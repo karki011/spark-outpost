@@ -87,6 +87,9 @@ function shippedLine(result: ShipResult, plan: ShipPlan, failing: boolean): stri
   const checkout = checkoutLine(plan.repo?.branch ?? null, result.branch);
   if (result.pullRequest) return `${pullRequestLine(result, failing)}\n\n${checkout}`;
   const why = plan.notes[0] ? ` ${plan.notes[0]}` : '';
+  if (result.pushed && result.prLink) {
+    return `Pushed ${result.branch}. ${result.prLink.label}: ${result.prLink.url}`;
+  }
   if (result.pushed) {
     return `Pushed ${result.branch} to ${plan.remote?.name ?? 'the remote'} without a pull request.${why}`;
   }

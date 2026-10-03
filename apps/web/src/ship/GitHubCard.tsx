@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitHubConnectionStatus } from '@spark-outpost/contracts';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
+import { GitHubRouteTest } from './GitHubRouteTest.tsx';
 import { TokenDetails, TokenForm } from './GitHubTokenPanel.tsx';
 import { githubApi, shipKeys } from './ship-api.ts';
 
@@ -94,6 +95,7 @@ export function GitHubCard({
   const status = useQuery({ queryKey: shipKeys.github, queryFn: githubApi.connection });
   const saved = (next: GitHubConnectionStatus) => {
     queryClient.setQueryData(shipKeys.github, next);
+    void queryClient.invalidateQueries({ queryKey: shipKeys.prRoutes });
     setChoice(null);
     if (open) onToggle();
   };
@@ -149,6 +151,7 @@ export function GitHubCard({
                 ))}
               {method === 'app' && <span className="cx-soon">Coming later</span>}
             </section>
+            <GitHubRouteTest status={data} />
           </>
         )}
       </div>

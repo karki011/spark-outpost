@@ -91,6 +91,43 @@ export const shipRequestSchema = z.object({
 });
 export type ShipRequest = z.infer<typeof shipRequestSchema>;
 
+export const prRouteSchema = z.enum(['token', 'gh_cli', 'link', 'push', 'commit']);
+export type PrRoute = z.infer<typeof prRouteSchema>;
+
+export const PR_ROUTE_LABELS: Record<PrRoute, string> = {
+  token: 'PRs via GitHub connection',
+  gh_cli: 'PRs via gh (user)',
+  link: 'Push only · PR link',
+  push: 'Push only',
+  commit: 'Commit only · no remote',
+};
+
+export const prRouteInfoSchema = z.object({
+  route: prRouteSchema,
+  host: z.string().nullable(),
+  repo: z.string().nullable(),
+});
+export type PrRouteInfo = z.infer<typeof prRouteInfoSchema>;
+
+export const chatPrRouteSchema = z.object({ info: prRouteInfoSchema.nullable() });
+export type ChatPrRoute = z.infer<typeof chatPrRouteSchema>;
+
+export const prLinkSchema = z.object({ url: z.string(), label: z.string() });
+export type PrLink = z.infer<typeof prLinkSchema>;
+
+export const githubTestResultSchema = z.object({
+  projects: z.array(
+    z.object({
+      project: z.string(),
+      remote: z.string().nullable(),
+      route: prRouteSchema,
+      reach: z.enum(['git', 'token', 'failed', 'none']),
+      detail: z.string(),
+    }),
+  ),
+});
+export type GitHubTestResult = z.infer<typeof githubTestResultSchema>;
+
 export const shipResultSchema = z.object({
   mode: shipModeSchema,
   branch: z.string(),
@@ -101,6 +138,7 @@ export const shipResultSchema = z.object({
     .extend({ created: z.boolean(), draft: z.boolean().optional() })
     .nullable(),
   link: taskLinkSchema.nullable(),
+  prLink: prLinkSchema.nullable().optional(),
 });
 export type ShipResult = z.infer<typeof shipResultSchema>;
 

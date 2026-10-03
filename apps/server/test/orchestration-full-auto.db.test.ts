@@ -242,15 +242,16 @@ describe('Full auto runs to a draft PR', () => {
     expect(stub.github.pulls[0]!.body).toContain('Plan it followed:');
   }, 120_000);
 
-  it('pushes the branch without a PR when GitHub is not connected, and says so', async () => {
+  it('pushes the branch and links Create PR when GitHub is not connected', async () => {
     await newRepo();
     start();
     const { orchestration, reply, keep } = await runFullAuto();
     expect(orchestration.status).toBe('succeeded');
     expectAutoKept(keep);
     expect(stub.github.pulls).toEqual([]);
-    expect(reply).toMatch(/Pushed spark\/\S+ to origin without a pull request\./);
-    expect(reply).toContain('Connect GitHub in Settings → Connectors');
+    expect(reply).toMatch(
+      /Pushed spark\/\S+\. Create PR on GitHub: https:\/\/github\.com\/acme\/widgets\/compare\//,
+    );
     expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(true);
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   }, 120_000);

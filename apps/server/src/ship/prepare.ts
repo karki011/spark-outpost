@@ -30,8 +30,9 @@ import {
   type Remote,
   type RepoState,
 } from './git.ts';
-import { connectionFor, type GitHubDeps } from './github/access.ts';
+import { connectionsFor, type GitHubDeps } from './github/access.ts';
 import type { GitHubConnection } from './github/connection.ts';
+import { prRouteFor } from './pr-route.ts';
 import { parseRemoteUrl, repoSlug, type RemoteRepo } from './remote.ts';
 import { shipTaskFacts, type ShipTaskFacts } from './task-facts.ts';
 
@@ -63,7 +64,9 @@ export interface ShipPlan {
   shipped: TaskShip | null;
   remote: Remote | null;
   remoteRepo: RemoteRepo | null;
+  hostRepo: RemoteRepo | null;
   github: GitHubConnection | null;
+  connections: GitHubConnection[];
   blocked: ShipBlock | null;
   modes: ShipMode[];
   notes: string[];
@@ -116,18 +119,38 @@ async function baseBranch(
   return remoteDefaultBranch(root, remote.name);
 }
 
-function modeNotes(plan: Pick<ShipPlan, 'remote' | 'remoteRepo' | 'github' | 'skipped'>) {
-  const notes: string[] = [];
-  if (!plan.remote) notes.push('This repository has no remote, so Ship can only commit.');
-  else if (!plan.remoteRepo)
-    notes.push('The remote isn’t on GitHub, so Ship can push but not open a PR.');
-  else if (!plan.github) {
-    notes.push(
-      plan.remoteRepo.host === 'github.com'
-        ? 'Connect GitHub in Settings → Connectors (gh CLI or a token) to open a pull request.'
-        : `No GitHub login for ${plan.remoteRepo.host}, so Ship can push but not open a PR.`,
-    );
+type RoutePlan = Pick<ShipPlan, 'remote' | 'hostRepo' | 'connections'>;
+
+function routeOf(plan: RoutePlan) {
+  const methods = plan.connections.map((connection) => connection.method);
+  return prRouteFor({
+    hasRemote: plan.remote !== null,
+    repo: plan.hostRepo,
+    token: methods.includes('token'),
+    gh: methods.includes('gh_cli'),
+  });
+}
+
+function routeNote(plan: RoutePlan): string | null {
+  const route = routeOf(plan);
+  if (route === 'commit') return 'This repository has no remote, so Ship can only commit.';
+  if (route === 'link') {
+    return plan.hostRepo?.host === 'github.com'
+      ? 'No GitHub connection, so Ship pushes the branch and gives you a Create PR link. Connect GitHub in Settings → Connectors (a token or the gh CLI) to open it directly.'
+      : `Ship pushes the branch and links the page to open the request on ${plan.hostRepo?.host}.`;
   }
+  if (route === 'push') {
+    return plan.hostRepo
+      ? `No GitHub login for ${plan.hostRepo.host}, so Ship can push but not open a PR.`
+      : 'The remote isn’t on a known host, so Ship can push but not open a PR.';
+  }
+  return null;
+}
+
+function modeNotes(plan: RoutePlan & Pick<ShipPlan, 'skipped'>) {
+  const notes: string[] = [];
+  const route = routeNote(plan);
+  if (route) notes.push(route);
   if (plan.skipped.length > 0) {
     notes.push(
       `${plan.skipped.length} file${plan.skipped.length === 1 ? '' : 's'} left out: ${plan.skipped.map((file) => file.path).join(', ')}.`,
@@ -136,10 +159,12 @@ function modeNotes(plan: Pick<ShipPlan, 'remote' | 'remoteRepo' | 'github' | 'sk
   return notes;
 }
 
-function modesFor(plan: Pick<ShipPlan, 'files' | 'remote' | 'remoteRepo' | 'github'>): ShipMode[] {
+const PR_ROUTES = new Set(['token', 'gh_cli', 'link']);
+
+function modesFor(plan: RoutePlan & Pick<ShipPlan, 'files'>): ShipMode[] {
   const modes: ShipMode[] = plan.files.length > 0 ? ['commit'] : [];
   if (plan.remote) modes.push('push');
-  if (plan.remoteRepo && plan.github) modes.push('draft_pr');
+  if (PR_ROUTES.has(routeOf(plan))) modes.push('draft_pr');
   return modes;
 }
 
@@ -157,7 +182,9 @@ function blockedPlan(
     skipped: [],
     remote: null,
     remoteRepo: null,
+    hostRepo: null,
     github: null,
+    connections: [],
     notes: [],
     keepCheckout: false,
     paths: [],
@@ -252,7 +279,8 @@ async function planFrom(
 
   const remote = await pickRemote(root, repo.branch);
   const parsed = remote ? parseRemoteUrl(remote.url) : null;
-  const github = parsed ? await connectionFor(deps, parsed.host) : null;
+  const connections = parsed ? await connectionsFor(deps, parsed.host) : [];
+  const github = connections[0] ?? null;
   const remoteRepo = parsed && (parsed.host === 'github.com' || github) ? parsed : null;
   const plan: ShipPlan = {
     ...context,
@@ -261,7 +289,9 @@ async function planFrom(
       shipped?.baseBranch ?? (await baseBranch(root, remote, baseHint ?? repo.branch, branch)),
     remote,
     remoteRepo,
+    hostRepo: parsed,
     github,
+    connections,
     blocked: null,
     modes: [],
     notes: [],

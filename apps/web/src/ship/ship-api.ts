@@ -1,8 +1,12 @@
 import {
+  chatPrRouteSchema,
   githubConnectionSchema,
+  githubTestResultSchema,
   shipPreviewSchema,
   shipResultSchema,
+  type ChatPrRoute,
   type GitHubConnectionStatus,
+  type GitHubTestResult,
   type SaveGitHubTokenRequest,
   type ShipPreview,
   type ShipRequest,
@@ -13,6 +17,8 @@ import { request } from '../api/client.ts';
 export const shipKeys = {
   preview: (taskId: string) => ['tasks', taskId, 'ship'] as const,
   github: ['github-connection'] as const,
+  prRoutes: ['pr-route'] as const,
+  prRoute: (conversationId: string) => ['pr-route', conversationId] as const,
 };
 
 export const shipApi = {
@@ -23,6 +29,8 @@ export const shipApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  prRoute: (conversationId: string): Promise<ChatPrRoute> =>
+    request(chatPrRouteSchema, `/conversations/${conversationId}/pr-route`),
 };
 
 export const githubApi = {
@@ -35,4 +43,6 @@ export const githubApi = {
     }),
   removeToken: (): Promise<GitHubConnectionStatus> =>
     request(githubConnectionSchema, '/github/token', { method: 'DELETE', body: '{}' }),
+  test: (): Promise<GitHubTestResult> =>
+    request(githubTestResultSchema, '/github/test', { method: 'POST', body: '{}' }),
 };

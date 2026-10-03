@@ -1,4 +1,5 @@
 import type {
+  PrLink,
   ShipFile,
   ShipMode,
   ShipPreview,
@@ -22,11 +23,12 @@ import {
   createBranch,
   filesBetween,
   harnessCommitsToPush,
-  pushBranch,
   remoteDefaultBranch,
   remoteHasBranch,
 } from './git.ts';
-import type { PullRequest } from './github/connection.ts';
+import { GitHubApiError, type GitHubConnection, type PullRequest } from './github/connection.ts';
+import { pullRequestLink } from './pr-route.ts';
+import { pushWithCredentials, type GitRoute } from './push.ts';
 import { commitBody, commitSubject, pullRequestBody, type ShipSummary } from './message.ts';
 import {
   planShip,
@@ -101,6 +103,8 @@ interface Progress {
   pushed: boolean;
   pullRequest: (PullRequest & { created: boolean; draft?: boolean }) | null;
   link: TaskLink | null;
+  pushedWith: GitRoute | null;
+  prLink: PrLink | null;
 }
 
 async function commitWithoutCheckout(
@@ -152,7 +156,7 @@ async function pushStep(deps: ShipDeps, plan: ShipPlan, progress: Progress) {
       `${plan.branch} carries Spark Outpost's internal commits (${internal.slice(0, 3).join('; ')}), so it was not pushed.`,
     );
   }
-  await pushBranch(plan.root!, remote.name, plan.branch);
+  progress.pushedWith = await pushWithCredentials(deps, plan.root!, remote, plan.branch);
   progress.pushed = true;
   progress.ship = { ...progress.ship, remote: remote.name, pushedAt: new Date() };
   await saveTaskShip(deps.db, plan.task.id, progress.ship);
@@ -191,6 +195,64 @@ async function watchShipped(
   });
 }
 
+interface OpenedPull {
+  pull: PullRequest;
+  existing: boolean;
+  github: GitHubConnection;
+}
+
+const isAuthError = (error: unknown) =>
+  error instanceof GitHubApiError && (error.status === 401 || error.status === 403);
+
+async function openWith(
+  github: GitHubConnection,
+  plan: ShipPlan,
+  text: { title: string; body: string; base: string; draft: boolean },
+): Promise<OpenedPull> {
+  const repo = plan.remoteRepo!;
+  const existing = await github.findPullRequest(repo, plan.branch);
+  const pull = existing
+    ? await github.updatePullRequest(repo, existing.number, { title: text.title, body: text.body })
+    : await github.createPullRequest(repo, { ...text, head: plan.branch });
+  return { pull, existing: existing !== null, github };
+}
+
+async function openThroughChain(
+  plan: ShipPlan,
+  text: { title: string; body: string; base: string; draft: boolean },
+): Promise<{ opened: OpenedPull | null; refused: unknown }> {
+  let refused: unknown = null;
+  for (const github of plan.connections) {
+    try {
+      return { opened: await openWith(github, plan, text), refused: null };
+    } catch (error) {
+      if (!isAuthError(error)) throw error;
+      refused = error;
+    }
+  }
+  return { opened: null, refused };
+}
+
+async function baseFor(plan: ShipPlan): Promise<string> {
+  if (plan.baseBranch) return plan.baseBranch;
+  for (const github of plan.connections) {
+    const base = await github.defaultBranch(plan.remoteRepo!).catch(() => null);
+    if (base) return base;
+  }
+  return (await remoteDefaultBranch(plan.root!, plan.remote!.name)) ?? 'main';
+}
+
+async function linkStep(deps: ShipDeps, plan: ShipPlan, progress: Progress, link: PrLink) {
+  progress.prLink = link;
+  const { link: saved } = await addTaskLink(deps.db, plan.task.id, {
+    kind: 'link',
+    url: link.url,
+    title: link.label,
+    source: 'ship',
+  });
+  progress.link = saved;
+}
+
 async function pullRequestStep(
   deps: ShipDeps,
   plan: ShipPlan,
@@ -198,18 +260,23 @@ async function pullRequestStep(
   progress: Progress,
   options: ShipOptions,
 ) {
-  const github = plan.github!;
-  const repo = plan.remoteRepo!;
-  const base = plan.baseBranch ?? (await github.defaultBranch(repo));
+  const base = await baseFor(plan);
   if (base === plan.branch) throw new ShipBlockedError('The branch and its base are the same.');
   const files = await pullRequestFiles(plan, base);
   const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
   const body = pullRequestBody(summary);
-  const existing = await github.findPullRequest(repo, plan.branch);
   const draft = await draftFor(deps, options);
-  const pull = existing
-    ? await github.updatePullRequest(repo, existing.number, { title, body })
-    : await github.createPullRequest(repo, { title, body, head: plan.branch, base, draft });
+  const { opened, refused } = await openThroughChain(plan, { title, body, base, draft });
+  if (!opened) {
+    const link = plan.hostRepo
+      ? pullRequestLink(plan.hostRepo, base, plan.branch, { title, body })
+      : null;
+    if (!link && refused) throw refused;
+    if (link) await linkStep(deps, plan, progress, link);
+    return;
+  }
+  const { pull, existing } = opened;
+  const repo = plan.remoteRepo!;
   progress.pullRequest = existing ? { ...pull, created: false } : { ...pull, created: true, draft };
   progress.ship = { ...progress.ship, baseBranch: base, prUrl: pull.url, prNumber: pull.number };
   await saveTaskShip(deps.db, plan.task.id, progress.ship);
@@ -220,7 +287,7 @@ async function pullRequestStep(
     source: 'ship',
   });
   progress.link = link;
-  await watchShipped(deps, plan, pull, plan.branch, existing === null && draft);
+  await watchShipped(deps, plan, pull, plan.branch, !existing && draft);
   await syncTicketsAfterShip(deps, plan.task.id, { url: pull.url, title: link.title ?? pull.url });
 }
 
@@ -246,6 +313,8 @@ async function audit(
     repo: plan.remoteRepo ? `${plan.remoteRepo.host}/${repoSlug(plan.remoteRepo)}` : null,
     pushed: progress.pushed,
     pullRequest: progress.pullRequest,
+    pushedWith: progress.pushedWith,
+    prLink: progress.prLink?.url ?? null,
     github: plan.github?.method ?? null,
     keepsCheckout: plan.keepCheckout,
   });
@@ -293,6 +362,8 @@ async function runShip(
     pushed: false,
     pullRequest: null,
     link: null,
+    pushedWith: null,
+    prLink: null,
   };
   try {
     await commitStep(deps, plan, title, progress, notes);
@@ -311,6 +382,7 @@ async function runShip(
     pushed: progress.pushed,
     pullRequest: progress.pullRequest,
     link: progress.link,
+    prLink: progress.prLink,
   };
 }
 
@@ -335,7 +407,7 @@ async function pushOwnBranch(deps: ShipDeps, plan: ShipPlan, branch: string): Pr
   if (!safeToPush(branch, deps.branchPrefix, [plan.baseBranch, defaultBranch, 'main', 'master'])) {
     throw new ShipBlockedError(`Ship only pushes its own ${deps.branchPrefix}/ branches.`);
   }
-  await pushBranch(plan.root!, remote, branch);
+  await pushWithCredentials(deps, plan.root!, plan.remote!, branch);
 }
 
 async function runPieceShip(
@@ -346,7 +418,7 @@ async function runPieceShip(
 ): Promise<ShipResult> {
   const plan = await planShip(deps, taskId, { ...options, keepCheckout: true });
   if (plan.blocked) throw new ShipBlockedError(plan.blocked.message);
-  if (!plan.modes.includes('draft_pr')) {
+  if (!plan.modes.includes('draft_pr') || !plan.github) {
     throw new ShipBlockedError(plan.notes[0] ?? 'This task can’t open a pull request.');
   }
   const paths = plan.paths.filter((path) => piece.files.includes(path));

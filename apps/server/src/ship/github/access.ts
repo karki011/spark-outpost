@@ -25,6 +25,7 @@ export interface GitHubDeps {
   locateGh: () => Promise<string | null>;
   fetch: typeof fetch;
   apiUrl?: string | undefined;
+  loginPath?: () => Promise<string | null>;
 }
 
 interface GhCli {
@@ -67,13 +68,21 @@ async function tokenConnection(deps: GitHubDeps, host: string): Promise<GitHubCo
   );
 }
 
+async function ghLoggedIn(deps: GitHubDeps, host: string): Promise<GitHubConnection | null> {
+  const cli = await ghCli(deps, host);
+  return cli?.login ? ghConnection(deps, cli.path, host) : null;
+}
+
+export async function connectionsFor(deps: GitHubDeps, host: string): Promise<GitHubConnection[]> {
+  const [token, gh] = await Promise.all([tokenConnection(deps, host), ghLoggedIn(deps, host)]);
+  return [token, gh].filter((connection): connection is GitHubConnection => connection !== null);
+}
+
 export async function connectionFor(
   deps: GitHubDeps,
   host: string,
 ): Promise<GitHubConnection | null> {
-  const cli = await ghCli(deps, host);
-  if (cli?.login) return ghConnection(deps, cli.path, host);
-  return tokenConnection(deps, host);
+  return (await tokenConnection(deps, host)) ?? (await ghLoggedIn(deps, host));
 }
 
 export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
@@ -82,7 +91,7 @@ export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionSt
     token !== null && (await deps.secrets.get('github').catch(() => null)) !== null;
   const cli = await ghCli(deps, DEFAULT_GITHUB_HOST);
   return {
-    active: cli?.login ? 'gh_cli' : tokenSaved ? 'token' : null,
+    active: tokenSaved ? 'token' : cli?.login ? 'gh_cli' : null,
     ghCli: { installed: cli !== null, host: DEFAULT_GITHUB_HOST, login: cli?.login ?? null },
     token: tokenSaved ? token : null,
     app: { available: false },
