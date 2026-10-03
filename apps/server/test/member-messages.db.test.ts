@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { decideApproval } from '../src/persistence/approvals.ts';
+import { ApprovalConflictError, decideApproval } from '../src/persistence/approvals.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import {
   NORMAL,
@@ -116,7 +116,12 @@ async function settle(conversationId: string) {
         if (approval.status !== 'pending') continue;
         const decision = answerEverything(approval);
         if (decision) {
-          await decideApproval(t.db, t.workspaceId, approval.id, { scope: 'once', ...decision });
+          await decideApproval(t.db, t.workspaceId, approval.id, {
+            scope: 'once',
+            ...decision,
+          }).catch((error: unknown) => {
+            if (!(error instanceof ApprovalConflictError)) throw error;
+          });
         }
       }
       return null;
