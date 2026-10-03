@@ -70,12 +70,7 @@ export interface CopyFacts {
 }
 
 export function needsCopyFor(facts: CopyFacts): boolean {
-  return (
-    facts.level === 'full-auto' ||
-    facts.destructive ||
-    facts.risky ||
-    facts.busy
-  );
+  return facts.level === 'full-auto' || facts.destructive || facts.risky || facts.busy;
 }
 
 export interface CopyBase {

@@ -148,8 +148,16 @@ The **If you don't answer a question** setting in **Settings → Spark** doesn't
 - In the chat's **Work** panel, under **Waiting for you**, with a **Review** button.
 - In the desktop app's Spark Island at the top of the screen, where you can press **Y** to allow or **N** to deny. See [Spark Island](desktop-companion.md).
 
+## Actions that ran without review
+
+In **Bypass permissions**, **Approve for me** or **Full access** the agent acts without asking. Spark doesn't stop it; it watches every action:
+
+- Each tool call that ran without a permission request is marked **Ran without review** in the audit log, and the audit timeline counts them per run.
+- If an action crosses a protected path anyway (a write or delete outside the project, a secret file, a force push, git hooks or config, agent instruction files), a card appears in the chat, for example "Bolt wrote outside the project: ~/x.txt". Select **Revert** to undo the run's changes in the project. For files outside the project, the card shows the path and a copy of the original when Spark has one. Select **Dismiss** when you've looked.
+- The chat shows **Flagged by Spark** in the chat list and the desktop Spark Island until you revert or dismiss.
+
 ## See what was allowed
 
 Each turn's steps record what happened to every request, for example "Allowed pnpm test (you allowed it)", "Allowed … (on the project allowlist)" or "Declined: … (Secret files always ask)". Requests a safety rule refused show as steps, not cards.
 
-For the full record, open the chat's **…** menu and select **Audit this chat**. The **Timeline** tab shades the time each run waited for your approval.
+For the full record, open the chat's **…** menu and select **Audit this chat**. The **Timeline** tab shades the time each run waited for your approval and counts actions that ran without review.

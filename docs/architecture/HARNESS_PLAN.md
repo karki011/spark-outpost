@@ -247,11 +247,11 @@ Six visible concepts. Everything else stays out of sight until it matters.
 
 The mode comes from the user's picker and fixed rules. No model picks it, and Jev never changes it.
 
-| Mode     | When                                         | Agent setup                                                                                                                                   | Approvals                                                                           |
-| -------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Chat** | No linked folder                             | Today's lockdown: an empty temp folder and no tools                                                                                           | None; every request is declined                                                     |
-| **Ask**  | A folder is linked and the mode is read-only | Claude: `cwd` is the primary repo, file reads only. Codex: the patched `read-only` mode (a `readOnly` sandbox) in the primary repo            | Writes and commands are declined, with a hint to pick an editing mode               |
-| **Do**   | A folder is linked and the mode can edit     | The chosen agent mode. Codex and Claude modes that skip the gate run where the chat works and are watched, not gated | The mode's posture decides (see Provider permission modes); some actions always ask |
+| Mode     | When                                         | Agent setup                                                                                                                        | Approvals                                                                           |
+| -------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Chat** | No linked folder                             | Today's lockdown: an empty temp folder and no tools                                                                                | None; every request is declined                                                     |
+| **Ask**  | A folder is linked and the mode is read-only | Claude: `cwd` is the primary repo, file reads only. Codex: the patched `read-only` mode (a `readOnly` sandbox) in the primary repo | Writes and commands are declined, with a hint to pick an editing mode               |
+| **Do**   | A folder is linked and the mode can edit     | The chosen agent mode. Codex and Claude modes that skip the gate run where the chat works and are watched, not gated               | The mode's posture decides (see Provider permission modes); some actions always ask |
 
 - The agent mode is stored in `overrides[provider].agentMode` and defaults to the provider's `agent_mode`; `permission` (Ask or Do) is derived from it. The run records Ask or Do as `runs.mode` and the mode as `runs.agent_mode`.
 

@@ -13,7 +13,7 @@ What Ship can do depends on the repo:
 
 - **Commit** works in any git repo.
 - **Push** needs a remote.
-- **Open a pull request** needs the remote on GitHub and GitHub connected in **Settings → Connectors**. See [Tickets and GitHub](tickets-and-github.md#connect-github).
+- **Open a pull request** works for any GitHub remote. With GitHub connected in **Settings → Connectors** Spark opens it for you; without it, Spark pushes and gives you a **Create PR on GitHub** link. See [Tickets and GitHub](tickets-and-github.md#connect-github).
 
 Ship waits until the task has finished working.
 
@@ -30,6 +30,15 @@ Ship waits until the task has finished working.
 The chat then says what happened, for example "Opened PR #12.", with a link to it. Ship commits only the task's own files, never other changes in your checkout. After a PR exists, the button reads **Update PR**.
 
 The pull request body lists a summary, linked tickets, the changed files, the checks Spark ran, any Critic findings, the agreed plan and the cost.
+
+## How Spark pushes and opens the PR
+
+Spark pushes and opens pull requests itself, so your credentials never reach the agent. It tries, in order:
+
+1. **Push** with your own git login. If GitHub refuses it and a GitHub token is saved, Spark retries once with the token. The token is never written to git config or logs. If neither works, the error shows the exact `git push` command to try in a terminal.
+2. **Open the PR** with the GitHub connection, then your `gh` login, else a **Create PR on GitHub** link with the title and body filled in. GitLab and Bitbucket remotes get a link to their merge request page; other hosts get the pushed branch name.
+
+Hover the chat's branch chip to see the route, for example **PRs via GitHub connection** or **Push only · PR link**. **Settings → Connectors → GitHub** shows it too; select **Test** to check each project's remote and sign-in without changing anything. When only a link was made, the ticket shows it under **Linked work**.
 
 ## Ready for review or draft
 

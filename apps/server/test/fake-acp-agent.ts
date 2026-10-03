@@ -7,6 +7,7 @@ import { withTurnFailure } from './fake-acp-limits.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
+import { railCrossings } from './fake-acp-rails.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock } from './fake-acp-support.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
@@ -268,6 +269,7 @@ async function turn(
   const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
   if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
+  await railCrossings(roleTurn);
   const asked = currentRequest(params.prompt);
   const planned = await planTurn(asked, roleTurn, config.mode ?? '');
   if (planned) return planned;

@@ -23,6 +23,7 @@ export const FAKE_READ_ENV_TRIGGER = '#readenv';
 export const FAKE_INSTRUCTIONS_TRIGGER = '#instructions';
 export const FAKE_INSTRUCTIONS_SHELL_TRIGGER = '#shellinstructions';
 export const FAKE_HOOK_TRIGGER = '#githook';
+const FAKE_UNASKED_INSTRUCTIONS_TRIGGER = '#agentsedit';
 export const FAKE_COMMAND = 'pnpm lint -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
 
@@ -160,6 +161,9 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
       await mkdir(path.dirname(diff.path), { recursive: true });
       await writeFile(diff.path, diff.newText);
     }
+  }
+  if (turn.mode === 'do' && turn.prompt.includes(FAKE_UNASKED_INSTRUCTIONS_TRIGGER)) {
+    await writeFile(path.join(root, 'AGENTS.md'), '# Changed by the agent\n');
   }
   yield { kind: 'text_delta', delta: `Done. ${outcomes.join(' ')}` };
 }

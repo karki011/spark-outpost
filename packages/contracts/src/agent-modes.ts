@@ -261,7 +261,7 @@ export function combinationWarning(facts: CombinationFacts): string | null {
   const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return null;
   if (modeSkipsGate(facts.provider, facts.mode, facts.kind)) {
-    return "In this mode the agent acts without asking. Spark watches every action, marks it ran without review, and flags anything that crosses a safety rail.";
+    return 'In this mode the agent acts without asking. Spark watches every action, marks it ran without review, and flags anything that crosses a safety rail.';
   }
   return null;
 }

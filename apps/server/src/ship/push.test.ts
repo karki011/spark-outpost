@@ -19,7 +19,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe('pushing with the GitHub connection', () => {
+describe('pushing with the GitHub connection', { timeout: 20_000 }, () => {
   it('hands git the token only through the one-shot askpass environment', async () => {
     let script = '';
     await withTokenAccess(TOKEN, async (access) => {

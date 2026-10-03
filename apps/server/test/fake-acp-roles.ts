@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { readFakeSession } from './fake-acp-sessions.ts';
 import { echoedRemovals, lawEdits } from './fake-acp-laws.ts';
-import { railCrossings } from './fake-acp-rails.ts';
 
 export const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
 
@@ -328,7 +327,6 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#todos')) await todos(turn, 0);
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
   const lawReply = await lawEdits(turn);
-  await railCrossings(turn);
   if (turn.text.includes('#touchmain')) {
     const main = turn.cwd.split('/.spark/worktrees/')[0]!;
     await writeFile(join(main, 'notes.txt'), 'start\nyour own edit\n');
