@@ -6,16 +6,42 @@ import { projectKeys, projectsApi } from '../../api/projects.ts';
 import { breadcrumbs } from './folder-path.ts';
 import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+
+type FolderPurpose = 'project' | 'reference';
+
+const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> = {
+  project: {
+    title: 'Choose a project folder',
+    lede: "Your AI can read files in this folder to answer questions. It won't change them.",
+    use: 'Use this folder',
+  },
+  reference: {
+    title: 'Add a folder',
+    lede: 'The agent reads this folder with its tools when it needs to. Nothing is copied into the chat. A folder outside your projects is added as a project.',
+    use: 'Add this folder',
+  },
+};
 
 interface FolderDialogProps {
   linking: boolean;
   error: string | null;
   onUse: (path: string) => void;
   onClose: () => void;
+  purpose?: FolderPurpose;
+  startPath?: string | null;
 }
 
-export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogProps) {
-  const [path, setPath] = useState<string | null>(null);
+export function FolderDialog({
+  linking,
+  error,
+  onUse,
+  onClose,
+  purpose = 'project',
+  startPath = null,
+}: FolderDialogProps) {
+  const copy = COPY[purpose];
+  const [path, setPath] = useState<string | null>(startPath);
   const panelRef = useRef<HTMLDivElement>(null);
   const listing = useQuery({
     queryKey: projectKeys.folders(path),
@@ -37,7 +63,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
 
   return createPortal(
     <motion.div
-      className="fdlg-scrim"
+      className={purpose === 'reference' ? 'fdlg-scrim over-dialog' : 'fdlg-scrim'}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -60,7 +86,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
         transition={reveal}
       >
         <div className="fdlg-head">
-          <h3 id="fdlg-title">Choose a project folder</h3>
+          <h3 id="fdlg-title">{copy.title}</h3>
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -74,7 +100,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
           </button>
         </div>
         <p className="fdlg-lede" id="fdlg-lede">
-          Your AI can read files in this folder to answer questions. It won't change them.
+          {copy.lede}
         </p>
         <div className="fdlg-bar">
           <button
@@ -109,7 +135,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
               {listing.error.message}
             </p>
           )}
-          {listing.isPending && <p className="fdlg-note">Loading folders…</p>}
+          {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
           {current?.folders.length === 0 && <p className="fdlg-note">No folders inside.</p>}
           <ul aria-label="Folders">
             {current?.folders.map((folder) => (
@@ -141,7 +167,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
             disabled={!current || linking}
             onClick={() => current && onUse(current.path)}
           >
-            {linking ? 'Linking…' : 'Use this folder'}
+            {linking ? 'Linking…' : copy.use}
           </button>
         </div>
       </motion.div>

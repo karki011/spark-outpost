@@ -424,8 +424,8 @@ export function mainSessionRoute(
 export function ruleCriticPick(
   context: RouteContext,
   built: readonly BuiltShare[] = [],
+  provider = criticProvider(context, built),
 ): AgentPick {
-  const provider = criticProvider(context, built);
   const candidate = candidateFor(context, provider);
   const effort = highEffort(effortIds(candidate)) ?? 'high';
   const models = modelsFor(context, provider);
@@ -441,9 +441,13 @@ export function ruleCriticPick(
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };
 }
 
-export function routeCritic(context: RouteContext, built: readonly BuiltShare[] = []): MemberRoute {
+export function routeCritic(
+  context: RouteContext,
+  built: readonly BuiltShare[] = [],
+  provider?: string,
+): MemberRoute {
   const route: MemberRoute = {
-    pick: ruleCriticPick(context, built),
+    pick: ruleCriticPick(context, built, provider),
     routedBy: 'rules',
     rule: 'critic',
     autoWouldUse: null,

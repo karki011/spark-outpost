@@ -3,7 +3,8 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TaskLink } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
-import { PlusIcon } from '../ui/icons.tsx';
+import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
+import { FolderIcon, PlusIcon } from '../ui/icons.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { GitHubIcon, LinkIcon } from './TaskIcons.tsx';
 
@@ -25,15 +26,35 @@ function shortUrl(url: string): string {
   }
 }
 
-export function LinkChip({ link }: { link: Pick<TaskLink, 'kind' | 'url' | 'title' | 'source'> }) {
+type ChipLink = Pick<TaskLink, 'kind' | 'url' | 'title' | 'source'>;
+
+function FolderChip({ link }: { link: ChipLink }) {
   return (
-    <a className="lchip" href={link.url} target="_blank" rel="noopener noreferrer">
-      {link.kind === 'pr' ? <GitHubIcon /> : <LinkIcon />}
+    <div className="lchip" title={link.url}>
+      <FolderIcon />
+      <span className="t">
+        <b>{link.title ?? link.url}</b>
+        <small>
+          <span>Folder · {link.url}</span>
+        </small>
+      </span>
+    </div>
+  );
+}
+
+export function LinkChip({ link }: { link: ChipLink }) {
+  if (link.kind === 'folder') return <FolderChip link={link} />;
+  const href = link.kind === 'file' ? `/api${link.url}` : link.url;
+  return (
+    <a className="lchip" href={href} target="_blank" rel="noopener noreferrer">
+      {link.kind === 'pr' ? <GitHubIcon /> : link.kind === 'file' ? <FileIcon /> : <LinkIcon />}
       <span className="t">
         <b>{link.title ?? shortUrl(link.url)}</b>
         <small>
           {link.kind === 'pr' && <span className="spill ok">Pull request</span>}
-          <span>{sourceNames[link.source]}</span>
+          <span>
+            {link.kind === 'file' ? `File · ${sourceNames[link.source]}` : sourceNames[link.source]}
+          </span>
         </small>
       </span>
     </a>
@@ -71,7 +92,9 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
   return (
     <div className="wsec">
       {links.length === 0 && (
-        <p className="wnote first">No links yet. Pull requests show up here.</p>
+        <p className="wnote first">
+          No links yet. Pull requests and the links, files and folders you add show up here.
+        </p>
       )}
       {links.map((link) => (
         <LinkChip key={link.id} link={link} />

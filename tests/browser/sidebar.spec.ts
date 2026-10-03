@@ -134,6 +134,25 @@ test('renames inline, pins to the top, and deletes after a confirmation with und
   await expect(rowTitles(sidebar(page))).toHaveText(['Renamed chat', 'Newest chat']);
 });
 
+test('deleting the open chats one after another never lands back on a deleted chat', async ({
+  page,
+}) => {
+  await seedChats([{ title: 'Newest chat' }, { title: 'Second chat' }]);
+  await openChats(page);
+  const header = page.getByRole('main').getByRole('heading', { level: 1 });
+
+  await row(page, 'Newest chat').click();
+  await expect(header).toHaveText('Newest chat');
+  await (await openMenu(page, 'Newest chat')).getByRole('menuitem', { name: 'Delete' }).click();
+  await page.getByRole('menuitem', { name: 'Confirm delete' }).click();
+  await expect(header).toHaveText('Second chat');
+
+  await (await openMenu(page, 'Second chat')).getByRole('menuitem', { name: 'Delete' }).click();
+  await page.getByRole('menuitem', { name: 'Confirm delete' }).click();
+  await expect(header).not.toHaveText(/Newest chat|Second chat/);
+  await expect(page.getByRole('textbox', { name: /Ask anything|Message/ })).toBeVisible();
+});
+
 async function dragTo(page: Page, source: Locator, target: Locator) {
   const from = await source.boundingBox();
   const to = await target.boundingBox();

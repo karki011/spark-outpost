@@ -57,7 +57,7 @@ A chat says "… is rate limited. Try again in a minute." Wait a minute and send
 
 ## A run seems stuck
 
-1. Check whether it's waiting for you. Look for a card under **Waiting for you** above the message box, or on **Home** under **What needs you today**.
+1. Check whether it's waiting for you. The line above the message box says **Waiting for you** and what for; select it to jump to the card. You can also look on **Home** under **What needs you today**. If the line says what the agent is running, it is still working.
 2. To ask what it's doing without interrupting it, open the chat's **Work** panel, or use **Ask for update** in Spark Island.
 3. To stop it, select **Stop** in the message box. The turn says "Stopped before finishing." Then send a new message to try again.
 

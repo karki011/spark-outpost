@@ -25,6 +25,8 @@ export const SECRET_FILE_PATTERNS: readonly string[] = [
   'api-token',
 ];
 
+export const SECRET_FILE_REFUSAL = 'Spark never reads secret files like .env.';
+
 export const SECRET_FILE_EXCEPTIONS: readonly string[] = ['.env.example'];
 
 const SECRET_NAME_PATTERNS = SECRET_FILE_PATTERNS.map(

@@ -70,20 +70,60 @@ describe('lean flow', () => {
     expect(kept!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
   });
 
-  it('asks to keep at Auto-edit when the checks still fail', () => {
+  it('keeps at Automatic with a note when the checks still fail', () => {
     const [, , wrapped] = run(flow('hands-off'), [
       { type: 'start', start: 'build' },
       built(),
-      { type: 'wrapped', filesChanged: 2, checksFailing: true },
+      { type: 'wrapped', filesChanged: 2, checksFailing: true, outsideWorktree: true },
     ]);
     expect(wrapped!.action).toEqual({
-      type: 'ask',
-      kind: 'accept',
-      reason: '2 files changed. Automatic asks because the checks still fail.',
+      type: 'keep',
+      note: 'Kept automatically; worth a look: the checks still fail. Revert undoes them.',
     });
   });
 
-  it('keeps by itself at Auto-edit after a clean Critic, and asks after an unclear one', () => {
+  it('asks to keep at Automatic only for a destructive migration outside a worktree', () => {
+    const wrappedAt = (outsideWorktree: boolean) =>
+      run(flow('hands-off'), [
+        { type: 'start', start: 'build' },
+        built(),
+        { type: 'wrapped', filesChanged: 1, riskyMigration: 'DROP TABLE notes', outsideWorktree },
+      ]).at(-1)!.action;
+    expect(wrappedAt(false)).toMatchObject({ type: 'keep' });
+    expect(wrappedAt(true)).toMatchObject({ type: 'ask', kind: 'accept' });
+  });
+
+  it('retries a failed Critic once, then skips the review quietly and keeps', () => {
+    const steps = run(flow('hands-off', true), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'internal error' },
+      { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'internal error' },
+      { type: 'wrapped', filesChanged: 1 },
+    ]);
+    expect(steps[2]!.action).toMatchObject({ type: 'spawn', role: 'critic', reason: 'retry' });
+    expect(steps[3]!.action).toEqual({ type: 'wrap_up' });
+    expect(steps[3]!.state.criticSkipped).toBe('internal error');
+    expect(steps[4]!.action).toEqual({
+      type: 'keep',
+      note: 'Kept automatically; worth a look: the Critic was unavailable, so no AI review ran. Revert undoes them.',
+    });
+  });
+
+  it('uses the retried Critic’s verdict when the retry succeeds', () => {
+    const steps = run(flow('hands-off', true), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'internal error' },
+      { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'looks_good' },
+      { type: 'wrapped', filesChanged: 1 },
+    ]);
+    expect(steps[3]!.state).toMatchObject({ verdict: 'looks_good', criticRetried: true });
+    expect(steps[3]!.state.criticSkipped).toBeUndefined();
+    expect(steps[4]!.action).toEqual({ type: 'keep' });
+  });
+
+  it('keeps by itself at Automatic after a clean Critic, and with a note after an unclear one', () => {
     const reviewed = (verdict: 'looks_good' | 'unclear') =>
       run(flow('hands-off', true), [
         { type: 'start', start: 'build' },
@@ -92,7 +132,10 @@ describe('lean flow', () => {
         { type: 'wrapped', filesChanged: 1 },
       ]).at(-1)!.action;
     expect(reviewed('looks_good')).toEqual({ type: 'keep' });
-    expect(reviewed('unclear')).toMatchObject({ type: 'ask', kind: 'accept' });
+    expect(reviewed('unclear')).toEqual({
+      type: 'keep',
+      note: 'Kept automatically; worth a look: the Critic still has concerns. Revert undoes them.',
+    });
   });
 
   it('still asks to keep at Ask before edits when everything passed', () => {

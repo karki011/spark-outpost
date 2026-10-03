@@ -41,12 +41,6 @@ export function keyHint(view: IslandView): ReactNode {
           <Kbd>⌥ Space</Kbd> focus card · <Kbd>N</Kbd> deny · hold the button to confirm
         </>
       ) : null;
-    case 'pill':
-      return (
-        <>
-          <Kbd>⌥ Space</Kbd> chat · <Kbd>⌥ ⇧ Space</Kbd> chats · <Kbd>Esc</Kbd> close
-        </>
-      );
     default:
       return null;
   }

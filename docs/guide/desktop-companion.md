@@ -2,7 +2,7 @@
 title: Spark Island
 section: Desktop app
 order: 510
-summary: Spark Island, Scout at the top of your screen in the Mac app: what it shows at rest and on hover, the Home view with what's happening now and your Sparks, chimes, the session blobs beside it, notch and no-notch displays, and the status companion inside the app.
+summary: Spark Island, Scout at the top of your screen in the Mac app: what it shows at rest, opening it by pointing at it, the Home view with what's happening now and your Sparks, chimes, the session blobs beside it, notch and no-notch displays, and the status companion inside the app.
 ---
 
 You'll get to know Spark Island at the top of your Mac's screen and set it up the way you like. About 2 minutes.
@@ -29,17 +29,19 @@ Scout stays small at the top of your screen while you work. It never opens on it
 - **Couldn't finish**: a worried face while a recent chat has failed.
 - **Needs you**: a small number badge on Scout counts the chats waiting for you.
 
-Point at Scout to see everything at once, grouped:
+## Open Spark Island
 
-- **Needs you**: approvals and questions, each with **Review** to answer it right there and **Open chat**.
-- **Running**: each chat with who's working, what it's doing and how long it's been going.
-- **Recent**: chats that finished or failed in the last 20 minutes, with a short line about how it went.
+Point at Scout and Spark Island opens in full on **Home**, the same panel you get from a shortcut. A short pause before it opens means sweeping the pointer across the menu bar doesn't open it, and a short pause before it closes means it doesn't flicker shut if the pointer slips off the edge.
 
-Groups with nothing in them don't show. **See all** opens **Chats**, and **New chat** starts a chat. Select a row to open that chat in Spark Outpost.
+- While you only point at it, Spark Island closes again when the pointer leaves, and it doesn't take the keyboard from the app you're in.
+- Click anywhere inside it, such as a tab or a button, and it stays open and takes the keyboard. Press **Esc** or click outside it to close it.
+- You can also select Scout, or use a shortcut; see [Quick chat and Sessions](companion-quick-chat.md).
+
+Spark Island never opens by itself: only when you point at it, select it or press a shortcut.
 
 ## Home
 
-Select Scout to open Spark Island on **Home**. The panel is always a dark glass panel, whichever theme you use in the app, so it sits well with the notch and the menu bar.
+Spark Island opens on **Home**. The panel is always a dark glass panel, whichever theme you use in the app, so it sits well with the notch and the menu bar.
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
@@ -57,7 +59,7 @@ Spark Island can play a soft chime when a chat needs you or finishes. Chimes are
 
 ### When a chat needs you
 
-If Spark Outpost isn't the app you're using, a chat that needs you drops Spark Island into a one-line pill, such as **Deploy the site needs you · Review**. Point at it or select **Review** to see the card. While the Spark Outpost window is in front, Scout only shows the badge, since the card is already in the app. See [Answer approvals from Spark Island](companion-approvals.md).
+If Spark Outpost isn't the app you're using, a chat that needs you drops Spark Island into a one-line pill, such as **Deploy the site needs you · Review**. Point at it or select **Review** and Spark Island opens in full on that chat, with its request ready to answer. While the Spark Outpost window is in front, Scout only shows the badge, since the card is already in the app. See [Answer approvals from Spark Island](companion-approvals.md).
 
 ### Session blobs
 
@@ -65,7 +67,7 @@ Next to Scout, a small blob stands for each active chat: running, waiting for yo
 
 - A wobbling blob is working. A **!** means it's waiting for you.
 - A small sparkle means it's done. A grey blob means it failed.
-- Point at a blob to see the chat's title and state. Select it to open that chat in **Chats**.
+- Point at a blob to see the chat's title and state; pointing at a blob doesn't open the panel. Select it to open that chat in **Chats**.
 
 ## Notch or no notch
 
@@ -74,7 +76,7 @@ Next to Scout, a small blob stands for each active chat: running, waiting for yo
 
 To move Spark Island, drag it by any part that isn't a button, to any display. Drop it near the top centre to dock it again. Spark remembers where you put it.
 
-Scout and the session blobs move only when there's something to show. Opening Home, the panel grows out of Scout and the chat's blob hops into the **Now** card; closing it folds everything back. If **Reduce motion** is on in your Mac's Accessibility settings, they stay still, panels open and close in place, and only faces change.
+Scout and the session blobs move only when there's something to show. Opening Home, the panel grows out of Scout and the chat's blob hops into the **Now** card; closing it folds everything back. If **Reduce motion** is on in your Mac's Accessibility settings, they stay still, Spark Island opens and closes at once without growing or folding, and only faces change.
 
 ## The status companion in the app
 

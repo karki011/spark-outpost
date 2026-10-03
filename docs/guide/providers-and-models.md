@@ -19,6 +19,8 @@ To connect a provider for the first time, see [Connect an AI provider](connect-a
 
 New chats start with your default provider's model, mode and effort. For the modes, see [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
 
+Claude Opus 5.5 and Sonnet 5 have a 1M-token context window, and Spark starts Claude with it. The context ring shows the window Claude reports, such as **650K of 1M tokens**, and Spark warns and compacts at the same percentages of that window (see [Long chats and compaction](compaction.md)). If your account, or a custom Claude endpoint, runs a model with a smaller window, the chat keeps going and a one-line note says which window it got. Z.ai and Codex keep their own windows.
+
 ## Change the defaults for new chats
 
 1. Open **Settings → AI providers** and select a connected provider's tile.

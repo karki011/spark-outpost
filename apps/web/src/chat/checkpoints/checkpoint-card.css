@@ -22,6 +22,48 @@
   gap: 6px;
   padding: 8px 0 14px;
 }
+.appr.ck.accept {
+  overflow: clip;
+}
+.ck-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: inherit;
+  border-bottom: 1px solid var(--line);
+}
+.ck-top .appr-acts {
+  padding-bottom: 12px;
+}
+.ck-changes {
+  padding: 4px 0 14px;
+}
+.ck-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 14px 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ck-sum .ck-view {
+  margin: 0;
+}
+.ck-more {
+  margin: 6px 14px 0;
+  font-size: 12.5px;
+}
+.ck-more summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+}
+.ck-more .ck-files {
+  margin: 6px 0 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
 .ck-files {
   list-style: none;
   margin: 10px 14px 0;

@@ -52,4 +52,20 @@ describe('checkSource', () => {
     ]);
     expect(checkSource('apps/server/src/a.tsx', text)).toEqual([]);
   });
+
+  it('flags plain loading text in the web app', () => {
+    const text = [
+      'export const A = () => <p>Loading…</p>;',
+      "export const B = () => <p>{busy ? 'Loading...' : 'Done'}</p>;",
+      'export const C = () => <p>Loading the diff…</p>;',
+      'export const D = () => <p className="sr-only">Loading {title}…</p>;',
+      'export const E = () => <Skeleton label="Loading changes" />;',
+      '',
+    ].join('\n');
+    expect(checkSource('apps/web/src/a.tsx', text).map((violation) => violation.line)).toEqual([
+      1, 2, 3,
+    ]);
+    expect(checkSource('apps/web/src/a.test.tsx', text)).toEqual([]);
+    expect(checkSource('apps/server/src/a.tsx', text)).toEqual([]);
+  });
 });

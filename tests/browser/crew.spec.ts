@@ -64,12 +64,8 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   await expect(turn.locator('.jevline')).toContainText('model by rules');
   await expect(turn.locator('.jevline .cat-chip')).toHaveText('Bug fix');
   const builder = agentBlock(page, 'Bolt');
-  await expect(builder.getByRole('button', { name: 'Waiting for your answer' })).toBeVisible();
-  await expect(
-    page
-      .getByRole('region', { name: 'Waiting for you' })
-      .getByRole('group', { name: /Change a file\?/ }),
-  ).toBeVisible();
+  await expect(builder.getByRole('group', { name: /Change a file\?/ })).toBeVisible();
+  await expect(page.locator('.cstatus')).toContainText('Waiting for you · approve edit notes.txt');
   await expect(agentHead(page, 'Bolt')).toContainText('Waiting for you');
   await expect(agentHead(page, 'Bolt')).toContainText('Builder');
   await expect(agentHead(page, 'Bolt')).toContainText('Opus 5.5high effort');
@@ -138,18 +134,15 @@ test("Review jumps to a second turn's keep card, which renders once", async ({ p
   await expect(turns.first().locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 
   await send(page, 'Also tidy the heading. #build');
-  const keep = page
-    .getByRole('region', { name: 'Waiting for you' })
-    .getByRole('group', { name: /Keep these changes\?/ });
+  const keep = turns.nth(1).getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toBeVisible({ timeout: 30_000 });
-  await expect(turns.nth(1).getByRole('button', { name: 'Waiting for your answer' })).toBeVisible();
+  await expect(page.locator('.cstatus')).toContainText('Waiting for you · Keep these changes?');
   const anchor = await keep.getAttribute('id');
   expect(anchor).toMatch(/^approval-/);
   await expect(page.locator(`[id="${anchor}"]`)).toHaveCount(1);
   await expect(turns.first().getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(1);
 
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
-  await expect(keep).toBeInViewport();
   const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
   await waiting.getByRole('button', { name: 'Review' }).click();
   await expect(keep).toBeInViewport();

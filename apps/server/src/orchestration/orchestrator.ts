@@ -21,7 +21,12 @@ import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget, checkBudgetBeforeCall, fixRoundShort } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
-import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
+import {
+  correctnessFindings,
+  criticSkippedLine,
+  sessionReviewLine,
+  suggestionsLine,
+} from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import {
   confirmsRiskyFirst,
@@ -219,7 +224,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       if (action.approvedEach) {
         await autoKeep(s, 'balanced', [KEPT_AFTER_EACH_EDIT]);
       } else {
-        await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+        await autoKeep(s, 'hands-off', [action.note ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
       }
       return { type: 'kept' };
     case 'ship':
@@ -264,11 +269,12 @@ async function finish(
   const shipped = s.shipLine ?? null;
   const pieces = coordinationReport(s.coordination);
   const laws = lawsNote(s);
-  const notes = [pieces, assumed, escalated, fixed, suggested, laws, stopped, incomplete, shipped];
+  const skipped = criticSkippedLine(s);
+  const notes = [pieces, assumed, escalated, fixed, suggested, skipped, laws, stopped, incomplete];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
-  const text = withNotes(reply, notes, s.message !== null);
+  const text = withNotes(reply, [...notes, shipped], s.message !== null);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {

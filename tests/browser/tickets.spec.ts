@@ -160,7 +160,6 @@ test('the Tickets strip shows the Home brief, and each side links to the other',
   await seedAssignedSince([['WEB-433', 3]]);
   await openTickets(page);
   await expect(section(page, 'Needs you').locator('li')).toHaveCount(3, { timeout: 15_000 });
-  await expect(main(page).locator('.brief')).toHaveCount(0);
 
   const rail = page.getByRole('navigation', { name: 'Main' });
   await rail.getByRole('button', { name: /^Home/ }).click();

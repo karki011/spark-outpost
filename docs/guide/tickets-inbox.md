@@ -36,11 +36,23 @@ Use the filters for **Source**, **Team or project** and **Assignee**, or search 
 2. Under **How to start**, pick **Plan first** or **Build**.
 3. Pick the **Project folder** for the work.
 4. Leave **Move** _KEY_ **to In progress** on to update your tracker. For a ticket that isn't yours, you can also assign it to yourself.
-5. Select **Start with a plan** or **Start building**.
+5. Optional: open **Add context** to give Spark more to go on (see below).
+6. Select **Start with a plan** or **Start building**.
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-The new chat starts with the ticket's title, description, acceptance criteria and subtasks, and the ticket links to the chat. Spark treats the ticket text as data, never as instructions.
+The new chat starts with a short brief: the ticket's key, title, status, assignee, link and acceptance criteria (or the first part of the description), plus your note and references. The agent reads the full description, comments, linked issues and current status from your tracker when it needs them. Spark treats ticket text as data from your tracker, never as instructions, and the ticket links to the chat.
+
+### Add context
+
+**Add context** is folded away until you open it. Everything in it is optional:
+
+- **Note**: anything else Spark should know, such as a constraint or where to start.
+- **Add link**: paste a web link, such as a spec or design. Spark shows the address; it doesn't fetch the page.
+- **Add files**: pick or drop text files and images. They attach to the first message, with the same size limits as chat attachments. Secret files such as `.env` are refused.
+- **Add folder**: pick a folder. Spark sends its path, never its contents; the agent reads what it needs with its own tools. A folder outside your projects is added as a project.
+
+Each one shows as a chip you can remove before you start. After you start, they appear in the chat's Work panel under **Links**.
 
 ## Follow a ticket to a pull request
 

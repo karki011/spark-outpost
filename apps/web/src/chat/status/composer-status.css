@@ -1,0 +1,131 @@
+.cstatus {
+  flex-shrink: 0;
+  padding: 0 16px;
+}
+.cs-wrap {
+  max-width: 700px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+.cs-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  margin: 0 0 4px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.cs-blob {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+.cs-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 28px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  text-align: left;
+}
+.cs-main:hover {
+  background: var(--raise);
+}
+.cs-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cs-word {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--text);
+}
+.cs-line.wait .cs-word {
+  color: var(--warn);
+}
+.cs-dot {
+  flex-shrink: 0;
+}
+.cs-what {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-line.run .cs-what {
+  flex: 0 1 auto;
+}
+.cstatus code,
+.cs-list code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--raise);
+  color: var(--text);
+  font:
+    12px/1.4 'Geist Mono',
+    ui-monospace,
+    monospace;
+}
+.cs-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cs-go {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.cs-go svg {
+  width: 13px;
+  height: 13px;
+}
+.cs-main.open .cs-go .chev {
+  transform: rotate(90deg);
+}
+.cs-list {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 6px 31px;
+  padding: 0;
+  list-style: none;
+}
+.cs-list button {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-list button:hover {
+  background: var(--raise);
+}
+.cs-list button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (max-width: 640px) {
+  .cstatus {
+    padding: 0 8px;
+  }
+}

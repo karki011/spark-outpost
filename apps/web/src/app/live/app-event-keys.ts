@@ -26,6 +26,7 @@ export const LIVE_ROOTS: readonly string[] = [
   analyticsKeys.all[0],
   queryKeys.usageSummary[0],
   teammateKeys.all[0],
+  ticketKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -42,6 +43,7 @@ const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
+const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -89,12 +91,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [teammates, list];
     case 'pull_request':
       return event.conversationId
-        ? [
-            list,
-            { queryKey: prWatchesKey(event.conversationId), exact: true },
-            { queryKey: ticketKeys.inbox, exact: true },
-          ]
+        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
         : [];
+    case 'ticket':
+      return [ticketInbox];
   }
 }
 

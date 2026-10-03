@@ -16,7 +16,7 @@ async function sendPlannedTask(page: Page, content = 'Fix the date divider #plan
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
   const card = page.locator('.taskc');
-  await expect(card).toContainText('Task · 7 of 7 done');
+  await expect(card).toContainText('Task 7/7');
   return card;
 }
 
@@ -27,6 +27,8 @@ test('a planned run shows a task card and the work panel with plan history and a
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.setViewportSize({ width: 1400, height: 900 });
   const card = await sendPlannedTask(page);
+  await expect(card).toContainText('Task 7/7 · Done');
+  expect((await card.boundingBox())!.height).toBeLessThanOrEqual(32);
 
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await expect(panel).toBeVisible();
@@ -65,7 +67,7 @@ test('a planned run shows a task card and the work panel with plan history and a
   await expect(panel).toBeVisible();
 
   await page.reload();
-  await expect(page.locator('.taskc')).toContainText('Task · 8 of 8 done');
+  await expect(page.locator('.taskc')).toContainText('Task 8/8');
   await expect(page.getByRole('complementary', { name: 'Work panel' })).toBeVisible();
 });
 
@@ -82,10 +84,10 @@ test('a chit-chat reply has no task card and a follow-up joins the open task', a
 
   await input.fill('Now fix it #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task · 7 of 7 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
   await input.fill('Thanks, and one more thing');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task · 8 of 8 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 8/8', { timeout: 20_000 });
   await expect(page.locator('.taskc')).toHaveCount(1);
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await panel.getByRole('tab', { name: 'Cost' }).click();

@@ -216,8 +216,9 @@ async function reportEnvironment(
   await update({
     sessionUpdate: 'usage_update',
     used: 1_000,
-    size: 1_000_000,
+    size: Number(env.FAKE_ACP_WINDOW ?? 1_000_000),
     cost: { amount: 1.23, currency: 'USD' },
+    _meta: { '_claude/model': 'claude-opus-5-5' },
   });
   await say(
     JSON.stringify({
@@ -227,6 +228,7 @@ async function reportEnvironment(
       token: env.ANTHROPIC_AUTH_TOKEN ? 'set' : 'missing',
       tokenLength: env.ANTHROPIC_AUTH_TOKEN?.length ?? 0,
       opus: env.ANTHROPIC_DEFAULT_OPUS_MODEL ?? null,
+      sonnet: env.ANTHROPIC_DEFAULT_SONNET_MODEL ?? null,
       haiku: env.ANTHROPIC_DEFAULT_HAIKU_MODEL ?? null,
       timeout: env.API_TIMEOUT_MS ?? null,
     }),

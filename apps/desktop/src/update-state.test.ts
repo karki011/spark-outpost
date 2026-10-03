@@ -151,7 +151,23 @@ describe('updateErrorMessage', () => {
       ),
     ).toBe("There's no Stable release on the update feed yet. Check again later.");
     expect(updateErrorMessage('net::ERR_INTERNET_DISCONNECTED')).toBe(
-      'net::ERR_INTERNET_DISCONNECTED',
+      "Couldn't reach the update server. Check your connection.",
     );
+    expect(updateErrorMessage('Something odd happened')).toBe('Something odd happened');
+  });
+
+  it('never shows the raw server response', () => {
+    const raw =
+      '401 Unauthorized "method: GET url: https://feed.example/beta-mac.yml\\n\\n Data:\\n <!doctype html><html><title>Unauthorized</title></html>"';
+    expect(updateErrorMessage(raw)).toBe(
+      "The update server isn't accepting requests right now. Try again later.",
+    );
+    expect(updateErrorMessage('HttpError: 404 Not Found\n<html>x</html>')).toBe(
+      "There's no release on the update feed yet. Check again later.",
+    );
+    expect(updateErrorMessage('HttpError: 503 Service Unavailable')).toBe(
+      'The update server had a problem. Try again later.',
+    );
+    expect(updateErrorMessage(`${'x'.repeat(400)}\nmore`)).toHaveLength(160);
   });
 });

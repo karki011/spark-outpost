@@ -167,6 +167,27 @@ describe('ACP session update mapping', () => {
     ]);
   });
 
+  it('notes once when the turn ends on a smaller window than the model card', () => {
+    const usage = (size: number, cost?: number) =>
+      ({
+        sessionUpdate: 'usage_update',
+        used: 3000,
+        size,
+        ...(cost === undefined ? {} : { cost: { amount: cost, currency: 'USD' } }),
+        _meta: { '_claude/model': 'claude-opus-5-5' },
+      }) as const;
+    const shortNote = expect.objectContaining({
+      kind: 'step_finished',
+      name: 'Opus 5.5 is using a 200K context window on this account, not 1M',
+    });
+    const mapper = createUpdateMapper('Claude', true);
+    expect(mapper.map(usage(200_000))).toHaveLength(1);
+    expect(mapper.map(usage(200_000, 0.01))).toContainEqual(shortNote);
+    expect(mapper.map(usage(200_000, 0.02))).toHaveLength(1);
+    expect(createUpdateMapper('Claude', true).map(usage(1_000_000, 0.01))).toHaveLength(1);
+    expect(createUpdateMapper('Z.ai (GLM)').map(usage(200_000, 0.01))).toHaveLength(1);
+  });
+
   it('closes open steps when the turn finishes and ignores bookkeeping updates', () => {
     const mapper = createUpdateMapper();
     mapper.map({

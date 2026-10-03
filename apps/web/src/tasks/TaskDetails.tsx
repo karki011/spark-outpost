@@ -16,8 +16,19 @@ import { PlanPane } from './PlanPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { progressPercent } from './TaskCard.tsx';
 import { TaskList, WaitingItems } from './TaskList.tsx';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton, type SkeletonShape } from '../ui/loading/Skeleton.tsx';
 
 export type WorkTab = 'tasks' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
+
+const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
+  tasks: 'list',
+  plan: 'lines',
+  crew: 'list',
+  links: 'list',
+  changes: 'list',
+  cost: 'cards',
+};
 
 const tabNames: Record<WorkTab, string> = {
   tasks: 'Tasks',
@@ -166,7 +177,11 @@ export function TaskDetails({
           current !== 'changes' &&
           !(current === 'crew' && agents.length > 0) &&
           !detail.data && (
-            <p className="wsec wnote">{detail.isError ? detail.error.message : 'Loading…'}</p>
+            <div className="wsec">
+              <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
+                <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />
+              </QueryWait>
+            </div>
           )}
         {current === 'plan' && detail.data && (
           <PlanPane
