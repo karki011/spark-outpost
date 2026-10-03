@@ -11,9 +11,10 @@ interface ToastCardProps {
   toast: ShownToast;
   onDismiss: () => void;
   onUndo: () => void;
+  onRetry: () => void;
 }
 
-function ToastCard({ toast, onDismiss, onUndo }: ToastCardProps) {
+function ToastCard({ toast, onDismiss, onUndo, onRetry }: ToastCardProps) {
   const [paused, setPaused] = useState(false);
   const [delay, setDelay] = useState(TOAST_MS);
 
@@ -48,17 +49,30 @@ function ToastCard({ toast, onDismiss, onUndo }: ToastCardProps) {
           Undo
         </button>
       )}
+      {toast.retry && (
+        <button type="button" onClick={onRetry}>
+          Retry
+        </button>
+      )}
       <i className={`tbar${paused ? ' paused' : ''}`} aria-hidden="true" />
     </motion.div>
   );
 }
 
 export function ToastHost({ toaster }: { toaster: Toaster }) {
-  const { toast, dismiss, undo } = toaster;
+  const { toast, dismiss, undo, retry } = toaster;
   return (
     <div className="toasts" aria-live="polite">
       <AnimatePresence initial={false} mode="popLayout">
-        {toast && <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} onUndo={undo} />}
+        {toast && (
+          <ToastCard
+            key={toast.id}
+            toast={toast}
+            onDismiss={dismiss}
+            onUndo={undo}
+            onRetry={retry}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

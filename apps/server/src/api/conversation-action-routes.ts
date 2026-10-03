@@ -22,18 +22,21 @@ import { allowedCommands } from '../agents/acp/slash-commands.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import { openChatCommands } from '../persistence/session-commands.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
+import { DEFAULT_SETTLE_MS, stopConversationWork } from '../workflow/stop-conversation.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ConversationActionDeps {
   db: Db;
   workspaceId: string;
   terminals: Pick<TerminalSessions, 'endChat'>;
+  deleteSettleMs?: number;
 }
 
 export function conversationActionRoutes({
   db,
   workspaceId,
   terminals,
+  deleteSettleMs = DEFAULT_SETTLE_MS,
 }: ConversationActionDeps): Router {
   const router = Router();
 
@@ -80,6 +83,7 @@ export function conversationActionRoutes({
 
   router.delete('/conversations/:id', async (req, res) => {
     const id = paramId(req);
+    await stopConversationWork(db, id, deleteSettleMs);
     const workdirs = await conversationWorkdirs(db, id);
     terminals.endChat(id);
     await releaseConversation(db, id, 'deleted');
