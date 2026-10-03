@@ -5,7 +5,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
 import {
   NORMAL,
   TRIVIAL,
