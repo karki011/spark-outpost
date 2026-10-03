@@ -198,7 +198,7 @@ test('a 5,000 file change set with a 20,000 line file opens and scrolls without 
   await expect(chip).toBeFocused();
 });
 
-test('the changes chip opens the drawer by shortcut, resizes and hands focus back', async ({
+test('the changes chip opens the drawer by shortcut, resizes and hands focus back @packaged', async ({
   page,
 }) => {
   test.setTimeout(120_000);

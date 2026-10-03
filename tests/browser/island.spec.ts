@@ -208,7 +208,9 @@ test('the approval card takes Y only once focused', async ({ page }) => {
     .toBe('denied');
 });
 
-test('quick chat starts a real chat with the project and autonomy chips', async ({ page }) => {
+test('quick chat starts a real chat with the project and autonomy chips @packaged', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await openIsland(page);
   await page.keyboard.press('Alt+Space');
@@ -243,7 +245,7 @@ test('quick chat starts a real chat with the project and autonomy chips', async 
   await shot(page, 'reply');
 });
 
-test('sessions search, open one and ask for an update without touching the agent', async ({
+test('sessions search, open one and ask for an update without touching the agent @packaged', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });

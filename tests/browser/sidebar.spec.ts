@@ -99,7 +99,7 @@ test('archives with undo and moves chats between the Active and History tabs', a
   await expect(tabs.getByRole('tab', { name: /History/ })).toHaveText('History 1');
 });
 
-test('renames inline, pins to the top, and deletes after a confirmation with undo', async ({
+test('renames inline, pins to the top, and deletes after a confirmation with undo @packaged', async ({
   page,
 }) => {
   await seedChats([{ title: 'Newest chat' }, { title: 'Second chat' }, { title: 'Third chat' }]);

@@ -71,7 +71,7 @@ test('Home moves a chat to Needs you when it finishes, without polling', async (
   expect(listRequests() - before).toBeLessThanOrEqual(2);
 });
 
-test('live updates reconnect after the server drops them and catch up on missed changes', async ({
+test('live updates reconnect after the server drops them and catch up on missed changes @packaged', async ({
   page,
 }) => {
   test.setTimeout(60_000);

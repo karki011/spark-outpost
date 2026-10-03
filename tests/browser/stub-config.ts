@@ -35,6 +35,8 @@ export const SERVER_LOG_DIR = path.join(os.tmpdir(), `spark-outpost-server-logs-
 export const STUB_PORT = base ?? 4399;
 export const API_PORT = base === null ? 4319 : base + 1;
 export const WEB_PORT = base === null ? 5174 : base + 2;
+export const PACKAGED = process.env.SPARK_PACKAGED === '1';
+export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
 export const FAKE_CODEX_STATE = path.join(
   os.tmpdir(),

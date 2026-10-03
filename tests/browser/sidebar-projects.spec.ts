@@ -62,7 +62,7 @@ test('renames a project from its menu', async ({ page }) => {
   await expect(sidebar(page).getByText('live-crew')).toHaveCount(0);
 });
 
-test('removes a project after one confirmation and undo brings its chats back', async ({
+test('removes a project after one confirmation and undo brings its chats back @packaged', async ({
   page,
 }) => {
   await openChats(page);
