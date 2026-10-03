@@ -15,7 +15,12 @@ describe('live step lines', () => {
     expect(line('Read /Users/ada/work/app/src/types.ts:12')).toBe('Reading · types.ts');
     expect(line('Write `src/lib/a.ts`')).toBe('Editing · a.ts');
     expect(line('Thinking')).toBe('Thinking…');
-    expect(line('grep "invoice" src/lib')).toBe('Searching · "invoice" src/lib');
+    expect(line('grep "invoice" src/lib')).toBe('Searching · for invoice in lib');
+  });
+
+  it('names MCP tools in plain words', () => {
+    expect(line('mcp__spark__spark_pull_requests')).toBe('Checking pull requests');
+    expect(line('mcp__github__create_pull_request')).toBe('Using create pull request (github)');
   });
 
   it('marks commands as code and keeps the full text for the tooltip', () => {

@@ -61,13 +61,13 @@ To see what Jev cost, open a chat's **Work** panel: the totals add "Jev" with it
 
 ## Not connected or not asked
 
-The why-lines under a reply and in the model picker say how Jev took part:
+The chip on each reply (such as **Question**) and the model picker say how Jev took part:
 
 - **Jev not connected**: there's no Jev key, so the rules decided.
 - **Not asked**, for example "pinned, no Jev call": Jev is connected, but this step didn't need it. A model you picked yourself, destructive work that always goes to the top model, and a single possible model all skip Jev.
 - **Jev timed out** or **Jev failed**: Spark asked, got no answer and used the fixed rules.
 
-> **Tip:** Hover the line under a reply to see each of Jev's calls, how sure it was and what it cost.
+> **Tip:** Hover or focus the chip next to the agent's name on a reply to see each of Jev's calls, how sure it was and what it cost.
 
 ## When the Spark switch is off
 

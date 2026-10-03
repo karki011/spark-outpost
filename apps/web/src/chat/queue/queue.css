@@ -4,7 +4,7 @@
 }
 
 .qstrip {
-  max-width: 700px;
+  max-width: var(--chat-col, 700px);
   margin: 0 auto 6px;
   padding: 6px 8px 4px;
   border: 1px solid var(--line);

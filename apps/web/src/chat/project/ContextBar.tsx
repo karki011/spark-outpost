@@ -88,6 +88,9 @@ export function ContextBar({ conversationId, repos, popover, autonomy }: Context
           <ChevronIcon />
         </button>
         {projectTip.tooltip}
+        {!primary && (
+          <span className="ctx-unlinked">Not linked, so the agent can't read files</span>
+        )}
         {primary && current && (
           <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
         )}

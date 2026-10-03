@@ -218,6 +218,18 @@ describe('ACP session update mapping', () => {
     expect(describeTool('  ')).toBe('Using a tool');
   });
 
+  it('names MCP tools in plain words and shows commands as code', () => {
+    expect(describeTool('mcp__spark__spark_pull_requests', 'other')).toBe('Checking pull requests');
+    expect(describeTool('mcp.github.create_pull_request', 'execute')).toBe(
+      'Using create pull request (github)',
+    );
+    expect(describeTool('pnpm test --filter web', 'execute')).toBe('`pnpm test --filter web`');
+    expect(describeTool('Terminal', 'execute')).toBe('Terminal');
+    expect(describeTool('grep -n "useQuery" /work/apps/web/src', 'search')).toBe(
+      'Search for `useQuery` in `src`',
+    );
+  });
+
   it('passes each plan through whole, with priority and in-progress status', () => {
     const mapper = createUpdateMapper();
     mapper.map({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'a' } });

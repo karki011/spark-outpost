@@ -9,7 +9,6 @@
   margin-bottom: 0;
 }
 .md p {
-  max-width: 75ch;
   margin: 0 0 0.8em;
 }
 .md h1,
@@ -32,7 +31,6 @@
 }
 .md ul,
 .md ol {
-  max-width: 75ch;
   margin: 0 0 0.8em;
   padding-left: 1.4em;
 }

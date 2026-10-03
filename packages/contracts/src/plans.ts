@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Category } from './categories.ts';
 
 export const PLAN_DOCUMENT_MAX_LENGTH = 40_000;
 
@@ -57,11 +58,13 @@ export const PLAN_SOURCE_LABELS: Record<PlanDocumentSource, string> = {
   user: 'saved by you',
 };
 
-const LIST_ITEM = /^\s{0,3}(?:\d+[.)]|[-*+])\s+\S/;
+const NUMBERED_STEP = /^\s{0,3}\d+[.)]\s+\S/;
 const PLAN_HEADING = /^\s{0,3}#{1,4}\s.*\b(plan|steps|approach)\b/im;
+const ANSWER_CATEGORIES: ReadonlySet<Category> = new Set(['question', 'research', 'review']);
 
-export function looksLikePlan(text: string): boolean {
+export function looksLikePlan(text: string, category?: Category | null): boolean {
   if (PLAN_HEADING.test(text)) return true;
-  const items = text.split('\n').filter((line) => LIST_ITEM.test(line));
-  return items.length >= 3;
+  if (category && ANSWER_CATEGORIES.has(category)) return false;
+  const steps = text.split('\n').filter((line) => NUMBERED_STEP.test(line));
+  return steps.length >= 3;
 }

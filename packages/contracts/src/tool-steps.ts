@@ -1,0 +1,127 @@
+export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
+  spark_providers: 'Checking AI providers',
+  spark_connectors: 'Checking connectors',
+  spark_settings: 'Reading Spark settings',
+  spark_projects: 'Looking at projects',
+  spark_map: 'Reading the project map',
+  spark_chats: 'Looking at chats',
+  spark_chat: 'Reading a chat',
+  spark_chat_history: 'Reading chat history',
+  spark_attention: 'Checking what needs you',
+  spark_run: 'Checking run status',
+  spark_laws: 'Reading the universal laws',
+  spark_task: 'Reading the task and plan',
+  spark_audit: 'Reading the audit',
+  spark_tickets: 'Looking at tickets',
+  spark_analytics: 'Reading analytics',
+  spark_activity: 'Checking recent activity',
+  spark_brief: 'Reading the morning brief',
+  spark_spend: 'Checking spend',
+  spark_models: 'Reading model cards',
+  spark_terminals: 'Checking terminals',
+  spark_sparks: 'Looking at Sparks',
+  spark_guide: 'Reading the Spark guide',
+  spark_docs: 'Reading the user guide',
+  spark_pull_requests: 'Checking pull requests',
+  spark_pr: 'Reading a pull request',
+  spark_pr_follow_up: 'Checking PR follow-up',
+  spark_create_ticket: 'Creating a ticket',
+  spark_comment_ticket: 'Commenting on a ticket',
+  spark_transition_ticket: 'Moving a ticket',
+  spark_assign_ticket: 'Assigning a ticket',
+  spark_open_pr: 'Opening a PR',
+  spark_pr_follow_up_round: 'Requesting a PR follow-up round',
+  spark_create_spark: 'Adding a Spark',
+  spark_update_spark: 'Changing a Spark',
+};
+
+const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
+  Agent: 'Starting a subagent',
+  Task: 'Starting a subagent',
+  Bash: 'Running a command',
+  BashOutput: 'Checking command output',
+  KillBash: 'Stopping a command',
+  KillShell: 'Stopping a command',
+  Read: 'Reading a file',
+  Write: 'Writing a file',
+  Edit: 'Editing a file',
+  MultiEdit: 'Editing a file',
+  NotebookEdit: 'Editing a notebook',
+  Glob: 'Finding files',
+  Grep: 'Searching files',
+  WebFetch: 'Fetching a page',
+  WebSearch: 'Searching the web',
+  TodoWrite: 'Updating the to-do list',
+  ToolSearch: 'Loading tools',
+  Skill: 'Loading a skill',
+};
+
+export interface McpTool {
+  server: string;
+  tool: string;
+}
+
+const CLAUDE_MCP = /^mcp__(.+?)__(.+)$/;
+const CODEX_MCP = /^mcp\.([^.\s]+)\.(\S+)$/;
+
+export function parseMcpTool(title: string): McpTool | null {
+  const trimmed = title.trim();
+  const match = CLAUDE_MCP.exec(trimmed) ?? CODEX_MCP.exec(trimmed);
+  if (!match) return null;
+  return { server: match[1]!, tool: match[2]! };
+}
+
+export function humanizeToolName(name: string): string {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_\-.]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function mcpStep({ server, tool }: McpTool): string {
+  const spark = SPARK_TOOL_STEPS[tool];
+  if (spark) return spark;
+  return `Using ${humanizeToolName(tool)} (${humanizeToolName(server)})`;
+}
+
+const GREP_TITLE = /^grep\b.*"([^"]+)"(?:\s+(\S+))?\s*$/;
+
+function baseName(path: string): string {
+  return (
+    path
+      .replace(/[\\/]+$/, '')
+      .split(/[\\/]/)
+      .at(-1) || path
+  );
+}
+
+function grepStep(title: string): string | null {
+  const match = GREP_TITLE.exec(title);
+  if (!match) return null;
+  const where = match[2] ? ` in \`${baseName(match[2])}\`` : '';
+  return `Search for \`${match[1]}\`${where}`;
+}
+
+const FETCH_TITLE = /^Fetch https?:\/\/(?:[^@/?#\s]*@)?([^/?#:\s]+)\S*$/;
+
+function fetchStep(title: string): string | null {
+  const host = FETCH_TITLE.exec(title)?.[1];
+  return host ? `Fetch ${host}` : null;
+}
+
+export function friendlyStep(title: string): string {
+  const trimmed = title.trim();
+  const mcp = parseMcpTool(trimmed);
+  if (mcp) return mcpStep(mcp);
+  const named = SPARK_TOOL_STEPS[trimmed] ?? AGENT_TOOL_STEPS[trimmed];
+  if (named) return named;
+  return grepStep(trimmed) ?? fetchStep(trimmed) ?? snakeStep(trimmed);
+}
+
+const SNAKE_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
+
+function snakeStep(title: string): string {
+  return SNAKE_NAME.test(title) ? `Using ${humanizeToolName(title)}` : title;
+}

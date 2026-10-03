@@ -4,7 +4,7 @@ import { api, queryKeys } from '../api/client.ts';
 import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
 import { openMemberChat } from './member-chat-store.ts';
 import { AgentTv } from './AgentTv.tsx';
-import { agentAnchor, approvalAnchor, lastCrewOrchestration, tvCrew } from './conversation-crew.ts';
+import { agentAnchor, approvalAnchor, tvCrew, tvOrchestration } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { JEV_ID } from './crew-projection.ts';
@@ -27,7 +27,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   });
   const source = sourceId ? detail.data : undefined;
   const agents = tvCrew(source);
-  const orchestration = lastCrewOrchestration(source);
+  const orchestration = tvOrchestration(source);
   const waiting = orchestration?.pendingCheckpoint ?? null;
   const elsewhere = sourceId !== null && sourceId !== activeId;
   const asking = agents.some((agent) => agent.state === 'waiting');

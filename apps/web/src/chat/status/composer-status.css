@@ -3,7 +3,7 @@
   padding: 0 16px;
 }
 .cs-wrap {
-  max-width: 700px;
+  max-width: var(--chat-col, 700px);
   margin: 0 auto;
   overflow: hidden;
 }

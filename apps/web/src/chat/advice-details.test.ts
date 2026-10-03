@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AdviceSummary, IntakeAnswer } from '@spark-outpost/contracts';
-import { adviceDetails, jevMissing } from './AdviceLine.tsx';
+import { adviceDetails, jevMissing } from './AdviceChip.tsx';
 
 const rules: IntakeAnswer = {
   intent: 'bug_fix',

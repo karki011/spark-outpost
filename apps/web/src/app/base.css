@@ -94,9 +94,11 @@ svg {
 }
 
 .main {
+  --chat-col: clamp(700px, 100cqi - 360px, 900px);
   position: relative;
   flex: 1;
   min-width: 0;
+  container: main / inline-size;
   display: flex;
   flex-direction: column;
   margin: 8px 8px 8px 0;

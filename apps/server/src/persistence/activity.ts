@@ -1,4 +1,4 @@
-import type { ActivityStep } from '@spark-outpost/contracts';
+import { friendlyStep, type ActivityStep } from '@spark-outpost/contracts';
 
 export interface StepEventRow {
   run_id: string;
@@ -14,16 +14,17 @@ interface OpenQueue {
 export function activityFromEvents(rows: readonly StepEventRow[]): Record<string, ActivityStep[]> {
   const activity: Record<string, ActivityStep[]> = {};
   const openByRun = new Map<string, Map<string, OpenQueue>>();
-  for (const row of rows) {
+  for (const { name: raw, ...row } of rows) {
+    const name = friendlyStep(raw);
     const steps = (activity[row.run_id] ??= []);
     const open = openQueues(openByRun, row.run_id);
     if (row.type === 'STEP_STARTED') {
-      const step = { name: row.name, done: false };
+      const step = { name, done: false };
       steps.push(step);
       enqueue(open, step);
       continue;
     }
-    finishOldest(open.get(row.name));
+    finishOldest(open.get(name));
   }
   return activity;
 }

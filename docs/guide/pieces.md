@@ -71,7 +71,7 @@ When the pieces are joined, the reply has one line per piece: what its Builder b
 
 ## Watch the crew in Agent TV
 
-Select **Agent TV** in the chat to see the Coordinator in the middle and the Builders around it. **Stage** shows them as a map, **List** as rows. Select a Builder to see its piece, model and state, or **Message** to tell just that Builder something. See [Message a crew member](spark-crew.md#message-a-crew-member).
+Select **Agent TV** in the chat header to see the Coordinator in the middle and the Builders around it. It keeps showing the last crew while you ask follow-up questions. **Stage** shows them as a map, **List** as rows. Select a Builder to see its piece, model and state, or **Message** to tell just that Builder something. See [Message a crew member](spark-crew.md#message-a-crew-member).
 
 ## One PR or separate PRs
 

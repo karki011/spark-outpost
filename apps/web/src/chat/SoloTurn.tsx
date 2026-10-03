@@ -34,7 +34,7 @@ import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
-import { WorkLog } from './WorkLog.tsx';
+import { StepList, StepToggle, turnHeading, useStepLog } from './WorkLog.tsx';
 
 const liveStates: Record<LiveRunStatus, TurnState> = {
   connecting: 'working',
@@ -45,8 +45,8 @@ const liveStates: Record<LiveRunStatus, TurnState> = {
 };
 
 const liveMoods: Record<LiveRunStatus, string> = {
-  connecting: 'thinking',
-  running: 'thinking',
+  connecting: 'working',
+  running: 'working',
   succeeded: 'done',
   failed: 'hit a problem',
   cancelled: 'stopped',
@@ -143,6 +143,8 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
 
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
+  const seconds = finished ? runSeconds(run) : null;
+  const log = useStepLog(steps, state);
   const changeTask =
     finished && turnRuns.some((candidate) => candidate.mode === 'do')
       ? taskForRuns(detail.tasks, changeRunIds)
@@ -154,9 +156,15 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       label={label}
       state={state}
       category={run.category}
+      advice={detail.advice?.[run.id]}
       following={child?.following ?? run.following}
+      status={log ? <StepToggle log={log} label={turnHeading(log.views, state, seconds)} /> : null}
     >
-      <WorkLog steps={steps} state={state} seconds={finished ? runSeconds(run) : null} />
+      {log?.open && (
+        <div className="steps open">
+          <StepList log={log} />
+        </div>
+      )}
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {approvals.map((approval) =>
@@ -167,14 +175,19 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
         ),
       )}
       {text && <Markdown text={text} streaming={leads && active} />}
-      {working && !waiting && !text && (
+      {working && !waiting && !text && !log && (
         <span className="dots" role="status" aria-label="Working">
           <i />
           <i />
           <i />
         </span>
       )}
-      <ReplyPlanAction detail={detail} message={assistantMessage} finished={finished} />
+      <ReplyPlanAction
+        detail={detail}
+        message={assistantMessage}
+        finished={finished}
+        category={run.category}
+      />
       {finished && <MakeChange run={run} detail={detail} />}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       {error && <p className="error-line">{error}</p>}

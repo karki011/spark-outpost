@@ -12,11 +12,14 @@
 }
 
 .col {
-  max-width: 700px;
+  --overhang: clamp(0px, (100cqi - var(--chat-col, 700px)) / 2 - 32px, 96px);
+  max-width: var(--chat-col, 700px);
   margin: 0 auto;
 }
 
 .col > section {
+  margin-inline: calc(-1 * var(--overhang));
+  padding-inline: var(--overhang);
   content-visibility: auto;
   contain-intrinsic-size: auto 360px;
 }
@@ -188,7 +191,8 @@
   transition: transform 0.2s var(--out);
 }
 
-.steps.open .chev {
+.steps.open .chev,
+.steps-head[aria-expanded='true'] .chev {
   transform: rotate(90deg);
 }
 
@@ -315,4 +319,51 @@
   .thread-loading {
     animation-duration: 0.01s;
   }
+}
+
+.col .md > .md-code,
+.col .md > .md-table {
+  margin-inline: calc(-1 * var(--overhang));
+}
+
+.ai-head .steps-head {
+  min-height: 24px;
+  padding: 0;
+  gap: 4px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.ai-head .steps-head:hover,
+.ai-head .steps-head[aria-expanded='true'] {
+  color: var(--muted);
+}
+
+.ai-head + .steps {
+  margin-top: 2px;
+}
+
+.col > section:not(:last-child) .turn-foot > :is(.run-meta, .msg-actions) {
+  opacity: 0;
+  transition: opacity 0.15s var(--out);
+}
+
+.col > section:hover .turn-foot > :is(.run-meta, .msg-actions),
+.col > section:focus-within .turn-foot > :is(.run-meta, .msg-actions) {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .col > section:not(:last-child) .turn-foot > :is(.run-meta, .msg-actions) {
+    opacity: 1;
+  }
+}
+
+.mood-dot {
+  margin: 0 -4px;
+  color: var(--faint);
+}
+
+.ai-head .steps-head .chev {
+  order: 1;
 }
