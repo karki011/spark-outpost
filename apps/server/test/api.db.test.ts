@@ -114,6 +114,17 @@ describe('request validation and local protection', () => {
       .expect(415);
   });
 
+  it('accepts a bodyless DELETE the way the packaged app sends it', async () => {
+    const conversationId = randomUUID();
+    await post('/api/conversations', { id: conversationId }).expect(201);
+    await request(app)
+      .delete(`/api/conversations/${conversationId}`)
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .expect(204);
+    await get(`/api/conversations/${conversationId}`).expect(404);
+  });
+
   it('rejects invalid bodies and unknown conversations', async () => {
     await post('/api/conversations', { id: 'not-a-uuid' }).expect(400);
     await request(app).get(`/api/conversations/${randomUUID()}`).set(LOCAL_HEADERS).expect(404);

@@ -32,7 +32,7 @@ export function localRequestGuard(port: number, allowedOrigins: readonly string[
       next();
       return;
     }
-    if (MUTATING_METHODS.has(req.method) && !req.is('application/json')) {
+    if (MUTATING_METHODS.has(req.method) && req.is('application/json') === false) {
       res.status(415).json({ error: 'Send JSON with Content-Type: application/json.' });
       return;
     }
