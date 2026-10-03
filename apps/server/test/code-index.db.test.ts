@@ -9,6 +9,7 @@ import { removeProject } from '../src/projects/project-removal.ts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { evictBeyondCap, expireIndexes } from '../src/codescan/retention.ts';
 import { createCodeScanner } from '../src/codescan/scanner.ts';
+import { declarationsIn } from '../src/codescan/scan-store.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -152,6 +153,60 @@ describe('code index cache', () => {
       'SELECT count(*)::int AS projects FROM code_index_projects',
     );
     expect(rows[0]?.projects).toBe(1);
+  });
+
+  it('stores the line range of every declaration next to its name', async () => {
+    await put(
+      'src/data/load-series.ts',
+      'export function loadSeries(days: number) {\n  return [days];\n}\n\nexport const SERIES_LIMIT = 30;\n',
+    );
+    await indexProject(t.db, root);
+    const { rows } = await t.db.query<{ defs: number; starts: number[]; ends: number[] }>(
+      `SELECT cardinality(def_ids) AS defs, def_start_lines AS starts, def_end_lines AS ends
+       FROM code_index_files WHERE path = 'src/data/load-series.ts'`,
+    );
+    expect(rows[0]).toEqual({ defs: 2, starts: [1, 5], ends: [3, 5] });
+    const found = await declarationsIn(t.db, root, ['src/data/load-series.ts', 'package.json']);
+    expect(found.get('package.json')).toEqual([]);
+    expect(found.get('src/data/load-series.ts')).toEqual([
+      { name: 'loadSeries', kind: 'function', startLine: 1, endLine: 3, refFiles: 1 },
+      { name: 'SERIES_LIMIT', kind: 'variable', startLine: 5, endLine: 5, refFiles: 0 },
+    ]);
+  });
+
+  it('accepts rows written before line ranges and rebuilds them once', async () => {
+    await indexProject(t.db, root, { parserVersion: 'before-ranges' });
+    await t.db.query('UPDATE code_index_files SET def_start_lines = NULL, def_end_lines = NULL');
+    const old = await declarationsIn(t.db, root, ['src/data/load-series.ts']);
+    expect(old.get('src/data/load-series.ts')).toBeNull();
+
+    const upgraded = await indexProject(t.db, root);
+    expect(upgraded).toMatchObject({ rebuilt: 'the parser version changed', parsed: 8 });
+    const { rows } = await t.db.query<{ missing: number }>(
+      `SELECT count(*)::int AS missing FROM code_index_files
+       WHERE def_start_lines IS NULL OR cardinality(def_start_lines) <> cardinality(def_ids)
+         OR cardinality(def_end_lines) <> cardinality(def_ids)`,
+    );
+    expect(rows[0]?.missing).toBe(0);
+    expect(await indexProject(t.db, root)).toMatchObject({ rebuilt: null, parsed: 0 });
+  });
+
+  it('ignores stored ranges that do not line up with the declarations', async () => {
+    await indexProject(t.db, root);
+    await t.db.query(
+      `UPDATE code_index_files SET def_start_lines = '{9}', def_end_lines = '{2}'
+       WHERE path = 'src/data/load-series.ts'`,
+    );
+    await t.db.query(
+      `UPDATE code_index_files SET def_start_lines = '{1,2,3}'
+       WHERE path = 'src/chart/line-chart.tsx'`,
+    );
+    const found = await declarationsIn(t.db, root, [
+      'src/data/load-series.ts',
+      'src/chart/line-chart.tsx',
+    ]);
+    expect(found.get('src/data/load-series.ts')).toEqual([]);
+    expect(found.get('src/chart/line-chart.tsx')).toBeNull();
   });
 
   it('keeps only the most recently opened projects under the global cap and expires old ones', async () => {

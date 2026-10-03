@@ -107,6 +107,8 @@ function toRow(
     has_test: context.tested.has(result.path),
     def_ids: result.definitions.map((definition) => nameId(context, definition.name, fresh)),
     def_kinds: result.definitions.map((definition) => DEFINITION_KINDS.indexOf(definition.kind)),
+    def_start_lines: result.definitions.map((definition) => definition.startLine),
+    def_end_lines: result.definitions.map((definition) => definition.endLine),
     ref_ids: result.references.map((name) => nameId(context, name, fresh)),
     imports: result.imports,
     endpoints: result.endpoints,

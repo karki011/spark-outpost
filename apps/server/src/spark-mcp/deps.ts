@@ -1,3 +1,4 @@
+import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import type { Append } from '../workflow/agent-turn.ts';
@@ -16,6 +17,7 @@ export interface SparkToolDeps {
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
   serverSpendCapUsd: number | null;
   parallelBuilders?: boolean;
+  codeScan?: Pick<CodeScanner, 'scan'>;
   branchPrefix?: string;
   timeZone?: string;
   now?: () => Date;

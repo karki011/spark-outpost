@@ -103,6 +103,73 @@ describe('extractSymbols', () => {
     expect(inSource.definitions).toHaveLength(3);
   });
 
+  it('records the first and last line of each declaration', async () => {
+    const source = [
+      'import { Button } from "./ui";',
+      '',
+      'export interface ChartProps {',
+      '  size: number;',
+      '}',
+      '',
+      'export const loadChart = async (',
+      '  props: ChartProps,',
+      ') => {',
+      '  return Button.render(props);',
+      '};',
+      '',
+      'export class Widget {',
+      '  paint() {',
+      '    return 1;',
+      '  }',
+      '}',
+    ].join('\n');
+    const symbols = await extractSymbols('typescript', source);
+    const ranges = Object.fromEntries(
+      symbols.definitions.map((definition) => [
+        definition.name,
+        [definition.startLine, definition.endLine],
+      ]),
+    );
+    expect(ranges).toEqual({
+      ChartProps: [3, 5],
+      loadChart: [7, 11],
+      Widget: [13, 17],
+      paint: [14, 16],
+    });
+  });
+
+  it('covers the whole function for declarator-style languages', async () => {
+    const cpp = await extractSymbols(
+      'cpp',
+      'int compute(int x) {\n  return helper(x);\n}\nint Node::size() {\n  return 1;\n}\n',
+    );
+    expect(
+      cpp.definitions.map((definition) => [
+        definition.name,
+        definition.startLine,
+        definition.endLine,
+      ]),
+    ).toEqual([
+      ['compute', 1, 3],
+      ['size', 4, 6],
+    ]);
+    const python = await extractSymbols(
+      'python',
+      'class Loader:\n    def load(self):\n        return read_file()\n\nLIMIT = 3\n',
+    );
+    expect(
+      python.definitions.map((definition) => [
+        definition.name,
+        definition.startLine,
+        definition.endLine,
+      ]),
+    ).toEqual([
+      ['Loader', 1, 3],
+      ['load', 2, 3],
+      ['LIMIT', 5, 5],
+    ]);
+  });
+
   it('skips names shorter than three characters', async () => {
     const symbols = await extractSymbols('typescript', 'const ab = cd(ef);');
     expect(symbols.definitions).toEqual([]);

@@ -33,6 +33,8 @@ export interface FileRow {
   has_test: boolean;
   def_ids: number[];
   def_kinds: number[];
+  def_start_lines: number[];
+  def_end_lines: number[];
   ref_ids: number[];
   imports: string[];
   endpoints: Endpoint[];
@@ -156,19 +158,22 @@ export async function upsertFiles(
   if (rows.length === 0) return;
   await db.query(
     `INSERT INTO code_index_files (project_id, path, size, mtime_ms, content_hash, parser_version,
-       language, package, lines, has_test, def_ids, def_kinds, ref_ids, imports, endpoints)
+       language, package, lines, has_test, def_ids, def_kinds, def_start_lines, def_end_lines,
+       ref_ids, imports, endpoints)
      SELECT $1, r.path, r.size, r.mtime_ms, r.content_hash, r.parser_version, r.language,
-       r.package, r.lines, r.has_test, r.def_ids, r.def_kinds, r.ref_ids, r.imports, r.endpoints
+       r.package, r.lines, r.has_test, r.def_ids, r.def_kinds, r.def_start_lines,
+       r.def_end_lines, r.ref_ids, r.imports, r.endpoints
      FROM jsonb_to_recordset($2::jsonb) AS r (path text, size integer, mtime_ms bigint,
        content_hash text, parser_version text, language text, package text, lines integer,
-       has_test boolean, def_ids integer[], def_kinds smallint[], ref_ids integer[],
-       imports text[], endpoints jsonb)
+       has_test boolean, def_ids integer[], def_kinds smallint[], def_start_lines integer[],
+       def_end_lines integer[], ref_ids integer[], imports text[], endpoints jsonb)
      ON CONFLICT (project_id, path) DO UPDATE SET size = EXCLUDED.size,
        mtime_ms = EXCLUDED.mtime_ms, content_hash = EXCLUDED.content_hash,
        parser_version = EXCLUDED.parser_version, language = EXCLUDED.language,
        package = EXCLUDED.package, lines = EXCLUDED.lines, has_test = EXCLUDED.has_test,
-       def_ids = EXCLUDED.def_ids, def_kinds = EXCLUDED.def_kinds, ref_ids = EXCLUDED.ref_ids,
-       imports = EXCLUDED.imports, endpoints = EXCLUDED.endpoints`,
+       def_ids = EXCLUDED.def_ids, def_kinds = EXCLUDED.def_kinds,
+       def_start_lines = EXCLUDED.def_start_lines, def_end_lines = EXCLUDED.def_end_lines,
+       ref_ids = EXCLUDED.ref_ids, imports = EXCLUDED.imports, endpoints = EXCLUDED.endpoints`,
     [projectId, JSON.stringify(rows)],
   );
 }

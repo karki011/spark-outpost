@@ -40,7 +40,11 @@ the web app draws it (see [The UI page](#the-ui-page)).
 …)`, routers with `prefix`, Go groups, OpenAPI `basePath`), client calls (`fetch`, axios/ky/…,
    `useSWR`, API wrappers, template and base-URL calls, Python `requests`/`httpx`, Go `http.Get`),
    OpenAPI/Swagger routes, GraphQL schema fields and operations, and env keys. The parser version
-   moved to `…+imports@1`, which rebuilds every index once.
+   moved to `…+imports@1`, which rebuilds every index once. Each definition also keeps the first
+   and last line of its declaration (`def_start_lines`, `def_end_lines`, parallel to `def_ids`;
+   the declaration is the node the name belongs to, climbing out of declarators so
+   `const x = () => {…}` and C++ `int Node::size() {…}` cover the whole statement). The parser
+   version moved to `…+ranges@1`, which rebuilds every index once more.
 2. **Graph** (`map/resolve.ts`, `map/resolver-config.ts`, `map/graph.ts`). Imports resolve
    against the indexed file set: relative paths with extension, `index` and `.js → .ts` probing;
    tsconfig/jsconfig `paths` and `baseUrl` (JSONC, relative `extends`); workspace packages by
@@ -111,9 +115,12 @@ the web app draws it (see [The UI page](#the-ui-page)).
    - **env**: the same env key used on both sides after dropping public prefixes (`VITE_`,
      `NEXT_PUBLIC_`, `REACT_APP_`, …), excluding generic keys (0.4).
 
-## Storage (migrations 0072, 0075, 0078)
+## Storage (migrations 0072, 0075, 0078, 0107)
 
 - `code_index_files.imports text[]`, `code_index_files.endpoints jsonb`.
+- 0107 adds `code_index_files.def_start_lines int[]` and `def_end_lines int[]` (nullable: rows
+  written before it stay valid and read as "no line ranges" until the parser-version rebuild
+  replaces them).
 - `map_repos`: one row per repo root: status (`queued`, `building`, `paused`, `ready`,
   `failed`), phase and progress, `rules_version` (`MAP_RULES_VERSION`), source and built
   signatures, built commit, counts, per-phase timings and Jev totals, error.

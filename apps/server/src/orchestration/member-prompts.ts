@@ -95,7 +95,7 @@ export function agreedPlanText(s: Session): Promise<string | null> {
 
 export const RESEARCH_BRIEF = [
   '## Research',
-  'This is a research request. Use read-only tools and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
+  'This is a research request. Use read-only tools, `spark_find` to locate the code (ranked files with declarations as name@startLine-endLine; a hint, not a limit) and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
   'Answer with your findings, each tied to the files and lines you read, then a short list of suggested next steps.',
 ].join('\n');
 

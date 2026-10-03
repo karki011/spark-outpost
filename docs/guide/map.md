@@ -43,4 +43,10 @@ The Map opens in **Tree** on a computer and in **Outline** on a phone. It rememb
 
 > **Tip:** In **Tree**, use the arrow keys to move between boxes, **Enter** to open one and **Esc** to close it. Press **F** to focus the selected file.
 
+## Let an agent find code
+
+Agents use the same index the Map is built from. Ask in a chat, for example "Where do we load orders?", and the agent calls `spark_find`. It gets a ranked list of files, each with its area and its main functions and classes with their line numbers, so it reads only those lines.
+
+The list never includes secret files or anything in `.sparkignore`, and it carries no file contents. If the index is still building, the agent is told the result is incomplete.
+
 **Next:** [Find files on the Map](map-find-and-filter.md)
