@@ -281,7 +281,6 @@ export async function runAgentTurn(
         ? await prepareDoRun({
             ...gateOptions,
             builder: writesCode(input.role),
-            worktreeAuto: input.chatWorktree === true,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,

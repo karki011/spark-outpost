@@ -3,10 +3,8 @@ import {
   ASK_AUTO_WHY,
   ASK_TURN_ASKS,
   NO_RUN_RULES,
-  PUSH_REASON,
   SAFE_READ_WHY,
   SECRET_REASON,
-  WORKTREE_AUTO_WHY,
   decide,
   type ApprovalRequest,
 } from './decide.ts';
@@ -143,32 +141,5 @@ describe('decide() in an Ask run at Review each step', () => {
 
   it.each(REPORTED_READS)('runs the read-only compound command %s', (command) => {
     expect(asking(command)).toEqual({ verdict: 'allow', by: 'level', why: SAFE_READ_WHY });
-  });
-});
-
-describe("decide() with Automatic in the chat's worktree", () => {
-  const auto = (target: ApprovalRequest) =>
-    decide('asks', target, NO_RUN_RULES, [], { worktreeAuto: true });
-
-  it('allows edits and commands without asking', () => {
-    const allowed = { verdict: 'allow', by: 'level', why: WORKTREE_AUTO_WHY };
-    expect(auto(edit)).toEqual(allowed);
-    expect(auto(run('pnpm build'))).toEqual(allowed);
-  });
-
-  it('lets installs follow the mode but still asks before pushing', () => {
-    expect(auto(run('pnpm add left-pad'))).toEqual({
-      verdict: 'allow',
-      by: 'level',
-      why: WORKTREE_AUTO_WHY,
-    });
-    expect(auto(run('git push origin feature'))).toEqual({ verdict: 'ask', reason: PUSH_REASON });
-  });
-
-  it('follows the mode without it', () => {
-    expect(decide('asks', run('pnpm build'), NO_RUN_RULES, [])).toEqual({
-      verdict: 'ask',
-      reason: null,
-    });
   });
 });

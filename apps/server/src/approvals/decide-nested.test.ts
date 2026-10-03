@@ -5,7 +5,6 @@ import {
   OUTSIDE_DELETE_REASON,
   OUTSIDE_WRITE_REASON,
   SECRET_REASON,
-  WORKTREE_AUTO_WHY,
   decide,
   type ApprovalRequest,
 } from './decide.ts';
@@ -140,8 +139,7 @@ function heredoc(head: string, tail = ''): string {
   return `${head} <<'EOF'\n${UNREADABLE_BODY}\nEOF${tail}`;
 }
 
-const inWorktree = (command: string) =>
-  decide('asks', run(command), NO_RUN_RULES, [], { worktreeAuto: true });
+const inAuto = (command: string) => decide('auto', run(command), NO_RUN_RULES, []);
 
 describe('decide() treats a heredoc written to a file as a normal write', () => {
   it.each([
@@ -149,12 +147,8 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     heredoc('cat > src/a.ts', `\n${heredoc('cat > test/a.test.ts')}\nnode --test test/a.test.ts`),
     heredoc('cat src/format.ts; cat > src/slug.ts'),
     heredoc('cat >> docs/notes.md'),
-  ])('allows it at Automatic in the worktree: %s', (command) => {
-    expect(inWorktree(command)).toEqual({
-      verdict: 'allow',
-      by: 'level',
-      why: WORKTREE_AUTO_WHY,
-    });
+  ])('allows it in Auto: %s', (command) => {
+    expect(inAuto(command)).toEqual({ verdict: 'allow', by: 'level' });
   });
 
   it('follows the mode outside a worktree', () => {
@@ -167,8 +161,8 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     heredoc('python3 -'),
     heredoc('node'),
     heredoc('cat > run.sh', '\nbash'),
-  ])('lets the text run as code at Automatic in the worktree: %s', (command) => {
-    expect(inWorktree(command)).toEqual({ verdict: 'allow', by: 'level', why: WORKTREE_AUTO_WHY });
+  ])('lets the text run as code in Auto: %s', (command) => {
+    expect(inAuto(command)).toEqual({ verdict: 'allow', by: 'level' });
   });
 
   it.each([
@@ -176,13 +170,13 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     heredoc('cat > ~/.zshrc'),
     heredoc('cat > ../other/file.ts'),
   ])('asks when the text lands outside the project: %s', (command) => {
-    expect(inWorktree(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_WRITE_REASON });
+    expect(inAuto(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_WRITE_REASON });
   });
 
   it('asks when the text lands somewhere Spark cannot resolve', async () => {
     const command = heredoc('cat > "$OUT"');
     const shell = await parseShell(command);
-    expect(decide('asks', run(command), NO_RUN_RULES, [], { worktreeAuto: true, shell })).toEqual({
+    expect(decide('auto', run(command), NO_RUN_RULES, [], { shell })).toEqual({
       verdict: 'ask',
       reason: OUTSIDE_WRITE_REASON,
     });

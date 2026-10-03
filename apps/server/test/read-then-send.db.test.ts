@@ -62,7 +62,6 @@ function gateFor(turn: Turn) {
     runId: turn.runId,
     provider: 'claude',
     mode: MODE_FOR[turn.level],
-    worktreeAuto: true,
     append: recordingAppend().append,
     waiters,
     pollMs: 20,

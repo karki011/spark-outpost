@@ -73,7 +73,6 @@ export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
 export const SAFE_READ_WHY = 'a read-only command inside the project';
-export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
 export const ASK_TURN_ASKS =
   'Spark asks before commands in a question turn, unless they only read files';
@@ -189,7 +188,6 @@ export interface DecideOptions {
   files?: FileLister;
   askRun?: boolean;
   askAutoWhy?: string | null;
-  worktreeAuto?: boolean;
   defaultBranch?: string | null;
   observed?: readonly string[];
   instructionGrants?: ReadonlySet<string>;
@@ -379,9 +377,6 @@ export function decide(
     return agentAsked(request, view, allowlist, options);
   }
   const pushes = request.command !== null && isGitPush(request.command);
-  if (options.worktreeAuto && !pushes) {
-    return { verdict: 'allow', by: 'level', why: WORKTREE_AUTO_WHY };
-  }
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
   if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {

@@ -77,8 +77,6 @@ async function doChat(page: Page) {
   await pickMode(page, 'Manual');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Manual$/);
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
-  await page.getByRole('button', { name: /^Model and effort/ }).click();
-  await panel.getByRole('tab', { name: /Permissions/ }).click();
   await shot(page, 'level-picker');
   await page.keyboard.press('Escape');
   return page.getByRole('textbox', { name: 'Message' });

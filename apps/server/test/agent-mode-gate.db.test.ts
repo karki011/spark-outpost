@@ -85,7 +85,7 @@ describe('the approval gate follows the agent mode', () => {
 
   it('no longer stops a Spark-gated Builder for code or installs it cannot see into', async () => {
     const run = await doRun(t, root);
-    const builder = gateFor(run.runId, { provider: 'fake', worktreeAuto: true });
+    const builder = gateFor(run.runId, { provider: 'fake' });
     const signal = new AbortController().signal;
     const answers = await Promise.all(
       BUILDER_STEPS.map((step, index) =>

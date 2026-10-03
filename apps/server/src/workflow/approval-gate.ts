@@ -72,7 +72,6 @@ export interface GateDeps {
   builder?: boolean;
   askRun?: boolean;
   askAuto?: () => Promise<string | null>;
-  worktreeAuto?: boolean;
   extraAllowlist?: () => readonly string[];
   append: Append;
   waiters: ApprovalWaiters;
@@ -377,7 +376,6 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       builder: deps.builder === true,
       askRun: deps.askRun === true,
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
-      worktreeAuto: deps.worktreeAuto === true,
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
       instructionGrants,

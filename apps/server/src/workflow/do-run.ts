@@ -31,7 +31,6 @@ export interface AskTurnOptions extends AskRunOptions {
 
 export interface DoRunOptions extends AskRunOptions {
   builder?: boolean | undefined;
-  worktreeAuto?: boolean | undefined;
   projectRoots: readonly string[];
   backupAlsoFor?: string | undefined;
   copyOf?: string | null | undefined;
@@ -91,7 +90,6 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
   return createApprovalGate({
     ...gateBasics(options),
     builder: options.builder === true,
-    worktreeAuto: options.worktreeAuto === true,
     copyOf: options.copyOf ?? null,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
