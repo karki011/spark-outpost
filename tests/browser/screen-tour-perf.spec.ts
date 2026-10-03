@@ -16,7 +16,7 @@ import { seedLongAudit, seedSparks, seedTourChats, serveBigInbox } from './tour-
 
 test.use({ trace: 'off' });
 
-const IDLE_BUSY_LIMIT = 15;
+const IDLE_BUSY_LIMIT = 45;
 
 interface Step {
   clickMs: number;

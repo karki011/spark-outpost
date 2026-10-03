@@ -19,6 +19,7 @@ import {
   type TicketView,
 } from './ticket-model.ts';
 import { RowLinks } from './RowLinks.tsx';
+import { useProgressiveCount } from '../ui/use-progressive-count.ts';
 import { TicketRow } from './TicketRow.tsx';
 
 interface InboxSectionsProps {
@@ -121,6 +122,15 @@ const snoozedEntries = (entries: readonly LiveTicket[]) =>
     .filter((entry) => entry.ticket.snooze)
     .toSorted((a, b) => (a.ticket.snooze?.until ?? '').localeCompare(b.ticket.snooze?.until ?? ''));
 
+function withinLimit<T extends { rows: readonly LiveTicket[] }>(groups: T[], limit: number) {
+  let left = limit;
+  return groups.map((group) => {
+    const shown = group.rows.slice(0, Math.max(0, left));
+    left -= shown.length;
+    return { ...group, shown };
+  });
+}
+
 export function InboxSections(props: InboxSectionsProps) {
   const { entries, view } = props;
   const sections =
@@ -129,13 +139,20 @@ export function InboxSections(props: InboxSectionsProps) {
       : SECTIONS.filter((section) => view === 'inbox' || section.id === view);
   const ruleOf = (section: (typeof sections)[number]) =>
     section.id === 'attention' ? attentionRule(props.settings) : section.rule;
+  const limit = useProgressiveCount(entries.length);
+  const grouped = withinLimit(
+    sections.map((section) => ({
+      section,
+      rows:
+        section.id === 'snoozed'
+          ? snoozedEntries(entries)
+          : entries.filter((entry) => entry.section === section.id),
+    })),
+    limit,
+  );
   return (
     <>
-      {sections.map((section) => {
-        const rows =
-          section.id === 'snoozed'
-            ? snoozedEntries(entries)
-            : entries.filter((entry) => entry.section === section.id);
+      {grouped.map(({ section, rows, shown }) => {
         if (view === 'inbox' && rows.length === 0) return null;
         const listId = `tk-sec-${section.id}`;
         const open =
@@ -158,7 +175,7 @@ export function InboxSections(props: InboxSectionsProps) {
             {open && rows.length === 0 && <EmptyScene fill>{EMPTY_TEXT[view]}</EmptyScene>}
             {open && rows.length > 0 && (
               <ul id={listId} className="tk-rows">
-                {rows.map((entry) => (
+                {shown.map((entry) => (
                   <InboxRow
                     key={ticketId(entry.ticket)}
                     entry={entry}

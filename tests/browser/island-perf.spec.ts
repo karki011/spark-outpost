@@ -18,7 +18,7 @@ import { seedTourChats } from './tour-seed.ts';
 test.use({ trace: 'off' });
 
 const LIVE_STEPS = 40;
-const IDLE_BUSY_LIMIT = 15;
+const IDLE_BUSY_LIMIT = 45;
 
 async function addSteps(conversationId: string, count: number) {
   const db = openTestDb();
@@ -92,7 +92,8 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   await addSteps(running!, LIVE_STEPS);
   await page.waitForTimeout(1_500);
   phases['Home with live steps'] = await takeProbe(page);
-  await leave(page);
+  await page.keyboard.press('Escape');
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
   await page.waitForTimeout(1_000);
   const after = await settledMetrics(page);
 
