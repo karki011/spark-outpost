@@ -39,9 +39,17 @@ async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> 
   await failingCheck(page, repo.root);
   if (choice === 'Keep') await twoEarlierTurns(page);
   await send(page, 'Fix the divider #build');
-  await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
-  await keepCard(page).getByRole('button', { name: choice, exact: true }).click();
+  await expect(keepCard(page)).toContainText('Kept automatically.', { timeout: 60_000 });
+  await expect(keepCard(page).getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
+  if (choice === 'Revert') {
+    await page.getByRole('button', { name: 'Revert to before this run' }).click();
+    await page
+      .getByRole('group', { name: 'Revert to before this run' })
+      .getByRole('button', { name: 'Revert', exact: true })
+      .click();
+    await expect(page.getByRole('status').filter({ hasText: /^Reverted/ })).toBeVisible();
+  }
 }
 
 test('asks how it went after Keep, and the answer can be changed later', async ({ page }) => {

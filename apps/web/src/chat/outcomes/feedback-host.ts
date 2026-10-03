@@ -14,6 +14,7 @@ const VARIANTS: Record<string, KeepCardHost['variant']> = {
 
 export function keepCardHost(
   approvals: readonly Pick<Approval, 'id' | 'decisionOptionId' | 'payload' | 'status'>[],
+  revertedLater = false,
 ): KeepCardHost | null {
   const decided = approvals.filter(
     (approval) =>
@@ -24,5 +25,8 @@ export function keepCardHost(
   );
   const last = decided.at(-1);
   if (!last?.decisionOptionId) return null;
-  return { approvalId: last.id, variant: VARIANTS[last.decisionOptionId]! };
+  return {
+    approvalId: last.id,
+    variant: revertedLater ? 'reverted' : VARIANTS[last.decisionOptionId]!,
+  };
 }

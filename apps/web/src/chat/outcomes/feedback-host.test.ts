@@ -33,6 +33,14 @@ describe('keep card host', () => {
     });
   });
 
+  it('asks what went wrong once a kept change is reverted afterwards', () => {
+    expect(keepCardHost([accept('a', 'keep')], true)).toEqual({
+      approvalId: 'a',
+      variant: 'reverted',
+    });
+    expect(keepCardHost([accept('a', 'fix')], true)).toBeNull();
+  });
+
   it('has no host while pending, after only a fix, or without a keep card', () => {
     expect(keepCardHost([accept('a', null)])).toBeNull();
     expect(keepCardHost([accept('a', 'fix')])).toBeNull();

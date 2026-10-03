@@ -95,7 +95,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       <FilesChanged taskId={changeTask.id} runIds={[runId]} />
     ) : null;
   const unlisted = crewRunIds.filter((runId) => runId === run.id || !showsOwnChanges(runId));
-  const host = finished ? keepCardHost(checkpoints) : null;
+  const host = finished ? keepCardHost(checkpoints, run.revertedAt !== null) : null;
   const checkpointCard = (approval: CheckpointApproval) => (
     <CheckpointCard
       key={approval.id}

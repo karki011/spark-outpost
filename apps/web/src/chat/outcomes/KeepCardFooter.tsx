@@ -13,7 +13,7 @@ interface KeepCardFooterProps {
 export function KeepCardFooter({ runId, host, taskId, conversationId }: KeepCardFooterProps) {
   return (
     <>
-      <TurnFeedback runId={runId} variant={host.variant} />
+      <TurnFeedback key={host.variant} runId={runId} variant={host.variant} />
       {host.variant === 'kept' && <BringChanges conversationId={conversationId} />}
       {host.variant === 'kept' && taskId && (
         <ShipControl taskId={taskId} conversationId={conversationId} />

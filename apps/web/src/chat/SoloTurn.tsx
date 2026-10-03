@@ -134,12 +134,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   const checkpoints = finished
     ? mergeCheckpoints(detail.orchestrations?.[run.id]?.checkpoints ?? [])
     : [];
-  const host = finished ? keepCardHost(checkpoints) : null;
   const revertible = finished
     ? [run, child].find(
         (candidate): candidate is Run => candidate?.mode === 'do' && candidate.snapshot !== null,
       )
     : undefined;
+  const host = finished ? keepCardHost(checkpoints, Boolean(revertible?.revertedAt)) : null;
 
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
