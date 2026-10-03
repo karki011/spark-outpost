@@ -14,6 +14,7 @@ export async function editedChat(page: Page, root: string): Promise<void> {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
+  await expect(picker).toBeVisible();
   await pickPermission(page, 'Ask before edits');
   await expect(picker).toBeVisible();
   await page.keyboard.press('Escape');
