@@ -85,7 +85,7 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
         { rpcId: null, roots: context.roots, cwd: context.cwd, home },
       );
       const shell = request.kind === 'execute' ? await parseShell(request.command) : null;
-      return railCrossings(request, { shell }).map((crossing) => ({
+      return (await railCrossings(request, { shell })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
         paths: crossing.paths.map((target) => shown(target, home)),

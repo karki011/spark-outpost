@@ -32,12 +32,12 @@ async function run(command: string) {
 }
 
 describe('rail crossings Spark flags after an unasked action', () => {
-  it('flags an edit outside the project with its path, but not one in a temp folder', () => {
-    expect(railCrossings(edit('/Users/me/x.txt'))).toEqual([
+  it('flags an edit outside the project with its path, but not one in a temp folder', async () => {
+    expect(await railCrossings(edit('/Users/me/x.txt'))).toEqual([
       { rail: 'outside_write', paths: ['/Users/me/x.txt'] },
     ]);
-    expect(railCrossings(edit('/tmp/scratch.txt'))).toEqual([]);
-    expect(railCrossings(edit(`${ROOT}/src/a.ts`))).toEqual([]);
+    expect(await railCrossings(edit('/tmp/scratch.txt'))).toEqual([]);
+    expect(await railCrossings(edit(`${ROOT}/src/a.ts`))).toEqual([]);
   });
 
   it('flags shell writes and deletes outside the project', async () => {
@@ -51,7 +51,7 @@ describe('rail crossings Spark flags after an unasked action', () => {
 
   it('flags secret files, instruction files, git config and force pushes', async () => {
     expect(await run('cat .env')).toEqual([{ rail: 'secret', paths: ['.env'] }]);
-    expect(railCrossings(edit(`${ROOT}/AGENTS.md`))).toEqual([
+    expect(await railCrossings(edit(`${ROOT}/AGENTS.md`))).toEqual([
       { rail: 'instructions', paths: ['AGENTS.md'] },
     ]);
     expect(await run('git config core.hooksPath /x')).toEqual([

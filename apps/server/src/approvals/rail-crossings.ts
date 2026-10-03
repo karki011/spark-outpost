@@ -9,11 +9,12 @@ import {
   secretLabels,
   type ApprovalRequest,
 } from './decide.ts';
-import { diskLister, type FileLister } from './file-lister.ts';
+import { diskFiles, type FileLister } from './file-lister.ts';
+import { withPrefetchedFiles } from './prefetched-files.ts';
 import { forcePush } from './git-commands.ts';
 import { commandCwd, inTempDir, outsideRoots } from './request-place.ts';
 import type { ShellScript } from './shell-parse.ts';
-import { partRequests, shellView } from './shell-view.ts';
+import { partRequests, shellView, type ShellView } from './shell-view.ts';
 import { writeTargets } from './write-targets.ts';
 
 export interface RailCrossing {
@@ -58,9 +59,21 @@ function pathsFor(rail: RailKind, request: ApprovalRequest, parts: ApprovalReque
   return secretLabels(request);
 }
 
-function reasonCrossing(request: ApprovalRequest, options: CrossingOptions): RailCrossing | null {
+async function askReason(
+  request: ApprovalRequest,
+  options: CrossingOptions,
+  view: ShellView | null,
+): Promise<string | null> {
+  if (options.files) return alwaysAskReason(request, options.files, view);
+  return withPrefetchedFiles(diskFiles, (files) => alwaysAskReason(request, files, view), null);
+}
+
+async function reasonCrossing(
+  request: ApprovalRequest,
+  options: CrossingOptions,
+): Promise<RailCrossing | null> {
   const view = shellView(request, options.shell ?? null);
-  const reason = alwaysAskReason(request, options.files ?? diskLister, view);
+  const reason = await askReason(request, options, view);
   const rail = reason ? REASON_RAILS.get(reason) : undefined;
   if (!rail) return null;
   const paths = pathsFor(rail, request, partRequests(request, view));
@@ -68,12 +81,12 @@ function reasonCrossing(request: ApprovalRequest, options: CrossingOptions): Rai
   return onlyTemp ? null : { rail, paths };
 }
 
-export function railCrossings(
+export async function railCrossings(
   request: ApprovalRequest,
   options: CrossingOptions = {},
-): RailCrossing[] {
+): Promise<RailCrossing[]> {
   const crossings: RailCrossing[] = [];
-  const reasoned = reasonCrossing(request, options);
+  const reasoned = await reasonCrossing(request, options);
   if (reasoned) crossings.push(reasoned);
   const guarded = guardedTargets(request);
   if (guarded.instructions.length > 0) {
