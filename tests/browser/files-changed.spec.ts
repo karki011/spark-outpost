@@ -143,7 +143,7 @@ test('a turn lists changed files and opens each one in the diff drawer', async (
   await page.setViewportSize({ width: 1400, height: 900 });
   await editedChat(page, appRoot);
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept: you approved every edit.',
+    'Kept automatically.',
     { timeout: 20_000 },
   );
   const block = page.getByRole('region', { name: 'Files changed: 1 file changed' });
