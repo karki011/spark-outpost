@@ -49,4 +49,6 @@ Agents use the same index the Map is built from. Ask in a chat, for example "Whe
 
 The list never includes secret files or anything in `.sparkignore`, and it carries no file contents. If the index is still building, the agent is told the result is incomplete.
 
+When a task starts in **Do**, Spark also gives the agent a short starting list from the same index: the likely files, their main functions with line numbers and a few lines of the ones your request names. It's a hint, not a limit, and it works without Jev.
+
 **Next:** [Find files on the Map](map-find-and-filter.md)

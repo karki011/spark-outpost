@@ -74,8 +74,9 @@ async function find(args: Record<string, unknown>, readOnly = false) {
 }
 
 describe('spark_find', () => {
-  it('ranks files with their Map area and declarations as name@start-end', async () => {
-    const { builder, scanner } = mapBuilder(t, fakeJev().fetch);
+  it('ranks files with their Map area and declarations as name@start-end, with no Jev', async () => {
+    const jev = fakeJev();
+    const { builder, scanner } = mapBuilder(t, jev.fetch);
     expect(await builder.runOnce()).toBe(true);
     await scanner.idle();
 
@@ -90,6 +91,10 @@ describe('spark_find', () => {
     expect(orders.area).toEqual(expect.any(String));
     expect(orders.kind).toEqual(expect.any(String));
     expect(orders.score).toBeGreaterThan(0);
+    expect(jev.requests).toHaveLength(0);
+    const advisors = await t.db.query('SELECT 1 FROM advisor_connections');
+    const jevCalls = await t.db.query('SELECT 1 FROM map_jev_calls');
+    expect([advisors.rowCount, jevCalls.rowCount]).toEqual([0, 0]);
   });
 
   it('never lists secret or ignored files and returns no file contents', async () => {

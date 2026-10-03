@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { JEV_PAUSE_AFTER } from '../src/advisor/jev-breaker.ts';
+import { JEV_CALLS_IN_FLIGHT } from '../src/advisor/jev-limiter.ts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { createCodeScanner, type CodeScanner } from '../src/codescan/scanner.ts';
 import { children } from './coordinator-support.ts';
@@ -70,19 +72,37 @@ afterAll(async () => {
   await stopParseWorker();
 });
 
-async function builderPrompt(fetcher: typeof fetch | null): Promise<string> {
-  harness = startOrchestrator(t, fetcher, { codeScan: scanner });
-  const { conversationId, runId } = await startScenario(t, root, NORMAL, 'full-auto', 'auto');
-  const { orchestration } = await driveToEnd(t, conversationId, runId);
-  expect(orchestration.status).toBe('succeeded');
-  return (await children(t, runId)).find((child) => child.role === 'builder')!.prompt;
+interface Turn {
+  prompt: string;
+  runId: string;
+  cards: string[];
 }
 
-async function jevRows(): Promise<number> {
-  const { rows } = await t.db.query<{ asked: number }>(
-    `SELECT count(*)::int AS asked FROM run_advice WHERE jev_status = 'answered'`,
+async function build(fetcher: typeof fetch | null): Promise<Turn> {
+  harness = startOrchestrator(t, fetcher, { codeScan: scanner });
+  const { conversationId, runId } = await startScenario(t, root, NORMAL, 'full-auto', 'auto');
+  const { orchestration, asked } = await driveToEnd(t, conversationId, runId);
+  expect(orchestration.status).toBe('succeeded');
+  const builder = (await children(t, runId)).find((child) => child.role === 'builder')!;
+  return { prompt: builder.prompt, runId, cards: asked.map((approval) => approval.kind) };
+}
+
+async function jevStatuses(runId: string, purpose?: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ jev_status: string }>(
+    `SELECT jev_status FROM run_advice
+     WHERE run_id = $1 AND ($2::text IS NULL OR purpose = $2) ORDER BY created_at`,
+    [runId, purpose ?? null],
   );
-  return rows[0]!.asked;
+  return rows.map((row) => row.jev_status);
+}
+
+async function runErrors(runId: string): Promise<number> {
+  const { rows } = await t.db.query<{ errors: number }>(
+    `SELECT count(*)::int AS errors FROM run_events
+     WHERE run_id = $1 AND type = 'RUN_ERROR'`,
+    [runId],
+  );
+  return rows[0]!.errors;
 }
 
 function expectBlock(prompt: string): void {
@@ -99,38 +119,55 @@ function expectBlock(prompt: string): void {
 
 describe('code context for agents', { timeout: 120_000 }, () => {
   it('gives the Builder files, declaration leads and excerpts with no Jev at all', async () => {
-    const prompt = await builderPrompt(null);
+    const { prompt, runId, cards } = await build(null);
     expectBlock(prompt);
     expect(prompt).not.toContain('| Jev ');
-    expect(await jevRows()).toBe(0);
+    expect(await jevStatuses(runId, 'rank')).toEqual(['not_connected']);
+    const all = await jevStatuses(runId);
+    expect(all).not.toContain('answered');
+    expect(all).not.toContain('failed');
+    expect(all).not.toContain('timed_out');
+    expect(cards).toEqual([]);
+    expect(await runErrors(runId)).toBe(0);
   });
 
   it('adds Jev probabilities to the same block when Jev ranks the files', async () => {
     const script: JevScript = { calls: [], scenario: NORMAL, choices: { likely_file: 'store.ts' } };
-    const prompt = await builderPrompt(jevFetch(script));
+    const { prompt } = await build(jevFetch(script));
     expectBlock(prompt);
     expect(prompt).toMatch(/1\. store\.ts \|[^\n]*\| Jev 0\.80/);
     const ranked = script.calls.find((call) => call.questions.includes('likely_file'))!;
     expect(JSON.stringify(ranked.state)).not.toContain('export function dayDivider');
   });
 
-  it('still gives the block when Jev answers every call with an error', async () => {
+  it('still gives the block, and finishes quietly, when Jev answers every call with an error', async () => {
     const failing: typeof fetch = async () =>
       new Response('{"error":"boom"}', { status: 500, headers: { 'content-type': 'text/plain' } });
-    const prompt = await builderPrompt(failing);
+    const { prompt, runId, cards } = await build(failing);
     expectBlock(prompt);
     expect(prompt).not.toContain('| Jev ');
+    expect(await jevStatuses(runId, 'rank')).toEqual(['failed']);
+    expect(await jevStatuses(runId, 'intake')).toEqual(['failed']);
+    expect(cards).toEqual([]);
+    expect(await runErrors(runId)).toBe(0);
   });
 
   it('still gives the block, after a bounded wait, when Jev never answers', async () => {
+    let calls = 0;
     const hanging: typeof fetch = (_input, init) =>
       new Promise((_resolve, reject) => {
+        calls += 1;
         init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
       });
     const started = Date.now();
-    const prompt = await builderPrompt(hanging);
+    const { prompt, runId, cards } = await build(hanging);
     expectBlock(prompt);
+    expect(await jevStatuses(runId, 'intake')).toEqual(['timed_out']);
+    expect(await jevStatuses(runId, 'rank')).toEqual(['timed_out']);
+    expect(calls).toBeLessThanOrEqual(JEV_PAUSE_AFTER + JEV_CALLS_IN_FLIGHT);
     expect(Date.now() - started).toBeLessThan(60_000);
+    expect(cards).toEqual([]);
+    expect(await runErrors(runId)).toBe(0);
   });
 
   it('gives the Reader the same block for a research request', async () => {

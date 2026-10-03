@@ -142,6 +142,20 @@ From the TypeSafe docs (https://docs.typesafe.ai/models, https://docs.typesafe.a
 - **Known weak spots (jev-1.13):** literal reading, numbers and counting, dates, indirection, large irrelevant state, adversarial content, contradictory instructions, no consistency between separately asked questions, and generation. English is the primary language.
 - **Our handling:** at most 4 calls in flight per process (`JEV_CALLS_IN_FLIGHT`, `advisor/jev-limiter.ts`); a 429 or 529 is retried once, honouring `retry-after-ms` or `retry-after`, only when at least 1 s of the budget would be left; `jev-latest` is sent as `jev-1.13.0` (`requestModel` in `advisor/jev.ts`), the version the lines were tuned on.
 
+## Without Jev
+
+Nothing requires Jev. Not connected, Spark off, a missing key, an error and a timeout all end in the rules; none of them fails a turn, shows a card or raises an error event. `apps/server/test/code-context.db.test.ts`, `map-answer-cache.db.test.ts`, `coordinator-jev-routes.db.test.ts`, `advice.db.test.ts` and `advisor/jev-breaker.test.ts` cover the three cases (not connected, error, never answers).
+
+| Feature                                               | Not connected                                                                                | Error or timeout                                                                                        |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Code index, line ranges, `spark_find`                 | Never call Jev.                                                                              | Same.                                                                                                   |
+| Code context block for the Builder, pieces and Reader | Built from the scan and the index, in scan order, with no probabilities.                     | Same; waits at most 1.5 s after the scan for Jev's order.                                               |
+| File ranking (`rank`)                                 | Row says `not_connected`; scan order kept.                                                   | Row says `failed` or `timed_out`; scan order kept.                                                      |
+| Intake                                                | Rules decide; row `not_connected`, no advice activity.                                       | Rules decide after at most 3 s; row `failed` or `timed_out`.                                            |
+| Piece routing and Builder count                       | "Piece routes by rules (Jev not connected)".                                                 | Rules, with "Jev failed: …" or "Jev timed out" on the piece note.                                       |
+| Map labels                                            | Rule labels, `jevAreas` 0, no `map_jev_calls` rows, the answer cache is not read or written. | Rule labels; failed calls are recorded, nothing is cached, and the build stops asking after 3 in a row. |
+| Verifier, edit gate, Critic findings                  | Not asked.                                                                                   | Not verified or review, finish as before.                                                               |
+
 ## Where Jev is a poor fit
 
 - **Anything that writes:** plans, fix instructions, summaries, titles, commit and PR text, explanations. The docs say generation "will not work well and will be very slow".
@@ -153,7 +167,7 @@ From the TypeSafe docs (https://docs.typesafe.ai/models, https://docs.typesafe.a
 
 ## Risks
 
-- **Latency.** Orchestration calls time out after 3 s (`ORCHESTRATION_JEV_TIMEOUT_MS`) and fall back to the rules. Keep batches under about 60 questions and 10k state tokens.
+- **Latency.** Orchestration calls time out after 3 s (`ORCHESTRATION_JEV_TIMEOUT_MS`) and fall back to the rules. After 3 calls in a row that time out, cannot reach TypeSafe or get a 5xx (`JEV_PAUSE_AFTER`, `advisor/jev-breaker.ts`), every Jev call in the process is skipped for 30 s (`JEV_PAUSE_MS`) and answers at once with "Jev is not answering, so Spark is using its rules for a moment.", so a silent Jev costs a turn a few seconds, not 3 s per question; the first call after the pause tries again, and any answer resets the count. A rejected key (401), 422 and a caller that stopped waiting do not count. Keep batches under about 60 questions and 10k state tokens.
 - **Rate limits.** Several orchestrations and the map can call at once; the process limiter and the single retry cover this today. Record 429s so they can be told apart from other failures.
 - **Data sent.** Any new field goes in the [Data sent](#data-sent) table and a pinned test. File paths and contents beyond today's, chat history, or text across chats need the user's yes. Send diffs only while "Check changes with Jev" is on, never send tool output or credentials, and don't route through OpenRouter or Vercel AI Gateway (a third party). Zero data retention is enterprise-only.
 - **Quality drift.** `jev-latest` will move. Keep the pinned version and re-run `apps/server/test/jev-intake.live.test.ts` and a period of observation before moving to a new one.
