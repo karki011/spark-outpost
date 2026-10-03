@@ -1,0 +1,75 @@
+---
+title: Statuses and limits
+section: Reference
+type: reference
+order: 920
+summary: What each status label means across providers, chats, Sparks, tickets, the Map and Spark Island, and the fixed limits.
+---
+
+## Provider tiles
+
+| Status                                  | Means                                      |
+| --------------------------------------- | ------------------------------------------ |
+| **Not set up**                          | Nothing connected yet.                     |
+| **CLI not installed**                   | Install `claude` or `codex` first.         |
+| **Needs sign-in**                       | The CLI is installed but not signed in.    |
+| **Connected · Local CLI** / **API key** | Ready.                                     |
+| **Error**                               | Open the tile; **Test** says what's wrong. |
+
+## Chats and Sparks
+
+| Status                | Where             | Means                                                                  |
+| --------------------- | ----------------- | ---------------------------------------------------------------------- |
+| **Asking permission** | Chat list         | An approval card waits.                                                |
+| **PR feedback**       | Chat list         | PR follow-up needs you.                                                |
+| **Flagged by Spark**  | Chat list, island | An unreviewed action crossed a protected path.                         |
+| **Working**           | Spark card        | A request in one of its chats is running.                              |
+| **Needs you**         | Spark card        | A card in one of its chats waits.                                      |
+| **Done** / **Failed** | Spark card        | Its latest request finished in the last hour / failed in the last day. |
+
+## Ticket groups
+
+| Group                      | Holds                                                             |
+| -------------------------- | ----------------------------------------------------------------- |
+| **Needs you**              | A linked chat waits, checks fail on its PR, or a rule flagged it. |
+| **In progress with Spark** | A linked chat is running, such as "8/10 · Pip working".           |
+| **Started**                | In progress in your tracker, with no chat running.                |
+| **Up next**                | Assigned to you and not started.                                  |
+| **In review / PR open**    | In review, or its PR is open.                                     |
+| **Done recently**          | Done, or its PR merged, in the last 7 days.                       |
+
+## Map status
+
+| Status             | Means                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Updated** _time_ | Up to date.                                           |
+| **Waiting**        | The build hasn't started.                             |
+| **Paused**         | Agents are running. The map resumes when they finish. |
+| **Map failed**     | Point at it to read why.                              |
+
+## Spark Island states
+
+| You see                                           | Means         |
+| ------------------------------------------------- | ------------- |
+| Scout's eyes scan; a blob has a spinning ring     | **Working…**  |
+| A number badge on Scout; a blob pulses with **!** | **Needs you** |
+| A happy face; a blob pops a star once             | **Done**      |
+| A worried face; a grey blob with a red badge      | **Failed**    |
+| A dimmed blob                                     | **Quiet**     |
+
+Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on, only faces change.
+
+## Limits
+
+| Limit                                | Value                                    |
+| ------------------------------------ | ---------------------------------------- |
+| Approval card expiry                 | 30 minutes                               |
+| Builders for one plan                | 1 to 4; at once, up to 3                 |
+| Fix turns after failing checks       | 2                                        |
+| Critic fix rounds                    | 3                                        |
+| PR follow-up rounds per PR           | 3                                        |
+| Terminals open across all chats      | 12, each keeping 5,000 lines             |
+| Standing instructions for a Spark    | 2,000 characters                         |
+| Diff shown before **Load full file** | 2,000 lines; files over 1 MB stay folded |
+| Hold-to-confirm                      | 1.5 seconds; undo window 10 seconds      |
+| App logs kept                        | About 8 MB                               |

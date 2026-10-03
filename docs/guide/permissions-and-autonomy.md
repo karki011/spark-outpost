@@ -1,99 +1,43 @@
 ---
 title: Permissions and autonomy
-section: How Spark works
-order: 193
-summary: The two separate dials, the agent's mode and Spark autonomy, what each combination does, and which cards never go on without you.
+section: Understand Spark
+type: concept
+order: 814
+summary: The two separate dials - the agent's mode and Spark autonomy - how they combine, and what never goes on without you.
 ---
 
-You'll learn the two settings that decide how much happens without you, and how they combine. About 4 minutes.
+Two settings decide how much happens without you. The **agent's mode** decides what the agent may do without asking. **Spark autonomy** decides what Spark does with the result. They don't change each other.
 
-## Two separate dials
+| Dial           | Decides                                | Whose setting                  | Change it                                             |
+| -------------- | -------------------------------------- | ------------------------------ | ----------------------------------------------------- |
+| Agent's mode   | Approval cards while the agent works   | The provider's, with its names | [Change the agent's mode](agent-mode.md)              |
+| Spark autonomy | Plans, keeping, shipping, PR follow-up | Spark's                        | [Choose how much Spark does alone](spark-autonomy.md) |
 
-- **The agent's mode** decides what the agent may do without asking: read, edit, run commands. It's the provider's own setting, with the provider's names.
-- **Spark autonomy** decides what Spark does with the result: keep the changes, or keep them and open a pull request.
+For every mode and level, see [Agent modes and autonomy levels](modes-and-levels.md).
 
-Each chat has both. New chats start with your defaults.
+## How they combine
 
-## Dial 1: the agent's mode
+| Mode + autonomy                             | What you see                                           |
+| ------------------------------------------- | ------------------------------------------------------ |
+| **Manual** + **Automatic**                  | A card for every edit and command. The most control.   |
+| **Accept edits** + **Automatic**            | Edits go through; commands ask.                        |
+| **Auto** + **Automatic**                    | The agent asks when it judges it should. The defaults. |
+| **Bypass permissions** + **Full auto → PR** | No agent cards. Spark builds, checks and opens a PR.   |
+| **Plan** + any level                        | Answers only. Nothing changes.                         |
 
-Select the permissions chip next to the model button in the message box. It shows the current mode and opens the **Permissions** tab. See [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
-
-| What it allows                  | Claude and Z.ai           | Codex                        | Approval cards you see                                         |
-| ------------------------------- | ------------------------- | ---------------------------- | -------------------------------------------------------------- |
-| Reads only                      | **Plan**                  | **Read-only**                | None. The agent answers; **Make the change** runs it for real. |
-| Asks before edits and commands  | **Manual**                | **Ask every time**           | A card for each edit and each command.                         |
-| Edits freely, asks for commands | **Accept edits**          | none                         | A card for each command.                                       |
-| Decides what to ask             | **Auto** (Claude default) | **Approve for me** (default) | Only what the agent asks about.                                |
-| Never asks                      | **Bypass permissions**    | **Full access**              | None from the agent.                                           |
-
-Z.ai starts on **Manual**. Spark follows the mode: when it lets the agent act, Spark adds no card of its own beyond the protected paths. **Bypass permissions**, Codex's **Approve for me** and **Full access** act without asking, in the chat's worktree or on your checkout, whichever you chose. Spark records each action as **ran without review** and flags any that cross a protected path; see [Approvals](approvals.md#actions-that-ran-without-review).
-
-![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
-
-## Dial 2: Spark autonomy
-
-Select the shield chip in the context bar, or set the default in **Settings → Spark → How much Spark does alone**.
-
-| Level                   | Plans                   | Risky work              | Keeping changes                             | Shipping                                 |
-| ----------------------- | ----------------------- | ----------------------- | ------------------------------------------- | ---------------------------------------- |
-| **Automatic** (default) | Wait for you            | Runs in a worktree copy | Kept if checks pass and the Critic is happy | You ship with **Open PR**                |
-| **Full auto → PR**      | Build after a countdown | Runs in a worktree copy | Kept by itself                              | Spark opens a PR, a draft if checks fail |
-
-To review each step, pick a mode that asks, such as **Manual**.
-
-![The Work panel with the Spark autonomy levels](images/chats-and-modes-autonomy-light.png)
-
-## How the dials combine
-
-The mode decides the **approval cards** while the agent works. Autonomy decides the **Spark cards** around the work: plans, keep, ship and follow-up. They don't change each other. Some examples:
-
-| Mode + autonomy                             | What you see                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **Manual** + **Automatic**                  | A card for every edit and command; Spark keeps passing changes. The most control.     |
-| **Accept edits** + **Automatic**            | Edits go through; commands ask; Spark keeps passing changes.                          |
-| **Auto** + **Automatic**                    | The agent asks when it judges it needs to; Spark keeps passing changes. The defaults. |
-| **Bypass permissions** + **Full auto → PR** | No agent cards; in a worktree copy Spark builds, checks and opens a PR.               |
-| **Plan** + any level                        | Answers only. Nothing changes, so no keep or ship cards.                              |
+Spark honours the mode. It adds no ask rules of its own beyond the [protected paths](protected-paths.md).
 
 ## What never goes on without you
 
-Whatever the mode and level, these wait for your answer:
+- **Approval cards.** Unanswered, they're declined after 30 minutes.
+- **Protected paths**, in every mode and at both levels.
+- **The plan card at Automatic.** It waits for **Build**, even in **Auto** or **Bypass permissions**.
+- **Destructive plans**, at both levels.
+- **Continue past the budget?**
+- **Address PR feedback?** at **Automatic**.
 
-- **Approval cards.** They expire after 30 minutes if nobody answers, and the request is declined.
-- **Protected paths**: secret files, agent instruction files, git hooks and config, force pushes, and sending data out after reading secrets. See [Approvals and protected paths](approvals.md).
-- **The plan card at Automatic.** **Build this plan?** waits for **Build**, **Edit** or **Stop**, whatever the agent's mode, even **Auto** or **Bypass permissions**. After you select **Build**, the work runs on its own.
-- **Destructive work.** Its plan card waits at every level. Work counts as destructive when it deletes, drops or truncates data. Creating a table whose foreign key says `ON DELETE CASCADE` doesn't count.
-- **Continue past the budget?** See [Budgets and the budget card](estimates-and-budgets.md#budgets-and-the-budget-card).
-- **Pushing PR fixes** at **Automatic**: the **Address PR feedback?** card.
+## What Full auto → PR may do
 
-The model you pin is the chat's own model, the one that reads, plans and coordinates; Builders start from it. See [Builders in a pinned chat](auto-routing.md#builders-in-a-pinned-chat).
+It pushes only the chat's own `spark/` branch and opens or updates its pull request. It never merges and never force-pushes.
 
-**Full auto → PR** has firm limits too. It pushes only the chat's own branch and opens or updates its PR. It never merges and never force-pushes. At this level the agent, Builders included, may also push the chat's own branch and open its PR itself; no other branch is ever pushed.
-
-## If you don't answer
-
-**If you don't answer a question** in **Settings → Spark** sets how long Spark waits on its own questions: **Off**, **10s** (default), **30s** or **60s**. After that, Spark picks the safe option:
-
-| Card                                             | Spark picks                            |
-| ------------------------------------------------ | -------------------------------------- |
-| **A few questions first** (Automatic, Full auto) | The agent's best guesses               |
-| **Build this plan?** (Full auto only)            | **Build**                              |
-| A stuck or failing step                          | **Stop and report**                    |
-| **Jev could not verify the change**              | **Finish as it is**, marked unverified |
-| **This chat is almost full**                     | **Keep going**                         |
-
-With **Off**, these wait for you, except that **Full auto → PR** still builds a plan after 30 seconds. At **Automatic** the plan card always waits for you, whatever this setting says. Approval cards never use this setting.
-
-## Allow once, for this chat, or always
-
-Approval cards offer the agent's own buttons, typically **Allow**, **Always allow** and **Deny**. The card for agent instruction files, such as `AGENTS.md`, offers:
-
-- **Allow once**: this change only.
-- **Allow for this chat**: later instruction file changes in this chat go through.
-- **Deny**: the agent is told no and tries another way.
-
-Command cards can also offer **Always allow in this project**. See [Answer an approval card](approvals.md#answer-an-approval-card).
-
-> **Tip:** Start with the defaults (**Auto** and **Automatic**). Switch a chat to **Manual** for work you want to watch closely, step by step.
-
-**Next:** [Use cases](use-cases.md)
+An agent may push that branch and open its PR itself only when your message asks for it, the chat is at **Full auto → PR**, or its mode is **Auto**, **Bypass permissions** or **Full access**.

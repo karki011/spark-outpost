@@ -1,12 +1,16 @@
-import { useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  GUIDE_TYPE_LABELS,
   groupGuideSections,
   guideLink,
   searchGuidePages,
   type GuidePage,
 } from '@spark-outpost/contracts';
-import { SearchIcon, XIcon } from '../ui/icons.tsx';
+import { ChevronIcon, SearchIcon, XIcon } from '../ui/icons.tsx';
 import { openDoc } from './doc-route.ts';
+import { recordMissedSearch } from './missed-searches.ts';
+
+const MISSED_SEARCH_SETTLE_MS = 1_500;
 
 interface DocsSidebarProps {
   pages: readonly GuidePage[];
@@ -45,7 +49,7 @@ function DocsSearchBox({
         ref={input}
         type="search"
         value={query}
-        placeholder="Search the guide"
+        placeholder="What do you want to do?"
         aria-label="Search the guide"
         onChange={(event) => onQuery(event.target.value)}
         onKeyDown={onKeyDown}
@@ -77,6 +81,12 @@ function SearchResults({
   onPicked: () => void;
 }) {
   const hits = useMemo(() => searchGuidePages(pages, query), [pages, query]);
+  const missed = hits.length === 0;
+  useEffect(() => {
+    if (!missed) return;
+    const timer = window.setTimeout(() => recordMissedSearch(query), MISSED_SEARCH_SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [missed, query]);
   return (
     <div className="docs-results">
       <p className="docs-results-count" role="status">
@@ -84,13 +94,27 @@ function SearchResults({
           ? `No pages match “${query.trim()}”.`
           : `${hits.length} ${hits.length === 1 ? 'result' : 'results'}`}
       </p>
+      {missed && (
+        <p className="docs-results-hint">
+          Try fewer words, the name of a button or card, or{' '}
+          <a href={guideLink(pages[0]!.slug)} onClick={onPicked}>
+            browse by task
+          </a>
+          .
+        </p>
+      )}
       {hits.length > 0 && (
         <ul aria-label="Search results">
           {hits.map((hit) => (
             <li key={hit.slug}>
               <a href={guideLink(hit.slug, hit.anchor)} onClick={onPicked}>
                 <b>{hit.title}</b>
-                {hit.heading && <span className="docs-hit-heading">{hit.heading}</span>}
+                <span className="docs-hit-meta">
+                  <span className="docs-type" data-type={hit.type}>
+                    {GUIDE_TYPE_LABELS[hit.type]}
+                  </span>
+                  {hit.heading ?? hit.section}
+                </span>
                 <span className="docs-hit-snippet">{hit.snippet}</span>
               </a>
             </li>
@@ -111,27 +135,44 @@ function PageList({
   onPicked: () => void;
 }) {
   const sections = useMemo(() => groupGuideSections(pages), [pages]);
+  const currentSection = pages.find((page) => page.slug === current)?.section;
+  const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>({});
   return (
     <nav id="docs-nav" className="docs-nav" aria-label="Guide pages">
-      {sections.map((group) => (
-        <section key={group.section} aria-labelledby={`docs-sec-${group.pages[0]!.slug}`}>
-          <h2 id={`docs-sec-${group.pages[0]!.slug}`}>{group.section}</h2>
-          <ul>
-            {group.pages.map((page) => (
-              <li key={page.slug}>
-                <a
-                  href={guideLink(page.slug)}
-                  aria-current={page.slug === current ? 'page' : undefined}
-                  onClick={onPicked}
-                >
-                  {page.title}
-                  {page.comingSoon && <span className="docs-soon">Soon</span>}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {sections.map((group) => {
+        const id = `docs-sec-${group.pages[0]!.slug}`;
+        const open = toggled[group.section] ?? group.section === currentSection;
+        return (
+          <section key={group.section} aria-labelledby={id}>
+            <h2 id={id}>
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={`${id}-pages`}
+                onClick={() => setToggled((state) => ({ ...state, [group.section]: !open }))}
+              >
+                <ChevronIcon />
+                {group.section}
+                <span className="docs-nav-count">{group.pages.length}</span>
+              </button>
+            </h2>
+            <ul id={`${id}-pages`} hidden={!open}>
+              {group.pages.map((page) => (
+                <li key={page.slug}>
+                  <a
+                    href={guideLink(page.slug)}
+                    aria-current={page.slug === current ? 'page' : undefined}
+                    onClick={onPicked}
+                  >
+                    {page.title}
+                    {page.comingSoon && <span className="docs-soon">Soon</span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </nav>
   );
 }

@@ -1,24 +1,27 @@
 ---
-title: Jev, the advisor
+title: Connect Jev (optional)
 section: Get started
+type: start
 order: 150
-summary: What Jev is, why it's optional, and how to connect it during setup.
+summary: Decide whether to connect Jev, the optional advisor, during setup or later.
 ---
 
-You'll decide whether to connect Jev now. It's optional, so you can skip this page. About 1 minute.
+You'll decide whether to connect Jev now. About 1 minute.
 
-## What Jev does
+Jev is an optional advisor from TypeSafe. It helps Spark read each request and checks finished changes. Without Jev, Spark's own rules do the same jobs, and everything else works the same.
 
-Jev helps Spark decide how to handle each request and checks finished changes. It doesn't count as your provider, so you still need one connected provider.
+Jev isn't a provider, so you still need one connected provider.
 
 ## Connect Jev
 
-1. On the **AI provider** step, find **Advisor**.
-2. Select the **Jev** tile and connect it with a TypeSafe API key.
-3. When at least one provider is connected, select **Continue**.
+1. Get an API key from the **TypeSafe console**, under API keys.
+2. On the **AI provider** step, or later in **Settings → AI providers**, find **Advisor**.
+3. Select the **Jev** tile, paste the key and verify it.
 
-To connect it later, open **Settings → AI providers** and select the **Jev** tile under **Advisor**.
+The key is stored in your system keychain. Verifying it is free.
 
-To learn what Jev decides, what it reads and what it costs, see [Jev, Spark's advisor](jev.md).
+To replace the key, select **Use a new key** on Jev's screen. To remove Jev, hold **Hold to remove the Jev key** under **Danger zone**; you get 10 seconds to undo.
+
+To learn what Jev decides, reads and costs, see [Jev, the optional advisor](jev.md).
 
 **Next:** [Bring in your tools](bring-in-your-tools.md)

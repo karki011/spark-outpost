@@ -197,9 +197,8 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await failingCheck(page, repo.root);
   await send(page, 'Fix the totals divider #build #removehelper #criticremoval');
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep.getByRole('list', { name: 'Worth a look before you keep this' })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(keep.getByRole('list', { name: 'Worth a look' })).toBeVisible({ timeout: 30_000 });
+  await expect(keep).toContainText('Kept automatically');
   await keep.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'prompt-flow-crew-turn');
   await shoot(page, IMAGES, 'guardrails-keep-card', keep);

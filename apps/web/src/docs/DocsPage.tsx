@@ -1,21 +1,30 @@
 import './docs.css';
-import { useState } from 'react';
+import './docs-article.css';
+import { useEffect, useState } from 'react';
+import { guideLink } from '@spark-outpost/contracts';
 import { useDocRoute } from './doc-route.ts';
 import { DocArticle } from './DocArticle.tsx';
 import { DocsSidebar } from './DocsSidebar.tsx';
-import { guidePages } from './guide-content.ts';
+import { guidePages, openDocFor } from './guide-content.ts';
+
+function useCanonicalLink(slug: string | undefined, anchor: string | null, routed: boolean) {
+  useEffect(() => {
+    if (!slug || !routed) return;
+    const canonical = guideLink(slug, anchor);
+    if (window.location.hash === canonical) return;
+    const { pathname, search } = window.location;
+    window.history.replaceState(window.history.state, '', `${pathname}${search}${canonical}`);
+  }, [slug, anchor, routed]);
+}
 
 export function DocsPage() {
   const route = useDocRoute();
   const [query, setQuery] = useState('');
   const [navOpen, setNavOpen] = useState(false);
-  const index = Math.max(
-    0,
-    guidePages.findIndex((page) => page.slug === route?.slug),
-  );
-  const page = guidePages[index];
+  const open = openDocFor(route);
+  useCanonicalLink(open?.page.slug, open?.anchor ?? null, Boolean(route?.slug));
 
-  if (!page) {
+  if (!open) {
     return (
       <main className="page docs" aria-label="Docs">
         <p className="docs-empty">The user guide isn't included in this build.</p>
@@ -27,22 +36,17 @@ export function DocsPage() {
     <main className="page docs" aria-label="Docs">
       <DocsSidebar
         pages={guidePages}
-        current={page.slug}
+        current={open.page.slug}
         query={query}
         navOpen={navOpen}
         onQuery={setQuery}
-        onToggleNav={() => setNavOpen((open) => !open)}
+        onToggleNav={() => setNavOpen((shown) => !shown)}
         onPicked={() => {
           setQuery('');
           setNavOpen(false);
         }}
       />
-      <DocArticle
-        page={page}
-        anchor={route?.slug === page.slug ? route.anchor : null}
-        previous={guidePages[index - 1] ?? null}
-        next={guidePages[index + 1] ?? null}
-      />
+      <DocArticle page={open.page} anchor={open.anchor} previous={open.previous} next={open.next} />
     </main>
   );
 }

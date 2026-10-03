@@ -93,4 +93,17 @@ describe('feedbackTarget', () => {
   it('names the saved file without its folder', () => {
     expect(fileName('/Users/me/Downloads/diag.zip')).toBe('diag.zip');
   });
+
+  it('lists Docs searches that found nothing, redacted and capped at ten', () => {
+    const missed = Array.from({ length: 12 }, (_, index) => `query ${index}`);
+    const body = feedbackBody({ ...report, missedDocsSearches: missed });
+    expect(body).toContain('Docs searches with no results: query 2; query 3');
+    expect(body).not.toContain('query 1;');
+    expect(feedbackBody(report)).not.toContain('Docs searches');
+    const secret = feedbackBody({
+      ...report,
+      missedDocsSearches: ['sk-ant-api03-abcdefghijklmnopqrstuvwx'],
+    });
+    expect(secret).not.toContain('abcdefghijklmnop');
+  });
 });

@@ -5,7 +5,7 @@ import { guideChunks, searchGuidePages } from './guide-search.ts';
 function page(slug: string, title: string, summary: string, body: string) {
   return parseGuidePage(
     slug,
-    `---\ntitle: ${title}\nsection: Basics\norder: 1\nsummary: ${summary}\n---\n${body}`,
+    `---\ntitle: ${title}\nsection: Basics\ntype: how-to\norder: 1\nsummary: ${summary}\n---\n${body}`,
   );
 }
 
@@ -89,6 +89,10 @@ describe('searchGuidePages', () => {
     expect(searchGuidePages(PAGES, 'the of')).toEqual([]);
     expect(searchGuidePages(PAGES, 'zzzqqq')).toEqual([]);
     expect(searchGuidePages(PAGES, 'spark', 1)).toHaveLength(1);
+  });
+
+  it('says which type of page each hit is', () => {
+    expect(searchGuidePages(PAGES, 'jev')[0]).toMatchObject({ slug: 'jev', type: 'how-to' });
   });
 
   it('falls back to the summary when only the title matches', () => {

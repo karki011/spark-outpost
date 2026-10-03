@@ -36,7 +36,7 @@ function DiagnosticsRow() {
   return (
     <SettingRow
       label="Diagnostics"
-      doc={{ page: 'troubleshooting', heading: 'send-diagnostics-with-a-bug-report' }}
+      doc={{ page: 'trouble-setup-and-reset', heading: 'send-diagnostics-with-a-bug-report' }}
       hint={message ?? DIAGNOSTICS_HINT}
       hintId={hintId}
     >

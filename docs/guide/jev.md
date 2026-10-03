@@ -1,76 +1,57 @@
 ---
-title: Jev, Spark's advisor
-section: Work with Spark
-order: 230
-summary: What Jev decides and what it never does, how to connect it, Check changes with Jev, and what it costs.
+title: Jev, the optional advisor
+section: Understand Spark
+type: concept
+order: 824
+summary: What Jev decides and never does, what it reads, what it costs, and what happens without it.
 ---
 
-You'll learn what Jev does for Spark, how to connect it, and what changes without it. About 3 minutes.
-
-Jev is an optional advisor from TypeSafe. It answers a few short questions about each request. Code turns those answers into decisions, and the rules take over whenever Jev is unsure or missing.
+Jev is an optional advisor from TypeSafe. It answers a few short questions about each request; code turns the answers into decisions, and Spark's rules take over whenever Jev is unsure or not connected.
 
 ## What Jev decides
 
-| Job         | What Jev answers                                                                                                                   | Without Jev                                                                    |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Intake**  | What kind of request is it, such as **Bug fix** or **Research**? Is it too vague, a review, destructive, or part of the same task? | The rules decide from the wording, and the chip shows their guess.             |
-| **Routing** | Rates the request 1–5 for complexity, ambiguity, stakes and context. On **Auto**, these ratings feed Spark's model choice.         | The rules estimate the ratings. See [How Auto picks a model](auto-routing.md). |
-| **Triage**  | Sorts new pull request comments into fix, question, disagreement, nit and so on.                                                   | Keyword rules sort them.                                                       |
-| **Checks**  | Verifies the finished change and says which review findings need a fix. See [Check changes with Jev](#check-changes-with-jev).     | Your project's checks and the Critic decide.                                   |
-| **The Map** | Labels each area of a project, such as auth or payments.                                                                           | Rules label the areas.                                                         |
+| Job         | With Jev                                                                   | Without Jev                                  |
+| ----------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| **Intake**  | Names the kind of request and whether it's vague or destructive.           | Rules decide from the wording.               |
+| **Routing** | Rates the request 1–5 on four scales for [model choice](model-routing.md). | Rules estimate the ratings.                  |
+| **Pieces**  | Picks how many Builders a plan needs.                                      | Rules decide whether to split.               |
+| **Checks**  | Verifies the finished change and sorts review findings.                    | Your project's checks and the Critic decide. |
+| **Triage**  | Sorts pull request comments.                                               | Keyword rules sort them.                     |
+| **The Map** | Labels each area.                                                          | Rules label the areas.                       |
 
-Jev only counts when it's sure enough. Below its confidence line, the rules decide that question.
+Jev never answers a chat, edits files, runs code, answers an approval card, loosens a mode, raises a budget or picks the model itself.
 
-## What Jev never does
-
-- It never answers a chat, edits files, calls tools or runs code.
-- It never answers an approval card, loosens a mode, raises a budget or skips a safety check.
-- It never picks the model itself. Its ratings go into a score that code calculates.
-
-## Connect Jev
-
-1. Get an API key in the **TypeSafe console** under API keys.
-2. Open **Settings → AI providers** and find **Advisor**.
-3. Select the **Jev** tile, paste the key and verify it.
-
-The key is stored in your system keychain. To replace it, select **Use a new key** on Jev's screen. To remove Jev, hold **Hold to remove the Jev key** under **Danger zone**; you get 10 seconds to undo.
+To connect it, see [Connect Jev](meet-jev.md).
 
 ## Check changes with Jev
 
-**Check changes with Jev** sits on Jev's screen, under **Settings**: open **Settings → AI providers** and select the **Jev** tile. It's on by default and needs Jev connected. With it on, Jev also gets code diffs:
+The switch is on Jev's screen in **Settings → AI providers**. It's on by default. With it on, Jev also receives code diffs: it watches proposed edits and verifies the final diff. If Jev finds a change incomplete, a stronger model redoes it once.
 
-- **Proposed edits**: watched only, never blocked or allowed.
-- **Final diff**: verified. If Jev finds the change incomplete, a stronger model redoes it once. If Jev can't say what's missing, your project's checks pass and the Critic has no concerns, you get the **Jev could not verify the change** card instead of a second Builder.
-- **Review findings**: Jev uses the diff to tell which ones need a fix.
+Turn it off to keep diffs on your computer.
 
 ![Settings on Jev's screen, with Check changes with Jev](images/jev-advisor-light.png)
 
-Turn it off to keep diffs on your computer. Jev then sees only your requests.
-
 ## What Jev reads
 
-The **Sends** line on Jev's screen lists it. In short: your request, the previous request and a short task summary, and the text of files you attach. With **Check changes with Jev** on, also the diffs.
+| Sent                                                                               | Never sent                      |
+| ---------------------------------------------------------------------------------- | ------------------------------- |
+| Your request, the previous request and a short task summary                        | Keys and tokens                 |
+| The text of files you attach                                                       | Tool output                     |
+| Diffs, with **Check changes with Jev** on                                          | Your full chat history          |
+| Some file contents for the Map. See [what Jev reads](map-areas.md#what-jev-reads). | Secret and `.sparkignore` files |
 
-Jev never gets keys, tool output or your full chat history. TypeSafe doesn't train on it. The Map sends some file contents to label areas, but never secret files or anything in `.sparkignore`. See [Privacy and secrets](privacy-and-secrets.md).
+Everything is redacted first. TypeSafe doesn't train on it.
 
 ## What it costs
 
-TypeSafe bills Jev to your TypeSafe account, by input tokens only. A typical call costs well under $0.0001, and verifying a key is free. There's no **Send test message** for Jev, because a test would be billed.
+TypeSafe bills your TypeSafe account by input tokens. A typical call costs well under $0.0001. The chat's **Work** panel and **Settings → Usage** show Jev's cost.
 
-To see what Jev cost, open a chat's **Work** panel: the totals add "Jev" with its estimated cost. **Settings → Usage** also shows Jev's own cost.
+## How you know Jev took part
 
-## Not connected or not asked
+Hover the chip on a reply, such as **Question**:
 
-The chip on each reply (such as **Question**) and the model picker say how Jev took part:
+- **Jev not connected**: the rules decided.
+- **Not asked**: this step didn't need Jev, for example "pinned, no Jev call".
+- **Jev timed out** or **Jev failed**: Spark used the rules.
 
-- **Jev not connected**: there's no Jev key, so the rules decided.
-- **Not asked**, for example "pinned, no Jev call": Jev is connected, but this step didn't need it. A model you picked yourself, destructive work that always goes to the top model, and a single possible model all skip Jev.
-- **Jev timed out** or **Jev failed**: Spark asked, got no answer and used the fixed rules.
-
-> **Tip:** Hover or focus the chip next to the agent's name on a reply to see each of Jev's calls, how sure it was and what it cost.
-
-## When the Spark switch is off
-
-With the **Spark** switch off in **Settings → Spark**, chats go straight to your agent and Jev isn't called. Approvals and safety rules still apply. The Map still uses Jev to label areas.
-
-**Next:** [Ship and pull requests](ship-and-pull-requests.md)
+With the **Spark** switch off, Jev isn't called for chats. The Map still uses it.

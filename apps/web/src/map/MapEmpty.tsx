@@ -112,11 +112,7 @@ export function MapEmpty() {
       <p className="mh-note">
         Maps build in the background and never slow down chats. Jev may read file contents to label
         areas, never secret files.
-        <InfoTip
-          topic="what Jev reads"
-          text={PRIVACY}
-          doc={{ page: 'privacy-and-secrets', heading: 'sparkignore' }}
-        />
+        <InfoTip topic="what Jev reads" text={PRIVACY} doc={{ page: 'sparkignore' }} />
       </p>
       <AnimatePresence>
         {adding && (

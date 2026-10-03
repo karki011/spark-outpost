@@ -1,7 +1,8 @@
 ---
 title: The Map
-section: Your tools
-order: 420
+section: Projects and the Map
+type: how-to
+order: 320
 summary: Open a project's Map, see how it builds, and switch between the Tree, Focus, Outline and Sky views.
 ---
 
@@ -45,10 +46,8 @@ The Map opens in **Tree** on a computer and in **Outline** on a phone. It rememb
 
 ## Let an agent find code
 
-Agents use the same index the Map is built from. Ask in a chat, for example "Where do we load orders?", and the agent calls `spark_find`. It gets a ranked list of files, each with its area and its main functions and classes with their line numbers, so it reads only those lines.
+Ask in a chat "Where do we load orders?" and the agent calls `spark_find` on the Map's index. It gets ranked files with their area and main functions with line numbers. Secret files, `.sparkignore` paths and file contents are never included.
 
-The list never includes secret files or anything in `.sparkignore`, and it carries no file contents. If the index is still building, the agent is told the result is incomplete.
-
-When a task starts in **Do**, Spark also gives the agent a short starting list from the same index: the likely files, their main functions with line numbers and a few lines of the ones your request names. It's a hint, not a limit, and it works without Jev.
+In **Do**, Spark also starts the agent with the likely files and a few matching lines. It's a hint, not a limit, and it works without Jev.
 
 **Next:** [Find files on the Map](map-find-and-filter.md)

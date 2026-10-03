@@ -1,4 +1,10 @@
-import { HEADING_LINE, inlineText, markdownLines, type GuidePage } from './guide.ts';
+import {
+  HEADING_LINE,
+  inlineText,
+  markdownLines,
+  type GuidePage,
+  type GuidePageType,
+} from './guide.ts';
 import { countTokenMatches, prefixMatches, searchTokens } from './text-match.ts';
 
 export interface GuideChunk {
@@ -11,6 +17,7 @@ export interface GuideSearchHit {
   slug: string;
   title: string;
   section: string;
+  type: GuidePageType;
   heading: string | null;
   anchor: string | null;
   snippet: string;
@@ -18,7 +25,7 @@ export interface GuideSearchHit {
 }
 
 const SNIPPET_CHARS = 160;
-const WEIGHTS = { title: 6, summary: 3, heading: 4, text: 1 } as const;
+const WEIGHTS = { title: 8, summary: 4, heading: 5, text: 1 } as const;
 
 function plainLine(line: string): string {
   return inlineText(
@@ -93,6 +100,7 @@ function pageHit(queryTokens: string[], page: GuidePage): GuideSearchHit | null 
     slug: page.slug,
     title: page.title,
     section: page.section,
+    type: page.type,
     heading: target?.heading ?? null,
     anchor: target?.anchor ?? null,
     snippet: snippet(text, queryTokens),

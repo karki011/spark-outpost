@@ -8,6 +8,7 @@ import {
   fileName,
   type FeedbackDraft,
 } from './feedback-draft.ts';
+import { missedSearches } from '../docs/missed-searches.ts';
 import { useFeedbackFocus } from './feedback-request.ts';
 import { feedbackTarget } from './feedback-target.ts';
 
@@ -88,6 +89,7 @@ export function FeedbackForm({ version, beta }: FeedbackFormProps) {
         version,
         beta,
         diagnostics: attached,
+        missedDocsSearches: missedSearches(),
       });
       await deliver(draft);
       setResult({ text: draftText(draft, outcome), draft });
