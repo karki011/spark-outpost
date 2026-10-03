@@ -44,6 +44,7 @@ const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
+const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -94,7 +95,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
         : [];
     case 'ticket':
-      return [ticketInbox];
+      return [ticketInbox, ticketConnections];
   }
 }
 
