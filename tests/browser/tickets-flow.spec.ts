@@ -16,8 +16,7 @@ import { FAKE_GH_STATE } from './stub-config.ts';
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
 const section = (page: Page, name: string) => main(page).getByRole('region', { name, exact: true });
 const row = (page: Page, key: string) => main(page).locator(`li[data-ticket$=":${key}"]`);
-const strip = (page: Page) =>
-  main(page).getByRole('group', { name: 'Show tickets by where they are' });
+const views = (page: Page) => main(page).getByRole('navigation', { name: 'Ticket views' });
 
 const GROUPS = [
   'Needs you',
@@ -98,28 +97,61 @@ test('groups tickets by where they are in your flow, with a chip and Spark progr
   await done.getByRole('button', { name: /^Done recently/ }).click();
   await expect(row(page, 'ENG-1190')).toContainText(/Done/);
 
-  await expect(strip(page).getByRole('button')).toHaveText([
-    /^All\s*10$/,
-    '4 need you',
-    '1 with Spark',
-    '1 started',
-    '1 up next',
-    '1 in review',
-    '2 done this week',
+  await expect(views(page).getByRole('button')).toHaveText([
+    /^Inbox\s*10$/,
+    /^Needs you\s*4$/,
+    /^In progress with Spark\s*1$/,
+    /^Started\s*1$/,
+    /^Up next\s*1$/,
+    /^In review \/ PR open\s*1$/,
+    /^Done recently\s*2$/,
   ]);
-  await strip(page).getByRole('button', { name: '1 with Spark' }).click();
-  await expect(strip(page).getByRole('button', { name: '1 with Spark' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.getByRole('complementary')).toHaveCount(0);
+  await expect(main(page).locator('.tk-none')).toBeHidden();
+});
+
+test('the side column filters the list, moves with the arrow keys and remembers the view', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await seedEveryGroup(page);
+  await openTickets(page);
+  await expect(section(page, 'Needs you').locator('li.irow')).toHaveCount(4, { timeout: 15_000 });
+  await expect(main(page).locator('.tk-none')).toContainText('Select a ticket');
+
+  const inbox = views(page).getByRole('button', { name: /^Inbox/ });
+  const withSpark = views(page).getByRole('button', { name: /^In progress with Spark/ });
+  await expect(inbox).toHaveAttribute('aria-pressed', 'true');
+  await inbox.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(withSpark).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(withSpark).toHaveAttribute('aria-pressed', 'true');
+  await expect(inbox).toHaveAttribute('aria-pressed', 'false');
   await expect(main(page).locator('li.irow')).toHaveCount(1);
   await expect(row(page, 'WEB-433')).toBeVisible();
-  await strip(page).getByRole('button', { name: '1 with Spark' }).click();
-  await expect(strip(page).getByRole('button', { name: /^All/ })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await page.keyboard.press('End');
+  await expect(views(page).getByRole('button', { name: /^Done recently/ })).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(inbox).toBeFocused();
+
+  await page.reload();
+  await expect(withSpark).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+  await expect(main(page).locator('li.irow')).toHaveCount(1);
+
+  await page.keyboard.press('/');
+  await page.keyboard.type('upload');
+  await expect(withSpark).toHaveAttribute('aria-pressed', 'false');
+  await inbox.click();
+  await expect(page.getByRole('searchbox')).toHaveValue('');
   await expect(section(page, 'Needs you')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(views(page).getByRole('button', { name: /^Needs you/ })).toBeVisible();
+  const box = await views(page).boundingBox();
+  const list = await section(page, 'Needs you').boundingBox();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(list!.y);
 });
 
 test('rows move with the keyboard, Enter opens one, and focus shows a preview', async ({
@@ -169,7 +201,7 @@ test('a linked chat and its pull request move the ticket between groups without 
   await expect(section(page, 'Needs you')).toContainText('WEB-433', { timeout: 15_000 });
   await expect(row(page, 'WEB-433')).toContainText(/Needs you.*Approve plan/);
   await expect(section(page, 'In progress with Spark')).toHaveCount(0);
-  await expect(strip(page).getByRole('button', { name: '5 need you' })).toBeVisible();
+  await expect(views(page).getByRole('button', { name: 'Needs you 5' })).toBeVisible();
 
   await setPullChecks(341, 'failing');
   const watch = await watchPull(reviewing!, 341);
@@ -214,6 +246,7 @@ test('the grouped list has no serious accessibility issues in light, dark and at
   const chip = await row(page, 'WEB-433').locator('.fchip').boundingBox();
   const title = await row(page, 'WEB-433').locator('.tk-title').boundingBox();
   expect(chip!.y).toBeGreaterThan(title!.y);
+  expect(title!.width).toBeGreaterThan(140);
   expect(found).toEqual([]);
 });
 

@@ -361,7 +361,7 @@
   background: var(--faint);
 }
 
-@media (max-width: 900px) {
+@container tk-list (max-width: 760px) {
   .tk .ir-main,
   .tk .ir-main.with-status {
     grid-template-columns: 16px 58px minmax(0, 1fr) 34px;

@@ -101,7 +101,7 @@
   border-style: dashed;
 }
 
-@media (max-width: 900px) {
+@container tk-list (max-width: 760px) {
   .tk .ir-links {
     align-self: flex-start;
     padding-top: 6px;

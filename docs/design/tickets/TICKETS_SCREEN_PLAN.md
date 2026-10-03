@@ -6,7 +6,7 @@ Reference for the Tickets screen and the Home brief. Both are built: the backend
 
 1. **The inbox is the only layout.** The list and board mockups are removed (they are in git history at `0a3b94b`). The inbox has a Comfortable / Compact row density switch. Both densities use the same one-line row; Compact only makes it shorter (32 px instead of 40 px) and hides the brief strip.
 2. **Search covers every ticket in the connected sources**, not just yours. Results are grouped as Assigned to you, Unassigned and Assigned to others. Any result can be assigned to you in one click (Linear `issueUpdate` with `assigneeId`; Jira `PUT /issue/{key}/assignee`). Built: `GET /tickets/search`.
-3. **Flow groups.** Every ticket assigned to you lands in exactly one group, from the tracker status and Spark's activity together: Needs you, In progress with Spark, Started, Up next, In review / PR open and Done recently. A summary strip above the list counts each group ("3 need you · 2 with Spark · 4 done this week") and its chips filter the list; it replaced the side column of views.
+3. **Flow groups.** Every ticket assigned to you lands in exactly one group, from the tracker status and Spark's activity together: Needs you, In progress with Spark, Started, Up next, In review / PR open and Done recently. A side column of views lists Inbox and each group with its live count, like the folders of a mail app, and filters the list; below 900 px it becomes a row of pills above the list.
 4. **Filters:** source, team or project, sprint or cycle, priority, label, plus assignee while searching.
 5. **Skeleton loading everywhere and no spinners.** Skeletons are shaped like the rows, sections, brief and detail they stand in for. Pending moves and "Assigning…" use a pulsing dot with text.
 6. **Attention comes from rules first.** Deterministic rules flag the work and each flag says why. An optional AI brief then summarises only the flagged items.
@@ -32,7 +32,7 @@ CSS tokens, fonts, rail, buttons, pills, provider cards, the Home layout (`home-
 
 **Filter bar.** Selects for source, team or project, sprint or cycle, priority (Urgent, High and above, Medium and above) and label, plus assignee (Anyone, Me, Unassigned, or a person) while searching. An active filter is tinted and "Clear filters" appears. The density switch sits at the right end of the bar.
 
-**Summary strip.** One chip per non-empty group with its count ("3 need you", "2 with Spark", "1 started", "5 up next", "2 in review", "4 done this week"), plus All and Snoozed. Each chip is a toggle button (`aria-pressed`) that shows only its group; selecting it again shows all. Chips use the same colour and icon as the row chips. The rail's Tickets item shows the Needs you count as a badge.
+**Side column** (236 px, `TicketViews.tsx`). "Views": Inbox with the total, then one item per group with its count (Needs you in the warn colour; empty groups stay, muted), and Snoozed when something is snoozed. Each item is a toggle button (`aria-pressed`); Up, Down, Home and End move between them, and the choice is remembered on this computer. Picking a view clears a search. The attention rules sit at the foot. Below 900 px the column turns into a row of pills above the list (empty groups hidden), and at phone width that row scrolls sideways. The rail's Tickets item shows the Needs you count as a badge.
 
 **Brief strip.** At the top of the Inbox view in Comfortable density: "What needs you today", with up to 3 ticket items from the Home brief. Each item shows its lead reason as plain text (the same words as its row) and one quick action. A footer links to "Full brief on Home". It is a view of the Home brief and never calls a model itself. It shows as a skeleton while the brief is being written. When the brief is off, it says so and offers "Turn on (about $0.01 each)".
 
@@ -51,7 +51,7 @@ The screen joins each linked chat's live state (from the chat list that live eve
 
 Spark reads PR status (`apps/server/src/tickets/pull-status.ts`, `getPullRequest`): a draft or open PR places the ticket in In review / PR open, failing checks move it to Needs you, and a merged PR moves it to Done recently.
 
-**Rows.** One line, the same height in every section (40 px Comfortable, 32 px Compact); two lines only below 900 px, where the reason moves under the title.
+**Rows.** One line, the same height in every section (40 px Comfortable, 32 px Compact); two lines only when the list itself is narrower than 760 px (a container query, so it also applies beside an open detail pane), where the chip, reason, age and assignee move under the title. At phone width the title wraps to two lines.
 
 `[source letter] [priority] [KEY] [status chip] [Title] ... [Spark progress or reason] [+N] [sync glyph] [age] [assignee] [links]`
 
@@ -70,7 +70,7 @@ Spark reads PR status (`apps/server/src/tickets/pull-status.ts`, `getPullRequest
 
 **Section headers.** Chevron, name and count only ("Needs you 4"), with an info button whose tooltip gives the rule ("Flagged by rules; each row says why."). The tooltip shows on hover and keyboard focus, stays while hovered and closes with Escape. Search group headers work the same way.
 
-**Detail pane** (420 px; below 1180 px it overlays the list). The actions come first: Assign to me (when it isn't yours), then Answer in chat or Open chat, Open PR, and Start work or Start again. Next come "Why it needs attention" (each flag with the rule's wording), the sync line, and the properties: status and time in it, priority, due, team or project, sprint or cycle, assignee, labels, updated. Then Linked work: the chat, the question the chat is asking, and a PR box whose Review, CI checks and Merged lines read "Not available yet". Then the description (loaded live), acceptance criteria, subtasks, links and comments.
+**Detail pane** (420 px; below 1180 px it overlays the list; from 1500 px an empty pane says "Select a ticket to see its details" until one is picked). The actions come first: Assign to me (when it isn't yours), then Answer in chat or Open chat, Open PR, and Start work or Start again. Next come "Why it needs attention" (each flag with the rule's wording), the sync line, and the properties: status and time in it, priority, due, team or project, sprint or cycle, assignee, labels, updated. Then Linked work: the chat, the question the chat is asking, and a PR box whose Review, CI checks and Merged lines read "Not available yet". Then the description (loaded live), acceptance criteria, subtasks, links and comments.
 
 **Search.** Typing replaces the sections with results. Skeleton rows show while the query runs, and a line gives the count and scope ("5 results for "upload" across all tickets in Linear and Jira"). Results are grouped as Assigned to you, Unassigned and Assigned to others. Each row keeps the status circle and says whose it is in the reason slot ("Unassigned", "Assigned to Jordan Lee"). With no results, the text names both sources and offers Clear filters and Clear search. When Jira's token is rejected, a note says its results are from 11:02.
 

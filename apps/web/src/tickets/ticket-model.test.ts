@@ -9,7 +9,6 @@ import {
   safeUrl,
   searchGroup,
   snoozeChoices,
-  snoozedTickets,
   whose,
 } from './ticket-model.ts';
 
@@ -142,15 +141,5 @@ describe('snooze choices', () => {
   it('skips to the following Monday when today is Monday', () => {
     const monday = new Date(2026, 8, 28, 8, 0);
     expect(snoozeChoices(monday)[2]?.until).toEqual(new Date(2026, 9, 5, 9, 0));
-  });
-
-  it('lists snoozed tickets soonest first', () => {
-    const snooze = (until: string) => ({ until, rules: ['review-slow' as const] });
-    const tickets = [
-      inbox({ key: 'WEB-1', snooze: snooze('2026-10-02T09:00:00.000Z') }),
-      inbox({ key: 'WEB-2' }),
-      inbox({ key: 'WEB-3', snooze: snooze('2026-09-29T09:00:00.000Z') }),
-    ];
-    expect(snoozedTickets(tickets).map((ticket) => ticket.key)).toEqual(['WEB-3', 'WEB-1']);
   });
 });

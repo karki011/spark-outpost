@@ -1,25 +1,24 @@
-.tk .fchip,
-.tk .sum-chip {
+.tk .fchip {
   --tone: var(--muted);
 }
 
-.tk :is(.fchip, .sum-chip).needs {
+.tk .fchip.needs {
   --tone: var(--warn);
 }
 
-.tk :is(.fchip, .sum-chip).bad {
+.tk .fchip.bad {
   --tone: var(--danger);
 }
 
-.tk :is(.fchip, .sum-chip):is(.spark, .review) {
+.tk .fchip:is(.spark, .review) {
   --tone: var(--accent-text);
 }
 
-.tk :is(.fchip, .sum-chip):is(.started, .all) {
+.tk .fchip.started {
   --tone: var(--text);
 }
 
-.tk :is(.fchip, .sum-chip).done {
+.tk .fchip.done {
   --tone: var(--success);
 }
 
@@ -66,53 +65,6 @@
   padding-left: 3px;
 }
 
-.tk .tk-sum {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--line);
-}
-
-.tk .sum-chip {
-  min-height: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--tone);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-
-.tk .sum-chip:hover {
-  border-color: var(--tone);
-}
-
-.tk .sum-chip[aria-pressed='true'] {
-  border-color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 13%, var(--panel));
-  font-weight: 600;
-}
-
-.tk .sum-chip .n {
-  color: var(--muted);
-}
-
-.tk .sum-chip:focus-visible {
-  outline: 2px solid var(--accent-text);
-  outline-offset: 2px;
-}
-
 .tk .ir-main.flow {
   grid-template-columns: 10px 16px 66px 104px minmax(0, 1fr) auto 34px 18px;
 }
@@ -142,17 +94,12 @@
   border-radius: 50%;
 }
 
-.tk .sk-sum .sk {
-  height: 26px;
-  border-radius: 999px;
-}
-
-@media (max-width: 900px) {
+@container tk-list (max-width: 760px) {
   .tk .ir-main.flow {
-    grid-template-columns: 16px auto minmax(0, 1fr) auto;
+    grid-template-columns: 16px auto minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'pri key title who'
-      '. chip why age';
+      'pri key title title title'
+      'chip chip why age who';
   }
 
   .tk .ir-main.flow .fchip {
@@ -177,8 +124,12 @@
   }
 }
 
-@media (max-width: 640px) {
-  .tk .tk-sum {
-    padding: 8px 14px;
+@container tk-list (max-width: 480px) {
+  .tk .ir-main.flow .tk-title {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 }

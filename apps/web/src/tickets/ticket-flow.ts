@@ -32,19 +32,6 @@ export function flowChip(section: TicketSection, tone: RowTone): FlowChip {
     : CHIPS[section];
 }
 
-const SUMMARY: Record<TicketSection, (count: number) => string> = {
-  attention: (count) => `${count} need${count === 1 ? 's' : ''} you`,
-  spark: (count) => `${count} with Spark`,
-  started: (count) => `${count} started`,
-  up_next: (count) => `${count} up next`,
-  review: (count) => `${count} in review`,
-  done: (count) => `${count} done this week`,
-};
-
-export function summaryText(section: TicketSection, count: number): string {
-  return SUMMARY[section](count);
-}
-
 export type ChatLookup = ReadonlyMap<string, ConversationSummary>;
 
 export function chatLookup(chats: readonly ConversationSummary[]): ChatLookup {

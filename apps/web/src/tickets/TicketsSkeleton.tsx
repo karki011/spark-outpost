@@ -38,16 +38,19 @@ export function TicketsSkeleton({ sourcesLabel }: { sourcesLabel: string }) {
       <p className="sr-only" role="status">
         Loading tickets from {sourcesLabel}
       </p>
-      <div className="ib-main">
-        <div className="tk-sum sk-sum" aria-hidden="true">
-          {[52, 96, 92, 84, 108].map((width, index) => (
-            <span key={index} className="sk" style={{ width }} />
+      <div className="ib-nav" aria-hidden="true">
+        <div className="sk-nav">
+          {Array.from({ length: 7 }, (_, index) => (
+            <span key={index} className="sk" />
           ))}
         </div>
+      </div>
+      <div className="ib-main">
         <SkeletonSection rows={3} title={120} />
         <SkeletonSection rows={2} title={90} />
         <SkeletonSection rows={4} title={70} />
       </div>
+      <div className="tk-detail tk-none" aria-hidden="true" />
     </div>
   );
 }

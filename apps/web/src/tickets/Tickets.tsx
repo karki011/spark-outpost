@@ -21,26 +21,27 @@ import { TicketFilterBar } from './TicketFilterBar.tsx';
 import { Glyph } from './ticket-icons.tsx';
 import {
   ALL_FILTERS,
-  countBy,
   filterTickets,
   inboxIdOf,
-  snoozedTickets,
   ticketId,
   type RowAction,
   type TicketFilters,
   type TicketView,
 } from './ticket-model.ts';
+import { viewItems } from './ticket-views.ts';
 import { TicketsHeader } from './TicketsHeader.tsx';
-import { SummaryStrip } from './SummaryStrip.tsx';
 import { TicketsSkeleton } from './TicketsSkeleton.tsx';
+import { TicketViews } from './TicketViews.tsx';
 import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
 import { useLiveTickets } from './use-live-tickets.ts';
 import { useTicketInbox } from './use-ticket-inbox.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { useTicketSearch } from './use-ticket-search.ts';
+import { useTicketView } from './use-ticket-view.ts';
 import './tickets.css';
 import './ticket-flow.css';
+import './ticket-views.css';
 import './ticket-rows.css';
 import './ticket-search.css';
 import './ticket-detail.css';
@@ -81,7 +82,7 @@ function moveSelection(event: KeyboardEvent<HTMLElement>, follow: boolean) {
 
 export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   const { connections, connected, inbox } = useTicketInbox();
-  const [view, setView] = useState<TicketView>('inbox');
+  const [view, setView] = useTicketView();
   const [filters, setFilters] = useState<TicketFilters>(ALL_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<TicketSection>>(new Set(['done']));
   const [selectedId, setSelectedId] = useState(() => (focusId ? inboxIdOf(focusId) : null));
@@ -119,7 +120,11 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   const label = sourcesLabel(sources);
   const tickets = useMemo(() => filterTickets(data?.tickets ?? [], filters), [data, filters]);
   const entries = useLiveTickets(tickets);
-  const counts = countBy(entries);
+  const currentView = search.active ? null : view;
+  const showView = (next: TicketView) => {
+    setView(next);
+    search.clear();
+  };
 
   const findInbox = (id: string) => data?.tickets.find((ticket) => ticketId(ticket) === id) ?? null;
   const findResult = (id: string) =>
@@ -201,6 +206,12 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
             <TicketsSkeleton sourcesLabel={label} />
           ) : (
             <div className="ib">
+              <TicketViews
+                items={viewItems(entries, currentView)}
+                current={currentView}
+                settings={settings}
+                onView={showView}
+              />
               <div className="ib-main" onKeyDown={(event) => moveSelection(event, detail !== null)}>
                 {search.active ? (
                   <SearchResults
@@ -220,13 +231,6 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   </EmptyScene>
                 ) : (
                   <>
-                    <SummaryStrip
-                      view={view}
-                      total={tickets.length}
-                      counts={counts}
-                      snoozed={snoozedTickets(tickets).length}
-                      onView={setView}
-                    />
                     {view === 'inbox' && density === 'comfortable' && (
                       <BriefStrip
                         tickets={tickets}
@@ -250,7 +254,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   </>
                 )}
               </div>
-              {detail && (
+              {detail ? (
                 <TicketDetail
                   key={ticketId(detail)}
                   ticket={detail}
@@ -264,6 +268,14 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   onStart={() => setStarting(detail)}
                   onOpenChat={onOpenChat}
                 />
+              ) : (
+                <div className="tk-detail tk-none">
+                  <p>
+                    Select a ticket to see its details
+                    <br />
+                    and start work from it.
+                  </p>
+                </div>
               )}
             </div>
           )}
