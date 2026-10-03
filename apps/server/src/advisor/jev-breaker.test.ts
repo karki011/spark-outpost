@@ -116,6 +116,16 @@ describe('Jev breaker', () => {
     expect(breaker.paused).toBe(false);
   });
 
+  it('does not pause Jev for a short-deadline observer that opts out', async () => {
+    const breaker = new JevBreaker();
+    const { state, fetcher } = counted(silent);
+    const ask = options(fetcher, { breaker, pauseOnFailure: false });
+    const errors = await failTimes(JEV_PAUSE_AFTER + 1, ask);
+    expect(errors.every((error) => error instanceof AdvisorTimeoutError)).toBe(true);
+    expect(state.calls).toBe(JEV_PAUSE_AFTER + 1);
+    expect(breaker.paused).toBe(false);
+  });
+
   it('keeps one breaker per transport and base URL', () => {
     const first: typeof fetch = async () => new Response();
     const second: typeof fetch = async () => new Response();

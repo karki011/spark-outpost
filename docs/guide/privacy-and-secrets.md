@@ -13,7 +13,7 @@ Your chats, settings and code stay on your computer. Keys live in your system ke
 | Goes to                               | What                                                                                     | Stop it                                           |
 | ------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | **Your AI provider**                  | Your messages, and the files and command output the agent reads.                         | Use [`.sparkignore`](sparkignore.md) for files    |
-| **Jev**, if connected                 | Short, redacted facts about a request. Diffs for checks. Some file contents for the Map. | See [what Jev reads](jev.md#what-jev-reads)       |
+| **Jev**, if connected                 | Short, redacted facts about a request. Diffs and short file previews. Map file contents. | See [what Jev reads](jev.md#what-jev-reads)       |
 | **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them.                                                    | Disconnect them                                   |
 | **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat) |
 

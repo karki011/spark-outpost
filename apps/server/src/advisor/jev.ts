@@ -12,6 +12,7 @@ export interface JevOptions {
   timeoutMs?: number;
   limiter?: JevLimiter;
   breaker?: JevBreaker;
+  pauseOnFailure?: boolean;
   random?: () => number;
 }
 
@@ -170,7 +171,8 @@ export async function askSystemOne(
     breaker.succeeded();
     return response;
   } catch (error) {
-    if (error instanceof JevOutageError || error instanceof AdvisorTimeoutError) breaker.failed();
+    const outage = error instanceof JevOutageError || error instanceof AdvisorTimeoutError;
+    if (outage && options.pauseOnFailure !== false) breaker.failed();
     throw error;
   }
 }

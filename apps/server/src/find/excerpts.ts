@@ -5,7 +5,7 @@ import { MAX_FILE_BYTES } from '../codescan/skip.ts';
 import { CODE_CONTEXT, type ContextExcerpt, type ExcerptTarget } from './context-block.ts';
 import { shareable } from './leads.ts';
 
-async function readSource(root: string, path: string): Promise<string | null> {
+export async function readSource(root: string, path: string): Promise<string | null> {
   try {
     const file = join(root, path);
     const stats = await lstat(file);

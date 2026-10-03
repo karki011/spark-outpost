@@ -30,6 +30,10 @@ export interface RoutingLabelRow {
   thumbs: 'up' | 'down' | null;
   jev_tokens: number;
   jev_cost_usd: string | number;
+  content_files: string[] | null;
+  content_status: string | null;
+  content_tokens: number | null;
+  content_rank: unknown;
 }
 
 export interface LabelFilter {
