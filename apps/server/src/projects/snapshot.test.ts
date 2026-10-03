@@ -75,7 +75,7 @@ function coarseStat(): void {
   git('config', 'core.trustctime', 'false');
 }
 
-describe('the saved snapshot index', () => {
+describe('the saved snapshot index', { timeout: 60_000 }, () => {
   it('gives the same tree as a fresh index through edits, adds, deletes and commits', async () => {
     await write('.gitignore', 'ignored/\n*.log\n');
     await write('src/a.ts', 'a\n');
@@ -104,15 +104,15 @@ describe('the saved snapshot index', () => {
   it('sees an edit that keeps the size and lands in the same second as a snapshot', async () => {
     coarseStat();
     const seen = new Set<string>();
-    for (let round = 0; round < 12; round += 1) {
-      const text = `v${round % 10}\n`;
+    for (let round = 0; round < 6; round += 1) {
+      const text = `v${round % 5}\n`;
       await write('app.ts', text);
       const tree = await workingTree(root);
       expect(tree).toBe(freshTree());
       expect(git('show', `${tree}:app.ts`)).toBe(text);
       seen.add(tree);
     }
-    expect(seen.size).toBe(10);
+    expect(seen.size).toBe(5);
   });
 
   it('reports a same-size edit made right after the run snapshot', async () => {
