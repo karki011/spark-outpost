@@ -17,7 +17,6 @@ import {
   gitRepo,
   jevFetch,
   removeRepo,
-  setCheckCommands,
   startOrchestrator,
   startScenario,
   withTag,
@@ -129,8 +128,8 @@ describe('the loop guard', () => {
 describe('checkpoints', () => {
   it('reverts the whole orchestration from the keep, fix or revert card', async () => {
     await start();
-    await setCheckCommands(t, root, ['node -e "process.exit(1)"']);
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
+    const risky = withTag(TRIVIAL, '#dropmigration');
+    const { conversationId, runId } = await startScenario(t, root, risky, 'hands-off');
     const answers: Answerer = (approval) =>
       approval.kind === 'accept'
         ? { optionId: CHECKPOINT_OPTION.revert }
@@ -143,8 +142,8 @@ describe('checkpoints', () => {
 
   it('sends a fix request back to the same Builder from the keep card', async () => {
     await start();
-    await setCheckCommands(t, root, ['node -e "process.exit(1)"']);
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
+    const risky = withTag(TRIVIAL, '#dropmigration');
+    const { conversationId, runId } = await startScenario(t, root, risky, 'hands-off');
     let fixed = false;
     const answers: Answerer = (approval) => {
       if (approval.kind !== 'accept') return answerEverything(approval);
@@ -153,9 +152,7 @@ describe('checkpoints', () => {
       return { optionId: CHECKPOINT_OPTION.fix, note: 'Use UTC' };
     };
     const { orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    const names = orchestration.crew.map((member) => member.name);
-    expect(names.length).toBeGreaterThan(1);
-    expect(new Set(names)).toEqual(new Set(['Bolt']));
+    expect(orchestration.crew.map((member) => member.name)).toEqual(['Bolt', 'Bolt']);
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('fixed as asked');
   }, 60_000);
 

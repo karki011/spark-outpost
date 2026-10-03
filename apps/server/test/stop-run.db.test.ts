@@ -18,6 +18,7 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  TRIVIAL,
   withTag,
   type Harness,
   type JevScript,
@@ -121,7 +122,15 @@ describe('Stop on a top-level run', () => {
 
   it('cancels the waiting approval card and the run when stopped while waiting', async () => {
     start();
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'hands-off');
+    const { conversationId, runId } = await startScenario(
+      t,
+      root,
+      TRIVIAL,
+      'hands-off',
+      'auto',
+      'sonnet',
+      'default',
+    );
     const approval = await pendingApproval(conversationId);
     await stopRun(t.db, runId);
     expect((await finished(runId)).status).toBe('cancelled');
