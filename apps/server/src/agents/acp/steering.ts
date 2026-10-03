@@ -1,6 +1,6 @@
 import type * as acp from '@agentclientprotocol/sdk';
 import { z } from 'zod';
-import type { SteerRequests } from '../../providers/provider.ts';
+import type { ProviderTurn, SteerRequests } from '../../providers/provider.ts';
 
 type Requester = Pick<acp.ClientContext, 'request'>;
 
@@ -33,4 +33,13 @@ export function attachSteering(
 ): () => void {
   if (!steering || !steeringSupported(init)) return () => undefined;
   return steering.attach((text) => steer(ctx, sessionId, text));
+}
+
+export async function nextMessage(
+  turn: ProviderTurn,
+  stopReason: acp.StopReason,
+  signal: AbortSignal,
+): Promise<string | null> {
+  if (!turn.inbox || stopReason !== 'end_turn' || signal.aborted) return null;
+  return turn.inbox.take();
 }

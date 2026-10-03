@@ -46,6 +46,10 @@ export interface SteerRequests {
   attach(send: (text: string) => Promise<boolean>): () => void;
 }
 
+export interface TurnInbox {
+  take(): Promise<string | null>;
+}
+
 export interface StoredSession {
   sessionId: string;
   cwd: string;
@@ -78,6 +82,7 @@ export interface ProviderTurn {
   planning?: boolean;
   modeRequests?: ModeRequests;
   steering?: SteerRequests;
+  inbox?: TurnInbox;
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;

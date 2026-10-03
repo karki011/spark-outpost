@@ -39,6 +39,7 @@ import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
 import { ticketErrorStatus } from './ticket-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
+import { queueErrorStatus } from './queue-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
@@ -89,7 +90,7 @@ export function apiRoutes(deps: RouteDeps): Router {
     const request = parseBody(sendMessageRequestSchema, req);
     const conversationId = paramId(req);
     const target = await runTarget(conversationId);
-    if (request.startAs === 'change' && target.permission !== PERMISSION_DO) {
+    if (request.startAs && target.permission !== PERMISSION_DO) {
       throw new BadRequestError('Switch the chat to Do to make the change.');
     }
     await deps.warmTicketMentions?.(request.content);
@@ -157,7 +158,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     outcomeErrorStatus(error) ??
     shipErrorStatus(error) ??
     ticketErrorStatus(error) ??
-    teammateErrorStatus(error);
+    teammateErrorStatus(error) ??
+    queueErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

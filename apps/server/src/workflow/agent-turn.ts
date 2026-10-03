@@ -28,6 +28,7 @@ import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, startBasis } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
+import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { createSpendMeter } from './spend-meter.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
@@ -66,6 +67,8 @@ async function mainSessionBrief(db: Db, input: RunInput) {
   return teammateBrief(db, input.identity.threadId);
 }
 
+const INBOX_POLL_MS = 1000;
+
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
 export interface TurnDeps {
@@ -77,6 +80,7 @@ export interface TurnDeps {
   approvalPollMs?: number;
   approvalTimeoutMs?: number;
   sessionLimits?: SweepLimits;
+  inboxPollMs?: number;
 }
 
 export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout' | 'budget';
@@ -243,6 +247,15 @@ export async function runAgentTurn(
         control.stop('cancelled'),
       )
     : null;
+  const inbox = input.assistant
+    ? null
+    : openMemberInbox(deps.db, {
+        runId: lease.runId,
+        topRunId: input.parentRunId ?? lease.runId,
+        pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
+        append,
+      });
+  const steering = joinSteering([steerWatch, inbox]);
   const secretValues = await projectSecretValues(input.projectRoots);
   const redaction = createRedactionFilter(secretValues);
   const observer = scannedObserver(audit, secretValues, observations.record);
@@ -335,7 +348,8 @@ export async function runAgentTurn(
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
-      ...(steerWatch ? { steering: steerWatch } : {}),
+      ...(steering ? { steering } : {}),
+      ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
       ...(session ? { session: session.target } : {}),
@@ -414,6 +428,9 @@ export async function runAgentTurn(
   } finally {
     modeWatch?.dispose();
     steerWatch?.dispose();
+    await inbox
+      ?.dispose()
+      .catch((error: unknown) => console.error('Could not close the message inbox', error));
     audit.discard();
   }
 }

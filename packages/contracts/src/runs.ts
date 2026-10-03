@@ -32,7 +32,7 @@ export function isTerminalRunStatus(status: RunStatus): status is TerminalRunSta
 export const activeRunsSchema = z.object({ activeRuns: z.number().int().nonnegative() });
 export type ActiveRuns = z.infer<typeof activeRunsSchema>;
 
-export const startAsSchema = z.enum(['change']);
+export const startAsSchema = z.enum(['change', 'continue']);
 export type StartAs = z.infer<typeof startAsSchema>;
 
 export const messageSourceSchema = z.enum(['ui', 'e2e', 'bench']);

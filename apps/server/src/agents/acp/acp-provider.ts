@@ -48,7 +48,7 @@ import {
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, openProject, sessionMeta } from './session-start.ts';
-import { attachSteering } from './steering.ts';
+import { attachSteering, nextMessage } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
@@ -459,15 +459,22 @@ async function converse(
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
-      const prompt = session.prompt(blocks);
-      const promptFailure = prompt.then(() => new Promise<never>(() => undefined));
+      const failureOf = (sent: Promise<unknown>) =>
+        sent.then(() => new Promise<never>(() => undefined));
+      let promptFailure = failureOf(session.prompt(blocks));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
-          stopRequests?.();
-          detachSteering();
           push(promptTokens(message.response.usage));
           mapper.stopped(message.response._meta);
+          const next = await nextMessage(turn, message.stopReason, signal);
+          if (next) {
+            const options = { ...promptOptions, attachments: [] };
+            promptFailure = failureOf(session.prompt(followUpBlocks(next, options)));
+            continue;
+          }
+          stopRequests?.();
+          detachSteering();
           if (turn.session) await closeQuietly(ctx, init, session.sessionId);
           return message.stopReason;
         }

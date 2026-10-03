@@ -74,6 +74,7 @@ export async function runIntake(
     currentTask: current,
     previousReply: previousReply(input),
     change: input.startAs === 'change',
+    continuing: input.startAs === 'continue',
     hasAgreedPlan: await hasAgreedPlan(deps, input),
   });
   const decisions = solo ? soloDecisions(decided) : decided;

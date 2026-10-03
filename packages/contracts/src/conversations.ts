@@ -6,6 +6,7 @@ import { ATTACHMENTS_PER_MESSAGE, attachmentSchema } from './attachments.ts';
 import { categorySchema, titleSourceSchema } from './categories.ts';
 import { chatSettingsSchema } from './chat-settings.ts';
 import { compactionSchema, continuationSchema } from './compaction.ts';
+import { memberMessageSchema, queuedMessageSchema } from './crew-messages.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
@@ -114,6 +115,8 @@ export const conversationDetailSchema = z.object({
   plans: conversationPlansSchema.optional(),
   compactions: z.array(compactionSchema).optional(),
   continuedIn: z.array(continuationSchema).optional(),
+  queue: z.array(queuedMessageSchema).optional(),
+  memberMessages: z.array(memberMessageSchema).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

@@ -26,6 +26,7 @@ import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { queueRoutes } from './queue-routes.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
@@ -82,6 +83,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', mcpRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
+  app.use('/api', queueRoutes(options));
   app.use('/api', taskChangeRoutes(options));
   app.use('/api', shipRoutes(options));
   app.use('/api', prFollowUpRoutes(options));
