@@ -1,4 +1,5 @@
 import { objectFields } from '../agents/acp/object-fields.ts';
+import { isSparkPlanFile } from '../plans/plan-mode.ts';
 
 const NO_REVIEW_NEEDED = new Set(['read', 'search', 'think', 'switch_mode']);
 const RAN = new Set(['completed', 'failed']);
@@ -17,6 +18,7 @@ export function createReviewTracker(): ReviewTracker {
   const asked = new Set<string>();
   const kinds = new Map<string, string>();
   const settled = new Set<string>();
+  const planFiles = new Set<string>();
   return {
     asked(toolCallId) {
       asked.add(toolCallId);
@@ -29,10 +31,11 @@ export function createReviewTracker(): ReviewTracker {
       const id = update.toolCallId;
       if (typeof id !== 'string' || settled.has(id)) return null;
       if (typeof update.kind === 'string') kinds.set(id, update.kind);
+      if (isSparkPlanFile(objectFields(update.rawInput).file_path)) planFiles.add(id);
       if (typeof update.status !== 'string' || !RAN.has(update.status)) return null;
       settled.add(id);
       const kind = kinds.get(id) ?? 'other';
-      if (asked.has(id) || NO_REVIEW_NEEDED.has(kind)) return null;
+      if (asked.has(id) || planFiles.has(id) || NO_REVIEW_NEEDED.has(kind)) return null;
       return { toolCallId: id, kind };
     },
   };

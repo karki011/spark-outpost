@@ -38,7 +38,17 @@ export function exitPlanText(
   return text ? text.slice(0, PLAN_DOCUMENT_MAX_LENGTH) : null;
 }
 
-const PLAN_FILE = /(?:^|\/)\.claude\/plans\/[^/]+\.md$/;
+export const PLANS_DIR = '.spark/plans';
+const PLAN_FILE = /(?:^|\/)\.(?:claude|spark)\/plans\/[^/]+\.md$/;
+const SPARK_PLAN_FILE = /(?:^|\/)\.spark\/plans\/[^/]+\.md$/;
+
+function isPlanFile(target: unknown): target is string {
+  return typeof target === 'string' && PLAN_FILE.test(target);
+}
+
+export function isSparkPlanFile(target: unknown): boolean {
+  return typeof target === 'string' && SPARK_PLAN_FILE.test(target);
+}
 
 export function isExitPlanKind(toolKind: string | null | undefined): boolean {
   return toolKind === SWITCH_MODE_KIND;
@@ -47,7 +57,7 @@ export function isExitPlanKind(toolKind: string | null | undefined): boolean {
 export function planFileText(rawInput: unknown): string | null {
   const fields = objectFields(rawInput);
   const { file_path: target, content } = fields;
-  if (typeof target !== 'string' || !PLAN_FILE.test(target)) return null;
+  if (!isPlanFile(target)) return null;
   if (typeof content !== 'string' || !content.trim()) return null;
   return content.trim().slice(0, PLAN_DOCUMENT_MAX_LENGTH);
 }

@@ -150,6 +150,7 @@ describe('protected paths', () => {
     '.cursor/settings.json',
     '.github/workflows/ci.yml',
     '.spark/worktrees/run-1/src/a.ts',
+    '.spark/plans/quiet-plan.md',
     '.git/HEAD',
     '.git/hooks/sample/x',
   ])('%s is an ordinary path', (relative) => {

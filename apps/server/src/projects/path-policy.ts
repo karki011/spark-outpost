@@ -112,13 +112,13 @@ const INSTRUCTION_PREFIXES = ['.claude/', '.cursor/rules/', '.spark/'];
 const INSTRUCTION_FILES = new Set(['.github/copilot-instructions.md']);
 const GIT_HOOK = /^\.git\/hooks\/[^/]+$/;
 const GIT_CONFIG = '.git/config';
-const SPARK_WORKTREES = '.spark/worktrees/';
+const SPARK_OWN_DIRS = ['.spark/worktrees/', '.spark/plans/'];
 
 export function protectedPath(relative: string): ProtectedKind | null {
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';
   if (INSTRUCTION_NAMES.has(name) || INSTRUCTION_FILES.has(relative)) return 'instructions';
-  if (relative.startsWith(SPARK_WORKTREES)) return null;
+  if (SPARK_OWN_DIRS.some((dir) => relative.startsWith(dir))) return null;
   const inside = INSTRUCTION_PREFIXES.some((prefix) => relative.startsWith(prefix));
   return inside || INSTRUCTION_PREFIXES.includes(`${relative}/`) ? 'instructions' : null;
 }
