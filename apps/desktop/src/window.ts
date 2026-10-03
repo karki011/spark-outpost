@@ -1,6 +1,7 @@
 import { BrowserWindow, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
+import { linkTarget } from './link-target.ts';
 import { themeArgs } from './theme-arg.ts';
 
 export interface WindowOptions {
@@ -9,8 +10,22 @@ export interface WindowOptions {
   theme: string | null;
 }
 
-function openOutside(url: string): void {
-  if (/^(https?:\/\/|mailto:)/.test(url)) void shell.openExternal(url);
+const VIEWER_SIZE = { width: 960, height: 760 } as const;
+
+function openViewer(url: string, origin: string): void {
+  const viewer = new BrowserWindow({
+    ...VIEWER_SIZE,
+    autoHideMenuBar: true,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  guardNavigation(viewer, origin);
+  void viewer.loadURL(url);
+}
+
+function openLink(url: string, origin: string): void {
+  const target = linkTarget(url, origin);
+  if (target === 'viewer') openViewer(url, origin);
+  if (target === 'browser') void shell.openExternal(url);
 }
 
 export function attachApiToken(origin: string, token: string): void {
@@ -21,13 +36,13 @@ export function attachApiToken(origin: string, token: string): void {
 
 export function guardNavigation(window: BrowserWindow, origin: string): void {
   window.webContents.setWindowOpenHandler(({ url }) => {
-    openOutside(url);
+    openLink(url, origin);
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
     if (targetsApi(url, origin)) return;
     event.preventDefault();
-    openOutside(url);
+    openLink(url, origin);
   });
 }
 
