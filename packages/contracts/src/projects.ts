@@ -50,10 +50,16 @@ export type RemovedProject = z.infer<typeof removedProjectSchema>;
 export const folderEntrySchema = z.object({ name: z.string(), path: z.string() });
 export type FolderEntry = z.infer<typeof folderEntrySchema>;
 
+export const folderFileSchema = folderEntrySchema.extend({
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type FolderFile = z.infer<typeof folderFileSchema>;
+
 export const folderListingSchema = z.object({
   path: z.string(),
   parent: z.string().nullable(),
   folders: z.array(folderEntrySchema),
+  files: z.array(folderFileSchema).default([]),
 });
 export type FolderListing = z.infer<typeof folderListingSchema>;
 

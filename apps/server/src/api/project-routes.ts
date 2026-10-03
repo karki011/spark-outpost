@@ -4,6 +4,7 @@ import {
   attachProjectFileRequestSchema,
   conversationOrderRequestSchema,
   createProjectRequestSchema,
+  instructionsPathSchema,
   projectOrderRequestSchema,
   removedProjectSchema,
   updateProjectRequestSchema,
@@ -13,6 +14,7 @@ import type { Db } from '../persistence/db.ts';
 import { saveAttachment } from '../persistence/attachments.ts';
 import { AttachmentError, UNSUPPORTED_ATTACHMENT } from '../persistence/attachment-content.ts';
 import { listFolders } from '../projects/folders.ts';
+import { readInstructionsFile } from '../projects/instructions-file.ts';
 import { currentBranch } from '../projects/git.ts';
 import { listProjectFiles } from '../projects/project-files.ts';
 import { projectPolicy, readProjectFile } from '../projects/project-fs.ts';
@@ -76,7 +78,18 @@ export function projectRoutes({ db, workspaceId }: ProjectRouteDeps): Router {
   const router = Router();
 
   router.get('/folders', async (req, res) => {
-    res.json(await listFolders(queryText(req, 'path') || undefined));
+    res.json(
+      await listFolders(queryText(req, 'path') || undefined, {
+        instructionFiles: queryText(req, 'files') === 'instructions',
+        hidden: queryText(req, 'hidden') === '1',
+      }),
+    );
+  });
+
+  router.get('/instructions-file', async (req, res) => {
+    const requested = instructionsPathSchema.safeParse(queryText(req, 'path'));
+    if (!requested.success) throw new BadRequestError('Choose a file by its full path.');
+    res.json(await readInstructionsFile(requested.data));
   });
 
   router.get('/projects', async (_req, res) => {

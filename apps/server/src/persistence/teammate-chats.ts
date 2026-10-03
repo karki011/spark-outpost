@@ -128,12 +128,17 @@ export async function openHomeThread(
   });
 }
 
+export interface StoredBrief extends TeammateBrief {
+  instructionsPath: string | null;
+}
+
 export async function teammateBrief(
   db: Queryable,
   conversationId: string,
-): Promise<TeammateBrief | null> {
-  const { rows } = await db.query<TeammateBrief>(
-    `SELECT t.name, t.role, t.instructions FROM conversations c
+): Promise<StoredBrief | null> {
+  const { rows } = await db.query<StoredBrief>(
+    `SELECT t.name, t.role, t.instructions, t.instructions_path AS "instructionsPath"
+     FROM conversations c
      JOIN teammates t ON t.id = c.teammate_id WHERE c.id = $1`,
     [conversationId],
   );

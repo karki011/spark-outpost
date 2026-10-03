@@ -119,6 +119,7 @@ const teammateFieldsShape = {
   name: teammateNameSchema,
   role: teammateRoleSchema,
   face: teammateFaceSchema,
+  faceAuto: z.boolean().default(false),
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
   agentMode: z.string().nullable(),

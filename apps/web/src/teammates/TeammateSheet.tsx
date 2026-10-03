@@ -3,23 +3,18 @@ import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } fr
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  TEAMMATE_INSTRUCTIONS_MAX,
-  TEAMMATE_NAME_MAX,
-  TEAMMATE_ROLE_MAX,
-  type Teammate,
-} from '@spark-outpost/contracts';
+import { TEAMMATE_NAME_MAX, TEAMMATE_ROLE_MAX, type Teammate } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
-import { useProjects } from '../chat/project/use-chat-repos.ts';
-import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { XIcon } from '../ui/icons.tsx';
 import { reveal } from '../ui/transitions.tsx';
-import { FacePicker } from './FacePicker.tsx';
 import { TeammateDefaults } from './TeammateDefaults.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
+import { TeammateInstructions } from './TeammateInstructions.tsx';
+import { TeammateLook } from './TeammateLook.tsx';
+import { TeammateProject } from './TeammateProject.tsx';
 import {
   changesFrom,
   createRequest,
@@ -32,7 +27,6 @@ import {
 import { closeTeammateSheet, requestTeammateDelete, type SheetRequest } from './teammate-store.ts';
 import { teammateKeys, teammatesApi } from './teammates-api.ts';
 
-const NO_PROJECT = '';
 const FOCUSABLE = 'button:not(:disabled), input, textarea, [tabindex="0"]';
 
 interface TeammateSheetProps {
@@ -60,6 +54,7 @@ function useSave(editing: Teammate | null) {
 function useSheetKeys(panel: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('.fdlg')) return;
       if (event.key === 'Escape') {
         if (document.querySelector('.choice-menu.open')) return;
         event.stopPropagation();
@@ -84,7 +79,6 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
   );
   const [touched, setTouched] = useState(false);
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
-  const projects = useProjects();
   const save = useSave(editing);
   useSheetKeys(panelRef);
 
@@ -101,11 +95,6 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
     setTouched(true);
     if (!problem && !unchanged) save.mutate(draft);
   };
-  const used = draft.instructions.length;
-  const projectChoices = [
-    { id: NO_PROJECT, label: 'No project', description: 'Chats start without a linked folder.' },
-    ...(projects.data ?? []).map((project) => ({ id: project.id, label: project.name })),
-  ];
 
   return createPortal(
     <motion.div
@@ -167,40 +156,27 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
                 onChange={(event) => setDraft({ ...draft, role: event.target.value })}
               />
             </label>
-            <FacePicker face={shownFace(draft)} onChange={(face) => setDraft({ ...draft, face })} />
+            <TeammateLook
+              picked={draft.face}
+              shown={shownFace(draft)}
+              onChange={(face) => setDraft({ ...draft, face })}
+            />
             <h3 className="tm-sub">Defaults for its chats</h3>
             <TeammateDefaults
               draft={draft}
               providers={setup.data?.providers ?? []}
               onChange={(defaults) => setDraft({ ...draft, ...defaults })}
             />
-            <div className="field">
-              <span>Default project</span>
-              <ChoicePicker
-                label="Default project"
-                choices={projectChoices}
-                value={draft.projectIds[0] ?? NO_PROJECT}
-                onChange={(id) => setDraft({ ...draft, projectIds: id ? [id] : [] })}
-              />
-            </div>
-            <label className="field">
-              <span>Standing instructions</span>
-              <textarea
-                className="inp tm-instructions"
-                rows={6}
-                value={draft.instructions}
-                placeholder="Review for bugs and missing tests. Point to the file and line."
-                aria-describedby={`${titleId}-count`}
-                onChange={(event) => setDraft({ ...draft, instructions: event.target.value })}
-              />
-              <small
-                id={`${titleId}-count`}
-                className={used > TEAMMATE_INSTRUCTIONS_MAX ? 'tm-count over' : 'tm-count'}
-              >
-                Added to every chat with this Spark as your own instructions. {used} /{' '}
-                {TEAMMATE_INSTRUCTIONS_MAX}
-              </small>
-            </label>
+            <TeammateProject
+              projectIds={draft.projectIds}
+              onChange={(projectIds) => setDraft({ ...draft, projectIds })}
+            />
+            <TeammateInstructions
+              instructions={draft.instructions}
+              path={draft.instructionsPath}
+              onInstructions={(instructions) => setDraft({ ...draft, instructions })}
+              onPath={(instructionsPath) => setDraft({ ...draft, instructionsPath })}
+            />
             {editing && (
               <div className="tm-danger">
                 <HoldToConfirm

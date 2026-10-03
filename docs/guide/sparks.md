@@ -14,10 +14,17 @@ A Spark is a named teammate, like a contact. It has a face, a role, a long-runni
 
 1. Open **Home** and find **Your Sparks**.
 2. Select **New Spark**, or **Add** on a suggested one such as **Pip · Code reviewer**.
-3. Type a **Name** and a **Role**. Pick a **Blob** and a **Colour**.
-4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**, or leave them on your usual settings.
-5. Write **Standing instructions**, up to 2,000 characters.
+3. Type a **Name** and a **Role**. The blob comes from the name. To pick one yourself, select **Change look**; **Use name** puts it back.
+4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**, or leave them on your usual settings. **Choose folder…** adds any folder as a project.
+5. Write **Standing instructions**, up to 2,000 characters, or select **Use a file…** and pick a Markdown or text file.
 6. Select **Create Spark**.
+
+## Instructions from a file
+
+- Spark reads the file at the start of each chat, so edits to the file apply to the next chat.
+- The file is used instead of the typed text. The typed text is used only if the file is missing or can't be read.
+- Only the first 2,000 characters are used. The sheet shows a preview and says when the file is cut.
+- The file must be `.md`, `.markdown`, `.mdc` or `.txt`, plain text, and 256 KB or smaller. Secret files such as `.env` can't be picked.
 
 ## Talk to it
 

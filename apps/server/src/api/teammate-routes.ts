@@ -20,6 +20,7 @@ import {
   teammateList,
   updateTeammate,
 } from '../persistence/teammates.ts';
+import { readInstructionsFile } from '../projects/instructions-file.ts';
 import { BadRequestError, paramId } from './validation.ts';
 
 export interface TeammateRouteDeps {
@@ -35,7 +36,18 @@ function parseTeammateBody<T>(schema: z.ZodType<T>, req: Request): T {
   return result.data;
 }
 
-const BRIEF_FIELDS: readonly (keyof UpdateTeammateRequest)[] = ['name', 'role', 'instructions'];
+const BRIEF_FIELDS: readonly (keyof UpdateTeammateRequest)[] = [
+  'name',
+  'role',
+  'instructions',
+  'instructionsPath',
+];
+
+async function assertInstructionsFile(requested: string | null | undefined): Promise<void> {
+  if (!requested) return;
+  const file = await readInstructionsFile(requested);
+  if (file.problem) throw new BadRequestError(file.problem);
+}
 
 export function teammateErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof TeammateNotFoundError) return { status: 404, message: error.message };
@@ -58,6 +70,7 @@ export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
   router.post('/teammates', async (req, res) => {
     const input = parseTeammateBody(createTeammateRequestSchema, req);
     await assertConnected(input.provider);
+    await assertInstructionsFile(input.instructionsPath);
     res.status(201).json(await createTeammate(db, workspaceId, input));
   });
 
@@ -65,6 +78,7 @@ export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
     const id = paramId(req);
     const update = parseTeammateBody(updateTeammateRequestSchema, req);
     await assertConnected(update.provider);
+    await assertInstructionsFile(update.instructionsPath);
     const saved = await updateTeammate(db, workspaceId, id, update);
     if (BRIEF_FIELDS.some((field) => update[field] !== undefined)) {
       await closeTeammateSessions(db, workspaceId, id);

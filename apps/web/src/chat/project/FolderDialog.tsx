@@ -1,16 +1,29 @@
+import './project.css';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { projectKeys, projectsApi } from '../../api/projects.ts';
+import type { FolderListing } from '@spark-outpost/contracts';
+import { formatBytes } from '../../api/attachments.ts';
+import { projectKeys, projectsApi, type FolderPick } from '../../api/projects.ts';
+import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { FileIcon } from '../attachments/attachment-icons.tsx';
 import { breadcrumbs } from './folder-path.ts';
+import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
-type FolderPurpose = 'project' | 'reference';
+type FolderPurpose = 'project' | 'reference' | 'instructions';
+
+const FOCUSABLE = 'button:not(:disabled)';
 
 const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> = {
+  instructions: {
+    title: 'Choose an instructions file',
+    lede: 'Markdown and text files are listed. Spark reads the file when a chat starts and never changes it. Secret files are left out.',
+    use: 'Use this file',
+  },
   project: {
     title: 'Choose a project folder',
     lede: "Your AI can read files in this folder to answer questions. It won't change them.",
@@ -23,6 +36,12 @@ const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> 
   },
 };
 
+function emptyNote(listing: FolderListing, picksFile: boolean): string | null {
+  if (listing.folders.length > 0) return null;
+  if (!picksFile) return 'No folders inside.';
+  return listing.files.length === 0 ? 'No folders or instruction files here.' : null;
+}
+
 interface FolderDialogProps {
   linking: boolean;
   error: string | null;
@@ -30,6 +49,7 @@ interface FolderDialogProps {
   onClose: () => void;
   purpose?: FolderPurpose;
   startPath?: string | null;
+  stacked?: boolean;
 }
 
 export function FolderDialog({
@@ -39,20 +59,35 @@ export function FolderDialog({
   onClose,
   purpose = 'project',
   startPath = null,
+  stacked = purpose !== 'project',
 }: FolderDialogProps) {
   const copy = COPY[purpose];
+  const picksFile = purpose === 'instructions';
   const [path, setPath] = useState<string | null>(startPath);
+  const [hidden, setHidden] = useState(false);
+  const [file, setFile] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const pick: FolderPick = { files: picksFile ? 'instructions' : null, hidden };
   const listing = useQuery({
-    queryKey: projectKeys.folders(path),
-    queryFn: () => projectsApi.folders(path),
+    queryKey: projectKeys.folders(path, pick),
+    queryFn: () => projectsApi.folders(path, pick),
     placeholderData: keepPreviousData,
   });
   const current = listing.data;
+  const picked = current?.files.find((entry) => entry.path === file)?.path ?? null;
+  const chosen = picksFile ? picked : (current?.path ?? null);
+  const empty = current ? emptyNote(current, picksFile) : null;
+  const open = (next: string) => {
+    setFile(null);
+    setPath(next);
+  };
 
   useEffect(() => {
     panelRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
+      wrapTabFocus(event, () => [
+        ...(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
+      ]);
       if (event.key !== 'Escape') return;
       event.stopPropagation();
       onClose();
@@ -63,7 +98,7 @@ export function FolderDialog({
 
   return createPortal(
     <motion.div
-      className={purpose === 'reference' ? 'fdlg-scrim over-dialog' : 'fdlg-scrim'}
+      className={stacked ? 'fdlg-scrim over-dialog' : 'fdlg-scrim'}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -109,7 +144,7 @@ export function FolderDialog({
             aria-label="Parent folder"
             title="Parent folder"
             disabled={!current?.parent}
-            onClick={() => current?.parent && setPath(current.parent)}
+            onClick={() => current?.parent && open(current.parent)}
           >
             <ParentFolderIcon />
           </button>
@@ -121,7 +156,7 @@ export function FolderDialog({
                   <button
                     type="button"
                     aria-current={index === all.length - 1 ? 'location' : undefined}
-                    onClick={() => setPath(crumb.path)}
+                    onClick={() => open(crumb.path)}
                   >
                     {crumb.name}
                   </button>
@@ -136,11 +171,11 @@ export function FolderDialog({
             </p>
           )}
           {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
-          {current?.folders.length === 0 && <p className="fdlg-note">No folders inside.</p>}
+          {empty && <p className="fdlg-note">{empty}</p>}
           <ul aria-label="Folders">
             {current?.folders.map((folder) => (
               <li key={folder.path}>
-                <button type="button" className="fdlg-row" onClick={() => setPath(folder.path)}>
+                <button type="button" className="fdlg-row" onClick={() => open(folder.path)}>
                   <FolderIcon />
                   <span>{folder.name}</span>
                   <ChevronIcon />
@@ -148,15 +183,45 @@ export function FolderDialog({
               </li>
             ))}
           </ul>
+          {picksFile && current && current.files.length > 0 && (
+            <ul aria-label="Files">
+              {current.files.map((entry) => (
+                <li key={entry.path}>
+                  <button
+                    type="button"
+                    className="fdlg-row"
+                    aria-pressed={entry.path === picked}
+                    onClick={() => setFile(entry.path)}
+                    onDoubleClick={() => onUse(entry.path)}
+                  >
+                    <FileIcon />
+                    <span>{entry.name}</span>
+                    <small>{formatBytes(entry.sizeBytes)}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+        {picksFile && (
+          <label className="fdlg-hidden">
+            <BlobToggle
+              size="sm"
+              label="Show hidden folders and files"
+              checked={hidden}
+              onChange={setHidden}
+            />
+            <span aria-hidden="true">Show hidden folders and files</span>
+          </label>
+        )}
         {error && (
           <p className="fdlg-error" role="alert">
             {error}
           </p>
         )}
         <div className="fdlg-foot">
-          <span className="fdlg-path" title={current?.path}>
-            {current?.path ?? ''}
+          <span className="fdlg-path" title={chosen ?? current?.path}>
+            {chosen ?? current?.path ?? ''}
           </span>
           <button type="button" className="btn ghost sm" onClick={onClose}>
             Cancel
@@ -164,8 +229,8 @@ export function FolderDialog({
           <button
             type="button"
             className="btn primary sm"
-            disabled={!current || linking}
-            onClick={() => current && onUse(current.path)}
+            disabled={!chosen || linking}
+            onClick={() => chosen && onUse(chosen)}
           >
             {linking ? 'Linking…' : copy.use}
           </button>

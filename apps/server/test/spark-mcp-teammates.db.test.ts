@@ -1,6 +1,6 @@
 import { getApproval } from '../src/persistence/approvals.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
+import { SPARK_ACTION_OPTION, faceFromName } from '@spark-outpost/contracts';
 import { createTeammate, listTeammates } from '../src/persistence/teammates.ts';
 import {
   answerCard,
@@ -96,10 +96,18 @@ describe('spark_create_spark', () => {
       state: 'done',
       message: 'Added Wren to Sparks.',
     });
-    expect((await listTeammates(t.db, t.workspaceId)).map((teammate) => teammate.name)).toEqual([
-      'Wren',
+    expect(await listTeammates(t.db, t.workspaceId)).toEqual([
+      expect.objectContaining({ name: 'Wren', faceAuto: true, face: faceFromName('Wren') }),
     ]);
     expect(JSON.stringify(recorded.audited)).toContain('spark/create_teammate');
+  });
+
+  it('keeps a face the agent names and stores it as picked', async () => {
+    await tools.call('spark_create_spark', { name: 'Ada', face: { shape: 'sun', color: 'gold' } });
+    await confirmCard(t);
+    expect(await listTeammates(t.db, t.workspaceId)).toEqual([
+      expect.objectContaining({ faceAuto: false, face: { shape: 'sun', color: 'gold' } }),
+    ]);
   });
 
   it('leaves the roster alone when the user declines', async () => {
@@ -140,6 +148,20 @@ describe('spark_update_spark', () => {
     });
     const [saved] = await listTeammates(t.db, t.workspaceId);
     expect(saved?.instructions).toBe('Also check tests.');
+  });
+
+  it('follows the new name for a name-based blob and can put a picked one back', async () => {
+    await createTeammate(t.db, t.workspaceId, { ...pip, face: { shape: 'sun', color: 'gold' } });
+    await tools.call('spark_update_spark', { spark: 'Pip', face: null, name: 'Juniper' });
+    const card = await confirmCard(t);
+
+    expect(card.payload.sparkAction).toMatchObject({
+      faceAuto: true,
+      face: faceFromName('Juniper'),
+      changed: ['name', 'face'],
+    });
+    const [saved] = await listTeammates(t.db, t.workspaceId);
+    expect(saved).toMatchObject({ name: 'Juniper', faceAuto: true, face: faceFromName('Juniper') });
   });
 
   it('says so when nothing would change', async () => {

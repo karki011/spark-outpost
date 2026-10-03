@@ -24,8 +24,11 @@ import { ACTION_NOTE } from './action-note.ts';
 const fieldsInput = {
   role: teammateRoleSchema.optional().describe('Role or title, such as "Release manager".'),
   face: teammateFaceSchema
+    .nullable()
     .optional()
-    .describe('Blob face: shape and colour. Defaults to one picked from the name.'),
+    .describe(
+      'Blob face: shape and colour. Leave it out so the blob comes from the name; null puts a Spark back on its name-based blob.',
+    ),
   provider: providerIdSchema
     .nullable()
     .optional()
@@ -79,6 +82,7 @@ async function create(context: SparkToolContext, args: Fields & { name: string }
     name: args.name,
     role: args.role ?? '',
     face: args.face ?? faceFromName(args.name),
+    faceAuto: !args.face,
     provider: args.provider ?? null,
     model: args.model ?? null,
     agentMode: args.agentMode ?? null,
@@ -98,7 +102,7 @@ export async function performCreateTeammate(
   const created = await createTeammate(context.deps.db, context.scope.workspaceId, {
     name: action.name,
     role: action.role,
-    face: action.face,
+    face: action.faceAuto ? null : action.face,
     provider: action.provider,
     model: action.model,
     agentMode: action.agentMode,
@@ -113,7 +117,8 @@ function changesOf(current: Teammate, args: Fields & { name?: string | undefined
   const update: UpdateTeammateRequest = {};
   if (args.name !== undefined && args.name !== current.name) update.name = args.name;
   if (args.role !== undefined && args.role !== current.role) update.role = args.role;
-  if (args.face && JSON.stringify(args.face) !== JSON.stringify(current.face)) {
+  const picked = current.faceAuto ? null : current.face;
+  if (args.face !== undefined && JSON.stringify(args.face) !== JSON.stringify(picked)) {
     update.face = args.face;
   }
   if (args.provider !== undefined && args.provider !== current.provider) {
@@ -128,6 +133,12 @@ function changesOf(current: Teammate, args: Fields & { name?: string | undefined
     update.instructions = args.instructions;
   }
   return update;
+}
+
+function faceAfter(current: Teammate, changes: UpdateTeammateRequest) {
+  const faceAuto = changes.face === undefined ? current.faceAuto : changes.face === null;
+  const picked = changes.face ?? current.face;
+  return { faceAuto, face: faceAuto ? faceFromName(changes.name ?? current.name) : picked };
 }
 
 async function update(
@@ -151,7 +162,7 @@ async function update(
     teammateId: current.id,
     name: changes.name ?? current.name,
     role: changes.role ?? current.role,
-    face: changes.face ?? current.face,
+    ...faceAfter(current, changes),
     provider: changes.provider === undefined ? current.provider : changes.provider,
     model: changes.model === undefined ? current.model : changes.model,
     agentMode: changes.agentMode === undefined ? current.agentMode : changes.agentMode,
@@ -179,6 +190,7 @@ function changesFrom(action: ActionOf<'update_teammate'>): UpdateTeammateRequest
   const changed = new Set(action.changed);
   const update: Record<string, unknown> = {};
   for (const field of CHANGEABLE) if (changed.has(field)) update[field] = action[field];
+  if (changed.has('face') && action.faceAuto) update.face = null;
   if (changed.has('projectIds')) update.projectIds = action.projects.map((project) => project.id);
   return update as UpdateTeammateRequest;
 }
