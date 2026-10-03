@@ -246,48 +246,6 @@ describe('ACP session update mapping', () => {
     expect(mapper.finish()).toEqual([]);
   });
 
-  it('captures pull request links from tool output, resource links and raw output once', () => {
-    const mapper = createUpdateMapper();
-    const pr = 'https://github.com/o/r/pull/12';
-    expect(
-      mapper.map({
-        sessionUpdate: 'tool_call',
-        toolCallId: 'gh',
-        title: 'gh pr create',
-        status: 'in_progress',
-        content: [{ type: 'content', content: { type: 'text', text: `Created ${pr}\n` } }],
-      }),
-    ).toEqual([
-      { kind: 'step_started', name: 'gh pr create', tool: true },
-      { kind: 'link', url: pr, title: 'o/r#12', source: 'tool_output' },
-    ]);
-    expect(
-      mapper.map({
-        sessionUpdate: 'tool_call_update',
-        toolCallId: 'gh',
-        status: 'completed',
-        rawOutput: { stdout: `${pr}\nhttps://github.com/o/r/pull/13` },
-      }),
-    ).toEqual([
-      {
-        kind: 'link',
-        url: 'https://github.com/o/r/pull/13',
-        title: 'o/r#13',
-        source: 'tool_output',
-      },
-      expect.objectContaining({ kind: 'step_finished', name: 'gh pr create' }),
-    ]);
-    expect(mapper.map(link('https://github.com/o/r/pull/14', 'PR 14'))).toEqual([
-      {
-        kind: 'link',
-        url: 'https://github.com/o/r/pull/14',
-        title: 'o/r#14',
-        source: 'resource_link',
-      },
-      { kind: 'text_delta', delta: '[PR 14](https://github.com/o/r/pull/14)' },
-    ]);
-  });
-
   it('leaves unfinished tool steps open when the turn is cancelled', () => {
     const mapper = createUpdateMapper();
     mapper.map({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'a' } });

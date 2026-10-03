@@ -129,6 +129,19 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
       <span className="appr-res" role="status">
         <b>{result.label}</b>
         {result.detail}
+        {approval.payload.sparkResult?.url && (
+          <>
+            {' '}
+            <a
+              href={approval.payload.sparkResult.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open: ${result.label}`}
+            >
+              Open
+            </a>
+          </>
+        )}
       </span>
     </div>
   );
@@ -136,7 +149,8 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
 
 export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps) {
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
-  const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
+  const approval =
+    local && incoming.status === 'pending' ? mergeDecision([incoming], local)[0]! : incoming;
   if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
   return (
     <Pending

@@ -76,4 +76,40 @@ describe('approval outcome', () => {
     expect(shownOptions(always).map((option) => option.optionId)).toEqual(['yes', 'no', 'never']);
     expect(shownOptions(pending)).toHaveLength(4);
   });
+
+  it('shows what Spark did for a Spark action, or why it failed', () => {
+    const spark = (result: NonNullable<Approval['payload']['sparkResult']>, by = 'user' as const) =>
+      outcome(
+        decided({
+          status: 'allowed',
+          decidedBy: by,
+          decisionOptionId: 'confirm',
+          scope: 'once',
+          payload: { ...pending.payload, sparkResult: result },
+        }),
+      );
+    expect(spark({ state: 'running', message: null, url: null })).toMatchObject({
+      label: 'Confirmed. Spark is doing it…',
+    });
+    expect(
+      spark({ state: 'done', message: 'Opened PR #3.', url: 'https://github.com/o/r/pull/3' }),
+    ).toMatchObject({ icon: 'ok', label: 'Opened PR #3.' });
+    expect(
+      outcome(
+        decided({
+          status: 'allowed',
+          decidedBy: 'level',
+          payload: {
+            ...pending.payload,
+            sparkResult: { state: 'done', message: 'Created ENG-1.', url: null },
+          },
+        }),
+      ).detail,
+    ).toContain('Done without a card');
+    expect(spark({ state: 'failed', message: 'GitHub said no.', url: null })).toEqual({
+      icon: 'no',
+      label: 'It failed.',
+      detail: 'GitHub said no.',
+    });
+  });
 });

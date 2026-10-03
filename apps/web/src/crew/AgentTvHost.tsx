@@ -37,7 +37,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   const asking = agents.some((agent) => agent.state === 'waiting');
   const idle = busyCount(agents) === 0 && !waiting && !asking;
   const stop = useMutation({
-    mutationFn: api.cancelRun,
+    mutationFn: (runId: string) => api.cancelRun(runId),
     onSettled: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.conversation(sourceId ?? '') }),

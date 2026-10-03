@@ -276,6 +276,29 @@ describe('tasks', () => {
     ]);
   });
 
+  it('lists only pull requests the chat opened, not ones the agent mentioned', async () => {
+    const opened = 'https://github.com/o/r/pull/30';
+    const mentioned = 'https://github.com/o/r/pull/2177';
+    const name = start(
+      scripted(() => [
+        { kind: 'step_started', name: 'gh pr create', tool: true },
+        { kind: 'link', url: opened, title: 'o/r#30', source: 'tool_output' },
+        { kind: 'step_finished', name: 'gh pr create' },
+        { kind: 'text_delta', delta: `Opened it. Similar work: ${mentioned}` },
+      ]),
+    );
+    const working = await sendAndSettle(await newConversation(), 'work', name);
+    const task = await getTaskDetail(t.db, (await runRow(working.id)).task_id!);
+
+    expect(task!.links.map((link) => [link.url, link.source])).toEqual([
+      [opened, 'tool_output'],
+      [mentioned, 'agent_text'],
+    ]);
+    expect(task!.items.filter((item) => item.id.startsWith('pr:'))).toEqual([
+      expect.objectContaining({ label: 'Opened o/r#30', state: 'done' }),
+    ]);
+  });
+
   it('writes no plan once the worker lost its lease', async () => {
     const conversationId = await newConversation();
     const sent = await sendUserMessage(

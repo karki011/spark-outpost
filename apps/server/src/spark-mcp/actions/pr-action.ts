@@ -1,12 +1,19 @@
 import { z } from 'zod';
-import { SPARK_TEXT_MAX, SPARK_TITLE_MAX, type SparkAction } from '@spark-outpost/contracts';
+import {
+  SPARK_TEXT_MAX,
+  SPARK_TITLE_MAX,
+  type ShipResult,
+  type SparkAction,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../../persistence/db.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../../projects/worktrees.ts';
 import type { ShipDeps } from '../../ship/prepare.ts';
 import { shipPreview, shipTask } from '../../ship/service.ts';
 import { gitHubDepsFor } from '../deps.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
-import { confirmThen } from './confirm.ts';
+import { proposeAction } from './confirm.ts';
+import type { Performed } from './performed.ts';
+import { ACTION_NOTE } from './action-note.ts';
 
 const FILES_SHOWN = 50;
 const DURING_RUN = { duringRun: true };
@@ -30,15 +37,49 @@ async function taskFor(
   return rows[0].id;
 }
 
+function shipDepsOf(context: SparkToolContext): ShipDeps {
+  return {
+    ...gitHubDepsFor(context.deps, context.scope),
+    branchPrefix: context.deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
+  };
+}
+
+function shippedMessage(result: ShipResult): string {
+  const pull = result.pullRequest;
+  if (!pull) return `Pushed ${result.branch} without a pull request.`;
+  const verb = pull.created ? 'Opened' : 'Updated';
+  return `${verb} ${pull.draft ? 'draft PR' : 'PR'} #${pull.number}.`;
+}
+
+export async function performOpenPr(
+  context: SparkToolContext,
+  action: Extract<SparkAction, { action: 'open_pr' }>,
+): Promise<Performed> {
+  const body = action.body.trim();
+  const result = await shipTask(
+    shipDepsOf(context),
+    action.taskId,
+    { mode: 'draft_pr', title: action.title },
+    { ...DURING_RUN, notes: body ? [body] : [] },
+  );
+  return {
+    message: shippedMessage(result),
+    url: result.pullRequest?.url ?? null,
+    output: {
+      number: result.pullRequest?.number ?? null,
+      branch: result.branch,
+      commit: result.commit,
+      files: result.committedFiles.length,
+    },
+  };
+}
+
 async function openPr(
   context: SparkToolContext,
   args: { title: string; body: string; task?: string | undefined },
 ) {
   const { deps, scope } = context;
-  const ship: ShipDeps = {
-    ...gitHubDepsFor(deps, scope),
-    branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
-  };
+  const ship = shipDepsOf(context);
   const taskId = await taskFor(deps.db, scope.conversationId, args.task);
   const preview = await shipPreview(ship, taskId, DURING_RUN);
   if (preview.blocked) throw new SparkToolError(preview.blocked.message);
@@ -58,22 +99,7 @@ async function openPr(
     files: preview.files.slice(0, FILES_SHOWN),
     moreFiles: Math.max(0, preview.files.length - FILES_SHOWN),
   };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'open_pr') throw new Error('Unexpected action.');
-    const result = await shipTask(
-      ship,
-      taskId,
-      { mode: 'draft_pr', title: confirmed.title },
-      { ...DURING_RUN, notes: confirmed.body.trim() ? [confirmed.body.trim()] : [] },
-    );
-    return {
-      url: result.pullRequest?.url ?? null,
-      number: result.pullRequest?.number ?? null,
-      branch: result.branch,
-      commit: result.commit,
-      files: result.committedFiles.length,
-    };
-  });
+  return proposeAction(context, action);
 }
 
 export const pullRequestActionTool = sparkTool({
@@ -81,7 +107,8 @@ export const pullRequestActionTool = sparkTool({
   title: 'Open a PR',
   acts: true,
   description:
-    "Open a pull request for this chat's changes through Spark's Ship flow (commit, push the task's own branch, open a PR, ready for review or draft per Settings → Spark → Open pull requests as; nothing merges). You propose the title and description; Spark shows the user a card with the branch, base and files, they may edit the text, and nothing happens until they confirm. The call waits and returns the PR URL and number, or that the user declined.",
+    "Open a pull request for this chat's changes through Spark's Ship flow (commit, push the task's own branch, open a PR, ready for review or draft per Settings → Spark → Open pull requests as; nothing merges, never force-pushes, never pushes the default branch). You propose the title and description. When the user asks you to open a PR, use this tool rather than git push or gh. Returns the PR URL and number when Spark opened it. " +
+    ACTION_NOTE,
   input: {
     title: z.string().trim().min(1).max(SPARK_TITLE_MAX),
     body: z.string().max(SPARK_TEXT_MAX).default('').describe('What changed and why.'),

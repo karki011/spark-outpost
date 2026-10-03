@@ -12,6 +12,7 @@ import { removalFindings } from '../laws/removals.ts';
 import { fixDiff } from './fix-rounds.ts';
 import type { ChangedLines } from './checkpoint.ts';
 import type { Session } from './session.ts';
+import { publishBrief } from '../workflow/publish-context.ts';
 import type { Spawn } from './transitions.ts';
 
 export interface ChangeSummary {
@@ -137,5 +138,6 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     checkCommands: checkCommands(s),
     agreedPlan,
     likelyFiles: likelyFilesLine(await awaitRanking(s)),
+    publish: await publishBrief(s.deps.db, s.input),
   });
 }

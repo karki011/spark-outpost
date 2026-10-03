@@ -117,11 +117,10 @@ test('the audit view summarises, times, lists, and exports a session', async ({ 
   await expect(dialog.getByText('No messages match.', { exact: false })).toBeVisible();
 
   await dialog.getByRole('tab', { name: 'Export' }).click();
-  const jsonl = dialog.getByRole('link', { name: 'Download .jsonl' });
-  await expect(jsonl).toHaveAttribute('href', /\/audit\/export\.jsonl$/);
+  await expect(dialog.getByRole('button', { name: 'Download .jsonl' })).toBeEnabled();
   await expect(dialog.getByLabel('CSV preview')).toContainText('estimated');
   const download = page.waitForEvent('download');
-  await dialog.getByRole('link', { name: 'Download .csv' }).click();
+  await dialog.getByRole('button', { name: 'Download .csv' }).click();
   expect((await download).suggestedFilename()).toMatch(/-cost\.csv$/);
   await shot(page, 'export');
 
@@ -156,4 +155,53 @@ test('the audit view opens from the cost ring and fills a phone screen', async (
   const scroll = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scroll).toBeLessThanOrEqual(390);
   await shot(page, 'mobile');
+});
+
+test('downloading the JSONL export shows progress and runs once at a time', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await sendPlannedTask(page);
+  await seedAuditLog();
+  let requests = 0;
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/audit/export.jsonl', async (route) => {
+    requests += 1;
+    if (requests === 1) {
+      await route.fulfill({ status: 500, json: { error: 'Boom.' } });
+      return;
+    }
+    await held;
+    await route.continue();
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Chat actions' }).click();
+  await page.getByRole('menuitem', { name: 'Audit this chat' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Audit this chat' });
+  await dialog.getByRole('tab', { name: 'Export' }).click();
+
+  await dialog.getByRole('button', { name: 'Download .jsonl' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText(
+    "Spark couldn't export this (The server responded with 500). Try again.",
+  );
+  const button = dialog.getByRole('button', { name: 'Download .jsonl' });
+  await expect(button).toBeEnabled();
+
+  const downloads: string[] = [];
+  page.on('download', (download) => downloads.push(download.suggestedFilename()));
+  await button.click();
+  const busy = dialog.getByRole('button', { name: 'Preparing…' });
+  await expect(busy).toBeDisabled();
+  await expect(busy).toHaveAttribute('aria-busy', 'true');
+  await expect(dialog.getByRole('alert')).toBeHidden();
+  await expect(busy).toBeFocused();
+  await busy.click({ force: true });
+  await busy.click({ force: true });
+  expect(requests).toBe(2);
+
+  release();
+  await expect(button).toBeEnabled();
+  await expect.poll(() => downloads).toEqual([expect.stringMatching(/-audit\.jsonl$/)]);
+  expect(requests).toBe(2);
 });

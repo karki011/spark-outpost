@@ -248,13 +248,16 @@ function sessionMeta(
   {
     builder,
     coordinated,
+    publishes,
     planning,
     approvals,
-  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'planning' | 'approvals'>,
+  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'publishes' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
-  if (changing) return definition.doSessionMeta?.(roots, repo, builder, coordinated) ?? null;
+  if (changing) {
+    return definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes) ?? null;
+  }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
 }

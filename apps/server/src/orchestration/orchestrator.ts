@@ -40,6 +40,7 @@ import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
 import { assumptionLine } from './clarify.ts';
 import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.ts';
+import { mainAgentInstruction } from './instruction-turn.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
 import {
@@ -320,14 +321,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
-    if (solo && !doing) {
+    const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
+    if ((solo && !doing) || mainAgentInstruction(input.userRequest, current)) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
       return;
     }
     const scanning =
       doing && !solo && repoRoot ? startScan({ deps, input }, repoRoot, taskStartedAt) : null;
-    const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(
       deps,
       input,

@@ -359,6 +359,9 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
   }
+  if (turn.text.includes('#stubbornbuild')) {
+    for (;;) await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   if (turn.text.includes('#todos')) await todos(turn, stopAfter);
   if (turn.text.includes('#cost')) {
     const cost = { amount: 0.2, currency: 'USD' };

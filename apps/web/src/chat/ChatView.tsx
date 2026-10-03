@@ -2,12 +2,10 @@ import {
   DEFAULT_INVOLVEMENT_LEVEL,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
-  type AnnotationInput,
-  type Attachment,
   type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
@@ -50,7 +48,9 @@ import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
+import { useChatSend } from './send/use-chat-send.ts';
 import { activeRun } from './turns.ts';
+import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -61,12 +61,6 @@ const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
 const NO_COMMANDS: AgentCommand[] = [];
 const NO_RUNS: Run[] = [];
-
-export interface OutgoingMessage {
-  content: string;
-  attachments: Attachment[];
-  annotations?: AnnotationInput[];
-}
 
 interface ChatViewProps {
   conversationId: string;
@@ -89,23 +83,17 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
     ]);
 
-  const send = useMutation({
-    mutationFn: (message: OutgoingMessage) =>
-      api.sendMessage(
-        conversationId,
-        crypto.randomUUID(),
-        message.content,
-        message.attachments.map((attachment) => attachment.id),
-        message.annotations,
-      ),
-    onSuccess: refresh,
-  });
+  const savedIds = useMemo(
+    () => new Set(detail.data?.messages.map((message) => message.id)),
+    [detail.data?.messages],
+  );
+  const sends = useChatSend(conversationId, savedIds, refresh);
   const attachments = useAttachments();
   const latestReplyId =
     detail.data?.messages.findLast((message) => message.role === 'assistant')?.id ?? null;
   const quotes = useQuotes(conversationId, latestReplyId);
   const drop = useFileDrop(attachments.add);
-  const stop = useMutation({ mutationFn: api.cancelRun, onSuccess: refresh });
+  const stop = useStop(conversationId, detail.data, refresh);
   const startFresh = useMutation({
     mutationFn: () => api.startFreshSession(conversationId),
     onSuccess: () =>
@@ -198,7 +186,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 <Thread
                   detail={detail.data}
                   repos={repos}
-                  pendingMessage={send.isPending ? send.variables : null}
+                  sends={sends}
                   onOpenTask={openTask}
                   onOpenChat={openChat}
                   quotes={quotes}
@@ -229,16 +217,15 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               orchestration={orchestration}
               usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
               busy={running !== null}
-              sending={send.isPending}
-              error={send.error?.message ?? stop.error?.message ?? null}
+              sending={sends.sending}
+              error={stop.error}
+              stopping={stop.stopping}
               attachments={attachments}
               quotes={quotes}
               onSend={async (content, files, annotations) => {
-                await send.mutateAsync({ content, attachments: files, annotations });
+                sends.send({ content, attachments: files, annotations });
               }}
-              onStop={() => {
-                if (running) stop.mutate(running.id);
-              }}
+              onStop={stop.stop}
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}

@@ -187,6 +187,11 @@
   gap: 6px;
   text-decoration: none;
 }
+.xcard .xerr {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}
 .xprev {
   margin: 0;
   padding: 10px 12px;

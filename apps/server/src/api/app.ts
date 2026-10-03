@@ -28,6 +28,7 @@ import { taskRoutes } from './task-routes.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
+import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 
@@ -48,11 +49,22 @@ export interface AppOptions
   apiToken: string;
   webRoot?: string;
   diagnostics?: DiagnosticsPlaces;
+  activeWork?: ActiveWork;
+}
+
+function trackRequests(work: ActiveWork) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.headers.accept?.includes('text/event-stream')) {
+      res.once('close', work.begin(`${req.method} ${req.path}`));
+    }
+    next();
+  };
 }
 
 export function createApp(options: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
+  if (options.activeWork) app.use(trackRequests(options.activeWork));
   app.use(localRequestGuard(options.port, options.allowedOrigins));
   app.use(requireLaunchToken(options.apiToken));
   app.use('/api', attachmentRoutes(options));

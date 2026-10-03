@@ -1,6 +1,7 @@
 import type { BuildStyle } from '@spark-outpost/contracts';
 import { REMOVAL_RULE } from '../laws/critic-text.ts';
 import { builderStyle, criticStyle } from './lean.ts';
+import type { PublishBrief } from '../approvals/publish-policy.ts';
 
 const REQUEST_LIMIT = 8_000;
 export const HISTORY_TURNS = 6;
@@ -35,6 +36,7 @@ export interface BuilderContext {
   agreedPlan?: string | null;
   projectNote?: string | null;
   likelyFiles?: string | null;
+  publish?: PublishBrief | null;
 }
 
 export interface PieceReview {
@@ -129,6 +131,19 @@ export const INCREMENT_RULE =
 export const SHIP_RULE =
   "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes: Spark Outpost commits, pushes and opens the PR itself when the task is done, even when the request says to ship it.";
 
+function publishSteps(branch: string): string {
+  return `commit it, push this chat's own branch with \`git push origin ${branch}\` and open its pull request with \`gh pr create\` (\`gh pr view\` and \`gh pr edit\` work on that PR). Never force-push, push any other branch or the base branch, or change git remotes; nothing merges.`;
+}
+
+export function publishRule(publish: PublishBrief | null | undefined): string {
+  if (!publish) return SHIP_RULE;
+  const steps = publishSteps(publish.branch);
+  if (publish.basis === 'requested') {
+    return `The user asked for this to be pushed or opened as a pull request, so after the change ${steps}`;
+  }
+  return `Leave the change in the working tree unless the user asks you to publish it: Spark Outpost commits, pushes and opens the PR when the task is done. If they ask, ${steps}`;
+}
+
 function checkSection(commands: readonly string[] | undefined): string[] {
   if (!commands || commands.length === 0) return [];
   return [
@@ -152,7 +167,7 @@ export function builderPrompt(context: BuilderContext): string {
   const parts = [
     'Role: Builder. Make the change the request asks for, then reply with what you changed.',
     INCREMENT_RULE,
-    SHIP_RULE,
+    publishRule(context.publish),
     section('Request', cap(context.request, REQUEST_LIMIT)),
   ];
   if (context.agreedPlan) parts.push(context.agreedPlan);

@@ -98,7 +98,7 @@ The safety floor holds at every level.`,
       'gate',
       'spend cap',
     ],
-    text: `Every agent action that isn't pre-approved goes through the backend's approval gate, which enforces a floor no mode or level loosens: secret files (.env, keys, credentials) always ask or are refused; Builders never publish (git push, remote changes and gh/hub/glab are refused — only Ship pushes); no writes outside the linked folders; every command and decision goes to a hash-chained audit log.
+    text: `Every agent action that isn't pre-approved goes through the backend's approval gate, which enforces a floor no mode or level loosens: secret files (.env, keys, credentials) always ask or are refused; agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes outside the linked folders; every command and decision goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 
@@ -225,7 +225,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no approval card; section spark-tools says which one answers which question.
 
-Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark and spark_update_spark. Each shows a card previewing exactly what will change; you may edit the text, and nothing happens until you confirm. There is no Always allow and autonomy levels never decide these cards. Every action is audited.`,
+Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark and spark_update_spark. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
   },
   {
     id: 'spark-tools',

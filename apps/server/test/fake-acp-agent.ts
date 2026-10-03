@@ -15,6 +15,7 @@ import {
   loadSessionAdvertised,
   newSessionId,
   readFakeSession,
+  recordCancel,
   recordClose,
   recordPrompt,
   replayHistory,
@@ -468,6 +469,7 @@ acp
     }
   })
   .onNotification(acp.methods.agent.session.cancel, (ctx) => {
+    recordCancel(ctx.params.sessionId);
     pending.get(ctx.params.sessionId)?.abort();
   })
   .connect(

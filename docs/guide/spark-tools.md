@@ -40,9 +40,14 @@ Tools that read change nothing.
 | The audit log                                         | `spark_audit`                                                                             |
 | How Spark works, and this guide                       | `spark_guide`, `spark_docs`                                                               |
 
-## Actions ask first
+## When actions ask first
 
-A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). These never act on their own. The agent proposes, and Spark shows you a confirm card.
+A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). The agent proposes, and Spark does it. Whether you see a confirm card first follows the agent's permission mode and the chat's autonomy:
+
+- **Auto** or **Bypass permissions** (Codex **Agent** or **Full access**), or **Full auto → PR**: Spark does it straight away. The chat shows what it did, with a link.
+- **Accept edits**: Spark does it straight away when your message asked for it, such as "open a PR". Otherwise you get a card.
+- **Manual**, **Plan** and read-only modes: you always get a card. When your message asked for it, the confirm button is focused so you can press Enter.
+- After the agent reads secrets or private work data in a turn, every action in that turn asks first.
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
@@ -52,7 +57,7 @@ To answer the card:
 2. Change any field you want, such as the title or priority.
 3. Select the confirm button, such as **Create ticket** or **Open PR**. To say no, select **Don't**. Nothing changes and the agent is told.
 
-The card shows at every Spark autonomy level. If nobody answers within 30 minutes, it's declined and says **Expired**. Every answer goes into the audit log.
+The agent doesn't wait on the card. Answer it whenever you like, even after the agent has finished: Spark does it when you confirm and shows the result, such as **Opened PR #12** and a link, on the card. Every action and answer goes into the audit log.
 
 ## What the tools never return
 

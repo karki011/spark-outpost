@@ -34,9 +34,9 @@ function recorder() {
   return { messages, screen, client };
 }
 
-async function until(check: () => boolean, timeoutMs = 4000) {
+async function until(check: () => boolean | Promise<boolean>, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs;
-  while (!check()) {
+  while (!(await check())) {
     if (Date.now() > deadline) throw new Error('Timed out waiting for the terminal.');
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
@@ -110,14 +110,14 @@ describe('chat shells', () => {
     const shell = openShell(null);
     shell.terminal.input('echo "ready-$((2 + 2))"\r');
     await until(() => shell.screen.text.includes('ready-4'));
-    expect(sessions.runningCommand(shell.created.id)).toBeNull();
+    expect(await sessions.runningCommand(shell.created.id)).toBeNull();
 
     shell.terminal.input('sleep 100\r');
-    await until(() => sessions.runningCommand(shell.created.id) === 'sleep 100');
+    await until(async () => (await sessions.runningCommand(shell.created.id)) === 'sleep 100');
 
     shell.terminal.input('\x03');
-    await until(() => sessions.runningCommand(shell.created.id) === null);
-    expect(sessions.runningCommand('not-a-session')).toBeNull();
+    await until(async () => (await sessions.runningCommand(shell.created.id)) === null);
+    expect(await sessions.runningCommand('not-a-session')).toBeNull();
   }, 30_000);
 
   it('tells the watcher when a shell starts and ends, but not about setup terminals', async () => {

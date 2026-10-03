@@ -48,8 +48,10 @@ export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps
     res.status(201).json(response);
   });
 
-  router.get('/terminal/sessions/:id/busy', (req, res) => {
-    const response: ShellBusyResponse = { command: terminals.runningCommand(sessionId(req)) };
+  router.get('/terminal/sessions/:id/busy', async (req, res) => {
+    const response: ShellBusyResponse = {
+      command: await terminals.runningCommand(sessionId(req)),
+    };
     res.json(response);
   });
 

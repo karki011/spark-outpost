@@ -1,5 +1,9 @@
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
+const PS_ARGS = ['-A', '-o', 'pid=,ppid=,tpgid=,args='];
 
 export interface ProcessRow {
   pid: number;
@@ -62,15 +66,7 @@ export function runningCommand(root: number, table: readonly ProcessRow[]): stri
   return main ? commandLabel(main.args) : null;
 }
 
-export function processTable(): ProcessRow[] {
-  let output: string;
-  try {
-    output = execFileSync('/bin/ps', ['-A', '-o', 'pid=,ppid=,tpgid=,args='], {
-      encoding: 'utf8',
-    });
-  } catch {
-    return [];
-  }
+function parseProcessTable(output: string): ProcessRow[] {
   const rows: ProcessRow[] = [];
   for (const line of output.split('\n')) {
     const match = PS_LINE.exec(line.trim());
@@ -86,6 +82,23 @@ export function processTable(): ProcessRow[] {
   return rows;
 }
 
+function processTableNow(): ProcessRow[] {
+  try {
+    return parseProcessTable(execFileSync('/bin/ps', PS_ARGS, { encoding: 'utf8' }));
+  } catch {
+    return [];
+  }
+}
+
+export async function processTable(): Promise<ProcessRow[]> {
+  try {
+    const { stdout } = await execFileAsync('/bin/ps', PS_ARGS, { encoding: 'utf8' });
+    return parseProcessTable(stdout);
+  } catch {
+    return [];
+  }
+}
+
 function signal(pid: number, name: NodeJS.Signals) {
   try {
     process.kill(pid, name);
@@ -95,7 +108,7 @@ function signal(pid: number, name: NodeJS.Signals) {
 }
 
 export function killProcessTree(root: number, graceMs = 1500): void {
-  const targets = [root, ...descendantsOf(root, processTable())];
+  const targets = [root, ...descendantsOf(root, processTableNow())];
   for (const pid of targets) signal(pid, 'SIGHUP');
   signal(-root, 'SIGHUP');
   const escalate = setTimeout(() => {

@@ -24,13 +24,19 @@ export function topLevelRuns(detail: ConversationDetail): Run[] {
   return detail.runs.filter((run) => !run.parentRunId);
 }
 
+function isActive(run: Run | undefined): run is Run {
+  return (
+    run?.status === 'queued' || run?.status === 'running' || run?.status === 'awaiting_approval'
+  );
+}
+
 export function activeRun(detail: ConversationDetail | undefined): Run | null {
   const latest = detail ? topLevelRuns(detail).at(-1) : undefined;
-  const active =
-    latest?.status === 'queued' ||
-    latest?.status === 'running' ||
-    latest?.status === 'awaiting_approval';
-  return active ? latest : null;
+  return isActive(latest) ? latest : null;
+}
+
+export function activeRuns(detail: ConversationDetail | undefined): Run[] {
+  return detail ? topLevelRuns(detail).filter(isActive) : [];
 }
 
 export function runSeconds(run: Run): number | null {
