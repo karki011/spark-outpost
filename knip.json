@@ -5,7 +5,7 @@
     ".": {
       "entry": [
         "scripts/*.ts",
-        "scripts/codescan/{bench,load,requests}.ts",
+        "scripts/codescan/{bench,load,loop-bench,requests}.ts",
         "scripts/e2e-live/{rescore,stub}.ts",
         "scripts/e2e-live/dev-day/rescore-day.ts",
         "scripts/routing/{live,live-score}.ts",
