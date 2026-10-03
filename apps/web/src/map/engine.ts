@@ -48,6 +48,7 @@ export interface EngineCallbacks {
 const TRANSITION_MS = 900;
 const FLY_MS = 900;
 const LOD_EVERY_MS = 150;
+const IDLE_FRAME_MS = 40;
 
 interface Fly {
   from: Camera;
@@ -86,6 +87,8 @@ export class MapEngine {
   private requested = 0;
   private lastTime = 0;
   private lastLod = 0;
+  private lastDraw = 0;
+  private idle = false;
   private lodTimer: ReturnType<typeof setTimeout> | undefined;
   private autoFit = true;
 
@@ -428,6 +431,11 @@ export class MapEngine {
   private loop = (now: number): void => {
     this.requested = 0;
     if (!this.view || this.viewport.width === 0) return;
+    if (this.idle && !this.dirty && now - this.lastDraw < IDLE_FRAME_MS) {
+      this.request();
+      return;
+    }
+    this.lastDraw = now;
     const moving = this.step(now);
     const frame = this.frame(this.context, now);
     this.drawBase(frame);
@@ -435,7 +443,9 @@ export class MapEngine {
     this.dirty = false;
     drawBridgeSparks(frame);
     drawOverlay(frame);
-    if (moving || overlayAnimates(frame)) this.request();
+    const animating = overlayAnimates(frame);
+    this.idle = !moving && animating;
+    if (moving || animating) this.request();
   };
 
   private maybeLoad(now: number): void {

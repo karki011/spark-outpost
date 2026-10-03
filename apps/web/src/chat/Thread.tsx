@@ -5,22 +5,12 @@ import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
-import { MessageAttachments } from './attachments/MessageAttachments.tsx';
-import { AdviceLine } from './AdviceLine.tsx';
 import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
-import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
-import { compactionsByRun } from './compaction/compaction-text.ts';
-import { SoloTurn } from './SoloTurn.tsx';
+import { TurnSection } from './TurnSection.tsx';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
-import { TaskCard } from '../tasks/TaskCard.tsx';
-import { CrewTurn } from './crew/CrewTurn.tsx';
-import { crewAgents } from '../crew/crew-projection.ts';
-import { isCrewTurn } from '../crew/conversation-crew.ts';
-import { MessageActions } from './message-actions/MessageActions.tsx';
-import { QuotedText } from './quotes/QuotedText.tsx';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
 import { PendingSends } from './send/PendingSends.tsx';
@@ -47,7 +37,6 @@ export const Thread = memo(function Thread({
   const voice = useVoice();
   const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
-  const compactions = compactionsByRun(detail.compactions);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(
     detail.tasks.map((task) => {
@@ -55,17 +44,6 @@ export const Thread = memo(function Thread({
       return [last ? (parentOf.get(last) ?? last) : undefined, task];
     }),
   );
-  const crewRun = (runId: string) => {
-    const orchestration = detail.orchestrations?.[runId] ?? null;
-    return isCrewTurn(orchestration) ? orchestration : null;
-  };
-  const taskCard = (runId: string) => {
-    const task = taskAfterRun.get(runId);
-    if (!onOpenTask || !task) return null;
-    const orchestration = crewRun(runId);
-    const crew = orchestration ? crewAgents(orchestration, detail.activity) : [];
-    return <TaskCard task={task} onOpen={() => onOpenTask(task.id)} agents={crew} />;
-  };
 
   const pendingCount = sends.pending.length;
   useEffect(() => {
@@ -111,68 +89,17 @@ export const Thread = memo(function Thread({
       <div className="thread" ref={scrollerRef}>
         <div className="col">
           {turns.map(({ run, userMessage, assistantMessage }) => (
-            <section
+            <TurnSection
               key={run.id}
-              aria-label="Turn"
-              data-assistant-message-id={assistantMessage?.id}
-            >
-              {compactions.get(run.id)?.map((compaction) => (
-                <CompactionDivider
-                  key={compaction.id}
-                  compaction={compaction}
-                  onOpenChat={onOpenChat}
-                />
-              ))}
-              {userMessage && (
-                <div className="msg me" data-message-id={userMessage.id}>
-                  <MessageAttachments attachments={userMessage.attachments} />
-                  {userMessage.content && (
-                    <>
-                      <div className="bubble">
-                        <QuotedText text={userMessage.content} />
-                      </div>
-                      <MessageActions
-                        text={userMessage.content}
-                        createdAt={userMessage.createdAt}
-                        copyLabel="Copy message"
-                        side="user"
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-              {crewRun(run.id) ? (
-                <CrewTurn
-                  run={run}
-                  detail={detail}
-                  orchestration={crewRun(run.id)!}
-                  repo={repos[0] ?? null}
-                  taskCard={taskCard(run.id)}
-                />
-              ) : (
-                <SoloTurn
-                  run={run}
-                  detail={detail}
-                  assistantMessage={assistantMessage}
-                  repo={repos[0] ?? null}
-                />
-              )}
-              {!crewRun(run.id) && (
-                <>
-                  <AdviceLine advice={detail.advice?.[run.id]} />
-                  {taskCard(run.id)}
-                </>
-              )}
-              {detail.continuedIn
-                ?.filter((continuation) => continuation.runId === run.id)
-                .map((continuation) => (
-                  <ContinuedDivider
-                    key={continuation.conversationId}
-                    continuation={continuation}
-                    onOpenChat={onOpenChat}
-                  />
-                ))}
-            </section>
+              run={run}
+              userMessage={userMessage}
+              assistantMessage={assistantMessage}
+              detail={detail}
+              repo={repos[0] ?? null}
+              task={taskAfterRun.get(run.id) ?? null}
+              onOpenTask={onOpenTask}
+              onOpenChat={onOpenChat}
+            />
           ))}
           <PendingSends sends={sends} />
         </div>

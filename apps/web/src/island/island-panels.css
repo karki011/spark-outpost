@@ -328,6 +328,25 @@
   color: var(--faint);
 }
 
+.isl-smore {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.isl-smore:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+}
+
 .isl-sempty {
   padding: 18px 8px;
   text-align: center;
@@ -397,16 +416,42 @@
 }
 
 .isl-skl i {
+  position: relative;
+  overflow: hidden;
   height: 9px;
   border-radius: 5px;
+}
+
+.isl-skl i::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 300%;
   background: linear-gradient(
     90deg,
     color-mix(in srgb, var(--text) 8%, transparent) 25%,
     color-mix(in srgb, var(--text) 16%, transparent) 50%,
     color-mix(in srgb, var(--text) 8%, transparent) 75%
   );
-  background-size: 300% 100%;
-  animation: isl-shimmer 1.4s ease-in-out infinite;
+  will-change: transform;
+  animation: isl-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes isl-sweep {
+  from {
+    transform: translateX(-66.667%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-skl i::after,
+  .isl-tile-skl::after {
+    animation: none;
+    transform: translateX(-33%);
+  }
 }
 
 .isl-snote {

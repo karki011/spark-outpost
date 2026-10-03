@@ -7,7 +7,7 @@ interface ChatRowsProps {
   id: string;
   chats: readonly ConversationSummary[];
   sortable?: boolean;
-  renderRow: (chat: ConversationSummary) => ReactNode;
+  renderRow: (chat: ConversationSummary, index: number) => ReactNode;
 }
 
 export function ChatRows({ id, chats, sortable = true, renderRow }: ChatRowsProps) {
@@ -18,7 +18,7 @@ export function ChatRows({ id, chats, sortable = true, renderRow }: ChatRowsProp
       items={chats.map((chat) => chat.id)}
       strategy={sortable ? listSorting : noSorting}
     >
-      <ul className="rows">{chats.map((chat) => renderRow(chat))}</ul>
+      <ul className="rows">{chats.map((chat, index) => renderRow(chat, index))}</ul>
     </SortableContext>
   );
 }

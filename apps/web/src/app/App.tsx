@@ -1,5 +1,6 @@
 import {
   lazy,
+  memo,
   Suspense,
   useCallback,
   useEffect,
@@ -37,6 +38,8 @@ import {
 import { revealIslandSettings } from '../settings/DesktopCompanionSetting.tsx';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
+import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { Tickets } from '../tickets/Tickets.tsx';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
@@ -53,6 +56,8 @@ import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { useAttentionTitle } from './use-attention-title.ts';
 import '../ui/controls.css';
+
+const StableChatView = memo(ChatView);
 
 const MapPage = lazy(() =>
   import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
@@ -116,32 +121,32 @@ function ChatShell({ entering }: { entering: boolean }) {
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;
 
-  const startDraft = () => {
+  const startDraft = useStableCallback(() => {
     const next = newDraftId();
     setDraftId(next);
     setSelectedId(next);
     setView('chats');
     return next;
-  };
+  });
 
-  const startDraftInProject = (projectId: string) => {
+  const startDraftInProject = useStableCallback((projectId: string) => {
     const next = startDraft();
     layout.closeDrawer();
     void api
       .updateChatSettings(next, { projectIds: [projectId] })
       .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.conversation(next) }));
     return next;
-  };
+  });
 
   const chatAboutFile = (projectId: string, path: string) => {
     queueDraft(startDraftInProject(projectId), `About \`${path}\`: `);
   };
 
-  const openChat = (id: string) => {
+  const openChat = useStableCallback((id: string) => {
     setSelectedId(id);
     setView('chats');
     layout.closeDrawer();
-  };
+  });
 
   const openFromDesktop = useRef(openChat);
   useEffect(() => {
@@ -198,18 +203,20 @@ function ChatShell({ entering }: { entering: boolean }) {
           onProfile={() => setSettings('spark')}
         />
         <div className="view" hidden={view !== 'chats'}>
-          <ConversationList
-            selectedId={activeId}
-            onSelect={setSelectedId}
-            onNew={startDraft}
-            onNewInProject={startDraftInProject}
-          />
-          <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
-          {activeId ? (
-            <ChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
-          ) : (
-            <main className="main" aria-busy="true" />
-          )}
+          <FreezeWhileHidden hidden={view !== 'chats'}>
+            <ConversationList
+              selectedId={activeId}
+              onSelect={setSelectedId}
+              onNew={startDraft}
+              onNewInProject={startDraftInProject}
+            />
+            <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
+            {activeId ? (
+              <StableChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
+            ) : (
+              <main className="main" aria-busy="true" />
+            )}
+          </FreezeWhileHidden>
         </div>
         {view === 'home' && (
           <Home

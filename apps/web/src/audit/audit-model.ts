@@ -170,8 +170,12 @@ export interface JsonToken {
 const JSON_TOKEN =
   /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b/g;
 
-export function jsonTokens(value: unknown): JsonToken[] {
-  const source = JSON.stringify(value, null, 2) ?? 'undefined';
+export const JSON_TOKEN_LIMIT = 16_000;
+
+export function jsonTokens(value: unknown, limit = Infinity): JsonToken[] {
+  const full = JSON.stringify(value, null, 2) ?? 'undefined';
+  const cut = full.length > limit ? full.lastIndexOf('\n', limit) : -1;
+  const source = cut > 0 ? full.slice(0, cut) : full;
   const tokens: JsonToken[] = [];
   let last = 0;
   for (const match of source.matchAll(JSON_TOKEN)) {
@@ -188,6 +192,7 @@ export function jsonTokens(value: unknown): JsonToken[] {
     }
     last = index + whole.length;
   }
-  if (last < source.length) tokens.push({ kind: 'plain', text: source.slice(last) });
+  const rest = source.slice(last) + (cut > 0 ? full.slice(cut) : '');
+  if (rest) tokens.push({ kind: 'plain', text: rest });
   return tokens;
 }

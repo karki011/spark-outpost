@@ -12,6 +12,9 @@ import {
 
 const MEMORY_KEY = 'spark-outpost.island';
 const GREETING_MS = 4_000;
+const SEEN_EVERY_MS = 60_000;
+
+let lastNoted = 0;
 
 interface Memory {
   streak: number;
@@ -83,5 +86,8 @@ export function useGreeting(voice: Voice, ready: boolean): string | null {
 }
 
 export function noteSeen(): void {
-  writeMemory({ lastSeen: Date.now() });
+  const now = Date.now();
+  if (now - lastNoted < SEEN_EVERY_MS) return;
+  lastNoted = now;
+  writeMemory({ lastSeen: now });
 }

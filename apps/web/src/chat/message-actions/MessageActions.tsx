@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import './message-actions.css';
 import { CheckIcon, CopyIcon } from '../../ui/icons.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
@@ -37,11 +38,16 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function MessageActions({ text, createdAt, copyLabel, side }: MessageActionsProps) {
+export const MessageActions = memo(function MessageActions({
+  text,
+  createdAt,
+  copyLabel,
+  side,
+}: MessageActionsProps) {
   return (
     <div className={`msg-actions ${side}`} role="group" aria-label="Message actions">
       <RelativeTime iso={createdAt} />
       <CopyButton text={text} label={copyLabel} />
     </div>
   );
-}
+});

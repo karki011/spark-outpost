@@ -20,8 +20,9 @@ interface SkyCanvasProps {
 
 const ZOOM_STEP = 1.6;
 const OVERLAY_GAP = 6;
+const OVERLAY_REFRESH_MS = 250;
 
-function overlayRects(stage: HTMLElement): Rect[] {
+function measureOverlays(stage: HTMLElement): Rect[] {
   const origin = stage.getBoundingClientRect();
   return [...stage.querySelectorAll<HTMLElement>('[data-map-overlay]')].map((element) => {
     const box = element.getBoundingClientRect();
@@ -32,6 +33,19 @@ function overlayRects(stage: HTMLElement): Rect[] {
       box.bottom - origin.top + OVERLAY_GAP,
     ];
   });
+}
+
+function cachedOverlayRects(stage: HTMLElement) {
+  let rects: Rect[] = [];
+  let measuredAt = -Infinity;
+  return () => {
+    const now = performance.now();
+    if (now - measuredAt >= OVERLAY_REFRESH_MS) {
+      rects = measureOverlays(stage);
+      measuredAt = now;
+    }
+    return rects;
+  };
 }
 
 function useLatest<T>(value: T) {
@@ -70,7 +84,7 @@ export function SkyCanvas({
       announce: (text) => latest.current.announce(text),
       revealed: (shown, total, last) => latest.current.revealed(shown, total, last),
       wantFiles: (candidates) => latest.current.wantFiles(candidates),
-      reserved: () => overlayRects(canvas.parentElement!),
+      reserved: cachedOverlayRects(canvas.parentElement!),
     });
     engineRef.current = engine;
     const unbind = bindInput(engine);

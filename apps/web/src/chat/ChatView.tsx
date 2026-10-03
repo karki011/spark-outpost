@@ -131,9 +131,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     setAutonomyRequest((request) => request + 1);
   };
   const diff = useDiffDrawer();
-  const viewChanges = task
-    ? (taskId?: string, file?: ChangeEntry) => diff.open(taskId ?? task.id, file)
-    : null;
+  const openDiff = diff.open;
+  const taskId = task?.id ?? null;
+  const viewChanges = useMemo(
+    () =>
+      taskId ? (target?: string, file?: ChangeEntry) => openDiff(target ?? taskId, file) : null,
+    [taskId, openDiff],
+  );
   const toggleDiff = () => {
     if (diff.request) diff.close();
     else if (task) diff.open(task.id);

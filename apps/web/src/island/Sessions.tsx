@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  memo,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
@@ -18,6 +26,8 @@ interface SessionsProps {
   onOpenChat: (id: string) => void;
 }
 
+const PAGE = 60;
+
 const GROUPS = [
   { id: 'needs', label: 'Needs you' },
   { id: 'running', label: 'Running' },
@@ -33,32 +43,85 @@ function groupOf(chat: ConversationSummary, now: number): (typeof GROUPS)[number
   return 'earlier';
 }
 
-const GROUP_RANK = new Map(GROUPS.map((group, index) => [group.id, index]));
-
-function byGroup(chats: readonly ConversationSummary[], now: number): ConversationSummary[] {
-  return chats.toSorted(
-    (a, b) => GROUP_RANK.get(groupOf(a, now))! - GROUP_RANK.get(groupOf(b, now))!,
-  );
+interface Listed {
+  chat: ConversationSummary;
+  index: number;
 }
 
-function sessionGroups(chats: readonly ConversationSummary[], now: number) {
-  const indexed = chats.map((chat, index) => ({ chat, index, group: groupOf(chat, now) }));
-  return GROUPS.map((group) => ({
+function arrange(chats: readonly ConversationSummary[], now: number, limit: number) {
+  const tagged = chats.map((chat) => ({ chat, group: groupOf(chat, now) }));
+  const ordered = GROUPS.flatMap((group) => tagged.filter((item) => item.group === group.id));
+  const visible = ordered.slice(0, limit);
+  const groups = GROUPS.map((group) => ({
     ...group,
-    chats: indexed.filter((item) => item.group === group.id),
-  })).filter((group) => group.chats.length > 0);
+    chats: [] as Listed[],
+  }));
+  visible.forEach((item, index) => {
+    groups.find((group) => group.id === item.group)!.chats.push({ chat: item.chat, index });
+  });
+  return {
+    shown: visible.map((item) => item.chat),
+    hidden: ordered.length - visible.length,
+    groups: groups.filter((group) => group.chats.length > 0),
+  };
 }
+
+interface SessionRowProps {
+  chat: ConversationSummary;
+  active: boolean;
+  now: number;
+  projectNames: ReadonlyMap<string, string>;
+  onSelect: (id: string) => void;
+}
+
+const SessionRow = memo(function SessionRow({
+  chat,
+  active,
+  now,
+  projectNames,
+  onSelect,
+}: SessionRowProps) {
+  const state = sessionState(chat);
+  return (
+    <div
+      id={`isl-sopt-${chat.id}`}
+      role="option"
+      aria-selected={active}
+      className={active ? 'isl-srow act' : 'isl-srow'}
+      onClick={() => onSelect(chat.id)}
+    >
+      <SessionBlob
+        chat={chat}
+        state={state}
+        size={22}
+        expression={sessionExpression(state, false)}
+      />
+      <div className="isl-smain">
+        <div className="isl-st">{chat.title}</div>
+        <div className="isl-sp2">{projectLine(chat, projectNames)}</div>
+      </div>
+      <StateChip chat={chat} state={state} now={now} />
+    </div>
+  );
+});
 
 export function Sessions(props: SessionsProps) {
   const { chats, projectNames, selected, onSelect } = props;
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const matches = byGroup(
-    chats.filter((chat) => matchesQuery(chat, projectNames, query)),
-    props.now,
+  const [limit, setLimit] = useState(PAGE);
+  const deferredQuery = useDeferredValue(query);
+  const arranged = useMemo(
+    () =>
+      arrange(
+        chats.filter((chat) => matchesQuery(chat, projectNames, deferredQuery)),
+        props.now,
+        limit,
+      ),
+    [chats, projectNames, deferredQuery, props.now, limit],
   );
-  const shown = matches;
+  const { shown } = arranged;
   const current = Math.min(active, Math.max(0, shown.length - 1));
   const listed = selected ? chats.find((chat) => chat.id === selected) : undefined;
   const unlisted = useQuery({
@@ -145,53 +208,46 @@ export function Sessions(props: SessionsProps) {
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActive(0);
+                setLimit(PAGE);
               }}
               onKeyDown={onKeyDown}
             />
           </div>
           {shown.length > 0 ? (
-            <div className="isl-slist" id="isl-slist" role="listbox" aria-label="Recent sessions">
-              {sessionGroups(shown, props.now).map((group) => (
-                <div
-                  key={group.label}
-                  role="group"
-                  aria-labelledby={`isl-sg-${group.id}`}
-                  className="isl-sgroup"
-                >
-                  <div id={`isl-sg-${group.id}`} className="isl-hhead" role="presentation">
-                    {group.label}
-                  </div>
-                  {group.chats.map(({ chat, index }) => {
-                    const state = sessionState(chat);
-                    return (
-                      <div
+            <>
+              <div className="isl-slist" id="isl-slist" role="listbox" aria-label="Recent sessions">
+                {arranged.groups.map((group) => (
+                  <div
+                    key={group.label}
+                    role="group"
+                    aria-labelledby={`isl-sg-${group.id}`}
+                    className="isl-sgroup"
+                  >
+                    <div id={`isl-sg-${group.id}`} className="isl-hhead" role="presentation">
+                      {group.label}
+                    </div>
+                    {group.chats.map(({ chat, index }) => (
+                      <SessionRow
                         key={chat.id}
-                        id={`isl-sopt-${chat.id}`}
-                        role="option"
-                        aria-selected={index === current}
-                        className={index === current ? 'isl-srow act' : 'isl-srow'}
-                        onClick={() => onSelect(chat.id)}
-                      >
-                        <SessionBlob
-                          chat={chat}
-                          state={state}
-                          size={22}
-                          expression={sessionExpression(state, false)}
-                        />
-                        <div className="isl-smain">
-                          <div className="isl-st">{chat.title}</div>
-                          <div className="isl-sp2">{projectLine(chat, projectNames)}</div>
-                        </div>
-                        <StateChip chat={chat} state={state} />
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+                        chat={chat}
+                        active={index === current}
+                        now={props.now}
+                        projectNames={projectNames}
+                        onSelect={onSelect}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {arranged.hidden > 0 && (
+                <button type="button" className="isl-smore" onClick={() => setLimit(limit + PAGE)}>
+                  Show {Math.min(PAGE, arranged.hidden)} more
+                </button>
+              )}
+            </>
           ) : (
             <div className="isl-sempty">
-              {query ? `No session matches “${query}”.` : 'No chats yet.'}
+              {deferredQuery ? `No session matches “${deferredQuery}”.` : 'No chats yet.'}
             </div>
           )}
         </>

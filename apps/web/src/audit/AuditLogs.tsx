@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { memo, useId, useMemo, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type {
   AuditRunSummary,
@@ -9,7 +9,7 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
-import { clockTime, entrySummary, jsonTokens } from './audit-model.ts';
+import { clockTime, entrySummary, JSON_TOKEN_LIMIT, jsonTokens } from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -23,9 +23,10 @@ const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
 ];
 
 function Json({ value }: { value: unknown }) {
+  const tokens = useMemo(() => jsonTokens(value, JSON_TOKEN_LIMIT), [value]);
   return (
     <pre>
-      {jsonTokens(value).map((token, index) =>
+      {tokens.map((token, index) =>
         token.kind === 'plain' ? (
           token.text
         ) : (
@@ -50,7 +51,13 @@ const DIRECTION_TITLES: Record<ProtocolLogEntry['direction'], string> = {
   harness: 'Spark',
 };
 
-function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean }) {
+const LogRow = memo(function LogRow({
+  entry,
+  broken,
+}: {
+  entry: ProtocolLogEntry;
+  broken: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const rawId = useId();
   const arrow = DIRECTION_ARROWS[entry.direction];
@@ -90,7 +97,7 @@ function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean })
       )}
     </li>
   );
-}
+});
 
 function runOption(run: AuditRunSummary, index: number): string {
   return [`Run ${index + 1}`, run.role, run.model].filter(Boolean).join(' · ');

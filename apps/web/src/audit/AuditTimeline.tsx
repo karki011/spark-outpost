@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { providerLabel, type AuditRunSummary } from '@spark-outpost/contracts';
 import { providerColor } from '../chat/provider-name.ts';
 import {
@@ -23,7 +23,21 @@ function useNow(live: boolean): number {
   return now;
 }
 
-function TurnWaterfall({ turn, index, now }: { turn: AuditTurn; index: number; now: number }) {
+const FROZEN_NOW = 0;
+
+function turnTicks(turn: AuditTurn): boolean {
+  return turn.runs.some((run) => isLive(run) || run.approvalWaits.some((wait) => !wait.end));
+}
+
+const TurnWaterfall = memo(function TurnWaterfall({
+  turn,
+  index,
+  now,
+}: {
+  turn: AuditTurn;
+  index: number;
+  now: number;
+}) {
   const chart = waterfall(turn, now);
   const active = Math.max(0, chart.wallMs - chart.waitMs);
   const pct = (value: number) => `${value}%`;
@@ -88,11 +102,11 @@ function TurnWaterfall({ turn, index, now }: { turn: AuditTurn; index: number; n
       </div>
     </figure>
   );
-}
+});
 
 export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
   const now = useNow(runs.some(isLive));
-  const turns = auditTurns(runs);
+  const turns = useMemo(() => auditTurns(runs), [runs]);
   const providers = [...new Set(runs.map((run) => run.provider))];
   const waited = runs.some((run) => run.approvalWaits.length > 0);
   if (turns.length === 0) return <EmptyScene>No runs in this chat yet.</EmptyScene>;
@@ -102,7 +116,12 @@ export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
         Who worked when, per turn. Shaded stretches are time a run waited for your approval.
       </p>
       {turns.map((turn, index) => (
-        <TurnWaterfall key={turn.userMessageId} turn={turn} index={index} now={now} />
+        <TurnWaterfall
+          key={turn.userMessageId}
+          turn={turn}
+          index={index}
+          now={turnTicks(turn) ? now : FROZEN_NOW}
+        />
       ))}
       <div className="wf-legend">
         {providers.map((provider) => (

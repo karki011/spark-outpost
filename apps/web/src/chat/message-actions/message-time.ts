@@ -4,6 +4,13 @@ const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const sameYearDate = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' });
+const otherYearDate = new Intl.DateTimeFormat('en', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+const full = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
 
 export function messageTime(iso: string, now: number): string {
   const then = new Date(iso);
@@ -13,13 +20,9 @@ export function messageTime(iso: string, now: number): string {
   if (elapsed < DAY) return relative.format(-Math.floor(elapsed / HOUR), 'hour');
   if (elapsed < WEEK) return relative.format(-Math.floor(elapsed / DAY), 'day');
   const sameYear = then.getFullYear() === new Date(now).getFullYear();
-  return then.toLocaleDateString('en', {
-    month: 'short',
-    day: 'numeric',
-    ...(sameYear ? {} : { year: 'numeric' }),
-  });
+  return (sameYear ? sameYearDate : otherYearDate).format(then);
 }
 
 export function fullTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
+  return full.format(new Date(iso));
 }

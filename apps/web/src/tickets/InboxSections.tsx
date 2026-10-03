@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { AttentionSettings, InboxTicket, TicketSection } from '@spark-outpost/contracts';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { UserBlob } from '../brand/UserBlob.tsx';
@@ -57,7 +58,7 @@ function Assignee({ name }: { name: string }) {
   );
 }
 
-function InboxRow({
+const InboxRow = memo(function InboxRow({
   entry,
   now,
   selected,
@@ -67,8 +68,8 @@ function InboxRow({
   entry: LiveTicket;
   now: number;
   selected: boolean;
-  onSelect: () => void;
-  onAction: (action: RowAction) => void;
+  onSelect: (ticket: InboxTicket) => void;
+  onAction: (ticket: InboxTicket, action: RowAction) => void;
 }) {
   const { ticket } = entry;
   const action = rowAction({ ...ticket, section: entry.section });
@@ -90,15 +91,15 @@ function InboxRow({
       syncProblem={syncProblem(ticket)}
       snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date(now)) : null}
       selected={selected}
-      onSelect={onSelect}
+      onSelect={() => onSelect(ticket)}
       chip={<StatusChip section={entry.section} tone={entry.tone} chat={entry.chat} />}
       avatar={ticket.assignedTo ? <Assignee name={ticket.assignedTo.name} /> : null}
       preview={rowPreview(entry, now)}
       links={
         <RowLinks
           ticket={ticket}
-          onOpenChat={() => onAction({ kind: 'open-chat', label: 'Open chat' })}
-          onOpenPr={(url) => onAction({ kind: 'open-pr', label: 'Open PR', url })}
+          onOpenChat={() => onAction(ticket, { kind: 'open-chat', label: 'Open chat' })}
+          onOpenPr={(url) => onAction(ticket, { kind: 'open-pr', label: 'Open PR', url })}
         />
       }
       action={
@@ -107,13 +108,13 @@ function InboxRow({
               label: action.label,
               name: `${action.label} ${ticket.key}`,
               primary: action.kind === 'answer' || action.kind === 'start',
-              onClick: () => onAction(action),
+              onClick: () => onAction(ticket, action),
             }
           : null
       }
     />
   );
-}
+});
 
 const snoozedEntries = (entries: readonly LiveTicket[]) =>
   entries
@@ -163,8 +164,8 @@ export function InboxSections(props: InboxSectionsProps) {
                     entry={entry}
                     now={props.now}
                     selected={props.selectedId === ticketId(entry.ticket)}
-                    onSelect={() => props.onSelect(entry.ticket)}
-                    onAction={(action) => props.onAction(entry.ticket, action)}
+                    onSelect={props.onSelect}
+                    onAction={props.onAction}
                   />
                 ))}
               </ul>

@@ -9,7 +9,15 @@ function waitingChip(chat: ConversationSummary): string {
   return chat.attention?.kind === 'input' ? 'Has a question' : 'Waiting for you';
 }
 
-export function StateChip({ chat, state }: { chat: ConversationSummary; state: SessionState }) {
+export function StateChip({
+  chat,
+  state,
+  now,
+}: {
+  chat: ConversationSummary;
+  state: SessionState;
+  now?: number;
+}) {
   switch (state) {
     case 'working':
       return (
@@ -23,9 +31,9 @@ export function StateChip({ chat, state }: { chat: ConversationSummary; state: S
     case 'failed':
       return <span className="isl-schip bad">Failed</span>;
     case 'done':
-      return <span className="isl-schip">Done · {relativeTime(chat.updatedAt)}</span>;
+      return <span className="isl-schip">Done · {relativeTime(chat.updatedAt, now)}</span>;
     case 'idle':
-      return <span className="isl-schip">{relativeTime(chat.updatedAt)}</span>;
+      return <span className="isl-schip">{relativeTime(chat.updatedAt, now)}</span>;
   }
 }
 

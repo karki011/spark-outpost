@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
-import type { Approval, ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type {
+  Approval,
+  ConversationDetail,
+  ConversationSummary,
+  Project,
+} from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { providerName } from '../chat/provider-name.ts';
@@ -10,6 +15,7 @@ import { isRunning } from '../conversations/row-state.ts';
 
 const WATCHED_LIMIT = 8;
 const NO_CHATS: ConversationSummary[] = [];
+const NO_PROJECTS: Project[] = [];
 
 export interface ChatAgent {
   id: string;
@@ -57,6 +63,10 @@ export function pendingOf(detail: ConversationDetail): Approval[] {
   return [...detail.approvals, ...checkpoints];
 }
 
+function dataOf(results: UseQueryResult<ConversationDetail>[]) {
+  return results.map((result) => result.data);
+}
+
 export function useIslandData(hidden: ReadonlySet<string>, extraIds: readonly string[]) {
   const query = useQuery({ queryKey: queryKeys.conversations, queryFn: api.listConversations });
   const all = query.data ?? NO_CHATS;
@@ -72,13 +82,18 @@ export function useIslandData(hidden: ReadonlySet<string>, extraIds: readonly st
       queryKey: queryKeys.conversation(id),
       queryFn: () => api.getConversation(id),
     })),
+    combine: dataOf,
   });
-  const detailById = new Map<string, ConversationDetail>();
-  details.forEach((result, index) => {
-    if (result.data) detailById.set(watched[index]!, result.data);
-  });
-  const approvalsByChat = new Map(
-    [...detailById].map(([id, detail]) => [id, pendingOf(detail)] as const),
+  const detailById = useMemo(() => {
+    const map = new Map<string, ConversationDetail>();
+    details.forEach((detail, index) => {
+      if (detail) map.set(watched[index]!, detail);
+    });
+    return map;
+  }, [details, watched]);
+  const approvalsByChat = useMemo(
+    () => new Map([...detailById].map(([id, detail]) => [id, pendingOf(detail)] as const)),
+    [detailById],
   );
   const projects = useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
   const projectNames = useMemo(
@@ -91,7 +106,7 @@ export function useIslandData(hidden: ReadonlySet<string>, extraIds: readonly st
     chats,
     detailById,
     approvalsByChat,
-    projects: projects.data ?? [],
+    projects: projects.data ?? NO_PROJECTS,
     projectNames,
   };
 }

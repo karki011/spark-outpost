@@ -236,3 +236,8 @@ svg {
   border-width: 2px;
   background-color: var(--scroll-thumb-hover);
 }
+
+svg.scout,
+svg:has(> .mo-root) {
+  contain: layout style;
+}

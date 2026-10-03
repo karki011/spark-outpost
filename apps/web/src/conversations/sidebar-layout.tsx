@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -147,26 +148,29 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [narrow]);
 
-  return {
-    collapsed,
-    drawer: narrow && drawer,
-    narrow,
-    attention,
-    hidden: narrow ? !drawer : collapsed,
-    width,
-    setWidth: (next) => {
-      const clamped = next === null ? null : clampWidth(next);
-      setWidthState(clamped);
-      saveWidth(clamped);
-    },
-    toggle: () => {
-      rememberToggleFocus();
-      if (narrow) setDrawer((open) => !open);
-      else setCollapsed(!collapsed);
-    },
-    reveal: () => (narrow ? setDrawer(true) : setCollapsed(false)),
-    closeDrawer: () => setDrawer(false),
-  };
+  return useMemo(
+    () => ({
+      collapsed,
+      drawer: narrow && drawer,
+      narrow,
+      attention,
+      hidden: narrow ? !drawer : collapsed,
+      width,
+      setWidth: (next) => {
+        const clamped = next === null ? null : clampWidth(next);
+        setWidthState(clamped);
+        saveWidth(clamped);
+      },
+      toggle: () => {
+        rememberToggleFocus();
+        if (narrow) setDrawer((open) => !open);
+        else setCollapsed(!collapsed);
+      },
+      reveal: () => (narrow ? setDrawer(true) : setCollapsed(false)),
+      closeDrawer: () => setDrawer(false),
+    }),
+    [collapsed, drawer, narrow, attention, width],
+  );
 }
 
 export function SidebarLayoutProvider({

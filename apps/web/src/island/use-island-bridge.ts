@@ -9,6 +9,7 @@ import { matchesShortcut } from '../desktop/shortcut-keys.ts';
 
 export const HIT_MARGIN = 14;
 const DRAG_START = 6;
+const PROBE_GAP_MS = 16;
 const REST_DELAY_MS = 700;
 
 const BROWSER_GEOMETRY: IslandGeometry = {
@@ -132,6 +133,20 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       hovering.current = on;
       latest.current.onHover(on);
     };
+    let lastProbe = -Infinity;
+    let probeFrame = 0;
+    let trailing: { x: number; y: number } | null = null;
+    const probe = (x: number, y: number) => {
+      lastProbe = performance.now();
+      trailing = null;
+      const core = latest.current.coreRects();
+      const blobs = latest.current.blobRects();
+      const hit = inside([...core, ...blobs], x, y);
+      setInteractive(hit);
+      const onCore = inside(core, x, y, 0);
+      const onBlob = inside(blobs, x, y, 0);
+      setHover(hit && (onCore || !onBlob));
+    };
     const onMove = (event: MouseEvent) => {
       if (dragging) {
         if (
@@ -144,15 +159,21 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
         if (dragging.started) desktop?.island.drag('move', event.screenX, event.screenY);
         return;
       }
-      const core = latest.current.coreRects();
-      const blobs = latest.current.blobRects();
-      const hit = inside([...core, ...blobs], event.clientX, event.clientY);
-      setInteractive(hit);
-      const onCore = inside(core, event.clientX, event.clientY, 0);
-      const onBlob = inside(blobs, event.clientX, event.clientY, 0);
-      setHover(hit && (onCore || !onBlob));
+      const now = performance.now();
+      if (now - lastProbe >= PROBE_GAP_MS) {
+        probe(event.clientX, event.clientY);
+        return;
+      }
+      trailing = { x: event.clientX, y: event.clientY };
+      if (!probeFrame) {
+        probeFrame = requestAnimationFrame(() => {
+          probeFrame = 0;
+          if (trailing) probe(trailing.x, trailing.y);
+        });
+      }
     };
     const onLeave = () => {
+      trailing = null;
       if (dragging) return;
       setInteractive(false);
       setHover(false);
@@ -187,6 +208,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     window.addEventListener('drop', onDragOut);
     document.documentElement.addEventListener('dragleave', onDragOut);
     return () => {
+      cancelAnimationFrame(probeFrame);
       window.removeEventListener('dragenter', onDragIn);
       window.removeEventListener('drop', onDragOut);
       document.documentElement.removeEventListener('dragleave', onDragOut);

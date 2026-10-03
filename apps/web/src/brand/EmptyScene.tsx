@@ -221,10 +221,33 @@ function useRally(
       frame = requestAnimationFrame(tick);
     };
 
+    let onScreen = true;
+    let pausedAt = 0;
+    const sync = () => {
+      const run = onScreen && document.visibilityState === 'visible';
+      if (run && frame === 0) {
+        if (pausedAt > 0) started += performance.now() - pausedAt;
+        frame = requestAnimationFrame(tick);
+      } else if (!run && frame !== 0) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        pausedAt = performance.now();
+      }
+    };
+    const observer = new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1]?.isIntersecting ?? true;
+      sync();
+    });
+    const stage = ball()?.parentElement;
+    if (stage) observer.observe(stage);
+    document.addEventListener('visibilitychange', sync);
+
     place(ball(), handOf('left'), BALL);
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', sync);
       queue = [];
     };
   }, [active, refs, setMoods, setHero]);

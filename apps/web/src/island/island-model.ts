@@ -79,10 +79,6 @@ export function viewWidth(view: IslandView, notchWidth: number): number {
   }
 }
 
-export function isQuiet(view: IslandView): boolean {
-  return view.kind === 'peek' || view.kind === 'nudge';
-}
-
 export type RunStatuses = ReadonlyMap<string, { status: string; chatId: string }>;
 
 export function runStatuses(chats: readonly ConversationSummary[]): RunStatuses {
@@ -180,11 +176,9 @@ export function rankedSessions(
 ): ConversationSummary[] {
   return chats
     .filter((chat) => !chat.archivedAt && !hidden.has(chat.id))
-    .toSorted(
-      (a, b) =>
-        SESSION_RANK[sessionState(a)] - SESSION_RANK[sessionState(b)] ||
-        b.updatedAt.localeCompare(a.updatedAt),
-    );
+    .map((chat) => ({ chat, rank: SESSION_RANK[sessionState(chat)] }))
+    .toSorted((a, b) => a.rank - b.rank || b.chat.updatedAt.localeCompare(a.chat.updatedAt))
+    .map((item) => item.chat);
 }
 
 export const ACTIVE_MS = 20 * 60_000;

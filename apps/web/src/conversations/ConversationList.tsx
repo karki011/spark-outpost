@@ -4,7 +4,7 @@ import './sidebar-chrome.css';
 import './chat-row.css';
 import './chat-menu.css';
 import './sidebar-layout.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { SortableContext } from '@dnd-kit/sortable';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +25,7 @@ import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { AttentionCard } from './AttentionCard.tsx';
 import { ChatMenu } from './ChatMenu.tsx';
-import type { MenuAnchor } from './MenuShell.tsx';
+import { anchorFor, type OpenMenu, type OpenProjectMenu } from './menu-anchor.ts';
 import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
@@ -53,7 +53,9 @@ import { useProjectActions } from './use-project-actions.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
+import { useMarkRead } from './use-mark-read.ts';
 import { useToast } from './use-toast.ts';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 
 const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
@@ -65,37 +67,7 @@ interface ConversationListProps {
   onNewInProject: (projectId: string) => void;
 }
 
-interface OpenMenu {
-  chatId: string;
-  anchor: MenuAnchor;
-}
-
-interface OpenProjectMenu {
-  projectId: string;
-  anchor: MenuAnchor;
-}
-
-function anchorFor(element: HTMLElement, point: Point | null): MenuAnchor {
-  const rect = element.getBoundingClientRect();
-  if (point) return { x: point.x, y: point.y + 4, above: point.y - 4, focusBack: element };
-  return { x: rect.left, y: rect.bottom + 4, above: rect.top - 4, focusBack: element };
-}
-
-function useMarkRead(selectedId: string | null, chats: readonly ConversationSummary[]) {
-  const client = useQueryClient();
-  const marked = useRef<string | null>(null);
-  const selected = chats.find((chat) => chat.id === selectedId);
-  const key = selected?.unread ? `${selected.id}:${selected.latestRun?.id}` : null;
-  useEffect(() => {
-    if (!key || !selectedId || marked.current === key) return;
-    marked.current = key;
-    void api
-      .markConversationRead(selectedId)
-      .then(() => client.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }));
-  }, [key, selectedId, client]);
-}
-
-export function ConversationList({
+export const ConversationList = memo(function ConversationList({
   selectedId,
   onSelect,
   onNew,
@@ -111,7 +83,8 @@ export function ConversationList({
   const projectList = projects.data ?? [];
   const [tab, setTab] = useState<SidebarTab>('active');
   const [search, setSearch] = useState('');
-  const filter = parseChatFilter(search);
+  const deferredSearch = useDeferredValue(search);
+  const filter = parseChatFilter(deferredSearch);
   const query = useDebouncedValue(filter.text, SEARCH_DELAY_MS);
   const results = useQuery({
     queryKey: queryKeys.conversationSearch(query),
@@ -238,7 +211,21 @@ export function ConversationList({
     setRenamingId(null);
   };
 
-  const renderRow = (chat: ConversationSummary, sortable: boolean) => (
+  const handleOpen = useStableCallback((id: string) => openChat(id));
+  const handleMenu = useStableCallback(
+    (chatId: string, element: HTMLElement, point: Point | null) =>
+      setMenu({ chatId, anchor: anchorFor(element, point) }),
+  );
+  const handleRename = useStableCallback((chat: ConversationSummary, title: string | null) => {
+    setRenamingId(null);
+    if (title) actions.rename(chat, title);
+  });
+  const handleRestore = useStableCallback((chat: ConversationSummary) =>
+    actions.archive(chat, false),
+  );
+  const handleDelete = useStableCallback((chat: ConversationSummary) => actions.remove(chat));
+
+  const renderRow = (chat: ConversationSummary, sortable: boolean, index: number) => (
     <ChatRow
       key={chat.id}
       chat={chat}
@@ -247,14 +234,12 @@ export function ConversationList({
       sortable={sortable}
       settling={dnd.busy}
       flash={chat.id === actions.flashId}
-      onOpen={() => openChat(chat.id)}
-      onMenu={(element, point) => setMenu({ chatId: chat.id, anchor: anchorFor(element, point) })}
-      onRename={(title) => {
-        setRenamingId(null);
-        if (title) actions.rename(chat, title);
-      }}
-      onRestore={() => actions.archive(chat, false)}
-      onDelete={() => actions.remove(chat)}
+      index={index}
+      onOpen={handleOpen}
+      onMenu={handleMenu}
+      onRename={handleRename}
+      onRestore={handleRestore}
+      onDelete={handleDelete}
     />
   );
 
@@ -274,7 +259,7 @@ export function ConversationList({
       id={id}
       chats={rows}
       sortable={sortable}
-      renderRow={(chat) => renderRow(chat, canDrag && enabled)}
+      renderRow={(chat, index) => renderRow(chat, canDrag && enabled, index)}
     />
   );
 
@@ -383,7 +368,9 @@ export function ConversationList({
           open={searching || folds.isOpen(key)}
           onToggle={() => folds.toggle(key)}
         >
-          <ul className="rows">{group.chats.map((chat) => renderRow(chat, false))}</ul>
+          <ul className="rows">
+            {group.chats.map((chat, index) => renderRow(chat, false, index))}
+          </ul>
         </FoldSection>
       );
     });
@@ -497,4 +484,4 @@ export function ConversationList({
       </AnimatePresence>
     </nav>
   );
-}
+});

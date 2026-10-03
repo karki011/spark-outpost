@@ -70,9 +70,15 @@ function playGhost(ghost: HTMLElement, blobFrom: DOMRect | null, rest: DOMRect):
   void fade.finished.catch(() => undefined).finally(() => ghost.remove());
 }
 
+const GHOST_ROW_LIMIT = 30;
+
 export function leaveAsGhost(view: HTMLElement): void {
   const parent = view.parentElement;
   if (!parent || !view.isConnected || typeof view.animate !== 'function') return;
+  if (
+    view.querySelectorAll('[role="option"], [role="listitem"], li, button').length > GHOST_ROW_LIMIT
+  )
+    return;
   const ghost = view.cloneNode(true) as HTMLElement;
   ghost.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
   ghost.setAttribute('aria-hidden', 'true');

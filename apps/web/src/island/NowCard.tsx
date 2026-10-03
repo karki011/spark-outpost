@@ -1,5 +1,6 @@
 import {
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -200,7 +201,10 @@ function NowSession({ chat, reduced, onOpenHere, onOpenChat }: SessionProps) {
   });
   const state = sessionState(chat);
   const live = state === 'working' || state === 'waiting';
-  const lines = activityLines(runSteps(chat, detail.data), live);
+  const lines = useMemo(
+    () => activityLines(runSteps(chat, detail.data), live),
+    [chat, detail.data, live],
+  );
   const count = stepCount(chat.latestRun?.progress);
   const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
   return (

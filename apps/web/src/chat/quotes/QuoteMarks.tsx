@@ -108,6 +108,10 @@ export function QuoteMarks({ scrollerRef, conversationId, pending }: QuoteMarksP
   useEffect(() => {
     const root = scrollerRef.current;
     if (!root) return;
+    if (sent.length === 0 && unsent.length === 0) {
+      marksRef.current = [];
+      return;
+    }
     let frame = 0;
     let clearSent: () => void = () => undefined;
     let clearUnsent: () => void = () => undefined;

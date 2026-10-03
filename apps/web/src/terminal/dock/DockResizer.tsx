@@ -25,20 +25,34 @@ export function DockResizer({ height, onHeight }: DockResizerProps) {
     if (event.button !== 0) return;
     event.preventDefault();
     const handle = event.currentTarget;
-    const dock = handle.closest('.term-dock');
+    const dock = handle.closest<HTMLElement>('.term-dock');
     const startHeight = dock?.getBoundingClientRect().height ?? height;
     const startY = event.clientY;
     const max = roomAbove(handle);
     dock?.classList.add('dragging');
     handle.setPointerCapture(event.pointerId);
+    let dragged = clampDockHeight(startHeight, max);
+    let frame = 0;
+    let moved = false;
+    const paint = () => {
+      frame = 0;
+      dock?.style.setProperty('--term-h', `${dragged}px`);
+    };
     const onMove = (move: globalThis.PointerEvent) => {
-      onHeight(clampDockHeight(startHeight - (move.clientY - startY), max));
+      moved = true;
+      dragged = clampDockHeight(startHeight - (move.clientY - startY), max);
+      if (!frame) frame = requestAnimationFrame(paint);
     };
     const onUp = () => {
       handle.removeEventListener('pointermove', onMove);
       handle.removeEventListener('pointerup', onUp);
       handle.removeEventListener('pointercancel', onUp);
+      if (frame) cancelAnimationFrame(frame);
       dock?.classList.remove('dragging');
+      if (moved) {
+        paint();
+        onHeight(dragged);
+      }
     };
     handle.addEventListener('pointermove', onMove);
     handle.addEventListener('pointerup', onUp);

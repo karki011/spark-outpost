@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { guideHrefTarget, guideLink, type GuidePage } from '@spark-outpost/contracts';
 import { codeComponents, remarkPlugins } from '../chat/markdown/Markdown.tsx';
@@ -72,7 +72,12 @@ function PageLink({ page, rel }: { page: GuidePage; rel: 'prev' | 'next' }) {
   );
 }
 
-export function DocArticle({ page, anchor, previous, next }: DocArticleProps) {
+export const DocArticle = memo(function DocArticle({
+  page,
+  anchor,
+  previous,
+  next,
+}: DocArticleProps) {
   const titleRef = useScrollToTarget(page, anchor);
   const components = useMemo<Components>(
     () => ({
@@ -110,4 +115,4 @@ export function DocArticle({ page, anchor, previous, next }: DocArticleProps) {
       </article>
     </div>
   );
-}
+});

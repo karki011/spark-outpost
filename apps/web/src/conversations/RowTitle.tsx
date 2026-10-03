@@ -6,6 +6,21 @@ const PIXELS_PER_SECOND = 36;
 const SCROLL_SHARE = 0.65;
 const MIN_SCROLL_S = 1.2;
 
+const sizeChecks = new Map<Element, () => void>();
+let sizeObserver: ResizeObserver | null = null;
+
+function observeSize(element: Element, check: () => void): () => void {
+  sizeObserver ??= new ResizeObserver((entries) => {
+    for (const entry of entries) sizeChecks.get(entry.target)?.();
+  });
+  sizeChecks.set(element, check);
+  sizeObserver.observe(element);
+  return () => {
+    sizeChecks.delete(element);
+    sizeObserver?.unobserve(element);
+  };
+}
+
 function useOverflow(text: string) {
   const [element, ref] = useState<HTMLSpanElement | null>(null);
   const [truncated, setTruncated] = useState(false);
@@ -13,9 +28,7 @@ function useOverflow(text: string) {
     if (!element) return;
     const check = () => setTruncated(element.scrollWidth > element.clientWidth);
     check();
-    const observer = new ResizeObserver(check);
-    observer.observe(element);
-    return () => observer.disconnect();
+    return observeSize(element, check);
   }, [element, text]);
   const measure = useCallback(
     () => (element ? Math.max(0, element.scrollWidth - element.clientWidth) : 0),

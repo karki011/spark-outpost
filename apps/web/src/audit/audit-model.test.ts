@@ -188,4 +188,12 @@ describe('jsonTokens', () => {
       '-1500',
     ]);
   });
+
+  it('highlights only the head of a long payload and keeps the rest as plain text', () => {
+    const value = { rows: Array.from({ length: 200 }, (_, index) => ({ id: index, ok: true })) };
+    const tokens = jsonTokens(value, 400);
+    expect(tokens.map((token) => token.text).join('')).toBe(JSON.stringify(value, null, 2));
+    expect(tokens.filter((token) => token.kind !== 'plain').length).toBeLessThan(200);
+    expect(tokens.at(-1)?.kind).toBe('plain');
+  });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { memo, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -19,11 +19,12 @@ interface ChatRowProps {
   sortable: boolean;
   settling: boolean;
   flash: boolean;
-  onOpen: () => void;
-  onMenu: (element: HTMLElement, point: { x: number; y: number } | null) => void;
-  onRename: (title: string | null) => void;
-  onRestore: () => void;
-  onDelete: () => void;
+  index: number;
+  onOpen: (id: string) => void;
+  onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
+  onRename: (chat: ConversationSummary, title: string | null) => void;
+  onRestore: (chat: ConversationSummary) => void;
+  onDelete: (chat: ConversationSummary) => void;
 }
 
 function StatusMark({ tone }: { tone: RowTone }) {
@@ -91,7 +92,11 @@ function HistoryActions({
   title,
   onRestore,
   onDelete,
-}: Pick<ChatRowProps, 'onRestore' | 'onDelete'> & { title: string }) {
+}: {
+  title: string;
+  onRestore: () => void;
+  onDelete: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
   return (
     <span className="ract">
@@ -118,7 +123,7 @@ function HistoryActions({
   );
 }
 
-export function ChatRow(props: ChatRowProps) {
+export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const { chat, selected, renaming, sortable, settling, flash, onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
@@ -153,7 +158,7 @@ export function ChatRow(props: ChatRowProps) {
   const openMenuAt = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     if ((event.nativeEvent as globalThis.PointerEvent).pointerType === 'touch') return;
-    onMenu(event.currentTarget, { x: event.clientX, y: event.clientY });
+    onMenu(chat.id, event.currentTarget, { x: event.clientX, y: event.clientY });
   };
 
   const rootProps = {
@@ -181,7 +186,11 @@ export function ChatRow(props: ChatRowProps) {
         <div className="row-open">
           <span className="st" />
           <span className="rt">
-            <RenameInput title={chat.title} label="Chat name" onDone={onRename} />
+            <RenameInput
+              title={chat.title}
+              label="Chat name"
+              onDone={(title) => onRename(chat, title)}
+            />
           </span>
         </div>
       ) : (
@@ -190,7 +199,7 @@ export function ChatRow(props: ChatRowProps) {
           className="row-open"
           aria-current={selected ? 'page' : undefined}
           title={tooltip.join(' · ')}
-          onClick={onOpen}
+          onClick={() => onOpen(chat.id)}
           onFocus={(event) => {
             if (event.currentTarget.matches(':focus-visible')) marquee.start();
           }}
@@ -223,7 +232,11 @@ export function ChatRow(props: ChatRowProps) {
         </button>
       )}
       {history ? (
-        <HistoryActions title={chat.title} onRestore={props.onRestore} onDelete={props.onDelete} />
+        <HistoryActions
+          title={chat.title}
+          onRestore={() => props.onRestore(chat)}
+          onDelete={() => props.onDelete(chat)}
+        />
       ) : (
         !renaming && (
           <>
@@ -250,7 +263,7 @@ export function ChatRow(props: ChatRowProps) {
               className="icon-btn rmenu"
               aria-label={`Options for ${chat.title}`}
               aria-haspopup="menu"
-              onClick={(event) => onMenu(event.currentTarget, null)}
+              onClick={(event) => onMenu(chat.id, event.currentTarget, null)}
             >
               <DotsIcon />
             </button>
@@ -263,6 +276,7 @@ export function ChatRow(props: ChatRowProps) {
   return (
     <motion.li
       layout={settling ? false : 'position'}
+      layoutDependency={props.index}
       initial={false}
       transition={reveal}
       {...rootProps}
@@ -270,4 +284,4 @@ export function ChatRow(props: ChatRowProps) {
       {content}
     </motion.li>
   );
-}
+});

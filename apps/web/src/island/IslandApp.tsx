@@ -39,7 +39,6 @@ import { islandKeys, islandApi } from './island-api.ts';
 import {
   cardKey,
   hoverOpens,
-  isQuiet,
   islandView,
   sessionState,
   pendingCards,
@@ -64,12 +63,14 @@ import { noteSeen, useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 
 const NOTE_MS = 1_500;
+const MINUTE_MS = 60_000;
 const HOVER_IN_MS = 140;
 const HOVER_OUT_MS = 400;
 const MOMENT_MS = 6_000;
 const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
+const NO_HIDDEN: ReadonlySet<string> = new Set();
 const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
 const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
   home: 'Spark Island open. Home shows what is happening now.',
@@ -104,6 +105,10 @@ function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
   }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
   return [hover, onHover, cancelEnter] as const;
+}
+
+function minuteOf(time: number): number {
+  return Math.floor(time / MINUTE_MS) * MINUTE_MS;
 }
 
 function coreRects(island: HTMLElement | null): DOMRect[] {
@@ -146,14 +151,18 @@ export function IslandApp() {
   const [draft, setDraft] = useState<QuickDraft>({ text: '', projectId: undefined, level: null });
   const [followUp, setFollowUp] = useState<ConversationSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => minuteOf(Date.now()));
   const { moment, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
-  const running = data.chats.filter(
-    (chat) =>
-      !chat.archivedAt &&
-      !chat.needsInput &&
-      (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
+  const running = useMemo(
+    () =>
+      data.chats.filter(
+        (chat) =>
+          !chat.archivedAt &&
+          !chat.needsInput &&
+          (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
+      ),
+    [data.chats],
   );
   const settleHover = useRef<(inside: boolean) => void>(() => undefined);
   const [hover, onHover, cancelHoverOpen] = useHoverIntent(settleHover);
@@ -169,9 +178,15 @@ export function IslandApp() {
     setDraft((current) => ({ ...current, projectId: project.id }));
   });
 
-  const cards = pendingCards(data.chats, data.approvalsByChat, snoozed);
-  const allCards = pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE);
-  const row = peekRow(data.chats, new Set(), now);
+  const cards = useMemo(
+    () => pendingCards(data.chats, data.approvalsByChat, snoozed),
+    [data.chats, data.approvalsByChat, snoozed],
+  );
+  const allCards = useMemo(
+    () => pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE),
+    [data.chats, data.approvalsByChat],
+  );
+  const row = useMemo(() => peekRow(data.chats, NO_HIDDEN, now), [data.chats, now]);
   const view = islandView({
     note: note !== null,
     panel,
@@ -179,16 +194,15 @@ export function IslandApp() {
     review,
     nudge: !sparkFocused && cards.length > 0,
   });
-  const quiet = isQuiet(view);
-  const waiting = waitingCount(data.chats, new Set());
-  const feed = companionFeed(data.chats);
+  const waiting = useMemo(() => waitingCount(data.chats, NO_HIDDEN), [data.chats]);
+  const feed = useMemo(() => companionFeed(data.chats), [data.chats]);
   const spoken = useThrottledAnnouncement(statusText(feed), true);
   const sleepy = isSleepyTime(new Date(now).getHours(), 0);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), quiet ? 60_000 : 1_000);
+    const timer = setInterval(() => setNow(minuteOf(Date.now())), MINUTE_MS);
     return () => clearInterval(timer);
-  }, [quiet]);
+  }, []);
 
   useEffect(() => {
     if (!note) return;
@@ -318,7 +332,7 @@ export function IslandApp() {
     }
   };
 
-  const sessions = rankedSessions(data.chats, new Set());
+  const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
   const sound = useIslandSound();
   useChimes(
     sound?.on ?? false,
@@ -331,9 +345,13 @@ export function IslandApp() {
     desktop?.island.openSettings?.(target);
   };
   const settingsReady = typeof desktop?.island.openSettings === 'function';
-  const quickStart = quickStartProject(data.chats, data.projects);
+  const quickStart = useMemo(
+    () => quickStartProject(data.chats, data.projects),
+    [data.chats, data.projects],
+  );
+  const homeChats = useMemo(() => homeSessions(data.chats), [data.chats]);
   const home = {
-    sessions: homeSessions(data.chats),
+    sessions: homeChats,
     quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
     onOpenHere: (id: string) => {
       setSelected(id);
@@ -346,25 +364,28 @@ export function IslandApp() {
     },
     onMakeSpark: settingsReady ? () => openSettings('sparks') : null,
   };
-  const fast = {
-    waiting: feed.needs.map((item) => ({
-      id: item.chat.id,
-      title: item.chat.title,
-      detail: item.sub,
-    })),
-    running: feed.running.map((item) => ({
-      id: item.chat.id,
-      title: item.chat.title,
-      detail: item.step,
-    })),
-    spendToday: null as number | null,
-  };
   const spend = useQuery({
     queryKey: homeKeys.spend('today'),
     queryFn: () => homeApi.spend('today'),
     enabled: panel === 'ask',
   });
-  fast.spendToday = spend.data?.costUsd ?? null;
+  const spendToday = spend.data?.costUsd ?? null;
+  const fast = useMemo(
+    () => ({
+      waiting: feed.needs.map((item) => ({
+        id: item.chat.id,
+        title: item.chat.title,
+        detail: item.sub,
+      })),
+      running: feed.running.map((item) => ({
+        id: item.chat.id,
+        title: item.chat.title,
+        detail: item.step,
+      })),
+      spendToday,
+    }),
+    [feed, spendToday],
+  );
 
   const grab = useIslandDrop({
     islandRef,

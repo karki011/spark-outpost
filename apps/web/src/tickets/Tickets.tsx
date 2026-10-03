@@ -37,6 +37,7 @@ import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
 import { useLiveTickets } from './use-live-tickets.ts';
 import { useTicketInbox } from './use-ticket-inbox.ts';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { useTicketSearch } from './use-ticket-search.ts';
 import './tickets.css';
 import './ticket-flow.css';
@@ -131,7 +132,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
     return mine ? { ...mine, mine: true, inbox: mine } : null;
   })();
 
-  const act = (ticket: InboxTicket, action: RowAction) => {
+  const act = useStableCallback((ticket: InboxTicket, action: RowAction) => {
     if ((action.kind === 'answer' || action.kind === 'open-chat') && ticket.chat) {
       onOpenChat(ticket.chat.conversationId);
     } else if (action.kind === 'open-pr' && action.url) {
@@ -139,15 +140,17 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
     } else {
       setStarting({ ...ticket, mine: true, inbox: ticket });
     }
-  };
+  });
 
-  const toggleSection = (section: TicketSection) =>
+  const toggleSection = useStableCallback((section: TicketSection) =>
     setCollapsed((current) => {
       const next = new Set(current);
       if (next.has(section)) next.delete(section);
       else next.add(section);
       return next;
-    });
+    }),
+  );
+  const selectTicket = useStableCallback((ticket: InboxTicket) => setSelectedId(ticketId(ticket)));
 
   const selectResult = (ticket: TicketSearchResult) => setSelectedId(ticketId(ticket));
   const loading = connections.isPending || (connected && inbox.isPending);
@@ -228,7 +231,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                       <BriefStrip
                         tickets={tickets}
                         now={now}
-                        onSelect={(ticket) => setSelectedId(ticketId(ticket))}
+                        onSelect={selectTicket}
                         onAction={act}
                         onHome={onHome}
                       />
@@ -241,7 +244,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                       collapsed={collapsed}
                       selectedId={selectedId}
                       onToggle={toggleSection}
-                      onSelect={(ticket) => setSelectedId(ticketId(ticket))}
+                      onSelect={selectTicket}
                       onAction={act}
                     />
                   </>

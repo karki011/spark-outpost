@@ -1,0 +1,106 @@
+import { memo } from 'react';
+import type { ConversationDetail, Message, Project, Run } from '@spark-outpost/contracts';
+import { isCrewTurn } from '../crew/conversation-crew.ts';
+import { crewAgents } from '../crew/crew-projection.ts';
+import { TaskCard } from '../tasks/TaskCard.tsx';
+import { AdviceLine } from './AdviceLine.tsx';
+import { MessageAttachments } from './attachments/MessageAttachments.tsx';
+import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
+import { compactionsByRun } from './compaction/compaction-text.ts';
+import { CrewTurn } from './crew/CrewTurn.tsx';
+import { MessageActions } from './message-actions/MessageActions.tsx';
+import { QuotedText } from './quotes/QuotedText.tsx';
+import { SoloTurn } from './SoloTurn.tsx';
+import { sameTurnDetail } from './turn-props.ts';
+
+type Task = ConversationDetail['tasks'][number];
+
+interface TurnSectionProps {
+  run: Run;
+  userMessage: Message | null;
+  assistantMessage: Message | null;
+  detail: ConversationDetail;
+  repo: Project | null;
+  task: Task | null;
+  onOpenTask?: ((taskId: string) => void) | undefined;
+  onOpenChat: (conversationId: string) => void;
+}
+
+function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean {
+  return (
+    before.run === after.run &&
+    before.userMessage === after.userMessage &&
+    before.assistantMessage === after.assistantMessage &&
+    before.repo === after.repo &&
+    before.task === after.task &&
+    before.onOpenTask === after.onOpenTask &&
+    before.onOpenChat === after.onOpenChat &&
+    sameTurnDetail(before.detail, after.detail, after.run)
+  );
+}
+
+export const TurnSection = memo(function TurnSection({
+  run,
+  userMessage,
+  assistantMessage,
+  detail,
+  repo,
+  task,
+  onOpenTask,
+  onOpenChat,
+}: TurnSectionProps) {
+  const orchestration = detail.orchestrations?.[run.id] ?? null;
+  const crew = isCrewTurn(orchestration) ? orchestration : null;
+  const taskCard =
+    onOpenTask && task ? (
+      <TaskCard
+        task={task}
+        onOpen={() => onOpenTask(task.id)}
+        agents={crew ? crewAgents(crew, detail.activity) : []}
+      />
+    ) : null;
+  const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
+  return (
+    <section aria-label="Turn" data-assistant-message-id={assistantMessage?.id}>
+      {compactions.map((compaction) => (
+        <CompactionDivider key={compaction.id} compaction={compaction} onOpenChat={onOpenChat} />
+      ))}
+      {userMessage && (
+        <div className="msg me" data-message-id={userMessage.id}>
+          <MessageAttachments attachments={userMessage.attachments} />
+          {userMessage.content && (
+            <>
+              <div className="bubble">
+                <QuotedText text={userMessage.content} />
+              </div>
+              <MessageActions
+                text={userMessage.content}
+                createdAt={userMessage.createdAt}
+                copyLabel="Copy message"
+                side="user"
+              />
+            </>
+          )}
+        </div>
+      )}
+      {crew ? (
+        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
+      ) : (
+        <>
+          <SoloTurn run={run} detail={detail} assistantMessage={assistantMessage} repo={repo} />
+          <AdviceLine advice={detail.advice?.[run.id]} />
+          {taskCard}
+        </>
+      )}
+      {detail.continuedIn
+        ?.filter((continuation) => continuation.runId === run.id)
+        .map((continuation) => (
+          <ContinuedDivider
+            key={continuation.conversationId}
+            continuation={continuation}
+            onOpenChat={onOpenChat}
+          />
+        ))}
+    </section>
+  );
+}, sameSection);
