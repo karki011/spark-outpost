@@ -17,12 +17,12 @@ describe('the plan-first card', () => {
     expect(card.title).toBe('Build this plan?');
     expect(card.payload.autoOption).toBe(CHECKPOINT_OPTION.makeChange);
     expect(card.options.map((option) => [option.optionId, option.name])).toEqual([
-      [CHECKPOINT_OPTION.makeChange, 'Build this plan'],
-      [CHECKPOINT_OPTION.editPlan, 'Edit plan'],
+      [CHECKPOINT_OPTION.makeChange, 'Build'],
+      [CHECKPOINT_OPTION.editPlan, 'Edit'],
       [CHECKPOINT_OPTION.stop, 'Stop'],
     ]);
     expect(card.payload.reason).toContain('plan v3');
-    expect(card.payload.reason).toContain('builds it in 10 s');
+    expect(card.payload.reason).toContain('Full auto builds it in 10 s');
   });
 
   it('says so when auto-continue is off and Full auto uses its own wait', () => {
@@ -32,11 +32,14 @@ describe('the plan-first card', () => {
     );
   });
 
-  it('counts down at Automatic like other cards', () => {
-    const automatic = planFirstCard(1, 'hands-off', 10);
-    expect(automatic.payload.autoOption).toBe(CHECKPOINT_OPTION.makeChange);
-    expect(automatic.payload.reason).toContain('Automatic builds it in 10 s');
-    expect(planFirstCard(1, 'hands-off', null).payload.reason).toContain('Auto-continue is off');
+  it('waits for the user at Automatic, whatever the auto-continue setting', () => {
+    for (const seconds of [10, 60, null]) {
+      const automatic = planFirstCard(1, 'hands-off', seconds);
+      expect(automatic.payload.autoOption).toBeNull();
+      expect(automatic.payload.reason).toBe(
+        'Saved as plan v1; nothing was changed yet. Build it, edit it, or stop.',
+      );
+    }
   });
 
   it('asks for a plan without changes, with the requested revision', () => {

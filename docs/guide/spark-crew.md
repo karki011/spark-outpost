@@ -35,12 +35,12 @@ If the request is too vague, the agent first asks 1 to 3 questions with its best
 
 A plan comes as the card **Build this plan?**, before anything changes.
 
-![The Build this plan? card with Build this plan, Edit plan and Stop](images/spark-crew-plan-light.png)
+![The Build this plan? card with Build, Edit and Stop](images/spark-crew-plan-light.png)
 
 1. Read the plan. The card also shows an estimate of time and cost.
-2. Select **Build this plan**, **Edit plan** or **Stop**.
+2. Select **Build**, **Edit** or **Stop**.
 
-At **Automatic** and **Full auto → PR**, the button counts down, for example "Building this plan in 30s", and builds unless you edit or stop it.
+At **Automatic** the card waits for you, whatever the agent's mode: it's the one deliberate stop, and Spark Island and the message box say "Waiting for you · plan to review". After **Build**, the rest runs by itself. At **Full auto → PR** the button counts down, for example "Building this plan in 30s", and builds unless you edit or stop it.
 
 ## When the Critic reviews
 

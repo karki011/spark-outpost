@@ -64,11 +64,11 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
       'hands-off',
       'how much spark does alone',
     ],
-    text: `Alongside the agent's own mode, Spark has two autonomy levels. Set the default for new chats in Settings → Spark → How much Spark does alone; each chat can pick its own in its permissions. To review each step, pick an agent mode that asks (for example Manual, Ask every time or Plan).
+    text: `Alongside the agent's own mode, Spark has two autonomy levels. Default for new chats: Settings → Spark → How much Spark does alone; each chat can pick its own. To review each step, pick an agent mode that asks (Manual, Ask every time, Plan).
 
-Automatic (default): approval cards follow the agent's mode; in Ask turns (which never change files) commands run without asking. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.
+Automatic (default): approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept when checks pass, Critic findings are fixed in a loop, risky work runs in a worktree copy, Revert is always there. "Build this plan?" (Build, Edit, Stop) waits for the user in any agent mode, without auto-continue; after Build the rest runs alone.
 
-Full auto → PR: Automatic, in a worktree copy, then Ship commits, pushes the task branch and opens a PR (Open pull requests as: ready or draft). Nothing ever merges. When checks still fail in Full auto: Open a draft PR (marked "Checks failing") or Stop and ask.
+Full auto → PR: the same in a worktree copy, but a plan builds after a countdown (auto-continue seconds, else 30 s); then Ship pushes the task branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask.
 
 The safety floor holds at every level.`,
   },

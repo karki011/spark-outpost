@@ -111,7 +111,7 @@ test('the loop guard stops a Builder that repeats itself and reports', async ({ 
   expect(repo.notes()).toBe('start\n');
 });
 
-test('risky work shows a plan card that waits before the Builder starts, and Build this plan goes on', async ({
+test('risky work shows a plan card that waits before the Builder starts, and Build goes on', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -121,7 +121,7 @@ test('risky work shows a plan card that waits before the Builder starts, and Bui
   await expect(risky).toBeVisible({ timeout: 30_000 });
   await expect(risky).toContainText('Waiting for your answer — this would change data permanently');
   expect(repo.notes()).toBe('start\n');
-  await risky.getByRole('button', { name: 'Build this plan' }).click();
+  await risky.getByRole('button', { name: 'Build', exact: true }).click();
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });

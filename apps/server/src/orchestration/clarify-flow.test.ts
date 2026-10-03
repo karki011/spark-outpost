@@ -57,7 +57,7 @@ describe('plan first, then build', () => {
   const planned = (level: InvolvementLevel) =>
     nextStep(flow(level), { type: 'start', start: 'plan_first' });
 
-  it('builds the plan on Build this plan, and revises it on Edit plan', () => {
+  it('builds the plan on Build, and revises it on Edit', () => {
     expect(planned('full-auto').action).toEqual({ type: 'plan_first', note: null });
     const built = after(planned('full-auto').state, [
       { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null },
