@@ -128,21 +128,24 @@ async function gatherText(
   evidence.project = project;
 }
 
-function topByEvidence(evidence: Evidence, limit: number): string[] {
+function pathsByEvidence(evidence: Evidence): string[] {
   const weight = (path: string) =>
     (evidence.pathHits.has(path) ? 100 : 0) +
     (evidence.pathWords.get(path) ?? 0) * 20 +
     (evidence.namedDefiners.has(path) ? 50 : 0) +
     (evidence.matches.get(path)?.terms.size ?? 0) * 5 +
     Math.log2(1 + (evidence.matches.get(path)?.count ?? 0));
-  const paths = new Set([
-    ...evidence.pathHits,
-    ...evidence.pathWords.keys(),
-    ...evidence.namedDefiners.keys(),
-    ...evidence.matches.keys(),
-    ...evidence.uncommitted,
-  ]);
-  return [...paths].sort((a, b) => weight(b) - weight(a) || a.localeCompare(b)).slice(0, limit);
+  const weights = new Map<string, number>();
+  for (const paths of [
+    evidence.pathHits,
+    evidence.pathWords.keys(),
+    evidence.namedDefiners.keys(),
+    evidence.matches.keys(),
+    evidence.uncommitted,
+  ]) {
+    for (const path of paths) if (!weights.has(path)) weights.set(path, weight(path));
+  }
+  return [...weights].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([path]) => path);
 }
 
 function unionIds(
@@ -184,10 +187,11 @@ async function gatherSymbols(
   for (const [name, id] of widened) named.set(name, id);
   await addNameStats(db, project, evidence, [...widened.values()], signal);
   evidence.namedDefiners = await abortable(definersOf(db, project.id, [...named.values()]), signal);
-  const core = topByEvidence(evidence, CORE_SEEDS);
+  const ordered = pathsByEvidence(evidence);
+  const core = ordered.slice(0, CORE_SEEDS);
   const coChanges = [...coChanged(project.history, new Set(core))];
   evidence.coChange = new Map(coChanges.sort((a, b) => b[1] - a[1]).slice(0, MAX_CO_CHANGES));
-  const seeds = [...new Set([...topByEvidence(evidence, MAX_SEEDS), ...evidence.coChange.keys()])];
+  const seeds = [...new Set([...ordered.slice(0, MAX_SEEDS), ...evidence.coChange.keys()])];
   evidence.facts = await timed(
     timings,
     'facts',

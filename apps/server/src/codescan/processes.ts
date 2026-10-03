@@ -8,6 +8,7 @@ export interface RunOptions {
   signal?: AbortSignal;
   okCodes?: readonly number[];
   maxBytes?: number;
+  onStdout?: (chunk: Buffer) => void;
 }
 
 export class CommandError extends Error {
@@ -43,8 +44,9 @@ export function runCommand(command: string, args: string[], options: RunOptions)
     let stderr = '';
     child.stdout.on('data', (chunk: Buffer) => {
       size += chunk.length;
-      if (size <= maxBytes) chunks.push(chunk);
-      else child.kill();
+      if (size > maxBytes) child.kill();
+      else if (options.onStdout) options.onStdout(chunk);
+      else chunks.push(chunk);
     });
     child.stderr.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString('utf8')).slice(-2000);

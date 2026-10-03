@@ -111,8 +111,10 @@ export function referenceEdges(paths: readonly string[], input: RankInput): Edge
   const definers = definersById(paths, input);
   const referrers = referrerCounts(paths, input);
   return paths.map((path, from) => {
+    const refIds = input.facts.get(path)?.refIds;
+    if (!refIds || refIds.length === 0) return [];
     const weights = new Map<number, number>();
-    for (const id of input.facts.get(path)?.refIds ?? []) {
+    for (const id of refIds) {
       const targets = definers.get(id);
       if (!targets) continue;
       const stats = input.nameStats?.get(id);
@@ -130,27 +132,34 @@ export function referenceEdges(paths: readonly string[], input: RankInput): Edge
 }
 
 export function personalisedPageRank(edges: readonly Edge[][], personal: readonly number[]) {
+  const size = personal.length;
   const total = personal.reduce((sum, value) => sum + value, 0);
-  const base =
-    total > 0 ? personal.map((value) => value / total) : personal.map(() => 1 / personal.length);
-  const outWeight = edges.map((list) => list.reduce((sum, edge) => sum + edge.weight, 0));
-  let rank = [...base];
+  const base = Float64Array.from(personal, (value) => (total > 0 ? value / total : 1 / size));
+  const outWeight = Float64Array.from(edges, (list) =>
+    list.reduce((sum, edge) => sum + edge.weight, 0),
+  );
+  let rank = Float64Array.from(base);
+  let next = new Float64Array(size);
   for (let iteration = 0; iteration < ITERATIONS; iteration += 1) {
-    const next = base.map((value) => (1 - DAMPING) * value);
+    for (let index = 0; index < size; index += 1) next[index] = (1 - DAMPING) * base[index]!;
     let dangling = 0;
-    rank.forEach((value, from) => {
+    for (let from = 0; from < size; from += 1) {
+      const value = rank[from]!;
       const out = outWeight[from] ?? 0;
       if (out === 0) {
         dangling += value;
-        return;
+        continue;
       }
       for (const edge of edges[from] ?? []) {
-        next[edge.to] = (next[edge.to] ?? 0) + (DAMPING * value * edge.weight) / out;
+        next[edge.to] = next[edge.to]! + (DAMPING * value * edge.weight) / out;
       }
-    });
-    rank = next.map((value, index) => value + DAMPING * dangling * (base[index] ?? 0));
+    }
+    for (let index = 0; index < size; index += 1) {
+      next[index] = next[index]! + DAMPING * dangling * base[index]!;
+    }
+    [rank, next] = [next, rank];
   }
-  return rank;
+  return Array.from(rank);
 }
 
 function reasonsFor(input: RankInput, path: string, linked: boolean): string[] {
@@ -183,9 +192,11 @@ function largest(values: readonly number[]): number {
 }
 
 function inDegrees(edges: readonly Edge[][], size: number): number[] {
-  const sources = Array.from({ length: size }, () => new Set<number>());
-  edges.forEach((list, from) => list.forEach((edge) => sources[edge.to]?.add(from)));
-  return sources.map((set) => set.size);
+  const degrees = new Array<number>(size).fill(0);
+  for (const list of edges) {
+    for (const edge of list) degrees[edge.to] = (degrees[edge.to] ?? 0) + 1;
+  }
+  return degrees;
 }
 
 export function rankFiles(input: RankInput): RankedFile[] {

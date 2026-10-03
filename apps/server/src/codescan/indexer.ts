@@ -1,3 +1,4 @@
+import { setTimeout as pause } from 'node:timers/promises';
 import type { Queryable } from '../persistence/db.ts';
 import { statIndexable, textReader } from './file-stats.ts';
 import {
@@ -43,6 +44,8 @@ import { DEFINITION_KINDS, PARSER_VERSION } from './tag-queries.ts';
 import { pairTests } from './test-pairs.ts';
 
 const HISTORY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+const yieldToEventLoop = () => pause(0);
 
 export interface IndexOptions {
   fileCap?: number;
@@ -186,6 +189,7 @@ export async function indexProject(
   const parserVersion = options.parserVersion ?? PARSER_VERSION;
   const { project, rebuilt } = await openProject(db, root, parserVersion);
   const [listed, commit] = await Promise.all([listProjectFiles(root), headCommit(root)]);
+  await yieldToEventLoop();
   const stale = historyIsStale(project, rebuilt);
   const [indexable, history, changed] = await Promise.all([
     statIndexable(root, listed),
@@ -196,19 +200,30 @@ export async function indexProject(
   const selected = withinCap(indexable, options.fileCap ?? PROJECT_FILE_CAP, recent);
   const read = await readLayout(listed, textReader(root));
   const capped = selected.length < indexable.length;
-  const kept = new Set(selected.map((file) => file.path));
+  await yieldToEventLoop();
   const layout = {
     ...read,
     searchExcludes: capped
       ? uncoveredDirectories(
           indexable.map((file) => file.path),
-          kept,
+          new Set(selected.map((file) => file.path)),
         )
       : [],
   };
   const packageOf = packageMatcher(layout.packages);
   const cached = rebuilt ? new Map<string, CachedRow>() : await cachedFiles(db, project.id);
-  const names = rebuilt ? new Map<string, number>() : await projectNames(db, project.id);
+  await yieldToEventLoop();
+  const tested = pairTests(
+    selected.map((file) => file.path),
+    packageOf,
+  );
+  await yieldToEventLoop();
+  const plan = planRefresh(cached, selected, changed);
+  const names =
+    rebuilt || plan.read.length === 0
+      ? new Map<string, number>()
+      : await projectNames(db, project.id);
+  await yieldToEventLoop();
   const context: Context = {
     db,
     root,
@@ -218,12 +233,8 @@ export async function indexProject(
     nextNameId: largestId(names) + 1,
     stats: new Map(selected.map((file) => [file.path, file])),
     packageOf,
-    tested: pairTests(
-      selected.map((file) => file.path),
-      packageOf,
-    ),
+    tested,
   };
-  const plan = planRefresh(cached, selected, changed);
   const totals = { parsed: 0, unchanged: 0, missing: 0 };
   for (let start = 0; start < plan.read.length; start += WRITE_BATCH) {
     await options.pace?.(start, plan.read.length);
@@ -234,6 +245,7 @@ export async function indexProject(
     totals.missing += written.missing;
   }
   await deleteFiles(db, project.id, plan.remove);
+  await yieldToEventLoop();
   await relabelFiles(db, project.id, relabelled(context, cached, selected));
   const changedRows = totals.parsed + totals.missing + plan.remove.length > 0;
   if (!rebuilt && changedRows) await pruneNames(db, project.id);
