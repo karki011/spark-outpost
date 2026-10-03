@@ -88,9 +88,14 @@ export function startScan(
     }));
 }
 
-export function observeScan(s: Session, scanning: Promise<ScanOutcome> | null): void {
+export function observeScan(
+  s: Session,
+  scanning: Promise<ScanOutcome> | null,
+  root?: string | null,
+): void {
   if (!scanning) return;
   s.scan = scanning;
+  s.scanRoot = root ?? null;
   void scanning.then((outcome) => {
     s.scanReport = outcome.report;
   });

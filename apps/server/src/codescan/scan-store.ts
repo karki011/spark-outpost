@@ -2,6 +2,7 @@ import type { Queryable } from '../persistence/db.ts';
 import type { Commit } from './git.ts';
 import type { ProjectLayout } from './layout.ts';
 import type { NameStats, NodeFacts } from './rank.ts';
+import { DEFINITION_KINDS, type DefinitionKind } from './tag-queries.ts';
 
 export const NEIGHBOUR_LIMIT = 400;
 export const PATH_MATCH_LIMIT = 40;
@@ -205,4 +206,73 @@ export async function neighbours(
     [projectId, referenced, defined, exclude, NEIGHBOUR_LIMIT / 2],
   );
   return toFacts(rows);
+}
+
+export interface IndexedDeclaration {
+  name: string;
+  kind: DefinitionKind;
+  startLine: number;
+  endLine: number;
+  refFiles: number;
+}
+
+interface DeclarationRow {
+  path: string;
+  project_id: string;
+  def_ids: number[];
+  def_kinds: number[];
+  def_start_lines: number[] | null;
+  def_end_lines: number[] | null;
+}
+
+function validRange(start: number | undefined, end: number | undefined): boolean {
+  return Number.isInteger(start) && Number.isInteger(end) && start! >= 1 && end! >= start!;
+}
+
+function rowDeclarations(
+  row: DeclarationRow,
+  names: ReadonlyMap<number, { name: string; ref_files: number }>,
+): IndexedDeclaration[] | null {
+  const starts = row.def_start_lines;
+  const ends = row.def_end_lines;
+  if (!starts || !ends) return row.def_ids.length === 0 ? [] : null;
+  if (starts.length !== row.def_ids.length || ends.length !== row.def_ids.length) return null;
+  return row.def_ids.flatMap((id, index) => {
+    const named = names.get(id);
+    const kind = DEFINITION_KINDS[row.def_kinds[index] ?? -1];
+    if (!named || !kind || !validRange(starts[index], ends[index])) return [];
+    return [
+      {
+        name: named.name,
+        kind,
+        startLine: starts[index]!,
+        endLine: ends[index]!,
+        refFiles: named.ref_files,
+      },
+    ];
+  });
+}
+
+export async function declarationsIn(
+  db: Queryable,
+  root: string,
+  paths: readonly string[],
+): Promise<Map<string, IndexedDeclaration[] | null>> {
+  if (paths.length === 0) return new Map();
+  const { rows } = await db.query<DeclarationRow>(
+    `SELECT f.path, f.project_id, f.def_ids, f.def_kinds, f.def_start_lines, f.def_end_lines
+     FROM code_index_files f JOIN code_index_projects p ON p.id = f.project_id
+     WHERE p.root_path = $1 AND f.path = ANY($2::text[])`,
+    [root, paths],
+  );
+  const projectId = rows[0]?.project_id;
+  if (!projectId) return new Map();
+  const ids = [...new Set(rows.flatMap((row) => row.def_ids))];
+  const named = await db.query<{ id: number; name: string; ref_files: number }>(
+    `SELECT id, name, ref_files FROM code_index_names
+     WHERE project_id = $1 AND id = ANY($2::int[])`,
+    [projectId, ids],
+  );
+  const names = new Map(named.rows.map((row) => [row.id, row]));
+  return new Map(rows.map((row) => [row.path, rowDeclarations(row, names)]));
 }

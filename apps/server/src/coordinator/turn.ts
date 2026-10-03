@@ -4,6 +4,7 @@ import { insertPieceList } from '../persistence/pieces.ts';
 import { proposedPlanFromRun, rejectPlanDocument } from '../persistence/plan-documents.ts';
 import { usedNames } from '../persistence/orchestrations.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
+import { declarationLeads } from '../orchestration/code-context.ts';
 import { agreedPlanText, checkCommands } from '../orchestration/member-prompts.ts';
 import { runMember } from '../orchestration/members.ts';
 import { seatRoute } from '../orchestration/member-routes.ts';
@@ -105,10 +106,18 @@ async function askForPieces(
   const files = await projectFiles(root);
   const budgetTokens = budgetFor(seatRoute(s, spawn).route.pick);
   const likely = likelyFiles(s.scanReport?.candidates ?? []).slice(0, LIKELY_SHOWN);
+  const leads = await declarationLeads(
+    s,
+    likely.map((file) => file.path),
+  );
   let prompt = coordinatorPrompt({
     request: s.input.userRequest,
     agreedPlan: await agreedPlanText(s),
-    likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
+    likelyFiles: likely.map((file) => ({
+      path: file.path,
+      lines: file.lines,
+      leads: leads.get(file.path) ?? [],
+    })),
     planFiles: [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
       0,
       PLAN_FILES_SHOWN,

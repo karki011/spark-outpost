@@ -319,7 +319,8 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
 });
 
 describe('likely files from the Jev ranking', { timeout: 150_000 }, () => {
-  const HINT = 'Likely files (a ranking hint, not a limit):';
+  const HINT = 'Likely code (a ranking hint, not a limit)';
+  const STORE = /\d\. store\.ts \|[^\n]*\| Jev 0\.80/;
 
   beforeEach(async () => {
     await writeFile(
@@ -341,7 +342,9 @@ describe('likely files from the Jev ranking', { timeout: 150_000 }, () => {
     await scanner.idle();
     expect(orchestration.status).toBe('succeeded');
     const builder = (await children(t, runId)).find((child) => child.role === 'builder')!;
-    expect(builder.prompt).toContain(`${HINT} store.ts (0.80)`);
+    expect(builder.prompt).toContain(HINT);
+    expect(builder.prompt).toMatch(STORE);
+    expect(builder.prompt).toContain('<code_evidence>');
   });
 
   it('gives each piece only the ranked files it owns or reads', async () => {
@@ -366,8 +369,8 @@ describe('likely files from the Jev ranking', { timeout: 150_000 }, () => {
         .filter((child) => child.pieceKey)
         .map((child) => [child.pieceKey, child.prompt]),
     );
-    expect(prompts.get('P1')).toContain(`${HINT} store.ts (0.80)`);
-    expect(prompts.get('P2')).toContain(`${HINT} store.ts (0.80)`);
+    expect(prompts.get('P1')).toMatch(STORE);
+    expect(prompts.get('P2')).toMatch(STORE);
     expect(prompts.get('P3')).not.toContain(HINT);
   });
 });

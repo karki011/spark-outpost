@@ -179,6 +179,7 @@ export interface JevCallRecord {
   subject: string;
   policyVersion: string;
   call: JevCall;
+  fromCache?: boolean;
   answer: unknown;
 }
 
@@ -190,21 +191,22 @@ export async function recordJevCall(
   if (record.call.status === 'not_connected' || record.call.status === 'not_asked') return;
   await db.query(
     `INSERT INTO map_jev_calls (repo_id, purpose, subject, jev_status, model, input_tokens,
-       cost_usd, latency_ms, policy_version, asked, answer, error)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+       cost_usd, latency_ms, policy_version, asked, answer, error, from_cache)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [
       repoId,
       record.purpose,
       record.subject,
       record.call.status,
       record.call.model,
-      record.call.usage?.inputTokens ?? null,
-      record.call.usage?.costUsd ?? null,
+      record.fromCache ? 0 : (record.call.usage?.inputTokens ?? null),
+      record.fromCache ? 0 : (record.call.usage?.costUsd ?? null),
       record.call.latencyMs,
       record.policyVersion,
       record.call.asked ? JSON.stringify(redactValue(record.call.asked)) : null,
       JSON.stringify(redactValue(record.answer ?? null)),
       record.call.error,
+      record.fromCache === true,
     ],
   );
 }

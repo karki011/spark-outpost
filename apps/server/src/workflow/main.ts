@@ -52,6 +52,7 @@ const sparkDeps: SparkToolDeps = {
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
+  codeScan,
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 const sparkActions = await startSparkActionFollowThrough(sparkDeps);

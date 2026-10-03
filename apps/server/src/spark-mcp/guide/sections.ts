@@ -195,7 +195,7 @@ The morning brief (Settings → Spark → Morning brief, with a time) is written
     keywords: ['map', 'project map', 'areas', 'repo map', 'core impact', 'unmatched'],
     text: `The Map page (in the side rail) draws each linked repository as a sky of files grouped into areas, with links between areas and between repositories (front end to back end, shared packages, shared env keys). Filter areas by category (Core, Shared, Feature), files by kind, and links between projects; open a file for Jev's label, a preview, what depends on it, its imports and its history ("Changed 3 days ago · 5 commits · 2 authors"). With 2+ projects it lists unmatched API: routes nothing calls and calls that reach no route.
 
-The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev connected, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact on the keep card, the Changes pane and the PR description. spark_map returns a project's areas.`,
+The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev connected, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact on the keep card, the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
   },
   {
     id: 'mcp-servers',
@@ -229,7 +229,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages, the queue and messages to crew members: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
 Spend: spark_spend. Trends and outcomes: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'compaction',

@@ -12,6 +12,7 @@ import { createTeammateTool, updateTeammateTool } from './actions/teammate-actio
 import { attentionTool } from './tools/attention-tool.ts';
 import { auditTool } from './tools/audit-tool.ts';
 import { docsTool } from './tools/docs-tool.ts';
+import { findTool } from './tools/find-tool.ts';
 import { guideTool } from './tools/guide-tool.ts';
 import { chatTools } from './tools/chat-tools.ts';
 import { historyTool } from './tools/history-tool.ts';
@@ -32,6 +33,7 @@ export const SPARK_MCP_NAME = 'spark';
 export const SPARK_TOOLS: readonly SparkTool[] = [
   ...setupTools,
   ...projectTools,
+  findTool,
   ...chatTools,
   historyTool,
   attentionTool,
@@ -55,7 +57,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
 ];
 
 const INSTRUCTIONS =
-  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats and their full history (including turns compacted out of context), live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, estimates, budgets and guardrail findings, activity, the brief, settings, Sparks (named teammates with their state and standing instructions), a guide to how Spark works (spark_guide section spark-tools says which tool answers what) and the user guide with step-by-step how-tos (spark_docs). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round; add or change a Spark) run at once in Auto, Bypass/Full access or Full auto → PR; otherwise they return waiting_for_user while the user confirms on a card, and Spark does it when they do. Results are JSON, paged and redacted.';
+  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats and their full history (including turns compacted out of context), live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects, the Map and code search (spark_find), terminals, tickets, pull requests and the follow-up on them, estimates, budgets and guardrail findings, activity, the brief, settings, Sparks (named teammates with their state and standing instructions), a guide to how Spark works (spark_guide section spark-tools says which tool answers what) and the user guide with step-by-step how-tos (spark_docs). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round; add or change a Spark) run at once in Auto, Bypass/Full access or Full auto → PR; otherwise they return waiting_for_user while the user confirms on a card, and Spark does it when they do. Results are JSON, paged and redacted.';
 
 const READ_ONLY = {
   readOnlyHint: true,

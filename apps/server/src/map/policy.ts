@@ -17,6 +17,7 @@ export const LABEL_EVIDENCE_TOKENS = 6_000;
 export const LABEL_FILE_TOKENS = 1_500;
 export const LABEL_PATHS = 120;
 export const LABEL_MAX_AREAS = 300;
+export const LABEL_GIVE_UP_AFTER = 3;
 
 export const CPU_BUDGET = 0.3;
 export const MAP_POLL_MS = 10_000;

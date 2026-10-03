@@ -4,6 +4,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_settings: 'Reading Spark settings',
   spark_projects: 'Looking at projects',
   spark_map: 'Reading the project map',
+  spark_find: 'Finding code',
   spark_chats: 'Looking at chats',
   spark_chat: 'Reading a chat',
   spark_chat_history: 'Reading chat history',

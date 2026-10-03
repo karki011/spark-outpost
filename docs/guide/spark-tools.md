@@ -34,6 +34,7 @@ Tools that read change nothing.
 | Pull requests and their checks and reviews                               | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
 | Providers, models, connectors, settings, projects                        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
 | The Map, and what breaks if a file changes                               | `spark_map`                                                                               |
+| Where something lives in the code                                        | `spark_find`                                                                              |
 | Open terminals                                                           | `spark_terminals`                                                                         |
 | Tickets, or one ticket in full (`action` read)                           | `spark_tickets`                                                                           |
 | Your Sparks, their state and standing instructions                       | `spark_sparks`                                                                            |

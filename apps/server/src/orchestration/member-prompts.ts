@@ -5,7 +5,7 @@ import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.t
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
-import { awaitRanking, likelyFilesLine } from './likely-files.ts';
+import { codeContext } from './code-context.ts';
 import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
@@ -95,14 +95,14 @@ export function agreedPlanText(s: Session): Promise<string | null> {
 
 export const RESEARCH_BRIEF = [
   '## Research',
-  'This is a research request. Use read-only tools and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
+  'This is a research request. Use read-only tools, `spark_find` to locate the code (ranked files with declarations as name@startLine-endLine; a hint, not a limit) and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
   'Answer with your findings, each tied to the files and lines you read, then a short list of suggested next steps.',
 ].join('\n');
 
 export async function readerPreamble(s: Session): Promise<string | null> {
   const plan = await agreedPlanText(s);
   const research = turnCategory(s.intake.outcome, s.intake.body.rules.intent) === 'research';
-  const parts = [plan, research ? RESEARCH_BRIEF : null].filter(Boolean);
+  const parts = [plan, research ? RESEARCH_BRIEF : null, await codeContext(s)].filter(Boolean);
   return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
@@ -147,7 +147,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     buildStyle: s.buildStyle,
     checkCommands: checkCommands(s),
     agreedPlan,
-    likelyFiles: likelyFilesLine(await awaitRanking(s)),
+    likelyFiles: await codeContext(s),
     publish: await publishBrief(s.deps.db, s.input),
   });
 }

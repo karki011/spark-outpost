@@ -147,6 +147,7 @@ export async function buildRepo(deps: BuildDeps, repo: RepoRow): Promise<Record<
         }),
       );
       timings.jevCalls = totals.asked;
+      timings.jevCached = totals.cached;
       timings.jevInputTokens = totals.inputTokens;
       timings.jevCostMicroUsd = Math.round(totals.costUsd * 1_000_000);
     }

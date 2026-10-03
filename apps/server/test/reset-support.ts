@@ -61,6 +61,9 @@ async function seedMap(t: TestDb): Promise<void> {
      VALUES ($1, 'area_label', 'a1', 'failed', 'p')`,
     [repos[0]],
   );
+  await t.db.query(
+    `INSERT INTO jev_answer_cache (key, answers, model) VALUES ('k', '{}', 'jev-1.13.0')`,
+  );
   await t.db.query('INSERT INTO map_link_pairs (repo_a, repo_b, signature) VALUES ($1, $2, $3)', [
     repos[0],
     repos[1],

@@ -35,6 +35,7 @@ export interface MapSchedulerOptions {
   db: Db;
   scanner: CodeScanner;
   jev: IntakeDeps | null;
+  jevTimeoutMs?: number;
   rootPrefix?: string | null;
   pollMs?: number;
   checkEveryMs?: number;
@@ -67,6 +68,7 @@ async function jevAccessFor(
   db: Queryable,
   deps: IntakeDeps | null,
   root: string,
+  timeoutMs: number,
 ): Promise<JevAccess | null> {
   if (!deps) return null;
   const { rows } = await db.query<{ model: string | null }>(
@@ -79,7 +81,7 @@ async function jevAccessFor(
   const row = rows[0];
   if (!row) return null;
   return {
-    deps: { ...deps, timeoutMs: MAP_JEV_TIMEOUT_MS },
+    deps: { ...deps, timeoutMs },
     model: row.model ?? advisorEntry('jev').defaultModel,
   };
 }
@@ -127,7 +129,12 @@ export function createMapBuilder(options: MapSchedulerOptions): MapBuilder {
         {
           db,
           scanner: options.scanner,
-          jev: await jevAccessFor(db, options.jev, repo.rootPath),
+          jev: await jevAccessFor(
+            db,
+            options.jev,
+            repo.rootPath,
+            options.jevTimeoutMs ?? MAP_JEV_TIMEOUT_MS,
+          ),
           gate,
           signal: controller.signal,
           ignoreFor: readIgnore,

@@ -17,6 +17,8 @@ export const MAX_IMPORTS = 300;
 export interface Definition {
   name: string;
   kind: DefinitionKind;
+  startLine: number;
+  endLine: number;
 }
 
 export interface FileSymbols {
@@ -81,6 +83,14 @@ export function isMockDefinition(name: Node): boolean {
   return false;
 }
 
+const NAME_WRAPPER = /_declarator$|^qualified_identifier$/;
+
+export function declarationNode(name: Node): Node {
+  let node = name.parent ?? name;
+  while (node.parent && NAME_WRAPPER.test(node.type)) node = node.parent;
+  return node;
+}
+
 function collectDefinitions(
   tools: LoadedLanguage,
   tree: Parameters<Query['captures']>[0],
@@ -92,7 +102,13 @@ function collectDefinitions(
     const name = capture.node.text;
     if (!kind || name.length < MIN_NAME_LENGTH || seen.has(name)) continue;
     if (isMockDefinition(capture.node) || (testFile && kind === 'variable')) continue;
-    seen.set(name, { name, kind });
+    const declaration = declarationNode(capture.node);
+    seen.set(name, {
+      name,
+      kind,
+      startLine: declaration.startPosition.row + 1,
+      endLine: declaration.endPosition.row + 1,
+    });
     if (seen.size >= MAX_DEFINITIONS) break;
   }
   return [...seen.values()];
