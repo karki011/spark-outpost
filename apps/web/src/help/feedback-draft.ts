@@ -3,6 +3,7 @@ import type { FeedbackTarget } from './feedback-target.ts';
 
 export const FEEDBACK_FIELD_MAX = 2000;
 const TITLE_MAX = 70;
+const MISSED_SEARCHES_MAX = 10;
 
 export interface FeedbackReport {
   happened: string;
@@ -10,6 +11,7 @@ export interface FeedbackReport {
   version: string | null;
   beta: boolean;
   diagnostics: string | null;
+  missedDocsSearches?: readonly string[];
 }
 
 export type FeedbackDraft =
@@ -37,6 +39,10 @@ export function feedbackBody(report: FeedbackReport): string {
     versionLine(report),
   ];
   if (report.diagnostics) parts.push(`Diagnostics: attached ${report.diagnostics}`);
+  const missed = (report.missedDocsSearches ?? []).slice(-MISSED_SEARCHES_MAX);
+  if (missed.length > 0) {
+    parts.push(`Docs searches with no results: ${clean(missed.join('; '))}`);
+  }
   return `${parts.join('\n')}\n`;
 }
 
