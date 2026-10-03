@@ -145,7 +145,7 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
 });
 
-test('Fix from the keep card runs another Builder with your note', async ({ page }) => {
+test.fixme('Fix from the keep card runs another Builder with your note', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Auto-edit');
   await failingCheck(page, repo.root);

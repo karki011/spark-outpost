@@ -105,7 +105,7 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
 
   await page.reload();
   const status = page.locator('.cstatus').getByRole('button', { name: /^Waiting for you/ });
-  await expect(status).toContainText('approve pnpm test -- groupMessages');
+  await expect(status).toContainText('approve pnpm lint -- groupMessages');
   const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
   await status.focus();
   await page.keyboard.press('Enter');
