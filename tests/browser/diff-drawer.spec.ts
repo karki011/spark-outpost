@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { crewRepo, type CrewRepo } from './crew-engine.ts';
@@ -8,7 +9,8 @@ import { editedChat } from './edited-chat.ts';
 test.use({ trace: 'off' });
 
 const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
-const LONG_TASK_MS = PRODUCTION ? 100 : 250;
+const BUSY_MACHINE = os.loadavg()[0] > os.cpus().length * 2;
+const LONG_TASK_MS = PRODUCTION && !BUSY_MACHINE ? 100 : 250;
 const FILES = 5000;
 const BIG_LINES = 20_000;
 const SHOTS = 'test-results/diff-drawer';
@@ -120,9 +122,9 @@ test('a 5,000 file change set with a 20,000 line file opens and scrolls without 
 
   await page.evaluate(async () => {
     const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
-    for (let index = 0; index < 120; index++) await frame();
+    for (let index = 0; index < 600; index++) await frame();
   });
-  await phase('idle chat for 120 frames');
+  await phase('idle chat for 600 frames');
   const opened = Date.now();
   await chip.click();
   await expect(loadedRow).toBeVisible({ timeout: 30_000 });
@@ -175,10 +177,12 @@ test('a 5,000 file change set with a 20,000 line file opens and scrolls without 
     type: 'diff drawer perf',
     description: JSON.stringify({
       production: PRODUCTION,
+      loadAverage: os.loadavg()[0],
+      limitMs: LONG_TASK_MS,
       openMs,
       longTasks: long.length,
       maxLongTaskMs: Math.max(0, ...long),
-      idleMaxLongTaskMs: Math.max(0, ...(phases['idle chat for 120 frames'] ?? [])),
+      idleMaxLongTaskMs: Math.max(0, ...(phases['idle chat for 600 frames'] ?? [])),
       domNodesBefore: baseline,
       domNodesAfter: nodes,
       editorLines: lines,
@@ -187,8 +191,7 @@ test('a 5,000 file change set with a 20,000 line file opens and scrolls without 
   });
   expect(lines).toBeLessThan(400);
   expect(nodes - baseline).toBeLessThan(4000);
-  const noiseFloor = Math.max(0, ...(phases['idle chat for 120 frames'] ?? []));
-  expect(Math.max(0, ...long)).toBeLessThan(LONG_TASK_MS + noiseFloor);
+  expect(Math.max(0, ...long)).toBeLessThan(LONG_TASK_MS);
 
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);

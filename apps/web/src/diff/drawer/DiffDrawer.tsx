@@ -1,5 +1,5 @@
 import './diff-drawer.css';
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ChangeEntry } from '@spark-outpost/contracts';
 import { Counts, DiffStat } from '../../chat/changes/FileChangeList.tsx';
@@ -42,12 +42,18 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
     tree.current?.focus();
   }, []);
 
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape' || event.defaultPrevented) return;
-    event.preventDefault();
-    event.stopPropagation();
-    onClose();
-  };
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const focus = document.activeElement;
+      const inside = focus?.closest('.dd');
+      if (!inside && focus !== document.body) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   const data = summary.data;
   const label = data ? `Changes · ${filesLabel(data.files)}` : 'Changes';
@@ -57,7 +63,6 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
       role="dialog"
       aria-label={label}
       style={{ '--dd-w': `${shown}px` } as CSSProperties}
-      onKeyDown={onKeyDown}
     >
       <DrawerResizer width={shown} onWidth={setWidth} />
       <header className="dd-head">
