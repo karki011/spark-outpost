@@ -1,25 +1,14 @@
 .isl-sstatus .shim {
-  background: linear-gradient(
-    90deg,
-    var(--muted) 0%,
-    var(--muted) 35%,
-    var(--text) 50%,
-    var(--muted) 65%,
-    var(--muted) 100%
-  );
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: isl-shimmer 2.2s linear infinite;
+  color: var(--text);
+  animation: isl-glow 1.8s ease-in-out infinite alternate;
 }
 
-@keyframes isl-shimmer {
+@keyframes isl-glow {
   from {
-    background-position: 100% 0;
+    opacity: 0.55;
   }
   to {
-    background-position: 0 0;
+    opacity: 1;
   }
 }
 

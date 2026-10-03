@@ -14,7 +14,6 @@ const BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 10 : 5) : 25;
 const POINTER_BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 45 : 30) : 80;
 const FRAME_LIMIT = 15;
 const PAINT_LIMIT = 60;
-const TITLE_SHIMMER_OFF = '.row.st-running .tt > span { animation: none; }';
 
 interface BlobMotion {
   blobs: number;
@@ -104,9 +103,6 @@ test('a thinking blob in a running chat does no work on each frame', async ({ pa
   await expect(page.locator('.cstatus .mo-always')).toBeVisible();
   await page.mouse.move(700, 300);
   await stayLive(page);
-  await page.waitForTimeout(1_500);
-  record('chat with title shimmer', await frameWork(page), 3);
-  await page.addStyleTag({ content: TITLE_SHIMMER_OFF });
   await measure(page, 'chat');
 });
 

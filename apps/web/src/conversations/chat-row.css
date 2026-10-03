@@ -111,12 +111,8 @@
 }
 
 .row.st-running .tt > span {
-  background: linear-gradient(90deg, var(--muted) 35%, var(--text) 50%, var(--muted) 65%);
-  background-size: 250% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: shimmer 2s linear infinite;
+  color: var(--text);
+  animation: glow 1.8s ease-in-out infinite alternate;
 }
 
 .row.st-done .tt {
