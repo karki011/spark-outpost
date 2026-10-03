@@ -10,6 +10,9 @@ import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { rowState } from '../conversations/row-state.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
+import { activeRun } from '../chat/turns.ts';
+import { queuedCount } from '../chat/queue/queue-model.ts';
+import { useChatQueue } from '../chat/queue/use-chat-queue.ts';
 import { islandApi } from './island-api.ts';
 import { sessionState } from './island-model.ts';
 import { projectLine, StateChip } from './session-bits.tsx';
@@ -17,6 +20,10 @@ import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent, pendingOf } from './use-island-data.ts';
 
 const RECENT_MESSAGES = 6;
+
+function queuedHint(count: number): string {
+  return count > 0 ? `${queuedCount(count)} · sends when this turn ends` : '';
+}
 
 function UpdateBox({ update, pending }: { update: ChatUpdate | undefined; pending: boolean }) {
   if (!pending && !update) return null;
@@ -90,13 +97,18 @@ function Actions({ detail, provider }: { detail: ConversationDetail; provider: s
   );
 }
 
-function Reply({ chat }: { chat: ConversationSummary }) {
+function Reply({ chat, detail }: { chat: ConversationSummary; detail?: ConversationDetail }) {
   const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(text);
+  const queue = useChatQueue(chat.id, detail?.queue);
+  const busy = activeRun(detail) !== null;
   const send = useMutation({
-    mutationFn: (content: string) => api.sendMessage(chat.id, crypto.randomUUID(), content),
+    mutationFn: async (content: string) => {
+      if (busy) await queue.add(content);
+      else await api.sendMessage(chat.id, crypto.randomUUID(), content);
+    },
     onSuccess: () => {
       setText('');
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(chat.id) });
@@ -122,18 +134,20 @@ function Reply({ chat }: { chat: ConversationSummary }) {
         id={`isl-reply-${chat.id}`}
         ref={inputRef}
         rows={1}
-        placeholder="Reply…"
+        placeholder={busy ? 'Queue a reply for when this turn ends…' : 'Reply…'}
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}
       />
       <div className="isl-qc-bar">
-        <span className="isl-qc-hint">{send.isPending ? 'Sending…' : ''}</span>
+        <span className="isl-qc-hint">
+          {send.isPending ? 'Sending…' : queuedHint(queue.items.length)}
+        </span>
         <span className="isl-sp" />
         <button
           type="button"
           className="isl-send"
-          aria-label="Send reply"
+          aria-label={busy ? 'Queue reply' : 'Send reply'}
           disabled={!text.trim() || send.isPending}
           onClick={submit}
         >
@@ -224,7 +238,7 @@ export function SessionChat({ chat, projectNames, onBack, onOpenChat }: SessionC
           {update.error.message}
         </p>
       )}
-      <Reply chat={chat} />
+      <Reply chat={chat} {...(detail.data ? { detail: detail.data } : {})} />
       <div className="isl-acts">
         <button
           type="button"

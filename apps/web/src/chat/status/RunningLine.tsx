@@ -1,5 +1,5 @@
 import { useTooltip } from '../../ui/Tooltip.tsx';
-import { Dot, WorkerFace } from './line-parts.tsx';
+import { Dot, QueuedTail, WorkerFace } from './line-parts.tsx';
 import type { StepActivity } from './step-activity.ts';
 import { clockText } from './status-text.ts';
 import type { Worker } from './status-store.ts';
@@ -25,10 +25,12 @@ export function RunningLine({
   worker,
   activity,
   since,
+  queued = 0,
 }: {
   worker: Worker;
   activity: StepActivity | null;
   since: number | null;
+  queued?: number;
 }) {
   const step = busyStep(activity);
   const now = useNow(since !== null);
@@ -53,6 +55,7 @@ export function RunningLine({
           <span className="cs-time">{clockText(elapsed)}</span>
         </>
       )}
+      <QueuedTail queued={queued} />
       {tip.tooltip}
     </p>
   );

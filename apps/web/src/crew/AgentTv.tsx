@@ -86,6 +86,7 @@ interface AgentTvProps {
   onPick(id: string): void;
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
+  onMessage?: (runId: string) => void;
   branch?: string | null;
 }
 
@@ -100,6 +101,7 @@ export function AgentTv({
   onPick,
   onAsk,
   onStop,
+  onMessage,
   branch = null,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
@@ -300,6 +302,7 @@ export function AgentTv({
             onAsk={onAsk}
             onStop={onStop}
             onClear={clearTvFinished}
+            onMessage={onMessage}
           />
         ) : (
           <AgentTvStage
@@ -317,6 +320,7 @@ export function AgentTv({
             onLanded={events.landed}
             onPick={onPick}
             onAsk={onAsk}
+            onMessage={onMessage}
           />
         )}
         {view === 'stage' && (

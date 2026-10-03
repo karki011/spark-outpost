@@ -30,6 +30,7 @@ interface TvListProps {
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
   onClear(keys: readonly string[]): void;
+  onMessage?: ((runId: string) => void) | undefined;
 }
 
 function RowBlob({ item }: { item: TvRow }) {
@@ -78,6 +79,7 @@ function Row({
   onPick,
   onAsk,
   onStop,
+  onMessage,
 }: {
   item: TvRow;
   finished: boolean;
@@ -85,6 +87,7 @@ function Row({
   onPick(agentId: string): void;
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
+  onMessage?: ((runId: string) => void) | undefined;
 }) {
   const asking = !finished && needsYou(item);
   const outcome = outcomeOf(item.state);
@@ -153,6 +156,16 @@ function Row({
         </div>
         <div className="tvl-act">
           <span className="tvl-line">{activityText(item)}</span>
+          {onMessage && item.messageable && (
+            <button
+              type="button"
+              className="tvl-open"
+              aria-label={`Message ${item.name}`}
+              onClick={() => onMessage(item.runId)}
+            >
+              Message
+            </button>
+          )}
           <button
             type="button"
             className="tvl-open"
@@ -168,14 +181,23 @@ function Row({
   );
 }
 
-export function TvList({ rows, cleared, stopping, onPick, onAsk, onStop, onClear }: TvListProps) {
+export function TvList({
+  rows,
+  cleared,
+  stopping,
+  onPick,
+  onAsk,
+  onStop,
+  onClear,
+  onMessage,
+}: TvListProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const runningId = useId();
   const finishedId = useId();
   const clearTip = useTooltip('Clear finished');
   const finished = rows.finished.filter((item) => !cleared.has(item.key));
-  const common = { onPick, onAsk, onStop };
+  const common = { onPick, onAsk, onStop, onMessage };
 
   const clear = () => {
     onClear(finished.map((item) => item.key));

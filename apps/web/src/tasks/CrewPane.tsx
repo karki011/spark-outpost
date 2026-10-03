@@ -5,6 +5,7 @@ import { formatDuration } from '../audit/audit-model.ts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { CostText } from '../usage/CostText.tsx';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
+import { MessageMemberButton } from '../crew/MessageMemberButton.tsx';
 import {
   crewStateWord,
   modelLabel,
@@ -50,9 +51,10 @@ function jobLine(agent: CrewAgent, piece: string | undefined): string {
 interface OrchestratedCrewProps {
   agents: readonly CrewAgent[];
   labels: ReadonlyMap<string, string>;
+  conversationId: string | null;
 }
 
-function OrchestratedCrew({ agents, labels }: OrchestratedCrewProps) {
+function OrchestratedCrew({ agents, labels, conversationId }: OrchestratedCrewProps) {
   return (
     <div className="wsec">
       <div className="wsec-h">
@@ -87,6 +89,9 @@ function OrchestratedCrew({ agents, labels }: OrchestratedCrewProps) {
                 )}
               </small>
             </span>
+            {conversationId && (
+              <MessageMemberButton conversationId={conversationId} agent={agent} />
+            )}
           </li>
         ))}
       </ul>
@@ -98,10 +103,15 @@ interface CrewPaneProps {
   runs: readonly TaskRun[];
   agents?: readonly CrewAgent[];
   labels?: ReadonlyMap<string, string> | undefined;
+  conversationId?: string;
 }
 
-export function CrewPane({ runs, agents = [], labels = new Map() }: CrewPaneProps) {
-  if (agents.length > 0) return <OrchestratedCrew agents={agents} labels={labels} />;
+export function CrewPane({ runs, agents = [], labels = new Map(), conversationId }: CrewPaneProps) {
+  if (agents.length > 0) {
+    return (
+      <OrchestratedCrew agents={agents} labels={labels} conversationId={conversationId ?? null} />
+    );
+  }
   const names = crewNames(runs);
   return (
     <div className="wsec">

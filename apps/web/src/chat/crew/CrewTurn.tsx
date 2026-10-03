@@ -41,6 +41,7 @@ import {
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
+import { messagesFor } from '../../crew/member-model.ts';
 
 interface CrewTurnProps {
   run: Run;
@@ -131,6 +132,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}
+        messages={messagesFor(detail, member.runId)}
         after={item.checkpoints.map(checkpointCard)}
       />
     );

@@ -5,6 +5,7 @@ interface SendButtonProps {
   disabled: boolean;
   onSend: () => void;
   onStop: () => void;
+  onQueue?: () => void;
 }
 
 export function SendButton({
@@ -14,6 +15,7 @@ export function SendButton({
   disabled,
   onSend,
   onStop,
+  onQueue,
 }: SendButtonProps) {
   if (busy) {
     return (
@@ -21,6 +23,26 @@ export function SendButton({
         <span className="stopping-note" role="status">
           {stopping ? 'Stopping…' : ''}
         </span>
+        {onQueue && (
+          <button
+            type="button"
+            className="send queue"
+            aria-label="Queue message"
+            title="Queue: sends when this turn ends"
+            disabled={disabled}
+            onClick={onQueue}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3 4.5h10M3 8h10M3 11.5h5.5M11.5 10v4M9.5 12h4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
         <StopButton stopping={stopping} onStop={onStop} />
       </>
     );

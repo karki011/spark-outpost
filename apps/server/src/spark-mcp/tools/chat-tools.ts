@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   autonomyLabel,
   CONVERSATION_SEARCH_MAX_LENGTH,
+  type ConversationDetail,
   type ConversationSummary,
   type Run,
 } from '@spark-outpost/contracts';
@@ -111,6 +112,18 @@ function runLine(run: Run) {
 
 const RUNS_SHOWN = 30;
 
+function clipped(text: string, maxChars: number): string {
+  return text.length > maxChars ? `${text.slice(0, maxChars)}… (${text.length} chars)` : text;
+}
+
+function memberName(detail: ConversationDetail, runId: string): string {
+  for (const orchestration of Object.values(detail.orchestrations ?? {})) {
+    const member = orchestration.crew.find((entry) => entry.runId === runId);
+    if (member) return member.name;
+  }
+  return 'the agent';
+}
+
 async function chat(
   { deps, scope }: SparkToolContext,
   args: { chat?: string | undefined; offset?: number | undefined; limit: number; maxChars: number },
@@ -152,16 +165,24 @@ async function chat(
       items: shown.items.map((message) => ({
         role: message.role,
         at: message.createdAt,
-        text:
-          message.content.length > args.maxChars
-            ? `${message.content.slice(0, args.maxChars)}… (${message.content.length} chars)`
-            : message.content,
+        text: clipped(message.content, args.maxChars),
         ...(message.attachments.length > 0
           ? { attachments: message.attachments.map((attachment) => attachment.name) }
           : {}),
       })),
     },
     runs: { total: runs.length, latest: runs.slice(-RUNS_SHOWN).map(runLine) },
+    queue: (detail.queue ?? []).map((item, index) => ({
+      position: index + 1,
+      text: clipped(item.content, args.maxChars),
+      ...(item.continueRunId ? { continues: memberName(detail, item.continueRunId) } : {}),
+    })),
+    crewMessages: (detail.memberMessages ?? []).slice(-RUNS_SHOWN).map((message) => ({
+      to: memberName(detail, message.runId),
+      text: clipped(message.body, args.maxChars),
+      status: message.status,
+      at: message.createdAt,
+    })),
     approvals: approvals.slice(-RUNS_SHOWN).map((approval) => ({
       kind: approval.kind,
       title: approval.title,
@@ -214,7 +235,7 @@ export const chatTools = [
     privateData: true,
     title: 'Read a chat',
     description:
-      'Read one chat: settings, cost, its branch and worktree, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost) and approval cards. Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
+      'Read one chat: settings, cost, its branch and worktree, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost), approval cards, the queue of messages waiting to send when the running turn ends (in order), and the messages the user sent straight to crew members (to, text, status). Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
     input: {
       chat: chatIdInput,
       offset: z.number().int().min(0).optional().describe('First message to show (0 = oldest).'),

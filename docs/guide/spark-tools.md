@@ -25,20 +25,20 @@ In the desktop app, you can also ask from anywhere with **Ask** in Spark Island.
 
 Tools that read change nothing.
 
-| You ask about                                         | Tool                                                                                      |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| What needs you, failed chats, flagged tickets         | `spark_attention`                                                                         |
-| Chats, one chat's runs and settings, earlier turns    | `spark_chats`, `spark_chat`, `spark_chat_history`                                         |
-| A running task: crew, pieces, budget, Jev's decisions | `spark_run`, `spark_task`, `spark_laws`                                                   |
-| Spend, activity, analytics, the morning brief         | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                         |
-| Pull requests and their checks and reviews            | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
-| Providers, models, connectors, settings, projects     | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
-| The Map, and what breaks if a file changes            | `spark_map`                                                                               |
-| Open terminals                                        | `spark_terminals`                                                                         |
-| Tickets, or one ticket in full (`action` read)        | `spark_tickets`                                                                           |
-| Your Sparks, their state and standing instructions    | `spark_sparks`                                                                            |
-| The audit log                                         | `spark_audit`                                                                             |
-| How Spark works, and this guide                       | `spark_guide`, `spark_docs`                                                               |
+| You ask about                                                            | Tool                                                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| What needs you, failed chats, flagged tickets                            | `spark_attention`                                                                         |
+| Chats, one chat's runs, settings, queue and crew messages, earlier turns | `spark_chats`, `spark_chat`, `spark_chat_history`                                         |
+| A running task: crew, pieces, budget, Jev's decisions                    | `spark_run`, `spark_task`, `spark_laws`                                                   |
+| Spend, activity, analytics, the morning brief                            | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                         |
+| Pull requests and their checks and reviews                               | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
+| Providers, models, connectors, settings, projects                        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
+| The Map, and what breaks if a file changes                               | `spark_map`                                                                               |
+| Open terminals                                                           | `spark_terminals`                                                                         |
+| Tickets, or one ticket in full (`action` read)                           | `spark_tickets`                                                                           |
+| Your Sparks, their state and standing instructions                       | `spark_sparks`                                                                            |
+| The audit log                                                            | `spark_audit`                                                                             |
+| How Spark works, and this guide                                          | `spark_guide`, `spark_docs`                                                               |
 
 ## When actions ask first
 

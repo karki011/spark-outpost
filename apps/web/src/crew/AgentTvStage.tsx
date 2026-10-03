@@ -50,6 +50,7 @@ export interface StageProps {
   onLanded(key: string): void;
   onPick(id: string): void;
   onAsk(approvalId: string): void;
+  onMessage?: ((runId: string) => void) | undefined;
 }
 
 function seatOf(layout: StageLayout, crew: readonly CrewAgent[], id: string): Seat {
@@ -204,6 +205,7 @@ export function AgentTvStage(props: StageProps) {
           ask={asks[selectedAgent.id]}
           onGo={() => go(selectedAgent.id)}
           onAsk={props.onAsk}
+          onMessage={props.onMessage && (() => props.onMessage?.(selectedAgent.id))}
         />
       )}
     </div>

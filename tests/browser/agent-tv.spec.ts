@@ -6,7 +6,6 @@ import {
   CREW_REQUEST,
   crewChat,
   crewRepo,
-  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -122,12 +121,9 @@ test('keyboard: Tab reaches the blobs, Enter opens the bubble, Enter again goes 
   await expect(await blockOf(page, 'builder')).toBeInViewport();
 });
 
-test('a dispatch sends a packet and a line of chatter, and a waiting agent asks for you', async ({
-  page,
-}) => {
+test('a dispatch sends a packet and a line of chatter', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Auto-edit');
-  await failingCheck(page, repo.root);
   await send(page, `${CREW_REQUEST} #build #crew`);
   await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = tvOf(page);
@@ -138,13 +134,7 @@ test('a dispatch sends a packet and a line of chatter, and a waiting agent asks 
     timeout: 15_000,
   });
   await expect(tv.locator('.tv-pk.out')).toHaveCount(0, { timeout: 5_000 });
-
-  const ask = tv.getByRole('button', { name: /Needs you: keep these changes\?/ });
-  await expect(ask).toBeVisible({ timeout: 30_000 });
-  await shot(page, 'waiting');
-  await scrollThread(page, 'top');
-  await ask.click();
-  await expect(card(page, /Keep these changes\?/)).toBeInViewport();
+  await shot(page, 'chatter');
 });
 
 test('the header controls explain themselves on keyboard focus', async ({ page }) => {

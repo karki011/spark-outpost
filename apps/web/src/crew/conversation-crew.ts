@@ -21,6 +21,20 @@ export function crewOrchestration(detail: ConversationDetail | undefined): Orche
   return isCrewTurn(orchestration) ? orchestration : null;
 }
 
+export function lastCrewOrchestration(
+  detail: ConversationDetail | undefined,
+): Orchestration | null {
+  const orchestrations = detail?.orchestrations;
+  if (!detail || !orchestrations) return null;
+  const run = detail.runs.findLast((candidate) => isCrewTurn(orchestrations[candidate.id]));
+  return run ? orchestrations[run.id]! : null;
+}
+
+export function tvCrew(detail: ConversationDetail | undefined): CrewAgent[] {
+  const orchestration = lastCrewOrchestration(detail);
+  return orchestration ? crewAgents(orchestration, detail?.activity) : [];
+}
+
 export function conversationCrew(detail: ConversationDetail | undefined): CrewAgent[] {
   const orchestration = crewOrchestration(detail);
   return orchestration ? crewAgents(orchestration, detail?.activity) : [];

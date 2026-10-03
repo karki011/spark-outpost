@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { addToQueue, reorderQueue } from '../src/persistence/chat-queue.ts';
+import { insertMemberMessage } from '../src/persistence/member-messages.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { saveConnection as saveTicketConnection } from '../src/tickets/connections.ts';
 import { LINEAR_KEY, LINEAR_ME } from './fake-linear.ts';
@@ -95,6 +97,35 @@ describe('spark_chats and spark_chat', () => {
       expect.objectContaining({ role: 'assistant', text: expect.stringContaining('[redacted:') }),
     ]);
     expect(body.runs.latest[0]!.costUsd).toBe(0.12);
+  });
+
+  it('shows the queued messages in order and what the user told crew members', async () => {
+    const chat = await startChat(t, 'Busy chat');
+    const first = randomUUID();
+    const second = randomUUID();
+    await addToQueue(t.db, chat.conversationId, { id: first, content: 'Then add a test' });
+    await addToQueue(t.db, chat.conversationId, { id: second, content: 'And update the docs' });
+    await reorderQueue(t.db, chat.conversationId, [second, first]);
+    await insertMemberMessage(t.db, {
+      id: randomUUID(),
+      conversationId: chat.conversationId,
+      runId: chat.runId,
+      body: 'Use UTC',
+      urgency: 'next',
+    });
+
+    const body = (await (await open(chat.conversationId)).call('spark_chat')).json<{
+      queue: { position: number; text: string }[];
+      crewMessages: { to: string; text: string; status: string }[];
+    }>();
+
+    expect(body.queue).toEqual([
+      { position: 1, text: 'And update the docs' },
+      { position: 2, text: 'Then add a test' },
+    ]);
+    expect(body.crewMessages).toEqual([
+      expect.objectContaining({ to: 'the agent', text: 'Use UTC', status: 'queued' }),
+    ]);
   });
 
   it('defaults spark_chat to this chat and refuses chats from nowhere', async () => {
