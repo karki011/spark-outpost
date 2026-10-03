@@ -3,6 +3,10 @@
   inset: 0;
 }
 
+.map-tree:focus {
+  outline: none;
+}
+
 .map-tree .react-flow {
   --xy-background-pattern-color: color-mix(in srgb, var(--line-strong) 45%, transparent);
   --xy-edge-stroke: var(--line-strong);

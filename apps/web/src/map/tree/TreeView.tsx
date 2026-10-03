@@ -95,6 +95,7 @@ function TreeCanvas({
   const [revealTarget, setRevealTarget] = useState<string | null>(null);
   const centred = useRef(0);
   const fitTo = useRef<string | null>(null);
+  const centreAfterClose = useRef<string | null>(null);
   const fitted = useRef(false);
   const fitMin = useRef(FIRST_ZOOM);
 
@@ -214,7 +215,13 @@ function TreeCanvas({
       void flow.fitView({ padding: 0.12, duration: 0, maxZoom: 1, minZoom: fitMin.current });
     }
     if (!layout.fresh) return;
-    if (pendingFocus.current) ensureVisible(pendingFocus.current.id);
+    const closed = centreAfterClose.current;
+    if (closed && layout.result[closed]) {
+      centreAfterClose.current = null;
+      centreOn(closed);
+    } else if (pendingFocus.current) {
+      ensureVisible(pendingFocus.current.id);
+    }
     const target = revealTarget;
     if (target && centred.current !== handled && layout.result[target]) {
       centred.current = handled;
@@ -270,7 +277,8 @@ function TreeCanvas({
       if (item.kind !== 'group' && item.kind !== 'area' && item.kind !== 'folder') return;
       const opening = !expanded.has(item.id);
       if (opening && item.kind === 'area') require([item.id]);
-      if (opening) fitTo.current = item.id;
+      fitTo.current = opening ? item.id : null;
+      centreAfterClose.current = opening ? null : item.id;
       pendingFocus.current = { id: item.id, force: false };
       setExpanded((previous) => toggled(previous, item.id));
       announce(`${nameOf(item)} ${opening ? 'opened' : 'closed'}.`);
@@ -287,7 +295,8 @@ function TreeCanvas({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.target as HTMLElement).closest('[data-tree-node]')) return;
+    const parked = event.target === wrapRef.current;
+    if (!parked && !(event.target as HTMLElement).closest('[data-tree-node]')) return;
     if (zoomKey(event.key)) {
       event.preventDefault();
       return;
@@ -322,15 +331,34 @@ function TreeCanvas({
       if (!closing || closing.kind === 'project') return;
       event.preventDefault();
       event.stopPropagation();
+      fitTo.current = null;
+      centreAfterClose.current = closing.id;
       setExpanded((previous) => {
         const next = new Set(previous);
         next.delete(closing.id);
         return next;
       });
       announce(`${nameOf(closing)} closed.`);
-      moveTo(closing.id);
+      setActive(closing.id);
+      pendingFocus.current = { id: closing.id, force: false };
     }
   };
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const keepFocusNear = (event: FocusEvent) => {
+      const left = event.target as HTMLElement;
+      if (!left.matches('[data-tree-node]')) return;
+      queueMicrotask(() => {
+        if (!left.isConnected && document.activeElement === document.body) {
+          wrap.focus({ preventScroll: true });
+        }
+      });
+    };
+    wrap.addEventListener('focusout', keepFocusNear);
+    return () => wrap.removeEventListener('focusout', keepFocusNear);
+  }, []);
 
   const [activeStore] = useState(() => new ActiveStore());
   useEffect(() => activeStore.set(current), [activeStore, current]);
@@ -353,7 +381,9 @@ function TreeCanvas({
       aria-label={label}
       aria-describedby="map-tree-help"
       aria-busy={!layout || undefined}
+      tabIndex={-1}
       onKeyDown={onKeyDown}
+
       onPointerOver={(event) => {
         const anchor = (event.target as HTMLElement).closest<HTMLElement>('[data-tip]');
         if (!anchor) return;
