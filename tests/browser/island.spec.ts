@@ -167,14 +167,19 @@ test('stays at rest while work runs and finishes, nudges for approvals, and open
   await expect(island(page)).toHaveAttribute('data-view', 'note');
   const note = island(page).getByRole('status').filter({ hasText: 'Opening Spark…' });
   await expect(note).toBeVisible();
-  await page.waitForTimeout(700);
-  const scoutBox = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
-  for (const text of [note.locator('.isl-ttl'), note.locator('.isl-hint')]) {
-    expect((await text.boundingBox())!.x).toBeGreaterThan(scoutBox.x + scoutBox.width);
-  }
-  const noteBox = (await note.boundingBox())!;
-  const islandBox = (await island(page).boundingBox())!;
-  expect(noteBox.y + noteBox.height).toBeLessThan(islandBox.y + islandBox.height);
+  await page.waitForTimeout(400);
+  const layout = await island(page).evaluate((root) => {
+    const box = (selector: string) => root.querySelector(selector)!.getBoundingClientRect();
+    const scout = box('.isl-scout-wrap');
+    return {
+      scoutRight: scout.right,
+      textLefts: [box('.isl-note .isl-ttl').left, box('.isl-note .isl-hint').left],
+      noteBottom: box('.isl-note').bottom,
+      islandBottom: root.getBoundingClientRect().bottom,
+    };
+  });
+  for (const left of layout.textLefts) expect(left).toBeGreaterThan(layout.scoutRight);
+  expect(layout.noteBottom).toBeLessThan(layout.islandBottom);
   await page.mouse.move(5, 600);
   await expect(island(page)).toHaveAttribute('data-view', 'peek', { timeout: 3000 });
 });
@@ -282,6 +287,7 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
     },
   ]);
   await openIsland(page);
+  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
   await page.keyboard.press('Alt+Shift+Space');
   await page.keyboard.press('Meta+4');
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
