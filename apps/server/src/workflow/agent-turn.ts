@@ -347,6 +347,7 @@ export async function runAgentTurn(
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
+      ...(input.piece?.sharesTree ? { sharesTree: true } : {}),
       ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),

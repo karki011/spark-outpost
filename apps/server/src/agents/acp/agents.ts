@@ -68,6 +68,7 @@ export interface AgentDefinition {
     builder?: boolean,
     coordinated?: boolean,
     publishes?: boolean,
+    sharesTree?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -93,9 +94,9 @@ const CLAUDE_DO_MODE = 'default';
 export const PIECE_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
-function askRules(builder: boolean, coordinated: boolean): string[] {
-  if (coordinated) return [...PIECE_ASK_RULES];
-  return builder ? [...PUBLISH_ASK_RULES] : [];
+function askRules(builder: boolean, coordinated: boolean, sharesTree: boolean): string[] {
+  if (sharesTree) return [...PIECE_ASK_RULES];
+  return builder && !coordinated ? [...PUBLISH_ASK_RULES] : [];
 }
 
 export const FORCE_PUSH_DENY_RULES = [
@@ -149,7 +150,9 @@ export function claudeSessionMeta(
   allowBypass = false,
   coordinated = false,
   publishes = false,
+  sharesTree = false,
 ): Record<string, unknown> {
+  const ask = askRules(builder, coordinated, sharesTree);
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
@@ -177,7 +180,7 @@ export function claudeSessionMeta(
           disableSkillShellExecution: true,
           permissions: {
             deny,
-            ...(builder || coordinated ? { ask: askRules(builder, coordinated) } : {}),
+            ...(ask.length > 0 ? { ask } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
             blockReadsOutsideWorkingDirectories: true,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
@@ -262,6 +265,7 @@ const claudeSessions = {
     builder = false,
     coordinated = false,
     publishes = false,
+    sharesTree = false,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -271,6 +275,7 @@ const claudeSessions = {
       true,
       coordinated,
       publishes,
+      sharesTree,
     ),
 } satisfies Partial<AgentDefinition>;
 

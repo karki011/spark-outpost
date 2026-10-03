@@ -114,6 +114,14 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
   return `${base}\n\n${brief}`;
 }
 
+function sharesTree(coordination: Coordination, piece: TaskPiece): boolean {
+  if (piece.placement !== 'shared') return false;
+  const shared = (coordination.list?.pieces ?? []).filter(
+    (other) => !other.research && other.placement === 'shared',
+  );
+  return shared.length > 1;
+}
+
 function seatFor(
   s: Session,
   piece: TaskPiece,
@@ -125,7 +133,13 @@ function seatFor(
   const name = coordination.names.get(piece.key) ?? piece.key;
   const guard = piece.research
     ? {}
-    : { guard: { coordinated: true, owned: ownedFilesFor(coordination, piece) } };
+    : {
+        guard: {
+          coordinated: true,
+          owned: ownedFilesFor(coordination, piece),
+          ...(sharesTree(coordination, piece) ? { sharesTree: true } : {}),
+        },
+      };
   const memberRoute = pieceRoute(s, piece);
   return {
     role: piece.research ? 'scout' : 'builder',

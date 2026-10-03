@@ -39,6 +39,15 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
+async function sharedGuards(runId: string): Promise<Record<string, boolean>> {
+  const { rows } = await t.db.query<{ key: string; shares: boolean }>(
+    `SELECT route->>'pieceKey' AS key, COALESCE((route->'guard'->>'sharesTree')::boolean, false) AS shares
+       FROM runs WHERE parent_run_id = $1 AND route ? 'guard' AND route ? 'pieceKey'`,
+    [runId],
+  );
+  return Object.fromEntries(rows.map((row) => [row.key, row.shares]));
+}
+
 async function begin(tags: string, options: Parameters<typeof beginPieces>[3] = {}) {
   const begun = beginPieces(t, root, tags, options);
   harness = begun.harness;
@@ -83,6 +92,7 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Pieces (3, in the shared tree, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | shared tree · owns 3 files |');
+    expect(await sharedGuards(runId)).toEqual({ P1: true, P2: true, P3: true });
   });
 
   it('keeps pieces in order while the project runs one Builder at a time', async () => {
@@ -98,6 +108,7 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const runs = await crewRuns(t, runId);
     const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
     expect(overlap(first('P1'), first('P2'))).toBe(false);
+    expect(await sharedGuards(runId)).toEqual({ P1: false, P2: false, P3: false });
   });
 
   it('stops every running piece when you press Stop mid-group', async () => {

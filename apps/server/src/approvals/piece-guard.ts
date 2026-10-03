@@ -17,11 +17,13 @@ export const BUILDER_GIT_REASON =
 export interface PieceGuard {
   coordinated: boolean;
   owned: OwnedFiles | null;
+  sharesTree?: boolean | undefined;
 }
 
 export const pieceGuardSchema = z.object({
   coordinated: z.boolean(),
   owned: ownedFilesSchema.nullable(),
+  sharesTree: z.boolean().optional(),
 });
 
 export const builderEnvSchema = z.record(z.string().regex(/^[A-Z_][A-Z0-9_]*$/), z.string());

@@ -77,6 +77,7 @@ export interface ProviderTurn {
   mode?: RunMode;
   builder?: boolean;
   coordinated?: boolean;
+  sharesTree?: boolean;
   publishes?: boolean;
   env?: Readonly<Record<string, string>>;
   planning?: boolean;

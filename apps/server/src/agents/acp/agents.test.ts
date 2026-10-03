@@ -147,9 +147,17 @@ describe('Claude session options', () => {
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
-  it('routes a coordinated Builder through the gate, which guards its files', () => {
-    const piece = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    expect(piece.settings.permissions.ask).toEqual([...PIECE_ASK_RULES]);
+  it('routes a piece through the gate only while it shares one tree with other pieces', () => {
+    const shared = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, true, false, true),
+    );
+    expect(shared.settings.permissions.ask).toEqual([...PIECE_ASK_RULES]);
+    const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
+    expect(alone.settings.permissions).not.toHaveProperty('ask');
+    const publishing = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
+    );
+    expect(publishing.settings.permissions).not.toHaveProperty('ask');
   });
 
   it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
