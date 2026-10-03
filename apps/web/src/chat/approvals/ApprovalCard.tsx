@@ -23,6 +23,7 @@ import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
 import { CommandPreview } from './CommandPreview.tsx';
 import { DiffView } from './DiffView.tsx';
+import { askReason, fromSandbox } from './ask-reason.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
 
@@ -92,15 +93,6 @@ function commandNote(approval: Approval): string | null {
   if (approval.reason !== null || approval.payload.agentReason) return null;
   if (approval.payload.asksBecause) return `${approval.payload.asksBecause}.`;
   return "It isn't on the project's allowlist yet.";
-}
-
-const SANDBOX = /sandbox/i;
-
-function agentReasonLine(agent: string, reason: string): string {
-  if (SANDBOX.test(reason)) {
-    return `${agent} couldn't run this inside its sandbox, so it asks before running it without one.`;
-  }
-  return `${agent} asks because: ${reason}`;
 }
 
 function optionClass(allow: boolean, primary: boolean): string {
@@ -216,6 +208,7 @@ function PendingApproval({
   const alwaysAsks = approval.reason !== null;
   const agentReason = approval.payload.agentReason ?? null;
   const agentName = agent ?? providerName(provider);
+  const reason = askReason(approval, agentName);
   const command = approval.payload.command;
   const plan = approval.payload.plan ?? null;
   const cwd = displayCwd(approval.payload.cwd, repo);
@@ -329,10 +322,12 @@ function PendingApproval({
           {commandNote(approval)}
         </p>
       )}
-      {agentReason && (
+      {reason && (
         <p className="appr-reason">
-          {agentReasonLine(agentName, agentReason)}
-          {SANDBOX.test(agentReason) && <span className="appr-agent-says"> {agentReason}</span>}
+          {reason}
+          {agentReason && fromSandbox(agentReason) && (
+            <span className="appr-agent-says"> {agentReason}</span>
+          )}
         </p>
       )}
       {approval.kind === 'edit' && (
