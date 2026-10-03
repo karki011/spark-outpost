@@ -9,7 +9,7 @@ import {
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
 import { leaveAsGhost } from './home-motion.ts';
-import { viewWidth, type IslandView } from './island-model.ts';
+import { peekClearance, viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
@@ -84,10 +84,12 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     : Math.min(chatting ? CHAT_WIDTH : viewWidth(view, geometry.notchWidth), room);
   const compactPill = pillish && !hugsNotch;
   const hint = keyHint(view);
+  const scout = scoutSpot(view, width, top, hang, rest);
+  const rowShift = view.kind === 'peek' ? scout.x + scout.size / 2 - width / 2 : 0;
   const setTarget = useIslandShape(
     islandRef,
     scoutRef,
-    { width, height: top, radius: 14, scout: scoutSpot(view, width, top, hang, rest) },
+    { width, height: top, radius: 14, scout },
     props.reduced,
   );
   const wings = wingsFor(props);
@@ -217,13 +219,14 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         ref={rowRef}
         className="isl-peekrow-wrap"
         data-flat={flat || undefined}
-        style={{ '--top': `${top}px` } as CSSProperties}
+        style={{ '--top': `${top}px`, '--cx': `${rowShift}px` } as CSSProperties}
       >
         <PeekRow
           sessions={props.peek.sessions}
           more={props.peek.more}
           shown={quiet}
           size={flat ? FLAT_ROW_BLOB : ROW_BLOB}
+          clearance={peekClearance(flat, rest.blob)}
           sleepy={props.sleepy}
           onOpen={props.onPeekOpen}
           onMore={() => props.onTab('sessions')}

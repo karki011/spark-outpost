@@ -6,15 +6,17 @@ import {
   islandView,
   newMoments,
   nextStreak,
+  peekClearance,
   peekOffset,
   peekRow,
   pendingCards,
   quickShortcutTarget,
   runStatuses,
+  sessionState,
   type Card,
   type IslandInputs,
 } from './island-model.ts';
-import { crewQuirk, scoutMoodFor } from './island-mood.ts';
+import { crewQuirk, scoutMoodFor, sessionExpression } from './island-mood.ts';
 
 function chat(id: string, patch: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
@@ -154,7 +156,36 @@ describe('island state machine', () => {
     const row = peekRow(chats, new Set(['c6']), now);
     expect(row.sessions.map((session) => session.id)).toEqual(['c0', 'c1', 'c2', 'c3', 'c4']);
     expect(row.more).toBe(1);
-    expect([0, 1, 2, 3, 4].map(peekOffset)).toEqual([30, -30, 56, -56, 82]);
+    expect([0, 1, 2, 3, 4].map((slot) => peekOffset(slot, 38))).toEqual([38, -38, 64, -64, 90]);
+  });
+
+  it('keeps the peek row clear of a bigger hanging Spark and its badge', () => {
+    const flatEdge = (blob: number) => peekClearance(true, blob) * 1.25 - 14 - 4;
+    for (const blob of [38, 48, 58]) {
+      expect(flatEdge(blob)).toBeGreaterThanOrEqual(blob / 2 + 8);
+    }
+    expect(peekClearance(true, 58)).toBeGreaterThan(peekClearance(true, 38));
+    expect(peekClearance(false, 58)).toBe(peekClearance(false, 38));
+  });
+
+  it('reads each chat as working, waiting, done, failed or quiet', () => {
+    const latest = (status: string) => ({ latestRun: run('r', status) });
+    expect(sessionState(chat('a', latest('running')))).toBe('working');
+    expect(sessionState(chat('b', { ...latest('awaiting_approval'), needsInput: true }))).toBe(
+      'waiting',
+    );
+    expect(sessionState(chat('c', latest('succeeded')))).toBe('done');
+    expect(sessionState(chat('d', latest('failed')))).toBe('failed');
+    expect(sessionState(chat('e'))).toBe('idle');
+  });
+
+  it('gives each chat state its own face, sleepy only when quiet at night', () => {
+    expect(sessionExpression('working', true)).toBe('thinking');
+    expect(sessionExpression('waiting', false)).toBe('unsure');
+    expect(sessionExpression('done', false)).toBe('happy');
+    expect(sessionExpression('failed', true)).toBe('sad');
+    expect(sessionExpression('idle', false)).toBe('idle');
+    expect(sessionExpression('idle', true)).toBe('sleepy');
   });
 });
 

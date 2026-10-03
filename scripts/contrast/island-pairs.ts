@@ -56,6 +56,10 @@ export const ISLAND_PAIRS: Pair[] = [
   pair('ask-question', 'your question in Ask', 'var(--user-text)', ['var(--user)']),
   pair('peek-badge-ring', 'waiting badge on the peeking blob', 'var(--warn)', ISLAND, 'ui'),
   pair('scout', 'Scout on the island', 'var(--accent)', ISLAND, 'ui'),
+  pair('peek-failed-badge', 'failed badge on the peeking blob', 'var(--danger)', ISLAND, 'ui'),
+  ...['--c-claude', '--c-codex', '--c-zai', '--c-jev', '--accent'].map((color) =>
+    pair(`peek-ring${color}`, 'working ring around a peeking blob', `var(${color})`, ISLAND, 'ui'),
+  ),
   pair('focus', 'focus ring around a card or blob', 'var(--accent)', CARD, 'focus'),
   pair('tab-icon', 'Home, Chats and New tab icons', 'var(--muted)', ISLAND, 'ui'),
   pair('chimes-on', 'chimes button while on', 'var(--accent-text)', ISLAND, 'ui'),

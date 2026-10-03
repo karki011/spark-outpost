@@ -223,11 +223,18 @@ export function peekRow(
 }
 
 const SLOT_GAP = 26;
-const SCOUT_CLEARANCE = 30;
+const NOTCH_CLEARANCE = 38;
+const FLAT_SPREAD = 1.25;
+const FLAT_BADGE_ROOM = 30;
 
-export function peekOffset(slot: number): number {
+export function peekClearance(flat: boolean, blob: number): number {
+  if (!flat) return NOTCH_CLEARANCE;
+  return Math.ceil((blob / 2 + FLAT_BADGE_ROOM) / FLAT_SPREAD);
+}
+
+export function peekOffset(slot: number, clearance: number): number {
   const side = slot % 2 === 0 ? 1 : -1;
-  return side * (SCOUT_CLEARANCE + Math.floor(slot / 2) * SLOT_GAP);
+  return side * (clearance + Math.floor(slot / 2) * SLOT_GAP);
 }
 
 export function waitingCount(chats: readonly ConversationSummary[], hidden: ReadonlySet<string>) {

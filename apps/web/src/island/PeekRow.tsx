@@ -2,14 +2,28 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { peekOffset, sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
-import { SessionBlob } from './SessionBlob.tsx';
+import { SessionBlob, sessionTint } from './SessionBlob.tsx';
 
 const STATUS_WORDS: Record<SessionState, string> = {
-  working: 'running',
+  working: 'working',
   waiting: 'needs you',
   done: 'done',
   failed: 'failed',
   idle: 'quiet',
+};
+
+const TIP_WORDS: Record<SessionState, string> = {
+  working: 'Working…',
+  waiting: 'Needs you',
+  done: 'Done',
+  failed: 'Failed',
+  idle: 'Quiet',
+};
+
+const BADGES: Partial<Record<SessionState, string>> = {
+  waiting: '!',
+  failed: '!',
+  done: '',
 };
 
 const LEAVE_MS = 420;
@@ -19,6 +33,7 @@ interface PeekRowProps {
   more: number;
   shown: boolean;
   size: number;
+  clearance: number;
   sleepy: boolean;
   onOpen: (id: string) => void;
   onMore: () => void;
@@ -52,7 +67,16 @@ function useSlots(sessions: readonly ConversationSummary[]): Slot[] {
   ];
 }
 
-export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }: PeekRowProps) {
+export function PeekRow({
+  sessions,
+  more,
+  shown,
+  size,
+  clearance,
+  sleepy,
+  onOpen,
+  onMore,
+}: PeekRowProps) {
   const slots = useSlots(sessions);
   const [focus, setFocus] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -94,7 +118,13 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
             tabIndex={!leaving && shown && slot === current ? 0 : -1}
             aria-label={label}
             disabled={leaving || !shown}
-            style={{ '--x': `${peekOffset(slot)}px`, '--d': `${slot * 70}ms` } as CSSProperties}
+            style={
+              {
+                '--x': `${peekOffset(slot, clearance)}px`,
+                '--d': `${slot * 70}ms`,
+                '--sc': sessionTint(chat),
+              } as CSSProperties
+            }
             onClick={() => onOpen(chat.id)}
             onFocus={() => !leaving && setFocus(slot)}
           >
@@ -104,14 +134,16 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
               size={size}
               expression={sessionExpression(state, sleepy)}
             />
-            {state === 'waiting' && (
-              <span className="isl-pb" aria-hidden="true">
-                !
+            {BADGES[state] !== undefined && (
+              <span className="isl-pb" data-state={state} aria-hidden="true">
+                {BADGES[state]}
               </span>
             )}
             <span className="isl-tip" aria-hidden="true">
               <b>{chat.title}</b>
-              <span>{STATUS_WORDS[state]} · Click to open</span>
+              <span>
+                <em data-state={state}>{TIP_WORDS[state]}</em> · Click to open
+              </span>
             </span>
           </button>
         );
@@ -128,7 +160,7 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
           aria-label={`${more} more active chats`}
           style={
             {
-              '--x': `${peekOffset(sessions.length)}px`,
+              '--x': `${peekOffset(sessions.length, clearance)}px`,
               '--d': `${sessions.length * 70}ms`,
             } as CSSProperties
           }
