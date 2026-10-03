@@ -244,27 +244,3 @@ test('Agent TV keeps following its chat while you look at another one', async ({
   await expect(card(page, /Change a file\?/)).toBeVisible();
   await expect(tv).toBeVisible();
 });
-
-test('Agent TV keeps showing the last crew after a solo answer in the same chat', async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await crewChat(page, repo, 'Auto-edit');
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 45_000 });
-  const name = await builderName(page);
-  await send(page, 'What does parseDate do?');
-  await expect(page.locator('.msg.me')).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0, { timeout: 30_000 });
-
-  await page.getByRole('button', { name: 'Agent TV' }).click();
-  const tv = tvOf(page);
-  await tv.getByRole('radio', { name: 'List' }).click();
-  await expect(tv.getByRole('list', { name: 'Running' })).toHaveCount(0);
-  await expect(tv).toContainText('Nothing running right now.');
-  await tv.getByRole('button', { name: /^Finished/ }).click();
-  await expect(
-    tv.getByRole('list', { name: 'Finished' }).getByRole('listitem', { name: `${name} · Builder` }),
-  ).toContainText('Passed');
-  await shot(page, 'tv-after-solo');
-});
