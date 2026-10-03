@@ -4,7 +4,7 @@ import type {
   SessionUpdate,
   ToolCallContent,
 } from '@agentclientprotocol/sdk';
-import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
+import { friendlyStep, type ConfigValues, type PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { currentValue } from './session-config.ts';
 import { currentValues } from './capabilities.ts';
@@ -92,10 +92,17 @@ const PROVIDER_ISSUES = new Set([
 
 const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
 
-export function describeTool(title: string): string {
+function asCommand(title: string, kind: string | null | undefined): string {
+  const runs = kind === 'execute' && title !== 'Terminal' && !title.includes('`');
+  return runs ? `\`${title}\`` : title;
+}
+
+export function describeTool(title: string, kind?: string | null): string {
   const trimmed = title.trim();
   if (!trimmed) return 'Using a tool';
-  return trimmed
+  const friendly = friendlyStep(trimmed);
+  if (friendly !== trimmed) return friendly;
+  return asCommand(trimmed, kind)
     .split('`')
     .map((part, index) =>
       index % 2 === 1
@@ -258,7 +265,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     const open = openTools.get(update.toolCallId);
     if (!open) return;
     open.opensPr ||= opensPullRequest(update.title, update.rawInput);
-    const title = update.title ? describeTool(update.title) : null;
+    const title = update.title ? describeTool(update.title, update.kind ?? open.kind) : null;
     open.target =
       toolTarget(update.locations, update.rawInput) ??
       (title && title !== open.name ? title : open.target);
@@ -349,7 +356,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'tool_call': {
           rememberPlan(update.kind, update.rawInput, update.content);
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
-          const name = describeTool(update.title);
+          const name = describeTool(update.title, update.kind);
           worked = true;
           const target = toolTarget(update.locations, update.rawInput);
           openTools.set(update.toolCallId, {

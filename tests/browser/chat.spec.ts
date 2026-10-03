@@ -35,7 +35,7 @@ test('sends a message, streams the reply, and survives a reload without duplicat
   await expect(reply).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Chats' })).toContainText(marker);
-  const workLog = page.locator('.steps-head', { hasText: /Worked for \d+s/ });
+  const workLog = page.locator('.steps-head', { hasText: /worked for \d+s/ });
   await expect(workLog).toHaveAttribute('aria-expanded', 'false');
 
   await page.reload();

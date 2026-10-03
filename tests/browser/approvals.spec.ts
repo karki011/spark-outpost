@@ -117,7 +117,7 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   });
   await page.locator('.crew-turn .agent-head', { hasText: 'Bolt' }).click();
   await page
-    .getByRole('button', { name: /Worked for|steps/ })
+    .getByRole('button', { name: /worked for|steps/ })
     .first()
     .click();
   await expect(page.getByText('(you allowed it)')).toBeVisible();

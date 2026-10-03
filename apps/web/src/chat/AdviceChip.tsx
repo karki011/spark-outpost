@@ -2,9 +2,11 @@ import { useId } from 'react';
 import {
   categoryLabel,
   type AdviceSummary,
+  type Category,
   type IntakeAnswer,
   type IntakeCall,
 } from '@spark-outpost/contracts';
+import { CategoryChip } from '../categories/CategoryChip.tsx';
 import { formatCost } from '../usage/format.ts';
 import { formatTokens, shortLabel } from './composer/model-options.ts';
 import { providerName } from './provider-name.ts';
@@ -95,19 +97,28 @@ export function adviceDetails(advice: AdviceSummary, { recordedRoute = true } = 
   return lines.filter(Boolean);
 }
 
-export function AdviceLine({ advice }: { advice: AdviceSummary | undefined }) {
+interface AdviceChipProps {
+  category: Category | null | undefined;
+  advice: AdviceSummary | undefined;
+}
+
+function chipLabel(category: Category | null | undefined, advice: AdviceSummary): string {
+  if (category) return categoryLabel(category);
+  return advice.jev ? categoryName(advice.jev) : 'Rules';
+}
+
+export function AdviceChip({ category, advice }: AdviceChipProps) {
   const tipId = useId();
-  if (!advice || advice.jevStatus === 'not_connected') return null;
+  if (!advice || advice.jevStatus === 'not_connected') return <CategoryChip category={category} />;
   return (
-    <div className="run-meta">
-      <span className="run-usage" tabIndex={0} aria-describedby={tipId}>
-        {headline(advice)}
-        <span className="usage-tip" role="tooltip" id={tipId}>
-          {adviceDetails(advice).map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </span>
+    <span className="cat-chip advice" tabIndex={0} aria-describedby={tipId}>
+      {chipLabel(category, advice)}
+      <span className="usage-tip" role="tooltip" id={tipId}>
+        <b>{headline(advice)}</b>
+        {adviceDetails(advice).map((line) => (
+          <span key={line}>{line}</span>
+        ))}
       </span>
-    </div>
+    </span>
   );
 }

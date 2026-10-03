@@ -5,7 +5,7 @@
   gap: 8px;
   margin: 0 auto 8px;
   width: 100%;
-  max-width: var(--composer-max, 760px);
+  max-width: calc(var(--chat-col, 700px) + 60px);
 }
 
 .main > .tm-talk {

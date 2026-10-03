@@ -14,17 +14,19 @@ async function sendInNewChat(page: Page, text: string) {
   });
 }
 
-test('shows what Jev suggested on the turn, with the rules comparison on focus', async ({
+test('shows what Jev suggested in the turn chip, with the rules comparison on focus', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
   await sendInNewChat(page, 'Fix the typo in the README heading');
 
-  const line = page.locator('.run-usage', { hasText: 'Jev:' });
-  await expect(line).toHaveText(/^Jev: Bug fix/);
-  await line.focus();
-  const tip = line.getByRole('tooltip');
+  await expect(page.locator('.run-usage', { hasText: 'Jev:' })).toHaveCount(0);
+  const chip = page.locator('.ai-head .cat-chip.advice');
+  await expect(chip).toHaveText(/^Bug fix/);
+  await chip.focus();
+  const tip = chip.getByRole('tooltip');
   await expect(tip).toBeVisible();
+  await expect(tip).toContainText('Jev: Bug fix');
   await expect(tip).toContainText('Category Bug fix');
   await expect(tip).toContainText('Rules ran: Claude');
   await expect(tip).toContainText(`policy ${POLICY_VERSION}`);

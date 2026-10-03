@@ -30,8 +30,12 @@ export function lastCrewOrchestration(
   return run ? orchestrations[run.id]! : null;
 }
 
+export function tvOrchestration(detail: ConversationDetail | undefined): Orchestration | null {
+  return lastCrewOrchestration(detail) ?? latestOrchestration(detail);
+}
+
 export function tvCrew(detail: ConversationDetail | undefined): CrewAgent[] {
-  const orchestration = lastCrewOrchestration(detail);
+  const orchestration = tvOrchestration(detail);
   return orchestration ? crewAgents(orchestration, detail?.activity) : [];
 }
 

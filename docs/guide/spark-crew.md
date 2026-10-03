@@ -63,7 +63,7 @@ One chat can also switch with the branch chip above the message box. See [Where 
 
 ## Watch the crew in Agent TV
 
-Select **Agent TV** in the chat header to watch the crew work. **Stage** shows the agents as blobs, with Jev in the middle; **List** shows one row per agent with its model, time and cost. Select an agent to see its status, then **Go to** to jump to its work in the chat. Agent TV keeps following its chat while you open another one. Press **Esc** to close it.
+Select **Agent TV** in the chat header to watch the crew work. The button appears once a chat's first reply starts. A plain answer has a crew of one, so Agent TV shows Jev and the agent that answered; when Builders join, they appear too. **Stage** shows the agents as blobs, with Jev in the middle; **List** shows one row per agent with its model, time and cost. Select an agent to see its status, then **Go to** to jump to its work in the chat. Agent TV keeps following its chat while you open another one. Press **Esc** to close it.
 
 ## Message a crew member
 

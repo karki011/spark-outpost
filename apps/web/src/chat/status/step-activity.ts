@@ -1,3 +1,4 @@
+import { friendlyStep } from '@spark-outpost/contracts';
 import { clipText, commandFull, commandSummary, fileName, hideSecrets } from './status-text.ts';
 
 export type StepKind = 'read' | 'edit' | 'run' | 'search' | 'think' | 'other';
@@ -56,7 +57,7 @@ function plain(text: string): string {
 }
 
 export function stepActivity(name: string): StepActivity {
-  const safe = hideSecrets(name).trim();
+  const safe = hideSecrets(friendlyStep(name)).trim();
   const full = plain(safe);
   if (safe.startsWith('`')) {
     const command = quoted(safe) ?? full;

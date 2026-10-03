@@ -1,6 +1,6 @@
 .ctxbar-wrap {
   position: relative;
-  max-width: 700px;
+  max-width: var(--chat-col, 700px);
   margin: 0 auto -12px;
   padding: 0 12px;
 }
@@ -60,6 +60,15 @@
 }
 .ctx-repo.unset .ctx-name {
   font-weight: 400;
+}
+
+.ctx-unlinked {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-size: 12px;
 }
 
 .ctx-branch {
@@ -193,6 +202,9 @@
 }
 
 @media (max-width: 640px) {
+  .ctx-unlinked {
+    display: none;
+  }
   .ctx-name {
     max-width: 150px;
   }

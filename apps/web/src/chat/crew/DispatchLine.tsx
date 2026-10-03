@@ -4,7 +4,7 @@ import type { AdviceSummary, Category, Orchestration } from '@spark-outpost/cont
 import { CategoryChip } from '../../categories/CategoryChip.tsx';
 import { dispatchParts } from '../../crew/crew-projection.ts';
 import { whyLines } from '../../crew/why-lines.ts';
-import { adviceDetails } from '../AdviceLine.tsx';
+import { adviceDetails } from '../AdviceChip.tsx';
 
 const ROUTING = { auto: 'model by rules', pinned: 'pinned model' } as const;
 

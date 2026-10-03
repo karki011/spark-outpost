@@ -48,7 +48,7 @@ test('titles a chat from the agent after its first turn and shows the turn categ
     'title',
     'Renamed by Spark',
   );
-  await expect(page.locator('.msg.ai .ai-head .cat-chip')).toHaveText('Bug fix');
+  await expect(page.locator('.msg.ai .ai-head .cat-chip')).toHaveText(/^Bug fix/);
   await expect(page.locator('.msg.ai').last()).not.toContainText('Title:');
 });
 

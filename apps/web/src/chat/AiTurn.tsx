@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import type { Category } from '@spark-outpost/contracts';
+import type { AdviceSummary, Category } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
-import { CategoryChip } from '../categories/CategoryChip.tsx';
+import { AdviceChip } from './AdviceChip.tsx';
 import { followingLine } from './project/agent-setup.ts';
 import { providerName } from './provider-name.ts';
 
@@ -21,11 +21,22 @@ interface AiTurnProps {
   label: string;
   state: TurnState;
   category?: Category | null | undefined;
+  advice?: AdviceSummary | undefined;
   following?: readonly string[] | null | undefined;
+  status?: ReactNode;
   children: ReactNode;
 }
 
-export function AiTurn({ provider, label, state, category, following, children }: AiTurnProps) {
+export function AiTurn({
+  provider,
+  label,
+  state,
+  category,
+  advice,
+  following,
+  status,
+  children,
+}: AiTurnProps) {
   const followed = followingLine(following ?? []);
   return (
     <div className="msg ai">
@@ -40,7 +51,15 @@ export function AiTurn({ provider, label, state, category, following, children }
         </span>
         <span className="provider-name">{providerName(provider)}</span>
         <span className="mood">{label}</span>
-        <CategoryChip category={category} />
+        {status && (
+          <>
+            <span className="mood-dot" aria-hidden="true">
+              ·
+            </span>
+            {status}
+          </>
+        )}
+        <AdviceChip category={category} advice={advice} />
         {followed && (
           <span className="ai-following" title={followed}>
             {followed}

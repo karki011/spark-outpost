@@ -27,7 +27,7 @@ To start a chat inside a project, select **+** next to the project's name in the
 
 ## Link a project
 
-Without a project, the agent can answer and explain but can't read or change files. To let it work on code:
+Without a project, the agent can answer and explain but can't read or change files, and the context bar above the message box says so: **Not linked, so the agent can't read files**. To let it work on code:
 
 1. Above the message box, select **Choose project**.
 2. Pick a folder under **Recent**, or select **Choose a folder…** and then **Use this folder**.
@@ -119,8 +119,16 @@ To change the default for new chats, open **Settings → Spark** and change **Ho
 - When Spark splits the work into pieces, the message box becomes a steering box. Pick who gets your message under **Steer to**: **Auto**, **All pieces**, one piece, or **Coordinator**. See [The Spark crew](spark-crew.md).
 - To tell one agent something, such as Bolt the Builder, message it directly. See [Message a crew member](spark-crew.md#message-a-crew-member).
 - To see the plan, the crew, the files changed and the cost, select **Show work panel** in the chat header.
+- The reply's header says how it's going, for example **Claude working · 3 steps**. Select the step count to show or hide the steps. Steps use plain words, such as **Checking pull requests**, **Read `table.tsx`** or a command like `pnpm test`, never raw tool names. When the turn ends, the header says how long it took, for example **done · worked for 19s**.
 - A line above the message box shows what the agent is doing right now, for example **Running · pnpm test**, **Editing · table.tsx** or **Thinking…**. A step that runs longer than ten seconds shows how long it has taken. When the turn ends, the line says **Done** with the time it took, then fades. Secrets in commands show as •••.
 - When the agent needs you, its card waits in the chat and the same line says what for, for example **Waiting for you · approve `pnpm test`**. Select it, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux), to jump to the card. See [Approvals and protected paths](approvals.md#answer-an-approval-card).
+
+### Under a reply
+
+- The chip next to the agent's name, such as **Question** or **Bug fix**, is the kind of request Spark read. With [Jev](jev.md) connected, hover or focus the chip to see what Jev suggested and how the rules compare.
+- One quiet line under the reply shows tokens, cost, the time and **Copy reply**. On older replies it appears when you hover or focus them. Hover the tokens for the model, effort and cost details.
+- **Save as agreed plan** appears only under a reply that reads as a plan: a heading such as **Plan** or **Steps**, or three or more numbered steps. Answers to questions need the heading.
+- A task card, for example **Task 6/6 · Done**, appears under a reply when the task has more than replies: a plan, checks, a pull request or something waiting for you. For plain questions, **Show work panel** in the chat header still opens the task.
 
 ### Queue messages while a turn runs
 

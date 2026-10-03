@@ -3,7 +3,7 @@ import type { ConversationDetail, Message, Project, Run } from '@spark-outpost/c
 import { isCrewTurn } from '../crew/conversation-crew.ts';
 import { crewAgents } from '../crew/crew-projection.ts';
 import { TaskCard } from '../tasks/TaskCard.tsx';
-import { AdviceLine } from './AdviceLine.tsx';
+import { showsTaskCard } from '../tasks/task-card-shown.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
@@ -88,8 +88,7 @@ export const TurnSection = memo(function TurnSection({
       ) : (
         <>
           <SoloTurn run={run} detail={detail} assistantMessage={assistantMessage} repo={repo} />
-          <AdviceLine advice={detail.advice?.[run.id]} />
-          {taskCard}
+          {task && showsTaskCard(task) && taskCard}
         </>
       )}
       {detail.continuedIn

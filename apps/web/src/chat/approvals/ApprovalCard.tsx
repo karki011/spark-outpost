@@ -2,7 +2,10 @@ import './approval-card.css';
 import { Fragment, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  friendlyStep,
+  humanizeToolName,
   isCheckApproval,
+  parseMcpTool,
   sparkActionLabels,
   type Approval,
   type ApprovalDecidedValue,
@@ -82,6 +85,8 @@ function request(approval: Approval, agent: string) {
     const paths = approval.payload.paths;
     return paths.length === 0 ? `${agent} wants to change files.` : `${agent} wants to edit:`;
   }
+  const mcp = parseMcpTool(approval.title);
+  if (mcp) return `${agent} wants to use ${humanizeToolName(mcp.tool)} (${mcp.server}).`;
   return `${agent} wants to: ${approval.title}`;
 }
 
@@ -105,7 +110,7 @@ function subject(approval: Approval): string | null {
   if (approval.payload.plan) return null;
   if (approval.payload.command) return approval.payload.command;
   if (approval.payload.paths.length > 0) return approval.payload.paths.join(', ');
-  return approval.kind === 'edit' ? null : approval.title;
+  return approval.kind === 'edit' ? null : friendlyStep(approval.title);
 }
 
 function ResolvedApproval({ approval }: { approval: Approval }) {

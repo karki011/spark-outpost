@@ -1,4 +1,5 @@
 import {
+  friendlyStep,
   agentRoleSchema,
   categorySchema,
   faceFromName,
@@ -175,7 +176,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             id: row.latest_run_id,
             status: row.latest_run_status,
             error: row.latest_run_error,
-            step: row.latest_run_step,
+            step: row.latest_run_step === null ? null : friendlyStep(row.latest_run_step),
             provider: row.latest_run_provider,
             progress:
               row.latest_run_progress && row.latest_run_progress.total > 0

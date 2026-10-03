@@ -196,6 +196,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
           (message) => message.role === 'assistant' && message.runId === run.id,
         )}
         finished={finished}
+        category={run.category}
       />
       {finished && changeTask && run.mode === 'do' && (
         <FilesChanged taskId={changeTask.id} runIds={crewRunIds} listed={unlisted} />

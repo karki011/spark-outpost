@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationDetail } from '@spark-outpost/contracts';
-import { crewOrchestration, lastCrewOrchestration, tvCrew } from './conversation-crew.ts';
+import {
+  crewOrchestration,
+  lastCrewOrchestration,
+  tvCrew,
+  tvOrchestration,
+} from './conversation-crew.ts';
 import { member, orchestration } from './test-orchestration.ts';
 
 const CREW_RUN = '00000000-0000-4000-8000-000000000001';
@@ -27,9 +32,16 @@ describe('the crew Agent TV shows', () => {
     expect(tvCrew(detail()).map((agent) => agent.name)).toEqual(['Jev', 'Bolt']);
   });
 
-  it('shows nothing in a chat that never had a crew', () => {
+  it('shows the single agent in a chat that never had a crew', () => {
     const solo = { ...detail(), runs: [{ id: SOLO_RUN }] } as unknown as ConversationDetail;
     expect(lastCrewOrchestration(solo)).toBeNull();
+    expect(tvOrchestration(solo)?.runId).toBe(SOLO_RUN);
+    expect(tvCrew(solo).map((agent) => agent.name)).toEqual(['Jev', 'Wren']);
+  });
+
+  it('shows nothing before the first reply', () => {
+    const empty = { ...detail(), runs: [], orchestrations: {} } as unknown as ConversationDetail;
+    expect(tvCrew(empty)).toEqual([]);
     expect(tvCrew(undefined)).toEqual([]);
   });
 });
