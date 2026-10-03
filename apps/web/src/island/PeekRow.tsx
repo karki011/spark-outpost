@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { STATUS_WORDS } from './HoverList.tsx';
-import { peekOffset, sessionState } from './island-model.ts';
+import { peekOffset, sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { SessionBlob } from './SessionBlob.tsx';
+
+const STATUS_WORDS: Record<SessionState, string> = {
+  working: 'running',
+  waiting: 'needs you',
+  done: 'done',
+  failed: 'failed',
+  idle: 'quiet',
+};
 
 const LEAVE_MS = 420;
 

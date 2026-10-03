@@ -7,7 +7,7 @@ summary: Allow or deny an agent's request from the top of your screen with Y and
 
 You'll answer an agent that's waiting for you without switching to Spark Outpost. About 1 minute.
 
-When an agent asks before running a command or changing files, Scout shows a badge. If you're in another app, Spark Island also drops a one-line pill, such as **Deploy the site needs you · Review**. Point at Scout and select **Review** under **Needs you**, or select the pill, to open the card. It shows who asks, the chat, and the command or files.
+When an agent asks before running a command or changing files, Scout shows a badge. If you're in another app, Spark Island also drops a one-line pill, such as **Deploy the site needs you · Review**. Point at the pill, or select it, and Spark Island opens in full on that chat with the request ready to answer. Press **⌥Space** instead to open just the card. The card shows who asks, the chat, and the command or files.
 
 ## Allow or deny a request
 
@@ -24,7 +24,7 @@ The card then says what happened, for example **Allowed once** or **Denied**, an
 ## Other choices
 
 - **Open chat**: open the chat in Spark Outpost, for example to read a whole diff.
-- **Later**: put the card aside. It stays under **Needs you** when you point at Scout.
+- **Later**: put the card aside. It stays in **Chats** under **Needs you**, and on Home.
 - With more than one card, the top right shows where you are, such as **1 of 3**.
 
 Cards that need the whole chat, such as plans or changes to agent instruction files, only offer **Open chat** and **Later**.

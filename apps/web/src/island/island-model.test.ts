@@ -3,6 +3,7 @@ import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { fastAnswer } from './ask-fast-path.ts';
 import {
   cardKey,
+  hoverOpens,
   islandView,
   newMoments,
   nextStreak,
@@ -50,31 +51,30 @@ const quiet: IslandInputs = {
   cards: [],
   review: null,
   nudge: false,
-  hover: false,
 };
 
 describe('island state machine', () => {
-  it('rests until hovered, whatever is running or waiting', () => {
+  it('rests whatever is running or waiting, and hovering opens the full panel', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null };
     expect(islandView(quiet).kind).toBe('peek');
     expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
-    expect(islandView({ ...quiet, hover: true }).kind).toBe('pill');
-    expect(islandView({ ...quiet, cards: [card], hover: true }).kind).toBe('pill');
+    expect(hoverOpens(islandView(quiet))).toEqual({ kind: 'home' });
+    expect(hoverOpens(islandView({ ...quiet, cards: [card], nudge: true }))).toEqual({
+      kind: 'card',
+      card,
+    });
+    expect(hoverOpens(islandView({ ...quiet, panel: 'quick' }))).toBeNull();
+    expect(hoverOpens(islandView({ ...quiet, note: true }))).toBeNull();
+    expect(hoverOpens(islandView({ ...quiet, cards: [card], review: cardKey(card) }))).toBeNull();
   });
 
-  it('nudges for a waiting card only when allowed, and opens it on hover or review', () => {
+  it('nudges for a waiting card only when allowed, and opens it on review', () => {
     const first = { kind: 'approval' as const, chat: chat('a'), approval: null };
     const second = { kind: 'question' as const, chat: chat('b'), approval: null };
     const cards = [first, second];
     expect(islandView({ ...quiet, cards, nudge: true })).toEqual({
       kind: 'nudge',
       card: first,
-      total: 2,
-    });
-    expect(islandView({ ...quiet, cards, nudge: true, hover: true })).toEqual({
-      kind: 'card',
-      card: first,
-      index: 1,
       total: 2,
     });
     expect(islandView({ ...quiet, cards, review: cardKey(second) })).toEqual({
