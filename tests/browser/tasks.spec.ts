@@ -36,12 +36,12 @@ test('a planned run shows a task card and the work panel with plan history and a
   await expect(panel.getByText('All done.')).toBeVisible();
   const done = panel.getByRole('list', { name: 'Done' });
   await expect(done.getByRole('button', { name: /Look through the code/ })).toBeVisible();
-  await expect(done.getByRole('button', { name: `Done Opened ${PR_TITLE}` })).toBeVisible();
-  await panel.getByRole('button', { name: 'Hide 7 done' }).click();
+  await expect(done.getByRole('button', { name: /Opened/ })).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Hide 6 done' }).click();
   await expect(done).toHaveCount(0);
   await page.reload();
-  await expect(panel.getByRole('button', { name: 'Show 7 done' })).toBeVisible();
-  await panel.getByRole('button', { name: 'Show 7 done' }).click();
+  await expect(panel.getByRole('button', { name: 'Show 6 done' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Show 6 done' }).click();
   await expect(done).toBeVisible();
 
   await panel.getByRole('tab', { name: 'Plan' }).click();
@@ -55,6 +55,7 @@ test('a planned run shows a task card and the work panel with plan history and a
   await panel.getByRole('tab', { name: 'Links' }).click();
   const pr = panel.getByRole('link', { name: new RegExp(PR_TITLE) });
   await expect(pr).toHaveAttribute('href', 'https://github.com/spark-outpost/demo/pull/42');
+  await expect(pr).toContainText('Mentioned by the agent');
   await panel.getByRole('button', { name: 'Add link' }).click();
   await panel.getByRole('textbox', { name: 'Link URL' }).fill('https://github.com/acme/web/pull/7');
   await panel.getByRole('button', { name: 'Add', exact: true }).click();

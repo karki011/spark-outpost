@@ -23,12 +23,6 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-async function buildThePlan(page: Page): Promise<void> {
-  const plan = card(page, /Build this plan\?/);
-  await expect(plan).toBeVisible({ timeout: 30_000 });
-  await plan.getByRole('button', { name: 'Build this plan' }).click();
-}
-
 async function planBuildsByItself(page: Page): Promise<void> {
   const plan = card(page, /Build this plan\?/);
   await expect(plan.getByRole('button', { name: /^Building this plan in \d+s$/ })).toBeVisible({
@@ -203,7 +197,7 @@ test('two copies that collide go to the integrator, then to the merge conflict c
   test.setTimeout(180_000);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, `${REQUEST} #manifest #useredit #unresolvable`);
-  await buildThePlan(page);
+  await planBuildsByItself(page);
   await expect(board(page)).toContainText('in worktrees', { timeout: 60_000 });
 
   const conflict = card(page, /copy and your files collided/);

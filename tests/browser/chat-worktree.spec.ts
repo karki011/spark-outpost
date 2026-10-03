@@ -90,7 +90,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
 
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toContainText(`Kept on ${branch} in this chat’s worktree.`);
-  await expect(keep.locator('.ship-btn')).toHaveText('Push branch');
+  await expect(keep.locator('.ship-btn')).toHaveText('Open PR');
   await keep.getByRole('button', { name: 'Bring changes into main' }).click();
   const done = page.getByRole('status').filter({ hasText: 'Brought 1 file into main.' });
   await expect(done).toBeVisible();
