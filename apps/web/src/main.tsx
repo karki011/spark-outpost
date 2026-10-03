@@ -1,13 +1,14 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ignoreAnimationIterationListeners } from './app/animation-events.ts';
 import { App } from './app/App.tsx';
 import { markConnectionRestored, reportRequestError } from './app/connection/connection-store.ts';
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
-import './brand/blob-idle.css';
+import './brand/blob-motion.css';
 import './app/base.css';
 import './app/reduced-motion.css';
 import './app/idle-motion.css';
@@ -23,6 +24,7 @@ const queryClient = new QueryClient({
 configureLiveQueries(queryClient);
 
 markScrollbarStyle();
+ignoreAnimationIterationListeners(EventTarget.prototype);
 
 const IslandApp = lazy(() =>
   import('./island/IslandApp.tsx').then((module) => ({ default: module.IslandApp })),

@@ -221,3 +221,55 @@ export async function waitForText(
   }
   throw new Error(`Timed out waiting for "${text}" in ${selector}`);
 }
+
+export interface FrameWork {
+  busy: number;
+  recalcs: number;
+  layouts: number;
+  paints: number;
+}
+
+async function paintsPerSecond(page: Page, ms: number): Promise<number> {
+  const cdp = await cdpFor(page);
+  let paints = 0;
+  const count = (batch: { value: { name?: string }[] }) => {
+    paints += batch.value.filter((event) => event.name === 'Paint').length;
+  };
+  cdp.on('Tracing.dataCollected', count);
+  const done = new Promise((resolve) => cdp.once('Tracing.tracingComplete', resolve));
+  await cdp.send('Tracing.start', {
+    traceConfig: { includedCategories: ['devtools.timeline'] },
+    transferMode: 'ReportEvents',
+  });
+  const started = Date.now();
+  await page.waitForTimeout(ms);
+  const seconds = (Date.now() - started) / 1000;
+  await cdp.send('Tracing.end');
+  await done;
+  cdp.off('Tracing.dataCollected', count);
+  return Math.round(paints / seconds);
+}
+
+export async function frameWork(page: Page, ms = 3_000): Promise<FrameWork> {
+  const cdp = await cdpFor(page);
+  const read = async () => {
+    const { metrics } = await cdp.send('Performance.getMetrics');
+    const value = (name: string) => metrics.find((metric) => metric.name === name)?.value ?? 0;
+    return {
+      task: value('TaskDuration'),
+      recalcs: value('RecalcStyleCount'),
+      layouts: value('LayoutCount'),
+    };
+  };
+  const before = await read();
+  const started = Date.now();
+  await page.waitForTimeout(ms);
+  const after = await read();
+  const seconds = (Date.now() - started) / 1000;
+  return {
+    busy: Number((((after.task - before.task) / seconds) * 100).toFixed(1)),
+    recalcs: Math.round((after.recalcs - before.recalcs) / seconds),
+    layouts: Math.round((after.layouts - before.layouts) / seconds),
+    paints: await paintsPerSecond(page, Math.min(ms, 2_000)),
+  };
+}

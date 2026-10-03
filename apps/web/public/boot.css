@@ -85,13 +85,19 @@ body {
   animation: bb-twinkle 3s 1s ease-in-out infinite;
 }
 
+.bb-eyes,
 .bb-eye {
-  fill: var(--scout-eye);
   transform-box: fill-box;
   transform-origin: center;
-  animation:
-    bb-open 0.45s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both,
-    bb-blink 4.8s 2.2s infinite;
+}
+
+.bb-eyes {
+  animation: bb-open 0.45s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bb-eye {
+  fill: var(--scout-eye);
+  animation: bb-blink 4.8s 2.2s infinite;
 }
 
 .bb-closed {
@@ -201,6 +207,7 @@ body {
   .bb-stretch,
   .bb-breathe,
   .bb-spark,
+  .bb-eyes,
   .bb-eye,
   .bb-closed,
   .boot-status span {

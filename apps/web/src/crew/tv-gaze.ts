@@ -7,8 +7,15 @@ interface Point {
   y: number;
 }
 
+interface Place {
+  center: Point;
+  radius: number;
+  width: number;
+}
+
 interface Watcher {
   svg: SVGSVGElement;
+  place: Place | null;
   eyes: SVGElement | null;
   face: Face | null;
   aim: GazeAim;
@@ -22,20 +29,23 @@ interface Watcher {
 
 interface Frame {
   watcher: Watcher;
-  center: Point;
-  radius: number;
-  width: number;
+  place: Place;
   target: Point | null;
   hold: number;
 }
 
 const TRAVEL = 3.2;
 const MAX_DT = 64;
+const PLACE_STALE_MS = 200;
 const EYE_PROPS = ['dx', 'dy', 'sx', 'sy', 't'] as const;
 
-function centerOf(element: Element): Point {
+function placeOf(element: Element): Place {
   const box = element.getBoundingClientRect();
-  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  return {
+    center: { x: box.left + box.width / 2, y: box.top + box.height / 2 },
+    radius: Math.max(1, Math.min(box.width, box.height) / 2),
+    width: Math.max(1, box.width),
+  };
 }
 
 export class StageGaze {
@@ -43,6 +53,7 @@ export class StageGaze {
   private pointer: Point | null = null;
   private raf = 0;
   private last = 0;
+  private placedAt = -Infinity;
   private paused = false;
 
   attach(id: string, svg: SVGSVGElement) {
@@ -50,6 +61,7 @@ export class StageGaze {
     if (existing?.svg === svg) return;
     this.watchers.set(id, {
       svg,
+      place: null,
       eyes: null,
       face: null,
       aim: existing?.aim ?? null,
@@ -83,6 +95,7 @@ export class StageGaze {
     for (const watcher of this.watchers.values()) {
       if (!watcher.eyes?.isConnected) watcher.eyes = null;
     }
+    this.placedAt = -Infinity;
     this.wake();
   }
 
@@ -99,7 +112,12 @@ export class StageGaze {
   private cancel() {
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
+    this.rest();
+  }
+
+  private rest() {
     this.last = 0;
+    this.placedAt = -Infinity;
   }
 
   private wake() {
@@ -119,31 +137,33 @@ export class StageGaze {
     if (watcher.aim === null) return { point: null, hold: 0 };
     if (watcher.aim === 'rest') return { point: null, hold: 1 };
     const other = this.watchers.get(watcher.aim.blob);
-    return other ? { point: centerOf(other.svg), hold: 1 } : { point: null, hold: 0 };
+    return other?.place ? { point: other.place.center, hold: 1 } : { point: null, hold: 0 };
   }
 
-  private measure(): Frame[] {
-    const frames: Frame[] = [];
+  private place(time: number) {
+    const stale = time - this.placedAt > PLACE_STALE_MS;
+    if (stale) this.placedAt = time;
     for (const watcher of this.watchers.values()) {
       if (!watcher.svg.isConnected) continue;
       this.resolve(watcher);
-      if (!watcher.eyes || !watcher.face) continue;
-      const box = watcher.svg.getBoundingClientRect();
+      if (stale || !watcher.place) watcher.place = placeOf(watcher.svg);
+    }
+  }
+
+  private measure(time: number): Frame[] {
+    this.place(time);
+    const frames: Frame[] = [];
+    for (const watcher of this.watchers.values()) {
+      if (!watcher.svg.isConnected || !watcher.eyes || !watcher.face || !watcher.place) continue;
       const { point, hold } = this.targetOf(watcher);
-      frames.push({
-        watcher,
-        center: { x: box.left + box.width / 2, y: box.top + box.height / 2 },
-        radius: Math.max(1, Math.min(box.width, box.height) / 2),
-        width: Math.max(1, box.width),
-        target: point,
-        hold,
-      });
+      frames.push({ watcher, place: watcher.place, target: point, hold });
     }
     return frames;
   }
 
   private write(frame: Frame, k: number): boolean {
-    const { watcher, center, target } = frame;
+    const { watcher, target } = frame;
+    const { center, radius, width } = frame.place;
     const face = watcher.face!;
     const eyes = watcher.eyes!;
     const result = step({
@@ -151,10 +171,10 @@ export class StageGaze {
       y: watcher.y,
       dx: target ? target.x - center.x : 0,
       dy: target ? target.y - center.y : 0,
-      radius: frame.radius,
+      radius,
       k,
     });
-    const eps = threshold(frame.width, TRAVEL);
+    const eps = threshold(width, TRAVEL);
     let moving = false;
     if (Math.abs(result.tx - result.x) <= eps && Math.abs(result.ty - result.y) <= eps) {
       watcher.x = result.tx;
@@ -193,10 +213,10 @@ export class StageGaze {
     const dt = this.last ? Math.min(time - this.last, MAX_DT) : 16;
     this.last = time;
     const k = pursuit(dt);
-    const frames = this.measure();
+    const frames = this.measure(time);
     let moving = false;
     for (const frame of frames) moving = this.write(frame, k) || moving;
     if (moving) this.wake();
-    else this.last = 0;
+    else this.rest();
   }
 }

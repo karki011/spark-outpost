@@ -251,10 +251,6 @@
   flex-shrink: 0;
 }
 
-.mc-card:not(:hover, :focus-within, .open) .mc-blob .mo-eye {
-  animation-name: none;
-}
-
 .mc-spark {
   position: absolute;
   top: -5px;
