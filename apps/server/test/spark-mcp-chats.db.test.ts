@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { insertFinishedRunEntries } from '../src/persistence/audit-log.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { saveConnection as saveTicketConnection } from '../src/tickets/connections.ts';
@@ -174,6 +175,32 @@ describe('spark_audit', () => {
         },
       ],
     });
+  });
+
+  it('lists the tool calls that ran without review', async () => {
+    const chat = await startChat(t, 'Bypass');
+    await finish(chat.runId, 0.1, 'ok');
+    const update = (fields: Record<string, unknown>, unreviewed = false) => ({
+      at: new Date(),
+      direction: 'from_agent' as const,
+      kind: 'notification' as const,
+      method: 'session/update',
+      rpcId: null,
+      sizeBytes: 10,
+      truncated: false,
+      payload: { params: { update: { toolCallId: 'w1', ...fields } } },
+      ...(unreviewed ? { unreviewed: true } : {}),
+    });
+    await insertFinishedRunEntries(t.db, chat.runId, [
+      update({ sessionUpdate: 'tool_call', title: 'Write ~/x.txt', kind: 'edit' }),
+      update({ sessionUpdate: 'tool_call_update', status: 'completed' }, true),
+    ]);
+
+    const body = (await (await open(chat.conversationId)).call('spark_audit')).json<{
+      runs: { ranWithoutReview?: string[] }[];
+    }>();
+
+    expect(body.runs[0]?.ranWithoutReview).toEqual(['Write ~/x.txt']);
   });
 
   it('narrows to one run and audits a period across chats', async () => {

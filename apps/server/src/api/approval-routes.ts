@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { approvalDecisionRequestSchema } from '@spark-outpost/contracts';
+import { approvalDecisionRequestSchema, railFlagDecisionSchema } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import {
   ApprovalConflictError,
@@ -14,6 +14,8 @@ import {
   revertRun,
   runChanges,
 } from '../projects/run-changes.ts';
+import { decideRailFlag } from '../projects/rail-flag-decision.ts';
+import { RailFlagNotFoundError } from '../persistence/rail-flags.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ApprovalRouteDeps {
@@ -41,12 +43,21 @@ export function approvalRoutes({ db, workspaceId }: ApprovalRouteDeps): Router {
     res.json(await revertRun(db, workspaceId, paramId(req)));
   });
 
+  router.post('/rail-flags/:id/decision', async (req, res) => {
+    const decision = parseBody(railFlagDecisionSchema, req);
+    res.json(await decideRailFlag(db, workspaceId, paramId(req), decision));
+  });
+
   return router;
 }
 
 export function approvalErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof ApprovalInputError) return { status: 400, message: error.message };
-  if (error instanceof ApprovalNotFoundError || error instanceof RunNotFoundError) {
+  if (
+    error instanceof ApprovalNotFoundError ||
+    error instanceof RunNotFoundError ||
+    error instanceof RailFlagNotFoundError
+  ) {
     return { status: 404, message: error.message };
   }
   if (error instanceof ApprovalConflictError || error instanceof RevertConflictError) {

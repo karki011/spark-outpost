@@ -169,7 +169,7 @@ function redirectRail(view: ShellView | null): string | null {
   return kinds.includes('writes_outside') ? OUTSIDE_WRITE_REASON : null;
 }
 
-function alwaysAskReason(
+export function alwaysAskReason(
   request: ApprovalRequest,
   files: FileLister,
   view: ShellView | null,

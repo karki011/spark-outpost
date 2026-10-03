@@ -48,6 +48,7 @@ export const protocolLogEntrySchema = z.object({
   payload: z.unknown(),
   prevHash: z.string().nullable(),
   hash: z.string(),
+  unreviewed: z.boolean().optional(),
 });
 export type ProtocolLogEntry = z.infer<typeof protocolLogEntrySchema>;
 
@@ -133,6 +134,7 @@ export const auditRunSummarySchema = z.object({
   agentLabel: z.string().nullable().optional(),
   category: categorySchema.nullable().optional(),
   fileReads: z.number().int().nullable().optional(),
+  unreviewedCount: count.optional(),
 });
 export type AuditRunSummary = z.infer<typeof auditRunSummarySchema>;
 

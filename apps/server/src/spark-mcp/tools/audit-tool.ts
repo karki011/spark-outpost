@@ -38,6 +38,27 @@ async function runSteps(db: Queryable, runIds: readonly string[]) {
   return groupBy(rows, (row) => row.run_id);
 }
 
+interface UnreviewedRow {
+  run_id: string;
+  title: string | null;
+}
+
+async function unreviewedCalls(db: Queryable, runIds: readonly string[]) {
+  const { rows } = await db.query<UnreviewedRow>(
+    `SELECT u.run_id,
+       (SELECT t.payload #>> '{params,update,title}' FROM run_protocol_log t
+        WHERE t.run_id = u.run_id AND t.method = 'session/update'
+          AND t.payload #>> '{params,update,toolCallId}' = u.payload #>> '{params,update,toolCallId}'
+          AND t.payload #>> '{params,update,title}' IS NOT NULL
+        ORDER BY t.seq LIMIT 1) AS title
+     FROM run_protocol_log u
+     WHERE u.run_id = ANY($1::uuid[]) AND u.unreviewed
+     ORDER BY u.run_id, u.seq`,
+    [runIds],
+  );
+  return groupBy(rows, (row) => row.run_id);
+}
+
 async function runApprovals(db: Queryable, runIds: readonly string[]) {
   const { rows } = await db.query<ApprovalRow>(
     `SELECT run_id, kind, title, status, decided_by, scope FROM approvals
@@ -76,9 +97,10 @@ async function chatAudit(
   if (!all) throw new SparkToolError('That chat or run does not exist.');
   const runs = selectRuns(all, runId);
   const ids = runs.map((run) => run.runId);
-  const [steps, approvals] = await Promise.all([
+  const [steps, approvals, unreviewed] = await Promise.all([
     runSteps(deps.db, ids),
     runApprovals(deps.db, ids),
+    unreviewedCalls(deps.db, ids),
   ]);
   const summary = summarizeAudit(conversationId, runs);
   return {
@@ -100,6 +122,9 @@ async function chatAudit(
     runs: runs.map((run) => {
       const names = (steps.get(run.runId) ?? []).map((step) => step.name);
       const cards = approvals.get(run.runId) ?? [];
+      const ranWithoutReview = (unreviewed.get(run.runId) ?? []).map(
+        (row) => row.title ?? 'a tool call',
+      );
       return {
         id: run.runId,
         role: run.role,
@@ -127,6 +152,9 @@ async function chatAudit(
           (sum, wait) => sum + (wait.end ? Date.parse(wait.end) - Date.parse(wait.start) : 0),
           0,
         ),
+        ...(ranWithoutReview.length > 0
+          ? { ranWithoutReview: ranWithoutReview.slice(0, STEPS_PER_RUN) }
+          : {}),
         auditLogEntries: run.logEntries,
         ...(run.logPruned ? { logPruned: true } : {}),
       };
@@ -171,7 +199,7 @@ export const auditTool = sparkTool({
   privateData: true,
   title: 'Audit',
   description:
-    "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, and approval cards with who decided them. With days and no chat or run: harness totals, approvals, checks, Critic and loops for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong and how to tune Spark.",
+    "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, tool calls that ran without review (no permission request, as in Bypass or Full access), and approval cards with who decided them. With days and no chat or run: harness totals, approvals, checks, Critic and loops for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong and how to tune Spark.",
   input: {
     chat: chatIdInput,
     run: z.uuid().optional().describe('One run (and its sub-runs) instead of the whole chat.'),

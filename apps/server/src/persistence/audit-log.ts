@@ -24,10 +24,11 @@ interface LogRow {
   payload: unknown;
   prev_hash: string | null;
   hash: string;
+  unreviewed: boolean;
 }
 
 const LOG_COLUMNS =
-  'run_id, seq, at, direction, kind, method, rpc_id, size_bytes, truncated, payload, prev_hash, hash';
+  'run_id, seq, at, direction, kind, method, rpc_id, size_bytes, truncated, payload, prev_hash, hash, unreviewed';
 
 function toHashedRow(row: LogRow): HashedRow {
   return {
@@ -43,6 +44,7 @@ function toHashedRow(row: LogRow): HashedRow {
     payload: row.payload,
     prevHash: row.prev_hash,
     hash: row.hash,
+    ...(row.unreviewed ? { unreviewed: true } : {}),
   };
 }
 
@@ -95,6 +97,7 @@ async function writeEntries(
       sizeBytes: entry.sizeBytes,
       truncated: entry.truncated,
       payload: entry.payload,
+      ...(entry.unreviewed ? { unreviewed: true } : {}),
     })),
   );
   await client.query(
@@ -102,7 +105,7 @@ async function writeEntries(
      SELECT * FROM jsonb_to_recordset($1::jsonb) AS row(
        run_id uuid, seq integer, at timestamptz, direction text, kind text, method text,
        rpc_id text, size_bytes integer, truncated boolean, payload jsonb, prev_hash text,
-       hash text)`,
+       hash text, unreviewed boolean)`,
     [
       JSON.stringify(
         rows.map((row) => ({
@@ -118,6 +121,7 @@ async function writeEntries(
           payload: row.payload,
           prev_hash: row.prevHash,
           hash: row.hash,
+          unreviewed: row.unreviewed === true,
         })),
       ),
     ],

@@ -70,6 +70,7 @@ function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean })
         <span className="ls">
           <span className={`ltype ${entry.kind}`}>{entry.kind}</span>
           {entrySummary(entry)}
+          {entry.unreviewed && <span className="unrev">Ran without review</span>}
         </span>
         <ChevronIcon />
       </button>

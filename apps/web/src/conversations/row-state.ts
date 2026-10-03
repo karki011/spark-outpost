@@ -46,6 +46,8 @@ export function attentionLine(attention: ConversationAttention | null): string {
       return name ? `${name} has a question` : attention.title || 'Needs your input';
     case 'stuck':
       return name ? `${name} was repeating itself` : 'The Builder was repeating itself';
+    case 'flag':
+      return attention.title;
   }
 }
 
@@ -58,6 +60,7 @@ function waitingState(chat: ConversationSummary): RowState {
   if (chat.attention?.prFeedback) return { tone: 'permission', label: 'PR feedback', sub };
   if (asksPermission(chat)) return { tone: 'permission', label: 'Asking permission', sub };
   if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Repeating itself', sub };
+  if (chat.attention?.kind === 'flag') return { tone: 'asking', label: 'Flagged by Spark', sub };
   return { tone: 'asking', label: 'Needs your input', sub };
 }
 

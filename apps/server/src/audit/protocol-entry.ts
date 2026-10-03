@@ -12,6 +12,7 @@ export interface ProtocolEntry {
   sizeBytes: number;
   truncated: boolean;
   payload: unknown;
+  unreviewed?: boolean;
 }
 
 type Message = Record<string, unknown>;

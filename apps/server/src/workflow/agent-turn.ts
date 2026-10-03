@@ -55,6 +55,7 @@ import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
+import { startRailFlags } from './rail-flags.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
@@ -293,6 +294,10 @@ export async function runAgentTurn(
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
           : undefined;
+    const rails =
+      input.mode === 'do'
+        ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
+        : null;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
@@ -382,8 +387,10 @@ export async function runAgentTurn(
       if (output.kind === 'instructions') {
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
+      if (output.kind === 'rail_flag') await rails?.record(output.flag);
       if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
     }
+    await rails?.finish();
     await sayText(redaction.finish());
     if (titles) {
       const ending = titles.finish();

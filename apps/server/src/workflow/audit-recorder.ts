@@ -1,6 +1,11 @@
 import type { ProtocolDirection } from '@spark-outpost/contracts';
 import { createProtocolRecorder, type ProtocolEntry } from '../audit/protocol-entry.ts';
 import { redactValue } from '../audit/redact.ts';
+import {
+  createReviewTracker,
+  permissionToolCallId,
+  sessionUpdateOf,
+} from '../audit/review-tracker.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
@@ -35,6 +40,7 @@ export function createAuditRecorder(options: AuditRecorderOptions): AuditRecorde
   const stderrCap = options.stderrCapBytes ?? STDERR_CAP_BYTES;
   const now = options.now ?? (() => new Date());
   const protocol = createProtocolRecorder();
+  const review = createReviewTracker();
   let buffer: ProtocolEntry[] = [];
   let chain: Promise<void> = Promise.resolve();
   let timer: NodeJS.Timeout | null = null;
@@ -102,11 +108,19 @@ export function createAuditRecorder(options: AuditRecorderOptions): AuditRecorde
     }
   };
 
+  const unreviewedFrom = (direction: ProtocolDirection, message: unknown) => {
+    if (direction !== 'from_agent') return false;
+    const asked = permissionToolCallId(message);
+    if (asked) review.asked(asked);
+    return review.settle(sessionUpdateOf(message)) !== null;
+  };
+
   return {
     message(direction, message) {
       if (stopped) return;
       if (isToolCall(direction, message)) toolCalls += 1;
-      enqueue(protocol.entry(direction, message, now()));
+      const entry = protocol.entry(direction, message, now());
+      enqueue(unreviewedFrom(direction, message) ? { ...entry, unreviewed: true } : entry);
     },
     stderr(chunk) {
       if (stopped) return;
