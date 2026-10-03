@@ -257,7 +257,7 @@ describe('continuing after Stop', () => {
 });
 
 describe('deleting a chat mid-run', () => {
-  it('refuses while the run is active, then deletes the chat and its sessions once it stopped', async () => {
+  it('stops the active run, then deletes the chat and its sessions', async () => {
     const script: JevScript = { calls: [], scenario: TRIVIAL };
     harness = startOrchestrator(t, jevFetch(script), { sessions: store });
     const slow = withTag(TRIVIAL, '#slowbuild');
@@ -276,13 +276,9 @@ describe('deleting a chat mid-run', () => {
         .set(LOCAL_HEADERS)
         .set('Origin', ORIGIN)
         .send({});
-    const busy = await remove().expect(409);
-    expect(busy.body.error).toMatch(/Stop the reply/);
-
-    await requestCancel(t.db, runId);
-    const { orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(orchestration.status).toBe('cancelled');
     await remove().expect(204);
+    const runs = await t.db.query('SELECT 1 FROM runs WHERE id = $1', [runId]);
+    expect(runs.rows).toEqual([]);
     const left = await t.db.query('SELECT 1 FROM provider_sessions');
     expect(left.rows).toEqual([]);
   }, 60_000);

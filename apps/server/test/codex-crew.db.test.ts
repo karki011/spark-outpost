@@ -91,18 +91,23 @@ describe('a Codex-only crew in Do', { timeout: 60_000 }, () => {
     expect(status).not.toBe('');
   }, 60_000);
 
-  it.each(['hands-off', 'full-auto'] as const)(
-    'builds in a worktree at %s and merges it into the working tree',
-    async (level) => {
-      const { orchestration, asked, builders, copies, status } = await build(level);
-      expect(orchestration.status).toBe('succeeded');
-      expect(builders.map((row) => [row.provider, row.in_copy])).toEqual([['codex', true]]);
-      expect(copies).toEqual([{ merged: true, removed: true }]);
-      expect(asked.filter((approval) => approval.kind === 'edit')).toEqual([]);
-      expect(status).not.toBe('');
-      const listed = execFileSync('git', ['-C', root, 'worktree', 'list'], { encoding: 'utf8' });
-      expect(listed).not.toContain('.spark');
-    },
-    60_000,
-  );
+  it('builds in place at hands-off, since the chosen mode decides where it works', async () => {
+    const { orchestration, asked, builders, copies, status } = await build('hands-off');
+    expect(orchestration.status).toBe('succeeded');
+    expect(builders.map((row) => [row.provider, row.in_copy])).toEqual([['codex', false]]);
+    expect(copies).toEqual([]);
+    expect(asked.filter((approval) => approval.kind === 'edit')).toEqual([]);
+    expect(status).not.toBe('');
+  }, 60_000);
+
+  it('builds in a worktree at full-auto and merges it into the working tree', async () => {
+    const { orchestration, asked, builders, copies, status } = await build('full-auto');
+    expect(orchestration.status).toBe('succeeded');
+    expect(builders.map((row) => [row.provider, row.in_copy])).toEqual([['codex', true]]);
+    expect(copies).toEqual([{ merged: true, removed: true }]);
+    expect(asked.filter((approval) => approval.kind === 'edit')).toEqual([]);
+    expect(status).not.toBe('');
+    const listed = execFileSync('git', ['-C', root, 'worktree', 'list'], { encoding: 'utf8' });
+    expect(listed).not.toContain('.spark');
+  }, 60_000);
 });

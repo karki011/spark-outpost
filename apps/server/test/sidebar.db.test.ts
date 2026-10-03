@@ -161,12 +161,8 @@ describe('archive, rename and pin', () => {
 });
 
 describe('delete', () => {
-  it('removes the chat with its messages and runs, but not while a reply runs', async () => {
-    const { id, runId } = await chat('Short-lived');
-    const busy = await api.remove(id).expect(409);
-    expect(busy.body.error).toMatch(/Stop the reply/);
-
-    await finishRun(runId, 'succeeded', null);
+  it('removes the chat with its messages and runs, stopping a reply that is still queued', async () => {
+    const { id } = await chat('Short-lived');
     await api.remove(id).expect(204);
     expect(await api.list()).toEqual([]);
     const left = await t.db.query(
