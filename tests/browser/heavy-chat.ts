@@ -75,7 +75,22 @@ function inflate(detail: ConversationDetail): ConversationDetail {
   };
 }
 
-export async function openHeavyChat(page: Page): Promise<void> {
+function inflateKeepingLive(detail: ConversationDetail): ConversationDetail {
+  const inflated = inflate(detail);
+  const [first] = detail.runs;
+  const history = {
+    runs: inflated.runs.filter((run) => run.id !== first?.id),
+    messages: inflated.messages.filter((message) => message.runId !== first?.id),
+  };
+  return {
+    ...inflated,
+    runs: [...history.runs, ...detail.runs],
+    messages: [...history.messages, ...detail.messages],
+    activity: { ...inflated.activity, ...detail.activity },
+  };
+}
+
+export async function openHeavyChat(page: Page, keepLive = false): Promise<void> {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
@@ -86,7 +101,8 @@ export async function openHeavyChat(page: Page): Promise<void> {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
     const detail = (await response.json()) as ConversationDetail;
-    await route.fulfill({ response, json: detail.tasks.length > 0 ? inflate(detail) : detail });
+    const grown = keepLive ? inflateKeepingLive(detail) : inflate(detail);
+    await route.fulfill({ response, json: detail.tasks.length > 0 ? grown : detail });
   });
   await page.reload();
   await expect(page.locator('.thread section[aria-label="Turn"]')).toHaveCount(TURNS, {

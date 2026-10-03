@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { Locator, Page } from '@playwright/test';
+import type { CDPSession, Locator, Page } from '@playwright/test';
 import { SERVER_LOG_DIR } from './stub-config.ts';
 
 export const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
@@ -114,4 +114,75 @@ export function writeReport(name: string, data: unknown): void {
     ...(data as object),
   };
   writeFileSync(path.join(REPORT_DIR, `${name}.json`), JSON.stringify(record, null, 2));
+}
+
+export interface PageMetrics {
+  taskMs: number;
+  heapMb: number;
+  nodes: number;
+  listeners: number;
+}
+
+const sessions = new WeakMap<Page, Promise<CDPSession>>();
+
+function cdpFor(page: Page): Promise<CDPSession> {
+  let session = sessions.get(page);
+  if (!session) {
+    session = page
+      .context()
+      .newCDPSession(page)
+      .then(async (cdp) => {
+        await cdp.send('Performance.enable');
+        return cdp;
+      });
+    sessions.set(page, session);
+  }
+  return session;
+}
+
+export async function pageMetrics(page: Page): Promise<PageMetrics> {
+  const cdp = await cdpFor(page);
+  const { metrics } = await cdp.send('Performance.getMetrics');
+  const value = (name: string) => metrics.find((metric) => metric.name === name)?.value ?? 0;
+  return {
+    taskMs: value('TaskDuration') * 1000,
+    heapMb: Number((value('JSHeapUsedSize') / 1_048_576).toFixed(1)),
+    nodes: value('Nodes'),
+    listeners: value('JSEventListeners'),
+  };
+}
+
+export async function idleBusyPercent(page: Page, ms = 2_000): Promise<number> {
+  const before = await pageMetrics(page);
+  const started = Date.now();
+  await page.waitForTimeout(ms);
+  const after = await pageMetrics(page);
+  return Math.round(((after.taskMs - before.taskMs) / (Date.now() - started)) * 100);
+}
+
+export async function settledMetrics(page: Page): Promise<PageMetrics> {
+  const cdp = await cdpFor(page);
+  await cdp.send('HeapProfiler.collectGarbage');
+  return pageMetrics(page);
+}
+
+export async function waitForText(
+  page: Page,
+  selector: string,
+  text: string,
+  timeoutMs = 120_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const found = await page.evaluate(
+      ({ selector, text }) =>
+        [...document.querySelectorAll(selector)].some((element) =>
+          element.textContent?.includes(text),
+        ),
+      { selector, text },
+    );
+    if (found) return;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`Timed out waiting for "${text}" in ${selector}`);
 }
