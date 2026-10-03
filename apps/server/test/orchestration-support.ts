@@ -73,6 +73,7 @@ export async function connectProviders(t: TestDb, jev = true): Promise<void> {
 }
 
 const launch = FAKE_ACP_LAUNCH;
+const { conversationMode, askMode } = FAKE_AGENT_MODES;
 
 function sessionEnv(store: string | undefined): Record<string, string> {
   if (!store) return {};
@@ -89,7 +90,7 @@ function fakeAgent(
   extraEnv: Record<string, string> = {},
 ): Provider {
   return createAcpProvider({
-    definition: { ...agentDefinitions[id], ...FAKE_AGENT_MODES },
+    definition: { ...agentDefinitions[id], conversationMode, askMode },
     launch,
     cancelGraceMs: 2_000,
     env: {
