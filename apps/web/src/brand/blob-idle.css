@@ -1,4 +1,0 @@
-.mo-root,
-.mo-root:not(.mo-always):not(:hover) :is(.mo-breathe, .mo-bob, .mo-eyes, .mo-eye > *) {
-  animation-name: none;
-}

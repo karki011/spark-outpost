@@ -79,7 +79,7 @@
 }
 
 .isl-peekrow-wrap[data-flat] .mo-eyes {
-  transform: translateY(16px);
+  --blob-eyes-y: 16px;
 }
 
 .isl.bare svg.scout {
