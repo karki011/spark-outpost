@@ -192,7 +192,7 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(back).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
-  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
+  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Automatic');
 });
 
 test('modes and options reported by a live run show up in the picker', async ({ page }) => {

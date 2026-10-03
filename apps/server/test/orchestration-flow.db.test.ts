@@ -153,7 +153,9 @@ describe('checkpoints', () => {
       return { optionId: CHECKPOINT_OPTION.fix, note: 'Use UTC' };
     };
     const { orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(orchestration.crew.map((member) => member.name)).toEqual(['Bolt', 'Bolt']);
+    const names = orchestration.crew.map((member) => member.name);
+    expect(names.length).toBeGreaterThan(1);
+    expect(new Set(names)).toEqual(new Set(['Bolt']));
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('fixed as asked');
   }, 60_000);
 

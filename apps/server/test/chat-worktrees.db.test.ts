@@ -166,12 +166,12 @@ describe('a chat worktree per Do chat', { timeout: WORKTREE_TEST_MS }, () => {
     expect(rows[0]!.created_at.getTime()).toBeGreaterThanOrEqual(rows[0]!.decided_at.getTime());
   });
 
-  it("runs commands without asking on Automatic in the chat's worktree", async () => {
+  it("follows the agent's mode in the chat's worktree: Accept edits asks before a command", async () => {
     await doTurn('#pnpmbuild');
     const { rows } = await t.db.query<{ status: string; decided_by: string }>(
       `SELECT status, decided_by FROM approvals WHERE payload->>'command' = 'pnpm build'`,
     );
-    expect(rows).toEqual([{ status: 'allowed', decided_by: 'level' }]);
+    expect(rows).toEqual([{ status: 'allowed', decided_by: 'user' }]);
   });
 
   it('works on an existing branch the request names, in its own worktree', async () => {

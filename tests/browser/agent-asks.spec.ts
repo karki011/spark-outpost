@@ -57,7 +57,7 @@ test('in Auto, runs what the mode allows and explains a sandbox request', async 
 test('keeps the answer buttons in view for a long command', async ({ page }) => {
   test.setTimeout(90_000);
   await chatInMode(page, 'Manual');
-  await send(page, 'Run the script #longcommand');
+  await send(page, 'Fix the broken notes with the script #longcommand');
   const asked = card(page, /Run a command\?/);
   const more = asked.getByRole('button', { name: 'Show all (42 lines)' });
   await expect(more).toBeVisible({ timeout: 15_000 });
