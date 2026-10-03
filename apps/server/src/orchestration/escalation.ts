@@ -173,7 +173,8 @@ export function scoreEscalation(
 }
 
 export function kilo(tokens: number): string {
-  return `${Math.round(tokens / 1_000)}K`;
+  const thousands = Math.round(tokens / 1_000);
+  return thousands < 1_000 ? `${thousands}K` : `${Number((tokens / 1_000_000).toFixed(1))}M`;
 }
 
 function fromLabel(escalation: Escalation): string {

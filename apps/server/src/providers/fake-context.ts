@@ -4,7 +4,9 @@ import type { ProviderOutput, ProviderTurn } from './provider.ts';
 
 const CONTEXT_TRIGGER = /#ctx(\d{1,3})\b/;
 const NO_COMPACT_TRIGGER = '#nocompact';
+const LONG_WINDOW_TRIGGER = '#window1m';
 export const FAKE_CONTEXT_SIZE = 200_000;
+const FAKE_LONG_CONTEXT_SIZE = 1_000_000;
 const RESTING_PERCENT = 6;
 const COMPACTED_PERCENT = 8;
 export const FAKE_COMPACT_REPLY =
@@ -20,9 +22,14 @@ function tracksContext(turn: ProviderTurn): boolean {
   return turn.session !== undefined && chatTexts(turn).some((text) => CONTEXT_TRIGGER.test(text));
 }
 
-function usageAt(percent: number): Usage {
-  const contextUsed = Math.round((FAKE_CONTEXT_SIZE * Math.min(100, percent)) / 100);
-  return { kind: 'usage', contextUsed, contextSize: FAKE_CONTEXT_SIZE, costUsd: null };
+function windowOf(turn: ProviderTurn): number {
+  const long = chatTexts(turn).some((text) => text.includes(LONG_WINDOW_TRIGGER));
+  return long ? FAKE_LONG_CONTEXT_SIZE : FAKE_CONTEXT_SIZE;
+}
+
+function usageAt(percent: number, contextSize = FAKE_CONTEXT_SIZE): Usage {
+  const contextUsed = Math.round((contextSize * Math.min(100, percent)) / 100);
+  return { kind: 'usage', contextUsed, contextSize, costUsd: null };
 }
 
 export function fakeCompactTurn(turn: ProviderTurn): boolean {
@@ -54,12 +61,16 @@ export function fakeSessionOutputs(turn: ProviderTurn): ProviderOutput[] {
   return outputs;
 }
 
-export function fakeCompactOutputs(): ProviderOutput[] {
-  return [{ kind: 'text_delta', delta: FAKE_COMPACT_REPLY }, usageAt(COMPACTED_PERCENT)];
+export function fakeCompactOutputs(turn: ProviderTurn): ProviderOutput[] {
+  return [
+    { kind: 'text_delta', delta: FAKE_COMPACT_REPLY },
+    usageAt(COMPACTED_PERCENT, windowOf(turn)),
+  ];
 }
 
 export function withFakeContext(turn: ProviderTurn, output: ProviderOutput): ProviderOutput {
   if (output.kind !== 'usage' || !tracksContext(turn)) return output;
   const asked = CONTEXT_TRIGGER.exec(turn.prompt)?.[1];
-  return { ...usageAt(asked ? Number(asked) : RESTING_PERCENT), costUsd: output.costUsd };
+  const percent = asked ? Number(asked) : RESTING_PERCENT;
+  return { ...usageAt(percent, windowOf(turn)), costUsd: output.costUsd };
 }

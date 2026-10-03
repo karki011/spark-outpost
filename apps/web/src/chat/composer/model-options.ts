@@ -96,8 +96,12 @@ export function meterLevel(efforts: CapabilityOption[], effort: string | null, b
   return Math.max(1, Math.round(((index + 1) / efforts.length) * bars));
 }
 
+const trimZero = (value: string) => value.replace(/\.0$/, '');
+
 export function formatTokens(count: number): string {
   if (count < 1000) return String(Math.round(count));
   const thousands = count / 1000;
-  return `${thousands >= 100 ? Math.round(thousands) : thousands.toFixed(1).replace(/\.0$/, '')}K`;
+  if (thousands < 100) return `${trimZero(thousands.toFixed(1))}K`;
+  if (Math.round(thousands) < 1000) return `${Math.round(thousands)}K`;
+  return `${trimZero((count / 1_000_000).toFixed(1))}M`;
 }

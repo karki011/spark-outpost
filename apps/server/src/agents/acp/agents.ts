@@ -43,6 +43,7 @@ export interface AgentDefinition {
   offers?: AgentOffers;
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
+  longContext?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
   conversationMode: string;
@@ -265,6 +266,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     cli: 'claude',
     launch: () => packageBin(CLAUDE_ACP),
     ...claudeSessions,
+    longContext: true,
   },
   codex: {
     id: 'codex',
