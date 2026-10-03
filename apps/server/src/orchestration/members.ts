@@ -25,7 +25,7 @@ import {
 import { promptFor, readerPreamble } from './member-prompts.ts';
 import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
-import { reviewFindings, reviewVerdict } from './review.ts';
+import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
 import { splitRemovals } from '../laws/critic-text.ts';
@@ -356,7 +356,8 @@ async function runChild(
 async function afterCritic(s: Session, result: MemberResult, route: MemberRoute) {
   const verdict = result.outcome === 'succeeded' ? reviewVerdict(result.text) : 'unclear';
   const all = reviewFindings(result.text);
-  const { removed, rest: findings } = splitRemovals(all);
+  const { removed, rest } = splitRemovals(all);
+  const findings = openFindings(rest);
   s.criticRemovals = result.outcome === 'succeeded' ? removed : null;
   await mergeRoute(s.deps.db, result.runId, { verdict });
   s.findings = verdict === 'concerns' ? findings : [];
