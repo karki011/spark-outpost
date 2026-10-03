@@ -382,6 +382,9 @@ test('asks before an agent instruction file, with Allow once, for this chat, or 
     timeout: 15_000,
   });
   expect(readFileSync(agents, 'utf8')).toBe('Edited by the fake agent\n');
+  await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {
+    timeout: 15_000,
+  });
 
   await send(page, 'Once more #instructions');
   const third = card(page, /Change a file\?/);

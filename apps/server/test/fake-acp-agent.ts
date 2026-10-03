@@ -29,7 +29,9 @@ const fakeModels = JSON.parse(
     ]),
 ) as [string, string][];
 
-const fakeModes = JSON.parse(
+type FakeMode = [string, string, string | null, string | null];
+
+const listedModes = JSON.parse(
   process.env.FAKE_ACP_MODES ??
     JSON.stringify([
       ['read-only', 'Ask first', null, null],
@@ -40,10 +42,14 @@ const fakeModes = JSON.parse(
       ['plan', 'Plan', null, 'plan'],
       ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
     ]),
-) as [string, string, string | null, string | null][];
+) as FakeMode[] | Record<string, FakeMode[]>;
+
+const fakeModes = Array.isArray(listedModes)
+  ? listedModes
+  : (listedModes[process.env.FAKE_ACP_PROVIDER ?? ''] ?? []);
 
 const config: Record<string, string> = {
-  mode: 'agent',
+  mode: fakeModes.some(([id]) => id === 'agent') ? 'agent' : (fakeModes[0]?.[0] ?? 'agent'),
   model: fakeModels[0]?.[0] ?? 'fast-1',
   effort: 'medium',
 };
