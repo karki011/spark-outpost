@@ -9,6 +9,7 @@ import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { cliEnvironment, type CliLocator } from './agent-cli.ts';
+import { prepareCodexLaunch } from './codex-launch.ts';
 import { capabilitiesFrom, offeredCapabilities, sessionCapabilities } from './capabilities.ts';
 import { findOption } from './session-config.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
@@ -32,8 +33,14 @@ export async function probeCapabilities(
   let agent: AgentProcess | null = null;
   const timer = new AbortController();
   try {
-    const cli = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
-    const env = { ...(await agentEnvironment({ ...options, definition }, workdir)), ...cli };
+    const located = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
+    const { cli, profiles } = located.CODEX_PATH
+      ? await prepareCodexLaunch(located, workdir, false)
+      : { cli: located, profiles: true };
+    const env = {
+      ...(await agentEnvironment({ ...options, definition, codexProfiles: profiles }, workdir)),
+      ...cli,
+    };
     agent = startAgentProcess(options.launch ?? definition.launch(), workdir, env);
     const running = agent;
     const read = acp.client(CLIENT_INFO).connectWith(running.stream, async (ctx) => {

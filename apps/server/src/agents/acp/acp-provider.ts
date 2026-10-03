@@ -15,6 +15,7 @@ import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-
 import { agentEnvironment } from './agent-env.ts';
 import { longContextEnv } from './long-context.ts';
 import { cliEnvironment, type CliLocator } from './agent-cli.ts';
+import { CODEX_PLAIN_SANDBOX_NOTE, codexConfigFailed, prepareCodexLaunch } from './codex-launch.ts';
 import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
 import {
   openSparkTools,
@@ -44,14 +45,13 @@ import {
   writeWithApproval,
   type DoWorkspace,
 } from './do-handlers.ts';
-import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
+import { extraRoots, openProject, sessionMeta } from './session-start.ts';
 import { attachSteering } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
-  type ClaudeRepoOptions,
   type NamedMcpServer,
   type RepoSession,
 } from './repo-session.ts';
@@ -102,7 +102,7 @@ async function* runTurn(options: AcpProviderOptions, turn: ProviderTurn) {
   const forwardAbort = () => abort.abort();
   turn.signal.addEventListener('abort', forwardAbort, { once: true });
   if (turn.signal.aborted) abort.abort();
-  const session = runSession(options, turn, abort.signal, channel);
+  const session = runSession(options, turn, abort.signal, channel, false);
   try {
     yield* channel;
   } finally {
@@ -117,6 +117,7 @@ async function runSession(
   turn: ProviderTurn,
   signal: AbortSignal,
   channel: Channel<ProviderOutput>,
+  legacyPermissions: boolean,
 ): Promise<void> {
   const { definition } = options;
   const mapper = createUpdateMapper(definition.name, definition.longContext === true);
@@ -124,6 +125,8 @@ async function runSession(
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
   let scratch: string | null = null;
+  let launchDir: string | null = null;
+  let retryWithoutProfiles = false;
   let spark: SparkTools | null = null;
   let graceTimer: NodeJS.Timeout | null = null;
   const onAbort = () => {
@@ -162,8 +165,24 @@ async function runSession(
     const codex = withCodexSpark(repo?.codex ?? null, turn.spark, spark !== null);
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
     const builder = turn.builder === true;
-    const cli = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
-    const launchEnv = await agentEnvironment(options, home, browsing, codex, builder, turn.env);
+    const located = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
+    if (definition.repoStyle === 'codex') launchDir = await mkdtemp(join(tmpdir(), 'spark-codex-'));
+    const prepared =
+      launchDir && located.CODEX_PATH
+        ? await prepareCodexLaunch(located, launchDir, legacyPermissions)
+        : { cli: located, profiles: !legacyPermissions };
+    const cli = prepared.cli;
+    const launchEnv = await agentEnvironment(
+      { ...options, codexProfiles: prepared.profiles },
+      home,
+      browsing,
+      codex,
+      builder,
+      turn.env,
+    );
+    if (definition.repoStyle === 'codex' && !prepared.profiles) {
+      push(mapper.note(CODEX_PLAIN_SANDBOX_NOTE));
+    }
     const env = withCodexSparkServer(
       { ...launchEnv, ...longContextEnv(definition, launchEnv, repo?.claude?.redirects), ...cli },
       definition.repoStyle === 'codex' ? spark : null,
@@ -198,11 +217,19 @@ async function runSession(
     }
     channel.close();
   } catch (error) {
-    push(mapper.finish(true));
-    if (signal.aborted) channel.close();
-    else {
-      const cause = agent ? await exitOr(agent, error) : error;
-      channel.close(toProviderError(definition.name, cause, agent?.stderrTail() ?? ''));
+    const cause = signal.aborted || !agent ? error : await exitOr(agent, error);
+    const tail = agent?.stderrTail() ?? '';
+    retryWithoutProfiles =
+      !signal.aborted &&
+      definition.repoStyle === 'codex' &&
+      !legacyPermissions &&
+      !mapper.repliedWithText() &&
+      !mapper.didWork() &&
+      codexConfigFailed(cause, tail);
+    if (!retryWithoutProfiles) {
+      push(mapper.finish(true));
+      if (signal.aborted) channel.close();
+      else channel.close(toProviderError(definition.name, cause, tail));
     }
   } finally {
     signal.removeEventListener('abort', onAbort);
@@ -210,7 +237,9 @@ async function runSession(
     agent?.kill();
     spark?.grant.revoke();
     if (scratch) await rm(scratch, { recursive: true, force: true });
+    if (launchDir) await rm(launchDir, { recursive: true, force: true });
   }
+  if (retryWithoutProfiles) await runSession(options, turn, signal, channel, true);
 }
 
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
@@ -220,46 +249,6 @@ async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
     delay(EXIT_WAIT_MS).then(() => null),
   ]);
   return exit instanceof AgentExitedError ? exit : error;
-}
-
-async function openProject(
-  definition: AgentDefinition,
-  roots: readonly string[],
-): Promise<PathPolicy> {
-  try {
-    return await projectPolicy(roots);
-  } catch (error) {
-    const root = error instanceof RootMissingError ? error.root : roots.join(', ');
-    throw new ProviderError(
-      `${definition.name} can't open the project folder ${root}. Check that it still exists, or link the project again.`,
-    );
-  }
-}
-
-function extraRoots(policy: PathPolicy | null): string[] {
-  return policy ? policy.roots.slice(1).map((root) => root.path) : [];
-}
-
-function sessionMeta(
-  definition: AgentDefinition,
-  policy: PathPolicy | null,
-  changing: boolean,
-  repo: ClaudeRepoOptions | null,
-  {
-    builder,
-    coordinated,
-    publishes,
-    planning,
-    approvals,
-  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'publishes' | 'planning' | 'approvals'>,
-) {
-  if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
-  const roots = extraRoots(policy);
-  if (changing) {
-    return definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes) ?? null;
-  }
-  const commands = approvals !== undefined;
-  return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
 }
 
 function openedRoots(

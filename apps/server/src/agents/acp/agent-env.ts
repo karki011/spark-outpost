@@ -19,6 +19,7 @@ export interface AgentEnvironmentOptions {
   definition: AgentDefinition;
   env?: Record<string, string> | undefined;
   secrets?: Pick<SecretStore, 'get'> | undefined;
+  codexProfiles?: boolean | undefined;
 }
 
 const HOSTING_TOKENS = [
@@ -64,11 +65,17 @@ async function baseEnvironment(
   }
   const base = options.env ?? childEnvironment(process.env);
   if (definition.repoStyle !== 'codex') {
-    return { ...base, ...definition.conversationEnv?.(home, browsing, repo) };
+    return {
+      ...base,
+      ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles),
+    };
   }
   const kept = { ...base };
   delete kept.APP_SERVER_LOGS;
-  const env = { ...kept, ...definition.conversationEnv?.(home, browsing, repo) };
+  const env = {
+    ...kept,
+    ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles),
+  };
   return withHiddenServers(env, await codexUserMcpNames(base));
 }
 

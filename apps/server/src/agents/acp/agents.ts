@@ -54,6 +54,7 @@ export interface AgentDefinition {
     workdir: string,
     browsing?: boolean,
     repo?: CodexRepoOptions | null,
+    profiles?: boolean,
   ) => Record<string, string>;
   projectSessionMeta?: (
     extraRoots: readonly string[],
@@ -173,12 +174,17 @@ export function claudeSessionMeta(
   };
 }
 
-export function codexConfig(browsing: boolean, repo: CodexRepoOptions | null): object {
+export function codexConfig(
+  browsing: boolean,
+  repo: CodexRepoOptions | null,
+  profiles = true,
+): object {
   return {
     features: { shell_tool: browsing, unified_exec: false, skill_mcp_dependency_install: false },
     web_search: 'disabled',
-    default_permissions: CODEX_READ_ONLY_MODE,
-    permissions: codexPermissionProfiles(),
+    ...(profiles
+      ? { default_permissions: CODEX_READ_ONLY_MODE, permissions: codexPermissionProfiles() }
+      : {}),
     ...(repo && !repo.agentsMd ? { project_doc_max_bytes: 0 } : {}),
     ...(repo?.developerInstructions ? { developer_instructions: repo.developerInstructions } : {}),
     ...(repo && !repo.skills ? { skills: { include_instructions: false } } : {}),
@@ -189,11 +195,12 @@ function codexEnv(
   workdir: string,
   browsing = false,
   repo: CodexRepoOptions | null = null,
+  profiles = true,
 ): Record<string, string> {
   return {
     INITIAL_AGENT_MODE: CODEX_READ_ONLY_MODE,
     TMPDIR: workdir,
-    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo)),
+    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles)),
   };
 }
 
