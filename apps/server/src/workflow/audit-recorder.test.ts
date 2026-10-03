@@ -123,4 +123,34 @@ describe('audit recorder', () => {
     await audit.close();
     expect(batches).toEqual([]);
   });
+  it('marks a tool call that ran without a permission request as unreviewed', async () => {
+    const { audit, batches } = recorder();
+    const update = (toolCallId: string, fields: Record<string, unknown>) => ({
+      jsonrpc: '2.0',
+      method: 'session/update',
+      params: { update: { sessionUpdate: 'tool_call_update', toolCallId, ...fields } },
+    });
+    audit.message('from_agent', update('w', { kind: 'edit', status: 'pending' }));
+    audit.message('from_agent', update('w', { status: 'completed' }));
+    audit.message('from_agent', update('a', { kind: 'execute', status: 'pending' }));
+    audit.message('from_agent', {
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'session/request_permission',
+      params: { toolCall: { toolCallId: 'a' }, options: [] },
+    });
+    audit.message('from_agent', update('a', { status: 'completed' }));
+    audit.message('from_agent', update('r', { kind: 'read', status: 'completed' }));
+    audit.message('from_agent', update('w', { status: 'completed' }));
+    await audit.close();
+    expect(batches.flat().map((entry) => entry.unreviewed === true)).toEqual([
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
 });

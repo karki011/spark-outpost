@@ -118,7 +118,7 @@ Budgets cap each task: active time, tool calls and cost (Settings → Spark → 
 
 In its own worktree, a chat's first build turn creates a git worktree under .spark/worktrees on a new spark/<title>-<id> branch, reused by every later turn, so chats work side by side and your folder stays as it is. Answers, plans and reviews don't create one. The keep card offers Bring changes into your branch, Ship, or leaving the work on the chat branch. The worktree is released on archive, delete (unpushed work stays on the branch), merge and Reset.
 
-In my files, new chats edit the folder directly. Spark still uses a private worktree copy for Full auto → PR, provider modes that skip the gate, a second task in the same repo, and destructive or risky work; the copy merges back after each turn, with a card if your files changed meanwhile.`,
+In my files, new chats edit the folder directly. Spark still uses a private worktree copy for Full auto → PR, a second task in the same repo, and destructive or risky work; the copy merges back after each turn, with a card if your files changed meanwhile.`,
   },
   {
     id: 'coordinator',

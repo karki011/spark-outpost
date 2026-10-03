@@ -109,7 +109,7 @@ A few more rules hold everywhere:
 
 - **Agents publish only the chat's own branch, and only when allowed.** An agent, Builders included, may push the chat's own `spark/` branch and run `gh pr create`, `gh pr view` or `gh pr edit` for its pull request when your message asks for it ("open a PR", "push it"), the chat is at **Full auto → PR**, or the agent's mode is **Auto** or **Bypass permissions**. Otherwise Builders don't push and Spark commits, pushes and opens the PR itself when the task is done. Force pushes, pushes of any other branch or the base branch, changing remotes and other hosting tools stay refused in every mode.
 - **Short instructions after the work is done go to the chat's agent.** When a chat's task has already built, a short message like "open pr" or "push it" runs as one turn of the chat's main agent with the chat's own mode, not as a new Builder.
-- **Modes Spark can't check run in a copy.** Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so those chats run only in a worktree copy, never on your checkout.
+- **Modes that never ask are watched, not blocked.** Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without asking, wherever the chat works. See [Actions that ran without review](#actions-that-ran-without-review).
 
 ### Keep files away from agents with .sparkignore
 
@@ -148,8 +148,16 @@ The **If you don't answer a question** setting in **Settings → Spark** doesn't
 - In the chat's **Work** panel, under **Waiting for you**, with a **Review** button.
 - In the desktop app's Spark Island at the top of the screen, where you can press **Y** to allow or **N** to deny. See [Spark Island](desktop-companion.md).
 
+## Actions that ran without review
+
+In **Bypass permissions**, **Approve for me** or **Full access** the agent acts without asking. Spark doesn't stop it; it watches every action:
+
+- Each tool call that ran without a permission request is marked **Ran without review** in the audit log, and the audit timeline counts them per run.
+- If an action crosses a protected path anyway (a write or delete outside the project, a secret file, a force push, git hooks or config, agent instruction files), a card appears in the chat, for example "Bolt wrote outside the project: ~/x.txt". Select **Revert** to undo the run's changes in the project. For files outside the project, the card shows the path and a copy of the original when Spark has one. Select **Dismiss** when you've looked.
+- The chat shows **Flagged by Spark** in the chat list and the desktop Spark Island until you revert or dismiss.
+
 ## See what was allowed
 
 Each turn's steps record what happened to every request, for example "Allowed pnpm test (you allowed it)", "Allowed … (on the project allowlist)" or "Declined: … (Secret files always ask)". Requests a safety rule refused show as steps, not cards.
 
-For the full record, open the chat's **…** menu and select **Audit this chat**. The **Timeline** tab shades the time each run waited for your approval.
+For the full record, open the chat's **…** menu and select **Audit this chat**. The **Timeline** tab shades the time each run waited for your approval and counts actions that ran without review.

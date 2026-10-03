@@ -82,7 +82,6 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
         projectRoots: [root],
         signal: new AbortController().signal,
         mode: 'do',
-        worktree: true,
         approvals: gate,
       })) {
         outputs.push(output);

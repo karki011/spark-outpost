@@ -64,7 +64,7 @@ async function editAndKeep(page: Page, text: string) {
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('group', { name: /Keep these changes\?/ }).last()).toContainText(
-    'Kept: you approved every edit.',
+    'Kept automatically.',
     { timeout: 20_000 },
   );
   await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {

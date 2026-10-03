@@ -7,6 +7,7 @@ import { withTurnFailure } from './fake-acp-limits.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
+import { railCrossings } from './fake-acp-rails.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock } from './fake-acp-support.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
@@ -29,7 +30,9 @@ const fakeModels = JSON.parse(
     ]),
 ) as [string, string][];
 
-const fakeModes = JSON.parse(
+type FakeMode = [string, string, string | null, string | null];
+
+const listedModes = JSON.parse(
   process.env.FAKE_ACP_MODES ??
     JSON.stringify([
       ['read-only', 'Ask first', null, null],
@@ -40,10 +43,14 @@ const fakeModes = JSON.parse(
       ['plan', 'Plan', null, 'plan'],
       ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
     ]),
-) as [string, string, string | null, string | null][];
+) as FakeMode[] | Record<string, FakeMode[]>;
+
+const fakeModes = Array.isArray(listedModes)
+  ? listedModes
+  : (listedModes[process.env.FAKE_ACP_PROVIDER ?? ''] ?? []);
 
 const config: Record<string, string> = {
-  mode: 'agent',
+  mode: fakeModes.some(([id]) => id === 'agent') ? 'agent' : (fakeModes[0]?.[0] ?? 'agent'),
   model: fakeModels[0]?.[0] ?? 'fast-1',
   effort: 'medium',
 };
@@ -268,6 +275,7 @@ async function turn(
   const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
   if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
+  await railCrossings(roleTurn);
   const asked = currentRequest(params.prompt);
   const planned = await planTurn(asked, roleTurn, config.mode ?? '');
   if (planned) return planned;

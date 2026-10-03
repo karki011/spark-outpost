@@ -1,11 +1,14 @@
 import {
   approvalSchema,
   projectSchema,
+  railFlagSchema,
   revertRunResponseSchema,
   runChangesSchema,
   type Approval,
   type ApprovalDecisionRequest,
   type Project,
+  type RailFlag,
+  type RailFlagDecision,
   type RevertRunResponse,
   type RunChanges,
 } from '@spark-outpost/contracts';
@@ -27,6 +30,11 @@ export const approvalsApi = {
     request(runChangesSchema, `/runs/${runId}/changes`),
   revert: (runId: string): Promise<RevertRunResponse> =>
     request(revertRunResponseSchema, `/runs/${runId}/revert`, { method: 'POST', body: '{}' }),
+  decideFlag: (id: string, decision: RailFlagDecision): Promise<RailFlag> =>
+    request(railFlagSchema, `/rail-flags/${id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify(decision),
+    }),
   setAllowlist: (projectId: string, commandAllowlist: string[]): Promise<Project> =>
     request(projectSchema, `/projects/${projectId}`, {
       method: 'PATCH',

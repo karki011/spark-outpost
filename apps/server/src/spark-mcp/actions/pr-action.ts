@@ -46,6 +46,7 @@ function shipDepsOf(context: SparkToolContext): ShipDeps {
 
 function shippedMessage(result: ShipResult): string {
   const pull = result.pullRequest;
+  if (!pull && result.prLink) return `Pushed ${result.branch}. ${result.prLink.label}.`;
   if (!pull) return `Pushed ${result.branch} without a pull request.`;
   const verb = pull.created ? 'Opened' : 'Updated';
   return `${verb} ${pull.draft ? 'draft PR' : 'PR'} #${pull.number}.`;
@@ -64,7 +65,7 @@ export async function performOpenPr(
   );
   return {
     message: shippedMessage(result),
-    url: result.pullRequest?.url ?? null,
+    url: result.pullRequest?.url ?? result.prLink?.url ?? null,
     output: {
       number: result.pullRequest?.number ?? null,
       branch: result.branch,

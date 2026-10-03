@@ -126,7 +126,7 @@ describe('provider permission modes over ACP', { timeout: 20_000 }, () => {
     expect(result.steps).toContain("Fake doesn't offer dontAsk here; using Ask every time");
   });
 
-  it('keeps a worktree-only mode off the real checkout, and uses it in a worktree copy', async () => {
+  it('uses a mode that skips the gate on the real checkout too', async () => {
     const settings = {
       method: 'cli' as const,
       model: null,
@@ -135,10 +135,7 @@ describe('provider permission modes over ACP', { timeout: 20_000 }, () => {
       mode: 'agent',
     };
     const checkout = await run(codex, 'hello', { settings });
-    expect(checkout.text).toContain('mode=ask-every-action');
-    expect(checkout.steps).toContain('agent runs only in a worktree copy; asking instead');
-    const copy = await run(codex, 'hello', { settings, worktree: true });
-    expect(copy.text).toContain('mode=agent');
+    expect(checkout.text).toContain('mode=agent');
   });
 
   it('shows a mode change the agent makes itself, and follows it', async () => {
@@ -148,9 +145,10 @@ describe('provider permission modes over ACP', { timeout: 20_000 }, () => {
     expect(result.settings.at(-1)).toMatchObject({ mode: 'plan' });
   });
 
-  it('stops the run when the agent switches to a mode that may not run here', async () => {
+  it('follows the agent when it switches itself to a mode that skips the gate', async () => {
     const result = await run(codex, '#modeswitch agent');
-    expect(String(result.error)).toMatch(/switched to Approve for me mode, so the run was stopped/);
+    expect(result.error).toBeNull();
+    expect(result.settings.at(-1)).toMatchObject({ mode: 'agent' });
   });
 
   it('switches a running turn to the mode you pick, without a new session', async () => {
@@ -164,16 +162,13 @@ describe('provider permission modes over ACP', { timeout: 20_000 }, () => {
     expect(result.settings.at(-1)).toMatchObject({ mode: 'acceptEdits' });
   });
 
-  it('refuses a live switch to a worktree-only mode on the real checkout', async () => {
+  it('switches a running turn on the real checkout to a mode that skips the gate', async () => {
     const picks = requests();
     const result = await run(codex, '#waitmode agent', { modeRequests: picks }, (output) => {
       if (output.kind === 'session_settings') setTimeout(() => picks.emit('agent'), 50);
     });
     expect(result.error).toBeNull();
-    expect(result.text).toContain('switched=ask-every-action');
-    expect(result.steps).toContain(
-      'Approve for me runs only in a worktree copy; the mode stays as it was',
-    );
+    expect(result.text).toContain('switched=agent');
   });
 
   it("uses the provider's read-only mode for Ask runs and never the chat's Do mode", async () => {

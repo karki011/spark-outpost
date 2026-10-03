@@ -37,7 +37,7 @@ Tools that read change nothing.
 | Open terminals                                                           | `spark_terminals`                                                                         |
 | Tickets, or one ticket in full (`action` read)                           | `spark_tickets`                                                                           |
 | Your Sparks, their state and standing instructions                       | `spark_sparks`                                                                            |
-| The audit log                                                            | `spark_audit`                                                                             |
+| The audit log, including actions that ran without review                 | `spark_audit`                                                                             |
 | How Spark works, and this guide                                          | `spark_guide`, `spark_docs`                                                               |
 
 ## When actions ask first

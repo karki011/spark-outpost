@@ -89,6 +89,7 @@ export const ticketWorkSchema = z.object({
   conversationId: z.uuid(),
   startedAt: z.string(),
   pullRequests: z.array(ticketRefSchema),
+  prLinks: z.array(ticketRefSchema).optional(),
 });
 export type TicketWork = z.infer<typeof ticketWorkSchema>;
 

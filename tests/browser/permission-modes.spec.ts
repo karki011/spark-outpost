@@ -71,7 +71,7 @@ test("the picker lists the agent's own modes and says what each combination does
   await expect(panel.getByRole('note')).toHaveCount(0);
 
   await pickMode(page, 'Bypass permissions');
-  await expect(panel.getByRole('note')).toContainText('runs only in a worktree copy');
+  await expect(panel.getByRole('note')).toContainText('ran without review');
   await pickAutonomy(page, 'Full auto → PR');
   await openPermissions(page);
   await expect(panel).toContainText('in a worktree copy');

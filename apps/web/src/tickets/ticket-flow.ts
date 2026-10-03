@@ -91,6 +91,8 @@ export function askingText(attention: ConversationAttention | null): string {
       return 'Answer a question';
     case 'stuck':
       return 'Check a stuck chat';
+    case 'flag':
+      return 'Check a flagged action';
     default:
       return 'Waiting for your answer';
   }

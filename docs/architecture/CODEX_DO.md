@@ -2,7 +2,7 @@
 
 Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on September 26, 2026 against codex-acp 1.13.1 (with our read-only patch) and the `codex app-server` it bundles, `@openai/codex` 0.156.1. See [ACP agents](ACP_AGENTS.md#do-in-project-folders-m2) and [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#adapter-capabilities) for the background, and [PATCHES.md](PATCHES.md) for the patch that shipped from this probe.
 
-**Status: implemented September 26, 2026**, then superseded by provider permission modes (September 28) and chat worktrees (September 29): the picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access), and a Do chat in a git project works in its own worktree by default ([HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). Ask every time still sends every action to the gate; Approve for me and Full access don't, so they run only in a worktree copy.
+**Status: implemented September 26, 2026**, then superseded by provider permission modes (September 28) and chat worktrees (September 29): the picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access), and a Do chat in a git project works in its own worktree by default ([HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). Ask every time still sends every action to the gate; Approve for me and Full access don't; since October 2 they run wherever the chat works and Spark watches them.
 
 ## Short answer
 

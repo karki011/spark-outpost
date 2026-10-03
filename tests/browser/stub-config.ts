@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { FAKE_CLAUDE_MODES } from '../../apps/server/src/providers/fake.ts';
 
 const credentials = path.resolve(import.meta.dirname, '../../.local/credentials.env');
 if (!process.env.TEST_DATABASE_URL && existsSync(credentials)) process.loadEnvFile(credentials);
@@ -68,11 +69,29 @@ export const FAKE_ACP_MODELS: [string, string][] = [
   { id: 'fake-deep', label: 'Fake Deep' },
 ].map((model) => [model.id, model.label]);
 
-export const FAKE_ACP_MODES: [string, string, string | null, string | null][] = [
-  ['read-only', 'Ask first', null, null],
-  ['ask-every-action', 'Ask every time', null, null],
-  ['agent', 'Agent', null, null],
-  ['yolo', 'Yolo', 'Custom mode from the fake agent', 'full_access'],
+type FakeAcpMode = [string, string, string | null, string | null];
+
+const YOLO: FakeAcpMode = ['yolo', 'Yolo', 'Custom mode from the fake agent', 'full_access'];
+
+const CLAUDE_ACP_MODES: FakeAcpMode[] = [
+  ...FAKE_CLAUDE_MODES.map((mode): FakeAcpMode => [
+    mode.id,
+    mode.label,
+    mode.description,
+    mode.kind,
+  ]),
+  YOLO,
 ];
+
+export const FAKE_ACP_MODES: Record<string, FakeAcpMode[]> = {
+  claude: CLAUDE_ACP_MODES,
+  zai: CLAUDE_ACP_MODES,
+  codex: [
+    ['read-only', 'Ask first', null, null],
+    ['ask-every-action', 'Ask every time', null, null],
+    ['agent', 'Agent', null, null],
+    YOLO,
+  ],
+};
 
 export const MAP_ROOT_PREFIX = path.join(realpathSync(os.tmpdir()), 'spark-map-real-');

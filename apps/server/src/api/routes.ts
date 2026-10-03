@@ -16,7 +16,6 @@ import {
   listConversations,
   sendUserMessage,
 } from '../persistence/conversations.ts';
-import { ConversationBusyError } from '../persistence/conversation-actions.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
 import { stopRun } from '../workflow/stop-run.ts';
@@ -183,7 +182,7 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (error instanceof PlanDocumentError || error instanceof AgentConfigConflictError) {
     return { status: 409, message: error.message };
   }
-  if (error instanceof MessageConflictError || error instanceof ConversationBusyError) {
+  if (error instanceof MessageConflictError) {
     return { status: 409, message: error.message };
   }
   return { status: 500, message: 'The server hit an unexpected error. Check the server log.' };

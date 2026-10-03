@@ -22,6 +22,7 @@ import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
+import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
 import { taskForNewRun } from './tasks.ts';
@@ -74,7 +75,10 @@ const summaryQuery = `
       r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
       false
     ) AS unread,
-    COALESCE(r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL, false) AS needs_input,
+    COALESCE(
+      r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
+    ) AS needs_input,
+    fl.flag_title,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_provider,
     p.pending_pr_feedback,
@@ -107,7 +111,12 @@ const summaryQuery = `
     ) m ON true
     WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
     ORDER BY a.created_at, a.id LIMIT 1
-  ) p ON true`;
+  ) p ON true
+  LEFT JOIN LATERAL (
+    SELECT f.id AS flag_id, f.title AS flag_title FROM rail_flags f
+    WHERE f.conversation_id = c.id AND f.status = 'open'
+    ORDER BY f.created_at DESC LIMIT 1
+  ) fl ON true`;
 
 export class ConversationNotFoundError extends Error {
   constructor(id: string) {
@@ -238,6 +247,7 @@ export async function getConversationDetail(
     continuedIn,
     queue,
     memberMessages,
+    railFlags: await listRailFlags(db, id),
   };
 }
 

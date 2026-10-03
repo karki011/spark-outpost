@@ -1,0 +1,60 @@
+.rail-flag {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--warn) 8%, var(--panel));
+  font-size: 13px;
+  animation: rise 0.2s var(--out) both;
+}
+.rail-flag.settled {
+  border-color: var(--line);
+  background: var(--panel);
+}
+.rail-flag-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.rail-flag-h svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--warn);
+}
+.rail-flag-h b {
+  font-weight: 500;
+}
+.rail-flag-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.rail-flag-err {
+  margin: 6px 0 0;
+  color: var(--danger);
+}
+.rail-original {
+  margin-top: 8px;
+}
+.rail-original summary {
+  cursor: pointer;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.rail-original pre {
+  max-height: 200px;
+  margin: 6px 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--code);
+  font-size: 12px;
+}
+.rail-flag-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}

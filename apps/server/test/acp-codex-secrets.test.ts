@@ -75,7 +75,6 @@ describe.skipIf(process.platform !== 'darwin')(
       async (mode) => {
         const text = await reply(`${READ_SECRETS}; echo made > made.txt && cat made.txt`, {
           mode: 'do',
-          worktree: true,
           settings: { method: 'cli', model: null, modelLabel: null, effort: null, mode },
           approvals: neverAsked,
         });

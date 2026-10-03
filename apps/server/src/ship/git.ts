@@ -289,13 +289,39 @@ export async function harnessCommitsToPush(
     .filter(Boolean);
 }
 
-export async function pushBranch(root: string, remote: string, branch: string): Promise<void> {
+export interface GitAccess {
+  env?: Record<string, string>;
+  config?: readonly string[];
+}
+
+export async function pushBranch(
+  root: string,
+  remote: string,
+  branch: string,
+  access: GitAccess = {},
+): Promise<void> {
   const ref = `refs/heads/${branch}`;
   await gitOut(
     root,
-    ['push', '--set-upstream', remote, `${ref}:${ref}`],
+    [...(access.config ?? []), 'push', '--set-upstream', remote, `${ref}:${ref}`],
     `Pushing ${branch}`,
     SLOW_MS,
+    access.env,
+  );
+}
+
+export async function listRemoteHeads(
+  root: string,
+  remote: string,
+  access: GitAccess = {},
+): Promise<void> {
+  const pushUrl = (await gitMaybe(root, ['remote', 'get-url', '--push', remote])) ?? remote;
+  await gitOut(
+    root,
+    [...(access.config ?? []), 'ls-remote', '--heads', pushUrl],
+    `Reaching ${remote}`,
+    QUICK_MS * 2,
+    access.env,
   );
 }
 

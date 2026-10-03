@@ -42,7 +42,7 @@ async function sendAndKeep(page: Page) {
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept: you approved every edit.',
+    'Kept automatically.',
     { timeout: 20_000 },
   );
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });

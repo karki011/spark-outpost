@@ -11,6 +11,7 @@ export interface ChainRow {
   sizeBytes: number;
   truncated: boolean;
   payload: unknown;
+  unreviewed?: boolean;
 }
 
 export interface HashedRow extends ChainRow {
@@ -49,6 +50,7 @@ export function rowHash(prevHash: string | null, row: ChainRow): string {
     sizeBytes: row.sizeBytes,
     truncated: row.truncated,
     payload: row.payload,
+    unreviewed: row.unreviewed === true ? true : undefined,
   });
   return createHash('sha256')
     .update(prevHash ?? '')

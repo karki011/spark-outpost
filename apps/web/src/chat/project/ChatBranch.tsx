@@ -1,6 +1,8 @@
 import './chat-branch.css';
 import { useId } from 'react';
-import type { ChatBranch as Branch } from '@spark-outpost/contracts';
+import { useQuery } from '@tanstack/react-query';
+import { PR_ROUTE_LABELS, type ChatBranch as Branch } from '@spark-outpost/contracts';
+import { shipApi, shipKeys } from '../../ship/ship-api.ts';
 import { BranchIcon, ChevronIcon, CopyIcon, FolderIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
@@ -12,6 +14,18 @@ interface ChatBranchProps {
   conversationId: string;
   branch: Branch;
   checkoutBranch: string | null;
+}
+
+const ROUTE_STALE_MS = 5 * 60_000;
+
+function usePrRouteLabel(conversationId: string): string | null {
+  const route = useQuery({
+    queryKey: shipKeys.prRoute(conversationId),
+    queryFn: () => shipApi.prRoute(conversationId),
+    staleTime: ROUTE_STALE_MS,
+  });
+  const info = route.data?.info;
+  return info ? PR_ROUTE_LABELS[info.route] : null;
 }
 
 const BRANCH_LOCK_HINT = 'Where this chat works is set once it has a branch.';
@@ -31,7 +45,9 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
   const openFolder = useOpenWorktree(conversationId);
   const bring = useBringChanges(conversationId);
   const copy = useCopyFeedback();
-  const tip = useTooltip(branchTip(branch), { side: 'top' });
+  const routeLabel = usePrRouteLabel(conversationId);
+  const tipText = routeLabel ? `${branchTip(branch)} · ${routeLabel}` : branchTip(branch);
+  const tip = useTooltip(tipText, { side: 'top' });
   const kind = branch.worktree ? 'worktree' : 'my files';
   const into = checkoutBranch ?? 'my files';
   const failure = openFolder.error ?? bring.error;

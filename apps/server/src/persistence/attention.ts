@@ -11,6 +11,7 @@ export interface PendingApprovalRow {
   pending_asker: string | null;
   pending_provider: string | null;
   pending_pr_feedback?: boolean | null;
+  flag_title?: string | null;
 }
 
 const JEV = 'Jev';
@@ -68,9 +69,14 @@ function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {
   return null;
 }
 
+function flagAttention(row: PendingApprovalRow): ConversationAttention | null {
+  if (!row.flag_title) return null;
+  return { kind: 'flag', title: row.flag_title, agentName: null, provider: null, approvalId: null };
+}
+
 export function toAttention(row: PendingApprovalRow): ConversationAttention | null {
   const kind = row.pending_kind;
-  if (!row.pending_id || !kind) return null;
+  if (!row.pending_id || !kind) return flagAttention(row);
   const attention = ATTENTION_BY_APPROVAL_KIND[kind];
   return {
     kind: attention,

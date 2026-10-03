@@ -12,6 +12,7 @@ import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
 import { messageSourceSchema, runSchema, runStatusSchema, startAsSchema } from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
+import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
 
 export const MESSAGE_MAX_LENGTH = 20_000;
@@ -29,7 +30,14 @@ export const messageSchema = z.object({
 });
 export type Message = z.infer<typeof messageSchema>;
 
-export const attentionKindSchema = z.enum(['permission', 'input', 'plan', 'review', 'stuck']);
+export const attentionKindSchema = z.enum([
+  'permission',
+  'input',
+  'plan',
+  'review',
+  'stuck',
+  'flag',
+]);
 export type AttentionKind = z.infer<typeof attentionKindSchema>;
 
 export const conversationAttentionSchema = z.object({
@@ -117,6 +125,7 @@ export const conversationDetailSchema = z.object({
   continuedIn: z.array(continuationSchema).optional(),
   queue: z.array(queuedMessageSchema).optional(),
   memberMessages: z.array(memberMessageSchema).optional(),
+  railFlags: z.array(railFlagSchema).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 
