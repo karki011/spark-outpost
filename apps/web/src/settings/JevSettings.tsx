@@ -9,6 +9,10 @@ const DIFFS_INFO = {
       text: 'Verified. If Jev finds it incomplete, a stronger model redoes it once.',
     },
     { label: 'Review findings', text: 'Jev uses the diff to tell which ones need a fix.' },
+    {
+      label: 'File previews',
+      text: 'Short redacted excerpts of the likeliest files, to compare file rankings. Nothing changes for agents.',
+    },
   ],
 };
 
@@ -26,7 +30,7 @@ export function JevSettings({ profile, jevConnected }: JevSettingsProps) {
       doc={{ page: 'jev', heading: 'check-changes-with-jev' }}
       hint={
         jevConnected
-          ? 'Diffs go to TypeSafe and are never used for training.'
+          ? 'Diffs and short file previews go to TypeSafe and are never used for training.'
           : 'Connect Jev to use this.'
       }
       disabled={!jevConnected}

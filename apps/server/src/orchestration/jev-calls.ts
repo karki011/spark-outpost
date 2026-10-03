@@ -42,10 +42,16 @@ function failureMessage(error: unknown, signal: AbortSignal): string {
   return `Jev failed unexpectedly (${message || errorName(error)}).`;
 }
 
+export interface JevCallOptions {
+  timeoutMs: number;
+  pauseOnFailure: boolean;
+}
+
 export async function callJev(
   access: JevAccess | null,
   build: () => IntakeQuestions,
   signal: AbortSignal,
+  options?: JevCallOptions,
 ): Promise<JevCall> {
   if (!access) return notConnected;
   const base = { ...notConnected, model: requestModel(access.model) };
@@ -62,7 +68,8 @@ export async function callJev(
         apiKey,
         model: access.model,
         fetch: access.deps.fetch,
-        timeoutMs: access.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS,
+        timeoutMs: options?.timeoutMs ?? access.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS,
+        ...(options ? { pauseOnFailure: options.pauseOnFailure } : {}),
       },
       asked,
       signal,

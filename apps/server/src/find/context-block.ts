@@ -61,7 +61,7 @@ const STATUS_TEXT: Record<FindStatus, string> = {
 const HINT = 'Likely code (a ranking hint, not a limit)';
 const TAG = /<(\/?)code_evidence>/gi;
 
-function safeLine(text: string): string {
+export function safeLine(text: string): string {
   const clipped =
     text.length > CODE_CONTEXT.lineChars ? `${text.slice(0, CODE_CONTEXT.lineChars)}…` : text;
   return clipped.replace(TAG, '<$1code-evidence>');

@@ -85,12 +85,33 @@ function variantLabel(raw: unknown) {
   };
 }
 
-type RankColumns = Pick<RoutingLabelRow, 'scan_files' | 'predicted_files'>;
+type RankColumns = Pick<RoutingLabelRow, 'scan_files' | 'predicted_files' | 'content_files'>;
 
 export function filesAtK(row: RankColumns, changed: readonly string[]) {
   return {
     scan: atK(row.scan_files ?? [], changed),
     predicted: atK(row.predicted_files ?? [], changed),
+    content: row.content_files ? atK(row.content_files, changed) : null,
+  };
+}
+
+const contentRankSchema = z.object({
+  skipped: z.string().nullable().optional().catch(undefined),
+  sent: z.array(z.string()).optional().catch(undefined),
+  cached: z.array(z.string()).optional().catch(undefined),
+  buildMs: optionalNumber,
+});
+
+function contentLabel(row: RoutingLabelRow) {
+  const answer = parsed(contentRankSchema, row.content_rank);
+  if (!answer) return null;
+  return {
+    status: row.content_status,
+    skipped: answer.skipped ?? null,
+    filesSent: answer.sent?.length ?? 0,
+    filesCached: answer.cached?.length ?? 0,
+    tokens: row.content_tokens,
+    buildMs: answer.buildMs ?? null,
   };
 }
 
@@ -119,6 +140,8 @@ export function toLabel(row: RoutingLabelRow) {
     scan: { status: row.scan_status, ms: row.scan_ms },
     scanFiles: row.scan_files ?? [],
     predictedFiles: row.predicted_files ?? [],
+    contentFiles: row.content_files,
+    contentRank: contentLabel(row),
     changedFiles: known ? changed : null,
     files: known ? filesAtK(row, changed) : null,
     rankJev: row.rank_jev,

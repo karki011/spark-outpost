@@ -2,6 +2,7 @@ import { renderJevState } from '../codescan/jev-state.ts';
 import type { ScanOutcome } from '../codescan/scanner.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { track } from './observe.ts';
+import { agentRanking, rankByContent } from './observe-content.ts';
 import { rankFiles, type Ranking } from './observe-rank.ts';
 import { observeRouting } from './observe-route.ts';
 import type { Session } from './session.ts';
@@ -100,6 +101,11 @@ export function observeScan(
     s.scanReport = outcome.report;
   });
   const ranking = scanning.then((outcome) => rankFiles(s, outcome.report));
-  s.ranking = ranking.catch(() => null);
+  const content = scanning.then((outcome) => rankByContent(s, outcome.report));
+  s.ranking = agentRanking(ranking, content).catch(() => null);
+  track(
+    s,
+    content.then(() => undefined),
+  );
   track(s, recordScan(s, scanning, ranking));
 }

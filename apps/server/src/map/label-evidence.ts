@@ -27,7 +27,7 @@ export function sendable(path: string, ignore: readonly string[]): boolean {
   return !isSecretPath(path, ignore) && !isSkipped(path);
 }
 
-function fileBlock(path: string, text: string, budgetTokens: number): string {
+export function fileBlock(path: string, text: string, budgetTokens: number): string {
   const limit = budgetTokens * CHARS_PER_TOKEN;
   const clean = storableText(redactText(text));
   const body =

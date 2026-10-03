@@ -140,7 +140,7 @@ test('the rules pick models, so there is no frontier switch, and Jev can stop ch
   const diffs = providers.getByRole('switch', { name: 'Check changes with Jev' });
   await expect(diffs).toBeChecked();
   await expect(diffs).toHaveAccessibleDescription(
-    'Diffs go to TypeSafe and are never used for training.',
+    'Diffs and short file previews go to TypeSafe and are never used for training.',
   );
   const info = providers.getByRole('button', { name: 'More about Check changes with Jev' });
   await expect(info).toHaveAccessibleDescription(

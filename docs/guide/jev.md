@@ -27,7 +27,9 @@ To connect it, see [Connect Jev](meet-jev.md).
 
 The switch is on Jev's screen in **Settings → AI providers**. It's on by default. With it on, Jev also receives code diffs: it watches proposed edits and verifies the final diff. If Jev finds a change incomplete, a stronger model redoes it once.
 
-Turn it off to keep diffs on your computer.
+Jev also reads short previews of the likeliest files, only to compare file rankings. Agents get the same files as before.
+
+Turn it off to keep diffs and file previews on your computer.
 
 ![Settings on Jev's screen, with Check changes with Jev](images/jev-advisor-light.png)
 
@@ -37,7 +39,7 @@ Turn it off to keep diffs on your computer.
 | ---------------------------------------------------------------------------------- | ------------------------------- |
 | Your request, the previous request and a short task summary                        | Keys and tokens                 |
 | The text of files you attach                                                       | Tool output                     |
-| Diffs, with **Check changes with Jev** on                                          | Your full chat history          |
+| Diffs and short file previews, with **Check changes with Jev** on                  | Your full chat history          |
 | Some file contents for the Map. See [what Jev reads](map-areas.md#what-jev-reads). | Secret and `.sparkignore` files |
 
 Everything is redacted first. TypeSafe doesn't train on it.

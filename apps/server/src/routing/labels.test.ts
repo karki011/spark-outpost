@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RoutingLabelRow } from '../persistence/routing-labels.ts';
-import { atK, toLabel } from './labels.ts';
+import { atK, filesAtK, toLabel } from './labels.ts';
 
 describe('file prediction at k', () => {
   it('counts hits in the first five predictions against the files that changed', () => {
@@ -18,6 +18,49 @@ describe('file prediction at k', () => {
   it('has no ratio without predictions or changes', () => {
     expect(atK([], ['a'])).toEqual({ hits: 0, precision: null, recall: 0 });
     expect(atK(['a'], [])).toEqual({ hits: 0, precision: 0, recall: null });
+  });
+});
+
+describe('content ranking next to the current one', () => {
+  const changed = ['b', 'z'];
+
+  it('scores the content ranking against the same changed files', () => {
+    const at = filesAtK(
+      { scan_files: ['a', 'b'], predicted_files: ['a', 'c'], content_files: ['b', 'z'] },
+      changed,
+    );
+    expect(at.predicted).toEqual({ hits: 0, precision: 0, recall: 0 });
+    expect(at.content).toEqual({ hits: 2, precision: 1, recall: 1 });
+  });
+
+  it('has no content score for a turn without a content ranking', () => {
+    const at = filesAtK(
+      { scan_files: ['a'], predicted_files: ['a'], content_files: null },
+      changed,
+    );
+    expect(at.content).toBeNull();
+  });
+
+  it('labels what the content ranking sent and cost', () => {
+    const label = toLabel({
+      created_at: new Date('2026-10-03T00:00:00Z'),
+      jev_cost_usd: 0,
+      changed_files: changed,
+      content_files: ['b'],
+      content_status: 'answered',
+      content_tokens: 4200,
+      content_rank: { skipped: null, sent: ['a', 'b'], cached: ['c'], buildMs: 12 },
+    } as unknown as RoutingLabelRow);
+    expect(label.contentFiles).toEqual(['b']);
+    expect(label.files?.content).toEqual({ hits: 1, precision: 1, recall: 0.5 });
+    expect(label.contentRank).toEqual({
+      status: 'answered',
+      skipped: null,
+      filesSent: 2,
+      filesCached: 1,
+      tokens: 4200,
+      buildMs: 12,
+    });
   });
 });
 
