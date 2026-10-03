@@ -2,14 +2,6 @@ import type { ConversationSummary, UpdateConversationRequest } from '@spark-outp
 import { ConversationNotFoundError, getSummary } from './conversations.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 
-const ACTIVE_RUN_STATUSES = ['queued', 'running', 'awaiting_approval'];
-
-export class ConversationBusyError extends Error {
-  constructor() {
-    super('Stop the reply that is still running before deleting this chat.');
-  }
-}
-
 function flag(value: boolean | undefined): boolean | null {
   return value === undefined ? null : value;
 }
@@ -79,11 +71,6 @@ export async function deleteConversation(db: Db, workspaceId: string, id: string
       [id, workspaceId],
     );
     if (!found.rowCount) throw new ConversationNotFoundError(id);
-    const active = await client.query(
-      'SELECT 1 FROM runs WHERE conversation_id = $1 AND status = ANY($2::text[]) LIMIT 1',
-      [id, ACTIVE_RUN_STATUSES],
-    );
-    if (active.rowCount) throw new ConversationBusyError();
     await client.query('DELETE FROM conversations WHERE id = $1', [id]);
   });
 }

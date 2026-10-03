@@ -30,6 +30,7 @@ export interface TestAppOptions {
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
   diagnostics?: AppOptions['diagnostics'];
+  deleteSettleMs?: number;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -75,6 +76,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,
+    ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
   });

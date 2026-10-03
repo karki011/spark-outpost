@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type {
-  ConversationDetail,
-  ConversationSummary,
-  Project,
-  UpdateConversationRequest,
+import {
+  isTerminalRunStatus,
+  type ConversationDetail,
+  type ConversationSummary,
+  type Project,
+  type UpdateConversationRequest,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectsApi } from '../api/projects.ts';
@@ -180,6 +181,34 @@ export function useChatActions({
     });
   };
 
+  const isBusy = (chat: ConversationSummary) => {
+    const latest = client
+      .getQueryData<ConversationSummary[]>(queryKeys.conversations)
+      ?.find((item) => item.id === chat.id)?.latestRun;
+    const run = latest === undefined ? chat.latestRun : latest;
+    return run !== null && !isTerminalRunStatus(run.status);
+  };
+
+  const finishDelete = (chat: ConversationSummary) => {
+    api.deleteConversation(chat.id).then(
+      () => {
+        dropSummary(client, chat.id);
+        setDeletingId(chat.id, false);
+      },
+      (error: unknown) => {
+        setDeletingId(chat.id, false);
+        void refreshLists(client);
+        toaster.show({
+          text: `Could not delete ${chat.title}. ${message(error)}`,
+          retry: () => {
+            setDeletingId(chat.id, true);
+            finishDelete(chat);
+          },
+        });
+      },
+    );
+  };
+
   const remove = (chat: ConversationSummary) => {
     setDeletingId(chat.id, true);
     if (chat.id === selectedId) {
@@ -188,20 +217,12 @@ export function useChatActions({
       else onNew();
     }
     toaster.show({
-      text: `Deleted ${chat.title}`,
+      text: isBusy(chat) ? `Stopping and deleting ${chat.title}…` : `Deleted ${chat.title}`,
       undo: () => {
         setDeletingId(chat.id, false);
         flash(chat.id);
       },
-      onSettle: () => {
-        api.deleteConversation(chat.id).then(
-          () => {
-            dropSummary(client, chat.id);
-            setDeletingId(chat.id, false);
-          },
-          (error: unknown) => fail(error, () => setDeletingId(chat.id, false)),
-        );
-      },
+      onSettle: () => finishDelete(chat),
     });
   };
 
