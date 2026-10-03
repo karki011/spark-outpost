@@ -179,8 +179,17 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     expect(inAuto(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_WRITE_REASON });
   });
 
-  it('asks when the text lands somewhere Spark cannot resolve', async () => {
+  it('follows the mode when the text lands at a variable path', async () => {
     const command = heredoc('cat > "$OUT"');
+    const shell = await parseShell(command);
+    expect(decide('auto', run(command), NO_RUN_RULES, [], { shell })).toEqual({
+      verdict: 'allow',
+      by: 'level',
+    });
+  });
+
+  it('asks when the literal part of a variable path leaves the project', async () => {
+    const command = heredoc('cat > "../$OUT"');
     const shell = await parseShell(command);
     expect(decide('auto', run(command), NO_RUN_RULES, [], { shell })).toEqual({
       verdict: 'ask',

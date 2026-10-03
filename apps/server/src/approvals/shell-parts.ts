@@ -158,16 +158,42 @@ const QUIET_TARGETS = new Set(['/dev/null', '/dev/stdout', '/dev/stderr']);
 const DUPLICATES = /^\d*[<>]&$|^&>$/;
 
 export type RedirectKind =
-  'quiet' | 'reads' | 'writes_inside' | 'writes_temp' | 'writes_outside' | 'secret';
+  | 'quiet'
+  | 'reads'
+  | 'reads_unknown'
+  | 'writes_inside'
+  | 'writes_unknown'
+  | 'writes_temp'
+  | 'writes_outside'
+  | 'secret';
+
+const UNKNOWN_SEGMENT = 'spark-unknown';
+
+function unknownKind(operator: string): RedirectKind {
+  return operator.includes('<') ? 'reads_unknown' : 'writes_unknown';
+}
+
+function placedKind(operator: string, resolved: string, place: PartPlace): RedirectKind {
+  if (place.isSecret(resolved)) return 'secret';
+  if (operator === '<') return place.inside(resolved) ? 'reads' : 'secret';
+  if (place.inside(resolved)) return 'writes_inside';
+  return inTempDir(resolved) ? 'writes_temp' : 'writes_outside';
+}
+
+function dynamicKind(operator: string, text: string, place: PartPlace): RedirectKind {
+  const sample = text.replaceAll(DYNAMIC, UNKNOWN_SEGMENT);
+  const resolved = resolvePart(sample, place);
+  if (place.isSecret(resolved)) return 'secret';
+  if (text.startsWith(DYNAMIC)) return unknownKind(operator);
+  const kind = placedKind(operator, resolved, place);
+  return kind === 'reads' || kind === 'writes_inside' ? unknownKind(operator) : kind;
+}
 
 export function redirectKind(redirect: ShellRedirect, place: PartPlace): RedirectKind {
   const { operator, target } = redirect;
   if (target && !target.dynamic && QUIET_TARGETS.has(target.text)) return 'quiet';
   if (DUPLICATES.test(operator) && target && /^(?:\d+|-)$/.test(target.text)) return 'quiet';
-  if (!target || target.dynamic) return operator.includes('<') ? 'secret' : 'writes_outside';
-  const resolved = resolvePart(target.text, place);
-  if (place.isSecret(resolved)) return 'secret';
-  if (operator === '<') return place.inside(resolved) ? 'reads' : 'secret';
-  if (place.inside(resolved)) return 'writes_inside';
-  return inTempDir(resolved) ? 'writes_temp' : 'writes_outside';
+  if (!target) return unknownKind(operator);
+  if (target.dynamic) return dynamicKind(operator, target.text, place);
+  return placedKind(operator, resolvePart(target.text, place), place);
 }
