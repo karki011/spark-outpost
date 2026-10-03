@@ -158,10 +158,14 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       category={run.category}
       advice={detail.advice?.[run.id]}
       following={child?.following ?? run.following}
-      status={log ? <StepToggle log={log} label={turnHeading(log.views, state, seconds)} /> : null}
+      status={
+        log ? (
+          <StepToggle log={log} label={turnHeading(log.views, state, seconds, log.open)} />
+        ) : null
+      }
     >
-      {log?.open && (
-        <div className="steps open">
+      {log && (
+        <div className={log.open ? 'steps open' : 'steps'}>
           <StepList log={log} />
         </div>
       )}

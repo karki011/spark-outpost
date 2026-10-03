@@ -8,6 +8,7 @@
   position: absolute;
   inset: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
   padding: 4px 16px 32px;
 }
 
@@ -196,6 +197,35 @@
   transform: rotate(90deg);
 }
 
+.steps-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.24s var(--out),
+    opacity 0.2s var(--out),
+    visibility 0s 0.24s;
+}
+
+.steps.open > .steps-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.steps-body > ul {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps-body {
+    transition: none;
+  }
+}
+
 .steps ul {
   list-style: none;
   margin: 4px 0 0 6px;
@@ -341,6 +371,10 @@
 
 .ai-head + .steps {
   margin-top: 2px;
+}
+
+.ai-head + .steps:not(.open) {
+  margin: 0;
 }
 
 .col > section:not(:last-child) .turn-foot > :is(.run-meta, .msg-actions) {

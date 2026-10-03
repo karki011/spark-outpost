@@ -22,13 +22,20 @@ function heading(steps: StepView[], state: TurnState, seconds: number | null) {
   return seconds ? `Worked for ${seconds}s` : count;
 }
 
+function currentStep(steps: readonly StepView[]): string | null {
+  const step = steps.findLast((candidate) => candidate.status !== 'done') ?? steps.at(-1);
+  return step ? friendlyStep(step.name).replaceAll('`', '') : null;
+}
+
 export function turnHeading(
   steps: readonly StepView[],
   state: TurnState,
   seconds: number | null,
+  open = true,
 ): string {
   if (state === 'done' && seconds) return `worked for ${seconds}s`;
-  return stepCount(steps);
+  const current = state === 'working' && !open ? currentStep(steps) : null;
+  return current ? `${current} · ${stepCount(steps)}` : stepCount(steps);
 }
 
 export interface StepLog {
@@ -44,7 +51,7 @@ export function useStepLog(steps: readonly RunStep[], state: TurnState): StepLog
   const [choice, setChoice] = useState<boolean | null>(null);
   const listId = useId();
   if (steps.length === 0) return null;
-  const open = choice ?? working;
+  const open = choice ?? false;
   return { open, listId, views: viewSteps(steps), working, toggle: () => setChoice(!open) };
 }
 
@@ -86,16 +93,18 @@ function StepIcon({ step, working }: { step: StepView; working: boolean }) {
 
 export function StepList({ log }: { log: StepLog }) {
   return (
-    <ul id={log.listId}>
-      {log.views.map((step, index) => (
-        <li key={`${step.name}-${index}`}>
-          <StepIcon step={step} working={log.working} />
-          <span>
-            <StepName name={step.name} />
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div className="steps-body" id={log.listId} inert={!log.open}>
+      <ul>
+        {log.views.map((step, index) => (
+          <li key={`${step.name}-${index}`}>
+            <StepIcon step={step} working={log.working} />
+            <span>
+              <StepName name={step.name} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -111,7 +120,7 @@ export function WorkLog({ steps, state, seconds = null }: WorkLogProps) {
   return (
     <div className={log.open ? 'steps open' : 'steps'}>
       <StepToggle log={log} label={heading(log.views, state, seconds)} />
-      {log.open && <StepList log={log} />}
+      <StepList log={log} />
     </div>
   );
 }

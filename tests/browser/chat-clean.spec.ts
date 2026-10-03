@@ -86,8 +86,15 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await openChats(page);
 
   await expect(head(page).locator('.mood')).toHaveText('working');
-  const toggle = head(page).getByRole('button', { name: '4 steps' });
+  const toggle = head(page).locator('.steps-head');
+  await expect(toggle).toHaveText('Checking pull requests · 4 steps');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.steps li').first()).toBeHidden();
+  const box = await page.locator('.col').boundingBox();
+  await toggle.click();
+  await expect(toggle).toHaveText('4 steps');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect((await page.locator('.col').boundingBox())?.x).toBe(box?.x);
   await expect(page.locator('.steps li')).toHaveText([
     'Using Opus 5.5 · medium effort',
     'Looking at projects',
@@ -101,7 +108,7 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   await shots(page, 'running');
 
   await toggle.click();
-  await expect(page.locator('.steps li')).toHaveCount(0);
+  await expect(page.locator('.steps li').first()).toBeHidden();
 });
 
 test('a finished answer keeps one quiet meta row and no plan or Jev lines', async ({ page }) => {
