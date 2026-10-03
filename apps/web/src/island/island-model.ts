@@ -9,6 +9,7 @@ export interface Card {
   kind: CardKind;
   chat: ConversationSummary;
   approval: Approval | null;
+  loading: boolean;
 }
 
 export interface Moment {
@@ -36,13 +37,26 @@ export function islandView(inputs: IslandInputs): IslandView {
   if (inputs.note) return { kind: 'note' };
   if (inputs.panel) return { kind: 'panel', panel: inputs.panel };
   const total = inputs.cards.length;
-  const reviewed = inputs.cards.findIndex((card) => cardKey(card) === inputs.review);
+  const reviewed = inputs.cards.findIndex((card) => card.chat.id === inputs.review);
   if (reviewed >= 0) {
     return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
   }
   const first = inputs.cards[0];
   if (first && inputs.nudge) return { kind: 'nudge', card: first, total };
   return { kind: 'peek' };
+}
+
+export type QuickShortcutTarget =
+  { kind: 'review'; chatId: string } | { kind: 'close' } | { kind: 'quick' };
+
+export function quickShortcutTarget(panel: Panel | null, view: IslandView): QuickShortcutTarget {
+  if (panel) return { kind: 'close' };
+  if (view.kind !== 'card' && view.kind !== 'nudge') return { kind: 'quick' };
+  const { card } = view;
+  if (card.loading || card.kind === 'approval' || card.kind === 'force') {
+    return { kind: 'review', chatId: card.chat.id };
+  }
+  return { kind: 'quick' };
 }
 
 export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
@@ -137,7 +151,12 @@ export function pendingCards(
       const wanted = chat.attention?.approvalId;
       const approval =
         pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
-      return { kind: cardKind(chat, approval), chat, approval };
+      return {
+        kind: cardKind(chat, approval),
+        chat,
+        approval,
+        loading: !approvalsByChat.has(chat.id),
+      };
     })
     .filter((card) => !snoozed.has(cardKey(card)))
     .sort((a, b) => cardTime(a).localeCompare(cardTime(b)));

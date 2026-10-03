@@ -266,7 +266,7 @@ export function CardView({
 
   useEffect(() => {
     if (focusSignal > 0) cardRef.current?.focus({ preventScroll: true });
-  }, [focusSignal]);
+  }, [focusSignal, card.loading]);
 
   const allow = approval ? findOption(approval, 'allow_once') : undefined;
   const deny = approval
@@ -281,7 +281,7 @@ export function CardView({
       ? projectAllowOption(approval.options)
       : undefined;
   const send = (option: ApprovalOption | undefined, scope: ApprovalScope = 'once') => {
-    if (!option || !armed || decide.isPending) return;
+    if (!option || !armed || decide.isPending || card.loading) return;
     decide.mutate({ option, scope });
   };
 
@@ -321,6 +321,12 @@ export function CardView({
         expression="unsure"
       />
       <div className="isl-ttl">{title}</div>
+      {card.loading && (
+        <div className="isl-skl" aria-hidden="true">
+          <i />
+          <i style={{ width: '58%' }} />
+        </div>
+      )}
       {approval && card.kind !== 'question' && card.kind !== 'open' && (
         <Target approval={approval} />
       )}

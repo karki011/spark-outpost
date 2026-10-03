@@ -43,6 +43,7 @@ import {
   sessionState,
   pendingCards,
   peekRow,
+  quickShortcutTarget,
   rankedSessions,
   waitingCount,
   type Card,
@@ -264,16 +265,11 @@ export function IslandApp() {
       }
       return;
     }
-    if (
-      !panel &&
-      (view.kind === 'card' || view.kind === 'nudge') &&
-      (view.card.kind === 'approval' || view.card.kind === 'force')
-    ) {
-      setReview(cardKey(view.card));
+    const target = quickShortcutTarget(panel, view);
+    if (target.kind === 'review') {
+      setReview(target.chatId);
       setFocusSignal((value) => value + 1);
-      return;
-    }
-    if (panel) closePanel();
+    } else if (target.kind === 'close') closePanel();
     else openPanel('quick');
   };
 

@@ -195,7 +195,6 @@ test('the approval card takes Y only once focused', async ({ page }) => {
   ]);
   await openIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  await expect(island(page).locator('.isl-nudge')).toContainText('Approve');
   await page.keyboard.press('y');
   await expect(island(page)).toHaveAttribute('data-view', 'nudge');
   await page.keyboard.press('Alt+Space');

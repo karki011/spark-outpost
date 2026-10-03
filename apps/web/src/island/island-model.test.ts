@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { fastAnswer } from './ask-fast-path.ts';
 import {
-  cardKey,
   hoverOpens,
   islandView,
   newMoments,
@@ -10,7 +9,9 @@ import {
   peekOffset,
   peekRow,
   pendingCards,
+  quickShortcutTarget,
   runStatuses,
+  type Card,
   type IslandInputs,
 } from './island-model.ts';
 import { crewQuirk, scoutMoodFor } from './island-mood.ts';
@@ -55,7 +56,7 @@ const quiet: IslandInputs = {
 
 describe('island state machine', () => {
   it('rests whatever is running or waiting, and hovering opens the full panel', () => {
-    const card = { kind: 'approval' as const, chat: chat('a'), approval: null };
+    const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     expect(islandView(quiet).kind).toBe('peek');
     expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
     expect(hoverOpens(islandView(quiet))).toEqual({ kind: 'home' });
@@ -65,19 +66,19 @@ describe('island state machine', () => {
     });
     expect(hoverOpens(islandView({ ...quiet, panel: 'quick' }))).toBeNull();
     expect(hoverOpens(islandView({ ...quiet, note: true }))).toBeNull();
-    expect(hoverOpens(islandView({ ...quiet, cards: [card], review: cardKey(card) }))).toBeNull();
+    expect(hoverOpens(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBeNull();
   });
 
   it('nudges for a waiting card only when allowed, and opens it on review', () => {
-    const first = { kind: 'approval' as const, chat: chat('a'), approval: null };
-    const second = { kind: 'question' as const, chat: chat('b'), approval: null };
+    const first = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
+    const second = { kind: 'question' as const, chat: chat('b'), approval: null, loading: false };
     const cards = [first, second];
     expect(islandView({ ...quiet, cards, nudge: true })).toEqual({
       kind: 'nudge',
       card: first,
       total: 2,
     });
-    expect(islandView({ ...quiet, cards, review: cardKey(second) })).toEqual({
+    expect(islandView({ ...quiet, cards, review: second.chat.id })).toEqual({
       kind: 'card',
       card: second,
       index: 2,
@@ -229,5 +230,53 @@ describe('Ask Spark fast path', () => {
     expect(fastAnswer('How is the upload chat going?', state)).toBeNull();
     expect(fastAnswer('What did I spend last week?', state)).toBeNull();
     expect(fastAnswer('Which provider is cheapest?', state)).toBeNull();
+  });
+
+  describe('the quick shortcut target', () => {
+    const waiting = chat('a', { needsInput: true });
+    const loadingCard: Card = {
+      kind: 'open' as const,
+      chat: waiting,
+      approval: null,
+      loading: true,
+    };
+    const approvalCard: Card = {
+      kind: 'approval' as const,
+      chat: waiting,
+      approval: null,
+      loading: false,
+    };
+    const openCard: Card = { kind: 'open' as const, chat: waiting, approval: null, loading: false };
+    const nudge = (card: Card) => ({ kind: 'nudge' as const, card, total: 1 });
+    const reviewCard = (card: Card) => ({
+      kind: 'card' as const,
+      card,
+      index: 1,
+      total: 1,
+    });
+
+    it('reviews a needs-you item whose details are still loading instead of starting a chat', () => {
+      expect(quickShortcutTarget(null, nudge(loadingCard))).toEqual({
+        kind: 'review',
+        chatId: 'a',
+      });
+      expect(quickShortcutTarget(null, reviewCard(loadingCard))).toEqual({
+        kind: 'review',
+        chatId: 'a',
+      });
+    });
+
+    it('reviews a loaded approval and keeps its chat id when the details arrive', () => {
+      expect(quickShortcutTarget(null, nudge(approvalCard))).toEqual({
+        kind: 'review',
+        chatId: 'a',
+      });
+    });
+
+    it('opens the composer when nothing needs approving and closes an open panel', () => {
+      expect(quickShortcutTarget(null, { kind: 'peek' })).toEqual({ kind: 'quick' });
+      expect(quickShortcutTarget(null, nudge(openCard))).toEqual({ kind: 'quick' });
+      expect(quickShortcutTarget('home', nudge(loadingCard))).toEqual({ kind: 'close' });
+    });
   });
 });
