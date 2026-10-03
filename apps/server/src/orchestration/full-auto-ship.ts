@@ -18,10 +18,11 @@ import { checksFailing } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { assumptionPrNote } from './clarify.ts';
-import { sessionReviewLine } from './critic-fix.ts';
+import { criticSkippedLine, sessionReviewLine } from './critic-fix.ts';
+import { changedLines } from './member-prompts.ts';
 import { choosePrSplit, ownWorktreePieces } from './pr-split.ts';
 import { publish, type Session } from './session.ts';
-import { lawItems } from '../laws/review.ts';
+import { lawItems, lawsNote } from '../laws/review.ts';
 import type { FlowEvent } from './transitions.ts';
 
 export const CHECKS_FAILING_NOTE = 'Checks failing';
@@ -52,7 +53,7 @@ export async function autoKeep(
 ): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
   const reason = lines.filter((line): line is string => Boolean(line)).join(' ');
-  const plain = acceptCard(changes.files, reason, null, lawItems(s));
+  const plain = acceptCard(changes.files, reason, null, lawItems(s), await changedLines(s));
   const card = { ...plain, payload: { ...plain.payload, keptBy } };
   s.checkpoints += 1;
   const kept = await insertApproval(
@@ -147,6 +148,8 @@ async function ship(s: Session, failing: boolean, separate: readonly TaskPiece[]
     s.unverified ? UNVERIFIED_NOTE : null,
     s.risky ? RISKY_PR_NOTE : null,
     s.assumption ? assumptionPrNote(s.assumption) : null,
+    criticSkippedLine(s),
+    lawsNote(s),
     ...(s.prNotes ?? []),
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);

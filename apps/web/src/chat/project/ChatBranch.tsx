@@ -5,6 +5,7 @@ import { BranchIcon, ChevronIcon, CopyIcon, FolderIcon } from '../../ui/icons.ts
 import { usePopover } from '../../ui/use-popover.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
+import { branchTip } from './place-picker-model.ts';
 import { useBringChanges, useOpenWorktree } from './use-chat-workspace.ts';
 
 interface ChatBranchProps {
@@ -30,7 +31,7 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
   const openFolder = useOpenWorktree(conversationId);
   const bring = useBringChanges(conversationId);
   const copy = useCopyFeedback();
-  const tip = useTooltip(branch.branch, { side: 'top' });
+  const tip = useTooltip(branchTip(branch), { side: 'top' });
   const kind = branch.worktree ? 'worktree' : 'my files';
   const into = checkoutBranch ?? 'my files';
   const failure = openFolder.error ?? bring.error;

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   DEFAULT_ATTENTION_SETTINGS,
   ticketSourceNames,
@@ -34,9 +33,9 @@ import {
 import { TicketsHeader } from './TicketsHeader.tsx';
 import { TicketsSkeleton } from './TicketsSkeleton.tsx';
 import { TicketViews } from './TicketViews.tsx';
-import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
+import { useTicketInbox } from './use-ticket-inbox.ts';
 import { useTicketSearch } from './use-ticket-search.ts';
 import './tickets.css';
 import './ticket-rows.css';
@@ -48,8 +47,6 @@ interface TicketsProps {
   onOpenChat: (conversationId: string) => void;
   onHome: () => void;
 }
-
-const INBOX_STALE_MS = 60_000;
 
 const SOURCE_ORDER: readonly TicketSourceId[] = ['linear', 'jira'];
 
@@ -70,17 +67,7 @@ function moveSelection(event: KeyboardEvent<HTMLElement>) {
 }
 
 export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
-  const connections = useQuery({
-    queryKey: ticketKeys.connections,
-    queryFn: ticketsApi.connections,
-  });
-  const connected = (connections.data?.connections ?? []).some((entry) => entry.keySaved);
-  const inbox = useQuery({
-    queryKey: ticketKeys.inbox,
-    queryFn: ticketsApi.inbox,
-    enabled: connected,
-    staleTime: INBOX_STALE_MS,
-  });
+  const { connections, connected, inbox } = useTicketInbox();
   const [view, setView] = useState<TicketView>('inbox');
   const [filters, setFilters] = useState<TicketFilters>(ALL_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<TicketSection>>(new Set(['done']));

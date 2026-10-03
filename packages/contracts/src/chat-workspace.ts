@@ -13,6 +13,8 @@ export const chatBranchSchema = z.object({
   worktree: z.boolean(),
   owned: z.boolean(),
   baseBranch: z.string().nullable(),
+  baseRef: z.string().nullable().default(null),
+  createdAt: z.string().nullable().default(null),
 });
 export type ChatBranch = z.infer<typeof chatBranchSchema>;
 

@@ -5,6 +5,7 @@ import {
   copiesRiskyWork,
   DESTRUCTIVE_CARD_REASON,
   keepReason,
+  keptLine,
   keepsByItself,
   MIGRATION_CARD_REASON,
   riskyChange,
@@ -111,17 +112,22 @@ describe('the migration diff', () => {
 });
 
 describe('risky migrations found after the Builder', () => {
-  it('ask to keep at Auto-edit and say why', () => {
+  it('ask to keep at Automatic only outside a worktree, and say why', () => {
     const facts = {
       checksFailing: false,
       criticUnsatisfied: false,
       riskyMigration: 'ALTER TABLE expenses DROP COLUMN note',
     };
-    expect(asksToKeep('hands-off', 2, facts)).toBe(true);
-    expect(keepReason('hands-off', facts)).toBe(
-      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`).',
+    expect(asksToKeep('hands-off', 2, facts)).toBe(false);
+    expect(keptLine(facts)).toBe(
+      'Kept automatically; worth a look: the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`). Revert undoes them.',
     );
-    expect(asksToKeep('full-auto', 2, facts)).toBe(false);
+    const outside = { ...facts, outsideWorktree: true };
+    expect(asksToKeep('hands-off', 2, outside)).toBe(true);
+    expect(keepReason('hands-off', outside)).toBe(
+      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`) and the change is in your checkout, not a worktree.',
+    );
+    expect(asksToKeep('full-auto', 2, outside)).toBe(false);
   });
 });
 
@@ -150,11 +156,19 @@ describe('keep card', () => {
     expect(asksToKeep('balanced', 0, settled)).toBe(false);
   });
 
-  it('asks at Auto-edit only when checks fail or the Critic is not satisfied', () => {
+  it('keeps at Automatic and turns failing checks and Critic concerns into a note', () => {
     expect(asksToKeep('hands-off', 2, settled)).toBe(false);
     expect(keepsByItself('hands-off', 2)).toBe(true);
-    expect(asksToKeep('hands-off', 2, { ...settled, checksFailing: true })).toBe(true);
-    expect(asksToKeep('hands-off', 2, { ...settled, criticUnsatisfied: true })).toBe(true);
+    const troubled = { ...settled, checksFailing: true, criticUnsatisfied: true };
+    expect(asksToKeep('hands-off', 2, { ...troubled, outsideWorktree: true })).toBe(false);
+    expect(keepsByItself('hands-off', 2, troubled)).toBe(true);
+    expect(keptLine(settled)).toBeNull();
+    expect(keptLine(troubled)).toBe(
+      'Kept automatically; worth a look: the checks still fail; the Critic still has concerns. Revert undoes them.',
+    );
+    expect(keptLine({ ...settled, criticSkipped: true })).toContain(
+      'the Critic was unavailable, so no AI review ran',
+    );
     expect(keepsByItself('hands-off', 0)).toBe(false);
   });
 

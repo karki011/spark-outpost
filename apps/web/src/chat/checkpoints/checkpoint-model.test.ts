@@ -6,6 +6,7 @@ import { member } from '../../crew/test-orchestration.ts';
 import {
   autoLabel,
   budgetLine,
+  changesSummary,
   checkpointQuestion,
   clarifyAnswer,
   quickPicks,
@@ -166,6 +167,19 @@ describe('checkpoint wording', () => {
     const plan = checkpoint({ kind: 'plan', question: 'Approve the plan?' });
     expect(checkpointTitle(plan.payload.checkpoint!)).toBe('Approve the plan?');
     expect(waitingLabel(plan.payload.checkpoint!)).toBe('Approve the plan');
+  });
+});
+
+describe('the keep card summary', () => {
+  it('names the files and, when known, the changed lines', () => {
+    const files = Array.from({ length: 12 }, (_, index) => ({
+      path: `src/file-${index}.ts`,
+      change: 'modified' as const,
+    }));
+    expect(changesSummary({ files, lines: { added: 340, removed: 21 } })).toBe(
+      '12 files · +340 −21',
+    );
+    expect(changesSummary({ files: files.slice(0, 1), lines: null })).toBe('1 file');
   });
 });
 

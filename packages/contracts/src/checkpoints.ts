@@ -130,6 +130,10 @@ export const checkpointPayloadSchema = z.object({
   waitsFor: z.string().nullable().default(null),
   keptBy: z.enum(INVOLVEMENT_LEVEL_IDS).nullable().default(null),
   laws: z.array(z.string()).default([]),
+  lines: z
+    .object({ added: z.number().int().nonnegative(), removed: z.number().int().nonnegative() })
+    .nullable()
+    .default(null),
   estimate: z.string().nullable().default(null),
   askAgainAt: z.number().int().nullable().default(null),
 });
