@@ -17,9 +17,9 @@ function file(path: string, change: ChangedFile['change'], text: string | null):
 }
 
 describe('pairRenames', () => {
-  it('turns a similar delete and add into one rename with the edit counts', () => {
+  it('turns a similar delete and add into one rename with the edit counts', async () => {
     const edited = body.replace('line 3\n', 'line three\n');
-    const result = pairRenames([
+    const result = await pairRenames([
       file('src/old.ts', 'deleted', body),
       file('src/new.ts', 'added', edited),
       file('README.md', 'modified', 'x\n'),
@@ -35,13 +35,13 @@ describe('pairRenames', () => {
     expect(result[1]!.path).toBe('README.md');
   });
 
-  it('leaves unrelated or empty files alone', () => {
+  it('leaves unrelated or empty files alone', async () => {
     const files = [
       file('a.ts', 'deleted', body),
       file('b.ts', 'added', 'something else entirely\n'),
       file('c.ts', 'deleted', ''),
       file('d.ts', 'added', ''),
     ];
-    expect(pairRenames(files)).toEqual(files);
+    expect(await pairRenames(files)).toEqual(files);
   });
 });

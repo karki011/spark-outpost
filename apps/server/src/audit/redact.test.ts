@@ -81,6 +81,21 @@ describe('redactText', () => {
     );
   });
 
+  it.each([
+    ['1.http://u:pw4abc@h', '1.http://u:[redacted:url_password]@h'],
+    ['x-https://u:pw4abc@h', 'x-https://u:[redacted:url_password]@h'],
+    ['123://u:pw4abc@h', '123://u:pw4abc@h'],
+  ])('finds the scheme of %s like a word-bounded scheme would', (text, expected) => {
+    expect(redactText(text)).toBe(expected);
+  });
+
+  it('scans long dashed text next to a URL in linear time', () => {
+    const text = `see https://example.com ${'a-'.repeat(200_000)}`;
+    const started = performance.now();
+    expect(redactText(text)).toBe(text);
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
   it('redacts sensitive fields inside JSON text', () => {
     expect(redactText('{"apiKey": "abc", "name": "x", "inputTokens": 5, "token":"t"}')).toBe(
       '{"apiKey": "[redacted:api_key]", "name": "x", "inputTokens": 5, "token":"[redacted:token]"}',
@@ -166,6 +181,13 @@ describe('mentionsSecretFile', () => {
     expect(mentionsSecretFile({ command: ['cat', '/home/me/.ssh/id_ed25519'] })).toBe(true);
     expect(mentionsSecretFile([{ path: 'certs/server.pem' }])).toBe(true);
     expect(mentionsSecretFile({ command: "cat '.npmrc'" })).toBe(true);
+  });
+
+  it('ignores file contents but still checks the paths beside them', () => {
+    const contents = 'cp .env .env.local\n'.repeat(3);
+    expect(mentionsSecretFile({ file_path: 'src/a.ts', content: contents })).toBe(false);
+    expect(mentionsSecretFile({ path: 'a.ts', oldText: contents, newText: contents })).toBe(false);
+    expect(mentionsSecretFile({ file_path: '.env', new_string: 'x' })).toBe(true);
   });
 
   it('ignores ordinary files and the .env example', () => {

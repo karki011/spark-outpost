@@ -15,8 +15,10 @@ import {
   type ApprovalRequest,
   type RunRule,
 } from './decide.ts';
+import type { FileLister } from './file-lister.ts';
 
 const ROOT = '/work/app';
+const noFiles: FileLister = { glob: () => [], walk: () => [], script: () => null };
 const LEVELS: ModePosture[] = ['asks', 'edits', 'full_access'];
 const EVERY_MODE: ModePosture[] = ['asks', 'edits', 'auto', 'full_access', 'denies', 'unknown'];
 const allowing = (...rules: RunRule[]) => ({ allow: rules, reject: [] });
@@ -296,13 +298,14 @@ describe('decide() for read-only commands', () => {
   });
 
   it.each(LEVELS)('asks for reads of secret files and outside reads in %s', (level) => {
-    expect(decide(level, run('cat .env'), NO_RUN_RULES, [])).toEqual({
+    const options = { files: noFiles };
+    expect(decide(level, run('cat .env'), NO_RUN_RULES, [], options)).toEqual({
       verdict: 'ask',
       reason: SECRET_REASON,
     });
     if (level !== 'full_access') {
-      expect(decide(level, run('cat /etc/hosts'), NO_RUN_RULES, []).verdict).toBe('ask');
-      expect(decide(level, run('grep -rn KEY .'), NO_RUN_RULES, []).verdict).toBe('ask');
+      expect(decide(level, run('cat /etc/hosts'), NO_RUN_RULES, [], options).verdict).toBe('ask');
+      expect(decide(level, run('grep -rn KEY .'), NO_RUN_RULES, [], options).verdict).toBe('ask');
     }
   });
 });

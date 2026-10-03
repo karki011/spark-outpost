@@ -35,6 +35,24 @@ describe('policy gate questions', () => {
     expect(diff).not.toContain('sk-aaaa');
     expect(diff).toContain('[cut at 24000 characters]');
   });
+
+  it('bounds the diff of a huge rewrite and still redacts what it shows', () => {
+    const lines = (prefix: string) =>
+      Array.from({ length: 60_000 }, (_, index) => `${prefix} ${index * 7919}`).join('\n');
+    const started = performance.now();
+    const diff = editDiff([
+      {
+        path: 'big.ts',
+        oldText: `TOKEN=ghp_${'b1'.repeat(15)}\n${lines('old')}`,
+        newText: lines('new'),
+      },
+    ]);
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(diff.length).toBeLessThan(24_100);
+    expect(diff).toContain('[cut at 24000 characters]');
+    expect(diff).toContain('-TOKEN=[redacted:');
+    expect(diff).not.toContain('ghp_b1');
+  });
 });
 
 describe('policy verdict', () => {

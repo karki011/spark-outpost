@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import type { Request, Response } from 'express';
 import { isTerminalRunEvent, isTerminalRunStatus } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
@@ -12,6 +13,24 @@ export function parseCursor(req: Request): number {
     req.header('last-event-id') ?? (typeof req.query.after === 'string' ? req.query.after : '0');
   const cursor = Number.parseInt(raw, 10);
   return Number.isInteger(cursor) && cursor >= 0 ? cursor : 0;
+}
+
+function drained(res: Response, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      res.off('drain', done);
+      res.off('close', done);
+      signal.removeEventListener('abort', done);
+      resolve();
+    };
+    res.on('drain', done);
+    res.on('close', done);
+    signal.addEventListener('abort', done, { once: true });
+  });
+}
+
+async function send(res: Response, frame: string, signal: AbortSignal): Promise<void> {
+  if (!res.write(frame) && !signal.aborted) await drained(res, signal);
 }
 
 export async function streamRunEvents(
@@ -49,11 +68,13 @@ export async function streamRunEvents(
     let batch = firstBatch;
     while (!disconnected.signal.aborted) {
       for (const stored of batch) {
-        res.write(`id: ${stored.seq}\ndata: ${JSON.stringify(stored.event)}\n\n`);
+        await send(res, hub.frame(runId, stored), disconnected.signal);
         cursor = stored.seq;
         if (isTerminalRunEvent(stored.event)) return;
+        if (disconnected.signal.aborted) return;
       }
       if (batch.length === 0) await hub.waitFor(runId, POLL_FALLBACK_MS, disconnected.signal);
+      else await nextTurn();
       if (disconnected.signal.aborted) return;
       batch = await listRunEventsAfter(db, runId, cursor);
     }

@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
 import type { ChangedFile } from '@spark-outpost/contracts';
 
@@ -42,16 +43,17 @@ function isText(file: ChangedFile, text: string | null): text is string {
   return file.shown === 'text' && text !== null && text !== '';
 }
 
-function bestMatch(
+async function bestMatch(
   gone: ChangedFile,
   candidates: readonly ChangedFile[],
   taken: ReadonlySet<ChangedFile>,
-): { file: ChangedFile; comparison: Comparison } | null {
+): Promise<{ file: ChangedFile; comparison: Comparison } | null> {
   let best: { file: ChangedFile; comparison: Comparison } | null = null;
   const oldText = gone.oldText ?? '';
   for (const fresh of candidates) {
     const newText = fresh.newText ?? '';
     if (taken.has(fresh) || !sizesClose(oldText, newText)) continue;
+    await nextTurn();
     const comparison = compare(oldText, newText);
     if (!comparison || comparison.similarity < MIN_SIMILARITY) continue;
     if (!best || comparison.similarity > best.comparison.similarity) {
@@ -61,7 +63,7 @@ function bestMatch(
   return best;
 }
 
-export function pairRenames(files: readonly ChangedFile[]): ChangedFile[] {
+export async function pairRenames(files: readonly ChangedFile[]): Promise<ChangedFile[]> {
   const deleted = files.filter((file) => file.change === 'deleted' && isText(file, file.oldText));
   const added = files.filter((file) => file.change === 'added' && isText(file, file.newText));
   if (deleted.length === 0 || added.length === 0 || deleted.length * added.length > MAX_PAIRS) {
@@ -71,7 +73,7 @@ export function pairRenames(files: readonly ChangedFile[]): ChangedFile[] {
   const gone = new Set<ChangedFile>();
   const renamed = new Map<ChangedFile, ChangedFile>();
   for (const file of deleted) {
-    const match = bestMatch(file, added, taken);
+    const match = await bestMatch(file, added, taken);
     if (!match) continue;
     taken.add(match.file);
     gone.add(file);

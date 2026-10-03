@@ -143,4 +143,31 @@ describe('protocol entries', () => {
     expect(text).toContain('"name":"PLAIN"');
     expect(text).toContain('gh-mcp');
   });
+
+  it('redacts the kept head of a huge edit quickly and never stores the rest', () => {
+    const recorder = createProtocolRecorder();
+    const filler = 'const value = compute(input);\n'.repeat(70_000);
+    const update = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'edit',
+      rawInput: {
+        file_path: 'src/big.ts',
+        old_string: `GITHUB_TOKEN=a8f9c2d1e7b6a5f4c3d2e1f0\n${filler}`,
+        new_string: `${filler}sk-tail-AbCdEfGhIjKlMnOp1234`,
+      },
+    };
+    const message = { jsonrpc: '2.0', method: 'session/update', params: { update } };
+    const started = performance.now();
+    const entry = recorder.entry('from_agent', message, at);
+    const elapsed = performance.now() - started;
+    const head = (entry.payload as { head: string }).head;
+    expect(entry.sizeBytes).toBeGreaterThan(4_000_000);
+    expect(entry.truncated).toBe(true);
+    expect(Buffer.byteLength(head)).toBeLessThanOrEqual(PAYLOAD_CAP_BYTES);
+    expect(head.startsWith('{"jsonrpc":"2.0"')).toBe(true);
+    expect(head).toContain('"old_string":"GITHUB_TOKEN=[redacted:env]');
+    expect(head).not.toContain('a8f9c2d1e7b6a5f4c3d2e1f0');
+    expect(head).not.toContain('sk-tail');
+    expect(elapsed).toBeLessThan(200);
+  });
 });

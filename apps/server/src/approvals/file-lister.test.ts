@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { diskLister } from './file-lister.ts';
+import { diskFiles } from './file-lister.ts';
 
 let root: string;
 const git = (...args: string[]) =>
@@ -26,14 +26,14 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe('diskLister.script', () => {
-  it('trusts only scripts committed and unchanged in git', () => {
-    expect(diskLister.script(join(root, 'tool.py'))).toEqual({
+describe('diskFiles.script', () => {
+  it('trusts only scripts committed and unchanged in git', async () => {
+    expect(await diskFiles.script(join(root, 'tool.py'))).toEqual({
       text: 'print(1)\n',
       committed: true,
     });
     for (const name of ['edited.py', 'new.py', 'ignored.py']) {
-      expect(diskLister.script(join(root, name))?.committed).toBe(false);
+      expect((await diskFiles.script(join(root, name)))?.committed).toBe(false);
     }
   });
 
@@ -41,24 +41,43 @@ describe('diskLister.script', () => {
     await symlink(join(root, 'new.py'), join(root, 'link.py'));
     git('add', 'link.py');
     git('commit', '-qm', 'link');
-    expect(diskLister.script(join(root, 'link.py'))).toEqual({
+    expect(await diskFiles.script(join(root, 'link.py'))).toEqual({
       text: 'print(2)\n',
       committed: false,
     });
   });
 
-  it('returns nothing for a missing file or a folder', () => {
-    expect(diskLister.script(join(root, 'missing.py'))).toBeNull();
-    expect(diskLister.script(root)).toBeNull();
+  it('returns nothing for a missing file or a folder', async () => {
+    expect(await diskFiles.script(join(root, 'missing.py'))).toBeNull();
+    expect(await diskFiles.script(root)).toBeNull();
   });
 
   it('does not trust a script outside any repository', async () => {
     const outside = await realpath(await mkdtemp(join(tmpdir(), 'spark-loose-')));
     try {
       await writeFile(join(outside, 'x.py'), 'print(4)\n');
-      expect(diskLister.script(join(outside, 'x.py'))?.committed).toBe(false);
+      expect((await diskFiles.script(join(outside, 'x.py')))?.committed).toBe(false);
     } finally {
       await rm(outside, { recursive: true, force: true });
     }
+  });
+});
+
+describe('diskFiles listing', () => {
+  it('globs and walks the tree, skipping node_modules and .git', async () => {
+    await mkdir(join(root, 'node_modules', 'pkg'), { recursive: true });
+    await writeFile(join(root, 'node_modules', 'pkg', 'index.js'), '');
+    await mkdir(join(root, 'src'));
+    await writeFile(join(root, 'src', 'a.py'), '');
+    expect((await diskFiles.glob('*.py', root))?.sort()).toEqual(
+      ['edited.py', 'ignored.py', 'new.py', 'tool.py'].map((name) => join(root, name)),
+    );
+    const walked = await diskFiles.walk(root);
+    expect(walked).toContain(join(root, 'src', 'a.py'));
+    expect(walked?.some((file) => file.includes('node_modules') || file.includes('.git/'))).toBe(
+      false,
+    );
+    expect(await diskFiles.walk(join(root, 'tool.py'))).toEqual([join(root, 'tool.py')]);
+    expect(await diskFiles.walk(join(root, 'missing'))).toEqual([]);
   });
 });

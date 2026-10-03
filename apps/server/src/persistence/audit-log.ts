@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import type {
   AuditLogPage,
   AuditLogQuery,
@@ -175,6 +176,9 @@ export async function* protocolLogBatches(
   }
 }
 
+const VERIFY_BATCH_ROWS = 100;
+const VERIFY_CHUNK_ROWS = 25;
+
 export async function verifyRunLog(db: Queryable, runId: string): Promise<ChainVerification> {
   const run = await db.query<{ pruned: boolean }>(
     'SELECT protocol_log_pruned_at IS NOT NULL AS pruned FROM runs WHERE id = $1',
@@ -182,13 +186,17 @@ export async function verifyRunLog(db: Queryable, runId: string): Promise<ChainV
   );
   const pruned = run.rows[0]?.pruned ?? false;
   let position = CHAIN_START;
-  for await (const batch of protocolLogBatches(db, runId)) {
-    const check = verifyChain(batch as HashedRow[], position);
-    if (!check.intact) {
-      const { intact, checked, firstBrokenSeq, reason } = check;
-      return { runId, intact, checked, firstBrokenSeq, reason, pruned };
+  for await (const batch of protocolLogBatches(db, runId, VERIFY_BATCH_ROWS)) {
+    for (let start = 0; start < batch.length; start += VERIFY_CHUNK_ROWS) {
+      await nextTurn();
+      const chunk = batch.slice(start, start + VERIFY_CHUNK_ROWS) as HashedRow[];
+      const check = verifyChain(chunk, position);
+      if (!check.intact) {
+        const { intact, checked, firstBrokenSeq, reason } = check;
+        return { runId, intact, checked, firstBrokenSeq, reason, pruned };
+      }
+      position = check;
     }
-    position = check;
   }
   return {
     runId,

@@ -161,7 +161,9 @@ async function backupListed(
 ): Promise<ListedFile[]> {
   const versions = await backupVersions(db, run, later);
   const byPath = new Map(versions.map((version) => [version.change.path, version]));
-  const files = pairRenames(await Promise.all(versions.map(describeVersions)));
+  const described: ChangedFile[] = [];
+  for (const version of versions) described.push(await describeVersions(version));
+  const files = await pairRenames(described);
   return files.map((file) => ({
     file: withoutText(file),
     contents: () =>

@@ -128,6 +128,21 @@ describe('protocol log storage', () => {
     });
   });
 
+  it('verifies long logs across batches and finds a forged row deep inside', async () => {
+    const lease = await leasedRun();
+    await insertProtocolEntries(t.db, lease, entries(260));
+    expect(await verifyRunLog(t.db, lease.runId)).toMatchObject({ intact: true, checked: 260 });
+    await t.db.query(
+      `UPDATE run_protocol_log SET payload = '{"text":"forged"}' WHERE run_id = $1 AND seq = 213`,
+      [lease.runId],
+    );
+    expect(await verifyRunLog(t.db, lease.runId)).toMatchObject({
+      intact: false,
+      checked: 212,
+      firstBrokenSeq: 213,
+    });
+  });
+
   it('prunes logs of runs past retention and keeps the run and its metrics', async () => {
     const old = await leasedRun();
     await insertProtocolEntries(t.db, old, entries(2));

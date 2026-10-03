@@ -14,7 +14,7 @@ import {
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
-import { diskLister, type FileLister } from './file-lister.ts';
+import { NO_FILES, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import { egressOf } from './egress.ts';
@@ -374,7 +374,7 @@ export function decide(
   if (ungranted.length > 0) {
     return { verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: guarded.instructions };
   }
-  const files = options.files ?? diskLister;
+  const files = options.files ?? NO_FILES;
   const tainted = taintedEgress(request, options, files);
   if (tainted) return tainted;
   const always = alwaysAskReason(request, files, view);

@@ -22,4 +22,24 @@ describe('activityFromEvents', () => {
       ],
     });
   });
+
+  it('pairs thousands of interleaved steps oldest first', () => {
+    const rows = [];
+    for (let index = 0; index < 5000; index += 1) {
+      rows.push({ run_id: 'big', type: 'STEP_STARTED', name: `Step ${index % 50}` });
+    }
+    for (let index = 0; index < 2500; index += 1) {
+      rows.push({ run_id: 'big', type: 'STEP_FINISHED', name: `Step ${index % 50}` });
+    }
+    rows.push({ run_id: 'big', type: 'STEP_FINISHED', name: 'Never started' });
+
+    const started = performance.now();
+    const steps = activityFromEvents(rows).big ?? [];
+    const elapsed = performance.now() - started;
+
+    expect(steps).toHaveLength(5000);
+    expect(steps.slice(0, 2500).every((step) => step.done)).toBe(true);
+    expect(steps.slice(2500).some((step) => step.done)).toBe(false);
+    expect(elapsed).toBeLessThan(200);
+  });
 });

@@ -109,20 +109,31 @@ function nameFilter(globs: readonly string[]): RegExp[] {
   return globs.filter((glob) => !UNSUPPORTED_GLOB.test(glob)).map(globToRegExp);
 }
 
-function filtersAllow(file: string, args: ReadArgs): boolean {
-  const name = path.basename(file);
+interface NameFilters {
+  include: RegExp[];
+  exclude: RegExp[];
+}
+
+function nameFilters(args: ReadArgs): NameFilters {
   const include = args.include.some((glob) => UNSUPPORTED_GLOB.test(glob))
     ? []
     : nameFilter(args.include);
+  return { include, exclude: nameFilter(args.exclude) };
+}
+
+function filtersAllow(file: string, filters: NameFilters): boolean {
+  const name = path.basename(file);
+  const { include, exclude } = filters;
   if (include.length > 0 && !include.some((pattern) => pattern.test(name))) return false;
-  return !nameFilter(args.exclude).some((pattern) => pattern.test(name));
+  return !exclude.some((pattern) => pattern.test(name));
 }
 
 function walked(target: string, args: ReadArgs, place: ReadPlace): Concern {
   const files = place.files.walk(target);
   if (files === null) return 'unknown';
+  const filters = nameFilters(args);
   const read = files.filter(
-    (file) => (args.hidden || !isHiddenBelow(target, file)) && filtersAllow(file, args),
+    (file) => (args.hidden || !isHiddenBelow(target, file)) && filtersAllow(file, filters),
   );
   return read.some(place.isSecret) ? 'secret' : null;
 }

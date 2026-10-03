@@ -1,5 +1,5 @@
 import type { ProtocolDirection, ProtocolEntryKind } from '@spark-outpost/contracts';
-import { mentionsSecretFile, redactValue, redacted, storableText } from './redact.ts';
+import { mentionsSecretFile, redactValueWithin, redacted, storableText } from './redact.ts';
 
 export const PAYLOAD_CAP_BYTES = 64 * 1024;
 
@@ -37,13 +37,30 @@ function messageKind(message: Message): ProtocolEntryKind {
   return 'error' in message ? 'error' : 'response';
 }
 
-export function capPayload(payload: unknown): { payload: unknown; truncated: boolean } {
+const REDACTION_BUDGET_CHARS = PAYLOAD_CAP_BYTES * 2;
+
+interface CappedPayload {
+  payload: unknown;
+  truncated: boolean;
+}
+
+export function capPayload(payload: unknown): CappedPayload {
   const text = JSON.stringify(payload) ?? 'null';
   const bytes = Buffer.from(text, 'utf8');
   if (bytes.length <= PAYLOAD_CAP_BYTES) return { payload, truncated: false };
+  return headOf(bytes);
+}
+
+function headOf(bytes: Buffer): CappedPayload {
   let head = storableText(bytes.subarray(0, PAYLOAD_CAP_BYTES).toString('utf8'));
   while (Buffer.byteLength(head, 'utf8') > PAYLOAD_CAP_BYTES) head = head.slice(0, -1);
   return { payload: { head }, truncated: true };
+}
+
+function storedPayload(value: unknown): CappedPayload {
+  const safe = redactValueWithin(value, REDACTION_BUDGET_CHARS);
+  if (!safe.clipped) return capPayload(safe.value);
+  return headOf(Buffer.from(JSON.stringify(safe.value) ?? 'null', 'utf8'));
 }
 
 function toolUpdate(message: Message): Message | null {
@@ -154,7 +171,7 @@ export function createProtocolRecorder(): ProtocolRecorder {
       const sizeBytes = Buffer.byteLength(JSON.stringify(raw) ?? 'null', 'utf8');
       const message = asRecord(raw);
       if (!message) {
-        const capped = capPayload(redactValue(raw));
+        const capped = storedPayload(raw);
         return {
           at,
           direction,
@@ -167,7 +184,7 @@ export function createProtocolRecorder(): ProtocolRecorder {
       }
       const rpcId = rpcIdOf(message);
       const method = methodFor(direction, message, rpcId);
-      const capped = capPayload(redactValue(scrubSecrets(direction, message, rpcId)));
+      const capped = storedPayload(scrubSecrets(direction, message, rpcId));
       return { at, direction, kind: messageKind(message), method, rpcId, sizeBytes, ...capped };
     },
   };

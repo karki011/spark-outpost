@@ -8,10 +8,12 @@ import {
   decide,
   type ApprovalRequest,
 } from './decide.ts';
+import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
+const noFiles: FileLister = { glob: () => [], walk: () => [], script: () => null };
 
 function run(command: string): ApprovalRequest {
   return {
@@ -30,10 +32,14 @@ function run(command: string): ApprovalRequest {
   };
 }
 
-const fullAccess = (command: string) => decide('full_access', run(command), NO_RUN_RULES, []);
+const fullAccess = (command: string) =>
+  decide('full_access', run(command), NO_RUN_RULES, [], { files: noFiles });
 
 const parsedFullAccess = async (command: string) =>
-  decide('full_access', run(command), NO_RUN_RULES, [], { shell: await parseShell(command) });
+  decide('full_access', run(command), NO_RUN_RULES, [], {
+    files: noFiles,
+    shell: await parseShell(command),
+  });
 
 describe('decide() looks inside nested and wrapped commands', () => {
   it.each([

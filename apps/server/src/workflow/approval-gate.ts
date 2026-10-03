@@ -13,6 +13,8 @@ import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
+import { diskFiles } from '../approvals/file-lister.ts';
+import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import {
   FS_WRITE_TOOL_KIND,
   SECRET_REASON,
@@ -20,6 +22,7 @@ import {
   relativeTo,
   secretLabels,
   type ApprovalRequest,
+  type DecideOptions,
   type Decision,
   type RunRule,
   type RunRules,
@@ -46,6 +49,8 @@ import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 
 const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+const UNDECIDED: Decision = { verdict: 'ask', reason: null };
 
 export const APPROVAL_TIMEOUT_MS = 30 * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
@@ -375,7 +380,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     ]);
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
-    const decision = decide(postureOf(request), request, runRules, allowlist, {
+    const options: DecideOptions = {
       builder: deps.builder === true,
       askRun: deps.askRun === true,
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
@@ -386,7 +391,12 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       agentAsks: Boolean(request.agentReason),
       ...(deps.piece ? { piece: deps.piece } : {}),
       ...(await publishContext(deps.db, deps.publish, request)),
-    });
+    };
+    const decision = await withPrefetchedFiles(
+      diskFiles,
+      (files) => decide(postureOf(request), request, runRules, allowlist, { ...options, files }),
+      UNDECIDED,
+    );
     if (decision.verdict === 'ask') {
       return ask(request, decision.reason, signal, decision);
     }

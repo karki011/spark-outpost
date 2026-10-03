@@ -14,6 +14,7 @@ interface TextRule {
   pattern: RegExp;
   split?: (match: string, groups: string[]) => SecretParts | null;
   checksValue?: boolean;
+  requires?: string;
 }
 
 const SENSITIVE_ENV_PARTS = new Set([
@@ -61,6 +62,12 @@ const keepPrefix =
     after: '',
   });
 
+const URL_SCHEME_START = /^[a-z]|[+.-][a-z]/i;
+
+function hasUrlScheme(before: string): boolean {
+  return URL_SCHEME_START.test(before.slice(0, before.indexOf('://')));
+}
+
 const TEXT_RULES: TextRule[] = [
   {
     kind: 'private_key',
@@ -86,13 +93,10 @@ const TEXT_RULES: TextRule[] = [
   { kind: 'aws_key', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
   {
     kind: 'url_password',
-    pattern: /\b([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)([^\s@/]+)(@)/gi,
-    split: (_match, [before = '', value = '', after = '']) => ({
-      kind: 'url_password',
-      before,
-      value,
-      after,
-    }),
+    requires: '://',
+    pattern: /(?<![a-z0-9+.-])([a-z0-9+.-]*:\/\/[^\s:/@]+:)([^\s@/]+)(@)/gi,
+    split: (_match, [before = '', value = '', after = '']) =>
+      hasUrlScheme(before) ? { kind: 'url_password', before, value, after } : null,
   },
   {
     kind: 'env',
@@ -126,9 +130,14 @@ function parts(rule: TextRule, match: string, rest: unknown[]): SecretMatch | nu
   return split ? { ...split, rule } : null;
 }
 
+function appliesTo(rule: TextRule, text: string): boolean {
+  return rule.requires === undefined || text.includes(rule.requires);
+}
+
 function replaceSecrets(text: string, replacement: (secret: SecretMatch) => string | null): string {
   let result = text;
   for (const rule of TEXT_RULES) {
+    if (!appliesTo(rule, result)) continue;
     result = result.replace(rule.pattern, (match: string, ...rest: unknown[]) => {
       if (match.startsWith('[redacted:')) return match;
       const secret = parts(rule, match, rest);
@@ -159,6 +168,7 @@ function looksSecret(raw: string): boolean {
 function scanned(text: string, keep: (secret: SecretMatch) => boolean): SecretMatch[] {
   const found: SecretMatch[] = [];
   for (const rule of TEXT_RULES) {
+    if (!appliesTo(rule, text)) continue;
     for (const match of text.matchAll(rule.pattern)) {
       const [whole, ...groups] = match;
       if (whole.startsWith('[redacted:')) continue;

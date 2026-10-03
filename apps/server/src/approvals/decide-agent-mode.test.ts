@@ -10,9 +10,11 @@ import {
   type DecideOptions,
 } from './decide.ts';
 import { ASK_RUN_REASON } from './ask-run.ts';
+import type { FileLister } from './file-lister.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
+const noFiles: FileLister = { glob: () => [], walk: () => [], script: () => null };
 
 function run(command: string, extra: Partial<ApprovalRequest> = {}): ApprovalRequest {
   return {
@@ -39,7 +41,11 @@ async function decideParsed(
   extra: Partial<ApprovalRequest> = {},
 ) {
   const shell = await parseShell(command);
-  return decide(posture, run(command, extra), NO_RUN_RULES, [], { ...options, shell });
+  return decide(posture, run(command, extra), NO_RUN_RULES, [], {
+    files: noFiles,
+    ...options,
+    shell,
+  });
 }
 
 const LOOP_READ = [

@@ -21,21 +21,53 @@ export interface ProposedEdit {
   newText: string;
 }
 
+const DIFF_TIMEOUT_MS = 50;
+const DIFF_SCAN_CHARACTERS = MAX_DIFF_CHARACTERS * 2;
+const TOO_LARGE_NOTE = '[too large to compare line by line; showing old and new text]';
+
+function prefixed(text: string, mark: string): string[] {
+  if (text === '') return [];
+  return text
+    .slice(0, DIFF_SCAN_CHARACTERS)
+    .split('\n')
+    .map((line) => `${mark}${line}`);
+}
+
+function replacementPatch(oldName: string, edit: ProposedEdit): string {
+  return [
+    `--- ${oldName}`,
+    `+++ ${edit.path}`,
+    TOO_LARGE_NOTE,
+    ...prefixed(edit.oldText ?? '', '-'),
+    ...prefixed(edit.newText, '+'),
+  ].join('\n');
+}
+
+function editPatch(edit: ProposedEdit): string {
+  const oldName = edit.oldText === null ? '/dev/null' : edit.path;
+  const patch = createTwoFilesPatch(oldName, edit.path, edit.oldText ?? '', edit.newText, '', '', {
+    context: 3,
+    timeout: DIFF_TIMEOUT_MS,
+  });
+  return patch ?? replacementPatch(oldName, edit);
+}
+
+function cappedDiff(text: string): string {
+  if (text.length <= DIFF_SCAN_CHARACTERS) return capped(redactText(text), MAX_DIFF_CHARACTERS);
+  const head = redactText(text.slice(0, DIFF_SCAN_CHARACTERS)).slice(0, MAX_DIFF_CHARACTERS);
+  return `${head}\n[cut at ${MAX_DIFF_CHARACTERS} characters]`;
+}
+
 export function editDiff(edits: readonly ProposedEdit[]): string {
-  const text = edits
-    .map((edit) =>
-      createTwoFilesPatch(
-        edit.oldText === null ? '/dev/null' : edit.path,
-        edit.path,
-        edit.oldText ?? '',
-        edit.newText,
-        '',
-        '',
-        { context: 3 },
-      ),
-    )
-    .join('\n');
-  return capped(redactText(text), MAX_DIFF_CHARACTERS);
+  const patches: string[] = [];
+  let length = 0;
+  for (const edit of edits) {
+    if (length > DIFF_SCAN_CHARACTERS) break;
+    const patch = editPatch(edit);
+    patches.push(patch);
+    length += patch.length + 1;
+  }
+  return cappedDiff(patches.join('\n'));
 }
 
 export interface PolicyFacts {

@@ -6,16 +6,48 @@ export interface StepEventRow {
   name: string;
 }
 
+interface OpenQueue {
+  steps: ActivityStep[];
+  head: number;
+}
+
 export function activityFromEvents(rows: readonly StepEventRow[]): Record<string, ActivityStep[]> {
   const activity: Record<string, ActivityStep[]> = {};
+  const openByRun = new Map<string, Map<string, OpenQueue>>();
   for (const row of rows) {
     const steps = (activity[row.run_id] ??= []);
+    const open = openQueues(openByRun, row.run_id);
     if (row.type === 'STEP_STARTED') {
-      steps.push({ name: row.name, done: false });
+      const step = { name: row.name, done: false };
+      steps.push(step);
+      enqueue(open, step);
       continue;
     }
-    const open = steps.find((step) => step.name === row.name && !step.done);
-    if (open) open.done = true;
+    finishOldest(open.get(row.name));
   }
   return activity;
+}
+
+function openQueues(
+  openByRun: Map<string, Map<string, OpenQueue>>,
+  runId: string,
+): Map<string, OpenQueue> {
+  let open = openByRun.get(runId);
+  if (!open) {
+    open = new Map();
+    openByRun.set(runId, open);
+  }
+  return open;
+}
+
+function enqueue(open: Map<string, OpenQueue>, step: ActivityStep): void {
+  const queue = open.get(step.name);
+  if (queue) queue.steps.push(step);
+  else open.set(step.name, { steps: [step], head: 0 });
+}
+
+function finishOldest(queue: OpenQueue | undefined): void {
+  if (!queue || queue.head >= queue.steps.length) return;
+  queue.steps[queue.head]!.done = true;
+  queue.head += 1;
 }

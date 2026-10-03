@@ -60,12 +60,33 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${source}$`);
 }
 
-function matchesIgnore(relative: string, pattern: string): boolean {
+interface IgnoreRule {
+  anchored: boolean;
+  regex: RegExp;
+}
+
+const MAX_IGNORE_RULES = 1_000;
+const ignoreRules = new Map<string, IgnoreRule | null>();
+
+function compileIgnore(pattern: string): IgnoreRule | null {
   const trimmed = pattern.replace(/\/+$/, '');
-  if (trimmed === '') return false;
+  if (trimmed === '') return null;
+  return { anchored: trimmed.includes('/'), regex: globToRegExp(trimmed.replace(/^\//, '')) };
+}
+
+function ignoreRule(pattern: string): IgnoreRule | null {
+  if (ignoreRules.has(pattern)) return ignoreRules.get(pattern)!;
+  if (ignoreRules.size >= MAX_IGNORE_RULES) ignoreRules.clear();
+  const rule = compileIgnore(pattern);
+  ignoreRules.set(pattern, rule);
+  return rule;
+}
+
+function matchesIgnore(relative: string, pattern: string): boolean {
+  const rule = ignoreRule(pattern);
+  if (!rule) return false;
   const segments = relative.split('/');
-  const anchored = trimmed.includes('/');
-  const regex = globToRegExp(trimmed.replace(/^\//, ''));
+  const { anchored, regex } = rule;
   if (!anchored) return segments.some((segment) => regex.test(segment));
   return segments.some((_, index) => regex.test(segments.slice(0, index + 1).join('/')));
 }
