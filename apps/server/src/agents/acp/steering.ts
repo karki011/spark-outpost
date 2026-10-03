@@ -43,3 +43,7 @@ export async function nextMessage(
   if (!turn.inbox || stopReason !== 'end_turn' || signal.aborted) return null;
   return turn.inbox.take();
 }
+
+export function untilFailure(sent: Promise<unknown>): Promise<never> {
+  return sent.then(() => new Promise<never>(() => undefined));
+}

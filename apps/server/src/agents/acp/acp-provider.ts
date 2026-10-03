@@ -49,7 +49,7 @@ import {
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, openProject, sessionMeta } from './session-start.ts';
-import { attachSteering, nextMessage } from './steering.ts';
+import { attachSteering, nextMessage, untilFailure } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
@@ -461,10 +461,9 @@ async function converse(
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);
+      const textOnly = { ...promptOptions, attachments: [] };
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
-      const failureOf = (sent: Promise<unknown>) =>
-        sent.then(() => new Promise<never>(() => undefined));
-      let promptFailure = failureOf(session.prompt(blocks));
+      let promptFailure = untilFailure(session.prompt(blocks));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
@@ -472,8 +471,7 @@ async function converse(
           mapper.stopped(message.response._meta);
           const next = await nextMessage(turn, message.stopReason, signal);
           if (next) {
-            const options = { ...promptOptions, attachments: [] };
-            promptFailure = failureOf(session.prompt(followUpBlocks(next, options)));
+            promptFailure = untilFailure(session.prompt(followUpBlocks(next, textOnly)));
             continue;
           }
           stopRequests?.();
