@@ -36,6 +36,8 @@ export interface LeadOptions {
   limit: number;
   under?: string | undefined;
   declarations?: number;
+  order?: readonly string[] | undefined;
+  relevant?: ((path: string) => boolean) | undefined;
 }
 
 export function leadLabel(declaration: Pick<IndexedDeclaration, 'name' | 'startLine' | 'endLine'>) {
@@ -78,9 +80,22 @@ export function pickDeclarations(
     .slice(0, limit);
 }
 
+function inOrder(files: readonly RankedFile[], order: readonly string[] | undefined) {
+  if (!order || order.length === 0) return [...files];
+  const position = new Map(order.map((path, index) => [path, index]));
+  const rank = (file: RankedFile) => position.get(file.path) ?? order.length;
+  return files.toSorted((a, b) => rank(a) - rank(b));
+}
+
 export function leadFiles(report: ScanReport, options: LeadOptions): RankedFile[] {
-  return report.candidates
-    .filter((file) => shareable(file.path, options.ignore) && isUnder(file.path, options.under))
+  const relevant = options.relevant ?? (() => true);
+  return inOrder(report.candidates, options.order)
+    .filter(
+      (file) =>
+        shareable(file.path, options.ignore) &&
+        isUnder(file.path, options.under) &&
+        relevant(file.path),
+    )
     .slice(0, options.limit);
 }
 

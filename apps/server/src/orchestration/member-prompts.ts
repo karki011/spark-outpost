@@ -5,7 +5,7 @@ import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.t
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
-import { awaitRanking, likelyFilesLine } from './likely-files.ts';
+import { codeContext } from './code-context.ts';
 import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
@@ -102,7 +102,7 @@ export const RESEARCH_BRIEF = [
 export async function readerPreamble(s: Session): Promise<string | null> {
   const plan = await agreedPlanText(s);
   const research = turnCategory(s.intake.outcome, s.intake.body.rules.intent) === 'research';
-  const parts = [plan, research ? RESEARCH_BRIEF : null].filter(Boolean);
+  const parts = [plan, research ? RESEARCH_BRIEF : null, await codeContext(s)].filter(Boolean);
   return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
@@ -147,7 +147,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     buildStyle: s.buildStyle,
     checkCommands: checkCommands(s),
     agreedPlan,
-    likelyFiles: likelyFilesLine(await awaitRanking(s)),
+    likelyFiles: await codeContext(s),
     publish: await publishBrief(s.deps.db, s.input),
   });
 }

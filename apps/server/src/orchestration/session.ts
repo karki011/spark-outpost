@@ -158,6 +158,7 @@ export interface Session {
   observations: Promise<void>[];
   jevDiffs: boolean;
   scan?: Promise<ScanOutcome> | null;
+  scanRoot?: string | null;
   scanReport?: ScanReport | null;
   ranking?: Promise<Ranking | null>;
   unverified?: boolean;

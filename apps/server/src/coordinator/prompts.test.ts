@@ -60,6 +60,30 @@ describe('piece prompts', () => {
     expect(prompt).toContain('only changes docs or text files');
   });
 
+  it('lists the likely files with their size and declaration leads, as a hint', () => {
+    const prompt = coordinatorPrompt({
+      request: 'Fix the day divider',
+      agreedPlan: null,
+      likelyFiles: [
+        { path: 'src/store.ts', lines: 40, leads: ['dayDivider@3-9', 'formatDay@12-20'] },
+        { path: 'src/midnight.ts', lines: null, leads: [] },
+        { path: 'src/plain.ts', lines: 7 },
+      ],
+      planFiles: [],
+      checks: [],
+      budgetTokens: 100_000,
+    });
+    expect(prompt).toContain(
+      [
+        '## Files the code scan ranked likely',
+        'A ranking hint, not a limit. Declarations are name@startLine-endLine.',
+        '- src/store.ts (40 lines): dayDivider@3-9, formatDay@12-20',
+        '- src/midnight.ts',
+        '- src/plain.ts (7 lines)',
+      ].join('\n'),
+    );
+  });
+
   it('says a docs-only piece has no scoped check', () => {
     expect(brief({})).toContain('Scoped checks: none — docs only.');
     expect(brief({ owns: ['src/a.ts'] })).not.toContain('Scoped checks');

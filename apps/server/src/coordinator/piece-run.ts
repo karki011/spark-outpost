@@ -12,7 +12,7 @@ import { checkBudget } from '../orchestration/budget-check.ts';
 import { runChecks } from '../orchestration/checks.ts';
 import { builderPrompt, checkFailureText } from '../orchestration/context.ts';
 import { treeOf } from '../orchestration/land.ts';
-import { awaitRanking, likelyFilesLine } from '../orchestration/likely-files.ts';
+import { codeContext } from '../orchestration/code-context.ts';
 import { agreedPlanText } from '../orchestration/member-prompts.ts';
 import type { Place } from '../orchestration/members.ts';
 import { publish, type MemberResult, type Seat, type Session } from '../orchestration/session.ts';
@@ -109,7 +109,7 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
     buildStyle: s.buildStyle,
     checkCommands: [],
     agreedPlan: await agreedPlanText(s),
-    likelyFiles: likelyFilesLine(await awaitRanking(s), relevant),
+    likelyFiles: await codeContext(s, relevant),
   });
   return `${base}\n\n${brief}`;
 }

@@ -432,7 +432,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       jevDiffs: !solo && (await jevDiffsAllowed(deps.db, input.workspaceId)),
     };
     session = s;
-    observeScan(s, scanning);
+    observeScan(s, scanning, repoRoot);
     if (doing && !answers) {
       if (!solo) decideBuildStyle(s);
       await ensureTask(s, current);

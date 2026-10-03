@@ -16,7 +16,7 @@ const REQUEST_LIMIT = 8_000;
 export interface CoordinatorContext {
   request: string;
   agreedPlan: string | null;
-  likelyFiles: readonly { path: string; lines: number | null }[];
+  likelyFiles: readonly { path: string; lines: number | null; leads?: readonly string[] }[];
   planFiles: readonly string[];
   checks: readonly string[];
   budgetTokens: number;
@@ -63,9 +63,10 @@ function groupsSection(groups: readonly (readonly PlanStep[])[]): string {
 }
 
 export function coordinatorPrompt(context: CoordinatorContext): string {
-  const files = context.likelyFiles.map((file) =>
-    file.lines === null ? file.path : `${file.path} (${file.lines} lines)`,
-  );
+  const files = context.likelyFiles.map((file) => {
+    const size = file.lines === null ? file.path : `${file.path} (${file.lines} lines)`;
+    return file.leads?.length ? `${size}: ${file.leads.join(', ')}` : size;
+  });
   return [
     COORDINATOR_ROLE_LINE,
     `## Request\n${clip(context.request, REQUEST_LIMIT)}`,
@@ -75,7 +76,11 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
           `## Files the agreed plan names\nEvery plan step that names one of these is covered by the piece that owns or reads it:\n${bullets(context.planFiles)}`,
         ]
       : []),
-    ...(files.length > 0 ? [`## Files the code scan ranked likely\n${bullets(files)}`] : []),
+    ...(files.length > 0
+      ? [
+          `## Files the code scan ranked likely\nA ranking hint, not a limit. Declarations are name@startLine-endLine.\n${bullets(files)}`,
+        ]
+      : []),
     ...(context.groups ? [groupsSection(context.groups)] : []),
     ...(context.checks.length > 0 ? [`## Project checks\n${bullets(context.checks)}`] : []),
     `## Reply\nReply with one fenced \`${PIECES_FENCE}\` block and nothing else, in this message. Don't write a plan file or ask to leave plan mode: this reply is the plan.\n\n${EXAMPLE}`,
