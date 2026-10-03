@@ -38,11 +38,13 @@ export function FullDiskAccess() {
     await queryClient.invalidateQueries({ queryKey: fullDiskAccessQuery.queryKey });
   }
 
+  const granted = status === 'granted';
+
   return (
     <section className="pcard fda-card" aria-label="Full Disk Access">
       <div className="pc-head">
         <span className="nm">
-          <b>Let Spark read everywhere on your Mac (Full Disk Access)</b>
+          <b>Full Disk Access</b>
           <small>Optional. Spark works without it.</small>
         </span>
         <DocLink
@@ -52,37 +54,57 @@ export function FullDiskAccess() {
         {status && <StatusPill status={status} />}
       </div>
       <div className="pc-body">
-        <p>
-          With Full Disk Access, Spark's agents can read files in protected folders like{' '}
-          <code>~/Library</code>, Desktop, Documents and Downloads without macOS asking every time.
+        <p className="fda-lead">
+          {granted
+            ? 'Agents can read protected folders without macOS asking.'
+            : 'Stops macOS asking each time an agent reads a protected folder.'}
         </p>
-        <p>
-          macOS doesn't let apps turn this on themselves, so the button opens{' '}
-          <b>System Settings → Privacy &amp; Security → Full Disk Access</b>, where you switch on{' '}
-          <b>Spark Outpost</b>.
-        </p>
-        <p>
-          Without it, macOS may ask once per folder (Desktop, Documents or Downloads) the first time
-          an agent reads there. You can allow those individually instead of granting Full Disk
-          Access.
-        </p>
-        <p className="fda-note">
-          Full Disk Access only stops macOS's own file-access prompts. It does not replace Spark's
-          own approvals before a command or edit runs.
-        </p>
-        {privacy ? (
-          <button type="button" className="btn line sm" onClick={() => void openSystemSettings()}>
-            Open System Settings
-          </button>
-        ) : (
-          <p className="fda-note">
-            In a browser, open{' '}
-            <HelpLink href={FULL_DISK_ACCESS_SYSTEM_SETTINGS_URL}>
-              System Settings → Privacy &amp; Security → Full Disk Access
-            </HelpLink>{' '}
-            and switch on Spark Outpost.
-          </p>
+        <dl className="fda-facts">
+          <div>
+            <dt>With it</dt>
+            <dd>
+              Agents read <code>~/Library</code>, Desktop, Documents and Downloads without a macOS
+              prompt.
+            </dd>
+          </div>
+          <div>
+            <dt>Without it</dt>
+            <dd>macOS asks once per folder. You can allow each one as it comes up.</dd>
+          </div>
+          <div>
+            <dt>Either way</dt>
+            <dd>Spark's own approvals before a command or edit still apply.</dd>
+          </div>
+        </dl>
+        {!granted && (
+          <ol className="fda-steps">
+            <li>
+              Open <b>System Settings → Privacy &amp; Security → Full Disk Access</b>.
+            </li>
+            <li>
+              Switch on <b>Spark Outpost</b>.
+            </li>
+            <li>Come back here. Spark checks again on its own.</li>
+          </ol>
         )}
+        {!granted &&
+          (privacy ? (
+            <button
+              type="button"
+              className="btn primary sm fda-open"
+              onClick={() => void openSystemSettings()}
+            >
+              Open System Settings
+            </button>
+          ) : (
+            <p className="fda-note">
+              In a browser, open{' '}
+              <HelpLink href={FULL_DISK_ACCESS_SYSTEM_SETTINGS_URL}>
+                System Settings → Privacy &amp; Security → Full Disk Access
+              </HelpLink>{' '}
+              yourself.
+            </p>
+          ))}
       </div>
     </section>
   );

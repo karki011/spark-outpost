@@ -262,7 +262,9 @@ test('the Mac access step explains Full Disk Access and can be skipped', async (
   test.skip(!(await macAccess.isVisible()), 'Full Disk Access is reported unsupported here.');
 
   const card = dialog(page).getByRole('region', { name: 'Full Disk Access' });
-  await expect(card).toContainText('Let Spark read everywhere on your Mac (Full Disk Access)');
+  await expect(card).toContainText(
+    'Stops macOS asking each time an agent reads a protected folder.',
+  );
   await expect(card).toContainText('System Settings');
   await expect(card).toContainText("Spark's own approvals");
   await expect(dialog(page)).toContainText('Optional. You can do this later in Settings.');

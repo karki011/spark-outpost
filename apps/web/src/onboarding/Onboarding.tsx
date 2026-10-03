@@ -190,8 +190,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                   <>
                     <h2 id="onbTitle">Mac access</h2>
                     <p className="lede">
-                      Optional. Spark can read protected folders without macOS asking every time an
-                      agent reaches into one.
+                      Optional. Skip it now and turn it on later in Settings → Help.
                     </p>
                     <FullDiskAccess />
                   </>

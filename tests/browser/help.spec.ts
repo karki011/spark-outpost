@@ -196,7 +196,9 @@ test('Settings → Help opens System Settings to grant Full Disk Access and re-c
 
   const card = help.getByRole('region', { name: 'Full Disk Access' });
   await expect(card).toContainText('Not yet');
-  await expect(card).toContainText('Let Spark read everywhere on your Mac (Full Disk Access)');
+  await expect(card).toContainText(
+    'Stops macOS asking each time an agent reads a protected folder.',
+  );
   await expect(card).toContainText("Spark's own approvals");
   await shot(page, 'settings-help-full-disk-access', 'light');
   await page.emulateMedia({ colorScheme: 'dark' });
