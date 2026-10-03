@@ -183,7 +183,7 @@ describe('Full auto runs to a draft PR', () => {
     const audit = await t.db.query<{ method: string }>(
       `SELECT method FROM run_protocol_log WHERE kind = 'ship'`,
     );
-    expect(audit.rows.map((row) => row.method)).toEqual(['ship/draft_pr']);
+    expect(audit.rows.map((row) => row.method)).toEqual(['ship/ready_pr']);
   }, 120_000);
 
   it("refuses the Builder's own push, so only Ship's branch reaches the remote and no internal commit does", async () => {

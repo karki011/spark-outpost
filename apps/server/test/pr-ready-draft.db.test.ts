@@ -89,6 +89,10 @@ it('opens PRs ready for review by default, as drafts when Settings say so, and w
   const drafted = await shippedChat('drafted');
   expect(drafted.result.pullRequest).toMatchObject({ number: 2, created: true, draft: true });
   expect(stub.github.pulls[1]).toMatchObject({ draft: true });
+  const { rows: audited } = await t.db.query<{ method: string }>(
+    `SELECT method FROM run_protocol_log WHERE kind = 'ship' ORDER BY at, seq`,
+  );
+  expect(audited.map((row) => row.method)).toEqual(['ship/ready_pr', 'ship/draft_pr']);
 
   const watched = prWatchListSchema.parse(
     (await get(`/api/conversations/${drafted.conversationId}/pull-requests`).expect(200)).body,

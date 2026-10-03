@@ -14,6 +14,7 @@ export const gitStatusSchema = z.object({
 export type GitStatus = z.infer<typeof gitStatusSchema>;
 
 export const SHIP_TITLE_MAX_LENGTH = 200;
+export const PR_TITLE_MAX_LENGTH = 120;
 
 export const shipModeSchema = z.enum(['commit', 'push', 'draft_pr']);
 export type ShipMode = z.infer<typeof shipModeSchema>;

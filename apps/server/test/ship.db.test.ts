@@ -190,8 +190,13 @@ describe('ship', { timeout: 60_000 }, () => {
     );
     expect(rows).toEqual([
       expect.objectContaining({
-        method: 'ship/draft_pr',
-        payload: expect.objectContaining({ outcome: 'succeeded', github: 'gh_cli' }),
+        method: 'ship/ready_pr',
+        payload: expect.objectContaining({
+          mode: 'ready_pr',
+          draft: false,
+          outcome: 'succeeded',
+          github: 'gh_cli',
+        }),
       }),
     ]);
 

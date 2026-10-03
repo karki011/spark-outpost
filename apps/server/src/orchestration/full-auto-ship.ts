@@ -1,6 +1,8 @@
 import {
   CHECKPOINT_OPTION,
+  clipAtWord,
   preferredShipMode,
+  SHIP_TITLE_MAX_LENGTH,
   type InvolvementLevel,
   type ShipResult,
   type TaskPiece,
@@ -187,7 +189,12 @@ async function shipMain(
       return `Full auto → PR kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
     }
     const title = failing ? `[${CHECKS_FAILING_NOTE}] ${plan.task.title}` : plan.task.title;
-    const result = await shipTask(deps, s.taskId!, { mode, title: title.slice(0, 200) }, options);
+    const result = await shipTask(
+      deps,
+      s.taskId!,
+      { mode, title: clipAtWord(title, SHIP_TITLE_MAX_LENGTH) },
+      options,
+    );
     return shippedLine(result, plan, failing);
   } catch (error) {
     return shipFailureLine(error);

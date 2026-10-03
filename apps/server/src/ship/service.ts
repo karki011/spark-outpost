@@ -1,11 +1,13 @@
-import type {
-  PrLink,
-  ShipFile,
-  ShipMode,
-  ShipPreview,
-  ShipRequest,
-  ShipResult,
-  TaskLink,
+import {
+  clipAtWord,
+  PR_TITLE_MAX_LENGTH,
+  type PrLink,
+  type ShipFile,
+  type ShipMode,
+  type ShipPreview,
+  type ShipRequest,
+  type ShipResult,
+  type TaskLink,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import { coreImpact, hasCoreImpact } from '../map/impact.ts';
@@ -102,6 +104,7 @@ interface Progress {
   committedFiles: string[];
   pushed: boolean;
   pullRequest: (PullRequest & { created: boolean; draft?: boolean }) | null;
+  draft: boolean | null;
   link: TaskLink | null;
   pushedWith: GitRoute | null;
   prLink: PrLink | null;
@@ -266,6 +269,7 @@ async function pullRequestStep(
   const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
   const body = pullRequestBody(summary);
   const draft = await draftFor(deps, options);
+  progress.draft = draft;
   const { opened, refused } = await openThroughChain(plan, { title, body, base, draft });
   if (!opened) {
     const link = plan.hostRepo
@@ -300,8 +304,10 @@ async function audit(
 ) {
   const runId = plan.facts?.auditRunId;
   if (!runId) return;
+  const recorded = mode === 'draft_pr' && progress.draft === false ? 'ready_pr' : mode;
   const payload = redactValue({
-    mode,
+    mode: recorded,
+    draft: progress.draft,
     outcome: error ? 'failed' : 'succeeded',
     error,
     branch: plan.branch,
@@ -323,7 +329,7 @@ async function audit(
       at: new Date(),
       direction: 'harness',
       kind: 'ship',
-      method: `ship/${mode}`,
+      method: `ship/${recorded}`,
       rpcId: null,
       sizeBytes: Buffer.byteLength(JSON.stringify(payload)),
       truncated: false,
@@ -361,6 +367,7 @@ async function runShip(
     committedFiles: [],
     pushed: false,
     pullRequest: null,
+    draft: null,
     link: null,
     pushedWith: null,
     prLink: null,
@@ -424,7 +431,10 @@ async function runPieceShip(
   const paths = plan.paths.filter((path) => piece.files.includes(path));
   const files = plan.files.filter((file) => paths.includes(file.path));
   const branch = `${plan.branch}-${piece.key.toLowerCase()}`;
-  const title = shipTitle(plan, `${plan.task.title}: ${piece.title}`);
+  const title = shipTitle(
+    plan,
+    clipAtWord(`${plan.task.title}: ${piece.title}`, PR_TITLE_MAX_LENGTH),
+  );
   const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
   const commit = await commitOnBranch(
     plan.root!,
