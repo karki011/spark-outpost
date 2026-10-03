@@ -94,7 +94,9 @@ the web app draws it (see [The UI page](#the-ui-page)).
    files' contents were included). Areas are relabelled only when the rules version or label
    policy changes, when Jev becomes available for a rules-only label, or when fewer than 60% of
    the area's 30 most important files are the ones it was labelled with. At most 300 areas per
-   build go to Jev.
+   build go to Jev. A request identical to one answered in the last 7 days (same policy, model,
+   state and questions) is answered from `jev_answer_cache` instead of a call; see
+   [JEV.md](JEV.md#project-map).
 7. **Links** (`map/link-match.ts`, `map/links.ts`). After a repo builds, links are recomputed
    for every pair it forms with another built map whose pair signature (both sides' source
    signatures plus `MAP_LINK_POLICY`) changed:
@@ -115,7 +117,7 @@ the web app draws it (see [The UI page](#the-ui-page)).
    - **env**: the same env key used on both sides after dropping public prefixes (`VITE_`,
      `NEXT_PUBLIC_`, `REACT_APP_`, …), excluding generic keys (0.4).
 
-## Storage (migrations 0072, 0075, 0078, 0107)
+## Storage (migrations 0072, 0075, 0078, 0107, 0108)
 
 - `code_index_files.imports text[]`, `code_index_files.endpoints jsonb`.
 - 0107 adds `code_index_files.def_start_lines int[]` and `def_end_lines int[]` (nullable: rows
@@ -137,7 +139,10 @@ the web app draws it (see [The UI page](#the-ui-page)).
 - `map_overrides`: user category overrides keyed by **root path and area id**, not by map row,
   so they survive rebuilds, rules changes and even removing and re-adding the project. Overrides
   always win when the API merges labels.
-- `map_jev_calls`: audit of every map Jev call.
+- `map_jev_calls`: audit of every map Jev call; 0108 adds `from_cache` for answers served from
+  the cache.
+- `jev_answer_cache` (0108): `key` (SHA-256), `answers`, `model`, `created_at`. Answers only,
+  never the request; 7-day TTL, pruned on write.
 - `map_link_pairs`, `map_links`: links per unordered repo pair, stored apart from either map.
 
 Reset empties all of these (it truncates every table it finds in `information_schema`).

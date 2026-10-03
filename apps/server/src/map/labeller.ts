@@ -1,6 +1,9 @@
 import type { MapCategory, MapKind } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
+import type { IntakeQuestions } from '../advisor/intake-questions.ts';
+import { requestModel } from '../advisor/jev.ts';
 import { callJev, type JevAccess, type JevCall } from '../orchestration/jev-calls.ts';
+import { answerCacheKey, cachedAnswers, storeAnswers, type CachedAnswers } from './answer-cache.ts';
 import { areaEvidence, type ReadContent } from './label-evidence.ts';
 import {
   describeArea,
@@ -13,6 +16,7 @@ import { recordJevCall, saveLabel, storedLabels, type StoredLabel } from './mode
 import type { Gate } from './pace.ts';
 import {
   LABEL_BASIS_FILES,
+  LABEL_GIVE_UP_AFTER,
   LABEL_MAX_AREAS,
   MAP_LABEL_POLICY,
   RELABEL_BELOW_OVERLAP,
@@ -50,6 +54,7 @@ export interface LabelDeps {
 
 export interface LabelTotals {
   asked: number;
+  cached: number;
   inputTokens: number;
   costUsd: number;
 }
@@ -146,39 +151,67 @@ function areaFacts(area: LabelArea): string[] {
   ];
 }
 
-async function askJev(deps: LabelDeps, area: LabelArea, names: string[]) {
+function cachedCall(asked: IntakeQuestions, cached: CachedAnswers): JevCall {
+  return {
+    status: 'answered',
+    asked,
+    response: { model: cached.model, answers: cached.answers },
+    error: null,
+    latencyMs: 0,
+    usage: null,
+    model: cached.model,
+  };
+}
+
+interface AskedLabel {
+  call: JevCall;
+  contents: string[];
+  cached: boolean;
+}
+
+async function askJev(
+  deps: LabelDeps,
+  jev: JevAccess,
+  area: LabelArea,
+  names: string[],
+): Promise<AskedLabel> {
   const evidence = await areaEvidence({
     facts: areaFacts(area),
     rankedPaths: area.ranked,
     ignore: deps.ignore,
     read: deps.read,
   });
-  const call = await callJev(
-    deps.jev,
-    () => labelQuestions(areaState(area, deps.repoName), evidence.text, names),
-    deps.signal,
-  );
-  return { call, contents: evidence.contents };
+  const asked = labelQuestions(areaState(area, deps.repoName), evidence.text, names);
+  const key = answerCacheKey(MAP_LABEL_POLICY, requestModel(jev.model), asked);
+  const cached = await cachedAnswers(deps.db, key, asked);
+  if (cached) {
+    return { call: cachedCall(asked, cached), contents: evidence.contents, cached: true };
+  }
+  const call = await callJev(jev, () => asked, deps.signal);
+  if (call.status === 'answered' && call.response) {
+    await storeAnswers(deps.db, key, call.response);
+  }
+  return { call, contents: evidence.contents, cached: false };
 }
 
 async function labelOne(
   deps: LabelDeps,
   area: LabelArea,
-  useJev: boolean,
-): Promise<JevCall | null> {
+  jev: JevAccess | null,
+): Promise<AskedLabel | null> {
   const names = nameCandidates(area.root, area.package, area.ranked.slice(0, 5));
   const rules = { category: area.ruleCategory, kind: area.ruleKind };
   let choice: LabelChoice = parseLabel(null, names, rules);
-  let call: JevCall | null = null;
-  if (useJev) {
-    const asked = await askJev(deps, area, names);
-    call = asked.call;
-    choice = parseLabel(call.response, names, rules);
+  let asked: AskedLabel | null = null;
+  if (jev) {
+    asked = await askJev(deps, jev, area, names);
+    choice = parseLabel(asked.call.response, names, rules);
     await recordJevCall(deps.db, deps.repoId, {
       purpose: 'area_label',
       subject: area.id,
       policyVersion: MAP_LABEL_POLICY,
-      call,
+      call: asked.call,
+      fromCache: asked.cached,
       answer: { ...choice, contents: asked.contents },
     });
   }
@@ -201,7 +234,7 @@ async function labelOne(
     basis: area.ranked.slice(0, LABEL_BASIS_FILES),
     policyVersion: MAP_LABEL_POLICY,
   });
-  return call;
+  return asked;
 }
 
 export async function labelAreas(deps: LabelDeps): Promise<LabelTotals> {
@@ -211,15 +244,19 @@ export async function labelAreas(deps: LabelDeps): Promise<LabelTotals> {
   const todo = areas.filter((area) =>
     needsLabel(stored.get(area.id), area.ranked.slice(0, LABEL_BASIS_FILES), jevReady),
   );
-  const totals: LabelTotals = { asked: 0, inputTokens: 0, costUsd: 0 };
+  const totals: LabelTotals = { asked: 0, cached: 0, inputTokens: 0, costUsd: 0 };
   await deps.progress(0, todo.length, jevReady ? Math.min(todo.length, LABEL_MAX_AREAS) : 0);
+  let failedInARow = 0;
   for (const [index, area] of todo.entries()) {
-    const useJev = jevReady && index < LABEL_MAX_AREAS;
-    if (useJev) await deps.gate.step();
-    const call = await labelOne(deps, area, useJev);
-    if (call?.status === 'answered') totals.asked += 1;
-    totals.inputTokens += call?.usage?.inputTokens ?? 0;
-    totals.costUsd += call?.usage?.costUsd ?? 0;
+    const reachable = failedInARow < LABEL_GIVE_UP_AFTER;
+    const jev = index < LABEL_MAX_AREAS && reachable ? deps.jev : null;
+    if (jev) await deps.gate.step();
+    const asked = await labelOne(deps, area, jev);
+    if (asked) failedInARow = asked.call.status === 'answered' ? 0 : failedInARow + 1;
+    if (asked?.cached) totals.cached += 1;
+    else if (asked?.call.status === 'answered') totals.asked += 1;
+    totals.inputTokens += asked?.call.usage?.inputTokens ?? 0;
+    totals.costUsd += asked?.call.usage?.costUsd ?? 0;
     await deps.progress(index + 1, todo.length);
   }
   return totals;

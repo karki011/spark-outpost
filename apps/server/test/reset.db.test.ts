@@ -49,7 +49,8 @@ describe('POST /api/reset', () => {
     const before = await rowCounts(t);
     const seeded = ['conversations', 'messages', 'runs', 'jobs', 'profiles', 'projects'];
     const mapTables = ['map_repos', 'map_areas', 'map_files', 'map_labels', 'map_overrides'];
-    for (const table of [...seeded, ...mapTables, 'map_jev_calls', 'map_link_pairs', 'map_links'])
+    const caches = ['map_jev_calls', 'map_link_pairs', 'map_links', 'jev_answer_cache'];
+    for (const table of [...seeded, ...mapTables, ...caches])
       expect(before[table], table).toBeGreaterThan(0);
 
     const response = await postReset(t, storedSecrets(mcpId), { keepApiKeys: false });
