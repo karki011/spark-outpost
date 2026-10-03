@@ -32,19 +32,11 @@ const DEV_BADGE = [
 function appIconSvg(dev: boolean): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fcfbf7"/>
-      <stop offset="1" stop-color="#e3eeea"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="14"/>
+    <filter id="shadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.3"/>
     </filter>
   </defs>
-  <rect x="100" y="112" width="824" height="824" rx="185" fill="#000000" fill-opacity="0.28" filter="url(#shadow)"/>
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)"/>
-  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#0c0f12" stroke-opacity="0.08" stroke-width="2"/>
-  <ellipse cx="512" cy="792" rx="210" ry="28" fill="${INK}" fill-opacity="0.1"/>
-  <g transform="translate(192 180) scale(10)">${scout()}</g>
+  <g filter="url(#shadow)"><g transform="translate(78 70) scale(13.5)">${scout()}</g></g>
   ${dev ? DEV_BADGE : ''}
 </svg>`;
 }
