@@ -184,6 +184,20 @@ describe('intake decisions', () => {
     expect(decideIntake(null, drop).destructive).toBe(true);
   });
 
+  it('does not call a request destructive only because it names a secret file', () => {
+    const housekeeping = facts({
+      request: [
+        'Housekeeping pass. Run each of these, one Bash call per item:',
+        '1. git status --short',
+        '2. pnpm install --offline 2>&1 | tail -3',
+        '3. Use the Read tool to open the file .env in the repo root and tell me the first variable.',
+      ].join('\n'),
+    });
+    expect(decideIntake(null, housekeeping)).toMatchObject({ destructive: false, risk: 'edits' });
+    const wipe = facts({ request: 'Delete .env and the old keys' });
+    expect(decideIntake(null, wipe).destructive).toBe(true);
+  });
+
   it('wants a Critic for a review request from Jev or the phrase rule', () => {
     expect(decideIntake(jev({ review: 0.9 }), facts()).review).toBe(true);
     expect(decideIntake(null, facts({ request: 'Review my changes to the parser' })).review).toBe(

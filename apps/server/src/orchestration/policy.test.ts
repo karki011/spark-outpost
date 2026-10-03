@@ -21,14 +21,14 @@ import {
 import { oneTierUp, strongerEffort, tierLadder, topTier } from './tiers.ts';
 
 describe('risk rules', () => {
-  it('calls deletions, drops, data migrations, history rewrites and secrets destructive', () => {
+  it('calls deletions, drops, data migrations and history rewrites destructive', () => {
     for (const request of [
       'Drop the legacy users table',
       'Delete the old reports folder',
       'Migrate the orders data to the new schema',
       'git reset --hard and force push',
       'Remove the files under tmp/',
-      'Rotate the key in .env',
+      'Delete .env and start over',
     ]) {
       expect(destructiveByRule(request), request).toBe(true);
     }
@@ -36,6 +36,9 @@ describe('risk rules', () => {
       'Rename formatDate to formatDay in src/dates.ts',
       'Add a CSV export to the reports page',
       'Fix the typo in README.md',
+      'Rotate the key in .env',
+      'Use the Read tool to open the file .env and tell me the name of the first variable in it.',
+      'Load ~/.ssh/config settings into the deploy script',
     ]) {
       expect(destructiveByRule(request), request).toBe(false);
     }

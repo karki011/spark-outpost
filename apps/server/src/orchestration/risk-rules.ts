@@ -4,7 +4,6 @@ import {
   LARGE_DIFF_FILES,
   LARGE_DIFF_LINES,
 } from '../advisor/policy.ts';
-import { isSecretPath } from '../projects/path-policy.ts';
 import { namedFiles } from './context.ts';
 
 const DESTRUCTIVE =
@@ -21,11 +20,6 @@ export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function namesSecret(request: string): boolean {
-  const tokens = request.split(/[\s`'"(),;]+/).filter(Boolean);
-  return tokens.some((token) => isSecretPath(token));
-}
-
 const FOREIGN_KEY_ACTION =
   /\bon\s+(?:delete|update)\s+(?:cascade|set\s+null|set\s+default|restrict|no\s+action)\b|\bcascad\w*\s+delet\w*|\bdelet\w*\s+cascad\w*/gi;
 
@@ -37,11 +31,11 @@ function withoutForeignKeyActions(text: string): string {
 }
 
 export function destructiveByRule(request: string): boolean {
-  return DESTRUCTIVE.test(withoutForeignKeyActions(request)) || namesSecret(request);
+  return DESTRUCTIVE.test(withoutForeignKeyActions(request));
 }
 
 export function strongRemovalByRule(request: string): boolean {
-  return STRONG_REMOVAL.test(withoutForeignKeyActions(request)) || namesSecret(request);
+  return STRONG_REMOVAL.test(withoutForeignKeyActions(request));
 }
 
 export function destructiveTargets(request: string): string[] {
