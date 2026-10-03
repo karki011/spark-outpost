@@ -138,6 +138,7 @@ async function build(turn: RoleTurn, file: string, line: string): Promise<void> 
 async function strayWrites(turn: RoleTurn, key: string): Promise<void> {
   const tag = (name: string, piece: string) => turn.text.includes(name) && key === piece;
   if (tag('#gitstash', 'P1')) await askToRun(turn, 'git stash');
+  if (tag('#addpkg', 'P1')) await askToRun(turn, 'pnpm add left-pad');
   if (tag('#strayedit', 'P2')) await write(turn, 'view.ts', 'edited by P2');
   if (tag('#shellwrite', 'P2')) await writeFile(join(turn.cwd, 'view.ts'), 'shell write by P2\n');
   if (tag('#shellstray', 'P2')) await writeFile(join(turn.cwd, 'stray.ts'), 'shell stray\n');

@@ -101,6 +101,7 @@ export type GateAnswer =
       allowed: boolean;
       note: string;
       approvalId?: string;
+      denial?: string;
     }
   | { outcome: 'cancelled'; note: string };
 

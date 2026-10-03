@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { decodeClaudePermissionResponse } from '@agentclientprotocol/claude-agent-acp/dist/permissions/response.js';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
 
 const context = {
@@ -212,6 +213,48 @@ describe('permissionResponse', () => {
     ).toEqual({ outcome: { outcome: 'selected', optionId: 'allow' } });
     expect(permissionResponse({ outcome: 'cancelled', note: '' })).toEqual({
       outcome: { outcome: 'cancelled' },
+    });
+  });
+
+  it("tells the agent when Spark's policy, not the user, rejected the call", () => {
+    const denial = "Spark's policy blocked `pnpm add zod` (reason).";
+    expect(
+      permissionResponse({
+        outcome: 'selected',
+        optionId: 'reject',
+        allowed: false,
+        note: '',
+        denial,
+      }),
+    ).toEqual({
+      outcome: { outcome: 'selected', optionId: 'reject' },
+      _meta: { denyMessage: denial },
+    });
+  });
+
+  it("reaches Claude as the tool's denial message instead of 'User refused'", () => {
+    const offered = [{ optionId: 'reject', name: 'No', kind: 'reject_once' as const }];
+    const decode = (denial?: string) =>
+      decodeClaudePermissionResponse(
+        permissionResponse({
+          outcome: 'selected',
+          optionId: 'reject',
+          allowed: false,
+          note: '',
+          ...(denial ? { denial } : {}),
+        }),
+        'Bash',
+        { command: 'pnpm add zod' },
+        'tool-1',
+        offered,
+      ).permissionResult;
+    expect(decode("Spark's policy blocked `pnpm add zod` (reason).")).toMatchObject({
+      behavior: 'deny',
+      message: "Spark's policy blocked `pnpm add zod` (reason).",
+    });
+    expect(decode()).toMatchObject({
+      behavior: 'deny',
+      message: 'User refused permission to run tool',
     });
   });
 });

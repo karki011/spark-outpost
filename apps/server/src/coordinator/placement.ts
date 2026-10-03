@@ -18,6 +18,12 @@ const GENERATED =
   /(?:^|\/)(?:dist|build|out|generated|__generated__|coverage|\.next)\/|\.(?:gen|generated)\.[^/]+$|\.d\.ts$|\.min\.(?:js|css)$/i;
 const MIGRATIONS = /(?:^|\/)(?:migrations?|migrate|db\/migrate)\//i;
 const UNSURE_MARGIN = 0.1;
+const INSTALL_WORDING =
+  /\b(?:re)?install\w*\b|\b(?:pnpm|npm|yarn|bun|cargo|poetry|uv) add\b|\bgo get\b|\bpip3? install\b/i;
+
+export function asksForInstall(request: string): boolean {
+  return INSTALL_WORDING.test(request);
+}
 
 export function inMigrationsFolder(file: string): boolean {
   return MIGRATIONS.test(file);
@@ -46,6 +52,7 @@ export interface PlacementFacts {
   repoBusy: boolean;
   destructive: boolean;
   skipsGate: boolean;
+  installs: boolean;
   wholeProjectChecks: boolean;
   splitWorthIt: number | null;
   sameFolder: number | null;
@@ -130,6 +137,7 @@ export function listIsolation(
 ): string | null {
   if (facts.repoBusy) return 'another task is working in this repo';
   if (facts.skipsGate) return "the agent's mode skips the approval gate";
+  if (facts.installs) return 'the request installs packages';
   if (facts.destructive || pieces.some((piece) => piece.destructive)) {
     return 'the story deletes, migrates or rewrites data';
   }

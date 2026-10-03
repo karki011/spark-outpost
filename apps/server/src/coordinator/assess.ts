@@ -12,6 +12,7 @@ import type { BuilderPlan } from './builder-jev.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
 import { planSteps, type PlanStep } from './plan-coverage.ts';
 import {
+  asksForInstall,
   placePieces,
   type PlaceablePiece,
   type Placement,
@@ -57,6 +58,7 @@ export async function placementFacts(s: Session): Promise<PlacementFacts> {
     repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
     destructive: s.facts.destructive,
     skipsGate: modeSkipsGate(s.input.provider, s.input.agentMode),
+    installs: asksForInstall(s.input.userRequest),
     wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
     splitWorthIt: null,
     sameFolder: null,

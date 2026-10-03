@@ -1,0 +1,23 @@
+diff --git a/dist/permissions/effects.js b/dist/permissions/effects.js
+index f4649e0bdb3b6418ec9adc13f7d67579ba1c9c86..72a68c8f7fb5782596767ac3d49e5b73f759e59b 100644
+--- a/dist/permissions/effects.js
++++ b/dist/permissions/effects.js
+@@ -5,7 +5,8 @@ export function parseClaudePermissionSelection(response, toolName) {
+         throw new Error("Tool use aborted");
+     const optionId = response.outcome.optionId;
+     const contextResetMode = toolName === "ExitPlanMode" ? exitPlanClearContextMode(optionId) : undefined;
+-    return { optionId, ...(contextResetMode ? { contextResetMode } : {}) };
++    const denyMessage = typeof response._meta?.denyMessage === "string" ? response._meta.denyMessage : undefined;
++    return { optionId, ...(contextResetMode ? { contextResetMode } : {}), ...(denyMessage ? { denyMessage } : {}) };
+ }
+ function allow(context, updatedPermissions, permanent = false) {
+     return {
+@@ -125,7 +126,7 @@ function applyCommonSelection(selection, context) {
+                 throw new Error("Invalid durable permission selection");
+             return allow(context, context.durableChangeSet.updates, true);
+         case PERMISSION_OPTION_ID.reject:
+-            return deny(context);
++            return deny(context, selection.denyMessage);
+         default:
+             throw new Error(`Unknown permission option: ${selection.optionId}`);
+     }

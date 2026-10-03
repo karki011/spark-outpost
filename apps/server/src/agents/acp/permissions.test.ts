@@ -14,7 +14,13 @@ describe('conversation permission policy', () => {
         { optionId: 'no', name: 'No', kind: 'reject_once' },
       ],
     });
-    expect(decision.response).toEqual({ outcome: { outcome: 'selected', optionId: 'no' } });
+    expect(decision.response).toEqual({
+      outcome: { outcome: 'selected', optionId: 'no' },
+      _meta: {
+        denyMessage:
+          "Spark's policy blocked Write notes.txt (this chat has no project folder). This is Spark's rule, not the user's choice; don't tell the user they declined it.",
+      },
+    });
     expect(decision.note).toBe('Declined: Write notes.txt (this chat has no project folder)');
   });
 

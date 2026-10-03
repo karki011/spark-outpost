@@ -47,6 +47,7 @@ import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approv
 import { runEvents } from './run-events.ts';
 import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
+import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 
 const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -128,6 +129,11 @@ function allowOption(options: readonly ApprovalOption[]): ApprovalOption | undef
     options.find((option) => option.kind === 'allow_once') ??
     options.find((option) => option.kind === 'allow_always')
   );
+}
+
+function policyBlocked(answer: GateAnswer): GateAnswer {
+  if (answer.outcome !== 'selected') return answer;
+  return { ...answer, denial: policyDenial(answer.note) };
 }
 
 function rejectOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
@@ -407,7 +413,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
         optionId: rejectOption(request.options)?.optionId ?? null,
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
-      return reject(request, `Declined: ${what} (${decision.reason})`, denied.id);
+      return policyBlocked(reject(request, blockedNote(what, decision.reason), denied.id));
     }
     const option = allowOption(request.options);
     const recorded = await insertApproval(deps.db, newApproval(request, null), {

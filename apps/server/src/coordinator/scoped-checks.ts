@@ -65,8 +65,7 @@ export function noCheckLabel(paths: readonly string[]): string {
 }
 
 export function runsWholeProject(command: string): boolean {
-  const text = squash(command);
-  return isPackageInstall(text) || WHOLE_PROJECT.test(text);
+  return WHOLE_PROJECT.test(squash(command));
 }
 
 export function scopedCheckProblem(

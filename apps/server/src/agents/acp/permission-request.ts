@@ -131,7 +131,9 @@ export function approvalRequestFrom(
 }
 
 export function permissionResponse(answer: GateAnswer): acp.RequestPermissionResponse {
-  return answer.outcome === 'selected'
-    ? { outcome: { outcome: 'selected', optionId: answer.optionId } }
-    : { outcome: { outcome: 'cancelled' } };
+  if (answer.outcome !== 'selected') return { outcome: { outcome: 'cancelled' } };
+  const selected = { outcome: 'selected' as const, optionId: answer.optionId };
+  return answer.denial
+    ? { outcome: selected, _meta: { denyMessage: answer.denial } }
+    : { outcome: selected };
 }

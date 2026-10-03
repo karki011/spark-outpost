@@ -89,6 +89,18 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
     expect(list.pieces.every((piece) => piece.status === 'landed')).toBe(true);
   });
 
+  it('lets a piece install packages when it has the tree to itself', async () => {
+    const { orchestration, runId } = await build('#addpkg', 'hands-off');
+    expect(orchestration.status).toBe('succeeded');
+    expect(await refusals(runId)).toEqual([]);
+    const { rows } = await t.db.query<{ status: string }>(
+      `SELECT a.status FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.title = 'pnpm add left-pad'`,
+      [runId],
+    );
+    expect(rows).toEqual([{ status: 'allowed' }]);
+  });
+
   it('refuses git stash to a piece Builder', async () => {
     const { runId } = await build('#gitstash', 'hands-off');
     expect(await refusals(runId)).toEqual([BUILDER_GIT_REASON]);

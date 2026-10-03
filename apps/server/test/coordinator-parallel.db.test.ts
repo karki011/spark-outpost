@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SHARED_INSTALL_REASON } from '../src/approvals/piece-guard.ts';
+import { NOT_STARTED_STOPPED } from '../src/coordinator/skip.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
@@ -95,6 +97,29 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     expect(await sharedGuards(runId)).toEqual({ P1: true, P2: true, P3: true });
   });
 
+  it("holds an install while pieces share the tree and says it was Spark's policy", async () => {
+    await projectFlags(t, root, { parallel: true });
+    const { conversationId, runId } = await begin('#addpkg');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ status: string; decided_by: string; reason: string }>(
+      `SELECT a.status, a.decided_by, a.reason FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.title = 'pnpm add left-pad'`,
+      [runId],
+    );
+    expect(rows).toEqual([
+      { status: 'denied', decided_by: 'policy', reason: SHARED_INSTALL_REASON },
+    ]);
+    const steps = await t.db.query<{ name: string }>(
+      `SELECT e.payload->>'stepName' AS name FROM run_events e JOIN runs r ON r.id = e.run_id
+       WHERE r.parent_run_id = $1 AND e.type = 'STEP_STARTED' AND e.payload->>'stepName' LIKE 'Spark''s policy blocked%'`,
+      [runId],
+    );
+    expect(steps.rows.map((row) => row.name)).toEqual([
+      `Spark's policy blocked \`pnpm add left-pad\` (${SHARED_INSTALL_REASON})`,
+    ]);
+  });
+
   it('keeps pieces in order while the project runs one Builder at a time', async () => {
     await projectFlags(t, root, { slots: 1 });
     const { conversationId, runId } = await begin('');
@@ -128,8 +153,9 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
       ['P1', 'failed'],
       ['P2', 'failed'],
-      ['P3', 'pending'],
+      ['P3', 'skipped'],
     ]);
+    expect(list.pieces[2]!.note).toBe(NOT_STARTED_STOPPED);
     const runs = await crewRuns(t, runId);
     expect(runs.filter((run) => run.pieceKey).map((run) => run.status)).toEqual([
       'cancelled',

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  asksForInstall,
   criticalPathSaving,
   placePieces,
   sharedTreeBlocker,
@@ -12,6 +13,7 @@ const FACTS: PlacementFacts = {
   repoBusy: false,
   destructive: false,
   skipsGate: false,
+  installs: false,
   wholeProjectChecks: false,
   splitWorthIt: null,
   sameFolder: null,
@@ -34,6 +36,21 @@ const TWO_LARGE = [
   piece('P2'),
   piece('P3', { dependsOn: ['P1', 'P2'], sizeEstimate: 10_000 }),
 ];
+
+describe('asksForInstall', () => {
+  it.each([
+    '4. pnpm install --offline 2>&1 | tail -3',
+    'Add zod with `pnpm add zod` and use it in src/schema.ts',
+    'Install the date-fns package',
+    'pip install -r requirements.txt, then run the tests',
+  ])('reads an install in the request: %s', (request) => {
+    expect(asksForInstall(request)).toBe(true);
+  });
+
+  it('ignores a request without one', () => {
+    expect(asksForInstall('Add a CSV export to the reports page')).toBe(false);
+  });
+});
 
 describe('placePieces', () => {
   it('row 1: outside git everything runs in order', () => {
@@ -96,6 +113,7 @@ describe('placePieces', () => {
   it.each([
     [{ repoBusy: true }, 'another task is working in this repo'],
     [{ skipsGate: true }, "the agent's mode skips the approval gate"],
+    [{ installs: true }, 'the request installs packages'],
     [{ destructive: true }, 'the story deletes, migrates or rewrites data'],
   ])('row 2: %o sends pieces to worktrees', (overrides, reason) => {
     expect(placePieces(TWO_LARGE, { ...FACTS, ...overrides })).toMatchObject({

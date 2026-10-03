@@ -12,7 +12,7 @@ import { lastDays } from './window.ts';
 import { reportedModel } from '../../providers/reported-model.ts';
 
 const STEPS_PER_RUN = 25;
-const DECLINED = /^(Declined|Blocked|Refused|Stopped)\b/i;
+const DECLINED = /^(Declined|Blocked|Refused|Stopped|Spark's policy blocked)\b/i;
 
 interface StepRow {
   run_id: string;

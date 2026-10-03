@@ -7,12 +7,16 @@ import {
   type OwnedFiles,
 } from '../coordinator/owned.ts';
 import { FULL_CHECKS_REASON, runsWholeProject } from '../coordinator/scoped-checks.ts';
+import { isPackageInstall } from './command-kinds.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { changesGitState } from './git-commands.ts';
 import { writeTargets } from './write-targets.ts';
 
 export const BUILDER_GIT_REASON =
   "Builders in a coordinated task don't change the index, the branch or the stash; use `git diff` and `git show HEAD:<path>` for baselines";
+
+export const SHARED_INSTALL_REASON =
+  'Other pieces are working in this folder at the same time, so installs wait until they land. Finish this piece without it and say in your reply which install it needs';
 
 export interface PieceGuard {
   coordinated: boolean;
@@ -69,6 +73,7 @@ export function pieceRefusal(
   if (guard.coordinated && command && changesGitState(command)) return BUILDER_GIT_REASON;
   const owned = guard.owned;
   if (!owned) return null;
+  if (command && guard.sharesTree && isPackageInstall(command)) return SHARED_INSTALL_REASON;
   if (command && runsWholeProject(command)) return `Inside a piece, ${FULL_CHECKS_REASON}`;
   const targets = request.kind === 'edit' ? request.paths : commandTargets(request);
   const outside = outsidePiece(owned, targets, relativeOf);

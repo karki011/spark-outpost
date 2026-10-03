@@ -33,6 +33,17 @@ const decided = (change: Partial<Approval>): Approval => ({
 });
 
 describe('approval outcome', () => {
+  it("says Spark's policy blocked a call, never that you declined it", () => {
+    const blocked = outcome(
+      decided({ status: 'denied', decidedBy: 'policy', decisionOptionId: 'no', reason: 'x' }),
+    );
+    expect(blocked).toEqual({
+      icon: 'no',
+      label: "Spark's policy blocked it.",
+      detail: "The command didn't run.",
+    });
+  });
+
   it("names the agent's option the user chose", () => {
     const always = outcome(
       decided({ status: 'allowed', decisionOptionId: 'always', scope: 'run' }),

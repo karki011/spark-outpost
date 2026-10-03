@@ -110,7 +110,7 @@ export async function writeTextFile(
   if (!answer.allowed) {
     throw acp.RequestError.invalidRequest(
       { path: params.path },
-      'Declined: the write was not approved.',
+      (answer.outcome === 'selected' && answer.denial) || 'Declined: the write was not approved.',
     );
   }
   await mkdir(path.dirname(target), { recursive: true });

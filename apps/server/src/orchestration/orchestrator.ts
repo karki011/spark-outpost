@@ -250,7 +250,7 @@ async function finish(
   if (status === 'failed') s.closeReason ??= status;
   await cleanupCopies(s).catch(() => undefined);
   await settleObservations(s);
-  await skipUnstarted(s.deps.db, s.coordination ?? null);
+  await skipUnstarted(s.deps.db, s.coordination ?? null, status === 'cancelled');
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
   const assumed = s.assumption ? assumptionLine(s.assumption) : null;
   const stopped = status === 'failed' && reason ? reason : null;

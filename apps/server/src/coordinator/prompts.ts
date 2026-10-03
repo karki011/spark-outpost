@@ -160,7 +160,8 @@ export function pieceSection(brief: PieceBrief): string {
   parts.push(
     `## Rules for pieces\n${bullets([
       BUILDER_GIT_RULE,
-      "Don't run the project's full checks, installs, formatters over the repo, or migrations against a shared database: the coordinator runs the full checks after integration.",
+      "Don't run the project's full checks, formatters over the repo, or migrations against a shared database: the coordinator runs the full checks after integration.",
+      'Run a package install when the piece needs one or the request asks for it.',
       'Stop after each acceptance item that passes its scoped check, and reply with what you changed.',
     ])}`,
   );

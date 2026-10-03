@@ -45,7 +45,10 @@ export async function skipWithDependents(
   return moved ? [piece.key, ...dependents] : dependents;
 }
 
-function unstartedNote(pieces: readonly TaskPiece[]): string {
+export const NOT_STARTED_STOPPED = 'Not started: you stopped the run';
+
+function unstartedNote(pieces: readonly TaskPiece[], cancelled: boolean): string {
+  if (cancelled) return NOT_STARTED_STOPPED;
   const failed = pieces.find((piece) => piece.status === 'failed');
   return failed
     ? `Not started: ${failed.key} failed and the run stopped`
@@ -55,10 +58,11 @@ function unstartedNote(pieces: readonly TaskPiece[]): string {
 export async function skipUnstarted(
   db: Queryable,
   coordination: Coordination | null,
+  cancelled: boolean,
 ): Promise<void> {
   const list = coordination?.list;
   if (!coordination || !list) return;
-  const note = unstartedNote(list.pieces);
+  const note = unstartedNote(list.pieces, cancelled);
   let moved = false;
   for (const piece of list.pieces) {
     if (await movePiece(db, piece.id, ['pending', 'ready'], 'skipped', { note })) moved = true;

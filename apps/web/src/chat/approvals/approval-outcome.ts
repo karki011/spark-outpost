@@ -121,6 +121,9 @@ export function outcome(approval: Approval): Outcome {
       }
       return { icon: 'ok', label: 'Allowed once.', detail: '' };
     case 'denied':
+      if (approval.decidedBy === 'policy') {
+        return { icon: 'no', label: "Spark's policy blocked it.", detail: deniedDetail(approval) };
+      }
       return { icon: 'no', label: 'Denied.', detail: deniedDetail(approval) };
     default:
       return { icon: 'ok', label: '', detail: '' };
