@@ -136,3 +136,4 @@ Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink
 | Settings → Sparks                                                 | `sparks`                                                     |
 
 Getting started links to `troubleshooting#run-setup-again` for when setup comes back.
+> Note: this branch is a live Spark test — do not merge.
