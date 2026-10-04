@@ -18,7 +18,10 @@ the web app draws it (see [The UI page](#the-ui-page)).
   keeps busy time within a CPU budget (`CPU_BUDGET = 0.3`: after 40 ms of work it sleeps long
   enough to keep the duty cycle at 30%), and **pauses while any agent run is queued or running**
   (status `paused`, rechecked every `MAP_POLL_MS`). The index phase shares the code scanner's
-  lane, so a map build never indexes a repo at the same time as a run's scan.
+  lane, so a map build never indexes a repo at the same time as a run's scan. On a machine with
+  four cores or fewer, an index build started by a run's scan goes through the same gate
+  (`map/scan-index-pace.ts`) when it has more than 500 files to parse; scans keep answering with
+  the index marked as building. Bigger machines and small refreshes are not paced.
 - **Resumable.** The build records its phase (`index → graph → labels → links → done`) before
   starting it. After a crash or shutdown the next worker resumes from that phase; finished labels
   and link pairs are kept and not asked again.

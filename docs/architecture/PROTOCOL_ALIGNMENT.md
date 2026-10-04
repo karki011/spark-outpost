@@ -36,6 +36,8 @@ Not installed: `@ag-ui/client`, `@a2a-js/sdk`, CopilotKit.
 
 `RUN_STARTED`, `STEP_STARTED`, `STEP_FINISHED`, `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`, `CUSTOM` (`approval_requested`, `approval_decided`), `ACTIVITY_SNAPSHOT`, `RUN_FINISHED` (outcomes `success`, `cancelled`), `RUN_ERROR` (codes `provider_error`, `outcome_unknown`), built in `apps/server/src/workflow/run-events.ts`.
 
+The worker writes `TEXT_MESSAGE_CONTENT` events in batches: chunks wait at most 50 ms (or 8 KB) and are stored together, each still its own event with its own `seq`. Any other event first stores the waiting text in the same transaction, so the order is the order the agent produced (`apps/server/src/workflow/run-appender.ts`).
+
 Real providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGENTS.md)). The fake provider, which echoes the message, remains for tests; it is not evidence of any real provider capability.
 
 ## Deviations from the AG-UI client model

@@ -138,7 +138,7 @@ Verified on 2026-10-01 (Intel Mac, ad-hoc signed): the packaged x64 app starts i
 
 - **Server as JS:** compile `apps/server` instead of registering `tsx` at runtime.
 - **pg_dump:** not bundled; `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres` (the app keeps the last two). The update backup falls back to a cold copy; `Contents/Resources/postgres-tools/bin` is checked first if a matching pg_dump/pg_restore 17 is added later.
-- **PATH for GUI launches:** an app started from Finder gets a minimal PATH; agents, git and the CLI lookup need the login shell's PATH.
+- **PATH for GUI launches:** an app started from Finder gets a minimal PATH; agents, git and the CLI lookup need the login shell's PATH. The lookup runs while Postgres starts; the Git check waits for it.
 - **Repo lock file** in `.git/` naming channel and run (isolation section): not built; the server has no hook for it yet (`repoBusy` only checks runs in its own database). TODO.
 - **Worktrees under the channel data folder:** branches are per channel now, but copies still live in `<repo>/.spark/worktrees/<runId>`.
 - **Link scheme:** `spark-outpost-dev://` is named but not registered with the OS (no handler yet).
