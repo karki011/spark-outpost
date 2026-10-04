@@ -23,6 +23,8 @@ const PREFS: SparkSessionPrefs = {
   personality: 'friendly',
 };
 
+const SPARK = { name: 'spark', browser: false };
+
 describe('sparkInstructions', () => {
   it('asks for coordinator work, the first name and the friendly tone by default', () => {
     const text = sparkInstructions(PREFS, true);
@@ -78,12 +80,12 @@ describe('sparkInstructions', () => {
     expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
     expect(sparkInstructions(PREFS, true, true)).not.toContain('spark_browser_');
     expect(sparkInstructions(PREFS, true, false, true)).not.toContain('spark_browser_');
-    expect(withCodexSpark(null, PREFS, true, true)!.developerInstructions).toContain(
+    expect(withCodexSpark(null, PREFS, { browser: true })!.developerInstructions).toContain(
       'spark_browser_*',
     );
-    expect(withClaudeSpark(null, PREFS, true, 'spark', true)!.appendPrompt).toContain(
-      'spark_browser_*',
-    );
+    expect(
+      withClaudeSpark(null, PREFS, true, { name: 'spark', browser: true })!.appendPrompt,
+    ).toContain('spark_browser_*');
   });
 
   it('stays within its length budget even with the longest name', () => {
@@ -109,12 +111,12 @@ describe('withClaudeSpark', () => {
   });
 
   it('allows the Spark server without an ask, even when no Spark preferences are set', () => {
-    expect(withClaudeSpark(null, undefined, false, 'spark')!.allowRules).toEqual(['mcp__spark']);
+    expect(withClaudeSpark(null, undefined, false, SPARK)!.allowRules).toEqual(['mcp__spark']);
     const merged = withClaudeSpark(
       { ...NO_REPO, allowRules: ['Bash(npm test:*)'] },
       PREFS,
       true,
-      'spark',
+      SPARK,
     )!;
     expect(merged.allowRules).toEqual(['Bash(npm test:*)', 'mcp__spark']);
     expect(merged.appendPrompt).toContain('spark_* tools');

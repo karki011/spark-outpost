@@ -75,6 +75,11 @@ const NO_CLAUDE_REPO: ClaudeRepoOptions = {
   agentTool: false,
 };
 
+export interface SparkToolsHint {
+  name: string;
+  browser: boolean;
+}
+
 function withSparkServer(repo: ClaudeRepoOptions | null, sparkServer: string | null) {
   if (!sparkServer) return repo;
   const base = repo ?? NO_CLAUDE_REPO;
@@ -85,10 +90,9 @@ export function withClaudeSpark(
   repo: ClaudeRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
   hasTools: boolean,
-  sparkServer: string | null = null,
-  browser = false,
+  spark: SparkToolsHint | null = null,
 ): ClaudeRepoOptions | null {
-  const allowed = withSparkServer(repo, sparkServer);
+  const allowed = withSparkServer(repo, spark?.name ?? null);
   if (!prefs) return allowed;
   const base = allowed ?? NO_CLAUDE_REPO;
   const subagents = hasTools;
@@ -96,7 +100,7 @@ export function withClaudeSpark(
     ...base,
     appendPrompt: joined(
       base.appendPrompt,
-      sparkInstructions(prefs, subagents, sparkServer !== null, browser),
+      sparkInstructions(prefs, subagents, spark !== null, spark?.browser),
     ),
     agentTool: subagents,
   };
@@ -111,8 +115,7 @@ const NO_CODEX_REPO: CodexRepoOptions = {
 export function withCodexSpark(
   repo: CodexRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
-  sparkTools = false,
-  browser = false,
+  spark: Pick<SparkToolsHint, 'browser'> | null = null,
 ): CodexRepoOptions | null {
   if (!prefs) return repo;
   const base = repo ?? NO_CODEX_REPO;
@@ -120,7 +123,7 @@ export function withCodexSpark(
     ...base,
     developerInstructions: joined(
       base.developerInstructions,
-      sparkInstructions(prefs, false, sparkTools, browser),
+      sparkInstructions(prefs, false, spark !== null, spark?.browser),
     ),
   };
 }
