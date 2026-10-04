@@ -5,7 +5,7 @@ import './day-calendar.css';
 
 export type DayCalendarProps = ComponentProps<typeof DayPicker>;
 
-export function DayCalendar({ className, ...props }: DayCalendarProps) {
+export function DayCalendarGrid({ className, ...props }: DayCalendarProps) {
   return (
     <DayPicker
       showOutsideDays

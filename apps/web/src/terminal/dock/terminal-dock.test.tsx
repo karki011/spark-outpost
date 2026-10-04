@@ -22,6 +22,7 @@ vi.mock('../terminal-api.ts', () => ({
 }));
 
 vi.mock('../terminal-connection.ts', () => ({
+  preloadTerminal: () => Promise.resolve(),
   openTerminal: (
     start: () => Promise<{ chatId: string | null }>,
     _element: HTMLElement,

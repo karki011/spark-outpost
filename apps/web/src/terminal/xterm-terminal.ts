@@ -2,33 +2,13 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
-import {
-  terminalServerMessageSchema,
-  type TerminalClientMessage,
-  type TerminalEndReason,
-  type TerminalHint,
-} from '@spark-outpost/contracts';
+import '@xterm/xterm/css/xterm.css';
+import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-outpost/contracts';
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
+import type { TerminalConnection, TerminalHandlers } from './terminal-connection.ts';
 import { lineEditingSequence } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { themeFromTokens } from './terminal-theme.ts';
-
-export interface TerminalHandlers<T extends TerminalTicket> {
-  onOpen(created: T): void;
-  onCommandRun?(): void;
-  onHint?(hint: TerminalHint): void;
-  onEnded(reason: TerminalEndReason): void;
-  onError(message: string): void;
-}
-
-export interface TerminalConnection {
-  run(): void;
-  notice(text: string): void;
-  fit(): void;
-  focus(): void;
-  close(): void;
-  dispose(): void;
-}
 
 const OSC_CLIPBOARD = 52;
 const encoder = new TextEncoder();
@@ -64,7 +44,7 @@ function createTerminal(): Terminal {
   });
 }
 
-export function openTerminal<T extends TerminalTicket>(
+export function openXterm<T extends TerminalTicket>(
   start: () => Promise<T>,
   element: HTMLElement,
   handlers: TerminalHandlers<T>,
