@@ -4,6 +4,7 @@ import {
   modePosture,
   permissionFor,
   type AgentModeOption,
+  type BusyEnterAction,
   type CompactionThresholds,
   type InvolvementLevel,
   type Personality,
@@ -48,6 +49,7 @@ interface ProfileRow {
   auto_compact: boolean;
   heartbeat: boolean;
   wide_window: WideWindowLayout;
+  busy_enter: BusyEnterAction;
 }
 
 export interface ConnectionRow {
@@ -91,7 +93,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
        spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       heartbeat, wide_window, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
+       heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -195,6 +197,7 @@ export async function getSetupState(
     autoCompact: profile.auto_compact,
     heartbeat: profile.heartbeat,
     wideWindow: profile.wide_window,
+    busyEnter: profile.busy_enter,
   };
   return { profile: result, providers, advisors };
 }
@@ -248,6 +251,7 @@ export async function updateProfile(
        auto_compact = COALESCE($23, auto_compact),
        heartbeat = COALESCE($24, heartbeat),
        wide_window = COALESCE($25, wide_window),
+       busy_enter = COALESCE($26, busy_enter),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -276,6 +280,7 @@ export async function updateProfile(
       update.autoCompact ?? null,
       update.heartbeat ?? null,
       update.wideWindow ?? null,
+      update.busyEnter ?? null,
     ],
   );
 }

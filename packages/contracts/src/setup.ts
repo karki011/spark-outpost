@@ -117,6 +117,10 @@ export const wideWindowSchema = z.enum(WIDE_WINDOW_LAYOUTS);
 export type WideWindowLayout = z.infer<typeof wideWindowSchema>;
 export const DEFAULT_WIDE_WINDOW: WideWindowLayout = 'rail';
 
+export const busyEnterSchema = z.enum(['queue', 'now']);
+export type BusyEnterAction = z.infer<typeof busyEnterSchema>;
+export const DEFAULT_BUSY_ENTER: BusyEnterAction = 'queue';
+
 export const profileSchema = z.object({
   displayName: z.string(),
   defaultProvider: providerIdSchema.nullable(),
@@ -140,6 +144,7 @@ export const profileSchema = z.object({
   autoCompact: z.boolean().default(true),
   heartbeat: z.boolean().default(true),
   wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
+  busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'> & {
@@ -178,6 +183,7 @@ export const updateProfileRequestSchema = z
     autoCompact: z.boolean(),
     heartbeat: z.boolean(),
     wideWindow: wideWindowSchema,
+    busyEnter: busyEnterSchema,
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

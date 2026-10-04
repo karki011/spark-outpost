@@ -71,6 +71,7 @@ describe('setup state', () => {
       autoCompact: true,
       heartbeat: true,
       wideWindow: 'rail',
+      busyEnter: 'queue',
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',

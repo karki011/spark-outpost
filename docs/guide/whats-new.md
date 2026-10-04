@@ -18,7 +18,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Changes are kept without waiting for you.                                                        | Undo with [**Revert to before this run**](review-changes.md#keep-or-revert). |
 | Spark follows the agent's mode and adds no command cards of its own.                             | Expect fewer cards. [Protected paths](protected-paths.md) still ask.         |
 | Modes that never ask are marked **ran without review**.                                          | Answer any [flag](approvals.md#actions-that-ran-without-review).             |
-| Plain step names, one live status line and a message queue while a turn runs.                    | [Follow a turn](follow-a-turn.md) above the message box.                     |
+| Plain step names, one status line. While a turn runs, **Enter** queues and **⌘Enter** sends now. | [Follow a turn](follow-a-turn.md) above the message box.                     |
 | **Delete** works on running chats.                                                               | Nothing.                                                                     |
 | Agent TV for any chat, with messages to one crew member.                                         | See [Watch and steer the crew](pieces.md).                                   |
 | The **Changes** drawer replaces inline diffs.                                                    | Press **⌘⇧D**.                                                               |

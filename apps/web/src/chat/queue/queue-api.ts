@@ -24,6 +24,11 @@ export const queueApi = {
       method: 'DELETE',
       body: '{}',
     }),
+  sendFirst: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
+    request(queueResponseSchema, path(conversationId, '/send-now'), {
+      method: 'POST',
+      body: JSON.stringify({ id, content }),
+    }),
   sendNow: (conversationId: string, id: string): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, `/${id}/send-now`), {
       method: 'POST',
