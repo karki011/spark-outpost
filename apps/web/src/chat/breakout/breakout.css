@@ -1,0 +1,32 @@
+.breakout {
+  display: flex;
+  justify-content: center;
+  margin-inline: calc(-1 * var(--overhang, 0px));
+}
+
+.breakout-in {
+  flex: 0 1 auto;
+  min-width: calc(100% - 2 * var(--overhang, 0px));
+  max-width: 100%;
+}
+
+.breakout-in > * {
+  --overhang: 0px;
+}
+
+.md > .breakout {
+  margin-bottom: 12px;
+}
+
+.md > .breakout:last-child {
+  margin-bottom: 0;
+}
+
+.breakout-in > :is(.md-code, .md-table) {
+  margin: 0;
+}
+
+.breakout-in > .appr > :not(.appr-diff, .appr-cmd-wrap, .appr-plan),
+.breakout-in > .appr > .appr-plan > .md > :not(.breakout) {
+  contain: inline-size;
+}
