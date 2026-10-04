@@ -122,6 +122,7 @@ export function recordingStore(inner: SecretStore): SecretStore & { deleted: Sec
     deleted,
     set: (id, secret) => inner.set(id, secret),
     get: (id) => inner.get(id),
+    fresh: (id) => inner.fresh(id),
     waiting: () => inner.waiting(),
     async delete(id) {
       deleted.push(id);

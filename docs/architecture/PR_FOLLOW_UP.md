@@ -1,6 +1,6 @@
 # PR follow-up
 
-After Spark opens a pull request from a chat, the worker watches it through the user's existing GitHub connection (gh CLI or token) and handles failing checks and review feedback. Code: `apps/server/src/pr-follow-up/`, storage in `persistence/pr-watches.ts` (migration 0087).
+After Spark opens a pull request from a chat, the worker watches it through the user's existing GitHub connection (GitHub App sign-in for covered repos, token, or gh CLI; see `GITHUB_APP.md`) and handles failing checks and review feedback. Code: `apps/server/src/pr-follow-up/`, storage in `persistence/pr-watches.ts` (migration 0087).
 
 ## Ready for review by default
 

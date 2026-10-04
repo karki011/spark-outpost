@@ -73,10 +73,19 @@ export function useViewPlacement(
     let animating = 0;
     let dragging = false;
 
+    let watching = false;
+    const overlay = new MutationObserver(() => schedule());
+    const watchOverlay = (covered: boolean) => {
+      if (covered === watching) return;
+      watching = covered;
+      if (covered) overlay.observe(document.body, { childList: true, subtree: true });
+      else overlay.disconnect();
+    };
     const report = () => {
       frame = 0;
       const bounds = shown ? boundsOf(element) : null;
       const covered = bounds !== null && (dragging || overlapped(element, bounds));
+      watchOverlay(covered);
       const placement: BrowserPlacement = {
         chatId,
         projectId,
@@ -90,9 +99,9 @@ export function useViewPlacement(
       sent = key;
       void browser.place(placement);
     };
-    const schedule = () => {
+    function schedule() {
       frame ||= requestAnimationFrame(report);
-    };
+    }
     const scheduleSettled = () => {
       schedule();
       clearTimeout(settle);
@@ -135,6 +144,7 @@ export function useViewPlacement(
 
     return () => {
       resize.disconnect();
+      overlay.disconnect();
       window.removeEventListener('resize', schedule);
       panel?.removeEventListener('transitionrun', onTransitionRun);
       panel?.removeEventListener('transitionend', onTransitionEnd);

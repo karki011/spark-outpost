@@ -203,12 +203,12 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
   await expect(card.locator('.pill-ok')).toHaveCount(0);
   await connectorHead(card).click();
   const methods = card.getByRole('radiogroup', { name: 'How to connect GitHub' });
-  await expect(methods.getByRole('radio', { name: 'Personal token' })).toBeChecked();
+  await expect(methods.getByRole('radio', { name: 'GitHub sign-in' })).toBeChecked();
   await methods.getByRole('radio', { name: 'gh CLI' }).click();
   await expect(card).toContainText('Installed but not signed in');
-  await methods.getByRole('radio', { name: 'GitHub App' }).click();
-  await expect(card.getByRole('region', { name: 'GitHub App' })).toContainText('Coming later');
-  await methods.getByRole('radio', { name: 'Personal token' }).click();
+  await methods.getByRole('radio', { name: 'GitHub sign-in' }).click();
+  await card.getByRole('button', { name: 'Use a token instead' }).click();
+  await expect(methods.getByRole('radio', { name: 'Personal token' })).toBeChecked();
 
   const token = card.getByLabel('Personal access token');
   await token.fill('not-a-token');

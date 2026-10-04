@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { APP_CLIENT_ID, APP_SLUG } from './apps/server/test/fake-github-app.ts';
 import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
+import { SLACK_BOT_TOKEN, SLACK_USER_TOKEN } from './apps/server/test/fake-slack.ts';
 import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
@@ -36,6 +38,9 @@ const serverEnv = {
   FAKE_GH_NODE: process.execPath,
   FAKE_GH_API: `${STUB_URL}/github`,
   GITHUB_API_URL: `${STUB_URL}/github`,
+  GITHUB_LOGIN_URL: `${STUB_URL}/github`,
+  SPARK_GITHUB_APP_CLIENT_ID: APP_CLIENT_ID,
+  SPARK_GITHUB_APP_SLUG: APP_SLUG,
   SHELL: '/bin/sh',
   DATABASE_URL: TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),
@@ -45,6 +50,8 @@ const serverEnv = {
     jev: 'browser-test-jev-key',
     zai: 'browser-test-zai-key',
     'ticket:linear': LINEAR_KEY,
+    'slack:bot': SLACK_BOT_TOKEN,
+    'slack:user': SLACK_USER_TOKEN,
   }),
   AGENT_RUNTIME: 'fake',
   COORDINATOR_MODE: 'parallel',
@@ -52,6 +59,7 @@ const serverEnv = {
   MORNING_BRIEF: 'false',
   MAP_ROOT_PREFIX,
   LINEAR_API_URL: `${STUB_URL}/linear/graphql`,
+  SLACK_API_URL: `${STUB_URL}/slack/api`,
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),

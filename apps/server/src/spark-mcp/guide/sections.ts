@@ -227,9 +227,9 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Live run, crew, pieces, Jev decisions: spark_run. Plan and files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
+    text: `Needs me? spark_attention. Live run, crew, pieces, Jev decisions: spark_run. Plan, files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
 Spend: spark_spend. Trends, outcomes: spark_analytics. Model cards: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear: spark_connectors. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Where code lives: spark_find. Terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets, findings: spark_laws. Sparks, @Spark jobs and replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser pane (Mac app): spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs.`,
+Agents: spark_providers. GitHub, Jira, Linear, Slack: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code search: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser pane: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs.`,
   },
   {
     id: 'compaction',
@@ -269,7 +269,7 @@ The Spark switch on: Jev reads each request, routing picks models, a Critic revi
       'projects',
       'connectors',
     ],
-    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
+    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear, Slack); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
 
 spark_settings returns the non-secret settings; spark_projects returns each project's Builders at once and Where Spark works.`,
   },

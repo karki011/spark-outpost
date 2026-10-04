@@ -23,7 +23,7 @@ Spark is a moderator here too: it honours the agent's mode, keeps a few hard rai
 
 ## The pane
 
-The renderer reports the bounds of `#bp-view` and main places the active tab's view over it (`use-view-placement.ts`, `panes.ts`). Bounds are sent on resize, during the panel's open and close transition, and after pointer, key and focus events; nothing polls. A native view sits above the DOM, so when anything overlaps the pane (a dialog, a menu, the lightbox) or a resizer is being dragged, main sends a snapshot of the page, the pane shows it as an image, and the view is hidden until the overlap ends.
+The renderer reports the bounds of `#bp-view` and main places the active tab's view over it (`use-view-placement.ts`, `panes.ts`). Bounds are sent on resize, during the panel's open and close transition, and after pointer, key and focus events; nothing polls. While something overlaps the pane, DOM changes trigger a re-check, so the view comes back when a dialog finishes closing. A native view sits above the DOM, so when anything overlaps the pane (a dialog, a menu, the lightbox) or a resizer is being dragged, main sends a snapshot of the page, the pane shows it as an image, and the view is hidden until the overlap ends.
 
 Tabs belong to a chat. The address bar accepts any address: it is the user's browser. A tab the user navigates becomes theirs.
 

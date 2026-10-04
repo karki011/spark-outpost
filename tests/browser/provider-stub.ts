@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts';
+import type { FakeGitHubApp } from '../../apps/server/test/fake-github-app.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
+import { fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 
 const anthropicModels = {
@@ -71,7 +73,18 @@ async function addPull(req: IncomingMessage, res: ServerResponse) {
   github.pulls.push(pull);
   send(res, 201, pull);
 }
+async function setApp(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const { revoke, ...fields } = JSON.parse(text || '{}') as Partial<FakeGitHubApp> & {
+    revoke?: boolean;
+  };
+  Object.assign(github.app, fields);
+  if (revoke) github.app.revokeAccess();
+  send(res, 200, { ok: true });
+}
 const tickets = ticketFakes();
+let slack = fakeSlack();
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '').split('?')[0];
@@ -80,6 +93,7 @@ const server = createServer((req, res) => {
   if (path === '/github-test/pulls') return send(res, 200, github.pulls);
   const pullNumber = /^\/github-test\/pulls\/(\d+)$/.exec(path ?? '')?.[1];
   if (pullNumber && req.method === 'POST') return void updatePull(req, res, Number(pullNumber));
+  if (path === '/github-test/app' && req.method === 'POST') return void setApp(req, res);
   if (path === '/github-test/reset') {
     github = fakeGitHub();
     return send(res, 200, { ok: true });
@@ -87,6 +101,12 @@ const server = createServer((req, res) => {
   if (path?.startsWith('/github/')) {
     return void github.handle(req, res, (req.url ?? '').slice('/github'.length));
   }
+  if (path === '/slack-test/reset') {
+    slack = fakeSlack();
+    return send(res, 200, { ok: true });
+  }
+  if (path === '/slack-test/posted') return send(res, 200, slack.posted);
+  if (path?.startsWith('/slack/api/')) return void slack.handle(req, res);
   if (path === '/tickets-test/reset') {
     tickets.reset();
     return send(res, 200, { ok: true });

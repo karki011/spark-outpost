@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   builderConfig,
+  packagedGitHubApp,
   packagedHeartbeatUrl,
   releaseProblems,
   signingPlan,
@@ -129,6 +130,34 @@ describe('builderConfig', () => {
 
     expect(withBeat.extraMetadata).toMatchObject({ heartbeatUrl: endpoint });
     expect(without.extraMetadata).not.toHaveProperty('heartbeatUrl');
+  });
+
+  it('writes the GitHub App client ID and slug into the packaged manifest only when set', () => {
+    const env = { SPARK_GITHUB_APP_CLIENT_ID: 'Iv23liExample', SPARK_GITHUB_APP_SLUG: 'spark' };
+    expect(builderConfig({ ...base, archs: ['x64'], env }).extraMetadata).toMatchObject({
+      githubApp: { clientId: 'Iv23liExample', slug: 'spark' },
+    });
+    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).not.toHaveProperty(
+      'githubApp',
+    );
+  });
+});
+
+describe('packagedGitHubApp', () => {
+  it('reads the client ID and slug from the environment, or nothing', () => {
+    const env = { SPARK_GITHUB_APP_CLIENT_ID: ' Iv23liExample ', SPARK_GITHUB_APP_SLUG: 'spark' };
+    const ids = { clientId: 'Iv23liExample', slug: 'spark' };
+    expect(packagedGitHubApp(env)).toEqual(ids);
+    expect(packagedGitHubApp({})).toBeNull();
+  });
+
+  it('refuses values that do not look like a client ID and slug', () => {
+    expect(() => packagedGitHubApp({ SPARK_GITHUB_APP_CLIENT_ID: 'a secret value' })).toThrow(
+      /client ID/,
+    );
+    expect(() =>
+      packagedGitHubApp({ SPARK_GITHUB_APP_CLIENT_ID: 'Iv23li', SPARK_GITHUB_APP_SLUG: 'a/b' }),
+    ).toThrow(/URL name/);
   });
 });
 

@@ -50,6 +50,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'read|look|check|see|inspect|review|screenshot|summari[sz]e',
     'page|tab|browser|site|website',
   ),
+  post_slack: asked(
+    'post|send|share|reply|tell|message|notify|announce|update',
+    'slack|channel|thread',
+  ),
 };
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {

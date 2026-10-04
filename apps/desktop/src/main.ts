@@ -1,16 +1,10 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
-import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
+import { isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
+import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
-import {
-  apiPortFile,
-  chooseApiPort,
-  isStablePort,
-  randomStablePort,
-  readApiPort,
-  saveApiPort,
-} from './api-port.ts';
+import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
 import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
 import { startBootTeasers } from './boot-teaser-host.ts';
@@ -24,16 +18,8 @@ import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
 import { FileLog } from './file-log.ts';
-import {
-  HEARTBEAT_URL_ENV,
-  heartbeatEnabled,
-  heartbeatUrl,
-  installIdFile,
-  loadInstallId,
-  readBakedHeartbeatUrl,
-  startHeartbeat,
-  type HeartbeatTimer,
-} from './heartbeat.ts';
+import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
+import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
@@ -97,6 +83,7 @@ let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
+let pendingLinkChat: string | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
@@ -282,20 +269,6 @@ function quitAfterSaving(): void {
   void (storage?.capture() ?? Promise.resolve()).finally(() => shutdown.quit());
 }
 
-async function stableApiPort(): Promise<number> {
-  const file = apiPortFile(paths.userData);
-  const saved = await readApiPort(file);
-  const port = await chooseApiPort({
-    saved,
-    isFree: (candidate) => portIsFree(candidate),
-    random: randomStablePort,
-    fallback: () => freePort(),
-  });
-  if (port !== saved && isStablePort(port)) await saveApiPort(file, port);
-  if (saved !== null && port !== saved) mainLog(`API port ${saved} is taken; moved to ${port}.`);
-  return port;
-}
-
 async function launch(): Promise<void> {
   savedTheme = await readSavedTheme(appearanceFile(paths.userData));
   listenForTheme();
@@ -322,7 +295,11 @@ async function launch(): Promise<void> {
       if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
     },
   });
-  const apiPort = await stableApiPort();
+  const apiPort = await stableApiPort(paths.userData, {
+    isFree: portIsFree,
+    fallback: freePort,
+    log: mainLog,
+  });
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
   const token = createLaunchToken();
   const launchInfo: ServerLaunch = {
@@ -334,7 +311,10 @@ async function launch(): Promise<void> {
     token,
     version: app.getVersion(),
     webRoot: layout.webRoot,
-    baseEnv: process.env,
+    baseEnv: {
+      ...gitHubAppEnv(await readBakedGitHubApp(app.getAppPath())),
+      ...process.env,
+    },
   };
   if (!(await migrateBeforeStart(launchInfo, databaseOptions))) return;
 
@@ -411,7 +391,15 @@ async function launch(): Promise<void> {
     },
     log: log('updates'),
   });
-  heartbeat = await scheduleHeartbeat(apiUrl, token);
+  heartbeat = await scheduleHeartbeat({
+    apiUrl,
+    token,
+    version: app.getVersion(),
+    appPath: app.getAppPath(),
+    userData: paths.userData,
+    devChannel: config.channel === 'dev',
+    env: process.env,
+  });
   bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({
     appName: config.appName,
@@ -422,25 +410,11 @@ async function launch(): Promise<void> {
     showSpark,
     quit: () => app.quit(),
   });
+  if (app.isPackaged) app.setAsDefaultProtocolClient(config.linkScheme);
+  if (pendingLinkChat) companionHost.openChat(pendingLinkChat);
+  pendingLinkChat = null;
   void spark?.finished.then(() => companionHost?.companion.resume());
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
-}
-
-async function scheduleHeartbeat(apiUrl: string, token: string): Promise<HeartbeatTimer> {
-  const version = app.getVersion();
-  return startHeartbeat({
-    url:
-      heartbeatUrl(process.env[HEARTBEAT_URL_ENV]) ??
-      (await readBakedHeartbeatUrl(app.getAppPath())),
-    enabled: () => heartbeatEnabled(apiUrl, token),
-    heartbeat: async () => ({
-      installId: await loadInstallId(installIdFile(paths.userData)),
-      version,
-      os: process.platform,
-      arch: process.arch,
-      channel: config.channel === 'dev' ? 'dev' : defaultUpdateChannel(version),
-    }),
-  });
 }
 
 function openSpark(): SparkWindow {
@@ -460,6 +434,16 @@ function openSpark(): SparkWindow {
   return opened;
 }
 
+function openLink(url: string | null): void {
+  const chatId = url ? parseSparkChatLink(url, config.linkScheme) : null;
+  if (!chatId) {
+    showSpark();
+    return;
+  }
+  if (companionHost) companionHost.openChat(chatId);
+  else pendingLinkChat = chatId;
+}
+
 function showSpark(): void {
   if (shutdown.failed.aborted) return;
   if (!spark) {
@@ -473,7 +457,11 @@ function showSpark(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', showSpark);
+  app.on('second-instance', (_event, argv) => openLink(linkIn(argv, config.linkScheme)));
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    openLink(url);
+  });
   app.on('activate', showSpark);
   app.on('window-all-closed', () => {
     if (!companionHost?.companion.running()) app.quit();

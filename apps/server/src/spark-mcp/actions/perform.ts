@@ -15,6 +15,7 @@ import {
   performCreateTicket,
   performTransitionTicket,
 } from './ticket-actions.ts';
+import { performPostSlack } from './slack-actions.ts';
 import type { Performed } from './performed.ts';
 
 export function performSparkAction(
@@ -51,6 +52,8 @@ export function performSparkAction(
         message: `The agent can read ${action.origin} in this chat.`,
         url: null,
       });
+    case 'post_slack':
+      return performPostSlack(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
   }

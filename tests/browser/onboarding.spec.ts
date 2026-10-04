@@ -94,8 +94,8 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(tools).toHaveCount(4);
   await expect(tools.first()).toContainText('GitHub');
   await expect(tools.nth(1)).toContainText('Jira');
-  await expect(tools.nth(3)).toContainText('Coming soon');
-  await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(3);
+  await expect(tools.nth(3)).toContainText('Slack');
+  await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(4);
 
   await continueFromTools(page, "You're all set, Hazel");
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();

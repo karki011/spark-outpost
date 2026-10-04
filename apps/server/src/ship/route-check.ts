@@ -7,7 +7,7 @@ import { listRemoteHeads, pickRemote } from './git.ts';
 import { connectionsFor, type GitHubDeps } from './github/access.ts';
 import { prRouteFor } from './pr-route.ts';
 import { withCredentials } from './push.ts';
-import { parseRemoteUrl, repoSlug } from './remote.ts';
+import { parseRemoteUrl, repoSlug, type RemoteRepo } from './remote.ts';
 
 const CACHE_MS = 5 * 60_000;
 const cache = new Map<string, { at: number; info: Promise<PrRouteInfo> }>();
@@ -19,10 +19,11 @@ export function forgetPrRoutes(): void {
 async function checkRoute(deps: GitHubDeps, root: string): Promise<PrRouteInfo> {
   const remote = await pickRemote(root, null).catch(() => null);
   const repo = remote ? parseRemoteUrl(remote.url) : null;
-  const methods = repo ? (await connectionsFor(deps, repo.host)).map((c) => c.method) : [];
+  const methods = repo ? (await connectionsFor(deps, repo)).map((c) => c.method) : [];
   const route = prRouteFor({
     hasRemote: remote !== null,
     repo,
+    app: methods.includes('app'),
     token: methods.includes('token'),
     gh: methods.includes('gh_cli'),
   });
@@ -64,14 +65,15 @@ export async function conversationPrRoute(
 
 const REACHED = {
   git: 'Reached the remote with your git login',
+  app: 'Reached the remote with your GitHub sign-in',
   token: 'Reached the remote with the GitHub connection',
 } as const;
 
-async function signedIn(deps: GitHubDeps, host: string | null): Promise<string> {
-  const [first] = host ? await connectionsFor(deps, host) : [];
-  if (!first) return '';
+async function signedIn(deps: GitHubDeps, repo: RemoteRepo | null): Promise<string> {
+  const [first] = repo ? await connectionsFor(deps, repo) : [];
+  if (!first || !repo) return '';
   const who = await first.whoami().catch(() => null);
-  return who ? ` · signed in to ${host} as ${who.login}` : ` · ${host} sign-in failed`;
+  return who ? ` · signed in to ${repo.host} as ${who.login}` : ` · ${repo.host} sign-in failed`;
 }
 
 async function testProject(deps: GitHubDeps, name: string, root: string) {
@@ -84,7 +86,7 @@ async function testProject(deps: GitHubDeps, name: string, root: string) {
     const via = await withCredentials(deps, remote, (access) =>
       listRemoteHeads(root, remote.name, access),
     );
-    const detail = `${REACHED[via]}${await signedIn(deps, info.host)}`;
+    const detail = `${REACHED[via]}${await signedIn(deps, parseRemoteUrl(remote.url))}`;
     return { project: name, remote: remote.name, route: info.route, reach: via, detail };
   } catch (error) {
     const detail = shipFailureMessage(error);

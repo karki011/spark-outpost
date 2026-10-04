@@ -59,6 +59,8 @@ import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
+import { conversationHasSlackContext } from '../persistence/slack.ts';
+import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
@@ -206,6 +208,9 @@ export async function runAgentTurn(
     conversationId: input.identity.threadId,
     audit,
   });
+  if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
+    observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
+  }
   let auditSettled = false;
   const settleAudit = async () => {
     if (auditSettled) return;

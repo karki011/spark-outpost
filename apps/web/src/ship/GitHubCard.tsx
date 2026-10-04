@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitHubConnectionStatus } from '@spark-outpost/contracts';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
+import { GitHubAppPanel, useGitHubSignIn } from './GitHubAppPanel.tsx';
 import { GitHubRouteTest } from './GitHubRouteTest.tsx';
 import { TokenDetails, TokenForm } from './GitHubTokenPanel.tsx';
 import { githubApi, shipKeys } from './ship-api.ts';
@@ -13,15 +14,17 @@ type Method = 'gh' | 'token' | 'app';
 const DESCRIPTION =
   'Ship commits and pushes with your own Git. Opening a pull request needs GitHub.';
 
+const APP_METHOD: { id: Method; label: string } = { id: 'app', label: 'GitHub sign-in' };
 const METHODS: { id: Method; label: string }[] = [
   { id: 'gh', label: 'gh CLI' },
   { id: 'token', label: 'Personal token' },
-  { id: 'app', label: 'GitHub App' },
 ];
 
 function defaultMethod(status: GitHubConnectionStatus): Method {
+  if (status.app.available && status.app.state !== 'signed_out') return 'app';
   if (status.active === 'token') return 'token';
-  return status.ghCli.login ? 'gh' : 'token';
+  if (status.ghCli.login) return 'gh';
+  return status.app.available ? 'app' : 'token';
 }
 
 function ghCliState(ghCli: GitHubConnectionStatus['ghCli']): { tone: string; line: string } {
@@ -49,6 +52,7 @@ function ghCliHowTo(ghCli: GitHubConnectionStatus['ghCli']): ReactNode {
 }
 
 export function activeLine(status: GitHubConnectionStatus): string {
+  if (status.active === 'app') return `Signed in to GitHub as ${status.app.login ?? 'you'}`;
   if (status.active === 'gh_cli') {
     return `Connected through the gh CLI as ${status.ghCli.login ?? 'you'}`;
   }
@@ -56,6 +60,11 @@ export function activeLine(status: GitHubConnectionStatus): string {
     return `Connected with a token as ${status.token.login}`;
   }
   return 'Not connected';
+}
+
+function statusLine(status: GitHubConnectionStatus): string {
+  const line = status.active ? activeLine(status) : DESCRIPTION;
+  return status.app.state === 'needs_sign_in' ? `Sign in again · ${line}` : line;
 }
 
 function GhCliPanel({
@@ -106,16 +115,19 @@ export function GitHubCard({
   });
   const remove = useMutation({ mutationFn: githubApi.removeToken, onSuccess: saved });
   const data = status.data;
+  const flow = useGitHubSignIn(data?.app.available ?? false);
   const busy = save.isPending || remove.isPending;
-  const method = choice ?? (data ? defaultMethod(data) : 'token');
-  const methodLabel = METHODS.find((option) => option.id === method)?.label ?? '';
+  const methods = data?.app.available ? [APP_METHOD, ...METHODS] : METHODS;
+  const signingIn = flow?.status === 'waiting' || flow?.status === 'starting';
+  const method = choice ?? (signingIn ? 'app' : data ? defaultMethod(data) : 'token');
+  const methodLabel = methods.find((option) => option.id === method)?.label ?? '';
 
   return (
     <ConnectorCard
       connectorId="github"
       name="GitHub"
       icon={icon}
-      status={data?.active ? activeLine(data) : DESCRIPTION}
+      status={data ? statusLine(data) : DESCRIPTION}
       badge={status.isPending ? 'checking' : data?.active ? 'connected' : null}
       open={open}
       onToggle={onToggle}
@@ -127,7 +139,7 @@ export function GitHubCard({
           <>
             <Segmented
               ariaLabel="How to connect GitHub"
-              options={METHODS}
+              options={methods}
               value={method}
               onChange={(id) => setChoice(id as Method)}
             />
@@ -149,7 +161,9 @@ export function GitHubCard({
                     onSave={(token, host) => save.mutate({ token, host })}
                   />
                 ))}
-              {method === 'app' && <span className="cx-soon">Coming later</span>}
+              {method === 'app' && (
+                <GitHubAppPanel app={data.app} flow={flow} onUseToken={() => setChoice('token')} />
+              )}
             </section>
             <GitHubRouteTest status={data} />
           </>

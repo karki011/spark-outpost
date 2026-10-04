@@ -7,11 +7,14 @@ import type { SecretStore } from '../setup/secrets.ts';
 import { locateCli, type ApiEndpoints } from '../setup/verify.ts';
 import { ShipGitError } from '../ship/git.ts';
 import { gitHubStatus, removeToken, saveToken, type GitHubDeps } from '../ship/github/access.ts';
+import type { GitHubAppConfig } from '../ship/github/app-config.ts';
+import type { Sleep } from '../ship/github/app-sign-in.ts';
 import { GitHubApiError } from '../ship/github/connection.ts';
 import { ShipBlockedError, type ShipDeps } from '../ship/prepare.ts';
 import { conversationPrRoute, forgetPrRoutes, testGitHub } from '../ship/route-check.ts';
 import { shipPreview, shipTask } from '../ship/service.ts';
 import { loginShellPath } from '../setup/login-path.ts';
+import { gitHubAppRoutes } from './github-app-routes.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ShipRouteDeps {
@@ -24,6 +27,8 @@ export interface ShipRouteDeps {
   branchPrefix?: string;
   githubApiUrl?: string | undefined;
   locateGh?: () => Promise<string | null>;
+  githubApp?: GitHubAppConfig | null | undefined;
+  githubSignInSleep?: Sleep;
 }
 
 export function shipErrorStatus(error: unknown): { status: number; message: string } | null {
@@ -48,6 +53,7 @@ export function gitHubDepsOf(deps: GitHubRouteDeps): GitHubDeps {
     apiUrl: deps.githubApiUrl,
     locateGh: deps.locateGh ?? (() => locateCli('gh', deps.runCommand, deps.loginShell)),
     loginPath: loginShellPath(deps.runCommand, deps.loginShell),
+    app: deps.githubApp,
   };
 }
 
@@ -81,6 +87,8 @@ export function shipRoutes(routeDeps: ShipRouteDeps): Router {
     forgetPrRoutes();
     res.json(await removeToken(deps));
   });
+
+  router.use(gitHubAppRoutes(deps, routeDeps.githubSignInSleep));
 
   router.post('/github/test', async (_req, res) => {
     res.json(await testGitHub(deps));

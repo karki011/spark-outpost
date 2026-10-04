@@ -3,6 +3,7 @@ import { digestTriggerSchema, spendRangeSchema } from '@spark-outpost/contracts'
 import { digestState, requestDigest } from '../digest/service.ts';
 import { todaySummary } from '../digest/today.ts';
 import type { Db } from '../persistence/db.ts';
+import { appConnection } from '../persistence/github-app.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { spendSummary } from '../persistence/spend.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -28,6 +29,7 @@ export function homeRoutes({ db, workspaceId, secrets }: HomeRouteDeps): Router 
     res.json({
       issues: await providerIssues(db, workspaceId),
       keychainWaiting: secrets.waiting(),
+      githubSignInNeeded: (await appConnection(db, workspaceId))?.state === 'needs_sign_in',
     });
   });
 

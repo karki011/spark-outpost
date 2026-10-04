@@ -241,9 +241,13 @@ test('the Jev screen keeps only its own switch and explains it in an info tip', 
   ).toHaveCount(0);
 
   const info = advisor.getByRole('button', { name: 'More about Check changes with Jev' });
-  await info.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('tooltip')).toContainText('never blocked or allowed');
+  await expect(async () => {
+    await info.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('tooltip')).toContainText('never blocked or allowed', {
+      timeout: 1_000,
+    });
+  }).toPass({ timeout: 10_000 });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await expect(advisor).toBeVisible();

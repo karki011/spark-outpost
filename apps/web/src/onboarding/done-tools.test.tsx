@@ -3,11 +3,12 @@ import type { ReactNode } from 'react';
 import { cleanup, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it } from 'vitest';
-import type {
-  GitHubConnectionStatus,
-  GitStatus,
-  TicketConnection,
-  TicketConnections,
+import {
+  GITHUB_APP_SIGNED_OUT,
+  type GitHubConnectionStatus,
+  type GitStatus,
+  type TicketConnection,
+  type TicketConnections,
 } from '@spark-outpost/contracts';
 import { shipKeys } from '../ship/ship-api.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
@@ -20,7 +21,7 @@ const NO_GITHUB: GitHubConnectionStatus = {
   active: null,
   ghCli: { installed: false, host: 'github.com', login: null },
   token: null,
-  app: { available: false },
+  app: GITHUB_APP_SIGNED_OUT,
 };
 
 const linear = {

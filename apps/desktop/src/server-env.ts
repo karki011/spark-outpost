@@ -28,6 +28,7 @@ const LAUNCHER_OWNED = [
   'FAKE_ACP_AGENT',
   'KEYCHAIN_SERVICE',
   'BRANCH_PREFIX',
+  'SPARK_LINK_SCHEME',
   'BACKUP_DIR',
   'WEB_ROOT',
   'NODE_OPTIONS',
@@ -61,6 +62,7 @@ export function apiEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
   return {
     ...workerEnv(launch),
     API_PORT: String(launch.apiPort),
+    SPARK_LINK_SCHEME: launch.config.linkScheme,
     ALLOWED_ORIGINS: launch.apiOrigin,
     WEB_ROOT: launch.webRoot,
     SPARK_APP_VERSION: launch.version,

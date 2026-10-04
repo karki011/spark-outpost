@@ -23,7 +23,11 @@ export interface TestAppOptions {
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
   githubApiUrl?: string;
+  githubApp?: AppOptions['githubApp'];
+  githubSignInSleep?: AppOptions['githubSignInSleep'];
   linearApiUrl?: string;
+  slackApiUrl?: string;
+  slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
   serverSpendCapUsd?: number;
   parallelBuilders?: boolean;
@@ -72,7 +76,11 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
     githubApiUrl: options.githubApiUrl,
+    githubApp: options.githubApp,
+    ...(options.githubSignInSleep ? { githubSignInSleep: options.githubSignInSleep } : {}),
     linearApiUrl: options.linearApiUrl,
+    slackApiUrl: options.slackApiUrl,
+    ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,

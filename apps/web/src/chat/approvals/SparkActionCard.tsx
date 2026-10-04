@@ -48,6 +48,11 @@ const PRIORITY_CHOICES = [
   })),
 ];
 
+const TEXT_LABELS: Partial<Record<SparkAction['action'], string>> = {
+  comment_ticket: 'Comment',
+  post_slack: 'Slack message',
+};
+
 function draftOf(action: SparkAction): Draft {
   return {
     title: 'title' in action ? action.title : '',
@@ -195,6 +200,25 @@ function Facts({ action }: { action: SparkAction }) {
           {action.title && <Fact label="Title">{action.title}</Fact>}
         </dl>
       );
+    case 'post_slack':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Channel">#{action.channel.name}</Fact>
+          <Fact label="Where">
+            {action.threadTs ? (
+              action.permalink ? (
+                <a href={action.permalink} target="_blank" rel="noreferrer">
+                  A reply in this thread
+                </a>
+              ) : (
+                'A reply in the thread this chat started from'
+              )
+            ) : (
+              'A new message in the channel'
+            )}
+          </Fact>
+        </dl>
+      );
     case 'pr_follow_up':
       return null;
   }
@@ -257,7 +281,7 @@ function Fields({ action, draft, onChange, disabled }: FieldsProps) {
       )}
       {(fields.includes('description') || fields.includes('body')) && (
         <label className="field" htmlFor={`${id}-text`}>
-          <span>{action.action === 'comment_ticket' ? 'Comment' : 'Description'}</span>
+          <span>{TEXT_LABELS[action.action] ?? 'Description'}</span>
           <textarea
             id={`${id}-text`}
             className="inp"

@@ -37,12 +37,13 @@ interface CompanionHostOptions {
 
 export interface CompanionHost {
   companion: Companion;
+  openChat(id: string): void;
   dispose(): void;
 }
 
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAG_PHASES: readonly DragPhase[] = ['start', 'move', 'end'];
-const SETTINGS_TARGETS: readonly string[] = ['island', 'sparks', 'spark-new'];
+const SETTINGS_TARGETS: readonly string[] = ['island', 'sparks', 'spark-new', 'connectors'];
 const SPARK_EDIT_TARGET =
   /^spark-edit:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -236,6 +237,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
 
   return {
     companion,
+    openChat,
     dispose: () => {
       companion.shutdown();
       globalShortcut.unregisterAll();

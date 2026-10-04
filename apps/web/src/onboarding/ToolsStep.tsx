@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
-import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
+import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
 import { GitCheck } from './GitCheck.tsx';
 
@@ -69,7 +69,7 @@ export const connectors: Connector[] = [
   {
     id: 'slack',
     name: 'Slack',
-    description: 'Read threads you share and post updates back.',
+    description: SLACK_DESCRIPTION,
     icon: (
       <ToolIcon>
         <path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16" />
@@ -107,13 +107,11 @@ export function ConnectorGrid() {
           );
         }
         return (
-          <ConnectorCard
+          <SlackCard
             key={connector.id}
-            connectorId={connector.id}
-            name={connector.name}
             icon={connector.icon}
-            status={connector.description}
-            badge="soon"
+            open={openId === connector.id}
+            onToggle={() => toggle(connector.id)}
           />
         );
       })}
@@ -127,7 +125,8 @@ export function ToolsStep() {
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
         Spark checks for Git first, since every Do chat works in its own git worktree. GitHub lets
-        Ship open pull requests. Jira and Linear bring your tickets into Spark.
+        Ship open pull requests. Jira and Linear bring your tickets into Spark. Slack notifies you
+        and shares threads.
       </p>
       <GitCheck />
       <ConnectorGrid />

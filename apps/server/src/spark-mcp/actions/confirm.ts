@@ -52,6 +52,7 @@ function cardTitle(action: SparkAction): string {
   const question = sparkActionLabels[action.action].question;
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
+  if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
   if (action.action === 'read_page') return `${question} ${action.origin}${action.path}`;
   if (action.action === 'pr_follow_up' || action.action === 'pr_follow_up_round') {

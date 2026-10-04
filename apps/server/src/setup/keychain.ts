@@ -7,6 +7,7 @@ export interface Keyring {
 }
 
 interface KeychainCache extends Keyring {
+  fresh(account: string): Promise<string | null>;
   waiting(): boolean;
 }
 
@@ -105,6 +106,10 @@ export function keychainCache(keyring: Keyring, timing: KeychainTiming = {}): Ke
   }
 
   return {
+    fresh(account) {
+      invalidate(account);
+      return bounded(startRead(account));
+    },
     async get(account) {
       const cached = cache.get(account);
       if (cached && now() - cached.at < freshMs) return cached.value;

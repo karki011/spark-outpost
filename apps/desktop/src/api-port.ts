@@ -52,3 +52,23 @@ export async function saveApiPort(file: string, port: number): Promise<void> {
   await writeFile(partial, `${JSON.stringify({ port }, null, 2)}\n`, { mode: 0o600 });
   await rename(partial, file);
 }
+
+export interface StablePortDeps {
+  isFree(port: number): Promise<boolean>;
+  fallback(): Promise<number>;
+  log(line: string): void;
+}
+
+export async function stableApiPort(userData: string, deps: StablePortDeps): Promise<number> {
+  const file = apiPortFile(userData);
+  const saved = await readApiPort(file);
+  const port = await chooseApiPort({
+    saved,
+    isFree: deps.isFree,
+    random: randomStablePort,
+    fallback: deps.fallback,
+  });
+  if (port !== saved && isStablePort(port)) await saveApiPort(file, port);
+  if (saved !== null && port !== saved) deps.log(`API port ${saved} is taken; moved to ${port}.`);
+  return port;
+}

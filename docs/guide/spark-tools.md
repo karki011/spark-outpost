@@ -26,6 +26,7 @@ These change nothing.
 | Open terminals                                            | `spark_terminals`                                                                                                  |
 | The Browser pane's tabs, a page, its screenshot and logs  | `spark_browser_tabs`, `spark_browser_open`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs` |
 | Tickets, one in full, or a search of every ticket         | `spark_tickets`                                                                                                    |
+| A Slack thread by link, or a search of allowed channels   | `spark_slack`                                                                                                      |
 | Your Sparks, and the jobs and replies from an `@` mention | `spark_sparks`, `spark_chat`                                                                                       |
 | The audit log, including actions that ran without review  | `spark_audit`                                                                                                      |
 | How Spark works, and this guide                           | `spark_guide`, `spark_docs`                                                                                        |
@@ -38,6 +39,7 @@ The agent proposes, and Spark does it.
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
 | Open a pull request                         | `spark_open_pr`                                                                                         |
+| Post to an allowed Slack channel or thread  | `spark_slack_post`                                                                                      |
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |

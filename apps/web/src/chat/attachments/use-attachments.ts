@@ -4,13 +4,16 @@ import {
   type Attachment,
   type AttachmentKind,
 } from '@spark-outpost/contracts';
-import type { ProjectFile } from '@spark-outpost/contracts';
+import type { ProjectFile, SlackThreadPreview } from '@spark-outpost/contracts';
 import { attachmentUrl, classifyFile, uploadAttachment } from '../../api/attachments.ts';
 import { ApiError } from '../../api/client.ts';
 import { projectsApi } from '../../api/projects.ts';
+import { slackApi, slackNotAllowed } from '../../slack/slack-api.ts';
 
 export type AttachmentSource =
-  { type: 'upload'; file: File } | { type: 'repo'; projectId: string; path: string };
+  | { type: 'upload'; file: File }
+  | { type: 'repo'; projectId: string; path: string }
+  | { type: 'slack'; url: string };
 
 export interface PendingAttachment {
   key: string;
@@ -25,6 +28,8 @@ export interface PendingAttachment {
   error: string | null;
   retryable: boolean;
   attachment: Attachment | null;
+  slack?: SlackThreadPreview;
+  blockedChannel?: { id: string; name: string | null };
 }
 
 export interface AttachmentsState {
@@ -35,6 +40,8 @@ export interface AttachmentsState {
   uploaded: Attachment[];
   add: (files: File[]) => void;
   addFromRepo: (projectId: string, file: ProjectFile) => void;
+  addSlack: (url: string) => void;
+  allowSlackChannel: (key: string) => void;
   remove: (key: string) => void;
   retry: (key: string) => void;
   clear: () => void;
@@ -90,24 +97,63 @@ function createRepoItem(projectId: string, file: ProjectFile): PendingAttachment
   };
 }
 
-function transfer(
+function createSlackItem(url: string): PendingAttachment {
+  return {
+    key: crypto.randomUUID(),
+    name: 'Slack thread',
+    size: 0,
+    source: { type: 'slack', url },
+    kind: 'text',
+    mediaType: 'text/markdown',
+    previewUrl: null,
+    status: 'uploading',
+    progress: 0,
+    error: null,
+    retryable: false,
+    attachment: null,
+  };
+}
+
+interface Transferred {
+  attachment: Attachment;
+  slack?: SlackThreadPreview;
+}
+
+async function transfer(
   item: PendingAttachment,
   signal: AbortSignal,
   onProgress: (progress: number) => void,
-): Promise<Attachment> {
-  if (item.source.type === 'repo') {
-    return projectsApi.attach(item.source.projectId, item.source.path, signal);
+): Promise<Transferred> {
+  if (item.source.type === 'slack') {
+    const { attachment, preview } = await slackApi.context(item.source.url, signal);
+    return { attachment, slack: preview };
   }
-  return uploadAttachment(item.source.file, {
+  return { attachment: await transferFile(item, item.source, signal, onProgress) };
+}
+
+function transferFile(
+  item: PendingAttachment,
+  source: Exclude<AttachmentSource, { type: 'slack' }>,
+  signal: AbortSignal,
+  onProgress: (progress: number) => void,
+): Promise<Attachment> {
+  if (source.type === 'repo') {
+    return projectsApi.attach(source.projectId, source.path, signal);
+  }
+  return uploadAttachment(source.file, {
     mediaType: item.mediaType ?? 'text/plain',
     signal,
     onProgress,
   });
 }
 
-function completed(item: PendingAttachment, attachment: Attachment): Partial<PendingAttachment> {
+function completed(
+  item: PendingAttachment,
+  { attachment, slack }: Transferred,
+): Partial<PendingAttachment> {
   const changes = { status: 'done', progress: 1, attachment } as const;
   if (item.source.type === 'upload') return changes;
+  if (slack) return { ...changes, slack, name: attachment.name, size: attachment.size };
   return {
     ...changes,
     kind: attachment.kind,
@@ -149,13 +195,16 @@ export function useAttachments(): AttachmentsState {
       controllers.current.set(item.key, controller);
       transfer(item, controller.signal, (progress) => patch(item.key, { progress }))
         .then(
-          (attachment) => patch(item.key, completed(item, attachment)),
+          (transferred) => patch(item.key, completed(item, transferred)),
           (error: unknown) => {
             if (controller.signal.aborted) return;
             patch(item.key, {
               status: 'error',
               error: error instanceof Error ? error.message : 'Upload failed.',
               retryable: isRetryable(error),
+              ...(slackNotAllowed(error)
+                ? { blockedChannel: slackNotAllowed(error)!.channel }
+                : {}),
             });
           },
         )
@@ -194,6 +243,31 @@ export function useAttachments(): AttachmentsState {
       if (!duplicate) append([createRepoItem(projectId, file)]);
     },
     [append],
+  );
+
+  const addSlack = useCallback(
+    (url: string) => {
+      const duplicate = itemsRef.current.some(
+        (item) => item.source.type === 'slack' && item.source.url === url,
+      );
+      if (!duplicate) append([createSlackItem(url)]);
+    },
+    [append],
+  );
+
+  const allowSlackChannel = useCallback(
+    (key: string) => {
+      const item = itemsRef.current.find((candidate) => candidate.key === key);
+      if (!item?.blockedChannel) return;
+      const restarted = { ...item, status: 'uploading', progress: 0, error: null } as const;
+      patch(key, restarted);
+      slackApi.allowChannel(item.blockedChannel.id).then(
+        () => start(restarted),
+        (error: unknown) =>
+          patch(key, { status: 'error', error: (error as Error).message, retryable: false }),
+      );
+    },
+    [patch, start],
   );
 
   const remove = useCallback(
@@ -241,6 +315,8 @@ export function useAttachments(): AttachmentsState {
     uploaded: items.flatMap((item) => (item.attachment ? [item.attachment] : [])),
     add,
     addFromRepo,
+    addSlack,
+    allowSlackChannel,
     remove,
     retry,
     clear,

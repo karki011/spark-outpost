@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
+import { API_TOKEN_HEADER, defaultUpdateChannel } from '@spark-outpost/contracts';
 
 export const HEARTBEAT_URL_ENV = 'SPARK_HEARTBEAT_URL';
 export const FIRST_HEARTBEAT_MS = 30_000;
@@ -122,4 +122,31 @@ export function startHeartbeat(options: HeartbeatOptions): HeartbeatTimer {
       if (interval) clearInterval(interval);
     },
   };
+}
+
+export interface HeartbeatSchedule {
+  apiUrl: string;
+  token: string;
+  version: string;
+  appPath: string;
+  userData: string;
+  devChannel: boolean;
+  env: NodeJS.ProcessEnv;
+}
+
+export async function scheduleHeartbeat(schedule: HeartbeatSchedule): Promise<HeartbeatTimer> {
+  const { version } = schedule;
+  return startHeartbeat({
+    url:
+      heartbeatUrl(schedule.env[HEARTBEAT_URL_ENV]) ??
+      (await readBakedHeartbeatUrl(schedule.appPath)),
+    enabled: () => heartbeatEnabled(schedule.apiUrl, schedule.token),
+    heartbeat: async () => ({
+      installId: await loadInstallId(installIdFile(schedule.userData)),
+      version,
+      os: process.platform,
+      arch: process.arch,
+      channel: schedule.devChannel ? 'dev' : defaultUpdateChannel(version),
+    }),
+  });
 }

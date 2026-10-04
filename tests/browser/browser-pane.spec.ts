@@ -129,8 +129,10 @@ test('the Mac app opens the Browser pane and tells the shell where it is', async
         : null;
     })
     .toEqual([0, 0]);
-  const placed = (await calls(page, 'place')).at(-1);
-  expect(placed).toMatchObject({ covered: false, projectId: null, keepSignIns: true });
+  await expect
+    .poll(async () => (await calls(page, 'place')).at(-1))
+    .toMatchObject({ covered: false, projectId: null, keepSignIns: true });
+  await expect(page.locator('#work-panel .wp-in')).toHaveCSS('opacity', '1');
 
   const axe = await new AxeBuilder({ page }).include('#work-panel').analyze();
   expect(axe.violations).toEqual([]);
