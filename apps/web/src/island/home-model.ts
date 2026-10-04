@@ -11,6 +11,7 @@ import { viewSteps, type StepView } from '../chat/run-projection.ts';
 import { hideSecrets } from '../chat/status/status-text.ts';
 import { STEP_VERBS, stepKind, type StepKind } from '../chat/status/step-activity.ts';
 import { sessionState } from './island-model.ts';
+import { firstSentence } from './plain-line.ts';
 
 export const HOME_PAGES = 5;
 export const ACTIVITY_LINES = 3;
@@ -78,6 +79,18 @@ export function runActivity(
     }
   }
   return NO_ACTIVITY;
+}
+
+export function finishedLine(
+  detail: ConversationDetail | undefined,
+  runId: string | undefined,
+): string | null {
+  if (!detail || !runId) return null;
+  const reply = detail.messages.findLast(
+    (message) => message.role === 'assistant' && message.runId === runId,
+  );
+  const sentence = reply ? firstSentence(hideSecrets(reply.content)) : '';
+  return sentence || null;
 }
 
 export type ActivityState = 'done' | 'active' | 'failed';

@@ -8,6 +8,7 @@ export interface SeedApproval {
   title: string;
   command?: string;
   paths?: string[];
+  diffs?: { path: string; oldText: string | null; newText: string }[];
   plan?: string;
   checkpoint?: Record<string, unknown>;
 }
@@ -40,7 +41,7 @@ async function insertApproval(
     command: approval.command ?? null,
     cwd: null,
     paths: approval.paths ?? [],
-    diffs: [],
+    diffs: approval.diffs ?? [],
     truncated: false,
     ...(approval.plan ? { plan: approval.plan } : {}),
     ...(approval.checkpoint ? { checkpoint: approval.checkpoint } : {}),

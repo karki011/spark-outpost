@@ -12,6 +12,9 @@ import { isCheckpoint, type CheckpointApproval } from '../chat/checkpoints/check
 import { useAutoContinue } from '../chat/checkpoints/use-auto-continue.ts';
 import { attentionLine } from '../conversations/row-state.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
+import { baseName } from './home-model.ts';
+import { approvalHunk } from './island-diff.ts';
+import { IslandDiff } from './IslandDiff.tsx';
 import type { Card } from './island-model.ts';
 import { Kbd, useArmed, Who } from './island-parts.tsx';
 import type { ChatAgent } from './use-island-data.ts';
@@ -68,7 +71,15 @@ function Target({ approval }: { approval: Approval }) {
     );
   }
   if (approval.payload.paths.length > 0) {
-    return <div className="isl-code">{approval.payload.paths.slice(0, 4).join('\n')}</div>;
+    const hunk = approvalHunk(approval);
+    return (
+      <>
+        <div className="isl-code">{approval.payload.paths.slice(0, 4).join('\n')}</div>
+        {hunk && (
+          <IslandDiff diff={hunk} mode="hunk" label={`First change to ${baseName(hunk.path)}`} />
+        )}
+      </>
+    );
   }
   return <div className="isl-code">{approval.title}</div>;
 }

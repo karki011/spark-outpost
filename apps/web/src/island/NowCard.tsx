@@ -16,7 +16,7 @@ import { rowState } from '../conversations/row-state.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { ActivityLog } from './ActivityLog.tsx';
 import { DiffPeek, type PeekTarget } from './DiffPeek.tsx';
-import { activityLines, runActivity, stepCount, withChanges } from './home-model.ts';
+import { activityLines, finishedLine, runActivity, stepCount, withChanges } from './home-model.ts';
 import { hopIn } from './home-motion.ts';
 import { sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
@@ -153,6 +153,7 @@ function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: SessionPr
   );
   const count = stepCount(chat.latestRun?.progress);
   const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
+  const said = state === 'done' ? finishedLine(detail.data, chat.latestRun?.id) : null;
   return (
     <div className="isl-now-text">
       <div className="isl-now-head">
@@ -190,6 +191,12 @@ function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: SessionPr
         />
       ) : (
         <p className="isl-now-status">{status}</p>
+      )}
+      {said && (
+        <p className="isl-now-said">
+          <span className="sr-only">Finished: </span>
+          {said}
+        </p>
       )}
     </div>
   );

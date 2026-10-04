@@ -10,6 +10,7 @@ import {
   activityLines,
   activityText,
   changeFor,
+  finishedLine,
   homeSessions,
   quickStartProject,
   runActivity,
@@ -238,5 +239,34 @@ describe('which run the Now card follows', () => {
       OWNER,
     );
     expect(runActivity(live, undefined).steps).toEqual([]);
+  });
+});
+
+describe('the finished line', () => {
+  const RUN = '00000000-0000-4000-8000-000000000001';
+  const message = (role: string, content: string, runId: string | null = RUN) => ({
+    role,
+    content,
+    runId,
+  });
+  const detail = (messages: ReturnType<typeof message>[]) =>
+    ({ messages }) as unknown as ConversationDetail;
+
+  it('is the first plain sentence of the run’s last reply', () => {
+    const messages = [
+      message('user', 'Fix the totals.', null),
+      message('assistant', 'Looking now.'),
+      message('assistant', '**Fixed** the `total()` rounding. Tests pass.\n\n- details'),
+      message('assistant', 'From another turn.', 'other-run'),
+    ];
+    expect(finishedLine(detail(messages), RUN)).toBe('Fixed the total() rounding.');
+  });
+
+  it('hides secrets and is absent without a reply', () => {
+    const leaked = [message('assistant', 'Used sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789')];
+    expect(finishedLine(detail(leaked), RUN)).not.toContain('sk-ant');
+    expect(finishedLine(detail([message('user', 'Hi', null)]), RUN)).toBeNull();
+    expect(finishedLine(detail([message('assistant', '```\ncode\n```')]), RUN)).toBeNull();
+    expect(finishedLine(undefined, RUN)).toBeNull();
   });
 });

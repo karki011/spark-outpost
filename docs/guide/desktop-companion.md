@@ -28,7 +28,9 @@ Drag the island to move it.
 
 Select a Spark tile to chat, right-click to edit or delete, or select **New Spark**.
 
-Steps show verbs and file names, never full paths or secrets. Select an edit, such as **Edited · invoice.ts +12 −3**, to see the change; **Open chat** jumps to that turn. Scout's faces: [Spark Island states](statuses-and-limits.md#spark-island-states).
+Steps show verbs and file names, never full paths or secrets. Scout's faces: [Spark Island states](statuses-and-limits.md#spark-island-states).
+
+Select an edit, such as **Edited · invoice.ts +12 −3**, to see the change; **Open chat** jumps to that turn. A finished chat shows the first sentence of the reply.
 
 ## Answer a card
 
@@ -36,6 +38,8 @@ The island never opens by itself. A chat that needs you drops a pill, such as **
 
 1. Select the pill, or press **⌥Space**.
 2. With the card focused, press **Y** to allow once or **N** to deny.
+
+Edit cards show the first changed lines, never a secret file's.
 
 ![A Spark Island card: Claude wants to run a command, with Deny, Allow once, Always in this project, Open chat and Later](images/companion-island-card-light.png)
 
