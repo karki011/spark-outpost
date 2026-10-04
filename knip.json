@@ -13,6 +13,7 @@
         "tests/browser/provider-stub.ts",
         "tests/browser/ensure-database.ts",
         "tests/browser/bin/gh-fake.ts",
+        "tests/fixtures/browser-pane/serve.ts",
         "infra/heartbeat-worker/src/worker.ts"
       ],
       "project": ["scripts/**/*.ts", "tests/**/*.ts", "infra/**/*.ts"],

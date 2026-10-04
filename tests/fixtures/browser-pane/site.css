@@ -1,0 +1,23 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 24px;
+  color: #1b1b1f;
+  background: #fbfbfd;
+}
+nav a {
+  margin-right: 12px;
+}
+label {
+  display: block;
+  margin: 12px 0 4px;
+}
+input {
+  padding: 6px 8px;
+  width: 260px;
+}
+#buy {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #3355dd;
+  background: #e8edff;
+}

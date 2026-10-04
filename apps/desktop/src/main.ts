@@ -38,8 +38,15 @@ import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
 import { startPrivacy, type Privacy } from './privacy.ts';
-import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
-import { forkService, OutputTail } from './service.ts';
+import {
+  apiEnv,
+  browserWorkerEnv,
+  POSTGRES_LOCALE,
+  workerEnv,
+  type ServerLaunch,
+} from './server-env.ts';
+import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
+import { forkService, OutputTail, type ServiceOptions } from './service.ts';
 import { createShutdown } from './shutdown.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
@@ -96,6 +103,7 @@ let help: Help | null = null;
 let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
 let storage: StorageSync | null = null;
+let browser: DesktopBrowserHost | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
@@ -112,10 +120,28 @@ const bootTeasers = startBootTeasers({
   log: log('teasers'),
 });
 
-function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: () => boolean) {
+function supervise(
+  name: string,
+  entry: string,
+  env: NodeJS.ProcessEnv,
+  ready: () => boolean,
+  connect?: ServiceOptions['connect'],
+) {
   const tail = new OutputTail();
   const supervisor = new Supervisor({
-    start: () => forkService({ name, bootstrap, entry, cwd: serverDir, env, log: log(name) }, tail),
+    start: () =>
+      forkService(
+        {
+          name,
+          bootstrap,
+          entry,
+          cwd: serverDir,
+          env,
+          log: log(name),
+          ...(connect ? { connect } : {}),
+        },
+        tail,
+      ),
     onRestart: (delayMs, code) => {
       if (!ready()) {
         fail(`${name} stopped during startup (exit ${code}).`, tail.text());
@@ -141,6 +167,8 @@ async function stopEverything(): Promise<void> {
 function closeWindows(): void {
   storage?.dispose();
   storage = null;
+  browser?.dispose();
+  browser = null;
   heartbeat?.dispose();
   heartbeat = null;
   updater?.dispose();
@@ -320,11 +348,20 @@ async function launch(): Promise<void> {
   );
   await waitForApi(apiUrl, token, shutdown.failed);
   apiReady = true;
+  const browserHost = await startBrowserHost({
+    window: () => spark?.window ?? null,
+    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
+    userData: paths.userData,
+    blockedPorts: [apiPort, databaseOptions.port],
+    log: log('browser'),
+  });
+  browser = browserHost;
   supervise(
     'Spark Outpost Worker',
     path.join(serverDir, 'src/workflow/main.ts'),
-    workerEnv(launchInfo),
+    browserWorkerEnv(launchInfo),
     () => true,
+    (port) => browserHost.connectWorker(port),
   );
 
   attachApiToken(apiUrl, token);
@@ -416,6 +453,7 @@ function openSpark(): SparkWindow {
     log: mainLog,
   });
   opened.window.on('closed', () => {
+    browser?.windowClosed();
     if (spark === opened) spark = null;
   });
   if (origin) opened.loadApp(origin);

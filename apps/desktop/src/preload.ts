@@ -70,6 +70,19 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   privacy: {
     openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
   },
+  browser: {
+    state: (chatId: string) => ipcRenderer.invoke(IPC.browserState, chatId),
+    place: (placement: unknown) => ipcRenderer.invoke(IPC.browserPlace, placement),
+    command: (chatId: string, command: unknown) =>
+      ipcRenderer.invoke(IPC.browserCommand, chatId, command),
+    start: (placement: unknown) => ipcRenderer.invoke(IPC.browserStart, placement),
+    sites: (projectId: string) => ipcRenderer.invoke(IPC.browserSites, projectId),
+    signOut: (projectId: string, origin: string | null) =>
+      ipcRenderer.invoke(IPC.browserSignOut, { projectId, origin }),
+    onState: (callback: (state: unknown) => void) => listen(IPC.browserStateChanged, callback),
+    onSnapshot: (callback: (snapshot: unknown) => void) => listen(IPC.browserSnapshot, callback),
+    onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserPicked, callback),
+  },
   help: {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),

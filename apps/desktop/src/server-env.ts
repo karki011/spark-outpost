@@ -1,4 +1,4 @@
-import { API_TOKEN_ENV } from '@spark-outpost/contracts';
+import { API_TOKEN_ENV, BROWSER_HOST_ENV } from '@spark-outpost/contracts';
 import type { ChannelConfig, ChannelPaths } from './channel.ts';
 
 export const POSTGRES_LOCALE = 'en_US.UTF-8';
@@ -34,12 +34,17 @@ const LAUNCHER_OWNED = [
   'SPARK_APP_VERSION',
   'SPARK_LOG_DIR',
   'SPARK_DATA_DIR',
+  BROWSER_HOST_ENV,
 ];
 
 function inherited(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env = { ...baseEnv };
   for (const name of LAUNCHER_OWNED) delete env[name];
   return env;
+}
+
+export function browserWorkerEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
+  return { ...workerEnv(launch), [BROWSER_HOST_ENV]: '1' };
 }
 
 export function workerEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
