@@ -10,6 +10,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                            | What to do                                                                   |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Slack connects: notifications, shared threads, start work from a thread, confirmed posts.               | See [Connect Slack](connect-slack.md).                                       |
 | Sparks are named teammates. `@Name` hands one a job as a read-only subagent. Delete in Settings.        | See [Make a Spark](sparks.md).                                               |
 | Wide windows show a context rail. **Talk to…** sits in the bar above the message box.                   | Set **On wide windows** in [Settings](settings.md#spark).                    |
 | The plan card waits for **Build** at **Automatic**, in every agent mode.                                | Select **Build**, or use [**Full auto → PR**](spark-autonomy.md).            |
@@ -28,4 +29,3 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Spark Island is wider and takes dropped files and folders.                                              | See [Use Spark Island](desktop-companion.md).                                |
 | Spark runs the `claude` and `codex` CLIs you installed.                                                 | Install the CLI if a tile says **CLI not installed**.                        |
 | An anonymous heartbeat and optional **Full Disk Access** in the Mac app.                                | Review both in [Mac privacy settings](mac-privacy.md).                       |
-| The guide is shorter: fewer pages, grouped by task. Page links changed.                                 | Start at [What do you want to do?](welcome.md)                               |
