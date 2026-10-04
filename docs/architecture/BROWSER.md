@@ -108,6 +108,14 @@ On 2026-10-04 (Intel Mac, Electron 44.4.5, dev channel, throwaway data folder, d
 - With the pane open on a static page the page's renderer used 0.0% CPU and about 60 to 80 MB; the app's own script time was 0% with the pane open or closed.
 - The outline and text of the fixture form, read with the same CDP calls, masked the password and card fields; a tab that was not showing could still be captured.
 
+Later on 2026-10-04, in the same kind of dev build with a throwaway data folder and a throwaway project (a small node server), with the fake ACP agent calling the real Spark tools (a local, uncommitted switch; no provider was called):
+
+- **Start preview** in the pane started the saved command, loaded the page in the view and showed **Preview running**; **Show output** opened the **Preview** terminal tab; **Stop preview** ended the process.
+- `spark_browser_preview` start from a turn returned the address; `spark_browser_open` with no address in a later turn opened it in a real view with the same process still running; with the saved port taken by another program the server came up on the next port and the tool returned that address.
+- A screenshot from a turn wrote one `spark/browser` audit row with its hash, and the turn showed **Checked in browser**.
+- After a tab went from one page to another, its console and network logs held only the new page, and no Electron security warning.
+- Quitting the app ended the preview process and recorded a stop with reason `shutdown`.
+
 ## Not verified
 
-The tool path from a live agent through the bridge into a real view was not run end to end; the main-side page tools were exercised only through the pane and unit tests. See the completion record for what was run.
+Real Claude and Codex sessions were not run against the preview server or the brief line; only the fake agent was. A crash and restart of a real dev server, and a preview inside a chat's git worktree, were covered by tests with a fake process, not in the shell.
