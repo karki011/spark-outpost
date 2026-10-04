@@ -5,6 +5,7 @@ import {
   autonomyLabel,
   type TeammateView,
 } from '@spark-outpost/contracts';
+import { sparkJobCounts, type SparkJobCount } from '../../persistence/spark-mentions.ts';
 import { teammateList } from '../../persistence/teammates.ts';
 import { listProjects } from '../../projects/projects.ts';
 import { nowOf } from '../deps.ts';
@@ -23,7 +24,11 @@ export function matchTeammate<T extends { id: string; name: string }>(
   throw new SparkToolError(`No Spark called ${reference}. Sparks: ${names}.`);
 }
 
-function describe(teammate: TeammateView, projectNames: ReadonlyMap<string, string>) {
+function describe(
+  teammate: TeammateView,
+  projectNames: ReadonlyMap<string, string>,
+  jobs: SparkJobCount | undefined,
+) {
   return {
     id: teammate.id,
     name: teammate.name,
@@ -35,6 +40,9 @@ function describe(teammate: TeammateView, projectNames: ReadonlyMap<string, stri
     homeChatId: teammate.homeConversationId,
     chats: teammate.chatCount,
     lastActivity: teammate.lastActivity,
+    mentionJobs: jobs
+      ? { total: jobs.jobs, lastChatId: jobs.lastChatId, lastAt: jobs.lastAt.toISOString() }
+      : { total: 0 },
     defaults: {
       provider: teammate.provider ?? 'default provider',
       model: teammate.model ?? 'provider default',
@@ -49,14 +57,16 @@ function describe(teammate: TeammateView, projectNames: ReadonlyMap<string, stri
 
 async function sparks(context: SparkToolContext, args: { spark?: string | undefined }) {
   const { deps, scope } = context;
-  const [list, projects] = await Promise.all([
+  const [list, projects, counts] = await Promise.all([
     teammateList(deps.db, scope.workspaceId, nowOf(deps)),
     listProjects(deps.db, scope.workspaceId),
+    sparkJobCounts(deps.db, scope.workspaceId),
   ]);
+  const jobs = new Map(counts.map((count) => [count.sparkId, count]));
   const names = new Map(projects.map((project) => [project.id, project.name]));
   const shown = args.spark ? [matchTeammate(list.teammates, args.spark)] : list.teammates;
   return {
-    sparks: shown.map((teammate) => describe(teammate, names)),
+    sparks: shown.map((teammate) => describe(teammate, names, jobs.get(teammate.id))),
     ...(args.spark
       ? {}
       : {
@@ -64,7 +74,7 @@ async function sparks(context: SparkToolContext, args: { spark?: string | undefi
             list.starters.includes(starter.id),
           ).map((starter) => `${starter.name} · ${starter.role}`),
         }),
-    note: 'Sparks are named teammates. Each has a home chat and supplies defaults and standing instructions to chats started with it. Change one with spark_create_spark or spark_update_spark (confirm card).',
+    note: 'Sparks are named teammates. Each has a home chat and supplies defaults and standing instructions to chats started with it (Talk to…). In any other chat, @Name in a message hands that one job to the Spark as a read-only subagent with its own context; mentionJobs counts those and spark_chat shows each reply (sparkReplies). Change a Spark with spark_create_spark or spark_update_spark (confirm card).',
   };
 }
 
@@ -73,7 +83,7 @@ export const teammatesTool = sparkTool({
   title: 'Sparks (named teammates)',
   privateData: true,
   description:
-    "List the user's Sparks: named teammates with a face, role, home chat and defaults (provider, model, mode, autonomy, projects) plus their standing instructions and, when the user pointed the Spark at one, the instructions file read at the start of each chat. Each has a state across its chats: idle, working, needs_you, done or failed, and the last chat it worked in. Pass spark (name or id) for one.",
+    "List the user's Sparks: named teammates with a face, role, home chat and defaults (provider, model, mode, autonomy, projects) plus their standing instructions and, when the user pointed the Spark at one, the instructions file read at the start of each chat. Each has a state across its chats: idle, working, needs_you, done or failed, and the last chat it worked in, plus mentionJobs: how many one-off jobs an @mention handed it in other chats. Pass spark (name or id) for one.",
   input: {
     spark: z.string().trim().min(1).max(100).optional().describe('A Spark name or id.'),
   },

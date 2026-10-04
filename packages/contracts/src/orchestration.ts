@@ -74,6 +74,13 @@ export const orchestrationDecisionSchema = z.object({
 });
 export type OrchestrationDecision = z.infer<typeof orchestrationDecisionSchema>;
 
+export const crewSparkSchema = z.object({
+  id: z.uuid(),
+  role: z.string(),
+  only: z.boolean(),
+});
+export type CrewSpark = z.infer<typeof crewSparkSchema>;
+
 export const crewMemberSchema = z.object({
   runId: z.uuid(),
   role: agentRoleSchema,
@@ -108,6 +115,7 @@ export const crewMemberSchema = z.object({
   sameProvider: z.boolean().optional(),
   routeNote: z.string().optional(),
   budget: z.string().optional(),
+  spark: crewSparkSchema.optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 

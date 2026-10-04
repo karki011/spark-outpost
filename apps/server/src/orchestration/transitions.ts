@@ -59,6 +59,7 @@ const PHASE_FOR_ROLE: Record<AgentRole, OrchestrationPhase> = {
   critic: 'reviewing',
   coordinator: 'planning',
   integrator: 'building',
+  spark: 'scouting',
 };
 
 function spawn(state: FlowState, next: Omit<Spawn, 'note'> & { note?: string | null }): FlowResult {

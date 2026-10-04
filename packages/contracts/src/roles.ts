@@ -7,6 +7,7 @@ export const agentRoleSchema = z.enum([
   'critic',
   'coordinator',
   'integrator',
+  'spark',
 ]);
 export type AgentRole = z.infer<typeof agentRoleSchema>;
 
@@ -17,6 +18,7 @@ const ROLE_LABELS: Record<AgentRole, string> = {
   critic: 'Critic',
   coordinator: 'Coordinator',
   integrator: 'Integrator',
+  spark: 'Spark',
 };
 
 export const CREW_NAMES: Record<AgentRole, readonly string[]> = {
@@ -26,6 +28,7 @@ export const CREW_NAMES: Record<AgentRole, readonly string[]> = {
   critic: ['Hawk', 'Owl', 'Lynx'],
   coordinator: ['Atlas', 'Juno', 'Vega'],
   integrator: ['Weld', 'Knot', 'Seam'],
+  spark: ['Spark'],
 };
 
 const ROLE_DUTIES: Record<AgentRole, string> = {
@@ -35,6 +38,7 @@ const ROLE_DUTIES: Record<AgentRole, string> = {
   critic: 'reviews the change',
   coordinator: 'splits the work into pieces',
   integrator: 'joins the pieces',
+  spark: 'does the job you handed it',
 };
 
 export const JEV_NAME = 'Jev';

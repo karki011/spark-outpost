@@ -60,6 +60,8 @@ export interface OrchestrationPatch {
   phase?: OrchestrationPhase;
   depth?: Depth;
   depthSource?: 'jev' | 'rules' | 'user';
+  risk?: Risk;
+  routing?: ModelRouting;
   retries?: number;
   activeMs?: number;
   toolCalls?: number;
@@ -74,6 +76,8 @@ const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
   phase: 'phase',
   depth: 'depth',
   depthSource: 'depth_source',
+  risk: 'risk',
+  routing: 'routing',
   retries: 'retries',
   activeMs: 'active_ms',
   toolCalls: 'tool_calls',

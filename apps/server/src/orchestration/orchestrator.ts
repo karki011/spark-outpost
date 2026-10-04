@@ -1,7 +1,7 @@
 import { firstName } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
-import { insertOrchestration } from '../persistence/orchestrations.ts';
+import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
@@ -56,6 +56,7 @@ import { agreedPlanText, changesSoFar } from './member-prompts.ts';
 import { writePlanOnly } from './plan-only.ts';
 import { writePlanFirst } from './plan-first.ts';
 import { clarifyTurn } from './clarify-turn.ts';
+import { handToSparks } from './spark-handoff.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { escalatedHighStakes, wantsCritic } from './critic-rule.ts';
@@ -308,7 +309,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     if (!placed) return;
     const prepared = await prepareTurn(deps, lease, placed.input, append, control);
     if (!prepared) return;
-    input = prepared;
+    const handed = await handToSparks({ deps, lease, input: prepared, append, control });
+    if (handed === 'finished') return;
+    input = handed;
     const mode = input.mode ?? 'chat';
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
@@ -353,18 +356,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const inProject = doing && root !== undefined;
     const git = inProject && (await isGitWorkTree(root));
     const limits = baseLimits(deps, input.provider, prefs.savedSpendCapUsd);
-    await insertOrchestration(deps.db, {
-      runId: lease.runId,
-      depth: readOnlyStart(decisions.start) ? 'direct' : 'execute',
+    const start = {
+      depth: readOnlyStart(decisions.start) ? ('direct' as const) : ('execute' as const),
       depthSource: Object.values(decisions.calls).some((call) => call.source === 'jev')
-        ? 'jev'
-        : 'rules',
+        ? ('jev' as const)
+        : ('rules' as const),
       risk: decisions.risk,
       routing: intake.context.routing,
-      activeLimitMs: limits.activeLimitMs,
-      toolCallLimit: limits.toolCallLimit,
-      costCapUsd: limits.costCapUsd,
-    });
+    };
+    await insertOrchestration(deps.db, { runId: lease.runId, ...start, ...limits });
+    if (input !== prepared) await updateOrchestration(deps.db, lease.runId, start);
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
     const jevDeps = solo ? null : orchestrationJevDeps(deps);

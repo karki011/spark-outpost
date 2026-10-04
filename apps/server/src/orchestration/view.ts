@@ -14,6 +14,7 @@ import {
   type AgentRole,
   type Approval,
   type CostSource,
+  type CrewSpark,
   type CrewMember,
   type IntakeCall,
   type Orchestration,
@@ -40,6 +41,7 @@ export interface StoredRoute {
   fileReads?: number;
   routeNote?: string;
   budget?: string;
+  spark?: CrewSpark;
 }
 
 export interface MemberRow {
@@ -81,6 +83,7 @@ const routeFieldsSchema = z.object({
   budget: crew.budget.catch(undefined),
   pieceKey: crew.pieceKey.catch(undefined),
   placement: crew.placement.catch(undefined),
+  spark: crew.spark.catch(undefined),
 });
 const storedRouteSchema = routeFieldsSchema.catch(() => routeFieldsSchema.parse({}));
 
@@ -142,6 +145,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     ...(route.budget ? { budget: route.budget } : {}),
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
+    ...(route.spark ? { spark: route.spark } : {}),
   };
 }
 
