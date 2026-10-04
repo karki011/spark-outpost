@@ -138,6 +138,9 @@ describe('tickets inbox', () => {
       String(tomorrow.getMonth() + 1).padStart(2, '0'),
       String(tomorrow.getDate()).padStart(2, '0'),
     ].join('-');
+    stubs.linear.issues.find((issue) => issue.identifier === 'ENG-14')!.completedAt = new Date(
+      Date.now() - 2 * 24 * 3_600_000,
+    ).toISOString();
     await inbox();
     await backdateAssigned('WEB-418', 3);
     const list = await inbox();
