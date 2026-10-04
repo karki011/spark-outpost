@@ -38,7 +38,14 @@ describe('Linear source', () => {
       ['ENG-13', 'in_progress', 'ENG'],
       ['OPS-4', 'todo', 'OPS'],
     ]);
-    expect(open[0]).toMatchObject({ sprint: 'Cycle 7', priority: 'High', statusName: 'Todo' });
+    expect(open[0]).toMatchObject({
+      sprint: 'Cycle 7',
+      priority: 'High',
+      statusName: 'Todo',
+      reporter: { name: 'Jordan Lee' },
+      createdAt: '2026-09-18T09:00:00.000Z',
+    });
+    expect(open[1]).toMatchObject({ reporter: null, createdAt: '2026-09-18T09:00:00.000Z' });
     expect((await linear().listAssigned({ status: 'done' })).map((t) => t.key)).toEqual(['ENG-14']);
     expect((await linear().listAssigned({ project: 'ops' })).map((t) => t.key)).toEqual(['OPS-4']);
     expect((await linear().listAssigned({ q: 'today' })).map((t) => t.key)).toEqual(['ENG-12']);
@@ -119,7 +126,10 @@ describe('Jira source', () => {
       sprint: 'Sprint 41',
       project: 'WEB',
       updatedAt: '2026-09-27T12:00:00.000Z',
+      reporter: { name: 'Jordan Lee' },
+      createdAt: '2026-09-18T09:00:00.000Z',
     });
+    expect(open[1]).toMatchObject({ reporter: null, createdAt: null });
     expect((await jira().listAssigned({ project: 'API' })).map((t) => t.key)).toEqual(['API-77']);
     expect((await jira().listAssigned({ status: 'done' })).map((t) => t.key)).toEqual(['WEB-420']);
     expect((await jira().listAssigned({ q: 'csv' })).map((t) => t.key)).toEqual([

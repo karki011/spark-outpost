@@ -36,6 +36,9 @@ export const ticketKeySchema = z
 export const ticketPersonSchema = z.object({ id: z.string(), name: z.string() });
 export type TicketPerson = z.infer<typeof ticketPersonSchema>;
 
+export const ticketReporterSchema = z.object({ name: z.string() });
+export type TicketReporter = z.infer<typeof ticketReporterSchema>;
+
 export const TICKET_PRIORITY_NONE = 0;
 
 export const ticketSummarySchema = z.object({
@@ -54,6 +57,8 @@ export const ticketSummarySchema = z.object({
   labels: z.array(z.string()),
   dueDate: z.string().nullable(),
   doneAt: z.string().nullable(),
+  reporter: ticketReporterSchema.nullable(),
+  createdAt: z.string().nullable(),
 });
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
 

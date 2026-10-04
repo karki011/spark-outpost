@@ -5,6 +5,7 @@ import {
 } from '@spark-outpost/contracts';
 import { chatTicketStates } from '../../persistence/chat-tickets.ts';
 import { requireSource } from '../../tickets/connections.ts';
+import { parsePullUrl } from '../../tickets/pull-status.ts';
 import { pickSource } from '../actions/ticket-actions.ts';
 import { ticketDepsFor } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
@@ -75,6 +76,8 @@ function ticketFacts(ticket: TicketDetail, offset: number) {
     statusGroup: ticket.status,
     priority: ticket.priority,
     assignee: ticket.assignee ?? ticket.assignedTo?.name ?? null,
+    reportedBy: ticket.reporter?.name ?? null,
+    createdAt: ticket.createdAt,
     project: ticket.project,
     sprint: ticket.sprint,
     labels: ticket.labels,
@@ -87,6 +90,7 @@ function ticketFacts(ticket: TicketDetail, offset: number) {
       ? { earlierComments: ticket.comments.length - comments.length }
       : {}),
     linkedIssues: ticket.links,
+    pullRequests: ticket.links.filter((link) => parsePullUrl(link.url) !== null),
     subtasks: ticket.subtasks.map((sub) => ({
       key: sub.key,
       title: sub.title,

@@ -99,16 +99,12 @@
   min-width: 0;
   min-height: var(--row-h);
   display: grid;
-  grid-template-columns: 10px 16px 66px minmax(0, 1fr) auto 34px;
+  grid-template-columns: 10px 16px 66px 132px minmax(0, 1fr) auto 34px 18px;
   align-items: center;
   column-gap: 10px;
   padding: 0 18px 0 10px;
   font-size: 13.5px;
   text-align: left;
-}
-
-.tk .ir-main.with-status {
-  grid-template-columns: 10px 14px 16px 66px minmax(0, 1fr) auto 34px;
 }
 
 .tk .ir-main:focus-visible {
@@ -334,46 +330,17 @@
   line-height: 1;
 }
 
-.tk .bk {
-  width: 13px;
-  height: 13px;
-  display: inline-block;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  border-radius: 50%;
-}
-
-.tk .bk.todo {
-  border: 1.5px solid var(--line-strong);
-}
-
-.tk .bk.prog {
-  border: 1.5px solid var(--accent-text);
-  background: conic-gradient(var(--accent-text) 0 50%, transparent 0);
-}
-
-.tk .bk.rev {
-  border: 1.5px solid var(--warn);
-  background: radial-gradient(circle, var(--warn) 0 3px, transparent 3.5px);
-}
-
-.tk .bk.done {
-  background: var(--faint);
-}
-
-@media (max-width: 900px) {
-  .tk .ir-main,
-  .tk .ir-main.with-status {
-    grid-template-columns: 16px 58px minmax(0, 1fr) 34px;
+@container tk-list (max-width: 760px) {
+  .tk .ir-main {
+    grid-template-columns: 16px 96px minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'pri key title age'
-      '. . why why';
+      'pri key title title title'
+      'chip chip why age who';
     row-gap: 2px;
     padding: 8px 14px 8px 12px;
   }
 
-  .tk .ir-main .srcl,
-  .tk .ir-main .bk {
+  .tk .ir-main .srcl {
     display: none;
   }
 
@@ -389,8 +356,17 @@
     grid-area: title;
   }
 
+  .tk .ir-main .fchip {
+    grid-area: chip;
+    justify-self: start;
+  }
+
   .tk .ir-main .age {
     grid-area: age;
+  }
+
+  .tk .ir-main .ir-who {
+    grid-area: who;
   }
 
   .tk .ir-main .why-r {
@@ -414,4 +390,14 @@
   background: var(--raise);
   font-size: 11.5px;
   color: var(--muted);
+}
+
+@container tk-list (max-width: 480px) {
+  .tk .ir-main .tk-title {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
 }

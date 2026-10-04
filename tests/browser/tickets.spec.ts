@@ -67,7 +67,7 @@ test('the inbox sorts tickets into sections and opens a ticket', async ({ page }
   await expect(row(page, 'WEB-433')).toContainText('Urgent · not started');
   await expect(row(page, 'API-81')).toContainText('Blocked');
   await expect(section(page, 'Started')).toContainText('WEB-421');
-  await expect(row(page, 'WEB-421')).toContainText(/Started.*In progress · no chat/);
+  await expect(row(page, 'WEB-421')).toContainText(/In Progress.*No chat yet/);
   await expect(section(page, 'In review / PR open').locator('li')).toHaveCount(2);
   await expect(section(page, 'Up next')).toContainText('ENG-1210');
   const done = section(page, 'Done recently');
@@ -79,10 +79,10 @@ test('the inbox sorts tickets into sections and opens a ticket', async ({ page }
     page.getByRole('navigation', { name: 'Main' }).getByLabel('3 tickets need attention'),
   ).toBeVisible();
 
-  const views = main(page).getByRole('group', { name: 'Show tickets by where they are' });
-  await views.getByRole('button', { name: '2 up next' }).click();
+  const views = main(page).getByRole('navigation', { name: 'Ticket views' });
+  await views.getByRole('button', { name: 'Up next 2' }).click();
   await expect(main(page).locator('li.irow')).toHaveCount(2);
-  await views.getByRole('button', { name: /^All/ }).click();
+  await views.getByRole('button', { name: /^Inbox/ }).click();
 
   await row(page, 'WEB-433')
     .getByRole('button', { name: /WEB-433/ })

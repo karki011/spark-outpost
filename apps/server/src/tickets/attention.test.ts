@@ -29,6 +29,8 @@ function ticket(fields: Partial<TicketListItem> = {}): TicketListItem {
     labels: [],
     dueDate: null,
     doneAt: null,
+    reporter: null,
+    createdAt: null,
     work: [],
     ...fields,
   };
@@ -235,7 +237,7 @@ describe('inbox sections', () => {
     });
     expect(place(facts({}, { status: 'in_progress' }))).toMatchObject({
       section: 'started',
-      reason: 'In progress · no chat',
+      reason: 'No chat yet',
     });
     expect(place(facts({ chat: chat('finished') }))).toMatchObject({
       section: 'started',
@@ -243,7 +245,7 @@ describe('inbox sections', () => {
     });
     expect(place(facts({ chat: chat('idle') }))).toMatchObject({
       section: 'started',
-      reason: 'Started · chat idle',
+      reason: 'Chat idle',
     });
     expect(place(facts({}, { dueDate: '2026-10-06' }))).toMatchObject({
       section: 'up_next',

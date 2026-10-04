@@ -24,6 +24,8 @@ const ticket: TicketDetail = {
   assignedTo: null,
   dueDate: null,
   doneAt: null,
+  reporter: null,
+  createdAt: null,
   description:
     'People want a spreadsheet.\n\n### Acceptance criteria\n\n- A Download CSV button\n- Columns match\n\n### Notes\n\nKeep it small.',
   assignee: 'Alex Example',

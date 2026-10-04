@@ -1,10 +1,56 @@
+.tk .ib {
+  --tk-detail-cap: max(360px, calc(100% - 236px - 380px));
+}
+
 .tk .tk-detail {
-  width: 420px;
+  position: relative;
+  width: min(var(--tk-detail-w, 500px), var(--tk-detail-cap));
   flex-shrink: 0;
-  padding: 18px 22px 28px;
-  overflow-y: auto;
+  display: flex;
+  min-height: 0;
   border-left: 1px solid var(--line);
   animation: tk-slidein 0.4s var(--out);
+}
+
+.tk .tk-detail-in {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 22px 28px;
+  overflow-y: auto;
+}
+
+.tk .tk-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: -4px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.tk .tk-resize:focus-visible {
+  outline: none;
+}
+
+.tk .tk-detail:has(.tk-resize:hover),
+.tk .tk-detail:has(.tk-resize:focus-visible),
+.tk .tk-detail.dragging {
+  border-left-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.tk .tk-detail.dragging {
+  user-select: none;
+}
+
+.tk .tk-unknown {
+  color: var(--muted);
+}
+
+.tk .tk-props dd time {
+  cursor: default;
 }
 
 .tk .tk-dhead {
@@ -106,11 +152,6 @@
   margin: 0;
 }
 
-.tk .native-l {
-  font-size: 12.5px;
-  color: var(--faint);
-}
-
 .tk .lbl {
   padding: 1px 8px;
   border-radius: 6px;
@@ -173,38 +214,9 @@
   color: var(--muted);
 }
 
-.tk .prbox {
-  margin-top: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  font-size: 13px;
-}
-
-.tk .prbox a,
 .tk .xlink a {
   color: var(--accent-text);
   text-underline-offset: 2px;
-}
-
-.tk .prbox dl {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 4px 10px;
-  margin: 8px 0 0;
-}
-
-.tk .prbox dt {
-  color: var(--faint);
-}
-
-.tk .prbox dd {
-  margin: 0;
-}
-
-.tk .na-txt {
-  color: var(--muted);
-  font-style: italic;
 }
 
 .tk .tk-detail .md {
@@ -430,6 +442,10 @@
 }
 
 @media (max-width: 1180px) {
+  .tk .ib {
+    --tk-detail-cap: calc(100% - 48px);
+  }
+
   .tk .tk-detail {
     position: absolute;
     top: 0;
@@ -446,6 +462,10 @@
     left: 0;
     width: auto;
   }
+
+  .tk .tk-resize {
+    display: none;
+  }
 }
 
 .tk .tk-detail .md h1,
@@ -456,34 +476,4 @@
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
-}
-
-.tk .tk-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--raise);
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.tk .tk-pill::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.tk .tk-pill.in_progress {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
-.tk .tk-pill.in_review {
-  background: color-mix(in srgb, var(--warn) 13%, transparent);
-  color: var(--warn);
 }

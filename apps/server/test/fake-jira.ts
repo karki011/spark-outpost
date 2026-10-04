@@ -21,6 +21,8 @@ export interface FakeJiraIssue {
   priority: string;
   duedate: string | null;
   resolutiondate: string | null;
+  reporter: string | null;
+  created: string | null;
   labels: string[];
   comments: { author: string; body: unknown; created: string }[];
   remoteLinks: { globalId: string; url: string; title: string }[];
@@ -56,6 +58,8 @@ function seedIssues(): FakeJiraIssue[] {
     priority: 'Medium',
     duedate: null,
     resolutiondate: null,
+    reporter: 'acc-2',
+    created: '2026-09-18T09:00:00.000+0000',
     labels: ['frontend'],
     comments: [],
     remoteLinks: [],
@@ -81,7 +85,14 @@ function seedIssues(): FakeJiraIssue[] {
       ],
       subtasks: ['WEB-419'],
     },
-    { ...base, key: 'WEB-419', summary: 'CSV header row', status: 'In Progress' },
+    {
+      ...base,
+      key: 'WEB-419',
+      summary: 'CSV header row',
+      status: 'In Progress',
+      reporter: null,
+      created: null,
+    },
     {
       ...base,
       key: 'WEB-420',
@@ -153,6 +164,10 @@ export function fakeJira(): FakeJira {
         : null,
       duedate: item.duedate,
       resolutiondate: item.resolutiondate,
+      reporter: item.reporter
+        ? { accountId: item.reporter, displayName: jiraPeople[item.reporter] ?? item.reporter }
+        : null,
+      ...(item.created ? { created: item.created } : {}),
       labels: item.labels,
       comment: {
         comments: item.comments.map((c) => ({
@@ -281,6 +296,8 @@ export function fakeJira(): FakeJira {
       priority: fields.priority?.name ?? 'Medium',
       duedate: null,
       resolutiondate: null,
+      reporter: JIRA_ME,
+      created: new Date().toISOString(),
       labels: fields.labels ?? [],
       comments: [],
       remoteLinks: [],

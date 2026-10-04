@@ -7,16 +7,14 @@ const ROWS = {
 };
 
 const TONES = {
-  needs: 'var(--warn)',
-  bad: 'var(--danger)',
-  spark: 'var(--accent-text)',
-  started: 'var(--text)',
-  next: 'var(--muted)',
-  review: 'var(--accent-text)',
+  todo: 'var(--muted)',
+  in_progress: 'var(--accent-text)',
+  in_review: 'var(--warn)',
+  blocked: 'var(--danger)',
   done: 'var(--success)',
 };
 
-const TINTED = new Set(['needs', 'bad', 'spark', 'started']);
+const TINTED = new Set(['in_progress', 'in_review', 'blocked']);
 
 const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
   TINTED.has(tone)
@@ -24,7 +22,7 @@ const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
         {
           id: `tickets.chip-${tone}`,
           group: 'Tickets',
-          label: `${tone} status chip`,
+          label: `${tone} status badge`,
           fg,
           bg: [`color-mix(in srgb, ${fg} 11%, var(--panel))`],
           kind: 'text' as const,
@@ -33,33 +31,22 @@ const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
     : Object.entries(ROWS).map(([row, bg]) => ({
         id: `tickets.chip-${tone}-on-${row}`,
         group: 'Tickets',
-        label: `${tone} status chip on a ${row} row`,
+        label: `${tone} status badge on a ${row} row`,
         fg,
         bg: [bg],
         kind: 'text' as const,
       })),
 );
 
-const summaryChips: Pair[] = [...Object.entries(TONES), ['all', 'var(--text)'] as const].map(
-  ([tone, fg]) => ({
-    id: `tickets.summary-${tone}-pressed`,
+const viewCounts: Pair[] = Object.entries({ row: ROWS.row, hovered: ROWS.hovered }).map(
+  ([state, bg]) => ({
+    id: `tickets.view-attention-count-${state}`,
     group: 'Tickets',
-    label: `${tone} summary chip, pressed`,
-    fg,
-    bg: [`color-mix(in srgb, ${fg} 13%, var(--panel))`],
+    label: `Needs you count in the side column, ${state}`,
+    fg: 'var(--warn)',
+    bg: [bg],
     kind: 'text' as const,
   }),
 );
 
-export const TICKETS: Pair[] = [
-  ...rowChips,
-  ...summaryChips,
-  {
-    id: 'tickets.summary-count-pressed',
-    group: 'Tickets',
-    label: 'count in the pressed All chip',
-    fg: 'var(--muted)',
-    bg: ['color-mix(in srgb, var(--text) 13%, var(--panel))'],
-    kind: 'text',
-  },
-];
+export const TICKETS: Pair[] = [...rowChips, ...viewCounts];

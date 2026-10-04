@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import type { TicketSourceId, TicketStatus } from '@spark-outpost/contracts';
 import { useTooltip, type TipContent } from '../ui/Tooltip.tsx';
-import { Glyph, PriorityGlyph, StatusCircle } from './ticket-icons.tsx';
+import { UserBlob } from '../brand/UserBlob.tsx';
+import { StatusBadge } from './StatusChip.tsx';
+import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 
 export type RowTone = 'none' | 'warn' | 'error' | 'running';
 
@@ -19,9 +21,12 @@ export interface TicketRowProps {
   ticketKey: string;
   title: string;
   priorityRank: number;
-  status?: { status: TicketStatus; label: string };
+  status: TicketStatus;
+  statusName: string;
+  assignee: string | null;
   reason: string;
   tone: RowTone;
+  reasonIcon?: ReactNode;
   more: string[];
   age: { text: string; title: string } | null;
   syncProblem?: string | null;
@@ -32,8 +37,6 @@ export interface TicketRowProps {
   pinned?: ReactNode;
   below?: ReactNode;
   links?: ReactNode;
-  chip?: ReactNode;
-  avatar?: ReactNode;
   preview?: TipContent;
 }
 
@@ -44,8 +47,19 @@ const TONE_CLASS: Record<RowTone, string> = {
   running: 'sev run',
 };
 
+function Assignee({ name }: { name: string | null }) {
+  if (!name) {
+    return <span className="ir-who none" role="img" aria-label="Unassigned" title="Unassigned" />;
+  }
+  return (
+    <span className="ir-who" role="img" aria-label={`Assigned to ${name}`} title={name}>
+      <UserBlob displayName={name} size={18} />
+    </span>
+  );
+}
+
 export function TicketRow(props: TicketRowProps) {
-  const { action, pinned, below, links, chip } = props;
+  const { action, pinned, below, links } = props;
   const preview = useTooltip(props.preview ?? '');
   const classes = [
     'irow',
@@ -60,7 +74,7 @@ export function TicketRow(props: TicketRowProps) {
     <li className={classes} data-ticket={props.id}>
       <button
         type="button"
-        className={props.status ? 'ir-main with-status' : chip ? 'ir-main flow' : 'ir-main'}
+        className="ir-main"
         aria-current={props.selected ? 'true' : undefined}
         onClick={props.onSelect}
         {...(props.preview ? preview.triggerProps : {})}
@@ -68,13 +82,12 @@ export function TicketRow(props: TicketRowProps) {
         <span className="srcl" aria-hidden="true">
           {props.source === 'linear' ? 'L' : 'J'}
         </span>
-        {props.status && <StatusCircle status={props.status.status} label={props.status.label} />}
         <PriorityGlyph rank={props.priorityRank} />
         <span className="tk-key">{props.ticketKey}</span>
-        {chip}
+        <StatusBadge status={props.status} name={props.statusName} />
         <span className="tk-title">{props.title}</span>
         <span className="why-r">
-          <i className={TONE_CLASS[props.tone]} aria-hidden="true" />
+          {props.reasonIcon ?? <i className={TONE_CLASS[props.tone]} aria-hidden="true" />}
           <span className="txt">{props.reason}</span>
           {props.more.length > 0 && (
             <span className="tk-more" title={props.more.join(' · ')}>
@@ -98,7 +111,7 @@ export function TicketRow(props: TicketRowProps) {
         <span className="age" title={props.age?.title}>
           {props.age?.text}
         </span>
-        {props.avatar}
+        <Assignee name={props.assignee} />
       </button>
       {props.preview && preview.tooltip}
       {links}

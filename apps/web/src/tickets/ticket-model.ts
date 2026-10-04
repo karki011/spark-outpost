@@ -226,8 +226,3 @@ export function snoozeTime(until: Date, now: Date): string {
   }
   return until.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
-
-export const snoozedTickets = (tickets: readonly InboxTicket[]) =>
-  tickets
-    .filter((ticket) => ticket.snooze)
-    .toSorted((a, b) => (a.snooze?.until ?? '').localeCompare(b.snooze?.until ?? ''));

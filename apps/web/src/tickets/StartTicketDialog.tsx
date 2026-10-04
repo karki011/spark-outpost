@@ -10,6 +10,7 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { reveal } from '../ui/transitions.tsx';
+import { StatusBadge } from './StatusChip.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
@@ -140,6 +141,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
             <div>
               <h3 id={titleId}>Start work on {ticket.key}</h3>
               <small>{ticket.title}</small>
+              <StatusBadge status={ticket.status} name={ticket.statusName} />
             </div>
             <button
               type="button"

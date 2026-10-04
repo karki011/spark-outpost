@@ -1,11 +1,10 @@
 import type { TicketView } from '@spark-outpost/contracts';
-import { ticketStatusLabels } from '@spark-outpost/contracts';
 import { useId, useState } from 'react';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
-import { StatusCircle } from './ticket-icons.tsx';
+import { StatusBadge } from './StatusChip.tsx';
 import { safeUrl } from './ticket-model.ts';
 import { DetailSkeleton } from './TicketsSkeleton.tsx';
 
@@ -61,9 +60,9 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
           <h4>Subtasks</h4>
           {ticket.subtasks.map((subtask) => (
             <div key={subtask.key} className="subt">
-              <StatusCircle status={subtask.status} label={ticketStatusLabels[subtask.status]} />
               <span className="tk-key">{subtask.key}</span>
               <span className="t">{subtask.title}</span>
+              <StatusBadge status={subtask.status} name={subtask.statusName} />
             </div>
           ))}
         </section>

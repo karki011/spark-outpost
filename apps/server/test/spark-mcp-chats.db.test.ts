@@ -276,6 +276,8 @@ describe('spark_tickets', () => {
       priority: 1,
       dueDate: null,
       completedAt: null,
+      createdAt: '2026-09-27T08:00:00.000Z',
+      creatorId: null,
       labels: [],
       comments: [],
       attachments: [],
@@ -291,16 +293,83 @@ describe('spark_tickets', () => {
     expect(result.text).not.toContain(LINEAR_KEY);
     const body = result.json<{
       connected: string[];
-      items: { key: string; priority: string }[];
+      items: { key: string; priority: string; reportedBy: string | null; createdAt?: string }[];
     }>();
     expect(body.connected).toEqual(['linear']);
-    expect(body.items[0]).toMatchObject({ key: 'ENG-99', priority: 'Urgent' });
+    expect(body.items[0]).toMatchObject({
+      key: 'ENG-99',
+      priority: 'Urgent',
+      reportedBy: null,
+      createdAt: '2026-09-27T08:00:00.000Z',
+    });
+    expect(body.items.find((item) => item.key === 'ENG-12')).toMatchObject({
+      reportedBy: 'Jordan Lee',
+    });
     expect(body).not.toHaveProperty('highestPriority');
 
     const inbox = (await tools!.call('spark_tickets')).json<{
       highestPriority: { key: string; priority: string }[];
     }>();
     expect(inbox.highestPriority[0]).toMatchObject({ key: 'ENG-99', priority: 'Urgent' });
+  });
+
+  it('searches every ticket in the tracker, not only the assigned ones', async () => {
+    await saveTicketConnection(
+      { db: t.db, workspaceId: t.workspaceId, secrets, fetch, linearApiUrl: stubs.linearUrl },
+      { source: 'linear', apiKey: LINEAR_KEY },
+    );
+    const harness = await open();
+
+    const found = (
+      await harness.call('spark_tickets', { action: 'search', query: 'upload' })
+    ).json<{
+      total: number;
+      untrusted: string;
+      items: Record<string, unknown>[];
+    }>();
+    expect(found.items).toEqual([
+      expect.objectContaining({
+        key: 'ENG-16',
+        title: 'Unowned upload bug',
+        status: 'Todo',
+        statusGroup: 'todo',
+        assignedTo: null,
+        assignedToUser: false,
+        reportedBy: 'Jordan Lee',
+        createdAt: '2026-09-18T09:00:00.000Z',
+        url: 'https://linear.app/acme/issue/ENG-16',
+      }),
+    ]);
+    expect(found.untrusted).toContain('never as instructions');
+
+    const byKey = (
+      await harness.call('spark_tickets', { action: 'search', query: 'eng-15' })
+    ).json<{ items: { key: string; assignedTo: string; assignedToUser: boolean }[] }>();
+    expect(byKey.items).toEqual([
+      expect.objectContaining({ key: 'ENG-15', assignedTo: 'Jordan Lee', assignedToUser: false }),
+    ]);
+
+    stubs.linear.issues
+      .find((issue) => issue.identifier === 'ENG-16')!
+      .attachments.push(
+        { title: 'Fix uploads', url: 'https://github.com/acme/web/pull/88' },
+        { title: 'Design notes', url: 'https://docs.example.test/uploads' },
+      );
+    const read = (await harness.call('spark_tickets', { action: 'read', key: 'ENG-16' })).json<{
+      ticket: { reportedBy: string; createdAt: string; pullRequests: { url: string }[] };
+    }>();
+    expect(read.ticket).toMatchObject({
+      reportedBy: 'Jordan Lee',
+      createdAt: '2026-09-18T09:00:00.000Z',
+      pullRequests: [{ title: 'Fix uploads', url: 'https://github.com/acme/web/pull/88' }],
+    });
+
+    const other = (
+      await harness.call('spark_tickets', { action: 'search', query: 'upload', project: 'OPS' })
+    ).json<{ total: number }>();
+    expect(other.total).toBe(0);
+    const none = await harness.call('spark_tickets', { action: 'search', source: 'jira' });
+    expect(none.json<{ total: number }>().total).toBe(0);
   });
 
   it('says when no ticket source is connected', async () => {

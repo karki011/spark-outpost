@@ -7,15 +7,7 @@ import {
   type PullRequestStatus,
   type RunStatus,
 } from '@spark-outpost/contracts';
-import {
-  askingText,
-  chatLookup,
-  flowChip,
-  liveTicket,
-  liveTickets,
-  staleChats,
-  summaryText,
-} from './ticket-flow.ts';
+import { askingText, chatLookup, liveTicket, liveTickets, staleChats } from './ticket-flow.ts';
 import { countBy } from './ticket-model.ts';
 
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -38,6 +30,8 @@ function ticket(fields: Partial<InboxTicket> = {}): InboxTicket {
     labels: [],
     dueDate: null,
     doneAt: null,
+    reporter: null,
+    createdAt: null,
     work: [],
     section: 'up_next',
     flags: [],
@@ -209,23 +203,8 @@ describe('live ticket flow', () => {
   });
 });
 
-describe('status chips and the summary strip', () => {
-  it('gives every group its own chip, and errors their own tone', () => {
-    expect(flowChip('attention', 'warn')).toEqual({ label: 'Needs you', tone: 'needs' });
-    expect(flowChip('attention', 'error')).toEqual({ label: 'Needs you', tone: 'bad' });
-    expect(flowChip('spark', 'running')).toEqual({ label: 'With Spark', tone: 'spark' });
-    expect(flowChip('review', 'none').label).toBe('In review');
-    expect(flowChip('done', 'none').tone).toBe('done');
-  });
-
-  it('reads the counts as a sentence', () => {
-    expect(summaryText('attention', 1)).toBe('1 needs you');
-    expect(summaryText('attention', 3)).toBe('3 need you');
-    expect(summaryText('spark', 2)).toBe('2 with Spark');
-    expect(summaryText('done', 4)).toBe('4 done this week');
-  });
-
-  it('says what an asking chat wants in a few words', () => {
+describe('what an asking chat wants', () => {
+  it('says it in a few words', () => {
     expect(askingText(null)).toBe('Waiting for your answer');
     expect(askingText(asking('input').attention)).toBe('Answer a question');
   });

@@ -24,7 +24,7 @@ These change nothing.
 | Where something lives in the code                        | `spark_find`                                                                              |
 | Your MCP servers and where each is on                    | `spark_mcp_servers`                                                                       |
 | Open terminals                                           | `spark_terminals`                                                                         |
-| Tickets                                                  | `spark_tickets`                                                                           |
+| Tickets, one in full, or a search of every ticket        | `spark_tickets`                                                                           |
 | Your Sparks and their standing instructions              | `spark_sparks`                                                                            |
 | The audit log, including actions that ran without review | `spark_audit`                                                                             |
 | How Spark works, and this guide                          | `spark_guide`, `spark_docs`                                                               |

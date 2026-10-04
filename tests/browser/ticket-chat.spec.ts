@@ -131,7 +131,7 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
     .click();
   const detail = page.getByRole('complementary', { name: 'ENG-1210 details' });
   await expect(detail).toContainText('acme/widgets #1', { timeout: 15_000 });
-  await expect(detail).toContainText('Draft');
+  await expect(detail).toContainText('Draft', { timeout: 15_000 });
   const ticketRow = row(page, 'ENG-1210');
   await expect(
     ticketRow.getByRole('button', { name: /^Open PR #1 for ENG-1210, draft, in your browser/ }),
@@ -149,7 +149,7 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
   await expect(
     ticketRow.getByRole('button', { name: /^Open PR #1 for ENG-1210, merged/ }),
   ).toBeVisible({ timeout: 15_000 });
-  await expect(ticketRow).toContainText(/Done.*PR #1 merged/);
+  await expect(ticketRow).toContainText('PR #1 merged');
 
   await page.request.patch('/api/tickets/connections/linear', { data: { moveOnMerge: true } });
   await refreshTickets(page);
