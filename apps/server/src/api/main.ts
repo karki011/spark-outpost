@@ -108,6 +108,7 @@ const app = createApp({
   apiToken,
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
   branchPrefix: config.BRANCH_PREFIX,
+  linkScheme: config.SPARK_LINK_SCHEME,
   githubApiUrl: config.GITHUB_API_URL,
   githubApp,
   linearApiUrl: config.LINEAR_API_URL,

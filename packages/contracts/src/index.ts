@@ -7,6 +7,7 @@ export * from './agent-commands.ts';
 export * from './agent-modes.ts';
 export * from './approvals.ts';
 export * from './slack.ts';
+export * from './chat-share.ts';
 export * from './spark-actions.ts';
 export * from './involvement-levels.ts';
 export * from './artifacts.ts';

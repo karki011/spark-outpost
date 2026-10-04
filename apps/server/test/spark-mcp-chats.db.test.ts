@@ -137,7 +137,10 @@ describe('spark_chats and spark_chat', () => {
     const missing = await harness.call('spark_chat', { chat: randomUUID() });
 
     expect(own.id).toBe(chat.conversationId);
-    expect(missing).toMatchObject({ isError: true, text: 'That chat does not exist.' });
+    expect(missing).toMatchObject({
+      isError: true,
+      text: 'That chat does not exist. It may have been deleted.',
+    });
   });
 
   it("shows the chat's branch and worktree", async () => {

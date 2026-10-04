@@ -1,19 +1,10 @@
 import './composer.css';
 import './composer/composer-popovers.css';
 import './project/project.css';
-import {
-  useCallback,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ClipboardEvent,
-  type KeyboardEvent,
-} from 'react';
+import { useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   DEFAULT_BUSY_ENTER,
   MESSAGE_MAX_LENGTH,
-  isSlackMessageUrl,
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
@@ -30,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { usePopover } from '../ui/use-popover.ts';
 import { AttachmentChips } from './attachments/AttachmentChips.tsx';
+import { pasteContext } from './attachments/paste-context.ts';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
@@ -299,15 +291,6 @@ export function Composer({
   const hint = composerHint(attachments, queueing, busyEnter);
   const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
-  const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const files = Array.from(event.clipboardData.files);
-    const pasted = event.clipboardData.getData('text/plain').trim();
-    if (files.length === 0 && !isSlackMessageUrl(pasted)) return;
-    event.preventDefault();
-    if (files.length > 0) attachments.add(files);
-    else attachments.addSlack(pasted);
-  };
-
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (slash.handleKey(event)) return;
     if (mention.handleKey(event)) return;
@@ -449,7 +432,7 @@ export function Composer({
             mention.dismiss();
           }}
           onKeyDown={onKeyDown}
-          onPaste={onPaste}
+          onPaste={(event) => pasteContext(event, attachments, conversationId)}
         />
         <div className="comp-bar">
           <PlusMenu
@@ -458,6 +441,8 @@ export function Composer({
             onNotice={attachments.notify}
             onAddFromRepo={() => setRepoOpen(true)}
             onAddRepo={openRepoMenu}
+            chatId={conversationId}
+            onAddChat={attachments.addChat}
           />
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
             {hint}

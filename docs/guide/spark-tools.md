@@ -15,7 +15,7 @@ These change nothing.
 | You ask about                                              | Tool                                                                                                                                        |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                                           |
-| Chats, one chat's runs and queue, earlier turns            | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                                           |
+| Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                                           |
 | A running task: crew, pieces, estimate, Jev's decisions    | `spark_run`, `spark_task`, `spark_laws`                                                                                                     |
 | Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                                           |
 | Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                                                     |

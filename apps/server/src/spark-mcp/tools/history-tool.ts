@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { CONVERSATION_SEARCH_MAX_LENGTH } from '@spark-outpost/contracts';
 import { listCompactions } from '../../persistence/compactions.ts';
 import { limitInput, sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
-import { chatIdFor, chatIdInput, inWorkspace } from './chat-tools.ts';
+import { CHAT_NOT_FOUND } from '../../chat-share/digest.ts';
+import { chatIdFor, chatIdInput, inWorkspace, quotedFrom } from './chat-tools.ts';
 
 interface HistoryRow {
   role: 'user' | 'assistant';
@@ -33,7 +34,7 @@ function inRange(index: number, args: HistoryArgs): boolean {
 async function history({ deps, scope }: SparkToolContext, args: HistoryArgs) {
   const id = chatIdFor(scope, args.chat);
   if (!(await inWorkspace(deps.db, scope.workspaceId, id))) {
-    throw new SparkToolError('That chat does not exist.');
+    throw new SparkToolError(CHAT_NOT_FOUND);
   }
   const { rows } = await deps.db.query<HistoryRow>(
     `SELECT role, content, created_at FROM messages WHERE conversation_id = $1
@@ -49,6 +50,7 @@ async function history({ deps, scope }: SparkToolContext, args: HistoryArgs) {
   const last = shown.at(-1);
   const compactions = args.summaries ? await listCompactions(deps.db, id) : [];
   return {
+    ...quotedFrom(scope, id),
     chat: id,
     totalTurns: rows.length,
     matched: matching.length,
@@ -75,7 +77,7 @@ export const historyTool = sparkTool({
   privateData: true,
   title: 'Chat history',
   description:
-    "Read a chat's full transcript, including turns compacted out of the agent's context: a range of turns (from and to, 0 = oldest, inclusive), or turns whose text contains query. Also lists the chat's compactions (agent /compact, Spark summary or the agent compacting itself) with tokens before and after and the summary text. Defaults to this chat. Long text is cut to maxChars; secrets are redacted.",
+    "Read a chat's full transcript, including turns compacted out of the agent's context: a range of turns (from and to, 0 = oldest, inclusive), or turns whose text contains query. Also lists the chat's compactions (agent /compact, Spark summary or the agent compacting itself) with tokens before and after and the summary text. Defaults to this chat; chat also takes another chat's id or chat link (read-only, quoted data). Page with from and nextFrom. Long text is cut to maxChars; secrets are redacted.",
   input: {
     chat: chatIdInput,
     from: z.number().int().min(0).optional().describe('First turn to return (0 = oldest).'),

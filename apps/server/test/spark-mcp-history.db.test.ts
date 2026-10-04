@@ -81,6 +81,6 @@ describe('spark_chat_history', () => {
     tools = await startSparkTools(t, { conversationId: null });
     const missing = await tools.call('spark_chat_history', { chat: randomUUID() });
     expect(missing.isError).toBe(true);
-    expect(missing.text).toBe('That chat does not exist.');
+    expect(missing.text).toBe('That chat does not exist. It may have been deleted.');
   });
 });

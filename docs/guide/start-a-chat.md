@@ -36,9 +36,17 @@ To unlink, select **No project (chat only)** in the menu.
 | **Enter** / **Shift+Enter**       | Send / add a new line                                                    |
 | **@**                             | Add a file from the project                                              |
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
-| **+** (**Add files and context**) | **Upload a file**, **Add a screenshot** or **Add from repo**             |
+| **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
 
 You can also paste or drag files into the box.
+
+## Share a chat with another chat
+
+1. On the chat to share, select **Chat actions**, then **Copy chat link**.
+2. In another chat, paste the link, or select **+**, then **Add another chat…**.
+3. Check the chip's title, project and state, then send.
+
+The agent gets a short summary and can [read more](spark-tools.md), but never change that chat.
 
 > **Tip:** To talk to a named teammate, select **Talk to…** before your first message. To hand it one job, type `@` and its name. See [Make a Spark](sparks.md).
 

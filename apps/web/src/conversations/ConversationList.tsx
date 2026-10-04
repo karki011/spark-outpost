@@ -450,6 +450,7 @@ export const ConversationList = memo(function ConversationList({
           onRename={() => setRenamingId(menuChat.id)}
           onAutoTitle={(on) => actions.setAutoTitle(menuChat, on)}
           onPin={() => actions.pin(menuChat)}
+          onCopyLink={() => actions.copyLink(menuChat)}
           {...(siblings.length > 1
             ? {
                 onMoveUp: moveUp ? () => actions.reorderPinned(moveUp) : null,

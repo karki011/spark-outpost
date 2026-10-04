@@ -6,6 +6,7 @@ import {
   ArrowUpIcon,
   BackIcon,
   ChevronIcon,
+  CopyIcon,
   FolderIcon,
   MoveIcon,
   PenIcon,
@@ -21,6 +22,7 @@ export interface ChatMenuActions {
   onRename: () => void;
   onAutoTitle: (on: boolean) => void;
   onPin: () => void;
+  onCopyLink: () => void;
   onMove: (projectId: string | null) => void;
   onArchive: (archived: boolean) => void;
   onDelete: () => void;
@@ -115,6 +117,7 @@ export function ChatMenu({
           </span>
         </button>
       )}
+      <Item icon={<CopyIcon />} label="Copy chat link" onSelect={run(actions.onCopyLink)} />
       <hr />
       {archived ? (
         <Item

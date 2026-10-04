@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { ATTACHMENT_ACCEPT } from '../../api/attachments.ts';
 import { usePopover } from '../../ui/use-popover.ts';
 import {
@@ -6,6 +6,7 @@ import {
   canCaptureScreen,
   captureScreenshot,
 } from '../attachments/capture-screenshot.ts';
+import { ChatPicker } from './ChatPicker.tsx';
 
 interface PlusMenuProps {
   hasProject: boolean;
@@ -13,9 +14,11 @@ interface PlusMenuProps {
   onNotice: (message: string) => void;
   onAddFromRepo: () => void;
   onAddRepo: () => void;
+  chatId: string;
+  onAddChat: (chatId: string) => void;
 }
 
-type MenuAction = 'upload' | 'screenshot' | 'repo' | 'add-repo';
+type MenuAction = 'upload' | 'screenshot' | 'repo' | 'add-repo' | 'chat';
 
 const ITEMS: { label: string; icon: ReactNode; action: MenuAction }[] = [
   { label: 'Upload a file', icon: <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />, action: 'upload' },
@@ -35,6 +38,11 @@ const ITEMS: { label: string; icon: ReactNode; action: MenuAction }[] = [
     icon: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
     action: 'add-repo',
   },
+  {
+    label: 'Add another chat…',
+    icon: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />,
+    action: 'chat',
+  },
 ];
 
 export function PlusMenu({
@@ -43,6 +51,8 @@ export function PlusMenu({
   onNotice,
   onAddFromRepo,
   onAddRepo,
+  chatId,
+  onAddChat,
 }: PlusMenuProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
@@ -50,6 +60,11 @@ export function PlusMenu({
   >();
   const menuId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
+  const [pickingChat, setPickingChat] = useState(false);
+  const closeChatPicker = useCallback(() => {
+    setPickingChat(false);
+    anchorRef.current?.focus();
+  }, [anchorRef]);
 
   const addScreenshot = () => {
     if (!canCaptureScreen()) {
@@ -66,6 +81,7 @@ export function PlusMenu({
     setOpen(false);
     if (action === 'upload') fileInput.current?.click();
     else if (action === 'screenshot') addScreenshot();
+    else if (action === 'chat') setPickingChat(true);
     else if (action === 'repo' && hasProject) onAddFromRepo();
     else onAddRepo();
   };
@@ -104,6 +120,9 @@ export function PlusMenu({
           event.target.value = '';
         }}
       />
+      {pickingChat && (
+        <ChatPicker currentId={chatId} onPick={onAddChat} onClose={closeChatPicker} />
+      )}
       <div
         ref={panelRef}
         id={menuId}
