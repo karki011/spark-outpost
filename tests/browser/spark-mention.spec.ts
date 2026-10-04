@@ -123,6 +123,13 @@ test('a mention runs the Spark as its own labelled turn and skips the main agent
   expect((await scan(page, 'section[data-turn]')).violations).toEqual([]);
   await page.screenshot({ path: shot('turn') });
 
+  await page.getByRole('button', { name: 'Agent TV' }).click();
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await expect(tv).toContainText('Pip');
+  await expect(tv).toContainText('Code reviewer');
+  await page.screenshot({ path: shot('agent-tv') });
+  await page.keyboard.press('Escape');
+
   await page.reload();
   const again = page.locator('section[data-turn]').first();
   await expect(again.locator('.msg-sparks')).toHaveText(/Handed to\s*Pip\s*Code reviewer/);

@@ -23,15 +23,10 @@ export function sparksMatching<T extends { name: string }>(
   query: string,
 ): T[] {
   const wanted = query.toLowerCase();
-  return sparks
-    .filter((spark) =>
-      spark.name
-        .toLowerCase()
-        .split(/\s+/)
-        .some(
-          (word, index, words) =>
-            words.slice(index).join(' ').startsWith(wanted) || word.startsWith(wanted),
-        ),
-    )
-    .slice(0, PICKER_LIMIT);
+  const startsWord = (name: string) =>
+    name
+      .toLowerCase()
+      .split(/\s+/)
+      .some((word) => word.startsWith(wanted));
+  return sparks.filter((spark) => startsWord(spark.name)).slice(0, PICKER_LIMIT);
 }
