@@ -400,11 +400,27 @@ describe('spark_browser_screenshot', () => {
         content: expect.objectContaining({ attachmentId: detail!.browserShots![0]!.attachment.id }),
       }),
     ]);
-    expect(audits().at(-1)!.params).toMatchObject({
-      action: 'screenshot',
-      sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
-      bytes: PNG.length,
-    });
+    expect(audits().map((entry) => entry.params)).toEqual([
+      expect.objectContaining({
+        action: 'screenshot',
+        decision: 'local',
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        bytes: PNG.length,
+      }),
+    ]);
+  });
+
+  it('writes one audit entry for a screenshot of an external page, with the card and the hash', async () => {
+    await start({ mode: 'bypassPermissions' });
+    fake.page = EXTERNAL;
+    await call('spark_browser_screenshot');
+    expect(audits().map((entry) => entry.params)).toEqual([
+      expect.objectContaining({
+        action: 'screenshot',
+        place: 'external',
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+      }),
+    ]);
   });
 
   it('gives a text-only model a file path and a description instead', async () => {

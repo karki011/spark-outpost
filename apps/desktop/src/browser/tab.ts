@@ -149,6 +149,9 @@ export class PaneTab {
     contents.on('did-start-loading', () => this.note({ loading: true, error: null }));
     contents.on('did-stop-loading', () => this.note({ loading: false }));
     contents.on('page-title-updated', (_event, title) => this.note({ title }));
+    contents.on('did-start-navigation', (details) => {
+      if (details.isMainFrame && !details.isSameDocument) this.live?.logs.reset();
+    });
     contents.on('did-navigate', (_event, url, code) => {
       this.refs.clear();
       this.status = code > 0 ? code : null;

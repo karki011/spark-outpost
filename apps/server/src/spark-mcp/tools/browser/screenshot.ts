@@ -55,7 +55,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     .catch((error: unknown) => {
       throw asToolError(error);
     });
-  const cleared = await clearPage(context, 'spark_browser_screenshot', 'screenshot', shot);
+  const cleared = await clearPage(context, 'spark_browser_screenshot', 'screenshot', shot, false);
   if (!cleared.cleared) return cleared.result;
   const data = Buffer.from(shot.data, 'base64');
   const sha256 = createHash('sha256').update(data).digest('hex');
@@ -99,7 +99,13 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     page: shot.url,
     place: shot.place,
     decision: cleared.decision,
-    detail: { sha256, bytes: data.length, attachmentId: attachment.id, masked: shot.masked },
+    detail: {
+      sha256,
+      bytes: data.length,
+      attachmentId: attachment.id,
+      masked: shot.masked,
+      ...(cleared.approvalId ? { approvalId: cleared.approvalId } : {}),
+    },
   });
   const facts = {
     tab: shot.tabId,

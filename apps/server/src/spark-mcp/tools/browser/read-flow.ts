@@ -14,7 +14,7 @@ export interface PageFacts {
 export type PageWhat = 'read' | 'screenshot' | 'logs';
 
 export type Cleared =
-  | { cleared: true; decision: BrowserDecision }
+  | { cleared: true; decision: BrowserDecision; approvalId?: string | undefined }
   | { cleared: false; result: Record<string, unknown> };
 
 export async function clearPage(
@@ -22,15 +22,18 @@ export async function clearPage(
   tool: string,
   what: PageWhat,
   page: PageFacts,
+  auditCleared = true,
 ): Promise<Cleared> {
   if (page.place === 'local') {
-    auditBrowser(context, {
-      tool,
-      action: what,
-      page: page.url,
-      place: 'local',
-      decision: 'local',
-    });
+    if (auditCleared) {
+      auditBrowser(context, {
+        tool,
+        action: what,
+        page: page.url,
+        place: 'local',
+        decision: 'local',
+      });
+    }
     return { cleared: true, decision: 'local' };
   }
   const { origin, path } = pageParts(page.url);
@@ -41,17 +44,19 @@ export async function clearPage(
     title: page.title.slice(0, 300),
     what,
   });
-  auditBrowser(context, {
-    tool,
-    action: what,
-    page: page.url,
-    place: 'external',
-    decision: clearance.decision,
-    ...(clearance.approvalId ? { detail: { approvalId: clearance.approvalId } } : {}),
-  });
+  if (!clearance.cleared || auditCleared) {
+    auditBrowser(context, {
+      tool,
+      action: what,
+      page: page.url,
+      place: 'external',
+      decision: clearance.decision,
+      ...(clearance.approvalId ? { detail: { approvalId: clearance.approvalId } } : {}),
+    });
+  }
   if (clearance.cleared) {
     context.scope.observations?.record({ source: 'web_page', label: `web page ${origin}` });
-    return { cleared: true, decision: clearance.decision };
+    return { cleared: true, decision: clearance.decision, approvalId: clearance.approvalId };
   }
   const waiting = clearance.decision === 'waiting_for_user';
   return {

@@ -18,7 +18,14 @@ function argText(arg: RemoteValue): string {
 export interface PageLogs {
   console: BoundedLog;
   network: BoundedLog;
+  reset(): void;
   stop(): void;
+}
+
+const SHELL_WARNING = /^%c?Electron Security Warning \(/;
+
+export function fromTheShell(text: string): boolean {
+  return SHELL_WARNING.test(text);
 }
 
 export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
@@ -28,9 +35,11 @@ export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
 
   const onConsole = (params: Record<string, unknown>) => {
     const args = (params.args as RemoteValue[] | undefined) ?? [];
+    const text = args.map(argText).join(' ');
+    if (fromTheShell(text)) return;
     consoleLog.push({
       level: String(params.type ?? 'log'),
-      text: args.map(argText).join(' '),
+      text,
       source: null,
       status: null,
       method: null,
@@ -108,5 +117,10 @@ export async function capturePageLogs(cdp: Cdp): Promise<PageLogs> {
   await cdp.send('Runtime.enable');
   await cdp.send('Log.enable');
   await cdp.send('Network.enable', { maxTotalBufferSize: 1024, maxResourceBufferSize: 1024 });
-  return { console: consoleLog, network, stop };
+  const reset = () => {
+    consoleLog.clear();
+    network.clear();
+    pending.clear();
+  };
+  return { console: consoleLog, network, reset, stop };
 }
