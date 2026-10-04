@@ -13,9 +13,14 @@ Every connection is optional. Committing and pushing work without GitHub connect
 ## Connect GitHub
 
 1. Open **Settings → Connectors** and select the **GitHub** card.
-2. For **gh CLI**, run `gh auth login` in a terminal, then select **Check again**.
-3. For **Personal token**, paste it into **Personal access token** and select **Verify token**. Add an **Enterprise host** if you use one.
-4. Select **Test** to check each project's remote and sign-in without changing anything.
+2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown. This option appears only in builds set up for it.
+3. For **gh CLI**, run `gh auth login` in a terminal, then select **Check again**.
+4. For **Personal token**, paste it into **Personal access token** and select **Verify token**. Add an **Enterprise host** if you use one.
+5. Select **Test** to check each project's remote and sign-in without changing anything.
+
+With sign-in, Spark reaches only the repositories you pick. A project marked **not covered** shows **Give Spark access to this repo**.
+
+Access renews itself; if it ends, select **Sign in again**. Sign-in needs github.com, not an Enterprise server.
 
 ![The GitHub card in Settings → Connectors](images/tickets-github-light.png)
 

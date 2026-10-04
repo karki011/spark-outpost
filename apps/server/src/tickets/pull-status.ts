@@ -61,15 +61,16 @@ export async function readPullStatuses(
   deps: GitHubDeps,
   urls: readonly string[],
 ): Promise<Map<string, PullRequestStatus>> {
-  const byHost = new Map<string, { url: string; address: PullAddress }[]>();
+  const byRepo = new Map<string, { url: string; address: PullAddress }[]>();
   for (const url of new Set(urls)) {
     const address = parsePullUrl(url);
     if (!address) continue;
-    byHost.set(address.host, [...(byHost.get(address.host) ?? []), { url, address }]);
+    const key = `${address.host}/${address.owner}/${address.name}`.toLowerCase();
+    byRepo.set(key, [...(byRepo.get(key) ?? []), { url, address }]);
   }
   const statuses = new Map<string, PullRequestStatus>();
-  for (const [host, pulls] of byHost) {
-    const connection = await connectionFor(deps, host).catch(() => null);
+  for (const pulls of byRepo.values()) {
+    const connection = await connectionFor(deps, pulls[0]!.address).catch(() => null);
     if (!connection) continue;
     const read = await Promise.all(
       pulls.map((pull) => readOne(connection, pull.url, pull.address)),

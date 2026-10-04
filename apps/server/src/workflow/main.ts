@@ -9,6 +9,7 @@ import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
+import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { locateCli } from '../setup/verify.ts';
 import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
@@ -39,6 +40,7 @@ const intake = createIntakeRecorder({
   baseUrl: config.TYPESAFE_BASE_URL,
 });
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
+const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const sparkDeps: SparkToolDeps = {
   db,
@@ -48,6 +50,7 @@ const sparkDeps: SparkToolDeps = {
   github: {
     runCommand,
     apiUrl: config.GITHUB_API_URL,
+    app: githubApp,
     locateGh: () => locateCli('gh', runCommand, loginShell),
     loginPath: loginShellPath(runCommand, loginShell),
   },
@@ -86,6 +89,7 @@ const worker = startWorker({
     runCommand,
     fetch,
     apiUrl: config.GITHUB_API_URL,
+    app: githubApp,
     locateGh: () => locateCli('gh', runCommand, loginShell),
     loginPath: loginShellPath(runCommand, loginShell),
   },
@@ -106,6 +110,7 @@ const prFollowUp = startPrFollowUp({
     runCommand,
     fetch,
     apiUrl: config.GITHUB_API_URL,
+    app: githubApp,
     locateGh: () => locateCli('gh', runCommand, loginShell),
     loginPath: loginShellPath(runCommand, loginShell),
   },

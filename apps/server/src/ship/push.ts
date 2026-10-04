@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { gitHubToken } from '../persistence/github-tokens.ts';
 import { pushBranch, ShipGitError, type GitAccess, type Remote } from './git.ts';
-import type { GitHubDeps } from './github/access.ts';
+import { appCovers, type GitHubDeps } from './github/access.ts';
+import { appAccessToken } from './github/app-tokens.ts';
 import { parseRemoteUrl } from './remote.ts';
 
 export const GIT_AUTH =
@@ -18,7 +19,12 @@ case "$1" in
 esac
 `;
 
-export type GitRoute = 'git' | 'token';
+export type GitRoute = 'git' | 'app' | 'token';
+
+interface RemoteToken {
+  route: Exclude<GitRoute, 'git'>;
+  token: string;
+}
 
 export async function withTokenAccess<T>(
   token: string,
@@ -37,13 +43,22 @@ export async function withTokenAccess<T>(
   }
 }
 
-export async function tokenForRemote(deps: GitHubDeps, url: string): Promise<string | null> {
-  if (!/^https:\/\//i.test(url.trim())) return null;
-  const repo = parseRemoteUrl(url);
-  if (!repo) return null;
+async function savedToken(deps: GitHubDeps, host: string): Promise<string | null> {
   const info = await gitHubToken(deps.db, deps.workspaceId);
-  if (!info || info.host !== repo.host) return null;
+  if (!info || info.host !== host) return null;
   return deps.secrets.get('github').catch(() => null);
+}
+
+export async function tokensForRemote(deps: GitHubDeps, url: string): Promise<RemoteToken[]> {
+  if (!/^https:\/\//i.test(url.trim())) return [];
+  const repo = parseRemoteUrl(url);
+  if (!repo) return [];
+  const app = (await appCovers(deps, repo)) ? await appAccessToken(deps) : null;
+  const saved = await savedToken(deps, repo.host);
+  return [
+    ...(app ? [{ route: 'app' as const, token: app }] : []),
+    ...(saved ? [{ route: 'token' as const, token: saved }] : []),
+  ];
 }
 
 export async function loginEnv(deps: GitHubDeps): Promise<Record<string, string>> {
@@ -74,11 +89,27 @@ export async function withCredentials(
     return 'git';
   } catch (error) {
     if (!isAuthFailure(error)) throw error;
-    const token = await tokenForRemote(deps, remote.url);
-    if (!token) throw error;
-    await withTokenAccess(token, (access) => run({ ...access, env: { ...env, ...access.env } }));
-    return 'token';
+    return withSparkToken(await tokensForRemote(deps, remote.url), env, run, error);
   }
+}
+
+async function withSparkToken(
+  tokens: RemoteToken[],
+  env: Record<string, string>,
+  run: (access: GitAccess) => Promise<void>,
+  refused: ShipGitError,
+): Promise<GitRoute> {
+  let last = refused;
+  for (const { route, token } of tokens) {
+    try {
+      await withTokenAccess(token, (access) => run({ ...access, env: { ...env, ...access.env } }));
+      return route;
+    } catch (error) {
+      if (!isAuthFailure(error)) throw error;
+      last = error;
+    }
+  }
+  throw last;
 }
 
 export async function pushWithCredentials(

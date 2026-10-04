@@ -68,6 +68,17 @@ const configSchema = z.object({
   TYPESAFE_BASE_URL: providerUrl.default('https://api.typesafe.ai'),
   ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
   GITHUB_API_URL: providerUrl.optional(),
+  GITHUB_LOGIN_URL: providerUrl.optional(),
+  SPARK_GITHUB_APP_CLIENT_ID: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9.]{0,64}$/)
+    .default(''),
+  SPARK_GITHUB_APP_SLUG: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{0,64}$/)
+    .default(''),
   LINEAR_API_URL: providerUrl.optional(),
   KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
   BRANCH_PREFIX: z

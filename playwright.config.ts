@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { APP_CLIENT_ID, APP_SLUG } from './apps/server/test/fake-github-app.ts';
 import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
 import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
 import {
@@ -36,6 +37,9 @@ const serverEnv = {
   FAKE_GH_NODE: process.execPath,
   FAKE_GH_API: `${STUB_URL}/github`,
   GITHUB_API_URL: `${STUB_URL}/github`,
+  GITHUB_LOGIN_URL: `${STUB_URL}/github`,
+  SPARK_GITHUB_APP_CLIENT_ID: APP_CLIENT_ID,
+  SPARK_GITHUB_APP_SLUG: APP_SLUG,
   SHELL: '/bin/sh',
   DATABASE_URL: TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),

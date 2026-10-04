@@ -21,10 +21,10 @@ Ship commits only the task's own files and leaves secret files out. Once a PR ex
 
 Spark does it itself, so your credentials never reach the agent.
 
-| Step        | Spark tries, in order                                                                            |
-| ----------- | ------------------------------------------------------------------------------------------------ |
-| Push        | Your own git login, then a saved GitHub token. The token is never written to git config or logs. |
-| Open the PR | The GitHub connection, then your `gh` login, then a **Create PR on GitHub** link.                |
+| Step        | Spark tries, in order                                                                                             |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| Push        | Your own git login, then your GitHub sign-in or saved token. Neither is written to git config or logs.            |
+| Open the PR | Your GitHub sign-in for repositories it covers, then a token, your `gh` login, or a **Create PR on GitHub** link. |
 
 GitLab and Bitbucket remotes get a link to their merge request page. Hover the chat's branch chip to see the route.
 

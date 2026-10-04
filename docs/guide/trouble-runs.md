@@ -38,7 +38,7 @@ Still stuck after a fix? Ask in any chat, such as "Why did my last run fail?". T
 ## A push or PR failed
 
 - **You see:** an error with the exact `git push` command, or only a **Create PR on GitHub** link.
-- **Why:** your git login was refused and no GitHub token is saved, or GitHub isn't connected.
+- **Why:** your git login was refused and no GitHub sign-in or token covers the repo, or GitHub isn't connected.
 - **Fix:** open **Settings → Connectors → GitHub** and select **Test**.
 - **Still stuck:** run the shown command in a terminal, or open the link and create the PR yourself.
 

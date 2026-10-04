@@ -92,10 +92,11 @@ export const shipRequestSchema = z.object({
 });
 export type ShipRequest = z.infer<typeof shipRequestSchema>;
 
-export const prRouteSchema = z.enum(['token', 'gh_cli', 'link', 'push', 'commit']);
+export const prRouteSchema = z.enum(['app', 'token', 'gh_cli', 'link', 'push', 'commit']);
 export type PrRoute = z.infer<typeof prRouteSchema>;
 
 export const PR_ROUTE_LABELS: Record<PrRoute, string> = {
+  app: 'PRs via GitHub sign-in (you)',
   token: 'PRs via GitHub connection',
   gh_cli: 'PRs via gh (user)',
   link: 'Push only · PR link',
@@ -122,7 +123,7 @@ export const githubTestResultSchema = z.object({
       project: z.string(),
       remote: z.string().nullable(),
       route: prRouteSchema,
-      reach: z.enum(['git', 'token', 'failed', 'none']),
+      reach: z.enum(['git', 'app', 'token', 'failed', 'none']),
       detail: z.string(),
     }),
   ),
@@ -175,6 +176,48 @@ export const githubTokenInfoSchema = z.object({
 });
 export type GitHubTokenInfo = z.infer<typeof githubTokenInfoSchema>;
 
+export const githubAppStateSchema = z.enum(['signed_out', 'connected', 'needs_sign_in']);
+export type GitHubAppState = z.infer<typeof githubAppStateSchema>;
+
+export const githubAppProjectSchema = z.object({
+  project: z.string(),
+  repo: z.string(),
+  covered: z.boolean(),
+});
+export type GitHubAppProject = z.infer<typeof githubAppProjectSchema>;
+
+export const githubAppStatusSchema = z.object({
+  available: z.boolean(),
+  state: githubAppStateSchema,
+  login: z.string().nullable(),
+  installUrl: z.string().nullable(),
+  repos: z.array(z.string()),
+  reposTruncated: z.boolean(),
+  projects: z.array(githubAppProjectSchema),
+  checkedAt: z.string().nullable(),
+});
+export type GitHubAppStatus = z.infer<typeof githubAppStatusSchema>;
+
+export const GITHUB_APP_SIGNED_OUT: GitHubAppStatus = {
+  available: false,
+  state: 'signed_out',
+  login: null,
+  installUrl: null,
+  repos: [],
+  reposTruncated: false,
+  projects: [],
+  checkedAt: null,
+};
+
+export const githubAppSignInSchema = z.object({
+  status: z.enum(['idle', 'starting', 'waiting', 'connected', 'expired', 'denied', 'failed']),
+  userCode: z.string().nullable(),
+  verificationUri: z.string().nullable(),
+  expiresAt: z.string().nullable(),
+  message: z.string().nullable(),
+});
+export type GitHubAppSignIn = z.infer<typeof githubAppSignInSchema>;
+
 export const githubConnectionSchema = z.object({
   active: githubMethodSchema.nullable(),
   ghCli: z.object({
@@ -183,7 +226,7 @@ export const githubConnectionSchema = z.object({
     login: z.string().nullable(),
   }),
   token: githubTokenInfoSchema.nullable(),
-  app: z.object({ available: z.literal(false) }),
+  app: githubAppStatusSchema,
 });
 export type GitHubConnectionStatus = z.infer<typeof githubConnectionSchema>;
 

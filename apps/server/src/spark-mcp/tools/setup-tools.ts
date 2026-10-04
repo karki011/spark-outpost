@@ -15,6 +15,7 @@ import { providerIssues } from '../../persistence/provider-health.ts';
 import { getSetupState } from '../../persistence/setup.ts';
 import { fullDiskAccessStatus } from '../../setup/full-disk-access.ts';
 import { gitHubStatus } from '../../ship/github/access.ts';
+import { GITHUB_VIA } from '../../ship/github/connection.ts';
 import { ticketConnections } from '../../tickets/connections.ts';
 import { gitHubDepsFor, ticketDepsFor } from '../deps.ts';
 import { sparkTool, type SparkToolContext } from '../tool.ts';
@@ -110,7 +111,16 @@ async function connectors(context: SparkToolContext) {
   return {
     github: {
       connected: github.active !== null,
-      via: github.active === 'gh_cli' ? 'gh CLI' : github.active === 'token' ? 'saved PAT' : null,
+      via: github.active ? GITHUB_VIA[github.active] : null,
+      appSignIn: github.app.available
+        ? {
+            state: github.app.state,
+            login: github.app.login,
+            repos: github.app.repos.length,
+            projects: github.app.projects,
+            checkedAt: github.app.checkedAt,
+          }
+        : null,
       ghCli: github.ghCli,
       patAccount: github.token
         ? {

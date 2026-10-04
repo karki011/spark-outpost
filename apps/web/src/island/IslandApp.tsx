@@ -308,6 +308,7 @@ export function IslandApp() {
       openPanel('quick');
     },
     onMakeSpark: settingsReady ? () => openSettings('spark-new') : null,
+    onConnectors: settingsReady ? () => openSettings('connectors') : null,
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
   const spend = useQuery({

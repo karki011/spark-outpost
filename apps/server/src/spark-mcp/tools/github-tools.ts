@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { connectionFor } from '../../ship/github/access.ts';
-import { GitHubApiError, type GitHubConnection } from '../../ship/github/connection.ts';
+import { GITHUB_VIA, GitHubApiError, type GitHubConnection } from '../../ship/github/connection.ts';
 import { listPulls, readPull, type Range } from '../../ship/github/pull-reads.ts';
 import { pickRemote } from '../../ship/git.ts';
 import { parseRemoteUrl, repoSlug, type RemoteRepo } from '../../ship/remote.ts';
@@ -34,7 +34,7 @@ async function projectRepo(
   const remote = await pickRemote(project.rootPath, null).catch(() => null);
   const repo = remote ? parseRemoteUrl(remote.url) : null;
   if (!repo) throw new SparkToolError(`${project.name} has no GitHub remote.`);
-  const connection = await connectionFor(gitHubDepsFor(context.deps, context.scope), repo.host);
+  const connection = await connectionFor(gitHubDepsFor(context.deps, context.scope), repo);
   if (!connection) {
     throw new SparkToolError(
       `GitHub is not connected for ${repo.host}. Connect GitHub in Settings.`,
@@ -79,7 +79,13 @@ async function pullRequests(
   const pulls = await reading(repo, 'repository', () =>
     listPulls(connection, repo, args.state, args.limit),
   );
-  return { project, repo: repoSlug(repo), state: args.state, pulls };
+  return {
+    project,
+    repo: repoSlug(repo),
+    via: GITHUB_VIA[connection.method],
+    state: args.state,
+    pulls,
+  };
 }
 
 async function pullRequest(
@@ -104,6 +110,7 @@ async function pullRequest(
   return {
     project,
     repo: repoSlug(repo),
+    via: GITHUB_VIA[connection.method],
     ...pull,
     body: clip(pull.body, args.maxChars),
     files: pageOf(pull.files, range),

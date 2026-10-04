@@ -126,6 +126,7 @@ function routeOf(plan: RoutePlan) {
   return prRouteFor({
     hasRemote: plan.remote !== null,
     repo: plan.hostRepo,
+    app: methods.includes('app'),
     token: methods.includes('token'),
     gh: methods.includes('gh_cli'),
   });
@@ -136,7 +137,7 @@ function routeNote(plan: RoutePlan): string | null {
   if (route === 'commit') return 'This repository has no remote, so Ship can only commit.';
   if (route === 'link') {
     return plan.hostRepo?.host === 'github.com'
-      ? 'No GitHub connection, so Ship pushes the branch and gives you a Create PR link. Connect GitHub in Settings → Connectors (a token or the gh CLI) to open it directly.'
+      ? 'No GitHub connection, so Ship pushes the branch and gives you a Create PR link. Connect GitHub in Settings → Connectors to open it directly.'
       : `Ship pushes the branch and links the page to open the request on ${plan.hostRepo?.host}.`;
   }
   if (route === 'push') {
@@ -159,7 +160,7 @@ function modeNotes(plan: RoutePlan & Pick<ShipPlan, 'skipped'>) {
   return notes;
 }
 
-const PR_ROUTES = new Set(['token', 'gh_cli', 'link']);
+const PR_ROUTES = new Set(['app', 'token', 'gh_cli', 'link']);
 
 function modesFor(plan: RoutePlan & Pick<ShipPlan, 'files'>): ShipMode[] {
   const modes: ShipMode[] = plan.files.length > 0 ? ['commit'] : [];
@@ -279,7 +280,7 @@ async function planFrom(
 
   const remote = await pickRemote(root, repo.branch);
   const parsed = remote ? parseRemoteUrl(remote.url) : null;
-  const connections = parsed ? await connectionsFor(deps, parsed.host) : [];
+  const connections = parsed ? await connectionsFor(deps, parsed) : [];
   const github = connections[0] ?? null;
   const remoteRepo = parsed && (parsed.host === 'github.com' || github) ? parsed : null;
   const plan: ShipPlan = {

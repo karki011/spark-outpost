@@ -26,6 +26,7 @@ import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
 import { takeLaunchToken } from './launch-token.ts';
 import { gitHubDepsOf } from './ship-routes.ts';
+import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { pruneOldRows } from './startup-prune.ts';
@@ -63,6 +64,7 @@ const endpoints = {
   fetch,
 };
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
+const githubApp = gitHubAppConfig(config);
 const app = createApp({
   db,
   hub,
@@ -89,6 +91,7 @@ const app = createApp({
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
   branchPrefix: config.BRANCH_PREFIX,
   githubApiUrl: config.GITHUB_API_URL,
+  githubApp,
   linearApiUrl: config.LINEAR_API_URL,
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
@@ -102,7 +105,7 @@ const app = createApp({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
-const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell };
+const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
 const morningBrief = config.MORNING_BRIEF
   ? startMorningBrief(db, workspaceId, () =>
       loadInbox({
