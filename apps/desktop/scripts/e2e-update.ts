@@ -170,7 +170,7 @@ async function readJson(file: string): Promise<Record<string, unknown> | null> {
 async function updateCycle(v1: string): Promise<void> {
   const app = await install(v1);
   const running = launch(app);
-  const ready = await waitForLine(running, /\[main\] Spark Outpost ready on/, 120_000);
+  const ready = await waitForLine(running, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
   record(
     '0.0.1 packaged app launches, migrates a fresh database and serves the window',
     ready ? 'verified' : 'failed',
@@ -212,7 +212,7 @@ async function updateCycle(v1: string): Promise<void> {
 
 async function migrationCycle(v2: string, v3: string): Promise<void> {
   const second = launch(await install(v2));
-  const ready = await waitForLine(second, /\[main\] Spark Outpost ready on/, 120_000);
+  const ready = await waitForLine(second, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
   const backedUp = second.lines.find((line) => /\[migrate\] Backed up the database/.test(line));
   const marker = await readJson(path.join(userData, 'migrated-version.json'));
   record(
@@ -241,7 +241,7 @@ async function migrationCycle(v2: string, v3: string): Promise<void> {
   await third.exited;
 
   const again = launch(await install(v2));
-  const reopened = await waitForLine(again, /\[main\] Spark Outpost ready on/, 120_000);
+  const reopened = await waitForLine(again, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
   record('0.0.2 opens the restored data again', reopened ? 'verified' : 'failed');
   await quit(again);
   const backups = existsSync(path.join(userData, 'backups'))
