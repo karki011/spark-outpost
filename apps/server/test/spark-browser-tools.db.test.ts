@@ -200,6 +200,7 @@ describe('browser tools need the Mac app', () => {
       'spark_browser_read',
       'spark_browser_screenshot',
       'spark_browser_logs',
+      'spark_browser_preview',
     ]);
   });
 });

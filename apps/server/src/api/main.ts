@@ -17,6 +17,9 @@ import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
 import { forgetAllShells } from '../persistence/terminal-shells.ts';
+import { stopAllPreviewRows } from '../persistence/preview-servers.ts';
+import { previewRuntime } from '../preview/process.ts';
+import { PreviewServers } from '../preview/servers.ts';
 import { attachTerminalSockets } from '../terminal/websocket.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { probeCapabilities } from '../agents/acp/probe.ts';
@@ -54,6 +57,8 @@ const terminals = new TerminalSessions(
   defaultLimits,
   shellRegistry(db, workspaceId),
 );
+await stopAllPreviewRows(db, workspaceId);
+const previews = new PreviewServers(db, workspaceId, previewRuntime());
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 
 const secrets = configuredSecretStore(config);
@@ -63,7 +68,10 @@ const slackSocket = startSlackSocket({
   ...slackDeps,
   runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
 });
-const appEvents = new AppEventFeed(undefined, (event) => slackNotifier.changed(event));
+const appEvents = new AppEventFeed(undefined, (event) => {
+  slackNotifier.changed(event);
+  if (event.kind === 'preview') void previews.sync();
+});
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const endpoints = {
   anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
@@ -92,6 +100,7 @@ const app = createApp({
   }),
   loginShell,
   terminals,
+  previews,
   appEvents,
   activeWork,
   port: config.API_PORT,
@@ -144,6 +153,7 @@ attachTerminalSockets(server, terminals, {
 
 const shutdown = async () => {
   terminals.killAll();
+  await previews.stopAll('shutdown').catch(() => undefined);
   stopLagMonitor();
   outcomeSweep.stop();
   morningBrief?.stop();

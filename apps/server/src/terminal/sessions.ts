@@ -24,6 +24,7 @@ export interface TerminalLimits {
   maxMs: number;
   maxSessions: number;
   maxShells: number;
+  maxViews: number;
   quietMs: number;
   folderCheckMs: number;
 }
@@ -34,6 +35,7 @@ export const defaultLimits: TerminalLimits = {
   maxMs: 30 * 60_000,
   maxSessions: 2,
   maxShells: 12,
+  maxViews: 12,
   quietMs: 500,
   folderCheckMs: 3_000,
 };
@@ -53,10 +55,33 @@ interface ShellKind {
   label?: string | undefined;
 }
 
+export interface TerminalView {
+  input(data: string): void;
+  resize(cols: number, rows: number): void;
+  detach(): void;
+}
+
+export interface ViewedOutput {
+  output(data: string): void;
+  ended(): void;
+}
+
+export type OpenView = (
+  viewer: ViewedOutput,
+  size: { cols: number; rows: number },
+) => TerminalView | null;
+
+interface ViewKind {
+  type: 'view';
+  open: OpenView;
+}
+
 interface Session {
   id: string;
   token: Buffer;
-  kind: SetupKind | ShellKind;
+  kind: SetupKind | ShellKind | ViewKind;
+  attached: boolean;
+  view: TerminalView | null;
   pty: PtyProcess | null;
   client: TerminalClient | null;
   commandOutput: string;
@@ -127,6 +152,14 @@ export class TerminalSessions {
     return { id: session.id, token };
   }
 
+  createView(open: OpenView): { id: string; token: string } {
+    if (this.countOf('view') >= this.limits.maxViews) {
+      throw new TerminalLimitError('Too many terminal views are open. Close one first.');
+    }
+    const { session, token } = this.register({ type: 'view', open });
+    return { id: session.id, token };
+  }
+
   attach(
     id: string,
     token: string,
@@ -137,14 +170,16 @@ export class TerminalSessions {
     const offered = Buffer.from(token, 'base64url');
     const valid =
       session !== undefined &&
-      session.pty === null &&
+      !session.attached &&
       offered.length === session.token.length &&
       timingSafeEqual(offered, session.token);
     if (!session || !valid)
       throw new TerminalAuthError('This terminal link is invalid or already used.');
 
     session.client = client;
+    session.attached = true;
     const kind = session.kind;
+    if (kind.type === 'view') return this.attachView(session, kind, size);
     const pty = this.spawn(kind.type === 'shell' ? { ...size, cwd: kind.cwd } : size);
     session.pty = pty;
     if (kind.type === 'shell') {
@@ -183,6 +218,31 @@ export class TerminalSessions {
     };
   }
 
+  private attachView(
+    session: Session,
+    kind: ViewKind,
+    size: { cols: number; rows: number },
+  ): AttachedTerminal {
+    const view = kind.open(
+      {
+        output: (data) => session.client?.output(data),
+        ended: () => this.end(session, 'exited', null),
+      },
+      size,
+    );
+    if (!view) {
+      this.end(session, 'exited', null);
+      throw new TerminalAuthError('The preview is not running any more.');
+    }
+    session.view = view;
+    return {
+      input: (data) => view.input(data),
+      resize: (cols, rows) => view.resize(cols, rows),
+      close: () => this.end(session, 'closed', null),
+      disconnect: () => this.end(session, 'disconnected', null),
+    };
+  }
+
   kill(id: string): boolean {
     const session = this.sessions.get(id);
     if (!session) return false;
@@ -208,12 +268,14 @@ export class TerminalSessions {
     for (const session of [...this.sessions.values()]) this.end(session, 'shutdown', null);
   }
 
-  private register(kind: SetupKind | ShellKind): { session: Session; token: string } {
+  private register(kind: Session['kind']): { session: Session; token: string } {
     const token = randomBytes(32);
     const session: Session = {
       id: randomUUID(),
       token,
       kind,
+      attached: false,
+      view: null,
       pty: null,
       client: null,
       commandOutput: '',
@@ -226,7 +288,7 @@ export class TerminalSessions {
     };
     session.timers.push(
       setTimeout(() => {
-        if (!session.pty) this.end(session, 'closed', null);
+        if (!session.attached) this.end(session, 'closed', null);
       }, this.limits.tokenTtlMs),
     );
     this.sessions.set(session.id, session);
@@ -302,6 +364,8 @@ export class TerminalSessions {
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);
+    session.view?.detach();
+    session.view = null;
     if (session.pty) killProcessTree(session.pty.pid);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     session.client?.send({ type: 'ended', reason, exitCode });

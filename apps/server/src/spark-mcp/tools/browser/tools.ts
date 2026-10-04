@@ -14,6 +14,7 @@ import {
 import { renderResult } from '../../format.ts';
 import { SparkBlocks, SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
 import { asToolError, auditBrowser, browserSession, chatHome } from './context.ts';
+import { browserPreviewTool, ensurePreview } from './preview.ts';
 import { clearPage } from './read-flow.ts';
 import { browserScreenshotTool } from './screenshot.ts';
 
@@ -26,9 +27,22 @@ const tabInput = z
 export const EXTERNAL_NOT_YET =
   'Agents can open local pages only for now (localhost, 127.0.0.1, *.localhost, *.test and project files). External sites come in a later version. The user can open this address themselves in the Browser pane; you can read it after they do.';
 
-async function open(args: { url: string; tab?: string | undefined }, context: SparkToolContext) {
+interface OpenArgs {
+  url?: string | undefined;
+  tab?: string | undefined;
+}
+
+async function addressToOpen(args: OpenArgs, context: SparkToolContext) {
+  if (args.url !== undefined) return { url: addressToUrl(args.url) };
+  const preview = await ensurePreview(context, 'spark_browser_open');
+  return preview.ready ? { url: preview.url } : { result: preview.result };
+}
+
+async function open(args: OpenArgs, context: SparkToolContext) {
   const session = browserSession(context);
-  const url = addressToUrl(args.url);
+  const address = await addressToOpen(args, context);
+  if ('result' in address) return address.result;
+  const { url } = address;
   const kind = url ? classifyBrowserUrl(url) : 'blocked';
   if (!url || kind === 'blocked' || kind === 'blank') {
     throw new SparkToolError('That is not an address the browser can open.');
@@ -182,13 +196,14 @@ const browserOpenTool = sparkTool({
   needsBrowser: true,
   title: 'Open a page in the browser',
   description:
-    "Opens a local page (localhost, 127.0.0.1, [::1], *.localhost, *.test on any port, or a file inside a linked project) in this chat's Browser pane and returns the final address, title, HTTP status and tab id. Start the dev server in your own shell first. It reuses its tab already on that page, loading the page again so it is current, and never navigates a tab the user owns. External sites are not opened; the user can open them in the pane.",
+    "Opens a local page (localhost, 127.0.0.1, [::1], *.localhost, *.test on any port, or a file inside a linked project) in this chat's Browser pane and returns the final address, title, HTTP status and tab id. With no url it opens the project's preview, starting the preview server Spark runs for you if needed (see spark_browser_preview); with no preview set up, start the dev server in your own shell first. It reuses its tab already on that page, loading the page again so it is current, and never navigates a tab the user owns. External sites are not opened; the user can open them in the pane.",
   input: {
     url: z
       .string()
       .min(1)
       .max(4096)
-      .describe('Address to open, for example http://localhost:5173/.'),
+      .optional()
+      .describe('Address to open, for example http://localhost:5173/. Leave out for the preview.'),
     tab: tabInput,
   },
   run: open,
@@ -242,4 +257,5 @@ export const browserTools = [
   browserReadTool,
   browserScreenshotTool,
   browserLogsTool,
+  browserPreviewTool,
 ];

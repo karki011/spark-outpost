@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { workPlaceSchema } from './chat-workspace.ts';
+import { previewConfigSchema } from './preview.ts';
 
 export const PROJECT_FILES_LIMIT = 50;
 export const CONVERSATION_PROJECTS_MAX = 8;
@@ -20,6 +21,7 @@ export const projectSchema = z.object({
   pieceSlots: pieceSlotsSchema.optional(),
   workPlace: workPlaceSchema.optional(),
   browserKeepSignIns: z.boolean().optional(),
+  preview: previewConfigSchema.nullable().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

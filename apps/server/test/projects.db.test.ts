@@ -124,6 +124,7 @@ describe('projects', () => {
       pieceSlots: 3,
       workPlace: 'checkout',
       browserKeepSignIns: true,
+      preview: null,
     });
     const again = await post('/api/projects', { rootPath: root }).expect(200);
     expect(again.body).toEqual(project);

@@ -27,6 +27,7 @@ import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
+import { previewRoutes } from './preview-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
@@ -37,6 +38,7 @@ import { webApp } from './web-app.ts';
 import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
+import type { PreviewServers } from '../preview/servers.ts';
 
 export interface AppOptions
   extends
@@ -51,6 +53,7 @@ export interface AppOptions
     Pick<McpRouteDeps, 'probeMcp'>,
     Pick<ConversationActionDeps, 'deleteSettleMs'> {
   terminals: TerminalSessions;
+  previews: PreviewServers;
   appEvents: AppEventFeed;
   port: number;
   allowedOrigins: readonly string[];
@@ -106,7 +109,17 @@ export function createApp(options: AppOptions) {
   app.use('/api', analyticsRoutes(options));
   app.use('/api', diagnosticsRoutes(options));
   app.use('/api', terminalRoutes(options));
-  app.use('/api', resetRoutes({ ...options, stopTerminals: () => options.terminals.killAll() }));
+  app.use('/api', previewRoutes(options));
+  app.use(
+    '/api',
+    resetRoutes({
+      ...options,
+      stopTerminals: () => {
+        options.terminals.killAll();
+        void options.previews.stopAll('reset');
+      },
+    }),
+  );
   if (options.webRoot) app.use(webApp(options.webRoot));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });

@@ -7,6 +7,8 @@ import type { CommandResult, RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
+import { PreviewServers } from '../src/preview/servers.ts';
+import { fakePreviewRuntime } from './preview-support.ts';
 import type { TestDb } from './support.ts';
 
 export const PORT = 4318;
@@ -33,6 +35,7 @@ export interface TestAppOptions {
   parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
+  previews?: PreviewServers;
   diagnostics?: AppOptions['diagnostics'];
   deleteSettleMs?: number;
 }
@@ -72,6 +75,8 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     },
     runCommand: options.runCommand ?? noClis,
     terminals: options.terminals ?? new TerminalSessions(loginShellSpawner('/bin/sh')),
+    previews:
+      options.previews ?? new PreviewServers(t.db, t.workspaceId, fakePreviewRuntime().runtime),
     appEvents: options.appEvents ?? new AppEventFeed(),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
