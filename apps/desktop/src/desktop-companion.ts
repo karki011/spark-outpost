@@ -118,6 +118,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         },
       });
       island = opened;
+      opened.sparkFocus(sparkFocused());
       return opened;
     },
     register: (accelerator, run) => {

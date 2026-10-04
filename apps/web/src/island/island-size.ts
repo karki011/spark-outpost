@@ -7,7 +7,7 @@ export const ISLAND_SIZES: readonly { id: IslandSize; label: string; blob: numbe
   { id: 'large', label: 'Large', blob: 58 },
 ];
 
-export const DEFAULT_ISLAND_SIZE: IslandSize = 'medium';
+export const DEFAULT_ISLAND_SIZE: IslandSize = 'large';
 
 const SMALL_BLOB = 38;
 const SMALL_TUCK = 20;

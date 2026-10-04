@@ -12,7 +12,7 @@ You'll set up Spark Island and answer agents from it. About 2 minutes.
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off (on by default).
-3. Pick **Spark Island size**: **Small**, **Medium** (default) or **Large**.
+3. Pick **Spark Island size**: **Small**, **Medium** or **Large** (default).
 4. **Island chimes** play when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
@@ -54,6 +54,6 @@ Question cards count down to a default; point to pause.
 
 ## Inside the app
 
-Scout also floats in a corner of Spark Outpost. Select it for **Needs you**, **Failed**, **Running** and **Just finished**, or hide it with **Status companion**.
+The island hides while Spark is focused; Scout floats in a corner of the app instead. Select it for **Needs you**, **Failed**, **Running** and **Just finished**; **Status companion** hides it.
 
 **Next:** [Start and check chats from anywhere](companion-quick-chat.md)

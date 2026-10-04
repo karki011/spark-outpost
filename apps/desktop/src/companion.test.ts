@@ -129,13 +129,15 @@ describe('desktop companion lifecycle', () => {
     expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ sound: true }));
   });
 
-  it('starts at the medium island size, then saves and announces a new size', () => {
+  it('starts at the large island size, then saves a chosen size and announces it', () => {
     const { companion, effects } = setup();
-    expect(companion.status().islandSize).toBe('medium');
-    expect(companion.setIslandSize('large')).toMatchObject({ islandSize: 'large' });
-    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ islandSize: 'large' }));
+    expect(companion.status().islandSize).toBe('large');
+    expect(companion.setIslandSize('medium')).toMatchObject({ islandSize: 'medium' });
+    expect(effects.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ islandSize: 'medium', islandSizeChosen: true }),
+    );
     expect(effects.changed).toHaveBeenLastCalledWith(
-      expect.objectContaining({ islandSize: 'large' }),
+      expect.objectContaining({ islandSize: 'medium' }),
     );
   });
 

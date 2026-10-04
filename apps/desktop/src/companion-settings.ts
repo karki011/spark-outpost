@@ -17,6 +17,7 @@ export interface CompanionSettings {
   position: IslandPosition;
   sound: boolean;
   islandSize: IslandSize;
+  islandSizeChosen: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
@@ -29,8 +30,11 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
   position: { docked: true },
   sound: false,
-  islandSize: 'medium',
+  islandSize: 'large',
+  islandSizeChosen: false,
 };
+
+const FORMER_DEFAULT_SIZE: IslandSize = 'medium';
 
 const MODIFIERS = new Set([
   'Command',
@@ -114,6 +118,13 @@ function savedFlag(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function savedSize(record: Record<string, unknown>): IslandSize | null {
+  const size = record.islandSize;
+  if (!isIslandSize(size)) return null;
+  const chosen = record.islandSizeChosen === true || size !== FORMER_DEFAULT_SIZE;
+  return chosen ? size : null;
+}
+
 export function parseSettings(raw: string | null): CompanionSettings {
   if (!raw) return { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SHORTCUTS } };
   let value: unknown;
@@ -123,12 +134,14 @@ export function parseSettings(raw: string | null): CompanionSettings {
     return parseSettings(null);
   }
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const size = savedSize(record);
   return {
     enabled: savedFlag(record.enabled, DEFAULT_SETTINGS.enabled),
     shortcuts: parseShortcuts(record.shortcuts),
     position: parsePosition(record.position),
     sound: savedFlag(record.sound, DEFAULT_SETTINGS.sound),
-    islandSize: isIslandSize(record.islandSize) ? record.islandSize : DEFAULT_SETTINGS.islandSize,
+    islandSize: size ?? DEFAULT_SETTINGS.islandSize,
+    islandSizeChosen: size !== null,
   };
 }
 

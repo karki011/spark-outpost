@@ -60,13 +60,19 @@ describe('companion settings file', () => {
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
       sound: false,
-      islandSize: 'medium',
+      islandSize: 'large',
+      islandSizeChosen: false,
     });
   });
 
-  it('keeps a saved island size and ignores an unknown one', () => {
-    expect(parseSettings(JSON.stringify({ islandSize: 'large' })).islandSize).toBe('large');
-    expect(parseSettings(JSON.stringify({ islandSize: 'huge' })).islandSize).toBe('medium');
+  it('is large unless the user chose a size', () => {
+    const size = (saved: object) => parseSettings(JSON.stringify(saved)).islandSize;
+    expect(size({})).toBe('large');
+    expect(size({ islandSize: 'huge' })).toBe('large');
+    expect(size({ islandSize: 'medium' })).toBe('large');
+    expect(size({ islandSize: 'medium', islandSizeChosen: true })).toBe('medium');
+    expect(size({ islandSize: 'small' })).toBe('small');
+    expect(parseSettings(JSON.stringify({ islandSize: 'small' })).islandSizeChosen).toBe(true);
   });
 
   it('falls back to the defaults when both shortcuts collide', () => {
@@ -86,6 +92,7 @@ describe('companion settings file', () => {
       position: { docked: false as const, x: 40, y: 200 },
       sound: true,
       islandSize: 'small' as const,
+      islandSizeChosen: true,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

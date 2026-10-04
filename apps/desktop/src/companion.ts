@@ -151,7 +151,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
       return status();
     },
     setIslandSize(size) {
-      commit({ ...settings, islandSize: size });
+      commit({ ...settings, islandSize: size, islandSizeChosen: true });
       publish();
       return status();
     },

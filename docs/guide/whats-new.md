@@ -11,6 +11,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | What changed                                                                                                   | What to do                                                                   |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Spark Island shows code: the file being read or edited, each edit's change, and changed lines on edit cards.   | See [Use Spark Island](desktop-companion.md#open-it).                        |
+| Spark Island is **Large** unless you chose a size, and hides while Spark is focused.                           | Change the size in [Settings](settings.md#spark).                            |
 | **Browser** pane per chat (Mac app): agents read pages, you pick elements, **Preview** starts your dev server. | See [Use the browser](use-the-browser.md).                                   |
 | Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.                 | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
 | Slack connects: notifications, shared threads, start work from a thread, confirmed posts.                      | See [Connect Slack](connect-slack.md).                                       |

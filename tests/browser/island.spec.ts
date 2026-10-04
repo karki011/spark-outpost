@@ -396,8 +396,8 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
     .toBe('rgba(0, 0, 0, 0)');
 
   const scout = island(page).locator('.isl-scout-wrap');
-  await expect.poll(async () => (await scout.boundingBox())!.y).toBe(-25);
-  expect((await scout.boundingBox())!.height).toBe(48);
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBe(-31);
+  expect((await scout.boundingBox())!.height).toBe(58);
   const eyes = await island(page)
     .locator('.sc-eye')
     .evaluateAll((all) => all.map((eye) => eye.getBoundingClientRect()));
