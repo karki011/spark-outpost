@@ -6,7 +6,7 @@ export interface Turn {
   assistantMessage: Message | null;
 }
 
-export function buildTurns(detail: ConversationDetail): Turn[] {
+export function buildTurns(detail: Pick<ConversationDetail, 'messages' | 'runs'>): Turn[] {
   const byId = new Map(detail.messages.map((message) => [message.id, message]));
   const byRun = new Map(
     detail.messages
@@ -20,7 +20,7 @@ export function buildTurns(detail: ConversationDetail): Turn[] {
   }));
 }
 
-export function topLevelRuns(detail: ConversationDetail): Run[] {
+export function topLevelRuns(detail: Pick<ConversationDetail, 'runs'>): Run[] {
   return detail.runs.filter((run) => !run.parentRunId);
 }
 

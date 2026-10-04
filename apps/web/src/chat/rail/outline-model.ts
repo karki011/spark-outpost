@@ -50,7 +50,9 @@ function promptLabel(content: string | undefined): string {
   return clipAtWord(firstLine, LABEL_LENGTH) || NO_TEXT;
 }
 
-export function chatOutline(detail: ConversationDetail, facts: OutlineFacts): OutlineEntry[] {
+type OutlineSource = Pick<ConversationDetail, 'messages' | 'runs' | 'approvals' | 'plans'>;
+
+export function chatOutline(detail: OutlineSource, facts: OutlineFacts): OutlineEntry[] {
   const turns = buildTurns(detail);
   if (turns.length < OUTLINE_MIN_TURNS) return [];
   const turnOf = turnOfRun(detail.runs);

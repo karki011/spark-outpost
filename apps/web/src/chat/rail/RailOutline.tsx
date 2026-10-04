@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent } from 'react';
+import { memo, useRef, type MouseEvent } from 'react';
 import { prefersReducedMotion } from '../../ui/motion.ts';
 import { MarkIcon } from './RailIcons.tsx';
 import { OUTLINE_MARK_LABELS, turnAnchor, type OutlineEntry } from './outline-model.ts';
@@ -12,7 +12,11 @@ function scrollToTurn(runId: string): boolean {
   return true;
 }
 
-export function RailOutline({ entries }: { entries: readonly OutlineEntry[] }) {
+export const RailOutline = memo(function RailOutline({
+  entries,
+}: {
+  entries: readonly OutlineEntry[];
+}) {
   const nav = useRef<HTMLElement>(null);
   const { active, jumped } = useActiveTurn(
     nav,
@@ -55,4 +59,4 @@ export function RailOutline({ entries }: { entries: readonly OutlineEntry[] }) {
       </ol>
     </nav>
   );
-}
+});

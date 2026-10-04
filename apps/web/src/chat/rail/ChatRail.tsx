@@ -1,5 +1,5 @@
 import './chat-rail.css';
-import { memo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import type {
@@ -116,14 +116,23 @@ function OpenRail({
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,
   });
-  const outline = chatOutline(detail, {
-    changedRunIds: new Set(
-      (changes.data?.runs ?? [])
-        .filter((run) => run.files > 0 && !run.revertedAt)
-        .map((run) => run.runId),
-    ),
-    prUrls: list.map((entry) => entry.url),
-  });
+  const changedRuns = changes.data?.runs;
+  const { messages, runs, approvals, plans } = detail;
+  const outline = useMemo(
+    () =>
+      chatOutline(
+        { messages, runs, approvals, plans },
+        {
+          changedRunIds: new Set(
+            (changedRuns ?? [])
+              .filter((run) => run.files > 0 && !run.revertedAt)
+              .map((run) => run.runId),
+          ),
+          prUrls: (watches.data?.watches ?? []).map((entry) => entry.url),
+        },
+      ),
+    [messages, runs, approvals, plans, changedRuns, watches.data],
+  );
   const orchestration = running ? latestOrchestration(detail) : null;
   const agents = orchestration ? crewAgents(orchestration, detail.activity) : [];
 
