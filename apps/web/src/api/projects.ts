@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   attachmentSchema,
   folderListingSchema,
+  instructionsFileSchema,
   projectGitSchema,
   projectFileContentSchema,
   projectFilesResponseSchema,
@@ -9,6 +10,7 @@ import {
   removedProjectSchema,
   type Attachment,
   type FolderListing,
+  type InstructionsFile,
   type Project,
   type ProjectFileContent,
   type ProjectFilesResponse,
@@ -20,9 +22,18 @@ import { request } from './client.ts';
 
 export type BuilderSettings = Pick<UpdateProjectRequest, 'pieceSlots' | 'workPlace'>;
 
+export interface FolderPick {
+  files: 'instructions' | null;
+  hidden: boolean;
+}
+
+const FOLDERS_ONLY: FolderPick = { files: null, hidden: false };
+
 export const projectKeys = {
   all: ['projects'] as const,
-  folders: (path: string | null) => ['folders', path] as const,
+  folders: (path: string | null, pick: FolderPick = FOLDERS_ONLY) =>
+    ['folders', path, pick.files, pick.hidden] as const,
+  instructionsFile: (path: string) => ['instructions-file', path] as const,
   files: (projectId: string, query: string) => ['project-files', projectId, query] as const,
   file: (projectId: string, path: string) => ['project-file', projectId, path] as const,
   rename: (projectId: string, name: string): Promise<Project> =>
@@ -79,8 +90,13 @@ export const projectsApi = {
     }),
   git: (projectId: string): Promise<ProjectGit> =>
     request(projectGitSchema, `/projects/${projectId}/git`),
-  folders: (path: string | null): Promise<FolderListing> =>
-    request(folderListingSchema, withQuery('/folders', { path })),
+  folders: (path: string | null, pick: FolderPick = FOLDERS_ONLY): Promise<FolderListing> =>
+    request(
+      folderListingSchema,
+      withQuery('/folders', { path, files: pick.files, hidden: pick.hidden ? '1' : null }),
+    ),
+  instructionsFile: (path: string): Promise<InstructionsFile> =>
+    request(instructionsFileSchema, withQuery('/instructions-file', { path })),
   files: (
     projectId: string,
     query: string,

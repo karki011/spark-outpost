@@ -4,7 +4,7 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 ## Data (migration 0095)
 
-- `teammates`: workspace, `name` (unique per workspace, case-insensitive, 1–40), `role` (≤60), `face_shape` and `face_color` (one of `TEAMMATE_SHAPES` and `TEAMMATE_COLORS`), default `provider`, `model`, `agent_mode`, `level`, `instructions` (≤2000), `home_conversation_id` (`ON DELETE SET NULL`), timestamps. Up to 50 per workspace.
+- `teammates`: workspace, `name` (unique per workspace, case-insensitive, 1–40), `role` (≤60), `face_shape` and `face_color` (one of `TEAMMATE_SHAPES` and `TEAMMATE_COLORS`, or both null for a blob that follows the name; migration 0112), default `provider`, `model`, `agent_mode`, `level`, `instructions` (≤2000), `instructions_path` (optional file read at chat start; migration 0112), `home_conversation_id` (`ON DELETE SET NULL`), timestamps. Up to 50 per workspace.
 - `teammate_projects`: default projects in order; rows go with the teammate or the project.
 - `conversations.teammate_id` (`ON DELETE SET NULL`): deleting a teammate unlinks its chats and keeps them.
 - `profiles.dismissed_teammate_starters`: starter suggestions the user dismissed.
@@ -12,7 +12,7 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 ## Faces
 
-`faceFromName` (contracts) hashes the trimmed, lower-cased name (FNV-1a) into a shape and a colour, so a new Spark gets a stable face before the user picks one. The web maps a face to a Blobatar: the shape pins the `shape` trait to the middle of its band, the colour fixes the hue, and the tone is fixed at 0.5 so all Sparks sit at the same weight. State maps to the existing blob expressions (working → thinking, needs you → unsure, done → happy, failed → sad); faces animate only while working or waiting, and never with reduced motion.
+`faceFromName` (contracts) hashes the trimmed, lower-cased name (FNV-1a) into a shape and a colour, so a Spark gets a stable face without the user picking one. The server resolves it: `face` on a teammate or a conversation's teammate tag is always the stored pick or, when none is stored, `faceFromName(name)`, and `faceAuto` says which. Every surface renders `face`, so the name-based blob is the same everywhere and follows a rename. The sheet hides the pickers behind **Change look**; **Use name** stores null again. The web maps a face to a Blobatar: the shape pins the `shape` trait to the middle of its band, the colour fixes the hue, and the tone is fixed at 0.5 so all Sparks sit at the same weight. State maps to the existing blob expressions (working → thinking, needs you → unsure, done → happy, failed → sad); faces animate only while working or waiting, and never with reduced motion.
 
 ## State
 
@@ -26,7 +26,7 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 ## Standing instructions
 
-`loadRunInput` is unchanged; `runAgentTurn` looks up the teammate brief for top-level runs only (not Builders, Critics or other child runs, and not the Spark assistant chat) and passes it as `spark.teammate`. `sparkInstructions` appends it after the clipped Spark block under `# Standing instructions from the user for the Spark teammate …`, saying it is the user's own instruction and not tool output, file content or another agent's message. Claude receives it in the appended system prompt, Codex in developer instructions. Editing a teammate's name, role or instructions closes its chats' provider sessions so the next turn starts with the new brief. Jev routing and Builder picks are unchanged.
+`loadRunInput` is unchanged; `runAgentTurn` looks up the teammate brief for top-level runs only (not Builders, Critics or other child runs, and not the Spark assistant chat) and passes it as `spark.teammate`. `sparkInstructions` appends it after the clipped Spark block under `# Standing instructions from the user for the Spark teammate …`, saying it is the user's own instruction and not tool output, file content or another agent's message. Claude receives it in the appended system prompt, Codex in developer instructions. When `instructions_path` is set, `briefWithFile` (`apps/server/src/projects/instructions-file.ts`) reads that file for the brief instead of the typed text: an absolute path to a `.md`, `.markdown`, `.mdc` or `.txt` file, checked again after resolving links, never a secret file name, at most 256 KB, valid UTF-8 with no NUL bytes, cut at 2,000 characters. A missing, unreadable or empty file falls back to the typed instructions. `GET /api/instructions-file?path=` returns the same reading for the sheet's preview, and `GET /api/folders?files=instructions[&hidden=1]` lists the files the themed picker (`FolderDialog`, purpose `instructions`) can choose. Only the user sets the path; the Spark tools report it and cannot change it. Editing a teammate's name, role, instructions or instructions file closes its chats' provider sessions so the next turn starts with the new brief. Jev routing and Builder picks are unchanged.
 
 ## API
 

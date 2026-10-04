@@ -24,6 +24,8 @@ function asked(verbs: string, nouns: string): RegExp {
   return new RegExp(`\\b(${verbs})\\b${CLAUSE}\\b(${nouns})\\b`, 'i');
 }
 
+const MCP_NOUN = 'mcp|mcp servers?';
+
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   open_pr: asked('open|create|make|raise|submit|send|ship|put up', 'pr|prs|pull requests?'),
   create_ticket: asked(
@@ -40,6 +42,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
   create_teammate: asked('add|create|make|set up', 'sparks?|teammates?'),
   update_teammate: asked('change|update|rename|edit', 'sparks?|teammates?'),
+  add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
+  update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
+  switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),
+  remove_mcp_server: asked('remove|delete|uninstall|drop', MCP_NOUN),
 };
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {

@@ -286,6 +286,7 @@ describe('the Spark tools server', () => {
     const listed = await client.listTools();
     expect(listed.tools.map((tool) => tool.name).sort()).toEqual([
       'spark_activity',
+      'spark_add_mcp_server',
       'spark_analytics',
       'spark_assign_ticket',
       'spark_attention',
@@ -303,6 +304,7 @@ describe('the Spark tools server', () => {
       'spark_guide',
       'spark_laws',
       'spark_map',
+      'spark_mcp_servers',
       'spark_models',
       'spark_open_pr',
       'spark_pr',
@@ -311,25 +313,32 @@ describe('the Spark tools server', () => {
       'spark_projects',
       'spark_providers',
       'spark_pull_requests',
+      'spark_remove_mcp_server',
       'spark_run',
       'spark_settings',
       'spark_sparks',
       'spark_spend',
+      'spark_switch_mcp_server',
       'spark_task',
       'spark_terminals',
       'spark_tickets',
       'spark_transition_ticket',
+      'spark_update_mcp_server',
       'spark_update_spark',
     ]);
     const acting = listed.tools.filter((tool) => tool.annotations?.readOnlyHint === false);
     expect(acting.map((tool) => tool.name).sort()).toEqual([
+      'spark_add_mcp_server',
       'spark_assign_ticket',
       'spark_comment_ticket',
       'spark_create_spark',
       'spark_create_ticket',
       'spark_open_pr',
       'spark_pr_follow_up_round',
+      'spark_remove_mcp_server',
+      'spark_switch_mcp_server',
       'spark_transition_ticket',
+      'spark_update_mcp_server',
       'spark_update_spark',
     ]);
     for (const tool of listed.tools) {

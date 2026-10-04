@@ -7,6 +7,12 @@ import {
   teammateNameSchema,
   teammateRoleSchema,
 } from './teammates.ts';
+import {
+  addMcpServerActionSchema,
+  removeMcpServerActionSchema,
+  switchMcpServerActionSchema,
+  updateMcpServerActionSchema,
+} from './spark-mcp-actions.ts';
 import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
@@ -119,6 +125,7 @@ const teammateFieldsShape = {
   name: teammateNameSchema,
   role: teammateRoleSchema,
   face: teammateFaceSchema,
+  faceAuto: z.boolean().default(false),
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
   agentMode: z.string().nullable(),
@@ -149,6 +156,10 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   prFollowUpRoundActionSchema,
   createTeammateActionSchema,
   updateTeammateActionSchema,
+  addMcpServerActionSchema,
+  updateMcpServerActionSchema,
+  switchMcpServerActionSchema,
+  removeMcpServerActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -178,6 +189,10 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   pr_follow_up_round: [],
   create_teammate: [],
   update_teammate: [],
+  add_mcp_server: [],
+  update_mcp_server: [],
+  switch_mcp_server: [],
+  remove_mcp_server: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -203,6 +218,10 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   pr_follow_up_round: { question: 'Start a PR follow-up round?', confirm: 'Start round' },
   create_teammate: { question: 'Add this Spark?', confirm: 'Add Spark' },
   update_teammate: { question: 'Change this Spark?', confirm: 'Save changes' },
+  add_mcp_server: { question: 'Add this MCP server?', confirm: 'Add server' },
+  update_mcp_server: { question: 'Change this MCP server?', confirm: 'Save changes' },
+  switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
+  remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
 };
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);

@@ -29,6 +29,7 @@ import { DiffView } from './DiffView.tsx';
 import { askReason, fromSandbox } from './ask-reason.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
+import { McpSettingsButton, isMcpAction } from '../../settings/mcp/McpActionFacts.tsx';
 
 interface ApprovalCardProps {
   approval: Approval;
@@ -118,6 +119,7 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
   const result = outcome(approval);
   const shown = subject(approval);
   const denied = result.icon === 'no';
+  const mcpAction = approval.payload.sparkAction && isMcpAction(approval.payload.sparkAction);
   return (
     <div
       className={denied ? 'appr resolved denied' : 'appr resolved'}
@@ -146,6 +148,12 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
             >
               Open
             </a>
+          </>
+        )}
+        {mcpAction && approval.status === 'allowed' && (
+          <>
+            {' '}
+            <McpSettingsButton />
           </>
         )}
       </span>

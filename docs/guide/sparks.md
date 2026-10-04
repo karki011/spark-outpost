@@ -14,10 +14,16 @@ A Spark has a face, a role, a **home chat**, defaults for its chats and **standi
 
 1. Open **Home** and find **Your Sparks**.
 2. Select **New Spark**, or **Add** on a suggested one such as **Pip · Code reviewer**.
-3. Type a **Name** and a **Role**. Pick a **Blob** and a **Colour**.
-4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**.
-5. Write **Standing instructions**, up to 2,000 characters.
+3. Type a **Name** and a **Role**. The blob comes from the name; **Change look** lets you pick one.
+4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**. **Choose folder…** adds any folder.
+5. Write **Standing instructions**, up to 2,000 characters, or select **Use a file…** to point at a Markdown or text file.
 6. Select **Create Spark**.
+
+## Instructions from a file
+
+- Spark reads the file when a chat starts and uses it instead of the typed text.
+- Only the first 2,000 characters are used.
+- It must be a Markdown or text file, 256 KB or smaller. Secret files can't be picked.
 
 ## Talk to it
 
@@ -27,9 +33,7 @@ A Spark has a face, a role, a **home chat**, defaults for its chats and **standi
 | Start another chat with it | Select **Talk to…** above the message box, before the first message. |
 | See only its chats         | Type `with:` and its name in the chat search, such as `with:ada`.    |
 
-A Spark sets a chat's starting provider, model, mode, autonomy and project, and adds its instructions. New instructions reach its chats from their next message.
-
-It never changes approvals, protected paths or how Builders are picked.
+A Spark sets a chat's starting defaults and adds its instructions. It never changes approvals, protected paths or how Builders are picked.
 
 ## Change or delete one
 

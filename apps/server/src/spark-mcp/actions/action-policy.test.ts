@@ -50,6 +50,13 @@ describe('explicitlyAsked', () => {
     ['transition_ticket', 'move ENG-12 to done', true],
     ['assign_ticket', 'assign it to me', true],
     ['pr_follow_up', 'open pr', false],
+    ['add_mcp_server', 'add the GitHub MCP server', true],
+    ['add_mcp_server', 'set up an mcp for Slack', true],
+    ['add_mcp_server', 'which MCP servers do I have?', false],
+    ['update_mcp_server', 'point the docs MCP server at staging', true],
+    ['switch_mcp_server', 'turn off the files mcp for this chat', true],
+    ['remove_mcp_server', 'remove the old MCP server', true],
+    ['remove_mcp_server', 'add an MCP server', false],
   ] as const)('%s for "%s" is %s', (action, request, expected) => {
     expect(explicitlyAsked(action, request)).toBe(expected);
   });

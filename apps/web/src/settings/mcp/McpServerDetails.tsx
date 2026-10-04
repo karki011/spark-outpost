@@ -60,7 +60,7 @@ function NameList({ server }: { server: UserMcpServer }) {
           {names.map((name) => (
             <li key={name}>
               <code>{name}</code>
-              {server.secretNames.includes(name) && <small>in keychain</small>}
+              <small>{server.secretNames.includes(name) ? 'in keychain' : 'needs a value'}</small>
             </li>
           ))}
         </ul>

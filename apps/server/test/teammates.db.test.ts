@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Teammate, TeammateChat, TeammateList } from '@spark-outpost/contracts';
+import {
+  faceFromName,
+  type Teammate,
+  type TeammateChat,
+  type TeammateList,
+} from '@spark-outpost/contracts';
 import { createProject } from '../src/projects/projects.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
@@ -70,6 +75,73 @@ describe('teammate CRUD', () => {
     expect((await client.send('delete', `/api/teammates/${created.id}`)).status).toBe(204);
     expect((await list()).teammates).toEqual([]);
     expect((await client.send('delete', `/api/teammates/${created.id}`)).status).toBe(404);
+  });
+
+  it('keeps the blob on the name until a look is picked, and goes back on null', async () => {
+    const created = await create({ name: 'Pip' });
+    expect(created).toMatchObject({ faceAuto: true, face: faceFromName('Pip') });
+
+    const renamed = await client.send('patch', `/api/teammates/${created.id}`, { name: 'Wren' });
+    expect(renamed.body).toMatchObject({ faceAuto: true, face: faceFromName('Wren') });
+
+    const picked = await client.send('patch', `/api/teammates/${created.id}`, {
+      face: { shape: 'sun', color: 'gold' },
+    });
+    expect(picked.body).toMatchObject({ faceAuto: false, face: { shape: 'sun', color: 'gold' } });
+    const kept = await client.send('patch', `/api/teammates/${created.id}`, { name: 'Ada' });
+    expect(kept.body).toMatchObject({ faceAuto: false, face: { shape: 'sun', color: 'gold' } });
+
+    const reset = await client.send('patch', `/api/teammates/${created.id}`, { face: null });
+    expect(reset.body).toMatchObject({ faceAuto: true, face: faceFromName('Ada') });
+
+    const explicit = await create({ name: 'Bolt', face: { shape: 'boxy', color: 'ember' } });
+    expect(explicit).toMatchObject({ faceAuto: false, face: { shape: 'boxy', color: 'ember' } });
+  });
+
+  it('shows the same name-based blob on the roster and on the chat', async () => {
+    const teammate = await create({ name: 'Juniper' });
+    const opened = await client.send('post', `/api/teammates/${teammate.id}/home`, {});
+    const chat = opened.body as TeammateChat;
+    expect(chat.teammate?.face).toEqual(faceFromName('Juniper'));
+    const detail = await getConversationDetail(t.db, chat.conversationId);
+    expect(detail?.conversation.teammate?.face).toEqual(faceFromName('Juniper'));
+  });
+
+  it('stores an instructions file path only for a readable text file', async () => {
+    const role = path.join(root, 'reviewer.md');
+    await writeFile(role, 'Name the file and line.');
+    await writeFile(path.join(root, '.env'), 'TOKEN=abc');
+    const created = await create({ name: 'Pip', instructionsPath: role, instructions: 'Typed.' });
+    expect(created).toMatchObject({ instructionsPath: role, instructions: 'Typed.' });
+
+    const preview = await client.get(`/api/instructions-file?path=${encodeURIComponent(role)}`);
+    expect(preview.body).toMatchObject({
+      name: 'reviewer.md',
+      text: 'Name the file and line.',
+      truncated: false,
+      problem: null,
+    });
+
+    for (const [bad, message] of [
+      [path.join(root, '.env'), 'Secret files can’t be used as instructions.'],
+      [path.join(root, 'gone.md'), 'This file is missing.'],
+      ['roles/reviewer.md', 'Choose a file by its full path.'],
+    ] as const) {
+      const refused = await client.send('patch', `/api/teammates/${created.id}`, {
+        instructionsPath: bad,
+      });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe(message);
+    }
+    const secret = await client.get(
+      `/api/instructions-file?path=${encodeURIComponent(path.join(root, '.env'))}`,
+    );
+    expect(secret.body).toMatchObject({ text: '', problem: expect.stringContaining('Secret') });
+
+    const cleared = await client.send('patch', `/api/teammates/${created.id}`, {
+      instructionsPath: null,
+    });
+    expect(cleared.body).toMatchObject({ instructionsPath: null, instructions: 'Typed.' });
   });
 
   it('refuses duplicate names, long instructions and unconnected providers', async () => {

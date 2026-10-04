@@ -10,6 +10,16 @@ export const TEAMMATE_NAME_MAX = 40;
 export const TEAMMATE_ROLE_MAX = 60;
 export const TEAMMATE_INSTRUCTIONS_MAX = 2000;
 export const TEAMMATES_MAX = 50;
+export const INSTRUCTIONS_PATH_MAX = 1024;
+export const INSTRUCTIONS_FILE_MAX_BYTES = 256 * 1024;
+export const INSTRUCTIONS_FILE_EXTENSIONS = ['.md', '.markdown', '.mdc', '.txt'] as const;
+
+export function isInstructionsFileName(name: string): boolean {
+  const lower = name.toLowerCase();
+  return INSTRUCTIONS_FILE_EXTENSIONS.some(
+    (extension) => lower.endsWith(extension) && lower.length > extension.length,
+  );
+}
 
 export const TEAMMATE_SHAPES = [
   'round',
@@ -81,6 +91,23 @@ export const teammateInstructionsSchema = z
     `Keep standing instructions to ${TEAMMATE_INSTRUCTIONS_MAX} characters.`,
   );
 
+export const instructionsPathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(INSTRUCTIONS_PATH_MAX, 'That file path is too long.')
+  .refine((value) => value.startsWith('/'), 'Choose a file by its full path.');
+
+export const instructionsFileSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  sizeBytes: z.number().int().nonnegative().nullable(),
+  text: z.string(),
+  truncated: z.boolean(),
+  problem: z.string().nullable(),
+});
+export type InstructionsFile = z.infer<typeof instructionsFileSchema>;
+
 const projectIdsSchema = z
   .array(z.uuid())
   .max(CONVERSATION_PROJECTS_MAX)
@@ -98,11 +125,13 @@ export const teammateTagSchema = z.object({
 export type TeammateTag = z.infer<typeof teammateTagSchema>;
 
 export const teammateSchema = teammateTagSchema.extend({
+  faceAuto: z.boolean(),
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
   agentMode: z.string().nullable(),
   level: teammateLevelSchema.nullable(),
   instructions: z.string(),
+  instructionsPath: z.string().nullable(),
   projectIds: z.array(z.uuid()),
   homeConversationId: z.uuid().nullable(),
   createdAt: z.string(),
@@ -144,12 +173,13 @@ const teammateDefaultsShape = {
 export const createTeammateRequestSchema = z.object({
   name: teammateNameSchema,
   role: teammateRoleSchema.default(''),
-  face: teammateFaceSchema.optional(),
+  face: teammateFaceSchema.nullable().optional(),
   provider: teammateDefaultsShape.provider.default(null),
   model: teammateDefaultsShape.model.default(null),
   agentMode: teammateDefaultsShape.agentMode.default(null),
   level: teammateDefaultsShape.level.default(null),
   instructions: teammateInstructionsSchema.default(''),
+  instructionsPath: instructionsPathSchema.nullable().optional(),
   projectIds: projectIdsSchema.default([]),
 });
 export type CreateTeammateRequest = z.input<typeof createTeammateRequestSchema>;
@@ -159,9 +189,10 @@ export const updateTeammateRequestSchema = z
   .object({
     name: teammateNameSchema,
     role: teammateRoleSchema,
-    face: teammateFaceSchema,
+    face: teammateFaceSchema.nullable(),
     ...teammateDefaultsShape,
     instructions: teammateInstructionsSchema,
+    instructionsPath: instructionsPathSchema.nullable(),
     projectIds: projectIdsSchema,
   })
   .partial()

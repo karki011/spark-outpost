@@ -29,6 +29,7 @@ function describe(teammate: TeammateView, projectNames: ReadonlyMap<string, stri
     name: teammate.name,
     role: teammate.role || null,
     face: `${teammate.face.shape} ${teammate.face.color}`,
+    look: teammate.faceAuto ? 'from its name' : 'picked by the user',
     state: teammate.state,
     stateLabel: TEAMMATE_STATE_LABELS[teammate.state],
     homeChatId: teammate.homeConversationId,
@@ -42,6 +43,7 @@ function describe(teammate: TeammateView, projectNames: ReadonlyMap<string, stri
       projects: teammate.projectIds.map((id) => projectNames.get(id) ?? id),
     },
     standingInstructions: teammate.instructions || null,
+    instructionsFile: teammate.instructionsPath,
   };
 }
 
@@ -71,7 +73,7 @@ export const teammatesTool = sparkTool({
   title: 'Sparks (named teammates)',
   privateData: true,
   description:
-    "List the user's Sparks: named teammates with a face, role, home chat and defaults (provider, model, mode, autonomy, projects) plus their standing instructions. Each has a state across its chats: idle, working, needs_you, done or failed, and the last chat it worked in. Pass spark (name or id) for one.",
+    "List the user's Sparks: named teammates with a face, role, home chat and defaults (provider, model, mode, autonomy, projects) plus their standing instructions and, when the user pointed the Spark at one, the instructions file read at the start of each chat. Each has a state across its chats: idle, working, needs_you, done or failed, and the last chat it worked in. Pass spark (name or id) for one.",
   input: {
     spark: z.string().trim().min(1).max(100).optional().describe('A Spark name or id.'),
   },

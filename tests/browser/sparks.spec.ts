@@ -83,6 +83,7 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   await expect(form.getByRole('textbox', { name: 'Name' })).toBeFocused();
   await form.getByRole('textbox', { name: 'Name' }).fill('Ada');
   await form.getByRole('textbox', { name: 'Role' }).fill('Release manager');
+  await form.getByRole('button', { name: 'Change look' }).click();
   await form.getByRole('radio', { name: 'Cloud' }).click();
   await form.getByRole('radio', { name: 'Plum' }).click();
   await form.getByRole('button', { name: 'Provider' }).click();

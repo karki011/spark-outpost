@@ -31,13 +31,14 @@ interface TeammateRow {
   id: string;
   name: string;
   role: string;
-  face_shape: string;
-  face_color: string;
+  face_shape: string | null;
+  face_color: string | null;
   provider: string | null;
   model: string | null;
   agent_mode: string | null;
   level: string | null;
   instructions: string;
+  instructions_path: string | null;
   home_conversation_id: string | null;
   project_ids: string[];
   created_at: Date;
@@ -47,26 +48,26 @@ interface TeammateRow {
 const UNIQUE_VIOLATION = '23505';
 
 const teammateColumns = `t.id, t.name, t.role, t.face_shape, t.face_color, t.provider, t.model,
-  t.agent_mode, t.level, t.instructions, t.home_conversation_id, t.created_at, t.updated_at,
+  t.agent_mode, t.level, t.instructions, t.instructions_path, t.home_conversation_id, t.created_at, t.updated_at,
   ARRAY(
     SELECT tp.project_id::text FROM teammate_projects tp
     WHERE tp.teammate_id = t.id ORDER BY tp.position
   ) AS project_ids`;
 
 function toTeammate(row: TeammateRow): Teammate {
+  const picked = teammateFaceSchema.safeParse({ shape: row.face_shape, color: row.face_color });
   return {
     id: row.id,
     name: row.name,
     role: row.role,
-    face: teammateFaceSchema.catch(faceFromName(row.name)).parse({
-      shape: row.face_shape,
-      color: row.face_color,
-    }),
+    face: picked.data ?? faceFromName(row.name),
+    faceAuto: !picked.success,
     provider: providerIdSchema.safeParse(row.provider).data ?? null,
     model: row.model,
     agentMode: row.agent_mode,
     level: teammateLevelSchema.safeParse(row.level).data ?? null,
     instructions: row.instructions,
+    instructionsPath: row.instructions_path,
     projectIds: row.project_ids,
     homeConversationId: row.home_conversation_id,
     createdAt: row.created_at.toISOString(),
@@ -136,24 +137,24 @@ export async function createTeammate(
     throw new TeammateConflictError(`You can have up to ${TEAMMATES_MAX} Sparks.`);
   }
   const id = newId();
-  const face = input.face ?? faceFromName(input.name);
   await db
     .query(
       `INSERT INTO teammates (id, workspace_id, name, role, face_shape, face_color, provider, model,
-         agent_mode, level, instructions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+         agent_mode, level, instructions, instructions_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         id,
         workspaceId,
         input.name,
         input.role,
-        face.shape,
-        face.color,
+        input.face?.shape ?? null,
+        input.face?.color ?? null,
         input.provider,
         input.model,
         input.agentMode,
         input.level,
         input.instructions,
+        input.instructionsPath ?? null,
       ],
     )
     .catch((error: unknown) => nameTaken(error, input.name));
@@ -171,6 +172,7 @@ const COLUMNS: Record<Exclude<keyof UpdateTeammateRequest, 'face' | 'projectIds'
   agentMode: 'agent_mode',
   level: 'level',
   instructions: 'instructions',
+  instructionsPath: 'instructions_path',
 };
 
 export async function updateTeammate(
@@ -188,8 +190,8 @@ export async function updateTeammate(
     values.push(value);
     sets.push(`${column} = $${values.length + 2}`);
   }
-  if (update.face) {
-    values.push(update.face.shape, update.face.color);
+  if (update.face !== undefined) {
+    values.push(update.face?.shape ?? null, update.face?.color ?? null);
     sets.push(`face_shape = $${values.length + 1}`, `face_color = $${values.length + 2}`);
   }
   await db

@@ -32,16 +32,16 @@ The Spark Island rows show in the Mac app only.
 
 ## Other sections
 
-| Section          | Holds                                                                                                 | Read more                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Sparks**       | Your named teammates.                                                                                 | [Make a Spark](sparks.md)                                   |
-| **AI providers** | Claude, Codex, Z.ai, and Jev under **Advisor**.                                                       | [Manage providers](providers-and-models.md)                 |
-| **Models**       | Model cards: cost, benchmark results, when Spark uses each.                                           | [Model cards](providers-and-models.md#read-the-model-cards) |
-| **Usage**        | Tokens and cost per reply, by provider. Codex costs are estimates, marked **~**.                      | [Jev's cost](jev.md#what-it-costs)                          |
-| **Projects**     | Linked folders, trust for their hooks and MCP servers, **Builders at once**, **Where Spark works**.   | [Where a chat works](where-spark-works.md)                  |
-| **Connectors**   | GitHub, Jira and Linear.                                                                              | [Connect them](tickets-and-github.md)                       |
-| **MCP servers**  | Servers start off. Turn one on for all chats, some projects, or one chat with `/mcp`.                 | [Glossary](glossary.md)                                     |
-| **Appearance**   | The theme. **Graphite** is the default.                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-theme)    |
-| **Updates**      | Mac app: **Channel**, **Download updates automatically**, **Check for updates**.                      | [Update the app](updates.md)                                |
-| **Help**         | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**. | [Mac privacy settings](mac-privacy.md)                      |
-| **Reset**        | Start over. **Keep my API keys** is off by default.                                                   | [Start over](trouble-setup-and-reset.md#start-over)         |
+| Section          | Holds                                                                                                     | Read more                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Sparks**       | Your named teammates.                                                                                     | [Make a Spark](sparks.md)                                   |
+| **AI providers** | Claude, Codex, Z.ai, and Jev under **Advisor**.                                                           | [Manage providers](providers-and-models.md)                 |
+| **Models**       | Model cards: cost, benchmark results, when Spark uses each.                                               | [Model cards](providers-and-models.md#read-the-model-cards) |
+| **Usage**        | Tokens and cost per reply, by provider. Codex costs are estimates, marked **~**.                          | [Jev's cost](jev.md#what-it-costs)                          |
+| **Projects**     | Linked folders, trust for their hooks and MCP servers, **Builders at once**, **Where Spark works**.       | [Where a chat works](where-spark-works.md)                  |
+| **Connectors**   | GitHub, Jira and Linear.                                                                                  | [Connect them](tickets-and-github.md)                       |
+| **MCP servers**  | Servers start off. Turn one on for all chats, projects, or one chat. Fill values an agent's server needs. | [Glossary](glossary.md)                                     |
+| **Appearance**   | The theme. **Graphite** is the default.                                                                   | [Set up](getting-started.md#meet-spark-and-pick-a-theme)    |
+| **Updates**      | Mac app: **Channel**, **Download updates automatically**, **Check for updates**.                          | [Update the app](updates.md)                                |
+| **Help**         | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**.     | [Mac privacy settings](mac-privacy.md)                      |
+| **Reset**        | Start over. **Keep my API keys** is off by default.                                                       | [Start over](trouble-setup-and-reset.md#start-over)         |

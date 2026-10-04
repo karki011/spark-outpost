@@ -2,6 +2,7 @@ import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-ou
 import { getCapabilities } from '../persistence/chat-settings.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
+import { briefWithFile } from '../projects/instructions-file.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -65,7 +66,8 @@ export function writesCode(role: string | null | undefined): boolean {
 
 async function mainSessionBrief(db: Db, input: RunInput) {
   if (input.parentRunId || input.assistant) return null;
-  return teammateBrief(db, input.identity.threadId);
+  const brief = await teammateBrief(db, input.identity.threadId);
+  return brief ? briefWithFile(brief) : null;
 }
 
 const INBOX_POLL_MS = 1000;

@@ -14,6 +14,7 @@ export interface TeammateDraft extends DefaultsDraft {
   role: string;
   face: TeammateFace | null;
   instructions: string;
+  instructionsPath: string | null;
   projectIds: string[];
 }
 
@@ -27,6 +28,7 @@ export function newDraft(seed?: CreateTeammateRequest): TeammateDraft {
     agentMode: seed?.agentMode ?? null,
     level: seed?.level ?? null,
     instructions: seed?.instructions ?? '',
+    instructionsPath: seed?.instructionsPath ?? null,
     projectIds: seed?.projectIds ?? [],
   };
 }
@@ -35,14 +37,19 @@ export function draftOf(teammate: Teammate): TeammateDraft {
   return {
     name: teammate.name,
     role: teammate.role,
-    face: teammate.face,
+    face: pickedFace(teammate),
     provider: teammate.provider,
     model: teammate.model,
     agentMode: teammate.agentMode,
     level: teammate.level,
     instructions: teammate.instructions,
+    instructionsPath: teammate.instructionsPath,
     projectIds: [...teammate.projectIds],
   };
+}
+
+function pickedFace(teammate: Teammate): TeammateFace | null {
+  return teammate.faceAuto ? null : teammate.face;
 }
 
 export function shownFace(draft: TeammateDraft): TeammateFace {
@@ -61,12 +68,13 @@ export function createRequest(draft: TeammateDraft): CreateTeammateRequest {
   return {
     name: draft.name,
     role: draft.role,
-    face: shownFace(draft),
+    face: draft.face,
     provider: draft.provider,
     model: draft.model,
     agentMode: draft.agentMode,
     level: draft.level,
     instructions: draft.instructions,
+    instructionsPath: draft.instructionsPath,
     projectIds: draft.projectIds,
   };
 }
@@ -79,6 +87,7 @@ const SCALAR_FIELDS = [
   'agentMode',
   'level',
   'instructions',
+  'instructionsPath',
 ] as const;
 
 export function changesFrom(teammate: Teammate, draft: TeammateDraft): UpdateTeammateRequest {
@@ -87,9 +96,8 @@ export function changesFrom(teammate: Teammate, draft: TeammateDraft): UpdateTea
     const value = typeof draft[field] === 'string' ? (draft[field] as string).trim() : draft[field];
     if (value !== teammate[field]) changes[field] = value;
   }
-  const face = shownFace(draft);
-  if (face.shape !== teammate.face.shape || face.color !== teammate.face.color) {
-    changes.face = face;
+  if (JSON.stringify(draft.face) !== JSON.stringify(pickedFace(teammate))) {
+    changes.face = draft.face;
   }
   if (draft.projectIds.join() !== teammate.projectIds.join()) changes.projectIds = draft.projectIds;
   return changes as UpdateTeammateRequest;

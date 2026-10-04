@@ -22,6 +22,7 @@ These change nothing.
 | Providers, models, connectors, settings, projects        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
 | The Map, and what breaks if a file changes               | `spark_map`                                                                               |
 | Where something lives in the code                        | `spark_find`                                                                              |
+| Your MCP servers and where each is on                    | `spark_mcp_servers`                                                                       |
 | Open terminals                                           | `spark_terminals`                                                                         |
 | Tickets                                                  | `spark_tickets`                                                                           |
 | Your Sparks and their standing instructions              | `spark_sparks`                                                                            |
@@ -32,12 +33,15 @@ These change nothing.
 
 The agent proposes, and Spark does it.
 
-| Action                                      | Tool                                                                                            |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket` |
-| Open a pull request                         | `spark_open_pr`                                                                                 |
-| Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                      |
-| Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                      |
+| Action                                      | Tool                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
+| Open a pull request                         | `spark_open_pr`                                                                                         |
+| Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
+| Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
+| Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+
+An MCP server card shows the exact command, because it runs on your computer. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**. Changes apply to new agent sessions.
 
 ## When actions ask first
 

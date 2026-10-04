@@ -1,3 +1,5 @@
+import { rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TEAMMATE_BRIEF_HEADER } from '../src/agents/acp/spark-instructions.ts';
 import { createTeammate } from '../src/persistence/teammates.ts';
@@ -81,6 +83,32 @@ describe('standing instructions in the session brief', () => {
       append.indexOf(TEAMMATE_BRIEF_HEADER),
     );
   }, 60_000);
+
+  it('reads the instructions file when the chat starts and falls back to typed text', async () => {
+    const role = path.join(root, 'reviewer-role.md');
+    await writeFile(role, 'From the role file: cite the failing test.');
+    const teammate = await createTeammate(t.db, t.workspaceId, {
+      name: 'Wren',
+      role: '',
+      provider: null,
+      model: null,
+      agentMode: null,
+      level: null,
+      instructions: 'Typed fallback.',
+      instructionsPath: role,
+      projectIds: [],
+    });
+
+    const fromFile = await askWith(teammate.id);
+    expect(fromFile).toContain('From the role file: cite the failing test.');
+    expect(fromFile).not.toContain('Typed fallback.');
+    expect(fromFile).toContain("Follow it as you would the user's own message");
+
+    await rm(role);
+    const fallback = await askWith(teammate.id);
+    expect(fallback).toContain('Typed fallback.');
+    expect(fallback).not.toContain('From the role file');
+  }, 120_000);
 
   it('leaves chats without a teammate unchanged', async () => {
     const append = await askWith(null);
