@@ -173,8 +173,16 @@
   align-items: baseline;
   gap: 6px;
 }
+.agent-head > .agent-who .agent-role {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .agent-head > .agent-who .agent-role::before {
   content: '· ';
+}
+.agent-head > .ah-meta {
+  flex-shrink: 1000;
 }
 .ah-effort {
   display: inline-flex;
