@@ -229,7 +229,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages, the queue and messages to crew members: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
 Spend: spark_spend. Trends and outcomes: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear: spark_connectors. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
+Agents: spark_providers. GitHub, Jira, Linear: spark_connectors. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks, @Spark jobs and replies: spark_sparks, spark_chat. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'compaction',

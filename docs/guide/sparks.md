@@ -3,27 +3,23 @@ title: Make a Spark
 section: Chats
 type: how-to
 order: 228
-summary: Make a named teammate with a face, a role, its own chat, defaults and standing instructions, then talk to it.
+summary: Make a named teammate with a face, a role, its own chat, defaults and standing instructions, then talk to it or hand it one job with @.
 ---
 
-You'll make a named teammate and start chats with it. About 2 minutes.
+You'll make a named teammate, chat with it and hand it jobs. About 2 minutes.
 
-A Spark has a face, a role, a **home chat**, defaults for its chats and **standing instructions** it follows in every chat.
+A Spark has a face, a role, a **home chat**, defaults and **standing instructions**.
 
 ## Make one
 
 1. Open **Home** and find **Your Sparks**.
 2. Select **New Spark**, or **Add** on a suggested one such as **Pip · Code reviewer**.
-3. Type a **Name** and a **Role**. The blob comes from the name; **Change look** lets you pick one.
+3. Type a **Name** and a **Role**. **Change look** picks the blob.
 4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**. **Choose folder…** adds any folder.
-5. Write **Standing instructions**, up to 2,000 characters, or select **Use a file…** to point at a Markdown or text file.
+5. Write **Standing instructions**, or select **Use a file…**.
 6. Select **Create Spark**.
 
-## Instructions from a file
-
-- Spark reads the file when a chat starts and uses it instead of the typed text.
-- Only the first 2,000 characters are used.
-- It must be a Markdown or text file, 256 KB or smaller. Secret files can't be picked.
+A file replaces the typed text: Markdown or text, up to 256 KB, first 2,000 characters. No secret files.
 
 ## Talk to it
 
@@ -33,7 +29,15 @@ A Spark has a face, a role, a **home chat**, defaults for its chats and **standi
 | Start another chat with it | Select **Talk to…** in the bar above the message box, before the first message. |
 | See only its chats         | Type `with:` and its name in the chat search, such as `with:ada`.               |
 
-A Spark sets a chat's starting defaults and adds its instructions. It never changes approvals, protected paths or how Builders are picked.
+A Spark sets a chat's starting defaults and adds its instructions. It never changes approvals or protected paths.
+
+## Hand it one job
+
+In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?** chip.
+
+- It works as a read-only subagent with its own context and replies in the chat.
+- The chat's agent gets a short note, and runs only if your message goes on: `@Pip review this, then fix it`.
+- Up to three Sparks run in turn. Mode and approvals never widen.
 
 ## Change or delete one
 

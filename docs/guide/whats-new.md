@@ -10,6 +10,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                            | What to do                                                                   |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Sparks are named teammates. `@Name` hands one a job as a read-only subagent; a chip suggests one.       | See [Make a Spark](sparks.md).                                               |
 | Wide windows show a context rail. **Talk to…** sits in the bar above the message box.                   | Set **On wide windows** in [Settings](settings.md#spark).                    |
 | The plan card waits for **Build** at **Automatic**, in every agent mode.                                | Select **Build**, or use [**Full auto → PR**](spark-autonomy.md).            |
 | Two autonomy levels: **Automatic** and **Full auto → PR**. Retired levels became **Automatic**.         | To review each step, pick an [agent mode](agent-mode.md) that asks.          |
@@ -20,7 +21,6 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | **Delete** works on running chats.                                                                      | Nothing.                                                                     |
 | Agent TV for any chat, with messages to one crew member.                                                | See [Watch and steer the crew](pieces.md).                                   |
 | The **Changes** drawer replaces inline diffs.                                                           | Press **⌘⇧D**.                                                               |
-| Sparks: named teammates with standing instructions.                                                     | See [Make a Spark](sparks.md).                                               |
 | A warning before a message with a key in it is sent.                                                    | See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).         |
 | Pushes and PRs go through a route Spark controls.                                                       | Hover the branch chip. See [Ship a change](ship-and-pull-requests.md).       |
 | Agents may open the PR themselves when you ask, at Full auto, or in **Auto** or **Bypass permissions**. | Say "open a PR" in your message.                                             |
