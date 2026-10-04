@@ -7,10 +7,19 @@ export function useSlackSave() {
   const onSuccess = (status: SlackStatus) => queryClient.setQueryData(slackKeys.status, status);
   const settings = useMutation({ mutationFn: slackApi.updateSettings, onSuccess });
   const channels = useMutation({ mutationFn: slackApi.allowChannels, onSuccess });
+  const directMessages = useMutation({ mutationFn: slackApi.allowDirectMessages, onSuccess });
+  const scopes = useMutation({ mutationFn: slackApi.checkScopes, onSuccess });
   return {
     settings,
     channels,
-    error: settings.error?.message ?? channels.error?.message ?? null,
+    directMessages,
+    scopes,
+    error:
+      settings.error?.message ??
+      channels.error?.message ??
+      directMessages.error?.message ??
+      scopes.error?.message ??
+      null,
   };
 }
 

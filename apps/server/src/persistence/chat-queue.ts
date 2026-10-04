@@ -42,7 +42,7 @@ export async function listQueue(db: Queryable, conversationId: string): Promise<
   return rows.map(toQueued);
 }
 
-async function alreadySent(db: Queryable, id: string): Promise<boolean> {
+export async function alreadySent(db: Queryable, id: string): Promise<boolean> {
   const { rowCount } = await db.query('SELECT 1 FROM messages WHERE id = $1', [id]);
   return rowCount === 1;
 }

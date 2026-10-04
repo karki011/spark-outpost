@@ -4,11 +4,11 @@ import {
   type Attachment,
   type AttachmentKind,
 } from '@spark-outpost/contracts';
-import type { ProjectFile, SlackThreadPreview } from '@spark-outpost/contracts';
+import type { ProjectFile, SlackNotAllowed, SlackThreadPreview } from '@spark-outpost/contracts';
 import { attachmentUrl, classifyFile, uploadAttachment } from '../../api/attachments.ts';
 import { ApiError } from '../../api/client.ts';
 import { projectsApi } from '../../api/projects.ts';
-import { slackApi, slackNotAllowed } from '../../slack/slack-api.ts';
+import { allowSlackPlace, slackApi, slackNotAllowed } from '../../slack/slack-api.ts';
 
 export type AttachmentSource =
   | { type: 'upload'; file: File }
@@ -29,7 +29,7 @@ export interface PendingAttachment {
   retryable: boolean;
   attachment: Attachment | null;
   slack?: SlackThreadPreview;
-  blockedChannel?: { id: string; name: string | null };
+  blockedChannel?: SlackNotAllowed['channel'];
 }
 
 export interface AttachmentsState {
@@ -261,7 +261,7 @@ export function useAttachments(): AttachmentsState {
       if (!item?.blockedChannel) return;
       const restarted = { ...item, status: 'uploading', progress: 0, error: null } as const;
       patch(key, restarted);
-      slackApi.allowChannel(item.blockedChannel.id).then(
+      allowSlackPlace(item.blockedChannel).then(
         () => start(restarted),
         (error: unknown) =>
           patch(key, { status: 'error', error: (error as Error).message, retryable: false }),

@@ -1,3 +1,5 @@
+import type { SlackPlaceKind } from '@spark-outpost/contracts';
+
 export const SLACK_API_URL = 'https://slack.com/api';
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -21,11 +23,22 @@ export class SlackNotConnectedError extends Error {
   }
 }
 
+export interface SlackBlockedPlace {
+  id: string;
+  name: string | null;
+  kind?: SlackPlaceKind | undefined;
+}
+
+function notAllowedMessage(place: SlackBlockedPlace): string {
+  if (place.kind === 'im' || place.kind === 'mpim') {
+    return "That direct message isn't in your allowed conversations. Allow it in Settings → Connectors → Slack.";
+  }
+  return `${place.name ? `#${place.name}` : 'That channel'} isn't in your allowed Slack channels. Allow it in Settings → Connectors → Slack.`;
+}
+
 export class SlackChannelNotAllowedError extends Error {
-  constructor(readonly channel: { id: string; name: string | null }) {
-    super(
-      `${channel.name ? `#${channel.name}` : 'That channel'} isn't in your allowed Slack channels. Allow it in Settings → Connectors → Slack.`,
-    );
+  constructor(readonly channel: SlackBlockedPlace) {
+    super(notAllowedMessage(channel));
     this.name = 'SlackChannelNotAllowedError';
   }
 }
@@ -98,11 +111,33 @@ function retryAfterMs(response: Response): number {
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1000;
 }
 
+export interface SlackAnswer {
+  data: Record<string, unknown>;
+  scopes: string[] | null;
+}
+
+function grantedScopes(response: Response): string[] | null {
+  const header = response.headers.get('x-oauth-scopes');
+  if (header === null) return null;
+  return header
+    .split(',')
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+}
+
 export async function slackCall(
   client: SlackClient,
   method: string,
   params: Params = {},
 ): Promise<Record<string, unknown>> {
+  return (await slackAnswer(client, method, params)).data;
+}
+
+export async function slackAnswer(
+  client: SlackClient,
+  method: string,
+  params: Params = {},
+): Promise<SlackAnswer> {
   const botName = client.botName ?? 'Spark';
   for (let attempt = 0; ; attempt += 1) {
     const response = await post(client, method, params);
@@ -118,7 +153,7 @@ export async function slackCall(
     if (!data || typeof data !== 'object') {
       throw new SlackApiError('bad_response', `Slack answered with ${response.status}.`);
     }
-    if (data.ok === true) return data;
+    if (data.ok === true) return { data, scopes: grantedScopes(response) };
     const code = typeof data.error === 'string' ? data.error : 'unknown_error';
     throw new SlackApiError(code, messageFor(code, data, botName));
   }

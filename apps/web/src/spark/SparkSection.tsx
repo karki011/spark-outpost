@@ -2,6 +2,7 @@ import './spark.css';
 import { useState } from 'react';
 import type { SetupState } from '@spark-outpost/contracts';
 import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
+import { BusyEnterSetting } from '../settings/BusyEnterSetting.tsx';
 import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { DesktopCompanionSetting } from '../settings/DesktopCompanionSetting.tsx';
 import { FailingChecksSetting } from '../settings/FailingChecksSetting.tsx';
@@ -46,6 +47,7 @@ export function SparkSection({ setup }: { setup: SetupState }) {
       <section className="spark-group" aria-labelledby="spark-around">
         <h4 id="spark-around">Around the app</h4>
         <MorningBriefSetting enabled={profile.morningBrief} time={profile.morningBriefTime} />
+        <BusyEnterSetting action={profile.busyEnter} />
         <WideWindowSetting layout={profile.wideWindow} />
         <CompanionSetting />
         <DesktopCompanionSetting />

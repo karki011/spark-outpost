@@ -149,7 +149,11 @@ function finished(approval: Approval) {
   return { outcome: 'done', message: result.message, url: result.url, ...result.output };
 }
 
-export async function proposeAction(context: SparkToolContext, action: SparkAction) {
+export async function proposeAction(
+  context: SparkToolContext,
+  action: SparkAction,
+  options: { alwaysAsk?: boolean } = {},
+) {
   const run = actionRun(context.scope);
   const observed = (await run.scope.observations?.labels()) ?? [];
   const facts = await actionFacts(
@@ -157,7 +161,7 @@ export async function proposeAction(context: SparkToolContext, action: SparkActi
     { runId: run.runId, conversationId: run.scope.conversationId, observed: observed.length > 0 },
     action.action,
   );
-  const path = actionPath(facts);
+  const path = options.alwaysAsk ? 'confirm' : actionPath(facts);
   const card = await postCard(context.deps.db, run, action, {
     path,
     requested: facts.requested,

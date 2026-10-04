@@ -206,7 +206,7 @@ describe('Start work from a Slack link', () => {
       .send(body({ url: slackLink('C0RANDOM', '1760000500.000100') }));
 
     expect(response.status).toBe(409);
-    expect(response.body.channel).toEqual({ id: 'C0RANDOM', name: 'random' });
+    expect(response.body.channel).toEqual({ id: 'C0RANDOM', name: 'random', kind: 'channel' });
     expect(await chats()).toEqual([]);
     expect(await startEvents()).toEqual([
       expect.objectContaining({ outcome: 'skipped', reason: 'channel_not_allowed' }),

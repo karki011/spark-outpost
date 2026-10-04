@@ -9,6 +9,10 @@ export async function resetSlackFake(): Promise<void> {
   await fetch(`${STUB_URL}/slack-test/reset`);
 }
 
+export async function useLegacySlackScopes(): Promise<void> {
+  await fetch(`${STUB_URL}/slack-test/legacy-scopes`);
+}
+
 export async function slackPosts(): Promise<FakeSlackPost[]> {
   return (await (await fetch(`${STUB_URL}/slack-test/posted`)).json()) as FakeSlackPost[];
 }

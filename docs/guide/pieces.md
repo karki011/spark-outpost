@@ -31,7 +31,7 @@ Spark may split a big plan into [pieces](spark-crew.md#pieces), one Builder each
 2. Pick **Auto**, **All pieces**, one piece such as **P2 · API**, or **Coordinator**.
 3. Send. Write "skip P3" to skip a piece, or "use Codex for P2" to move one.
 
-**Auto** sends to whoever your words name.
+**Auto** sends to whoever your words name. **Enter** and **⌘Enter** both steer.
 
 ## Choose how many Builders run at once
 

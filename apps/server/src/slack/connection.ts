@@ -1,7 +1,8 @@
-import { slackSettingsSchema } from '@spark-outpost/contracts';
+import { missingSlackDmScopes, slackSettingsSchema } from '@spark-outpost/contracts';
 import type {
   SaveSlackConnectionRequest,
   SlackCapabilities,
+  SlackDirectMessages,
   SlackSocketState,
   SlackStatus,
   UpdateSlackSettingsRequest,
@@ -9,12 +10,15 @@ import type {
 import type { Db } from '../persistence/db.ts';
 import {
   allowedSlackChannels,
+  allowedSlackDms,
   deleteSlackConnection,
   getSlackConnection,
   recordSlackEvent,
+  replaceAllowedSlackDms,
   saveSlackConnection,
   saveSlackMember,
   saveSlackSettings,
+  saveSlackUserScopes,
   type SlackConnectionRow,
 } from '../persistence/slack.ts';
 import { SLACK_SECRET_IDS, type SecretStore, type SlackSecretId } from '../setup/secrets.ts';
@@ -22,6 +26,7 @@ import {
   SlackApiError,
   SlackChannelNotAllowedError,
   SlackNotConnectedError,
+  slackAnswer,
   slackCall,
   slackText,
   type SlackClient,
@@ -79,12 +84,44 @@ export async function requireSlack(deps: SlackDeps): Promise<OpenSlack> {
   return open;
 }
 
+export async function slackUserScopes(
+  deps: SlackDeps,
+  connection: SlackConnectionRow,
+  userToken: string | null,
+): Promise<string[] | null> {
+  if (!userToken) return null;
+  if (connection.userScopes) return connection.userScopes;
+  const scopes = await slackAnswer(clientFor(deps, userToken), 'auth.test').then(
+    (answer) => answer.scopes,
+    () => null,
+  );
+  if (scopes) await saveSlackUserScopes(deps.db, deps.workspaceId, scopes);
+  return scopes;
+}
+
+export function directMessagesBlock(
+  hasUserToken: boolean,
+  scopes: readonly string[] | null,
+): Pick<SlackDirectMessages, 'blockedBy' | 'missingScopes'> {
+  if (!hasUserToken) return { blockedBy: 'user_token', missingScopes: [] };
+  const missingScopes = missingSlackDmScopes(scopes);
+  return { blockedBy: missingScopes.length > 0 ? 'scopes' : null, missingScopes };
+}
+
+export const DIRECT_MESSAGES_NEED_USER_TOKEN =
+  "Reading direct messages needs a user token (xoxp-), because the app isn't in your direct messages. Add one in Settings → Connectors → Slack.";
+
+export const DIRECT_MESSAGES_NEED_SCOPES =
+  'Update the Slack app to allow direct messages: Settings → Connectors → Slack shows the steps.';
+
 function capabilities(
   connection: SlackConnectionRow,
   tokens: { user: boolean; app: boolean },
+  directBlocked: boolean,
 ): SlackCapabilities {
   const { settings } = connection;
   return {
+    readDirectMessages: settings.readDirectMessages && !directBlocked,
     notify: connection.memberId !== null || settings.notifyChannelId !== null,
     readThreads: true,
     readUnjoined: tokens.user,
@@ -102,6 +139,10 @@ export async function slackStatus(
   const tokens = connection ? await slackTokens(deps) : null;
   if (!connection || !tokens) return { connection: null };
   const present = { bot: true, user: tokens.user !== null, app: tokens.app !== null };
+  const block = directMessagesBlock(
+    present.user,
+    await slackUserScopes(deps, connection, tokens.user),
+  );
   return {
     connection: {
       team: connection.teamName,
@@ -112,10 +153,11 @@ export async function slackStatus(
           ? null
           : { id: connection.memberId, name: connection.memberName ?? connection.memberId },
       tokens: present,
-      capabilities: capabilities(connection, present),
+      capabilities: capabilities(connection, present, block.blockedBy !== null),
       validatedAt: connection.validatedAt.toISOString(),
       settings: connection.settings,
       allowedChannels: await allowedSlackChannels(deps.db, deps.workspaceId),
+      directMessages: { ...block, allowed: await allowedSlackDms(deps.db, deps.workspaceId) },
       socket,
       lastProblem:
         connection.problem && connection.problemAt
@@ -132,11 +174,13 @@ interface Who {
   userId: string;
   user: string;
   isBot: boolean;
+  scopes: string[] | null;
 }
 
 async function authTest(client: SlackClient): Promise<Who> {
-  const data = await slackCall(client, 'auth.test');
+  const { data, scopes } = await slackAnswer(client, 'auth.test');
   return {
+    scopes,
     teamId: slackText(data.team_id),
     team: slackText(data.team),
     url: slackText(data.url),
@@ -217,6 +261,7 @@ export async function saveSlack(
     botUserId: who.bot.userId,
     botName: who.bot.user,
     member,
+    userScopes: who.user?.scopes ?? null,
   });
   await recordSlackEvent(deps.db, deps.workspaceId, {
     action: 'connect',
@@ -235,6 +280,40 @@ export async function removeSlack(deps: SlackDeps): Promise<SlackStatus> {
   for (const id of SLACK_SECRET_IDS) await deps.secrets.delete(id).catch(() => undefined);
   await recordSlackEvent(deps.db, deps.workspaceId, { action: 'disconnect', outcome: 'succeeded' });
   return { connection: null };
+}
+
+export async function refreshSlackScopes(deps: SlackDeps): Promise<void> {
+  const open = await requireSlack(deps);
+  if (!open.user) return;
+  const { scopes } = await slackAnswer(open.user, 'auth.test');
+  await saveSlackUserScopes(deps.db, deps.workspaceId, scopes);
+}
+
+async function directMessageChoice(
+  deps: SlackDeps,
+  open: OpenSlack,
+  update: Pick<UpdateSlackSettingsRequest, 'readDirectMessages' | 'allDirectMessages'>,
+): Promise<{ readDirectMessages: boolean; allDirectMessages: boolean }> {
+  const current = open.connection.settings;
+  const on = update.readDirectMessages ?? current.readDirectMessages;
+  if (!on) {
+    if (current.readDirectMessages) await replaceAllowedSlackDms(deps.db, deps.workspaceId, []);
+    return { readDirectMessages: false, allDirectMessages: false };
+  }
+  if (update.readDirectMessages) {
+    const scopes = await slackUserScopes(deps, open.connection, open.tokens.user);
+    const { blockedBy } = directMessagesBlock(open.user !== null, scopes);
+    if (blockedBy) {
+      throw new SlackApiError(
+        'direct_messages_unavailable',
+        blockedBy === 'scopes' ? DIRECT_MESSAGES_NEED_SCOPES : DIRECT_MESSAGES_NEED_USER_TOKEN,
+      );
+    }
+  }
+  return {
+    readDirectMessages: true,
+    allDirectMessages: update.allDirectMessages ?? current.allDirectMessages,
+  };
 }
 
 export async function changeSlackSettings(
@@ -257,6 +336,7 @@ export async function changeSlackSettings(
     }
   }
   const current = open.connection.settings;
+  const direct = await directMessageChoice(deps, open, rest);
   const defined = (values: object) =>
     Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
   await saveSlackSettings(
@@ -265,6 +345,7 @@ export async function changeSlackSettings(
     slackSettingsSchema.parse({
       ...current,
       ...defined(rest),
+      ...direct,
       notify: { ...current.notify, ...defined(notify ?? {}) },
     }),
   );

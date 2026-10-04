@@ -6,7 +6,7 @@ order: 227
 summary: Open your app in the chat's Browser pane, let the agent look at it, and point at what you mean.
 ---
 
-You'll open a page next to a chat, have the agent check it, and select an element for your next message. About 2 minutes. The Browser pane is in the Mac app.
+You'll open a page next to a chat, have the agent check it, and select an element for your next message. About 2 minutes. Mac app only.
 
 ## Open a page
 

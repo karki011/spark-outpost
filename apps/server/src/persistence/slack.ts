@@ -1,6 +1,8 @@
 import {
   slackSettingsSchema,
   type SlackAllowedChannel,
+  type SlackDm,
+  type SlackPlaceKind,
   type SlackSettings,
 } from '@spark-outpost/contracts';
 import { redactText, redactValue } from '../audit/redact.ts';
@@ -16,6 +18,7 @@ export interface SlackConnectionRow {
   memberId: string | null;
   memberName: string | null;
   settings: SlackSettings;
+  userScopes: string[] | null;
   problem: string | null;
   problemAt: Date | null;
   validatedAt: Date;
@@ -30,6 +33,7 @@ interface StoredSlackConnection {
   member_id: string | null;
   member_name: string | null;
   settings: unknown;
+  user_scopes: string[] | null;
   problem: string | null;
   problem_at: Date | null;
   validated_at: Date;
@@ -48,6 +52,7 @@ function toConnection(row: StoredSlackConnection): SlackConnectionRow {
     memberId: row.member_id,
     memberName: row.member_name,
     settings: settings.success ? settings.data : DEFAULT_SLACK_SETTINGS,
+    userScopes: row.user_scopes,
     problem: row.problem,
     problemAt: row.problem_at,
     validatedAt: row.validated_at,
@@ -72,6 +77,7 @@ export interface SlackIdentity {
   botUserId: string;
   botName: string;
   member: { id: string; name: string } | null;
+  userScopes: string[] | null;
 }
 
 export async function saveSlackConnection(
@@ -81,13 +87,15 @@ export async function saveSlackConnection(
 ): Promise<void> {
   await db.query(
     `INSERT INTO slack_connections
-       (workspace_id, team_id, team_name, team_url, bot_user_id, bot_name, member_id, member_name)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (workspace_id, team_id, team_name, team_url, bot_user_id, bot_name, member_id, member_name,
+        user_scopes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (workspace_id) DO UPDATE SET
        team_id = EXCLUDED.team_id, team_name = EXCLUDED.team_name, team_url = EXCLUDED.team_url,
        bot_user_id = EXCLUDED.bot_user_id, bot_name = EXCLUDED.bot_name,
        member_id = COALESCE(EXCLUDED.member_id, slack_connections.member_id),
        member_name = COALESCE(EXCLUDED.member_name, slack_connections.member_name),
+       user_scopes = EXCLUDED.user_scopes,
        problem = NULL, problem_at = NULL, validated_at = now()`,
     [
       workspaceId,
@@ -98,12 +106,25 @@ export async function saveSlackConnection(
       identity.botName,
       identity.member?.id ?? null,
       identity.member?.name ?? null,
+      identity.userScopes,
     ],
   );
 }
 
+export async function saveSlackUserScopes(
+  db: Queryable,
+  workspaceId: string,
+  scopes: string[] | null,
+): Promise<void> {
+  await db.query('UPDATE slack_connections SET user_scopes = $2 WHERE workspace_id = $1', [
+    workspaceId,
+    scopes,
+  ]);
+}
+
 export async function deleteSlackConnection(db: Queryable, workspaceId: string): Promise<void> {
   await db.query('DELETE FROM slack_channels WHERE workspace_id = $1', [workspaceId]);
+  await db.query('DELETE FROM slack_direct_conversations WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_chat_threads WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_connections WHERE workspace_id = $1', [workspaceId]);
 }
@@ -199,8 +220,64 @@ export async function replaceAllowedSlackChannels(
   }
 }
 
+interface StoredDm {
+  channel_id: string;
+  kind: SlackDm['kind'];
+  name: string;
+}
+
+const toDm = (row: StoredDm): SlackDm => ({ id: row.channel_id, kind: row.kind, name: row.name });
+
+export async function allowedSlackDms(db: Queryable, workspaceId: string): Promise<SlackDm[]> {
+  const { rows } = await db.query<StoredDm>(
+    'SELECT channel_id, kind, name FROM slack_direct_conversations WHERE workspace_id = $1 ORDER BY name',
+    [workspaceId],
+  );
+  return rows.map(toDm);
+}
+
+export async function allowedSlackDm(
+  db: Queryable,
+  workspaceId: string,
+  channelId: string,
+): Promise<SlackDm | null> {
+  const { rows } = await db.query<StoredDm>(
+    'SELECT channel_id, kind, name FROM slack_direct_conversations WHERE workspace_id = $1 AND channel_id = $2',
+    [workspaceId, channelId],
+  );
+  return rows[0] ? toDm(rows[0]) : null;
+}
+
+export async function replaceAllowedSlackDms(
+  db: Queryable,
+  workspaceId: string,
+  conversations: readonly SlackDm[],
+): Promise<void> {
+  await db.query(
+    'DELETE FROM slack_direct_conversations WHERE workspace_id = $1 AND NOT (channel_id = ANY($2::text[]))',
+    [workspaceId, conversations.map((conversation) => conversation.id)],
+  );
+  for (const conversation of conversations) {
+    await db.query(
+      `INSERT INTO slack_direct_conversations (workspace_id, channel_id, kind, name)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (workspace_id, channel_id) DO UPDATE SET
+         kind = EXCLUDED.kind, name = EXCLUDED.name`,
+      [workspaceId, conversation.id, conversation.kind, conversation.name],
+    );
+  }
+}
+
 export type SlackEventAction =
-  'connect' | 'disconnect' | 'settings' | 'channels' | 'read' | 'search' | 'post' | 'start';
+  | 'connect'
+  | 'disconnect'
+  | 'settings'
+  | 'channels'
+  | 'direct_messages'
+  | 'read'
+  | 'search'
+  | 'post'
+  | 'start';
 
 export interface SlackEvent {
   action: SlackEventAction;
@@ -314,13 +391,38 @@ export async function slackChatThread(
 export async function saveSlackContextItem(
   db: Queryable,
   attachmentId: string,
-  thread: SlackThreadRef,
+  thread: SlackThreadRef & { kind: SlackPlaceKind },
 ): Promise<void> {
   await db.query(
-    `INSERT INTO slack_context_items (attachment_id, channel_id, thread_ts, permalink)
-     VALUES ($1, $2, $3, $4) ON CONFLICT (attachment_id) DO NOTHING`,
-    [attachmentId, thread.channelId, thread.threadTs, thread.permalink],
+    `INSERT INTO slack_context_items (attachment_id, channel_id, thread_ts, permalink, kind)
+     VALUES ($1, $2, $3, $4, $5) ON CONFLICT (attachment_id) DO NOTHING`,
+    [attachmentId, thread.channelId, thread.threadTs, thread.permalink, thread.kind],
   );
+}
+
+export async function markSlackDirectChat(db: Queryable, conversationId: string): Promise<void> {
+  await db.query(
+    `INSERT INTO slack_direct_chats (conversation_id)
+     SELECT id FROM conversations WHERE id = $1 ON CONFLICT (conversation_id) DO NOTHING`,
+    [conversationId],
+  );
+}
+
+export async function conversationReadSlackDms(
+  db: Queryable,
+  conversationId: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ found: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM slack_direct_chats WHERE conversation_id = $1)
+       OR EXISTS (
+         SELECT 1 FROM slack_context_items s
+         JOIN attachments a ON a.id = s.attachment_id
+         JOIN messages m ON m.id = a.message_id
+         WHERE m.conversation_id = $1 AND s.kind <> 'channel'
+       ) AS found`,
+    [conversationId],
+  );
+  return rows[0]?.found === true;
 }
 
 export async function conversationHasSlackContext(

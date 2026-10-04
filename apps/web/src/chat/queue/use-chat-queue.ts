@@ -14,6 +14,7 @@ export interface ChatQueue {
   remove: (id: string) => void;
   move: (id: string, delta: -1 | 1) => void;
   sendNow: (id: string) => void;
+  sendFirst: (content: string) => Promise<void>;
   error: string | null;
 }
 
@@ -22,7 +23,8 @@ type Change =
   | { kind: 'edit'; id: string; content: string }
   | { kind: 'remove'; id: string }
   | { kind: 'order'; ids: string[] }
-  | { kind: 'send'; id: string };
+  | { kind: 'send'; id: string }
+  | { kind: 'first'; id: string; content: string };
 
 function call(conversationId: string, change: Change): Promise<QueueResponse> {
   switch (change.kind) {
@@ -36,6 +38,8 @@ function call(conversationId: string, change: Change): Promise<QueueResponse> {
       return queueApi.order(conversationId, change.ids);
     case 'send':
       return queueApi.sendNow(conversationId, change.id);
+    case 'first':
+      return queueApi.sendFirst(conversationId, change.id, change.content);
   }
 }
 
@@ -51,6 +55,7 @@ function applied(queue: readonly QueuedMessage[], change: Change): QueuedMessage
       );
     case 'remove':
     case 'send':
+    case 'first':
       return queue.filter((item) => item.id !== change.id);
     case 'order':
       return inOrder(queue, change.ids);
@@ -77,7 +82,7 @@ export function useChatQueue(
     },
     onSuccess: (response, change) => {
       setQueue(() => response.queue);
-      if (change.kind === 'add' || change.kind === 'send') {
+      if (change.kind === 'add' || change.kind === 'send' || change.kind === 'first') {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     },
@@ -100,6 +105,9 @@ export function useChatQueue(
         if (ids) mutate({ kind: 'order', ids });
       },
       sendNow: (id) => mutate({ kind: 'send', id }),
+      sendFirst: async (content) => {
+        await mutateAsync({ kind: 'first', id: crypto.randomUUID(), content });
+      },
     }),
     [items, error, mutate, mutateAsync],
   );

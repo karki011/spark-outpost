@@ -79,8 +79,8 @@ export function SlackChannels({
     <section className="sl-section" aria-labelledby={`${id}-title`}>
       <h4 id={`${id}-title`}>Allowed channels</h4>
       <p className="tk-field-help">
-        Spark reads threads, searches and posts only in the channels you tick. Direct messages are
-        never read.
+        Spark reads threads, searches and posts only in the channels you tick. Direct messages have
+        their own switch below.
       </p>
       <label className="sr-only" htmlFor={`${id}-search`}>
         Search channels

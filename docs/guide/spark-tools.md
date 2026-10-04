@@ -26,7 +26,7 @@ These change nothing.
 | Open terminals                                            | `spark_terminals`                                                                                                  |
 | The Browser pane's tabs, a page, its screenshot and logs  | `spark_browser_tabs`, `spark_browser_open`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs` |
 | Tickets, one in full, or a search of every ticket         | `spark_tickets`                                                                                                    |
-| A Slack thread by link, or a search of allowed channels   | `spark_slack`                                                                                                      |
+| A Slack thread by link, or a search of what you allowed   | `spark_slack`                                                                                                      |
 | Your Sparks, and the jobs and replies from an `@` mention | `spark_sparks`, `spark_chat`                                                                                       |
 | The audit log, including actions that ran without review  | `spark_audit`                                                                                                      |
 | How Spark works, and this guide                           | `spark_guide`, `spark_docs`                                                                                        |

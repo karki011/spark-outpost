@@ -10,7 +10,8 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                     | What to do                                                                   |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| A **Browser** pane in each chat (Mac app): agents read local pages, you select elements.         | See [Use the browser](use-the-browser.md).                                   |
+| **Browser** pane per chat (Mac app): agents read pages, you select elements.                     | See [Use the browser](use-the-browser.md).                                   |
+| Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.   | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
 | Slack connects: notifications, shared threads, start work from a thread, confirmed posts.        | See [Connect Slack](connect-slack.md).                                       |
 | Sparks are named teammates. `@Name` hands one a job as a read-only subagent. Delete in Settings. | See [Make a Spark](sparks.md).                                               |
 | Wide windows show a context rail. **Talk to…** sits in the bar above the message box.            | Set **On wide windows** in [Settings](settings.md#spark).                    |
@@ -19,7 +20,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Changes are kept without waiting for you.                                                        | Undo with [**Revert to before this run**](review-changes.md#keep-or-revert). |
 | Spark follows the agent's mode and adds no command cards of its own.                             | Expect fewer cards. [Protected paths](protected-paths.md) still ask.         |
 | Modes that never ask are marked **ran without review**.                                          | Answer any [flag](approvals.md#actions-that-ran-without-review).             |
-| Plain step names, one live status line and a message queue while a turn runs.                    | [Follow a turn](follow-a-turn.md) above the message box.                     |
+| Plain step names, one status line. While a turn runs, **Enter** queues and **⌘Enter** sends now. | [Follow a turn](follow-a-turn.md) above the message box.                     |
 | **Delete** works on running chats.                                                               | Nothing.                                                                     |
 | Agent TV for any chat, with messages to one crew member.                                         | See [Watch and steer the crew](pieces.md).                                   |
 | The **Changes** drawer replaces inline diffs.                                                    | Press **⌘⇧D**.                                                               |

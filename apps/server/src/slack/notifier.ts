@@ -1,6 +1,7 @@
 import type { AppEvent } from '@spark-outpost/contracts';
 import {
   claimSlackDelivery,
+  conversationReadSlackDms,
   getSlackConnection,
   setSlackProblem,
   settleSlackDeliveries,
@@ -20,6 +21,7 @@ import { sendSlackMessage } from './post.ts';
 
 export const NOTIFY_BATCH_MS = 20_000;
 const FOCUS_TTL_MS = 45_000;
+export const DIRECT_CHAT_TITLE = 'A chat that read your Slack direct messages';
 const WATCHED_KINDS = new Set(['approval', 'run', 'conversation', 'pull_request', 'task']);
 
 export interface SlackNotifierOptions {
@@ -78,7 +80,9 @@ async function chatOf(deps: SlackDeps, conversationId: string): Promise<NotifyCh
      FROM conversations c WHERE c.id = $1 AND c.workspace_id = $2 AND c.kind <> 'digest'`,
     [conversationId, deps.workspaceId],
   );
-  return rows[0] ? { conversationId, ...rows[0] } : null;
+  if (!rows[0]) return null;
+  const direct = await conversationReadSlackDms(deps.db, conversationId);
+  return { conversationId, ...rows[0], ...(direct ? { title: DIRECT_CHAT_TITLE } : {}) };
 }
 
 async function stillWaiting(deps: SlackDeps, items: readonly Claimed[]): Promise<Set<string>> {

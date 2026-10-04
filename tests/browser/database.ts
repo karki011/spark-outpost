@@ -60,6 +60,7 @@ const RESET_TABLES = [
   'tickets',
   'slack_connections',
   'slack_channels',
+  'slack_direct_conversations',
   'slack_events',
   'slack_deliveries',
   'attention_settings',

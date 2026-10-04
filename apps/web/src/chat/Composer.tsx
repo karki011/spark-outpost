@@ -11,11 +11,13 @@ import {
   type KeyboardEvent,
 } from 'react';
 import {
+  DEFAULT_BUSY_ENTER,
   MESSAGE_MAX_LENGTH,
   isSlackMessageUrl,
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
+  type BusyEnterAction,
   type ChatSettings,
   type ConversationUsage,
   type Orchestration,
@@ -42,11 +44,10 @@ import {
   effortHint,
   typedCommandNote,
   parseSlash,
-  planPrompt,
-  reviewPrompt,
   skillCommand,
   type ClientCommandName,
 } from './composer/slash.ts';
+import { runClientCommand } from './composer/client-commands.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
 import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
 import { usePickerCommand } from './composer/use-picker-command.ts';
@@ -68,6 +69,7 @@ import { RepoFilePicker } from './project/RepoFilePicker.tsx';
 import { useAgentConfig } from './project/use-agent-config.ts';
 import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
+import { enterAction } from './queue/send-choice.ts';
 import { QuoteChips } from './quotes/QuoteChips.tsx';
 import { sendLabel } from './quotes/quote-text.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
@@ -93,6 +95,9 @@ interface ComposerProps {
   quotes?: QuotesState;
   onStop: () => void;
   onQueue?: (content: string) => Promise<void>;
+  onSendNow?: (content: string) => Promise<void>;
+  busyEnter?: BusyEnterAction;
+  notice?: string | null;
   steer?: SteerControl | null;
   onAudit?: () => void;
   onStartFresh?: () => void;
@@ -123,6 +128,9 @@ export function Composer({
   onSend,
   onStop,
   onQueue,
+  onSendNow,
+  busyEnter = DEFAULT_BUSY_ENTER,
+  notice = null,
   steer = null,
   onAudit,
   onStartFresh,
@@ -135,6 +143,7 @@ export function Composer({
   const [draft, setDraft] = useState('');
   const [repoOpen, setRepoOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastChoice = useRef(busyEnter);
   const secrets = useSecretGuard(draft);
   const inputId = useId();
   const repoPopover = usePopover<HTMLButtonElement, HTMLDivElement>();
@@ -183,39 +192,25 @@ export function Composer({
     }),
     [agentName, skills, efforts, canStartFresh, hasSettings],
   );
-  const runClientCommand = (command: ClientCommandName, args = ''): string | null => {
-    if (command === 'mcp') {
-      setMcpOpen(true);
-      return null;
-    }
-    if (command === 'fresh') {
-      onStartFresh?.();
-      attachments.notify(
-        onStartFresh
-          ? 'Started fresh. Your next message opens a new agent session.'
-          : 'This chat has no agent session yet.',
-      );
-      return null;
-    }
-    if (command === 'model' || command === 'effort') {
-      picker.run(command, args);
-      return null;
-    }
-    if (command === 'plan') {
-      if (args) return planPrompt(args);
-      attachments.notify('Add what to plan after /plan.');
-      setDraft('/plan ');
-      return null;
-    }
-    return reviewPrompt(args);
-  };
+  const runCommand = (command: ClientCommandName, args = '') =>
+    runClientCommand(
+      {
+        openMcp: () => setMcpOpen(true),
+        onStartFresh,
+        notify: attachments.notify,
+        pick: picker.run,
+        setDraft,
+      },
+      command,
+      args,
+    );
   const slash = useSlash({
     draft,
     setDraft,
     textareaRef,
     agentCommands,
     context: slashContext,
-    onRun: (command) => void runClientCommand(command),
+    onRun: (command) => void runCommand(command),
   });
   const closeRepo = useCallback(() => {
     setRepoOpen(false);
@@ -250,7 +245,7 @@ export function Composer({
     const command = clientCommand(parsed);
     if (command && parsed) {
       setDraft('');
-      return runClientCommand(command, parsed.args);
+      return runCommand(command, parsed.args);
     }
     const skill = skillCommand(parsed, slash.all);
     if (skill) return skill;
@@ -262,7 +257,8 @@ export function Composer({
     return draft;
   };
 
-  const submit = async () => {
+  const submit = async (choice: BusyEnterAction = busyEnter) => {
+    lastChoice.current = choice;
     if (!canSend || secrets.blocks(draft)) return;
     const draftText = draft;
     if (steering) {
@@ -279,7 +275,8 @@ export function Composer({
     }
     setDraft('');
     if (queueing && onQueue) {
-      await onQueue(content).then(
+      const deliver = choice === 'now' && onSendNow ? onSendNow : onQueue;
+      await deliver(content).then(
         () => quotes?.clear(),
         () => setDraft(draftText),
       );
@@ -294,6 +291,12 @@ export function Composer({
     }
   };
 
+  const sendAs = (choice: BusyEnterAction) => {
+    void submit(choice);
+    textareaRef.current?.focus();
+  };
+
+  const hint = composerHint(attachments, queueing, busyEnter);
   const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -310,7 +313,7 @@ export function Composer({
     if (mention.handleKey(event)) return;
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      void submit();
+      void submit(enterAction(event, busyEnter));
     }
   };
 
@@ -325,7 +328,7 @@ export function Composer({
         guard={secrets}
         input={textareaRef}
         onText={setDraft}
-        onSendAnyway={() => void submit()}
+        onSendAnyway={() => void submit(lastChoice.current)}
       />
       <ContextBar
         conversationId={conversationId}
@@ -356,9 +359,9 @@ export function Composer({
         <p className="composer-notice" role="status">
           {attachments.notice}
         </p>
-        {steering?.status && (
+        {(steering?.status ?? notice) && (
           <p className="composer-notice" role="status">
-            {steering.status}
+            {steering?.status ?? notice}
           </p>
         )}
         {typedNote && !slash.open && (
@@ -427,6 +430,7 @@ export function Composer({
           placeholder={composerPlaceholder({
             steering: steering !== null,
             queueing,
+            preferred: busyEnter,
             hasRepos,
             hasSparks: sparks.length > 0,
           })}
@@ -455,8 +459,8 @@ export function Composer({
             onAddFromRepo={() => setRepoOpen(true)}
             onAddRepo={openRepoMenu}
           />
-          <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'}>
-            {composerHint(attachments, queueing)}
+          <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
+            {hint}
           </span>
           <SparkOffChip />
           {settings && (
@@ -486,7 +490,7 @@ export function Composer({
             disabled={!canSend}
             onSend={() => void submit()}
             onStop={onStop}
-            {...(queueing ? { onQueue: () => void submit() } : {})}
+            {...(queueing ? { busySend: { preferred: busyEnter, onChoice: sendAs } } : {})}
           />
         </div>
       </div>
