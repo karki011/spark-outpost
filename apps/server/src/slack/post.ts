@@ -1,7 +1,7 @@
-import { SLACK_POST_TEXT_MAX, escapeSlackText } from '@spark-outpost/contracts';
+import { SLACK_POST_TEXT_MAX, escapeSlackText, slackPlaceLabel } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import { recordSlackEvent } from '../persistence/slack.ts';
-import { requireAllowedChannel } from './channels.ts';
+import { requirePostablePlace } from './access.ts';
 import { requireSlack, type OpenSlack, type SlackDeps } from './connection.ts';
 import { slackCall, slackText } from './web-api.ts';
 
@@ -53,9 +53,9 @@ export interface SlackPost {
 export async function postToSlack(
   deps: SlackDeps,
   post: SlackPost,
-): Promise<{ channelName: string; permalink: string | null }> {
+): Promise<{ place: string; permalink: string | null }> {
   const open = await requireSlack(deps);
-  const channel = await requireAllowedChannel(deps, open, post.channelId);
+  const channel = await requirePostablePlace(deps, open, post.channelId);
   const event = {
     action: 'post' as const,
     channelId: channel.id,
@@ -76,7 +76,7 @@ export async function postToSlack(
       channel: sent.channel,
       message_ts: sent.ts,
     }).catch(() => null);
-    return { channelName: channel.name, permalink: slackText(link?.permalink) || null };
+    return { place: slackPlaceLabel(channel), permalink: slackText(link?.permalink) || null };
   } catch (error) {
     await recordSlackEvent(deps.db, deps.workspaceId, {
       ...event,

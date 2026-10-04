@@ -9,15 +9,22 @@ import {
   type SlackThread,
 } from './thread.ts';
 
+function attachmentTitle({ preview }: SlackThread): string {
+  if (preview.channel.kind === 'im') return 'Slack direct message';
+  if (preview.channel.kind === 'mpim') return 'Slack group message';
+  return `Slack thread in ${preview.channel.name}`;
+}
+
 export async function saveSlackThreadAttachment(deps: SlackDeps, thread: SlackThread) {
   const attachment = await saveAttachment(deps.db, deps.workspaceId, {
-    name: `Slack thread in ${thread.preview.channel.name}.md`,
+    name: `${attachmentTitle(thread)}.md`,
     mediaType: 'text/markdown',
     data: Buffer.from(slackThreadDocument(thread), 'utf8'),
   });
   await saveSlackContextItem(deps.db, attachment.id, {
     ...thread.ref,
     permalink: thread.preview.permalink,
+    kind: thread.preview.channel.kind,
   });
   return attachment;
 }

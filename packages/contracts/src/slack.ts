@@ -8,6 +8,7 @@ export const SLACK_THREAD_MESSAGES_MAX = 100;
 export const SLACK_POST_TEXT_MAX = 3_000;
 export const SLACK_ALLOWED_CHANNELS_MAX = 100;
 export const SLACK_ALLOWED_USERS_MAX = 20;
+export const SLACK_ALLOWED_DMS_MAX = 100;
 export const SLACK_START_NOTE_MAX = 2_000;
 
 export const SLACK_BOT_SCOPES = {
@@ -27,7 +28,18 @@ export const SLACK_USER_SCOPES = {
   'groups:history': 'Read threads in your private channels the app has not joined.',
   'channels:read': 'List every public channel you can see in the channel picker.',
   'groups:read': 'List your private channels in the channel picker.',
+  'im:read': 'List your direct messages so you can pick the ones Spark may read.',
+  'im:history': 'Read a direct message you allowed. The app is not in it, so Spark reads as you.',
+  'mpim:read': 'List your group direct messages in the same picker.',
+  'mpim:history': 'Read a group direct message you allowed.',
 } as const;
+
+export const SLACK_DM_SCOPES = ['im:read', 'im:history', 'mpim:read', 'mpim:history'] as const;
+export type SlackDmScope = (typeof SLACK_DM_SCOPES)[number];
+
+export function missingSlackDmScopes(granted: readonly string[] | null): SlackDmScope[] {
+  return SLACK_DM_SCOPES.filter((scope) => !granted?.includes(scope));
+}
 
 export const SLACK_APP_SCOPES = {
   'connections:write': 'Open the Socket Mode connection, so Slack needs no public URL.',
@@ -94,6 +106,41 @@ export type SaveSlackConnectionRequest = z.infer<typeof saveSlackConnectionReque
 
 export const slackChannelIdSchema = z.string().regex(/^[CG][A-Z0-9]{2,20}$/);
 export const slackUserIdSchema = z.string().regex(/^[UW][A-Z0-9]{2,20}$/);
+export const slackConversationIdSchema = z.string().regex(/^[CDG][A-Z0-9]{2,20}$/);
+
+export const slackPlaceKindSchema = z.enum(['channel', 'im', 'mpim']);
+export type SlackPlaceKind = z.infer<typeof slackPlaceKindSchema>;
+
+export function slackPlaceLabel(place: { kind: SlackPlaceKind; name: string }): string {
+  if (place.kind === 'im') return `direct message with ${place.name}`;
+  if (place.kind === 'mpim') return `group message with ${place.name}`;
+  return `#${place.name}`;
+}
+
+export const slackDmSchema = z.object({
+  id: slackConversationIdSchema,
+  kind: z.enum(['im', 'mpim']),
+  name: z.string().min(1).max(200),
+});
+export type SlackDm = z.infer<typeof slackDmSchema>;
+
+export const slackDmPageSchema = z.object({
+  conversations: z.array(slackDmSchema),
+  nextCursor: z.string().nullable(),
+});
+export type SlackDmPage = z.infer<typeof slackDmPageSchema>;
+
+export const allowSlackDmsRequestSchema = z.object({
+  conversations: z.array(z.object({ id: slackConversationIdSchema })).max(SLACK_ALLOWED_DMS_MAX),
+});
+export type AllowSlackDmsRequest = z.infer<typeof allowSlackDmsRequestSchema>;
+
+export const slackDirectMessagesSchema = z.object({
+  blockedBy: z.enum(['user_token', 'scopes']).nullable(),
+  missingScopes: z.array(z.string()),
+  allowed: z.array(slackDmSchema),
+});
+export type SlackDirectMessages = z.infer<typeof slackDirectMessagesSchema>;
 
 export const slackChannelSchema = z.object({
   id: slackChannelIdSchema,
@@ -150,6 +197,8 @@ export const slackSettingsSchema = z.object({
   startFromSlack: z.boolean().default(true),
   postUpdatesToThread: z.boolean().default(true),
   allowedUserIds: z.array(slackUserIdSchema).max(SLACK_ALLOWED_USERS_MAX).default([]),
+  readDirectMessages: z.boolean().default(false),
+  allDirectMessages: z.boolean().default(false),
 });
 export type SlackSettings = z.infer<typeof slackSettingsSchema>;
 
@@ -163,6 +212,8 @@ export const updateSlackSettingsRequestSchema = z
     postUpdatesToThread: z.boolean(),
     allowedUserIds: z.array(slackUserIdSchema).max(SLACK_ALLOWED_USERS_MAX),
     memberId: slackUserIdSchema.nullable(),
+    readDirectMessages: z.boolean(),
+    allDirectMessages: z.boolean(),
   })
   .partial()
   .strict();
@@ -190,6 +241,7 @@ export const slackCapabilitiesSchema = z.object({
   search: z.boolean(),
   post: z.boolean(),
   startFromSlack: z.boolean(),
+  readDirectMessages: z.boolean(),
 });
 export type SlackCapabilities = z.infer<typeof slackCapabilitiesSchema>;
 
@@ -203,6 +255,7 @@ export const slackConnectionSchema = z.object({
   validatedAt: z.string(),
   settings: slackSettingsSchema,
   allowedChannels: z.array(slackAllowedChannelSchema),
+  directMessages: slackDirectMessagesSchema,
   socket: slackSocketStateSchema,
   lastProblem: z.object({ message: z.string(), at: z.string() }).nullable(),
 });
@@ -218,7 +271,11 @@ export const slackPresenceRequestSchema = z.object({ focused: z.boolean() });
 export const slackLinkRequestSchema = z.object({ url: z.string().trim().min(1).max(2000) });
 
 export const slackThreadPreviewSchema = z.object({
-  channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
+  channel: z.object({
+    id: slackConversationIdSchema,
+    name: z.string(),
+    kind: slackPlaceKindSchema.default('channel'),
+  }),
   author: z.string(),
   postedAt: z.string().nullable(),
   firstLine: z.string(),
@@ -239,7 +296,11 @@ export const SLACK_CHANNEL_NOT_ALLOWED = 'slack_channel_not_allowed';
 export const slackNotAllowedSchema = z.object({
   error: z.string(),
   code: z.literal(SLACK_CHANNEL_NOT_ALLOWED),
-  channel: z.object({ id: slackChannelIdSchema, name: z.string().nullable() }),
+  channel: z.object({
+    id: slackConversationIdSchema,
+    name: z.string().nullable(),
+    kind: slackPlaceKindSchema.default('channel'),
+  }),
 });
 export type SlackNotAllowed = z.infer<typeof slackNotAllowedSchema>;
 

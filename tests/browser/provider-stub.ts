@@ -3,7 +3,7 @@ import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts
 import type { FakeGitHubApp } from '../../apps/server/test/fake-github-app.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
-import { fakeSlack } from '../../apps/server/test/fake-slack.ts';
+import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 
 const anthropicModels = {
@@ -103,6 +103,10 @@ const server = createServer((req, res) => {
   }
   if (path === '/slack-test/reset') {
     slack = fakeSlack();
+    return send(res, 200, { ok: true });
+  }
+  if (path === '/slack-test/legacy-scopes') {
+    slack.userScopes = SLACK_LEGACY_USER_SCOPES;
     return send(res, 200, { ok: true });
   }
   if (path === '/slack-test/posted') return send(res, 200, slack.posted);
