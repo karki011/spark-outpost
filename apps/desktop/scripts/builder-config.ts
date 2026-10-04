@@ -2,11 +2,19 @@ import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import { Arch, type AfterPackContext, type Configuration } from 'electron-builder';
 import { channelConfig } from '../src/channel.ts';
+import {
+  GITHUB_APP_CLIENT_ID_ENV,
+  GITHUB_APP_SLUG_ENV,
+  gitHubAppIds,
+  type GitHubAppIds,
+} from '../src/github-app.ts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
 const HEARTBEAT_URL = '';
+const GITHUB_APP_CLIENT_ID = '';
+const GITHUB_APP_SLUG = '';
 
 export type MacArch = 'x64' | 'arm64';
 
@@ -33,6 +41,19 @@ export function signingPlan(env: Env): SigningPlan {
   const developerId = Boolean(env.CSC_LINK || env.CSC_NAME);
   if (!developerId) return { adHoc: true, notarize: false };
   return { adHoc: false, notarize: hasNotaryCredentials(env) };
+}
+
+export function packagedGitHubApp(env: Env): GitHubAppIds | null {
+  const clientId = (env[GITHUB_APP_CLIENT_ID_ENV] ?? GITHUB_APP_CLIENT_ID).trim();
+  if (clientId === '') return null;
+  const slug = (env[GITHUB_APP_SLUG_ENV] ?? GITHUB_APP_SLUG).trim();
+  const ids = gitHubAppIds(clientId, slug);
+  if (!ids || ids.slug !== slug) {
+    throw new Error(
+      `${GITHUB_APP_CLIENT_ID_ENV} must be the GitHub App's client ID (letters, digits and dots) and ${GITHUB_APP_SLUG_ENV} its URL name (letters, digits and dashes). Never a client secret or private key.`,
+    );
+  }
+  return ids;
 }
 
 export const RELEASE_ARCHS: MacArch[] = ['x64', 'arm64'];
@@ -111,6 +132,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const signing = signingPlan(options.env);
   const feed = updateFeedUrl(options.env);
   const heartbeat = packagedHeartbeatUrl(options.env);
+  const githubApp = packagedGitHubApp(options.env);
   return {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
@@ -119,6 +141,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       version: options.version,
       name: options.packageName ?? 'spark-outpost',
       ...(heartbeat ? { heartbeatUrl: heartbeat } : {}),
+      ...(githubApp ? { githubApp } : {}),
     },
     directories: { output: options.outputDir },
     npmRebuild: false,

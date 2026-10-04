@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { APP_LOGIN, fakeGitHubApp, type FakeGitHubApp } from './fake-github-app.ts';
 import { listPullsAnswer, pullJson, pullReadAnswer } from './fake-github-reads.ts';
 
 export const FAKE_GH_HEADER = 'x-fake-gh';
@@ -22,7 +23,7 @@ export interface FakePull {
   checkRuns?: { status: string; conclusion: string | null }[];
   html_url: string;
   openedBy: string;
-  via: 'gh_cli' | 'token';
+  via: 'gh_cli' | 'token' | 'app';
   sha?: string;
   updated_at?: string;
   mergeable?: boolean | null;
@@ -37,6 +38,8 @@ export interface FakePull {
 
 export interface FakeGitHub {
   pulls: FakePull[];
+  app: FakeGitHubApp;
+  requests: { method: string; path: string; via: FakePull['via'] | null }[];
   handle(req: IncomingMessage, res: ServerResponse, path: string): Promise<void>;
 }
 
@@ -51,12 +54,15 @@ function send(res: ServerResponse, status: number, body: unknown, headers = {}) 
   res.end(JSON.stringify(body));
 }
 
-function caller(req: IncomingMessage): Caller | null {
+function caller(req: IncomingMessage, app: FakeGitHubApp): Caller | null {
   const viaGh = req.headers[FAKE_GH_HEADER];
   if (typeof viaGh === 'string' && viaGh) return { login: viaGh, via: 'gh_cli', scopes: null };
   const auth = String(req.headers.authorization ?? '');
   const token = /^Bearer (\S+)$/.exec(auth)?.[1];
   if (!token || token.includes(REJECTED_TOKEN_MARKER)) return null;
+  if (token.startsWith('ghu_')) {
+    return app.loginFor(token) ? { login: APP_LOGIN, via: 'app', scopes: null } : null;
+  }
   return { login: TOKEN_LOGIN, via: 'token', scopes: token.startsWith('ghp_') ? 'repo' : null };
 }
 
@@ -74,6 +80,8 @@ const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
 
 export function fakeGitHub(): FakeGitHub {
   const pulls: FakePull[] = [];
+  const app = fakeGitHubApp();
+  const requests: FakeGitHub['requests'] = [];
 
   function repoAnswer(res: ServerResponse, owner: string, repo: string) {
     if (repo === 'missing') return send(res, 404, { message: 'Not Found' });
@@ -143,10 +151,18 @@ export function fakeGitHub(): FakeGitHub {
 
   return {
     pulls,
+    app,
+    requests,
     async handle(req, res, path) {
       const url = new URL(path, 'http://fake');
-      const who = caller(req);
+      const signIn = await app.login(req, url.pathname);
+      if (signIn) return send(res, signIn.status, signIn.body);
+      const who = caller(req, app);
+      requests.push({ method: req.method ?? 'GET', path: url.pathname, via: who?.via ?? null });
       if (!who) return send(res, 401, { message: 'Bad credentials' });
+      const installed =
+        who.via === 'app' ? app.installations(url.pathname, url.searchParams) : null;
+      if (installed) return send(res, installed.status, installed.body);
       if (url.pathname === '/user') {
         return send(
           res,

@@ -25,7 +25,10 @@ export function shipDepsOf(deps: FollowUpDeps, workspaceId: string): ShipDeps {
 
 export function connectTo(deps: FollowUpDeps, watch: Watch): Promise<GitHubConnection | null> {
   if (deps.connect) return deps.connect(watch.workspaceId, watch.host);
-  return connectionFor({ ...deps.github, db: deps.db, workspaceId: watch.workspaceId }, watch.host);
+  return connectionFor(
+    { ...deps.github, db: deps.db, workspaceId: watch.workspaceId },
+    { host: watch.host, owner: watch.owner, name: watch.repo },
+  );
 }
 
 export const nowOf = (deps: FollowUpDeps) => deps.now?.() ?? new Date();

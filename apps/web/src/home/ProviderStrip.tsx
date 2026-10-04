@@ -3,6 +3,7 @@ import { capabilitiesQuery } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { routeToProvider } from '../providers/provider-route.ts';
+import { requestSettings } from '../settings/settings-request.ts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { homeApi, homeKeys } from './home-api.ts';
@@ -110,6 +111,14 @@ export function ProviderStrip({ onSettings }: { onSettings: () => void }) {
           />
         ))}
       </ul>
+      {health.data?.githubSignInNeeded && (
+        <p className="ps-warn" role="status">
+          <span className="ps-warn-text">GitHub: your sign-in ended</span>
+          <button type="button" className="hlink" onClick={() => requestSettings('tools')}>
+            Sign in again
+          </button>
+        </p>
+      )}
       {first && (
         <p className="ps-warn" role="status">
           <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">

@@ -6,14 +6,24 @@ const enterprise = { host: 'git.corp.example', owner: 'acme', name: 'widgets' };
 
 describe('choosing how Spark opens a pull request', () => {
   it.each([
-    [{ hasRemote: false, repo: null, token: false, gh: false }, 'commit'],
-    [{ hasRemote: true, repo: null, token: true, gh: true }, 'push'],
-    [{ hasRemote: true, repo: github, token: true, gh: true }, 'token'],
-    [{ hasRemote: true, repo: github, token: false, gh: true }, 'gh_cli'],
-    [{ hasRemote: true, repo: github, token: false, gh: false }, 'link'],
-    [{ hasRemote: true, repo: enterprise, token: false, gh: true }, 'gh_cli'],
-    [{ hasRemote: true, repo: enterprise, token: false, gh: false }, 'push'],
-    [{ hasRemote: true, repo: { ...github, host: 'gitlab.com' }, token: false, gh: false }, 'link'],
+    [{ hasRemote: false, repo: null, app: false, token: false, gh: false }, 'commit'],
+    [{ hasRemote: true, repo: null, app: false, token: true, gh: true }, 'push'],
+    [{ hasRemote: true, repo: github, app: true, token: true, gh: true }, 'app'],
+    [{ hasRemote: true, repo: github, app: false, token: true, gh: true }, 'token'],
+    [{ hasRemote: true, repo: github, app: false, token: false, gh: true }, 'gh_cli'],
+    [{ hasRemote: true, repo: github, app: false, token: false, gh: false }, 'link'],
+    [{ hasRemote: true, repo: enterprise, app: false, token: false, gh: true }, 'gh_cli'],
+    [{ hasRemote: true, repo: enterprise, app: false, token: false, gh: false }, 'push'],
+    [
+      {
+        hasRemote: true,
+        repo: { ...github, host: 'gitlab.com' },
+        app: false,
+        token: false,
+        gh: false,
+      },
+      'link',
+    ],
   ] as const)('%o → %s', (facts, route) => {
     expect(prRouteFor(facts)).toBe(route);
   });

@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  GITHUB_APP_SIGNED_OUT,
   githubConnectionSchema,
   shipPreviewSchema,
   shipResultSchema,
@@ -322,7 +323,7 @@ describe('ship', { timeout: 60_000 }, () => {
       active: 'gh_cli',
       ghCli: { installed: true, host: 'github.com', login: 'octo-cli' },
       token: null,
-      app: { available: false },
+      app: GITHUB_APP_SIGNED_OUT,
     });
   });
 

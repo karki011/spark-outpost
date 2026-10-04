@@ -7,6 +7,7 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
   return [
     ...(keepApiKeys ? [] : connectableIdSchema.options),
     'github',
+    'github-app',
     ...ticketSourceIdSchema.options.map((source) => `ticket:${source}` as const),
     ...rows.map((row) => `mcp:${row.id}` as const),
   ];

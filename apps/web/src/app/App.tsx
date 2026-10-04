@@ -165,6 +165,10 @@ function ChatShell({ entering }: { entering: boolean }) {
           setSettings('sparks');
           return;
         }
+        if (target === 'connectors') {
+          setSettings('tools');
+          return;
+        }
         if (target === 'spark-new') {
           openTeammateSheet({ kind: 'create' });
           return;

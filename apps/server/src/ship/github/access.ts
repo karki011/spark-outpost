@@ -1,5 +1,16 @@
-import type { GitHubConnectionStatus } from '@spark-outpost/contracts';
+import {
+  GITHUB_APP_SIGNED_OUT,
+  type GitHubAppProject,
+  type GitHubAppStatus,
+  type GitHubConnectionStatus,
+} from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
+import {
+  appConnection,
+  deleteAppConnection,
+  saveAppRepos,
+  type AppConnection,
+} from '../../persistence/github-app.ts';
 import {
   deleteGitHubToken,
   gitHubToken,
@@ -10,7 +21,10 @@ import type { RunCommand } from '../../setup/command.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import { pickRemote } from '../git.ts';
 import { apiBaseFor, parseRemoteUrl, repoSlug, type RemoteRepo } from '../remote.ts';
-import { restConnection, type GitHubConnection } from './connection.ts';
+import { GITHUB_APP_HOST, installUrl, type GitHubAppConfig } from './app-config.ts';
+import { coversRepo, reachableRepos } from './app-repos.ts';
+import { appRequest, appTokensSaved, forgetAppTokens } from './app-tokens.ts';
+import { restConnection, type GitHubConnection, type GitHubRequest } from './connection.ts';
 import { validateToken } from './token.ts';
 import { ghCliRequest, tokenRequest } from './transports.ts';
 
@@ -26,6 +40,8 @@ export interface GitHubDeps {
   fetch: typeof fetch;
   apiUrl?: string | undefined;
   loginPath?: () => Promise<string | null>;
+  app?: GitHubAppConfig | null | undefined;
+  now?: (() => number) | undefined;
 }
 
 interface GhCli {
@@ -73,16 +89,85 @@ async function ghLoggedIn(deps: GitHubDeps, host: string): Promise<GitHubConnect
   return cli?.login ? ghConnection(deps, cli.path, host) : null;
 }
 
-export async function connectionsFor(deps: GitHubDeps, host: string): Promise<GitHubConnection[]> {
-  const [token, gh] = await Promise.all([tokenConnection(deps, host), ghLoggedIn(deps, host)]);
-  return [token, gh].filter((connection): connection is GitHubConnection => connection !== null);
+async function signedInApp(deps: GitHubDeps): Promise<AppConnection | null> {
+  if (!deps.app) return null;
+  const row = await appConnection(deps.db, deps.workspaceId);
+  return row?.state === 'connected' ? row : null;
+}
+
+function appApiRequest(deps: GitHubDeps): GitHubRequest {
+  return appRequest(deps, apiBaseFor(GITHUB_APP_HOST, deps.apiUrl));
+}
+
+function appApi(deps: GitHubDeps): GitHubConnection {
+  return restConnection('app', GITHUB_APP_HOST, appApiRequest(deps));
+}
+
+export async function appCovers(deps: GitHubDeps, repo: RemoteRepo): Promise<boolean> {
+  const row = await signedInApp(deps);
+  return row !== null && coversRepo(row.repos, repo);
+}
+
+async function appConnectionFor(
+  deps: GitHubDeps,
+  repo: RemoteRepo,
+): Promise<GitHubConnection | null> {
+  return (await appCovers(deps, repo)) ? appApi(deps) : null;
+}
+
+export async function connectionsFor(
+  deps: GitHubDeps,
+  repo: RemoteRepo,
+): Promise<GitHubConnection[]> {
+  const found = await Promise.all([
+    appConnectionFor(deps, repo),
+    tokenConnection(deps, repo.host),
+    ghLoggedIn(deps, repo.host),
+  ]);
+  return found.filter((connection): connection is GitHubConnection => connection !== null);
 }
 
 export async function connectionFor(
   deps: GitHubDeps,
-  host: string,
+  repo: RemoteRepo,
 ): Promise<GitHubConnection | null> {
-  return (await tokenConnection(deps, host)) ?? (await ghLoggedIn(deps, host));
+  return (
+    (await appConnectionFor(deps, repo)) ??
+    (await tokenConnection(deps, repo.host)) ??
+    (await ghLoggedIn(deps, repo.host))
+  );
+}
+
+async function projectCoverage(deps: GitHubDeps, repos: readonly string[]) {
+  const projects: GitHubAppProject[] = [];
+  for (const project of await listProjects(deps.db, deps.workspaceId)) {
+    const remote = await pickRemote(project.rootPath, null).catch(() => null);
+    const repo = remote ? parseRemoteUrl(remote.url) : null;
+    if (repo?.host !== GITHUB_APP_HOST) continue;
+    projects.push({
+      project: project.name,
+      repo: repoSlug(repo),
+      covered: coversRepo(repos, repo),
+    });
+  }
+  return projects;
+}
+
+async function appStatus(deps: GitHubDeps): Promise<GitHubAppStatus> {
+  if (!deps.app) return GITHUB_APP_SIGNED_OUT;
+  const available = { ...GITHUB_APP_SIGNED_OUT, available: true, installUrl: installUrl(deps.app) };
+  const row = await appConnection(deps.db, deps.workspaceId);
+  if (!row) return available;
+  const usable = row.state === 'connected' && (await appTokensSaved(deps));
+  return {
+    ...available,
+    state: usable ? 'connected' : 'needs_sign_in',
+    login: row.login,
+    repos: row.repos,
+    reposTruncated: row.reposTruncated,
+    projects: await projectCoverage(deps, row.repos),
+    checkedAt: row.checkedAt.toISOString(),
+  };
 }
 
 export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
@@ -90,12 +175,28 @@ export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionSt
   const tokenSaved =
     token !== null && (await deps.secrets.get('github').catch(() => null)) !== null;
   const cli = await ghCli(deps, DEFAULT_GITHUB_HOST);
+  const app = await appStatus(deps);
+  const fallback = tokenSaved ? 'token' : cli?.login ? 'gh_cli' : null;
   return {
-    active: tokenSaved ? 'token' : cli?.login ? 'gh_cli' : null,
+    active: app.state === 'connected' ? 'app' : fallback,
     ghCli: { installed: cli !== null, host: DEFAULT_GITHUB_HOST, login: cli?.login ?? null },
     token: tokenSaved ? token : null,
-    app: { available: false },
+    app,
   };
+}
+
+export async function recheckAppRepos(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
+  if (await signedInApp(deps)) {
+    await saveAppRepos(deps.db, deps.workspaceId, await reachableRepos(appApiRequest(deps)));
+  }
+  return gitHubStatus(deps);
+}
+
+export async function disconnectApp(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
+  await deleteAppConnection(deps.db, deps.workspaceId);
+  await deps.secrets.delete('github-app').catch(() => undefined);
+  forgetAppTokens(deps.workspaceId);
+  return gitHubStatus(deps);
 }
 
 async function projectRepos(deps: GitHubDeps, host: string): Promise<RemoteRepo[]> {

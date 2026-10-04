@@ -4,6 +4,7 @@ import { repoSlug, type RemoteRepo } from './remote.ts';
 export interface RouteFacts {
   hasRemote: boolean;
   repo: RemoteRepo | null;
+  app: boolean;
   token: boolean;
   gh: boolean;
 }
@@ -11,6 +12,7 @@ export interface RouteFacts {
 export function prRouteFor(facts: RouteFacts): PrRoute {
   if (!facts.hasRemote) return 'commit';
   if (!facts.repo) return 'push';
+  if (facts.app) return 'app';
   if (facts.token) return 'token';
   if (facts.gh) return 'gh_cli';
   return linkKind(facts.repo) ? 'link' : 'push';

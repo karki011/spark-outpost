@@ -63,6 +63,12 @@ export interface GitHubConnection {
   ): Promise<PullRequest>;
 }
 
+export const GITHUB_VIA: Record<GitHubMethod, string> = {
+  app: 'GitHub sign-in (GitHub App, as you)',
+  token: 'saved PAT',
+  gh_cli: 'gh CLI',
+};
+
 export class GitHubApiError extends Error {
   readonly status: number;
 

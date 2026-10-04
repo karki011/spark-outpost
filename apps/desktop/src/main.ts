@@ -34,6 +34,7 @@ import {
   startHeartbeat,
   type HeartbeatTimer,
 } from './heartbeat.ts';
+import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
@@ -306,7 +307,10 @@ async function launch(): Promise<void> {
     token,
     version: app.getVersion(),
     webRoot: layout.webRoot,
-    baseEnv: process.env,
+    baseEnv: {
+      ...gitHubAppEnv(await readBakedGitHubApp(app.getAppPath())),
+      ...process.env,
+    },
   };
   if (!(await migrateBeforeStart(launchInfo, databaseOptions))) return;
 

@@ -161,3 +161,112 @@
   margin-right: 7px;
   vertical-align: middle;
 }
+.gh-app,
+.gh-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+}
+.gh-code-skel {
+  width: 100%;
+  max-width: 320px;
+}
+.gh-code-row,
+.gh-actions,
+.gh-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.gh-code-value {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+.gh-actions .btn svg,
+.gh-link svg {
+  width: 12px;
+  height: 12px;
+}
+.gh-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.gh-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gh-avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--raise);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}
+.gh-cover {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-cover li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.gh-cover .gh-state {
+  font-weight: 400;
+}
+.gh-cover b {
+  font-weight: 500;
+}
+.gh-cover-repo {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.gh-repos {
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.gh-repos summary {
+  cursor: pointer;
+}
+.gh-repos ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+.gh-actions a.btn {
+  text-decoration: none;
+}

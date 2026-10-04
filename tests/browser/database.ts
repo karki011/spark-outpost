@@ -54,6 +54,7 @@ const RESET_TABLES = [
   'advisor_connections',
   'profiles',
   'github_tokens',
+  'github_app_connections',
   'ticket_connections',
   'ticket_events',
   'tickets',
