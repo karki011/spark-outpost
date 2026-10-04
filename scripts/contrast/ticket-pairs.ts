@@ -7,16 +7,14 @@ const ROWS = {
 };
 
 const TONES = {
-  needs: 'var(--warn)',
-  bad: 'var(--danger)',
-  spark: 'var(--accent-text)',
-  started: 'var(--text)',
-  next: 'var(--muted)',
-  review: 'var(--accent-text)',
+  todo: 'var(--muted)',
+  in_progress: 'var(--accent-text)',
+  in_review: 'var(--warn)',
+  blocked: 'var(--danger)',
   done: 'var(--success)',
 };
 
-const TINTED = new Set(['needs', 'bad', 'spark', 'started']);
+const TINTED = new Set(['in_progress', 'in_review', 'blocked']);
 
 const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
   TINTED.has(tone)
@@ -24,7 +22,7 @@ const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
         {
           id: `tickets.chip-${tone}`,
           group: 'Tickets',
-          label: `${tone} status chip`,
+          label: `${tone} status badge`,
           fg,
           bg: [`color-mix(in srgb, ${fg} 11%, var(--panel))`],
           kind: 'text' as const,
@@ -33,7 +31,7 @@ const rowChips: Pair[] = Object.entries(TONES).flatMap(([tone, fg]) =>
     : Object.entries(ROWS).map(([row, bg]) => ({
         id: `tickets.chip-${tone}-on-${row}`,
         group: 'Tickets',
-        label: `${tone} status chip on a ${row} row`,
+        label: `${tone} status badge on a ${row} row`,
         fg,
         bg: [bg],
         kind: 'text' as const,

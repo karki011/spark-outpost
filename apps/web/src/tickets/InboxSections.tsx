@@ -1,10 +1,9 @@
 import { memo } from 'react';
 import type { AttentionSettings, InboxTicket, TicketSection } from '@spark-outpost/contracts';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
-import { UserBlob } from '../brand/UserBlob.tsx';
 import { rowPreview } from './row-preview.ts';
 import { SectionHeader } from './SectionHeader.tsx';
-import { StatusChip } from './StatusChip.tsx';
+import { SparkFace } from './StatusChip.tsx';
 import type { LiveTicket } from './ticket-flow.ts';
 import {
   ageTitle,
@@ -51,14 +50,6 @@ function syncProblem(ticket: InboxTicket): string | null {
   return `${sync.message ?? 'The last change failed.'} Details and Retry are in the ticket.`;
 }
 
-function Assignee({ name }: { name: string }) {
-  return (
-    <span className="ir-who" role="img" aria-label={`Assigned to ${name}`} title={name}>
-      <UserBlob displayName={name} size={18} />
-    </span>
-  );
-}
-
 const InboxRow = memo(function InboxRow({
   entry,
   now,
@@ -81,8 +72,12 @@ const InboxRow = memo(function InboxRow({
       ticketKey={ticket.key}
       title={ticket.title}
       priorityRank={ticket.priorityRank}
+      status={ticket.status}
+      statusName={ticket.statusName}
+      assignee={ticket.assignedTo?.name ?? null}
       reason={entry.line}
-      tone="none"
+      tone={entry.tone}
+      reasonIcon={entry.section === 'spark' ? <SparkFace chat={entry.chat} /> : undefined}
       more={entry.section === 'attention' ? ticket.flags.slice(1).map((flag) => flag.text) : []}
       age={
         ticket.age
@@ -93,8 +88,6 @@ const InboxRow = memo(function InboxRow({
       snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date(now)) : null}
       selected={selected}
       onSelect={() => onSelect(ticket)}
-      chip={<StatusChip section={entry.section} tone={entry.tone} chat={entry.chat} />}
-      avatar={ticket.assignedTo ? <Assignee name={ticket.assignedTo.name} /> : null}
       preview={rowPreview(entry, now)}
       links={
         <RowLinks

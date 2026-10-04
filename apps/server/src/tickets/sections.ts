@@ -86,7 +86,7 @@ function started(facts: TicketFacts): Placement | null {
   if (ticket.status !== 'in_progress' && !chat) return null;
   return {
     section: 'started',
-    reason: chat ? 'Started · chat idle' : 'In progress · no chat',
+    reason: chat ? 'Chat idle' : 'No chat yet',
     tone: 'none',
     age: age(facts.statusSince ?? chat?.at, 'Started'),
   };

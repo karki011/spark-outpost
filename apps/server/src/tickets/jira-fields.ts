@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import type { TicketSummary } from '@spark-outpost/contracts';
 
-export const JIRA_EXTRA_FIELDS = ['assignee', 'duedate', 'labels', 'resolutiondate'];
+export const JIRA_EXTRA_FIELDS = [
+  'assignee',
+  'duedate',
+  'labels',
+  'resolutiondate',
+  'reporter',
+  'created',
+];
 
 export const jiraExtraFieldsShape = {
   assignee: z
@@ -11,6 +18,8 @@ export const jiraExtraFieldsShape = {
   duedate: z.string().nullable().optional(),
   labels: z.array(z.string()).optional(),
   resolutiondate: z.string().nullable().optional(),
+  reporter: z.object({ displayName: z.string() }).nullable().optional().catch(null),
+  created: z.string().nullable().optional(),
 };
 
 type JiraExtraFields = z.infer<z.ZodObject<typeof jiraExtraFieldsShape>>;
@@ -35,7 +44,10 @@ function isoOrNull(value: string | null | undefined): string | null {
 
 export function jiraExtras(
   fields: JiraExtraFields & { priority?: { name: string } | null | undefined },
-): Pick<TicketSummary, 'priorityRank' | 'assignedTo' | 'labels' | 'dueDate' | 'doneAt'> {
+): Pick<
+  TicketSummary,
+  'priorityRank' | 'assignedTo' | 'labels' | 'dueDate' | 'doneAt' | 'reporter' | 'createdAt'
+> {
   const assignee = fields.assignee;
   return {
     priorityRank: jiraPriorityRank(fields.priority?.name),
@@ -43,5 +55,7 @@ export function jiraExtras(
     labels: fields.labels ?? [],
     dueDate: fields.duedate ?? null,
     doneAt: isoOrNull(fields.resolutiondate),
+    reporter: fields.reporter ? { name: fields.reporter.displayName } : null,
+    createdAt: isoOrNull(fields.created),
   };
 }

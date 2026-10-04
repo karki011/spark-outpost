@@ -38,6 +38,8 @@ const ticket = (key: string, title: string): TicketSummary => ({
   labels: [],
   dueDate: null,
   doneAt: null,
+  reporter: null,
+  createdAt: null,
 });
 
 beforeEach(async () => {

@@ -78,16 +78,18 @@ test('groups tickets by where they are in your flow, with a chip and Spark progr
   const regions = main(page).locator('section[aria-label]');
   await expect(regions).toHaveText(GROUPS.map((name) => new RegExp(`^${escape(name)}`)));
 
-  await expect(row(page, 'WEB-421')).toContainText(/Needs you.*Approve plan/);
-  await expect(row(page, 'WEB-418')).toContainText(/Needs you.*PR #342 checks failing/);
-  await expect(row(page, 'API-81')).toContainText(/Needs you.*Blocked/);
+  await expect(row(page, 'WEB-421')).toContainText(/In Progress.*Approve plan/);
+  await expect(row(page, 'WEB-418')).toContainText(/In Review.*PR #342 checks failing/);
+  await expect(row(page, 'API-81').locator('.fchip.blocked')).toHaveText('Blocked');
   const spark = section(page, 'In progress with Spark');
   await expect(spark.locator('li.irow')).toHaveCount(1);
-  await expect(row(page, 'WEB-433')).toContainText(/With Spark.*2\/3 · Pip working/);
-  await expect(row(page, 'API-84')).toContainText(/Started.*Chat finished · not shipped/);
+  await expect(row(page, 'WEB-433')).toContainText('2/3 · Pip working');
+  await expect(row(page, 'API-84')).toContainText('Chat finished · not shipped');
   await expect(section(page, 'Started')).toContainText('API-84');
   await expect(section(page, 'Up next')).toContainText('ENG-1210');
-  await expect(row(page, 'API-77')).toContainText(/In review.*PR #341 · checks passing/);
+  await expect(row(page, 'API-77').locator('.fchip.in_review')).toHaveText('Code Review');
+  await expect(row(page, 'API-77')).toContainText('PR #341 · checks passing');
+  await expect(row(page, 'ENG-1210').locator('.fchip.todo')).toHaveText('Todo');
   await expect(row(page, 'WEB-433').getByRole('img', { name: /^Assigned to / })).toBeVisible();
   const done = section(page, 'Done recently');
   await expect(done.getByRole('button', { name: /^Done recently/ })).toHaveAttribute(
@@ -95,7 +97,7 @@ test('groups tickets by where they are in your flow, with a chip and Spark progr
     'false',
   );
   await done.getByRole('button', { name: /^Done recently/ }).click();
-  await expect(row(page, 'ENG-1190')).toContainText(/Done/);
+  await expect(row(page, 'ENG-1190').locator('.fchip.done')).toHaveText('Done');
 
   await expect(views(page).getByRole('button')).toHaveText([
     /^Inbox\s*10$/,
@@ -199,14 +201,14 @@ test('a linked chat and its pull request move the ticket between groups without 
 
   await askForPlanApproval(running!);
   await expect(section(page, 'Needs you')).toContainText('WEB-433', { timeout: 15_000 });
-  await expect(row(page, 'WEB-433')).toContainText(/Needs you.*Approve plan/);
+  await expect(row(page, 'WEB-433')).toContainText('Approve plan');
   await expect(section(page, 'In progress with Spark')).toHaveCount(0);
   await expect(views(page).getByRole('button', { name: 'Needs you 5' })).toBeVisible();
 
   await setPullChecks(341, 'failing');
   const watch = await watchPull(reviewing!, 341);
   await markWatchChecks(watch, 'failing');
-  await expect(row(page, 'API-77')).toContainText(/Needs you.*PR #341 checks failing/, {
+  await expect(row(page, 'API-77')).toContainText('PR #341 checks failing', {
     timeout: 30_000,
   });
   await expect(section(page, 'In review / PR open')).toHaveCount(0);
@@ -237,7 +239,7 @@ test('the grouped list has no serious accessibility issues in light, dark and at
   found.push(...(await violations('dark')));
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(row(page, 'WEB-433')).toContainText('With Spark');
+  await expect(row(page, 'WEB-433')).toContainText('Pip working');
   found.push(...(await violations('phone')));
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

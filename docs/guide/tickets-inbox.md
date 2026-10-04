@@ -21,6 +21,8 @@ First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
 
 Groups update as chats and pull requests change. Snooze a ticket to hide it until later.
 
+Select a ticket for its details: status, assignee, reporter, created date and pull requests. Drag the pane's edge to resize it.
+
 ## Start a chat from a ticket
 
 1. Select **Start** on the ticket's row.

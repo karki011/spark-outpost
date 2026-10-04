@@ -28,6 +28,8 @@ export interface FakeLinearIssue {
   priority: number;
   dueDate: string | null;
   completedAt: string | null;
+  createdAt: string;
+  creatorId: string | null;
   labels: string[];
   comments: { body: string; createdAt: string; user: string }[];
   attachments: { title: string; url: string }[];
@@ -77,6 +79,8 @@ const issue = (
   priority: 2,
   dueDate: null,
   completedAt: null,
+  createdAt: '2026-09-18T09:00:00.000Z',
+  creatorId: 'user-2',
   labels: ['bug'],
   comments: [],
   attachments: [],
@@ -102,6 +106,7 @@ function seedIssues(): FakeLinearIssue[] {
       title: 'Add a test for the divider',
       stateId: 'eng-progress',
       updatedAt: '2026-09-25T09:00:00.000Z',
+      creatorId: null,
     }),
     issue({
       identifier: 'ENG-14',
@@ -183,6 +188,8 @@ export function fakeLinear(): FakeLinear {
       priority: item.priority,
       dueDate: item.dueDate,
       completedAt: item.completedAt,
+      createdAt: item.createdAt,
+      creator: item.creatorId ? { name: linearPeople[item.creatorId] ?? item.creatorId } : null,
       assignee: item.assigneeId
         ? { id: item.assigneeId, name: linearPeople[item.assigneeId] ?? item.assigneeId }
         : null,
@@ -279,6 +286,8 @@ export function fakeLinear(): FakeLinear {
       priority: input.priority ?? 0,
       dueDate: null,
       completedAt: null,
+      createdAt: new Date().toISOString(),
+      creatorId: LINEAR_ME,
       labels: (input.labelIds ?? []).map(
         (id) => TEAM_LABELS.find((label) => label.id === id)?.name ?? id,
       ),

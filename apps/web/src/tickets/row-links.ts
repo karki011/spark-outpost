@@ -1,4 +1,9 @@
-import type { InboxTicket, PullRequestStatus } from '@spark-outpost/contracts';
+import type {
+  InboxTicket,
+  PullRequestChecks,
+  PullRequestStatus,
+  TicketRef,
+} from '@spark-outpost/contracts';
 import type { GlyphName } from './ticket-icons.tsx';
 
 export type PullTone = 'muted' | 'open' | 'bad' | 'warn' | 'good' | 'merged';
@@ -38,4 +43,47 @@ const CHAT_STATES: Record<NonNullable<InboxTicket['chat']>['state'], string> = {
 
 export function chatStateText(state: NonNullable<InboxTicket['chat']>['state']): string {
   return CHAT_STATES[state];
+}
+
+const PULL_URL =
+  /^https?:\/\/[^/]+\/(.+?)\/(?:-\/)?(?:pull|pull-requests|merge_requests)\/(\d+)(?:[/?#]|$)/i;
+
+export interface PullEntry {
+  url: string;
+  number: number | null;
+  repo: string | null;
+  title: string | null;
+  badge: PullBadge;
+  checks: PullRequestChecks | null;
+}
+
+function entryOf(ref: TicketRef, status: PullRequestStatus | null): PullEntry {
+  const match = PULL_URL.exec(ref.url);
+  const known = status?.url === ref.url ? status : null;
+  return {
+    url: ref.url,
+    number: known?.number ?? (match ? Number(match[2]) : null),
+    repo: known?.repo ?? match?.[1] ?? null,
+    title: ref.title === ref.url ? null : ref.title,
+    badge: pullBadge(known),
+    checks: known && known.state !== 'merged' && known.state !== 'closed' ? known.checks : null,
+  };
+}
+
+export function ticketPulls(
+  ticket: InboxTicket | null,
+  trackerLinks: readonly TicketRef[],
+): PullEntry[] {
+  const status = ticket?.pullRequest ?? null;
+  const refs: TicketRef[] = [
+    ...(status ? [{ title: status.url, url: status.url }] : []),
+    ...(ticket?.work.flatMap((work) => work.pullRequests) ?? []),
+    ...trackerLinks.filter((link) => PULL_URL.test(link.url)),
+  ];
+  const byUrl = new Map<string, TicketRef>();
+  for (const ref of refs) {
+    const seen = byUrl.get(ref.url);
+    if (!seen || seen.title === seen.url) byUrl.set(ref.url, ref);
+  }
+  return [...byUrl.values()].map((ref) => entryOf(ref, status));
 }

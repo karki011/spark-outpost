@@ -10,28 +10,6 @@ import {
 import type { RowTone } from './TicketRow.tsx';
 import { ticketId } from './ticket-model.ts';
 
-export type ChipTone = 'needs' | 'bad' | 'spark' | 'started' | 'next' | 'review' | 'done';
-
-export interface FlowChip {
-  label: string;
-  tone: ChipTone;
-}
-
-const CHIPS: Record<TicketSection, FlowChip> = {
-  attention: { label: 'Needs you', tone: 'needs' },
-  spark: { label: 'With Spark', tone: 'spark' },
-  started: { label: 'Started', tone: 'started' },
-  up_next: { label: 'Up next', tone: 'next' },
-  review: { label: 'In review', tone: 'review' },
-  done: { label: 'Done', tone: 'done' },
-};
-
-export function flowChip(section: TicketSection, tone: RowTone): FlowChip {
-  return section === 'attention' && tone === 'error'
-    ? { ...CHIPS.attention, tone: 'bad' }
-    : CHIPS[section];
-}
-
 export type ChatLookup = ReadonlyMap<string, ConversationSummary>;
 
 export function chatLookup(chats: readonly ConversationSummary[]): ChatLookup {

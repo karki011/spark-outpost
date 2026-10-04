@@ -109,5 +109,7 @@ export function summaryOf(ticket: TicketDetail): TicketSummary {
     labels: ticket.labels,
     dueDate: ticket.dueDate,
     doneAt: ticket.doneAt,
+    reporter: ticket.reporter,
+    createdAt: ticket.createdAt,
   };
 }

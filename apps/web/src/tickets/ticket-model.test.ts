@@ -33,6 +33,8 @@ function inbox(fields: Partial<InboxTicket> = {}): InboxTicket {
     labels: [],
     dueDate: null,
     doneAt: null,
+    reporter: null,
+    createdAt: null,
     work: [],
     section: 'up_next',
     flags: [],

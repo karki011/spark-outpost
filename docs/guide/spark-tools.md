@@ -37,7 +37,7 @@ Tools that read change nothing.
 | The Map, and what breaks if a file changes                               | `spark_map`                                                                               |
 | Where something lives in the code                                        | `spark_find`                                                                              |
 | Open terminals                                                           | `spark_terminals`                                                                         |
-| Tickets, or one ticket in full (`action` read)                           | `spark_tickets`                                                                           |
+| Tickets, one in full (`action` read), or any by `action` search          | `spark_tickets`                                                                           |
 | Your Sparks, their state and standing instructions                       | `spark_sparks`                                                                            |
 | The audit log, including actions that ran without review                 | `spark_audit`                                                                             |
 | How Spark works, and this guide                                          | `spark_guide`, `spark_docs`                                                               |

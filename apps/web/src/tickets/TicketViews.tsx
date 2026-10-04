@@ -1,7 +1,5 @@
 import type { KeyboardEvent } from 'react';
 import type { AttentionSettings } from '@spark-outpost/contracts';
-import { CHIP_GLYPHS } from './StatusChip.tsx';
-import { flowChip } from './ticket-flow.ts';
 import { Glyph, type GlyphName } from './ticket-icons.tsx';
 import { attentionRule, type TicketView } from './ticket-model.ts';
 import { nextViewIndex, type ViewItem } from './ticket-views.ts';
@@ -13,11 +11,16 @@ interface TicketViewsProps {
   onView: (view: TicketView) => void;
 }
 
-function glyphOf(view: TicketView): GlyphName {
-  if (view === 'inbox') return 'home';
-  if (view === 'snoozed') return 'snooze';
-  return CHIP_GLYPHS[flowChip(view, 'none').tone];
-}
+const GLYPHS: Record<TicketView, GlyphName> = {
+  inbox: 'home',
+  attention: 'warn',
+  spark: 'chat',
+  started: 'play',
+  up_next: 'circle',
+  review: 'pr',
+  done: 'check',
+  snoozed: 'snooze',
+};
 
 function itemClass(item: ViewItem): string {
   if (item.count === 0) return 'ib-item empty';
@@ -47,7 +50,7 @@ export function TicketViews({ items, current, settings, onView }: TicketViewsPro
           tabIndex={item.id === tabStop ? 0 : -1}
           onClick={() => onView(item.id)}
         >
-          <Glyph name={glyphOf(item.id)} size={15} />
+          <Glyph name={GLYPHS[item.id]} size={15} />
           <span className="l">{item.label}</span>
           <span className="n">{item.count}</span>
         </button>

@@ -41,6 +41,8 @@ const issueSchema = z.object({
   priority: z.number().int().min(0).max(4).nullable().optional(),
   dueDate: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
+  createdAt: z.string().nullable().optional(),
+  creator: z.object({ name: z.string() }).nullable().optional(),
   assignee: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
   labels: z.object({ nodes: z.array(z.object({ name: z.string() })) }).optional(),
   state: stateSchema,
@@ -76,7 +78,7 @@ const successSchema = (field: string) =>
   >;
 
 const ISSUE_FIELDS = `id identifier title url updatedAt priorityLabel priority dueDate completedAt
-  assignee { id name } labels { nodes { name } }
+  createdAt creator { name } assignee { id name } labels { nodes { name } }
   state { name type } team { key } cycle { name number }`;
 
 const VIEWER = 'query { viewer { id name email } }';
@@ -213,6 +215,8 @@ export function linearSource(
       labels: issue.labels?.nodes.map((label) => label.name) ?? [],
       dueDate: issue.dueDate ?? null,
       doneAt: issue.completedAt ?? null,
+      reporter: issue.creator ? { name: issue.creator.name } : null,
+      createdAt: issue.createdAt ?? null,
     };
   }
 

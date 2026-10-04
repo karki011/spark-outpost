@@ -1,5 +1,3 @@
-import type { TicketStatus } from '@spark-outpost/contracts';
-
 const PATHS = {
   ticket:
     'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zM10 9v6',
@@ -25,6 +23,8 @@ const PATHS = {
     'M6 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 7v10M6 7a8 8 0 0 0 10 6',
   'pr-closed':
     'M6 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 7v10M18 17v-5M15.5 4.5l5 5M20.5 4.5l-5 5',
+  eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  blocked: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM5.6 5.6l12.8 12.8',
   'x-circle': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6',
 };
 
@@ -71,18 +71,5 @@ export function PriorityGlyph({ rank }: { rank: number }) {
         <i key={index} className={index < bars ? 'on' : undefined} />
       ))}
     </span>
-  );
-}
-
-const STATUS_CLASS: Record<TicketStatus, string> = {
-  todo: 'todo',
-  in_progress: 'prog',
-  in_review: 'rev',
-  done: 'done',
-};
-
-export function StatusCircle({ status, label }: { status: TicketStatus; label: string }) {
-  return (
-    <span className={`bk ${STATUS_CLASS[status]}`} role="img" aria-label={label} title={label} />
   );
 }

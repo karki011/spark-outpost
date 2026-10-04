@@ -37,6 +37,8 @@ function linearIssue(
     priority: 3,
     dueDate: null,
     completedAt: null,
+    createdAt: isoDaysAgo(5),
+    creatorId: 'user-3',
     labels: [],
     comments: [],
     attachments: [],
@@ -74,6 +76,7 @@ function seedLinear() {
       title: 'Write the release notes for 3.2',
       dueDate: dayFromNow(0),
       priority: 3,
+      creatorId: null,
     }),
     linearIssue({
       identifier: 'WEB-421',
@@ -134,6 +137,8 @@ function jiraIssue(fields: Partial<FakeJiraIssue> & Pick<FakeJiraIssue, 'key' | 
     priority: 'Medium',
     duedate: null,
     resolutiondate: null,
+    reporter: 'acc-3',
+    created: jiraDaysAgo(6),
     labels: [],
     comments: [],
     remoteLinks: [],
@@ -147,6 +152,7 @@ function seedJira() {
   jiraPeople['acc-3'] = 'Priya Nair';
   jira.workflows.API = {
     'To Do': 'new',
+    'Ready for implementation': 'new',
     'In Progress': 'indeterminate',
     'Code Review': 'indeterminate',
     Blocked: 'indeterminate',
@@ -174,6 +180,14 @@ function seedJira() {
       summary: 'Resumable uploads for files over 1 GB',
       assignee: null,
       priority: 'Low',
+      status: 'Ready for implementation',
+      remoteLinks: [
+        {
+          globalId: 'https://github.com/acme/api/pull/52',
+          url: 'https://github.com/acme/api/pull/52',
+          title: 'Resumable upload spike',
+        },
+      ],
     }),
     jiraIssue({
       key: 'API-90',

@@ -1,7 +1,6 @@
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import {
   ticketSourceNames,
-  ticketStatusLabels,
   type TicketSearch,
   type TicketSearchResult,
 } from '@spark-outpost/contracts';
@@ -62,7 +61,9 @@ function SearchRow({
       ticketKey={ticket.key}
       title={ticket.title}
       priorityRank={ticket.priorityRank}
-      status={{ status: ticket.status, label: ticketStatusLabels[ticket.status] }}
+      status={ticket.status}
+      statusName={ticket.statusName}
+      assignee={ticket.assignedTo?.name ?? null}
       reason={whose(ticket)}
       tone="none"
       more={[]}

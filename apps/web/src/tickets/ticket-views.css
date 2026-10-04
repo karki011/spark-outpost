@@ -111,6 +111,7 @@
 .tk .tk-detail.tk-none {
   display: none;
   place-items: center;
+  padding: 18px 22px;
   font-size: 14px;
   color: var(--faint);
   text-align: center;

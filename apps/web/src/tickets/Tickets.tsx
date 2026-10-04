@@ -34,6 +34,7 @@ import { TicketsSkeleton } from './TicketsSkeleton.tsx';
 import { TicketViews } from './TicketViews.tsx';
 import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
+import { useDetailWidth } from './use-detail-width.ts';
 import { useLiveTickets } from './use-live-tickets.ts';
 import { useTicketInbox } from './use-ticket-inbox.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -88,6 +89,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   const [selectedId, setSelectedId] = useState(() => (focusId ? inboxIdOf(focusId) : null));
   const [starting, setStarting] = useState<DetailTicket | null>(null);
   const [density, setDensity] = useDensity();
+  const [detailWidth, setDetailWidth] = useDetailWidth();
   const searchRef = useRef<HTMLInputElement>(null);
   const toaster = useToast();
   const assigner = useAssign(toaster.show);
@@ -108,7 +110,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
 
   const data = inbox.data;
   const { setText: searchFor } = search;
-  const focusChecked = useRef(false);
+  const focusChecked = useRef(selectedId === null);
   useEffect(() => {
     if (focusChecked.current || !data || !selectedId) return;
     focusChecked.current = true;
@@ -261,6 +263,9 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   assigning={assigner.state.pending === ticketId(detail)}
                   confirming={assigner.isConfirming(detail, 'detail')}
                   assignError={assigner.state.errors[ticketId(detail)] ?? null}
+                  now={now}
+                  width={detailWidth}
+                  onWidth={setDetailWidth}
                   onConfirm={() => void assigner.confirm(detail)}
                   onCancelConfirm={assigner.cancel}
                   onClose={() => setSelectedId(null)}

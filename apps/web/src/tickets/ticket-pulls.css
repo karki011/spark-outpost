@@ -1,0 +1,45 @@
+.tk .pr-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tk .pr-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+
+.tk .pr-item:hover {
+  border-color: var(--faint);
+}
+
+.tk .pr-item .irl-pr {
+  flex-shrink: 0;
+}
+
+.tk .pr-t {
+  display: grid;
+  min-width: 0;
+}
+
+.tk .pr-t b {
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tk .pr-t small {
+  font-size: 12px;
+  color: var(--muted);
+}

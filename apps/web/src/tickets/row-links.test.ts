@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { PullRequestStatus } from '@spark-outpost/contracts';
-import { pullBadge } from './row-links.ts';
+import type { InboxTicket, PullRequestStatus } from '@spark-outpost/contracts';
+import { pullBadge, ticketPulls } from './row-links.ts';
 
 const pull = (fields: Partial<PullRequestStatus> = {}): PullRequestStatus => ({
   url: 'https://github.com/acme/web/pull/88',
@@ -39,5 +39,59 @@ describe('pull request badge', () => {
 
   it('says so when the pull request cannot be read', () => {
     expect(pullBadge(null)).toEqual({ label: 'status not available', tone: 'muted', glyph: 'pr' });
+  });
+});
+
+describe('pull requests on a ticket', () => {
+  const work = (url: string, title = url) => ({
+    taskId: null,
+    conversationId: '00000000-0000-4000-8000-000000000001',
+    startedAt: '2026-09-25T09:00:00Z',
+    pullRequests: [{ title, url }],
+  });
+  const inbox = (fields: Partial<InboxTicket>) =>
+    ({ pullRequest: null, work: [], ...fields }) as InboxTicket;
+
+  it('lists the PR Spark opened once, with its status, checks and title', () => {
+    const status = pull({ checks: 'failing' });
+    const pulls = ticketPulls(inbox({ pullRequest: status, work: [work(status.url, 'Fix CSV')] }), [
+      { title: 'acme/web#88', url: status.url },
+    ]);
+    expect(pulls).toEqual([
+      {
+        url: status.url,
+        number: 88,
+        repo: 'acme/web',
+        title: 'Fix CSV',
+        badge: pullBadge(status),
+        checks: 'failing',
+      },
+    ]);
+  });
+
+  it("adds pull requests the tracker links, and skips the tracker's other links", () => {
+    const pulls = ticketPulls(null, [
+      { title: 'Design doc', url: 'https://docs.example.test/doc/1' },
+      { title: 'Retry uploads', url: 'https://github.com/acme/api/pull/12' },
+      { title: 'MR', url: 'https://gitlab.example.test/acme/api/-/merge_requests/7' },
+    ]);
+    expect(pulls.map((entry) => [entry.repo, entry.number, entry.badge.label])).toEqual([
+      ['acme/api', 12, 'status not available'],
+      ['acme/api', 7, 'status not available'],
+    ]);
+  });
+
+  it('has nothing to show for a ticket without pull requests', () => {
+    expect(ticketPulls(inbox({}), [])).toEqual([]);
+    expect(ticketPulls(null, [])).toEqual([]);
+  });
+
+  it('drops the checks once a pull request is merged', () => {
+    const merged = pull({ state: 'merged', checks: 'passing', mergedAt: '2026-09-26T09:00:00Z' });
+    expect(ticketPulls(inbox({ pullRequest: merged }), [])[0]).toMatchObject({
+      checks: null,
+      title: null,
+      badge: { label: 'merged' },
+    });
   });
 });

@@ -94,9 +94,20 @@
 .tk .sk-irow {
   min-height: var(--row-h);
   display: grid;
-  grid-template-columns: 10px 16px 66px minmax(0, 1fr) 110px 34px;
+  grid-template-columns: 10px 16px 66px 132px minmax(0, 1fr) 110px 34px 18px;
   align-items: center;
   gap: 10px;
   padding: 0 18px 0 10px;
   border-bottom: 1px solid var(--line);
+}
+
+@container tk-list (max-width: 760px) {
+  .tk .sk-irow {
+    grid-template-columns: 10px 16px 66px 96px minmax(0, 1fr) 18px;
+  }
+
+  .tk .sk-irow > :nth-child(6),
+  .tk .sk-irow > :nth-child(7) {
+    display: none;
+  }
 }
