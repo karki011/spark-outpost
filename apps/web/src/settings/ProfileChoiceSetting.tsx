@@ -20,6 +20,7 @@ interface ProfileChoiceSettingProps<T> {
   doc?: DocTarget;
   hint: string | ((value: T) => string);
   toUpdate: (value: T) => UpdateProfileRequest;
+  onPick?: (value: T) => void;
 }
 
 export function ProfileChoiceSetting<T>({
@@ -30,6 +31,7 @@ export function ProfileChoiceSetting<T>({
   doc,
   hint,
   toUpdate,
+  onPick,
 }: ProfileChoiceSettingProps<T>) {
   const hintId = useId();
   const setting = useProfileSetting(saved, toUpdate);
@@ -49,7 +51,9 @@ export function ProfileChoiceSetting<T>({
         value={current.id}
         onChange={(id) => {
           const choice = choices.find((entry) => entry.id === id);
-          if (choice) setting.set(choice.value);
+          if (!choice) return;
+          setting.set(choice.value);
+          onPick?.(choice.value);
         }}
       />
     </SettingRow>

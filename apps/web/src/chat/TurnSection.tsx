@@ -10,6 +10,7 @@ import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
+import { turnAnchor } from './rail/outline-model.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { sameTurnDetail } from './turn-props.ts';
 
@@ -61,7 +62,13 @@ export const TurnSection = memo(function TurnSection({
     ) : null;
   const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
   return (
-    <section aria-label="Turn" data-assistant-message-id={assistantMessage?.id}>
+    <section
+      id={turnAnchor(run.id)}
+      data-turn={run.id}
+      tabIndex={-1}
+      aria-label="Turn"
+      data-assistant-message-id={assistantMessage?.id}
+    >
       {compactions.map((compaction) => (
         <CompactionDivider key={compaction.id} compaction={compaction} onOpenChat={onOpenChat} />
       ))}
