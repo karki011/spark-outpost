@@ -216,12 +216,30 @@ export function runsCommandsByRule(request: string): boolean {
   return prose !== request && !BUILD_VERB.test(prose);
 }
 
+const BROWSER_SUBJECT =
+  /\b(?:browser|screenshots?|console (?:logs?|errors?|messages?|output)|network (?:logs?|requests?|errors?)|localhost|127\.0\.0\.1)\b/i;
+const LOOK_VERB =
+  /\b(?:open|look at|inspect|check|read|view|screenshot|tell me|show me|report|describe|what)\b/i;
+const PORT_NUMBER = /\bport\s+\d+/gi;
+const TOLD_NOT_TO_CHANGE =
+  /\b(?:do not|don['’]?t|never|without|no need to)\s+(?:\w+\s+){0,2}?(?:chang|modif|edit|touch|delet|remov|writ|updat|fix|add|creat|mak)\w*(?:\s+(?:or|and|nor)\s+\w+)?/gi;
+
+export function looksAtPageByRule(request: string): boolean {
+  if (!BROWSER_SUBJECT.test(request)) return false;
+  const prose = request
+    .replace(NAMED_COMMAND, ' ')
+    .replace(PORT_NUMBER, ' ')
+    .replace(TOLD_NOT_TO_CHANGE, ' ');
+  return LOOK_VERB.test(prose) && !BUILD_VERB.test(prose);
+}
+
 const ASKS_HOW_OR_WHY =
   /^\s*(?:how (?:do|does|did|should|to|is|are)\b|how (?:can|could|would)\b(?! you\b)|what(?:['’]s)?\b(?! if\b)|why\b(?! (?:not|don['’]?t|can['’]?t|won['’]?t)\b)|where\b|when\b|which\b|who\b|(?:is|are) there\b|(?:does|do|is|are|should) (?:spark|i|it|we|the|builders?)\b|(?:can|could) (?:spark|i|builders?)\b)/i;
 
 export function questionByRule(request: string): boolean {
   if (THEN_CHANGE.test(request)) return false;
   if (runsCommandsByRule(request)) return true;
+  if (looksAtPageByRule(request)) return true;
   if (ASKS_FOR_ANSWER.test(request)) return true;
   if (!request.trim().endsWith('?')) return false;
   return ASKS_HOW_OR_WHY.test(request) || !BUILD_VERB.test(request);

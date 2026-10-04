@@ -14,6 +14,7 @@ import {
   isLargeDiff,
   planOnlyByRule,
   questionByRule,
+  looksAtPageByRule,
   runsCommandsByRule,
   reviewsExistingByRule,
   trivialByRule,
@@ -202,6 +203,28 @@ describe('risk rules', () => {
       'Add a `--verbose` flag',
     ]) {
       expect(runsCommandsByRule(request), request).toBe(false);
+    }
+  });
+
+  it('reads a request to look at a page in the browser as an answer, not build work', () => {
+    for (const request of [
+      'Start the dev server for this project, open the home page in the browser, tell me the heading text and what the button says, take a screenshot, then open /errors and tell me what the console and network logs show.',
+      "The dev server is already running at http://127.0.0.1:47733 (I started it). Use Spark's built-in browser: open the home page, tell me the heading, take a screenshot, then open /errors and report the console and network logs.",
+      'Inspect localhost on port 5173 and describe the layout',
+      'Take a screenshot of the pricing page in the browser and tell me what looks off',
+      'Open http://localhost:3000 in the browser and read the page. Do not change or delete any files.',
+      'Inspect the page in the browser without making changes, and don’t edit files yet.',
+    ]) {
+      expect(looksAtPageByRule(request), request).toBe(true);
+      expect(questionByRule(request), request).toBe(true);
+    }
+    for (const request of [
+      'Open the settings page in a dialog instead of a new tab',
+      'Open localhost:5173 in the browser and fix the header overlap',
+      'Check the browser console and then fix what you find',
+      'Add a screenshot of the browser to the README',
+    ]) {
+      expect(questionByRule(request), request).toBe(false);
     }
   });
 
