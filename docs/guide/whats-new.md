@@ -10,7 +10,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                                   | What to do                                                                   |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Spark Island shows code: edit steps open the change, edit cards show changed lines, finished chats the reply.  | See [Use Spark Island](desktop-companion.md#open-it).                        |
+| Spark Island shows code: the file being read or edited, each edit's change, and changed lines on edit cards.   | See [Use Spark Island](desktop-companion.md#open-it).                        |
 | **Browser** pane per chat (Mac app): agents read pages, you pick elements, **Preview** starts your dev server. | See [Use the browser](use-the-browser.md).                                   |
 | Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.                 | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
 | Slack connects: notifications, shared threads, start work from a thread, confirmed posts.                      | See [Connect Slack](connect-slack.md).                                       |
@@ -34,5 +34,4 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Pushes and PRs go through a route Spark controls.                                                       | Hover the branch chip. See [Ship a change](ship-and-pull-requests.md). |
 | Agents may open the PR themselves when you ask, at Full auto, or in **Auto** or **Bypass permissions**. | Say "open a PR" in your message.                                       |
 | The Tickets inbox groups tickets by where each one is.                                                  | See [Work from the Tickets inbox](tickets-inbox.md).                   |
-| Spark Island is wider and takes dropped files and folders.                                              | See [Use Spark Island](desktop-companion.md).                          |
 | Spark runs the `claude` and `codex` CLIs you installed.                                                 | Install the CLI if a tile says **CLI not installed**.                  |

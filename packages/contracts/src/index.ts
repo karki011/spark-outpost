@@ -21,6 +21,7 @@ export * from './checks.ts';
 export * from './checkpoints.ts';
 export * from './compaction.ts';
 export * from './conversations.ts';
+export * from './file-view.ts';
 export * from './orchestration.ts';
 export * from './projects.ts';
 export * from './roles.ts';

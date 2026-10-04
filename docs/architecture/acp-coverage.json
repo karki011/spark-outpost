@@ -146,12 +146,12 @@
   "session-update:tool_call": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Becomes a step named from the title, with absolute paths shortened to file names, and opens a task for the chat. kind becomes the step kind and locations and rawInput its target. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. name, pending status (looks like in_progress), content text and diffs are not kept on the step."
+    "note": "Becomes a step named from the title, with absolute paths shortened to file names, and opens a task for the chat. kind becomes the step kind and locations and rawInput its target. For read and edit kinds, the first location's path and line (with rawInput.limit for a read) are stored as a file_focus activity event (`file-focus.ts`), which Spark Island's file view reads; secret file names are skipped. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. name, pending status (looks like in_progress), content text and diffs are not kept on the step."
   },
   "session-update:tool_call_update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. Diffs are not kept."
+    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target, and a changed read or edit location stores a new file_focus event. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. Diffs are not kept."
   },
   "session-update:plan": {
     "status": "supported",

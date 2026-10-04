@@ -138,6 +138,110 @@
   line-clamp: 2;
 }
 
+.isl-now:has(.isl-file) {
+  grid-column: 1 / -1;
+}
+
+.isl-now-page:has(> .isl-file) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.isl-file {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--card-line);
+  border-radius: var(--r-sm);
+  background: var(--code);
+  animation: isl-code-in 0.22s ease-out both;
+}
+
+.isl-file-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--card-line);
+  font-size: 12px;
+}
+
+.isl-file-name,
+.isl-file-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isl-file-name {
+  flex: none;
+  max-width: 55%;
+}
+
+.isl-file-path {
+  min-width: 0;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.isl-file-state {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.isl-file-state[data-current] {
+  color: var(--accent-text);
+}
+
+.isl-file-body {
+  max-height: 126px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.isl-file-body table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  color: var(--code-foreground);
+  font:
+    11.5px/1.55 'Geist Mono',
+    ui-monospace,
+    monospace;
+}
+
+.isl-file-n {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: 44px;
+  min-width: 44px;
+  padding: 0 8px 0 6px;
+  background: var(--code);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.isl-file-c {
+  padding: 0 12px 0 8px;
+  white-space: pre;
+}
+
+.isl-file-body tr[data-marked] .isl-file-c {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.isl-file-body tr[data-marked] .isl-file-n {
+  color: var(--accent-text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
 @keyframes isl-code-in {
   from {
     opacity: 0;
@@ -145,6 +249,7 @@
   }
 }
 
-.isl-root[data-rm] .isl-pd {
+.isl-root[data-rm] .isl-pd,
+.isl-root[data-rm] .isl-file {
   animation: none;
 }

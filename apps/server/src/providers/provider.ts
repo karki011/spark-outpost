@@ -3,6 +3,7 @@ import type {
   AgentModeOption,
   ConfigOptionInfo,
   ConfigValues,
+  FileFocus,
   PlanDocumentSource,
   PlanEntry,
   ProtocolDirection,
@@ -146,6 +147,7 @@ export type ProviderOutput =
       toolKind?: string;
       target?: string;
     }
+  | ({ kind: 'file_focus' } & FileFocus)
   | { kind: 'text_delta'; delta: string }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
   | {

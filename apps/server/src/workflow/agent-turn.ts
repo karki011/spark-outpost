@@ -411,6 +411,7 @@ export async function runAgentTurn(
       options.onOutput?.(output);
       if (output.kind === 'step_started') await append(runEvents.stepStarted(output.name));
       if (output.kind === 'step_finished') await append(runEvents.stepFinished(output.name));
+      if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
       if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);

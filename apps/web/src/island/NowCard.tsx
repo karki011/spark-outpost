@@ -16,13 +16,22 @@ import { rowState } from '../conversations/row-state.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { ActivityLog } from './ActivityLog.tsx';
 import { DiffPeek, type PeekTarget } from './DiffPeek.tsx';
-import { activityLines, finishedLine, runActivity, stepCount, withChanges } from './home-model.ts';
+import { FileView } from './FileView.tsx';
+import {
+  activityLines,
+  baseName,
+  finishedLine,
+  runActivity,
+  stepCount,
+  withChanges,
+} from './home-model.ts';
 import { hopIn } from './home-motion.ts';
 import { sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { RunDots } from './island-parts.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent } from './use-island-data.ts';
+import { useFileView } from './use-file-view.ts';
 import { useRunChanges } from './use-run-changes.ts';
 
 const HOLD_MS = 550;
@@ -154,51 +163,61 @@ function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: SessionPr
   const count = stepCount(chat.latestRun?.progress);
   const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
   const said = state === 'done' ? finishedLine(detail.data, chat.latestRun?.id) : null;
+  const step = live && activity.runId ? `${activity.runId}:${activity.steps.length}` : null;
+  const file = useFileView(chat.id, step, activity.runIds);
+  const last = lines.at(-1);
+  const current =
+    file !== null && last?.state === 'active' && last.path !== null
+      ? baseName(last.path) === file.name
+      : false;
   return (
-    <div className="isl-now-text">
-      <div className="isl-now-head">
-        <span className="isl-now-dot" data-state={state} aria-hidden="true" />
-        <b className="isl-now-title">{chat.title}</b>
-        <span className="isl-now-agent">{agentLine(chat, detail.data)}</span>
-        <span className="isl-sp" />
-        {count && (
-          <span className="isl-now-steps">
-            <span className="sr-only">
-              Step {count.current} of {count.total}
-            </span>
-            <span aria-hidden="true">
-              <span key={count.current} className="isl-tick">
-                {count.current}
+    <>
+      <div className="isl-now-text">
+        <div className="isl-now-head">
+          <span className="isl-now-dot" data-state={state} aria-hidden="true" />
+          <b className="isl-now-title">{chat.title}</b>
+          <span className="isl-now-agent">{agentLine(chat, detail.data)}</span>
+          <span className="isl-sp" />
+          {count && (
+            <span className="isl-now-steps">
+              <span className="sr-only">
+                Step {count.current} of {count.total}
               </span>
-              /{count.total}
+              <span aria-hidden="true">
+                <span key={count.current} className="isl-tick">
+                  {count.current}
+                </span>
+                /{count.total}
+              </span>
             </span>
-          </span>
-        )}
-        <OpenButton chat={chat} onOpenHere={onOpenHere} onOpenChat={onOpenChat} />
-      </div>
-      {detail.isPending ? (
-        <div className="isl-skl isl-now-skl" aria-hidden="true">
-          <i />
-          <i style={{ width: '64%' }} />
+          )}
+          <OpenButton chat={chat} onOpenHere={onOpenHere} onOpenChat={onOpenChat} />
         </div>
-      ) : lines.length > 0 ? (
-        <ActivityLog
-          lines={lines}
-          reduced={reduced}
-          onPeek={(change) => {
-            if (taskId) onPeek({ chatId: chat.id, taskId, version: changes.version, change });
-          }}
-        />
-      ) : (
-        <p className="isl-now-status">{status}</p>
-      )}
-      {said && (
-        <p className="isl-now-said">
-          <span className="sr-only">Finished: </span>
-          {said}
-        </p>
-      )}
-    </div>
+        {detail.isPending ? (
+          <div className="isl-skl isl-now-skl" aria-hidden="true">
+            <i />
+            <i style={{ width: '64%' }} />
+          </div>
+        ) : lines.length > 0 ? (
+          <ActivityLog
+            lines={lines}
+            reduced={reduced}
+            onPeek={(change) => {
+              if (taskId) onPeek({ chatId: chat.id, taskId, version: changes.version, change });
+            }}
+          />
+        ) : (
+          <p className="isl-now-status">{status}</p>
+        )}
+        {said && (
+          <p className="isl-now-said">
+            <span className="sr-only">Finished: </span>
+            {said}
+          </p>
+        )}
+      </div>
+      {file && <FileView view={file} current={current} />}
+    </>
   );
 }
 
