@@ -2,6 +2,7 @@ import {
   AUTONOMY_LEVELS,
   autonomyLabel,
   reaskPercent,
+  slackPlaceLabel,
   ticketSourceIdSchema,
   ticketSourceNames,
   type ProviderSetup,
@@ -96,6 +97,9 @@ function slackFacts(connection: SlackConnection | null) {
     tokens: connection.tokens,
     capabilities: connection.capabilities,
     allowedChannels: connection.allowedChannels.map((channel) => `#${channel.name}`),
+    allowedDirectMessages: connection.settings.allDirectMessages
+      ? 'all'
+      : connection.directMessages.allowed.map((dm) => slackPlaceLabel(dm)),
     notify: connection.settings.notify,
     quietWhenFocused: connection.settings.quietWhenFocused,
     postUpdatesToThread: connection.settings.postUpdatesToThread,

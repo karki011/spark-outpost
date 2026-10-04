@@ -8,6 +8,7 @@ import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
 import { SlackChannels } from './SlackChannels.tsx';
 import { SlackConnectForm } from './SlackConnectForm.tsx';
+import { SlackDirectMessages } from './SlackDirectMessages.tsx';
 import { SlackNotifySettings } from './SlackNotifySettings.tsx';
 import { SlackStartSettings } from './SlackStartSettings.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
@@ -31,6 +32,11 @@ const CAPABILITIES: { key: keyof SlackCapabilities; on: string; off: string }[] 
     off: 'Reading channels the app has not joined needs a user token',
   },
   { key: 'search', on: 'Agents can search allowed channels', off: 'Search needs a user token' },
+  {
+    key: 'readDirectMessages',
+    on: 'Reads the direct messages you allowed',
+    off: 'Direct messages are not read',
+  },
   { key: 'post', on: 'Posts updates you confirm', off: '' },
   {
     key: 'startFromSlack',
@@ -93,6 +99,7 @@ function ConnectedBody({
         </p>
       )}
       <SlackChannels connection={connection} save={save} />
+      <SlackDirectMessages connection={connection} save={save} />
       <SlackNotifySettings connection={connection} save={save} />
       <SlackStartSettings connection={connection} save={save} onStarted={onClose} />
       {remove.isError && (

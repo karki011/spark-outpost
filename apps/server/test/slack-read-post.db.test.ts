@@ -115,20 +115,22 @@ describe('spark_slack', () => {
       action: 'thread',
       url: slackLink('C0RANDOM', '1760000500.000100'),
     });
-    const direct = await tools!.call('spark_slack', {
-      action: 'thread',
-      url: slackLink('D0DIRECT', '1760000500.000100'),
-    });
     const other = await tools!.call('spark_slack', {
       action: 'thread',
       url: 'https://example.test/archives/C0ENG/p1760000000000100',
     });
+    const askedBefore = stub.slack.calls.length;
+    const direct = await tools!.call('spark_slack', {
+      action: 'thread',
+      url: slackLink('D0DIRECT', '1760000500.000100'),
+    });
 
     expect(blocked.isError).toBe(true);
     expect(blocked.text).toContain("#random isn't in your allowed Slack channels");
-    expect(direct.text).toContain("doesn't read or post in direct messages");
+    expect(direct.text).toContain("doesn't read direct messages unless you turn on");
     expect(other.text).toContain('not a Slack message link');
     expect(stub.slack.calls).not.toContain('conversations.replies');
+    expect(stub.slack.calls.slice(askedBefore)).toEqual([]);
   });
 
   it('reads an allowed channel the app has not joined with the user token only', async () => {

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { SLACK_POST_TEXT_MAX, type SparkAction } from '@spark-outpost/contracts';
 import { redactText } from '../../audit/redact.ts';
-import { allowedSlackChannels, slackChatThread } from '../../persistence/slack.ts';
-import { requireAllowedChannel } from '../../slack/channels.ts';
+import { allowedSlackChannels, allowedSlackDm, slackChatThread } from '../../persistence/slack.ts';
+import { requirePostablePlace } from '../../slack/access.ts';
 import { requireSlack, type SlackDeps } from '../../slack/connection.ts';
 import { postToSlack } from '../../slack/post.ts';
 import { requireSlackRef } from '../../slack/thread.ts';
@@ -24,8 +24,9 @@ async function namedChannel(deps: SlackDeps, wanted: string): Promise<Place> {
   const name = wanted.replace(/^#/, '');
   const allowed = await allowedSlackChannels(deps.db, deps.workspaceId);
   const match = allowed.find((channel) => channel.id === name || channel.name === name);
-  if (!match) throw new SlackChannelNotAllowedError({ id: name, name });
-  return { channelId: match.id, threadTs: null, permalink: null };
+  const place = match ?? (await allowedSlackDm(deps.db, deps.workspaceId, name));
+  if (!place) throw new SlackChannelNotAllowedError({ id: name, name });
+  return { channelId: place.id, threadTs: null, permalink: null };
 }
 
 async function placeFor(
@@ -61,19 +62,27 @@ async function propose(
   args: { channel?: string | undefined; threadUrl?: string | undefined; text: string },
 ) {
   const deps = slackDepsFor(context.deps, context.scope);
-  const build = async (): Promise<SparkAction> => {
+  const build = async (): Promise<{ action: SparkAction; alwaysAsk: boolean }> => {
     const open = await requireSlack(deps);
     const place = await placeFor(deps, context.scope.conversationId, args);
-    const channel = await requireAllowedChannel(deps, open, place.channelId);
+    const channel = await requirePostablePlace(deps, open, place.channelId);
+    const direct = channel.kind !== 'channel';
     return {
-      action: 'post_slack',
-      channel: { id: channel.id, name: channel.name },
-      threadTs: place.threadTs,
-      permalink: place.permalink,
-      body: redactText(args.text),
+      alwaysAsk: direct,
+      action: {
+        action: 'post_slack',
+        channel: {
+          id: channel.id,
+          name: direct ? `${channel.name} (group message)` : channel.name,
+        },
+        threadTs: place.threadTs,
+        permalink: place.permalink,
+        body: redactText(args.text),
+      },
     };
   };
-  return proposeAction(context, await asSlackToolError(build()));
+  const { action, alwaysAsk } = await asSlackToolError(build());
+  return proposeAction(context, action, { alwaysAsk });
 }
 
 export async function performPostSlack(
@@ -87,11 +96,11 @@ export async function performPostSlack(
     conversationId: context.scope.conversationId,
     via: 'spark_tools',
   });
-  const where = action.threadTs ? `a thread in #${posted.channelName}` : `#${posted.channelName}`;
+  const where = action.threadTs ? `a thread in ${posted.place}` : posted.place;
   return {
     message: `Posted to ${where}.`,
     url: posted.permalink,
-    output: { channel: `#${posted.channelName}` },
+    output: { channel: posted.place },
   };
 }
 
@@ -99,7 +108,7 @@ export const slackPostTool = sparkTool({
   name: 'spark_slack_post',
   title: 'Post to Slack',
   acts: true,
-  description: `Post a short update, PR link or question to an allowed Slack channel or thread as the user's Spark app. Pass channel (name or id) or threadUrl (a message link, to reply in that thread); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
+  description: `Post a short update, PR link or question to an allowed Slack channel or thread as the user's Spark app. An allowed group direct message always asks the user first; one-to-one direct messages are never posted in. Pass channel (name or id) or threadUrl (a message link, to reply in that thread); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
   input: {
     channel: z.string().trim().min(1).max(120).optional(),
     threadUrl: z.string().trim().max(2000).optional(),

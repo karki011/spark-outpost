@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   SLACK_APP_MANIFEST,
   SLACK_BOT_SCOPES,
+  SLACK_DM_SCOPES,
   escapeSlackText,
+  missingSlackDmScopes,
   parseSlackMessageUrl,
   saveSlackConnectionRequestSchema,
+  slackPlaceLabel,
   slackSettingsSchema,
 } from './slack.ts';
 import { redactText } from './secrets.ts';
@@ -86,6 +89,36 @@ describe('Slack manifest and defaults', () => {
     expect(SLACK_APP_MANIFEST.oauth_config.scopes.bot).not.toContain('im:history');
     expect(SLACK_APP_MANIFEST.settings.socket_mode_enabled).toBe(true);
     expect(SLACK_APP_MANIFEST.features.shortcuts[0].callback_id).toBe('spark_start_work');
+  });
+
+  it('asks for the direct message scopes on the user token only, and reads none by default', () => {
+    const { bot, user } = SLACK_APP_MANIFEST.oauth_config.scopes;
+
+    expect(user).toEqual(expect.arrayContaining([...SLACK_DM_SCOPES]));
+    expect(bot.filter((scope) => /^(im|mpim):/.test(scope))).toEqual([]);
+    expect(slackSettingsSchema.parse({})).toMatchObject({
+      readDirectMessages: false,
+      allDirectMessages: false,
+    });
+  });
+
+  it('names the direct message scopes a token lacks', () => {
+    expect(missingSlackDmScopes(null)).toEqual([...SLACK_DM_SCOPES]);
+    expect(missingSlackDmScopes(['search:read', 'im:read', 'im:history'])).toEqual([
+      'mpim:read',
+      'mpim:history',
+    ]);
+    expect(missingSlackDmScopes([...SLACK_DM_SCOPES])).toEqual([]);
+  });
+
+  it('labels channels, direct messages and group messages', () => {
+    expect(slackPlaceLabel({ kind: 'channel', name: 'eng' })).toBe('#eng');
+    expect(slackPlaceLabel({ kind: 'im', name: 'Sam Ortiz' })).toBe(
+      'direct message with Sam Ortiz',
+    );
+    expect(slackPlaceLabel({ kind: 'mpim', name: 'alex, sam' })).toBe(
+      'group message with alex, sam',
+    );
   });
 
   it('defaults to notifying about everything but flags, quiet while focused', () => {

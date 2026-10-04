@@ -58,6 +58,39 @@ test('pasting a Slack link adds a context chip, and a blocked channel can be all
   expect(scan.violations).toEqual([]);
 });
 
+test('a direct message link is refused until allowed, then becomes a context chip @packaged', async ({
+  page,
+}) => {
+  const link = slackLink('D0SAM', '1760001000.000100');
+  await connectSlack(page, ['C0ENG']);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  const chips = page.getByRole('group', { name: 'Attachments' });
+
+  await paste(page, link);
+  const off = chips.locator('.att-chip.failed');
+  await expect(off).toContainText('unless you turn on "Let Spark read my direct messages"');
+  await expect(off.getByRole('button', { name: /Allow/ })).toHaveCount(0);
+  await off.getByRole('button', { name: /Remove/ }).click();
+  await expect(chips.locator('.att-chip')).toHaveCount(0);
+
+  await page.request.patch('/api/slack/settings', { data: { readDirectMessages: true } });
+  await paste(page, link);
+  const blocked = chips.locator('.att-chip.failed');
+  await expect(blocked).toContainText("That direct message isn't in your allowed conversations");
+  await blocked.getByRole('button', { name: 'Allow this conversation' }).click();
+
+  const chip = chips.locator('.att-chip[data-slack]');
+  await expect(chip).toContainText(
+    'Direct message with Sam Ortiz · Sam Ortiz · Can you check the billing export?',
+  );
+  await expect(chip).toContainText('Slack direct message.md');
+  await expect(chip).not.toContainText('dmleakedtokenvalue');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/slack-dm-context-chip.png` });
+  const scan = await new AxeBuilder({ page }).include('.composer').analyze();
+  expect(scan.violations).toEqual([]);
+});
+
 test('an agent asks to post to Slack and the user edits the text on the card first', async ({
   page,
 }) => {

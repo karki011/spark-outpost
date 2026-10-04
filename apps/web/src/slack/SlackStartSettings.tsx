@@ -13,7 +13,13 @@ import { requestChat } from '../app/chat-request.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
-import { slackApi, slackKeys, slackNotAllowed } from './slack-api.ts';
+import {
+  allowSlackPlace,
+  allowSlackPlaceLabel,
+  slackApi,
+  slackKeys,
+  slackNotAllowed,
+} from './slack-api.ts';
 import type { SlackSave } from './use-slack-save.ts';
 
 const MODES = [
@@ -54,7 +60,7 @@ function StartFromLink({ onStarted }: { onStarted: () => void }) {
     },
   });
   const allow = useMutation({
-    mutationFn: slackApi.allowChannel,
+    mutationFn: allowSlackPlace,
     onSuccess: (status) => {
       queryClient.setQueryData(slackKeys.status, status);
       start.mutate();
@@ -125,10 +131,10 @@ function StartFromLink({ onStarted }: { onStarted: () => void }) {
             <button
               type="button"
               className="btn line sm"
-              onClick={() => allow.mutate(blocked.channel.id)}
+              onClick={() => allow.mutate(blocked.channel)}
               disabled={allow.isPending}
             >
-              Allow this channel
+              {allowSlackPlaceLabel(blocked.channel)}
             </button>
           )}
         </p>

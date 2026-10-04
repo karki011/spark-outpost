@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { SLACK_BOT_SCOPES, SLACK_USER_SCOPES } from '@spark-outpost/contracts';
 
 export const SLACK_BOT_TOKEN = 'xoxb-1111111111-fakebotabcdefghij';
 export const SLACK_USER_TOKEN = 'xoxp-2222222222-fakeuserabcdefghij';
@@ -14,6 +15,18 @@ export interface FakeSlackChannel {
   botIsMember: boolean;
   userCanSee: boolean;
 }
+
+export interface FakeSlackDirect {
+  id: string;
+  kind: 'im' | 'mpim';
+  user?: string;
+  name?: string;
+  botIsMember: boolean;
+}
+
+export const SLACK_LEGACY_USER_SCOPES = Object.keys(SLACK_USER_SCOPES).filter(
+  (scope) => !/^(?:im|mpim):/.test(scope),
+);
 
 export interface FakeSlackMessage {
   ts: string;
@@ -31,6 +44,8 @@ export interface FakeSlackPost {
 
 export interface FakeSlack {
   channels: FakeSlackChannel[];
+  directs: FakeSlackDirect[];
+  userScopes: string[];
   users: Record<string, string>;
   messages: Record<string, FakeSlackMessage[]>;
   posted: FakeSlackPost[];
@@ -55,8 +70,34 @@ function seedChannels(): FakeSlackChannel[] {
   ];
 }
 
+function seedDirects(): FakeSlackDirect[] {
+  return [
+    { id: 'D0SAM', kind: 'im', user: 'U0SAM', botIsMember: false },
+    { id: 'D0KIM', kind: 'im', user: 'U0KIM', botIsMember: false },
+    { id: 'D0ME', kind: 'im', user: SLACK_ME, botIsMember: false },
+    { id: 'G0TRIO', kind: 'mpim', name: 'mpdm-alex--sam--kim-1', botIsMember: false },
+    { id: 'G0CREW', kind: 'mpim', name: 'mpdm-alex--sam--spark-1', botIsMember: true },
+  ];
+}
+
 function seedMessages(): Record<string, FakeSlackMessage[]> {
   return {
+    D0SAM: [
+      {
+        ts: '1760001000.000100',
+        user: 'U0SAM',
+        text: 'Can you check the billing export? My key is xoxp-8888888888-dmleakedtokenvalue',
+      },
+      {
+        ts: '1760001060.000200',
+        threadTs: '1760001000.000100',
+        user: SLACK_ME,
+        text: 'Looking at the billing export now.',
+      },
+    ],
+    D0KIM: [{ ts: '1760003000.000100', user: 'U0KIM', text: 'Billing export numbers, privately' }],
+    G0TRIO: [{ ts: '1760002000.000100', user: 'U0KIM', text: 'Billing export launch checklist' }],
+    G0CREW: [{ ts: '1760004000.000100', user: 'U0SAM', text: 'Crew room' }],
     C0ENG: [
       {
         ts: '1760000000.000100',
@@ -100,7 +141,14 @@ const fail = (res: ServerResponse, error: string, extra: Record<string, unknown>
 export function fakeSlack(): FakeSlack {
   const slack: FakeSlack = {
     channels: seedChannels(),
-    users: { [SLACK_ME]: 'Alex Example', U0SAM: 'Sam Ortiz', [SLACK_BOT_USER]: 'spark' },
+    directs: seedDirects(),
+    userScopes: Object.keys(SLACK_USER_SCOPES),
+    users: {
+      [SLACK_ME]: 'Alex Example',
+      U0SAM: 'Sam Ortiz',
+      U0KIM: 'Kim Lee',
+      [SLACK_BOT_USER]: 'spark',
+    },
     messages: seedMessages(),
     posted: [],
     calls: [],
@@ -122,8 +170,27 @@ export function fakeSlack(): FakeSlack {
     is_archived: false,
   });
 
+  const rawDirect = (direct: FakeSlackDirect) =>
+    direct.kind === 'im'
+      ? { id: direct.id, is_im: true, user: direct.user }
+      : { id: direct.id, name: direct.name, is_mpim: true, is_private: true };
+
+  const missingFor = (token: string, direct: FakeSlackDirect, access: 'read' | 'history') => {
+    const scope = `${direct.kind}:${access}`;
+    return token === SLACK_USER_TOKEN && !slack.userScopes.includes(scope) ? scope : null;
+  };
+
+  const directFor = (token: string, id: string | null) => {
+    const direct = slack.directs.find((entry) => entry.id === id);
+    if (!direct) return null;
+    return token === SLACK_USER_TOKEN || direct.botIsMember ? direct : null;
+  };
+
   function replies(res: ServerResponse, token: string, form: URLSearchParams) {
-    const channel = slack.channels.find((entry) => entry.id === form.get('channel'));
+    const direct = directFor(token, form.get('channel'));
+    const needed = direct ? missingFor(token, direct, 'history') : null;
+    if (needed) return fail(res, 'missing_scope', { needed });
+    const channel = direct ?? slack.channels.find((entry) => entry.id === form.get('channel'));
     if (!channel) return fail(res, 'channel_not_found');
     if (token === SLACK_BOT_TOKEN && !channel.botIsMember) return fail(res, 'not_in_channel');
     const ts = form.get('ts');
@@ -153,7 +220,7 @@ export function fakeSlack(): FakeSlack {
     }
     if (slack.failPosts) return fail(res, slack.failPosts);
     const target = form.get('channel') ?? '';
-    const channel = slack.channels.find((entry) => entry.id === target);
+    const channel = slack.channels.find((entry) => entry.id === target) ?? directFor(token, target);
     if (!channel && !slack.users[target]) return fail(res, 'channel_not_found');
     if (channel && !channel.botIsMember) return fail(res, 'not_in_channel');
     const ts = `1770000000.${String(slack.posted.length + 1).padStart(6, '0')}`;
@@ -169,11 +236,20 @@ export function fakeSlack(): FakeSlack {
   function search(res: ServerResponse, token: string, form: URLSearchParams) {
     if (token !== SLACK_USER_TOKEN) return fail(res, 'not_allowed_token_type');
     const query = (form.get('query') ?? '').replace(/\s+in:#\S+/, '').toLowerCase();
-    const matches = slack.channels.flatMap((channel) =>
+    const places = [
+      ...slack.channels.map((channel) => ({ id: channel.id, name: channel.name })),
+      ...slack.directs.map((direct) => ({
+        id: direct.id,
+        name: direct.user ?? direct.name,
+        is_im: direct.kind === 'im',
+        is_mpim: direct.kind === 'mpim',
+      })),
+    ];
+    const matches = places.flatMap((channel) =>
       (slack.messages[channel.id] ?? [])
         .filter((message) => message.text.toLowerCase().includes(query))
         .map((message) => ({
-          channel: { id: channel.id, name: channel.name },
+          channel,
           username: slack.users[message.user] ?? message.user,
           text: message.text,
           ts: message.ts,
@@ -183,14 +259,30 @@ export function fakeSlack(): FakeSlack {
     return send(res, { ok: true, messages: { matches } });
   }
 
+  function listDirects(token: string, form: URLSearchParams) {
+    const kinds = (form.get('types') ?? '').split(',');
+    return slack.directs.filter(
+      (direct) => kinds.includes(direct.kind) && directFor(token, direct.id),
+    );
+  }
+
   function list(res: ServerResponse, token: string, form: URLSearchParams) {
-    const visible = slack.channels.filter((channel) => visibleTo(token, channel));
+    const wantsDirects = /\bm?pim\b/.test(form.get('types') ?? '');
+    const blocked = wantsDirects
+      ? listDirects(token, form)
+          .map((direct) => missingFor(token, direct, 'read'))
+          .find(Boolean)
+      : null;
+    if (blocked) return fail(res, 'missing_scope', { needed: blocked });
+    const visible = wantsDirects
+      ? listDirects(token, form).map(rawDirect)
+      : slack.channels.filter((channel) => visibleTo(token, channel)).map(rawChannel);
     const start = Number(form.get('cursor') ?? '0') || 0;
     const page = visible.slice(start, start + slack.pageSize);
     const next = start + slack.pageSize < visible.length ? String(start + slack.pageSize) : '';
     return send(res, {
       ok: true,
-      channels: page.map(rawChannel),
+      channels: page,
       response_metadata: { next_cursor: next },
     });
   }
@@ -208,6 +300,10 @@ export function fakeSlack(): FakeSlack {
       return send(res, { ok: true, url: slack.socketUrl ?? 'ws://127.0.0.1:9/' });
     }
     if (token === SLACK_APP_TOKEN) return fail(res, 'not_allowed_token_type');
+    res.setHeader(
+      'x-oauth-scopes',
+      (token === SLACK_USER_TOKEN ? slack.userScopes : Object.keys(SLACK_BOT_SCOPES)).join(','),
+    );
     if (method === 'auth.test') {
       const bot = token === SLACK_BOT_TOKEN;
       return send(res, {
@@ -228,6 +324,10 @@ export function fakeSlack(): FakeSlack {
     }
     if (method === 'conversations.list') return list(res, token, form);
     if (method === 'conversations.info') {
+      const direct = directFor(token, form.get('channel'));
+      const needed = direct ? missingFor(token, direct, 'read') : null;
+      if (needed) return fail(res, 'missing_scope', { needed });
+      if (direct) return send(res, { ok: true, channel: rawDirect(direct) });
       const channel = slack.channels.find((entry) => entry.id === form.get('channel'));
       if (!channel || !visibleTo(token, channel)) return fail(res, 'channel_not_found');
       return send(res, { ok: true, channel: rawChannel(channel) });

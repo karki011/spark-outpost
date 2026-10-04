@@ -1,6 +1,8 @@
 import './attachments.css';
+import { slackPlaceLabel } from '@spark-outpost/contracts';
 import { AnimatePresence, motion } from 'motion/react';
 import { formatBytes } from '../../api/attachments.ts';
+import { allowSlackPlaceLabel } from '../../slack/slack-api.ts';
 import { XIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { FileIcon, ProgressRing, RetryIcon } from './attachment-icons.tsx';
@@ -48,11 +50,16 @@ function ImageTile({ item, onRemove }: { item: PendingAttachment; onRemove: () =
   );
 }
 
+function slackPlace(channel: Parameters<typeof slackPlaceLabel>[0]): string {
+  const label = slackPlaceLabel(channel);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function slackTitle(item: PendingAttachment): string | undefined {
   const { slack } = item;
   if (!slack) return undefined;
   const when = slack.postedAt ? ` · ${new Date(slack.postedAt).toLocaleString()}` : '';
-  return `#${slack.channel.name} · ${slack.author}${when}\n${slack.firstLine}`;
+  return `${slackPlace(slack.channel)} · ${slack.author}${when}\n${slack.firstLine}`;
 }
 
 function SlackDetail({ item }: { item: PendingAttachment }) {
@@ -60,7 +67,7 @@ function SlackDetail({ item }: { item: PendingAttachment }) {
   if (!slack) return <small>Reading the thread…</small>;
   return (
     <small className="att-slack">
-      #{slack.channel.name} · {slack.author} · {slack.firstLine}
+      {slackPlace(slack.channel)} · {slack.author} · {slack.firstLine}
     </small>
   );
 }
@@ -98,7 +105,7 @@ function FileChip({
       )}
       {failed && item.blockedChannel && onAllow && (
         <button type="button" className="btn line sm" onClick={onAllow}>
-          Allow this channel
+          {allowSlackPlaceLabel(item.blockedChannel)}
         </button>
       )}
       {failed && item.retryable && (

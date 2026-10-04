@@ -32,7 +32,7 @@ const FIELDS: FieldSpec[] = [
     key: 'userToken',
     label: 'User token (optional)',
     placeholder: 'xoxp-…',
-    help: 'OAuth & Permissions → User OAuth Token. Adds search and reading channels the app has not joined, and tells Spark who to notify.',
+    help: 'OAuth & Permissions → User OAuth Token. Adds search and reading channels the app has not joined, tells Spark who to notify, and is needed if you later let Spark read direct messages you pick.',
   },
   {
     key: 'appToken',
@@ -42,21 +42,29 @@ const FIELDS: FieldSpec[] = [
   },
 ];
 
-function ManifestSteps() {
+export function CopyManifest({ label = 'Copy manifest' }: { label?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     await navigator.clipboard.writeText(slackManifestJson());
     setCopied(true);
   };
   return (
+    <>
+      <button type="button" className="btn line sm" onClick={() => void copy()}>
+        {label}
+      </button>
+      <span className="sl-copied" role="status">
+        {copied ? 'Copied. Paste it in the next step.' : ''}
+      </span>
+    </>
+  );
+}
+
+function ManifestSteps() {
+  return (
     <ol className="sl-steps" aria-label="Create your Slack app">
       <li>
-        <button type="button" className="btn line sm" onClick={() => void copy()}>
-          Copy manifest
-        </button>
-        <span className="sl-copied" role="status">
-          {copied ? 'Copied. Paste it in the next step.' : ''}
-        </span>
+        <CopyManifest />
       </li>
       <li>
         <HelpLink href={SLACK_APPS_URL}>Create a Slack app</HelpLink> from a manifest, choose your
@@ -66,6 +74,12 @@ function ManifestSteps() {
       <li>
         In Slack, invite the app to each channel it should read or post in: type{' '}
         <code>/invite @Spark</code> there.
+      </li>
+      <li>
+        Direct messages stay unread. The user token carries four scopes for them (
+        <code>im:read</code>, <code>im:history</code>, <code>mpim:read</code>,{' '}
+        <code>mpim:history</code>), used only for conversations you pick after turning on{' '}
+        <b>Let Spark read my direct messages</b>.
       </li>
     </ol>
   );

@@ -2,12 +2,13 @@ import {
   SLACK_THREAD_MESSAGES_MAX,
   SLACK_THREAD_TEXT_MAX,
   parseSlackMessageUrl,
+  slackPlaceLabel,
   type SlackMessageRef,
   type SlackThreadPreview,
 } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
-import { recordSlackEvent } from '../persistence/slack.ts';
-import { requireAllowedChannel } from './channels.ts';
+import { markSlackDirectChat, recordSlackEvent } from '../persistence/slack.ts';
+import { requireSlackPlace, type SlackPlace } from './access.ts';
 import { requireSlack, type OpenSlack, type SlackDeps } from './connection.ts';
 import { SlackApiError, slackCall, slackText, type SlackClient } from './web-api.ts';
 
@@ -56,19 +57,29 @@ export function requireSlackRef(url: string): SlackMessageRef {
   return ref;
 }
 
-async function visible<T>(open: OpenSlack, call: (client: SlackClient) => Promise<T>): Promise<T> {
+interface Readers {
+  first: SlackClient;
+  fallback: SlackClient | null;
+}
+
+function readersFor(open: OpenSlack, place: SlackPlace): Readers {
+  if (place.kind !== 'channel' && open.user) return { first: open.user, fallback: null };
+  return { first: open.bot, fallback: open.user };
+}
+
+async function visible<T>(readers: Readers, call: (client: SlackClient) => Promise<T>): Promise<T> {
   try {
-    return await call(open.bot);
+    return await call(readers.first);
   } catch (error) {
-    if (!open.user || !(error instanceof SlackApiError) || !NOT_VISIBLE.has(error.code))
+    if (!readers.fallback || !(error instanceof SlackApiError) || !NOT_VISIBLE.has(error.code))
       throw error;
-    return call(open.user);
+    return call(readers.fallback);
   }
 }
 
-async function rawThread(open: OpenSlack, ref: SlackMessageRef): Promise<RawMessage[]> {
+async function rawThread(readers: Readers, ref: SlackMessageRef): Promise<RawMessage[]> {
   const replies = (ts: string) =>
-    visible(open, (client) =>
+    visible(readers, (client) =>
       slackCall(client, 'conversations.replies', {
         channel: ref.channelId,
         ts,
@@ -121,18 +132,28 @@ function capped(messages: SlackThreadMessage[]): {
   return { kept, truncated: false };
 }
 
-async function permalink(open: OpenSlack, ref: SlackMessageRef, ts: string): Promise<string> {
-  const data = await visible(open, (client) =>
+async function permalink(
+  open: OpenSlack,
+  readers: Readers,
+  ref: SlackMessageRef,
+  ts: string,
+): Promise<string> {
+  const data = await visible(readers, (client) =>
     slackCall(client, 'chat.getPermalink', { channel: ref.channelId, message_ts: ts }),
   ).catch(() => null);
   const fallback = `${open.connection.teamUrl.replace(/\/$/, '')}/archives/${ref.channelId}/p${ts.replace('.', '')}`;
   return slackText(data?.permalink) || fallback;
 }
 
-export async function readSlackThread(deps: SlackDeps, ref: SlackMessageRef): Promise<SlackThread> {
+export async function readSlackThread(
+  deps: SlackDeps,
+  ref: SlackMessageRef,
+  conversationId: string | null = null,
+): Promise<SlackThread> {
   const open = await requireSlack(deps);
-  const channel = await requireAllowedChannel(deps, open, ref.channelId);
-  const raw = await rawThread(open, ref);
+  const channel = await requireSlackPlace(deps, open, ref.channelId);
+  const readers = readersFor(open, channel);
+  const raw = await rawThread(readers, ref);
   if (raw.length === 0) {
     throw new SlackApiError('message_not_found', "Slack can't find that message.");
   }
@@ -152,21 +173,30 @@ export async function readSlackThread(deps: SlackDeps, ref: SlackMessageRef): Pr
     action: 'read',
     outcome: 'succeeded',
     channelId: channel.id,
-    detail: { messages: kept.length, truncated },
+    conversationId,
+    detail: { messages: kept.length, truncated, kind: channel.kind },
   });
+  if (conversationId && channel.kind !== 'channel') {
+    await markSlackDirectChat(deps.db, conversationId);
+  }
   return {
     ref: { channelId: channel.id, threadTs },
     messages: kept,
     preview: {
-      channel: { id: channel.id, name: channel.name },
+      channel: { id: channel.id, name: channel.name, kind: channel.kind },
       author: first.author,
       postedAt: first.at,
       firstLine: (first.text.split('\n')[0] ?? '').slice(0, FIRST_LINE_MAX),
       messages: kept.length,
       truncated: truncated || raw.length >= SLACK_THREAD_MESSAGES_MAX,
-      permalink: await permalink(open, ref, threadTs),
+      permalink: await permalink(open, readers, ref, threadTs),
     },
   };
+}
+
+function slackThreadTitle(preview: SlackThreadPreview): string {
+  const label = slackPlaceLabel(preview.channel);
+  return preview.channel.kind === 'channel' ? `Slack thread from ${label}` : `Slack ${label}`;
 }
 
 export function slackThreadDocument(thread: SlackThread): string {
@@ -175,7 +205,7 @@ export function slackThreadDocument(thread: SlackThread): string {
     (message) => `[${message.at ?? 'unknown time'}] ${message.author}: ${message.text}`,
   );
   return [
-    `Slack thread from #${preview.channel.name} (${preview.permalink})`,
+    `${slackThreadTitle(preview)} (${preview.permalink})`,
     SLACK_UNTRUSTED_NOTE,
     '',
     ...lines,

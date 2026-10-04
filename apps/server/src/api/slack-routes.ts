@@ -2,8 +2,10 @@ import { Router } from 'express';
 import {
   SLACK_CHANNEL_NOT_ALLOWED,
   allowSlackChannelsRequestSchema,
+  allowSlackDmsRequestSchema,
   saveSlackConnectionRequestSchema,
   slackChannelIdSchema,
+  slackConversationIdSchema,
   slackLinkRequestSchema,
   slackPresenceRequestSchema,
   startSlackRequestSchema,
@@ -16,12 +18,14 @@ import type { ApiEndpoints } from '../setup/verify.ts';
 import { allowOneSlackChannel, allowSlackChannels, listSlackChannels } from '../slack/channels.ts';
 import {
   changeSlackSettings,
+  refreshSlackScopes,
   removeSlack,
   saveSlack,
   slackStatus,
   type SlackDeps,
 } from '../slack/connection.ts';
 import { slackContextFromLink } from '../slack/context.ts';
+import { allowOneSlackDm, allowSlackDms, listSlackDms } from '../slack/direct.ts';
 import type { SlackNotifier } from '../slack/notifier.ts';
 import { sendTestNotification } from '../slack/test-message.ts';
 import type { SlackSocket } from '../slack/socket.ts';
@@ -56,6 +60,9 @@ const USER_ERRORS = new Set([
   'team_mismatch',
   'bad_link',
   'direct_message',
+  'direct_messages_off',
+  'direct_messages_unavailable',
+  'not_direct_message',
   'not_allowed_token_type',
   'user_not_found',
 ]);
@@ -72,8 +79,16 @@ export function slackErrorStatus(error: unknown): { status: number; message: str
 }
 
 function notAllowedBody(error: SlackChannelNotAllowedError): SlackNotAllowed {
-  return { error: error.message, code: SLACK_CHANNEL_NOT_ALLOWED, channel: error.channel };
+  const { id, name, kind } = error.channel;
+  return {
+    error: error.message,
+    code: SLACK_CHANNEL_NOT_ALLOWED,
+    channel: { id, name, kind: kind ?? 'channel' },
+  };
 }
+
+const pageCursor = (value: unknown): string | null =>
+  typeof value === 'string' && value ? value.slice(0, 500) : null;
 
 export function slackRoutes(routeDeps: SlackRouteDeps): Router {
   const deps: SlackDeps = {
@@ -111,8 +126,7 @@ export function slackRoutes(routeDeps: SlackRouteDeps): Router {
   });
 
   router.get('/slack/channels', async (req, res) => {
-    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.slice(0, 500) : null;
-    res.json(await listSlackChannels(deps, cursor || null));
+    res.json(await listSlackChannels(deps, pageCursor(req.query.cursor)));
   });
 
   router.put('/slack/channels', async (req, res) => {
@@ -124,6 +138,27 @@ export function slackRoutes(routeDeps: SlackRouteDeps): Router {
     const channelId = slackChannelIdSchema.safeParse(req.params.channelId);
     if (!channelId.success) throw new BadRequestError('Unknown Slack channel.');
     await allowOneSlackChannel(deps, channelId.data);
+    res.json(await status());
+  });
+
+  router.get('/slack/direct-messages', async (req, res) => {
+    res.json(await listSlackDms(deps, pageCursor(req.query.cursor)));
+  });
+
+  router.put('/slack/direct-messages', async (req, res) => {
+    await allowSlackDms(deps, parseBody(allowSlackDmsRequestSchema, req));
+    res.json(await status());
+  });
+
+  router.post('/slack/direct-messages/:channelId/allow', async (req, res) => {
+    const channelId = slackConversationIdSchema.safeParse(req.params.channelId);
+    if (!channelId.success) throw new BadRequestError('Unknown Slack conversation.');
+    await allowOneSlackDm(deps, channelId.data);
+    res.json(await status());
+  });
+
+  router.post('/slack/scopes/check', async (_req, res) => {
+    await refreshSlackScopes(deps);
     res.json(await status());
   });
 
