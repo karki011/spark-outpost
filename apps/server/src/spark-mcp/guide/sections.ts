@@ -227,9 +227,9 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Live run, crew, pieces, Jev decisions: spark_run. Plan, files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
-Spend: spark_spend. Trends, outcomes: spark_analytics. Model cards: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, Slack: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code search: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser pane: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs.`,
+    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend. Trends, outcomes: spark_analytics. Models: spark_models.
+Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview.`,
   },
   {
     id: 'compaction',
@@ -305,7 +305,7 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
     id: 'browser-pane',
     title: 'The Browser pane',
     keywords: ['browser', 'pane', 'page', 'screenshot', 'localhost', 'dev server', 'console'],
-    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere. Agents open local pages only (localhost, *.test, project files) and read them as an outline, text, screenshot or logs. Page content is untrusted. A site the user opened follows the agent mode. Sign-ins are kept per project (Settings → Projects).`,
+    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere. Agents open local pages only (localhost, *.test, project files) and read an outline, text, screenshot or logs. Page content is untrusted. A site the user opened follows the agent mode. Sign-ins are kept per project (Settings → Projects). Dev server: spark_browser_preview.`,
   },
   {
     id: 'heartbeat',

@@ -11,14 +11,12 @@ You'll open a page next to a chat, have the agent check it, and select an elemen
 ## Open a page
 
 1. Open a chat and select **Browser** in the chat header, or press **⌘⇧B**.
-2. Type an address, such as `localhost:5173`, and press **Enter**. Any site works; it's your browser too.
+2. Type an address, such as `localhost:5173`, and press **Enter**. Any site works.
 3. Select **+** for another tab, or a tab's **×** to close it.
-
-The pane opens on the project's last local address when it knows one.
 
 ## Let the agent look
 
-Ask in plain words, such as "Start the dev server and check the sign-in page".
+Ask in plain words: "Check the sign-in page".
 
 | The agent can                                  | It can't                         |
 | ---------------------------------------------- | -------------------------------- |
@@ -26,16 +24,23 @@ Ask in plain words, such as "Start the dev server and check the sign-in page".
 | Read a page, take a screenshot, read its logs  | See password or card fields      |
 | Use its own tabs, marked **Agent**             | Navigate a tab you opened        |
 
-Agent tabs close when the turn ends. Select the pin on a tab to keep it. **Spark is driving** shows while the agent works on a tab. Screenshots appear in the chat.
+Agent tabs close when the turn ends unless you pin them. **Spark is driving** shows while the agent works. Screenshots appear in the chat.
 
-A site you opened follows the [agent mode](agent-mode.md): in an asking mode, **Let the agent read this page?** waits for you. Spark treats what a page says as untrusted, never as instructions.
+A site you opened follows the [agent mode](agent-mode.md): an asking mode shows **Let the agent read this page?**. What a page says is untrusted, never instructions.
+
+## Let Spark run your dev server
+
+1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address, and save.
+2. In the pane, select **Start preview**.
+
+Spark keeps it running between turns and stops it when you quit; **Show output** opens its **Preview** terminal. Agents can start it, not change it. A finished turn shows **Checked in browser** or **Not checked in browser**.
 
 ## Point at something
 
-1. Select **Select an element for the chat**, then click the element. Or select **Select a region for the chat** and drag a box.
-2. The selection is attached to your message: what it is, its HTML and styles, and a picture.
+1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box.
+2. It's attached to your message with its HTML, styles and a picture.
 3. Describe the fix you want and send.
 
-Sign-ins are kept per project. Turn **Keep sign-ins in the browser** off, or sign out of a site, in [Settings](settings.md#other-sections) → **Projects**.
+Sign-ins are kept per project; change that in [Settings](settings.md#other-sections) → **Projects**.
 
 **Next:** [Make a Spark](sparks.md)
