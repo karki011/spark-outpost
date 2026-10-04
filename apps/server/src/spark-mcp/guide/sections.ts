@@ -175,7 +175,7 @@ In a chat worktree, the keep card offers "Bring changes into <your branch>", "Op
     id: 'tickets',
     title: 'Tickets inbox, links to chats and PRs',
     keywords: ['ticket', 'jira', 'linear', 'inbox', 'attention', 'link', 'unlink', 'priority'],
-    text: `Tickets pulls your Jira and Linear tickets (connect them in Settings → Connectors) into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; a strip of counts filters. Rows show a status chip, Spark progress, priority, age, and links to the chat and PR.
+    text: `Tickets pulls your Jira and Linear tickets (connect them in Settings → Connectors) into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently. Rows show status, Spark progress, priority, age, and links to the chat and PR.
 
 A build turn that names exactly one ticket links the chat to it; references like "see" or "similar to", or several keys, only suggest. Linked chats show a "KEY · title" chip (Unlink, Undo), their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
 
@@ -193,15 +193,15 @@ The morning brief (Settings → Spark → Morning brief, with a time) is written
     id: 'map',
     title: 'Project Map',
     keywords: ['map', 'project map', 'areas', 'repo map', 'core impact', 'unmatched'],
-    text: `The Map page (in the side rail) draws each linked repository as a sky of files grouped into areas, with links between areas and between repositories (front end to back end, shared packages, shared env keys). Filter areas by category (Core, Shared, Feature), files by kind, and links between projects; open a file for Jev's label, a preview, what depends on it, its imports and its history ("Changed 3 days ago · 5 commits · 2 authors"). With 2+ projects it lists unmatched API: routes nothing calls and calls that reach no route.
+    text: `The Map page draws each linked repository as a sky of files grouped into areas, with links between areas and between repositories (front end to back end, shared packages, env keys). Filter areas by category (Core, Shared, Feature), files by kind, and links between projects; open a file for Jev's label, a preview, what depends on it, its imports and its history. With 2+ projects it lists unmatched API: routes nothing calls and calls that reach no route.
 
-The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev connected, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact on the keep card, the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
+The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact on the keep card, the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
   },
   {
     id: 'mcp-servers',
     title: 'MCP servers: user-level and repo .mcp.json',
     keywords: ['mcp', 'mcp server', 'mcp.json', 'trust'],
-    text: `Agent sessions can use MCP servers from two sources: user-level servers you add by hand in Settings → MCP servers (scoped to all chats, a project, or a single chat), and a linked repo's own .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, naming env vars and headers only; you fill the values in Settings.
+    text: `Agent sessions can use MCP servers from two sources: user-level servers you add by hand in Settings → MCP servers (scoped to all chats, a project, or a single chat), and a linked repo's own .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, by name only; you fill values in Settings.
 
 A repo's .mcp.json, hooks, and allow rules only load after you trust that folder (a one-time "Trust this folder?" decision); trust is fingerprinted, so a changed hooks/MCP/allow-rules set asks again. Env and header secret values for MCP servers live in the OS keychain, never in the database, and are redacted in the audit log.`,
   },
@@ -217,7 +217,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in MCP server named "spark", so agents can answer questions about Spark without guessing.
+    text: `Every agent session Spark launches gets a built-in MCP server named "spark", so agents can answer questions about Spark.
 
 Read tools need no approval card; section spark-tools says which one answers which question.
 
