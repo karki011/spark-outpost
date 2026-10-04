@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import { RANGE_DAYS, type AnalyticsRange } from '@spark-outpost/contracts';
+import { preloadDayCalendar } from '../ui/DayCalendar.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { CalendarPopover } from './calendar/CalendarPopover.tsx';
@@ -65,7 +66,13 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
 
   return (
     <div className="an-range">
-      <div ref={anchorRef} className="an-cal-anchor" data-calendar={open ? id : undefined}>
+      <div
+        ref={anchorRef}
+        className="an-cal-anchor"
+        data-calendar={open ? id : undefined}
+        onPointerEnter={preloadDayCalendar}
+        onFocusCapture={preloadDayCalendar}
+      >
         <Segmented
           ariaLabel="Time range"
           options={[...PRESETS, { id: 'custom', label: customLabel(value, today) }]}

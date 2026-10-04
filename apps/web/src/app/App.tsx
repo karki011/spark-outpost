@@ -52,7 +52,7 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, preloadLazyUiWhenIdle, preloadView, Tickets } from './lazy-views.tsx';
+import { Analytics, preloadView, Tickets } from './lazy-views.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -85,7 +85,6 @@ function ChatShell({ entering }: { entering: boolean }) {
   }, []);
   useSettingsRequests(setSettings);
   useEffect(() => onProviderRoute(() => setSettingsState('ai')), []);
-  useEffect(() => preloadLazyUiWhenIdle(), []);
   const [view, setViewState] = useState<AppView>(() =>
     isDocLinkOpen() ? 'docs' : readSavedView(),
   );

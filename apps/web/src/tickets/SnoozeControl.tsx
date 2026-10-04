@@ -2,7 +2,7 @@ import './snooze.css';
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SNOOZE_MAX_DAYS, type InboxTicket, type TicketInbox } from '@spark-outpost/contracts';
-import { DayCalendar } from '../ui/DayCalendar.tsx';
+import { DayCalendar, preloadDayCalendar } from '../ui/DayCalendar.tsx';
 import { BackIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { Glyph } from './ticket-icons.tsx';
@@ -120,6 +120,7 @@ export function SnoozeButton({ ticket, snoozing }: { ticket: InboxTicket; snoozi
           if (!open) {
             setPicking(false);
             setDay(undefined);
+            preloadDayCalendar();
           }
           toggle();
         }}

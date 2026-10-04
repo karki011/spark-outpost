@@ -10,8 +10,8 @@ const loadGrid = () =>
 
 const Grid = lazy(loadGrid);
 
-export function preloadDayCalendar(): Promise<unknown> {
-  return loadGrid();
+export function preloadDayCalendar(): void {
+  void loadGrid().catch(() => undefined);
 }
 
 function DayCalendarSkeleton() {
