@@ -13,8 +13,8 @@ import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
 const HEARTBEAT_URL = '';
-const GITHUB_APP_CLIENT_ID = '';
-const GITHUB_APP_SLUG = '';
+const GITHUB_APP_CLIENT_ID = 'Iv23li7XhI8fUF6WSltL';
+const GITHUB_APP_SLUG = 'spark-outpost';
 
 export type MacArch = 'x64' | 'arm64';
 

@@ -137,18 +137,28 @@ describe('builderConfig', () => {
     expect(builderConfig({ ...base, archs: ['x64'], env }).extraMetadata).toMatchObject({
       githubApp: { clientId: 'Iv23liExample', slug: 'spark' },
     });
-    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).not.toHaveProperty(
+    const off = { SPARK_GITHUB_APP_CLIENT_ID: '', SPARK_GITHUB_APP_SLUG: '' };
+    expect(builderConfig({ ...base, archs: ['x64'], env: off }).extraMetadata).not.toHaveProperty(
       'githubApp',
     );
+    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).toMatchObject({
+      githubApp: { clientId: 'Iv23li7XhI8fUF6WSltL', slug: 'spark-outpost' },
+    });
   });
 });
 
 describe('packagedGitHubApp', () => {
-  it('reads the client ID and slug from the environment, or nothing', () => {
+  it('reads the client ID and slug from the environment, else the built-in App', () => {
     const env = { SPARK_GITHUB_APP_CLIENT_ID: ' Iv23liExample ', SPARK_GITHUB_APP_SLUG: 'spark' };
     const ids = { clientId: 'Iv23liExample', slug: 'spark' };
     expect(packagedGitHubApp(env)).toEqual(ids);
-    expect(packagedGitHubApp({})).toBeNull();
+    expect(
+      packagedGitHubApp({ SPARK_GITHUB_APP_CLIENT_ID: '', SPARK_GITHUB_APP_SLUG: '' }),
+    ).toBeNull();
+    expect(packagedGitHubApp({})).toEqual({
+      clientId: 'Iv23li7XhI8fUF6WSltL',
+      slug: 'spark-outpost',
+    });
   });
 
   it('refuses values that do not look like a client ID and slug', () => {
