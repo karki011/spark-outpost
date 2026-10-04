@@ -1,0 +1,49 @@
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { noteSeen } from './use-island-moments.ts';
+
+const MINUTE_MS = 60_000;
+const HOVER_IN_MS = 140;
+const HOVER_OUT_MS = 400;
+
+export function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
+  const [hover, setHover] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const entering = useRef(false);
+  const onHover = useCallback(
+    (inside: boolean) => {
+      clearTimeout(timer.current);
+      entering.current = inside;
+      timer.current = setTimeout(
+        () => {
+          setHover(inside);
+          settleRef.current(inside);
+        },
+        inside ? HOVER_IN_MS : HOVER_OUT_MS,
+      );
+      if (inside) noteSeen();
+    },
+    [settleRef],
+  );
+  const cancelEnter = useCallback(() => {
+    if (entering.current) clearTimeout(timer.current);
+  }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return [hover, onHover, cancelEnter] as const;
+}
+
+export function minuteOf(time: number): number {
+  return Math.floor(time / MINUTE_MS) * MINUTE_MS;
+}
+
+export function coreRects(island: HTMLElement | null): DOMRect[] {
+  if (!island) return [];
+  const scout = island.classList.contains('hang') ? island.querySelector('.isl-scout-wrap') : null;
+  return [island, scout].flatMap((element) => (element ? [element.getBoundingClientRect()] : []));
+}
+
+export function flatRowRects(row: HTMLElement | null): DOMRect[] {
+  if (!row?.matches('[data-flat]')) return [];
+  return Array.from(row.querySelectorAll('[data-shown] button'), (element) =>
+    element.getBoundingClientRect(),
+  );
+}

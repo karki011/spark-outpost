@@ -5,6 +5,8 @@ import {
   hoverOpens,
   islandView,
   newMoments,
+  chatWidth,
+  panelWidth,
   nextStreak,
   peekClearance,
   peekOffset,
@@ -309,5 +311,22 @@ describe('Ask Spark fast path', () => {
       expect(quickShortcutTarget(null, nudge(openCard))).toEqual({ kind: 'quick' });
       expect(quickShortcutTarget('home', nudge(loadingCard))).toEqual({ kind: 'close' });
     });
+  });
+});
+
+describe('panel width', () => {
+  it('grows with the screen between a floor and a ceiling', () => {
+    expect([1280, 1512, 1728, 1920, 3008].map((screen) => panelWidth('home', screen))).toEqual([
+      720, 756, 864, 920, 920,
+    ]);
+    expect([1280, 1728, 1920].map((screen) => panelWidth('quick', screen))).toEqual([
+      640, 726, 760,
+    ]);
+    expect(panelWidth('sessions', 1920)).toBe(panelWidth('ask', 1920));
+  });
+
+  it('never narrows an open chat below its reading width', () => {
+    expect(chatWidth(1280)).toBe(690);
+    expect(chatWidth(1920)).toBe(760);
   });
 });

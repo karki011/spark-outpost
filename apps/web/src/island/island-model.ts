@@ -67,29 +67,42 @@ export function hoverOpens(view: IslandView): HoverOpen {
   return null;
 }
 
-const WIDTHS = {
-  note: 420,
-  home: 680,
-  quick: 640,
-  sessions: 640,
-  ask: 640,
+const CARD_WIDTHS = {
   approval: 556,
   force: 556,
   question: 556,
   open: 520,
-  nudge: 364,
 } as const;
+const NOTE_WIDTH = 420;
+const NUDGE_WIDTH = 364;
+const HOME_WIDTH = { share: 0.5, min: 720, max: 920 } as const;
+const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
+const CHAT_MIN_WIDTH = 690;
 
-export function viewWidth(view: IslandView, notchWidth: number): number {
+function scaled(screenWidth: number, range: { share: number; min: number; max: number }): number {
+  return Math.round(Math.min(range.max, Math.max(range.min, screenWidth * range.share)));
+}
+
+export function panelWidth(panel: Panel, screenWidth: number): number {
+  return scaled(screenWidth, panel === 'home' ? HOME_WIDTH : PANEL_WIDTH);
+}
+
+export function chatWidth(screenWidth: number): number {
+  return Math.max(CHAT_MIN_WIDTH, scaled(screenWidth, PANEL_WIDTH));
+}
+
+export function viewWidth(view: IslandView, notchWidth: number, screenWidth: number): number {
   switch (view.kind) {
     case 'panel':
-      return WIDTHS[view.panel];
+      return panelWidth(view.panel, screenWidth);
     case 'card':
-      return WIDTHS[view.card.kind];
+      return CARD_WIDTHS[view.card.kind];
     case 'peek':
       return Math.max(notchWidth, 72);
-    default:
-      return WIDTHS[view.kind];
+    case 'note':
+      return NOTE_WIDTH;
+    case 'nudge':
+      return NUDGE_WIDTH;
   }
 }
 

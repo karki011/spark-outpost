@@ -11,13 +11,13 @@ import { IslandHome, type HomeBundle } from './IslandHome.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
 import { Sessions } from './Sessions.tsx';
-import type { GrabItem, GrabPhase } from './use-island-drop.ts';
+import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
 
 interface DropProps {
-  phase: GrabPhase;
-  item: GrabItem | null;
+  grab: Grab;
   note: string | null;
+  replyingTo: string | null;
   sceneRef: RefObject<HTMLDivElement | null>;
 }
 

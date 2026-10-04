@@ -99,9 +99,14 @@ describe('island placement', () => {
 
   it('rests in a narrow strip centred where the full window would be', () => {
     const at = { x: 360, y: 0 };
-    expect(islandBounds(at, null)).toEqual({ x: 360, y: 0, width: 720, height: ISLAND_HEIGHT });
+    expect(islandBounds(at, null)).toEqual({
+      x: 360,
+      y: 0,
+      width: ISLAND_WIDTH,
+      height: ISLAND_HEIGHT,
+    });
     expect(islandBounds(at, { width: 147, height: 37.2 })).toEqual({
-      x: 360 + (720 - 148) / 2,
+      x: 360 + (ISLAND_WIDTH - 148) / 2,
       y: 0,
       width: 148,
       height: 38,
@@ -130,14 +135,17 @@ describe('island placement', () => {
   });
 
   it('keeps a dragged island on its display and docks when dropped near the notch', () => {
-    const origin = { x: 396, y: 0 };
+    const origin = dockedPosition(builtIn);
     const moved = draggedPosition(origin, { x: 700, y: 10 }, { x: 900, y: 310 }, builtIn);
-    expect(moved).toEqual({ x: 596, y: 300 });
+    expect(moved).toEqual({ x: origin.x + 200, y: 300 });
     expect(nearDock(moved, builtIn)).toBe(false);
     expect(draggedPosition(origin, { x: 0, y: 0 }, { x: -5000, y: 5000 }, builtIn)).toEqual({
-      x: 0,
+      x: -160,
       y: 982 - ISLAND_HEIGHT,
     });
-    expect(nearDock({ x: 420, y: 40 }, builtIn)).toBe(true);
+    expect(draggedPosition(origin, { x: 0, y: 0 }, { x: 5000, y: 0 }, builtIn).x).toBe(
+      1512 - ISLAND_WIDTH + 160,
+    );
+    expect(nearDock({ x: origin.x + 24, y: 40 }, builtIn)).toBe(true);
   });
 });

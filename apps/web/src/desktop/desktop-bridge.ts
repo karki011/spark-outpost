@@ -8,7 +8,7 @@ import type {
 
 export type IslandAction = 'quick' | 'sessions';
 
-export type IslandSettingsTarget = 'island' | 'sparks';
+export type IslandSettingsTarget = 'island' | 'sparks' | 'spark-new' | `spark-edit:${string}`;
 
 export type IslandSize = 'small' | 'medium' | 'large';
 

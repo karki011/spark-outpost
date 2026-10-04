@@ -2,71 +2,62 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useFileDrop } from '../chat/attachments/use-file-drop.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { sortDrop, type DropKind } from './island-drop.ts';
-import { Spring } from './springs.ts';
 
-export type GrabPhase = 'idle' | 'enter' | 'over' | 'drop' | 'leave' | 'reject';
+export type GrabPhase =
+  'idle' | 'enter' | 'over' | 'drop' | 'chew' | 'choose' | 'done' | 'leave' | 'reject';
+
+export type FolderUse = 'project' | 'chat';
+export type GrabOutcome = 'files' | FolderUse;
 
 export interface GrabItem {
   kind: DropKind;
   name: string;
   preview: string | null;
+  more: number;
 }
 
-export const GRAB_MS = 850;
+export interface Grab {
+  phase: GrabPhase;
+  item: GrabItem | null;
+  outcome: GrabOutcome | null;
+  choose: (use: FolderUse) => void;
+  cancel: () => void;
+}
+
+export const GRAB_MS = 520;
+export const CHEW_MS = 760;
+const DONE_MS = 900;
 const LEAVE_MS = 650;
-const REACH: Record<GrabPhase, number> = {
-  idle: 0,
-  enter: 0.35,
-  over: 1,
-  drop: 0,
-  leave: 0,
-  reject: 0,
-};
+const REJECT_MS = 1_100;
+const LEAN_REACH = 160;
 
 interface DropOptions {
   islandRef: RefObject<HTMLElement | null>;
   sceneRef: RefObject<HTMLElement | null>;
-  reduced: boolean;
   onStart: () => void;
   onAbort: () => void;
   onFiles: (files: File[]) => void;
-  onFolder: (folder: string) => void;
+  onFolders: (folders: string[], use: FolderUse) => Promise<void>;
+  onDone: (outcome: GrabOutcome) => void;
   onNote: (note: string) => void;
 }
 
-function useReach(sceneRef: RefObject<HTMLElement | null>, target: number, reduced: boolean) {
-  const spring = useRef(new Spring(0));
-  useEffect(() => {
-    const value = spring.current;
-    const write = () => sceneRef.current?.style.setProperty('--reach', value.value.toFixed(3));
-    if (reduced) {
-      value.jump(target);
-      write();
-      return;
-    }
-    value.springTo(target, 0.42, 0.45);
-    let frame = 0;
-    let last = performance.now();
-    const step = (now: number) => {
-      value.step(Math.min(0.05, (now - last) / 1000), now);
-      last = now;
-      write();
-      if (value.busy) frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [sceneRef, target, reduced]);
+function contains(rect: DOMRect | undefined, x: number, y: number): boolean {
+  return (
+    rect !== undefined && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+  );
 }
 
 export function useIslandDrop(options: DropOptions) {
   const [phase, setPhase] = useState<GrabPhase>('idle');
   const [item, setItem] = useState<GrabItem | null>(null);
+  const [outcome, setOutcome] = useState<GrabOutcome | null>(null);
+  const folders = useRef<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef(options);
   useEffect(() => {
     latest.current = options;
   });
-  useReach(options.sceneRef, REACH[phase], options.reduced);
 
   useEffect(() => {
     if (phase !== 'idle' || !item?.preview) return;
@@ -75,31 +66,44 @@ export function useIslandDrop(options: DropOptions) {
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const settle = (next: GrabPhase, ms: number) => {
+  const after = (ms: number, run: () => void) => {
     clearTimeout(timer.current);
-    setPhase(next);
-    timer.current = setTimeout(() => {
-      setPhase('idle');
-      setItem(null);
-    }, ms);
+    timer.current = setTimeout(run, ms);
+  };
+
+  const rest = () => {
+    folders.current = [];
+    setPhase('idle');
+    setItem(null);
+    setOutcome(null);
+  };
+
+  const finish = (result: GrabOutcome) => {
+    setOutcome(result);
+    setPhase('done');
+    after(DONE_MS, () => {
+      rest();
+      latest.current.onDone(result);
+    });
+  };
+
+  const retreat = () => {
+    folders.current = [];
+    setPhase('leave');
+    after(LEAVE_MS, rest);
+    latest.current.onAbort();
   };
 
   const aim = (x: number, y: number) => {
     const scene = latest.current.sceneRef.current;
-    const island = latest.current.islandRef.current?.getBoundingClientRect();
     if (scene) {
       const box = scene.getBoundingClientRect();
-      const lean = Math.max(-1, Math.min(1, (x - (box.left + box.width / 2)) / 160));
+      const lean = Math.max(-1, Math.min(1, (x - (box.left + box.width / 2)) / LEAN_REACH));
       scene.style.setProperty('--lean', lean.toFixed(3));
-      scene.style.setProperty('--drop-x', `${x - box.left}px`);
-      scene.style.setProperty('--drop-y', `${y - box.top}px`);
+      scene.style.setProperty('--from-x', `${Math.round(x - (box.left + box.width / 2))}px`);
+      scene.style.setProperty('--from-y', `${Math.round(y - (box.top + box.height / 2))}px`);
     }
-    const inside =
-      island !== undefined &&
-      x >= island.left &&
-      x <= island.right &&
-      y >= island.top &&
-      y <= island.bottom;
+    const inside = contains(latest.current.islandRef.current?.getBoundingClientRect(), x, y);
     setPhase((current) =>
       current === 'enter' || current === 'over' ? (inside ? 'over' : 'enter') : current,
     );
@@ -116,28 +120,73 @@ export function useIslandDrop(options: DropOptions) {
           kind: shown.kind,
           name: shown.name,
           preview: shown.kind === 'image' ? URL.createObjectURL(shown.file) : null,
+          more: sorted.accepted - 1,
         },
       );
-      const { onFiles, onFolder, onNote } = latest.current;
+      const { onFiles, onNote } = latest.current;
       if (sorted.files.length > 0) onFiles(sorted.files);
-      sorted.folders.forEach(onFolder);
       if (sorted.notes.length > 0) onNote(sorted.notes.join(' '));
-      settle(sorted.rejectedAll ? 'reject' : 'drop', GRAB_MS);
+      if (sorted.rejectedAll) {
+        setPhase('reject');
+        after(REJECT_MS, rest);
+        return;
+      }
+      folders.current = sorted.folders;
+      setPhase('drop');
+      after(GRAB_MS, () => {
+        setPhase('chew');
+        after(CHEW_MS, () => {
+          if (folders.current.length > 0) setPhase('choose');
+          else finish('files');
+        });
+      });
     },
     {
       onEnter: () => {
         clearTimeout(timer.current);
+        folders.current = [];
         setItem(null);
+        setOutcome(null);
         setPhase('enter');
         latest.current.onStart();
       },
       onOver: aim,
-      onLeave: () => {
-        settle('leave', LEAVE_MS);
-        latest.current.onAbort();
-      },
+      onLeave: retreat,
     },
   );
 
-  return { phase, item, handlers: drop.handlers };
+  const choosing = phase === 'choose';
+  useEffect(() => {
+    if (!choosing) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      retreat();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  });
+
+  const grab: Grab = {
+    phase,
+    item,
+    outcome,
+    choose: (use) => {
+      if (phase !== 'choose') return;
+      const picked = folders.current;
+      folders.current = [];
+      setPhase('chew');
+      latest.current.onFolders(picked, use).then(
+        () => finish(use),
+        (error: Error) => {
+          latest.current.onNote(error.message);
+          setPhase('reject');
+          after(REJECT_MS, rest);
+        },
+      );
+    },
+    cancel: retreat,
+  };
+  return { grab, handlers: drop.handlers };
 }
