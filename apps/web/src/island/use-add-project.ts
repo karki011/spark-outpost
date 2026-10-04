@@ -18,19 +18,20 @@ export function useAddProject(onAdded: (project: Project) => void) {
       onAdded(project);
     },
   });
-  const start = async () => {
+  const start = () => {
     link.reset();
-    const desktop = sparkDesktop();
-    if (!desktop) {
-      setBrowsing(true);
-      return;
-    }
-    const folder = await desktop.island.pickFolder();
+    setBrowsing(true);
+  };
+  const desktop = sparkDesktop();
+  const pickNative = async () => {
+    const folder = await desktop?.island.pickFolder();
     if (folder) link.mutate(folder);
   };
   return {
     start,
+    pickNative: desktop ? () => void pickNative() : null,
     linkFolder: (folder: string) => link.mutate(folder),
+    linkFolderAsync: (folder: string) => link.mutateAsync(folder).then(() => undefined),
     adding: link.isPending,
     error: link.isError ? link.error.message : null,
     browsing,

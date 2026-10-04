@@ -136,6 +136,23 @@ export function QuickChat(props: QuickChatProps) {
     onDraft({ ...draft, level: AUTONOMY_LEVELS[(index + 1) % AUTONOMY_LEVELS.length]!.id });
   };
 
+  if (adder.browsing) {
+    return (
+      <div className="isl-panel isl-picker">
+        <FolderDialog
+          inline
+          linking={adder.adding}
+          error={adder.error}
+          onUse={adder.linkFolder}
+          onClose={adder.close}
+          fallback={
+            adder.pickNative && { label: 'Use the Mac folder dialog', onPick: adder.pickNative }
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="isl-panel">
       <div className="isl-qc">
@@ -251,16 +268,11 @@ export function QuickChat(props: QuickChatProps) {
           error={adder.error}
           chipRef={chipRef}
           onPick={pick}
-          onAdd={() => void adder.start()}
+          onAdd={() => {
+            setMenu(false);
+            adder.start();
+          }}
           onClose={() => setMenu(false)}
-        />
-      )}
-      {adder.browsing && (
-        <FolderDialog
-          linking={adder.adding}
-          error={adder.error}
-          onUse={adder.linkFolder}
-          onClose={adder.close}
         />
       )}
       {send.isError && (
