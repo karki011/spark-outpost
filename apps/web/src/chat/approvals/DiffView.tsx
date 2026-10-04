@@ -56,7 +56,13 @@ function rowTokens(row: DiffRow, highlighted: Highlighted | null): CodeToken[] |
   return highlighted.after[row.newNo! - 1] ?? null;
 }
 
-function Row({ row, highlighted }: { row: DiffRow; highlighted: Highlighted | null }) {
+export function DiffLine({
+  row,
+  highlighted = null,
+}: {
+  row: DiffRow;
+  highlighted?: Highlighted | null;
+}) {
   const segments = paintLine(row.text, rowTokens(row, highlighted), row.words);
   return (
     <tr className={`dv-row ${row.kind}`}>
@@ -167,7 +173,7 @@ export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string
                   onOpen={() => open(item.index)}
                 />
               ) : (
-                <Row
+                <DiffLine
                   key={`${item.row.oldNo}:${item.row.newNo}`}
                   row={item.row}
                   highlighted={highlighted}

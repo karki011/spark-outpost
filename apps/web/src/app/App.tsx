@@ -20,7 +20,8 @@ import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { MemberChatHost } from '../crew/MemberChatHost.tsx';
-import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
+import { JUMP_TRIES, scrollToAnchor, scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
+import { turnAnchor } from '../chat/rail/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
@@ -158,7 +159,14 @@ function ChatShell({ entering }: { entering: boolean }) {
   useEffect(() => {
     openFromDesktop.current = openChat;
   });
-  useEffect(() => sparkDesktop()?.onOpenChat((id) => openFromDesktop.current(id)), []);
+  useEffect(
+    () =>
+      sparkDesktop()?.onOpenChat((id, runId) => {
+        openFromDesktop.current(id);
+        if (runId) scrollToAnchor(turnAnchor(runId), JUMP_TRIES);
+      }),
+    [],
+  );
   useChatRequests(openChat);
   useSlackPresence();
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);

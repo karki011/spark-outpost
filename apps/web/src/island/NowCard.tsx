@@ -9,23 +9,21 @@ import {
   type WheelEvent,
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  isTerminalRunStatus,
-  type ConversationDetail,
-  type ConversationSummary,
-} from '@spark-outpost/contracts';
+import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
-import { viewSteps, type StepView } from '../chat/run-projection.ts';
 import { rowState } from '../conversations/row-state.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
-import { activityLines, stepCount, type ActivityLine } from './home-model.ts';
-import { hopIn, tickUp } from './home-motion.ts';
+import { ActivityLog } from './ActivityLog.tsx';
+import { DiffPeek, type PeekTarget } from './DiffPeek.tsx';
+import { activityLines, runActivity, stepCount, withChanges } from './home-model.ts';
+import { hopIn } from './home-motion.ts';
 import { sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { RunDots } from './island-parts.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent } from './use-island-data.ts';
+import { useRunChanges } from './use-run-changes.ts';
 
 const HOLD_MS = 550;
 const SWIPE_PX = 40;
@@ -42,22 +40,14 @@ interface NowCardProps {
   sleepy: boolean;
   quickStart: QuickStart | null;
   onOpenHere: (id: string) => void;
-  onOpenChat: (id: string) => void;
+  onOpenChat: (id: string, runId?: string) => void;
   onAsk: () => void;
   onNewIn: (projectId: string) => void;
 }
 
-function runSteps(chat: ConversationSummary, detail: ConversationDetail | undefined): StepView[] {
-  if (!detail) return [];
-  const live = detail.runs
-    .filter((run) => !isTerminalRunStatus(run.status))
-    .map((run) => run.id)
-    .toReversed();
-  for (const id of [chat.latestRun?.id, ...live]) {
-    const steps = id ? detail.activity[id] : undefined;
-    if (steps?.length) return viewSteps(steps);
-  }
-  return [];
+function taskOf(detail: ConversationDetail | undefined, runIds: readonly string[]): string | null {
+  if (!detail) return null;
+  return detail.tasks.find((task) => runIds.some((id) => task.runIds.includes(id)))?.id ?? null;
 }
 
 function agentLine(chat: ConversationSummary, detail: ConversationDetail | undefined): string {
@@ -99,61 +89,11 @@ function StateBadge({ state }: { state: SessionState }) {
   }
 }
 
-function Mark({ state }: { state: ActivityLine['state'] }) {
-  if (state === 'active') return <span className="isl-now-mark" aria-hidden="true" />;
-  return (
-    <svg className="isl-now-mark" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
-      <path
-        d={state === 'failed' ? 'm3 3 6 6m0-6-6 6' : 'm2.5 6.5 2.5 2.5 4.5-5'}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-    </svg>
-  );
-}
-
-const STATE_WORDS: Record<ActivityLine['state'], string> = {
-  done: 'Done',
-  active: 'Now',
-  failed: 'Failed',
-};
-
-function ActivityLog({ lines, reduced }: { lines: ActivityLine[]; reduced: boolean }) {
-  const listRef = useRef<HTMLOListElement>(null);
-  const lastKey = lines.at(-1)?.key ?? null;
-  const previous = useRef(lastKey);
-
-  useLayoutEffect(() => {
-    const before = previous.current;
-    previous.current = lastKey;
-    const list = listRef.current;
-    if (reduced || !list || before === null || before === lastKey) return;
-    tickUp(list, list.firstElementChild?.getBoundingClientRect().height ?? 18);
-  }, [lastKey, reduced]);
-
-  return (
-    <div className="isl-now-logwrap">
-      <ol ref={listRef} className="isl-now-log" aria-label="Latest steps">
-        {lines.map((line) => (
-          <li key={line.key} data-state={line.state} data-kind={line.kind}>
-            <Mark state={line.state} />
-            <span className="sr-only">{STATE_WORDS[line.state]}: </span>
-            <span className="isl-now-verb">{line.verb}</span>
-            {line.target && (
-              <>
-                <span aria-hidden="true"> · </span>
-                <span className="isl-now-target">{line.target}</span>
-              </>
-            )}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function OpenButton({ chat, onOpenHere, onOpenChat }: Omit<SessionProps, 'reduced'>) {
+function OpenButton({
+  chat,
+  onOpenHere,
+  onOpenChat,
+}: Pick<SessionProps, 'chat' | 'onOpenHere' | 'onOpenChat'>) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const held = useRef(false);
   const release = () => clearTimeout(timer.current);
@@ -192,18 +132,24 @@ interface SessionProps {
   reduced: boolean;
   onOpenHere: (id: string) => void;
   onOpenChat: (id: string) => void;
+  onPeek: (target: PeekTarget) => void;
 }
 
-function NowSession({ chat, reduced, onOpenHere, onOpenChat }: SessionProps) {
+function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: SessionProps) {
   const detail = useQuery({
     queryKey: queryKeys.conversation(chat.id),
     queryFn: () => api.getConversation(chat.id),
   });
   const state = sessionState(chat);
   const live = state === 'working' || state === 'waiting';
+  const activity = useMemo(() => runActivity(chat, detail.data), [chat, detail.data]);
+  const plain = useMemo(() => activityLines(activity.steps, live), [activity, live]);
+  const taskId = taskOf(detail.data, activity.runIds);
+  const edits = plain.some((line) => line.kind === 'edit' && line.path !== null);
+  const changes = useRunChanges(taskId, activity.runIds, edits);
   const lines = useMemo(
-    () => activityLines(runSteps(chat, detail.data), live),
-    [chat, detail.data, live],
+    () => withChanges(plain, activity.runIds, changes.entries),
+    [plain, activity.runIds, changes.entries],
   );
   const count = stepCount(chat.latestRun?.progress);
   const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
@@ -235,7 +181,13 @@ function NowSession({ chat, reduced, onOpenHere, onOpenChat }: SessionProps) {
           <i style={{ width: '64%' }} />
         </div>
       ) : lines.length > 0 ? (
-        <ActivityLog lines={lines} reduced={reduced} />
+        <ActivityLog
+          lines={lines}
+          reduced={reduced}
+          onPeek={(change) => {
+            if (taskId) onPeek({ chatId: chat.id, taskId, version: changes.version, change });
+          }}
+        />
       ) : (
         <p className="isl-now-status">{status}</p>
       )}
@@ -272,12 +224,15 @@ export function NowCard(props: NowCardProps) {
   const { sessions } = props;
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [peekTarget, setPeekTarget] = useState<PeekTarget | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const index = Math.max(
     0,
     sessions.findIndex((chat) => chat.id === pickedId),
   );
   const chat = sessions[index] ?? null;
   const state = chat ? sessionState(chat) : 'idle';
+  const peek = peekTarget && peekTarget.chatId === chat?.id ? peekTarget : null;
   const blobRef = useRef<HTMLSpanElement>(null);
   const opening = useRef({ chatId: chat?.id ?? null, reduced: props.reduced });
   const swipe = useRef<number | null>(null);
@@ -295,15 +250,29 @@ export function NowCard(props: NowCardProps) {
     setPickedId(sessions[(next + count) % count]!.id);
   };
 
+  const closePeek = () => {
+    const path = peek?.change.path;
+    setPeekTarget(null);
+    requestAnimationFrame(() => {
+      const section = sectionRef.current;
+      const rows = [...(section?.querySelectorAll<HTMLElement>('button[data-change]') ?? [])];
+      const back = rows.find((row) => row.dataset.change === path);
+      (back ?? section?.querySelector<HTMLElement>('.isl-now-open'))?.focus({
+        preventScroll: true,
+      });
+    });
+  };
+
   const onPointerUp = (event: PointerEvent<HTMLElement>) => {
     const start = swipe.current;
     swipe.current = null;
-    if (start === null) return;
+    if (start === null || peek) return;
     const moved = event.clientX - start;
     if (Math.abs(moved) >= SWIPE_PX) show(index + (moved < 0 ? 1 : -1));
   };
 
   const onWheel = (event: WheelEvent<HTMLElement>) => {
+    if (peek) return;
     if (Math.abs(event.deltaX) < 12 || Math.abs(event.deltaX) < Math.abs(event.deltaY)) return;
     if (event.timeStamp - wheelAt.current < WHEEL_GAP_MS) return;
     wheelAt.current = event.timeStamp;
@@ -312,7 +281,9 @@ export function NowCard(props: NowCardProps) {
 
   return (
     <section
+      ref={sectionRef}
       className="isl-hcard isl-now"
+      data-peek={peek ? '' : undefined}
       aria-label={chat ? `Now: ${chat.title}` : 'Now'}
       style={{ '--i': 0 } as CSSProperties}
       onPointerDown={(event) => {
@@ -321,46 +292,53 @@ export function NowCard(props: NowCardProps) {
       onPointerUp={onPointerUp}
       onWheel={onWheel}
     >
-      <span ref={blobRef} className="isl-now-blob" data-state={state}>
-        <span key={chat?.id ?? 'scout'} className="isl-now-face">
-          {chat ? (
-            <SessionBlob
-              chat={chat}
-              state={state}
-              size={84}
-              live={state === 'working' && !props.reduced}
-              expression={sessionExpression(state, props.sleepy)}
-            />
-          ) : (
-            <BlobScout size={64} mood={props.sleepy ? 'sleep' : null} />
+      {peek ? (
+        <DiffPeek target={peek} onBack={closePeek} onOpenChat={props.onOpenChat} />
+      ) : (
+        <>
+          <span ref={blobRef} className="isl-now-blob" data-state={state}>
+            <span key={chat?.id ?? 'scout'} className="isl-now-face">
+              {chat ? (
+                <SessionBlob
+                  chat={chat}
+                  state={state}
+                  size={84}
+                  live={state === 'working' && !props.reduced}
+                  expression={sessionExpression(state, props.sleepy)}
+                />
+              ) : (
+                <BlobScout size={64} mood={props.sleepy ? 'sleep' : null} />
+              )}
+            </span>
+            <StateBadge state={state} />
+          </span>
+          <div key={chat?.id ?? 'empty'} className="isl-now-page" data-dir={direction}>
+            {chat ? (
+              <NowSession
+                chat={chat}
+                reduced={props.reduced}
+                onOpenHere={props.onOpenHere}
+                onOpenChat={props.onOpenChat}
+                onPeek={setPeekTarget}
+              />
+            ) : (
+              <NowEmpty quickStart={props.quickStart} onAsk={props.onAsk} onNewIn={props.onNewIn} />
+            )}
+          </div>
+          {sessions.length > 1 && (
+            <div className="isl-dots" role="group" aria-label="Live chats">
+              {sessions.map((item, at) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={`Show ${item.title}`}
+                  aria-current={at === index || undefined}
+                  onClick={() => show(at)}
+                />
+              ))}
+            </div>
           )}
-        </span>
-        <StateBadge state={state} />
-      </span>
-      <div key={chat?.id ?? 'empty'} className="isl-now-page" data-dir={direction}>
-        {chat ? (
-          <NowSession
-            chat={chat}
-            reduced={props.reduced}
-            onOpenHere={props.onOpenHere}
-            onOpenChat={props.onOpenChat}
-          />
-        ) : (
-          <NowEmpty quickStart={props.quickStart} onAsk={props.onAsk} onNewIn={props.onNewIn} />
-        )}
-      </div>
-      {sessions.length > 1 && (
-        <div className="isl-dots" role="group" aria-label="Live chats">
-          {sessions.map((item, at) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-label={`Show ${item.title}`}
-              aria-current={at === index || undefined}
-              onClick={() => show(at)}
-            />
-          ))}
-        </div>
+        </>
       )}
     </section>
   );

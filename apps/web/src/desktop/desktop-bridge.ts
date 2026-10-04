@@ -83,7 +83,7 @@ export interface SparkDesktop {
     setInteractive(on: boolean): void;
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
-    openChat(id: string | null): void;
+    openChat(id: string | null, runId?: string): void;
     openSettings?(target: IslandSettingsTarget): void;
     setRestSize(size: { width: number; height: number } | null): void;
     ready?(): void;
@@ -107,7 +107,7 @@ export interface SparkDesktop {
     openFullDiskAccess(): Promise<void>;
   };
   browser?: DesktopBrowser;
-  onOpenChat(callback: (id: string) => void): Unsubscribe;
+  onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }
 

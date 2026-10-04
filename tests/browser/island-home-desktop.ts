@@ -7,6 +7,7 @@ export const island = (page: Page) => page.getByRole('region', { name: 'Spark Is
 
 export interface FakeIsland {
   openedChats: string[];
+  openedTurns: (string | null)[];
   settings: string[];
   sound: boolean[];
   chimes: number;
@@ -26,6 +27,7 @@ export async function fakeHomeDesktop(page: Page, theme = 'graphite') {
     const none = () => () => undefined;
     const fake = {
       openedChats: [] as string[],
+      openedTurns: [] as (string | null)[],
       settings: [] as string[],
       sound: [] as boolean[],
       chimes: 0,
@@ -106,7 +108,10 @@ export async function fakeHomeDesktop(page: Page, theme = 'graphite') {
           setInteractive: () => undefined,
           setFocusable: () => undefined,
           drag: () => undefined,
-          openChat: (id: string) => fake.openedChats.push(id),
+          openChat: (id: string, runId?: string) => {
+            fake.openedChats.push(id);
+            fake.openedTurns.push(runId ?? null);
+          },
           openSettings: (target: string) => fake.settings.push(target),
           setRestSize: () => undefined,
         },

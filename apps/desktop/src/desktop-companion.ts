@@ -72,7 +72,7 @@ function trayIcon(file: string) {
 export async function startCompanionHost(options: CompanionHostOptions): Promise<CompanionHost> {
   const initial = await loadSettings(options.settingsPath);
   let island: IslandWindow | null = null;
-  let pendingChat: string | null = null;
+  let pendingChat: { id: string; runId: string | null } | null = null;
   let pendingSettings: string | null = null;
   let saving = Promise.resolve();
   const tray = new Tray(trayIcon(options.trayIcon));
@@ -183,9 +183,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
-    const id = pendingChat;
+    const pending = pendingChat;
     pendingChat = null;
-    return id;
+    return pending;
   });
   ipcMain.handle(IPC.pendingSettings, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
@@ -216,15 +216,16 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     else if (isSize(size)) island!.setRestSize({ width: size.width, height: size.height });
   });
 
-  const openChat = (id: string) => {
-    pendingChat = id;
+  const openChat = (id: string, runId: string | null = null) => {
+    pendingChat = { id, runId };
     options.showSpark();
     broadcast(IPC.openChat, null);
   };
 
-  ipcMain.on(IPC.islandOpenChat, (event, id: unknown) => {
+  ipcMain.on(IPC.islandOpenChat, (event, id: unknown, runId: unknown) => {
     if (!fromIsland(event)) return;
-    if (typeof id === 'string' && CHAT_ID.test(id)) openChat(id);
+    const turn = typeof runId === 'string' && CHAT_ID.test(runId) ? runId : null;
+    if (typeof id === 'string' && CHAT_ID.test(id)) openChat(id, turn);
     else options.showSpark();
   });
 

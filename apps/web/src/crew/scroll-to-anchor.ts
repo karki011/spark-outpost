@@ -3,7 +3,7 @@ import { prefersReducedMotion } from '../ui/motion.ts';
 import { approvalAnchor } from './conversation-crew.ts';
 
 const SCROLL_TRIES = 30;
-const JUMP_TRIES = 180;
+export const JUMP_TRIES = 180;
 
 export function scrollToAnchor(anchor: string, tries = SCROLL_TRIES) {
   const target = document.getElementById(anchor);
