@@ -40,6 +40,6 @@ To unlink, select **No project (chat only)** in the menu.
 
 You can also paste or drag files into the box.
 
-> **Tip:** To talk to a named teammate, select **Talk to…** before your first message. See [Make a Spark](sparks.md).
+> **Tip:** To talk to a named teammate, select **Talk to…** before your first message. To hand it one job, type `@` and its name. See [Make a Spark](sparks.md).
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)

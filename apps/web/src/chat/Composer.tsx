@@ -3,7 +3,6 @@ import './composer/composer-popovers.css';
 import './project/project.css';
 import {
   useCallback,
-  useEffect,
   useId,
   useMemo,
   useRef,
@@ -51,10 +50,16 @@ import { SlashMenu } from './composer/SlashMenu.tsx';
 import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
 import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
-import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
+import { useDraftRequests } from './composer/use-draft-requests.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
-import { composerHint } from './composer/composer-hint.ts';
+import {
+  composerHint,
+  composerPlaceholder,
+  focusMovesToSlashMenu,
+} from './composer/composer-hint.ts';
+import { SparkSuggestion } from '../teammates/SparkSuggestion.tsx';
+import { useMentionSparks } from '../teammates/use-mention-sparks.ts';
 import type { AutonomyControl } from './project/AutonomyChip.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
@@ -101,15 +106,6 @@ const NO_SKILLS: readonly RepoDefinition[] = [];
 
 const MAX_ROWS = 5;
 
-function focusAtEnd(input: HTMLTextAreaElement) {
-  input.focus();
-  input.setSelectionRange(input.value.length, input.value.length);
-}
-
-function focusMovesToSlashMenu(next: EventTarget | null): boolean {
-  return next instanceof Element && next.closest('.slashpop') !== null;
-}
-
 export function Composer({
   conversationId,
   repos,
@@ -140,7 +136,6 @@ export function Composer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const secrets = useSecretGuard(draft);
   const inputId = useId();
-  const pendingDraft = usePendingDraft(conversationId);
   const repoPopover = usePopover<HTMLButtonElement, HTMLDivElement>();
   const hasRepos = repos.length > 0;
   const addFromRepo = (file: RepoFile) => attachments.addFromRepo(file.projectId, file);
@@ -148,8 +143,10 @@ export function Composer({
     repoPopover.setOpen(true);
     repoPopover.anchorRef.current?.focus();
   };
+  const sparks = useMentionSparks(conversationId);
   const mention = useMention({
     repos,
+    sparks,
     draft,
     setDraft,
     textareaRef,
@@ -232,27 +229,7 @@ export function Composer({
       ),
     [attachments.items],
   );
-  const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
-  if (pendingDraft !== appliedDraft) {
-    setAppliedDraft(pendingDraft);
-    if (pendingDraft !== null) setDraft(pendingDraft);
-  }
-
-  useEffect(() => {
-    if (pendingDraft === null) return;
-    takeDraft(conversationId);
-    requestAnimationFrame(() => {
-      const input = textareaRef.current;
-      if (input) focusAtEnd(input);
-    });
-  }, [pendingDraft, conversationId]);
-
-  const focusRequest = quotes?.focusRequest ?? 0;
-  useEffect(() => {
-    if (focusRequest === 0) return;
-    const input = textareaRef.current;
-    if (input) focusAtEnd(input);
-  }, [focusRequest]);
+  useDraftRequests(conversationId, setDraft, textareaRef, quotes?.focusRequest ?? 0);
 
   const steering = busy ? steer : null;
   const queueing = busy && steering === null && onQueue !== undefined;
@@ -352,6 +329,18 @@ export function Composer({
         repos={repos}
         popover={repoPopover}
         autonomy={autonomy}
+        suggestion={
+          <SparkSuggestion
+            conversationId={conversationId}
+            sparks={sparks}
+            draft={draft}
+            enabled={steering === null}
+            onApply={(text) => {
+              setDraft(text);
+              textareaRef.current?.focus();
+            }}
+          />
+        }
       />
       <div className="composer">
         {quotes && <QuoteChips items={quotes.items} onRemove={quotes.remove} />}
@@ -406,9 +395,14 @@ export function Composer({
           <MentionPicker
             listId={mention.listId}
             left={mention.left}
+            sparks={mention.sparks}
+            active={mention.active}
+            showsFiles={mention.showsFiles}
             search={mention.search}
             attached={attachedPaths}
+            onActive={mention.setActive}
             onPick={mention.pick}
+            onPickSpark={mention.pickSpark}
           />
         )}
         {repoOpen && hasRepos && (
@@ -426,15 +420,12 @@ export function Composer({
           value={draft}
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
           maxLength={MESSAGE_MAX_LENGTH}
-          placeholder={
-            steering
-              ? 'Steer the pieces while they run'
-              : queueing
-                ? 'Queue a message for when this turn ends'
-                : hasRepos
-                  ? 'Ask anything, @ to add a file, / for commands'
-                  : 'Ask anything, / for commands'
-          }
+          placeholder={composerPlaceholder({
+            steering: steering !== null,
+            queueing,
+            hasRepos,
+            hasSparks: sparks.length > 0,
+          })}
           {...(slash.open ? slash.inputProps : mention.inputProps)}
           onChange={(event) => {
             setDraft(event.target.value);

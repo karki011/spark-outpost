@@ -8,6 +8,8 @@ import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
+import { SparkJobs, isSparkLed, mainAgentRan, sparkMembers } from './crew/SparkJobs.tsx';
+import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './rail/outline-model.ts';
@@ -51,7 +53,9 @@ export const TurnSection = memo(function TurnSection({
   onOpenChat,
 }: TurnSectionProps) {
   const orchestration = detail.orchestrations?.[run.id] ?? null;
-  const crew = isCrewTurn(orchestration) ? orchestration : null;
+  const sparkLed = isSparkLed(orchestration) ? orchestration : null;
+  const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
+  const handedTo = sparkMembers(orchestration);
   const taskCard =
     onOpenTask && task ? (
       <TaskCard
@@ -88,9 +92,23 @@ export const TurnSection = memo(function TurnSection({
               />
             </>
           )}
+          {handedTo.length > 0 && (
+            <p className="msg-sparks">
+              Handed to
+              {handedTo.map((member) => (
+                <SparkTag
+                  key={member.runId}
+                  sparkId={member.spark?.id ?? ''}
+                  name={member.name}
+                  role={member.spark?.role ?? ''}
+                />
+              ))}
+            </p>
+          )}
         </div>
       )}
-      {crew ? (
+      {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
+      {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
       ) : (
         <>

@@ -60,6 +60,8 @@ export interface OrchestrationPatch {
   phase?: OrchestrationPhase;
   depth?: Depth;
   depthSource?: 'jev' | 'rules' | 'user';
+  risk?: Risk;
+  routing?: ModelRouting;
   retries?: number;
   activeMs?: number;
   toolCalls?: number;
@@ -74,6 +76,8 @@ const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
   phase: 'phase',
   depth: 'depth',
   depthSource: 'depth_source',
+  risk: 'risk',
+  routing: 'routing',
   retries: 'retries',
   activeMs: 'active_ms',
   toolCalls: 'tool_calls',
@@ -298,7 +302,7 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     db.query<MemberRow & { owner: string }>(
       `SELECT ${MEMBER_COLUMNS}, COALESCE(r.parent_run_id, r.id) AS owner FROM runs r
        WHERE r.role IS NOT NULL AND (r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[]))
-       ORDER BY r.created_at`,
+       ORDER BY r.role = 'spark' DESC, r.created_at`,
       [ids],
     ),
     db.query<ApprovalRow>(

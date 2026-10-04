@@ -9,6 +9,8 @@ import {
 import { resolveChatSettings } from '../../persistence/chat-settings.ts';
 import { primaryChatWorktree } from '../../persistence/chat-worktrees.ts';
 import { getConversationDetail, listConversations } from '../../persistence/conversations.ts';
+import type { Queryable } from '../../persistence/db.ts';
+import { replyText } from '../../persistence/spark-mentions.ts';
 import { listProjects } from '../../projects/projects.ts';
 import type { SparkScope } from '../deps.ts';
 import { page, round } from '../format.ts';
@@ -111,6 +113,7 @@ function runLine(run: Run) {
 }
 
 const RUNS_SHOWN = 30;
+const SPARK_REPLIES_SHOWN = 6;
 
 function clipped(text: string, maxChars: number): string {
   return text.length > maxChars ? `${text.slice(0, maxChars)}… (${text.length} chars)` : text;
@@ -122,6 +125,42 @@ function memberName(detail: ConversationDetail, runId: string): string {
     if (member) return member.name;
   }
   return 'the agent';
+}
+
+function sparkMembers(detail: ConversationDetail) {
+  return Object.values(detail.orchestrations ?? {}).flatMap((orchestration) =>
+    orchestration.crew
+      .filter((member) => member.role === 'spark')
+      .map((member) => ({ member, turnRunId: orchestration.runId })),
+  );
+}
+
+function handedTo(detail: ConversationDetail): Map<string, string[]> {
+  const byMessage = new Map<string, string[]>();
+  const messageOf = new Map(detail.runs.map((run) => [run.id, run.userMessageId]));
+  for (const { member, turnRunId } of sparkMembers(detail)) {
+    const messageId = messageOf.get(turnRunId);
+    if (messageId) byMessage.set(messageId, [...(byMessage.get(messageId) ?? []), member.name]);
+  }
+  return byMessage;
+}
+
+async function sparkReplies(db: Queryable, detail: ConversationDetail, maxChars: number) {
+  const latest = sparkMembers(detail).slice(-SPARK_REPLIES_SHOWN);
+  return Promise.all(
+    latest.map(async ({ member, turnRunId }) => ({
+      spark: member.name,
+      role: member.spark?.role || null,
+      turnRunId,
+      status: member.status,
+      ranAs: 'read-only subagent with its own context',
+      mainAgentRan: member.spark ? !member.spark.only : null,
+      agent: member.provider,
+      costUsd: round(member.costUsd),
+      at: member.startedAt,
+      text: clipped(await replyText(db, member.runId), maxChars),
+    })),
+  );
 }
 
 async function chat(
@@ -137,6 +176,7 @@ async function chat(
   const tree = await primaryChatWorktree(deps.db, id);
   const offset = args.offset ?? Math.max(0, messages.length - args.limit);
   const shown = page(messages, offset, args.limit);
+  const handed = handedTo(detail);
   return {
     id: conversation.id,
     title: conversation.title,
@@ -166,12 +206,14 @@ async function chat(
         role: message.role,
         at: message.createdAt,
         text: clipped(message.content, args.maxChars),
+        ...(handed.has(message.id) ? { handedToSparks: handed.get(message.id) } : {}),
         ...(message.attachments.length > 0
           ? { attachments: message.attachments.map((attachment) => attachment.name) }
           : {}),
       })),
     },
     runs: { total: runs.length, latest: runs.slice(-RUNS_SHOWN).map(runLine) },
+    sparkReplies: await sparkReplies(deps.db, detail, args.maxChars),
     queue: (detail.queue ?? []).map((item, index) => ({
       position: index + 1,
       text: clipped(item.content, args.maxChars),
@@ -235,7 +277,7 @@ export const chatTools = [
     privateData: true,
     title: 'Read a chat',
     description:
-      'Read one chat: settings, cost, its branch and worktree, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost), approval cards, the queue of messages waiting to send when the running turn ends (in order), and the messages the user sent straight to crew members (to, text, status). Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
+      'Read one chat: settings, cost, its branch and worktree, messages (the latest page by default; pass offset for earlier ones; handedToSparks names the Sparks an @mention handed the message to), its runs (status, provider, model, role, errors, cost), sparkReplies (the full reply of each Spark subagent, which the main agent only got as a short hand-off note), approval cards, the queue of messages waiting to send when the running turn ends (in order), and the messages the user sent straight to crew members (to, text, status). Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
     input: {
       chat: chatIdInput,
       offset: z.number().int().min(0).optional().describe('First message to show (0 = oldest).'),

@@ -1,5 +1,5 @@
 import './context-bar.css';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
@@ -24,11 +24,18 @@ interface ContextBarProps {
   repos: Project[];
   popover: RepoPopover;
   autonomy: AutonomyControl | null;
+  suggestion?: ReactNode;
 }
 
 const RECENT_LIMIT = 5;
 
-export function ContextBar({ conversationId, repos, popover, autonomy }: ContextBarProps) {
+export function ContextBar({
+  conversationId,
+  repos,
+  popover,
+  autonomy,
+  suggestion,
+}: ContextBarProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
   const [browsing, setBrowsing] = useState(false);
   const projects = useProjects();
@@ -115,6 +122,7 @@ export function ContextBar({ conversationId, repos, popover, autonomy }: Context
         <TalkToChip conversationId={conversationId} />
         {primary && autonomy && <AutonomyChip {...autonomy} />}
         {primary && <AgentSetup key={primary.id} repos={repos} />}
+        {suggestion}
       </div>
       <RepoMenu
         id={menuId}

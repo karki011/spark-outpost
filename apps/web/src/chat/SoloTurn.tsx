@@ -74,7 +74,8 @@ interface SoloTurnProps {
 }
 
 function soloChild(run: Run, detail: ConversationDetail) {
-  const member = detail.orchestrations?.[run.id]?.crew.at(-1) ?? null;
+  const crew = detail.orchestrations?.[run.id]?.crew ?? [];
+  const member = crew.findLast((candidate) => candidate.role !== 'spark') ?? null;
   const child = member
     ? (detail.runs.find((candidate) => candidate.id === member.runId) ?? null)
     : null;

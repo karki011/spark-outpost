@@ -21,8 +21,11 @@ export function roleTitle(agent: Pick<CrewAgent, 'role' | 'title'>): string {
   return role.success ? agentRoleLabel(role.data) : agent.role;
 }
 
-export function roleSubtitle(agent: Pick<CrewAgent, 'role' | 'name' | 'title'>): string | null {
+export function roleSubtitle(
+  agent: Pick<CrewAgent, 'role' | 'name' | 'title' | 'spark'>,
+): string | null {
   if (agent.title) return agent.title;
+  if (agent.spark?.role) return agent.spark.role;
   const title = roleTitle(agent);
   return agent.name.startsWith(title) || isDispatcher(agent) ? null : title;
 }

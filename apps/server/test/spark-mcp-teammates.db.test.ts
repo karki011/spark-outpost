@@ -1,6 +1,7 @@
 import { getApproval } from '../src/persistence/approvals.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPARK_ACTION_OPTION, faceFromName } from '@spark-outpost/contracts';
+import { insertChildRun, insertOrchestration } from '../src/persistence/orchestrations.ts';
 import { createTeammate, listTeammates } from '../src/persistence/teammates.ts';
 import {
   answerCard,
@@ -72,6 +73,82 @@ describe('spark_sparks', () => {
     const missing = await tools.call('spark_sparks', { spark: 'Nobody' });
     expect(missing.isError).toBe(true);
     expect(missing.text).toContain('Sparks: Pip');
+  });
+});
+
+describe('jobs handed to a Spark by an @mention', () => {
+  async function handedJob(reply: string) {
+    const teammate = await createTeammate(t.db, t.workspaceId, pip);
+    const chat = await startChat(t, '@Pip review the login change');
+    await insertOrchestration(t.db, {
+      runId: chat.runId,
+      depth: 'direct',
+      depthSource: 'user',
+      risk: 'read-only',
+      routing: 'pinned',
+      activeLimitMs: 60_000,
+      toolCallLimit: 60,
+      costCapUsd: null,
+    });
+    const child = await insertChildRun(
+      t.db,
+      {
+        parentRunId: chat.runId,
+        role: 'spark',
+        stepIndex: 0,
+        attempt: 1,
+        agentLabel: 'Pip · Code reviewer',
+        provider: 'claude',
+        model: null,
+        effort: null,
+        mode: 'chat',
+        prompt: 'review',
+        route: { name: 'Pip', spark: { id: teammate.id, role: 'Code reviewer', only: true } },
+      },
+      30,
+    );
+    await t.db.query(
+      `INSERT INTO run_events (run_id, seq, type, payload)
+       VALUES ($1, 1, 'TEXT_MESSAGE_CONTENT', $2)`,
+      [child.runId, JSON.stringify({ type: 'TEXT_MESSAGE_CONTENT', messageId: 'm', delta: reply })],
+    );
+    await t.db.query(`UPDATE runs SET status = 'succeeded', finished_at = now() WHERE id = $1`, [
+      child.runId,
+    ]);
+    return { teammate, chat };
+  }
+
+  it('shows which message went to which Spark and the Spark’s full reply', async () => {
+    const { chat } = await handedJob('Two findings in login.ts:12 and :40.');
+
+    const read = (await tools.call('spark_chat', { chat: chat.conversationId })).json<{
+      messages: { items: { role: string; handedToSparks?: string[] }[] };
+      sparkReplies: Record<string, unknown>[];
+    }>();
+
+    expect(read.messages.items[0]).toMatchObject({ role: 'user', handedToSparks: ['Pip'] });
+    expect(read.sparkReplies).toEqual([
+      expect.objectContaining({
+        spark: 'Pip',
+        role: 'Code reviewer',
+        status: 'succeeded',
+        mainAgentRan: false,
+        text: 'Two findings in login.ts:12 and :40.',
+      }),
+    ]);
+  });
+
+  it('counts the jobs on the Spark', async () => {
+    const { chat } = await handedJob('Looks fine.');
+
+    const result = (await tools.call('spark_sparks', { spark: 'Pip' })).json<{
+      sparks: { mentionJobs: Record<string, unknown> }[];
+    }>();
+
+    expect(result.sparks[0]!.mentionJobs).toMatchObject({
+      total: 1,
+      lastChatId: chat.conversationId,
+    });
   });
 });
 

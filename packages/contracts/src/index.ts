@@ -62,5 +62,6 @@ export * from './guide-search.ts';
 export * from './secrets.ts';
 export * from './secret-files.ts';
 export * from './teammates.ts';
+export * from './spark-mention.ts';
 export * from './full-disk-access.ts';
 export * from './tool-steps.ts';

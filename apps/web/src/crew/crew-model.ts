@@ -29,6 +29,7 @@ export interface CrewAgent {
   routeNote?: string;
   budget?: string;
   title?: string;
+  spark?: { id: string; role: string };
 }
 
 export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';
@@ -75,8 +76,9 @@ export function isDispatcher(member: Pick<CrewAgent, 'role'>): boolean {
   return member.role === 'jev';
 }
 
-export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider'>): string {
+export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider' | 'spark'>): string {
   if (member.role === 'jev') return 'Dispatcher';
+  if (member.spark?.role) return member.spark.role;
   const role = agentRoleSchema.safeParse(member.role);
   const label = role.success ? agentRoleLabel(role.data) : member.role;
   return member.sameProvider ? `${label} (${SAME_PROVIDER_REVIEW})` : label;

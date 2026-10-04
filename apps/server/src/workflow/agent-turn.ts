@@ -2,6 +2,8 @@ import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-ou
 import { getCapabilities } from '../persistence/chat-settings.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
+import { subagentBrief } from '../persistence/spark-mentions.ts';
+import { auditSparkHandoff } from './spark-audit.ts';
 import { briefWithFile } from '../projects/instructions-file.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
@@ -64,9 +66,12 @@ export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
 }
 
-async function mainSessionBrief(db: Db, input: RunInput) {
-  if (input.parentRunId || input.assistant) return null;
-  const brief = await teammateBrief(db, input.identity.threadId);
+async function sessionBrief(db: Db, input: RunInput) {
+  if (input.assistant) return null;
+  if (input.parentRunId && input.role !== 'spark') return null;
+  const brief = input.parentRunId
+    ? await subagentBrief(db, input.identity.runId)
+    : await teammateBrief(db, input.identity.threadId);
   return brief ? briefWithFile(brief) : null;
 }
 
@@ -329,8 +334,9 @@ export async function runAgentTurn(
         ).catch(() => []);
     const spark = {
       ...(await sparkPreferences(deps.db, input.workspaceId)),
-      teammate: await mainSessionBrief(deps.db, input),
+      teammate: await sessionBrief(deps.db, input),
     };
+    auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
 
     for await (const output of provider.run({
