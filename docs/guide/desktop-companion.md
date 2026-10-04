@@ -26,6 +26,8 @@ Drag the island to move it.
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
+Select a Spark tile to chat, right-click it to edit or delete, or select **New Spark**.
+
 Steps show only verbs and file names, never full paths or secrets. For the faces of Scout, Spark's blob, see [Spark Island states](statuses-and-limits.md#spark-island-states).
 
 ## Answer a card

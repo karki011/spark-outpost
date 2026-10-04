@@ -17,6 +17,14 @@ You'll start a chat, check on another and ask Spark a question from any app. Abo
 
 ![The New chat tab of Spark Island with a message typed and the project, model, permissions and autonomy chips](images/companion-island-chat-light.png)
 
+## Drop files or a folder
+
+1. Drag files or a folder from Finder onto the island. Scout reaches for them.
+2. Files join a new chat, or your reply when a chat is open in **Chats**. Secret files such as `.env` are skipped.
+3. For a folder, pick **Start a chat here** or **Add as project**. **Esc** cancels.
+
+**Add a project…** under **Choose project** opens Spark's folder picker inside the island.
+
 ## Check on a chat
 
 1. Press **⌥⇧Space**, or select **Chats** in the panel.
