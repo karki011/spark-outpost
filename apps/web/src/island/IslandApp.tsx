@@ -11,15 +11,7 @@ import './island-motion.css';
 import './island-bar.css';
 import './island-home.css';
 import '../chat/project/project.css';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-  type SyntheticEvent,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { newDraftId } from '../api/client.ts';
@@ -60,14 +52,13 @@ import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
+import { coreRects, flatRowRects, minuteOf, useHoverIntent } from './island-hover.ts';
 import { useIslandData } from './use-island-data.ts';
-import { noteSeen, useGreeting, useMoments } from './use-island-moments.ts';
+import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 
 const NOTE_MS = 1_500;
 const MINUTE_MS = 60_000;
-const HOVER_IN_MS = 140;
-const HOVER_OUT_MS = 400;
 const MOMENT_MS = 6_000;
 const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
@@ -82,49 +73,6 @@ const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
 };
 
 type Opener = 'hover' | 'user';
-
-function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
-  const [hover, setHover] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const entering = useRef(false);
-  const onHover = useCallback(
-    (inside: boolean) => {
-      clearTimeout(timer.current);
-      entering.current = inside;
-      timer.current = setTimeout(
-        () => {
-          setHover(inside);
-          settleRef.current(inside);
-        },
-        inside ? HOVER_IN_MS : HOVER_OUT_MS,
-      );
-      if (inside) noteSeen();
-    },
-    [settleRef],
-  );
-  const cancelEnter = useCallback(() => {
-    if (entering.current) clearTimeout(timer.current);
-  }, []);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return [hover, onHover, cancelEnter] as const;
-}
-
-function minuteOf(time: number): number {
-  return Math.floor(time / MINUTE_MS) * MINUTE_MS;
-}
-
-function coreRects(island: HTMLElement | null): DOMRect[] {
-  if (!island) return [];
-  const scout = island.classList.contains('hang') ? island.querySelector('.isl-scout-wrap') : null;
-  return [island, scout].flatMap((element) => (element ? [element.getBoundingClientRect()] : []));
-}
-
-function flatRowRects(row: HTMLElement | null): DOMRect[] {
-  if (!row?.matches('[data-flat]')) return [];
-  return Array.from(row.querySelectorAll('[data-shown] button'), (element) =>
-    element.getBoundingClientRect(),
-  );
-}
 
 export function IslandApp() {
   useThemeSync();
@@ -359,7 +307,8 @@ export function IslandApp() {
       setDraft((current) => ({ ...current, projectId }));
       openPanel('quick');
     },
-    onMakeSpark: settingsReady ? () => openSettings('sparks') : null,
+    onMakeSpark: settingsReady ? () => openSettings('spark-new') : null,
+    onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
   const spend = useQuery({
     queryKey: homeKeys.spend('today'),
@@ -384,22 +333,30 @@ export function IslandApp() {
     [feed, spendToday],
   );
 
-  const grab = useIslandDrop({
+  const openChatHere =
+    panel === 'sessions' ? (data.chats.find((chat) => chat.id === selected) ?? null) : null;
+  const backFromDrop = () => {
+    if (beforeDrop.current) openPanel(beforeDrop.current);
+    else closePanel();
+  };
+  const { grab, handlers: dropHandlers } = useIslandDrop({
     islandRef,
     sceneRef,
-    reduced,
     onStart: () => {
       beforeDrop.current = panel;
       setDropNote(null);
-      setFollowUp(null);
+      setFollowUp(openChatHere);
       openPanel('quick');
     },
-    onAbort: () => {
-      if (beforeDrop.current) openPanel(beforeDrop.current);
-      else closePanel();
-    },
+    onAbort: backFromDrop,
     onFiles: attachments.add,
-    onFolder: adder.linkFolder,
+    onFolders: async (folders, use) => {
+      await Promise.all(folders.map(adder.linkFolderAsync));
+      if (use === 'chat') setFollowUp(null);
+    },
+    onDone: (outcome) => {
+      if (outcome === 'project') backFromDrop();
+    },
     onNote: setDropNote,
   });
 
@@ -419,7 +376,7 @@ export function IslandApp() {
   return (
     <div
       className="isl-drop-root"
-      {...grab.handlers}
+      {...dropHandlers}
       onPointerDownCapture={pin}
       onKeyDownCapture={pin}
     >
@@ -427,7 +384,7 @@ export function IslandApp() {
         islandRef={islandRef}
         rowRef={rowRef}
         compose={{ attachments, adder, added, note: dropNote }}
-        drop={{ phase: grab.phase, item: grab.item, note: dropNote, sceneRef }}
+        drop={{ grab, note: dropNote, replyingTo: followUp?.title ?? null, sceneRef }}
         view={view}
         geometry={geometry}
         size={size}

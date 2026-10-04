@@ -32,7 +32,7 @@ export interface IslandGeometry {
   menuBar: number;
 }
 
-export const ISLAND_WIDTH = 720;
+export const ISLAND_WIDTH = 1040;
 export const ISLAND_HEIGHT = 600;
 
 const NOTCH_MENU_BAR_MIN = 30;
@@ -44,6 +44,7 @@ const DOCK_REACH_X = 120;
 const DOCK_REACH_Y = 90;
 const REST_MIN_WIDTH = 40;
 const REST_MIN_HEIGHT = 20;
+const SIDE_SLACK = 160;
 
 export function islandDisplay(
   displays: readonly DisplayInfo[],
@@ -94,7 +95,11 @@ export function islandBounds(position: Point, rest: Size | null): Rect {
 export function clampToDisplay(position: Point, display: DisplayInfo): Point {
   const { bounds } = display;
   return {
-    x: clamp(position.x, bounds.x, bounds.x + bounds.width - ISLAND_WIDTH),
+    x: clamp(
+      position.x,
+      bounds.x - SIDE_SLACK,
+      bounds.x + bounds.width - ISLAND_WIDTH + SIDE_SLACK,
+    ),
     y: clamp(position.y, bounds.y, bounds.y + bounds.height - ISLAND_HEIGHT),
   };
 }

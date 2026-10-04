@@ -74,6 +74,8 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const dangerRef = useRef<HTMLDivElement>(null);
+  const toDelete = request.kind === 'edit' && request.focus === 'delete';
   const [draft, setDraft] = useState<TeammateDraft>(() =>
     editing ? draftOf(editing) : newDraft(request.kind === 'create' ? request.seed : undefined),
   );
@@ -84,9 +86,13 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    nameRef.current?.focus();
+    const hold = toDelete ? dangerRef.current?.querySelector('button') : null;
+    if (hold) {
+      hold.scrollIntoView({ block: 'center' });
+      hold.focus({ preventScroll: true });
+    } else nameRef.current?.focus();
     return () => previous?.focus?.();
-  }, []);
+  }, [toDelete]);
 
   const problem = draftProblem(draft);
   const unchanged = editing !== null && Object.keys(changesFrom(editing, draft)).length === 0;
@@ -178,7 +184,7 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
               onPath={(instructionsPath) => setDraft({ ...draft, instructionsPath })}
             />
             {editing && (
-              <div className="tm-danger">
+              <div ref={dangerRef} className="tm-danger">
                 <HoldToConfirm
                   label={`Hold to delete ${editing.name}`}
                   hint="Its chats stay and lose the link. You get 10 seconds to undo."

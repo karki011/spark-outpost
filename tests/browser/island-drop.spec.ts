@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const PNG =
@@ -147,6 +148,12 @@ test('dropping an image and a text file grabs them into a new chat', async ({ pa
   await expect(scene(page)).toHaveAttribute('data-phase', 'drop');
   await page.waitForTimeout(250);
   await shot(page, '3-drop');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'chew');
+  await expect(scene(page)).toContainText('Having a look…');
+  await expect(scene(page).locator('.isl-drop-chip')).toHaveText('shot.png+1');
+  await shot(page, '3b-chew');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'done');
+  await expect(scene(page)).toContainText('Added to a new chat');
   await expect(scene(page)).toBeHidden({ timeout: 3000 });
   const chips = island(page).getByRole('group', { name: 'Attachments' });
   await expect(chips.getByRole('button', { name: 'Remove shot.png' })).toBeVisible();
@@ -159,15 +166,83 @@ test('dropping an image and a text file grabs them into a new chat', async ({ pa
   expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height);
 });
 
-test('dropping a folder links it as the chat’s project', async ({ page }) => {
-  await resetTestDatabase({ onboarded: true });
-  await openResting(page);
+async function dropFolder(page: Page) {
   const files = [{ name: 'my-repo', size: 0 }];
   await drag(page, 'dragenter', files, BLOB);
   await drag(page, 'dragover', files, PANEL);
   await drag(page, 'drop', files, PANEL);
   await expect(scene(page)).toHaveAttribute('data-phase', 'drop');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'choose', { timeout: 4000 });
+  await expect(scene(page)).toContainText('my-repo is a folder');
+  return scene(page).getByRole('group', { name: 'What to do with my-repo' });
+}
+
+async function projectNames(page: Page): Promise<string[]> {
+  const projects = (await (await page.request.get('/api/projects')).json()) as { name: string }[];
+  return projects.map((project) => project.name);
+}
+
+test('a dropped folder offers a chat there or a project, and Start a chat here links it', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await openResting(page);
+  const choice = await dropFolder(page);
+  await expect(choice.getByRole('button')).toHaveText([
+    'Start a chat here',
+    'Add as project',
+    'Cancel',
+  ]);
+  await expect(choice.getByRole('button', { name: 'Start a chat here' })).toBeFocused();
+  expect(await projectNames(page)).toEqual([]);
+  await shot(page, '6-choose');
+  await page.keyboard.press('Enter');
+  await expect(scene(page)).toContainText('New chat in my-repo');
+  await expect(scene(page)).toBeHidden({ timeout: 3000 });
   await expect(island(page).getByRole('button', { name: 'my-repo' })).toBeVisible();
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toBeVisible();
+});
+
+test('Add as project links the folder and goes back; Escape links nothing', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await openResting(page);
+  await dropFolder(page);
+  await page.keyboard.press('Escape');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'leave');
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+  expect(await projectNames(page)).toEqual([]);
+
+  const choice = await dropFolder(page);
+  await choice.getByRole('button', { name: 'Add as project' }).click();
+  await expect(scene(page)).toContainText('my-repo is a project now');
+  await expect.poll(() => projectNames(page)).toEqual(['my-repo']);
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await expect(scene(page)).toBeHidden({ timeout: 3000 });
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+});
+
+test('files dropped on an open chat go to a reply in that chat', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Tidy the release notes', run: { status: 'succeeded' } }]);
+  await openResting(page);
+  await island(page)
+    .getByRole('button', { name: /Open Spark Island/ })
+    .click();
+  await island(page).getByRole('tab', { name: 'Chats' }).click();
+  await island(page)
+    .getByRole('option', { name: /Tidy the release notes/ })
+    .click();
+  await expect(island(page).getByRole('textbox', { name: /^Reply to/ })).toBeVisible();
+  const files = [{ name: 'notes.md', type: 'text/markdown' }];
+  await drag(page, 'dragenter', files, PANEL);
+  await expect(scene(page)).toContainText('Drop to add to your reply');
+  await drag(page, 'drop', files, PANEL);
+  await expect(scene(page)).toContainText('Added to your reply', { timeout: 4000 });
+  await expect(scene(page)).toBeHidden({ timeout: 3000 });
+  await expect(island(page)).toContainText('Following up in Tidy the release notes');
+  await expect(
+    island(page).getByRole('group', { name: 'Attachments' }).getByText('notes.md'),
+  ).toBeVisible();
 });
 
 test('a secret file is refused with a head shake and a note, a huge file shows an error', async ({
@@ -222,6 +297,9 @@ test('with reduced motion the grab keeps still and only the face and words chang
   await expect(scene(page).locator('.isl-drop-blob')).toHaveCSS('animation-name', 'none');
   await drag(page, 'drop', files, PANEL);
   await expect(scene(page)).toHaveAttribute('data-phase', 'drop');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'chew');
+  await expect(scene(page).locator('.isl-drop-blob')).toHaveCSS('animation-name', 'none');
+  await expect(scene(page)).toHaveAttribute('data-phase', 'done');
   await expect(scene(page).locator('svg.scout')).toHaveClass(/\bhappy\b/);
   await expect(
     island(page).getByRole('group', { name: 'Attachments' }).getByText('notes.md'),

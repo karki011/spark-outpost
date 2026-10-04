@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { CreateTeammateRequest } from '@spark-outpost/contracts';
 
 export type SheetRequest =
-  { kind: 'create'; seed?: CreateTeammateRequest } | { kind: 'edit'; id: string };
+  { kind: 'create'; seed?: CreateTeammateRequest } | { kind: 'edit'; id: string; focus?: 'delete' };
 
 export interface PendingDelete {
   id: string;
@@ -12,9 +12,10 @@ export interface PendingDelete {
 interface TeammateUiState {
   sheet: SheetRequest | null;
   deleting: PendingDelete | null;
+  deleteProblem: string | null;
 }
 
-let state: TeammateUiState = { sheet: null, deleting: null };
+let state: TeammateUiState = { sheet: null, deleting: null, deleteProblem: null };
 const listeners = new Set<() => void>();
 
 function update(next: Partial<TeammateUiState>): void {
@@ -36,7 +37,11 @@ export function closeTeammateSheet(): void {
 }
 
 export function requestTeammateDelete(deleting: PendingDelete): void {
-  update({ sheet: null, deleting });
+  update({ sheet: null, deleting, deleteProblem: null });
+}
+
+export function reportTeammateDeleteProblem(deleteProblem: string | null): void {
+  update({ deleteProblem });
 }
 
 export function clearTeammateDelete(): void {

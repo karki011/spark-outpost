@@ -220,6 +220,74 @@ test('Settings lists Sparks and opens the same sheet', async ({ page }) => {
   await expect(section).toBeVisible();
 });
 
+test('Settings deletes a Spark with hold to delete and Undo @packaged', async ({ page }) => {
+  test.setTimeout(60_000);
+  const id = await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
+  await addSpark(page, { name: 'Bolt', role: 'Bug fixer' });
+  const opened = await page.request.post(`/api/teammates/${id}/home`, { data: {} });
+  const { conversationId } = (await opened.json()) as { conversationId: string };
+  await openChats(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Sparks' }).click();
+  const section = page.getByRole('dialog', { name: 'Sparks' });
+  const list = section.getByRole('list', { name: 'Your Sparks' });
+
+  await list.getByRole('button', { name: 'Delete Pip' }).click();
+  const hold = sheet(page, 'Edit Pip').getByRole('button', { name: 'Hold to delete Pip' });
+  await expect(hold).toBeInViewport();
+  await expect(hold).toBeFocused();
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(1_700);
+  await page.keyboard.up('Space');
+  const grace = page.locator('.grace');
+  await expect(grace).toContainText('Deleting Pip');
+  await expect(list).not.toContainText('Pip');
+  await grace.getByRole('button', { name: 'Undo' }).click();
+  await expect(list).toContainText('Pip');
+
+  const removed = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' && response.url().endsWith(`/api/teammates/${id}`),
+    { timeout: 20_000 },
+  );
+  await list.getByRole('button', { name: 'Delete Pip' }).click();
+  await holdToDelete(page, 'Pip');
+  await expect(grace).toContainText('Deleting Pip');
+  expect((await removed).status()).toBe(204);
+  await expect(grace).toHaveCount(0);
+  await expect(list).not.toContainText('Pip');
+  await expect(list).toContainText('Bolt');
+  await expect(section).toBeVisible();
+  const chat = await page.request.get(`/api/conversations/${conversationId}`);
+  expect(chat.status()).toBe(200);
+});
+
+test('a Spark that cannot be deleted comes back with the reason', async ({ page }) => {
+  const id = await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
+  await openChats(page);
+  await page.route(`**/api/teammates/${id}`, (route) =>
+    route.request().method() === 'DELETE'
+      ? route.fulfill({ status: 500, json: { error: 'The database is busy.' } })
+      : route.continue(),
+  );
+  await page.clock.install();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Sparks' }).click();
+  const list = page
+    .getByRole('dialog', { name: 'Sparks' })
+    .getByRole('list', { name: 'Your Sparks' });
+  await list.getByRole('button', { name: 'Delete Pip' }).click();
+  const hold = page.getByRole('button', { name: 'Hold to delete Pip' });
+  await hold.hover();
+  await page.mouse.down();
+  await page.clock.runFor(1_600);
+  await page.mouse.up();
+  await expect(page.locator('.grace')).toContainText('Deleting Pip');
+  await page.clock.runFor(10_500);
+  await expect(page.getByRole('alert')).toContainText('Pip wasn’t deleted. The database is busy.');
+  await expect(list).toContainText('Pip');
+});
+
 test('the roster and the sheet pass axe and fit a phone', async ({ page }) => {
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await addSpark(page, { name: 'Bolt', role: 'Bug fixer' });

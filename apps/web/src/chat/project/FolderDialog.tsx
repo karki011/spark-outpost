@@ -50,6 +50,8 @@ interface FolderDialogProps {
   purpose?: FolderPurpose;
   startPath?: string | null;
   stacked?: boolean;
+  inline?: boolean;
+  fallback?: { label: string; onPick: () => void } | null;
 }
 
 export function FolderDialog({
@@ -60,6 +62,8 @@ export function FolderDialog({
   purpose = 'project',
   startPath = null,
   stacked = purpose !== 'project',
+  inline = false,
+  fallback = null,
 }: FolderDialogProps) {
   const copy = COPY[purpose];
   const picksFile = purpose === 'instructions';
@@ -101,6 +105,146 @@ export function FolderDialog({
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [onClose]);
 
+  const content = (
+    <>
+      <div className="fdlg-head">
+        <h3 id="fdlg-title">{copy.title}</h3>
+        <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M6 6l12 12M18 6 6 18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <p className="fdlg-lede" id="fdlg-lede">
+        {copy.lede}
+      </p>
+      <div className="fdlg-bar">
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Parent folder"
+          title="Parent folder"
+          disabled={!current?.parent}
+          onClick={() => current?.parent && open(current.parent)}
+        >
+          <ParentFolderIcon />
+        </button>
+        <nav className="fdlg-crumbs" aria-label="Folder path">
+          {current &&
+            breadcrumbs(current.path).map((crumb, index, all) => (
+              <span key={crumb.path} className="fdlg-crumb">
+                {index > 1 && <span className="fdlg-sep">/</span>}
+                <button
+                  type="button"
+                  aria-current={index === all.length - 1 ? 'location' : undefined}
+                  onClick={() => open(crumb.path)}
+                >
+                  {crumb.name}
+                </button>
+              </span>
+            ))}
+        </nav>
+      </div>
+      <div className="fdlg-list" aria-busy={listing.isFetching}>
+        {listing.isError && (
+          <p className="fdlg-note bad" role="alert">
+            {listing.error.message}
+          </p>
+        )}
+        {listing.isError && fallback && (
+          <button type="button" className="btn line sm fdlg-fallback" onClick={fallback.onPick}>
+            {fallback.label}
+          </button>
+        )}
+        {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
+        {empty && <p className="fdlg-note">{empty}</p>}
+        <ul aria-label="Folders">
+          {current?.folders.map((folder) => (
+            <li key={folder.path}>
+              <button type="button" className="fdlg-row" onClick={() => open(folder.path)}>
+                <FolderIcon />
+                <span>{folder.name}</span>
+                <ChevronIcon />
+              </button>
+            </li>
+          ))}
+        </ul>
+        {picksFile && current && current.files.length > 0 && (
+          <ul aria-label="Files">
+            {current.files.map((entry) => (
+              <li key={entry.path}>
+                <button
+                  type="button"
+                  className="fdlg-row"
+                  aria-pressed={entry.path === picked}
+                  onClick={() => setFile(entry.path)}
+                  onDoubleClick={() => onUse(entry.path)}
+                >
+                  <FileIcon />
+                  <span>{entry.name}</span>
+                  <small>{formatBytes(entry.sizeBytes)}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {picksFile && (
+        <label className="fdlg-hidden">
+          <BlobToggle
+            size="sm"
+            label="Show hidden folders and files"
+            checked={hidden}
+            onChange={setHidden}
+          />
+          <span aria-hidden="true">Show hidden folders and files</span>
+        </label>
+      )}
+      {error && (
+        <p className="fdlg-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="fdlg-foot">
+        <span className="fdlg-path" title={chosen ?? current?.path}>
+          {chosen ?? current?.path ?? ''}
+        </span>
+        <button type="button" className="btn ghost sm" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn primary sm"
+          disabled={!chosen || linking}
+          onClick={() => chosen && onUse(chosen)}
+        >
+          {linking ? 'Linking…' : copy.use}
+        </button>
+      </div>
+    </>
+  );
+  const dialog = {
+    ref: panelRef,
+    tabIndex: -1,
+    role: 'dialog',
+    'aria-labelledby': 'fdlg-title',
+    'aria-describedby': 'fdlg-lede',
+  } as const;
+
+  if (inline) {
+    return (
+      <div {...dialog} className="fdlg inline">
+        {content}
+      </div>
+    );
+  }
+
   return createPortal(
     <motion.div
       className={stacked ? 'fdlg-scrim over-dialog' : 'fdlg-scrim'}
@@ -113,133 +257,15 @@ export function FolderDialog({
       }}
     >
       <motion.div
-        ref={panelRef}
+        {...dialog}
         className="fdlg"
-        tabIndex={-1}
-        role="dialog"
         aria-modal="true"
-        aria-labelledby="fdlg-title"
-        aria-describedby="fdlg-lede"
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={reveal}
       >
-        <div className="fdlg-head">
-          <h3 id="fdlg-title">{copy.title}</h3>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M6 6l12 12M18 6 6 18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-        <p className="fdlg-lede" id="fdlg-lede">
-          {copy.lede}
-        </p>
-        <div className="fdlg-bar">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Parent folder"
-            title="Parent folder"
-            disabled={!current?.parent}
-            onClick={() => current?.parent && open(current.parent)}
-          >
-            <ParentFolderIcon />
-          </button>
-          <nav className="fdlg-crumbs" aria-label="Folder path">
-            {current &&
-              breadcrumbs(current.path).map((crumb, index, all) => (
-                <span key={crumb.path} className="fdlg-crumb">
-                  {index > 1 && <span className="fdlg-sep">/</span>}
-                  <button
-                    type="button"
-                    aria-current={index === all.length - 1 ? 'location' : undefined}
-                    onClick={() => open(crumb.path)}
-                  >
-                    {crumb.name}
-                  </button>
-                </span>
-              ))}
-          </nav>
-        </div>
-        <div className="fdlg-list" aria-busy={listing.isFetching}>
-          {listing.isError && (
-            <p className="fdlg-note bad" role="alert">
-              {listing.error.message}
-            </p>
-          )}
-          {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
-          {empty && <p className="fdlg-note">{empty}</p>}
-          <ul aria-label="Folders">
-            {current?.folders.map((folder) => (
-              <li key={folder.path}>
-                <button type="button" className="fdlg-row" onClick={() => open(folder.path)}>
-                  <FolderIcon />
-                  <span>{folder.name}</span>
-                  <ChevronIcon />
-                </button>
-              </li>
-            ))}
-          </ul>
-          {picksFile && current && current.files.length > 0 && (
-            <ul aria-label="Files">
-              {current.files.map((entry) => (
-                <li key={entry.path}>
-                  <button
-                    type="button"
-                    className="fdlg-row"
-                    aria-pressed={entry.path === picked}
-                    onClick={() => setFile(entry.path)}
-                    onDoubleClick={() => onUse(entry.path)}
-                  >
-                    <FileIcon />
-                    <span>{entry.name}</span>
-                    <small>{formatBytes(entry.sizeBytes)}</small>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        {picksFile && (
-          <label className="fdlg-hidden">
-            <BlobToggle
-              size="sm"
-              label="Show hidden folders and files"
-              checked={hidden}
-              onChange={setHidden}
-            />
-            <span aria-hidden="true">Show hidden folders and files</span>
-          </label>
-        )}
-        {error && (
-          <p className="fdlg-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="fdlg-foot">
-          <span className="fdlg-path" title={chosen ?? current?.path}>
-            {chosen ?? current?.path ?? ''}
-          </span>
-          <button type="button" className="btn ghost sm" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn primary sm"
-            disabled={!chosen || linking}
-            onClick={() => chosen && onUse(chosen)}
-          >
-            {linking ? 'Linking…' : copy.use}
-          </button>
-        </div>
+        {content}
       </motion.div>
     </motion.div>,
     document.body,

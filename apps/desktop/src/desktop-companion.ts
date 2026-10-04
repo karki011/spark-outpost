@@ -42,11 +42,14 @@ export interface CompanionHost {
 
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAG_PHASES: readonly DragPhase[] = ['start', 'move', 'end'];
-const SETTINGS_TARGETS = ['island', 'sparks'] as const;
-type SettingsTarget = (typeof SETTINGS_TARGETS)[number];
+const SETTINGS_TARGETS: readonly string[] = ['island', 'sparks', 'spark-new'];
+const SPARK_EDIT_TARGET =
+  /^spark-edit:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isSettingsTarget(value: unknown): value is SettingsTarget {
-  return SETTINGS_TARGETS.some((target) => target === value);
+function isSettingsTarget(value: unknown): value is string {
+  return (
+    typeof value === 'string' && (SETTINGS_TARGETS.includes(value) || SPARK_EDIT_TARGET.test(value))
+  );
 }
 
 function isShortcutAction(value: unknown): value is ShortcutAction {
@@ -69,7 +72,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   const initial = await loadSettings(options.settingsPath);
   let island: IslandWindow | null = null;
   let pendingChat: string | null = null;
-  let pendingSettings: SettingsTarget | null = null;
+  let pendingSettings: string | null = null;
   let saving = Promise.resolve();
   const tray = new Tray(trayIcon(options.trayIcon));
   tray.setToolTip(options.appName);

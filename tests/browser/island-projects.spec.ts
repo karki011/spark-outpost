@@ -87,8 +87,15 @@ test('with no projects the menu says so and Add a project links a folder and sel
   const menu = island(page).getByRole('menu', { name: 'Choose project' });
   await expect(menu).toContainText('No projects yet');
   await menu.getByRole('menuitem', { name: 'Add a project…' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
+  const dialog = island(page).getByRole('dialog', { name: 'Choose a project folder' });
   await expect(dialog).toBeVisible();
+  await expect(dialog).toBeFocused();
+  await expectInside(page, '.fdlg');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(island(page).getByRole('textbox', { name: 'Message' })).toBeVisible();
+  await island(page).getByRole('button', { name: 'Choose project' }).click();
+  await menu.getByRole('menuitem', { name: 'Add a project…' }).click();
   await dialog.getByRole('navigation', { name: 'Folder path' }).getByRole('button').first().click();
   for (const segment of path.join(base, 'picked-repo').split('/').filter(Boolean)) {
     await dialog
@@ -101,7 +108,9 @@ test('with no projects the menu says so and Add a project links a folder and sel
   await expect(island(page).getByRole('button', { name: 'picked-repo' })).toBeVisible();
 });
 
-test('in the desktop app Add a project uses the native folder picker', async ({ page }) => {
+test('in the desktop app Add a project opens Spark’s picker and keeps the Mac dialog as a fallback', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   const folder = path.join(base, 'docs-site');
   await page.addInitScript((folder) => {
@@ -146,6 +155,18 @@ test('in the desktop app Add a project uses the native folder picker', async ({ 
   );
   await island(page).getByRole('button', { name: 'Choose project' }).click();
   await island(page).getByRole('menuitem', { name: 'Add a project…' }).click();
+  const dialog = island(page).getByRole('dialog', { name: 'Choose a project folder' });
+  await expect(dialog.getByRole('list', { name: 'Folders' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Use the Mac folder dialog' })).toHaveCount(0);
+  await expect(island(page).getByRole('button', { name: 'docs-site' })).toHaveCount(0);
+  await expectInside(page, '.fdlg');
+
+  await page.route('**/api/folders**', (route) =>
+    route.fulfill({ status: 500, json: { error: 'Folders can’t be listed right now.' } }),
+  );
+  await dialog.getByRole('button', { name: 'Parent folder' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Folders can’t be listed right now.');
+  await dialog.getByRole('button', { name: 'Use the Mac folder dialog' }).click();
   await expect(island(page).getByRole('button', { name: 'docs-site' })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: 'Choose a project folder' })).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
 });

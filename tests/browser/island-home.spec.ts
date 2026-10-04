@@ -116,16 +116,43 @@ test('Spark tiles start a chat with that Spark right in the island', async ({ pa
     ['Docs', 'moss'],
   ]) {
     const response = await page.request.post('/api/teammates', {
-      data: { name, role: 'Helper', face: { shape: 'boxy', color } },
+      data: {
+        name,
+        role: name === 'Docs' ? 'Writes and tidies the guides nobody else reads' : 'Helper',
+        face: { shape: 'boxy', color },
+      },
     });
     expect(response.status()).toBe(201);
   }
   await openHome(page);
   const tiles = island(page).getByRole('region', { name: 'Your Sparks' }).getByRole('button');
-  await expect(tiles).toHaveCount(5);
-  await expect(tiles.first()).toHaveAccessibleName('Chat with Stripe');
+  await expect(tiles).toHaveCount(6);
+  await expect(tiles.first()).toHaveAccessibleName('Chat with Stripe, Helper');
+  await expect(tiles.first().locator('.isl-tile-role')).toHaveText('Helper');
+  await expect(tiles.last()).toHaveText('New Spark');
+  const long = tiles.filter({ hasText: 'Docs' });
+  await long.scrollIntoViewIfNeeded();
+  const fits = await long.evaluate((tile) => {
+    const role = tile.querySelector('.isl-tile-role')!;
+    const box = tile.getBoundingClientRect();
+    return role.scrollWidth > role.clientWidth && role.getBoundingClientRect().right <= box.right;
+  });
+  expect(fits).toBe(true);
+  const grid = island(page).locator('.isl-tilegrid');
+  expect(
+    await grid.evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length),
+  ).toBeGreaterThanOrEqual(2);
   await expect(nowCard(page)).toContainText('All quiet');
   await shot(page, 'home-sparks');
+
+  await tiles.last().click();
+  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
+  await openHome(page);
+  await tiles.filter({ hasText: 'Stripe' }).click({ button: 'right' });
+  await expect
+    .poll(async () => (await fakeState(page)).settings.at(-1))
+    .toMatch(/^spark-edit:[0-9a-f-]{36}$/);
+  await openHome(page);
 
   await tiles.filter({ hasText: 'GitHub' }).click();
   await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
@@ -166,12 +193,12 @@ test('an empty Home offers Ask and quick starts, and the bar reaches settings', 
 
   await page.keyboard.press('Meta+1');
   await island(page).getByRole('region', { name: 'Quick start' }).getByText('New Spark').click();
-  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['sparks']);
+  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new']);
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 
   await openHome(page);
   await island(page).getByRole('button', { name: 'Spark Island settings' }).click();
-  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['sparks', 'island']);
+  await expect.poll(async () => (await fakeState(page)).settings).toEqual(['spark-new', 'island']);
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
 

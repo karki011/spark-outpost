@@ -59,22 +59,35 @@
 }
 
 .isl-ear {
+  --ear: 16px;
   position: absolute;
   top: 0;
-  width: 10px;
-  height: 10px;
+  width: var(--ear);
+  height: var(--ear);
   pointer-events: none;
   transition: opacity 0.2s;
 }
 
 .isl-ear.l {
-  left: -10px;
-  background: radial-gradient(circle at 0 100%, transparent 9.5px, var(--island) 10px);
+  left: calc(-1 * var(--ear));
+  background: radial-gradient(
+    circle at 0 100%,
+    transparent calc(var(--ear) - 1.5px),
+    var(--island-line) calc(var(--ear) - 1px),
+    var(--island-line) calc(var(--ear) - 0.5px),
+    var(--island) var(--ear)
+  );
 }
 
 .isl-ear.r {
-  right: -10px;
-  background: radial-gradient(circle at 100% 100%, transparent 9.5px, var(--island) 10px);
+  right: calc(-1 * var(--ear));
+  background: radial-gradient(
+    circle at 100% 100%,
+    transparent calc(var(--ear) - 1.5px),
+    var(--island-line) calc(var(--ear) - 1px),
+    var(--island-line) calc(var(--ear) - 0.5px),
+    var(--island) var(--ear)
+  );
 }
 
 .isl.floating .isl-ear,

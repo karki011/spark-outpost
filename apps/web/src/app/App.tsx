@@ -56,6 +56,7 @@ import { Analytics, preloadView, Tickets } from './lazy-views.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
+import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
@@ -162,6 +163,14 @@ function ChatShell({ entering }: { entering: boolean }) {
       sparkDesktop()?.onOpenSettings?.((target) => {
         if (target === 'sparks') {
           setSettings('sparks');
+          return;
+        }
+        if (target === 'spark-new') {
+          openTeammateSheet({ kind: 'create' });
+          return;
+        }
+        if (target.startsWith('spark-edit:')) {
+          openTeammateSheet({ kind: 'edit', id: target.slice('spark-edit:'.length) });
           return;
         }
         revealIslandSettings();

@@ -13,6 +13,7 @@ export interface SortedDrop {
   files: File[];
   folders: string[];
   shown: DropItem | null;
+  accepted: number;
   notes: string[];
   rejectedAll: boolean;
 }
@@ -68,6 +69,7 @@ export function sortDrop(
     ),
     folders,
     shown: accepted[0] ?? rejected[0] ?? null,
+    accepted: accepted.length,
     notes,
     rejectedAll: accepted.length === 0,
   };

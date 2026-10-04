@@ -1,24 +1,47 @@
-import type { RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
-import type { GrabItem, GrabPhase } from './use-island-drop.ts';
-
-const WORDS: Record<GrabPhase, string> = {
-  idle: '',
-  enter: 'Drop to add to a new chat',
-  over: 'Drop to add to a new chat',
-  drop: 'Got it!',
-  leave: 'Maybe next time',
-  reject: 'Spark can’t take that one',
-};
+import type { Grab, GrabItem, GrabOutcome, GrabPhase } from './use-island-drop.ts';
 
 const MOODS: Record<GrabPhase, ScoutMood> = {
   idle: null,
   enter: null,
   over: null,
-  drop: 'happy',
+  drop: null,
+  chew: 'working',
+  choose: null,
+  done: 'happy',
   leave: 'sad',
   reject: 'sad',
 };
+
+const DONE_WORDS: Record<GrabOutcome, (name: string, replying: boolean) => string> = {
+  files: (_name, replying) => (replying ? 'Added to your reply' : 'Added to a new chat'),
+  project: (name) => `${name} is a project now`,
+  chat: (name) => `New chat in ${name}`,
+};
+
+function words(phase: GrabPhase, grab: Grab, replyingTo: string | null): string {
+  const name = grab.item?.name ?? 'It';
+  switch (phase) {
+    case 'idle':
+      return '';
+    case 'enter':
+    case 'over':
+      return replyingTo ? 'Drop to add to your reply' : 'Drop to add to a new chat';
+    case 'drop':
+      return 'Got it!';
+    case 'chew':
+      return 'Having a look…';
+    case 'choose':
+      return `${name} is a folder`;
+    case 'done':
+      return grab.outcome ? DONE_WORDS[grab.outcome](name, replyingTo !== null) : 'Done';
+    case 'leave':
+      return 'Maybe next time';
+    case 'reject':
+      return 'Spark can’t take that one';
+  }
+}
 
 function Arm({ side }: { side: 'l' | 'r' }) {
   return (
@@ -45,23 +68,54 @@ function ItemIcon({ item }: { item: GrabItem }) {
   );
 }
 
+function Carried({ item }: { item: GrabItem }) {
+  return (
+    <span className="isl-drop-chip">
+      <ItemIcon item={item} />
+      <span>{item.name}</span>
+      {item.more > 0 && <b>+{item.more}</b>}
+    </span>
+  );
+}
+
+function FolderChoice({ grab, name }: { grab: Grab; name: string }) {
+  const firstRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    firstRef.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <div className="isl-drop-choice" role="group" aria-label={`What to do with ${name}`}>
+      <button
+        ref={firstRef}
+        type="button"
+        className="isl-drop-btn primary"
+        onClick={() => grab.choose('chat')}
+      >
+        Start a chat here
+      </button>
+      <button type="button" className="isl-drop-btn" onClick={() => grab.choose('project')}>
+        Add as project
+      </button>
+      <button type="button" className="isl-drop-btn quiet" onClick={grab.cancel}>
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 interface DropSceneProps {
-  phase: GrabPhase;
-  item: GrabItem | null;
+  grab: Grab;
   note: string | null;
+  replyingTo: string | null;
   sceneRef: RefObject<HTMLDivElement | null>;
 }
 
-export function DropScene({ phase, item, note, sceneRef }: DropSceneProps) {
+export function DropScene({ grab, note, replyingTo, sceneRef }: DropSceneProps) {
+  const { phase, item } = grab;
+  const flying = phase === 'drop' || phase === 'reject';
+  const carrying = phase === 'chew' || phase === 'choose' || phase === 'done';
   return (
-    <div
-      ref={sceneRef}
-      className="isl-drop"
-      data-phase={phase}
-      hidden={phase === 'idle'}
-      role="status"
-      aria-label={phase === 'idle' ? undefined : WORDS[phase]}
-    >
+    <div ref={sceneRef} className="isl-drop" data-phase={phase} hidden={phase === 'idle'}>
       <div className="isl-drop-stage">
         <svg className="isl-arms" viewBox="-40 -34 80 40" aria-hidden="true">
           <Arm side="l" />
@@ -71,17 +125,21 @@ export function DropScene({ phase, item, note, sceneRef }: DropSceneProps) {
           <BlobScout
             size={56}
             mood={MOODS[phase]}
-            lookAtPointer={phase === 'enter' || phase === 'over'}
+            lookAtPointer={phase === 'enter' || phase === 'over' || phase === 'choose'}
           />
         </span>
-        {item && (phase === 'drop' || phase === 'reject') && (
+        {item && flying && (
           <span className="isl-drop-item" data-kind={item.kind}>
             <ItemIcon item={item} />
           </span>
         )}
       </div>
-      <strong>{WORDS[phase]}</strong>
-      {phase === 'reject' && note && <span className="isl-drop-note">{note}</span>}
+      {item && carrying && <Carried item={item} />}
+      <p className="isl-drop-words" role="status">
+        <strong>{words(phase, grab, replyingTo)}</strong>
+        {phase === 'reject' && note && <span className="isl-drop-note">{note}</span>}
+      </p>
+      {phase === 'choose' && item && <FolderChoice grab={grab} name={item.name} />}
     </div>
   );
 }

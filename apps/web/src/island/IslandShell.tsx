@@ -9,7 +9,7 @@ import {
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
 import { leaveAsGhost } from './home-motion.ts';
-import { peekClearance, viewWidth, type IslandView } from './island-model.ts';
+import { chatWidth, peekClearance, viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
@@ -27,7 +27,6 @@ interface ShellRefs {
 const KHINT_HEIGHT = 18;
 const PILL_MIN_WIDTH = 112;
 const PANEL_MIN_WIDTH = 320;
-const CHAT_WIDTH = 690;
 const PANEL_SIDE_GAP = 16;
 const ROW_BLOB = 22;
 const FLAT_ROW_BLOB = 28;
@@ -77,11 +76,15 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const top = pillish ? Math.max(geometry.top, rest.pillHeight) : bare ? 0 : geometry.top;
   const quiet = view.kind === 'peek' || pillish;
   const viewport = useViewportWidth();
+  const screenWidth = window.screen.width;
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
   const width = bare
     ? rest.blob
-    : Math.min(chatting ? CHAT_WIDTH : viewWidth(view, geometry.notchWidth), room);
+    : Math.min(
+        chatting ? chatWidth(screenWidth) : viewWidth(view, geometry.notchWidth, screenWidth),
+        room,
+      );
   const compactPill = pillish && !hugsNotch;
   const hint = keyHint(view);
   const scout = scoutSpot(view, width, top, hang, rest);
@@ -183,6 +186,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
               key={viewKey(view)}
               className="isl-view"
               data-panel={view.kind === 'panel' ? view.panel : undefined}
+              data-drop={props.drop.grab.phase !== 'idle' || undefined}
               style={{ width, marginLeft: -width / 2 }}
             >
               <ViewBody props={props} />

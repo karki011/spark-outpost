@@ -47,3 +47,20 @@
   cursor: progress;
   color: var(--muted);
 }
+
+.isl-picker .fdlg {
+  max-width: none;
+  max-height: 420px;
+  border-color: var(--card-line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.isl-picker .fdlg-list {
+  min-height: 150px;
+}
+
+.isl-picker .fdlg-fallback {
+  margin: 0 10px 8px;
+}

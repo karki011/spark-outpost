@@ -9,6 +9,7 @@ export interface HomeBundle {
   onOpenHere: (id: string) => void;
   onNewIn: (projectId: string | null) => void;
   onMakeSpark: (() => void) | null;
+  onEditSpark: ((id: string) => void) | null;
 }
 
 interface IslandHomeProps {
@@ -41,6 +42,7 @@ export function IslandHome({ home, waiting, sleepy, reduced, onTab, onOpenChat }
         onAsk={() => onTab('ask')}
         onChats={() => onTab('sessions')}
         onMakeSpark={home.onMakeSpark}
+        onEditSpark={home.onEditSpark}
       />
     </div>
   );
