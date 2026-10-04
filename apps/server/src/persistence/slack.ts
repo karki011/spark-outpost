@@ -338,3 +338,14 @@ export async function conversationHasSlackContext(
   );
   return rows[0]?.found === true;
 }
+
+export async function pruneSlackLog(db: Queryable, retentionDays: number): Promise<void> {
+  for (const [table, column] of [
+    ['slack_deliveries', 'created_at'],
+    ['slack_events', 'at'],
+  ] as const) {
+    await db.query(`DELETE FROM ${table} WHERE ${column} < now() - make_interval(days => $1)`, [
+      retentionDays,
+    ]);
+  }
+}
