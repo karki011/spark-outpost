@@ -322,6 +322,37 @@
   max-height: 220px;
 }
 
+.browser-check {
+  gap: 6px;
+}
+
+.browser-check-shot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 2px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font-size: inherit;
+  cursor: zoom-in;
+}
+
+.browser-check-shot:hover,
+.browser-check-shot:focus-visible {
+  color: var(--muted);
+  background: var(--raise);
+}
+
+.browser-check-shot img {
+  display: block;
+  width: 28px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  object-fit: cover;
+  object-position: top;
+}
+
 .set-site-list {
   display: flex;
   flex-direction: column;

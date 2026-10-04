@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -5,6 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
+import { editedChat } from './edited-chat.ts';
 import { openChats } from './navigation.ts';
 import { slot } from './stub-config.ts';
 
@@ -197,4 +199,72 @@ test('the Browser pane starts the preview, shows it as a Preview terminal and st
       ),
     )
     .toBe('down');
+});
+
+const PIXEL = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+async function addScreenshot(): Promise<void> {
+  const db = openTestDb();
+  try {
+    const attachment = randomUUID();
+    await db.query(
+      `INSERT INTO attachments (id, workspace_id, name, media_type, kind, size, data)
+       SELECT $1, c.workspace_id, 'browser.png', 'image/png', 'image', $2, $3
+       FROM conversations c LIMIT 1`,
+      [attachment, PIXEL.length, PIXEL],
+    );
+    await db.query(
+      `INSERT INTO browser_screenshots
+         (id, run_id, conversation_id, attachment_id, page, title, width, height, sha256)
+       SELECT $1, r.id, r.conversation_id, $2, $3, 'Lantern Quay', 1, 1, repeat('a', 64)
+       FROM runs r WHERE r.parent_run_id IS NULL ORDER BY r.created_at LIMIT 1`,
+      [randomUUID(), attachment, `${URL}/`],
+    );
+  } finally {
+    await db.end();
+  }
+}
+
+test('a finished turn says whether the change was checked in the browser', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  writeFileSync(path.join(root, 'notes.txt'), 'Remember the milk\n');
+  await withDesktopBrowser(page);
+  await editedChat(page, root);
+  const turns = page.locator('.crew-turn');
+  await expect(turns.first().locator('.crew-foot')).toContainText('Done');
+  await expect(page.getByRole('region', { name: /Files changed/ }).first()).toBeVisible();
+  await expect(page.getByText('Not checked in browser')).toHaveCount(0);
+  await expect(page.getByText('Checked in browser')).toHaveCount(0);
+
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('Make the Save button wider #edit #build');
+  await input.press('Enter');
+  await page
+    .getByRole('group', { name: /Change a file\?/ })
+    .getByRole('button', { name: 'Allow', exact: true })
+    .click();
+  await expect(turns.nth(1).locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
+  const second = turns.nth(1).locator('.turn-foot');
+  await expect(second.getByText('Not checked in browser')).toBeVisible();
+  await expect(turns.first().getByText('Not checked in browser')).toHaveCount(0);
+  await shoot(page, 'browser-preview-summary-not-checked.png');
+
+  await addScreenshot();
+  await page.reload();
+  const checked = turns
+    .first()
+    .locator('.turn-foot')
+    .getByRole('button', { name: 'Checked in browser. Open the screenshot of Lantern Quay' });
+  await turns.first().hover();
+  await expect(checked).toBeVisible();
+  await expect(checked.locator('img')).toHaveJSProperty('complete', true);
+  await shoot(page, 'browser-preview-summary-checked.png');
+  await checked.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(turns.nth(1).getByText('Not checked in browser')).toBeVisible();
 });

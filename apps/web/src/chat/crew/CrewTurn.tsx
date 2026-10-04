@@ -14,6 +14,7 @@ import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
 import { PieceBoard } from '../../crew/PieceBoard.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
+import { BrowserCheckMeta } from '../../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { RailFlags } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
@@ -208,6 +209,14 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
           <span>{finished ? 'Done' : 'So far'}</span>{' '}
           {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
         </p>
+        {finished && (
+          <BrowserCheckMeta
+            detail={detail}
+            run={run}
+            taskId={run.mode === 'do' ? (changeTask?.id ?? null) : null}
+            runIds={crewRunIds}
+          />
+        )}
         {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
         {run.mode === 'do' && run.snapshot && finished && <RevertRun run={run} compact />}
       </div>
