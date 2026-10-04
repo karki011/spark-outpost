@@ -95,7 +95,6 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
   await openHeavyChat(page, true);
   await expect(page.getByRole('navigation', { name: 'On this chat' })).toHaveCount(rail ? 1 : 0);
   await page.waitForTimeout(1_500);
-  const idleBusy = await restingBusyPercent(page);
   const before = await settledMetrics(page);
   await startProbe(page);
   const startCommits = await commits(page);
@@ -116,6 +115,7 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
   const soak = SOAK_MS > 0 ? await takeProbe(page) : null;
   await page.waitForTimeout(1_000);
   const after = await settledMetrics(page);
+  const idleBusy = await restingBusyPercent(page);
   const leaks = growth(before, after);
 
   await page.screenshot({ path: `test-results/smooth-audit/${report}.png` });

@@ -1,5 +1,5 @@
 import './chat-rail.css';
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import type {
@@ -27,6 +27,7 @@ import { RailSummary } from './RailSummary.tsx';
 import { RailTv } from './RailTv.tsx';
 import { chatOutline } from './outline-model.ts';
 import { railRows, type RailAction } from './rail-model.ts';
+import { useRoomInThread } from './use-rail-layout.ts';
 
 interface ChatRailProps {
   detail: ConversationDetail;
@@ -62,41 +63,40 @@ function RailToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
   );
 }
 
-export const ChatRail = memo(function ChatRail({
+export const ChatRail = memo(function ChatRail(props: ChatRailProps) {
+  if (props.collapsed) {
+    return <RailToggle open={false} onToggle={() => props.onCollapse(false)} />;
+  }
+  return <OpenRail {...props} />;
+});
+
+function OpenRail({
   detail,
   repos,
   taskId,
   autonomy,
   running,
-  collapsed,
   onCollapse,
   onTab,
   onAutonomy,
   onChanges,
 }: ChatRailProps) {
   const conversationId = detail.conversation.id;
+  const railRef = useRef<HTMLElement>(null);
+  useRoomInThread(railRef);
   const { settings } = detail;
   const provider = settings.provider ?? '';
-  const capabilities = useQuery({
-    ...capabilitiesQuery((provider || 'claude') as ProviderId),
-    enabled: !collapsed,
-  });
+  const capabilities = useQuery(capabilitiesQuery((provider || 'claude') as ProviderId));
   const changes = useQuery({
     queryKey: diffKeys.summary(taskId ?? ''),
     queryFn: () => diffApi.summary(taskId ?? ''),
-    enabled: taskId !== null && !collapsed,
+    enabled: taskId !== null,
   });
   const watches = useQuery({
     queryKey: prWatchesKey(conversationId),
     queryFn: () => prFollowUpApi.get(conversationId),
-    enabled: !collapsed,
   });
-  const workspace = useChatWorkspace(
-    conversationId,
-    !collapsed && Boolean(detail.conversation.branch),
-  );
-
-  if (collapsed) return <RailToggle open={false} onToggle={() => onCollapse(false)} />;
+  const workspace = useChatWorkspace(conversationId, Boolean(detail.conversation.branch));
 
   const list = watches.data?.watches ?? [];
   const watch = list.find((entry) => entry.phase !== 'done') ?? list[0] ?? null;
@@ -135,7 +135,7 @@ export const ChatRail = memo(function ChatRail({
   };
 
   return (
-    <section className="crail" id="chat-rail" aria-label="Chat context">
+    <section ref={railRef} className="crail" id="chat-rail" aria-label="Chat context">
       <div className="crail-head">
         <h3 className="crail-title">Context</h3>
         <RailToggle open onToggle={() => onCollapse(true)} />
@@ -147,4 +147,4 @@ export const ChatRail = memo(function ChatRail({
       </AnimatePresence>
     </section>
   );
-});
+}

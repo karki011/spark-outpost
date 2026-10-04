@@ -23,6 +23,22 @@ export function useRoomy(main: RefObject<HTMLElement | null>): boolean {
   return roomy;
 }
 
+const RAIL_GUTTER = 52;
+
+export function useRoomInThread(rail: RefObject<HTMLElement | null>): void {
+  useLayoutEffect(() => {
+    const element = rail.current;
+    const thread = element?.closest('.thread');
+    if (!element || !thread || typeof ResizeObserver !== 'function') return;
+    const fit = () =>
+      element.style.setProperty('--crail-room', `${thread.clientHeight - RAIL_GUTTER}px`);
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(thread);
+    return () => observer.disconnect();
+  }, [rail]);
+}
+
 function readCollapsed(): boolean {
   try {
     return localStorage.getItem(COLLAPSED_KEY) === '1';

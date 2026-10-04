@@ -2,7 +2,6 @@
   flex: 1;
   position: relative;
   min-height: 0;
-  container: thread / size;
 }
 
 .thread {
