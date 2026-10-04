@@ -85,4 +85,13 @@ describe('Spark preferences', () => {
     const { body: after } = await get('/api/setup').expect(200);
     expect(after.profile.personality).toBe('playful');
   });
+
+  it('remembers the wide-window layout and refuses an unknown one', async () => {
+    const { send } = localClient(createTestApp(t));
+    const { body } = await send('patch', '/api/profile', { wideWindow: 'panel' }).expect(200);
+    expect(body.profile.wideWindow).toBe('panel');
+    const kept = await send('patch', '/api/profile', { displayName: 'Hazel' }).expect(200);
+    expect(kept.body.profile.wideWindow).toBe('panel');
+    await send('patch', '/api/profile', { wideWindow: 'sideways' }).expect(400);
+  });
 });

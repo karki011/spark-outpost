@@ -15,6 +15,7 @@ import {
   type SetupState,
   type SparkSessionPrefs,
   type UpdateProfileRequest,
+  type WideWindowLayout,
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel, retirementOf, usableDefault } from '../model-cards/cards.ts';
 import { catalog, catalogEntry } from '../providers/catalog.ts';
@@ -46,6 +47,7 @@ interface ProfileRow {
   compact_at_percent: number;
   auto_compact: boolean;
   heartbeat: boolean;
+  wide_window: WideWindowLayout;
 }
 
 export interface ConnectionRow {
@@ -89,7 +91,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
        spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       heartbeat, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
+       heartbeat, wide_window, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -192,6 +194,7 @@ export async function getSetupState(
     compactAtPercent: profile.compact_at_percent,
     autoCompact: profile.auto_compact,
     heartbeat: profile.heartbeat,
+    wideWindow: profile.wide_window,
   };
   return { profile: result, providers, advisors };
 }
@@ -244,6 +247,7 @@ export async function updateProfile(
        compact_at_percent = COALESCE($22, compact_at_percent),
        auto_compact = COALESCE($23, auto_compact),
        heartbeat = COALESCE($24, heartbeat),
+       wide_window = COALESCE($25, wide_window),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -271,6 +275,7 @@ export async function updateProfile(
       update.compactAtPercent ?? null,
       update.autoCompact ?? null,
       update.heartbeat ?? null,
+      update.wideWindow ?? null,
     ],
   );
 }
