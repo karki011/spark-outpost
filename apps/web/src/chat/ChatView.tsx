@@ -30,6 +30,7 @@ import {
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserButton } from '../browser/BrowserButton.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
+import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
 import { browserAvailable, onBrowserPick } from '../browser/browser-store.ts';
 import { pickFiles } from '../browser/pick-files.ts';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
@@ -123,6 +124,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const running = activeRun(detail.data);
+  usePreviewDockTab(conversationId);
   const queue = useChatQueue(conversationId, detail.data?.queue);
   const title = detail.data?.conversation.title ?? '';
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
