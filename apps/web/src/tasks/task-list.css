@@ -162,6 +162,10 @@
   background: var(--raise);
 }
 
+.titem.done {
+  animation: none;
+}
+
 .titem.active {
   background: var(--accent-soft);
 }

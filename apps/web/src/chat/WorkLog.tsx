@@ -92,18 +92,33 @@ function StepIcon({ step, working }: { step: StepView; working: boolean }) {
 }
 
 export function StepList({ log }: { log: StepLog }) {
+  const [wasOpen, setWasOpen] = useState(log.open);
+  const [closing, setClosing] = useState(false);
+  if (wasOpen !== log.open) {
+    setWasOpen(log.open);
+    setClosing(!log.open);
+  }
   return (
-    <div className="steps-body" id={log.listId} inert={!log.open}>
-      <ul>
-        {log.views.map((step, index) => (
-          <li key={`${step.name}-${index}`}>
-            <StepIcon step={step} working={log.working} />
-            <span>
-              <StepName name={step.name} />
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div
+      className="steps-body"
+      id={log.listId}
+      inert={!log.open}
+      onTransitionEnd={(event) => {
+        if (event.target === event.currentTarget && !log.open) setClosing(false);
+      }}
+    >
+      {(log.open || closing) && (
+        <ul>
+          {log.views.map((step, index) => (
+            <li key={`${step.name}-${index}`}>
+              <StepIcon step={step} working={log.working} />
+              <span>
+                <StepName name={step.name} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
