@@ -1,6 +1,6 @@
 import { TEAMMATE_STATE_LABELS } from '@spark-outpost/contracts';
 import { DocLink } from '../ui/DocLink.tsx';
-import { PlusIcon } from '../ui/icons.tsx';
+import { PlusIcon, TrashIcon } from '../ui/icons.tsx';
 import { StarterSuggestions } from './StarterSuggestions.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 import { openTeammateSheet } from './teammate-store.ts';
@@ -51,6 +51,16 @@ export function SparksSection() {
                   onClick={() => openTeammateSheet({ kind: 'edit', id: teammate.id })}
                 >
                   Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn line sm"
+                  aria-label={`Delete ${teammate.name}`}
+                  onClick={() =>
+                    openTeammateSheet({ kind: 'edit', id: teammate.id, focus: 'delete' })
+                  }
+                >
+                  <TrashIcon /> Delete
                 </button>
               </li>
             ))}

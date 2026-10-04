@@ -2,8 +2,14 @@ import { AnimatePresence } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../api/client.ts';
 import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
+import '../ui/toast.css';
 import { TeammateSheet } from './TeammateSheet.tsx';
-import { clearTeammateDelete, useTeammateUi, type PendingDelete } from './teammate-store.ts';
+import {
+  clearTeammateDelete,
+  reportTeammateDeleteProblem,
+  useTeammateUi,
+  type PendingDelete,
+} from './teammate-store.ts';
 import { teammateKeys, teammatesApi } from './teammates-api.ts';
 import { useTeammates } from './use-teammates.ts';
 
@@ -14,6 +20,9 @@ function DeleteGrace({ pending }: { pending: PendingDelete }) {
   const remove = async () => {
     try {
       await teammatesApi.remove(pending.id);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'The server could not be reached.';
+      reportTeammateDeleteProblem(`${pending.name} wasn’t deleted. ${reason}`);
     } finally {
       clearTeammateDelete();
       await Promise.all([
@@ -34,7 +43,7 @@ function DeleteGrace({ pending }: { pending: PendingDelete }) {
 }
 
 export function TeammateHost() {
-  const { sheet, deleting } = useTeammateUi();
+  const { sheet, deleting, deleteProblem } = useTeammateUi();
   const { teammates } = useTeammates();
   const editing = sheet?.kind === 'edit' ? teammates.find((entry) => entry.id === sheet.id) : null;
   const showSheet = sheet !== null && (sheet.kind === 'create' || editing);
@@ -52,6 +61,14 @@ export function TeammateHost() {
       <AnimatePresence>
         {deleting && <DeleteGrace key={deleting.id} pending={deleting} />}
       </AnimatePresence>
+      {deleteProblem && !deleting && (
+        <div className="toast floating" role="alert">
+          <span>{deleteProblem}</span>
+          <button type="button" onClick={() => reportTeammateDeleteProblem(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
     </>
   );
 }

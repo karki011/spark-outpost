@@ -39,6 +39,6 @@ A Spark sets a chat's starting defaults and adds its instructions. It never chan
 
 1. On **Home**, point at the card and select **Edit**, or open **Settings → Sparks**.
 2. Change what you need and select **Save**.
-3. To delete it, press and hold **Hold to delete** for 1.5 seconds. You get 10 seconds to **Undo**. Its chats stay.
+3. To delete it, scroll to the end of the sheet, or select **Delete** in **Settings → Sparks**. Press and hold **Hold to delete** for 1.5 seconds. You get 10 seconds to **Undo**; Escape also undoes. Its chats stay.
 
 **Next:** [Watch and steer the crew](pieces.md)
