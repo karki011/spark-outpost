@@ -215,12 +215,12 @@ async function evidenceScores(input: RankInput, paths: readonly string[]): Promi
   return scores;
 }
 
-export function strongestNodes(
+export async function strongestNodes(
   paths: readonly string[],
   evidence: readonly number[],
   facts: RankInput['facts'],
   cap: number,
-): number[] {
+): Promise<number[]> {
   const byPath = (a: number, b: number) =>
     paths[a]! < paths[b]! ? -1 : paths[a]! > paths[b]! ? 1 : 0;
   const all = paths.map((_, index) => index);
@@ -229,10 +229,12 @@ export function strongestNodes(
   const unlinked = all.filter((index) => !facts.has(paths[index]!));
   const room = Math.max(0, cap - linked.length);
   if (room === 0) return linked.sort(byPath);
+  await nextTurn();
   const ascending = Float64Array.from(unlinked, (index) => evidence[index]!).sort();
   const cutoff = ascending[ascending.length - room]!;
   const stronger = unlinked.filter((index) => evidence[index]! > cutoff);
   const atCutoff = unlinked.filter((index) => evidence[index] === cutoff);
+  await nextTurn();
   const earliest = firstSorted(atCutoff, room - stronger.length, byPath);
   return [...linked, ...stronger, ...earliest].sort(byPath);
 }
@@ -242,7 +244,7 @@ export async function rankFiles(input: RankInput): Promise<RankedFile[]> {
   if (found.length === 0) return [];
   await nextTurn();
   const scored = await evidenceScores(input, found);
-  const kept = strongestNodes(found, scored, input.facts, input.nodeCap ?? RANK_NODE_CAP);
+  const kept = await strongestNodes(found, scored, input.facts, input.nodeCap ?? RANK_NODE_CAP);
   const paths = kept.map((index) => found[index]!);
   const evidence = kept.map((index) => scored[index]!);
   await nextTurn();
@@ -276,6 +278,9 @@ export async function rankFiles(input: RankInput): Promise<RankedFile[]> {
     };
   });
   await nextTurn();
-  ranked.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
-  return ranked.slice(0, input.limit ?? MAX_CANDIDATES);
+  return firstSorted(
+    ranked,
+    input.limit ?? MAX_CANDIDATES,
+    (a, b) => b.score - a.score || a.path.localeCompare(b.path),
+  );
 }

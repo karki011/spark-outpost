@@ -218,16 +218,16 @@ describe('ranking when most files match', () => {
     expect(await rankFiles(few)).toEqual(await rankFiles(uncapped));
   });
 
-  it('selects every linked file, then unlinked ones by evidence and path, in path order', () => {
+  it('selects every linked file, then unlinked ones by evidence and path, in path order', async () => {
     const paths = ['d.ts', 'b.ts', 'f.ts', 'a.ts', 'e.ts', 'c.ts'];
     const evidence = [1, 5, 9, 1, 0, 1];
     const linked = new Map([['e.ts', facts([], [])]]);
-    const picked = (cap: number, known = linked) =>
-      strongestNodes(paths, evidence, known, cap).map((index) => paths[index]);
-    expect(picked(6)).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts', 'f.ts']);
-    expect(picked(4)).toEqual(['a.ts', 'b.ts', 'e.ts', 'f.ts']);
-    expect(picked(5)).toEqual(['a.ts', 'b.ts', 'c.ts', 'e.ts', 'f.ts']);
-    expect(picked(1)).toEqual(['e.ts']);
-    expect(picked(2, new Map())).toEqual(['b.ts', 'f.ts']);
+    const picked = async (cap: number, known = linked) =>
+      (await strongestNodes(paths, evidence, known, cap)).map((index) => paths[index]);
+    expect(await picked(6)).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts', 'f.ts']);
+    expect(await picked(4)).toEqual(['a.ts', 'b.ts', 'e.ts', 'f.ts']);
+    expect(await picked(5)).toEqual(['a.ts', 'b.ts', 'c.ts', 'e.ts', 'f.ts']);
+    expect(await picked(1)).toEqual(['e.ts']);
+    expect(await picked(2, new Map())).toEqual(['b.ts', 'f.ts']);
   });
 });
