@@ -248,6 +248,10 @@
   display: none;
 }
 
+.crail-tv-stage .tv-l.on {
+  animation: none;
+}
+
 .crail-tv-cap {
   margin: 0;
   padding: 0 6px 2px;

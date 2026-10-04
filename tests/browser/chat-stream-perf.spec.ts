@@ -2,8 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openHeavyChat } from './heavy-chat.ts';
 import {
+  BUSY_MACHINE,
   CLICK_LIMIT_MS,
   keyFeedbackMs,
+  PRODUCTION,
+  restingBusyPercent,
   settledMetrics,
   startProbe,
   takeProbe,
@@ -20,6 +23,7 @@ const SOAK_MS = Number(process.env.SPARK_SOAK_MS ?? 0);
 const HEAP_GROWTH_MB = 25;
 const NODE_GROWTH = 6_000;
 const LISTENER_GROWTH = 400;
+const IDLE_BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 12 : 6) : 30;
 
 interface CommitWindow {
   reactCommits: number;
@@ -74,17 +78,24 @@ function growth(before: PageMetrics, after: PageMetrics) {
   };
 }
 
-test('a heavy chat streams a long reply smoothly without leaking', async ({ page }) => {
-  test.setTimeout(240_000 + SOAK_MS * 2);
+interface StreamCase {
+  report: string;
+  viewport: { width: number; height: number };
+  rail: boolean;
+}
+
+async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCase) {
   await resetTestDatabase({ onboarded: true });
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize(viewport);
   await countCommits(page);
   let detailFetches = 0;
   page.on('request', (request) => {
     if (/\/api\/conversations\/[0-9a-f-]{36}$/.test(request.url())) detailFetches++;
   });
   await openHeavyChat(page, true);
+  await expect(page.getByRole('navigation', { name: 'On this chat' })).toHaveCount(rail ? 1 : 0);
   await page.waitForTimeout(1_500);
+  const idleBusy = await restingBusyPercent(page);
   const before = await settledMetrics(page);
   await startProbe(page);
   const startCommits = await commits(page);
@@ -107,9 +118,10 @@ test('a heavy chat streams a long reply smoothly without leaking', async ({ page
   const after = await settledMetrics(page);
   const leaks = growth(before, after);
 
-  await page.screenshot({ path: 'test-results/smooth-audit/chat-stream.png' });
+  await page.screenshot({ path: `test-results/smooth-audit/${report}.png` });
   const summary = {
     words: WORDS,
+    idleBusy,
     streamMs,
     sendKeyMs,
     stream,
@@ -122,9 +134,10 @@ test('a heavy chat streams a long reply smoothly without leaking', async ({ page
     after,
     growth: leaks,
   };
-  writeReport(SOAK_MS > 0 ? 'chat-soak' : 'chat-stream', summary);
+  writeReport(SOAK_MS > 0 ? `${report}-soak` : report, summary);
   test.info().annotations.push({ type: 'chat stream', description: JSON.stringify(summary) });
 
+  expect(idleBusy).toBeLessThan(IDLE_BUSY_LIMIT);
   expect(sendKeyMs).toBeLessThan(CLICK_LIMIT_MS);
   expect(stream.maxTaskMs).toBeLessThan(TASK_LIMIT_MS);
   expect(summary.reactCommitsPerSecond).toBeLessThan(70);
@@ -132,4 +145,24 @@ test('a heavy chat streams a long reply smoothly without leaking', async ({ page
   expect(leaks.heapMb).toBeLessThan(HEAP_GROWTH_MB);
   expect(leaks.nodes).toBeLessThan(NODE_GROWTH);
   expect(leaks.listeners).toBeLessThan(LISTENER_GROWTH);
+}
+
+test('a heavy chat streams a long reply smoothly without leaking', async ({ page }) => {
+  test.setTimeout(240_000 + SOAK_MS * 2);
+  await streamHeavyChat(page, {
+    report: 'chat-stream',
+    viewport: { width: 1440, height: 900 },
+    rail: false,
+  });
+});
+
+test('the context rail and its outline add no work while a heavy chat streams', async ({
+  page,
+}) => {
+  test.setTimeout(240_000 + SOAK_MS * 2);
+  await streamHeavyChat(page, {
+    report: 'chat-stream-rail',
+    viewport: { width: 2000, height: 1100 },
+    rail: true,
+  });
 });
