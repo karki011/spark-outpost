@@ -68,6 +68,7 @@ desktopBrowser?.blockPorts([sparkTools.port]);
 const sparkActions = await startSparkActionFollowThrough(sparkDeps);
 const worker = startWorker({
   db,
+  browserPane: sparkTools.browser,
   activeWork,
   approvalWaiters,
   intake,

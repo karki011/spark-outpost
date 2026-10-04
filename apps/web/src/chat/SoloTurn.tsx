@@ -11,6 +11,7 @@ import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { hasPending } from './approvals/approval-events.ts';
+import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from './../browser/BrowserShots.tsx';
 import { RailFlags } from './approvals/RailFlags.tsx';
 import { RevertRun } from './approvals/RevertRun.tsx';
@@ -201,6 +202,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       {finished && (
         <div className="turn-foot">
           <RunUsageMeta run={child?.usage ? child : run} />
+          <BrowserCheckMeta
+            detail={detail}
+            run={run}
+            taskId={changeTask?.id ?? null}
+            runIds={changeRunIds}
+          />
           {text && (
             <MessageActions
               text={text}

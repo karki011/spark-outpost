@@ -3,6 +3,7 @@ import type { AppEvent } from '@spark-outpost/contracts';
 import { analyticsKeys } from '../../analytics/analytics-api.ts';
 import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
+import { previewKeys } from '../../api/preview.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
@@ -28,6 +29,7 @@ export const LIVE_ROOTS: readonly string[] = [
   queryKeys.usageSummary[0],
   teammateKeys.all[0],
   ticketKeys.all[0],
+  previewKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -55,6 +57,11 @@ function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[]
   return withAudit ? [detail, { queryKey: auditKeys.summary(id), exact: true }] : [detail];
 }
 
+function chatPreview(event: AppEvent): Invalidation[] {
+  const id = event.conversationId;
+  return id ? [{ queryKey: previewKeys.chat(id), exact: true }] : [];
+}
+
 function outcome(event: AppEvent): Invalidation[] {
   return event.runId ? [{ queryKey: outcomeKeys.run(event.runId), exact: true }] : [];
 }
@@ -62,12 +69,13 @@ function outcome(event: AppEvent): Invalidation[] {
 function invalidationsFor(event: AppEvent): Invalidation[] {
   switch (event.kind) {
     case 'conversation':
-      return [list, search, teammates, ...conversationScoped(event, false)];
+      return [list, search, teammates, ...conversationScoped(event, false), ...chatPreview(event)];
     case 'run':
       return [
         list,
         teammates,
         ...conversationScoped(event, true),
+        ...chatPreview(event),
         tasks,
         spend,
         today,
@@ -98,6 +106,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         : [];
     case 'ticket':
       return [ticketInbox, ticketConnections];
+    case 'preview':
+      return [{ queryKey: previewKeys.all }];
   }
 }
 

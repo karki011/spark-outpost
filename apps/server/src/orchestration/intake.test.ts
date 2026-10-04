@@ -50,6 +50,23 @@ describe('intake decisions', () => {
     );
   });
 
+  it('answers a look-at-the-page request instead of planning a build', () => {
+    const looking = facts({
+      request:
+        "The dev server is already running at http://127.0.0.1:47733 (I started it). Use Spark's built-in browser: open the home page, tell me the heading text and what the button says, take a screenshot, then open /errors and tell me what the console and network logs show.",
+    });
+    for (const level of ['hands-off', 'full-auto'] as const) {
+      const decided = decideIntake(null, { ...looking, level });
+      expect(decided, level).toMatchObject({ start: 'answer', intent: 'question' });
+    }
+    expect(decideIntake(jev({ question: 0.5, plan: 0.5 }), looking).start).toBe('answer');
+    const careful = facts({
+      request:
+        'Open the home page in the browser and tell me what the console logs show. Do not change or delete any files.',
+    });
+    expect(decideIntake(null, careful)).toMatchObject({ start: 'answer', destructive: true });
+  });
+
   it('answers when Jev is unsure, unless the request leads with a change verb', () => {
     for (const level of ['hands-off', 'full-auto'] as const) {
       const unsure = facts({ request: 'lets plan the agent md update', level });

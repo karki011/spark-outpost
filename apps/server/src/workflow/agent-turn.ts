@@ -62,10 +62,16 @@ import { createRunObservations } from '../observations/run-observations.ts';
 import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
+import { withBrowserCheck } from './browser-check.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
+}
+
+function editsFiles(input: RunInput): boolean {
+  if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
+  return input.role === null || writesCode(input.role);
 }
 
 async function sessionBrief(db: Db, input: RunInput) {
@@ -91,6 +97,7 @@ export interface TurnDeps {
   approvalTimeoutMs?: number;
   sessionLimits?: SweepLimits;
   inboxPollMs?: number;
+  browserPane?: boolean;
 }
 
 export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout' | 'budget';
@@ -345,7 +352,12 @@ export async function runAgentTurn(
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
 
     for await (const output of provider.run({
-      prompt: input.prompt,
+      prompt: withBrowserCheck({
+        prompt: input.prompt,
+        userRequest: input.userRequest,
+        editsFiles: editsFiles(input),
+        browserPane: deps.browserPane === true,
+      }),
       attachments: input.attachments,
       history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
       settings: input.settings,

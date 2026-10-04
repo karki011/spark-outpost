@@ -3,7 +3,9 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import {
   DEFAULT_WORK_PLACE,
+  previewConfigSchema,
   workPlaceSchema,
+  type PreviewConfig,
   type Project,
   type WorkPlace,
 } from '@spark-outpost/contracts';
@@ -22,11 +24,12 @@ export interface ProjectRow {
   piece_slots: number;
   work_place: string;
   browser_keep_sign_ins: boolean;
+  preview: unknown;
   last_used_at?: Date;
 }
 
 export const PROJECT_COLUMNS =
-  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place, browser_keep_sign_ins';
+  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place, browser_keep_sign_ins, preview';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -38,6 +41,11 @@ export function displayPath(root: string, home: string): string {
   if (root === home) return '~';
   if (root.startsWith(`${home}${path.sep}`)) return `~${root.slice(home.length)}`;
   return root;
+}
+
+export function storedPreview(value: unknown): PreviewConfig | null {
+  const parsed = previewConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 export function toProject(row: ProjectRow, home: string): Project {
@@ -54,6 +62,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     pieceSlots: row.piece_slots,
     workPlace: workPlaceSchema.catch(DEFAULT_WORK_PLACE).parse(row.work_place),
     browserKeepSignIns: row.browser_keep_sign_ins,
+    preview: storedPreview(row.preview),
   };
 }
 
@@ -164,6 +173,21 @@ export async function updateProject(
       change.workPlace ?? null,
       change.browserKeepSignIns ?? null,
     ],
+  );
+  if (!rows[0]) throw new ProjectNotFoundError();
+  return toProject(rows[0], await realHome());
+}
+
+export async function saveProjectPreview(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+  preview: PreviewConfig | null,
+): Promise<Project> {
+  const { rows } = await db.query<ProjectRow>(
+    `UPDATE projects SET preview = $3::jsonb WHERE id = $1 AND workspace_id = $2
+     RETURNING ${PROJECT_COLUMNS}`,
+    [id, workspaceId, preview === null ? null : JSON.stringify(preview)],
   );
   if (!rows[0]) throw new ProjectNotFoundError();
   return toProject(rows[0], await realHome());

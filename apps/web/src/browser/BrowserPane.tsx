@@ -19,6 +19,7 @@ import {
   sendBrowserCommand,
   useChatBrowser,
 } from './browser-store.ts';
+import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { useViewPlacement, type BrowserHome } from './use-view-placement.ts';
 
@@ -179,13 +180,16 @@ function AddressBar({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | nul
   );
 }
 
-function StartPage({ tab }: { tab: BrowserPaneTab | null }) {
+function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
   if (tab?.error) {
     return (
-      <div className="bp-start" role="status">
-        <b>This page didn’t load</b>
-        <p>{tab.error}</p>
-        <p>If it is your dev server, start it in the terminal, then reload.</p>
+      <div className="bp-start">
+        <div role="status">
+          <b>This page didn’t load</b>
+          <p>{tab.error}</p>
+          <p>If it is your dev server, start it in the terminal, then reload.</p>
+        </div>
+        <PreviewStart chatId={chatId} tab={tab} />
       </div>
     );
   }
@@ -195,6 +199,7 @@ function StartPage({ tab }: { tab: BrowserPaneTab | null }) {
       <p>
         Type an address above to open a page. Your dev server works: try localhost and its port.
       </p>
+      <PreviewStart chatId={chatId} tab={tab} />
       <p>
         Agents can open and read local pages here when you ask. Anything a page says is treated as
         untrusted.
@@ -286,9 +291,10 @@ export function BrowserPane({ home, shown }: BrowserPaneProps) {
           <span className="bp-badge">Click an element or drag a box. Esc cancels.</span>
         )}
         {tab?.driving && <span className="bp-badge drive">Spark is driving</span>}
+        <PreviewBadge chatId={chatId} />
       </div>
       <div className="bp-view" id="bp-view" ref={view}>
-        {blank && <StartPage tab={tab} />}
+        {blank && <StartPage chatId={chatId} tab={tab} />}
         {!blank && browser.snapshot && (
           <img className="bp-snapshot" src={browser.snapshot} alt="" />
         )}

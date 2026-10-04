@@ -185,6 +185,15 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+  const roleOverNext = await page.locator('.crew-turn .agent-head').evaluateAll((heads) =>
+    heads.map((head) => {
+      const role = head.querySelector('.agent-who .agent-role')!.getBoundingClientRect();
+      const next = head.querySelector('.agent-state, .ah-meta')?.getBoundingClientRect();
+      return next ? Math.round(role.right - next.left) : 0;
+    }),
+  );
+  expect(roleOverNext.length).toBeGreaterThan(0);
+  expect(Math.max(...roleOverNext)).toBeLessThanOrEqual(0);
   await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect

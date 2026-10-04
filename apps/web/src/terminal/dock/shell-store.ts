@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { CreateShellResponse, ShellFolderKind } from '@spark-outpost/contracts';
+import { previewApi } from '../../api/preview.ts';
 import { createShell, runningCommand } from '../terminal-api.ts';
 import { openTerminal, type TerminalConnection } from '../terminal-connection.ts';
 import { endMessages } from '../terminal-messages.ts';
@@ -14,6 +15,7 @@ export interface ShellTab {
   kind: ShellFolderKind | null;
   status: ShellStatus;
   notice: string | null;
+  preview: boolean;
   host: HTMLDivElement;
 }
 
@@ -89,7 +91,9 @@ function ended(chatId: string, tabId: string, notice: string, removeTab: boolean
   updateTab(chatId, tabId, { status: 'ended', notice });
 }
 
-export function newShell(chatId: string): string {
+const PREVIEW_ENDED = 'The preview stopped.';
+
+function addTab(chatId: string, preview: boolean, front: boolean): string {
   const id = crypto.randomUUID();
   const host = document.createElement('div');
   host.className = 'term-host';
@@ -97,23 +101,48 @@ export function newShell(chatId: string): string {
   const tab: ShellTab = {
     id,
     sessionId: null,
-    label: null,
+    label: preview ? 'Preview' : null,
     cwd: null,
     kind: null,
     status: 'starting',
     notice: null,
+    preview,
     host,
   };
   const chat = chatOf(chatId);
-  focusWanted = id;
-  setChat(chatId, { open: true, tabs: [...chat.tabs, tab], activeId: id });
-  const connection = openTerminal(() => createShell(chatId), host, {
+  const show = front || chat.activeId === null;
+  if (show) focusWanted = id;
+  setChat(chatId, {
+    open: chat.open || front,
+    tabs: [...chat.tabs, tab],
+    activeId: show ? id : chat.activeId,
+  });
+  const create = preview ? () => previewApi.terminal(chatId) : () => createShell(chatId);
+  const connection = openTerminal(create, host, {
     onOpen: (created) => started(chatId, id, created),
-    onEnded: (reason) => ended(chatId, id, endMessages[reason], reason === 'chat_removed'),
+    onEnded: (reason) =>
+      ended(chatId, id, preview ? PREVIEW_ENDED : endMessages[reason], reason === 'chat_removed'),
     onError: (message) => ended(chatId, id, message, false),
   });
   connections.set(id, connection);
   return id;
+}
+
+export function newShell(chatId: string): string {
+  return addTab(chatId, false, true);
+}
+
+export function showPreviewShell(chatId: string, front = true): void {
+  const chat = chatOf(chatId);
+  const existing = chat.tabs.find((tab) => tab.preview && tab.status !== 'ended');
+  if (!existing) {
+    for (const stale of chat.tabs.filter((tab) => tab.preview)) closeShell(chatId, stale.id);
+    addTab(chatId, true, front);
+    return;
+  }
+  if (!front) return;
+  focusWanted = existing.id;
+  setChat(chatId, { ...chat, open: true, activeId: existing.id });
 }
 
 export async function shellCommand(chatId: string, tabId: string): Promise<string | null> {

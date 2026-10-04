@@ -5,6 +5,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectBuilders } from './ProjectBuilders.tsx';
+import { ProjectPreview } from './ProjectPreview.tsx';
 
 function trustLabel(trust: ProjectTrust | undefined): string {
   if (!trust) return 'Not asked yet';
@@ -47,6 +48,7 @@ function ProjectRow({
       </div>
       <ProjectBuilders project={project} available={parallelAvailable} />
       <ProjectBrowser project={project} />
+      <ProjectPreview project={project} />
     </li>
   );
 }

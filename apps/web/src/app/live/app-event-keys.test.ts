@@ -32,6 +32,9 @@ const cached: Record<string, QueryKey> = {
   ticketInbox: ['tickets', 'inbox'],
   ticketView: ['tickets', 'view', 'linear', 'ENG-1'],
   ticketConnections: ['tickets', 'connections'],
+  previewA: ['preview', 'chat', A],
+  previewB: ['preview', 'chat', B],
+  previewProject: ['preview', 'project', A],
 };
 
 async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
@@ -64,6 +67,7 @@ describe('app event invalidation', () => {
         'health',
         'list',
         'outcome',
+        'previewA',
         'spendToday',
         'spendWeek',
         'task',
@@ -71,6 +75,14 @@ describe('app event invalidation', () => {
         'usage',
       ].sort(),
     );
+  });
+
+  it('a preview server change refreshes every preview on screen and nothing else', async () => {
+    expect(await invalidatedBy(event('preview', null))).toEqual([
+      'previewA',
+      'previewB',
+      'previewProject',
+    ]);
   });
 
   it('map progress refreshes every map on screen and nothing else', async () => {
@@ -106,7 +118,12 @@ describe('app event invalidation', () => {
   });
 
   it('a conversation change refreshes the list, search results and that chat', async () => {
-    expect(await invalidatedBy(event('conversation'))).toEqual(['detailA', 'list', 'search']);
+    expect(await invalidatedBy(event('conversation'))).toEqual([
+      'detailA',
+      'list',
+      'previewA',
+      'search',
+    ]);
   });
 
   it('task changes without a chat leave every chat detail alone', async () => {
