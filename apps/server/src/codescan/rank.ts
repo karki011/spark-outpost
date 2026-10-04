@@ -1,7 +1,11 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
+import { firstSorted } from './first-sorted.ts';
 import type { TextMatch } from './ripgrep.ts';
 import { isTestFile } from './test-pairs.ts';
 
 export const MAX_CANDIDATES = 255;
+export const RANK_NODE_CAP = 4_000;
+const SCORE_BATCH = 2_000;
 export const DAMPING = 0.85;
 export const ITERATIONS = 30;
 export const WIDELY_DEFINED = 5;
@@ -33,6 +37,7 @@ export interface RankInput {
   churn: ReadonlyMap<string, number>;
   packageOf: (path: string) => string;
   limit?: number;
+  nodeCap?: number;
 }
 
 export interface RankedFile {
@@ -78,7 +83,7 @@ function nodePaths(input: RankInput): string[] {
       ...input.uncommitted,
       ...input.coChange.keys(),
     ]),
-  ].sort();
+  ];
 }
 
 function definersById(paths: readonly string[], input: RankInput): Map<number, number[]> {
@@ -199,12 +204,54 @@ function inDegrees(edges: readonly Edge[][], size: number): number[] {
   return degrees;
 }
 
-export function rankFiles(input: RankInput): RankedFile[] {
-  const paths = nodePaths(input);
-  if (paths.length === 0) return [];
+async function evidenceScores(input: RankInput, paths: readonly string[]): Promise<number[]> {
+  const scores: number[] = [];
+  for (let start = 0; start < paths.length; start += SCORE_BATCH) {
+    for (const path of paths.slice(start, start + SCORE_BATCH)) {
+      scores.push(evidenceScore(input, path));
+    }
+    await nextTurn();
+  }
+  return scores;
+}
+
+export async function strongestNodes(
+  paths: readonly string[],
+  evidence: readonly number[],
+  facts: RankInput['facts'],
+  cap: number,
+): Promise<number[]> {
+  const byPath = (a: number, b: number) =>
+    paths[a]! < paths[b]! ? -1 : paths[a]! > paths[b]! ? 1 : 0;
+  const all = paths.map((_, index) => index);
+  if (paths.length <= cap) return all.sort(byPath);
+  const linked = all.filter((index) => facts.has(paths[index]!));
+  const unlinked = all.filter((index) => !facts.has(paths[index]!));
+  const room = Math.max(0, cap - linked.length);
+  if (room === 0) return linked.sort(byPath);
+  await nextTurn();
+  const ascending = Float64Array.from(unlinked, (index) => evidence[index]!).sort();
+  const cutoff = ascending[ascending.length - room]!;
+  const stronger = unlinked.filter((index) => evidence[index]! > cutoff);
+  const atCutoff = unlinked.filter((index) => evidence[index] === cutoff);
+  await nextTurn();
+  const earliest = firstSorted(atCutoff, room - stronger.length, byPath);
+  return [...linked, ...stronger, ...earliest].sort(byPath);
+}
+
+export async function rankFiles(input: RankInput): Promise<RankedFile[]> {
+  const found = nodePaths(input);
+  if (found.length === 0) return [];
+  await nextTurn();
+  const scored = await evidenceScores(input, found);
+  const kept = await strongestNodes(found, scored, input.facts, input.nodeCap ?? RANK_NODE_CAP);
+  const paths = kept.map((index) => found[index]!);
+  const evidence = kept.map((index) => scored[index]!);
+  await nextTurn();
   const edges = referenceEdges(paths, input);
-  const evidence = paths.map((path) => evidenceScore(input, path));
+  await nextTurn();
   const rank = personalisedPageRank(edges, evidence);
+  await nextTurn();
   const references = inDegrees(edges, paths.length);
   const topRank = largest(rank);
   const topEvidence = largest(evidence);
@@ -230,6 +277,10 @@ export function rankFiles(input: RankInput): RankedFile[] {
       reasons: reasonsFor(input, path, (references[index] ?? 0) > 0),
     };
   });
-  ranked.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
-  return ranked.slice(0, input.limit ?? MAX_CANDIDATES);
+  await nextTurn();
+  return firstSorted(
+    ranked,
+    input.limit ?? MAX_CANDIDATES,
+    (a, b) => b.score - a.score || a.path.localeCompare(b.path),
+  );
 }

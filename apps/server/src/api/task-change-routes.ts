@@ -14,6 +14,7 @@ import {
   summarize,
   toEntry,
 } from '../projects/change-sets.ts';
+import { RunListingCache } from '../projects/run-listing-cache.ts';
 import { leanChanges, taskChangeSet } from '../projects/task-changes.ts';
 import { BadRequestError, paramId } from './validation.ts';
 
@@ -28,7 +29,8 @@ function runList(runs: string | undefined): string[] | undefined {
 
 export function taskChangeRoutes({ db, workspaceId }: TaskChangeRouteDeps): Router {
   const router = Router();
-  const sets = new ChangeSetCache((taskId) => taskChangeSet(db, workspaceId, taskId));
+  const listings = new RunListingCache();
+  const sets = new ChangeSetCache((taskId) => taskChangeSet(db, workspaceId, taskId, listings));
 
   router.get('/tasks/:id/changes', async (req, res) => {
     const taskId = paramId(req);

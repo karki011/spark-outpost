@@ -1,4 +1,5 @@
-.day-grid {
+.day-grid,
+.day-grid.rdp-root {
   --rdp-accent-color: var(--accent);
   --rdp-accent-background-color: var(--accent-soft);
   --rdp-today-color: var(--accent-text);
@@ -76,4 +77,50 @@
 
 .day-grid .rdp-selected:not(.rdp-range_middle) .rdp-day_button {
   font-weight: 600;
+}
+
+.day-grid-skel {
+  width: calc(7 * var(--rdp-day-width));
+}
+
+.day-skel-caption {
+  display: block;
+  width: 96px;
+  height: 12px;
+  margin: calc((var(--rdp-nav-height) - 12px) / 2) 0;
+  border-radius: 6px;
+  background: var(--raise);
+}
+
+.day-skel-days {
+  display: grid;
+  grid-template-columns: repeat(7, var(--rdp-day-width));
+}
+
+.day-skel-weekday,
+.day-skel-day {
+  display: grid;
+  place-items: center;
+  height: var(--rdp-day-height);
+}
+
+.day-skel-weekday {
+  height: 33px;
+}
+
+.day-skel-weekday::before,
+.day-skel-day::before {
+  content: '';
+  border-radius: 999px;
+  background: var(--raise);
+}
+
+.day-skel-weekday::before {
+  width: 16px;
+  height: 8px;
+}
+
+.day-skel-day::before {
+  width: 22px;
+  height: 22px;
 }

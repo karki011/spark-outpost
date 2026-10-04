@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import '@xterm/xterm/css/xterm.css';
 import '../terminal.css';
 import './terminal-dock.css';
 import { PlusIcon, XIcon } from '../../ui/icons.tsx';

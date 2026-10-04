@@ -317,6 +317,47 @@ describe('code index cache', () => {
     });
   });
 
+  it('answers a scan while the index build it started is held back, then finishes it', async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const scanner = createCodeScanner(t.db, {
+      deadlineMs: 10_000,
+      scanIndexPace: () => () => held,
+    });
+    const during = await scanner.scan(root, 'Add a range prop to useChartData in line-chart.tsx');
+    expect(during.status).toBe('done');
+    expect(during.report?.index).not.toBe('ready');
+    expect(during.report?.candidates.map((file) => file.path)).toContain(
+      'src/chart/line-chart.tsx',
+    );
+
+    release();
+    await scanner.idle();
+    const after = await scanner.scan(root, 'Add a range prop to useChartData in line-chart.tsx');
+    expect(after.report?.index).toBe('ready');
+    expect(Object.keys(await files())).toContain('src/chart/line-chart.tsx');
+  });
+
+  it('paces a build asked for with its own pace by that pace, not the scan one', async () => {
+    const used: string[] = [];
+    const scanner = createCodeScanner(t.db, {
+      scanIndexPace: () => () => {
+        used.push('scan');
+        return Promise.resolve();
+      },
+    });
+    await scanner.ensureIndexed(root, {
+      fresh: true,
+      pace: () => {
+        used.push('map');
+        return Promise.resolve();
+      },
+    });
+    expect(used).toEqual(['map']);
+  });
+
   it('returns nothing useful rather than waiting past the deadline', async () => {
     const scanner = createCodeScanner(t.db, { deadlineMs: 1, refreshEveryMs: Infinity });
     const outcome = await scanner.scan(root, 'Rename useChartData');

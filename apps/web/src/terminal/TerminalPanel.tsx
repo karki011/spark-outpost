@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import '@xterm/xterm/css/xterm.css';
 import type { ProviderId, TerminalHint, TerminalStep } from '@spark-outpost/contracts';
 import { LabelText } from '../providers/LabelText.tsx';
 import { CheckIcon, XIcon } from '../ui/icons.tsx';

@@ -1,17 +1,6 @@
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { WebglAddon } from '@xterm/addon-webgl';
-import { Terminal } from '@xterm/xterm';
-import {
-  terminalServerMessageSchema,
-  type TerminalClientMessage,
-  type TerminalEndReason,
-  type TerminalHint,
-} from '@spark-outpost/contracts';
-import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
-import { lineEditingSequence } from './terminal-keys.ts';
-import { openTerminalLink } from './terminal-links.ts';
-import { themeFromTokens } from './terminal-theme.ts';
+import type { TerminalEndReason, TerminalHint } from '@spark-outpost/contracts';
+import type { TerminalTicket } from './terminal-api.ts';
+import type * as Xterm from './xterm-terminal.ts';
 
 export interface TerminalHandlers<T extends TerminalTicket> {
   onOpen(created: T): void;
@@ -30,38 +19,30 @@ export interface TerminalConnection {
   dispose(): void;
 }
 
-const OSC_CLIPBOARD = 52;
-const encoder = new TextEncoder();
+const LOAD_FAILED = 'The terminal could not load. Close it and open it again.';
+const SKELETON_LINES = ['38%', '64%', '22%'];
 
-export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
-  let addon: WebglAddon;
-  try {
-    addon = new WebglAddon();
-  } catch {
-    return null;
-  }
-  addon.onContextLoss(() => addon.dispose());
-  try {
-    terminal.loadAddon(addon);
-  } catch {
-    addon.dispose();
-    return null;
-  }
-  return addon;
+let loading: Promise<typeof Xterm> | null = null;
+
+export function preloadTerminal(): Promise<typeof Xterm> {
+  loading ??= import('./xterm-terminal.ts');
+  loading.catch(() => {
+    loading = null;
+  });
+  return loading;
 }
 
-function createTerminal(): Terminal {
-  return new Terminal({
-    fontFamily: '"Geist Mono", ui-monospace, Menlo, monospace',
-    fontSize: 12.5,
-    lineHeight: 1.25,
-    cursorBlink: true,
-    scrollback: 5000,
-    minimumContrastRatio: 4.5,
-    screenReaderMode: true,
-    theme: themeFromTokens(),
-    linkHandler: { activate: (event, uri) => openTerminalLink(event, uri) },
-  });
+function showSkeleton(element: HTMLElement): HTMLElement {
+  const skeleton = document.createElement('div');
+  skeleton.className = 'term-skel';
+  skeleton.setAttribute('aria-hidden', 'true');
+  for (const width of SKELETON_LINES) {
+    const line = document.createElement('span');
+    line.style.width = width;
+    skeleton.append(line);
+  }
+  element.append(skeleton);
+  return skeleton;
 }
 
 export function openTerminal<T extends TerminalTicket>(
@@ -69,140 +50,43 @@ export function openTerminal<T extends TerminalTicket>(
   element: HTMLElement,
   handlers: TerminalHandlers<T>,
 ): TerminalConnection {
-  const abort = new AbortController();
-  const terminal = createTerminal();
-  const fit = new FitAddon();
-  terminal.loadAddon(fit);
-  terminal.loadAddon(new WebLinksAddon((event, uri) => openTerminalLink(event, uri)));
-  terminal.open(element);
-  const webgl = loadWebglRenderer(terminal);
-  terminal.parser.registerOscHandler(OSC_CLIPBOARD, () => true);
-
-  let socket: WebSocket | null = null;
-  let session: T | null = null;
-  let lastSize = '';
+  let opened: TerminalConnection | null = null;
   let disposed = false;
+  let waiting: ((connection: TerminalConnection) => void)[] = [];
+  const skeleton = showSkeleton(element);
 
-  const sendControl = (message: TerminalClientMessage) => {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+  preloadTerminal().then(
+    (xterm) => {
+      skeleton.remove();
+      if (disposed) return;
+      const connection = xterm.openXterm(start, element, handlers);
+      opened = connection;
+      for (const call of waiting) call(connection);
+      waiting = [];
+    },
+    () => {
+      skeleton.remove();
+      if (!disposed) handlers.onError(LOAD_FAILED);
+    },
+  );
+
+  const whenOpen = (call: (connection: TerminalConnection) => void) => {
+    if (opened) call(opened);
+    else if (!disposed) waiting.push(call);
   };
-  const sendInput = (data: string) => {
-    if (socket?.readyState !== WebSocket.OPEN) return;
-    socket.send(encoder.encode(data));
-    if (data.includes('\r')) handlers.onCommandRun?.();
-  };
-  const sendResize = () => {
-    try {
-      fit.fit();
-    } catch {
-      return;
-    }
-    const size = `${terminal.cols}x${terminal.rows}`;
-    if (size === lastSize || socket?.readyState !== WebSocket.OPEN) return;
-    lastSize = size;
-    sendControl({ type: 'resize', cols: terminal.cols, rows: terminal.rows });
-  };
-
-  try {
-    fit.fit();
-  } catch {
-    terminal.resize(80, 24);
-  }
-
-  const resizeObserver = new ResizeObserver(sendResize);
-  resizeObserver.observe(element);
-  const themeObserver = new MutationObserver(() => {
-    terminal.options.theme = themeFromTokens();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-skin'],
-  });
-  const inputSubscription = terminal.onData(sendInput);
-  terminal.attachCustomKeyEventHandler((event) => {
-    const sequence = lineEditingSequence(event);
-    if (!sequence) return true;
-    if (event.type === 'keydown') sendInput(sequence);
-    return false;
-  });
-
-  const connect = (created: T) => {
-    const ws = new WebSocket(streamUrl(created, terminal.cols, terminal.rows));
-    ws.binaryType = 'arraybuffer';
-    socket = ws;
-    const { signal } = abort;
-    ws.addEventListener(
-      'open',
-      () => {
-        sendResize();
-        handlers.onOpen(created);
-        terminal.focus();
-      },
-      { signal },
-    );
-    ws.addEventListener(
-      'message',
-      (event: MessageEvent<ArrayBuffer | string>) => {
-        if (event.data instanceof ArrayBuffer) {
-          terminal.write(new Uint8Array(event.data));
-          return;
-        }
-        const message = terminalServerMessageSchema.safeParse(JSON.parse(event.data));
-        if (!message.success) return;
-        if (message.data.type === 'hint') handlers.onHint?.(message.data.hint);
-        if (message.data.type === 'ended') handlers.onEnded(message.data.reason);
-      },
-      { signal },
-    );
-    ws.addEventListener(
-      'close',
-      (event) => {
-        if (event.code === 4401) handlers.onError(event.reason || 'The terminal could not start.');
-      },
-      { signal },
-    );
-  };
-
-  void Promise.resolve()
-    .then(() => (disposed ? null : start()))
-    .then((created) => {
-      if (!created) return;
-      session = created;
-      if (disposed) {
-        void deleteTerminalSession(created.id);
-        return;
-      }
-      connect(created);
-    })
-    .catch((error: unknown) => {
-      if (!disposed) {
-        handlers.onError(error instanceof Error ? error.message : 'The terminal could not start.');
-      }
-    });
 
   return {
-    run: () => {
-      sendInput('\r');
-      terminal.focus();
-    },
-    notice: (text) => terminal.write(`\r\n\x1b[2m${text}\x1b[0m\r\n`),
-    fit: sendResize,
-    focus: () => {
-      sendResize();
-      terminal.focus();
-    },
-    close: () => sendControl({ type: 'close' }),
+    run: () => whenOpen((connection) => connection.run()),
+    notice: (text) => whenOpen((connection) => connection.notice(text)),
+    fit: () => whenOpen((connection) => connection.fit()),
+    focus: () => whenOpen((connection) => connection.focus()),
+    close: () => whenOpen((connection) => connection.close()),
     dispose: () => {
       if (disposed) return;
       disposed = true;
-      abort.abort();
-      resizeObserver.disconnect();
-      themeObserver.disconnect();
-      inputSubscription.dispose();
-      if (socket) socket.close();
-      else if (session) void deleteTerminalSession(session.id);
-      webgl?.dispose();
-      terminal.dispose();
+      waiting = [];
+      skeleton.remove();
+      opened?.dispose();
     },
   };
 }

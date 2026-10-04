@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { loadWebglRenderer } from './terminal-connection.ts';
+import { loadWebglRenderer } from './xterm-terminal.ts';
 
 vi.mock('@xterm/addon-webgl', () => ({
   WebglAddon: class {

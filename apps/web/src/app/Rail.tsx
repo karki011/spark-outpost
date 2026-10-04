@@ -17,6 +17,7 @@ interface RailProps {
   ticketsWaiting: number;
   mood: ScoutMood;
   onView: (view: AppView) => void;
+  onIntent: (view: AppView) => void;
   onSettings: () => void;
   onProfile: () => void;
 }
@@ -125,6 +126,7 @@ export function Rail({
   ticketsWaiting,
   mood,
   onView,
+  onIntent,
   onSettings,
   onProfile,
 }: RailProps) {
@@ -165,6 +167,8 @@ export function Rail({
           title={
             item.id === 'chats' && reopens ? `Show chats sidebar (${SIDEBAR_HINT})` : undefined
           }
+          onPointerEnter={() => onIntent(item.id)}
+          onFocus={() => onIntent(item.id)}
           onClick={() => onView(item.id)}
         >
           {item.icon}

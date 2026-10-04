@@ -1,4 +1,5 @@
 import type { Queryable } from '../persistence/db.ts';
+import { firstSorted } from './first-sorted.ts';
 import { churnByFile, coChanged } from './history.ts';
 import { packageMatcher } from './layout.ts';
 import { ownersMatcher } from './owners.ts';
@@ -128,7 +129,7 @@ async function gatherText(
   evidence.project = project;
 }
 
-function pathsByEvidence(evidence: Evidence): string[] {
+function strongestPaths(evidence: Evidence): string[] {
   const weight = (path: string) =>
     (evidence.pathHits.has(path) ? 100 : 0) +
     (evidence.pathWords.get(path) ?? 0) * 20 +
@@ -145,7 +146,11 @@ function pathsByEvidence(evidence: Evidence): string[] {
   ]) {
     for (const path of paths) if (!weights.has(path)) weights.set(path, weight(path));
   }
-  return [...weights].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([path]) => path);
+  return firstSorted(
+    [...weights],
+    MAX_SEEDS,
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  ).map(([path]) => path);
 }
 
 function unionIds(
@@ -187,7 +192,7 @@ async function gatherSymbols(
   for (const [name, id] of widened) named.set(name, id);
   await addNameStats(db, project, evidence, [...widened.values()], signal);
   evidence.namedDefiners = await abortable(definersOf(db, project.id, [...named.values()]), signal);
-  const ordered = pathsByEvidence(evidence);
+  const ordered = strongestPaths(evidence);
   const core = ordered.slice(0, CORE_SEEDS);
   const coChanges = [...coChanged(project.history, new Set(core))];
   evidence.coChange = new Map(coChanges.sort((a, b) => b[1] - a[1]).slice(0, MAX_CO_CHANGES));
@@ -289,14 +294,14 @@ function summarise(evidence: Evidence, candidates: readonly RankedFile[]): ScanS
   };
 }
 
-function report(
+async function report(
   evidence: Evidence,
   terms: RequestTerms,
   timings: Record<string, number>,
   partial: boolean,
-): ScanReport {
+): Promise<ScanReport> {
   const layout = evidence.project?.layout;
-  const candidates = rankFiles({
+  const candidates = await rankFiles({
     facts: evidence.facts,
     matches: evidence.matches,
     pathHits: evidence.pathHits,
@@ -339,7 +344,7 @@ export async function scanRequest(
     if (!signal.aborted) throw error;
     partial = true;
   }
-  const result = report(evidence, terms, timings, partial);
+  const result = await report(evidence, terms, timings, partial);
   timings.total = Math.round(performance.now() - started);
   if (partial && result.candidates.length === 0) return null;
   return result;

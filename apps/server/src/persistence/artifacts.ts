@@ -64,23 +64,40 @@ export async function writeArtifact(
   }
 }
 
-export async function latestPlan(
+type LatestPlan = StoredPlan & { sourceRunId: string | null };
+
+export async function latestPlans(
   db: Queryable,
-  taskId: string,
-): Promise<(StoredPlan & { sourceRunId: string | null }) | null> {
-  const { rows } = await db.query<{ version: number; body: unknown; source_run_id: string | null }>(
-    `SELECT version, body, source_run_id FROM run_artifacts WHERE task_id = $1 AND kind = 'plan'
-     ORDER BY version DESC LIMIT 1`,
-    [taskId],
+  taskIds: readonly string[],
+): Promise<Map<string, LatestPlan>> {
+  const { rows } = await db.query<{
+    task_id: string;
+    version: number;
+    body: unknown;
+    source_run_id: string | null;
+  }>(
+    `SELECT DISTINCT ON (task_id) task_id, version, body, source_run_id FROM run_artifacts
+     WHERE task_id = ANY($1::uuid[]) AND kind = 'plan'
+     ORDER BY task_id, version DESC`,
+    [taskIds],
   );
-  const row = rows[0];
-  if (!row) return null;
-  const body = planBodySchema.safeParse(row.body);
-  return {
-    version: row.version,
-    entries: body.success ? body.data.entries : [],
-    sourceRunId: row.source_run_id,
-  };
+  return new Map(
+    rows.map((row) => {
+      const body = planBodySchema.safeParse(row.body);
+      return [
+        row.task_id,
+        {
+          version: row.version,
+          entries: body.success ? body.data.entries : [],
+          sourceRunId: row.source_run_id,
+        },
+      ];
+    }),
+  );
+}
+
+export async function latestPlan(db: Queryable, taskId: string): Promise<LatestPlan | null> {
+  return (await latestPlans(db, [taskId])).get(taskId) ?? null;
 }
 
 export async function planVersions(db: Queryable, taskId: string): Promise<PlanVersion[]> {

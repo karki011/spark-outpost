@@ -4,6 +4,7 @@ import {
   BOOT_STATUS,
   leaveDelay,
   MIN_BOOT_MS,
+  prepareBoot,
   reportingSteps,
   type BootStep,
 } from './boot-steps.ts';
@@ -101,5 +102,74 @@ describe('leaving the boot screen', () => {
 
   it('does not wait when the window never showed', () => {
     expect(leaveDelay(null, 5_000)).toBe(0);
+  });
+});
+
+function gate<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: Error) => void = () => undefined;
+  const promise = new Promise<T>((settle, fail) => {
+    resolve = settle;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+describe('preparing to boot', () => {
+  function steps() {
+    const order: string[] = [];
+    const gates = { database: gate<string>(), path: gate<void>(), tools: gate<void>() };
+    const booting = prepareBoot({
+      startDatabase: () => {
+        order.push('database starting');
+        return gates.database.promise;
+      },
+      adoptShellPath: () => {
+        order.push('path lookup');
+        return gates.path.promise;
+      },
+      checkTools: () => {
+        order.push('tools checked');
+        return gates.tools.promise;
+      },
+    });
+    return { order, gates, booting };
+  }
+
+  const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+  it('starts the database without waiting for the shell path', async () => {
+    const { order, gates, booting } = steps();
+    await settle();
+    expect(order).toEqual(['database starting', 'path lookup']);
+    gates.database.resolve('postgres://local');
+    gates.path.resolve();
+    gates.tools.resolve();
+    expect(await booting).toBe('postgres://local');
+  });
+
+  it('checks for tools only once the shell path is known, and waits for both', async () => {
+    const { order, gates, booting } = steps();
+    let done = false;
+    void booting.then(() => {
+      done = true;
+    });
+    gates.database.resolve('postgres://local');
+    await settle();
+    expect(order).not.toContain('tools checked');
+    expect(done).toBe(false);
+    gates.path.resolve();
+    await settle();
+    expect(order).toEqual(['database starting', 'path lookup', 'tools checked']);
+    expect(done).toBe(false);
+    gates.tools.resolve();
+    await settle();
+    expect(done).toBe(true);
+  });
+
+  it('fails when the database does not start', async () => {
+    const { gates, booting } = steps();
+    gates.database.reject(new Error('Postgres did not start'));
+    await expect(booting).rejects.toThrow('Postgres did not start');
   });
 });

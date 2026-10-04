@@ -14,7 +14,7 @@ import {
 import { waitForApi } from './api-ready.ts';
 import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
 import { startBootTeasers } from './boot-teaser-host.ts';
-import { reportingSteps } from './boot-steps.ts';
+import { prepareBoot, reportingSteps } from './boot-steps.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
@@ -272,10 +272,8 @@ async function launch(): Promise<void> {
   savedTheme = await readSavedTheme(appearanceFile(paths.userData));
   listenForTheme();
   showSpark();
-  if (app.isPackaged) await adoptLoginShellPath(process.env);
   if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
-  if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
 
   const databaseOptions: DatabaseOptions = {
     dataDir: paths.postgresData,
@@ -284,14 +282,25 @@ async function launch(): Promise<void> {
     log: log('postgres'),
   };
   spark?.status('database');
-  database = await startDatabase(databaseOptions);
+  const started = await prepareBoot({
+    startDatabase: async () => {
+      database = await startDatabase(databaseOptions);
+      return database;
+    },
+    adoptShellPath: async () => {
+      if (app.isPackaged) await adoptLoginShellPath(process.env);
+    },
+    checkTools: async () => {
+      if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
+    },
+  });
   const apiPort = await stableApiPort();
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
   const token = createLaunchToken();
   const launchInfo: ServerLaunch = {
     config,
     paths,
-    databaseUrl: database.url,
+    databaseUrl: started.url,
     apiPort,
     apiOrigin: apiUrl,
     token,

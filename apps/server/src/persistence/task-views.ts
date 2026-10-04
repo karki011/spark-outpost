@@ -23,7 +23,7 @@ import {
   type TaskListEvent,
   type AgentRole,
 } from '@spark-outpost/contracts';
-import { latestPlan, planVersions } from './artifacts.ts';
+import { latestPlans, planVersions } from './artifacts.ts';
 import { latestApprovedPlan } from './plan-documents.ts';
 import type { Queryable } from './db.ts';
 import { taskLinks } from './tasks.ts';
@@ -97,6 +97,7 @@ function toTaskRun(row: TaskRunRow): TaskRunView {
 
 interface ApprovalEventRow {
   id: string;
+  task_id: string;
   run_id: string;
   kind: string;
   title: string;
@@ -126,26 +127,46 @@ function approvalDecision(row: ApprovalEventRow): string {
   return row.option_name ? `${decision}: ${row.option_name}` : decision;
 }
 
-async function approvalEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+function grouped<T>(entries: readonly (readonly [string, T])[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const [key, value] of entries) {
+    const group = groups.get(key);
+    if (group) group.push(value);
+    else groups.set(key, [value]);
+  }
+  return groups;
+}
+
+async function approvalEvents(
+  db: Queryable,
+  taskIds: readonly string[],
+): Promise<Map<string, TaskListEvent[]>> {
   const { rows } = await db.query<ApprovalEventRow>(
-    `SELECT a.id, a.run_id, a.kind, a.title, a.status, a.payload->'fullPaths' AS full_paths,
+    `SELECT a.id, r.task_id, a.run_id, a.kind, a.title, a.status,
+       a.payload->'fullPaths' AS full_paths,
        (SELECT o->>'name' FROM jsonb_array_elements(a.options) o
         WHERE o->>'optionId' = a.decision_option_id LIMIT 1) AS option_name
      FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.task_id = $1 AND (a.status = 'pending' OR a.decided_by IN ('user', 'auto'))
-     ORDER BY a.created_at`,
-    [taskId],
+     WHERE r.task_id = ANY($1::uuid[])
+       AND (a.status = 'pending' OR a.decided_by IN ('user', 'auto'))
+     ORDER BY a.created_at, a.id`,
+    [taskIds],
   );
-  return rows.map((row) => ({
-    id: row.id,
-    kind: 'waiting',
-    runId: row.run_id,
-    state: APPROVAL_STATES[row.status],
-    ...(row.full_paths?.length ? { hint: row.full_paths.join('\n') } : {}),
-    ...(row.kind === 'execute' ? { command: true } : {}),
-    ...(row.status === 'pending' ? {} : { detail: approvalDecision(row) }),
-    label: row.status === 'pending' ? `Waiting for you: ${row.title}` : row.title,
-  }));
+  return grouped(
+    rows.map((row) => [
+      row.task_id,
+      {
+        id: row.id,
+        kind: 'waiting',
+        runId: row.run_id,
+        state: APPROVAL_STATES[row.status],
+        ...(row.full_paths?.length ? { hint: row.full_paths.join('\n') } : {}),
+        ...(row.kind === 'execute' ? { command: true } : {}),
+        ...(row.status === 'pending' ? {} : { detail: approvalDecision(row) }),
+        label: row.status === 'pending' ? `Waiting for you: ${row.title}` : row.title,
+      },
+    ]),
+  );
 }
 
 const CHECK_OUTPUT_SHOWN = 1_500;
@@ -159,21 +180,35 @@ function checkOutput(tails: readonly string[]): string | undefined {
   return text.length > CHECK_OUTPUT_SHOWN ? `…${text.slice(-CHECK_OUTPUT_SHOWN)}` : text;
 }
 
-async function taskArtifactBodies(
-  db: Queryable,
-  taskId: string,
-  kind: 'check' | 'shortcuts',
-): Promise<{ version: number; body: unknown }[]> {
-  const { rows } = await db.query<{ version: number; body: unknown }>(
-    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = $2
-     ORDER BY version`,
-    [taskId, kind],
-  );
-  return rows;
+interface ArtifactBody {
+  version: number;
+  body: unknown;
 }
 
-async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
-  const rows = await taskArtifactBodies(db, taskId, 'check');
+type EventArtifactKind = 'check' | 'shortcuts';
+
+const EVENT_ARTIFACT_KINDS: readonly EventArtifactKind[] = ['check', 'shortcuts'];
+
+async function taskArtifactBodies(
+  db: Queryable,
+  taskIds: readonly string[],
+): Promise<Record<EventArtifactKind, Map<string, ArtifactBody[]>>> {
+  const { rows } = await db.query<ArtifactBody & { task_id: string; kind: EventArtifactKind }>(
+    `SELECT task_id, kind, version, body FROM run_artifacts
+     WHERE task_id = ANY($1::uuid[]) AND kind = ANY($2::text[])
+     ORDER BY version`,
+    [taskIds, EVENT_ARTIFACT_KINDS],
+  );
+  const ofKind = (kind: EventArtifactKind) =>
+    grouped(
+      rows
+        .filter((row) => row.kind === kind)
+        .map((row) => [row.task_id, { version: row.version, body: row.body }]),
+    );
+  return { check: ofKind('check'), shortcuts: ofKind('shortcuts') };
+}
+
+function checkEvents(rows: readonly ArtifactBody[]): TaskListEvent[] {
   return rows.flatMap((row) => {
     const parsed = checkBodySchema.safeParse(row.body);
     if (!parsed.success) return [];
@@ -194,8 +229,7 @@ async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent
   });
 }
 
-async function shortcutEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
-  const rows = await taskArtifactBodies(db, taskId, 'shortcuts');
+function shortcutEvents(rows: readonly ArtifactBody[]): TaskListEvent[] {
   return rows.flatMap((row) => {
     const parsed = shortcutsBodySchema.safeParse(row.body);
     if (!parsed.success) return [];
@@ -219,19 +253,40 @@ function sumOrNull(values: readonly (number | null)[]): number | null {
   return known.length > 0 ? known.reduce((total, value) => total + value, 0) : null;
 }
 
-async function overview(
+interface TaskFacts {
+  runs: Map<string, TaskRunView[]>;
+  links: Map<string, TaskLink[]>;
+  plans: Awaited<ReturnType<typeof latestPlans>>;
+  agreedPlanVersion: number | null;
+  approvals: Map<string, TaskListEvent[]>;
+  artifacts: Awaited<ReturnType<typeof taskArtifactBodies>>;
+}
+
+async function loadTaskFacts(
   db: Queryable,
-  row: TaskRow,
-  runs: readonly TaskRunView[],
-  links: readonly TaskLink[],
-): Promise<TaskOverview> {
-  const plan = await latestPlan(db, row.id);
-  const agreed = await latestApprovedPlan(db, row.conversation_id);
+  conversationId: string,
+  taskIds: readonly string[],
+): Promise<TaskFacts> {
+  const [runs, links, plans, agreed, approvals, artifacts] = await Promise.all([
+    loadRuns(db, taskIds),
+    taskLinks(db, taskIds),
+    latestPlans(db, taskIds),
+    latestApprovedPlan(db, conversationId),
+    approvalEvents(db, taskIds),
+    taskArtifactBodies(db, taskIds),
+  ]);
+  return { runs, links, plans, agreedPlanVersion: agreed?.version ?? null, approvals, artifacts };
+}
+
+function overview(row: TaskRow, facts: TaskFacts): TaskOverview {
+  const runs = facts.runs.get(row.id) ?? [];
+  const links = facts.links.get(row.id) ?? [];
+  const plan = facts.plans.get(row.id) ?? null;
   const listRuns: readonly TaskListRun[] = runs;
   const events = [
-    ...(await approvalEvents(db, row.id)),
-    ...(await checkEvents(db, row.id)),
-    ...(await shortcutEvents(db, row.id)),
+    ...(facts.approvals.get(row.id) ?? []),
+    ...checkEvents(facts.artifacts.check.get(row.id) ?? []),
+    ...shortcutEvents(facts.artifacts.shortcuts.get(row.id) ?? []),
   ];
   const items = taskList({ status: row.status, links }, listRuns, events, plan);
   return {
@@ -243,7 +298,7 @@ async function overview(
     closedAt: row.closed_at?.toISOString() ?? null,
     runIds: runs.map((run) => run.id),
     planVersion: plan?.version ?? null,
-    agreedPlanVersion: agreed?.version ?? null,
+    agreedPlanVersion: facts.agreedPlanVersion,
     items,
     summary: taskSummary(items, listRuns),
     costUsd: sumOrNull(runs.map((run) => run.costUsd)),
@@ -275,28 +330,26 @@ export async function taskOverviews(
     [conversationId],
   );
   if (rows.length === 0) return [];
-  const ids = rows.map((row) => row.id);
-  const [runs, links] = await Promise.all([loadRuns(db, ids), taskLinks(db, ids)]);
-  return Promise.all(
-    rows.map((row) => overview(db, row, runs.get(row.id) ?? [], links.get(row.id) ?? [])),
+  const facts = await loadTaskFacts(
+    db,
+    conversationId,
+    rows.map((row) => row.id),
   );
+  return rows.map((row) => overview(row, facts));
 }
 
 export async function getTaskDetail(db: Queryable, taskId: string): Promise<TaskDetail | null> {
   const { rows } = await db.query<TaskRow>('SELECT * FROM tasks WHERE id = $1', [taskId]);
   const row = rows[0];
   if (!row) return null;
-  const [runs, links, versions] = await Promise.all([
-    loadRuns(db, [taskId]),
-    taskLinks(db, [taskId]),
+  const [facts, versions] = await Promise.all([
+    loadTaskFacts(db, row.conversation_id, [taskId]),
     planVersions(db, taskId),
   ]);
-  const taskRuns = runs.get(taskId) ?? [];
-  const taskLinkList = links.get(taskId) ?? [];
   return {
-    ...(await overview(db, row, taskRuns, taskLinkList)),
-    runs: taskRuns.map((run) => taskRunSchema.parse(run)),
+    ...overview(row, facts),
+    runs: (facts.runs.get(taskId) ?? []).map((run) => taskRunSchema.parse(run)),
     planVersions: versions,
-    links: taskLinkList,
+    links: facts.links.get(taskId) ?? [],
   };
 }

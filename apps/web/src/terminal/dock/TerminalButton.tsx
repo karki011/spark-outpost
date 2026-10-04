@@ -1,6 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { TERMINAL_KEYS } from '../../ui/Keys.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { preloadTerminal } from '../terminal-connection.ts';
 import { toggleShells, useChatShells } from './shell-store.ts';
 
 export const TERMINAL_DOCK_ID = 'terminal-dock';
@@ -28,6 +29,10 @@ function useTerminalShortcut(chatId: string, button: RefObject<HTMLButtonElement
   }, [chatId, button]);
 }
 
+function warmTerminal() {
+  void preloadTerminal().catch(() => undefined);
+}
+
 export function TerminalButton({ chatId }: { chatId: string }) {
   const shells = useChatShells(chatId);
   const button = useRef<HTMLButtonElement>(null);
@@ -46,6 +51,8 @@ export function TerminalButton({ chatId }: { chatId: string }) {
         aria-keyshortcuts="Control+`"
         aria-controls={shells.open ? TERMINAL_DOCK_ID : undefined}
         {...tip.triggerProps}
+        onMouseEnter={warmTerminal}
+        onFocusCapture={warmTerminal}
         onClick={() => toggleShells(chatId)}
       >
         <svg

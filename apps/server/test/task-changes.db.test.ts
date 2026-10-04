@@ -327,6 +327,49 @@ describe('task changes', { timeout: 60_000 }, () => {
     expect(laneFiles?.map((file) => file.path).sort()).toEqual(['a.ts', 'fixed.txt']);
   });
 
+  it('keeps the summary current through edits, new files, removals and commits', async () => {
+    const root = join(base, 'live');
+    await mkdir(root);
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-C', root, '-c', 'user.name=t', '-c', 'user.email=t@t', ...args]);
+    execFileSync('git', ['init', '-q', root]);
+    await writeFile(join(root, 'a.ts'), 'one\ntwo\n');
+    git('add', '.');
+    git('commit', '-qm', 'a');
+    const { taskId, runs } = await twoRunTask();
+    await snapshotRun(t.db, runs[0], root);
+    const summary = async () => {
+      const read = changeSummarySchema.parse(
+        (await get(`/api/tasks/${taskId}/changes/summary`).expect(200)).body,
+      );
+      return { files: read.files, added: read.added, removed: read.removed, version: read.version };
+    };
+
+    expect(await summary()).toMatchObject({ files: 0 });
+    await writeFile(join(root, 'a.ts'), 'one\n2\n');
+    const edited = await summary();
+    expect(edited).toMatchObject({ files: 1, added: 1, removed: 1 });
+    expect(await summary()).toEqual(edited);
+
+    await writeFile(join(root, 'a.ts'), 'one\n3\n');
+    const again = await summary();
+    expect(again).toMatchObject({ files: 1, added: 1, removed: 1 });
+    expect(again.version).not.toBe(edited.version);
+
+    await writeFile(join(root, 'b.ts'), 'new\nfile\n');
+    expect(await summary()).toMatchObject({ files: 2, added: 3, removed: 1 });
+    git('add', '.');
+    git('commit', '-qm', 'agent work');
+    expect(await summary()).toMatchObject({ files: 2, added: 3, removed: 1 });
+    await writeFile(join(root, 'b.ts'), 'new\nfile\nmore\n');
+    expect(await summary()).toMatchObject({ files: 2, added: 4, removed: 1 });
+    await rm(join(root, 'b.ts'));
+    expect(await summary()).toMatchObject({ files: 1, added: 1, removed: 1 });
+    git('checkout', '-q', 'HEAD~1', '--', 'a.ts');
+    expect(await summary()).toMatchObject({ files: 0 });
+    expect((await changes(taskId)).runs).toEqual([]);
+  });
+
   it('returns nothing for runs without changes and 404 for unknown tasks', async () => {
     const { taskId } = await twoRunTask();
     expect(await changes(taskId)).toEqual({ runs: [], core: null });

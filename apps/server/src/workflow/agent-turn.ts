@@ -72,7 +72,7 @@ async function mainSessionBrief(db: Db, input: RunInput) {
 
 const INBOX_POLL_MS = 1000;
 
-export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
+export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number | null>;
 
 export interface TurnDeps {
   db: Db;

@@ -11,7 +11,7 @@ import {
 import { AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, SetupState } from '@spark-outpost/contracts';
-import { Analytics } from '../analytics/Analytics.tsx';
+import { AnalyticsSkeleton } from '../analytics/AnalyticsSkeleton.tsx';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
@@ -41,7 +41,7 @@ import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
-import { Tickets } from '../tickets/Tickets.tsx';
+import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
@@ -52,6 +52,7 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
+import { Analytics, preloadView, Tickets } from './lazy-views.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -197,6 +198,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           waiting={waiting}
           ticketsWaiting={ticketsWaiting}
           mood={mood}
+          onIntent={preloadView}
           onView={(next) => {
             setView(next);
             if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
@@ -238,16 +240,22 @@ function ChatShell({ entering }: { entering: boolean }) {
             onProviders={() => setSettings('ai')}
           />
         )}
-        {view === 'analytics' && <Analytics />}
+        {view === 'analytics' && (
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            <Analytics />
+          </Suspense>
+        )}
         {view === 'tickets' && (
-          <Tickets
-            focusId={ticketFocus}
-            onOpenChat={openChat}
-            onHome={() => {
-              setTicketFocus(null);
-              setView('home');
-            }}
-          />
+          <Suspense fallback={<TicketsViewSkeleton />}>
+            <Tickets
+              focusId={ticketFocus}
+              onOpenChat={openChat}
+              onHome={() => {
+                setTicketFocus(null);
+                setView('home');
+              }}
+            />
+          </Suspense>
         )}
         {view === 'map' && (
           <Suspense fallback={<main className="page" aria-label="Project map" aria-busy="true" />}>

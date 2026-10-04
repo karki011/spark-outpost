@@ -3,14 +3,15 @@ import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
-import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
+import { LeaseLostError } from '../persistence/run-events.ts';
 import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
 import { revertRun } from '../projects/run-changes.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
-import { runAgentTurn, startControl, type Append } from '../workflow/agent-turn.ts';
+import { runAgentTurn, startControl } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage, failSafely, finishRun } from '../workflow/execute-run.ts';
 import { prepareTurn } from '../compaction/prepare-turn.ts';
+import { runAppender } from '../workflow/run-appender.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
@@ -297,7 +298,7 @@ async function finish(
 
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const taskStartedAt = Date.now();
-  const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
+  const append = runAppender(deps.db, lease);
   let input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
   const control = startControl(deps, lease);
   let budgetTimer: NodeJS.Timeout | null = null;

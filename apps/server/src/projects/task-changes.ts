@@ -17,6 +17,7 @@ import {
   type SnapshotSource,
 } from './run-changes.ts';
 import { runBaseUntil } from './run-base.ts';
+import { rangeSignature, type RunListingCache } from './run-listing-cache.ts';
 import { gitFileAt, workingTree } from './snapshot.ts';
 
 export interface ListedRun {
@@ -97,6 +98,7 @@ async function gitListed(
   db: Queryable,
   run: RunState,
   next: RunState | undefined,
+  listings: RunListingCache | undefined,
 ): Promise<ListedFile[]> {
   const { root, ref } = run.snapshot;
   if (!ref) return [];
@@ -104,10 +106,17 @@ async function gitListed(
   const until = next?.snapshot.ref ?? source.end;
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
+  const range = { root: gitRoot, from: ref, until };
+  const signature = listings ? await rangeSignature(range) : null;
+  const known = signature === null ? undefined : listings?.get(signature);
+  if (known) return known;
   const base = await runBaseUntil(gitRoot, ref, until);
   const files = await changesWhilePresent(gitRoot, async () =>
     gitRangeFiles({ root: gitRoot, from: base, to: until ?? (await workingTree(gitRoot)) }),
   );
+  if (files && signature !== null && (await rangeSignature(range)) === signature) {
+    listings?.set(signature, files);
+  }
   return files ?? [];
 }
 
@@ -191,6 +200,7 @@ async function runFiles(
   db: Queryable,
   run: RunState,
   later: readonly RunState[],
+  listings: RunListingCache | undefined,
 ): Promise<ListedRun | null> {
   const sameRoot = later.filter((other) => other.snapshot.root === run.snapshot.root);
   const files =
@@ -199,6 +209,7 @@ async function runFiles(
           db,
           run,
           sameRoot.find((other) => other.snapshot.kind === 'git'),
+          listings,
         )
       : await backupListed(db, run, sameRoot);
   if (files.length === 0) return null;
@@ -209,6 +220,7 @@ export async function taskChangeSet(
   db: Queryable,
   workspaceId: string,
   taskId: string,
+  listings?: RunListingCache,
 ): Promise<ListedRun[]> {
   const task = await getTaskDetail(db, taskId);
   if (!task) throw new TaskNotFoundError(taskId);
@@ -219,7 +231,7 @@ export async function taskChangeSet(
   );
   const main = await Promise.all(
     states.map((run, index) =>
-      copies.has(run.runId) ? null : runFiles(db, run, states.slice(index + 1)),
+      copies.has(run.runId) ? null : runFiles(db, run, states.slice(index + 1), listings),
     ),
   );
   const byRun = new Map(
