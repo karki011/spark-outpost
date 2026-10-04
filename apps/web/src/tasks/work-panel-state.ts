@@ -25,6 +25,21 @@ function save(open: boolean) {
   }
 }
 
+const cleared = new Set<() => void>();
+
+function removeSaved(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    return;
+  }
+}
+
+export function forgetPanelChoice(): void {
+  removeSaved();
+  for (const listener of cleared) listener();
+}
+
 export function clampPanelWidth(width: number): number {
   return Math.round(Math.min(WORK_PANEL_MAX_WIDTH, Math.max(WORK_PANEL_MIN_WIDTH, width)));
 }
@@ -59,9 +74,10 @@ export interface WorkPanelState {
   setWidth(width: number | null): void;
 }
 
-export function useWorkPanelState(): WorkPanelState {
+export function useWorkPanelState(opensByDefault = true): WorkPanelState {
   const [wide, setWide] = useState(isWide);
-  const [docked, setDocked] = useState(() => readSaved() ?? true);
+  const [chosen, setChosen] = useState(readSaved);
+  const docked = chosen ?? opensByDefault;
   const [sheet, setSheet] = useState(false);
   const [width, setWidthState] = useState(readWidth);
 
@@ -71,6 +87,14 @@ export function useWorkPanelState(): WorkPanelState {
     const onChange = () => setWide(media.matches);
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const onCleared = () => setChosen(null);
+    cleared.add(onCleared);
+    return () => {
+      cleared.delete(onCleared);
+    };
   }, []);
 
   return {
@@ -84,7 +108,7 @@ export function useWorkPanelState(): WorkPanelState {
     },
     setOpen(open) {
       if (wide) {
-        setDocked(open);
+        setChosen(open);
         save(open);
       } else {
         setSheet(open);
@@ -104,8 +128,12 @@ export interface TaskPanel {
   openTask(taskId: string): void;
 }
 
-export function useTaskPanel(tasks: readonly TaskOverview[], hasSettings: boolean): TaskPanel {
-  const state = useWorkPanelState();
+export function useTaskPanel(
+  tasks: readonly TaskOverview[],
+  hasSettings: boolean,
+  opensByDefault = true,
+): TaskPanel {
+  const state = useWorkPanelState(opensByDefault);
   const [chosen, setChosen] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const task = tasks.find((candidate) => candidate.id === chosen) ?? tasks.at(-1) ?? null;

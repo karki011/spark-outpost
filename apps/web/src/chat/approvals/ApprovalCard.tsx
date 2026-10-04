@@ -17,6 +17,7 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { projectKeys } from '../../api/projects.ts';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
+import { Breakout } from '../breakout/Breakout.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
 import { approvalSummary } from '../status/pending-summary.ts';
@@ -231,129 +232,136 @@ function PendingApproval({
       : undefined;
 
   return (
-    <div className="appr" role="group" aria-labelledby={headingId} id={approvalAnchor(approval.id)}>
-      <div className="appr-top">
-        <div className="appr-h">
-          <span className="ic" aria-hidden="true">
-            <i className="appr-dia" />
-          </span>
-          <span id={headingId}>
-            <b>{heading(approval)}</b> {request(approval, agentName)}
-          </span>
+    <Breakout>
+      <div
+        className="appr"
+        role="group"
+        aria-labelledby={headingId}
+        id={approvalAnchor(approval.id)}
+      >
+        <div className="appr-top">
+          <div className="appr-h">
+            <span className="ic" aria-hidden="true">
+              <i className="appr-dia" />
+            </span>
+            <span id={headingId}>
+              <b>{heading(approval)}</b> {request(approval, agentName)}
+            </span>
+          </div>
+          {holdOption && (
+            <HoldToConfirm
+              label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
+              hint="Press and hold for 1.5 seconds, with the mouse or Space."
+              holdingHint="Keep holding. Let go now to cancel."
+              releasedHint={
+                gitControl
+                  ? 'Released early. Nothing was changed.'
+                  : 'Released early. Nothing was pushed.'
+              }
+              disabled={decide.isPending}
+              onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
+            />
+          )}
+          <div className="appr-acts">
+            {options.map((option, index) => (
+              <Fragment key={option.optionId}>
+                <button
+                  type="button"
+                  className={optionClass(isAllow(option), index === firstAllow)}
+                  disabled={decide.isPending || Boolean(option.unavailableReason)}
+                  title={option.unavailableReason}
+                  onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
+                >
+                  {instructions && isAllow(option) ? 'Allow once' : option.name}
+                </button>
+                {index === lastAllow && chatAllow && (
+                  <button
+                    type="button"
+                    className="btn line sm"
+                    disabled={decide.isPending}
+                    onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
+                  >
+                    Allow for this chat
+                  </button>
+                )}
+                {index === lastAllow && projectAllow && (
+                  <button
+                    type="button"
+                    className="btn line sm"
+                    disabled={decide.isPending}
+                    onClick={() =>
+                      decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
+                    }
+                  >
+                    Always allow in this project
+                  </button>
+                )}
+              </Fragment>
+            ))}
+          </div>
+          {decide.isError && (
+            <p className="appr-err" role="alert">
+              {decide.error.message}
+            </p>
+          )}
         </div>
-        {holdOption && (
-          <HoldToConfirm
-            label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
-            hint="Press and hold for 1.5 seconds, with the mouse or Space."
-            holdingHint="Keep holding. Let go now to cancel."
-            releasedHint={
-              gitControl
-                ? 'Released early. Nothing was changed.'
-                : 'Released early. Nothing was pushed.'
-            }
-            disabled={decide.isPending}
-            onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
-          />
+        {command && <CommandPreview command={command} />}
+        {plan && (
+          <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
+            <Markdown text={plan} />
+          </div>
         )}
-        <div className="appr-acts">
-          {options.map((option, index) => (
-            <Fragment key={option.optionId}>
-              <button
-                type="button"
-                className={optionClass(isAllow(option), index === firstAllow)}
-                disabled={decide.isPending || Boolean(option.unavailableReason)}
-                title={option.unavailableReason}
-                onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
-              >
-                {instructions && isAllow(option) ? 'Allow once' : option.name}
-              </button>
-              {index === lastAllow && chatAllow && (
-                <button
-                  type="button"
-                  className="btn line sm"
-                  disabled={decide.isPending}
-                  onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
-                >
-                  Allow for this chat
-                </button>
-              )}
-              {index === lastAllow && projectAllow && (
-                <button
-                  type="button"
-                  className="btn line sm"
-                  disabled={decide.isPending}
-                  onClick={() =>
-                    decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
-                  }
-                >
-                  Always allow in this project
-                </button>
-              )}
-            </Fragment>
-          ))}
-        </div>
-        {decide.isError && (
-          <p className="appr-err" role="alert">
-            {decide.error.message}
+        {approval.kind === 'edit' && approval.payload.diffs.length > 0
+          ? approval.payload.diffs.map((diff) => (
+              <DiffView key={diff.path} diff={diff} fullPath={fullPath(approval, diff.path)} />
+            ))
+          : approval.kind === 'edit' && (
+              <ul className="appr-paths">
+                {approval.payload.paths.map((path) => (
+                  <li key={path}>
+                    <code title={fullPath(approval, path)}>{path}</code>
+                  </li>
+                ))}
+              </ul>
+            )}
+        {approval.payload.truncated && <p>The diff was cut to 64 KB.</p>}
+        {approval.kind === 'execute' && (cwd || commandNote(approval)) && (
+          <p>
+            {cwd && (
+              <>
+                Runs in <code>{cwd}</code>
+                {branch && (
+                  <>
+                    {' '}
+                    on <code>{branch}</code>
+                  </>
+                )}
+                .{' '}
+              </>
+            )}
+            {commandNote(approval)}
+          </p>
+        )}
+        {reason && (
+          <p className="appr-reason">
+            {reason}
+            {agentReason && fromSandbox(agentReason) && (
+              <span className="appr-agent-says"> {agentReason}</span>
+            )}
+          </p>
+        )}
+        {approval.kind === 'edit' && (
+          <p>The change lands in your working tree. You can revert this run afterwards.</p>
+        )}
+        {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
+        <ObservedNote observed={approval.payload.observed} />
+        {gitControl && (
+          <p className="appr-reason">
+            Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and
+            approvals. Allow this once only if you have read the change.
           </p>
         )}
       </div>
-      {command && <CommandPreview command={command} />}
-      {plan && (
-        <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
-          <Markdown text={plan} />
-        </div>
-      )}
-      {approval.kind === 'edit' && approval.payload.diffs.length > 0
-        ? approval.payload.diffs.map((diff) => (
-            <DiffView key={diff.path} diff={diff} fullPath={fullPath(approval, diff.path)} />
-          ))
-        : approval.kind === 'edit' && (
-            <ul className="appr-paths">
-              {approval.payload.paths.map((path) => (
-                <li key={path}>
-                  <code title={fullPath(approval, path)}>{path}</code>
-                </li>
-              ))}
-            </ul>
-          )}
-      {approval.payload.truncated && <p>The diff was cut to 64 KB.</p>}
-      {approval.kind === 'execute' && (cwd || commandNote(approval)) && (
-        <p>
-          {cwd && (
-            <>
-              Runs in <code>{cwd}</code>
-              {branch && (
-                <>
-                  {' '}
-                  on <code>{branch}</code>
-                </>
-              )}
-              .{' '}
-            </>
-          )}
-          {commandNote(approval)}
-        </p>
-      )}
-      {reason && (
-        <p className="appr-reason">
-          {reason}
-          {agentReason && fromSandbox(agentReason) && (
-            <span className="appr-agent-says"> {agentReason}</span>
-          )}
-        </p>
-      )}
-      {approval.kind === 'edit' && (
-        <p>The change lands in your working tree. You can revert this run afterwards.</p>
-      )}
-      {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
-      <ObservedNote observed={approval.payload.observed} />
-      {gitControl && (
-        <p className="appr-reason">
-          Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and
-          approvals. Allow this once only if you have read the change.
-        </p>
-      )}
-    </div>
+    </Breakout>
   );
 }

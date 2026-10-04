@@ -1,12 +1,13 @@
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
+  DEFAULT_WIDE_WINDOW,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
   type ChangeEntry,
   type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
@@ -50,6 +51,10 @@ import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
+import { ChatRail } from './rail/ChatRail.tsx';
+import { RailContext } from './rail/rail-context.ts';
+import { useRailCollapsed, useRoomy } from './rail/use-rail-layout.ts';
+import { panelOpensByDefault, railState } from './rail/wide-layout.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { useChatSend } from './send/use-chat-send.ts';
@@ -62,7 +67,6 @@ import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
-import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -119,7 +123,22 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
     repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
-  const panel = useTaskPanel(detail.data?.tasks ?? NO_TASKS, autonomyLevel !== null);
+  const mainRef = useRef<HTMLElement>(null);
+  const roomy = useRoomy(mainRef);
+  const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
+  const panel = useTaskPanel(
+    detail.data?.tasks ?? NO_TASKS,
+    autonomyLevel !== null,
+    panelOpensByDefault(roomy, wideLayout),
+  );
+  const [railCollapsed, setRailCollapsed] = useRailCollapsed();
+  const rail = railState({
+    roomy,
+    panelOpen: panel.open,
+    layout: wideLayout,
+    collapsed: railCollapsed,
+    turns: detail.data?.runs.length ?? 0,
+  });
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
   const steer = useSteer(conversationId, running ? orchestration : null);
@@ -147,19 +166,29 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     if (diff.request) diff.close();
     else if (task) diff.open(task.id);
   };
+  const openPanelTab = useStableCallback((tab: WorkTab) => {
+    setPanelTab(tab);
+    panel.setOpen(true);
+  });
+  const openAutonomyPanel = useStableCallback(openAutonomy);
+  const reviewChanges = useStableCallback(toggleDiff);
+  const collapseRail = useStableCallback(setRailCollapsed);
   const workspace = useChatWorkspace(conversationId, Boolean(detail.data?.conversation.branch));
   const chatBranch = workspace.data?.current ?? null;
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
   const [status] = useState(createStatusStore);
-  const teammate = detail.data?.conversation.teammate ?? null;
 
   return (
     <ViewChangesContext value={viewChanges}>
       <StatusContext value={status}>
         <FileSheetProvider>
-          <main className="main" {...drop.handlers}>
+          <main
+            ref={mainRef}
+            className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
+            {...drop.handlers}
+          >
             <header className="head">
               <SidebarToggle />
               {repos.length > 0 && (
@@ -201,14 +230,33 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             )}
             {detail.data ? (
               <PanelOpenContext value={panel.open}>
-                <Thread
-                  detail={detail.data}
-                  repos={repos}
-                  sends={sends}
-                  onOpenTask={openTask}
-                  onOpenChat={openChat}
-                  quotes={quotes}
-                />
+                <RailContext
+                  value={
+                    rail === 'hidden' ? null : (
+                      <ChatRail
+                        detail={detail.data}
+                        repos={repos}
+                        taskId={taskId}
+                        autonomy={autonomyLevel}
+                        running={running !== null}
+                        collapsed={rail === 'collapsed'}
+                        onCollapse={collapseRail}
+                        onTab={openPanelTab}
+                        onAutonomy={openAutonomyPanel}
+                        onChanges={reviewChanges}
+                      />
+                    )
+                  }
+                >
+                  <Thread
+                    detail={detail.data}
+                    repos={repos}
+                    sends={sends}
+                    onOpenTask={openTask}
+                    onOpenChat={openChat}
+                    quotes={quotes}
+                  />
+                </RailContext>
               </PanelOpenContext>
             ) : (
               <div className="thread-wrap" aria-busy={detail.isPending}>
@@ -216,9 +264,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
                 )}
               </div>
-            )}
-            {detail.data?.messages.length === 0 && (
-              <TalkToChip conversationId={conversationId} teammate={teammate} />
             )}
             <ComposerStatus
               store={status}

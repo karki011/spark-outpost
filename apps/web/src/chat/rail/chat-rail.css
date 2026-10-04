@@ -1,0 +1,298 @@
+.main.crail-open .col {
+  --rail-reserve: 216px;
+}
+
+.main.crail-collapsed .col {
+  --rail-reserve: 24px;
+}
+
+.crail-slot {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 0;
+}
+
+.crail {
+  position: absolute;
+  top: 6px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  max-height: var(--crail-room, 60vh);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+  animation: crail-in 0.2s var(--out) both;
+}
+
+@keyframes crail-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.crail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding-left: 6px;
+}
+
+.crail-title {
+  margin: 0;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.crail-toggle {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.crail-toggle:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-show {
+  position: absolute;
+  top: 6px;
+  right: 0;
+}
+
+.crail-rows,
+.crail-outline ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crail-rows {
+  flex-shrink: 0;
+}
+
+.crail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+:is(button, a).crail-row:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-ico {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 16px;
+  height: 17px;
+  color: var(--faint);
+}
+
+.crail-ico svg {
+  width: 14px;
+  height: 14px;
+}
+
+.crail-row.ok .crail-ico {
+  color: var(--success);
+}
+
+.crail-row.warn .crail-ico {
+  color: var(--warn);
+}
+
+.crail-row.bad .crail-ico {
+  color: var(--danger);
+}
+
+.crail-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.crail-main,
+.crail-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-main .chf-n {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.crail-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.crail-detail svg {
+  width: 11px;
+  height: 11px;
+}
+
+.crail-outline {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 72px;
+  margin-top: 14px;
+}
+
+.crail-outline .crail-title {
+  padding: 0 6px 4px;
+}
+
+.crail-outline ol {
+  min-height: 0;
+  margin-left: 6px;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.crail-outline a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.crail-outline a::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.crail-outline a:hover {
+  color: var(--text);
+}
+
+.crail-outline a[aria-current] {
+  color: var(--text);
+}
+
+.crail-outline a[aria-current]::before {
+  opacity: 1;
+}
+
+.crail-o-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-marks {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 3px;
+  color: var(--faint);
+}
+
+.crail-mark.error {
+  color: var(--danger);
+}
+
+.crail-tv {
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.crail-tv-stage .tv-role,
+.crail-tv-stage .tv-line {
+  display: none;
+}
+
+.crail-tv-stage .tv-l.on {
+  animation: none;
+}
+
+.crail-tv-cap {
+  margin: 0;
+  padding: 0 6px 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-tv-cap b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.crail-tv-open {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.crail-tv-open:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.crail-tv.paused *,
+.crail-tv.paused *::before,
+.crail-tv.paused *::after {
+  animation-play-state: paused !important;
+}
+
+.crail-tv.still .tv-b,
+.crail-tv.still .tv-sq,
+.crail-tv.still .tv-l.on {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crail {
+    animation: none;
+  }
+}

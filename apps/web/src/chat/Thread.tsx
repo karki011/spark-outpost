@@ -1,5 +1,5 @@
 import './thread.css';
-import { memo, useEffect } from 'react';
+import { memo, use, useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
@@ -16,6 +16,12 @@ import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
 import { PendingSends } from './send/PendingSends.tsx';
 import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
+import { RailContext } from './rail/rail-context.ts';
+
+function RailSlot() {
+  const rail = use(RailContext);
+  return rail ? <div className="crail-slot">{rail}</div> : null;
+}
 
 interface ThreadProps {
   detail: ConversationDetail;
@@ -87,6 +93,7 @@ export const Thread = memo(function Thread({
   return (
     <div className="thread-wrap">
       <div className="thread" ref={scrollerRef}>
+        <RailSlot />
         <div className="col">
           {turns.map(({ run, userMessage, assistantMessage }) => (
             <TurnSection

@@ -1,0 +1,108 @@
+import { describe, expect, it } from 'vitest';
+import { EMPTY_CONVERSATION_USAGE } from '@spark-outpost/contracts';
+import { railRows, type RailFacts } from './rail-model.ts';
+
+const base: RailFacts = {
+  repoNames: [],
+  branch: null,
+  provider: 'Claude',
+  model: 'Opus 5.5',
+  mode: 'Plan',
+  autonomy: null,
+  changes: null,
+  watch: null,
+  usage: EMPTY_CONVERSATION_USAGE,
+  contextPercent: null,
+  hasTask: false,
+};
+
+const ids = (facts: RailFacts) => railRows(facts).map((row) => row.id);
+
+describe('railRows', () => {
+  it('offers Choose project for an unlinked chat and stays quiet about what is unknown', () => {
+    const rows = railRows(base);
+    expect(rows.map((row) => row.id)).toEqual(['project', 'agent']);
+    expect(rows[0]).toMatchObject({
+      text: 'Not linked',
+      detail: 'Choose project',
+      action: { kind: 'project' },
+    });
+    expect(rows[1]).toMatchObject({ text: 'Claude · Opus 5.5', detail: 'Plan', action: null });
+  });
+
+  it('names the project, its branch and where the chat works', () => {
+    const [project] = railRows({
+      ...base,
+      repoNames: ['acme-web', 'acme-api'],
+      branch: { name: 'spark/fix-dates', worktree: true },
+    });
+    expect(project).toMatchObject({
+      text: 'acme-web +1',
+      detail: 'spark/fix-dates · worktree',
+      onBranch: true,
+    });
+  });
+
+  it('shows Spark autonomy with the user-facing names and opens its setting', () => {
+    const rows = railRows({ ...base, repoNames: ['acme-web'], autonomy: 'full-auto' });
+    expect(rows.find((row) => row.id === 'autonomy')).toMatchObject({
+      text: 'Full auto → PR',
+      action: { kind: 'autonomy' },
+    });
+  });
+
+  it('counts changed files and opens the changes', () => {
+    const rows = railRows({
+      ...base,
+      hasTask: true,
+      changes: { files: 3, added: 120, removed: 8 },
+    });
+    expect(rows.find((row) => row.id === 'changes')).toMatchObject({
+      text: '3 files changed',
+      counts: { added: 120, removed: 8 },
+      action: { kind: 'changes' },
+    });
+    expect(ids({ ...base, changes: { files: 0, added: 0, removed: 0 } })).not.toContain('changes');
+  });
+
+  it('shows checks and a pull request link once the chat has a PR', () => {
+    const rows = railRows({
+      ...base,
+      hasTask: true,
+      watch: {
+        repo: 'acme/widgets',
+        number: 7,
+        url: 'https://github.com/acme/widgets/pull/7',
+        prState: 'open',
+        draft: true,
+        checks: 'failing',
+      },
+    });
+    expect(rows.find((row) => row.id === 'checks')).toMatchObject({
+      text: 'Checks failing',
+      tone: 'bad',
+      action: { kind: 'tab', tab: 'tasks' },
+    });
+    expect(rows.find((row) => row.id === 'pr')).toMatchObject({
+      text: 'PR #7',
+      detail: 'Draft',
+      action: { kind: 'link', href: 'https://github.com/acme/widgets/pull/7' },
+    });
+  });
+
+  it('sums tokens, cost and context, and opens Cost only when there is a task', () => {
+    const usage = { ...EMPTY_CONVERSATION_USAGE, totalTokens: 12_400, costUsd: 0.08 };
+    const row = railRows({ ...base, usage, contextPercent: 23, hasTask: true }).at(-1);
+    expect(row).toMatchObject({
+      id: 'usage',
+      text: '12.4K tokens · $0.08',
+      detail: '23% context',
+      action: { kind: 'tab', tab: 'cost' },
+    });
+    expect(railRows({ ...base, usage, contextPercent: 23 }).at(-1)?.action).toBeNull();
+    expect(railRows({ ...base, contextPercent: 5 }).at(-1)).toMatchObject({
+      text: '5% context',
+      detail: null,
+    });
+  });
+});

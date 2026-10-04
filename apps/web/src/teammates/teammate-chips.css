@@ -1,99 +1,22 @@
-.tm-talk {
+.ctx-talk {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 auto 8px;
-  width: 100%;
-  max-width: calc(var(--chat-col, 700px) + 60px);
-}
-
-.main > .tm-talk {
-  padding: 0 20px;
-}
-
-.tm-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 28px;
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 12.5px;
-  transition:
-    border-color 0.15s var(--out),
-    color 0.15s var(--out);
+  min-width: 0;
 }
 
-.tm-chip:hover,
-.tm-chip[aria-expanded='true'] {
-  border-color: var(--line-strong);
-  color: var(--text);
+.mpop.talkpop {
+  width: 280px;
 }
 
-.tm-chip.on {
-  border-color: var(--accent);
-  color: var(--text);
+.talkpop .mopt > span:not(.mi) {
+  flex: 1;
+  min-width: 0;
 }
 
-.tm-chip svg:last-child {
-  width: 12px;
-  height: 12px;
-}
-
-.tm-menu {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  min-width: 240px;
-  max-height: 320px;
-  padding: 6px;
-  overflow-y: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--panel);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
-}
-
-.home-compose .tm-menu {
-  top: calc(100% + 6px);
-  bottom: auto;
-}
-
-.tm-menu[hidden] {
-  display: none;
-}
-
-.tm-menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: var(--r-sm);
-  text-align: left;
-}
-
-.tm-menu button:hover,
-.tm-menu button:focus-visible,
-.tm-menu button[aria-checked='true'] {
-  background: var(--raise);
-}
-
-.tm-menu b {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tm-menu small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
+.talkpop .mopt > span.mi {
+  background: transparent;
 }
 
 .tm-menu-blank {
@@ -101,6 +24,12 @@
   height: 22px;
   border: 1px dashed var(--line-strong);
   border-radius: 50%;
+}
+
+.tm-menu-blank.sm {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
 .tm-head {

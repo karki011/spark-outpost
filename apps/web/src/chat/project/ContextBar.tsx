@@ -1,16 +1,18 @@
 import './context-bar.css';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
+import { TalkToChip } from '../../teammates/TalkToChip.tsx';
 import { AgentSetup } from './AgentSetup.tsx';
 import { AutonomyChip, type AutonomyControl } from './AutonomyChip.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
+import { onProjectMenuRequest } from './project-menu-request.ts';
 import { PICK_PROJECT_HINT, recentProjects, repoSummary } from './repo-list.ts';
 import { useChatRepos, useProjectBranch, useProjects, type RepoRequest } from './use-chat-repos.ts';
 import { useChatWorkspace } from './use-chat-workspace.ts';
@@ -40,6 +42,15 @@ export function ContextBar({ conversationId, repos, popover, autonomy }: Context
   const names = repos.map((repo) => repo.name);
   const projectTip = useTooltip(
     primary ? repos.map((repo) => repo.rootPath).join(', ') : PICK_PROJECT_HINT,
+  );
+
+  useEffect(
+    () =>
+      onProjectMenuRequest(conversationId, () => {
+        setOpen(true);
+        anchorRef.current?.focus();
+      }),
+    [conversationId, setOpen, anchorRef],
   );
 
   const apply = (request: RepoRequest) => {
@@ -101,6 +112,7 @@ export function ContextBar({ conversationId, repos, popover, autonomy }: Context
             checkoutBranch={branch}
           />
         )}
+        <TalkToChip conversationId={conversationId} />
         {primary && autonomy && <AutonomyChip {...autonomy} />}
         {primary && <AgentSetup key={primary.id} repos={repos} />}
       </div>

@@ -1,0 +1,157 @@
+import {
+  autonomyLabel,
+  type ConversationUsage,
+  type InvolvementLevel,
+  type PrChecks,
+  type PrWatch,
+} from '@spark-outpost/contracts';
+import { formatTokens } from '../composer/model-options.ts';
+import { filesLabel, formatTotal } from '../changes/change-rules.ts';
+import { repoSummary } from '../project/repo-list.ts';
+import type { WorkTab } from '../../tasks/TaskDetails.tsx';
+import { formatCost } from '../../usage/format.ts';
+
+export type RailRowId = 'project' | 'agent' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
+
+export type RailAction =
+  | { kind: 'project' }
+  | { kind: 'tab'; tab: WorkTab }
+  | { kind: 'autonomy' }
+  | { kind: 'changes' }
+  | { kind: 'link'; href: string };
+
+export type RailTone = 'ok' | 'warn' | 'bad';
+
+export interface RailRow {
+  id: RailRowId;
+  text: string;
+  detail: string | null;
+  label: string;
+  action: RailAction | null;
+  tone?: RailTone;
+  counts?: { added: number; removed: number };
+  onBranch?: boolean;
+}
+
+export interface RailFacts {
+  repoNames: readonly string[];
+  branch: { name: string; worktree: boolean } | null;
+  provider: string;
+  model: string | null;
+  mode: string;
+  autonomy: InvolvementLevel | null;
+  changes: { files: number; added: number; removed: number } | null;
+  watch: Pick<PrWatch, 'repo' | 'number' | 'url' | 'prState' | 'draft' | 'checks'> | null;
+  usage: ConversationUsage;
+  contextPercent: number | null;
+  hasTask: boolean;
+}
+
+const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
+  none: { text: 'No checks' },
+  pending: { text: 'Checks running', tone: 'warn' },
+  passing: { text: 'Checks passing', tone: 'ok' },
+  failing: { text: 'Checks failing', tone: 'bad' },
+};
+
+function prState(watch: NonNullable<RailFacts['watch']>): string {
+  if (watch.prState !== 'open') return watch.prState === 'merged' ? 'Merged' : 'Closed';
+  return watch.draft ? 'Draft' : 'Open';
+}
+
+function projectRow(facts: RailFacts): RailRow {
+  if (facts.repoNames.length === 0) {
+    return {
+      id: 'project',
+      text: 'Not linked',
+      detail: 'Choose project',
+      label: 'Not linked. Choose project',
+      action: { kind: 'project' },
+    };
+  }
+  const name = repoSummary(facts.repoNames);
+  const place = facts.branch
+    ? `${facts.branch.name} · ${facts.branch.worktree ? 'worktree' : 'my files'}`
+    : null;
+  return {
+    id: 'project',
+    text: name,
+    detail: place,
+    label: place ? `Project ${name}, ${place}` : `Project ${name}`,
+    action: { kind: 'project' },
+    ...(place ? { onBranch: true } : {}),
+  };
+}
+
+function usageRow(facts: RailFacts): RailRow | null {
+  const { usage, contextPercent } = facts;
+  const parts: string[] = [];
+  if (usage.totalTokens > 0) parts.push(`${formatTokens(usage.totalTokens)} tokens`);
+  if (usage.costUsd !== null) parts.push(formatCost(usage.costUsd, usage.costSource ?? null));
+  if (parts.length === 0 && contextPercent === null) return null;
+  const context = contextPercent === null ? null : `${contextPercent}% context`;
+  const text = parts.join(' · ') || context!;
+  const detail = parts.length > 0 ? context : null;
+  return {
+    id: 'usage',
+    text,
+    detail,
+    label: [text, detail].filter(Boolean).join(', '),
+    action: facts.hasTask ? { kind: 'tab', tab: 'cost' } : null,
+  };
+}
+
+export function railRows(facts: RailFacts): RailRow[] {
+  const rows: RailRow[] = [projectRow(facts)];
+  const agent = [facts.provider, facts.model].filter(Boolean).join(' · ');
+  rows.push({
+    id: 'agent',
+    text: agent,
+    detail: facts.mode,
+    label: `Agent ${agent}, mode ${facts.mode}`,
+    action: facts.hasTask ? { kind: 'tab', tab: 'crew' } : null,
+  });
+  if (facts.autonomy) {
+    const level = autonomyLabel(facts.autonomy);
+    rows.push({
+      id: 'autonomy',
+      text: level,
+      detail: null,
+      label: `Spark autonomy: ${level}`,
+      action: { kind: 'autonomy' },
+    });
+  }
+  if (facts.changes && facts.changes.files > 0) {
+    const { files, added, removed } = facts.changes;
+    rows.push({
+      id: 'changes',
+      text: `${filesLabel(files)} changed`,
+      detail: null,
+      label: `${filesLabel(files)} changed, ${formatTotal(added)} added, ${formatTotal(removed)} removed. Review changes`,
+      action: { kind: 'changes' },
+      counts: { added, removed },
+    });
+  }
+  if (facts.watch) {
+    const checks = CHECKS[facts.watch.checks];
+    rows.push({
+      id: 'checks',
+      text: checks.text,
+      detail: null,
+      label: checks.text,
+      action: facts.hasTask ? { kind: 'tab', tab: 'tasks' } : null,
+      ...(checks.tone ? { tone: checks.tone } : {}),
+    });
+    const name = `${facts.watch.repo}#${facts.watch.number}`;
+    rows.push({
+      id: 'pr',
+      text: `PR #${facts.watch.number}`,
+      detail: prState(facts.watch),
+      label: `Pull request ${name}, ${prState(facts.watch)}. Opens on GitHub`,
+      action: { kind: 'link', href: facts.watch.url },
+    });
+  }
+  const usage = usageRow(facts);
+  if (usage) rows.push(usage);
+  return rows;
+}

@@ -10,13 +10,13 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                            | What to do                                                                   |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Wide windows show a context rail. **Talk to…** sits in the bar above the message box.                   | Set **On wide windows** in [Settings](settings.md#spark).                    |
 | The plan card waits for **Build** at **Automatic**, in every agent mode.                                | Select **Build**, or use [**Full auto → PR**](spark-autonomy.md).            |
 | Two autonomy levels: **Automatic** and **Full auto → PR**. Retired levels became **Automatic**.         | To review each step, pick an [agent mode](agent-mode.md) that asks.          |
 | Changes are kept without waiting for you.                                                               | Undo with [**Revert to before this run**](review-changes.md#keep-or-revert). |
 | Spark follows the agent's mode and adds no command cards of its own.                                    | Expect fewer cards. [Protected paths](protected-paths.md) still ask.         |
 | Modes that never ask are marked **ran without review**.                                                 | Answer any [flag](approvals.md#actions-that-ran-without-review).             |
-| Plain step names and one live status line in chats.                                                     | [Follow a turn](follow-a-turn.md) above the message box.                     |
-| A message queue while a turn runs.                                                                      | See [Queue messages](follow-a-turn.md#queue-messages).                       |
+| Plain step names, one live status line and a message queue while a turn runs.                           | [Follow a turn](follow-a-turn.md) above the message box.                     |
 | **Delete** works on running chats.                                                                      | Nothing.                                                                     |
 | Agent TV for any chat, with messages to one crew member.                                                | See [Watch and steer the crew](pieces.md).                                   |
 | The **Changes** drawer replaces inline diffs.                                                           | Press **⌘⇧D**.                                                               |

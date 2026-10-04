@@ -12,7 +12,6 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { Composer } from '../chat/Composer.tsx';
 import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
-import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
 const NO_REPOS: string[] = [];
 const STARTED_MS = 6000;
@@ -100,7 +99,6 @@ export function HomeComposer(props: HomeComposerProps) {
 
   return (
     <section className="home-compose" aria-label="Start a new chat">
-      <TalkToChip conversationId={draftId} teammate={detail.data?.conversation.teammate ?? null} />
       <Composer
         conversationId={draftId}
         repos={repos}

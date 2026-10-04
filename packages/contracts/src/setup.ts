@@ -112,6 +112,11 @@ export const DEFAULT_AUTO_CONTINUE_SECONDS = 10;
 export const AUTO_CONTINUE_CHOICES: readonly (number | null)[] = [null, 10, 30, 60];
 export const autoContinueSecondsSchema = z.number().int().min(1).max(600).nullable();
 
+export const WIDE_WINDOW_LAYOUTS = ['rail', 'panel', 'empty'] as const;
+export const wideWindowSchema = z.enum(WIDE_WINDOW_LAYOUTS);
+export type WideWindowLayout = z.infer<typeof wideWindowSchema>;
+export const DEFAULT_WIDE_WINDOW: WideWindowLayout = 'rail';
+
 export const profileSchema = z.object({
   displayName: z.string(),
   defaultProvider: providerIdSchema.nullable(),
@@ -134,6 +139,7 @@ export const profileSchema = z.object({
   compactAtPercent: compactAtPercentSchema.default(COMPACT_AT_DEFAULT),
   autoCompact: z.boolean().default(true),
   heartbeat: z.boolean().default(true),
+  wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'> & {
@@ -171,6 +177,7 @@ export const updateProfileRequestSchema = z
     compactAtPercent: compactAtPercentSchema,
     autoCompact: z.boolean(),
     heartbeat: z.boolean(),
+    wideWindow: wideWindowSchema,
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

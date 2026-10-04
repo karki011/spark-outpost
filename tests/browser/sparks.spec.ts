@@ -139,7 +139,21 @@ test('Talk to on Home starts the next chat with a Spark, then goes back to plain
   await addSpark(page, { name: 'Bolt', role: 'Bug fixer', level: 'full-auto' });
   await openHome(page);
   const compose = home(page).getByRole('region', { name: 'Start a new chat' });
-  await compose.getByRole('button', { name: 'Talk to…' }).click();
+  const bar = compose.locator('.ctxbar');
+  await expect(bar.getByRole('button', { name: 'Choose project' })).toBeVisible();
+  const talk = bar.getByRole('button', { name: 'Talk to…' });
+  await talk.click();
+  const menu = compose.getByRole('menu', { name: 'Talk to' });
+  await expect(menu.getByRole('menuitemradio', { name: /No Spark/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  const [chipBox, menuBox] = [await talk.boundingBox(), await menu.boundingBox()];
+  expect(Math.abs(menuBox!.x - chipBox!.x)).toBeLessThan(2);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(talk).toBeFocused();
+  await talk.click();
   await page.getByRole('menuitemradio', { name: /Bolt/ }).click();
   await expect(compose.getByRole('button', { name: 'Talking to Bolt' })).toBeVisible();
 
