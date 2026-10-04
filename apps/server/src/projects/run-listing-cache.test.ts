@@ -60,6 +60,13 @@ describe('working tree signature', () => {
     expect(await changedBy(() => git('checkout', '--', 'kept.ts'))).toBe(true);
   });
 
+  it('ignores node_modules, which snapshots leave out', async () => {
+    const dependency = join(root, 'node_modules/left-pad');
+    await mkdir(dependency, { recursive: true });
+    expect(await changedBy(() => writeFile(join(dependency, 'index.js'), 'pad\n'))).toBe(false);
+    expect(await changedBy(() => writeFile(join(root, 'node_modules_notes.md'), 'x\n'))).toBe(true);
+  });
+
   it('changes when the commit or any ref moves', async () => {
     await writeFile(join(root, 'app.ts'), 'two\n');
     expect(await changedBy(() => git(...IDENTITY, 'commit', '-qam', 'next'))).toBe(true);

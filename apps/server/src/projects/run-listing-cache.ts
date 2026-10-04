@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import type { ListedFile } from './change-list.ts';
-import { git } from './snapshot.ts';
+import { git, SNAPSHOT_PATHSPEC } from './snapshot.ts';
 
 const MAX_LISTINGS = 32;
 const LISTING_TTL_MS = 10 * 60_000;
@@ -67,6 +67,8 @@ async function workingTreeSignature(root: string): Promise<string | null> {
       '--branch',
       '-z',
       '--untracked-files=all',
+      '--',
+      ...SNAPSHOT_PATHSPEC,
     ]),
   ]);
   const dirty = parseStatus(status);
