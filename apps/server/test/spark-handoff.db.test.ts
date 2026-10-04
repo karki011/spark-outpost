@@ -297,7 +297,9 @@ describe('a message that mentions a Spark', () => {
       content: '@Pip review parseDate',
     });
 
-    expect(await drainQueue(t.db, first.conversationId, chatTarget(t.db))).toBe('sent');
+    await eventually(
+      async () => (await drainQueue(t.db, first.conversationId, chatTarget(t.db))) === 'sent',
+    );
 
     const runId = await topRunFor(queuedId);
     const [child] = await children(runId);
