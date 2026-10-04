@@ -106,6 +106,10 @@ export function TalkToChip({ conversationId }: { conversationId: string }) {
             <TickIcon />
           </button>
         ))}
+        <div className="eff-note talk-note" role="presentation">
+          Talk to… makes this whole chat a chat with a Spark. To hand one job to a Spark in any
+          chat, type @ and its name.
+        </div>
       </div>
       {pick.isError && (
         <span className="ctx-unlinked" role="alert">

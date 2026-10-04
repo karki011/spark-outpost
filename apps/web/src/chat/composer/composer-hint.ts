@@ -7,3 +7,30 @@ export function composerHint(attachments: AttachmentsState, queueing: boolean): 
   if (queueing) return 'Enter to queue, it sends when this turn ends';
   return 'Enter to send, Shift + Enter for a new line';
 }
+
+interface PlaceholderFacts {
+  steering: boolean;
+  queueing: boolean;
+  hasRepos: boolean;
+  hasSparks: boolean;
+}
+
+export function composerPlaceholder(facts: PlaceholderFacts): string {
+  if (facts.steering) return 'Steer the pieces while they run';
+  if (facts.queueing) return 'Queue a message for when this turn ends';
+  if (facts.hasRepos && facts.hasSparks) {
+    return 'Ask anything, @ to add a file or hand a job to a Spark, / for commands';
+  }
+  if (facts.hasRepos) return 'Ask anything, @ to add a file, / for commands';
+  if (facts.hasSparks) return 'Ask anything, @ to hand a job to a Spark, / for commands';
+  return 'Ask anything, / for commands';
+}
+
+export function focusAtEnd(input: HTMLTextAreaElement): void {
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+export function focusMovesToSlashMenu(next: EventTarget | null): boolean {
+  return next instanceof Element && next.closest('.slashpop') !== null;
+}

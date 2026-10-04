@@ -28,6 +28,7 @@ import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
 import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
+import { SparkCrewFace } from '../../teammates/SparkCrewFace.tsx';
 
 const NO_MESSAGES: readonly MemberMessage[] = [];
 
@@ -64,6 +65,20 @@ const TURN_STATES: Record<CrewAgent['state'], TurnState> = {
   queued: 'working',
 };
 
+function AgentFace({ agent, size }: { agent: CrewAgent; size: number }) {
+  if (agent.spark) {
+    return (
+      <SparkCrewFace sparkId={agent.spark.id} name={agent.name} state={agent.state} size={size} />
+    );
+  }
+  return <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={size} />;
+}
+
+function AgentName({ agent }: { agent: CrewAgent }) {
+  if (agent.spark) return <span className="agent-name">{agent.name}</span>;
+  return <CrewName name={agent.name} />;
+}
+
 interface AgentHeadProps {
   agent: CrewAgent;
   anchor: string;
@@ -75,10 +90,10 @@ export function AgentHead({ agent, anchor, conversationId }: AgentHeadProps) {
   return (
     <div className="agent-head" id={anchor}>
       <span className={`agent-ava ${agent.state}`} aria-hidden="true">
-        <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={30} />
+        <AgentFace agent={agent} size={30} />
       </span>
       <span className="agent-who">
-        <CrewName name={agent.name} />
+        <AgentName agent={agent} />
         <span className="agent-role">{roleLabel(agent)}</span>
       </span>
       {live && <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>}
@@ -132,7 +147,9 @@ function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: Body
           <i />
         </span>
       )}
-      {agent.state === 'queued' && <p className="ai-note">Queued. Starts when Jev hands off.</p>}
+      {agent.state === 'queued' && !agent.spark && (
+        <p className="ai-note">Queued. Starts when Jev hands off.</p>
+      )}
       {error && <p className="error-line">{error}</p>}
     </>
   );
@@ -213,9 +230,9 @@ export function AgentBlock({
           onClick={() => setChoice(true)}
         >
           <span className="agent-ava sm" aria-hidden="true">
-            <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={20} />
+            <AgentFace agent={agent} size={20} />
           </span>
-          <CrewName name={agent.name} />
+          <AgentName agent={agent} />
           <span className="agent-role">{roleLabel(agent)}</span>
           <span className="fold-text">{firstLine(body.text) || agent.line}</span>
           <span className="fold-meta">{usageParts(agent).join(' · ')}</span>

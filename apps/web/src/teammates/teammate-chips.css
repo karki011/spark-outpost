@@ -137,3 +137,8 @@
 .tm-fact-text {
   white-space: pre-wrap;
 }
+
+.talkpop .talk-note {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--line);
+}

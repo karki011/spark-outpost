@@ -108,7 +108,10 @@ export function lastAgentIndex(items: readonly CrewItem[]): number {
 
 export function handOffAt(crew: readonly CrewMember[], rootRunId: string): string | null {
   const starts = crew
-    .filter((member) => member.runId !== rootRunId && member.startedAt !== null)
+    .filter(
+      (member) =>
+        member.runId !== rootRunId && member.role !== 'spark' && member.startedAt !== null,
+    )
     .map((member) => member.startedAt!)
     .sort();
   return starts[0] ?? null;

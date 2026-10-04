@@ -302,7 +302,7 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     db.query<MemberRow & { owner: string }>(
       `SELECT ${MEMBER_COLUMNS}, COALESCE(r.parent_run_id, r.id) AS owner FROM runs r
        WHERE r.role IS NOT NULL AND (r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[]))
-       ORDER BY r.created_at`,
+       ORDER BY r.role = 'spark' DESC, r.created_at`,
       [ids],
     ),
     db.query<ApprovalRow>(
