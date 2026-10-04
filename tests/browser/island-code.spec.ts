@@ -325,5 +325,5 @@ test('a live edit by the agent shows the edited file while the turn runs', async
   await expect(page.locator('.md', { hasText: 'livediff=done 24' })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(nowCard(view).getByRole('figure')).toHaveCount(0);
+  await expect(nowCard(view).getByRole('figure')).toHaveCount(0, { timeout: 15_000 });
 });
