@@ -103,7 +103,8 @@ async function open(panes: BrowserPanes, request: Request<'open'>, signal: Abort
     if (!userIsElsewhere) panes.select(request.chatId, tab.id);
     panes.layout();
     if (tab.error) throw new BrowserOpError('load_failed', `The page did not load: ${tab.error}`);
-    return { ...tabFacts(tab), status: tab.status, reused: choice.action === 'reuse' };
+    const reused = choice.action === 'reuse' || choice.action === 'reload';
+    return { ...tabFacts(tab), status: tab.status, reused };
   });
 }
 

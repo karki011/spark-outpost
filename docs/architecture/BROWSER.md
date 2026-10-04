@@ -27,13 +27,13 @@ The renderer reports the bounds of `#bp-view` and main places the active tab's v
 
 Tabs belong to a chat. The address bar accepts any address: it is the user's browser. A tab the user navigates becomes theirs.
 
-| Agent `open` finds                                      | It                                         |
-| ------------------------------------------------------- | ------------------------------------------ |
-| Its own tab on the same origin and path                 | Reuses it (navigates if the query differs) |
-| A user tab on exactly that address, not the one showing | Reads it, never navigates it               |
-| Its own unpinned tab on the same origin                 | Navigates it                               |
-| Nothing, and fewer than 5 agent tabs                    | Opens a tab                                |
-| 5 agent tabs                                            | Navigates its oldest unpinned tab          |
+| Agent `open` finds                                      | It                                           |
+| ------------------------------------------------------- | -------------------------------------------- |
+| Its own tab on the same origin and path                 | Loads it again there, so the page is current |
+| A user tab on exactly that address, not the one showing | Reads it, never navigates it                 |
+| Its own unpinned tab on the same origin                 | Navigates it                                 |
+| Nothing, and fewer than 5 agent tabs                    | Opens a tab                                  |
+| 5 agent tabs                                            | Navigates its oldest unpinned tab            |
 
 Agent tabs close when the turn's grant is revoked unless the user pinned them.
 

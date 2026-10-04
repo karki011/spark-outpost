@@ -163,7 +163,12 @@ async function runSession(
           )
         : null;
     const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
-    const codex = withCodexSpark(repo?.codex ?? null, turn.spark, spark !== null);
+    const codex = withCodexSpark(
+      repo?.codex ?? null,
+      turn.spark,
+      spark !== null,
+      spark?.browser ?? false,
+    );
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
     const builder = turn.builder === true;
     const located = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
@@ -382,6 +387,7 @@ async function converse(
       turn.spark,
       policy !== null,
       spark?.name ?? null,
+      workspace.spark?.browser ?? false,
     );
     const plan = newSessionRequest({
       agentName: definition.name,

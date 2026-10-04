@@ -27,6 +27,9 @@ const TONE: Record<Personality, string> = {
 const SPARK_TOOLS_LINE =
   'For any question about Spark itself (what needs the user, chats, runs, crew and Jev picks, plans, files changed, spend, outcomes, models, Map, terminals, tickets, PRs, settings, how it works), use the spark_* tools; spark_guide section spark-tools maps questions to tools, and spark_docs answers how-do-I questions from the user guide. Their ticket and PR actions run only after the user confirms a card.';
 
+const SPARK_BROWSER_LINE =
+  'To open or check a web page, use the spark_browser_* tools (the Browser pane here), not another browser tool.';
+
 export const TEAMMATE_BRIEF_HEADER = '# Standing instructions from the user';
 
 export function teammateBriefText(teammate: TeammateBrief): string {
@@ -43,6 +46,7 @@ export function sparkInstructions(
   prefs: SparkSessionPrefs,
   subagents: boolean,
   sparkTools = false,
+  browser = false,
 ): string {
   const name = firstName(prefs.displayName);
   const lines = [
@@ -53,6 +57,7 @@ export function sparkInstructions(
       : []),
     TONE[prefs.personality],
     ...(sparkTools ? [SPARK_TOOLS_LINE] : []),
+    ...(sparkTools && browser ? [SPARK_BROWSER_LINE] : []),
   ];
   const base = lines.join('\n').slice(0, SPARK_INSTRUCTIONS_MAX_LENGTH);
   return prefs.teammate ? `${base}\n\n${teammateBriefText(prefs.teammate)}` : base;
@@ -81,6 +86,7 @@ export function withClaudeSpark(
   prefs: SparkSessionPrefs | undefined,
   hasTools: boolean,
   sparkServer: string | null = null,
+  browser = false,
 ): ClaudeRepoOptions | null {
   const allowed = withSparkServer(repo, sparkServer);
   if (!prefs) return allowed;
@@ -90,7 +96,7 @@ export function withClaudeSpark(
     ...base,
     appendPrompt: joined(
       base.appendPrompt,
-      sparkInstructions(prefs, subagents, sparkServer !== null),
+      sparkInstructions(prefs, subagents, sparkServer !== null, browser),
     ),
     agentTool: subagents,
   };
@@ -106,6 +112,7 @@ export function withCodexSpark(
   repo: CodexRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
   sparkTools = false,
+  browser = false,
 ): CodexRepoOptions | null {
   if (!prefs) return repo;
   const base = repo ?? NO_CODEX_REPO;
@@ -113,7 +120,7 @@ export function withCodexSpark(
     ...base,
     developerInstructions: joined(
       base.developerInstructions,
-      sparkInstructions(prefs, false, sparkTools),
+      sparkInstructions(prefs, false, sparkTools, browser),
     ),
   };
 }

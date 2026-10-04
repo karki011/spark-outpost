@@ -182,7 +182,7 @@ const browserOpenTool = sparkTool({
   needsBrowser: true,
   title: 'Open a page in the browser',
   description:
-    "Opens a local page (localhost, 127.0.0.1, [::1], *.localhost, *.test on any port, or a file inside a linked project) in this chat's Browser pane and returns the final address, title, HTTP status and tab id. Start the dev server in your own shell first. It reuses a tab already on that page and never navigates a tab the user owns. External sites are not opened; the user can open them in the pane.",
+    "Opens a local page (localhost, 127.0.0.1, [::1], *.localhost, *.test on any port, or a file inside a linked project) in this chat's Browser pane and returns the final address, title, HTTP status and tab id. Start the dev server in your own shell first. It reuses its tab already on that page, loading the page again so it is current, and never navigates a tab the user owns. External sites are not opened; the user can open them in the pane.",
   input: {
     url: z
       .string()

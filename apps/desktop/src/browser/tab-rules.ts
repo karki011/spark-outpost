@@ -12,11 +12,13 @@ export interface TabFacts {
   owner: BrowserTabOwner;
   active: boolean;
   pinned: boolean;
+  failed: boolean;
   lastUsed: number;
 }
 
 export type OpenChoice =
   | { action: 'reuse'; tabId: string }
+  | { action: 'reload'; tabId: string }
   | { action: 'navigate'; tabId: string }
   | { action: 'new' }
   | { action: 'limit' };
@@ -44,8 +46,10 @@ function roomForNew(tabs: readonly TabFacts[]): OpenChoice {
 function wantedTab(tabs: readonly TabFacts[], url: string, wanted: string): OpenChoice | null {
   const tab = tabs.find((candidate) => candidate.id === wanted);
   if (!tab) return null;
-  if (tab.url === url) return { action: 'reuse', tabId: tab.id };
-  return tab.owner === 'agent' ? { action: 'navigate', tabId: tab.id } : null;
+  if (tab.owner === 'agent') {
+    return { action: tab.url === url ? 'reload' : 'navigate', tabId: tab.id };
+  }
+  return tab.url === url && !tab.failed ? { action: 'reuse', tabId: tab.id } : null;
 }
 
 export function chooseOpenTab(tabs: readonly TabFacts[], url: string, wanted?: string): OpenChoice {
@@ -55,11 +59,11 @@ export function chooseOpenTab(tabs: readonly TabFacts[], url: string, wanted?: s
   const mine = agentTabs(tabs);
   const samePage = mine.find((tab) => originAndPath(tab.url) === page);
   if (samePage) {
-    return samePage.url === url
-      ? { action: 'reuse', tabId: samePage.id }
-      : { action: 'navigate', tabId: samePage.id };
+    return { action: samePage.url === url ? 'reload' : 'navigate', tabId: samePage.id };
   }
-  const idleUserTab = tabs.find((tab) => tab.owner === 'user' && !tab.active && tab.url === url);
+  const idleUserTab = tabs.find(
+    (tab) => tab.owner === 'user' && !tab.active && !tab.failed && tab.url === url,
+  );
   if (idleUserTab) return { action: 'reuse', tabId: idleUserTab.id };
   const origin = browserOrigin(url);
   const sameOrigin = mine.find((tab) => !tab.pinned && browserOrigin(tab.url) === origin);

@@ -15,6 +15,7 @@ export interface SparkGrant {
 
 export interface SparkMcpHost {
   port: number;
+  browser: boolean;
   grant(scope: SparkScope): SparkGrant;
   close(): Promise<void>;
 }
@@ -133,6 +134,7 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
 
   return {
     port,
+    browser: deps.browser !== undefined,
     grant(scope) {
       const token = randomBytes(32).toString('base64url');
       const key = digest(token);

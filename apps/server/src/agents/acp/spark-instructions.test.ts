@@ -67,6 +67,25 @@ describe('sparkInstructions', () => {
     expect(sparkInstructions(PREFS, true)).not.toContain('spark_*');
   });
 
+  it('names the browser tools only when the session has the Browser pane, without cutting the text', () => {
+    const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
+    const text = sparkInstructions(longest, true, true, true);
+    expect(
+      text.endsWith(
+        'use the spark_browser_* tools (the Browser pane here), not another browser tool.',
+      ),
+    ).toBe(true);
+    expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
+    expect(sparkInstructions(PREFS, true, true)).not.toContain('spark_browser_');
+    expect(sparkInstructions(PREFS, true, false, true)).not.toContain('spark_browser_');
+    expect(withCodexSpark(null, PREFS, true, true)!.developerInstructions).toContain(
+      'spark_browser_*',
+    );
+    expect(withClaudeSpark(null, PREFS, true, 'spark', true)!.appendPrompt).toContain(
+      'spark_browser_*',
+    );
+  });
+
   it('stays within its length budget even with the longest name', () => {
     const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
     expect(sparkInstructions(longest, true).length).toBeLessThanOrEqual(
