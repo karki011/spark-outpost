@@ -10,19 +10,20 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Chats
 
-| Keys                        | Action                              |
-| --------------------------- | ----------------------------------- |
-| **⌘⇧O**                     | New chat                            |
-| **⌘K**                      | Search chats                        |
-| **⌘B**                      | Show or hide the chat list          |
-| **Enter** / **Shift+Enter** | Send / new line                     |
-| **Enter** / **⌘Enter**      | While a turn runs: queue / send now |
-| **@** / **/**               | Add a file / run a command          |
-| **⌘⇧Y**                     | Jump to the card that waits for you |
-| **⌘⇧D**                     | Open the **Changes** drawer         |
-| **⌘⇧A**                     | Add the selected text to the chat   |
-| **⌃\`**                     | Show or hide the terminal           |
-| **Esc**                     | Close Agent TV, a drawer or a menu  |
+| Keys                        | Action                                  |
+| --------------------------- | --------------------------------------- |
+| **⌘⇧O**                     | New chat                                |
+| **⌘K**                      | Search chats                            |
+| **⌘B**                      | Show or hide the chat list              |
+| **Enter** / **Shift+Enter** | Send / new line                         |
+| **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
+| **@** / **/**               | Add a file / run a command              |
+| **⌘⇧Y**                     | Jump to the card that waits for you     |
+| **⌘⇧D**                     | Open the **Changes** drawer             |
+| **⌘⇧A**                     | Add the selected text to the chat       |
+| **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
+| **⌃\`**                     | Show or hide the terminal               |
+| **Esc**                     | Close Agent TV, a drawer or a menu      |
 
 ## Cards
 

@@ -19,6 +19,7 @@ export const projectSchema = z.object({
   parallelPieces: z.boolean().optional(),
   pieceSlots: pieceSlotsSchema.optional(),
   workPlace: workPlaceSchema.optional(),
+  browserKeepSignIns: z.boolean().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

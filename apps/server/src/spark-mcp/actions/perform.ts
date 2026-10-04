@@ -47,6 +47,11 @@ export function performSparkAction(
       return performSwitchMcpServer(context, action);
     case 'remove_mcp_server':
       return performRemoveMcpServer(context, action);
+    case 'read_page':
+      return Promise.resolve({
+        message: `The agent can read ${action.origin} in this chat.`,
+        url: null,
+      });
     case 'post_slack':
       return performPostSlack(context, action);
     case 'pr_follow_up':

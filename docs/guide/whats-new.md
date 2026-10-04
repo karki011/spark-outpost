@@ -10,6 +10,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                     | What to do                                                                   |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **Browser** pane per chat (Mac app): agents read pages, you select elements.                     | See [Use the browser](use-the-browser.md).                                   |
 | Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.   | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
 | Slack connects: notifications, shared threads, start work from a thread, confirmed posts.        | See [Connect Slack](connect-slack.md).                                       |
 | Sparks are named teammates. `@Name` hands one a job as a read-only subagent. Delete in Settings. | See [Make a Spark](sparks.md).                                               |

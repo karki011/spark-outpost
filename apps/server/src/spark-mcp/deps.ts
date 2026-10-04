@@ -1,3 +1,4 @@
+import type { BrowserHost } from '../browser/host-client.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
@@ -23,6 +24,8 @@ export interface SparkToolDeps {
   branchPrefix?: string;
   timeZone?: string;
   now?: () => Date;
+  browser?: BrowserHost | undefined;
+  shotDir?: string;
 }
 
 export interface SparkActionHooks {

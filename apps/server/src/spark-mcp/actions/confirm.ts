@@ -25,13 +25,13 @@ export const WAITING_MESSAGE =
 export const IN_PROGRESS_MESSAGE =
   'Spark is still doing it; the result appears on the card in the chat. Do not call this again.';
 
-interface ActionRun {
+export interface ActionRun {
   runId: string;
   hooks: SparkActionHooks;
   scope: SparkScope;
 }
 
-function actionRun(scope: SparkScope): ActionRun {
+export function actionRun(scope: SparkScope): ActionRun {
   if (!scope.runId || !scope.actions) {
     throw new SparkToolError(
       'This session cannot ask the user to confirm, so Spark cannot take actions here.',
@@ -54,19 +54,20 @@ function cardTitle(action: SparkAction): string {
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
+  if (action.action === 'read_page') return `${question} ${action.origin}${action.path}`;
   if (action.action === 'pr_follow_up' || action.action === 'pr_follow_up_round') {
     return `${question} ${action.repo}#${action.number}`;
   }
   return `${question} ${action.ticket.key}`;
 }
 
-interface CardPlan {
+export interface CardPlan {
   path: ActionPath;
   requested: boolean;
   observed: readonly string[];
 }
 
-async function postCard(
+export async function postCard(
   db: Queryable,
   run: ActionRun,
   action: SparkAction,
@@ -111,7 +112,11 @@ async function postCard(
   return card;
 }
 
-function auditAction(run: ActionRun, action: SparkAction, outcome: Record<string, unknown>): void {
+export function auditAction(
+  run: ActionRun,
+  action: SparkAction,
+  outcome: Record<string, unknown>,
+): void {
   run.hooks.audit?.message('harness', {
     method: `spark/${action.action}`,
     params: redactValue({ action, ...outcome }),

@@ -21,11 +21,12 @@ export interface ProjectRow {
   parallel_pieces: boolean;
   piece_slots: number;
   work_place: string;
+  browser_keep_sign_ins: boolean;
   last_used_at?: Date;
 }
 
 export const PROJECT_COLUMNS =
-  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place';
+  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place, browser_keep_sign_ins';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -52,6 +53,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     parallelPieces: row.parallel_pieces,
     pieceSlots: row.piece_slots,
     workPlace: workPlaceSchema.catch(DEFAULT_WORK_PLACE).parse(row.work_place),
+    browserKeepSignIns: row.browser_keep_sign_ins,
   };
 }
 
@@ -132,6 +134,7 @@ export interface ProjectChange {
   parallelPieces?: boolean | undefined;
   pieceSlots?: number | undefined;
   workPlace?: WorkPlace | undefined;
+  browserKeepSignIns?: boolean | undefined;
 }
 
 export async function updateProject(
@@ -145,7 +148,8 @@ export async function updateProject(
      SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
          check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END,
          parallel_pieces = COALESCE($7, parallel_pieces), piece_slots = COALESCE($8, piece_slots),
-         work_place = COALESCE($9, work_place)
+         work_place = COALESCE($9, work_place),
+         browser_keep_sign_ins = COALESCE($10, browser_keep_sign_ins)
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -158,6 +162,7 @@ export async function updateProject(
       change.parallelPieces ?? null,
       change.pieceSlots ?? null,
       change.workPlace ?? null,
+      change.browserKeepSignIns ?? null,
     ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();

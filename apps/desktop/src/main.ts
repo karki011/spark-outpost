@@ -1,17 +1,10 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
-import { defaultUpdateChannel, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
+import { isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
 import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
-import {
-  apiPortFile,
-  chooseApiPort,
-  isStablePort,
-  randomStablePort,
-  readApiPort,
-  saveApiPort,
-} from './api-port.ts';
+import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
 import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
 import { startBootTeasers } from './boot-teaser-host.ts';
@@ -25,23 +18,21 @@ import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
 import { FileLog } from './file-log.ts';
-import {
-  HEARTBEAT_URL_ENV,
-  heartbeatEnabled,
-  heartbeatUrl,
-  installIdFile,
-  loadInstallId,
-  readBakedHeartbeatUrl,
-  startHeartbeat,
-  type HeartbeatTimer,
-} from './heartbeat.ts';
+import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
 import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
 import { startPrivacy, type Privacy } from './privacy.ts';
-import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
-import { forkService, OutputTail } from './service.ts';
+import {
+  apiEnv,
+  browserWorkerEnv,
+  POSTGRES_LOCALE,
+  workerEnv,
+  type ServerLaunch,
+} from './server-env.ts';
+import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
+import { forkService, OutputTail, type ServiceOptions } from './service.ts';
 import { createShutdown } from './shutdown.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
@@ -99,6 +90,7 @@ let help: Help | null = null;
 let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
 let storage: StorageSync | null = null;
+let browser: DesktopBrowserHost | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
@@ -115,10 +107,28 @@ const bootTeasers = startBootTeasers({
   log: log('teasers'),
 });
 
-function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: () => boolean) {
+function supervise(
+  name: string,
+  entry: string,
+  env: NodeJS.ProcessEnv,
+  ready: () => boolean,
+  connect?: ServiceOptions['connect'],
+) {
   const tail = new OutputTail();
   const supervisor = new Supervisor({
-    start: () => forkService({ name, bootstrap, entry, cwd: serverDir, env, log: log(name) }, tail),
+    start: () =>
+      forkService(
+        {
+          name,
+          bootstrap,
+          entry,
+          cwd: serverDir,
+          env,
+          log: log(name),
+          ...(connect ? { connect } : {}),
+        },
+        tail,
+      ),
     onRestart: (delayMs, code) => {
       if (!ready()) {
         fail(`${name} stopped during startup (exit ${code}).`, tail.text());
@@ -144,6 +154,8 @@ async function stopEverything(): Promise<void> {
 function closeWindows(): void {
   storage?.dispose();
   storage = null;
+  browser?.dispose();
+  browser = null;
   heartbeat?.dispose();
   heartbeat = null;
   updater?.dispose();
@@ -257,20 +269,6 @@ function quitAfterSaving(): void {
   void (storage?.capture() ?? Promise.resolve()).finally(() => shutdown.quit());
 }
 
-async function stableApiPort(): Promise<number> {
-  const file = apiPortFile(paths.userData);
-  const saved = await readApiPort(file);
-  const port = await chooseApiPort({
-    saved,
-    isFree: (candidate) => portIsFree(candidate),
-    random: randomStablePort,
-    fallback: () => freePort(),
-  });
-  if (port !== saved && isStablePort(port)) await saveApiPort(file, port);
-  if (saved !== null && port !== saved) mainLog(`API port ${saved} is taken; moved to ${port}.`);
-  return port;
-}
-
 async function launch(): Promise<void> {
   savedTheme = await readSavedTheme(appearanceFile(paths.userData));
   listenForTheme();
@@ -297,7 +295,11 @@ async function launch(): Promise<void> {
       if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
     },
   });
-  const apiPort = await stableApiPort();
+  const apiPort = await stableApiPort(paths.userData, {
+    isFree: portIsFree,
+    fallback: freePort,
+    log: mainLog,
+  });
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
   const token = createLaunchToken();
   const launchInfo: ServerLaunch = {
@@ -326,11 +328,20 @@ async function launch(): Promise<void> {
   );
   await waitForApi(apiUrl, token, shutdown.failed);
   apiReady = true;
+  const browserHost = await startBrowserHost({
+    window: () => spark?.window ?? null,
+    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
+    userData: paths.userData,
+    blockedPorts: [apiPort, databaseOptions.port],
+    log: log('browser'),
+  });
+  browser = browserHost;
   supervise(
     'Spark Outpost Worker',
     path.join(serverDir, 'src/workflow/main.ts'),
-    workerEnv(launchInfo),
+    browserWorkerEnv(launchInfo),
     () => true,
+    (port) => browserHost.connectWorker(port),
   );
 
   attachApiToken(apiUrl, token);
@@ -380,7 +391,15 @@ async function launch(): Promise<void> {
     },
     log: log('updates'),
   });
-  heartbeat = await scheduleHeartbeat(apiUrl, token);
+  heartbeat = await scheduleHeartbeat({
+    apiUrl,
+    token,
+    version: app.getVersion(),
+    appPath: app.getAppPath(),
+    userData: paths.userData,
+    devChannel: config.channel === 'dev',
+    env: process.env,
+  });
   bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({
     appName: config.appName,
@@ -398,23 +417,6 @@ async function launch(): Promise<void> {
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
 }
 
-async function scheduleHeartbeat(apiUrl: string, token: string): Promise<HeartbeatTimer> {
-  const version = app.getVersion();
-  return startHeartbeat({
-    url:
-      heartbeatUrl(process.env[HEARTBEAT_URL_ENV]) ??
-      (await readBakedHeartbeatUrl(app.getAppPath())),
-    enabled: () => heartbeatEnabled(apiUrl, token),
-    heartbeat: async () => ({
-      installId: await loadInstallId(installIdFile(paths.userData)),
-      version,
-      os: process.platform,
-      arch: process.arch,
-      channel: config.channel === 'dev' ? 'dev' : defaultUpdateChannel(version),
-    }),
-  });
-}
-
 function openSpark(): SparkWindow {
   const opened = openSparkWindow({
     config,
@@ -425,6 +427,7 @@ function openSpark(): SparkWindow {
     log: mainLog,
   });
   opened.window.on('closed', () => {
+    browser?.windowClosed();
     if (spark === opened) spark = null;
   });
   if (origin) opened.loadApp(origin);

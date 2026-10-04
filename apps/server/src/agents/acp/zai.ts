@@ -12,6 +12,7 @@ export interface ZaiModel {
   id: string;
   label: string;
   description: string;
+  readsImages: boolean;
 }
 
 export const ZAI_MODELS: readonly ZaiModel[] = [
@@ -19,6 +20,7 @@ export const ZAI_MODELS: readonly ZaiModel[] = [
     slot: 'opus',
     id: 'glm-5.3',
     label: 'GLM-5.3',
+    readsImages: false,
     description:
       "Z.ai's strongest GLM for coding and agent work. Text only, 1M context, thinks on every turn. $1.40 in, $4.40 out per million tokens.",
   },
@@ -26,6 +28,7 @@ export const ZAI_MODELS: readonly ZaiModel[] = [
     slot: 'haiku',
     id: 'glm-5.3-flash',
     label: 'GLM-5.3-Flash',
+    readsImages: true,
     description:
       'Fast, cheap GLM that also reads images, 1M context. About a tenth of GLM-5.3: $0.15 in, $0.50 out per million tokens.',
   },

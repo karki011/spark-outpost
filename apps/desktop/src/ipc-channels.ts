@@ -43,6 +43,15 @@ export const IPC = {
   helpOpen: 'help:open',
   helpPending: 'help:pending',
   privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
+  browserState: 'browser:state',
+  browserPlace: 'browser:place',
+  browserCommand: 'browser:command',
+  browserStart: 'browser:start',
+  browserSites: 'browser:sites',
+  browserSignOut: 'browser:sign-out',
+  browserStateChanged: 'browser:state-changed',
+  browserSnapshot: 'browser:snapshot',
+  browserPicked: 'browser:picked',
 } as const;
 
 export type DragPhase = 'start' | 'move' | 'end';

@@ -26,11 +26,11 @@ Without Jev, nothing is sent to TypeSafe.
 - Spark's database keeps a masked hint. Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI. Spark never reads or stores it.
 
-To add keys safely, see [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
+See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
 ## How Spark redacts secrets
 
-Before Spark stores or shows agent output, it replaces anything that looks like a secret with `[redacted:…]`: keys, tokens, passwords in URLs, `KEY=value` lines and values from your secret files.
+Before storing or showing agent output, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, passwords in URLs, `KEY=value` lines and values from your secret files.
 
 This covers agent replies, the audit log, Spark tool results, provider errors and anything sent to Jev.
 
@@ -38,8 +38,9 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 
 - [Secret files](protected-paths.md#secret-files) and anything in `.sparkignore`. Ship leaves them out of commits too.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets and keys.
+- [Browser pane](use-the-browser.md): password and card fields. Cookies stay on this Mac.
 
-If a run reads private data, Spark asks before anything in that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).
+After a run reads private data, Spark asks before it [sends data out](approvals.md#sending-data-out-after-reading-secrets).
 
 ## When you reset
 

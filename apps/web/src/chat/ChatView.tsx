@@ -8,7 +8,7 @@ import {
   type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
@@ -28,6 +28,10 @@ import {
   tvCrew,
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
+import { BrowserButton } from '../browser/BrowserButton.tsx';
+import { BrowserPane } from '../browser/BrowserPane.tsx';
+import { browserAvailable, onBrowserPick } from '../browser/browser-store.ts';
+import { pickFiles } from '../browser/pick-files.ts';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
@@ -125,6 +129,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
     repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
+  const hasBrowser = browserAvailable();
   const mainRef = useRef<HTMLElement>(null);
   const roomy = useRoomy(mainRef);
   const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
@@ -132,6 +137,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     detail.data?.tasks ?? NO_TASKS,
     autonomyLevel !== null,
     panelOpensByDefault(roomy, wideLayout),
+    hasBrowser,
   );
   const [railCollapsed, setRailCollapsed] = useRailCollapsed();
   const rail = railState({
@@ -181,6 +187,27 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
   const [status] = useState(createStatusStore);
+  const browsing = panel.open && panel.view === 'browser';
+  const toggleBrowser = useStableCallback(() => {
+    if (browsing) panel.setOpen(false);
+    else panel.setView('browser');
+  });
+  const addFiles = attachments.add;
+  useEffect(
+    () =>
+      onBrowserPick((pick) => {
+        if (pick.chatId === conversationId) addFiles(pickFiles(pick));
+      }),
+    [conversationId, addFiles],
+  );
+  const firstRepo = repos[0] ?? null;
+  const panelRoots = useMemo(
+    () => [
+      ...(chatBranch?.worktree ? [chatBranch.path] : []),
+      ...repos.map((repo) => repo.rootPath),
+    ],
+    [chatBranch, repos],
+  );
 
   return (
     <ViewChangesContext value={viewChanges}>
@@ -219,6 +246,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
                 )}
                 <AgentTvButton conversationId={conversationId} agents={tvCrew(detail.data)} />
+                {hasBrowser && <BrowserButton open={browsing} onToggle={toggleBrowser} />}
                 <TerminalButton chatId={conversationId} />
                 <ThemePicker />
               </div>
@@ -329,13 +357,26 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               onClose={() => panel.setOpen(false)}
               orchestration={taskCrew}
               agents={taskCrew ? crew : []}
-              roots={[
-                ...(chatBranch?.worktree ? [chatBranch.path] : []),
-                ...repos.map((repo) => repo.rootPath),
-              ]}
+              roots={panelRoots}
               runs={detail.data?.runs ?? []}
               width={panel.width}
               onWidth={panel.setWidth}
+              limits={panel.limits}
+              view={panel.view}
+              onView={panel.setView}
+              browser={
+                hasBrowser ? (
+                  <BrowserPane
+                    home={{
+                      chatId: conversationId,
+                      projectId: firstRepo?.id ?? null,
+                      keepSignIns: firstRepo?.browserKeepSignIns ?? true,
+                      roots: panelRoots,
+                    }}
+                    shown={browsing}
+                  />
+                ) : null
+              }
               {...(openAudit ? { onAudit: openAudit } : {})}
             />
           )}

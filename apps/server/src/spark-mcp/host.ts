@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { sparkMcpServer } from './server.ts';
+import { endBrowserRun } from './tools/browser/end-run.ts';
 
 export interface SparkGrant {
   url: string;
@@ -13,6 +14,7 @@ export interface SparkGrant {
 }
 
 export interface SparkMcpHost {
+  port: number;
   grant(scope: SparkScope): SparkGrant;
   close(): Promise<void>;
 }
@@ -130,11 +132,19 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
   const url = `http://${host}${MCP_PATH}`;
 
   return {
+    port,
     grant(scope) {
       const token = randomBytes(32).toString('base64url');
       const key = digest(token);
       grants.set(key, scope);
-      return { url, token, revoke: () => void grants.delete(key) };
+      return {
+        url,
+        token,
+        revoke: () => {
+          grants.delete(key);
+          void endBrowserRun(deps, scope);
+        },
+      };
     },
     async close() {
       grants.clear();

@@ -7,12 +7,24 @@ export interface SparkToolContext {
   signal?: AbortSignal;
 }
 
+export type SparkBlock =
+  { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+
+export class SparkBlocks {
+  readonly blocks: readonly SparkBlock[];
+
+  constructor(blocks: readonly SparkBlock[]) {
+    this.blocks = blocks;
+  }
+}
+
 export interface SparkTool {
   name: string;
   title: string;
   description: string;
   acts?: boolean;
   privateData?: boolean;
+  needsBrowser?: boolean;
   input: z.ZodRawShape;
   run(args: unknown, context: SparkToolContext): Promise<unknown>;
 }

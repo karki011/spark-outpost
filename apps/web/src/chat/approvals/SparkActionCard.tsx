@@ -190,6 +190,16 @@ function Facts({ action }: { action: SparkAction }) {
     case 'switch_mcp_server':
     case 'remove_mcp_server':
       return <McpActionFacts action={action} />;
+    case 'read_page':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Page">
+            {action.origin}
+            {action.path}
+          </Fact>
+          {action.title && <Fact label="Title">{action.title}</Fact>}
+        </dl>
+      );
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -218,12 +228,18 @@ function byline(action: SparkAction, agent: string): string {
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
   }
+  if (action.action === 'read_page') {
+    return `${agent} wants to read a page you opened in the browser.`;
+  }
   return `${agent} asks Spark to do this for you.`;
 }
 
 function confirmNote(action: SparkAction): string {
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
+  }
+  if (action.action === 'read_page') {
+    return 'The site is outside your project, so Spark treats what it says as untrusted. Allowing covers this site for the rest of this chat.';
   }
   if (editableFields(action.action).length === 0) {
     return 'Nothing happens until you confirm. Spark does it as soon as you confirm, even after the agent has finished.';

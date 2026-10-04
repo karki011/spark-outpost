@@ -24,6 +24,7 @@ import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
 import { startPrFollowUp } from '../pr-follow-up/poller.ts';
 import { pollNowForApproval } from '../persistence/pr-watches.ts';
+import { connectDesktopBrowser } from '../browser/host-client.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
@@ -42,6 +43,7 @@ const intake = createIntakeRecorder({
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
+const desktopBrowser = connectDesktopBrowser(process.env, process);
 const sparkDeps: SparkToolDeps = {
   db,
   secrets,
@@ -59,8 +61,10 @@ const sparkDeps: SparkToolDeps = {
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
   codeScan,
+  browser: desktopBrowser?.host,
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
+desktopBrowser?.blockPorts([sparkTools.port]);
 const sparkActions = await startSparkActionFollowThrough(sparkDeps);
 const worker = startWorker({
   db,

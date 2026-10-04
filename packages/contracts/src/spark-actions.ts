@@ -147,6 +147,14 @@ export const updateTeammateActionSchema = z.object({
   changed: z.array(z.string()).max(20),
 });
 
+export const readPageActionSchema = z.object({
+  action: z.literal('read_page'),
+  origin: z.string().max(300),
+  path: z.string().max(500),
+  title: z.string().max(300),
+  what: z.enum(['read', 'screenshot', 'logs']),
+});
+export type ReadPageAction = z.infer<typeof readPageActionSchema>;
 export const postSlackActionSchema = z.object({
   action: z.literal('post_slack'),
   channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
@@ -169,6 +177,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
+  readPageActionSchema,
   postSlackActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
@@ -203,6 +212,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   update_mcp_server: [],
   switch_mcp_server: [],
   remove_mcp_server: [],
+  read_page: [],
   post_slack: ['body'],
 };
 
@@ -233,6 +243,7 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   update_mcp_server: { question: 'Change this MCP server?', confirm: 'Save changes' },
   switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
   remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
+  read_page: { question: 'Let the agent read this page?', confirm: 'Allow for this chat' },
   post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
 };
 

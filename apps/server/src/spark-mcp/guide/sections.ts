@@ -227,9 +227,9 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages, the queue and messages to crew members: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
-Spend: spark_spend. Trends and outcomes: spark_analytics. Model cards: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, Slack: spark_connectors. Slack threads and search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks, @Spark jobs and replies: spark_sparks, spark_chat. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
+    text: `Needs me? spark_attention. Live run, crew, pieces, Jev decisions: spark_run. Plan, files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend. Trends, outcomes: spark_analytics. Model cards: spark_models.
+Agents: spark_providers. GitHub, Jira, Linear, Slack: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code search: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser pane: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs.`,
   },
   {
     id: 'compaction',
@@ -299,9 +299,13 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
     id: 'desktop-app',
     title: 'The desktop app (Electron)',
     keywords: ['desktop', 'electron', 'app', 'packaging'],
-    text: `Spark Outpost's desktop shell is Electron, kept deliberately thin: the same React web app runs in the renderer, while the API server and workflow worker run in their own processes (never in Electron's main process), and PostgreSQL is bundled and started as a child process rather than requiring Docker or Homebrew.
-
-Local API calls require a per-launch token so nothing else on your machine can reach them. A separate "Dev" channel (its own app ID, data folder, database, and branch prefix) keeps development builds from ever touching your everyday installed app's data. Packaging (code signing, notarization, auto-update) is the step still ahead of general release.`,
+    text: `The desktop shell is Electron, kept thin: the same web app in the renderer, the API and worker in their own processes, and a bundled PostgreSQL. Local API calls need a per-launch token so nothing else on the machine can reach them. A separate Dev channel (own app ID, data folder, database, branch prefix) never touches the installed app's data.`,
+  },
+  {
+    id: 'browser-pane',
+    title: 'The Browser pane',
+    keywords: ['browser', 'pane', 'page', 'screenshot', 'localhost', 'dev server', 'console'],
+    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere. Agents open local pages only (localhost, *.test, project files) and read them as an outline, text, screenshot or logs. Page content is untrusted. A site the user opened follows the agent mode. Sign-ins are kept per project (Settings → Projects).`,
   },
   {
     id: 'heartbeat',

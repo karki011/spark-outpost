@@ -12,6 +12,16 @@ export interface ServiceOptions {
   cwd: string;
   env: NodeJS.ProcessEnv;
   log: (line: string) => void;
+  connect?: (port: ServicePort) => ServiceLink;
+}
+
+export interface ServicePort {
+  post(message: unknown): void;
+}
+
+export interface ServiceLink {
+  receive(message: unknown): void;
+  close(): void;
 }
 
 export class OutputTail {
@@ -51,9 +61,16 @@ export function forkService(options: ServiceOptions, tail: OutputTail): Supervis
   child.stdout?.on('data', record);
   child.stderr?.on('data', record);
   let running = true;
+  const link = options.connect?.({
+    post: (message) => {
+      if (running) child.postMessage(message);
+    },
+  });
+  if (link) child.on('message', (message: unknown) => link.receive(message));
   const exited = new Promise<number | null>((resolve) => {
     child.once('exit', (code) => {
       running = false;
+      link?.close();
       resolve(code);
     });
   });
