@@ -5,6 +5,7 @@ import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
+import { TalkToChip } from '../../teammates/TalkToChip.tsx';
 import { AgentSetup } from './AgentSetup.tsx';
 import { AutonomyChip, type AutonomyControl } from './AutonomyChip.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
@@ -101,6 +102,7 @@ export function ContextBar({ conversationId, repos, popover, autonomy }: Context
             checkoutBranch={branch}
           />
         )}
+        <TalkToChip conversationId={conversationId} />
         {primary && autonomy && <AutonomyChip {...autonomy} />}
         {primary && <AgentSetup key={primary.id} repos={repos} />}
       </div>
