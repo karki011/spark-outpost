@@ -12,7 +12,11 @@ const providerUrl = z
   .transform((value) => value.replace(/\/$/, ''));
 
 const memorySecretsSchema = z.partialRecord(
-  z.union([connectableIdSchema, z.literal('github'), z.enum(['ticket:linear', 'ticket:jira'])]),
+  z.union([
+    connectableIdSchema,
+    z.literal('github'),
+    z.enum(['ticket:linear', 'ticket:jira', 'slack:bot', 'slack:user', 'slack:app']),
+  ]),
   z.string().min(1),
 );
 
@@ -80,6 +84,11 @@ const configSchema = z.object({
     .regex(/^[A-Za-z0-9-]{0,64}$/)
     .default(''),
   LINEAR_API_URL: providerUrl.optional(),
+  SLACK_API_URL: providerUrl.optional(),
+  SPARK_LINK_SCHEME: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .optional(),
   KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
   BRANCH_PREFIX: z
     .string()

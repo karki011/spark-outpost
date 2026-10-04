@@ -47,6 +47,7 @@ const sparkDeps: SparkToolDeps = {
   secrets,
   fetch,
   linearApiUrl: config.LINEAR_API_URL,
+  slackApiUrl: config.SLACK_API_URL,
   github: {
     runCommand,
     apiUrl: config.GITHUB_API_URL,

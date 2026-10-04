@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
-import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
+import { defaultUpdateChannel, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
+import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import {
   apiPortFile,
@@ -91,6 +92,7 @@ let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
+let pendingLinkChat: string | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
@@ -389,6 +391,9 @@ async function launch(): Promise<void> {
     showSpark,
     quit: () => app.quit(),
   });
+  if (app.isPackaged) app.setAsDefaultProtocolClient(config.linkScheme);
+  if (pendingLinkChat) companionHost.openChat(pendingLinkChat);
+  pendingLinkChat = null;
   void spark?.finished.then(() => companionHost?.companion.resume());
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
 }
@@ -426,6 +431,16 @@ function openSpark(): SparkWindow {
   return opened;
 }
 
+function openLink(url: string | null): void {
+  const chatId = url ? parseSparkChatLink(url, config.linkScheme) : null;
+  if (!chatId) {
+    showSpark();
+    return;
+  }
+  if (companionHost) companionHost.openChat(chatId);
+  else pendingLinkChat = chatId;
+}
+
 function showSpark(): void {
   if (shutdown.failed.aborted) return;
   if (!spark) {
@@ -439,7 +454,11 @@ function showSpark(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', showSpark);
+  app.on('second-instance', (_event, argv) => openLink(linkIn(argv, config.linkScheme)));
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    openLink(url);
+  });
   app.on('activate', showSpark);
   app.on('window-all-closed', () => {
     if (!companionHost?.companion.running()) app.quit();

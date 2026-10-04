@@ -37,6 +37,7 @@ interface CompanionHostOptions {
 
 export interface CompanionHost {
   companion: Companion;
+  openChat(id: string): void;
   dispose(): void;
 }
 
@@ -236,6 +237,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
 
   return {
     companion,
+    openChat,
     dispose: () => {
       companion.shutdown();
       globalShortcut.unregisterAll();

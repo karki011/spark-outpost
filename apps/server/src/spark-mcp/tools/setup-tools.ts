@@ -5,6 +5,7 @@ import {
   ticketSourceIdSchema,
   ticketSourceNames,
   type ProviderSetup,
+  type SlackConnection,
 } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
 import { effectiveFor } from '../../mcp/effective.ts';
@@ -17,7 +18,8 @@ import { fullDiskAccessStatus } from '../../setup/full-disk-access.ts';
 import { gitHubStatus } from '../../ship/github/access.ts';
 import { GITHUB_VIA } from '../../ship/github/connection.ts';
 import { ticketConnections } from '../../tickets/connections.ts';
-import { gitHubDepsFor, ticketDepsFor } from '../deps.ts';
+import { slackStatus } from '../../slack/connection.ts';
+import { gitHubDepsFor, slackDepsFor, ticketDepsFor } from '../deps.ts';
 import { sparkTool, type SparkToolContext } from '../tool.ts';
 import { reportedModel } from '../../providers/reported-model.ts';
 
@@ -84,12 +86,31 @@ async function mcpServers({ deps, scope }: SparkToolContext) {
   }));
 }
 
+function slackFacts(connection: SlackConnection | null) {
+  if (!connection) return { connected: false };
+  return {
+    connected: true,
+    workspace: connection.team,
+    bot: connection.botName,
+    notifies: connection.member?.name ?? null,
+    tokens: connection.tokens,
+    capabilities: connection.capabilities,
+    allowedChannels: connection.allowedChannels.map((channel) => `#${channel.name}`),
+    notify: connection.settings.notify,
+    quietWhenFocused: connection.settings.quietWhenFocused,
+    postUpdatesToThread: connection.settings.postUpdatesToThread,
+    checkedAt: connection.validatedAt,
+    ...(connection.lastProblem ? { lastProblem: connection.lastProblem } : {}),
+  };
+}
+
 async function connectors(context: SparkToolContext) {
   const { deps, scope } = context;
-  const [tickets, github, mcp] = await Promise.all([
+  const [tickets, github, mcp, slack] = await Promise.all([
     ticketConnections(ticketDepsFor(deps, scope)),
     gitHubStatus(gitHubDepsFor(deps, scope)),
     mcpServers(context),
+    slackStatus(slackDepsFor(deps, scope)),
   ]);
   const ticketSources = ticketSourceIdSchema.options.map((source) => {
     const connection = tickets.connections.find((entry) => entry.source === source);
@@ -135,7 +156,8 @@ async function connectors(context: SparkToolContext) {
     },
     tickets: ticketSources,
     mcpServers: mcp,
-    note: 'Spark connects GitHub, Jira and Linear itself; other services (for example Slack) only as MCP servers.',
+    slack: slackFacts(slack.connection),
+    note: 'Spark connects GitHub, Jira, Linear and Slack itself; other services only as MCP servers.',
   };
 }
 
@@ -199,7 +221,7 @@ export const setupTools = [
     name: 'spark_connectors',
     title: 'Connectors',
     description:
-      "Whether GitHub, Jira and Linear are connected (account, site, last check) and the user's MCP servers (on or off, last connection test). Never returns tokens.",
+      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens.",
     input: {},
     run: (_args, context) => connectors(context),
   }),

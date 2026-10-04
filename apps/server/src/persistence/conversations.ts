@@ -294,7 +294,7 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | undefined;
+  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | undefined;
 };
 
 export async function sendUserMessage(

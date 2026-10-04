@@ -3,7 +3,10 @@ import type { Config } from '../config.ts';
 import { keychainCache, nativeKeyring, type Keyring, type KeychainTiming } from './keychain.ts';
 
 export type TicketSecretId = `ticket:${TicketSourceId}`;
-export type SecretId = ConnectableId | 'github' | 'github-app' | TicketSecretId | `mcp:${string}`;
+export type SlackSecretId = 'slack:bot' | 'slack:user' | 'slack:app';
+export const SLACK_SECRET_IDS: readonly SlackSecretId[] = ['slack:bot', 'slack:user', 'slack:app'];
+export type SecretId =
+  ConnectableId | 'github' | 'github-app' | TicketSecretId | SlackSecretId | `mcp:${string}`;
 
 export interface SecretStore {
   set(provider: SecretId, secret: string): Promise<void>;
@@ -19,7 +22,7 @@ function account(provider: SecretId): string {
   if (provider.startsWith('mcp:')) return provider;
   if (provider === 'github') return 'github:token';
   if (provider === 'github-app') return 'github:app';
-  if (provider.startsWith('ticket:')) return `${provider}:token`;
+  if (provider.startsWith('ticket:') || provider.startsWith('slack:')) return `${provider}:token`;
   return `${provider}:api_key`;
 }
 

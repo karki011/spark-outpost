@@ -13,6 +13,7 @@ import {
   switchMcpServerActionSchema,
   updateMcpServerActionSchema,
 } from './spark-mcp-actions.ts';
+import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
@@ -146,6 +147,14 @@ export const updateTeammateActionSchema = z.object({
   changed: z.array(z.string()).max(20),
 });
 
+export const postSlackActionSchema = z.object({
+  action: z.literal('post_slack'),
+  channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
+  threadTs: z.string().nullable(),
+  permalink: z.string().nullable(),
+  body: z.string().trim().min(1).max(SLACK_POST_TEXT_MAX),
+});
+
 export const sparkActionSchema = z.discriminatedUnion('action', [
   createTicketActionSchema,
   commentTicketActionSchema,
@@ -160,6 +169,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
+  postSlackActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -193,6 +203,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   update_mcp_server: [],
   switch_mcp_server: [],
   remove_mcp_server: [],
+  post_slack: ['body'],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -222,6 +233,7 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   update_mcp_server: { question: 'Change this MCP server?', confirm: 'Save changes' },
   switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
   remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
+  post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
 };
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);

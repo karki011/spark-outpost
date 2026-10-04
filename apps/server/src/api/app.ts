@@ -31,6 +31,7 @@ import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
 import { teammateRoutes } from './teammate-routes.ts';
+import { slackRoutes, type SlackRouteDeps } from './slack-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
 import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
@@ -43,6 +44,7 @@ export interface AppOptions
     SetupDeps,
     ShipRouteDeps,
     TicketRouteDeps,
+    Pick<SlackRouteDeps, 'slackApiUrl' | 'slackNotifier' | 'slackSocket'>,
     ChatSettingsDeps,
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
@@ -93,6 +95,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', prFollowUpRoutes(options));
   app.use('/api', ticketRoutes(options));
   app.use('/api', chatTicketRoutes(options));
+  app.use('/api', slackRoutes(options));
   app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));

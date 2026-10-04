@@ -149,6 +149,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
     files: ['package.json', 'dist/**', 'assets/**'],
     afterPack: (context) =>
       copyRuntime(options.stageDir, Arch[context.arch] as MacArch, resourcesDir(context)),
+    protocols: [{ name: prod.appName, schemes: [prod.linkScheme] }],
     artifactName: 'Spark-Outpost-${version}-${arch}.${ext}',
     generateUpdatesFilesForAllChannels: true,
     publish: feed ? [{ provider: 'generic', url: feed }] : null,

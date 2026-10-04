@@ -10,18 +10,19 @@ Your chats, settings and code stay on your computer, and keys live in your syste
 
 ## What leaves your computer
 
-| Goes to                               | What                                                                                     | Stop it                                           |
-| ------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| **Your AI provider**                  | Your messages, and the files and command output the agent reads.                         | Use [`.sparkignore`](sparkignore.md) for files    |
-| **Jev**, if connected                 | Short, redacted facts about a request. Diffs and short file previews. Map file contents. | See [what Jev reads](jev.md#what-jev-reads)       |
-| **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them.                                                    | Disconnect them                                   |
-| **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat) |
+| Goes to                               | What                                                                                     | Stop it                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Your AI provider**                  | Your messages, and the files and command output the agent reads.                         | Use [`.sparkignore`](sparkignore.md) for files                   |
+| **Jev**, if connected                 | Short, redacted facts about a request. Diffs and short file previews. Map file contents. | See [what Jev reads](jev.md#what-jev-reads)                      |
+| **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them.                                                    | Disconnect them                                                  |
+| **Slack**                             | Notifications, posts you confirm.                                                        | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
+| **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 Without Jev, nothing is sent to TypeSafe.
 
 ## Where your keys live
 
-- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider keys, the Jev key, and GitHub, Jira, Linear and MCP tokens.
+- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider keys, the Jev key, and GitHub, Jira, Linear, Slack and MCP tokens.
 - Spark's database keeps only a masked hint. Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI. Spark never reads or stores it.
 
@@ -42,4 +43,4 @@ If a run reads private data, Spark asks before anything in that run [sends data 
 
 ## When you reset
 
-**Settings → Reset** removes GitHub, ticket and MCP tokens. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).
+**Settings → Reset** removes GitHub, ticket, Slack and MCP tokens. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).

@@ -29,8 +29,7 @@ test('Settings connects Jira after a visible check and collapses into a summary'
   await openConnectors(page);
   const cards = page.locator('.cgrid > li');
   await expect(cards.nth(1)).toHaveAttribute('data-connector', 'jira');
-  await expect(cards.nth(3)).toContainText('Coming soon');
-  await expect(cards.nth(3).getByRole('button')).toHaveCount(0);
+  await expect(cards.nth(3)).toHaveAttribute('data-connector', 'slack');
   const jira = connectorCard(page, 'jira');
   await expect(connectorHead(jira)).toHaveAttribute('aria-expanded', 'false');
   await expect(connectorHead(connectorCard(page, 'linear'))).toHaveAttribute(

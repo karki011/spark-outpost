@@ -30,11 +30,13 @@ import {
 export class ApiError extends Error {
   readonly status: number;
   readonly url: string | null;
+  readonly body: unknown;
 
-  constructor(status: number, message: string, url: string | null = null) {
+  constructor(status: number, message: string, url: string | null = null, body: unknown = null) {
     super(message);
     this.status = status;
     this.url = url;
+    this.body = body;
   }
 }
 
@@ -66,7 +68,7 @@ export async function request<T>(
       typeof payload.error === 'string'
         ? payload.error
         : `The server responded with ${response.status}.`;
-    throw new ApiError(response.status, message, url);
+    throw new ApiError(response.status, message, url, payload);
   }
   return schema.parse(payload);
 }

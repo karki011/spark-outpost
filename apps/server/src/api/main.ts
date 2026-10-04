@@ -29,6 +29,9 @@ import { gitHubDepsOf } from './ship-routes.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
+import { resolveRunTarget } from './run-target.ts';
+import { startSlackNotifier } from '../slack/notifier.ts';
+import { startSlackSocket } from '../slack/socket.ts';
 import { pruneOldRows } from './startup-prune.ts';
 
 const apiToken = takeLaunchToken(
@@ -52,10 +55,16 @@ const terminals = new TerminalSessions(
   shellRegistry(db, workspaceId),
 );
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
-const appEvents = new AppEventFeed();
-const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 
 const secrets = configuredSecretStore(config);
+const slackDeps = { db, workspaceId, secrets, fetch, slackApiUrl: config.SLACK_API_URL };
+const slackNotifier = startSlackNotifier(slackDeps, { linkScheme: config.SPARK_LINK_SCHEME });
+const slackSocket = startSlackSocket({
+  ...slackDeps,
+  runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
+});
+const appEvents = new AppEventFeed(undefined, (event) => slackNotifier.changed(event));
+const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const endpoints = {
   anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
   openaiBaseUrl: config.OPENAI_BASE_URL,
@@ -93,6 +102,9 @@ const app = createApp({
   githubApiUrl: config.GITHUB_API_URL,
   githubApp,
   linearApiUrl: config.LINEAR_API_URL,
+  slackApiUrl: config.SLACK_API_URL,
+  slackNotifier,
+  slackSocket,
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
@@ -122,6 +134,7 @@ const morningBrief = config.MORNING_BRIEF
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
   void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
+  void slackSocket.refresh();
 });
 attachTerminalSockets(server, terminals, {
   port: config.API_PORT,
@@ -134,6 +147,8 @@ const shutdown = async () => {
   stopLagMonitor();
   outcomeSweep.stop();
   morningBrief?.stop();
+  slackSocket.stop();
+  await slackNotifier.stop();
   server.close();
   server.closeAllConnections();
   await listener.close();

@@ -37,6 +37,7 @@ import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
 import { ticketErrorStatus } from './ticket-routes.ts';
+import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -158,6 +159,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     outcomeErrorStatus(error) ??
     shipErrorStatus(error) ??
     ticketErrorStatus(error) ??
+    slackErrorStatus(error) ??
     teammateErrorStatus(error) ??
     queueErrorStatus(error);
   if (known) return known;
