@@ -130,7 +130,8 @@ export async function linkAttachments(
 export async function pruneUnlinkedAttachments(db: Queryable, workspaceId: string): Promise<void> {
   await db.query(
     `DELETE FROM attachments WHERE workspace_id = $1 AND message_id IS NULL
-       AND created_at < now() - interval '1 day'`,
+       AND created_at < now() - interval '1 day'
+       AND NOT EXISTS (SELECT 1 FROM browser_screenshots s WHERE s.attachment_id = attachments.id)`,
     [workspaceId],
   );
 }

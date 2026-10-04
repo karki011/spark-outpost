@@ -79,8 +79,8 @@ async function insertProject(
   const inserted = await client.query<ProjectRow>(
     `INSERT INTO projects
        (id, workspace_id, name, root_path, created_at, command_allowlist, check_commands,
-        parallel_pieces, piece_slots, work_place)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        parallel_pieces, piece_slots, work_place, browser_keep_sign_ins)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      ON CONFLICT DO NOTHING RETURNING ${PROJECT_COLUMNS}`,
     [
       project.id,
@@ -93,6 +93,7 @@ async function insertProject(
       project.parallelPieces ?? true,
       project.pieceSlots ?? PIECE_SLOTS_MAX,
       project.workPlace ?? DEFAULT_WORK_PLACE,
+      project.browserKeepSignIns ?? true,
     ],
   );
   if (inserted.rows[0]) return inserted.rows[0];

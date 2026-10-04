@@ -146,6 +146,15 @@ export const updateTeammateActionSchema = z.object({
   changed: z.array(z.string()).max(20),
 });
 
+export const readPageActionSchema = z.object({
+  action: z.literal('read_page'),
+  origin: z.string().max(300),
+  path: z.string().max(500),
+  title: z.string().max(300),
+  what: z.enum(['read', 'screenshot', 'logs']),
+});
+export type ReadPageAction = z.infer<typeof readPageActionSchema>;
+
 export const sparkActionSchema = z.discriminatedUnion('action', [
   createTicketActionSchema,
   commentTicketActionSchema,
@@ -160,6 +169,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
+  readPageActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -193,6 +203,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   update_mcp_server: [],
   switch_mcp_server: [],
   remove_mcp_server: [],
+  read_page: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -222,6 +233,7 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   update_mcp_server: { question: 'Change this MCP server?', confirm: 'Save changes' },
   switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
   remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
+  read_page: { question: 'Let the agent read this page?', confirm: 'Allow for this chat' },
 };
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);

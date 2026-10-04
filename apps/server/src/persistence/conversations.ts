@@ -22,6 +22,7 @@ import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
+import { listBrowserShots } from './browser-screenshots.ts';
 import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
@@ -214,6 +215,7 @@ export async function getConversationDetail(
     queue,
     memberMessages,
     railFlags,
+    browserShots,
   ] = await Promise.all([
     db.query<MessageRow>(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
@@ -238,6 +240,7 @@ export async function getConversationDetail(
     listQueue(db, id),
     listMemberMessages(db, id),
     listRailFlags(db, id),
+    listBrowserShots(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -262,6 +265,7 @@ export async function getConversationDetail(
     queue,
     memberMessages,
     railFlags,
+    ...(browserShots.length > 0 ? { browserShots } : {}),
   };
 }
 

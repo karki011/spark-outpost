@@ -186,6 +186,7 @@ export const updateProjectRequestSchema = z
     parallelPieces: z.boolean().optional(),
     pieceSlots: pieceSlotsSchema.optional(),
     workPlace: workPlaceSchema.optional(),
+    browserKeepSignIns: z.boolean().optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined));
 export type UpdateProjectRequest = z.input<typeof updateProjectRequestSchema>;

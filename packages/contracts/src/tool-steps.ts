@@ -39,6 +39,11 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_update_mcp_server: 'Changing an MCP server',
   spark_switch_mcp_server: 'Switching an MCP server',
   spark_remove_mcp_server: 'Removing an MCP server',
+  spark_browser_open: 'Opening a page in the browser',
+  spark_browser_tabs: 'Looking at browser tabs',
+  spark_browser_read: 'Reading a page',
+  spark_browser_screenshot: 'Taking a screenshot of a page',
+  spark_browser_logs: 'Reading page logs',
 };
 
 const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
