@@ -86,6 +86,7 @@ export class PaneTab {
       owner: this.owner,
       active: this.active,
       pinned: this.pinned,
+      failed: this.error !== null,
       lastUsed: this.lastUsed,
     };
   }

@@ -25,6 +25,11 @@ describe('Spark tools for agent sessions', () => {
     expect(sparkReserved(['notes'])).toEqual(['notes', 'spark', 'spark_outpost']);
   });
 
+  it('knows whether the host has the Browser pane', () => {
+    expect(openSparkTools(access, scope, [])?.browser).toBe(false);
+    expect(openSparkTools({ ...access, browser: true }, scope, [])?.browser).toBe(true);
+  });
+
   it('sends Claude an HTTP server with the session token, but nothing to Codex or agents without HTTP', () => {
     const tools = openSparkTools(access, scope, []);
     expect(sparkAcpServer(tools, agentDefinitions.claude, withHttp)).toEqual({

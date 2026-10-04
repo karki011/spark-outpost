@@ -5,11 +5,12 @@ import { SPARK_MCP_NAME } from '../../spark-mcp/server.ts';
 import type { AgentDefinition } from './agents.ts';
 import { supportsTransport, type NamedMcpServer } from './repo-session.ts';
 
-export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'>;
+export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> & Partial<Pick<SparkMcpHost, 'browser'>>;
 
 export interface SparkTools {
   name: string;
   grant: SparkGrant;
+  browser: boolean;
 }
 
 const FALLBACK_NAME = 'spark_outpost';
@@ -22,7 +23,7 @@ export function openSparkTools(
 ): SparkTools | null {
   if (!access || !scope) return null;
   const name = reserved.includes(SPARK_MCP_NAME) ? FALLBACK_NAME : SPARK_MCP_NAME;
-  return { name, grant: access.grant(scope) };
+  return { name, grant: access.grant(scope), browser: access.browser === true };
 }
 
 export function sparkReserved(reserved: readonly string[]): string[] {
