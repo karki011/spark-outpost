@@ -1,5 +1,6 @@
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
+  DEFAULT_BUSY_ENTER,
   DEFAULT_WIDE_WINDOW,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
@@ -59,6 +60,7 @@ import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { useChatSend } from './send/use-chat-send.ts';
 import { QueueStrip } from './queue/QueueStrip.tsx';
+import { sendNowStatus } from './queue/send-choice.ts';
 import { queueMode } from './queue/queue-model.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
 import { activeRun } from './turns.ts';
@@ -286,7 +288,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
               busy={running !== null}
               sending={sends.sending}
-              error={stop.error}
+              error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
+              notice={sendNowStatus({
+                memberMessages: detail.data?.memberMessages,
+                runs: detail.data?.runs ?? NO_RUNS,
+              })}
               stopping={stop.stopping}
               attachments={attachments}
               quotes={quotes}
@@ -295,6 +301,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               }}
               onStop={stop.stop}
               onQueue={queue.add}
+              onSendNow={queue.sendFirst}
+              busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}

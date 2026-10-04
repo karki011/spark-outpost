@@ -94,4 +94,14 @@ describe('Spark preferences', () => {
     expect(kept.body.profile.wideWindow).toBe('panel');
     await send('patch', '/api/profile', { wideWindow: 'sideways' }).expect(400);
   });
+
+  it('remembers what Enter does while the agent is working and refuses an unknown action', async () => {
+    const { get, send } = localClient(createTestApp(t));
+    expect((await get('/api/setup').expect(200)).body.profile.busyEnter).toBe('queue');
+    const { body } = await send('patch', '/api/profile', { busyEnter: 'now' }).expect(200);
+    expect(body.profile.busyEnter).toBe('now');
+    const kept = await send('patch', '/api/profile', { displayName: 'Hazel' }).expect(200);
+    expect(kept.body.profile.busyEnter).toBe('now');
+    await send('patch', '/api/profile', { busyEnter: 'later' }).expect(400);
+  });
 });

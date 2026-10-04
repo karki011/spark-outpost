@@ -104,29 +104,30 @@ async function topRuns(conversationId: string) {
   return rows;
 }
 
+async function answerPending(conversationId: string) {
+  const detail = await getConversationDetail(t.db, conversationId);
+  for (const approval of detail?.approvals ?? []) {
+    if (approval.status !== 'pending') continue;
+    const decision = answerEverything(approval);
+    if (!decision) continue;
+    await decideApproval(t.db, t.workspaceId, approval.id, {
+      scope: 'once',
+      ...decision,
+    }).catch((error: unknown) => {
+      if (!(error instanceof ApprovalConflictError)) throw error;
+    });
+  }
+}
+
 async function settle(conversationId: string) {
   return eventually(async () => {
     const runs = await topRuns(conversationId);
     const busy = runs.some((run) =>
       ['queued', 'running', 'awaiting_approval'].includes(run.status),
     );
-    if (busy) {
-      const detail = await getConversationDetail(t.db, conversationId);
-      for (const approval of detail?.approvals ?? []) {
-        if (approval.status !== 'pending') continue;
-        const decision = answerEverything(approval);
-        if (decision) {
-          await decideApproval(t.db, t.workspaceId, approval.id, {
-            scope: 'once',
-            ...decision,
-          }).catch((error: unknown) => {
-            if (!(error instanceof ApprovalConflictError)) throw error;
-          });
-        }
-      }
-      return null;
-    }
-    return runs;
+    if (!busy) return runs;
+    await answerPending(conversationId);
+    return null;
   }, 90_000);
 }
 
@@ -289,7 +290,7 @@ describe('the chat queue', { timeout: 150_000 }, () => {
     expect((await post(`/api/runs/${runId}/cancel`, {})).status).toBeLessThan(300);
     await eventually(async () => (await topRuns(conversationId))[0]?.status === 'cancelled');
     await new Promise((resolve) => setTimeout(resolve, 1_500));
-    expect(await topRuns(conversationId)).toHaveLength(1);
+    expect(await settle(conversationId)).toHaveLength(1);
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.queue?.map((item) => item.id)).toEqual([id]);
     const sent = await post(`/api/conversations/${conversationId}/queue/${id}/send-now`, {});
@@ -307,5 +308,154 @@ describe('the chat queue', { timeout: 150_000 }, () => {
     expect(await memberMessage(id)).toMatchObject({ delivered_run_id: builder.id });
     const { orchestration } = await driveToEnd(t, conversationId, runId, answerEverything, 90_000);
     expect(orchestration.status).toBe('succeeded');
+  });
+});
+
+describe('Send now from the composer', { timeout: 150_000 }, () => {
+  const sendNow = (conversationId: string, body: object) =>
+    post(`/api/conversations/${conversationId}/queue/send-now`, body);
+
+  async function stored(id: string) {
+    const { rows } = await t.db.query<{ messages: number; notes: number; queued: number }>(
+      `SELECT (SELECT count(*)::int FROM messages WHERE id = $1) AS messages,
+         (SELECT count(*)::int FROM member_messages WHERE id = $1) AS notes,
+         (SELECT count(*)::int FROM chat_queue WHERE id = $1) AS queued`,
+      [id],
+    );
+    return rows[0];
+  }
+
+  it('stops a turn whose agent cannot steer, sends the message first and keeps the queue in order', async () => {
+    const { conversationId, runId } = await startManual();
+    await waitingBuilder(conversationId, runId);
+    const [first, second, now] = [randomUUID(), randomUUID(), randomUUID()];
+    await post(`/api/conversations/${conversationId}/queue`, { id: first, content: 'First' });
+    await post(`/api/conversations/${conversationId}/queue`, { id: second, content: 'Second' });
+    const sent = await sendNow(conversationId, { id: now, content: 'Right now' });
+    expect(sent.status).toBe(202);
+    expect(sent.body).toMatchObject({
+      outcome: 'steering',
+      queue: [{ id: first }, { id: second }],
+    });
+    const again = await sendNow(conversationId, { id: now, content: 'Right now' });
+    expect(again.body).toMatchObject({
+      outcome: 'steering',
+      queue: [{ id: first }, { id: second }],
+    });
+    expect(await stored(now)).toEqual({ messages: 0, notes: 1, queued: 0 });
+
+    await eventually(async () => (await memberMessage(now))?.status !== 'queued', 30_000);
+    const runs = await eventually(async () => {
+      await answerPending(conversationId);
+      const started = await topRuns(conversationId);
+      return started.length >= 3 ? started : null;
+    }, 120_000);
+    expect(runs[0]?.status).toBe('cancelled');
+    expect(runs.slice(1, 3).map((run) => run.user_message_id)).toEqual([now, first]);
+    const waiting = (await getConversationDetail(t.db, conversationId))?.queue ?? [];
+    expect([
+      ...runs.slice(3).map((run) => run.user_message_id),
+      ...waiting.map((item) => item.id),
+    ]).toEqual([second]);
+    await settle(conversationId);
+    expect(await memberMessage(now)).toMatchObject({ status: 'sent' });
+    expect(await stored(now)).toEqual({ messages: 1, notes: 1, queued: 0 });
+  });
+
+  it('steers a running turn whose agent supports it, without a turn of its own', async () => {
+    const { conversationId, runId } = await startManual({ agentEnv: { FAKE_ACP_STEERING: '1' } });
+    const builder = await waitingBuilder(conversationId, runId);
+    const later = randomUUID();
+    const now = randomUUID();
+    await post(`/api/conversations/${conversationId}/queue`, { id: later, content: 'Later' });
+    const sent = await sendNow(conversationId, { id: now, content: 'Use UTC.' });
+    expect(sent.body).toMatchObject({ outcome: 'steering', queue: [{ id: later }] });
+    await eventually(async () => (await memberMessage(now))?.status === 'delivered', 30_000);
+    expect(await memberMessage(now)).toMatchObject({ delivered_run_id: builder.id });
+
+    const runs = await eventually(async () => {
+      const settled = await settle(conversationId);
+      return settled.length === 2 ? settled : null;
+    }, 120_000);
+    expect(runs.map((run) => run.status)).toEqual(['succeeded', 'succeeded']);
+    expect(runs.map((run) => run.user_message_id)).not.toContain(now);
+    expect(runs[1]?.user_message_id).toBe(later);
+
+    const repeated = await sendNow(conversationId, { id: now, content: 'Use UTC.' });
+    expect(repeated.status).toBe(202);
+    expect(await topRuns(conversationId)).toHaveLength(2);
+    expect(await stored(now)).toEqual({ messages: 0, notes: 1, queued: 0 });
+  });
+
+  it('sends straight away when no turn is running, ahead of a paused queue', async () => {
+    const { conversationId, runId } = await startManual();
+    await waitingBuilder(conversationId, runId);
+    const later = randomUUID();
+    await post(`/api/conversations/${conversationId}/queue`, { id: later, content: 'Later' });
+    await post(`/api/runs/${runId}/cancel`, {});
+    await eventually(async () => (await topRuns(conversationId))[0]?.status === 'cancelled');
+    const now = randomUUID();
+    const sent = await sendNow(conversationId, { id: now, content: 'Go on with this' });
+    expect(sent.body).toMatchObject({ outcome: 'sent', queue: [{ id: later }] });
+    await sendNow(conversationId, { id: now, content: 'Go on with this' });
+    const runs = await topRuns(conversationId);
+    expect(runs.map((run) => run.user_message_id).slice(1)).toEqual([now]);
+    expect(await stored(now)).toEqual({ messages: 1, notes: 0, queued: 0 });
+    await post(`/api/runs/${runs[1]!.id}/cancel`, {});
+    await eventually(async () => (await topRuns(conversationId))[1]?.status === 'cancelled');
+  });
+
+  it('stores nothing when the request is refused', async () => {
+    const { conversationId, runId } = await startManual();
+    await waitingBuilder(conversationId, runId);
+    const id = randomUUID();
+    expect((await sendNow(conversationId, { id, content: '   ' })).status).toBe(400);
+    expect((await sendNow(conversationId, { id: 'nope', content: 'Hello' })).status).toBe(400);
+    expect((await sendNow(randomUUID(), { id, content: 'Hello' })).status).toBe(404);
+    expect(await stored(id)).toEqual({ messages: 0, notes: 0, queued: 0 });
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.memberMessages).toEqual([]);
+    expect(await settle(conversationId)).toHaveLength(1);
+  });
+
+  it('keeps a message whose turn died with its worker and sends it once, before the queue', async () => {
+    const { conversationId, runId } = await startScenario(
+      t,
+      root,
+      NORMAL,
+      'hands-off',
+      'auto',
+      'sonnet',
+      'default',
+    );
+    await t.db.query(`UPDATE runs SET status = 'running' WHERE id = $1`, [runId]);
+    await t.db.query(
+      `UPDATE jobs SET status = 'leased', attempts = 1, lease_token = $2,
+         lease_expires_at = now() - interval '1 minute' WHERE run_id = $1`,
+      [runId, randomUUID()],
+    );
+    const later = randomUUID();
+    const now = randomUUID();
+    await post(`/api/conversations/${conversationId}/queue`, { id: later, content: 'Later' });
+    const sent = await sendNow(conversationId, { id: now, content: 'Right now' });
+    expect(sent.body).toMatchObject({ outcome: 'steering', queue: [{ id: later }] });
+    expect(await memberMessage(now)).toMatchObject({ status: 'queued' });
+
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), { sessions });
+    await eventually(async () => (await memberMessage(now))?.status === 'sent', 120_000);
+    const runs = await eventually(async () => {
+      const settled = await settle(conversationId);
+      return settled.some((run) => run.user_message_id === now && run.status === 'succeeded')
+        ? settled
+        : null;
+    }, 120_000);
+    expect(runs[1]?.user_message_id).toBe(now);
+    expect(runs.filter((run) => run.user_message_id === now)).toHaveLength(1);
+    const waiting = (await getConversationDetail(t.db, conversationId))?.queue ?? [];
+    expect([
+      ...runs.slice(2).map((run) => run.user_message_id),
+      ...waiting.map((item) => item.id),
+    ]).toEqual([later]);
+    expect(await stored(now)).toEqual({ messages: 1, notes: 1, queued: 0 });
   });
 });

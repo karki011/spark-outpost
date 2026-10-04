@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ChatUpdate, ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  DEFAULT_BUSY_ENTER,
+  type BusyEnterAction,
+  type ChatUpdate,
+  type ConversationDetail,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { setupApi, setupKey } from '../api/setup.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { ApprovalCard } from '../chat/approvals/ApprovalCard.tsx';
 import { CheckpointCard } from '../chat/checkpoints/CheckpointCard.tsx';
@@ -12,7 +19,9 @@ import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { activeRun } from '../chat/turns.ts';
 import { queuedCount } from '../chat/queue/queue-model.ts';
+import { busyHint, choiceTitle, enterAction } from '../chat/queue/send-choice.ts';
 import { useChatQueue } from '../chat/queue/use-chat-queue.ts';
+import { MAC } from '../ui/shortcuts.ts';
 import { islandApi } from './island-api.ts';
 import { sessionState } from './island-model.ts';
 import { projectLine, StateChip } from './session-bits.tsx';
@@ -21,8 +30,19 @@ import { chatAgent, pendingOf } from './use-island-data.ts';
 
 const RECENT_MESSAGES = 6;
 
-function queuedHint(count: number): string {
-  return count > 0 ? `${queuedCount(count)} · sends when this turn ends` : '';
+const BUSY_LABELS: Record<BusyEnterAction, string> = {
+  queue: 'Queue reply',
+  now: 'Send reply now',
+};
+
+function replyHint(busy: boolean, count: number, preferred: BusyEnterAction): string {
+  if (count > 0) return `${queuedCount(count)} · sends when this turn ends`;
+  return busy ? busyHint(preferred, MAC) : '';
+}
+
+interface ReplySend {
+  content: string;
+  action: BusyEnterAction;
 }
 
 function UpdateBox({ update, pending }: { update: ChatUpdate | undefined; pending: boolean }) {
@@ -104,29 +124,39 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
   const secrets = useSecretGuard(text);
   const queue = useChatQueue(chat.id, detail?.queue);
   const busy = activeRun(detail) !== null;
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const preferred = setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER;
   const send = useMutation({
-    mutationFn: async (content: string) => {
-      if (busy) await queue.add(content);
-      else await api.sendMessage(chat.id, crypto.randomUUID(), content);
+    mutationFn: async ({ content, action }: ReplySend) => {
+      if (!busy) await api.sendMessage(chat.id, crypto.randomUUID(), content);
+      else if (action === 'now') await queue.sendFirst(content);
+      else await queue.add(content);
     },
     onSuccess: () => {
       setText('');
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(chat.id) });
     },
   });
-  const submit = () => {
+  const submit = (action: BusyEnterAction = preferred) => {
     const content = text.trim();
     if (!content || send.isPending || secrets.blocks(text)) return;
-    send.mutate(content);
+    send.mutate({ content, action });
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    submit();
+    submit(enterAction(event, preferred));
   };
+  const busyPlaceholder =
+    preferred === 'now' ? 'Reply to the running turn…' : 'Queue a reply for when this turn ends…';
   return (
     <div className="isl-qc">
-      <SecretWarning guard={secrets} input={inputRef} onText={setText} onSendAnyway={submit} />
+      <SecretWarning
+        guard={secrets}
+        input={inputRef}
+        onText={setText}
+        onSendAnyway={() => submit()}
+      />
       <label className="sr-only" htmlFor={`isl-reply-${chat.id}`}>
         Reply to {chat.title}
       </label>
@@ -134,22 +164,23 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
         id={`isl-reply-${chat.id}`}
         ref={inputRef}
         rows={1}
-        placeholder={busy ? 'Queue a reply for when this turn ends…' : 'Reply…'}
+        placeholder={busy ? busyPlaceholder : 'Reply…'}
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}
       />
       <div className="isl-qc-bar">
         <span className="isl-qc-hint">
-          {send.isPending ? 'Sending…' : queuedHint(queue.items.length)}
+          {send.isPending ? 'Sending…' : replyHint(busy, queue.items.length, preferred)}
         </span>
         <span className="isl-sp" />
         <button
           type="button"
           className="isl-send"
-          aria-label={busy ? 'Queue reply' : 'Send reply'}
+          aria-label={busy ? BUSY_LABELS[preferred] : 'Send reply'}
+          title={busy ? choiceTitle(preferred, preferred, MAC) : undefined}
           disabled={!text.trim() || send.isPending}
-          onClick={submit}
+          onClick={() => submit()}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
             <path

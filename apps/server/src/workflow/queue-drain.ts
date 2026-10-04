@@ -1,10 +1,11 @@
 import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
-import { takeQueued } from '../persistence/chat-queue.ts';
+import { alreadySent, takeQueued } from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import {
+  getMemberMessage,
   insertMemberMessage,
   markMessageSent,
   urgentLeftovers,
@@ -44,7 +45,7 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
 async function sendQueued(
   db: Queryable,
   conversationId: string,
-  item: QueuedMessage,
+  item: Pick<QueuedMessage, 'id' | 'content' | 'continueRunId'>,
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
@@ -99,27 +100,40 @@ export async function drainQueue(
   });
 }
 
-export async function sendQueuedNow(
+export interface SendNowRequest {
+  id: string;
+  content?: string;
+}
+
+export async function sendNow(
   db: Db,
   conversationId: string,
-  id: string,
+  request: SendNowRequest,
   resolveTarget: ResolveTarget,
 ): Promise<SendNowOutcome | null> {
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
     if (!(await lockConversation(client, conversationId))) return null;
-    const item = await takeQueued(client, conversationId, id);
-    if (!item) return null;
+    if (await getMemberMessage(client, request.id)) return 'steering';
+    if (await alreadySent(client, request.id)) return 'sent';
+    const queued = await takeQueued(client, conversationId, request.id);
+    const content = queued?.content ?? request.content;
+    if (content === undefined) return null;
     const running = await activeTurn(client, conversationId);
     if (!running) {
-      await sendQueued(client, conversationId, item, target);
+      await sendQueued(
+        client,
+        conversationId,
+        { id: request.id, content, continueRunId: queued?.continueRunId ?? null },
+        target,
+      );
       return 'sent';
     }
     await insertMemberMessage(client, {
-      id: item.id,
+      id: request.id,
       conversationId,
       runId: running,
-      body: item.content,
+      body: content,
       urgency: 'now',
     });
     return 'steering';

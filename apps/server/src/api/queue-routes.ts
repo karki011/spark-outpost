@@ -18,7 +18,7 @@ import {
   takeQueued,
 } from '../persistence/chat-queue.ts';
 import { MemberMessageError, messageMember } from '../workflow/member-message.ts';
-import { drainQueue, sendQueuedNow, type ResolveTarget } from '../workflow/queue-drain.ts';
+import { drainQueue, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
@@ -98,9 +98,18 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     res.json(await reply(conversationId));
   });
 
+  router.post('/conversations/:id/queue/send-now', async (req, res) => {
+    const conversationId = paramId(req);
+    const request = parseBody(queueAddRequestSchema, req);
+    await known(conversationId);
+    const outcome = await sendNow(db, conversationId, request, resolveTarget);
+    if (!outcome) throw new QueueError(404, 'Conversation not found.');
+    res.status(202).json(await reply(conversationId, outcome));
+  });
+
   router.post('/conversations/:id/queue/:itemId/send-now', async (req, res) => {
     const conversationId = paramId(req);
-    const outcome = await sendQueuedNow(db, conversationId, itemId(req), resolveTarget);
+    const outcome = await sendNow(db, conversationId, { id: itemId(req) }, resolveTarget);
     if (!outcome) throw new QueueError(404, 'That message has already been sent.');
     res.status(202).json(await reply(conversationId, outcome));
   });

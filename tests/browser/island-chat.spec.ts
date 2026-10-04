@@ -126,6 +126,10 @@ test('Sessions lists every active chat and opens one inline to read, approve and
 
   const reply = island(page).getByRole('textbox', { name: 'Reply to Speed up the test suite' });
   await expect(reply).toHaveAttribute('placeholder', 'Queue a reply for when this turn ends…');
+  const mac = await page.evaluate(() => navigator.platform.startsWith('Mac'));
+  await expect(island(page).locator('.isl-qc-hint')).toHaveText(
+    `Enter to queue · ${mac ? '⌘Enter' : 'Ctrl+Enter'} to send now`,
+  );
   await reply.fill('Thanks, carry on');
   await page.keyboard.press('Enter');
   await expect
@@ -135,6 +139,20 @@ test('Sessions lists every active chat and opens one inline to read, approve and
       ),
     )
     .toEqual(['Thanks, carry on']);
+  await expect(island(page).locator('.isl-qc-hint')).toHaveText(
+    '1 queued · sends when this turn ends',
+  );
+
+  await reply.fill('Read this first');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect
+    .poll(async () =>
+      (
+        await sql(`SELECT body, urgency FROM member_messages WHERE conversation_id = $1`, [chatId])
+      ).rows.map((row) => `${row.urgency}: ${row.body}`),
+    )
+    .toEqual(['now: Read this first']);
+  await expect(reply).toHaveValue('');
   await expect(island(page).locator('.isl-qc-hint')).toHaveText(
     '1 queued · sends when this turn ends',
   );
