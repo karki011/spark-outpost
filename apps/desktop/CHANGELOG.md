@@ -2,6 +2,15 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.3
+
+- Browser: a Browser tab in the work panel that you and agents share. Agents open local pages, read them, take screenshots and read console and network logs. Pick an element or drag a region to point at something. Sign-ins are kept per project.
+- Slack: connect your own Slack app for notifications, shared threads as context, confirmed posts and starting work from Slack. Direct messages are readable only when you allow them.
+- GitHub sign-in through the Spark Outpost GitHub App, with no pasted token. The token and gh options remain.
+- While a turn runs, Enter queues a message and ⌘Enter sends it now. A setting flips the default.
+- Tested with Claude and Codex. Z.ai has not been tested with the browser yet.
+- Known: Codex cannot start a dev server in its default mode, and a dev server Claude starts ends with the turn. Start the server yourself for now.
+
 ## 0.1.0-beta.2
 
 - Plan card: "Build this plan?" waits for you in Automatic; Full auto → PR still continues on its own.
