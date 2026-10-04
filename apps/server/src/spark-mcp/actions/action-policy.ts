@@ -46,6 +46,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),
   remove_mcp_server: asked('remove|delete|uninstall|drop', MCP_NOUN),
+  post_slack: asked(
+    'post|send|share|reply|tell|message|notify|announce|update',
+    'slack|channel|thread',
+  ),
 };
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {

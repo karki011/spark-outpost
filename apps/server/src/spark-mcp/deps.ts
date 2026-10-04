@@ -5,6 +5,7 @@ import type { Append } from '../workflow/agent-turn.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
+import type { SlackDeps } from '../slack/connection.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -14,6 +15,7 @@ export interface SparkToolDeps {
   secrets: SecretStore;
   fetch: typeof fetch;
   linearApiUrl?: string | undefined;
+  slackApiUrl?: string | undefined;
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
   serverSpendCapUsd: number | null;
   parallelBuilders?: boolean;
@@ -48,6 +50,16 @@ export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDep
     secrets: deps.secrets,
     fetch: deps.fetch,
     linearApiUrl: deps.linearApiUrl,
+  };
+}
+
+export function slackDepsFor(deps: SparkToolDeps, scope: SparkScope): SlackDeps {
+  return {
+    db: deps.db,
+    workspaceId: scope.workspaceId,
+    secrets: deps.secrets,
+    fetch: deps.fetch,
+    slackApiUrl: deps.slackApiUrl,
   };
 }
 

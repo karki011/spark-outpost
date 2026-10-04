@@ -15,6 +15,7 @@ import {
   performCreateTicket,
   performTransitionTicket,
 } from './ticket-actions.ts';
+import { performPostSlack } from './slack-actions.ts';
 import type { Performed } from './performed.ts';
 
 export function performSparkAction(
@@ -46,6 +47,8 @@ export function performSparkAction(
       return performSwitchMcpServer(context, action);
     case 'remove_mcp_server':
       return performRemoveMcpServer(context, action);
+    case 'post_slack':
+      return performPostSlack(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
   }

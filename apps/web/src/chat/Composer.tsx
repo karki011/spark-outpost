@@ -12,6 +12,7 @@ import {
 } from 'react';
 import {
   MESSAGE_MAX_LENGTH,
+  isSlackMessageUrl,
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
@@ -297,9 +298,11 @@ export function Composer({
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.clipboardData.files);
-    if (files.length === 0) return;
+    const pasted = event.clipboardData.getData('text/plain').trim();
+    if (files.length === 0 && !isSlackMessageUrl(pasted)) return;
     event.preventDefault();
-    attachments.add(files);
+    if (files.length > 0) attachments.add(files);
+    else attachments.addSlack(pasted);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -348,6 +351,7 @@ export function Composer({
           items={attachments.items}
           onRemove={attachments.remove}
           onRetry={attachments.retry}
+          onAllowSlackChannel={attachments.allowSlackChannel}
         />
         <p className="composer-notice" role="status">
           {attachments.notice}

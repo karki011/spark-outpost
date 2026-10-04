@@ -39,6 +39,8 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_update_mcp_server: 'Changing an MCP server',
   spark_switch_mcp_server: 'Switching an MCP server',
   spark_remove_mcp_server: 'Removing an MCP server',
+  spark_slack: 'Reading Slack',
+  spark_slack_post: 'Posting to Slack',
 };
 
 const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
