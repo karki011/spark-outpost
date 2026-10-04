@@ -48,10 +48,11 @@ export interface ReadRequest {
 export async function readPage(cdp: Cdp, refs: RefMap, request: ReadRequest) {
   const rootBackendId = nodeForRef(refs, request.ref);
   const { nodes } = await cdp.send<{ nodes: AxNode[] }>('Accessibility.getFullAXTree');
-  if (request.mode === 'text') {
-    return { ...pageOfLines(pageTextOf(nodes, rootBackendId), request.offset), masked: 0 };
-  }
   const sensitive = new Set(await sensitiveBackendIds(cdp));
+  if (request.mode === 'text') {
+    const lines = pageTextOf(nodes, sensitive, rootBackendId);
+    return { ...pageOfLines(lines, request.offset), masked: 0 };
+  }
   const outline = outlineOf(nodes, { refs, sensitive, rootBackendId });
   if (!outline) throw new PageToolError('no_ref', 'That part of the page is gone. Read it again.');
   return { ...pageOfLines(outline.lines, request.offset), masked: outline.masked };

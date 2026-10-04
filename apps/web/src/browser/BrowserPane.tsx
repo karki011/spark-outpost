@@ -67,17 +67,15 @@ function TabStrip({ chatId, tabs }: { chatId: string; tabs: readonly BrowserPane
   };
   return (
     <div className="bp-tabs">
-      <div className="bp-tablist" role="tablist" aria-label="Browser tabs" onKeyDown={onKeyDown}>
+      <div className="bp-tablist" role="group" aria-label="Browser tabs" onKeyDown={onKeyDown}>
         {tabs.map((tab) => (
           <div key={tab.id} className={tab.active ? 'bp-tab on' : 'bp-tab'}>
             <button
               type="button"
-              role="tab"
               id={`bp-tab-${tab.id}`}
               className="bp-tab-main"
-              aria-selected={tab.active}
+              aria-current={tab.active ? 'page' : undefined}
               aria-controls="bp-view"
-              tabIndex={tab.active ? 0 : -1}
               title={tab.url}
               onClick={() => sendBrowserCommand(chatId, { command: 'select', tabId: tab.id })}
             >
@@ -289,7 +287,7 @@ export function BrowserPane({ home, shown }: BrowserPaneProps) {
         )}
         {tab?.driving && <span className="bp-badge drive">Spark is driving</span>}
       </div>
-      <div className="bp-view" id="bp-view" role="tabpanel" ref={view}>
+      <div className="bp-view" id="bp-view" ref={view}>
         {blank && <StartPage tab={tab} />}
         {!blank && browser.snapshot && (
           <img className="bp-snapshot" src={browser.snapshot} alt="" />

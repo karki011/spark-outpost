@@ -37,9 +37,22 @@ const PAGE: AxNode[] = [
   }),
   node('2t', 'StaticText', 'Sign in', { parentId: '2', dom: 11 }),
   node('3', 'generic', '', { parentId: '1', children: ['4', '5', '6', '7'], dom: 12 }),
-  node('4', 'textbox', 'Email', { parentId: '3', dom: 20, val: 'ada@example.test' }),
-  node('5', 'textbox', 'Password', { parentId: '3', dom: 21, val: 'hunter2' }),
-  node('6', 'textbox', 'Card', { parentId: '3', dom: 22, val: '4242424242424242' }),
+  node('4', 'textbox', 'Email', {
+    parentId: '3',
+    children: ['4t'],
+    dom: 20,
+    val: 'ada@example.test',
+  }),
+  node('4t', 'StaticText', 'ada@example.test', { parentId: '4', dom: 30 }),
+  node('5', 'textbox', 'Password', { parentId: '3', children: ['5t'], dom: 21, val: 'hunter2' }),
+  node('5t', 'StaticText', 'hunter2', { parentId: '5', dom: 31 }),
+  node('6', 'textbox', 'Card', {
+    parentId: '3',
+    children: ['6t'],
+    dom: 22,
+    val: '4242424242424242',
+  }),
+  node('6t', 'StaticText', '4242424242424242', { parentId: '6', dom: 32 }),
   node('7', 'button', 'Continue', {
     parentId: '3',
     children: ['7t'],
@@ -95,8 +108,9 @@ describe('accessibility outline', () => {
   });
 
   it('gives page text without any field values', () => {
-    const lines = pageTextOf(PAGE);
+    const lines = pageTextOf(PAGE, new Set([22]));
     expect(lines).toEqual(['Sign in', 'Continue']);
+    expect(pageTextOf(PAGE).join(' ')).not.toMatch(/hunter2|4242|ada@/);
   });
 
   it('pages lines within the character cap', () => {

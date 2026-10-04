@@ -31,6 +31,7 @@ const VALUE_ROLES = new Set([
   'slider',
   'TextField',
 ]);
+const TEXT_FIELD_ROLES = new Set(['textbox', 'searchbox', 'spinbutton', 'TextField']);
 const SHOWN_PROPERTIES = new Set([
   'level',
   'checked',
@@ -142,6 +143,11 @@ function describe(walk: Walk, node: AxNode): string {
   return parts.join(' ');
 }
 
+function holdsFieldValue(node: AxNode, sensitive: ReadonlySet<number>): boolean {
+  if (node.ignored) return false;
+  return TEXT_FIELD_ROLES.has(roleOf(node)) || isSensitive(node, text(node.name), sensitive);
+}
+
 function isWrapper(node: AxNode): boolean {
   return node.ignored === true || (WRAPPER_ROLES.has(roleOf(node)) && text(node.name) === '');
 }
@@ -157,6 +163,7 @@ function visit(walk: Walk, id: string, depth: number, parent: AxNode | null): vo
   if (SKIPPED_ROLES.has(role) || repeatsParent(node, parent)) return;
   const shown = !isWrapper(node);
   if (shown) walk.lines.push(`${'  '.repeat(depth)}- ${describe(walk, node)}`);
+  if (holdsFieldValue(node, walk.options.sensitive)) return;
   for (const child of node.childIds ?? []) {
     visit(walk, child, shown ? depth + 1 : depth, shown ? node : parent);
   }
@@ -182,7 +189,11 @@ export function outlineOf(nodes: readonly AxNode[], options: OutlineOptions): Ou
   return { lines: walk.lines, masked: walk.masked };
 }
 
-export function pageTextOf(nodes: readonly AxNode[], rootBackendId?: number | null): string[] {
+export function pageTextOf(
+  nodes: readonly AxNode[],
+  sensitive: ReadonlySet<number> = new Set(),
+  rootBackendId?: number | null,
+): string[] {
   const root = rootOf(nodes, rootBackendId);
   if (!root) return [];
   const byId = new Map(nodes.map((node) => [node.nodeId, node]));
@@ -195,6 +206,7 @@ export function pageTextOf(nodes: readonly AxNode[], rootBackendId?: number | nu
   const walk = (id: string, depth: number) => {
     const node = byId.get(id);
     if (!node || depth > DEPTH_MAX * 2) return;
+    if (holdsFieldValue(node, sensitive)) return;
     if (!node.ignored && roleOf(node) === 'StaticText') {
       const words = text(node.name);
       if (words === '') return;

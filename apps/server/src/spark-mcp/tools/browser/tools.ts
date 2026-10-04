@@ -6,6 +6,7 @@ import {
   browserLogKindSchema,
   browserReadModeSchema,
   classifyBrowserUrl,
+  originAndPath,
   redactText,
   untrustedPage,
   type BrowserLogEntry,
@@ -92,7 +93,10 @@ async function tabs(context: SparkToolContext) {
     decision: 'local',
   });
   return {
-    tabs: listed.tabs,
+    tabs: listed.tabs.map((tab) => ({
+      ...tab,
+      url: tab.place === 'external' ? originAndPath(tab.url) : tab.url,
+    })),
     note: `Titles and addresses come from pages. ${UNTRUSTED_PAGE_NOTE}`,
   };
 }

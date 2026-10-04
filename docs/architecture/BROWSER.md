@@ -75,10 +75,23 @@ Allowing the card covers that site for the rest of the chat. The observation fee
 - **External sites for agents:** `agentMayOpen` and `EXTERNAL_NOT_YET` are the two places that refuse today; the read gate and the `web_page` observation already cover external pages.
 - **Test-login vault, downloads:** none built; `will-download` is cancelled in `sessions.ts`.
 - Frames: the outline covers the main frame only.
+- A deleted chat's tabs are dropped only by the idle timer; nothing tells main that a chat is gone.
+- The pane tells main which folders `file://` may load (the chat's projects and worktree); the agent path reads them from the database instead.
 
 ## Fixture site
 
 `pnpm exec tsx tests/fixtures/browser-pane/serve.ts` serves static pages on `127.0.0.1:47611` for checks in the real shell: a form with password and card fields, console errors and a failing fetch, a probe that tries Spark's API, a page with text addressed to the agent, and a link that opens a tab.
+
+## Verified
+
+On 2026-10-04 (Intel Mac, Electron 44.4.5, dev channel, throwaway data folder, driven over a debugging port on that instance only):
+
+- The view follows the pane through panel resize, close and reopen, and is replaced by its snapshot under the Settings dialog.
+- Tabs, popups as tabs, the address bar (local, external and refused addresses), element and region selection landing as attachments.
+- The fixture probe could not reach `/api/health` plain, with a token header, or with `no-cors`; navigating to the API origin was blocked.
+- A cookie set in one project's chat was there after a restart and absent in another project's chat; Settings listed it and **Sign out** removed it.
+- With the pane open on a static page the page's renderer used 0.0% CPU and about 60 to 80 MB; the app's own script time was 0% with the pane open or closed.
+- The outline and text of the fixture form, read with the same CDP calls, masked the password and card fields; a tab that was not showing could still be captured.
 
 ## Not verified
 

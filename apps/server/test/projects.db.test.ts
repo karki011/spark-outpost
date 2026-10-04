@@ -123,6 +123,7 @@ describe('projects', () => {
       parallelPieces: true,
       pieceSlots: 3,
       workPlace: 'checkout',
+      browserKeepSignIns: true,
     });
     const again = await post('/api/projects', { rootPath: root }).expect(200);
     expect(again.body).toEqual(project);

@@ -34,7 +34,7 @@ A site you opened follows the [agent mode](agent-mode.md): in an asking mode, **
 
 1. Select **Select an element for the chat**, then click the element. Or select **Select a region for the chat** and drag a box.
 2. The selection is attached to your message: what it is, its HTML and styles, and a picture.
-3. Write what you want changed and send.
+3. Describe the fix you want and send.
 
 Sign-ins are kept per project. Turn **Keep sign-ins in the browser** off, or sign out of a site, in [Settings](settings.md#other-sections) → **Projects**.
 
