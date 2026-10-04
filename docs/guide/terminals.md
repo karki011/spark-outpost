@@ -37,4 +37,4 @@ Terminals end when you reload the page, quit the app or delete the chat. For the
 
 Agents can see which terminals are open and what program runs in each, never what's on the screen.
 
-**Next:** [Make a Spark](sparks.md)
+**Next:** [Use the browser](use-the-browser.md)

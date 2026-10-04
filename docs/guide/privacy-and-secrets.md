@@ -21,7 +21,7 @@ Without Jev, nothing is sent to TypeSafe.
 
 ## Where your keys live
 
-- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider keys, the Jev key, and GitHub, Jira, Linear and MCP tokens.
+- Keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider, Jev, GitHub, Jira, Linear and MCP.
 - Spark's database keeps only a masked hint. Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI. Spark never reads or stores it.
 
@@ -37,6 +37,7 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 
 - [Secret files](protected-paths.md#secret-files) and anything in `.sparkignore`. Ship leaves them out of commits too.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets and keys.
+- In the [Browser pane](use-the-browser.md): password and card fields. Its cookies stay on this Mac.
 
 If a run reads private data, Spark asks before anything in that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).
 
