@@ -85,9 +85,14 @@ export function FolderDialog({
   useEffect(() => {
     panelRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      wrapTabFocus(event, () => [
-        ...(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
-      ]);
+      const panel = panelRef.current;
+      const buttons = [...(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+      if (event.key === 'Tab' && event.shiftKey && document.activeElement === panel) {
+        event.preventDefault();
+        buttons.at(-1)?.focus();
+        return;
+      }
+      wrapTabFocus(event, () => buttons);
       if (event.key !== 'Escape') return;
       event.stopPropagation();
       onClose();

@@ -188,6 +188,10 @@ test('points standing instructions at a file with the themed picker @packaged', 
   await expect(picker).toBeVisible();
   const use = picker.getByRole('button', { name: 'Use this file' });
   await expect(use).toBeDisabled();
+  await page.keyboard.press('Shift+Tab');
+  await expect(picker.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(picker.getByRole('button', { name: 'Close' })).toBeFocused();
   await browseTo(picker, roles);
 
   const files = picker.getByRole('list', { name: 'Files' });
