@@ -200,13 +200,14 @@ test.describe('plain chats', () => {
     const shortCode = (await page.locator('.md-code').nth(1).boundingBox())!;
     const column = (await page.locator('.col').boundingBox())!;
     const railBox = (await rail(page).boundingBox())!;
-    expect(table.width).toBeGreaterThan(column.width + 150);
-    expect(longCode.width).toBeGreaterThan(column.width + 150);
-    expect(Math.abs(shortCode.width - column.width)).toBeLessThan(2);
-    for (const wide of [table, longCode]) {
-      expect(Math.abs(wide.x + wide.width / 2 - (column.x + column.width / 2))).toBeLessThan(2);
-      expect(wide.x + wide.width).toBeLessThan(railBox.x);
+    expect(column.width).toBeGreaterThan(1000);
+    for (const block of [table, longCode, shortCode]) {
+      expect(Math.abs(block.x - column.x)).toBeLessThan(2);
+      expect(Math.abs(block.width - column.width)).toBeLessThan(2);
+      expect(block.x + block.width).toBeLessThan(railBox.x);
     }
+    const composer = (await page.locator('.composer').boundingBox())!;
+    expect(Math.abs(composer.width - column.width)).toBeLessThan(2);
     const prose = (await page.locator('.md p').first().boundingBox())!;
     expect(prose.width).toBeLessThanOrEqual(column.width);
     expect(await pageScroll(page)).toBe(0);

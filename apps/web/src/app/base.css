@@ -94,7 +94,7 @@ svg {
 }
 
 .main {
-  --chat-col: clamp(700px, 100cqi - 360px, 900px);
+  --chat-col: clamp(700px, max(min(100cqi - 360px, 900px), 100cqi - 496px), 1120px);
   position: relative;
   flex: 1;
   min-width: 0;

@@ -13,11 +13,7 @@
 }
 
 .col {
-  --overhang: clamp(
-    0px,
-    (100cqi - var(--chat-col, 700px)) / 2 - 32px - var(--rail-reserve, 0px),
-    240px
-  );
+  --overhang: 0px;
   max-width: var(--chat-col, 700px);
   margin: 0 auto;
 }
