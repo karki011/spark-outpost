@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { parseAppEvent } from '@spark-outpost/contracts';
+import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
 import { listen, type NotificationListener } from '../persistence/notifications.ts';
 
 const APP_EVENT_CLIENT_LIMIT = 32;
@@ -12,7 +12,10 @@ export class AppEventFeed {
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private available = true;
 
-  constructor(private readonly clientLimit = APP_EVENT_CLIENT_LIMIT) {}
+  constructor(
+    private readonly clientLimit = APP_EVENT_CLIENT_LIMIT,
+    private readonly observe?: (event: AppEvent) => void,
+  ) {}
 
   get clientCount(): number {
     return this.clients.size;
@@ -21,6 +24,7 @@ export class AppEventFeed {
   publish(payload: string): void {
     const event = parseAppEvent(payload);
     if (!event) return;
+    this.observe?.(event);
     this.broadcast(`data: ${JSON.stringify(event)}\n\n`);
   }
 

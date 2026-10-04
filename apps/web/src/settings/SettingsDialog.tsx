@@ -284,7 +284,8 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                   <>
                     <p className="lede">
                       GitHub lets Ship open pull requests and Spark follow up on them. Jira and
-                      Linear bring your tickets into Spark. Slack isn't ready yet.
+                      Linear bring your tickets into Spark. Slack notifies you, shares threads as
+                      context and takes updates.
                     </p>
                     <ConnectorGrid />
                   </>

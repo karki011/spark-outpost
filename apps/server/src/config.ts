@@ -12,7 +12,11 @@ const providerUrl = z
   .transform((value) => value.replace(/\/$/, ''));
 
 const memorySecretsSchema = z.partialRecord(
-  z.union([connectableIdSchema, z.literal('github'), z.enum(['ticket:linear', 'ticket:jira'])]),
+  z.union([
+    connectableIdSchema,
+    z.literal('github'),
+    z.enum(['ticket:linear', 'ticket:jira', 'slack:bot', 'slack:user', 'slack:app']),
+  ]),
   z.string().min(1),
 );
 
@@ -69,6 +73,11 @@ const configSchema = z.object({
   ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
   GITHUB_API_URL: providerUrl.optional(),
   LINEAR_API_URL: providerUrl.optional(),
+  SLACK_API_URL: providerUrl.optional(),
+  SPARK_LINK_SCHEME: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .optional(),
   KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
   BRANCH_PREFIX: z
     .string()

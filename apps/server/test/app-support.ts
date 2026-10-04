@@ -24,6 +24,8 @@ export interface TestAppOptions {
   appEvents?: AppEventFeed;
   githubApiUrl?: string;
   linearApiUrl?: string;
+  slackApiUrl?: string;
+  slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
   serverSpendCapUsd?: number;
   parallelBuilders?: boolean;
@@ -73,6 +75,8 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
     githubApiUrl: options.githubApiUrl,
     linearApiUrl: options.linearApiUrl,
+    slackApiUrl: options.slackApiUrl,
+    ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,

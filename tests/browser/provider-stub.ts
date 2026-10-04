@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
+import { fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 
 const anthropicModels = {
@@ -72,6 +73,7 @@ async function addPull(req: IncomingMessage, res: ServerResponse) {
   send(res, 201, pull);
 }
 const tickets = ticketFakes();
+let slack = fakeSlack();
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '').split('?')[0];
@@ -87,6 +89,12 @@ const server = createServer((req, res) => {
   if (path?.startsWith('/github/')) {
     return void github.handle(req, res, (req.url ?? '').slice('/github'.length));
   }
+  if (path === '/slack-test/reset') {
+    slack = fakeSlack();
+    return send(res, 200, { ok: true });
+  }
+  if (path === '/slack-test/posted') return send(res, 200, slack.posted);
+  if (path?.startsWith('/slack/api/')) return void slack.handle(req, res);
   if (path === '/tickets-test/reset') {
     tickets.reset();
     return send(res, 200, { ok: true });

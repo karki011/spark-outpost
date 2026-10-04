@@ -58,6 +58,8 @@ import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
+import { useChatRequests } from './chat-request.ts';
+import { useSlackPresence } from '../slack/use-slack-presence.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 
@@ -157,6 +159,8 @@ function ChatShell({ entering }: { entering: boolean }) {
     openFromDesktop.current = openChat;
   });
   useEffect(() => sparkDesktop()?.onOpenChat((id) => openFromDesktop.current(id)), []);
+  useChatRequests(openChat);
+  useSlackPresence();
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
   useEffect(
     () =>
