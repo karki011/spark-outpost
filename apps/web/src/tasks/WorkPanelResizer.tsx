@@ -1,11 +1,6 @@
 import type { KeyboardEvent, PointerEvent } from 'react';
 import { holdTransitions, releaseAfterPaint, startWidthDrag, widthText } from '../ui/width-drag.ts';
-import {
-  clampPanelWidth,
-  WORK_PANEL_DEFAULT_WIDTH,
-  WORK_PANEL_MAX_WIDTH,
-  WORK_PANEL_MIN_WIDTH,
-} from './work-panel-state.ts';
+import { clampPanelWidth, WORK_PANEL_LIMITS, type PanelWidthLimits } from './work-panel-state.ts';
 
 const STEP = 16;
 const BIG_STEP = 48;
@@ -13,10 +8,15 @@ const BIG_STEP = 48;
 interface WorkPanelResizerProps {
   width: number | null;
   onWidth(width: number | null): void;
+  limits?: PanelWidthLimits;
 }
 
-export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProps) {
-  const width = saved ?? WORK_PANEL_DEFAULT_WIDTH;
+export function WorkPanelResizer({
+  width: saved,
+  onWidth,
+  limits = WORK_PANEL_LIMITS,
+}: WorkPanelResizerProps) {
+  const width = saved ?? limits.fallback;
 
   const resize = (next: number | null) => {
     const release = holdTransitions(document.getElementById('work-panel'));
@@ -36,7 +36,7 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
       cap: '--wp-cap',
       startWidth: panel?.getBoundingClientRect().width ?? width,
       direction: -1,
-      clamp: clampPanelWidth,
+      clamp: (next) => clampPanelWidth(next, limits),
       commit: onWidth,
     });
   };
@@ -46,8 +46,8 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
     const next: Record<string, number | null> = {
       ArrowLeft: width + step,
       ArrowRight: width - step,
-      Home: WORK_PANEL_MIN_WIDTH,
-      End: WORK_PANEL_MAX_WIDTH,
+      Home: limits.min,
+      End: limits.max,
       Enter: null,
     };
     if (!(event.key in next)) return;
@@ -62,8 +62,8 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize work panel"
-      aria-valuemin={WORK_PANEL_MIN_WIDTH}
-      aria-valuemax={WORK_PANEL_MAX_WIDTH}
+      aria-valuemin={limits.min}
+      aria-valuemax={limits.max}
       aria-valuenow={width}
       aria-valuetext={widthText(width)}
       tabIndex={0}

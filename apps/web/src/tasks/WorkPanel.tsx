@@ -1,7 +1,7 @@
 import './task-card.css';
 import '../ui/panel-motion.css';
 import './work-panel.css';
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { InvolvementLevel, Orchestration, Run, TaskOverview } from '@spark-outpost/contracts';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { ShieldIcon } from '../ui/icons.tsx';
@@ -9,7 +9,7 @@ import { useTooltip } from '../ui/Tooltip.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
 import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon } from './TaskIcons.tsx';
-import { WORK_PANEL_DEFAULT_WIDTH } from './work-panel-state.ts';
+import { WORK_PANEL_LIMITS, type PanelView, type PanelWidthLimits } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
 
 interface AutonomySetting {
@@ -33,7 +33,13 @@ interface WorkPanelProps {
   runs?: readonly Run[];
   width?: number | null;
   onWidth?: (width: number | null) => void;
+  limits?: PanelWidthLimits;
+  view?: PanelView;
+  onView?: (view: PanelView) => void;
+  browser?: ReactNode;
 }
+
+const VIEW_NAMES: Record<PanelView, string> = { work: 'Work', browser: 'Browser' };
 
 export function WorkPanel({
   conversationId,
@@ -51,7 +57,14 @@ export function WorkPanel({
   runs = [],
   width = null,
   onWidth,
+  limits = WORK_PANEL_LIMITS,
+  view = 'work',
+  onView,
+  browser = null,
 }: WorkPanelProps) {
+  const hasWork = task !== null || autonomy !== null;
+  const views: PanelView[] = browser ? (hasWork ? ['work', 'browser'] : ['browser']) : [];
+  const browsing = browser !== null && view === 'browser';
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLElement>(null);
   const closeTip = useTooltip('Hide work panel');
@@ -75,22 +88,40 @@ export function WorkPanel({
         <div className={open ? 'wp-scrim on' : 'wp-scrim'} aria-hidden="true" onClick={onClose} />
       )}
       <aside
-        className={open ? 'wp on' : 'wp'}
+        className={`wp${open ? ' on' : ''}${browsing ? ' browser' : ''}`}
         id="work-panel"
         aria-label="Work panel"
         inert={!open}
-        style={{ '--wp-w': `${width ?? WORK_PANEL_DEFAULT_WIDTH}px` } as CSSProperties}
+        style={{ '--wp-w': `${width ?? limits.fallback}px` } as CSSProperties}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && !wide) onClose();
         }}
       >
-        {wide && open && onWidth && <WorkPanelResizer width={width} onWidth={onWidth} />}
+        {wide && open && onWidth && (
+          <WorkPanelResizer width={width} onWidth={onWidth} limits={limits} />
+        )}
         <div className="wp-in">
           <span className="wp-grab" aria-hidden="true" />
           <div className="wp-head">
-            <b ref={title} tabIndex={-1}>
-              Work
-            </b>
+            {views.length > 0 ? (
+              <div className="wp-views" role="tablist" aria-label="Panel">
+                {views.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === id}
+                    onClick={() => onView?.(id)}
+                  >
+                    {VIEW_NAMES[id]}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <b ref={title} tabIndex={-1}>
+                Work
+              </b>
+            )}
             <button
               type="button"
               className="icon-btn"
@@ -102,8 +133,10 @@ export function WorkPanel({
             </button>
             {closeTip.tooltip}
           </div>
-          <div className="wp-body">
-            {task ? (
+          <div className={browsing ? 'wp-body browser' : 'wp-body'}>
+            {browsing ? (
+              browser
+            ) : task ? (
               <TaskDetails
                 conversationId={conversationId}
                 task={task}
@@ -124,7 +157,7 @@ export function WorkPanel({
               autonomySection
             )}
           </div>
-          {onAudit && (
+          {onAudit && !browsing && (
             <div className="wp-foot">
               <button type="button" className="btn ghost sm" onClick={onAudit}>
                 <ShieldIcon />

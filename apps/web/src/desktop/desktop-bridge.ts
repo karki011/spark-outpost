@@ -1,7 +1,12 @@
 import type {
+  BrowserCommand,
+  BrowserPaneState,
+  BrowserPick,
+  BrowserPlacement,
   DesktopHelpInfo,
   DiagnosticsExport,
   InstallResult,
+  SignedInSite,
   UpdateChannel,
   UpdateStatus,
 } from '@spark-outpost/contracts';
@@ -32,6 +37,23 @@ export interface IslandGeometry {
 }
 
 type Unsubscribe = () => void;
+
+export interface BrowserSnapshot {
+  chatId: string;
+  image: string | null;
+}
+
+export interface DesktopBrowser {
+  state(chatId: string): Promise<BrowserPaneState | null>;
+  place(placement: BrowserPlacement): Promise<unknown>;
+  command(chatId: string, command: BrowserCommand): Promise<unknown>;
+  start(placement: BrowserPlacement): Promise<BrowserPaneState | null>;
+  sites(projectId: string): Promise<SignedInSite[] | null>;
+  signOut(projectId: string, origin: string | null): Promise<SignedInSite[] | null>;
+  onState(callback: (state: BrowserPaneState) => void): Unsubscribe;
+  onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
+  onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
+}
 
 export interface SparkDesktop {
   platform: string;
@@ -83,6 +105,7 @@ export interface SparkDesktop {
   privacy?: {
     openFullDiskAccess(): Promise<void>;
   };
+  browser?: DesktopBrowser;
   onOpenChat(callback: (id: string) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }
@@ -94,6 +117,10 @@ export function sparkDesktop(): SparkDesktop | null {
 
 export function afterPaint(run: () => void): void {
   requestAnimationFrame(() => requestAnimationFrame(run));
+}
+
+export function desktopBrowser(): DesktopBrowser | null {
+  return sparkDesktop()?.browser ?? null;
 }
 
 export function companionAvailable(): boolean {

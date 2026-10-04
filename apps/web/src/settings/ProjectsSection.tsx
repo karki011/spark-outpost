@@ -3,6 +3,7 @@ import type { Project, ProjectTrust } from '@spark-outpost/contracts';
 import { agentConfigApi, agentConfigKey, projectTrustKey } from '../api/agent-config.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
+import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectBuilders } from './ProjectBuilders.tsx';
 
 function trustLabel(trust: ProjectTrust | undefined): string {
@@ -45,6 +46,7 @@ function ProjectRow({
         )}
       </div>
       <ProjectBuilders project={project} available={parallelAvailable} />
+      <ProjectBrowser project={project} />
     </li>
   );
 }

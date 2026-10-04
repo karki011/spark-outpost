@@ -11,6 +11,7 @@ import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { hasPending } from './approvals/approval-events.ts';
+import { BrowserShots } from './../browser/BrowserShots.tsx';
 import { RailFlags } from './approvals/RailFlags.tsx';
 import { RevertRun } from './approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
@@ -172,6 +173,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       )}
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
+      <BrowserShots detail={detail} runId={run.id} />
       {approvals.map((approval) =>
         isCheckpoint(approval) ? (
           <CheckpointCard key={approval.id} approval={approval} />

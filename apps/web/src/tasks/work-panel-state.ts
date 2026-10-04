@@ -8,6 +8,29 @@ export const WORK_PANEL_MIN_WIDTH = 340;
 export const WORK_PANEL_MAX_WIDTH = 640;
 export const WORK_PANEL_DEFAULT_WIDTH = 432;
 
+export interface PanelWidthLimits {
+  key: string;
+  min: number;
+  max: number;
+  fallback: number;
+}
+
+export const WORK_PANEL_LIMITS: PanelWidthLimits = {
+  key: WIDTH_KEY,
+  min: WORK_PANEL_MIN_WIDTH,
+  max: WORK_PANEL_MAX_WIDTH,
+  fallback: WORK_PANEL_DEFAULT_WIDTH,
+};
+
+export const BROWSER_PANEL_LIMITS: PanelWidthLimits = {
+  key: 'spark-outpost.browser-pane.width',
+  min: 380,
+  max: 1200,
+  fallback: 640,
+};
+
+export type PanelView = 'work' | 'browser';
+
 function readSaved(): boolean | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -40,23 +63,23 @@ export function forgetPanelChoice(): void {
   for (const listener of cleared) listener();
 }
 
-export function clampPanelWidth(width: number): number {
-  return Math.round(Math.min(WORK_PANEL_MAX_WIDTH, Math.max(WORK_PANEL_MIN_WIDTH, width)));
+export function clampPanelWidth(width: number, limits = WORK_PANEL_LIMITS): number {
+  return Math.round(Math.min(limits.max, Math.max(limits.min, width)));
 }
 
-function readWidth(): number | null {
+function readWidth(limits = WORK_PANEL_LIMITS): number | null {
   try {
-    const saved = Number(localStorage.getItem(WIDTH_KEY));
-    return saved > 0 ? clampPanelWidth(saved) : null;
+    const saved = Number(localStorage.getItem(limits.key));
+    return saved > 0 ? clampPanelWidth(saved, limits) : null;
   } catch {
     return null;
   }
 }
 
-function saveWidth(width: number | null): void {
+function saveWidth(width: number | null, limits = WORK_PANEL_LIMITS): void {
   try {
-    if (width === null) localStorage.removeItem(WIDTH_KEY);
-    else localStorage.setItem(WIDTH_KEY, String(width));
+    if (width === null) localStorage.removeItem(limits.key);
+    else localStorage.setItem(limits.key, String(width));
   } catch {
     return;
   }
@@ -70,8 +93,10 @@ export interface WorkPanelState {
   open: boolean;
   wide: boolean;
   width: number | null;
+  browserWidth: number | null;
   setOpen(open: boolean): void;
   setWidth(width: number | null): void;
+  setBrowserWidth(width: number | null): void;
 }
 
 export function useWorkPanelState(opensByDefault = true): WorkPanelState {
@@ -79,7 +104,8 @@ export function useWorkPanelState(opensByDefault = true): WorkPanelState {
   const [chosen, setChosen] = useState(readSaved);
   const docked = chosen ?? opensByDefault;
   const [sheet, setSheet] = useState(false);
-  const [width, setWidthState] = useState(readWidth);
+  const [width, setWidthState] = useState(() => readWidth());
+  const [browserWidth, setBrowserWidthState] = useState(() => readWidth(BROWSER_PANEL_LIMITS));
 
   useEffect(() => {
     if (typeof matchMedia !== 'function') return;
@@ -101,10 +127,16 @@ export function useWorkPanelState(opensByDefault = true): WorkPanelState {
     wide,
     open: wide ? docked : sheet,
     width,
+    browserWidth,
     setWidth(next) {
       const clamped = next === null ? null : clampPanelWidth(next);
       setWidthState(clamped);
       saveWidth(clamped);
+    },
+    setBrowserWidth(next) {
+      const clamped = next === null ? null : clampPanelWidth(next, BROWSER_PANEL_LIMITS);
+      setBrowserWidthState(clamped);
+      saveWidth(clamped, BROWSER_PANEL_LIMITS);
     },
     setOpen(open) {
       if (wide) {
@@ -123,8 +155,11 @@ export interface TaskPanel {
   open: boolean;
   wide: boolean;
   width: number | null;
+  view: PanelView;
+  limits: PanelWidthLimits;
   setWidth(width: number | null): void;
   setOpen(open: boolean): void;
+  setView(view: PanelView): void;
   openTask(taskId: string): void;
 }
 
@@ -132,24 +167,36 @@ export function useTaskPanel(
   tasks: readonly TaskOverview[],
   hasSettings: boolean,
   opensByDefault = true,
+  hasBrowser = false,
 ): TaskPanel {
   const state = useWorkPanelState(opensByDefault);
   const [chosen, setChosen] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [wanted, setWanted] = useState<PanelView>('work');
   const task = tasks.find((candidate) => candidate.id === chosen) ?? tasks.at(-1) ?? null;
+  const hasWork = task !== null || hasSettings;
+  const view: PanelView = hasBrowser && (wanted === 'browser' || !hasWork) ? 'browser' : 'work';
+  const setOpen = (open: boolean) => {
+    if (task) state.setOpen(open);
+    else setSettingsOpen(open);
+  };
   return {
     task,
-    available: task !== null || hasSettings,
-    open: task ? state.open : hasSettings && settingsOpen,
+    available: hasWork || hasBrowser,
+    open: task ? state.open : (hasSettings || hasBrowser) && settingsOpen,
     wide: state.wide,
-    width: state.width,
-    setWidth: state.setWidth,
-    setOpen(open) {
-      if (task) state.setOpen(open);
-      else setSettingsOpen(open);
+    width: view === 'browser' ? state.browserWidth : state.width,
+    view,
+    limits: view === 'browser' ? BROWSER_PANEL_LIMITS : WORK_PANEL_LIMITS,
+    setWidth: view === 'browser' ? state.setBrowserWidth : state.setWidth,
+    setOpen,
+    setView(next) {
+      setWanted(next);
+      setOpen(true);
     },
     openTask(taskId) {
       setChosen(taskId);
+      setWanted('work');
       state.setOpen(true);
     },
   };
