@@ -1,10 +1,9 @@
-import type { TaskPiece } from '@spark-outpost/contracts';
+import { fencedPiecesBlock, PIECES_FENCE, type TaskPiece } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
 import { pieceKey } from './builder-count.ts';
 import type { PlanStep } from './plan-coverage.ts';
 import { noCheckLabel } from './scoped-checks.ts';
 
-export const PIECES_FENCE = 'pieces';
 export const PIECE_HEADING = '## Your piece';
 export const COORDINATOR_ROLE_LINE =
   'Role: Coordinator. Plan how Builders will build this request, one piece each. Change no files.';
@@ -102,12 +101,8 @@ export function repairPrompt(prompt: string, errors: readonly string[]): string 
   return `${prompt}\n\n## Problems with your last pieces block\n${bullets(errors.slice(0, 20))}\n\nReply with a corrected \`${PIECES_FENCE}\` block only.`;
 }
 
-const FENCED = /```([\w-]*)\s*\n([\s\S]*?)```/g;
-
 export function piecesBlockText(text: string): unknown {
-  const blocks = [...text.matchAll(FENCED)];
-  const tagged = blocks.find((block) => block[1] === PIECES_FENCE) ?? blocks.at(-1);
-  const body = tagged?.[2] ?? text;
+  const body = fencedPiecesBlock(text)?.body ?? text;
   try {
     return JSON.parse(body.trim());
   } catch {
