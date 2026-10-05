@@ -13,7 +13,7 @@ When a chat's context is nearly full, Spark compacts it: the agent carries on fr
 ## Check how full the chat is
 
 1. Look at the context ring in the message box. It turns amber at 60% and red at 80% by default.
-2. Select it for the numbers, such as "150K of 200K tokens (75%)".
+2. Select it for the numbers.
 
 ![The context ring open, warning that the chat is getting full](images/compaction-ring-light.png)
 
@@ -21,7 +21,7 @@ Past the red point, Spark compacts before your next message, never mid-reply or 
 
 ## Read the summary
 
-1. Find the divider above your message, such as "Compacted · 180K → 16K tokens".
+1. Find the **Compacted** divider above your message.
 2. Select **View summary** to read what the agent now carries.
 
 Agents can still look up earlier turns with `spark_chat_history`.

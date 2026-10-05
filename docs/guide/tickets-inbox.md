@@ -13,7 +13,7 @@ First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
 ## Find your tickets
 
 1. Select **Tickets** in the rail. Groups are listed most urgent first. See [Ticket groups](statuses-and-limits.md#ticket-groups).
-2. Select a view in the side column, such as **Needs you**, to show only that group.
+2. Select a view in the side column to show only that group.
 3. Narrow with **Source**, **Team or project** and **Assignee**, or search.
 
 ![The Tickets inbox grouped by where each ticket is](images/tickets-inbox-light.png)

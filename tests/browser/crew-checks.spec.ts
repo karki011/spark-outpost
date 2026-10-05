@@ -11,12 +11,16 @@ import {
   type CrewRepo,
 } from './crew-engine.ts';
 
-const FAILS_UNTIL_FIXED = `import { existsSync } from 'node:fs';
-if (!existsSync('fixed.txt')) {
+const FAILS_UNTIL_FIXED = `import { existsSync, readFileSync } from 'node:fs';
+if (readFileSync('notes.txt', 'utf8').includes('step') && !existsSync('fixed.txt')) {
   console.error('expected fixed.txt to exist');
   process.exit(1);
 }
 console.log('all good');
+`;
+
+const OLD_TYPE_ERROR = `console.log('src/old.ts(3,1): error TS2322: an old problem');
+process.exit(1);
 `;
 
 let repo: CrewRepo;
@@ -62,13 +66,51 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   await work.getByRole('tab', { name: 'Tasks' }).click();
   const failed = work
     .getByRole('list', { name: 'Remaining' })
-    .getByRole('button', { name: /Checks failed for Bolt/ });
-  await expect(failed).toContainText('check.mjs exited 1');
+    .getByRole('button', { name: /Checks for Bolt.*check\.mjs failed/ });
   await failed.click();
-  await expect(work.getByLabel('Check output')).toContainText('expected fixed.txt to exist');
+  const output = work.getByLabel('Check output');
+  await expect(output).toContainText('expected fixed.txt to exist');
+  await expect(output).toContainText('passes before this change');
   await expect(work.getByRole('list', { name: 'Done' })).toContainText(
-    /Checks passed for Bolt(?:'s copy)?: .*check\.mjs passed/,
+    /Checks for Bolt(?:'s copy)?: .*check\.mjs passed/,
   );
+});
+
+test('a check that already failed before the change is one calm row, with no fix turn', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  repo.commit('lint.mjs', "console.log('clean');\n");
+  repo.commit('typecheck.mjs', OLD_TYPE_ERROR);
+  await crewChat(page, repo, 'Full auto');
+  await useChecks(page, [`${process.execPath} lint.mjs`, `${process.execPath} typecheck.mjs`]);
+  await send(page, `${CREW_REQUEST} #build #crew`);
+
+  const turn = page.locator('.crew-turn');
+  await expect(turn.locator('.crew-foot')).toContainText('Done', { timeout: 60_000 });
+  expect(() => repo.file('fixed.txt')).toThrow();
+
+  const work = panel(page);
+  await work.getByRole('tab', { name: 'Tasks' }).click();
+  await expect(work.getByRole('list', { name: 'Remaining' })).toHaveCount(0);
+  const row = work
+    .getByRole('list', { name: 'Done' })
+    .getByRole('button', { name: /Checks for Bolt/ });
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText(
+    /Checks for Bolt(?:'s copy)?: lint passed · typecheck already failing before this change/,
+  );
+  await expect(row.locator('xpath=..')).not.toHaveClass(/failed/);
+  await row.focus();
+  await page.keyboard.press('Enter');
+  await expect(row).toHaveAttribute('aria-expanded', 'true');
+  const output = work.getByLabel('Check output');
+  await expect(output).toContainText('also fails before this change');
+  await expect(output).toContainText('same failures: type src/old.ts TS2322');
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await work.screenshot({ path: testInfo.outputPath(`checks-row-${scheme}.png`) });
+  }
 });
 
 test('Accept edits: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({

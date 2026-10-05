@@ -12,7 +12,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | --------------------------------------- | ------------------------------------------ |
 | **Not set up**                          | Nothing connected yet.                     |
 | **CLI not installed**                   | Install `claude` or `codex` first.         |
-| **Needs sign-in**                       | The CLI is installed but not signed in.    |
+| **Needs sign-in**                       | Sign in to the CLI.                        |
 | **Connected · Local CLI** / **API key** | Ready.                                     |
 | **Error**                               | Open the tile; **Test** says what's wrong. |
 
@@ -29,20 +29,20 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Jev on a reply
 
-Hover the chip on a reply, such as **Question**.
+Hover the chip on a reply.
 
-| Status                            | Means                                                     |
-| --------------------------------- | --------------------------------------------------------- |
-| **Jev not connected**             | The rules decided.                                        |
-| **Not asked**                     | This step didn't need Jev, such as "pinned, no Jev call". |
-| **Jev timed out**, **Jev failed** | Spark used the rules.                                     |
+| Status                            | Means                      |
+| --------------------------------- | -------------------------- |
+| **Jev not connected**             | The rules decided.         |
+| **Not asked**                     | This step didn't need Jev. |
+| **Jev timed out**, **Jev failed** | Spark used the rules.      |
 
 ## Ticket groups
 
 | Group                      | Holds                                                             |
 | -------------------------- | ----------------------------------------------------------------- |
 | **Needs you**              | A linked chat waits, checks fail on its PR, or a rule flagged it. |
-| **In progress with Spark** | A linked chat is running, such as "8/10 · Pip working".           |
+| **In progress with Spark** | A linked chat is running.                                         |
 | **Started**                | In progress in your tracker, with no chat running.                |
 | **Up next**                | Assigned to you and not started.                                  |
 | **In review / PR open**    | In review, or its PR is open.                                     |
@@ -75,7 +75,8 @@ Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on,
 | ------------------------------------ | ---------------------------------------- |
 | Approval card expiry                 | 30 minutes                               |
 | Builders for one plan                | 1 to 4; at once, up to 3                 |
-| Fix turns after failing checks       | 2                                        |
+| Fix turns after failing checks       | 1                                        |
+| Time for one check                   | 10 minutes                               |
 | Critic fix rounds                    | 3                                        |
 | PR follow-up rounds per PR           | 3                                        |
 | Terminals open across all chats      | 12, each keeping 5,000 lines             |

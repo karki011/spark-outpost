@@ -24,7 +24,7 @@ Most requests skip most steps. A question stops after step 1.
 
 ![A crew turn: the dispatch line, the Builder and the kept card](images/prompt-flow-crew-turn-light.png)
 
-Hover the line above the crew, such as "Build it · 87% sure", to see how Spark handled each step. For where a card can stop a request, see [Cards](cards.md).
+Hover the line above the crew to see how Spark handled each step. For where a card can stop a request, see [Cards](cards.md).
 
 ## With Spark off
 
