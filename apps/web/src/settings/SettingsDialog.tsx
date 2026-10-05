@@ -18,6 +18,7 @@ import { McpSection } from './mcp/McpSection.tsx';
 import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
 import { HelpSection } from '../help/HelpSection.tsx';
 import './settings.css';
+import './settings-cards.css';
 
 export type SettingsSection =
   | 'spark'
@@ -46,7 +47,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   },
   {
     id: 'sparks',
-    label: 'Sparks',
+    label: 'Teammates',
     icon: (
       <>
         <circle cx="9" cy="10" r="3.2" />

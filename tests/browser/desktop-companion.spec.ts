@@ -150,5 +150,5 @@ test('the island opens these settings, and its chimes stay off until switched on
   ]);
 
   await fromIsland('sparks');
-  await expect(page.getByRole('dialog', { name: 'Sparks' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Teammates' })).toBeVisible();
 });

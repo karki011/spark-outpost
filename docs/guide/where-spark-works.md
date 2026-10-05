@@ -19,7 +19,7 @@ Hover the chip to see where the branch started and how pull requests will open.
 
 ## For every chat in a project
 
-1. Open **Settings → Projects** and find the project.
+1. Open **Settings → Projects** and select the project.
 2. Under **Where Spark works**, pick **Each chat in its own worktree (recommended)** or **In my files**.
 
 ## What to expect

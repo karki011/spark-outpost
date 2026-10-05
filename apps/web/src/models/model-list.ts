@@ -53,6 +53,29 @@ export function roleLine(view: ModelCardView): string | null {
   return usedBySpark(view) ? (ROLES[view.card.tier] ?? null) : null;
 }
 
+export function purposeLine(view: ModelCardView): string | null {
+  return roleLine(view) ?? view.card.strengths[0] ?? null;
+}
+
+export interface ModelGroup {
+  id: 'spark' | 'manual';
+  title: string;
+  models: ModelCardView[];
+}
+
+export function groupModels(models: readonly ModelCardView[]): ModelGroup[] {
+  const ordered = orderModels(models);
+  const groups: ModelGroup[] = [
+    { id: 'spark', title: 'Spark picks from these', models: ordered.filter(usedBySpark) },
+    {
+      id: 'manual',
+      title: 'Only when you pick it',
+      models: ordered.filter((view) => !usedBySpark(view)),
+    },
+  ];
+  return groups.filter((group) => group.models.length > 0);
+}
+
 function shortDate(date: string, now: number): string {
   const sameYear = date.slice(0, 4) === String(new Date(now).getUTCFullYear());
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -72,11 +95,11 @@ function retired(card: ModelCard, now: number): boolean {
   return retirementState(card, new Date(now)) === 'retired';
 }
 
-export function modelTag(view: ModelCardView, now: number = Date.now()): string | null {
+export function retirementTag(view: ModelCardView, now: number = Date.now()): string | null {
   const date = view.card.retiresNotBefore;
   if (retired(view.card, now)) return date ? `Retired ${shortDate(date, now)}` : 'Retired';
   if (retiresSoon(view.card, now)) return `Retiring ${shortDate(date!, now)}`;
-  return usedBySpark(view) ? null : 'Only when you pick it';
+  return null;
 }
 
 export function retirementDetail(card: ModelCard, now: number = Date.now()): string | null {
@@ -85,13 +108,10 @@ export function retirementDetail(card: ModelCard, now: number = Date.now()): str
   return date ? `Retires ${date}` : null;
 }
 
-export function shortPrice(card: ModelCard): string {
+export function fullPrice(card: ModelCard): string {
   if (!card.price) return 'No price listed';
-  return `${formatPrice(card.price.inputPerMillion)} / ${formatPrice(card.price.outputPerMillion)}`;
-}
-
-export function metaLine(card: ModelCard): string[] {
-  return [shortPrice(card), `${formatTokenCount(card.contextTokens)} context`, card.speed];
+  const { inputPerMillion, cachedInputPerMillion, outputPerMillion } = card.price;
+  return `${formatPrice(inputPerMillion)} in · ${formatPrice(cachedInputPerMillion)} cached · ${formatPrice(outputPerMillion)} out per million tokens`;
 }
 
 export function effortRange(card: ModelCard): string {
@@ -99,6 +119,41 @@ export function effortRange(card: ModelCard): string {
   if (efforts.length === 0) return 'none';
   if (efforts.length === 1) return efforts[0]!;
   return `${efforts[0]}–${efforts.at(-1)}`;
+}
+
+export function modelFacts(card: ModelCard, now: number = Date.now()): [string, string][] {
+  const defaultEffort = card.reasoning.defaultEffort;
+  const retirement = retirementDetail(card, now);
+  const facts: [string, string][] = [
+    ['Tier', card.tier],
+    ['Price', fullPrice(card)],
+    [
+      'Context',
+      `${formatTokenCount(card.contextTokens)} · ${formatTokenCount(card.maxOutputTokens)} max output`,
+    ],
+    ['Speed', card.speed],
+    ['Effort', `${effortRange(card)}${defaultEffort ? ` (default ${defaultEffort})` : ''}`],
+  ];
+  if (retirement) facts.push(['Retirement', retirement]);
+  return facts;
+}
+
+export interface StaleNote {
+  short: string;
+  full: string;
+}
+
+export function staleNote(view: ModelCardView): StaleNote | null {
+  const { staleness } = view;
+  if (staleness.factsExpired) {
+    return {
+      short: 'Facts out of date',
+      full: 'Facts are over 120 days old: Jev no longer sees its price',
+    };
+  }
+  if (!staleness.checkStale) return null;
+  const checked = `Checked ${staleness.checkedDaysAgo} days ago`;
+  return { short: checked, full: checked };
 }
 
 export interface BenchmarkBadge {

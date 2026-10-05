@@ -35,7 +35,7 @@ Spark may split a big plan into [pieces](spark-crew.md#pieces), one Builder each
 
 ## Choose how many Builders run at once
 
-1. Open **Settings → Projects** and find the project.
+1. Open **Settings → Projects** and select the project.
 2. Under **Builders at once**, pick **1 at a time, in order**, **Up to 2 at once** or **Up to 3 at once** (the default).
 
 ## One PR or separate PRs

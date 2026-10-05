@@ -192,7 +192,7 @@ test('the browser build has no Updates section and no update blob', async ({ pag
   await expect(page.getByRole('tab', { name: 'Reset' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
   await expect(page.locator('.upd-blob')).toHaveCount(0);
-  await expect(page.locator('.rail-ver')).toHaveCount(0);
+  await expect(rail(page).getByRole('button', { name: /^App version/ })).toHaveCount(0);
 });
 
 const PREVIEW = {
@@ -205,7 +205,6 @@ const PREVIEW = {
 };
 
 const blob = (page: Page) => rail(page).locator('.upd-blob');
-const version = (page: Page) => rail(page).locator('.rail-ver');
 const toasts = (page: Page) => page.locator('.upd-toasts').getByRole('status');
 
 async function hoverTip(page: Page, text: string) {
@@ -219,7 +218,7 @@ async function startPreview(page: Page, runs = 0) {
   await fakeUpdater(page, PREVIEW);
   await page.goto('/');
   await setRuns(page, runs);
-  await expect(version(page)).toHaveAccessibleName('App version v0.1.0-beta.1 · dev');
+  await expect(rail(page).getByRole('button', { name: 'Settings' })).toBeVisible();
   await pushUpdate(page, { phase: 'available', availableVersion: '0.1.0-beta.2' });
   await expect(blob(page)).toHaveAttribute('data-fill', '0');
 }
@@ -230,7 +229,6 @@ async function downloadToReady(page: Page) {
     await pushUpdate(page, { progress: percent });
     await expect(blob(page)).toHaveText(`${percent}%`);
     await expect(blob(page)).toHaveAttribute('data-fill', String(percent));
-    await expect(version(page)).toHaveText(`v0.1.0-beta.1· dev· ${percent}%`);
   }
   await pushUpdate(page, { phase: 'ready', progress: 100, installRequested: false });
   await expect(blob(page)).toHaveAccessibleName('Restart to update (Spark Outpost 0.1.0-beta.2)');
@@ -252,7 +250,7 @@ test.describe('update preview flow', () => {
     await pushUpdate(page, { progress: 51 });
     await expect(blob(page)).toHaveAttribute('data-fill', '51');
     await expect(blob(page)).toHaveClass(/downloading/);
-    await expect(version(page)).toContainText('51%');
+    await expect(blob(page)).toHaveText('51%');
     await hoverTip(page, 'Getting Spark Outpost 0.1.0-beta.2: 51%');
     await railShot(page, 'preview-half');
 
@@ -261,7 +259,6 @@ test.describe('update preview flow', () => {
     await expect(blob(page)).toHaveText('Restart');
     await expect(blob(page).locator('.scout')).not.toHaveClass(/filling/);
     await expect(blob(page).locator('.scout')).toHaveClass(/happy/);
-    await expect(version(page)).toHaveText('v0.1.0-beta.1· dev');
     await hoverTip(page, 'Restart to update');
     await railShot(page, 'preview-full');
 
@@ -282,7 +279,6 @@ test.describe('update preview flow', () => {
     await expect(toasts(page)).toContainText('Updated to 0.1.0-beta.2 (preview)');
     await expect(blob(page)).toHaveAccessibleName('Updated to 0.1.0-beta.2 (preview)');
     await expect(blob(page)).toHaveClass(/updated/);
-    await expect(version(page)).toHaveText('v0.1.0-beta.1· dev');
     await railShot(page, 'preview-toast');
 
     await blob(page).click();
@@ -291,7 +287,7 @@ test.describe('update preview flow', () => {
     await page.keyboard.press('Escape');
 
     await page.reload();
-    await expect(version(page)).toBeVisible();
+    await expect(rail(page).getByRole('button', { name: 'Settings' })).toBeVisible();
     await expect(toasts(page)).toHaveCount(0);
     await expect(blob(page)).toHaveCount(0);
     expect(await desktopCalls(page)).toEqual([]);
@@ -346,7 +342,7 @@ test.describe('update preview flow', () => {
     expect(await animation('.sc-body')).toBe('none');
   });
 
-  test('the rail shows the version under Settings and hides it when short', async ({ page }) => {
+  test('the rail shows no version text and Settings, Updates shows it', async ({ page }) => {
     await resetTestDatabase({ onboarded: true });
     await fakeUpdater(page, {
       currentVersion: '0.1.0-beta.1',
@@ -356,41 +352,29 @@ test.describe('update preview flow', () => {
     });
     await page.goto('/');
     const settings = rail(page).getByRole('button', { name: 'Settings' });
-    const label = page.getByRole('button', {
-      name: 'App version v0.1.0-beta.1 · dev',
-    });
-    await expect(label).toBeVisible();
+    await expect(settings).toBeVisible();
+    await expect(rail(page)).not.toContainText('0.1.0-beta.1');
+    await expect(rail(page)).not.toContainText('dev');
+    await expect(rail(page).getByRole('button', { name: /^App version/ })).toHaveCount(0);
+    await expect(rail(page).getByRole('button').last()).toHaveAccessibleName('Settings');
+    await railShot(page, 'rail-no-version');
 
-    const below = async () => {
-      const gear = (await settings.boundingBox())!;
-      const text = (await label.boundingBox())!;
-      const viewport = page.viewportSize()!;
-      expect(text.y).toBeGreaterThanOrEqual(gear.y + gear.height - 1);
-      expect(Math.abs(text.x + text.width / 2 - (gear.x + gear.width / 2))).toBeLessThan(2);
-      expect(text.y + text.height).toBeLessThanOrEqual(viewport.height);
-    };
-    await below();
-    await railShot(page, 'rail-version');
-
-    await page.setViewportSize({ width: 1280, height: 660 });
-    await expect(label).toBeVisible();
-    await below();
-
-    await page.setViewportSize({ width: 1280, height: 600 });
-    await expect(label).toBeHidden();
-    const gear = (await settings.boundingBox())!;
-    expect(gear.y + gear.height).toBeLessThanOrEqual(600);
-
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await label.click();
-    await expect(page.getByRole('dialog', { name: 'Updates' })).toBeVisible();
+    await settings.click();
+    await page.getByRole('tab', { name: 'Updates' }).click();
+    const updates = page.getByRole('dialog', { name: 'Updates' });
+    await expect(updates.locator('.upd-version')).toHaveText('Spark Outpost 0.1.0-beta.1Beta');
+    await expect(updates).toContainText('This dev copy never updates.');
   });
 
-  test('a prod build shows the version without the dev tag', async ({ page }) => {
+  test('a download shows its percentage on the update blob only', async ({ page }) => {
     await resetTestDatabase({ onboarded: true });
-    await fakeUpdater(page, { currentVersion: '0.1.0-beta.1' });
+    await fakeUpdater(page, { currentVersion: '0.1.0-beta.1', autoDownload: false });
     await page.goto('/');
-    await expect(version(page)).toHaveText('v0.1.0-beta.1');
-    await expect(version(page)).toHaveAccessibleName('App version v0.1.0-beta.1');
+    await pushUpdate(page, { phase: 'available', availableVersion: '0.1.0-beta.2' });
+    await blob(page).click();
+    await pushUpdate(page, { progress: 42 });
+    await expect(blob(page)).toHaveText('42%');
+    await expect(blob(page)).toHaveAccessibleName('Getting Spark Outpost 0.1.0-beta.2: 42%');
+    await expect(rail(page).getByText('42%')).toHaveCount(1);
   });
 });

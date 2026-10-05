@@ -16,6 +16,9 @@
 .pconf-sec-head button:hover {
   background: var(--raise);
 }
+.pconf-sec.disclosure:last-child:not(.open) .pconf-sec-head button {
+  border-radius: 0 0 calc(var(--r) - 1px) calc(var(--r) - 1px);
+}
 .pconf-sec-head .pconf-sec-title {
   flex-shrink: 0;
   margin: 0;

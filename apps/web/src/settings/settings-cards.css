@@ -1,0 +1,37 @@
+.set-panel .set-body {
+  --set-card-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+    0 3px 12px color-mix(in srgb, var(--text) 5%, transparent);
+  --set-card-shadow-lift:
+    0 1px 2px color-mix(in srgb, var(--text) 7%, transparent),
+    0 8px 22px color-mix(in srgb, var(--text) 9%, transparent);
+}
+.set-panel
+  .set-body
+  :is(.ptile, .pconf, .tcard, .tm-starter, .tm-set-row, .usage-row, .reset-list) {
+  border-color: transparent;
+}
+.set-panel .set-body :is(.tcard, .tm-starter, .tm-set-row, .usage-row, .reset-list) {
+  background: var(--panel);
+  box-shadow: var(--set-card-shadow);
+}
+.set-panel .set-body .usage-row.total {
+  background: var(--raise);
+  box-shadow: none;
+}
+.set-panel .set-body .tcard {
+  transition: box-shadow 0.2s var(--out);
+}
+.set-panel .set-body .tcard:hover {
+  box-shadow: var(--set-card-shadow-lift);
+}
+.set-panel .set-body .tcard[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0 5px var(--accent-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .set-panel .set-body .tcard {
+    transition: none;
+  }
+}
