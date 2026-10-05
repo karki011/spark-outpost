@@ -2,14 +2,27 @@ import { describe, expect, it } from 'vitest';
 import type { UpdateStatus } from '@spark-outpost/contracts';
 import { createUpdateController, type Emit, type UpdateDriver } from './update-controller.ts';
 import type { UpdatePrefs } from './update-prefs.ts';
-import { initialStatus } from './update-state.ts';
+import {
+  initialStatus,
+  INSTALL_STALL_TIMEOUT_MS,
+  INSTALL_STALLED_MESSAGE,
+  RUNS_RECHECK_MS,
+} from './update-state.ts';
+
+interface Timer {
+  run: () => void;
+  ms: number;
+  cancelled: boolean;
+}
 
 interface Harness {
   runs: number | null;
   installs: boolean[];
   quits: number;
   saved: UpdatePrefs[];
-  pending: (() => void)[];
+  timers: Timer[];
+  logs: string[];
+  fire: (ms: number) => void;
   finishDownload: () => void;
   emit: Emit;
 }
@@ -20,7 +33,13 @@ function setup(prefs: Partial<UpdatePrefs> = {}, skippedVersion: string | null =
     installs: [],
     quits: 0,
     saved: [],
-    pending: [],
+    timers: [],
+    logs: [],
+    fire: (ms) => {
+      const due = harness.timers.filter((timer) => timer.ms === ms && !timer.cancelled);
+      harness.timers = harness.timers.filter((timer) => !due.includes(timer));
+      for (const timer of due) timer.run();
+    },
     finishDownload: () => undefined,
     emit: () => undefined,
   };
@@ -59,10 +78,15 @@ function setup(prefs: Partial<UpdatePrefs> = {}, skippedVersion: string | null =
     quit: () => {
       harness.quits += 1;
     },
-    log: () => undefined,
-    later: (run) => {
-      harness.pending.push(run);
-      return () => undefined;
+    log: (line) => {
+      harness.logs.push(line);
+    },
+    later: (run, ms) => {
+      const timer: Timer = { run, ms, cancelled: false };
+      harness.timers.push(timer);
+      return () => {
+        timer.cancelled = true;
+      };
     },
   });
   return { controller, harness };
@@ -74,6 +98,19 @@ async function settle(): Promise<void> {
 
 function phase(status: UpdateStatus) {
   return status.phase;
+}
+
+async function readyToInstall() {
+  const made = setup();
+  const checking = made.controller.check();
+  await settle();
+  made.harness.finishDownload();
+  await checking;
+  return made;
+}
+
+function stallLogs(harness: Harness): string[] {
+  return harness.logs.filter((line) => line.includes('stalled'));
 }
 
 describe('update controller', () => {
@@ -121,7 +158,7 @@ describe('update controller', () => {
     expect(harness.installs).toEqual([]);
 
     harness.runs = 0;
-    harness.pending.shift()?.();
+    harness.fire(RUNS_RECHECK_MS);
     await settle();
     expect(harness.installs).toEqual([true]);
   });
@@ -149,6 +186,81 @@ describe('update controller', () => {
     idle.harness.emit({ type: 'error', message: 'Code signature did not pass validation' });
     expect(idle.harness.quits).toBe(1);
     expect(idle.controller.takeOverQuit()).toBe(false);
+  });
+
+  it('returns to ready with a reason and a log line when the install stalls', async () => {
+    const { controller, harness } = await readyToInstall();
+    await controller.requestInstall();
+    expect(phase(controller.status())).toBe('installing');
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(controller.status()).toMatchObject({
+      phase: 'ready',
+      installRequested: false,
+      error: INSTALL_STALLED_MESSAGE,
+    });
+    expect(stallLogs(harness)).toEqual([
+      'Update install stalled: the app was still running 90 s after the install started. Back to ready.',
+    ]);
+  });
+
+  it('installs again when Restart to update is clicked after a stall', async () => {
+    const { controller, harness } = await readyToInstall();
+    await controller.requestInstall();
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+
+    expect(await controller.requestInstall()).toEqual({ status: 'installing' });
+    expect(harness.installs).toEqual([true, true]);
+    expect(controller.status()).toMatchObject({ phase: 'installing', error: null });
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(controller.status()).toMatchObject({ phase: 'ready', error: INSTALL_STALLED_MESSAGE });
+    expect(stallLogs(harness)).toHaveLength(2);
+  });
+
+  it('keeps a failed install on its own error instead of the stall message', async () => {
+    const { controller, harness } = await readyToInstall();
+    await controller.requestInstall();
+    harness.emit({ type: 'error', message: 'Code signature did not pass validation' });
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(controller.status()).toMatchObject({
+      phase: 'ready',
+      error: 'Code signature did not pass validation',
+    });
+    expect(stallLogs(harness)).toEqual([]);
+  });
+
+  it('does not fall back once the app is quitting', async () => {
+    const { controller, harness } = await readyToInstall();
+    await controller.requestInstall();
+    expect(controller.takeOverQuit()).toBe(false);
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(phase(controller.status())).toBe('installing');
+    expect(stallLogs(harness)).toEqual([]);
+  });
+
+  it('does not watch for a stall when the install starts from quitting', async () => {
+    const { controller, harness } = await readyToInstall();
+    expect(controller.takeOverQuit()).toBe(true);
+    await settle();
+    expect(harness.installs).toEqual([false]);
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(phase(controller.status())).toBe('installing');
+    expect(harness.quits).toBe(0);
+    expect(stallLogs(harness)).toEqual([]);
+  });
+
+  it('cancels the stall watch when disposed', async () => {
+    const { controller, harness } = await readyToInstall();
+    await controller.requestInstall();
+    controller.dispose();
+
+    harness.fire(INSTALL_STALL_TIMEOUT_MS);
+    expect(phase(controller.status())).toBe('installing');
+    expect(stallLogs(harness)).toEqual([]);
   });
 
   it('does not take over quitting when nothing is staged', () => {

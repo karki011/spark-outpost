@@ -41,7 +41,9 @@ function phaseText(status: UpdateStatus): string {
     case 'downloading':
       return `Downloading ${version}… ${status.progress ?? 0}%`;
     case 'ready':
-      return `${version} is ready. It installs when you quit, or restart now.`;
+      return status.error
+        ? `${version} is ready. ${status.error}`
+        : `${version} is ready. It installs when you quit, or restart now.`;
     case 'installing':
       return `Installing ${version} and restarting…`;
     case 'error':

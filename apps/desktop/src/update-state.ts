@@ -9,6 +9,9 @@ import {
 export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_CHECK_DELAY_MS = 15_000;
 export const RUNS_RECHECK_MS = 15_000;
+export const INSTALL_STALL_TIMEOUT_MS = 90_000;
+export const INSTALL_STALLED_MESSAGE =
+  "The update didn't start. Quit Spark and open it again, or try Restart to update once more.";
 
 export type UpdateEvent =
   | { type: 'checking'; at: Date }
@@ -83,7 +86,7 @@ export function reduceUpdate(status: UpdateStatus, event: UpdateEvent): UpdateSt
   switch (event.type) {
     case 'checking':
       if (HOLDS_AN_UPDATE.has(status.phase)) {
-        return { ...status, lastCheckedAt: event.at.toISOString() };
+        return { ...status, error: null, lastCheckedAt: event.at.toISOString() };
       }
       return { ...status, phase: 'checking', error: null, lastCheckedAt: event.at.toISOString() };
     case 'available':
@@ -105,7 +108,7 @@ export function reduceUpdate(status: UpdateStatus, event: UpdateEvent): UpdateSt
     case 'waiting':
       return { ...status, installRequested: true, waitingForRuns: true };
     case 'installing':
-      return { ...status, phase: 'installing', waitingForRuns: false };
+      return { ...status, phase: 'installing', waitingForRuns: false, error: null };
     case 'error':
       if (status.phase === 'ready' || status.phase === 'installing') {
         return {
