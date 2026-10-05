@@ -169,7 +169,7 @@ describe('Critic → fix rounds', () => {
       reviewedAs(D),
       { type: 'wrapped', filesChanged: 1 },
     ]);
-    expect(results.at(-1)!.action).toEqual({ type: 'ship' });
+    expect(results.at(-1)!.action).toMatchObject({ type: 'ship' });
     expect(results.at(-1)!.state.review.stop).toBe('cap');
   });
 

@@ -17,7 +17,8 @@ export type RunMode = z.infer<typeof runModeSchema>;
 export const PERMISSION_ASK = 'ask' as const;
 export const PERMISSION_DO = 'do' as const;
 
-export const DEFAULT_INVOLVEMENT_LEVEL: InvolvementLevel = 'hands-off';
+export const DEFAULT_INVOLVEMENT_LEVEL: InvolvementLevel = 'full-auto';
+export const UNSET_RUN_LEVEL: InvolvementLevel = 'hands-off';
 
 export interface InvolvementLevelInfo {
   id: InvolvementLevel;

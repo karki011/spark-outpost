@@ -150,7 +150,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await expect.poll(savedWait).toBe(120);
   await expect(custom).toHaveCount(0);
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
-  await expect(level.getByRole('radio', { name: 'Automatic' })).toBeChecked();
+  await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
 
   await spark.getByRole('tab', { name: 'Appearance' }).click();
   const appearance = page.getByRole('dialog', { name: 'Appearance' });

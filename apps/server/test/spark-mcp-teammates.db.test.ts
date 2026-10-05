@@ -5,6 +5,7 @@ import { insertChildRun, insertOrchestration } from '../src/persistence/orchestr
 import { createTeammate, listTeammates } from '../src/persistence/teammates.ts';
 import {
   answerCard,
+  chatAtLevel,
   confirmCard,
   recordedHooks,
   startSparkTools,
@@ -32,6 +33,7 @@ beforeEach(async () => {
   t = await createTestDb();
   await connectCliProvider(t, 'claude');
   const { conversationId, runId } = await startChat(t, 'Set up a reviewer');
+  await chatAtLevel(t, conversationId, 'hands-off');
   recorded = recordedHooks();
   tools = await startSparkTools(t, { conversationId, runId, actions: recorded.hooks });
 });

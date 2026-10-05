@@ -9,6 +9,7 @@ import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { NO_TASK_BRANCH_REASON } from '../src/approvals/publish-policy.ts';
 import { DESTRUCTIVE_WAIT, RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
 import { assumptionPrNote } from '../src/orchestration/clarify.ts';
+import { NO_PULL_REQUEST } from '../src/orchestration/no-pull-request.ts';
 import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
@@ -20,6 +21,7 @@ import {
 } from '../src/orchestration/full-auto-ship.ts';
 import {
   NORMAL,
+  QUESTION,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -153,6 +155,17 @@ function expectAutoKept(keep: readonly Approval[]) {
   expect(keep[0]!.reason).toContain(KEPT_BY_FULL_AUTO);
 }
 
+function expectKeptLikeAutomatic(keep: readonly Approval[]) {
+  expect(keep).toHaveLength(1);
+  expect(keep[0]).toMatchObject({
+    status: 'allowed',
+    decidedBy: 'level',
+    decisionOptionId: CHECKPOINT_OPTION.keep,
+    payload: { checkpoint: { keptBy: 'hands-off' } },
+  });
+  expect(keep[0]!.reason).not.toContain(KEPT_BY_FULL_AUTO);
+}
+
 describe('Full auto runs to a draft PR', () => {
   it('keeps the change, commits only the task file on its branch without switching the checkout, pushes and opens a ready-for-review PR', async () => {
     await newRepo();
@@ -249,29 +262,83 @@ describe('Full auto runs to a draft PR', () => {
     expect(stub.github.pulls[0]!.body).toContain('Plan it followed:');
   }, 120_000);
 
-  it('pushes the branch and links Create PR when GitHub is not connected', async () => {
+  it('keeps like Automatic with one quiet line when GitHub is not connected, pushing nothing', async () => {
     await newRepo();
     start();
-    const { orchestration, reply, keep } = await runFullAuto();
+    const { orchestration, reply, keep, asked, taskId } = await runFullAuto();
     expect(orchestration.status).toBe('succeeded');
-    expectAutoKept(keep);
+    expectKeptLikeAutomatic(keep);
+    expect(asked.map((approval) => approval.kind)).not.toContain('accept');
     expect(stub.github.pulls).toEqual([]);
-    expect(reply).toMatch(
-      /Pushed spark\/\S+\. Create PR on GitHub: https:\/\/github\.com\/acme\/widgets\/compare\//,
-    );
-    expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(true);
+    expect(reply.match(/No pull request/g)).toHaveLength(1);
+    expect(reply).toContain(NO_PULL_REQUEST.notConnected);
+    expect(reply).not.toMatch(/Full auto → PR kept the change but/);
+    expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(false);
+    expect(await getTaskShip(t.db, taskId!)).toBeNull();
+    expect(await readFile(path.join(repo.root, 'notes.txt'), 'utf8')).toContain('step');
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   }, 120_000);
 
-  it('commits on the branch when the repository has no remote', async () => {
+  it.each([
+    ['a question', QUESTION],
+    [
+      'a plan-only request',
+      { ...NORMAL, text: 'Plan only: how should the divider handle midnight?' },
+    ],
+  ])(
+    'opens nothing for %s, with GitHub connected',
+    async (_name, scenario) => {
+      await newRepo();
+      await writeFile(ghState(), 'octo-cli');
+      start();
+      const { conversationId, runId } = await startScenario(t, repo.root, scenario, 'full-auto');
+      const { orchestration } = await driveToEnd(
+        t,
+        conversationId,
+        runId,
+        answerEverything,
+        90_000,
+      );
+      const detail = (await getConversationDetail(t.db, conversationId))!;
+      const reply = detail.messages.map((message) => message.content).join('\n');
+
+      expect(orchestration.status).toBe('succeeded');
+      expect(orchestration.checkpoints.filter((approval) => approval.kind === 'accept')).toEqual(
+        [],
+      );
+      expect(stub.github.pulls).toEqual([]);
+      expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(false);
+      expect(git(repo.root, 'branch', '--list', 'spark/*', '--format=%(refname:short)')).toBe('');
+      expect(reply).not.toMatch(/pull request|\bPR #/i);
+      expect(await readFile(path.join(repo.root, 'notes.txt'), 'utf8')).not.toContain('step');
+    },
+    120_000,
+  );
+
+  it('keeps like Automatic with one quiet line when the repository has no remote, committing nothing', async () => {
     await newRepo('none');
     start();
-    const { reply, taskId } = await runFullAuto();
-    expect(reply).toMatch(/Committed [0-9a-f]{7} on spark\/\S+, not pushed\./);
-    expect(reply).toContain('no remote');
-    const ship = await getTaskShip(t.db, taskId!);
-    expect(git(repo.root, 'log', '-1', '--format=%s', ship!.branch)).toMatch(/^The divider shows/);
+    const { orchestration, reply, keep, taskId } = await runFullAuto();
+    expect(orchestration.status).toBe('succeeded');
+    expectKeptLikeAutomatic(keep);
+    expect(reply.match(/No pull request/g)).toHaveLength(1);
+    expect(reply).toContain(NO_PULL_REQUEST.noGitHubRemote);
+    expect(await getTaskShip(t.db, taskId!)).toBeNull();
+    expect(git(repo.root, 'branch', '--list', 'spark/*', '--format=%(refname:short)')).toBe('');
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
+  }, 120_000);
+
+  it('keeps like Automatic with one quiet line when the project is not a git repository', async () => {
+    const folder = await mkdtemp(path.join(base, 'plain-'));
+    await writeFile(path.join(folder, 'notes.txt'), 'draft\n');
+    repo = { root: folder, bare: folder };
+    start();
+    const { orchestration, reply, keep } = await runFullAuto();
+    expect(orchestration.status).toBe('succeeded');
+    expectKeptLikeAutomatic(keep);
+    expect(reply.match(/No pull request/g)).toHaveLength(1);
+    expect(reply).toContain(NO_PULL_REQUEST.notGit);
+    expect(stub.github.pulls).toEqual([]);
   }, 120_000);
 
   it('opens the draft PR marked "Checks failing" when checks still fail after the fix turns', async () => {

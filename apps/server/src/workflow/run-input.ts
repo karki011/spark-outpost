@@ -1,5 +1,5 @@
 import {
-  DEFAULT_INVOLVEMENT_LEVEL,
+  UNSET_RUN_LEVEL,
   type AgentRole,
   type ConfigValues,
   type Attachment,
@@ -218,7 +218,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     settings: settingsOf(row),
     projectRoots: row.project_roots,
     mode: row.run_mode,
-    level: row.run_level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    level: row.run_level ?? UNSET_RUN_LEVEL,
     agentMode: row.agent_mode,
     parentRunId: null,
     userRequest: row.content,
@@ -284,7 +284,7 @@ function childInput(runId: string, row: RunRow): RunInput {
       ? [row.worktree_path, ...row.project_roots.slice(1)]
       : row.project_roots,
     mode: row.run_mode,
-    level: row.run_level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    level: row.run_level ?? UNSET_RUN_LEVEL,
     agentMode: row.agent_mode,
     parentRunId: row.parent_run_id,
     userRequest: row.content,

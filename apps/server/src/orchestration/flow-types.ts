@@ -45,7 +45,7 @@ export type FlowAction =
   | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'keep'; note?: string }
-  | { type: 'ship' }
+  | { type: 'ship'; keptNote?: string }
   | { type: 'revert' }
   | { type: 'restore' }
   | {

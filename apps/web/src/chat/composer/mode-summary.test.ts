@@ -13,7 +13,7 @@ describe('mode summary', () => {
       'Accept edits · Automatic',
     );
     expect(modeSummary('claude', 'default', 'full-auto', modes)).toBe('Manual · Full auto → PR');
-    expect(modeSummary('claude', 'default', null, modes)).toBe('Manual · Automatic');
+    expect(modeSummary('claude', 'default', null, modes)).toBe('Manual · Full auto → PR');
   });
 
   it('leaves out the autonomy for a read-only mode', () => {
