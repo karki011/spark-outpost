@@ -81,6 +81,7 @@ svg {
 .app {
   height: 100%;
   display: flex;
+  background: var(--rail);
 }
 
 .spin {
@@ -101,7 +102,7 @@ svg {
   container: main / inline-size;
   display: flex;
   flex-direction: column;
-  margin: 8px 8px 8px 0;
+  margin: 8px 8px 8px 4px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: calc(var(--r) + 4px);
