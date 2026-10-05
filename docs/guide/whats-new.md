@@ -6,6 +6,8 @@ order: 720
 summary: Recent changes you can see in the app, newest first, and what to do about each.
 ---
 
+What changed recently in Spark, newest first.
+
 ## October 2026
 
 | What changed                                                                                                                                   | What to do                                                                   |
