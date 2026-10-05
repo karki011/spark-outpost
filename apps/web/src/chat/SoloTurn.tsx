@@ -33,6 +33,7 @@ import {
   type LiveRunStatus,
   type RunProjection,
 } from './run-projection.ts';
+import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { runSeconds } from './turns.ts';
@@ -143,6 +144,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       ?.content;
   const text = shownText(stream, persistedText, finished);
   const interrupted = run.status === 'outcome_unknown';
+  const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished ? (interrupted ? null : run.error) : stream.error;
   const checkpoints = finished
     ? mergeCheckpoints(detail.orchestrations?.[run.id]?.checkpoints ?? [])
@@ -207,7 +209,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       />
       {finished && <MakeChange run={run} detail={detail} />}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
-      {error && <p className="error-line">{error}</p>}
+      <ModelSwitchNote change={finished ? shown.modelSwitch : stream.modelSwitch} />
+      <ErrorLine
+        error={error}
+        details={finished ? shown.errorDetails : null}
+        change={finished ? shown.modelSwitch : null}
+      />
       {finished && (
         <div className="turn-foot">
           <RunUsageMeta run={child?.usage ? child : run} />

@@ -114,7 +114,7 @@ function untilStopped(signal: AbortSignal): Promise<void> {
   });
 }
 
-async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
+async function askToRun(turn: RoleTurn, command: string, reason?: string): Promise<boolean> {
   const toolCall = {
     toolCallId: `run-${command.replace(/\W+/g, '-')}`,
     title: command,
@@ -130,6 +130,7 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
       { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
       { optionId: 'no', name: 'No', kind: 'reject_once' },
     ],
+    ...(reason ? { _meta: { permission: { description: `Reason: ${reason}` } } } : {}),
   })) as acp.RequestPermissionResponse;
   const allowed = answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
   await turn.update({
@@ -139,6 +140,8 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
   });
   return allowed;
 }
+
+export const TARGETED_CHECK = 'cd . && npx vitest run store.test.ts 2>&1 | tail -20';
 
 const UNREADABLE_LINE = "export const trim = (s: string) => s.replace(/^-|-$/g, '');";
 
@@ -156,6 +159,9 @@ async function strayWrites(turn: RoleTurn, key: string): Promise<void> {
   const tag = (name: string, piece: string) => turn.text.includes(name) && key === piece;
   if (tag('#gitstash', 'P1')) await askToRun(turn, 'git stash');
   if (tag('#addpkg', 'P1')) await askToRun(turn, 'pnpm add left-pad');
+  if (tag('#targeted', 'P1'))
+    await askToRun(turn, TARGETED_CHECK, 'This command requires approval');
+  if (tag('#allnx', 'P1')) await askToRun(turn, 'npx nx run-many --target=test');
   if (tag('#strayedit', 'P2')) await write(turn, 'view.ts', 'edited by P2');
   if (tag('#shellwrite', 'P2')) await writeFile(join(turn.cwd, 'view.ts'), 'shell write by P2\n');
   if (tag('#shellstray', 'P2')) await writeFile(join(turn.cwd, 'stray.ts'), 'shell stray\n');

@@ -7,6 +7,7 @@ import {
   type ApprovalOption,
   type RunEvent,
 } from '@spark-outpost/contracts';
+import { routesSharedPieces } from '../agents/acp/agents.ts';
 import { normalizeCommand } from '../approvals/commands.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
@@ -395,6 +396,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
+      routedPiece: deps.piece?.sharesTree === true && routesSharedPieces(deps.provider),
       ...(deps.piece ? { piece: deps.piece } : {}),
       ...(await publishContext(deps.db, deps.publish, request)),
     };

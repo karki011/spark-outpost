@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type {
-  AdvisorSetup,
-  ConnectionMethod,
-  ProviderSetup,
-  VerifyFailureCode,
-  VerifyRequest,
+import {
+  providerIdSchema,
+  type AdvisorSetup,
+  type ConnectionMethod,
+  type ProviderSetup,
+  type VerifyFailureCode,
+  type VerifyRequest,
 } from '@spark-outpost/contracts';
+import { api, queryKeys } from '../api/client.ts';
 import { setupKey, verifyProvider } from '../api/setup.ts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import type { VerifyFailure } from './tile-status.ts';
@@ -86,9 +88,21 @@ export function useProviderConnect(
     setShowKey(false);
   }
 
+  function refreshModels() {
+    const parsed = providerIdSchema.safeParse(provider.id);
+    if (!parsed.success) return;
+    void queryClient
+      .fetchQuery({
+        queryKey: queryKeys.capabilities(parsed.data),
+        queryFn: () => api.getCapabilities(parsed.data, true),
+      })
+      .catch(() => undefined);
+  }
+
   async function handleConnected() {
     setTerminalOpen(false);
     await queryClient.invalidateQueries({ queryKey: setupKey });
+    refreshModels();
     setVerifying(false);
     setChanging(false);
     setReauth(false);

@@ -153,6 +153,8 @@ function CrewTurnBody({
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
         error={member.error}
+        errorDetails={member.errorDetails ?? null}
+        modelSwitch={member.modelSwitch ?? null}
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}

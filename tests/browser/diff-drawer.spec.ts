@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { crewRepo, type CrewRepo } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
+import { EDIT_AFTER, EDIT_BEFORE, REWRITE_AFTER, REWRITE_BEFORE } from './diff-fixtures.ts';
 import { editedChat } from './edited-chat.ts';
 
 test.use({ trace: 'off' });
@@ -252,4 +253,93 @@ test('the changes chip opens the drawer by shortcut, resizes and hands focus bac
   await expect(drawer).toBeVisible();
   await drawer.getByRole('button', { name: 'Close changes' }).click();
   await expect(drawer).toHaveCount(0);
+});
+
+test('word marks show only for a real edit of a line and removed lines are numbered', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  repo.commit('rewrite.ts', REWRITE_BEFORE);
+  repo.commit('edit.ts', EDIT_BEFORE);
+  await editedChat(page, repo.root);
+  writeFileSync(path.join(repo.work(), 'rewrite.ts'), REWRITE_AFTER);
+  writeFileSync(path.join(repo.work(), 'edit.ts'), EDIT_AFTER);
+  await page.reload();
+  const chip = page.getByRole('button', { name: /removed in 3 files$/ });
+  await expect(chip).toBeVisible({ timeout: 60_000 });
+  await chip.click();
+  const drawer = page.getByRole('dialog', { name: 'Changes · 3 files' });
+  const tree = drawer.getByRole('tree', { name: 'Changed files' });
+  const code = drawer.locator('.dd-code');
+  const removed = code.locator('.cm-deletedChunk .cm-deletedLine');
+  const before = (selector: string) =>
+    code
+      .locator(selector)
+      .evaluateAll((lines) => lines.map((line) => getComputedStyle(line, '::before').content));
+
+  await tree.getByRole('treeitem', { name: /edit\.ts/ }).click();
+  await expect(code.locator('.cm-deletedChunk .dd-word')).toHaveText(['changed']);
+  await expect(code.locator('.cm-changedLine .dd-word')).toHaveText(['updated']);
+  await expect(code.locator('.cm-changedText, .cm-deletedText')).toHaveCount(0);
+  await expect(removed).toHaveText([/noun \+ ' changed';$/, 'task();']);
+  await expect(code.locator('.dd-old-rows')).toHaveText(['6', '11']);
+  await expect(code.locator('.cm-changedLine')).toHaveCount(3);
+  await expect(removed.first().locator('span[class]:not(.dd-word)').first()).toBeVisible();
+  expect(await before('.cm-changedLine')).toEqual(['"+"', '"+"', '"+"']);
+  expect(await before('.cm-deletedChunk .cm-deletedLine')).toEqual(['"−"', '"−"']);
+  const paint = await code.evaluate((root) => {
+    const background = (selector: string) =>
+      getComputedStyle(root.querySelector(selector)!).backgroundColor;
+    return {
+      inserted: background('ins.cm-insertedLine'),
+      deleted: background('.cm-deletedLine del'),
+      line: background('.cm-changedLine'),
+      word: background('.cm-changedLine .dd-word'),
+      radius: getComputedStyle(root.querySelector('.dd-word')!).borderRadius,
+    };
+  });
+  expect(paint.inserted).toBe('rgba(0, 0, 0, 0)');
+  expect(paint.deleted).toBe('rgba(0, 0, 0, 0)');
+  expect(paint.word).not.toBe(paint.line);
+  expect(paint.radius).toBe('3px');
+  await expect(code.locator('.dd-old-numbers .cm-gutterElement:visible')).toHaveText(
+    Array.from({ length: 16 }, (_, index) => String(index + 1)),
+  );
+  await expect(code.locator('.cm-lineNumbers .cm-gutterElement:visible')).toHaveText(
+    Array.from({ length: 17 }, (_, index) => String(index + 1)),
+  );
+
+  await drawer.getByRole('radio', { name: 'Split' }).click();
+  await expect(code.locator('.cm-merge-a .dd-word')).toHaveText(['changed']);
+  await expect(code.locator('.cm-merge-b .dd-word')).toHaveText(['updated']);
+  await expect(code.locator('.cm-merge-a .cm-changedLine')).toHaveCount(2);
+  expect(await before('.cm-merge-a .cm-changedLine')).toEqual(['"−"', '"−"']);
+
+  await tree.getByRole('treeitem', { name: /rewrite\.ts/ }).click();
+  await expect(code.locator('.cm-merge-b .cm-changedLine')).toHaveCount(30);
+  await expect(code.locator('.dd-word, .cm-changedText')).toHaveCount(0);
+  await drawer.getByRole('radio', { name: 'Unified' }).click();
+  await expect(removed).toHaveCount(21);
+  await expect(code.locator('.cm-changedLine')).toHaveCount(30);
+  await expect(code.locator('.dd-word, .cm-changedText, .cm-deletedText')).toHaveCount(0);
+  const rows = code.locator('.dd-old-rows > div');
+  await expect(rows).toHaveCount(21);
+  await expect(rows.first()).toHaveText('11');
+  await expect(rows.last()).toHaveText('31');
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  await drawer.getByRole('button', { name: 'Wrap' }).click();
+  await drawer.getByRole('separator', { name: 'Resize changes drawer' }).focus();
+  for (let press = 0; press < 12; press++) await page.keyboard.press('ArrowRight');
+  const heights = (selector: string) =>
+    code
+      .locator(selector)
+      .evaluateAll((lines) => lines.map((line) => Math.round(line.getBoundingClientRect().height)));
+  await expect
+    .poll(async () => Math.max(...(await heights('.cm-deletedChunk .cm-deletedLine'))))
+    .toBeGreaterThan(30);
+  await expect
+    .poll(() => heights('.dd-old-rows > div'))
+    .toEqual(await heights('.cm-deletedChunk .cm-deletedLine'));
 });

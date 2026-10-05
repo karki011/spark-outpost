@@ -3,7 +3,6 @@ import type { ModePosture } from '@spark-outpost/contracts';
 import {
   BUILDER_PUBLISH_REASON,
   OUTSIDE_DELETE_REASON,
-  OUTSIDE_WRITE_REASON,
   PUSH_REASON,
   SAFE_READ_WHY,
   SECRET_REASON,
@@ -15,6 +14,7 @@ import {
   type ApprovalRequest,
   type RunRule,
 } from './decide.ts';
+import { outsideDeleteReason } from './rails.ts';
 import type { FileLister } from './file-lister.ts';
 
 const ROOT = '/work/app';
@@ -220,15 +220,33 @@ describe('decide() refuses publishing from a Builder in every mode', () => {
 });
 
 describe('decide() always asks, in every mode', () => {
+  const home = '/Users/me';
   const cases: [string, ApprovalRequest, string][] = [
-    ['rm outside the repo', run('rm -rf /tmp/other'), OUTSIDE_DELETE_REASON],
-    ['rm with a parent path', run('rm ../sibling/file.txt'), OUTSIDE_DELETE_REASON],
-    ['rm in the home folder', run('rm ~/notes.txt'), OUTSIDE_DELETE_REASON],
-    ['find -delete outside', run('find /var/log -name "*.log" -delete'), OUTSIDE_DELETE_REASON],
+    ['rm outside the repo', run('rm -rf /srv/other'), outsideDeleteReason(['/srv/other'], home)],
+    [
+      'rm with a parent path',
+      run('rm ../sibling/file.txt'),
+      outsideDeleteReason(['/work/sibling/file.txt'], home),
+    ],
+    [
+      'rm in the home folder',
+      run('rm ~/notes.txt'),
+      'This deletes ~/notes.txt, which is outside this project',
+    ],
+    [
+      'find -delete outside',
+      run('find /var/log -name "*.log" -delete'),
+      outsideDeleteReason(['/var/log'], home),
+    ],
+    ['rm at a path Spark cannot resolve', run('rm -rf "$OUT/x"'), OUTSIDE_DELETE_REASON],
     ['reading .env in a command', run('cat .env'), SECRET_REASON],
     ['redirecting into a key file', run('echo x > deploy.pem'), SECRET_REASON],
     ['editing .env', edit(`${ROOT}/.env`), SECRET_REASON],
-    ['editing outside the repo', edit('/work/other/a.ts'), OUTSIDE_WRITE_REASON],
+    [
+      'editing outside the repo',
+      edit('/work/other/a.ts'),
+      'This changes /work/other/a.ts, which is outside this project',
+    ],
   ];
 
   it.each(cases)('%s', (_name, input, reason) => {

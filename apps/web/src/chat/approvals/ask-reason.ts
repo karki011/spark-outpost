@@ -44,6 +44,7 @@ function toolCallReason(approval: Approval, agent: string): string | null {
 
 export function askReason(approval: Approval, agent: string): string | null {
   const own = approval.payload.agentReason;
+  if (own && approval.payload.asksBecause) return `${agent} noted: ${own}`;
   if (own) return agentReasonLine(agent, own);
   return explainedBySpark(approval) ? null : toolCallReason(approval, agent);
 }

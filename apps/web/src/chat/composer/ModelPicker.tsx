@@ -25,7 +25,7 @@ import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
-import { buttonLabel, currentModel, selectableEfforts } from './model-options.ts';
+import { buttonLabel, currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionState } from './mode-summary.ts';
 import { PermissionChip } from './PermissionChip.tsx';
@@ -116,7 +116,9 @@ export function ModelPicker({
       })
     : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
-  const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const unusable = unusableChoice(settings.model, capabilities) !== null;
+  const pinnedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
   const auto = settings.routing === 'auto';
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;

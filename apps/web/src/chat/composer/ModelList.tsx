@@ -6,7 +6,15 @@ import {
   type ProviderSetup,
 } from '@spark-outpost/contracts';
 import { TickIcon } from '../../ui/icons.tsx';
-import { cleanDescription, optionLabel, retiringLabel, visibleModels } from './model-options.ts';
+import {
+  availabilityTag,
+  cleanDescription,
+  optionLabel,
+  retiringLabel,
+  unusableChoice,
+  visibleModels,
+} from './model-options.ts';
+import { UnusableModelNotice } from './UnusableModelNotice.tsx';
 import { BlobSwitchFace } from '../../brand/BlobToggle.tsx';
 
 interface ModelListProps {
@@ -48,8 +56,10 @@ export function ModelList({
   const options = visibleModels(models, selected, showRetiring, now);
   const hasRetiring = models.some((model) => isRetiring(model, now));
   const auto = routing === 'auto' && onAuto !== null;
+  const unusable = auto ? null : unusableChoice(selected, capabilities);
   return (
     <>
+      {unusable && <UnusableModelNotice issue={unusable} onSwitch={onSelect} />}
       <div role="radiogroup" aria-label={`${provider.name} model`}>
         {onAuto && <AutoOption checked={auto} onSelect={onAuto} />}
         {models.length === 0 && (
@@ -60,6 +70,7 @@ export function ModelList({
         {options.map((option) => {
           const description = cleanDescription(option);
           const retiring = retiringLabel(option, now);
+          const access = availabilityTag(option, capabilities);
           return (
             <button
               key={option.id}
@@ -73,6 +84,7 @@ export function ModelList({
                 <b>
                   {optionLabel(option, capabilities)}
                   {retiring && <span className="mtag">{retiring}</span>}
+                  {access && <span className="mtag">{access}</span>}
                 </b>
                 {description && <small title={description}>{description}</small>}
               </span>

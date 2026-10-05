@@ -1,4 +1,5 @@
-import { diffArrays, diffWordsWithSpace } from 'diff';
+import { diffArrays } from 'diff';
+import { hunkEdits, type Span } from '../../diff/word-spans.ts';
 import type { CodeToken } from '../markdown/highlighter.ts';
 
 export type DiffKind = 'same' | 'add' | 'remove';
@@ -31,8 +32,6 @@ export interface Segment {
 }
 
 const MAX_EDIT_LENGTH = 2000;
-const WORD_LINE_LIMIT = 400;
-const WORD_CHANGE_LIMIT = 0.6;
 const FOLD_CONTEXT = 3;
 const FOLD_MIN_HIDDEN = 4;
 
@@ -51,28 +50,31 @@ function lineChanges(before: string[], after: string[]) {
   );
 }
 
-function wordParts(before: string, after: string): [WordPart[], WordPart[]] | null {
-  if (before.length > WORD_LINE_LIMIT || after.length > WORD_LINE_LIMIT) return null;
-  const parts = diffWordsWithSpace(before, after);
-  const changed = parts
-    .filter((part) => part.added || part.removed)
-    .reduce((sum, part) => sum + part.value.length, 0);
-  if (changed > (before.length + after.length) * WORD_CHANGE_LIMIT) return null;
-  const side = (skip: 'added' | 'removed') =>
-    parts
-      .filter((part) => !part[skip])
-      .map((part) => ({ text: part.value, changed: part.added || part.removed }));
-  return [side('added'), side('removed')];
+function wordParts(text: string, spans: readonly Span[]): WordPart[] | null {
+  if (spans.length === 0) return null;
+  const parts: WordPart[] = [];
+  let at = 0;
+  for (const span of spans) {
+    if (span.from > at) parts.push({ text: text.slice(at, span.from), changed: false });
+    parts.push({ text: text.slice(span.from, span.to), changed: true });
+    at = span.to;
+  }
+  if (at < text.length) parts.push({ text: text.slice(at), changed: false });
+  return parts;
 }
 
 function pairWords(removed: DiffRow[], added: DiffRow[]): void {
-  const pairs = Math.min(removed.length, added.length);
-  for (let index = 0; index < pairs; index++) {
-    const words = wordParts(removed[index]!.text, added[index]!.text);
-    if (!words) continue;
-    removed[index]!.words = words[0];
-    added[index]!.words = words[1];
-  }
+  const edits = hunkEdits(
+    removed.map((row) => row.text),
+    added.map((row) => row.text),
+  );
+  edits?.forEach((edit, index) => {
+    if (!edit) return;
+    const before = removed[index]!;
+    const after = added[index]!;
+    before.words = wordParts(before.text, edit.before);
+    after.words = wordParts(after.text, edit.after);
+  });
 }
 
 export function buildDiff(oldText: string | null, newText: string): DiffModel {

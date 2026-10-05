@@ -94,10 +94,18 @@ export function beginPieces(
   t: TestDb,
   root: string,
   tags: string,
-  options: { level?: InvolvementLevel; costCapUsd?: number; jev?: typeof fetch } = {},
+  options: {
+    level?: InvolvementLevel;
+    costCapUsd?: number;
+    jev?: typeof fetch;
+    agentMode?: string;
+    routing?: 'auto' | 'pinned';
+    agentEnv?: Record<string, string>;
+  } = {},
 ): { harness: Harness; started: ReturnType<typeof startScenario> } {
   const harness = startOrchestrator(t, options.jev ?? jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'parallel',
+    ...(options.agentEnv ? { agentEnv: options.agentEnv } : {}),
     ...(options.costCapUsd === undefined ? {} : { budget: { costCapUsd: options.costCapUsd } }),
   });
   const scenario = withTag(NORMAL, `Split this up. #pieces #parallel ${tags}`);
@@ -106,9 +114,9 @@ export function beginPieces(
     root,
     scenario,
     options.level ?? 'hands-off',
-    'auto',
+    options.routing ?? 'auto',
     'sonnet',
-    'acceptEdits',
+    options.agentMode ?? 'acceptEdits',
   );
   return { harness, started };
 }

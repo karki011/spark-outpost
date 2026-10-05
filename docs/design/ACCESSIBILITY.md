@@ -90,7 +90,7 @@ Two uses are decorative and are not held to 3:1. The lighter shades that mark ch
 
 ### Automated check
 
-`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 153 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
+`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 300 text and UI pairings plus one hue check per theme. The diff tints (`--diff-add`, `--diff-remove` and their `-word` and `-edge` steps) live in `theme.css`; every syntax colour is checked on the line tint, and its `--code-word-*` ink on the word highlight. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
 
 The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every entry gives its reason:
 

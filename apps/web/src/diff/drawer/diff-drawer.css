@@ -311,14 +311,6 @@
   height: 100%;
 }
 
-.dd-code .dd-new .cm-line {
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-}
-
-.dd-code .dd-gone .cm-line {
-  background: color-mix(in srgb, var(--danger) 9%, transparent);
-}
-
 .dd-code-skel {
   padding: 14px 16px;
 }
