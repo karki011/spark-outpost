@@ -17,9 +17,35 @@ export async function slackPosts(): Promise<FakeSlackPost[]> {
   return (await (await fetch(`${STUB_URL}/slack-test/posted`)).json()) as FakeSlackPost[];
 }
 
+export interface SlackOAuthSeen {
+  access: string | null;
+  refresh: string | null;
+  requests: Record<string, string>[];
+  revoked: string[];
+}
+
+export async function slackOAuth(): Promise<SlackOAuthSeen> {
+  return (await (await fetch(`${STUB_URL}/slack-test/oauth`)).json()) as SlackOAuthSeen;
+}
+
+export async function endSlackSignIn(): Promise<void> {
+  await fetch(`${STUB_URL}/slack-test/end-sign-in`);
+}
+
+export async function approveInFakeSlack(
+  page: Page,
+  authorizeUrl: string,
+  deny: string | null = null,
+): Promise<void> {
+  const query = new URLSearchParams({ url: authorizeUrl, ...(deny ? { deny } : {}) });
+  const answer = await fetch(`${STUB_URL}/slack-test/authorize?${query.toString()}`);
+  const { redirect } = (await answer.json()) as { redirect: string };
+  await page.request.post('/api/slack/sign-in/callback', { data: { url: redirect } });
+}
+
 export async function connectSlack(page: Page, channels: string[] = ['C0ENG']): Promise<void> {
   await page.request.put('/api/slack/connection', {
-    data: { botToken: SLACK_BOT_TOKEN, userToken: SLACK_USER_TOKEN },
+    data: { botToken: SLACK_BOT_TOKEN, userToken: SLACK_USER_TOKEN, replace: true },
   });
   await page.request.put('/api/slack/channels', {
     data: { channels: channels.map((id) => ({ id, projectId: null })) },

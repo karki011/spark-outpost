@@ -204,13 +204,30 @@ export function SlackStartSettings({
   connection,
   save,
   onStarted,
+  onUseOwnApp,
 }: {
   connection: SlackConnection;
   save: SlackSave;
   onStarted: () => void;
+  onUseOwnApp: () => void;
 }) {
   const id = useId();
   const { settings, tokens } = connection;
+  if (connection.method === 'sign_in') {
+    return (
+      <section className="sl-section" aria-labelledby={`${id}-title`}>
+        <h4 id={`${id}-title`}>Start work from Slack</h4>
+        <StartFromLink onStarted={onStarted} />
+        <p className="tk-field-help">
+          Starting work from inside Slack, with @Spark or the message shortcut, needs your own Slack
+          app: a sign-in has no bot to listen there.{' '}
+          <button type="button" className="sl-inline" onClick={onUseOwnApp}>
+            Set up your own Slack app
+          </button>
+        </p>
+      </section>
+    );
+  }
   return (
     <section className="sl-section" aria-labelledby={`${id}-title`}>
       <h4 id={`${id}-title`}>Start work from Slack</h4>

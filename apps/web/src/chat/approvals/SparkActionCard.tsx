@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   editableFields,
-  sparkActionLabels,
+  sparkActionQuestion,
   ticketPriorityNameSchema,
   ticketSourceNames,
   ticketStatusLabels,
@@ -204,6 +204,7 @@ function Facts({ action }: { action: SparkAction }) {
       return (
         <dl className="sac-facts">
           <Fact label="Channel">#{action.channel.name}</Fact>
+          {action.asYou && <Fact label="Posts as">You, under your own name</Fact>}
           <Fact label="Where">
             {action.threadTs ? (
               action.permalink ? (
@@ -395,7 +396,7 @@ export function SparkActionCard({
           <i className="appr-dia" />
         </span>
         <span id={headingId}>
-          <b>{sparkActionLabels[action.action].question}</b> {byline(action, agent)}
+          <b>{sparkActionQuestion(action)}</b> {byline(action, agent)}
         </span>
       </div>
       <Facts action={action} />

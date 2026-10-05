@@ -112,7 +112,13 @@ export function SlackChannels({
                   onChange={(event) => toggle(channel.id, event.target.checked)}
                 />
                 <span>{channelLabel(channel)}</span>
-                {channel.isMember === false && <small>Invite the app to post here</small>}
+                {channel.isMember === false && (
+                  <small>
+                    {connection.method === 'sign_in'
+                      ? 'Join this channel to post here'
+                      : 'Invite the app to post here'}
+                  </small>
+                )}
               </label>
               {on && (
                 <ChoicePicker

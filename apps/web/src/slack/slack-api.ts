@@ -4,6 +4,7 @@ import {
   slackContextResponseSchema,
   slackDmPageSchema,
   slackNotAllowedSchema,
+  slackSignInFlowSchema,
   slackStatusSchema,
   slackTestResponseSchema,
   startSlackResponseSchema,
@@ -14,6 +15,7 @@ import {
   type SlackContextResponse,
   type SlackDmPage,
   type SlackNotAllowed,
+  type SlackSignInFlow,
   type SlackStatus,
   type StartSlackRequest,
   type StartSlackResponse,
@@ -23,6 +25,7 @@ import { ApiError, request } from '../api/client.ts';
 
 export const slackKeys = {
   status: ['slack', 'status'] as const,
+  signIn: ['slack', 'sign-in'] as const,
   channels: ['slack', 'channels'] as const,
   directMessages: ['slack', 'direct-messages'] as const,
 };
@@ -37,7 +40,12 @@ const paged = (path: string, cursor: string | null): string =>
 
 export const slackApi = {
   status: (): Promise<SlackStatus> => request(slackStatusSchema, '/slack'),
-  connect: (body: SaveSlackConnectionRequest): Promise<SlackStatus> =>
+  signIn: (): Promise<SlackSignInFlow> => request(slackSignInFlowSchema, '/slack/sign-in'),
+  startSignIn: (body: { directMessages: boolean; replace: boolean }): Promise<SlackSignInFlow> =>
+    request(slackSignInFlowSchema, '/slack/sign-in', json('POST', body)),
+  cancelSignIn: (): Promise<SlackSignInFlow> =>
+    request(slackSignInFlowSchema, '/slack/sign-in', { method: 'DELETE' }),
+  connect: (body: SaveSlackConnectionRequest & { replace?: boolean }): Promise<SlackStatus> =>
     request(slackStatusSchema, '/slack/connection', json('PUT', body)),
   disconnect: (): Promise<SlackStatus> =>
     request(slackStatusSchema, '/slack/connection', { method: 'DELETE' }),
