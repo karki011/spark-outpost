@@ -2,18 +2,32 @@ import { describe, expect, it } from 'vitest';
 import { agreesByRule, planAgreementAction } from './agreement.ts';
 
 describe('planAgreementAction', () => {
-  it('saves at 0.85 or more, offers from 0.6, and otherwise does nothing', () => {
-    expect(planAgreementAction(0.9)).toBe('save');
-    expect(planAgreementAction(0.85)).toBe('save');
-    expect(planAgreementAction(0.84)).toBe('offer');
-    expect(planAgreementAction(0.6)).toBe('offer');
-    expect(planAgreementAction(0.59)).toBe('none');
+  it('saves a real plan the user accepts: both scores at 0.85 or more', () => {
+    expect(planAgreementAction(0.93, 0.95)).toBe('save');
+    expect(planAgreementAction(0.85, 0.85)).toBe('save');
   });
 
-  it('does nothing without a Jev answer', () => {
-    expect(planAgreementAction(null)).toBe('none');
-    expect(planAgreementAction(undefined)).toBe('none');
-    expect(planAgreementAction(Number.NaN)).toBe('none');
+  it('offers when the plan is real but the acceptance is unsure, or the reverse', () => {
+    expect(planAgreementAction(0.7, 0.95)).toBe('offer');
+    expect(planAgreementAction(0.6, 0.6)).toBe('offer');
+    expect(planAgreementAction(0.95, 0.84)).toBe('offer');
+  });
+
+  it('does nothing when the previous reply is not a plan, however clear the "ok"', () => {
+    expect(planAgreementAction(0.7, 0.08)).toBe('none');
+    expect(planAgreementAction(0.97, 0.59)).toBe('none');
+  });
+
+  it('does nothing when the message does not accept the plan', () => {
+    expect(planAgreementAction(0.59, 0.95)).toBe('none');
+  });
+
+  it('does nothing without both Jev answers', () => {
+    expect(planAgreementAction(0.95, null)).toBe('none');
+    expect(planAgreementAction(0.95, undefined)).toBe('none');
+    expect(planAgreementAction(0.95, Number.NaN)).toBe('none');
+    expect(planAgreementAction(null, 0.95)).toBe('none');
+    expect(planAgreementAction(undefined, undefined)).toBe('none');
   });
 });
 

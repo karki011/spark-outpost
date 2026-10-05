@@ -32,9 +32,11 @@ export async function observePlanAgreement(deps: PlanAgreementDeps): Promise<Pla
   const previous = await previousAssistantMessage(deps.db, deps.runId);
   if (!previous) return null;
   const outcome = deps.intake.outcome;
-  const noul = outcome.status === 'answered' ? (outcome.intake.planAgreed ?? null) : null;
+  const answered = outcome.status === 'answered' ? outcome.intake : null;
+  const noul = answered?.planAgreed ?? null;
+  const previousIsPlan = answered?.previousIsPlan ?? null;
   const already = (await planForMessage(deps.db, previous.id))?.status === 'approved';
-  const action = already ? 'none' : planAgreementAction(noul);
+  const action = already ? 'none' : planAgreementAction(noul, previousIsPlan);
   let saved: PlanDocument | null = null;
   let error: string | null = null;
   if (action === 'save') {
@@ -68,6 +70,7 @@ export async function observePlanAgreement(deps: PlanAgreementDeps): Promise<Pla
       answer: {
         observation: true,
         jev: noul,
+        previousIsPlan,
         rule: agreesByRule(deps.input.userRequest),
         action,
         alreadySaved: already,

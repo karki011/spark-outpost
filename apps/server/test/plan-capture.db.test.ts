@@ -37,7 +37,21 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-function start(planAgreed: number | null) {
+function answeringPlanPresence(inner: typeof fetch, previousIsPlan: number | null): typeof fetch {
+  return async (input, init) => {
+    const response = await inner(input, init);
+    const asked = JSON.parse(String(init?.body)) as { questions: Record<string, unknown> };
+    if (previousIsPlan === null || !asked.questions.previous_is_plan) return response;
+    const body = (await response.json()) as { answers: Record<string, unknown> };
+    body.answers.previous_is_plan = { type: 'noul', noul: previousIsPlan };
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+}
+
+function start(planAgreed: number | null, previousIsPlan: number | null = 0.95) {
   const script: JevScript = {
     calls: [],
     scenario: {
@@ -49,7 +63,10 @@ function start(planAgreed: number | null) {
       ...(planAgreed === null ? {} : { planAgreed }),
     },
   };
-  harness = startOrchestrator(t, planAgreed === null ? null : jevFetch(script));
+  harness = startOrchestrator(
+    t,
+    planAgreed === null ? null : answeringPlanPresence(jevFetch(script), previousIsPlan),
+  );
   return script;
 }
 
@@ -302,9 +319,13 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
     const [advice] = await planAdvice(agreed);
     expect(advice).toMatchObject({
       jev_status: 'not_asked',
-      body: { applied: 'save', answer: { jev: 0.93, rule: true, action: 'save' } },
+      body: {
+        applied: 'save',
+        answer: { jev: 0.93, previousIsPlan: 0.95, rule: true, action: 'save' },
+      },
     });
     const planCall = script.calls.find((call) => call.questions.includes('plan_agreed'));
+    expect(planCall?.questions).toContain('previous_is_plan');
     expect(String(planCall?.state.previous_reply)).toContain('Shall I go ahead?');
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.plans).toEqual({ saved: [{ messageId: reply!.id, version: 1 }], offers: [] });
@@ -331,6 +352,38 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
     expect(await planDocuments(t.db, conversationId)).toEqual([]);
     const [advice] = await planAdvice(next);
     expect(advice?.body).toMatchObject({ applied: 'none', answer: { jev: 0.2, rule: false } });
+  });
+
+  it('does nothing after "ok" when the previous reply is not a plan', async () => {
+    start(0.7, 0.08);
+    const { conversationId } = await linkedConversation(t, root);
+    await finished(await say(conversationId, 'hi #planreply', 'ask'));
+    const next = await say(conversationId, 'ok', 'ask');
+    await finished(next);
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    const [advice] = await planAdvice(next);
+    expect(advice?.body).toMatchObject({
+      applied: 'none',
+      answer: { jev: 0.7, previousIsPlan: 0.08, rule: true, action: 'none' },
+    });
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.plans?.offers ?? []).toEqual([]);
+  });
+
+  it('does nothing when Jev does not say whether the previous reply is a plan', async () => {
+    start(0.93, null);
+    const { conversationId } = await linkedConversation(t, root);
+    await finished(await say(conversationId, 'Plan CSV export #planreply', 'ask'));
+    const next = await say(conversationId, 'sounds good, go ahead', 'ask');
+    await finished(next);
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    const [advice] = await planAdvice(next);
+    expect(advice?.body).toMatchObject({
+      applied: 'none',
+      answer: { jev: 0.93, previousIsPlan: null, action: 'none' },
+    });
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.plans?.offers ?? []).toEqual([]);
   });
 
   it('approves a proposed Codex plan instead of copying the reply', async () => {

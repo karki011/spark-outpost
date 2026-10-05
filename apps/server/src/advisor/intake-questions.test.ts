@@ -7,6 +7,7 @@ import {
   DESTRUCTIVE_QUESTION,
   MAX_PREVIOUS_REPLY_CHARACTERS,
   PLAN_AGREED_QUESTION,
+  PREVIOUS_IS_PLAN_QUESTION,
   PLAN_ONLY_QUESTION,
   REVIEW_QUESTION,
   VAGUE_QUESTION,
@@ -142,8 +143,9 @@ describe('intake questions', () => {
     expect(other.questions[SPEED_KEY]).toBeUndefined();
   });
 
-  it('asks whether the message approves a plan only when there is a previous reply, and sends its end', () => {
+  it('asks whether the previous reply is a plan and whether the message accepts it, only with a previous reply, and sends its end', () => {
     expect(buildIntakeQuestions(request).questions.plan_agreed).toBeUndefined();
+    expect(buildIntakeQuestions(request).questions.previous_is_plan).toBeUndefined();
     const reply = `${'a'.repeat(MAX_PREVIOUS_REPLY_CHARACTERS)}\n1. Add export\nShall I go ahead?`;
     const asked = buildIntakeQuestions({
       ...request,
@@ -152,14 +154,25 @@ describe('intake questions', () => {
       previousReply: reply,
     });
     expect(String(asked.questions.plan_agreed!.instructions)).toContain(PLAN_AGREED_QUESTION);
+    const presence = asked.questions.previous_is_plan!;
+    expect(presence).toMatchObject({ type: 'noul', instructions: PREVIOUS_IS_PLAN_QUESTION });
+    expect(JSON.stringify(presence.criteria)).toContain('options to pick from');
     const sent = String(asked.state.previous_reply);
     expect(sent).toHaveLength(MAX_PREVIOUS_REPLY_CHARACTERS);
     expect(sent.endsWith('Shall I go ahead?')).toBe(true);
-    const response = answered({ plan_agreed: noul(0.93) });
+    const response = answered({ plan_agreed: noul(0.93), previous_is_plan: noul(0.9) });
     const withReply = { ...request, previousReply: reply };
     expect(parseIntakeAnswers(withReply, buildIntakeQuestions(withReply), response)).toMatchObject({
       planAgreed: 0.93,
+      previousIsPlan: 0.9,
     });
+    const older = parseIntakeAnswers(
+      withReply,
+      buildIntakeQuestions(withReply),
+      answered({ plan_agreed: noul(0.93) }),
+    );
+    expect(older.previousIsPlan).toBeUndefined();
+    expect(older.invalid).toContain('previous_is_plan');
   });
 
   it('offers the chat provider’s tier ladder, never frontier, with card text', () => {
@@ -338,6 +351,7 @@ describe('advice record', () => {
     expect(notAskedReasons(request, buildIntakeQuestions(request))).toEqual({
       continues_task: 'no current task',
       plan_agreed: 'no previous reply',
+      previous_is_plan: 'no previous reply',
       injection: 'no attached text',
       speed: 'not a first request to make something faster',
     });

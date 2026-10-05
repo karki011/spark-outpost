@@ -92,6 +92,7 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   destructive: noul.optional(),
   continuesTask: noul.optional(),
   planAgreed: noul.optional(),
+  previousIsPlan: noul.optional(),
   tier: routeTierSchema.nullable().optional(),
   ratings: ratingsSchema.optional(),
   invalid: z.array(z.string()).optional(),
