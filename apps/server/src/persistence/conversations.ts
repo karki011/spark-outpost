@@ -31,6 +31,7 @@ import { listQueue } from './chat-queue.ts';
 import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
+import { findInterruption } from './interruptions.ts';
 import {
   toConversationSummary,
   toMessage,
@@ -56,7 +57,7 @@ const summaryQuery = `
        LIMIT 1)
     ) AS category,
     r.id AS latest_run_id, r.status AS latest_run_status, r.error AS latest_run_error,
-    r.provider AS latest_run_provider,
+    r.provider AS latest_run_provider, r.interruption_choice AS latest_run_interruption_choice,
     CASE WHEN r.status IN ('queued', 'running') THEN (
       SELECT jsonb_build_object(
         'done', count(*) FILTER (WHERE entry->>'status' = 'completed'),
@@ -92,7 +93,7 @@ const summaryQuery = `
   FROM conversations c
   LEFT JOIN teammates tm ON tm.id = c.teammate_id
   LEFT JOIN LATERAL (
-    SELECT id, status, error, finished_at, provider, task_id FROM runs
+    SELECT id, status, error, finished_at, provider, task_id, interruption_choice FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
   ) r ON true
   LEFT JOIN LATERAL (
@@ -217,6 +218,7 @@ export async function getConversationDetail(
     memberMessages,
     railFlags,
     browserShots,
+    interruption,
   ] = await Promise.all([
     db.query<MessageRow>(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
@@ -242,6 +244,7 @@ export async function getConversationDetail(
     listMemberMessages(db, id),
     listRailFlags(db, id),
     listBrowserShots(db, id),
+    findInterruption(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -267,6 +270,7 @@ export async function getConversationDetail(
     memberMessages,
     railFlags,
     ...(browserShots.length > 0 ? { browserShots } : {}),
+    ...(interruption ? { interruption } : {}),
   };
 }
 
@@ -300,6 +304,7 @@ export type SendMessageInput = Omit<
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
   source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | undefined;
+  continuesRunId?: string;
 };
 
 export async function sendUserMessage(
@@ -352,8 +357,8 @@ export async function sendInTransaction(
   const run = await client.query<RunRow>(
     `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
        task_id, plan_version, mode, level, agent_mode, config_values,
-       picked_mode, start_as, source)
-     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14)
+       picked_mode, start_as, source, continues_run_id)
+     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14, $15)
      RETURNING *`,
     [
       runId,
@@ -370,6 +375,7 @@ export async function sendInTransaction(
       JSON.stringify(target.options ?? {}),
       mode === 'do' ? (request.startAs ?? null) : null,
       request.source ?? null,
+      request.continuesRunId ?? null,
     ],
   );
   await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

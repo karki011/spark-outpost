@@ -1,6 +1,11 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
-import type { ProtocolObserver, ProviderOutput, StoredSession } from '../../providers/provider.ts';
+import type {
+  ProtocolObserver,
+  ProviderOutput,
+  SessionTarget,
+  StoredSession,
+} from '../../providers/provider.ts';
 
 export type ResumeMethod = 'resume' | 'load';
 
@@ -159,9 +164,20 @@ export function sessionOutput(
   };
 }
 
-export function sessionNote(opened: OpenedSession, planned: string | null): string | null {
-  if (opened.continued) return 'Continued session';
+export const REOPENED_INTERRUPTED = 'Reopened the interrupted session';
+
+export function freshAfterInterruption(reason: string | null): string {
+  const why = reason ? ` (${reason})` : '';
+  return `Couldn't reopen the interrupted session${why}, so this continues in a fresh one with the chat so far`;
+}
+
+export function sessionNote(
+  opened: OpenedSession,
+  target: Pick<SessionTarget, 'freshReason' | 'interrupted'>,
+): string | null {
+  if (opened.continued) return target.interrupted ? REOPENED_INTERRUPTED : 'Continued session';
+  const reason = opened.freshReason ?? target.freshReason;
+  if (target.interrupted) return freshAfterInterruption(reason);
   if (opened.freshReason === FRESH_REASONS.unsupported) return null;
-  const reason = opened.freshReason ?? planned;
   return reason ? `Fresh session (${reason})` : null;
 }

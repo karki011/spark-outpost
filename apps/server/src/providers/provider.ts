@@ -64,6 +64,7 @@ export interface SessionTarget {
   resume: StoredSession | null;
   freshReason: string | null;
   followUp?: string;
+  interrupted?: boolean;
 }
 
 export interface ProviderTurn {

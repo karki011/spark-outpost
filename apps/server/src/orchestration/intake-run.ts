@@ -82,6 +82,7 @@ export async function runIntake(
     previousReply: previousReply(input),
     change: input.startAs === 'change',
     continuing: input.startAs === 'continue',
+    resuming: input.continuesRunId != null,
     hasAgreedPlan: await hasAgreedPlan(deps, input),
   });
   const decisions = solo ? soloDecisions(decided) : decided;

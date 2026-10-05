@@ -63,6 +63,7 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
+import { auditContinuedSession } from './continue-note.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
@@ -417,7 +418,10 @@ export async function runAgentTurn(
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
       spend.read(output);
       await tasks.observe(output);
-      if (output.kind === 'session') await session?.started(output);
+      if (output.kind === 'session') {
+        await session?.started(output);
+        auditContinuedSession(audit, input, session?.target, output);
+      }
       if (output.kind === 'commands') await session?.commands(output.commands);
       if (output.kind === 'plan_proposed') {
         await plans.propose(output.plan, output.source, output.toolCallId);

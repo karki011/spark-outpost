@@ -416,7 +416,7 @@ async function converse(
           ? [{ kind: 'instructions' as const, files: workspace.repo.following }]
           : []),
       ]);
-      const sessionNotes = turn.session ? [sessionNote(opened, turn.session.freshReason)] : [];
+      const sessionNotes = turn.session ? [sessionNote(opened, turn.session)] : [];
       const notes = [applied.using, ...sessionNotes, ...workspace.notes, ...plan.notes];
       for (const note of [...notes, ...applied.notes]) {
         if (note) push(mapper.note(note));

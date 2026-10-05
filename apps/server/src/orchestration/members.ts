@@ -230,6 +230,7 @@ function followUpFor(
     const handback = opening.route.handback;
     return handback ? `${handback}\n\n${s.input.prompt}` : s.input.prompt;
   }
+  if (spawn.reason === 'first' && s.input.continuesRunId) return s.input.prompt;
   return null;
 }
 
@@ -275,7 +276,11 @@ async function runChild(
       model: route.pick.model,
       effort: route.pick.effort,
       mode,
-      prompt: withFollowUp(prompt, followUp, s.input.prompt),
+      prompt: withFollowUp(
+        prompt,
+        followUp,
+        s.input.continuesRunId ? s.input.userRequest : s.input.prompt,
+      ),
       route: storedRoute(route, name, {
         ...seat?.route,
         ...(branch ? { copy: branch } : {}),

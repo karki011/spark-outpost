@@ -16,6 +16,7 @@ import {
 } from './conversation-action-routes.ts';
 import { diagnosticsRoutes, type DiagnosticsPlaces } from './diagnostics-routes.ts';
 import { homeRoutes } from './home-routes.ts';
+import { interruptionRoutes } from './interruption-routes.ts';
 import { mapRoutes } from './map-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
@@ -89,6 +90,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', chatSettingsRoutes(options));
   app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
+  app.use('/api', interruptionRoutes(options));
   app.use('/api', chatShareRoutes(options));
   app.use('/api', projectRoutes(options));
   app.use('/api', mapRoutes(options));

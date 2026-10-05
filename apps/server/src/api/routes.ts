@@ -40,6 +40,7 @@ import { ticketErrorStatus } from './ticket-routes.ts';
 import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
+import { interruptionErrorStatus } from './interruption-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
@@ -162,7 +163,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     ticketErrorStatus(error) ??
     slackErrorStatus(error) ??
     teammateErrorStatus(error) ??
-    queueErrorStatus(error);
+    queueErrorStatus(error) ??
+    interruptionErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

@@ -9,6 +9,7 @@ import {
   type Attachment,
   type ConversationSummary,
   type CostSource,
+  type InterruptionChoice,
   type InvolvementLevel,
   type Message,
   type Run,
@@ -65,6 +66,8 @@ export interface RunRow {
   agent_label?: string | null;
   category?: string | null;
   followed_instructions?: string[] | null;
+  continues_run_id?: string | null;
+  interruption_choice?: InterruptionChoice | null;
 }
 
 export interface ConversationSummaryRow extends PendingApprovalRow {
@@ -77,6 +80,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_error: string | null;
   latest_run_step: string | null;
   latest_run_provider: string | null;
+  latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
   pinned_at: Date | null;
@@ -136,6 +140,8 @@ export function toRun(row: RunRow): Run {
     agentLabel: row.agent_label ?? null,
     category: categorySchema.safeParse(row.category).data ?? null,
     following: row.followed_instructions ?? null,
+    continuesRunId: row.continues_run_id ?? null,
+    interruptionChoice: row.interruption_choice ?? null,
   };
 }
 
@@ -182,6 +188,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
               row.latest_run_progress && row.latest_run_progress.total > 0
                 ? row.latest_run_progress
                 : null,
+            interruptionChoice: row.latest_run_interruption_choice ?? null,
           }
         : null,
     archivedAt: iso(row.archived_at),
