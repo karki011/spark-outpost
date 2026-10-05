@@ -1,8 +1,15 @@
-import { MergeView, originalDocChangeEffect, unifiedMergeView } from '@codemirror/merge';
-import { ChangeSet, Compartment, EditorState, type Extension } from '@codemirror/state';
+import {
+  MergeView,
+  getOriginalDoc,
+  originalDocChangeEffect,
+  unifiedMergeView,
+} from '@codemirror/merge';
+import { ChangeSet, Compartment, EditorState, Text, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { baseExtensions, languageLoader } from './code-setup.ts';
+import { baseExtensions, languageLoader, loadedLanguage } from './code-setup.ts';
+import { oldLineNumbers } from './old-line-numbers.ts';
 import { changedRange } from './text-change.ts';
+import { wordMarks } from './word-marks.ts';
 
 export type DiffMode = 'unified' | 'split';
 
@@ -37,6 +44,10 @@ const COLLAPSE = { margin: 3, minSize: 4 };
 const HIGHLIGHT_MAX_CHARS = 200 * 1024;
 const DIFF_CONFIG = { scanLimit: 500, timeout: 30 };
 
+function highlighted(input: CodeDiffInput): boolean {
+  return (input.oldText?.length ?? 0) + input.newText.length <= HIGHLIGHT_MAX_CHARS;
+}
+
 function wrapping(wrap: boolean): Extension {
   return wrap ? EditorView.lineWrapping : [];
 }
@@ -47,7 +58,21 @@ interface Slots {
 }
 
 function editorExtensions(slots: Slots, input: CodeDiffInput, label: string): Extension[] {
-  return [baseExtensions(label), slots.wrap.of(wrapping(input.wrap)), slots.language.of([])];
+  return [
+    baseExtensions(label),
+    slots.wrap.of(wrapping(input.wrap)),
+    slots.language.of((highlighted(input) && loadedLanguage(input.path)) || []),
+  ];
+}
+
+function textOf(text: string): Text {
+  return Text.of(text.split(/\r\n?|\n/));
+}
+
+function refreshRemovedLines(view: EditorView): void {
+  const original = getOriginalDoc(view.state);
+  const changes = ChangeSet.of({ from: 0, to: original.length, insert: original }, original.length);
+  view.dispatch({ effects: originalDocChangeEffect(view.state, changes) });
 }
 
 function singleDoc(input: CodeDiffInput): string | null {
@@ -102,14 +127,18 @@ function mount(parent: HTMLElement, input: CodeDiffInput): Mounted {
   }
   if (input.mode === 'split') {
     const second = newSlots();
+    const docs = { before: textOf(input.oldText ?? ''), after: textOf(input.newText) };
     const merge = new MergeView({
       parent,
       a: {
-        doc: input.oldText ?? '',
-        extensions: editorExtensions(first, input, `${input.path} before`),
+        doc: docs.before,
+        extensions: [editorExtensions(first, input, `${input.path} before`), wordMarks(docs)],
       },
-      b: { doc: input.newText, extensions: editorExtensions(second, input, `${input.path} after`) },
-      highlightChanges: true,
+      b: {
+        doc: docs.after,
+        extensions: [editorExtensions(second, input, `${input.path} after`), wordMarks(docs)],
+      },
+      highlightChanges: false,
       gutter: true,
       collapseUnchanged: COLLAPSE,
       diffConfig: DIFF_CONFIG,
@@ -128,11 +157,13 @@ function mount(parent: HTMLElement, input: CodeDiffInput): Mounted {
     state: EditorState.create({
       doc: input.newText,
       extensions: [
+        oldLineNumbers(),
         editorExtensions(first, input, `Changes to ${input.path}`),
+        wordMarks(null),
         unifiedMergeView({
           original: input.oldText ?? '',
           mergeControls: false,
-          highlightChanges: true,
+          highlightChanges: false,
           gutter: true,
           syntaxHighlightDeletions: true,
           collapseUnchanged: COLLAPSE,
@@ -168,11 +199,13 @@ export function createCodeDiff(parent: HTMLElement, input: CodeDiffInput): CodeD
       view.dispatch({ effects: pick(slots).reconfigure(extension) });
     }
   };
-  const size = (input.oldText?.length ?? 0) + input.newText.length;
-  const loader = size <= HIGHLIGHT_MAX_CHARS ? languageLoader(input.path) : null;
+  const loader =
+    highlighted(input) && !loadedLanguage(input.path) ? languageLoader(input.path) : null;
   if (loader) {
     void loader().then((language) => {
-      if (alive) reconfigure((slots) => slots.language, language);
+      if (!alive) return;
+      reconfigure((slots) => slots.language, language);
+      if (mounted.layout === 'unified') refreshRemovedLines(editors[0]!.view);
     });
   }
   return {

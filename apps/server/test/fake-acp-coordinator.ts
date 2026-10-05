@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { setTimeout as pause } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { conflictTurn, parallelBlock, pieceExtras } from './fake-acp-parallel.ts';
 import { codexLimited, rateLimited } from './fake-acp-limits.ts';
@@ -74,6 +75,21 @@ async function proposeInPlanMode(turn: RoleTurn, plan: string): Promise<void> {
   await turn.say('No response requested.');
 }
 
+export const SPLIT_RELEASE = 'release-split';
+const SPLIT_CHUNK = 24;
+
+async function saySlowly(turn: RoleTurn, text: string): Promise<void> {
+  const third = text.split('"key"', 3).join('"key"').length;
+  const release = join(mainRoot(turn.cwd), '.git', SPLIT_RELEASE);
+  for (let at = 0; at < text.length; at += SPLIT_CHUNK) {
+    while (at >= third - SPLIT_CHUNK && !existsSync(release) && !turn.signal.aborted) {
+      await pause(25);
+    }
+    await turn.say(text.slice(at, at + SPLIT_CHUNK));
+    await pause(5);
+  }
+}
+
 async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
@@ -86,7 +102,8 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
     await proposeInPlanMode(turn, split);
     return 'end_turn';
   }
-  await turn.say(split);
+  if (turn.text.includes('#slowsplit')) await saySlowly(turn, split);
+  else await turn.say(split);
   return 'end_turn';
 }
 
@@ -97,7 +114,7 @@ function untilStopped(signal: AbortSignal): Promise<void> {
   });
 }
 
-async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
+async function askToRun(turn: RoleTurn, command: string, reason?: string): Promise<boolean> {
   const toolCall = {
     toolCallId: `run-${command.replace(/\W+/g, '-')}`,
     title: command,
@@ -113,6 +130,7 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
       { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
       { optionId: 'no', name: 'No', kind: 'reject_once' },
     ],
+    ...(reason ? { _meta: { permission: { description: `Reason: ${reason}` } } } : {}),
   })) as acp.RequestPermissionResponse;
   const allowed = answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
   await turn.update({
@@ -122,6 +140,8 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
   });
   return allowed;
 }
+
+export const TARGETED_CHECK = 'cd . && npx vitest run store.test.ts 2>&1 | tail -20';
 
 const UNREADABLE_LINE = "export const trim = (s: string) => s.replace(/^-|-$/g, '');";
 
@@ -139,6 +159,9 @@ async function strayWrites(turn: RoleTurn, key: string): Promise<void> {
   const tag = (name: string, piece: string) => turn.text.includes(name) && key === piece;
   if (tag('#gitstash', 'P1')) await askToRun(turn, 'git stash');
   if (tag('#addpkg', 'P1')) await askToRun(turn, 'pnpm add left-pad');
+  if (tag('#targeted', 'P1'))
+    await askToRun(turn, TARGETED_CHECK, 'This command requires approval');
+  if (tag('#allnx', 'P1')) await askToRun(turn, 'npx nx run-many --target=test');
   if (tag('#strayedit', 'P2')) await write(turn, 'view.ts', 'edited by P2');
   if (tag('#shellwrite', 'P2')) await writeFile(join(turn.cwd, 'view.ts'), 'shell write by P2\n');
   if (tag('#shellstray', 'P2')) await writeFile(join(turn.cwd, 'stray.ts'), 'shell stray\n');

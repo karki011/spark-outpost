@@ -23,7 +23,7 @@ export function gitSubcommand(args: readonly string[]): { name: string; rest: st
   return null;
 }
 
-function gitSubcommands(command: string): { name: string; rest: string[] }[] {
+export function gitSubcommands(command: string): { name: string; rest: string[] }[] {
   return commandTree(command).commands.flatMap((program) => {
     if (programName(program) !== 'git') return [];
     const sub = gitSubcommand(program.slice(1));
@@ -205,10 +205,15 @@ export const BUILDER_GIT_OPS = [
 
 const BRANCH_DELETE = new Set(['-d', '-D', '--delete']);
 
-export function changesGitState(command: string): boolean {
+export type GitSub = { name: string; rest: string[] };
+
+export function changesGitState(
+  command: string,
+  harmless: (sub: GitSub) => boolean = () => false,
+): boolean {
   return gitSubcommands(command).some(
     (sub) =>
-      BUILDER_GIT_OPS.includes(sub.name) ||
+      (BUILDER_GIT_OPS.includes(sub.name) && !harmless(sub)) ||
       (sub.name === 'branch' && sub.rest.some((token) => BRANCH_DELETE.has(token))),
   );
 }

@@ -13,6 +13,7 @@ import {
   pieceRepo,
   projectFlags,
 } from './coordinator-parallel-support.ts';
+import { TARGETED_CHECK } from './fake-acp-coordinator.ts';
 import {
   assistantReplies,
   connectProviders,
@@ -40,6 +41,17 @@ afterEach(async () => {
   await t.cleanup();
   await removeRepo(root);
 });
+
+const CLAUDE_MODES = [
+  ['read-only', 'Ask first', null, null],
+  ['ask-every-action', 'Ask every time', null, null],
+  ['agent', 'Agent', null, 'auto_review'],
+  ['default', 'Manual', null, 'standard'],
+  ['acceptEdits', 'Accept edits', null, 'standard'],
+  ['auto', 'Auto', null, null],
+  ['plan', 'Plan', null, 'plan'],
+  ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
+];
 
 async function sharedGuards(runId: string): Promise<Record<string, boolean>> {
   const { rows } = await t.db.query<{ key: string; shares: boolean }>(
@@ -117,6 +129,26 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     );
     expect(steps.rows.map((row) => row.name)).toEqual([
       `Spark's policy blocked \`pnpm add left-pad\` (${SHARED_INSTALL_REASON})`,
+    ]);
+  });
+
+  it("answers a piece's targeted check itself in Auto and refuses a whole-workspace run", async () => {
+    await projectFlags(t, root, { parallel: true });
+    const { conversationId, runId } = await begin('#targeted #allnx', {
+      agentMode: 'auto',
+      routing: 'pinned',
+      agentEnv: { FAKE_ACP_MODES: JSON.stringify(CLAUDE_MODES) },
+    });
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ title: string; status: string; decided_by: string }>(
+      `SELECT a.title, a.status, a.decided_by FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.kind = 'execute' ORDER BY a.created_at`,
+      [runId],
+    );
+    expect(rows).toEqual([
+      { title: TARGETED_CHECK, status: 'allowed', decided_by: 'level' },
+      { title: 'npx nx run-many --target=test', status: 'denied', decided_by: 'policy' },
     ]);
   });
 

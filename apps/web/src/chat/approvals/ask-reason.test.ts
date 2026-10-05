@@ -33,6 +33,18 @@ describe('askReason', () => {
     expect(askReason(own, 'Claude')).toBe('Claude asks because: to create the file');
   });
 
+  it('shows the agent’s note as a note when Spark is the one asking', () => {
+    const payload = {
+      ...base.payload,
+      agentReason: 'This command requires approval',
+      asksBecause:
+        "Bolt shares this folder with 2 other pieces, and Spark couldn't tell what this command changes",
+    };
+    expect(askReason({ ...base, payload }, 'Claude')).toBe(
+      'Claude noted: This command requires approval',
+    );
+  });
+
   it('explains a sandbox retry in plain words', () => {
     const sandbox = {
       ...base,

@@ -5,10 +5,7 @@ export type Tokens = Map<string, string>;
 type Block = { selector: string; media: string | undefined; declarations: Tokens };
 
 export const THEME_CSS = ['apps/web/public/theme.css', 'apps/web/public/theme-map.css'];
-export const COMPONENT_TOKEN_CSS = [
-  'apps/web/src/chat/approvals/diff-view.css',
-  'apps/web/src/chat/markdown/code-tokens.css',
-];
+export const COMPONENT_TOKEN_CSS = ['apps/web/src/chat/markdown/code-tokens.css'];
 
 export const THEMES = [
   'system-light',
