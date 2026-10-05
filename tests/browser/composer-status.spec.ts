@@ -165,6 +165,14 @@ test('while the agent works the line says what it is doing, then Done', async ({
   const runId = run!.id;
   await emit(runId, { type: 'RUN_STARTED', runId, threadId: chatId });
   await openChats(page);
+  const turnHead = page.locator('.thread .ai-head');
+  await expect(turnHead.locator('.mood')).toHaveText('thinking');
+  await expect(shown(page)).toHaveCount(0);
+  await expect(page.locator('.thread .dots')).toHaveCount(0);
+  await expect(line(page).getByRole('status')).toHaveText('Fake provider is thinking…');
+  await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
+  await expect(turnHead).not.toBeInViewport();
   await expect(shown(page)).toHaveText('Fake provider is thinking…');
 
   await emit(runId, stepStarted(`\`${GREP}\``));

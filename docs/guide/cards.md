@@ -6,7 +6,7 @@ order: 614
 summary: Every card Spark or an agent can show, what it means, its buttons, and whether it waits for you.
 ---
 
-Cards appear in the chat and on [Spark Island](desktop-companion.md#answer-a-card). The line above the message box says **Waiting for you** while one waits.
+Cards appear in the chat, under the reply, and on [Spark Island](desktop-companion.md#answer-a-card). The line above the message box says **Waiting for you** while one waits.
 
 ## Approval cards
 
@@ -23,7 +23,7 @@ These come from the agent's mode or a [protected path](protected-paths.md). They
 
 ## While Spark works
 
-"The wait time" is [**If you don't answer a question**](approvals.md#if-you-dont-answer).
+"The wait time" is [**Wait before going with best guesses**](approvals.md#if-you-dont-answer). Typing in a card stops its countdown.
 
 | Card                                | Means                                              | Buttons                                              | By itself?                            |
 | ----------------------------------- | -------------------------------------------------- | ---------------------------------------------------- | ------------------------------------- |

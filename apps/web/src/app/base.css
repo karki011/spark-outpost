@@ -117,6 +117,8 @@ svg {
 }
 
 .chat-title {
+  flex: 0 1 auto;
+  min-width: 4ch;
   margin: 0;
   font-size: 15px;
   font-weight: 500;
@@ -126,6 +128,7 @@ svg {
 }
 
 .head-r {
+  flex-shrink: 0;
   margin-left: auto;
 }
 

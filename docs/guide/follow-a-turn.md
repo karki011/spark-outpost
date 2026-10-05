@@ -10,8 +10,8 @@ You'll follow a running turn, stop it, and line up more messages. About 2 minute
 
 ## See what's happening
 
-1. Read the line above the message box, such as **Running · pnpm test**.
-2. Select the step count in the reply's header, such as **3 steps**, to show the steps.
+1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
+2. Select the step count, such as **3 steps**, to show the steps.
 3. Select **Show work panel** in the chat header for the plan, crew, files and cost.
 
 When the agent needs you, the line says **Waiting for you**. Select it, or press **⌘⇧Y**, to jump to the card.
@@ -40,7 +40,7 @@ Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 1. Open the chat's **…** menu and select **Delete**, then **Confirm delete**.
 2. To take it back, select **Undo**.
 
-A running chat can be deleted too: Spark stops its work first.
+A running chat can be deleted too; Spark stops it first.
 
 ## After a turn
 

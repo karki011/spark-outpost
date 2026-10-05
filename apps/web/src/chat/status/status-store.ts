@@ -27,6 +27,7 @@ export interface LiveReport extends LiveInput {
 export interface StatusSnapshot {
   pending: readonly PendingEntry[];
   live: readonly LiveReport[];
+  headsInView: readonly string[];
 }
 
 export interface StatusStore {
@@ -36,6 +37,7 @@ export interface StatusStore {
   unregister(id: string): void;
   report(input: LiveInput): void;
   forget(id: string): void;
+  showHead(id: string, inView: boolean): void;
 }
 
 function byAge(a: PendingEntry, b: PendingEntry): number {
@@ -62,7 +64,7 @@ function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
 }
 
 export function createStatusStore(now: () => number = Date.now): StatusStore {
-  let state: StatusSnapshot = { pending: [], live: [] };
+  let state: StatusSnapshot = { pending: [], live: [], headsInView: [] };
   const listeners = new Set<() => void>();
   const publish = (next: StatusSnapshot) => {
     state = next;
@@ -94,6 +96,11 @@ export function createStatusStore(now: () => number = Date.now): StatusStore {
     forget(id) {
       if (!state.live.some((report) => report.id === id)) return;
       publish({ ...state, live: state.live.filter((report) => report.id !== id) });
+    },
+    showHead(id, inView) {
+      if (state.headsInView.includes(id) === inView) return;
+      const others = state.headsInView.filter((known) => known !== id);
+      publish({ ...state, headsInView: inView ? [...others, id] : others });
     },
   };
 }

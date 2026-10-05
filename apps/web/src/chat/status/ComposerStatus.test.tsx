@@ -231,6 +231,19 @@ describe('while the agent works', () => {
     expect(status().querySelectorAll('.cs-line')).toHaveLength(1);
   });
 
+  it('leaves the status to the turn header while it is in view, and still announces it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Edit `table.tsx`' }));
+    expect(shown()).toBe('Claude is working · Editing table.tsx');
+    act(() => view.store.showHead(RUN_ID, true));
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+    expect(status().dataset.state).toBe('idle');
+    expect(screen.getByRole('status').textContent).toBe('Claude is working: Editing table.tsx');
+    act(() => view.store.showHead(RUN_ID, false));
+    expect(status().dataset.state).toBe('running');
+  });
+
   it('names the crew member at work, and the lead only while nobody else works', () => {
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
     act(() => view.store.report({ ...JEV, working: true, step: null }));

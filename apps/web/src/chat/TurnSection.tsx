@@ -1,8 +1,14 @@
-import { memo } from 'react';
-import type { ConversationDetail, Message, Project, Run } from '@spark-outpost/contracts';
+import { memo, use } from 'react';
+import {
+  isTerminalRunStatus,
+  type ConversationDetail,
+  type Message,
+  type Project,
+  type Run,
+} from '@spark-outpost/contracts';
 import { isCrewTurn } from '../crew/conversation-crew.ts';
 import { crewAgents } from '../crew/crew-projection.ts';
-import { TaskCard } from '../tasks/TaskCard.tsx';
+import { TaskCard, TaskCount } from '../tasks/TaskCard.tsx';
 import { showsTaskCard } from '../tasks/task-card-shown.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
@@ -13,6 +19,7 @@ import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './rail/outline-model.ts';
+import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { sameTurnDetail } from './turn-props.ts';
 
@@ -56,8 +63,15 @@ export const TurnSection = memo(function TurnSection({
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
   const handedTo = sparkMembers(orchestration);
+  const inRail = use(RailTaskContext) === task?.id;
+  const shownTask = onOpenTask && task && !inRail && showsTaskCard(task) ? task : null;
+  const live = !isTerminalRunStatus(run.status);
+  const taskCount =
+    shownTask && onOpenTask && live ? (
+      <TaskCount task={shownTask} onOpen={() => onOpenTask(shownTask.id)} />
+    ) : null;
   const taskCard =
-    onOpenTask && task ? (
+    onOpenTask && task && !inRail ? (
       <TaskCard
         task={task}
         onOpen={() => onOpenTask(task.id)}
@@ -112,8 +126,14 @@ export const TurnSection = memo(function TurnSection({
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
       ) : (
         <>
-          <SoloTurn run={run} detail={detail} assistantMessage={assistantMessage} repo={repo} />
-          {task && showsTaskCard(task) && taskCard}
+          <SoloTurn
+            run={run}
+            detail={detail}
+            assistantMessage={assistantMessage}
+            repo={repo}
+            taskCount={taskCount}
+          />
+          {shownTask && !live && taskCard}
         </>
       )}
       {detail.continuedIn

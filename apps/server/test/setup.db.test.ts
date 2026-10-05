@@ -52,7 +52,7 @@ describe('setup state', () => {
       displayName: '',
       defaultProvider: null,
       onboardingCompleted: false,
-      autoContinueSeconds: 10,
+      autoContinueSeconds: 60,
       jevDiffs: true,
       shipFailingChecks: true,
       prReadyForReview: true,

@@ -52,3 +52,22 @@ label.set-row-label {
     margin-top: 8px;
   }
 }
+.set-wait {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+.set-wait-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.inp.set-wait-num {
+  width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

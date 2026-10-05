@@ -79,7 +79,15 @@ test('the work panel slides open and closed without moving the thread', async ({
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
+  await expect(page.getByRole('region', { name: 'Tasks' })).toContainText('6 of 6', {
+    timeout: 20_000,
+  });
+  await expect(page.locator('.taskc')).toHaveCount(0);
+  await page
+    .getByRole('main')
+    .locator('.head')
+    .getByRole('button', { name: 'Show work panel' })
+    .click();
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const thread = page.locator('.thread');

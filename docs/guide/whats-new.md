@@ -8,23 +8,24 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 ## October 2026
 
-| What changed                                                                                                   | What to do                                                                   |
-| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Browser** pane per chat (Mac app): agents read pages, you pick elements, **Preview** starts your dev server. | See [Use the browser](use-the-browser.md).                                   |
-| Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.                 | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
-| Slack connects: notifications, shared threads, start work from a thread, confirmed posts.                      | See [Connect Slack](connect-slack.md).                                       |
-| Sparks are named teammates. `@Name` hands one a job as a read-only subagent. Delete in Settings.               | See [Make a Spark](sparks.md).                                               |
-| Wide windows show a context rail. **Talk to…** sits in the bar above the message box.                          | Set **On wide windows** in [Settings](settings.md#spark).                    |
-| The plan card waits for **Build** at **Automatic**, in every agent mode.                                       | Select **Build**, or use [**Full auto → PR**](spark-autonomy.md).            |
-| Two autonomy levels: **Automatic** and **Full auto → PR**. Retired levels became **Automatic**.                | To review each step, pick an [agent mode](agent-mode.md) that asks.          |
-| Changes are kept without waiting.                                                                              | Undo with [**Revert to before this run**](review-changes.md#keep-or-revert). |
-| Spark follows the agent's mode and adds no command cards of its own.                                           | Expect fewer cards. [Protected paths](protected-paths.md) still ask.         |
-| Modes that never ask are marked **ran without review**.                                                        | Answer any [flag](approvals.md#actions-that-ran-without-review).             |
-| Plain step names, one status line. While a turn runs, **Enter** queues and **⌘Enter** sends now.               | [Follow a turn](follow-a-turn.md) above the message box.                     |
-| **Delete** works on running chats.                                                                             | Nothing.                                                                     |
-| Agent TV for any chat; message one crew member.                                                                | See [Watch and steer the crew](pieces.md).                                   |
-| The **Changes** drawer replaces inline diffs.                                                                  | Press **⌘⇧D**.                                                               |
-| A warning before sending a message containing a key.                                                           | See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).         |
+| What changed                                                                                                   | What to do                                                                    |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Question cards sit above the message box and wait 60s. One status per turn; tasks and Jev show beside it.      | Set **Wait before going with best guesses** in [Settings](settings.md#spark). |
+| **Browser** pane per chat (Mac app): agents read pages, you pick elements, **Preview** starts your dev server. | See [Use the browser](use-the-browser.md).                                    |
+| Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.                 | Follow the steps under **Direct messages** in [Slack](connect-slack.md).      |
+| Slack connects: notifications, shared threads, start work from a thread, confirmed posts.                      | See [Connect Slack](connect-slack.md).                                        |
+| Sparks are named teammates. `@Name` hands one a job as a read-only subagent. Delete in Settings.               | See [Make a Spark](sparks.md).                                                |
+| Wide windows show a context rail. **Talk to…** sits in the bar above the message box.                          | Set **On wide windows** in [Settings](settings.md#spark).                     |
+| The plan card waits for **Build** at **Automatic**, in every agent mode.                                       | Select **Build**, or use [**Full auto → PR**](spark-autonomy.md).             |
+| Two autonomy levels: **Automatic** and **Full auto → PR**. Retired levels became **Automatic**.                | To review each step, pick an [agent mode](agent-mode.md) that asks.           |
+| Changes are kept without waiting.                                                                              | Undo with [**Revert to before this run**](review-changes.md#keep-or-revert).  |
+| Spark follows the agent's mode and adds no command cards of its own.                                           | Expect fewer cards. [Protected paths](protected-paths.md) still ask.          |
+| Modes that never ask are marked **ran without review**.                                                        | Answer any [flag](approvals.md#actions-that-ran-without-review).              |
+| Plain step names, one status line. While a turn runs, **Enter** queues and **⌘Enter** sends now.               | [Follow a turn](follow-a-turn.md) above the message box.                      |
+| **Delete** works on running chats.                                                                             | Nothing.                                                                      |
+| Agent TV for any chat; message one crew member.                                                                | See [Watch and steer the crew](pieces.md).                                    |
+| The **Changes** drawer replaces inline diffs.                                                                  | Press **⌘⇧D**.                                                                |
+| A warning before sending a message containing a key.                                                           | See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).          |
 
 ## Earlier
 
@@ -34,6 +35,3 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Agents may open the PR themselves when you ask, at Full auto, or in **Auto** or **Bypass permissions**. | Say "open a PR" in your message.                                       |
 | The Tickets inbox groups tickets by where each one is.                                                  | See [Work from the Tickets inbox](tickets-inbox.md).                   |
 | Spark Island is wider and takes dropped files and folders.                                              | See [Use Spark Island](desktop-companion.md).                          |
-| Spark runs the `claude` and `codex` CLIs you installed.                                                 | Install the CLI if a tile says **CLI not installed**.                  |
-| An anonymous heartbeat and optional **Full Disk Access** in the Mac app.                                | Review both in [Mac privacy settings](mac-privacy.md).                 |
-| The guide is shorter: fewer pages, grouped by task. Page links changed.                                 | Start at [What do you want to do?](welcome.md)                         |

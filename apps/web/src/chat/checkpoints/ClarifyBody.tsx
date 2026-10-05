@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type FocusEvent } from 'react';
 import {
   CHECKPOINT_OPTION,
   clarifyOptionId,
@@ -16,6 +16,14 @@ import {
 interface BodyProps {
   approval: CheckpointApproval;
   decide: Decide;
+}
+
+function holdOnField(hold: () => void) {
+  return (event: FocusEvent<HTMLElement>) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      hold();
+    }
+  };
 }
 
 function ClarifyFoot({ approval, decide }: BodyProps) {
@@ -95,6 +103,7 @@ function QuestionsBody({ approval, decide }: BodyProps) {
   return (
     <form
       className="ck-questions"
+      onFocus={holdOnField(decide.hold)}
       onSubmit={(event) => {
         event.preventDefault();
         if (reply) decide(CHECKPOINT_OPTION.answer, reply);
@@ -147,7 +156,7 @@ function QuestionsBody({ approval, decide }: BodyProps) {
 function ChoicesBody({ approval, decide }: BodyProps) {
   const choices = approval.payload.checkpoint.choices;
   return (
-    <>
+    <div className="ck-own" onFocus={holdOnField(decide.hold)}>
       {choices.length > 0 && (
         <div className="appr-acts ck-choices">
           {choices.map((choice, index) => (
@@ -176,7 +185,7 @@ function ChoicesBody({ approval, decide }: BodyProps) {
       <div className="appr-acts ck-foot">
         <ClarifyFoot approval={approval} decide={decide} />
       </div>
-    </>
+    </div>
   );
 }
 

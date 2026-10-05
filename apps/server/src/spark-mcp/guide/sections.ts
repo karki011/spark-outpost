@@ -251,7 +251,7 @@ Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: sp
       'switch',
       'toggle',
     ],
-    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Spend cap per task, If you don’t answer a question: Off/10s/30s/60s, then the safe option); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
+    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Spend cap per task, Wait before going with best guesses: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
 
 The Spark switch on: Jev reads each request, routing picks models, a Critic reviews bigger changes and Jev checks finished work. Off: chats go straight to the agent you pick. Approvals and safety apply either way.`,
   },

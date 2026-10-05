@@ -1,25 +1,90 @@
-import { AUTO_CONTINUE_CHOICES } from '@spark-outpost/contracts';
-import { ProfileChoiceSetting } from './ProfileChoiceSetting.tsx';
+import { useId, useState } from 'react';
+import { DEFAULT_AUTO_CONTINUE_SECONDS } from '@spark-outpost/contracts';
+import { Segmented } from '../ui/Segmented.tsx';
+import { SettingRow } from './SettingRow.tsx';
+import {
+  CUSTOM_WAIT_ID,
+  parsedWait,
+  presetSeconds,
+  WAIT_OPTIONS,
+  WAIT_RANGE_HINT,
+  waitChoiceId,
+  waitHint,
+} from './auto-continue-model.ts';
+import { useProfileSetting } from './use-profile-setting.ts';
 
-const WAIT_CHOICES = AUTO_CONTINUE_CHOICES.map((seconds) => ({
-  id: seconds === null ? 'off' : String(seconds),
-  label: seconds === null ? 'Off' : `${seconds}s`,
-  value: seconds,
-}));
+const LABEL = 'Wait before going with best guesses';
 
 const WAIT_INFO =
-  'Covers questions such as an unclear request, a stuck step or a change Jev could not verify. Approvals always wait for you.';
+  'Covers questions such as an unclear request, a stuck step or a change Jev could not verify. Typing in the card stops the countdown. Approvals always wait for you.';
 
 export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
+  const hintId = useId();
+  const setting = useProfileSetting(seconds, (value: number | null) => ({
+    autoContinueSeconds: value,
+  }));
+  const saved = setting.value;
+  const [custom, setCustom] = useState(() => waitChoiceId(seconds) === CUSTOM_WAIT_ID);
+  const [draft, setDraft] = useState<string | null>(null);
+  const invalid = draft !== null && parsedWait(draft) === null;
+
+  const commit = () => {
+    if (draft === null) return;
+    const next = parsedWait(draft);
+    if (next === null) return;
+    setDraft(null);
+    if (next !== saved) setting.set(next);
+  };
+
+  const pick = (id: string) => {
+    setDraft(null);
+    if (id === CUSTOM_WAIT_ID) {
+      setCustom(true);
+      return;
+    }
+    const preset = presetSeconds(id);
+    if (preset === undefined) return;
+    setCustom(false);
+    if (preset !== saved) setting.set(preset);
+  };
+
   return (
-    <ProfileChoiceSetting
-      saved={seconds}
-      choices={WAIT_CHOICES}
-      label="If you don’t answer a question"
+    <SettingRow
+      label={LABEL}
+      hint={setting.error ?? (invalid ? WAIT_RANGE_HINT : waitHint(saved))}
+      hintId={hintId}
       info={WAIT_INFO}
       doc={{ page: 'approvals', heading: 'if-you-dont-answer' }}
-      hint="Spark picks the safe option."
-      toUpdate={(value) => ({ autoContinueSeconds: value })}
-    />
+    >
+      <span className="set-wait">
+        <Segmented
+          ariaLabel={LABEL}
+          describedBy={hintId}
+          options={WAIT_OPTIONS}
+          value={custom ? CUSTOM_WAIT_ID : waitChoiceId(saved)}
+          onChange={pick}
+        />
+        {custom && (
+          <span className="set-wait-custom">
+            <input
+              className="inp set-wait-num"
+              inputMode="numeric"
+              aria-label="Custom wait in seconds"
+              aria-describedby={hintId}
+              aria-invalid={invalid || undefined}
+              value={draft ?? String(saved ?? DEFAULT_AUTO_CONTINUE_SECONDS)}
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={commit}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                commit();
+              }}
+            />
+            <span aria-hidden="true">seconds</span>
+          </span>
+        )}
+      </span>
+    </SettingRow>
   );
 }

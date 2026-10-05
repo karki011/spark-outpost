@@ -23,6 +23,7 @@ test('shows what Jev suggested in the turn chip, with the rules comparison on fo
   await expect(page.locator('.run-usage', { hasText: 'Jev:' })).toHaveCount(0);
   const chip = page.locator('.ai-head .cat-chip.advice');
   await expect(chip).toHaveText(/^Bug fix/);
+  await expect(page.locator('.ai-head .ai-jev')).toHaveText('Jev: read it as Bug fix');
   await chip.focus();
   const tip = chip.getByRole('tooltip');
   await expect(tip).toBeVisible();
@@ -35,9 +36,10 @@ test('shows what Jev suggested in the turn chip, with the rules comparison on fo
   await expect(page.locator('.ctx-usage')).toContainText('Jev');
 });
 
-test('shows nothing from Jev when Jev is not connected', async ({ page }) => {
+test('says Jev is not connected on the turn, and nothing else from Jev', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await sendInNewChat(page, 'Hello without Jev');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible();
-  await expect(page.getByText(/Jev:|Jev not|Jev failed/)).toHaveCount(0);
+  await expect(page.locator('.thread .ai-head .ai-jev')).toHaveText('Jev not connected');
+  await expect(page.getByText(/Jev:|Jev failed|Jev answered/)).toHaveCount(0);
 });

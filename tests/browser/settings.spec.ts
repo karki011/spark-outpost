@@ -111,9 +111,44 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
     .toMatchObject({ sparkEnabled: false, personality: 'facts' });
 
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
-  const wait = spark.getByRole('radiogroup', { name: 'If you don’t answer a question' });
-  await expect(wait.getByRole('radio', { name: '10s' })).toBeChecked();
-  await expect(wait).toHaveAccessibleDescription('Spark picks the safe option.');
+  const wait = spark.getByRole('radiogroup', { name: 'Wait before going with best guesses' });
+  await expect(wait.getByRole('radio')).toHaveText([
+    '30s',
+    '60s',
+    '2 min',
+    '5 min',
+    'Never',
+    'Custom',
+  ]);
+  await expect(wait.getByRole('radio', { name: '60s' })).toBeChecked();
+  await expect(wait).toHaveAccessibleDescription(
+    'After 60s, Spark goes with its best guess or the safe option.',
+  );
+  const savedWait = async () =>
+    (await (await page.request.get('/api/setup')).json()).profile.autoContinueSeconds;
+  await wait.getByRole('radio', { name: 'Never' }).click();
+  await expect(wait).toHaveAccessibleDescription('Spark waits for your answer.');
+  await expect.poll(savedWait).toBeNull();
+  await wait.getByRole('radio', { name: 'Custom' }).click();
+  const custom = spark.getByRole('textbox', { name: 'Custom wait in seconds' });
+  await custom.fill('3');
+  await custom.press('Enter');
+  await expect(custom).toHaveAttribute('aria-invalid', 'true');
+  await expect(wait).toHaveAccessibleDescription('Enter a whole number of seconds from 5 to 600.');
+  expect(await savedWait()).toBeNull();
+  await custom.fill('45');
+  await custom.press('Enter');
+  await expect(wait).toHaveAccessibleDescription(
+    'After 45s, Spark goes with its best guess or the safe option.',
+  );
+  await expect.poll(savedWait).toBe(45);
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(wait.getByRole('radio', { name: 'Custom' })).toBeChecked();
+  await expect(custom).toHaveValue('45');
+  await wait.getByRole('radio', { name: '2 min' }).click();
+  await expect.poll(savedWait).toBe(120);
+  await expect(custom).toHaveCount(0);
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Automatic' })).toBeChecked();
 
@@ -237,7 +272,7 @@ test('the Jev screen keeps only its own switch and explains it in an info tip', 
   await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
   await expect(advisor).toContainText('Connect Jev to use this.');
   await expect(
-    advisor.getByRole('radiogroup', { name: 'If you don’t answer a question' }),
+    advisor.getByRole('radiogroup', { name: 'Wait before going with best guesses' }),
   ).toHaveCount(0);
 
   const info = advisor.getByRole('button', { name: 'More about Check changes with Jev' });

@@ -45,6 +45,6 @@ At **Full auto → PR**, Spark asks **One PR or separate PRs?** when pieces were
 1. Pick **One PR** or **Separate PRs**.
 2. To skip the card next time, pick **Always one PR here** or **Always separate PRs here**.
 
-Unanswered, Spark picks **One PR** after the **If you don't answer a question** time.
+Unanswered, Spark picks **One PR** after the **Wait before going with best guesses** time.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

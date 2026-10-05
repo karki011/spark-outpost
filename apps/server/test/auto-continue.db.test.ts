@@ -1,6 +1,6 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path, { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
 import {
@@ -11,6 +11,7 @@ import {
   settleIfDue,
 } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { migrationsDir } from '../src/persistence/migrate.ts';
 import { autoContinueSeconds, updateProfile } from '../src/persistence/setup.ts';
 import { askCheckpoint, retryCard, type CheckpointCard } from '../src/orchestration/checkpoint.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
@@ -190,14 +191,41 @@ describe('auto-continue on Jev questions', () => {
     expect((await getApproval(t.db, pending.id))?.decidedBy).toBe('user');
   });
 
-  it('defaults to 10 seconds and can be turned off in settings', async () => {
-    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(10);
+  it('defaults to 60 seconds and can be turned off in settings', async () => {
+    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(60);
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 30 });
     expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(30);
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: null });
     expect(await autoContinueSeconds(t.db, t.workspaceId)).toBeNull();
     await updateProfile(t.db, t.workspaceId, { displayName: 'Hari' });
     expect(await autoContinueSeconds(t.db, t.workspaceId)).toBeNull();
+  });
+
+  it('keeps a custom wait and refuses one outside 1 to 600 seconds', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 45 });
+    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(45);
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 600 });
+    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(600);
+    await expect(
+      updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 601 }),
+    ).rejects.toThrow();
+    await expect(updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 0 })).rejects.toThrow();
+    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(600);
+  });
+
+  it('moves a profile still on the old 10 second default to 60 and leaves other waits alone', async () => {
+    const migration = await readFile(
+      path.join(migrationsDir, '0123_auto_continue_default.sql'),
+      'utf8',
+    );
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 10 });
+    await t.db.query(migration);
+    expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(60);
+    for (const kept of [30, null]) {
+      await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: kept });
+      await t.db.query(migration);
+      expect(await autoContinueSeconds(t.db, t.workspaceId)).toBe(kept);
+    }
   });
 });
 

@@ -101,7 +101,7 @@ test('a heavy chat resizes and switches panels without long main-thread work', a
   browser,
 }) => {
   test.setTimeout(240_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1400, height: 900 });
   await openHeavyChat(page);
   const work = page.getByRole('complementary', { name: 'Work panel' });
   await expect(work.getByRole('tab', { name: 'Tasks' })).toBeVisible();

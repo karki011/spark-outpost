@@ -6,7 +6,7 @@ import {
   type Approval,
 } from '@spark-outpost/contracts';
 import { applyRunEvent, initialRunProjection } from '../run-projection.ts';
-import { hasPending } from './approval-events.ts';
+import { decidedFirst, hasPending } from './approval-events.ts';
 
 const approval: Approval = {
   id: '5f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
@@ -65,5 +65,16 @@ describe('approval events in the live run', () => {
     expect(state.approvals).toEqual([]);
     const other = applyRunEvent(state, 2, { type: EventType.CUSTOM, name: 'other', value: 1 });
     expect(other.approvals).toBe(state.approvals);
+  });
+});
+
+describe('card order in a turn', () => {
+  it('keeps answered cards in the flow and moves waiting ones to the end', () => {
+    const answered = { ...approval, id: 'a', status: 'allowed' as const };
+    const waiting = { ...approval, id: 'b' };
+    const denied = { ...approval, id: 'c', status: 'denied' as const };
+    const { decided, pending } = decidedFirst([waiting, answered, denied]);
+    expect(decided.map((card) => card.id)).toEqual(['a', 'c']);
+    expect(pending.map((card) => card.id)).toEqual(['b']);
   });
 });

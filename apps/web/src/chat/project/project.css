@@ -103,7 +103,11 @@
 }
 
 .crumb {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 3ch;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 14px;
   color: var(--faint);
   white-space: nowrap;

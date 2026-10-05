@@ -1,6 +1,6 @@
 import type { WideWindowLayout } from '@spark-outpost/contracts';
 
-export const RAIL_MIN_ROOM = 1560;
+export const RAIL_MIN_ROOM = 1040;
 export const OUTLINE_MIN_TURNS = 3;
 
 export type RailState = 'open' | 'collapsed' | 'hidden';

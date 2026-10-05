@@ -14,7 +14,7 @@ import { RunningLine, runningText } from './RunningLine.tsx';
 import { SummaryText } from './SummaryText.tsx';
 import { clockText } from './status-text.ts';
 import type { PendingEntry, StatusStore } from './status-store.ts';
-import { useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
+import { useHeadInView, useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
 
 const ANNOUNCE_GAP_MS = 4_000;
 const NO_ENTRIES: readonly PendingEntry[] = [];
@@ -192,15 +192,17 @@ export function ComposerStatus({
   useWaitingShortcut(pending);
   const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS);
   const expand = useExpandReveal();
+  const headInView = useHeadInView(store);
+  const shown = line?.kind === 'running' && headInView ? null : line;
   return (
-    <div className="cstatus" data-state={line?.kind ?? 'idle'}>
+    <div className="cstatus" data-state={shown?.kind ?? 'idle'}>
       <p className="sr-only" role="status">
         {said}
       </p>
       <AnimatePresence initial={false}>
-        {line && (
+        {shown && (
           <motion.div key="line" className="cs-wrap" {...expand}>
-            <LineBody line={line} provider={provider} queued={queued} />
+            <LineBody line={shown} provider={provider} queued={queued} />
           </motion.div>
         )}
       </AnimatePresence>

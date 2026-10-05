@@ -14,6 +14,7 @@ import { POLICY_VERSION } from './policy.ts';
 
 export type JevOutcome =
   | { status: 'not_connected' }
+  | { status: 'not_asked'; reason: string }
   | {
       status: 'failed' | 'timed_out';
       error: string;
@@ -69,6 +70,7 @@ export function adviceBody(
     answers: null,
   };
   if (outcome.status === 'not_connected') return base;
+  if (outcome.status === 'not_asked') return { ...base, jevError: outcome.reason };
   const sent = {
     jevModel: outcome.model,
     latencyMs: outcome.latencyMs,

@@ -43,4 +43,4 @@ If a run has read sensitive data, such as a secret file you allowed, Spark asks 
 
 Approval cards wait up to 30 minutes, then the request is declined.
 
-Spark's own questions follow **If you don't answer a question** in **Settings → Spark**: **Off**, **10s** (default), **30s** or **60s**. Then Spark picks the safe option listed in [Cards](cards.md).
+Spark's own questions follow **Wait before going with best guesses** in **Settings → Spark**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark picks the safe option listed in [Cards](cards.md).

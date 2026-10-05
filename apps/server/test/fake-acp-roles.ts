@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { readFakeSession } from './fake-acp-sessions.ts';
 import { echoedRemovals, lawEdits } from './fake-acp-laws.ts';
+import { askNothing, askQuestions } from './fake-acp-clarify.ts';
 
 export const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
 
@@ -432,32 +433,6 @@ async function finishMissing(turn: RoleTurn): Promise<acp.StopReason> {
 async function unstick(turn: RoleTurn): Promise<acp.StopReason> {
   await write(turn, 'notes.txt', 'tried another way');
   await turn.say('Tried another way.');
-  return 'end_turn';
-}
-
-const FAKE_QUESTIONS = {
-  questions: [{ question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' }],
-};
-
-const OLD_ROWS_QUESTIONS = {
-  questions: [
-    {
-      question: 'Which old report rows should go?',
-      options: ['Older than 90 days', 'Older than a year'],
-      default: 'Delete rows older than 90 days',
-    },
-  ],
-};
-
-async function askQuestions(turn: RoleTurn): Promise<acp.StopReason> {
-  const asked = turn.text.includes('#oldrows') ? OLD_ROWS_QUESTIONS : FAKE_QUESTIONS;
-  const block = ['```clarify', JSON.stringify(asked), '```'].join('\n');
-  await turn.say(`1. Which report do you mean: Spend or Usage?\n\n${block}`);
-  return 'end_turn';
-}
-
-async function askNothing(turn: RoleTurn): Promise<acp.StopReason> {
-  await turn.say('I could not tell what to ask about.');
   return 'end_turn';
 }
 

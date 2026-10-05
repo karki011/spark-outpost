@@ -108,9 +108,16 @@ export const advisorSetupSchema = connectableSetupSchema.extend({
 });
 export type AdvisorSetup = z.infer<typeof advisorSetupSchema>;
 
-export const DEFAULT_AUTO_CONTINUE_SECONDS = 10;
-export const AUTO_CONTINUE_CHOICES: readonly (number | null)[] = [null, 10, 30, 60];
-export const autoContinueSecondsSchema = z.number().int().min(1).max(600).nullable();
+export const DEFAULT_AUTO_CONTINUE_SECONDS = 60;
+export const AUTO_CONTINUE_CHOICES: readonly (number | null)[] = [30, 60, 120, 300, null];
+export const AUTO_CONTINUE_CUSTOM_MIN_SECONDS = 5;
+export const AUTO_CONTINUE_MAX_SECONDS = 600;
+export const autoContinueSecondsSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(AUTO_CONTINUE_MAX_SECONDS)
+  .nullable();
 
 export const WIDE_WINDOW_LAYOUTS = ['rail', 'panel', 'empty'] as const;
 export const wideWindowSchema = z.enum(WIDE_WINDOW_LAYOUTS);

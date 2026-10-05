@@ -86,3 +86,19 @@ export function TaskCard({ task, onOpen, agents = [] }: TaskCardProps) {
     </button>
   );
 }
+
+export function TaskCount({ task, onOpen }: Pick<TaskCardProps, 'task' | 'onOpen'>) {
+  const panelOpen = use(PanelOpenContext);
+  const { done, total } = task.summary;
+  return (
+    <button
+      type="button"
+      className="ai-task"
+      aria-label={`Task: ${task.title}. ${task.summary.text}. ${panelOpen ? 'Show' : 'Open'} the work panel`}
+      title={task.title}
+      onClick={onOpen}
+    >
+      task {Math.min(done + 1, total)} of {total}
+    </button>
+  );
+}

@@ -16,6 +16,8 @@ import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
 import type { OrchestratorDeps } from './session.ts';
 
+export const JEV_SKIPPED_SPARK_OFF = 'Spark is off';
+
 export function orchestrationJevDeps(deps: OrchestratorDeps): IntakeDeps | null {
   if (!deps.intake) return null;
   const own = deps.intake.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
@@ -62,8 +64,13 @@ export async function runIntake(
       ? { previousRequest: current.previousRequest, summary: current.summary }
       : null,
   };
-  const jevDeps = solo ? null : orchestrationJevDeps(deps);
-  const asked = await askIntake(deps.db, jevDeps, input, extra);
+  const asked = await askIntake(
+    deps.db,
+    orchestrationJevDeps(deps),
+    input,
+    extra,
+    solo ? JEV_SKIPPED_SPARK_OFF : null,
+  );
   const jev = asked.outcome.status === 'answered' ? asked.outcome.intake : null;
   const decided = decideIntake(jev, {
     request: input.userRequest,
