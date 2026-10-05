@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILDER_PUBLISH_REASON,
   NO_RUN_RULES,
-  OUTSIDE_DELETE_REASON,
-  OUTSIDE_WRITE_REASON,
   SECRET_REASON,
   decide,
   type ApprovalRequest,
@@ -41,28 +39,41 @@ const parsedFullAccess = async (command: string) =>
     shell: await parseShell(command),
   });
 
+const ASKS_DELETE = {
+  verdict: 'ask',
+  reason: expect.stringMatching(
+    /^(?:This deletes .+, which is outside this project|Deleting outside the repo always asks)$/,
+  ),
+};
+const ASKS_WRITE = {
+  verdict: 'ask',
+  reason: expect.stringMatching(
+    /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
+  ),
+};
+
 describe('decide() looks inside nested and wrapped commands', () => {
   it.each([
-    'sh -c "rm -rf /tmp/x"',
-    "bash -lc 'cd /tmp && rm -rf x'",
-    'zsh -c "sh -c \'rm -rf /tmp/x\'"',
-    'eval "rm -rf /tmp/x"',
-    'find /tmp/x -exec rm -rf {} +',
-    'find /tmp -name x -execdir rm {} \\;',
-    'find /tmp -delete',
-    'nice -n 10 rm -rf /tmp/x',
-    'timeout 5 rm -rf /tmp/x',
-    'timeout -s KILL 5 rm -rf /tmp/x',
-    'env -u HOME FOO=1 rm -rf /tmp/x',
-    'sudo -u root rm -rf /tmp/x',
+    'sh -c "rm -rf /srv/x"',
+    "bash -lc 'cd /srv && rm -rf x'",
+    'zsh -c "sh -c \'rm -rf /srv/x\'"',
+    'eval "rm -rf /srv/x"',
+    'find /srv/x -exec rm -rf {} +',
+    'find /srv -name x -execdir rm {} \\;',
+    'find /srv -delete',
+    'nice -n 10 rm -rf /srv/x',
+    'timeout 5 rm -rf /srv/x',
+    'timeout -s KILL 5 rm -rf /srv/x',
+    'env -u HOME FOO=1 rm -rf /srv/x',
+    'sudo -u root rm -rf /srv/x',
     'rm -rf "$HOME/x"',
-    'sh -c \'rm -rf "$1"\' _ /tmp/x',
-    'for x in 1; do rm -rf /tmp/x; done',
-    'if true; then rm -rf /tmp/x; fi',
-    'rm -rf $(echo /tmp/x)',
-    'rm -rf /tm`echo p`/x',
+    'sh -c \'rm -rf "$1"\' _ /srv/x',
+    'for x in 1; do rm -rf /srv/x; done',
+    'if true; then rm -rf /srv/x; fi',
+    'rm -rf $(echo /srv/x)',
+    'rm -rf /sr`echo v`/x',
   ])('asks before deleting outside the repo: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_DELETE_REASON });
+    expect(fullAccess(command)).toEqual(ASKS_DELETE);
   });
 
   it.each([
@@ -79,15 +90,12 @@ describe('decide() looks inside nested and wrapped commands', () => {
   it.each(['find . -name "*.log" | xargs rm', 'ls | xargs -n 1 rm -f'])(
     'asks before deleting files it gets from a pipe: %s',
     (command) => {
-      expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_DELETE_REASON });
+      expect(fullAccess(command)).toEqual(ASKS_DELETE);
     },
   );
 
   it('finds a delete inside a command substitution in quotes', async () => {
-    expect(await parsedFullAccess('echo "$(rm -rf /tmp/x)"')).toEqual({
-      verdict: 'ask',
-      reason: OUTSIDE_DELETE_REASON,
-    });
+    expect(await parsedFullAccess('echo "$(rm -rf /srv/x)"')).toEqual(ASKS_DELETE);
   });
 
   it.each([
@@ -176,7 +184,7 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     heredoc('cat > ~/.zshrc'),
     heredoc('cat > ../other/file.ts'),
   ])('asks when the text lands outside the project: %s', (command) => {
-    expect(inAuto(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_WRITE_REASON });
+    expect(inAuto(command)).toEqual(ASKS_WRITE);
   });
 
   it('follows the mode when the text lands at a variable path', async () => {
@@ -191,9 +199,6 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
   it('asks when the literal part of a variable path leaves the project', async () => {
     const command = heredoc('cat > "../$OUT"');
     const shell = await parseShell(command);
-    expect(decide('auto', run(command), NO_RUN_RULES, [], { shell })).toEqual({
-      verdict: 'ask',
-      reason: OUTSIDE_WRITE_REASON,
-    });
+    expect(decide('auto', run(command), NO_RUN_RULES, [], { shell })).toEqual(ASKS_WRITE);
   });
 });

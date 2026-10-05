@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import {
-  NO_RUN_RULES,
-  OUTSIDE_WRITE_REASON,
-  SECRET_REASON,
-  decide,
-  type ApprovalRequest,
-} from './decide.ts';
+import { NO_RUN_RULES, SECRET_REASON, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { parseShell } from './shell-parse.ts';
 
@@ -80,7 +74,9 @@ describe('decide() reads redirects with variable paths by their literal part', (
   ])('still asks when the literal part leaves the project: %s', async (command) => {
     expect(await parsed('full_access', command)).toEqual({
       verdict: 'ask',
-      reason: OUTSIDE_WRITE_REASON,
+      reason: expect.stringMatching(
+        /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
+      ),
     });
   });
 

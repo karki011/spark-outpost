@@ -12,6 +12,8 @@ const DOCS_NAME = /(?:^|\/)(?:README|CHANGELOG|CHANGES|LICENSE|NOTICE|AUTHORS|CO
 
 const MUTATING_FLAG = /(?:^|\s)(?:--write|-w|--fix|-u|--update(?:-snapshots)?)(?=\s|$)/;
 const WHOLE_PROJECT = /^(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?(?:check|ci|verify|format|lint:fix)\s*$/;
+const EVERY_NX_PROJECT =
+  /(?:^|[\s;&|(])nx\s+(?:run-many|affected)\b(?![^;&|]*\s(?:--projects?|-p)[=\s])/;
 const NARROWING_FLAG = /(?:^|\s)(?:--filter|-F|--project|--dir|-C|--workspace)[=\s]+\S+/;
 const PATH_WORD = /(?:^|\s)[./\w@-]*(?:\/[\w.@-]+|\.[cm]?[jt]sx?|\.py|\.go|\.rs|\.rb)(?=\s|$)/;
 
@@ -65,7 +67,8 @@ export function noCheckLabel(paths: readonly string[]): string {
 }
 
 export function runsWholeProject(command: string): boolean {
-  return WHOLE_PROJECT.test(squash(command));
+  const text = squash(command);
+  return WHOLE_PROJECT.test(text) || EVERY_NX_PROJECT.test(text);
 }
 
 export function scopedCheckProblem(
@@ -83,7 +86,7 @@ export function scopedCheckProblem(
   }
   if (isPackageInstall(text)) return `installs packages; ${FULL_CHECKS_REASON}`;
   if (MUTATING_FLAG.test(text)) return 'changes files; a scoped check only reads';
-  if (WHOLE_PROJECT.test(text)) return `runs the whole project; ${FULL_CHECKS_REASON}`;
+  if (runsWholeProject(text)) return `runs the whole project; ${FULL_CHECKS_REASON}`;
   if (projectChecks.some((check) => squash(check) === text)) {
     return `is a whole-project check; narrow it to the piece's files (${FULL_CHECKS_REASON})`;
   }

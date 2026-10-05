@@ -109,7 +109,7 @@ export const FORCE_PUSH_DENY_RULES = [
 export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
 
 export const BUILDER_GIT_DENY_RULES = [
-  ...BUILDER_GIT_OPS.map((op) => `Bash(git ${op}:*)`),
+  ...BUILDER_GIT_OPS.filter((op) => op !== 'worktree').map((op) => `Bash(git ${op}:*)`),
   'Bash(git branch -d:*)',
   'Bash(git branch -D:*)',
   'Bash(git branch --delete:*)',
@@ -287,6 +287,12 @@ export const HIDE_CLAUDE_AUTH = '--hide-claude-auth';
 function zaiLaunch(): AgentLaunch {
   const launch = packageBin(CLAUDE_ACP);
   return { ...launch, args: [...launch.args, HIDE_CLAUDE_AUTH] };
+}
+
+export function routesSharedPieces(provider: string): boolean {
+  return Object.values(agentDefinitions).some(
+    (definition) => definition.id === provider && definition.doSessionMeta !== undefined,
+  );
 }
 
 export function supportsDo(definition: AgentDefinition): boolean {

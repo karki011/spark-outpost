@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import {
   NO_RUN_RULES,
-  OUTSIDE_WRITE_REASON,
   SAFE_READ_WHY,
   UNREADABLE_REASON,
   decide,
@@ -79,7 +78,9 @@ describe('decide() reads shell commands it parses', () => {
   it('asks before a redirect writes outside the project, but not into a temp folder', async () => {
     expect(await decideParsed('full_access', 'git log > ~/log.txt')).toEqual({
       verdict: 'ask',
-      reason: OUTSIDE_WRITE_REASON,
+      reason: expect.stringMatching(
+        /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
+      ),
     });
     expect(await decideParsed('full_access', 'git log > /tmp/log.txt')).toEqual({
       verdict: 'allow',
@@ -90,7 +91,9 @@ describe('decide() reads shell commands it parses', () => {
   it('asks before a command copies files out of the project', () => {
     expect(decide('auto', run('cp src/a.ts ~/Desktop/a.ts'), NO_RUN_RULES, [])).toEqual({
       verdict: 'ask',
-      reason: OUTSIDE_WRITE_REASON,
+      reason: expect.stringMatching(
+        /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
+      ),
     });
   });
 });

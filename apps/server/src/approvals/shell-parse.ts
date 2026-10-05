@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { Language, Parser, type Node } from 'web-tree-sitter';
 
 export const DYNAMIC = '\u0001';
@@ -91,6 +92,10 @@ const DYNAMIC_PARTS = new Set([
 ]);
 const UNQUOTED_GLOB = /[*?[]/;
 
+function isTempVariable(text: string): boolean {
+  return text === '$TMPDIR' || text === '${TMPDIR}';
+}
+
 function unescaped(text: string): string {
   return text.replace(/\\(.)/gs, '$1');
 }
@@ -115,6 +120,7 @@ function wordOf(node: Node): ShellWord {
     case 'string_content':
       return { text: node.text, dynamic: false, glob: false };
     default:
+      if (isTempVariable(node.text)) return { text: tmpdir(), dynamic: false, glob: false };
       return {
         text: DYNAMIC_PARTS.has(node.type) ? DYNAMIC : node.text,
         dynamic: true,
