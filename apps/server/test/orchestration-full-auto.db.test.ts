@@ -164,6 +164,7 @@ function expectKeptLikeAutomatic(keep: readonly Approval[]) {
     payload: { checkpoint: { keptBy: 'hands-off' } },
   });
   expect(keep[0]!.reason).not.toContain(KEPT_BY_FULL_AUTO);
+  expect(keep[0]!.reason!.match(/No pull request/g)).toHaveLength(1);
 }
 
 describe('Full auto runs to a draft PR', () => {

@@ -74,11 +74,8 @@ describe('setup state', () => {
       wideWindow: 'rail',
       busyEnter: 'queue',
     });
-    expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
-      'claude',
-      'codex',
-      'zai',
-    ]);
+    const ids = body.providers.map((provider: { id: string }) => provider.id);
+    expect(ids).toEqual(['claude', 'codex', 'zai']);
     expect(
       body.providers.every((provider: { connection: unknown }) => provider.connection === null),
     ).toBe(true);

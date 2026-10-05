@@ -7,7 +7,7 @@ import { connectTickets, resetTicketFakes, slowTicketCreates } from './ticket-se
 const SHOTS = process.env.SPARK_SHEET_SHOTS;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
+  await resetCrew('hands-off');
   await resetTicketFakes();
   await page.setViewportSize({ width: 1400, height: 900 });
 });

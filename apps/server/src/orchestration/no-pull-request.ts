@@ -60,6 +60,6 @@ export async function keepWithoutPullRequest(
   const line = facts ? noPullRequestLine(facts) : null;
   if (line === null) return null;
   s.shipLine = line;
-  await autoKeep(s, 'hands-off', [keptNote ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+  await autoKeep(s, 'hands-off', [keptNote ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s), line]);
   return { type: 'kept' };
 }
