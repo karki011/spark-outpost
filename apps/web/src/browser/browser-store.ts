@@ -12,9 +12,10 @@ import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 export interface ChatBrowser {
   tabs: readonly BrowserPaneTab[];
   snapshot: string | null;
+  agentOpened: string | null;
 }
 
-const EMPTY: ChatBrowser = { tabs: [], snapshot: null };
+const EMPTY: ChatBrowser = { tabs: [], snapshot: null, agentOpened: null };
 
 let chats: ReadonlyMap<string, ChatBrowser> = new Map();
 const listeners = new Set<() => void>();
@@ -32,16 +33,30 @@ function update(chatId: string, change: Partial<ChatBrowser>): void {
   emit();
 }
 
-function accept(raw: unknown): void {
+export function agentOpenedTab(
+  before: ChatBrowser,
+  tabs: readonly BrowserPaneTab[],
+): string | null {
+  const known = new Set(before.tabs.map((tab) => tab.id));
+  const opened = tabs.find((tab) => tab.owner === 'agent' && tab.driving && !known.has(tab.id));
+  if (opened) return opened.id;
+  return tabs.some((tab) => tab.id === before.agentOpened) ? before.agentOpened : null;
+}
+
+function accept(raw: unknown, pushed: boolean): void {
   const state = browserPaneStateSchema.safeParse(raw);
-  if (state.success) update(state.data.chatId, { tabs: state.data.tabs });
+  if (!state.success) return;
+  const { chatId, tabs } = state.data;
+  const before = chats.get(chatId) ?? EMPTY;
+  const agentOpened = agentOpenedTab(pushed ? before : { ...before, tabs }, tabs);
+  update(chatId, { tabs, agentOpened });
 }
 
 function connect(): void {
   const browser = desktopBrowser();
   if (connected || !browser) return;
   connected = true;
-  browser.onState(accept);
+  browser.onState((state) => accept(state, true));
   browser.onSnapshot((snapshot) => {
     if (typeof snapshot?.chatId !== 'string') return;
     const image = typeof snapshot.image === 'string' ? snapshot.image : null;
@@ -68,6 +83,10 @@ export function useChatBrowser(chatId: string): ChatBrowser {
   return useSyncExternalStore(subscribe, () => chats.get(chatId) ?? EMPTY);
 }
 
+export function useAgentOpened(chatId: string): string | null {
+  return useSyncExternalStore(subscribe, () => chats.get(chatId)?.agentOpened ?? null);
+}
+
 export function onBrowserPick(listener: (pick: BrowserPick) => void): () => void {
   connect();
   pickListeners.add(listener);
@@ -75,7 +94,11 @@ export function onBrowserPick(listener: (pick: BrowserPick) => void): () => void
 }
 
 export function acceptBrowserState(state: BrowserPaneState | null): void {
-  if (state) accept(state);
+  if (state) accept(state, false);
+}
+
+export function dismissAgentOpened(chatId: string): void {
+  if (chats.get(chatId)?.agentOpened) update(chatId, { agentOpened: null });
 }
 
 export function sendBrowserCommand(chatId: string, command: BrowserCommand): void {

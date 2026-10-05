@@ -99,6 +99,34 @@
   color: var(--muted);
 }
 
+.wp-switch {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  margin-right: 4px;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+}
+
+.wp-switch button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.wp-switch button:hover {
+  color: var(--text);
+}
+
+.wp-switch button[aria-selected='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
 .wp-body {
   flex: 1;
   overflow-y: auto;

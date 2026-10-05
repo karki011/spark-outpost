@@ -13,7 +13,7 @@ Spark is a moderator here too: it honours the agent's mode, keeps a few hard rai
 | Bridge    | `apps/desktop/src/browser/bridge.ts`, `apps/server/src/browser/host-client.ts` | Typed requests from the worker to main                                                                  |
 | Tools     | `apps/server/src/spark-mcp/tools/browser/`                                     | `spark_browser_open`, `_tabs`, `_read`, `_screenshot`, `_logs`, `_preview`                              |
 | Preview   | `apps/server/src/preview/`, `persistence/preview-servers.ts`                   | The project's dev server, run by the API process ([Preview server](#preview-server))                    |
-| Pane      | `apps/web/src/browser/`                                                        | Tab strip, address bar, Select, and the element whose bounds the view follows                           |
+| Pane      | `apps/web/src/browser/`                                                        | Tab strip, address bar, Select, per-chat open state, and the element whose bounds the view follows      |
 
 ## Views and isolation
 
@@ -25,6 +25,10 @@ Spark is a moderator here too: it honours the agent's mode, keeps a few hard rai
 ## The pane
 
 The renderer reports the bounds of `#bp-view` and main places the active tab's view over it (`use-view-placement.ts`, `panes.ts`). Bounds are sent on resize, during the panel's open and close transition, and after pointer, key and focus events; nothing polls. While something overlaps the pane, DOM changes trigger a re-check, so the view comes back when a dialog finishes closing. A native view sits above the DOM, so when anything overlaps the pane (a dialog, a menu, the lightbox) or a resizer is being dragged, main sends a snapshot of the page, the pane shows it as an image, and the view is hidden until the overlap ends.
+
+The header is two rows. The first holds the page tabs (a `tablist` that owns its tabs through `aria-owns`, so each tab's pin and close buttons can sit beside it), **New tab** right after the last tab, **Spark is driving**, and the panel's close button; when the chat also has work, a two-icon **Work**/**Browser** switch leads the row. The second holds back, forward, reload, the address bar and the two Select buttons; while the user is selecting, the hint takes the address bar's place so the view does not move. A third row appears only for the preview status and the agent-opened notice. The tab shows the page title and the loading spinner, so there is no title line. `WorkPanel` draws no head of its own in the Browser view; it hands its switch and close button to `BrowserPane`.
+
+Whether the pane is open is per chat (`pane-open.ts`, the chat ids in `localStorage` under `spark-outpost.browser-pane.open`, 100 at most), separate from the Work panel's own saved choice, so a new chat starts closed and opening the pane in one chat changes no other. The pane opens by itself only when a state push from main shows a new agent tab that is being driven (`agentOpenedTab` in `browser-store.ts`); it then shows **The agent opened …** with **Dismiss** until the user dismisses it, closes the pane, or the tab closes. An agent reloading or reading a tab it already had does not reopen a pane the user closed.
 
 Tabs belong to a chat. The address bar accepts any address: it is the user's browser. A tab the user navigates becomes theirs.
 
@@ -80,7 +84,7 @@ Allowing the card covers that site for the rest of the chat. The observation fee
 
 ## User pointing
 
-**Select** uses `Overlay.setInspectMode`: `searchForNode` for an element (CDP draws the hover highlight) and `captureAreaScreenshot` for a region. The result (role and name, a redacted HTML snippet, key computed styles, the box and a cropped image) becomes two ordinary attachments on the draft: a text file marked untrusted and an image. While a tab is being selected on, agent calls on it answer `user_picking`.
+**Select** uses `Overlay.setInspectMode`: `searchForNode` for an element (CDP draws the hover highlight) and `captureAreaScreenshot` for a region. The result (role and name, a redacted HTML snippet, key computed styles, the box and a cropped image) becomes two ordinary attachments on the draft: a text file marked untrusted and an image. The agent gets exactly those. The composer shows them as one **Selected: …** chip (`PickChip`, labelled from the note's role and name) that expands to the note and the picture and removes both; a sent message pairs `selected-<slug>.txt` with its picture by name (`groupPicks`) and shows the same chip, reading the note from the attachment store. While a tab is being selected on, agent calls on it answer `user_picking`.
 
 ## Seams for phase 2 and 3
 

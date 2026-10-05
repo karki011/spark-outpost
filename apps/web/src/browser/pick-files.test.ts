@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BrowserPick } from '@spark-outpost/contracts';
-import { pickFiles, pickText } from './pick-files.ts';
+import { groupPicks, pickFiles, pickLabel, pickText } from './pick-files.ts';
 import { tabLabel } from './tab-label.ts';
 
 const PIXEL =
@@ -56,6 +56,35 @@ describe('what a selection attaches to the message', () => {
     expect(pickText(region)).toContain('The user selected a region in the browser pane');
     expect(pickText(region)).toContain('Element 2\nRole: link "Sign in"');
     expect(pickFiles(region)).toHaveLength(1);
+  });
+});
+
+describe('how a selection is shown', () => {
+  it('names the element, a nameless element and a region', () => {
+    expect(pickLabel(pickText(pick))).toBe('Selected: Buy the blue kettle button');
+    const nameless = { ...pick, elements: [{ ...pick.elements[0]!, name: '' }] };
+    expect(pickLabel(pickText(nameless))).toBe('Selected: button');
+    expect(pickLabel(pickText({ ...pick, kind: 'region' }))).toBe('Selected region');
+    expect(pickLabel(pickText({ ...pick, elements: [] }))).toBe('Selected element');
+    expect(pickLabel('Role: button "Buy"')).toBeNull();
+  });
+
+  it('pairs the note with its picture and leaves other files alone', () => {
+    const note = { name: 'selected-link-about.txt', kind: 'text' };
+    const picture = { name: 'selected-link-about.png', kind: 'image' };
+    const photo = { name: 'photo.png', kind: 'image' };
+    const notes = { name: 'notes.txt', kind: 'text' };
+    const lone = { name: 'selected-region.txt', kind: 'text' };
+    expect(groupPicks([photo, picture, note, notes, lone])).toEqual([
+      photo,
+      { text: note, image: picture },
+      notes,
+      { text: lone, image: null },
+    ]);
+    expect(groupPicks([note, picture, note, picture])).toEqual([
+      { text: note, image: picture },
+      { text: note, image: null },
+    ]);
   });
 });
 

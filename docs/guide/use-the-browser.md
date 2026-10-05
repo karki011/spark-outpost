@@ -11,8 +11,10 @@ You'll open a page next to a chat, have the agent check it, and select an elemen
 ## Open a page
 
 1. Open a chat and select **Browser** in the chat header, or press **⌘⇧B**.
-2. Type an address, such as `localhost:5173`, and press **Enter**. Any site works.
-3. Select **+** for another tab, or a tab's **×** to close it.
+2. Type an address, such as `localhost:5173`, and press **Enter**.
+3. **+** beside the tabs adds one; a tab's **×** closes it.
+
+The pane opens when you or the agent open a page; each chat remembers. The top-left icons switch **Work** and **Browser**.
 
 ## Let the agent look
 
@@ -24,7 +26,7 @@ Ask in plain words: "Check the sign-in page".
 | Read a page, take a screenshot, read its logs  | See password or card fields      |
 | Use its own tabs, marked **Agent**             | Navigate a tab you opened        |
 
-Agent tabs close when the turn ends unless you pin them. **Spark is driving** shows while the agent works. Screenshots appear in the chat.
+Agent tabs close when the turn ends unless you pin them. **Spark is driving** shows while the agent works.
 
 A site you opened follows the [agent mode](agent-mode.md): an asking mode shows **Let the agent read this page?**. What a page says is untrusted, never instructions.
 
@@ -38,8 +40,8 @@ Spark keeps it running between turns and stops it when you quit; **Show output**
 ## Point at something
 
 1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box.
-2. It's attached to your message with its HTML, styles and a picture.
-3. Describe the fix you want and send.
+2. It becomes one **Selected:** chip; select it to see what the agent gets.
+3. Send.
 
 Sign-ins are kept per project; change that in [Settings](settings.md#other-sections) → **Projects**.
 

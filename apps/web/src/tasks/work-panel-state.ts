@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { TaskOverview } from '@spark-outpost/contracts';
+import type { BrowserPaneChoice } from '../browser/pane-open.ts';
 
 const STORAGE_KEY = 'spark-wp';
 const WIDTH_KEY = 'spark-outpost.work-panel.width';
@@ -160,6 +161,7 @@ export interface TaskPanel {
   setWidth(width: number | null): void;
   setOpen(open: boolean): void;
   setView(view: PanelView): void;
+  closeBrowser(): void;
   openTask(taskId: string): void;
 }
 
@@ -167,36 +169,45 @@ export function useTaskPanel(
   tasks: readonly TaskOverview[],
   hasSettings: boolean,
   opensByDefault = true,
-  hasBrowser = false,
+  browser: BrowserPaneChoice | null = null,
 ): TaskPanel {
   const state = useWorkPanelState(opensByDefault);
   const [chosen, setChosen] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [wanted, setWanted] = useState<PanelView>('work');
   const task = tasks.find((candidate) => candidate.id === chosen) ?? tasks.at(-1) ?? null;
   const hasWork = task !== null || hasSettings;
-  const view: PanelView = hasBrowser && (wanted === 'browser' || !hasWork) ? 'browser' : 'work';
-  const setOpen = (open: boolean) => {
+  const browsing = browser !== null && browser.open;
+  const workOpen = task ? state.open : hasSettings && settingsOpen;
+  const view: PanelView = browsing || (browser !== null && !hasWork) ? 'browser' : 'work';
+  const setWorkOpen = (open: boolean) => {
     if (task) state.setOpen(open);
     else setSettingsOpen(open);
   };
   return {
     task,
-    available: hasWork || hasBrowser,
-    open: task ? state.open : (hasSettings || hasBrowser) && settingsOpen,
+    available: hasWork || browser !== null,
+    open: browsing || workOpen,
     wide: state.wide,
     width: view === 'browser' ? state.browserWidth : state.width,
     view,
     limits: view === 'browser' ? BROWSER_PANEL_LIMITS : WORK_PANEL_LIMITS,
     setWidth: view === 'browser' ? state.setBrowserWidth : state.setWidth,
-    setOpen,
+    setOpen(open) {
+      if (open && !hasWork) browser?.setOpen(true);
+      if (open && hasWork) setWorkOpen(true);
+      if (!open && browsing) browser.setOpen(false);
+      if (!open && workOpen) setWorkOpen(false);
+    },
     setView(next) {
-      setWanted(next);
-      setOpen(true);
+      browser?.setOpen(next === 'browser');
+      if (next === 'work') setWorkOpen(true);
+    },
+    closeBrowser() {
+      browser?.setOpen(false);
     },
     openTask(taskId) {
       setChosen(taskId);
-      setWanted('work');
+      browser?.setOpen(false);
       state.setOpen(true);
     },
   };
