@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import { isSecretPath, protectedPath, refusalFor } from '../projects/path-policy.ts';
-import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
+import { protectedPath, refusalFor } from '../projects/path-policy.ts';
+import { commandTree, treeWords } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
 import {
   forcePush,
@@ -14,8 +14,8 @@ import {
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
+import { routedPieceDecision } from './piece-route.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
-import { readConcern } from './file-reads.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import { egressOf } from './egress.ts';
 import {
@@ -26,7 +26,8 @@ import {
 } from './publish-policy.ts';
 import { taintReason } from './taint.ts';
 import { writeTargets } from './write-targets.ts';
-import { commandCwd, inTempDir, isSecretTarget, outsideRoots, place } from './request-place.ts';
+import { commandCwd, isSecretTarget, outsideRoots, place } from './request-place.ts';
+import { alwaysAsk } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { partRequests, provenRead, shellView, type ShellView } from './shell-view.ts';
 
@@ -75,9 +76,7 @@ export const FS_WRITE_TOOL_KIND = 'write_text_file';
 export const PUSH_REASON = 'Pushing publishes outside this computer';
 export const BUILDER_PUBLISH_REASON =
   "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
-export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
-export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
-export const SECRET_REASON = 'Secret files always ask';
+export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
 export const ASK_TURN_ASKS =
@@ -92,27 +91,6 @@ export const PIECE_PROTECTED_REASON =
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
-}
-
-function touchesSecret(request: ApprovalRequest, tree: CommandTree | null): boolean {
-  if (request.paths.some((target) => isSecretTarget(request.roots, target))) return true;
-  if (!tree) return false;
-  const cwd = commandCwd(request);
-  return treeWords(tree)
-    .filter((word) => word !== '' && !word.startsWith('-'))
-    .some((word) => {
-      if (isSecretPath(path.basename(word))) return true;
-      return isSecretTarget(request.roots, resolveCommandPath(word, cwd, request.home));
-    });
-}
-
-function deletesOutside(request: ApprovalRequest, tree: CommandTree | null): boolean {
-  if (request.toolKind === 'delete' && request.paths.some((p) => outsideRoots(request, p))) {
-    return true;
-  }
-  if (!tree) return false;
-  const targets = deleteTargets(tree, commandCwd(request), request.home);
-  return targets === null || targets.some((target) => outsideRoots(request, target));
 }
 
 interface Guarded {
@@ -139,55 +117,6 @@ export function guardedTargets(request: ApprovalRequest): Guarded {
   };
 }
 
-function commandReads(request: ApprovalRequest, tree: CommandTree | null, files: FileLister) {
-  if (!request.command || !tree) return null;
-  return readConcern(request.command, tree, {
-    cwd: commandCwd(request),
-    home: request.home,
-    isSecret: (target) => isSecretTarget(request.roots, target),
-    files,
-  });
-}
-
-function writesOutside(request: ApprovalRequest): boolean {
-  if (!request.command) return false;
-  const targets = writeTargets(request.command, commandCwd(request), request.home) ?? [];
-  return targets.some((target) => outsideRoots(request, target) && !inTempDir(target));
-}
-
-function railReason(request: ApprovalRequest, files: FileLister): string | null {
-  const tree = request.command ? commandTree(request.command) : null;
-  if (deletesOutside(request, tree)) return OUTSIDE_DELETE_REASON;
-  if (touchesSecret(request, tree)) return SECRET_REASON;
-  if (commandReads(request, tree, files) === 'secret') return SECRET_REASON;
-  return writesOutside(request) ? OUTSIDE_WRITE_REASON : null;
-}
-
-function redirectRail(view: ShellView | null): string | null {
-  const kinds = view?.redirects ?? [];
-  if (kinds.includes('secret')) return SECRET_REASON;
-  return kinds.includes('writes_outside') ? OUTSIDE_WRITE_REASON : null;
-}
-
-export function alwaysAskReason(
-  request: ApprovalRequest,
-  files: FileLister,
-  view: ShellView | null,
-): string | null {
-  const parts = view ? [request, ...partRequests(request, view)] : [request];
-  for (const part of parts) {
-    const reason = railReason(part, files);
-    if (reason) return reason;
-  }
-  const redirected = redirectRail(view);
-  if (redirected) return redirected;
-  const writes = request.kind === 'edit' || request.toolKind === 'move';
-  if (writes && request.paths.some((target) => outsideRoots(request, target))) {
-    return OUTSIDE_WRITE_REASON;
-  }
-  return null;
-}
-
 export interface DecideOptions {
   builder?: boolean;
   piece?: PieceGuard;
@@ -199,6 +128,7 @@ export interface DecideOptions {
   instructionGrants?: ReadonlySet<string>;
   shell?: ShellScript | null;
   agentAsks?: boolean;
+  routedPiece?: boolean;
   publish?: PublishContext;
 }
 
@@ -377,8 +307,8 @@ export function decide(
   const files = options.files ?? NO_FILES;
   const tainted = taintedEgress(request, options, files);
   if (tainted) return tainted;
-  const always = alwaysAskReason(request, files, view);
-  if (always) return { verdict: 'ask', reason: always };
+  const always = alwaysAsk(request, files, view);
+  if (always) return { verdict: 'ask', reason: always.reason };
   if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
@@ -387,7 +317,9 @@ export function decide(
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
   if (options.agentAsks && posture !== 'full_access' && request.kind !== 'other') {
-    return agentAsked(request, view, allowlist, options);
+    const own = agentAsked(request, view, allowlist, options);
+    if (own.verdict !== 'ask' || !options.routedPiece) return own;
+    return routedPieceDecision(posture, request, view, options.piece?.owned ?? null) ?? own;
   }
   const pushes = request.command !== null && isGitPush(request.command);
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };

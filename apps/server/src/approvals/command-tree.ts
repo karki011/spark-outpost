@@ -1,4 +1,5 @@
 import { programName, resolveCommandPath, splitCommandLine, unwrapCommand } from './commands.ts';
+import { withTempVariable } from './temp-dirs.ts';
 
 export interface CommandTree {
   commands: string[][];
@@ -158,22 +159,25 @@ export function commandDirs(tree: CommandTree, cwd: string, home: string): strin
   return dirs;
 }
 
+function anchored(word: string): boolean {
+  return word.startsWith('/') || word === '~' || word.startsWith('~/');
+}
+
 export function deleteTargets(tree: CommandTree, cwd: string, home: string): string[] | null {
-  let dirs = [cwd];
+  let dirs: string[] | null = [cwd];
   const targets: string[] = [];
   for (const program of tree.commands) {
     const name = programName(program);
     if (name === 'cd' || name === 'pushd') {
-      const next = changedDirs(program, dirs, home);
-      if (next === null) return null;
-      dirs = next;
+      dirs = dirs === null ? null : changedDirs(program, dirs, home);
       continue;
     }
     if (DELETERS.has(name) && tree.fedByXargs.includes(program)) return null;
-    const words = deletedWords(program);
+    const words = deletedWords(program).map(withTempVariable);
     if (words.some((word) => UNKNOWN_WORD.test(word))) return null;
+    if (dirs === null && !words.every(anchored)) return null;
     for (const word of words) {
-      for (const dir of dirs) targets.push(resolveCommandPath(word, dir, home));
+      for (const dir of dirs ?? [cwd]) targets.push(resolveCommandPath(word, dir, home));
     }
   }
   return targets;

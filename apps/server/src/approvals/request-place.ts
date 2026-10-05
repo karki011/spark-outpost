@@ -1,4 +1,3 @@
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isSecretPath, relativeInside } from '../projects/path-policy.ts';
 import type { ApprovalRequest, RequestRoot } from './decide.ts';
@@ -40,10 +39,4 @@ export function partPlace(request: ApprovalRequest): PartPlace {
     inside: (target) => !outsideRoots(request, target),
     isSecret: (target) => isSecretTarget(request.roots, target),
   };
-}
-
-const TEMP_ROOTS = ['/tmp', '/private/tmp', '/var/folders', '/private/var/folders', tmpdir()];
-
-export function inTempDir(target: string): boolean {
-  return TEMP_ROOTS.some((root) => relativeInside(root, target) !== null);
 }

@@ -97,8 +97,9 @@ function listed(files: readonly string[]): string {
 }
 
 function commandNote(approval: Approval): string | null {
-  if (approval.reason !== null || approval.payload.agentReason) return null;
+  if (approval.reason !== null) return null;
   if (approval.payload.asksBecause) return `${approval.payload.asksBecause}.`;
+  if (approval.payload.agentReason) return null;
   return "It isn't on the project's allowlist yet.";
 }
 
