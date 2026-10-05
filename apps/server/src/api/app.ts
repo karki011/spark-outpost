@@ -20,6 +20,7 @@ import { mapRoutes } from './map-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
+import { projectCloneRoutes, type CloneRouteDeps } from './project-clone-routes.ts';
 import { projectRoutes } from './project-routes.ts';
 import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
@@ -54,6 +55,7 @@ export interface AppOptions
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
     Pick<ConversationActionDeps, 'deleteSettleMs'>,
+    Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
   previews: PreviewServers;
@@ -91,6 +93,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', chatShareRoutes(options));
   app.use('/api', projectRoutes(options));
+  app.use('/api', projectCloneRoutes(options));
   app.use('/api', mapRoutes(options));
   app.use('/api', agentConfigRoutes(options));
   app.use('/api', mcpRoutes(options));

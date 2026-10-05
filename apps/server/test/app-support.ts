@@ -39,6 +39,7 @@ export interface TestAppOptions {
   previews?: PreviewServers;
   diagnostics?: AppOptions['diagnostics'];
   deleteSettleMs?: number;
+  cloneTest?: AppOptions['cloneTest'];
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -93,6 +94,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     parallelBuilders: options.parallelBuilders,
     ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
+    ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
   });
 }
