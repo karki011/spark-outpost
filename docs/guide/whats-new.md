@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                   | What to do                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Save as agreed plan** shows only after a real plan.                                                                                          | No action.                                                                    |
 | Question cards sit above the message box and wait 60s. One status per turn; tasks and Jev show beside it.                                      | Set **Wait before going with best guesses** in [Settings](settings.md#spark). |
 | Hovering a ticket row hides nothing; **Start** shows at its end. Quiet rows say less.                                                          | See [Tickets inbox](tickets-inbox.md).                                        |
 | Settings: **Sparks** is now **Teammates**. Shorter **Models** and **Projects** lists. No version in the rail.                                  | The version is in **Settings → Updates**.                                     |

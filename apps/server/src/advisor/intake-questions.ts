@@ -119,7 +119,10 @@ export const DESTRUCTIVE_QUESTION =
   'Would doing `task` delete files or data, drop or migrate stored data, rewrite git history or touch secrets?';
 export const CONTINUES_QUESTION =
   'Does `task` continue the work in `previous_request` and `task_summary`?';
-export const PLAN_AGREED_QUESTION = 'Does `task` approve the plan in `previous_reply`?';
+export const PLAN_AGREED_QUESTION =
+  'Does `task` tell the assistant to go ahead with what `previous_reply` proposes? Judge only the acceptance in `task`.';
+export const PREVIOUS_IS_PLAN_QUESTION =
+  'Is `previous_reply` a concrete plan of work: ordered steps or a described approach for a change to build or do? Judge only `previous_reply`, not `task`.';
 export const TIER_QUESTION =
   'Which model size does `task` need? Pick the smallest that will do it well.';
 
@@ -131,6 +134,7 @@ export type IntakeKey =
   | 'destructive'
   | 'continues_task'
   | 'plan_agreed'
+  | 'previous_is_plan'
   | 'injection'
   | 'tier';
 
@@ -218,12 +222,32 @@ function followUpVagueQuestion(): Record<string, unknown> {
 function planAgreedQuestion(): Record<string, unknown> {
   return noulQuestion(PLAN_AGREED_QUESTION, {
     true: {
-      what: '`previous_reply` proposes a plan or steps and `task` accepts them, maybe with small changes',
+      what: '`task` accepts the proposed work and says to proceed, maybe with small changes',
       examples: ['yes, go ahead', 'ok but skip step 3'],
     },
     false: {
-      what: 'It asks something new, questions or rejects the plan, or there is no plan',
-      examples: ['why step 2?', 'now add a logout button'],
+      what: '`task` asks something new, questions or rejects the proposal, only acknowledges or picks a topic, or `previous_reply` proposes no work',
+      examples: ['why step 2?', 'now add a logout button', 'ok (after "What sounds good?")'],
+    },
+  });
+}
+
+function previousIsPlanQuestion(): Record<string, unknown> {
+  return noulQuestion(PREVIOUS_IS_PLAN_QUESTION, {
+    true: {
+      what: 'It lays out steps or an approach for a specific change, ready to be carried out',
+      examples: [
+        '1. Add src/export.ts 2. Wire the button 3. Add tests. Shall I go ahead?',
+        'I would move the retry into the client and cover it with a test.',
+      ],
+    },
+    false: {
+      what: 'It only asks the user a question, lists conversation topics or options to pick from, answers a question, makes small talk, or sums up finished work',
+      examples: [
+        "So what's on your mind? Some ideas: a bug, a new feature, a code tour. What sounds good?",
+        'parseDate reads ISO strings and returns a Date.',
+        'Done: the export button is added and the tests pass.',
+      ],
     },
   });
 }
@@ -319,7 +343,10 @@ export function buildIntakeQuestions(request: IntakeRequest): IntakeQuestions {
     intent: { type: 'choice', instructions: CATEGORY_QUESTION, criteria: CATEGORY_CRITERIA },
     ...doModeQuestions(request),
   };
-  if (request.previousReply) questions.plan_agreed = planAgreedQuestion();
+  if (request.previousReply) {
+    questions.plan_agreed = planAgreedQuestion();
+    questions.previous_is_plan = previousIsPlanQuestion();
+  }
   const tier = request.mode === 'chat' ? null : tierQuestion(chatCandidate(request));
   if (tier) questions.tier = tier;
   if (untrusted.length > 0) {
@@ -418,6 +445,7 @@ export function parseIntakeAnswers(
     ...noulField('destructive', destructive),
     ...noulField('continuesTask', read('continues_task')),
     ...noulField('planAgreed', read('plan_agreed')),
+    ...noulField('previousIsPlan', read('previous_is_plan')),
     tier: tier?.value ?? null,
     ...(Object.keys(rated.ratings).length > 0 ? { ratings: rated.ratings } : {}),
     confidence: intent?.confidence ?? 0,

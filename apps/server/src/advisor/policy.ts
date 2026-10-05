@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'intake-2-intent-start';
+export const POLICY_VERSION = 'intake-3-plan-presence';
 
 export type ActingQuestion =
   | 'question'
