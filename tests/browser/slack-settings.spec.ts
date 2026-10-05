@@ -127,7 +127,7 @@ test('Disconnect waits out the grace period and removes the connection', async (
   await expect(card.locator('.pc-head .nm small')).toHaveText('Connected to Acme as spark');
 
   await card.getByRole('button', { name: 'Disconnect' }).click();
-  await expect(card.getByRole('button', { name: 'Sign in with Slack' })).toBeVisible({
+  await expect(card.getByRole('button', { name: 'Sign in with Slack', exact: true })).toBeVisible({
     timeout: 10_000,
   });
   const status = (await (await page.request.get('/api/slack')).json()) as { connection: unknown };
