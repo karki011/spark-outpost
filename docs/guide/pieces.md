@@ -19,7 +19,7 @@ Agent TV keeps following its chat while you open another.
 ## Message a crew member
 
 1. Select **Message** on the agent's row in **Agent TV**, in the **Crew** tab of the **Work** panel, or in the chat.
-2. Type your message and select **Send to** _name_, such as **Send to Bolt**.
+2. Type your message and select **Send to** _name_.
 
 The agent reads it at its next step. A finished Builder shows **Continue** _name_ and resumes in a new turn.
 

@@ -1,11 +1,9 @@
-import { failingChecks, type CheckBody } from '@spark-outpost/contracts';
-import { CHECK_FIXES } from '../advisor/policy.ts';
+import type { CheckBody } from '@spark-outpost/contracts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { workingTree } from '../projects/snapshot.ts';
 import { checkBudget } from './budget-check.ts';
-import { checkLines } from './check-results.ts';
+import { changeFailureText, checkLines, startsCheckFix } from './check-results.ts';
 import { runChecks } from './checks.ts';
-import { checkFailureText } from './context.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { FlowAction } from './transitions.ts';
@@ -38,7 +36,7 @@ async function fix(s: Session, body: CheckBody, site: LandingSite): Promise<Memb
     s,
     { role: 'builder', reason: 'fix', escalate: false, note: null },
     site.place,
-    { checkFailures: checkFailureText(failingChecks(body)) },
+    { checkFailures: changeFailureText(body) },
   );
   return outcome.result;
 }
@@ -56,12 +54,13 @@ export async function checkAndFix(
     name: result.name,
     cwd: site.cwd,
     copy: site.place ? result.name : null,
+    before: site.before,
   });
   let last = first;
   const copyRunId = site.place?.reuse?.runId ?? null;
   await awaitDepsPrep(s.deps.db, copyRunId);
   let checks = await runChecks(s, target(last));
-  for (let fixes = 0; checks?.status === 'failed' && fixes < CHECK_FIXES; fixes += 1) {
+  while (startsCheckFix(s, checks)) {
     if (s.control.signal.aborted || (await checkBudget(s))) break;
     last = await fix(s, checks, site);
     if (last.outcome !== 'succeeded') break;

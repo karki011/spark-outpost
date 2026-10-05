@@ -47,4 +47,4 @@ Without Jev, or when Jev isn't sure, the Builder keeps your pinned model.
 
 ## Read the why-line
 
-Each Builder's why-line names the model and the reason, such as "Why Sonnet 5: rule chat model · mid tier". For models Spark stopped using, see [Model demotions](guardrails.md#model-demotions).
+Each Builder's why-line names the model and the reason. For models Spark stopped using, see [Model demotions](guardrails.md#model-demotions).

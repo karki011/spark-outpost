@@ -25,8 +25,8 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-const FAILS_UNTIL_FIXED = `import { existsSync } from 'node:fs';
-if (!existsSync('fixed.txt')) {
+const FAILS_UNTIL_FIXED = `import { existsSync, readFileSync } from 'node:fs';
+if (readFileSync('notes.txt', 'utf8').includes('step') && !existsSync('fixed.txt')) {
   console.error('expected fixed.txt to exist');
   process.exit(1);
 }
@@ -135,10 +135,16 @@ describe('checks after a Builder lands', { timeout: 60_000 }, () => {
 
     const detail = await getConversationDetail(t.db, conversationId);
     const labels = detail?.tasks.flatMap((task) => task.items.map((item) => item.label)) ?? [];
-    expect(labels.some((label) => label.startsWith('Checks failed for Bolt'))).toBe(true);
-    expect(labels.some((label) => label.startsWith('Checks passed for Bolt'))).toBe(true);
-    const failed = detail?.tasks[0]?.items.find((item) => item.label.startsWith('Checks failed'));
+    expect(labels).toContain("Checks for Bolt's copy: node check.mjs failed");
+    expect(labels).toContain("Checks for Bolt's copy: node check.mjs passed");
+    const failed = detail?.tasks[0]?.items.find((item) => item.label.endsWith('failed'));
+    expect(failed?.state).toBe('failed');
     expect(failed?.output).toContain('expected fixed.txt to exist');
+    expect(failed?.output).toContain('passes before this change');
+    expect(bodies[0]!.results[0]).toMatchObject({
+      cause: 'change',
+      baseline: { outcome: 'passed', cached: false },
+    });
 
     const { rows: sessions } = await t.db.query<{ close_reason: string | null }>(
       `SELECT close_reason FROM provider_sessions WHERE agent_key LIKE 'key:%'`,

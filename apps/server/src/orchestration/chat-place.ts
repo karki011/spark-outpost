@@ -8,7 +8,8 @@ import {
   placeChoice,
   type ChatWorktree,
 } from '../persistence/chat-worktrees.ts';
-import type { Queryable } from '../persistence/db.ts';
+import type { Db, Queryable } from '../persistence/db.ts';
+import type { Lease } from '../persistence/jobs.ts';
 import { newId } from '../persistence/ids.ts';
 import {
   addChatWorktree,
@@ -23,7 +24,7 @@ import {
   type WorktreeSource,
 } from '../projects/chat-worktrees.ts';
 import { git, headCommit, isGitWorkTree } from '../projects/snapshot.ts';
-import { prepareDependencies } from '../projects/worktree-deps.ts';
+import { prepareDependencies, type DepsPrep } from '../projects/worktree-deps.ts';
 import { DEFAULT_BRANCH_PREFIX, repoTop, worktreePath } from '../projects/worktrees.ts';
 import { shipBranchName } from '../ship/branch.ts';
 import { ticketBranchTitle } from '../tickets/chat-link.ts';
@@ -32,6 +33,7 @@ import type { Append } from '../workflow/agent-turn.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { auditDepsPrep, depsNote, installingNote } from './deps-audit.ts';
 import { decidePlace, namedBranch, type PlaceDecision } from './place-decision.ts';
 
 const WORKTREE_FAILED =
@@ -44,12 +46,14 @@ interface ChatPlaceDeps {
   db: Queryable;
   branchPrefix: string;
   gitInstalled?: () => Promise<boolean>;
+  onInstall?: (command: string) => void;
 }
 
 interface PlacedChat {
   input: RunInput;
   repoRoot: string | null;
   note: string | null;
+  deps?: { prep: DepsPrep; copy: string };
 }
 
 interface Target {
@@ -160,7 +164,7 @@ async function createCopy(
   deps: ChatPlaceDeps,
   target: Target,
   planned: Planned,
-): Promise<ChatWorktree> {
+): Promise<{ record: ChatWorktree; prep: DepsPrep | null }> {
   const { root } = target;
   const top = await repoTop(root);
   const id = newId();
@@ -186,8 +190,11 @@ async function createCopy(
     await markChatWorktreeRemoved(deps.db, id);
     throw error;
   }
-  await prepareDependencies(root, record.path, { root }).catch(() => null);
-  return record;
+  const prep = await prepareDependencies(root, record.path, {
+    root,
+    ...(deps.onInstall ? { onInstall: deps.onInstall } : {}),
+  }).catch(() => null);
+  return { record, prep };
 }
 
 async function restoreCopy(db: Queryable, record: ChatWorktree): Promise<boolean> {
@@ -255,12 +262,17 @@ async function freshPlace(deps: ChatPlaceDeps, input: RunInput, target: Target) 
   }
   const planned = await plannedSource(deps, target, input.userRequest, branches, decision);
   if (!planned) return { input, repoRoot: target.root, note: null };
-  const record = await createCopy(deps, target, planned);
+  const { record, prep } = await createCopy(deps, target, planned);
   const extra = decision.kind === 'new' ? decision.note : null;
   const fromHead = decision.kind === 'new' && decision.from === null;
   const dirty = fromHead && !clean ? DIRTY_NOTE : null;
-  const note = placeNote(record, [extra, dirty].filter(Boolean).join(' ') || null);
-  return { input: inCopy(input, record), repoRoot: target.root, note };
+  const said = [extra, dirty, depsNote(prep)].filter(Boolean).join(' ') || null;
+  return {
+    input: inCopy(input, record),
+    repoRoot: target.root,
+    note: placeNote(record, said),
+    ...(prep ? { deps: { prep, copy: record.path } } : {}),
+  };
 }
 
 async function primaryProject(db: Queryable, conversationId: string) {
@@ -294,21 +306,29 @@ export async function placeChat(
   return freshPlace(deps, plain, { conversationId, projectId, root });
 }
 
-type PlaceDeps = { db: Queryable; branchPrefix?: string };
+type PlaceDeps = { db: Db; branchPrefix?: string };
 
 export async function placeChatOrFailure(
   deps: PlaceDeps,
   input: RunInput,
   append: Append,
   create: boolean,
+  lease: Lease | null = null,
 ): Promise<PlacedChat | { failed: string }> {
   try {
     const placed = await placeChat(
-      { db: deps.db, branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX },
+      {
+        db: deps.db,
+        branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
+        onInstall: (command) => void planNote(append, installingNote(command)).catch(() => null),
+      },
       input,
       create,
     );
     if (placed.note) await planNote(append, placed.note);
+    if (placed.deps && lease) {
+      await auditDepsPrep(deps.db, lease, placed.deps.prep, placed.deps.copy).catch(() => null);
+    }
     return placed;
   } catch (error) {
     const reason = error instanceof Error ? error.message.split('\n')[0] : String(error);
@@ -321,8 +341,9 @@ export async function placeChatOrStop(
   input: RunInput,
   append: Append,
   create: boolean,
+  lease: Lease | null = null,
 ): Promise<PlacedChat | null> {
-  const placed = await placeChatOrFailure(deps, input, append, create);
+  const placed = await placeChatOrFailure(deps, input, append, create, lease);
   if (!('failed' in placed)) return placed;
   await append(runEvents.error(placed.failed, 'orchestration_failed'), {
     transition: { status: 'failed', error: placed.failed },

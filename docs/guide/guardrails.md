@@ -33,10 +33,10 @@ A plan card shows a **Rough estimate** of time and cost. After 5 similar finishe
 
 ## Task limits
 
-Each task has a limit on active time and tool calls, and on cost when you set **Spend cap per task** in **Settings → Spark**. At a limit, Spark stops and shows **Continue past the budget?**. It never continues by itself.
+Each task has a limit on active time and tool calls, and on cost when you set **Spend cap per task** in **Settings → Spark**. At a limit, Spark stops and shows **Continue past the budget?**.
 
 ## Model demotions
 
 On **Auto**, Spark stops sending a kind of task to a model whose recent pass rate falls well behind its tier, after at least 10 finished runs.
 
-The Builder's header says why, such as "Sonnet 5 has passed 55% of recent bug fixes here". A pinned model stays.
+The Builder's header says why. A pinned model stays.

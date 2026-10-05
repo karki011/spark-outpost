@@ -22,7 +22,7 @@ import { request } from './client.ts';
 
 export type BuilderSettings = Pick<
   UpdateProjectRequest,
-  'pieceSlots' | 'workPlace' | 'browserKeepSignIns'
+  'pieceSlots' | 'workPlace' | 'browserKeepSignIns' | 'checkCommands'
 >;
 
 export interface FolderPick {

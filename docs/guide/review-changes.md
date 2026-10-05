@@ -10,14 +10,14 @@ You'll read what the agent changed and keep or undo it. About 2 minutes.
 
 ## Read the diff
 
-1. Select the changed-lines chip in the chat header, such as **+2,550 −21**, or press **⌘⇧D**.
+1. Select the changed-lines chip in the chat header, or press **⌘⇧D**.
 2. Pick a file on the left, or type in **Filter files**.
 3. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** to search.
 4. Press **Esc** to close the **Changes** drawer.
 
 ![The Changes drawer with the file list and a diff](images/chats-and-modes-diff-drawer-light.png)
 
-Big files show 2,000 lines until you select **Load full file**. Lockfiles, generated files, binary files and files over 1 MB stay folded until you select **Show diff**.
+Big, generated and binary files stay folded until you select **Load full file** or **Show diff**.
 
 ## Keep or revert
 
@@ -39,5 +39,17 @@ The card waits for you, with **Keep**, **Fix** and **Revert**, only when Spark w
 Select **Fix**, type what should change, and select **Ask for a fix**.
 
 Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch.
+
+## Checks after a change
+
+After a Builder's turn, Spark runs project checks and adds one **Checks** row to **Tasks**. Open it for output.
+
+| The row says                                    | Meaning                                       |
+| ----------------------------------------------- | --------------------------------------------- |
+| **failed**                                      | The change caused it. The Builder fixes once. |
+| **already failing before this change**          | It fails without the change too.              |
+| **could not finish in time**, **could not run** | Not counted. The row says why.                |
+
+Choose the commands, or **Off**, in **Settings → Projects**.
 
 **Next:** [Manage a long chat](compaction.md)

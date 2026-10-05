@@ -11,7 +11,7 @@ You'll follow a running turn, stop it, and line up more messages. About 2 minute
 ## See what's happening
 
 1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
-2. Select the step count, such as **3 steps**, to show the steps.
+2. Select the step count to show the steps.
 3. Select **Show work panel** in the chat header for the plan, crew, files and cost.
 
 When the agent needs you, the line says **Waiting for you**. Select it, or press **⌘⇧Y**, to jump to the card.

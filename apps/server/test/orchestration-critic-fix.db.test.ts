@@ -306,13 +306,13 @@ describe('Critic → fix rounds', () => {
     expect(await reply(runId)).toContain(`Still concerns after 3 rounds: ${ROUND_FINDINGS[3]}`);
   }, 180_000);
 
-  it('stops the loop when checks start failing after a fix and the check fixes cannot mend them', async () => {
+  it('stops the loop when checks start failing after a fix and the one check fix cannot mend them', async () => {
     await configureCheck(FAILS_AFTER_REVIEW_FIX);
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugreview', 'full-auto');
     await drive(conversationId, runId);
-    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'builder', 'builder']);
-    expect(await checkStatuses()).toEqual(['passed', 'failed', 'failed', 'failed']);
+    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'builder']);
+    expect(await checkStatuses()).toEqual(['passed', 'failed', 'failed']);
     expect(await reply(runId)).toContain(
       'Stopped after 1 fix round: the checks failed after the fix and the check-fix turns could not fix them.',
     );

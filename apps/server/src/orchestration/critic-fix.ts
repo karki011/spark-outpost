@@ -1,4 +1,4 @@
-import type { CheckBody } from '@spark-outpost/contracts';
+import { unsettledChecks, type CheckBody } from '@spark-outpost/contracts';
 import { buildFindingQuestions, readFindings } from '../advisor/finding-questions.ts';
 import { latestChecks } from './check-results.ts';
 import { scopeRecheck, type ScopedReading } from './critic-scope.ts';
@@ -96,6 +96,9 @@ export function checksPhrase(bodies: readonly CheckBody[]): string {
   const latest = latestChecks(bodies);
   if (latest.length === 0) return 'no project checks ran';
   if (latest.some((body) => body.status === 'failed')) return 'checks still fail';
+  if (latest.some((body) => unsettledChecks(body).length > 0)) {
+    return 'no check fails because of this change';
+  }
   if (latest.every((body) => body.status === 'passed')) return 'checks pass';
   return 'checks were skipped';
 }

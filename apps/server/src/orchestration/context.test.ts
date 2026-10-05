@@ -181,11 +181,11 @@ describe('context assembly', () => {
   it('turns failing checks into a short fix request with the end of each output', () => {
     const failures = checkFailureText([
       { command: 'npm test', outcome: 'failed', exitCode: 1, outputTail: `${'x'.repeat(5000)}END` },
-      { command: 'npm run lint', outcome: 'timed_out', exitCode: null, outputTail: '' },
+      { command: 'npm run lint', outcome: 'failed', exitCode: 2, outputTail: '' },
     ]);
     expect(failures).toContain('`npm test` exited 1:');
     expect(failures).toContain('END');
-    expect(failures).toContain('`npm run lint` timed out:\n```text\n(no output)\n```');
+    expect(failures).toContain('`npm run lint` exited 2:\n```text\n(no output)\n```');
     expect(failures.length).toBeLessThan(3_200);
     const followUp = checkFixFollowUp(failures);
     expect(followUp.startsWith("The project's checks failed")).toBe(true);

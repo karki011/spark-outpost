@@ -37,7 +37,7 @@ import {
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const FAILS_UNTIL_FIXED = `import { existsSync } from 'node:fs';
-if (!existsSync('fixed.txt')) {
+if (existsSync('glue.ts') && !existsSync('fixed.txt')) {
   console.error('expected fixed.txt to exist');
   process.exit(1);
 }

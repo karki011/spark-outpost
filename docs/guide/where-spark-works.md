@@ -31,6 +31,8 @@ Hover the chip to see where the branch started and how pull requests will open.
 
 A new worktree starts from the latest `origin` default branch, unless your checkout has commits of its own or you picked a branch.
 
+When its lockfile differs from your checkout's, Spark installs dependencies there and says so if that fails.
+
 > **Tip:** Keep worktrees on if you run agents in modes that never ask. Mistakes then stay out of your checkout.
 
 **Next:** [Keep files and keys away from agents](sparkignore.md)

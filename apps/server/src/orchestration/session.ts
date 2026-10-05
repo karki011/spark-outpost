@@ -49,6 +49,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   fixRound?: Partial<FixRoundLimits>;
   budgetPollMs?: number;
   checkpointTimeoutMs?: number;
+  checkTimeoutMs?: number;
   jevTimeoutMs?: number;
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
@@ -89,6 +90,13 @@ export interface Seat {
 export interface BudgetChecks {
   running: Promise<BudgetLimit | null> | null;
   queued: Promise<BudgetLimit | null> | null;
+}
+
+export interface CheckMemory {
+  base?: string | null;
+  unfinished: Set<string>;
+  fixed: Set<string>;
+  fixRounds: Map<string, number>;
 }
 
 export interface PassingState {
@@ -146,6 +154,7 @@ export interface Session {
   checkRounds: number;
   checkBodies: CheckBody[];
   checkLines: string[];
+  checkMemory?: CheckMemory;
   projectStyle: ProjectStyle;
   buildStyle: BuildStyle;
   assumption: string | null;

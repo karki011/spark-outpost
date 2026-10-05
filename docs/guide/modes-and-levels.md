@@ -6,7 +6,7 @@ order: 612
 summary: Every agent mode for Claude, Codex and Z.ai, what each allows, and the two Spark autonomy levels.
 ---
 
-The agent's mode is the provider's own setting, shown with the provider's names. Spark autonomy is Spark's. To change them, see [Pick the mode](agent-mode.md#pick-the-agents-mode) and [Choose how much Spark does alone](spark-autonomy.md).
+The agent's mode is the provider's own setting, shown with the provider's names. To change them, see [Pick the mode](agent-mode.md#pick-the-agents-mode) and [Choose how much Spark does alone](spark-autonomy.md).
 
 ## Agent modes
 

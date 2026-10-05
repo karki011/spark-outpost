@@ -1,16 +1,12 @@
-import {
-  failingChecks,
-  type CheckBody,
-  type PieceViolation,
-  type TaskPiece,
-} from '@spark-outpost/contracts';
+import { type CheckBody, type PieceViolation, type TaskPiece } from '@spark-outpost/contracts';
 import { COORD_HANDOFF_SHARE, COORD_PIECE_FIX_TURNS } from '../advisor/policy.ts';
 import { configuredChecks } from '../checks/detect.ts';
 import { movePiece } from '../persistence/pieces.ts';
 import { git, workingTree } from '../projects/snapshot.ts';
 import { checkBudget } from '../orchestration/budget-check.ts';
 import { runChecks } from '../orchestration/checks.ts';
-import { builderPrompt, checkFailureText } from '../orchestration/context.ts';
+import { changeFailureText, startsCheckFix } from '../orchestration/check-results.ts';
+import { builderPrompt } from '../orchestration/context.ts';
 import { treeOf } from '../orchestration/land.ts';
 import { codeContext } from '../orchestration/code-context.ts';
 import { agreedPlanText } from '../orchestration/member-prompts.ts';
@@ -208,7 +204,7 @@ async function fixTurn(
   turn: PieceTurn,
   failing: CheckBody,
 ): Promise<PieceTurn | null> {
-  const failures = checkFailureText(failingChecks(failing));
+  const failures = changeFailureText(failing);
   const handoff = await contextOf(s, turn.result.runId);
   const generation = handoff ? turn.generation + 1 : turn.generation;
   const sections = [await work.brief(work.piece)];
@@ -341,7 +337,7 @@ export async function runPiece(
     }
   }
   let checks = await scopedChecks(s, work, turn.result);
-  while (checks?.status === 'failed' && fixes < COORD_PIECE_FIX_TURNS) {
+  while (fixes < COORD_PIECE_FIX_TURNS && startsCheckFix(s, checks)) {
     if (stopped(s) || (await checkBudget(s))) break;
     const fixed = await fixTurn(s, action, work, turn, checks);
     if (!fixed) return { skipped: true, landed: false };

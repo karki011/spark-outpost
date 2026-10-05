@@ -136,14 +136,19 @@ describe("Chesterton's fence", { timeout: 120_000 }, () => {
   });
 });
 
+const RED_AFTER_THE_CHANGE = `import { readFileSync } from 'node:fs';
+if (readFileSync('notes.txt', 'utf8').includes('step')) process.exit(3);
+`;
+
 describe('Goodhart: checks run outside the agent', { timeout: 120_000 }, () => {
   it("flags a Builder that says the checks pass when Spark's own run fails", async () => {
-    await setCheckCommands(t, root, ['node -e "process.exit(3)"']);
+    await commitFiles({ 'check.mjs': RED_AFTER_THE_CHANGE });
+    await setCheckCommands(t, root, ['node check.mjs']);
     const { runId } = await run(tagged(TRIVIAL, '#claimpass'));
     const texts = await findingTexts(runId);
     expect(texts).toHaveLength(1);
     expect(texts[0]).toMatch(
-      /^\w+ said the checks pass, but Spark's own run failed: `node -e "process.exit\(3\)"` exited 3\.$/,
+      /^\w+ said the checks pass, but Spark's own run failed: `node check\.mjs` exited 3\.$/,
     );
     expect(await keepCardLaws(runId)).toEqual(texts);
   });

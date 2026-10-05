@@ -130,17 +130,19 @@ export async function worktreesForRuns(
 }
 
 export interface DepsRecord {
-  method: 'clone' | 'copy' | 'offline_install' | 'skipped';
+  method: 'clone' | 'copy' | 'offline_install' | 'install' | 'skipped';
   durationMs: number;
   note: string | null;
   waitedMs: number;
+  lockfileMatched: boolean | null;
 }
 
 export async function saveDeps(db: Queryable, runId: string, deps: DepsRecord): Promise<void> {
   await db.query(
-    `UPDATE run_worktrees SET deps_method = $2, deps_ms = $3, deps_note = $4, deps_waited_ms = $5
+    `UPDATE run_worktrees SET deps_method = $2, deps_ms = $3, deps_note = $4, deps_waited_ms = $5,
+       deps_lockfile_matched = $6
      WHERE run_id = $1`,
-    [runId, deps.method, deps.durationMs, deps.note, deps.waitedMs],
+    [runId, deps.method, deps.durationMs, deps.note, deps.waitedMs, deps.lockfileMatched],
   );
 }
 
