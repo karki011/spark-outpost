@@ -38,6 +38,7 @@ function nouls(task: string): Record<string, number> {
     vague: task.includes(VAGUE_MARKER) ? 0.96 : 0.04,
     continues_task: 0.9,
     plan_agreed: task.includes(MAYBE_AGREED_MARKER) ? 0.7 : 0.05,
+    previous_is_plan: task.includes(MAYBE_AGREED_MARKER) ? 0.9 : 0.05,
     injection: 0.02,
   };
 }

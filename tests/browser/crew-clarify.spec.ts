@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   agentBlock,
   allowEdit,
@@ -81,11 +81,16 @@ test('the questions dock above the composer, wait without a countdown when auto-
 
   const builder = agentBlock(page, 'Bolt');
   await expect(builder).toContainText('Built it');
-  const built = (await builder.boundingBox())!;
-  const keepBox = (await keep.boundingBox())!;
-  const answeredBox = (await answered.boundingBox())!;
-  expect(keepBox.y).toBeGreaterThanOrEqual(built.y + built.height);
-  expect(answeredBox.y + answeredBox.height).toBeLessThanOrEqual(built.y);
+  const follows = async (later: Locator, earlier: Locator) => {
+    const before = await earlier.elementHandle();
+    return later.evaluate(
+      (node, other) =>
+        Boolean(other && other.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING),
+      before,
+    );
+  };
+  expect(await follows(keep, builder)).toBe(true);
+  expect(await follows(builder, answered)).toBe(true);
 });
 
 test('Automatic goes with the best guesses when the wait runs out, and says so', async ({

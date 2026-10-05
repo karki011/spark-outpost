@@ -46,6 +46,11 @@ import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { messagesFor } from '../../crew/member-model.ts';
 
+function footLabel(status: Orchestration['status']): string {
+  if (status === 'cancelled') return 'Stopped';
+  return isTerminalRunStatus(status) ? 'Done' : 'So far';
+}
+
 interface CrewTurnProps {
   run: Run;
   detail: ConversationDetail;
@@ -227,7 +232,7 @@ function CrewTurnBody({
       )}
       <div className="turn-foot">
         <p className="crew-foot">
-          <span>{finished ? 'Done' : 'So far'}</span>{' '}
+          <span>{footLabel(orchestration.status)}</span>{' '}
           {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
         </p>
         {finished && (
