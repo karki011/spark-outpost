@@ -1,73 +1,12 @@
 import { nativeImage, type NativeImage } from 'electron';
-import {
-  BROWSER_SCREENSHOT_WIDTH,
-  type BrowserBox,
-  type BrowserReadMode,
-} from '@spark-outpost/contracts';
+import { BROWSER_SCREENSHOT_WIDTH, type BrowserBox } from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
-import { paintBoxes, quadBox, scaledBox } from './mask.ts';
-import { outlineOf, pageOfLines, pageTextOf, type AxNode, type RefMap } from './outline.ts';
-import { sensitiveNodes, type DomNode } from './sensitive-nodes.ts';
+import { paintBoxes, scaledBox } from './mask.ts';
+import { PageToolError, boxOf, sensitiveBackendIds } from './page-read.ts';
 
 const FULL_PAGE_MAX_HEIGHT = 6000;
 const PNG_MAX_BYTES = 3_500_000;
 const JPEG_QUALITY = 82;
-
-export class PageToolError extends Error {
-  readonly code: 'no_ref' | 'failed';
-
-  constructor(code: 'no_ref' | 'failed', message: string) {
-    super(message);
-    this.code = code;
-  }
-}
-
-export async function sensitiveBackendIds(cdp: Cdp): Promise<number[]> {
-  const { root } = await cdp.send<{ root: DomNode }>('DOM.getDocument', {
-    depth: -1,
-    pierce: true,
-  });
-  return sensitiveNodes(root);
-}
-
-function nodeForRef(refs: RefMap, ref: string | undefined): number | null {
-  if (ref === undefined) return null;
-  const node = refs.nodeFor(ref);
-  if (node === null) {
-    throw new PageToolError('no_ref', `${ref} is not on this page any more. Read the page again.`);
-  }
-  return node;
-}
-
-export interface ReadRequest {
-  mode: BrowserReadMode;
-  ref?: string | undefined;
-  offset: number;
-}
-
-export async function readPage(cdp: Cdp, refs: RefMap, request: ReadRequest) {
-  const rootBackendId = nodeForRef(refs, request.ref);
-  const { nodes } = await cdp.send<{ nodes: AxNode[] }>('Accessibility.getFullAXTree');
-  const sensitive = new Set(await sensitiveBackendIds(cdp));
-  if (request.mode === 'text') {
-    const lines = pageTextOf(nodes, sensitive, rootBackendId);
-    return { ...pageOfLines(lines, request.offset), masked: 0 };
-  }
-  const outline = outlineOf(nodes, { refs, sensitive, rootBackendId });
-  if (!outline) throw new PageToolError('no_ref', 'That part of the page is gone. Read it again.');
-  return { ...pageOfLines(outline.lines, request.offset), masked: outline.masked };
-}
-
-export async function boxOf(cdp: Cdp, backendNodeId: number): Promise<BrowserBox | null> {
-  try {
-    const { model } = await cdp.send<{ model: { border: number[] } }>('DOM.getBoxModel', {
-      backendNodeId,
-    });
-    return quadBox(model.border);
-  } catch {
-    return null;
-  }
-}
 
 interface LayoutMetrics {
   cssVisualViewport: { pageX: number; pageY: number; clientWidth: number; clientHeight: number };
@@ -78,6 +17,7 @@ export interface ShotRequest {
   box?: BrowserBox | null;
   fullPage?: boolean;
   maxWidth?: number;
+  filled?: ReadonlySet<number>;
 }
 
 export interface Shot {
@@ -88,9 +28,9 @@ export interface Shot {
   masked: number;
 }
 
-async function sensitiveBoxes(cdp: Cdp): Promise<BrowserBox[]> {
+async function sensitiveBoxes(cdp: Cdp, filled: ReadonlySet<number>): Promise<BrowserBox[]> {
   const boxes: BrowserBox[] = [];
-  for (const backendNodeId of await sensitiveBackendIds(cdp)) {
+  for (const backendNodeId of new Set([...(await sensitiveBackendIds(cdp)), ...filled])) {
     const box = await boxOf(cdp, backendNodeId);
     if (box && box.width > 0 && box.height > 0) boxes.push(box);
   }
@@ -145,7 +85,9 @@ export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot>
       ? captured.resize({ width: maxWidth, quality: 'good' })
       : captured;
   const size = sized.getSize();
-  const hidden = (await sensitiveBoxes(cdp)).filter((box) => overlaps(box, area));
+  const hidden = (await sensitiveBoxes(cdp, request.filled ?? new Set())).filter((box) =>
+    overlaps(box, area),
+  );
   if (hidden.length === 0) return { ...encoded(sized), ...size, masked: 0 };
   const scale = size.width / area.width;
   const painted = paintBoxes(

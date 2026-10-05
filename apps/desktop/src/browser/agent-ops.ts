@@ -6,9 +6,11 @@ import {
   type BrowserTab,
 } from '@spark-outpost/contracts';
 import { fileURLToPath } from 'node:url';
-import { PageToolError, boxOf, capturePage, readPage } from './page-tools.ts';
+import { PageToolError, boxOf, readPage } from './page-read.ts';
+import { capturePage } from './page-tools.ts';
 import type { BrowserPanes } from './panes.ts';
 import { insideRoots } from './request-guard.ts';
+import { SignInError, signInOnPage } from './sign-in.ts';
 import type { PaneTab } from './tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 
@@ -121,7 +123,7 @@ async function read(panes: BrowserPanes, request: Request<'read'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
   return panes.whileDriving(tab, async () => {
     const { cdp } = await tab.wake();
-    const page = await readPage(cdp, tab.refs, request);
+    const page = await readPage(cdp, tab.refs, request, tab.filled);
     return { ...tabFacts(tab), mode: request.mode, ...page };
   });
 }
@@ -138,7 +140,11 @@ async function screenshot(panes: BrowserPanes, request: Request<'screenshot'>) {
     if (node !== null && !box) {
       throw new BrowserOpError('no_ref', `${request.ref} is not visible on the page.`);
     }
-    const shot = await capturePage(cdp, { box, fullPage: request.fullPage });
+    const shot = await capturePage(cdp, {
+      box,
+      fullPage: request.fullPage,
+      filled: tab.filled,
+    });
     return {
       ...tabFacts(tab),
       data: shot.data.toString('base64'),
@@ -162,6 +168,20 @@ async function logs(panes: BrowserPanes, request: Request<'logs'>) {
   };
 }
 
+async function signIn(panes: BrowserPanes, request: Request<'sign_in'>, signal: AbortSignal) {
+  const tab = targetTab(panes, request.chatId, request.tab);
+  return panes.whileDriving(tab, async () => {
+    const { cdp } = await tab.wake();
+    const { origin, username, password } = request;
+    const done = await signInOnPage(
+      cdp,
+      { origin, username, password },
+      { signal, filled: (node) => tab.filled.add(node) },
+    );
+    return { ...tabFacts(tab), url: done.url.slice(0, 4096), steps: done.steps };
+  });
+}
+
 export async function runBrowserOp(
   panes: BrowserPanes,
   request: BrowserHostRequest,
@@ -173,12 +193,18 @@ export async function runBrowserOp(
     if (request.op === 'read') return await read(panes, request);
     if (request.op === 'screenshot') return await screenshot(panes, request);
     if (request.op === 'logs') return await logs(panes, request);
+    if (request.op === 'page') return tabFacts(targetTab(panes, request.chatId, request.tab));
+    if (request.op === 'sign_in') return await signIn(panes, request, signal);
     return {
       closed: request.runId ? panes.closeRunTabs(request.chatId, request.runId) : 0,
     };
   } catch (error) {
     if (error instanceof BrowserOpError) throw error;
     if (error instanceof PageToolError) throw new BrowserOpError(error.code, error.message);
+    if (error instanceof SignInError) throw new BrowserOpError(error.code, error.message);
+    if (request.op === 'sign_in') {
+      throw new BrowserOpError('failed', 'Spark could not sign in on this page.');
+    }
     throw new BrowserOpError('failed', (error as Error).message.slice(0, 300));
   }
 }

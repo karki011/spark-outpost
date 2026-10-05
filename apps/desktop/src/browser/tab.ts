@@ -40,6 +40,7 @@ export class PaneTab {
   readonly id: string;
   readonly chatId: string;
   readonly refs = new RefMap();
+  readonly filled = new Set<number>();
   owner: BrowserTabOwner;
   runId: string | null;
   pinned = false;
@@ -154,6 +155,7 @@ export class PaneTab {
     });
     contents.on('did-navigate', (_event, url, code) => {
       this.refs.clear();
+      this.filled.clear();
       this.status = code > 0 ? code : null;
       this.url = url;
       this.hooks.visited(url);
@@ -236,6 +238,7 @@ export class PaneTab {
     this.loading = false;
     this.picking = false;
     this.refs.clear();
+    this.filled.clear();
     for (const step of [
       () => live.logs.stop(),
       () => live.cdp.detach(),
