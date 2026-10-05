@@ -60,8 +60,16 @@ export async function* fakeEditStream(
     return;
   }
   for (let edit = 0; edit < plan.edits; edit++) {
-    const name = `Edit ${edit % 2 === 0 ? LIVE_DIFF_GROWING_FILE : spreadFile(edit)}`;
+    const relative = edit % 2 === 0 ? LIVE_DIFF_GROWING_FILE : spreadFile(edit);
+    const name = `Edit ${relative}`;
     const tool = edit % TOOL_EVERY === 0;
+    yield {
+      kind: 'file_focus',
+      path: path.join(root, relative),
+      line: edit % 2 === 0 ? (edit / 2) * GROWTH_LINES + 1 : null,
+      limit: null,
+      action: 'edit',
+    };
     yield { kind: 'step_started', name, tool, toolKind: 'edit' };
     await applyEdit(root, edit);
     await delay(plan.gapMs, undefined, { signal: turn.signal });

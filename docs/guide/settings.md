@@ -26,7 +26,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | **While the agent is working, Enter**                  | **Queues the message** | [Queue or send now](follow-a-turn.md#queue-messages)                                           |
 | **On wide windows**                                    | **Context rail**       | Beside a chat: a rail with its project, agent, changes and outline, the work panel, or nothing |
 | **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                            |
-| **Show Spark Island**, **Spark Island size**           | On, **Medium**         | [Spark Island](desktop-companion.md)                                                           |
+| **Show Spark Island**, **Spark Island size**           | On, **Large**          | [Spark Island](desktop-companion.md)                                                           |
 | **Island chimes**                                      | Off                    | [Spark Island](desktop-companion.md)                                                           |
 | **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                                 |
 

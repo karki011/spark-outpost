@@ -52,7 +52,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),
-    openChat: (id: string | null) => ipcRenderer.send(IPC.islandOpenChat, id),
+    openChat: (id: string | null, runId?: string) =>
+      ipcRenderer.send(IPC.islandOpenChat, id, runId ?? null),
     openSettings: (target: string) => ipcRenderer.send(IPC.islandOpenSettings, target),
     setRestSize: (size: { width: number; height: number } | null) =>
       ipcRenderer.send(IPC.islandRestSize, size),
@@ -104,10 +105,11 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     take();
     return listen(IPC.openSettings, take);
   },
-  onOpenChat: (callback: (id: string) => void) => {
+  onOpenChat: (callback: (id: string, runId: string | null) => void) => {
     const take = () =>
-      void ipcRenderer.invoke(IPC.pendingChat).then((id: unknown) => {
-        if (typeof id === 'string') callback(id);
+      void ipcRenderer.invoke(IPC.pendingChat).then((pending: unknown) => {
+        const { id, runId } = (pending ?? {}) as { id?: unknown; runId?: unknown };
+        if (typeof id === 'string') callback(id, typeof runId === 'string' ? runId : null);
       });
     take();
     return listen(IPC.openChat, take);

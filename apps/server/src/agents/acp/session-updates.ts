@@ -13,6 +13,7 @@ import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 import { shortWindowNote } from './long-context.ts';
+import { createFocusTracker } from './file-focus.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -220,6 +221,7 @@ function toolTexts(
 
 export function createUpdateMapper(agentName = 'The agent', checksWindow = false): UpdateMapper {
   const openTools = new Map<string, OpenTool>();
+  const focus = createFocusTracker();
   const seenLinks = new Set<string>();
   let thinking = false;
   let lastMessageId: string | null = null;
@@ -248,6 +250,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     const open = openTools.get(id);
     if (open === undefined) return [];
     openTools.delete(id);
+    focus.done(id);
     const outputs: ProviderOutput[] = [
       {
         kind: 'step_finished',
@@ -366,6 +369,9 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
             opensPr: opensPullRequest(update.title, update.rawInput),
             linked: false,
           });
+          outputs.push(
+            ...focus.see(update.toolCallId, update.kind, update.locations, update.rawInput),
+          );
           outputs.push({
             kind: 'step_started',
             name,
@@ -388,7 +394,18 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
             update.content,
           );
           retarget(update);
-          const linked = openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput));
+          const open = openTools.get(update.toolCallId);
+          const linked = [
+            ...(open
+              ? focus.see(
+                  update.toolCallId,
+                  update.kind ?? open.kind,
+                  update.locations,
+                  update.rawInput,
+                )
+              : []),
+            ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),
+          ];
           if (update.status === 'completed' || update.status === 'failed') {
             return [...linked, ...finishTool(update.toolCallId, update.status === 'failed')];
           }

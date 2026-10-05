@@ -54,7 +54,7 @@ export interface IslandShellProps {
   onDraft: (draft: QuickDraft) => void;
   onTab: (panel: Panel) => void;
   onSelect: (id: string | null) => void;
-  onOpenChat: (id: string) => void;
+  onOpenChat: (id: string, runId?: string) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;

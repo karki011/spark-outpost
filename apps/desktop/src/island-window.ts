@@ -16,6 +16,7 @@ import {
 import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
+import { islandVisibility } from './island-visibility.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { revealGate } from './reveal-gate.ts';
 import { guardNavigation } from './window.ts';
@@ -111,14 +112,30 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   screen.on('display-added', place);
   screen.on('display-removed', place);
   screen.on('display-metrics-changed', place);
-  const reveal = revealGate(() => {
+  const showNow = (reason: string) => {
     if (window.isDestroyed()) return;
     if (placed) moveTo(placed.position);
     window.showInactive();
-    report('shown');
+    report(reason);
+  };
+  const reveal = revealGate(() => {
+    if (!visibility.hidden()) showNow('shown');
   }, READY_FALLBACK_MS);
+  const visibility = islandVisibility({
+    show: () => {
+      if (reveal.revealed()) showNow('shown again');
+    },
+    hide: () => {
+      if (window.isDestroyed()) return;
+      setIslandFocus(window, false);
+      escape.arm(false);
+      window.hide();
+      report('hidden');
+    },
+  });
   window.on('closed', () => {
     reveal.cancel();
+    visibility.cancel();
     escape.arm(false);
     screen.off('display-added', place);
     screen.off('display-removed', place);
@@ -150,6 +167,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     },
     command: (action: ShortcutAction) => {
       if (window.isDestroyed()) return;
+      visibility.summon();
       reveal.ready();
       if (!window.isVisible()) window.showInactive();
       send(IPC.islandCommand, action);
@@ -162,7 +180,10 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       setIslandFocus(window, on);
       escape.arm(on && !window.isDestroyed());
     },
-    sparkFocus: (focused) => send(IPC.islandSparkFocus, focused),
+    sparkFocus: (focused) => {
+      visibility.sparkFocus(focused);
+      send(IPC.islandSparkFocus, focused);
+    },
     setRestSize: (size) => {
       const changed = JSON.stringify(size) !== JSON.stringify(rest);
       rest = size;

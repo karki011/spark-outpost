@@ -21,7 +21,7 @@ interface IslandHomeProps {
   sleepy: boolean;
   reduced: boolean;
   onTab: (panel: Panel) => void;
-  onOpenChat: (id: string) => void;
+  onOpenChat: (id: string, runId?: string) => void;
 }
 
 export function IslandHome({ home, waiting, sleepy, reduced, onTab, onOpenChat }: IslandHomeProps) {

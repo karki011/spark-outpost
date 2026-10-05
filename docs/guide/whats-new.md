@@ -13,6 +13,8 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 | Settings: **Sparks** is now **Teammates**. Shorter **Models** and **Projects** lists. No version in the rail.  | The version is in **Settings → Updates**.                                    |
 | **Browser** header is one row; a pick is one **Selected:** chip.                                               | See [Use the browser](use-the-browser.md).                                   |
 | Share a chat with another chat: **Copy chat link**, then paste it there. The agent gets a summary.             | See [Share a chat](start-a-chat.md#share-a-chat-with-another-chat).          |
+| Spark Island shows code: the file being read or edited, each edit's change, and changed lines on edit cards.   | See [Use Spark Island](desktop-companion.md#open-it).                        |
+| Spark Island is **Large** unless you chose a size, and hides while Spark is focused.                           | Change the size in [Settings](settings.md#spark).                            |
 | **Browser** pane per chat (Mac app): agents read pages, you pick elements, **Preview** starts your dev server. | See [Use the browser](use-the-browser.md).                                   |
 | Slack can read direct messages you pick. Off until you turn it on; older apps need new scopes.                 | Follow the steps under **Direct messages** in [Slack](connect-slack.md).     |
 | Slack connects: notifications, shared threads, start work from a thread, confirmed posts.                      | See [Connect Slack](connect-slack.md).                                       |

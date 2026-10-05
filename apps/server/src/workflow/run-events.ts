@@ -2,7 +2,9 @@ import {
   APPROVAL_DECIDED,
   APPROVAL_REQUESTED,
   EventType,
+  FILE_FOCUS_ACTIVITY,
   type Approval,
+  type FileFocus,
   type RunEvent,
 } from '@spark-outpost/contracts';
 
@@ -36,6 +38,13 @@ export const runEvents = {
   }),
   stepStarted: (stepName: string): RunEvent => ({ type: EventType.STEP_STARTED, stepName }),
   stepFinished: (stepName: string): RunEvent => ({ type: EventType.STEP_FINISHED, stepName }),
+  fileFocus: ({ path, line, limit, action }: FileFocus): RunEvent => ({
+    type: EventType.ACTIVITY_SNAPSHOT,
+    messageId: FILE_FOCUS_ACTIVITY,
+    activityType: FILE_FOCUS_ACTIVITY,
+    content: { path, line, limit, action },
+    replace: true,
+  }),
   textStart: (messageId: string): RunEvent => ({
     type: EventType.TEXT_MESSAGE_START,
     messageId,

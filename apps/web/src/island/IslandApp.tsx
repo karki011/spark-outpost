@@ -10,6 +10,7 @@ import './island-drop.css';
 import './island-motion.css';
 import './island-bar.css';
 import './island-home.css';
+import './island-code.css';
 import '../chat/project/project.css';
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -190,12 +191,12 @@ export function IslandApp() {
     setFollowUp(null);
   };
 
-  const openChat = (id: string) => {
+  const openChat = (id: string, runId?: string) => {
     closePanel();
     if (moment?.chatId === id) dismiss();
     setNote({ title: 'Opening Spark…', sub: 'The chat opens in the main window.' });
     const desktop = sparkDesktop();
-    if (desktop) desktop.island.openChat(id);
+    if (desktop) desktop.island.openChat(id, runId);
     else window.open('/', '_blank', 'noopener');
   };
 

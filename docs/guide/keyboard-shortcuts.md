@@ -66,6 +66,6 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌥⇧Space**     | Chats                                      |
 | **⌘1** – **⌘4** | Home, Chats, New chat, Ask Spark           |
 | **Y** / **N**   | Allow once / deny the focused card         |
-| **Esc**         | Close the panel                            |
+| **Esc**         | Close the panel, or leave a change         |
 
 To change the two global shortcuts, see [Change a shortcut](companion-quick-chat.md#change-a-shortcut).
