@@ -128,6 +128,9 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       setupApi.updateDefaults(provider.id, update),
     onSuccess: (state, update) => {
       queryClient.setQueryData(setupKey, state);
+      if (update.model !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.capabilities(provider.id) });
+      }
       if (update.effort !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
       }
