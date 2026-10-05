@@ -12,6 +12,7 @@ import { CrewBlob } from './CrewBlob.tsx';
 import { crewStateWord, modelLabel, roleLabel, type CrewAgent } from './crew-model.ts';
 import { memberApi } from './member-api.ts';
 import { canContinue, memberIsLive } from './member-model.ts';
+import { memberReplyText } from './member-reply.ts';
 import { MemberMessageList } from './MemberMessageList.tsx';
 
 const TAIL_STEPS = 3;
@@ -32,7 +33,7 @@ function tail(text: string): string {
 function MemberTail({ conversationId, agent }: { conversationId: string; agent: CrewAgent }) {
   const stream = useRunStream(agent.id, conversationId);
   const steps = stream.steps.slice(-TAIL_STEPS);
-  const text = tail(stream.text);
+  const text = tail(memberReplyText(agent.role, stream.text, memberIsLive(agent)));
   if (steps.length === 0 && !text) {
     return (
       <div className="mc-tail" aria-busy="true">
