@@ -22,7 +22,7 @@ Without Jev, nothing goes to TypeSafe.
 
 ## Where your keys live
 
-- Keys and tokens are in your Keychain, under **Spark Outpost**: provider and Jev keys, connector and MCP tokens, saved sign-ins.
+- Keys and tokens are in your Keychain, under **Spark Outpost**: provider, Jev, connector and MCP keys, saved sign-ins.
 - Spark's database keeps a masked hint. Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI. Spark never reads it.
 
