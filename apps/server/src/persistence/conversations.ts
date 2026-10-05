@@ -4,6 +4,7 @@ import {
   titleFromMessage,
   type ConfigValues,
   type InvolvementLevel,
+  type ModelSwitch,
   type RunMode,
   type ConversationDetail,
   type ConversationSummary,
@@ -282,6 +283,7 @@ export interface RunTarget {
   agentMode?: string | null;
   level?: InvolvementLevel | null;
   options?: ConfigValues;
+  modelSwitch?: ModelSwitch | null;
 }
 
 async function runMode(
@@ -357,8 +359,8 @@ export async function sendInTransaction(
   const run = await client.query<RunRow>(
     `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
        task_id, plan_version, mode, level, agent_mode, config_values,
-       picked_mode, start_as, source, continues_run_id)
-     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14, $15)
+       picked_mode, start_as, source, continues_run_id, model_switch)
+     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14, $15, $16)
      RETURNING *`,
     [
       runId,
@@ -376,6 +378,7 @@ export async function sendInTransaction(
       mode === 'do' ? (request.startAs ?? null) : null,
       request.source ?? null,
       request.continuesRunId ?? null,
+      target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
     ],
   );
   await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

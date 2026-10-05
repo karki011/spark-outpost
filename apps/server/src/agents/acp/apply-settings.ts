@@ -7,7 +7,7 @@ import {
 } from '../../providers/provider.ts';
 import { PLAN_MODE_ID } from '../../plans/plan-mode.ts';
 import type { AgentDefinition } from './agents.ts';
-import { capabilitiesFrom, currentValues, isCoreOption } from './capabilities.ts';
+import { capabilitiesFrom, currentValues, isCoreOption, reportedAccess } from './capabilities.ts';
 import {
   LEGACY_MODE_OPTION,
   LEGACY_MODEL_OPTION,
@@ -186,7 +186,10 @@ export async function applySessionSettings(
   return {
     notes,
     options,
-    capabilities: capabilitiesFrom(options, initial),
+    capabilities: {
+      ...capabilitiesFrom(options, initial),
+      access: reportedAccess(definition, initial),
+    },
     mode: currentValue(options, 'mode'),
     current: {
       model: currentValue(options, 'model'),

@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../api/client.ts';
 import {
+  unavailableText,
   type CapabilityOption,
   type Choice,
+  type ModelOption,
   type ProviderCapabilities,
   type ProviderConnection,
   type ProviderSetup,
@@ -14,12 +16,24 @@ import {
   effortNote,
   optionLabel,
   selectableEfforts,
+  type UnusableChoice,
 } from '../chat/composer/model-options.ts';
+import { UnusableModelNotice } from '../chat/composer/UnusableModelNotice.tsx';
 import { withCurrentMode } from '../chat/composer/mode-summary.ts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 
-function toChoice(id: string, label: string, description: string): Choice {
-  return { id, label, description, risky: false, unavailableReason: null };
+function toChoice(
+  id: string,
+  label: string,
+  description: string,
+  unavailableReason: string | null = null,
+): Choice {
+  return { id, label, description, risky: false, unavailableReason };
+}
+
+function unusableReason(model: ModelOption, capabilities: ProviderCapabilities): string | null {
+  if (model.availability !== 'unusable') return null;
+  return `Not available with your ${capabilities.access?.signIn ?? 'sign-in'}`;
 }
 
 export function modeChoices(
@@ -42,9 +56,25 @@ export function modelChoices(
 ): Choice[] {
   return connection.method === 'cli' && capabilities
     ? capabilities.models.map((model) =>
-        toChoice(model.id, optionLabel(model, capabilities), cleanDescription(model) ?? ''),
+        toChoice(
+          model.id,
+          optionLabel(model, capabilities),
+          cleanDescription(model) ?? '',
+          unusableReason(model, capabilities),
+        ),
       )
     : connection.models.map((model) => toChoice(model.id, model.label, ''));
+}
+
+export function defaultIssue(
+  capabilities: ProviderCapabilities | undefined,
+): UnusableChoice | null {
+  const access = capabilities?.access;
+  if (!access?.defaultIssue) return null;
+  return {
+    text: unavailableText(access.signIn, access.defaultIssue.model.label),
+    switchTo: access.defaultIssue.suggestion,
+  };
 }
 
 const PER_CHAT = 'per-chat';
@@ -98,6 +128,9 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       setupApi.updateDefaults(provider.id, update),
     onSuccess: (state, update) => {
       queryClient.setQueryData(setupKey, state);
+      if (update.model !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.capabilities(provider.id) });
+      }
       if (update.effort !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
       }
@@ -106,63 +139,74 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
   const { capabilities, models, efforts, effort, selectedModel, agentMode, modes } =
     useDefaultChoices(provider, connection);
 
+  const issue = defaultIssue(capabilities.data);
   return (
-    <dl className="conn-details pdefaults">
-      <div className="pdef">
-        <dt>Model</dt>
-        <dd>
-          {models.length === 0 ? (
-            <span className="muted">
-              {capabilities.isFetching
-                ? `Asking ${provider.name} for its models…`
-                : `Whatever your ${provider.cli} CLI is set to`}
-            </span>
-          ) : (
+    <>
+      <dl className="conn-details pdefaults">
+        <div className="pdef">
+          <dt>Model</dt>
+          <dd>
+            {models.length === 0 ? (
+              <span className="muted">
+                {capabilities.isFetching
+                  ? `Asking ${provider.name} for its models…`
+                  : `Whatever your ${provider.cli} CLI is set to`}
+              </span>
+            ) : (
+              <ChoicePicker
+                label={`${provider.name} model`}
+                choices={models}
+                value={selectedModel ?? ''}
+                onChange={(id) => mutation.mutate({ model: id })}
+              />
+            )}
+          </dd>
+        </div>
+        <div className="pdef">
+          <dt>Mode</dt>
+          <dd>
+            {modes.length === 0 ? (
+              <span className="muted">
+                {capabilities.isFetching
+                  ? `Asking ${provider.name} for its modes…`
+                  : `Whatever your ${provider.cli} CLI is set to`}
+              </span>
+            ) : (
+              <ChoicePicker
+                label={`${provider.name} default mode`}
+                choices={modes}
+                value={agentMode ?? ''}
+                onChange={(id) => mutation.mutate({ agentMode: id })}
+              />
+            )}
+          </dd>
+        </div>
+        <div className="pdef">
+          <dt>Effort</dt>
+          <dd>
             <ChoicePicker
-              label={`${provider.name} model`}
-              choices={models}
-              value={selectedModel ?? ''}
-              onChange={(id) => mutation.mutate({ model: id })}
+              label={`${provider.name} effort`}
+              choices={[
+                toChoice(PER_CHAT, 'Per chat', PER_CHAT_NOTE),
+                ...efforts.map((choice) =>
+                  toChoice(choice.id, choice.label, effortNote(choice) ?? ''),
+                ),
+              ]}
+              value={effort?.id ?? PER_CHAT}
+              onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
             />
-          )}
-        </dd>
-      </div>
-      <div className="pdef">
-        <dt>Mode</dt>
-        <dd>
-          {modes.length === 0 ? (
-            <span className="muted">
-              {capabilities.isFetching
-                ? `Asking ${provider.name} for its modes…`
-                : `Whatever your ${provider.cli} CLI is set to`}
-            </span>
-          ) : (
-            <ChoicePicker
-              label={`${provider.name} default mode`}
-              choices={modes}
-              value={agentMode ?? ''}
-              onChange={(id) => mutation.mutate({ agentMode: id })}
-            />
-          )}
-        </dd>
-      </div>
-      <div className="pdef">
-        <dt>Effort</dt>
-        <dd>
-          <ChoicePicker
-            label={`${provider.name} effort`}
-            choices={[
-              toChoice(PER_CHAT, 'Per chat', PER_CHAT_NOTE),
-              ...efforts.map((choice) =>
-                toChoice(choice.id, choice.label, effortNote(choice) ?? ''),
-              ),
-            ]}
-            value={effort?.id ?? PER_CHAT}
-            onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
-          />
-          {effort && <small className="note">Do-task Builders always use this effort.</small>}
-        </dd>
-      </div>
-    </dl>
+            {effort && <small className="note">Do-task Builders always use this effort.</small>}
+          </dd>
+        </div>
+      </dl>
+      {issue && (
+        <UnusableModelNotice
+          issue={issue}
+          detail="It is the default model for new chats."
+          busy={mutation.isPending}
+          onSwitch={(model) => mutation.mutate({ model })}
+        />
+      )}
+    </>
   );
 }

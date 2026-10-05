@@ -18,22 +18,23 @@ Open **Settings → AI providers** and select the provider's tile. The message u
 | "Couldn't reach …"                                       | Check your internet connection.                                                                  |
 | In a chat: "… isn't signed in"                           | Reconnect on the provider's screen, then resend.                                                 |
 
-Still stuck? Select **Detect and verify** on the **Local CLI** tab to rerun every check.
+Still stuck? **Detect and verify** on **Local CLI** reruns every check.
 
 ## A key was rejected
 
-| You see                                                        | Fix                                                            |
-| -------------------------------------------------------------- | -------------------------------------------------------------- |
-| "rejected this key (401 Unauthorized)"                         | The key is wrong or revoked. Copy it again and **Verify key**. |
-| "denied access (403 Forbidden)"                                | Check the key's permissions with the provider.                 |
-| "can't use any models"                                         | Check which project the key belongs to.                        |
-| "This looks like an OpenAI key. Paste it under Codex instead." | Paste it on the right provider's screen.                       |
+| You see                                                        | Fix                                            |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| "rejected this key (401 Unauthorized)"                         | Copy it again and **Verify key**.              |
+| "denied access (403 Forbidden)"                                | Check the key's permissions with the provider. |
+| "can't use any models"                                         | Check which project the key belongs to.        |
+| "This looks like an OpenAI key. Paste it under Codex instead." | Paste it on the right provider's screen.       |
 
 ## No models in the picker
 
-| You see                    | Fix                                                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------------- |
-| **No models reported yet** | Check the tile says **Connected**, then reopen the picker. The first answer can take a few seconds. |
+| You see                    | Fix                                                        |
+| -------------------------- | ---------------------------------------------------------- |
+| **No models reported yet** | Check the tile says **Connected**, then reopen the picker. |
+| **Unavailable** on a model | Your sign-in can't use it. Select **Switch to …**.         |
 
 ## The test message fails
 
@@ -48,6 +49,6 @@ Still stuck? Select **Detect and verify** on the **Local CLI** tab to rerun ever
 
 ## A provider is rate limited
 
-| You see                                     | Fix                                                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| "… is rate limited. Try again in a minute." | Wait a minute and send again, or switch the chat to another provider with the model button. |
+| You see                                     | Fix                                              |
+| ------------------------------------------- | ------------------------------------------------ |
+| "… is rate limited. Try again in a minute." | Wait a minute, or switch provider in the picker. |

@@ -1,6 +1,8 @@
 import {
   isRetiring,
   retirementState,
+  unavailableText,
+  type ModelRef,
   type CapabilityOption,
   type ChatSettings,
   type ModelOption,
@@ -57,8 +59,37 @@ export function visibleModels(
   showRetiring: boolean,
   now: Date,
 ): ModelOption[] {
-  if (showRetiring) return [...models];
-  return models.filter((model) => model.id === selected || !isRetiring(model, now));
+  const usable = models.filter(
+    (model) => model.id === selected || model.availability !== 'unusable',
+  );
+  if (showRetiring) return usable;
+  return usable.filter((model) => model.id === selected || !isRetiring(model, now));
+}
+
+export function availabilityTag(
+  model: Pick<ModelOption, 'availability'>,
+  capabilities: Pick<ProviderCapabilities, 'access'> | undefined,
+): string | null {
+  if (model.availability === 'unusable') return 'Unavailable';
+  const reported = capabilities?.access?.reported === true;
+  return reported && model.availability === 'unknown' ? 'Unconfirmed' : null;
+}
+
+export interface UnusableChoice {
+  text: string;
+  switchTo: ModelRef | null;
+}
+
+export function unusableChoice(
+  selected: string | null,
+  capabilities: ProviderCapabilities | undefined,
+): UnusableChoice | null {
+  const model = capabilities?.models.find((option) => option.id === selected);
+  if (!model || model.availability !== 'unusable' || !capabilities?.access) return null;
+  return {
+    text: unavailableText(capabilities.access.signIn, shortLabel(model.label)),
+    switchTo: model.switchTo ?? null,
+  };
 }
 
 export function selectableEfforts(

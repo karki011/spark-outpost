@@ -15,6 +15,10 @@ import {
 } from '@spark-outpost/contracts';
 import { cardFor, effectiveDefaultModel, usableDefault } from '../model-cards/cards.ts';
 import { catalogEntry } from '../providers/catalog.ts';
+import { availabilityOf, selectable, selectableDefault } from '../model-access/access.ts';
+import { loadAccess, recordSnapshotAccess } from '../model-access/store.ts';
+import type { ReportedModelAccess } from '../providers/provider.ts';
+import { accessView, replacementFor } from '../model-access/view.ts';
 import { firstReportedEffort, reportedEfforts } from '../providers/efforts.ts';
 import type { Queryable } from './db.ts';
 import { assertModeOffered, InvalidDefaultError } from './setup.ts';
@@ -219,6 +223,7 @@ function assertOptionsOffered(
 
 export interface CapabilitySnapshot {
   provider: ProviderId;
+  access?: ReportedModelAccess | undefined;
   models: CapabilityOption[];
   efforts: CapabilityOption[];
   defaultModel: string | null;
@@ -252,6 +257,15 @@ export async function saveCapabilities(
       JSON.stringify(snapshot.options ?? []),
     ],
   );
+  if (snapshot.access) {
+    await recordSnapshotAccess(
+      db,
+      workspaceId,
+      snapshot.provider,
+      snapshot.models,
+      snapshot.access,
+    );
+  }
 }
 
 export async function getCapabilities(
@@ -260,6 +274,7 @@ export async function getCapabilities(
   provider: ProviderId,
 ): Promise<ProviderCapabilities | null> {
   const { rows } = await db.query<{
+    connection_model: string | null;
     models: CapabilityOption[];
     efforts: CapabilityOption[];
     default_model: string | null;
@@ -268,24 +283,44 @@ export async function getCapabilities(
     config_options: ConfigOptionInfo[];
     captured_at: Date;
   }>(
-    `SELECT models, efforts, default_model, modes, default_mode, config_options, captured_at
-     FROM provider_capabilities WHERE workspace_id = $1 AND provider = $2`,
+    `SELECT cap.models, cap.efforts, cap.default_model, cap.modes, cap.default_mode,
+       cap.config_options, cap.captured_at,
+       (SELECT pc.model FROM provider_connections pc
+        WHERE pc.workspace_id = cap.workspace_id AND pc.provider = cap.provider
+          AND pc.disconnected_at IS NULL) AS connection_model
+     FROM provider_capabilities cap WHERE cap.workspace_id = $1 AND cap.provider = $2`,
     [workspaceId, provider],
   );
   const row = rows[0];
   if (!row) return null;
+  const access = await loadAccess(db, workspaceId, provider);
+  const offered = selectable(row.models, access);
+  const adapterDefault = selectableDefault(row.models, offered, row.default_model);
+  const defaultModel = effectiveDefaultModel(provider, offered, adapterDefault);
   return {
     provider,
     models: row.models.map((model) => {
       const card = cardFor(model, provider);
+      const availability = availabilityOf(access, model.id);
       return {
         ...model,
         retiresNotBefore: card?.retiresNotBefore ?? null,
         ...(card?.retired ? { retired: true } : {}),
+        availability,
+        ...(availability === 'unusable'
+          ? { switchTo: replacementFor(provider, access, row.models, model) }
+          : {}),
       };
     }),
     efforts: row.efforts,
-    defaultModel: effectiveDefaultModel(provider, row.models, row.default_model),
+    defaultModel,
+    access: accessView({
+      provider,
+      providerName: catalogEntry(provider).name,
+      access,
+      models: row.models,
+      defaultModel: usableDefault(provider, row.connection_model) ?? defaultModel,
+    }),
     agentDefaultModel: row.default_model,
     modes: row.modes,
     defaultMode: defaultModeFor(provider) ?? row.default_mode,

@@ -33,6 +33,8 @@ import { publishGrant, startBasis } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
 import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { createSpendMeter } from './spend-meter.ts';
+import { recordAccount } from '../model-access/store.ts';
+import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
@@ -352,7 +354,11 @@ export async function runAgentTurn(
     auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
 
-    for await (const output of provider.run({
+    if (input.modelSwitch) {
+      await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
+    }
+    const guard = { ...input, db: deps.db, runId: lease.runId, append };
+    for await (const output of guardedRun(guard, provider, {
       prompt: withBrowserCheck({
         prompt: input.prompt,
         userRequest: input.userRequest,
@@ -433,6 +439,9 @@ export async function runAgentTurn(
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
       if (output.kind === 'rail_flag') await rails?.record(output.flag);
+      if (output.kind === 'account') {
+        await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
+      }
       if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
     }
     await rails?.finish();
@@ -461,6 +470,7 @@ export async function runAgentTurn(
     await settleAudit();
     const reason = control.reason();
     if (reason === 'cancelled' || reason === 'budget') return ended(result('cancelled'));
+    await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
     return ended(result('failed', failureMessage(error, reason)));
   } finally {
     modeWatch?.dispose();

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
@@ -12,6 +13,7 @@ import {
   codexPermissionProfiles,
   SECRET_GLOBS,
 } from './codex-permissions.ts';
+import { codexUnlistedModels } from './codex-models.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
 
@@ -42,6 +44,8 @@ export interface AgentDefinition {
   launch: () => AgentLaunch;
   keyEnvironment?: (apiKey: string) => Promise<Record<string, string>>;
   offers?: AgentOffers;
+  reportsModelAccess?: boolean;
+  unlistedModels?: (options: readonly SessionConfigOption[]) => string[];
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
   longContext?: boolean;
@@ -307,6 +311,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     launch: () => packageBin(CLAUDE_ACP),
     ...claudeSessions,
     longContext: true,
+    reportsModelAccess: true,
   },
   codex: {
     id: 'codex',
@@ -321,6 +326,8 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     doMode: CODEX_DO_MODE,
     doPrimaryRootOnly: true,
     inputExcludesCache: true,
+    reportsModelAccess: true,
+    unlistedModels: codexUnlistedModels,
   },
   zai: {
     id: 'zai',

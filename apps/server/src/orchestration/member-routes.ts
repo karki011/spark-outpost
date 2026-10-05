@@ -24,6 +24,7 @@ import {
   type MemberRoute,
   type RouteFacts,
 } from './routing.ts';
+import { withAccessNote } from './access-note.ts';
 import type { BuiltShare } from './critic-provider.ts';
 import { builderKey, type Session } from './session.ts';
 import { openBudget } from '../laws/builder-start.ts';
@@ -171,6 +172,11 @@ function retryCriticRoute(s: Session, previous: MemberRoute): MemberRoute {
 }
 
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
+  const resolved = await routeFor(s, spawn);
+  return { ...resolved, route: withAccessNote(s.route, resolved.route) };
+}
+
+async function routeFor(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
   if (previous && spawn.role === 'critic' && spawn.reason === 'retry') {
     return { route: retryCriticRoute(s, previous) };

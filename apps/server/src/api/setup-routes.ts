@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { forgetRejectedModels } from '../model-access/store.ts';
 import {
   advisorIdSchema,
   connectableIdSchema,
@@ -145,6 +146,7 @@ export function setupRoutes(deps: SetupDeps): Router {
         if (verified.secret) await secrets.set(provider, verified.secret);
         else await secrets.delete(provider);
         const connection = await saveVerified(provider, verified);
+        await forgetRejectedModels(db, workspaceId, provider);
         writeEvent(res, { type: 'connected', connection });
       } catch (error) {
         if (!(error instanceof KeychainWaitingError)) throw error;

@@ -1,4 +1,9 @@
-import type { CapabilityOption, ProviderId } from '@spark-outpost/contracts';
+import type {
+  CapabilityOption,
+  ModelSwitch,
+  ProviderCapabilities,
+  ProviderId,
+} from '@spark-outpost/contracts';
 import { cardFor } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunTarget } from '../persistence/conversations.ts';
@@ -33,14 +38,33 @@ export async function resolveRunTarget(
     settings.model === null || !capabilities
       ? settings.model
       : offeredPin(settings.provider, settings.model, capabilities.models);
+  const model = offered ?? capabilities?.defaultModel ?? null;
   return {
     provider: settings.provider,
-    model: offered ?? capabilities?.defaultModel ?? null,
+    model,
+    modelSwitch: droppedPin(settings.model, offered, model, capabilities),
     effort: settings.effort,
     permission: settings.permission,
     agentMode: settings.agentMode,
     level: settings.level,
     options: settings.options,
+  };
+}
+
+function droppedPin(
+  pinned: string | null,
+  offered: string | null,
+  used: string | null,
+  capabilities: ProviderCapabilities | null,
+): ModelSwitch | null {
+  if (pinned === null || offered !== null || used === null || !capabilities?.access) return null;
+  const label = capabilities.models.find((option) => option.id === used)?.label ?? used;
+  return {
+    provider: capabilities.provider,
+    signIn: capabilities.access.signIn,
+    from: { id: pinned, label: pinned },
+    to: { id: used, label },
+    learned: false,
   };
 }
 
