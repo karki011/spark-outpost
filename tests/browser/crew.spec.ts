@@ -4,6 +4,7 @@ import {
   agentBlock,
   agentHead,
   allowEdit,
+  autoContinueAfter,
   card,
   CREW_REQUEST,
   crewChat,
@@ -67,7 +68,7 @@ test('Manual: one task Builder with an edit approval, the Critic, then it keeps 
   const builder = agentBlock(page, 'Bolt');
   await expect(builder.getByRole('group', { name: /Change a file\?/ })).toBeVisible();
   await expect(page.locator('.cstatus')).toContainText('Waiting for you · approve edit notes.txt');
-  await expect(agentHead(page, 'Bolt')).toContainText('Waiting for you');
+  await expect(agentHead(page, 'Bolt')).toContainText('waiting for you');
   await expect(agentHead(page, 'Bolt')).toContainText('Builder');
   await expect(agentHead(page, 'Bolt')).toContainText('Opus 5.5high effort');
   await expect(
@@ -122,6 +123,40 @@ test('Manual: one task Builder with an edit approval, the Critic, then it keeps 
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   await work.getByRole('tab', { name: 'Crew' }).click();
   await expect(work.getByRole('list', { name: 'Crew' }).getByRole('listitem')).toHaveCount(3);
+});
+
+const WORK_WORD = /\b(working|thinking)\b/i;
+
+test('a crew block has one status, and a finished agent stops saying it works', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await autoContinueAfter(page, null);
+  await crewChat(page, repo, 'Auto-edit');
+  await send(page, 'Make the reports better #build #vague #questions #slowbuild');
+  const questions = card(page, /Spark has a few questions/);
+  await questions.getByRole('button', { name: 'Usage' }).click({ timeout: 30_000 });
+  await questions.getByRole('button', { name: 'Send' }).click();
+
+  const bolt = agentBlock(page, 'Bolt');
+  await expect(bolt.locator('.agent-state')).toHaveText('working', { timeout: 30_000 });
+  await expect(bolt.locator('.steps-head')).toHaveText(/^\d+ steps?$/);
+  await expect(bolt.getByText(WORK_WORD)).toHaveCount(1);
+  await expect(bolt.locator('.dots')).toHaveCount(0);
+  await shot(page, 'status-running');
+
+  const pip = agentBlock(page, 'Pip');
+  await expect(pip).toBeVisible();
+  await expect(pip.getByText(WORK_WORD)).toHaveCount(0);
+  await agentHead(page, 'Pip').click();
+  await expect(pip.locator('.agent-state')).toHaveText('done');
+  await expect(pip.locator('.steps-head')).toHaveText(/^\d+ steps?$/);
+  await expect(pip.getByText(WORK_WORD)).toHaveCount(0);
+  await shot(page, 'status-finished-sibling');
+
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(bolt.locator('.agent-state')).toHaveText('stopped', { timeout: 30_000 });
+  await expect(page.locator('.crew-turn').getByText(WORK_WORD)).toHaveCount(0);
 });
 
 test.fixme("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {

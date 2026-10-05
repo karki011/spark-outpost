@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  agentHead,
   autoContinueAfter,
   CREW_REQUEST,
   crewChat,
@@ -224,6 +225,38 @@ test('a question from Spark is one line that names the question', async ({ page 
     const questions = card(page, /Spark has a few questions/);
     await expect(questions).toBeInViewport();
     await expect(questions.locator(':focus')).toHaveCount(1);
+  } finally {
+    repo.remove();
+  }
+});
+
+test("the line stays away while the working crew member's header is in view", async ({ page }) => {
+  test.setTimeout(90_000);
+  await resetCrew();
+  const repo = crewRepo();
+  try {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await crewChat(page, repo, 'Auto-edit');
+    await send(page, `${CREW_REQUEST} #build #crew #slowbuild`);
+    const head = agentHead(page, 'Bolt');
+    await expect(head.locator('.agent-state')).toHaveText('working', { timeout: 30_000 });
+    await expect(head).toBeInViewport();
+    await expect(shown(page)).toHaveCount(0);
+    await expect(line(page).getByRole('status')).toHaveText(/^(Bolt|Jev|Claude) is /);
+    await shots(page, 'crew-head-in-view');
+
+    await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
+    const thread = page.locator('.thread');
+    await thread.evaluate((element) => (element.scrollTop = element.scrollHeight));
+    await expect(head).not.toBeInViewport();
+    await expect(shown(page)).toHaveText(/^Bolt is (working|thinking)/);
+    await shots(page, 'crew-head-out-of-view');
+
+    await thread.evaluate((element) => (element.scrollTop = 0));
+    await expect(head).toBeInViewport();
+    await expect(shown(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Stop' }).click();
+    await expect(head.locator('.agent-state')).toHaveText('stopped', { timeout: 30_000 });
   } finally {
     repo.remove();
   }

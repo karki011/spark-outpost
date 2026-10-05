@@ -28,9 +28,9 @@ import { KeepCardFooter } from '../outcomes/KeepCardFooter.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
 import type { RunStep } from '../run-projection.ts';
 import { useLiveReport } from '../status/status-context.ts';
-import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
+import { blockStatus } from './block-status.ts';
 import {
   crewItems,
   groupParallel,
@@ -82,11 +82,16 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
+  const leadId = `lead:${run.id}`;
   useLiveReport(
-    { id: `lead:${run.id}`, name: jev.name, provider: jev.provider, kind: 'lead' },
+    { id: leadId, name: jev.name, provider: jev.provider, kind: 'lead' },
     planning,
     NO_STEPS,
   );
+  const jevStatus =
+    jev.state === 'done'
+      ? null
+      : blockStatus(jev, { steps: NO_STEPS, waiting: false, started: false });
   const changeTask = taskForRuns(detail.tasks, crewRunIds);
   const showsOwnChanges = (runId: string) => {
     const child = runsById.get(runId);
@@ -118,7 +123,6 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
   const agentBlock = (item: Extract<CrewItem, { kind: 'agent' }>, collapsible: boolean) => {
     const member = item.member;
     const agent = runAgent(member, orchestration, detail.activity[member.runId] ?? []);
-    const child = runsById.get(member.runId);
     return (
       <AgentBlock
         key={member.runId}
@@ -131,7 +135,6 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
         error={member.error}
-        seconds={child ? runSeconds(child) : null}
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}
@@ -144,7 +147,12 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
   return (
     <div className="crew-turn">
       <div className="msg ai agent-block jev">
-        <AgentHead agent={jev} anchor={agentAnchor(orchestration.runId, 'jev')} />
+        <AgentHead
+          agent={jev}
+          anchor={agentAnchor(orchestration.runId, 'jev')}
+          status={jevStatus}
+          liveId={planning ? leadId : null}
+        />
         <DispatchLine
           orchestration={orchestration}
           advice={detail.advice?.[run.id]}

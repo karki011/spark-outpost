@@ -234,7 +234,9 @@ describe('while the agent works', () => {
   it('leaves the status to the turn header while it is in view, and still announces it', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
-    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Edit `table.tsx`' }));
+    act(() =>
+      view.store.report({ ...CLAUDE, id: RUN_ID, working: true, step: 'Edit `table.tsx`' }),
+    );
     expect(shown()).toBe('Claude is working · Editing table.tsx');
     act(() => view.store.showHead(RUN_ID, true));
     await act(() => vi.advanceTimersByTimeAsync(5_000));
@@ -242,6 +244,21 @@ describe('while the agent works', () => {
     expect(screen.getByRole('status').textContent).toBe('Claude is working: Editing table.tsx');
     act(() => view.store.showHead(RUN_ID, false));
     expect(status().dataset.state).toBe('running');
+  });
+
+  it('hides only while the header of the crew member it names is in view', () => {
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...JEV, working: true, step: null }));
+    act(() => view.store.report({ ...BOLT, working: true, step: 'Edit `table.tsx`' }));
+    expect(shown()).toBe('Bolt is working · Editing table.tsx');
+    act(() => view.store.showHead(JEV.id, true));
+    expect(shown()).toBe('Bolt is working · Editing table.tsx');
+    act(() => view.store.showHead(BOLT.id, true));
+    expect(status().dataset.state).toBe('idle');
+    act(() => view.store.report({ ...BOLT, working: false, step: null }));
+    expect(status().dataset.state).toBe('idle');
+    act(() => view.store.showHead(JEV.id, false));
+    expect(shown()).toBe('Jev is planning…');
   });
 
   it('names the crew member at work, and the lead only while nobody else works', () => {

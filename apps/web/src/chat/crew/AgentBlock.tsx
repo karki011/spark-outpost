@@ -9,13 +9,7 @@ import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
 import { MemberMessageList } from '../../crew/MemberMessageList.tsx';
 import '../../crew/member-chat.css';
-import {
-  crewStateWord,
-  modelLabel,
-  roleLabel,
-  usageParts,
-  type CrewAgent,
-} from '../../crew/crew-model.ts';
+import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
@@ -24,9 +18,10 @@ import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
-import { useLiveReport } from '../status/status-context.ts';
+import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
+import { blockStatus, type BlockStatus } from './block-status.ts';
 import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
 import { SparkCrewFace } from '../../teammates/SparkCrewFace.tsx';
@@ -83,13 +78,21 @@ function AgentName({ agent }: { agent: CrewAgent }) {
 interface AgentHeadProps {
   agent: CrewAgent;
   anchor: string;
+  status: BlockStatus | null;
+  liveId?: string | null;
   conversationId?: string;
 }
 
-export function AgentHead({ agent, anchor, conversationId }: AgentHeadProps) {
-  const live = agent.state !== 'done';
+export function AgentHead({
+  agent,
+  anchor,
+  status,
+  liveId = null,
+  conversationId,
+}: AgentHeadProps) {
+  const headRef = useLiveHead(liveId);
   return (
-    <div className="agent-head" id={anchor}>
+    <div className="agent-head" id={anchor} ref={headRef}>
       <span className={`agent-ava ${agent.state}`} aria-hidden="true">
         <AgentFace agent={agent} size={30} />
       </span>
@@ -97,7 +100,7 @@ export function AgentHead({ agent, anchor, conversationId }: AgentHeadProps) {
         <AgentName agent={agent} />
         <span className="agent-role">{roleLabel(agent)}</span>
       </span>
-      {live && <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>}
+      {status && <span className={`agent-state ${status.state}`}>{status.label}</span>}
       <HeadMeta agent={agent} />
       {conversationId && (
         <MessageMemberButton
@@ -112,16 +115,28 @@ export function AgentHead({ agent, anchor, conversationId }: AgentHeadProps) {
 
 interface BodyProps {
   agent: CrewAgent;
+  anchor: string;
+  bodyId: string;
+  conversationId: string;
   steps: readonly RunStep[];
   text: string;
   error: string | null;
-  seconds: number | null;
   approvals: readonly Approval[];
   repo: Project | null;
 }
 
-function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: BodyProps) {
-  const state = TURN_STATES[agent.state];
+function AgentBody({
+  agent,
+  anchor,
+  bodyId,
+  conversationId,
+  liveId = null,
+  steps,
+  text,
+  error,
+  approvals,
+  repo,
+}: BodyProps & { liveId?: string | null }) {
   const busy = agent.state === 'working' || agent.state === 'thinking';
   const cards = decidedFirst(
     approvals.filter(
@@ -138,33 +153,36 @@ function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: Body
       repo={repo}
     />
   );
+  const status = blockStatus(agent, {
+    steps,
+    waiting: cards.pending.length > 0,
+    started: Boolean(text),
+  });
   return (
     <>
-      <WorkLog steps={[...steps]} state={state} seconds={seconds} />
-      {cards.decided.map(approvalCard)}
-      {text && <Markdown text={text} streaming={busy} />}
-      {cards.pending.map(approvalCard)}
-      {busy && !text && steps.length === 0 && (
-        <span className="dots" role="status" aria-label={`${agent.name} is working`}>
-          <i />
-          <i />
-          <i />
-        </span>
-      )}
-      {agent.state === 'queued' && !agent.spark && (
-        <p className="ai-note">Queued. Starts when Jev hands off.</p>
-      )}
-      {error && <p className="error-line">{error}</p>}
+      <AgentHead
+        agent={agent}
+        anchor={anchor}
+        status={status}
+        liveId={liveId}
+        conversationId={conversationId}
+      />
+      <div id={bodyId}>
+        <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} />
+        {cards.decided.map(approvalCard)}
+        {text && <Markdown text={text} streaming={busy} />}
+        {cards.pending.map(approvalCard)}
+        {agent.state === 'queued' && !agent.spark && (
+          <p className="ai-note">Queued. Starts when Jev hands off.</p>
+        )}
+        {error && <p className="error-line">{error}</p>}
+      </div>
     </>
   );
 }
 
-function StreamedBody({
-  live,
-  conversationId,
-  ...stored
-}: BodyProps & { live: boolean; conversationId: string }) {
-  const stream = useRunStream(stored.agent.id, conversationId, live || !stored.text);
+function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
+  const stream = useRunStream(stored.agent.id, stored.conversationId, live || !stored.text);
   const leads = streamLeads(stream, !live);
   const steps = leads || stored.steps.length === 0 ? stream.steps : stored.steps;
   const streaming = stream.status === 'connecting' || stream.status === 'running';
@@ -173,6 +191,7 @@ function StreamedBody({
   return (
     <AgentBody
       {...stored}
+      liveId={live && streaming ? id : null}
       steps={steps}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
@@ -191,7 +210,6 @@ interface AgentBlockProps {
   steps: readonly RunStep[];
   text: string;
   error: string | null;
-  seconds: number | null;
   approvals: readonly Approval[];
   repo: Project | null;
   after?: ReactNode;
@@ -222,6 +240,7 @@ export function AgentBlock({
   const [choice, setChoice] = useState<boolean | null>(null);
   const bodyId = useId();
   const open = choice ?? !collapsed;
+  const block = { agent, anchor, bodyId, conversationId };
   if (!open) {
     return (
       <div className="msg ai agent-block folded" data-agent={agent.id}>
@@ -249,14 +268,11 @@ export function AgentBlock({
   }
   return (
     <div className="msg ai agent-block" data-agent={agent.id}>
-      <AgentHead agent={agent} anchor={anchor} conversationId={conversationId} />
-      <div id={bodyId}>
-        {settled ? (
-          <AgentBody agent={agent} {...body} />
-        ) : (
-          <StreamedBody agent={agent} live={live} conversationId={conversationId} {...body} />
-        )}
-      </div>
+      {settled ? (
+        <AgentBody {...block} {...body} />
+      ) : (
+        <StreamedBody live={live} {...block} {...body} />
+      )}
       <MemberMessageList
         name={agent.name}
         live={live}
