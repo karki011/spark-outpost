@@ -10,7 +10,6 @@ import {
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { runAgent } from '../../crew/crew-projection.ts';
 import { messagesFor } from '../../crew/member-model.ts';
-import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock } from './AgentBlock.tsx';
 
@@ -42,29 +41,24 @@ export function SparkJobs({ run, detail, orchestration, repo }: SparkJobsProps) 
     stream.orchestration && stream.orchestration.updatedAt > orchestration.updatedAt
       ? stream.orchestration
       : orchestration;
-  const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   return (
     <div className="crew-turn spark-jobs">
-      {sparkMembers(current).map((member) => {
-        const child = runsById.get(member.runId);
-        return (
-          <AgentBlock
-            key={member.runId}
-            agent={runAgent(member, current, detail.activity[member.runId] ?? [])}
-            anchor={agentAnchor(current.runId, member.runId)}
-            live={!isTerminalRunStatus(member.status)}
-            collapsed={false}
-            conversationId={detail.conversation.id}
-            steps={detail.activity[member.runId] ?? []}
-            text={NO_TEXT}
-            error={member.error}
-            seconds={child ? runSeconds(child) : null}
-            approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
-            repo={repo}
-            messages={messagesFor(detail, member.runId)}
-          />
-        );
-      })}
+      {sparkMembers(current).map((member) => (
+        <AgentBlock
+          key={member.runId}
+          agent={runAgent(member, current, detail.activity[member.runId] ?? [])}
+          anchor={agentAnchor(current.runId, member.runId)}
+          live={!isTerminalRunStatus(member.status)}
+          collapsed={false}
+          conversationId={detail.conversation.id}
+          steps={detail.activity[member.runId] ?? []}
+          text={NO_TEXT}
+          error={member.error}
+          approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
+          repo={repo}
+          messages={messagesFor(detail, member.runId)}
+        />
+      ))}
     </div>
   );
 }

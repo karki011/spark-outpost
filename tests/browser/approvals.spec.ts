@@ -98,7 +98,7 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await expect(approval.locator('pre')).toHaveText('$ pnpm lint -- groupMessages');
   await expect(approval).toContainText("It isn't on the project's allowlist yet");
   await expect(page.locator('.crew-turn .agent-head', { hasText: 'Bolt' })).toContainText(
-    'Waiting for you',
+    'waiting for you',
   );
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
   await shot(page, 'approval-command');
@@ -213,7 +213,7 @@ test('Stop while waiting cancels the approval and the run', async ({ page }) => 
   await expect(card(page, /Run a command\?/)).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(page.locator('.crew-turn .agent-head', { hasText: 'Bolt' })).toContainText(
-    'Stopped',
+    'stopped',
     { timeout: 15_000 },
   );
   await expect(card(page, /Run a command\?/)).toHaveCount(0);

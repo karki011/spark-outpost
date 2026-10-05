@@ -13,15 +13,6 @@ function stepCount(steps: readonly StepView[]): string {
   return `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}`;
 }
 
-function heading(steps: StepView[], state: TurnState, seconds: number | null) {
-  const count = stepCount(steps);
-  if (state === 'working') return `Working · ${count}`;
-  if (state === 'waiting') return 'Waiting for you';
-  if (state === 'stopped') return `Stopped after ${count}`;
-  if (state === 'failed') return `Failed after ${count}`;
-  return seconds ? `Worked for ${seconds}s` : count;
-}
-
 function currentStep(steps: readonly StepView[]): string | null {
   const step = steps.findLast((candidate) => candidate.status !== 'done') ?? steps.at(-1);
   return step ? friendlyStep(step.name).replaceAll('`', '') : null;
@@ -126,15 +117,14 @@ export function StepList({ log }: { log: StepLog }) {
 interface WorkLogProps {
   steps: RunStep[];
   state: TurnState;
-  seconds?: number | null;
 }
 
-export function WorkLog({ steps, state, seconds = null }: WorkLogProps) {
+export function WorkLog({ steps, state }: WorkLogProps) {
   const log = useStepLog(steps, state);
   if (!log) return null;
   return (
     <div className={log.open ? 'steps open' : 'steps'}>
-      <StepToggle log={log} label={heading(log.views, state, seconds)} />
+      <StepToggle log={log} label={stepCount(log.views)} />
       <StepList log={log} />
     </div>
   );

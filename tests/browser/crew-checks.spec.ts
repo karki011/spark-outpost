@@ -86,8 +86,8 @@ test('Accept edits: the check approval shows in the thread, Review jumps to it, 
   });
   await expect(check).toBeVisible({ timeout: 30_000 });
   await expect(check).toContainText(command);
-  await expect(agentHead(page, 'Jev')).toContainText('Waiting for you');
-  await expect(agentHead(page, 'Jev')).not.toContainText('Failed');
+  await expect(agentHead(page, 'Jev')).toContainText('waiting for you');
+  await expect(agentHead(page, 'Jev')).not.toContainText('hit a problem');
 
   const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
   await expect(waiting).toContainText('Run check');

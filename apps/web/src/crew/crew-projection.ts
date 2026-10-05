@@ -1,10 +1,12 @@
 import {
   depthLabel,
+  isTerminalRunStatus,
   type ActivityStep,
   type AdviceSummary,
   type CrewMember,
   type Orchestration,
 } from '@spark-outpost/contracts';
+import { handOffAt } from '../chat/crew/crew-items.ts';
 import type { CrewAgent, CrewState } from './crew-model.ts';
 
 export const JEV_ID = 'jev';
@@ -36,8 +38,17 @@ function stepLine(name: string): string {
   return plain.charAt(0).toLowerCase() + plain.slice(1);
 }
 
+function handedOff(member: CrewMember, orchestration: Orchestration): boolean {
+  return (
+    member.runId === orchestration.runId &&
+    !isTerminalRunStatus(member.status) &&
+    handOffAt(orchestration.crew, orchestration.runId) !== null
+  );
+}
+
 function memberState(member: CrewMember, orchestration: Orchestration): CrewState {
   if (orchestration.pendingCheckpoint?.runId === member.runId) return 'waiting';
+  if (handedOff(member, orchestration)) return 'done';
   const state = RUN_STATES[member.status];
   if (state === 'working' && !member.toolCalls) return 'thinking';
   return state;

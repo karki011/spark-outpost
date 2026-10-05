@@ -192,8 +192,8 @@ export function ComposerStatus({
   useWaitingShortcut(pending);
   const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS);
   const expand = useExpandReveal();
-  const headInView = useHeadInView(store);
-  const shown = line?.kind === 'running' && headInView ? null : line;
+  const headInView = useHeadInView(store, line?.kind === 'running' ? line.worker.id : null);
+  const shown = headInView ? null : line;
   return (
     <div className="cstatus" data-state={shown?.kind ?? 'idle'}>
       <p className="sr-only" role="status">

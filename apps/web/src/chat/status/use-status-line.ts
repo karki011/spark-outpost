@@ -76,8 +76,11 @@ export function useStatusLine({
   };
 }
 
-export function useHeadInView(store: StatusStore): boolean {
-  return useSyncExternalStore(store.subscribe, () => store.snapshot().headsInView.length > 0);
+export function useHeadInView(store: StatusStore, id: string | null): boolean {
+  return useSyncExternalStore(
+    store.subscribe,
+    () => id !== null && store.snapshot().headsInView.includes(id),
+  );
 }
 
 export function useNow(ticking: boolean): number {

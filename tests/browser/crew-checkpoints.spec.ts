@@ -133,13 +133,13 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   await crewChat(page, repo, 'Auto-edit');
   await send(page, `${CREW_REQUEST} #build #crew #slowbuild`);
   const builder = agentHead(page, 'Bolt');
-  await expect(builder).toContainText(/Working|Thinking/, { timeout: 30_000 });
+  await expect(builder).toContainText(/working|thinking|editing/, { timeout: 30_000 });
   await expect.poll(() => repo.notes()).toContain('step 1');
   await page.getByRole('button', { name: 'Stop' }).click();
 
-  await expect(builder).toContainText('Stopped', { timeout: 30_000 });
+  await expect(builder).toContainText('stopped', { timeout: 30_000 });
   await expect(builder.locator('.agent-ava')).toHaveClass(/\bstopped\b/);
-  await expect(agentHead(page, 'Jev')).toContainText('Stopped');
+  await expect(agentHead(page, 'Jev')).toContainText('stopped');
   await expect(page.locator('.crew-turn .agent-state.failed')).toHaveCount(0);
   await expect(page.locator('.crew-foot')).toContainText('Done 1 agent');
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
