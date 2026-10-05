@@ -30,7 +30,7 @@
   top: 6px;
   right: max(
     calc(-1 * var(--rail-pad, 0px)),
-    calc((100cqi - var(--chat-col)) / 2 - 232px - var(--rail-pad, 0px) * 100)
+    calc((100cqi - var(--chat-col)) / 2 - 248px - var(--rail-pad, 0px) * 100)
   );
   display: flex;
   flex-direction: column;
