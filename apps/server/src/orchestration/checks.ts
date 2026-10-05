@@ -190,7 +190,8 @@ async function runOne(
 ): Promise<CheckResult | null> {
   const { check } = planned;
   const scripts = s.checks?.scripts ?? '';
-  if (runsPackageScript(check) && (await scriptsFingerprint(target.cwd)) !== scripts) {
+  const own = planned.whole ?? check;
+  if (runsPackageScript(own) && (await scriptsFingerprint(target.cwd)) !== scripts) {
     return notRun(check, 'skipped', SCRIPTS_CHANGED_NOTE);
   }
   const whole = planned.scope?.whole ?? check.command;

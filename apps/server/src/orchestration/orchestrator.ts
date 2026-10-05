@@ -148,7 +148,7 @@ async function placeBeforeBuilding(s: Session): Promise<string | null> {
   s.input = placed.input;
   if (placed.input.chatWorktree) s.needsCopy = false;
   const root = placed.input.projectRoots[0];
-  if (s.checks && root) s.checks = await projectChecks(s.deps.db, s.lease.runId, root);
+  if (!s.flow.solo && root) s.checks = await projectChecks(s.deps.db, s.lease.runId, root);
   return null;
 }
 
