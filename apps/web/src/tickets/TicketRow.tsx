@@ -27,6 +27,7 @@ export interface TicketRowProps {
   reason: string | null;
   tone: RowTone;
   reasonIcon?: ReactNode;
+  reasonBadge?: ReactNode;
   more: string[];
   age: { text: string; title: string } | null;
   syncProblem?: string | null;
@@ -84,6 +85,7 @@ export function TicketRow(props: TicketRowProps) {
               <span className="txt">{props.reason}</span>
             </>
           )}
+          {props.reasonBadge}
           {props.more.length > 0 && (
             <span className="tk-more" title={props.more.join(' · ')}>
               +{props.more.length}

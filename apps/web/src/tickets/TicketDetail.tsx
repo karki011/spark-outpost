@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ticketSourceNames, type InboxTicket, type TicketSummary } from '@spark-outpost/contracts';
 import { UserBlob } from '../brand/UserBlob.tsx';
+import type { ToastSpec } from '../conversations/use-toast.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
@@ -14,8 +15,9 @@ import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 import { TicketBody } from './TicketBody.tsx';
 import { pullUrl, safeUrl } from './ticket-model.ts';
 import { createdText, exactDate } from './ticket-status.ts';
-import { TicketPulls } from './TicketPulls.tsx';
+import { LinkedWork, PullRequests } from './TicketPulls.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { useDismiss } from './use-dismiss.ts';
 
 export type DetailTicket = TicketSummary & {
   mine: boolean;
@@ -36,6 +38,7 @@ interface TicketDetailProps {
   onAssign: () => void;
   onStart: () => void;
   onOpenChat: (conversationId: string) => void;
+  onToast: (toast: ToastSpec) => void;
 }
 
 const PRIORITY_NAMES = ['No priority', 'Urgent', 'High', 'Medium', 'Low'];
@@ -83,6 +86,7 @@ export function TicketDetail({
   onAssign,
   onStart,
   onOpenChat,
+  onToast,
 }: TicketDetailProps) {
   const source = ticketSourceNames[ticket.source];
   const view = useQuery({
@@ -94,6 +98,11 @@ export function TicketDetail({
   const pr = safeUrl(inbox ? pullUrl(inbox) : null);
   const sync = inbox?.lastSync?.outcome === 'failed' ? inbox.lastSync : null;
   const snoozing = useSnooze(inbox);
+  const dismissing = useDismiss(inbox, onToast);
+  const flagged = inbox?.section === 'attention' && inbox.flags.length > 0;
+  const trackerLinks = view.data?.ticket.links ?? [];
+  const pullsFirst = Boolean(inbox?.notice) && !flagged;
+  const pulls = <PullRequests ticket={inbox} trackerLinks={trackerLinks} lead={pullsFirst} />;
 
   const created = createdText(ticket.createdAt, now);
   const paneWidth = { '--tk-detail-w': `${width ?? DETAIL_DEFAULT_WIDTH}px` } as CSSProperties;
@@ -156,8 +165,20 @@ export function TicketDetail({
             <Glyph name="play" />
             {chat ? 'Start again' : 'Start work'}
           </button>
-          {inbox?.section === 'attention' && inbox.flags.length > 0 && (
-            <SnoozeButton ticket={inbox} snoozing={snoozing} />
+          {inbox && flagged && (
+            <>
+              <SnoozeButton ticket={inbox} snoozing={snoozing} />
+              <button
+                type="button"
+                className="btn line sm"
+                aria-label={`Dismiss ${ticket.key} from Needs you`}
+                title="Clears it from Needs you until something changes"
+                disabled={dismissing.pending}
+                onClick={dismissing.dismiss}
+              >
+                Dismiss
+              </button>
+            </>
           )}
         </div>
         {confirming && (
@@ -170,8 +191,14 @@ export function TicketDetail({
           </div>
         )}
         <SnoozeError snoozing={snoozing} />
+        {dismissing.error && (
+          <p className="snz-err" role="alert">
+            Couldn't dismiss {ticket.key}. {dismissing.error}
+          </p>
+        )}
         {inbox && <SnoozedNote ticket={inbox} snoozing={snoozing} />}
         {inbox && <WhyBox ticket={inbox} />}
+        {pullsFirst && pulls}
         {sync && (
           <div className="sync fail" role="alert">
             <Glyph name="warn" />
@@ -236,11 +263,8 @@ export function TicketDetail({
           <dt>Updated</dt>
           <dd>{relativeTime(ticket.updatedAt)}</dd>
         </dl>
-        <TicketPulls
-          ticket={inbox}
-          trackerLinks={view.data?.ticket.links ?? []}
-          onOpenChat={onOpenChat}
-        />
+        <LinkedWork ticket={inbox} trackerLinks={trackerLinks} onOpenChat={onOpenChat} />
+        {!pullsFirst && pulls}
         <TicketBody view={view.data} loading={view.isPending} error={view.error} source={source} />
       </div>
     </aside>

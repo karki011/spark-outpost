@@ -12,6 +12,8 @@ const pull = (fields: Partial<PullRequestDetail> = {}): PullRequestDetail => ({
   mergedAt: null,
   reviews: [],
   checks: null,
+  headSha: null,
+  failedChecks: [],
   ...fields,
 });
 

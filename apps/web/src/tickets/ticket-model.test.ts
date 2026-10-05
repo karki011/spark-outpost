@@ -9,6 +9,7 @@ import {
   safeUrl,
   searchGroup,
   snoozeChoices,
+  unseenNotices,
   whose,
 } from './ticket-model.ts';
 
@@ -50,6 +51,7 @@ function inbox(fields: Partial<InboxTicket> = {}): InboxTicket {
 
 const flag = (rule: InboxTicket['flags'][number]['rule']) => ({
   rule,
+  key: rule,
   text: rule,
   rationale: 'Rule',
   since: null,
@@ -122,6 +124,12 @@ describe('ticket rows', () => {
     expect(searchGroup(result({ assignedTo: null }))).toBe('unassigned');
     expect(searchGroup(others)).toBe('others');
     expect(whose(others)).toBe('Assigned to Jordan Lee');
+  });
+
+  it('counts the notices nobody has looked at yet', () => {
+    const notice = (seen: boolean) => ({ id: `${PR}@abc`, text: 'PR #1 checks failing', seen });
+    expect(unseenNotices([inbox(), inbox({ notice: notice(false) })])).toBe(1);
+    expect(unseenNotices([inbox({ notice: notice(true) })])).toBe(0);
   });
 
   it('links out only to web addresses', () => {

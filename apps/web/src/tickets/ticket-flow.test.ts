@@ -12,6 +12,7 @@ import {
   chatLookup,
   liveTicket,
   liveTickets,
+  rowChecks,
   rowLine,
   staleChats,
 } from './ticket-flow.ts';
@@ -172,6 +173,7 @@ describe('live ticket flow', () => {
     const flags = [
       {
         rule: 'due-soon' as const,
+        key: 'due-soon',
         text: 'Due today',
         rationale: '',
         since: null,
@@ -237,6 +239,37 @@ describe('what a row says about the work', () => {
         asking('input'),
       ),
     ).toBe('Answer a question');
+  });
+});
+
+describe('the checks badge on a row in review', () => {
+  const inReview = (checks: PullRequestStatus['checks'], fields: Partial<InboxTicket> = {}) =>
+    liveTicket(
+      ticket({
+        section: 'review',
+        reason: `PR #341 · checks ${checks}`,
+        pullRequest: { ...pull('review'), checks },
+        ...fields,
+      }),
+      chatLookup([]),
+    );
+
+  it('leaves the checks to the badge and keeps the pull request in the text', () => {
+    for (const checks of ['failing', 'pending', 'passing'] as const) {
+      expect(rowChecks(inReview(checks))).toBe(checks);
+      expect(rowLine(inReview(checks))).toBe('PR #341');
+    }
+    const draft = inReview('failing', { pullRequest: { ...pull('draft'), checks: 'failing' } });
+    expect(rowLine(draft)).toBe('Draft PR #341');
+  });
+
+  it('shows no badge without checks or outside In review', () => {
+    const unread = inReview(null, { reason: 'PR #341 in review' });
+    expect(rowChecks(unread)).toBeNull();
+    expect(rowLine(unread)).toBe('PR #341 in review');
+    const flagged = inReview('failing', { section: 'attention', reason: 'Blocked' });
+    expect(rowChecks(flagged)).toBeNull();
+    expect(rowLine(flagged)).toBe('Blocked');
   });
 });
 

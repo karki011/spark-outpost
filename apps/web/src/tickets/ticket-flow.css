@@ -50,6 +50,19 @@
   border-color: var(--line);
 }
 
+.tk .fchip.ci {
+  flex-shrink: 0;
+}
+
+.tk .fchip.ci.unseen::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
 .tk .ir-who {
   width: 18px;
   height: 18px;

@@ -175,7 +175,7 @@ In a chat worktree, the keep card offers "Bring changes into <your branch>", "Op
     id: 'tickets',
     title: 'Tickets inbox, links to chats and PRs',
     keywords: ['ticket', 'jira', 'linear', 'inbox', 'attention', 'link', 'unlink', 'priority'],
-    text: `Tickets pulls your Jira and Linear tickets into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; a side column of views filters. Rows show a status badge, Spark progress, priority, assignee, and chat and PR links; the detail pane adds reporter, created date and pull requests. Search covers every ticket.
+    text: `Tickets pulls your Jira and Linear tickets into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; a side column of views filters. Rows show a status badge, Spark progress, priority, assignee, and chat and PR links; the detail pane adds reporter, created date and pull requests. Failing checks on a PR keep the ticket in In review / PR open with a checks badge (a notice, seen once opened), never in Needs you. Dismiss clears a Needs you ticket until something changes; Remind me later snoozes it. Search covers every ticket.
 
 A build turn that names exactly one ticket links the chat to it; other mentions only suggest. Linked chats show a "KEY · title" chip (Unlink, Undo), their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
 
