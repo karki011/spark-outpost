@@ -99,6 +99,7 @@ export const FAKE_ACP_MODES: Record<string, FakeAcpMode[]> = {
 };
 
 export const MAP_ROOT_PREFIX = path.join(realpathSync(os.tmpdir()), 'spark-map-real-');
+export const CLONE_TEST_ROOT = path.join(realpathSync(os.tmpdir()), `spark-clone-home-${slot}`);
 
 export const SIGN_IN_FIXTURE = {
   id: '0199b1c2-7a10-7c3e-9f41-5d2e8a6b4c01',

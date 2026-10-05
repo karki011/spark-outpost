@@ -1,22 +1,44 @@
 import './project.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { FolderListing } from '@spark-outpost/contracts';
+import type { FolderListing, Project } from '@spark-outpost/contracts';
 import { formatBytes } from '../../api/attachments.ts';
 import { projectKeys, projectsApi, type FolderPick } from '../../api/projects.ts';
 import { BlobToggle } from '../../brand/BlobToggle.tsx';
 import { FileIcon } from '../attachments/attachment-icons.tsx';
+import { ClonePanel } from './clone/ClonePanel.tsx';
+import { useCloneNeedsAttention } from './clone/use-clone-jobs.ts';
 import { breadcrumbs } from './folder-path.ts';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
+import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 type FolderPurpose = 'project' | 'reference' | 'instructions';
+type Mode = 'browse' | 'clone' | 'clone-parent';
 
-const FOCUSABLE = 'button:not(:disabled)';
+const FOCUSABLE = 'button:not(:disabled), input:not(:disabled)';
+
+const WAYS = [
+  { id: 'browse', label: 'Choose a folder' },
+  { id: 'clone', label: 'Clone a repository' },
+];
+
+const CLONE_COPY: Record<Exclude<Mode, 'browse'>, { title: string; lede: string; use: string }> = {
+  clone: {
+    title: 'Clone a repository',
+    lede: 'Spark runs git clone on this Mac, straight from the git host, then adds the new folder as a project.',
+    use: '',
+  },
+  'clone-parent': {
+    title: 'Choose where to clone',
+    lede: 'Spark creates the repository’s folder inside the folder you pick.',
+    use: 'Clone into this folder',
+  },
+};
 
 const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> = {
   instructions: {
@@ -52,6 +74,7 @@ interface FolderDialogProps {
   stacked?: boolean;
   inline?: boolean;
   fallback?: { label: string; onPick: () => void } | null;
+  onCloned?: ((project: Project) => void) | null;
 }
 
 export function FolderDialog({
@@ -64,8 +87,15 @@ export function FolderDialog({
   stacked = purpose !== 'project',
   inline = false,
   fallback = null,
+  onCloned = null,
 }: FolderDialogProps) {
-  const copy = COPY[purpose];
+  const ids = useId();
+  const [chosenMode, setMode] = useState<Mode | null>(null);
+  const cloneWaiting = useCloneNeedsAttention(onCloned !== null);
+  if (cloneWaiting && chosenMode === null) setMode('clone');
+  const mode = chosenMode ?? 'browse';
+  const [cloneParent, setCloneParent] = useState<string | null>(null);
+  const copy = mode === 'browse' ? COPY[purpose] : CLONE_COPY[mode];
   const picksFile = purpose === 'instructions';
   const [path, setPath] = useState<string | null>(startPath);
   const [hidden, setHidden] = useState(false);
@@ -86,8 +116,19 @@ export function FolderDialog({
     setPath(next);
   };
 
+  const dismiss = mode === 'clone-parent' ? () => setMode('clone') : onClose;
+  const use = (target: string) => {
+    if (mode !== 'clone-parent') return onUse(target);
+    setCloneParent(target);
+    setMode('clone');
+  };
+
   useEffect(() => {
-    panelRef.current?.focus();
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
+  }, [mode]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const panel = panelRef.current;
       const buttons = [...(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
@@ -99,31 +140,14 @@ export function FolderDialog({
       wrapTabFocus(event, () => buttons);
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onClose();
+      dismiss();
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [onClose]);
+  });
 
-  const content = (
+  const browser = (
     <>
-      <div className="fdlg-head">
-        <h3 id="fdlg-title">{copy.title}</h3>
-        <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M6 6l12 12M18 6 6 18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
-      <p className="fdlg-lede" id="fdlg-lede">
-        {copy.lede}
-      </p>
       <div className="fdlg-bar">
         <button
           type="button"
@@ -184,7 +208,7 @@ export function FolderDialog({
                   className="fdlg-row"
                   aria-pressed={entry.path === picked}
                   onClick={() => setFile(entry.path)}
-                  onDoubleClick={() => onUse(entry.path)}
+                  onDoubleClick={() => use(entry.path)}
                 >
                   <FileIcon />
                   <span>{entry.name}</span>
@@ -215,26 +239,71 @@ export function FolderDialog({
         <span className="fdlg-path" title={chosen ?? current?.path}>
           {chosen ?? current?.path ?? ''}
         </span>
-        <button type="button" className="btn ghost sm" onClick={onClose}>
+        <button type="button" className="btn ghost sm" onClick={dismiss}>
           Cancel
         </button>
         <button
           type="button"
           className="btn primary sm"
           disabled={!chosen || linking}
-          onClick={() => chosen && onUse(chosen)}
+          onClick={() => chosen && use(chosen)}
         >
           {linking ? 'Linking…' : copy.use}
         </button>
       </div>
     </>
   );
+  const content = (
+    <>
+      <div className="fdlg-head">
+        <h3 id={`${ids}title`}>{copy.title}</h3>
+        <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M6 6l12 12M18 6 6 18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <p className="fdlg-lede" id={`${ids}lede`}>
+        {copy.lede}
+      </p>
+      {onCloned && mode !== 'clone-parent' && (
+        <div className="fdlg-ways">
+          <Segmented
+            ariaLabel="How to add the project"
+            options={WAYS}
+            value={mode}
+            onChange={(id) => setMode(id === 'clone' ? 'clone' : 'browse')}
+          />
+        </div>
+      )}
+      {onCloned && mode !== 'browse' && (
+        <ClonePanel
+          hidden={mode !== 'clone'}
+          parent={cloneParent}
+          onParentChange={setCloneParent}
+          onPickParent={(current) => {
+            open(current);
+            setMode('clone-parent');
+          }}
+          onCloned={onCloned}
+          onClose={onClose}
+        />
+      )}
+      {mode !== 'clone' && browser}
+    </>
+  );
   const dialog = {
     ref: panelRef,
     tabIndex: -1,
     role: 'dialog',
-    'aria-labelledby': 'fdlg-title',
-    'aria-describedby': 'fdlg-lede',
+    'aria-labelledby': `${ids}title`,
+    'aria-describedby': `${ids}lede`,
   } as const;
 
   if (inline) {
