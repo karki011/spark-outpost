@@ -74,6 +74,18 @@ describe('update status', () => {
     ).toMatchObject({ phase: 'ready', installRequested: false, error: 'signature' });
   });
 
+  it('clears the last error when installing again or checking again', () => {
+    const failed = run([...READY, { type: 'installing' }, { type: 'error', message: 'stalled' }]);
+    expect(reduceUpdate(failed, { type: 'installing' })).toMatchObject({
+      phase: 'installing',
+      error: null,
+    });
+    expect(reduceUpdate(failed, { type: 'checking', at: AT })).toMatchObject({
+      phase: 'ready',
+      error: null,
+    });
+  });
+
   it('shows a skipped version instead of downloading it', () => {
     expect(run([{ type: 'skipped', version: '0.2.0' }])).toMatchObject({
       phase: 'idle',

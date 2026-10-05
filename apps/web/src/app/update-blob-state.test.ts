@@ -67,6 +67,16 @@ describe('updateBlobView', () => {
     });
   });
 
+  it('adds the reason a restart did not happen to the ready tooltip', () => {
+    expect(
+      updateBlobView({ ...base, phase: 'ready', error: "The update didn't start." }),
+    ).toMatchObject({
+      step: 'ready',
+      label: 'Restart',
+      description: "Restart to update (Spark Outpost 0.3.0) · The update didn't start.",
+    });
+  });
+
   it('celebrates a preview update only while asked to', () => {
     const relaunched = { ...base, availableVersion: null, previewUpdatedTo: '0.3.0' };
     expect(updateBlobView(relaunched)).toBeNull();

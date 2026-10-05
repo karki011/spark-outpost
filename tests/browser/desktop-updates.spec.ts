@@ -144,6 +144,26 @@ test('the ready toast appears once per version', async ({ page }) => {
   await expect(page.getByText('Spark Outpost 0.3.0 is ready.')).toHaveCount(0);
 });
 
+test('a stalled install goes back to Restart to update and says why', async ({ page }) => {
+  const stalled =
+    "The update didn't start. Quit Spark and open it again, or try Restart to update once more.";
+  await resetTestDatabase({ onboarded: true });
+  await fakeUpdater(page, { phase: 'installing', availableVersion: '0.3.0', progress: 100 });
+  await page.goto('/');
+  await expect(rail(page).getByRole('button', { name: /^Installing/ })).toBeDisabled();
+
+  await pushUpdate(page, { phase: 'ready', error: stalled });
+  const ready = rail(page).getByRole('button', {
+    name: `Restart to update (Spark Outpost 0.3.0) · ${stalled}`,
+  });
+  await expect(ready).toBeEnabled();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Updates' }).click();
+  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await expect(updates).toContainText(`0.3.0 is ready. ${stalled}`);
+  await expect(updates.getByRole('button', { name: 'Restart to update' })).toBeEnabled();
+});
+
 test('the dev copy shows its version, says it never updates and has no blob', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeUpdater(page, {

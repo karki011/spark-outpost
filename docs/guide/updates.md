@@ -12,12 +12,12 @@ The Mac app checks for updates when it starts and every 4 hours. It never instal
 
 ## Install an update
 
-1. Select the gray **Update** blob in the rail, just above **Settings**. It fills as the update downloads.
+1. Select the gray **Update** blob above **Settings**. It fills as it downloads.
 2. When the blob says **Restart**, select it.
 
 ![The Update blob above Settings in the rail](images/updates-rail-blob-light.png)
 
-A ready update also installs the next time you quit. While a chat is running or waiting for you, the blob says **Waiting**.
+A ready update also installs when you next quit. While a chat is running or waiting, the blob says **Waiting**. If the restart doesn't start, the blob returns to **Restart** and says why.
 
 ## Stable or Beta
 
@@ -26,13 +26,13 @@ A ready update also installs the next time you quit. While a chat is running or 
 
 ![Settings, Updates: Version, Update ready, Channel, Download updates automatically and Check for updates](images/updates-section-light.png)
 
-Spark never installs an older version. Moving from Beta to Stable keeps your version until Stable catches up.
+Spark never installs an older version. Moving to Stable keeps your version until Stable catches up.
 
 ## Download updates automatically
 
 1. Open **Settings → Updates**. **Download updates automatically** is on by default.
 2. Turn it off to download only when you select **Update** or **Get the update**.
-3. Select **Check now** to look for an update.
+3. Select **Check now** to look.
 
 ## Your data during an update
 

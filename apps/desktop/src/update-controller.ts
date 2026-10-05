@@ -1,6 +1,8 @@
 import type { InstallResult, UpdateChannel, UpdateStatus } from '@spark-outpost/contracts';
 import type { UpdatePrefs } from './update-prefs.ts';
 import {
+  INSTALL_STALL_TIMEOUT_MS,
+  INSTALL_STALLED_MESSAGE,
   installDecision,
   updateErrorMessage,
   reduceUpdate,
@@ -70,6 +72,12 @@ export function createUpdateController(
   let prefs = options.prefs;
   let quitting = false;
   let cancelRecheck: (() => void) | null = null;
+  let cancelStallWatch: (() => void) | null = null;
+
+  const stopStallWatch = () => {
+    cancelStallWatch?.();
+    cancelStallWatch = null;
+  };
 
   const apply: Emit = (event) => {
     const before = status;
@@ -96,6 +104,16 @@ export function createUpdateController(
     }
   };
 
+  const reportStall = () => {
+    cancelStallWatch = null;
+    if (quitting || status.phase !== 'installing') return;
+    const seconds = INSTALL_STALL_TIMEOUT_MS / 1000;
+    options.log(
+      `Update install stalled: the app was still running ${seconds} s after the install started. Back to ready.`,
+    );
+    apply({ type: 'error', message: INSTALL_STALLED_MESSAGE });
+  };
+
   const tryInstall = async (relaunch: boolean): Promise<InstallResult> => {
     cancelRecheck?.();
     cancelRecheck = null;
@@ -105,8 +123,10 @@ export function createUpdateController(
       cancelRecheck = later(() => void tryInstall(relaunch), RUNS_RECHECK_MS);
     }
     if (decision.status !== 'installing' || !driver) return decision;
+    stopStallWatch();
     apply({ type: 'installing' });
     driver.install(relaunch);
+    if (!quitting) cancelStallWatch = later(reportStall, INSTALL_STALL_TIMEOUT_MS);
     return decision;
   };
 
@@ -166,6 +186,7 @@ export function createUpdateController(
       return status;
     },
     takeOverQuit() {
+      stopStallWatch();
       if (quitting || status.phase !== 'ready' || !driver) return false;
       quitting = true;
       void tryInstall(false).then((result) => {
@@ -179,6 +200,7 @@ export function createUpdateController(
     },
     dispose() {
       cancelRecheck?.();
+      stopStallWatch();
     },
   };
 }

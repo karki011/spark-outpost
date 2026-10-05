@@ -88,7 +88,9 @@ export function updateBlobView(
   return {
     step: 'ready',
     label: 'Restart',
-    description: `${READY_TIP} (${version})`,
+    description: status.error
+      ? `${READY_TIP} (${version}) · ${status.error}`
+      : `${READY_TIP} (${version})`,
     mood: 'happy',
     fill: null,
   };
