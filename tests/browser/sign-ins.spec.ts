@@ -102,7 +102,7 @@ test('the web app says saved sign-ins need the Mac app', async ({ page }) => {
   await expect(block.getByRole('button', { name: `Add a sign-in to ${name}` })).toBeDisabled();
 });
 
-test('Settings adds, edits and deletes a sign-in without ever showing it back', async ({
+test('Settings adds, edits and deletes a sign-in without ever showing it back @packaged', async ({
   page,
 }) => {
   await withDesktopBrowser(page);

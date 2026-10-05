@@ -200,6 +200,7 @@ async function run(
 ): Promise<SignInOutcome> {
   await cdp.send('Page.enable');
   await requireOrigin(cdp, values.origin);
+  await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => undefined);
   const first = await planOf(cdp);
   if (first.step === 'none') throw new SignInError('no_form', first.reason);
   if (first.step === 'credentials') {
@@ -240,6 +241,7 @@ export async function signInOnPage(
     if (error instanceof SignInError) throw error;
     throw new SignInError('failed', SIGN_IN_FAILED);
   } finally {
+    await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: false }).catch(() => undefined);
     for (const node of filled) options.filled?.(node);
   }
 }
