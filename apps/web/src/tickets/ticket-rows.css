@@ -8,6 +8,7 @@
     20px 16px 72px 112px minmax(0, 1fr) fit-content(230px) auto 34px 18px
     var(--acts-w);
   column-gap: 10px;
+  max-width: 1600px;
 }
 
 .tk .tk-rows.with-links {
@@ -20,6 +21,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
+  max-width: 1600px;
   min-height: 38px;
   padding: 0 18px 0 12px;
   background: var(--panel);
