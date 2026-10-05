@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   editableFields,
-  sparkActionLabels,
+  sparkActionQuestion,
   ticketPriorityNameSchema,
   ticketSourceNames,
   ticketStatusLabels,
@@ -18,6 +18,7 @@ import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
+import { SignInFacts } from './SignInFacts.tsx';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
 import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
@@ -200,6 +201,8 @@ function Facts({ action }: { action: SparkAction }) {
           {action.title && <Fact label="Title">{action.title}</Fact>}
         </dl>
       );
+    case 'browser_sign_in':
+      return <SignInFacts action={action} />;
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -231,6 +234,9 @@ function byline(action: SparkAction, agent: string): string {
   if (action.action === 'read_page') {
     return `${agent} wants to read a page you opened in the browser.`;
   }
+  if (action.action === 'browser_sign_in') {
+    return `${agent} asks Spark to sign in on a page in the browser.`;
+  }
   return `${agent} asks Spark to do this for you.`;
 }
 
@@ -240,6 +246,9 @@ function confirmNote(action: SparkAction): string {
   }
   if (action.action === 'read_page') {
     return 'The site is outside your project, so Spark treats what it says as untrusted. Allowing covers this site for the rest of this chat.';
+  }
+  if (action.action === 'browser_sign_in') {
+    return 'Spark types the saved username and password into this site. The agent never sees them. Allowing covers this sign-in for the rest of this chat.';
   }
   if (editableFields(action.action).length === 0) {
     return 'Nothing happens until you confirm. Spark does it as soon as you confirm, even after the agent has finished.';
@@ -395,7 +404,7 @@ export function SparkActionCard({
           <i className="appr-dia" />
         </span>
         <span id={headingId}>
-          <b>{sparkActionLabels[action.action].question}</b> {byline(action, agent)}
+          <b>{sparkActionQuestion(action)}</b> {byline(action, agent)}
         </span>
       </div>
       <Facts action={action} />
