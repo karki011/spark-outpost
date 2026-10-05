@@ -98,6 +98,16 @@
   padding: 8px 14px 10px;
   border-top: 1px solid var(--line);
 }
+.mpop.left.chatpop {
+  width: 340px;
+}
+.chatpop .fname b {
+  flex-shrink: 1;
+}
+.chatpop .fname small {
+  flex-shrink: 0;
+  direction: ltr;
+}
 .mentionpop .flist {
   max-height: 240px;
 }

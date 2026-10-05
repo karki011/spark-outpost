@@ -22,6 +22,7 @@ export interface SparkToolDeps {
   parallelBuilders?: boolean;
   codeScan?: Pick<CodeScanner, 'scan'>;
   branchPrefix?: string;
+  linkScheme?: string | undefined;
   timeZone?: string;
   now?: () => Date;
   browser?: BrowserHost | undefined;

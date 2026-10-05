@@ -247,7 +247,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 />
                 <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
                 {openAudit && (
-                  <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
+                  <ChatHeaderMenu
+                    chatId={conversationId}
+                    onAudit={openAudit}
+                    onStartFresh={() => startFresh.mutate()}
+                  />
                 )}
                 <AgentTvButton conversationId={conversationId} agents={tvCrew(detail.data)} />
                 {hasBrowser && <BrowserButton open={browsing} onToggle={toggleBrowser} />}

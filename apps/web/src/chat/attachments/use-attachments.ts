@@ -4,8 +4,14 @@ import {
   type Attachment,
   type AttachmentKind,
 } from '@spark-outpost/contracts';
-import type { ProjectFile, SlackNotAllowed, SlackThreadPreview } from '@spark-outpost/contracts';
+import type {
+  ChatSharePreview,
+  ProjectFile,
+  SlackNotAllowed,
+  SlackThreadPreview,
+} from '@spark-outpost/contracts';
 import { attachmentUrl, classifyFile, uploadAttachment } from '../../api/attachments.ts';
+import { chatShareApi } from '../../api/chat-share.ts';
 import { ApiError } from '../../api/client.ts';
 import { projectsApi } from '../../api/projects.ts';
 import { allowSlackPlace, slackApi, slackNotAllowed } from '../../slack/slack-api.ts';
@@ -13,7 +19,8 @@ import { allowSlackPlace, slackApi, slackNotAllowed } from '../../slack/slack-ap
 export type AttachmentSource =
   | { type: 'upload'; file: File }
   | { type: 'repo'; projectId: string; path: string }
-  | { type: 'slack'; url: string };
+  | { type: 'slack'; url: string }
+  | { type: 'chat'; chatId: string };
 
 export interface PendingAttachment {
   key: string;
@@ -29,6 +36,7 @@ export interface PendingAttachment {
   retryable: boolean;
   attachment: Attachment | null;
   slack?: SlackThreadPreview;
+  chat?: ChatSharePreview;
   blockedChannel?: SlackNotAllowed['channel'];
   pick?: PagePick;
 }
@@ -48,6 +56,7 @@ export interface AttachmentsState {
   addPick: (text: string, files: File[]) => void;
   addFromRepo: (projectId: string, file: ProjectFile) => void;
   addSlack: (url: string) => void;
+  addChat: (chatId: string) => void;
   allowSlackChannel: (key: string) => void;
   remove: (key: string) => void;
   retry: (key: string) => void;
@@ -104,12 +113,14 @@ function createRepoItem(projectId: string, file: ProjectFile): PendingAttachment
   };
 }
 
-function createSlackItem(url: string): PendingAttachment {
+type LinkedSource = Extract<AttachmentSource, { type: 'slack' | 'chat' }>;
+
+function createLinkedItem(name: string, source: LinkedSource): PendingAttachment {
   return {
     key: crypto.randomUUID(),
-    name: 'Slack thread',
+    name,
     size: 0,
-    source: { type: 'slack', url },
+    source,
     kind: 'text',
     mediaType: 'text/markdown',
     previewUrl: null,
@@ -124,6 +135,7 @@ function createSlackItem(url: string): PendingAttachment {
 interface Transferred {
   attachment: Attachment;
   slack?: SlackThreadPreview;
+  chat?: ChatSharePreview;
 }
 
 async function transfer(
@@ -135,12 +147,16 @@ async function transfer(
     const { attachment, preview } = await slackApi.context(item.source.url, signal);
     return { attachment, slack: preview };
   }
+  if (item.source.type === 'chat') {
+    const { attachment, preview } = await chatShareApi.context(item.source.chatId, signal);
+    return { attachment, chat: preview };
+  }
   return { attachment: await transferFile(item, item.source, signal, onProgress) };
 }
 
 function transferFile(
   item: PendingAttachment,
-  source: Exclude<AttachmentSource, { type: 'slack' }>,
+  source: Exclude<AttachmentSource, LinkedSource>,
   signal: AbortSignal,
   onProgress: (progress: number) => void,
 ): Promise<Attachment> {
@@ -156,11 +172,12 @@ function transferFile(
 
 function completed(
   item: PendingAttachment,
-  { attachment, slack }: Transferred,
+  { attachment, slack, chat }: Transferred,
 ): Partial<PendingAttachment> {
   const changes = { status: 'done', progress: 1, attachment } as const;
   if (item.source.type === 'upload') return changes;
   if (slack) return { ...changes, slack, name: attachment.name, size: attachment.size };
+  if (chat) return { ...changes, chat, name: chat.title, size: attachment.size };
   return {
     ...changes,
     kind: attachment.kind,
@@ -169,8 +186,10 @@ function completed(
   };
 }
 
-function isRetryable(error: unknown): boolean {
-  return !(error instanceof ApiError) || (error.status !== 400 && error.status !== 413);
+function isRetryable(error: unknown, source: AttachmentSource): boolean {
+  if (!(error instanceof ApiError)) return true;
+  if (source.type === 'chat' && error.status === 404) return false;
+  return error.status !== 400 && error.status !== 413;
 }
 
 function revoke(item: PendingAttachment) {
@@ -208,7 +227,7 @@ export function useAttachments(): AttachmentsState {
             patch(item.key, {
               status: 'error',
               error: error instanceof Error ? error.message : 'Upload failed.',
-              retryable: isRetryable(error),
+              retryable: isRetryable(error, item.source),
               ...(slackNotAllowed(error)
                 ? { blockedChannel: slackNotAllowed(error)!.channel }
                 : {}),
@@ -265,7 +284,17 @@ export function useAttachments(): AttachmentsState {
       const duplicate = itemsRef.current.some(
         (item) => item.source.type === 'slack' && item.source.url === url,
       );
-      if (!duplicate) append([createSlackItem(url)]);
+      if (!duplicate) append([createLinkedItem('Slack thread', { type: 'slack', url })]);
+    },
+    [append],
+  );
+
+  const addChat = useCallback(
+    (chatId: string) => {
+      const duplicate = itemsRef.current.some(
+        (item) => item.source.type === 'chat' && item.source.chatId === chatId,
+      );
+      if (!duplicate) append([createLinkedItem('Spark chat', { type: 'chat', chatId })]);
     },
     [append],
   );
@@ -332,6 +361,7 @@ export function useAttachments(): AttachmentsState {
     addPick,
     addFromRepo,
     addSlack,
+    addChat,
     allowSlackChannel,
     remove,
     retry,

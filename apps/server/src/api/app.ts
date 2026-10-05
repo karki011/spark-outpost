@@ -5,6 +5,7 @@ import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
+import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
 import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
@@ -51,7 +52,8 @@ export interface AppOptions
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
-    Pick<ConversationActionDeps, 'deleteSettleMs'> {
+    Pick<ConversationActionDeps, 'deleteSettleMs'>,
+    Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
   previews: PreviewServers;
   appEvents: AppEventFeed;
@@ -86,6 +88,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', chatSettingsRoutes(options));
   app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
+  app.use('/api', chatShareRoutes(options));
   app.use('/api', projectRoutes(options));
   app.use('/api', mapRoutes(options));
   app.use('/api', agentConfigRoutes(options));

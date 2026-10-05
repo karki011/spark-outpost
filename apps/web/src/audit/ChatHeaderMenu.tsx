@@ -1,6 +1,7 @@
 import './audit.css';
 import { useId, type KeyboardEvent } from 'react';
-import { DotsIcon, RestoreIcon, ShieldIcon } from '../ui/icons.tsx';
+import { useCopyChatLink } from '../conversations/use-copy-chat-link.tsx';
+import { CopyIcon, DotsIcon, RestoreIcon, ShieldIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 
@@ -14,11 +15,13 @@ function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
 }
 
 interface ChatHeaderMenuProps {
+  chatId: string;
   onAudit(): void;
   onStartFresh?: () => void;
 }
 
-export function ChatHeaderMenu({ onAudit, onStartFresh }: ChatHeaderMenuProps) {
+export function ChatHeaderMenu({ chatId, onAudit, onStartFresh }: ChatHeaderMenuProps) {
+  const link = useCopyChatLink(chatId);
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -28,6 +31,7 @@ export function ChatHeaderMenu({ onAudit, onStartFresh }: ChatHeaderMenuProps) {
   return (
     <div className="head-menu">
       {tip.tooltip}
+      {link.toast}
       <button
         ref={anchorRef}
         type="button"
@@ -71,6 +75,18 @@ export function ChatHeaderMenu({ onAudit, onStartFresh }: ChatHeaderMenuProps) {
               Start fresh
             </button>
           )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              anchorRef.current?.focus();
+              link.copy();
+            }}
+          >
+            <CopyIcon />
+            Copy chat link
+          </button>
         </div>
       )}
     </div>

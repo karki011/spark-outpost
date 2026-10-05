@@ -1,7 +1,9 @@
 import './attachments.css';
 import { slackPlaceLabel } from '@spark-outpost/contracts';
+import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { formatBytes } from '../../api/attachments.ts';
+import { api, queryKeys } from '../../api/client.ts';
 import { allowSlackPlaceLabel } from '../../slack/slack-api.ts';
 import { XIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
@@ -9,6 +11,7 @@ import { FileIcon, ProgressRing, RetryIcon } from './attachment-icons.tsx';
 import { pickLabel } from '../../browser/pick-files.ts';
 import { PickChip } from './PickChip.tsx';
 import type { PagePick, PendingAttachment } from './use-attachments.ts';
+import { sharedChatView } from './shared-chat.ts';
 
 interface AttachmentChipsProps {
   items: PendingAttachment[];
@@ -71,6 +74,30 @@ function SlackDetail({ item }: { item: PendingAttachment }) {
     <small className="att-slack">
       {slackPlace(slack.channel)} · {slack.author} · {slack.firstLine}
     </small>
+  );
+}
+
+function ChatChip({ item, onRemove }: { item: PendingAttachment; onRemove: () => void }) {
+  const chats = useQuery({ queryKey: queryKeys.conversations, queryFn: api.listConversations });
+  const view = item.chat ? sharedChatView(item.chat, chats.data) : null;
+  return (
+    <div
+      className="chip att-chip"
+      aria-busy={view === null}
+      data-chat={view?.tone ?? 'loading'}
+      title={view ? `${view.title}\n${view.project} · ${view.state}` : undefined}
+    >
+      {view ? <FileIcon /> : <ProgressRing progress={0} label="Reading the chat" />}
+      <span className="att-name">{view?.title ?? item.name}</span>
+      {view ? (
+        <small className="att-slack">
+          {view.project} · <b className="att-state">{view.state}</b>
+        </small>
+      ) : (
+        <small>Reading the chat…</small>
+      )}
+      <RemoveButton name={view?.title ?? item.name} onClick={onRemove} />
+    </div>
   );
 }
 
@@ -177,6 +204,8 @@ export function AttachmentChips({
               slot.items.map((item) =>
                 item.kind === 'image' && item.status !== 'error' ? (
                   <ImageTile key={item.key} item={item} onRemove={() => onRemove(item.key)} />
+                ) : item.source.type === 'chat' && item.status !== 'error' ? (
+                  <ChatChip key={item.key} item={item} onRemove={() => onRemove(item.key)} />
                 ) : (
                   <FileChip
                     key={item.key}

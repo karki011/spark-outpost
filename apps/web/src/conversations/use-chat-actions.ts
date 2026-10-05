@@ -10,6 +10,7 @@ import {
 import { api, queryKeys } from '../api/client.ts';
 import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
+import { copyChatLink } from './use-copy-chat-link.tsx';
 import type { Toaster } from './use-toast.ts';
 
 const SEARCH_ROOT = ['conversation-search'] as const;
@@ -247,6 +248,8 @@ export function useChatActions({
     drop: (chat: ConversationSummary, target: string | null, order: readonly string[] | null) =>
       void drop(chat, target, order),
     archive: (chat: ConversationSummary, archived: boolean) => void archive(chat, archived),
+    copyLink: (chat: ConversationSummary) =>
+      void copyChatLink(chat.id).then((text) => toaster.show({ text })),
     remove,
   };
 }

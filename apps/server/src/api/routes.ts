@@ -44,6 +44,7 @@ import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
 import { KeychainWaitingError } from '../setup/keychain.ts';
+import { ChatNotFoundError } from '../chat-share/digest.ts';
 
 export interface RouteDeps {
   db: Db;
@@ -181,7 +182,9 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (error instanceof ConversationNotFoundError || error instanceof ConversationMissingError) {
     return { status: 404, message: 'Conversation not found.' };
   }
-  if (error instanceof ProjectNotFoundError) return { status: 404, message: error.message };
+  if (error instanceof ProjectNotFoundError || error instanceof ChatNotFoundError) {
+    return { status: 404, message: error.message };
+  }
   if (error instanceof TaskNotFoundError) return { status: 404, message: 'Task not found.' };
   if (error instanceof PlanDocumentError || error instanceof AgentConfigConflictError) {
     return { status: 409, message: error.message };
