@@ -8,7 +8,7 @@ import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from
 import { AnimatePresence } from 'motion/react';
 import { SortableContext } from '@dnd-kit/sortable';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
@@ -127,15 +127,13 @@ export const ConversationList = memo(function ConversationList({
   const waiting = attention(chats, selectedId);
   useMarkRead(selectedId, chats);
 
-  const addProject = useMutation({
-    mutationFn: projectsApi.create,
-    onSuccess: async (project) => {
-      setAddingProject(false);
-      folds.open(project.id);
-      toaster.show({ text: `Added project ${project.name}` });
-      await client.invalidateQueries({ queryKey: projectKeys.all });
-    },
-  });
+  const projectAdded = async (project: Project) => {
+    setAddingProject(false);
+    folds.open(project.id);
+    toaster.show({ text: `Added project ${project.name}` });
+    await client.invalidateQueries({ queryKey: projectKeys.all });
+  };
+  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
 
   const openChat = (id: string) => {
     onSelect(id);
@@ -479,6 +477,7 @@ export const ConversationList = memo(function ConversationList({
             linking={addProject.isPending}
             error={addProject.isError ? addProject.error.message : null}
             onUse={(rootPath) => addProject.mutate(rootPath)}
+            onCloned={(project) => void projectAdded(project)}
             onClose={() => setAddingProject(false)}
           />
         )}

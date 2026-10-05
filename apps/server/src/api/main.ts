@@ -37,6 +37,7 @@ import { startSlackNotifier } from '../slack/notifier.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { pruneOldRows } from './startup-prune.ts';
+import { cloneJobsFor } from './project-clone-routes.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -91,7 +92,26 @@ const endpoints = {
 };
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
+const cloneDeps = {
+  db,
+  workspaceId,
+  secrets,
+  endpoints,
+  runCommand,
+  loginShell,
+  githubApiUrl: config.GITHUB_API_URL,
+  githubApp,
+  cloneTest:
+    config.AGENT_RUNTIME === 'fake' && config.CLONE_TEST_ROOT
+      ? { root: config.CLONE_TEST_ROOT }
+      : null,
+  reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
+};
+const clones = cloneJobsFor(cloneDeps);
+await clones.recover();
 const app = createApp({
+  clones,
+  cloneTest: cloneDeps.cloneTest,
   db,
   hub,
   workspaceId,
@@ -163,6 +183,7 @@ attachTerminalSockets(server, terminals, {
 });
 
 const shutdown = async () => {
+  clones.stopAll();
   terminals.killAll();
   await previews.stopAll('shutdown').catch(() => undefined);
   stopLagMonitor();

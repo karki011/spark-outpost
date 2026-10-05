@@ -36,6 +36,7 @@ import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './vali
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
+import { cloneErrorStatus } from './project-clone-routes.ts';
 import { ticketErrorStatus } from './ticket-routes.ts';
 import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
@@ -162,7 +163,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     ticketErrorStatus(error) ??
     slackErrorStatus(error) ??
     teammateErrorStatus(error) ??
-    queueErrorStatus(error);
+    queueErrorStatus(error) ??
+    cloneErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

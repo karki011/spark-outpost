@@ -6,17 +6,17 @@ order: 522
 summary: Where your keys are stored, what leaves your computer and where it goes, and how Spark redacts secrets.
 ---
 
-Your chats, settings and code stay on your computer, and keys live in your keychain. Only what your AI provider, Jev and connected tools need leaves it.
+Your chats, settings and code stay on your computer; keys live in your keychain. Only what your AI provider, Jev and connected tools need leaves it.
 
 ## What leaves your computer
 
 | Goes to                               | What                                                                                     | Stop it                                                          |
 | ------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Your AI provider**                  | Your messages, and files, command output and allowed Slack messages the agent reads.     | Use [`.sparkignore`](sparkignore.md) for files                   |
+| **Your AI provider**                  | Your messages, and files, command output and allowed Slack messages the agent reads.     | [`.sparkignore`](sparkignore.md) for files                       |
 | **Jev**, if connected                 | Short, redacted facts about a request. Diffs and short file previews. Map file contents. | See [what Jev reads](jev.md#what-jev-reads)                      |
-| **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them.                                                    | Disconnect them                                                  |
+| **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                                   | Disconnect them                                                  |
 | **Slack**                             | Notifications, confirmed posts (as you after sign-in). Never direct message text.        | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
-| **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
+| **Spark Outpost team**, Mac app only  | Anonymous heartbeat.                                                                     | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 Without Jev, nothing goes to TypeSafe.
 
@@ -37,7 +37,7 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 ## What agents can't reach
 
 - [Secret files](protected-paths.md#secret-files) and anything in `.sparkignore`. Ship leaves them out of commits too.
-- Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets and keys.
+- Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 
 After a run reads private data, Spark asks before [sending data out](approvals.md#sending-data-out-after-reading-secrets).

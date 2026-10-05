@@ -10,6 +10,7 @@ import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-to
 import {
   API_PORT,
   APP_ORIGIN,
+  CLONE_TEST_ROOT,
   FAKE_ACP_MODELS,
   FAKE_CLAUDE_BIN,
   FAKE_ACP_MODES,
@@ -64,6 +65,7 @@ const serverEnv = {
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',
   MAP_ROOT_PREFIX,
+  CLONE_TEST_ROOT,
   LINEAR_API_URL: `${STUB_URL}/linear/graphql`,
   SLACK_API_URL: `${STUB_URL}/slack/api`,
   SPARK_SLACK_CLIENT_ID: SLACK_CLIENT_ID,

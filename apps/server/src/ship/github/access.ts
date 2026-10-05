@@ -10,6 +10,7 @@ import {
   deleteAppConnection,
   saveAppRepos,
   type AppConnection,
+  type RepoList,
 } from '../../persistence/github-app.ts';
 import {
   deleteGitHubToken,
@@ -101,6 +102,20 @@ function appApiRequest(deps: GitHubDeps): GitHubRequest {
 
 function appApi(deps: GitHubDeps): GitHubConnection {
   return restConnection('app', GITHUB_APP_HOST, appApiRequest(deps));
+}
+
+export async function connectedAppRepos(deps: GitHubDeps): Promise<RepoList | null> {
+  const row = await signedInApp(deps);
+  if (!row || !(await appTokensSaved(deps))) return null;
+  return { repos: row.repos, truncated: row.reposTruncated };
+}
+
+export async function accountConnection(deps: GitHubDeps): Promise<GitHubConnection | null> {
+  const token = await gitHubToken(deps.db, deps.workspaceId);
+  return (
+    (token ? await tokenConnection(deps, token.host) : null) ??
+    (await ghLoggedIn(deps, DEFAULT_GITHUB_HOST))
+  );
 }
 
 export async function appCovers(deps: GitHubDeps, repo: RemoteRepo): Promise<boolean> {

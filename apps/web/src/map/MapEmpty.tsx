@@ -75,13 +75,11 @@ export function MapEmpty() {
   const voice = useVoice();
   const client = useQueryClient();
   const [adding, setAdding] = useState(false);
-  const addProject = useMutation({
-    mutationFn: projectsApi.create,
-    onSuccess: async () => {
-      setAdding(false);
-      await client.invalidateQueries({ queryKey: projectKeys.all });
-    },
-  });
+  const projectAdded = async () => {
+    setAdding(false);
+    await client.invalidateQueries({ queryKey: projectKeys.all });
+  };
+  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
   return (
     <Shell>
       <SkyDoodle />
@@ -121,6 +119,7 @@ export function MapEmpty() {
             linking={addProject.isPending}
             error={addProject.isError ? addProject.error.message : null}
             onUse={(rootPath) => addProject.mutate(rootPath)}
+            onCloned={() => void projectAdded()}
             onClose={() => setAdding(false)}
           />
         )}

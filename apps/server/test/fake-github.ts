@@ -38,6 +38,7 @@ export interface FakePull {
 
 export interface FakeGitHub {
   pulls: FakePull[];
+  userRepos: string[];
   app: FakeGitHubApp;
   requests: { method: string; path: string; via: FakePull['via'] | null }[];
   handle(req: IncomingMessage, res: ServerResponse, path: string): Promise<void>;
@@ -80,6 +81,7 @@ const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
 
 export function fakeGitHub(): FakeGitHub {
   const pulls: FakePull[] = [];
+  const userRepos = ['acme/widgets', 'octo/notes'];
   const app = fakeGitHubApp();
   const requests: FakeGitHub['requests'] = [];
 
@@ -151,6 +153,7 @@ export function fakeGitHub(): FakeGitHub {
 
   return {
     pulls,
+    userRepos,
     app,
     requests,
     async handle(req, res, path) {
@@ -173,6 +176,10 @@ export function fakeGitHub(): FakeGitHub {
             ...(who.scopes ? { 'x-oauth-scopes': who.scopes } : {}),
           },
         );
+      }
+      if (url.pathname === '/user/repos') {
+        const page = Number(url.searchParams.get('page') ?? 1);
+        return send(res, 200, page === 1 ? userRepos.map((name) => ({ full_name: name })) : []);
       }
       const read =
         req.method === 'GET' ? pullReadAnswer(pulls, url.pathname, url.searchParams) : null;

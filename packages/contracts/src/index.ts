@@ -25,6 +25,7 @@ export * from './conversations.ts';
 export * from './file-view.ts';
 export * from './orchestration.ts';
 export * from './projects.ts';
+export * from './project-clone.ts';
 export * from './roles.ts';
 export * from './run-events.ts';
 export * from './runs.ts';
