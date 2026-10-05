@@ -141,7 +141,7 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   await expect(builder.locator('.agent-ava')).toHaveClass(/\bstopped\b/);
   await expect(agentHead(page, 'Jev')).toContainText('stopped');
   await expect(page.locator('.crew-turn .agent-state.failed')).toHaveCount(0);
-  await expect(page.locator('.crew-foot')).toContainText('Done 1 agent');
+  await expect(page.locator('.crew-foot')).toContainText('Stopped 1 agent');
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
 });
 
