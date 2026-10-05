@@ -207,6 +207,7 @@ function Facts({ action }: { action: SparkAction }) {
       return (
         <dl className="sac-facts">
           <Fact label="Channel">#{action.channel.name}</Fact>
+          {action.asYou && <Fact label="Posts as">You, under your own name</Fact>}
           <Fact label="Where">
             {action.threadTs ? (
               action.permalink ? (

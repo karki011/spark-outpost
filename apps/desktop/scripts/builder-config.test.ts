@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   builderConfig,
   packagedGitHubApp,
+  packagedSlackClientId,
   packagedHeartbeatUrl,
   releaseProblems,
   signingPlan,
@@ -144,6 +145,26 @@ describe('builderConfig', () => {
     expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).toMatchObject({
       githubApp: { clientId: 'Iv23li7XhI8fUF6WSltL', slug: 'spark-outpost' },
     });
+  });
+
+  it('bakes the Slack client ID only when one is set, and nothing by default', () => {
+    const env = { SPARK_SLACK_CLIENT_ID: ' 1234567890.9876543210 ' };
+    expect(packagedSlackClientId(env)).toBe('1234567890.9876543210');
+    expect(builderConfig({ ...base, archs: ['x64'], env }).extraMetadata).toMatchObject({
+      slackApp: { clientId: '1234567890.9876543210' },
+    });
+    expect(packagedSlackClientId({})).toBeNull();
+    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).not.toHaveProperty(
+      'slackApp',
+    );
+  });
+
+  it('refuses a Slack value that is not a client ID, such as a secret or a token', () => {
+    for (const value of ['0123456789abcdef0123456789abcdef', 'xoxp-1234567890-abcdefgh']) {
+      expect(() => packagedSlackClientId({ SPARK_SLACK_CLIENT_ID: value })).toThrow(
+        /Never a client secret/,
+      );
+    }
   });
 });
 

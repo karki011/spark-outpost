@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { SLACK_USER_SCOPES, type SlackConnection, type SlackDm } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { CopyManifest } from './SlackConnectForm.tsx';
+import { SlackSignInPanel } from './SlackSignIn.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
 import type { SlackSave } from './use-slack-save.ts';
 
@@ -58,6 +59,27 @@ function UpdateAppSteps({ missing, save }: { missing: readonly string[]; save: S
           {save.scopes.isSuccess ? 'Still missing. Reinstall the app in Slack first.' : ''}
         </span>
       </div>
+    </div>
+  );
+}
+
+function AllowInSlack({ missing }: { missing: readonly string[] }) {
+  const id = useId();
+  return (
+    <div className="sl-update" role="group" aria-labelledby={`${id}-title`}>
+      <h5 id={`${id}-title`}>Allow direct messages in Slack first</h5>
+      <p className="tk-field-help">
+        Your sign-in did not ask Slack for direct messages. Approving these adds them; nothing is
+        read until you turn the switch on and tick conversations.
+      </p>
+      <ul className="sl-scopes" aria-label="Permissions to add">
+        {missing.map((scope) => (
+          <li key={scope}>
+            <code>{scope}</code> {SLACK_USER_SCOPES[scope as keyof typeof SLACK_USER_SCOPES]}
+          </li>
+        ))}
+      </ul>
+      <SlackSignInPanel label="Allow direct messages in Slack" directMessages />
     </div>
   );
 }
@@ -168,7 +190,12 @@ export function SlackDirectMessages({
   return (
     <section className="sl-section" aria-labelledby={`${id}-title`}>
       <h4 id={`${id}-title`}>Direct messages</h4>
-      {blockedBy === 'scopes' && <UpdateAppSteps missing={missingScopes} save={save} />}
+      {blockedBy === 'scopes' &&
+        (connection.method === 'sign_in' ? (
+          <AllowInSlack missing={missingScopes} />
+        ) : (
+          <UpdateAppSteps missing={missingScopes} save={save} />
+        ))}
       <div>
         <label className="tk-switch">
           <BlobToggle

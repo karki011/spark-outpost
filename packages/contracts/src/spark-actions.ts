@@ -165,6 +165,7 @@ export const browserSignInActionSchema = z.object({
 export type BrowserSignInAction = z.infer<typeof browserSignInActionSchema>;
 export const postSlackActionSchema = z.object({
   action: z.literal('post_slack'),
+  asYou: z.boolean().optional(),
   channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
   threadTs: z.string().nullable(),
   permalink: z.string().nullable(),
@@ -258,10 +259,13 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
 };
 
+const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
+
 export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'browser_sign_in') {
     return `Sign in to ${action.origin} as ${action.label}?`;
   }
+  if (action.action === 'post_slack' && action.asYou) return SLACK_POST_AS_YOU_QUESTION;
   return sparkActionLabels[action.action].question;
 }
 

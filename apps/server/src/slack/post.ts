@@ -32,7 +32,7 @@ export async function sendSlackMessage(
   message: { channel: string; mrkdwn: string; threadTs?: string | null },
 ): Promise<SlackSent> {
   await paced(message.channel, deps.sleep ?? pause);
-  const data = await slackCall(open.bot, 'chat.postMessage', {
+  const data = await slackCall(open.main, 'chat.postMessage', {
     channel: message.channel,
     text: message.mrkdwn,
     thread_ts: message.threadTs ?? undefined,
@@ -72,7 +72,7 @@ export async function postToSlack(
       outcome: 'succeeded',
       detail: { via: post.via, length: post.text.length, thread: post.threadTs !== null },
     });
-    const link = await slackCall(open.bot, 'chat.getPermalink', {
+    const link = await slackCall(open.main, 'chat.getPermalink', {
       channel: sent.channel,
       message_ts: sent.ts,
     }).catch(() => null);

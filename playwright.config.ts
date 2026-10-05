@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { APP_CLIENT_ID, APP_SLUG } from './apps/server/test/fake-github-app.ts';
+import { SLACK_CLIENT_ID } from './apps/server/test/fake-slack-oauth.ts';
 import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
 import { SLACK_BOT_TOKEN, SLACK_USER_TOKEN } from './apps/server/test/fake-slack.ts';
 import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
@@ -65,6 +66,7 @@ const serverEnv = {
   MAP_ROOT_PREFIX,
   LINEAR_API_URL: `${STUB_URL}/linear/graphql`,
   SLACK_API_URL: `${STUB_URL}/slack/api`,
+  SPARK_SLACK_CLIENT_ID: SLACK_CLIENT_ID,
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),

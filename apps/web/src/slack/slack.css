@@ -145,3 +145,73 @@
 .sl-all {
   font-size: 13px;
 }
+
+.sl-methods {
+  display: grid;
+  gap: 14px;
+}
+.sl-method {
+  display: grid;
+  gap: 8px;
+}
+.sl-method + .sl-method {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.sl-method h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.sl-signin {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.sl-disclose {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.sl-disclose .chev {
+  color: var(--faint);
+  transition: transform 0.2s var(--out);
+}
+.sl-disclose[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+.sl-disclose small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.sl-inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sl-switch-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text);
+}

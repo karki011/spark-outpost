@@ -85,7 +85,13 @@ function ManifestSteps() {
   );
 }
 
-export function SlackConnectForm({ onConnected }: { onConnected?: () => void }) {
+export function SlackConnectForm({
+  onConnected,
+  replacesSignIn = false,
+}: {
+  onConnected?: () => void;
+  replacesSignIn?: boolean;
+}) {
   const id = useId();
   const queryClient = useQueryClient();
   const firstRef = useRef<HTMLInputElement>(null);
@@ -95,7 +101,8 @@ export function SlackConnectForm({ onConnected }: { onConnected?: () => void }) 
   );
   const [revealed, setRevealed] = useState(false);
   const connect = useMutation({
-    mutationFn: slackApi.connect,
+    mutationFn: (tokens: SaveSlackConnectionRequest) =>
+      slackApi.connect({ ...tokens, replace: replacesSignIn }),
     onSuccess: (status) => {
       setValues({});
       queryClient.setQueryData(slackKeys.status, status);
@@ -147,6 +154,12 @@ export function SlackConnectForm({ onConnected }: { onConnected?: () => void }) 
         Spark runs on your Mac, so you connect your own small Slack app. Nothing passes through a
         Spark server. <DocLink topic="Connect Slack" doc={{ page: 'connect-slack' }} />
       </p>
+      {replacesSignIn && (
+        <p className="sl-switch-note" role="note">
+          Saving these tokens switches Slack to your own app: Spark revokes your Slack sign-in and
+          removes it from this Mac. Posts then come from the app. Your allowed channels stay.
+        </p>
+      )}
       <ManifestSteps />
       {FIELDS.map((spec, index) => {
         const inputId = `${id}-${spec.key}`;
@@ -198,7 +211,7 @@ export function SlackConnectForm({ onConnected }: { onConnected?: () => void }) 
       )}
       <div className="tk-cform-acts">
         <button type="submit" className="btn primary sm" disabled={connect.isPending}>
-          {connect.isPending ? 'Checking…' : 'Save and check'}
+          {connect.isPending ? 'Checking…' : replacesSignIn ? 'Save and switch' : 'Save and check'}
         </button>
         <span className="tk-check-say" role="status">
           {connect.isPending ? 'Checking with Slack…' : ''}

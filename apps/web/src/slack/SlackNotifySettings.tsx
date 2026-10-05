@@ -84,20 +84,31 @@ export function SlackNotifySettings({
     ...connection.allowedChannels.map((channel) => ({ id: channel.id, label: `#${channel.name}` })),
   ];
   const lines = slackNotifyEventSchema.options.filter((event) => settings.notify[event]);
+  const signedIn = connection.method === 'sign_in';
 
   return (
     <section className="sl-section" aria-labelledby={`${id}-title`}>
       <h4 id={`${id}-title`}>Notify me in Slack</h4>
-      <MemberField connection={connection} save={save} />
-      <div className="sl-row">
-        <span>Send notifications to</span>
-        <ChoicePicker
-          label="Send notifications to"
-          choices={channelChoices}
-          value={settings.notifyChannelId ?? DIRECT}
-          onChange={(channelId) => save.settings.mutate({ notifyChannelId: channelId || null })}
-        />
-      </div>
+      {signedIn ? (
+        <p className="tk-field-help">
+          Notifications arrive as a message from you to yourself, in your own space in Slack. Slack
+          may not alert you about a message you sent. A message from a bot, or to a channel, needs
+          your own Slack app.
+        </p>
+      ) : (
+        <>
+          <MemberField connection={connection} save={save} />
+          <div className="sl-row">
+            <span>Send notifications to</span>
+            <ChoicePicker
+              label="Send notifications to"
+              choices={channelChoices}
+              value={settings.notifyChannelId ?? DIRECT}
+              onChange={(channelId) => save.settings.mutate({ notifyChannelId: channelId || null })}
+            />
+          </div>
+        </>
+      )}
       <div className="tk-sync">
         {slackNotifyEventSchema.options.map((event) => (
           <div key={event}>

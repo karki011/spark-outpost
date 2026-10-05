@@ -15,6 +15,8 @@ export interface SlackPlace {
 
 export const POSTING_IN_ONE_TO_ONE =
   "Spark can't post in a one-to-one direct message: the app isn't in it, and Spark never posts as you.";
+export const POSTING_IN_ONE_TO_ONE_AS_YOU =
+  'Spark never posts in a one-to-one direct message, even when it posts as you.';
 
 async function directPlace(
   deps: SlackDeps,
@@ -54,6 +56,11 @@ export async function requirePostablePlace(
   id: string,
 ): Promise<SlackPlace> {
   const place = await requireSlackPlace(deps, open, id);
-  if (place.kind === 'im') throw new SlackApiError('direct_message', POSTING_IN_ONE_TO_ONE);
+  if (place.kind === 'im') {
+    throw new SlackApiError(
+      'direct_message',
+      open.connection.method === 'sign_in' ? POSTING_IN_ONE_TO_ONE_AS_YOU : POSTING_IN_ONE_TO_ONE,
+    );
+  }
   return place;
 }

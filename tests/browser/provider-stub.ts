@@ -110,6 +110,20 @@ const server = createServer((req, res) => {
     return send(res, 200, { ok: true });
   }
   if (path === '/slack-test/posted') return send(res, 200, slack.posted);
+  if (path === '/slack-test/authorize') {
+    const wanted = new URL(req.url ?? '', 'http://stub').searchParams;
+    slack.oauth.deny = wanted.get('deny');
+    return send(res, 200, { redirect: slack.oauth.authorize(wanted.get('url') ?? '') });
+  }
+  if (path === '/slack-test/oauth') {
+    const { access, refresh, requests, revoked } = slack.oauth;
+    return send(res, 200, { access, refresh, requests, revoked });
+  }
+  if (path === '/slack-test/end-sign-in') {
+    slack.oauth.access = null;
+    slack.oauth.failRefresh = 'invalid_refresh_token';
+    return send(res, 200, { ok: true });
+  }
   if (path?.startsWith('/slack/api/')) return void slack.handle(req, res);
   if (path === '/tickets-test/reset') {
     tickets.reset();

@@ -27,7 +27,6 @@ import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
 import { FileLog } from './file-log.ts';
 import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
-import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
@@ -42,6 +41,7 @@ import {
 import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
 import { forkService, OutputTail, type ServiceOptions } from './service.ts';
 import { createShutdown } from './shutdown.ts';
+import { bakedSignInEnv, deliverSlackCallback, isSlackCallback } from './slack-sign-in.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
 import { Supervisor } from './supervisor.ts';
@@ -92,6 +92,7 @@ let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
 let pendingLinkChat: string | null = null;
+let localApi: { origin: string; token: string } | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
@@ -320,7 +321,7 @@ async function launch(): Promise<void> {
     version: app.getVersion(),
     webRoot: layout.webRoot,
     baseEnv: {
-      ...gitHubAppEnv(await readBakedGitHubApp(app.getAppPath())),
+      ...(await bakedSignInEnv(app.getAppPath())),
       ...process.env,
     },
   };
@@ -353,6 +354,7 @@ async function launch(): Promise<void> {
   );
 
   attachApiToken(apiUrl, token);
+  localApi = { origin: apiUrl, token };
   guardDownloads(session.defaultSession, {
     focus: () => spark?.focus(),
     log: log('downloads'),
@@ -443,6 +445,9 @@ function openSpark(): SparkWindow {
 }
 
 function openLink(url: string | null): void {
+  if (url && localApi && isSlackCallback(url, config.linkScheme)) {
+    void deliverSlackCallback(localApi, url);
+  }
   const chatId = url ? parseSparkChatLink(url, config.linkScheme) : null;
   if (!chatId) {
     showSpark();

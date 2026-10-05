@@ -43,7 +43,7 @@ export async function listSlackChannels(
   cursor: string | null,
 ): Promise<SlackChannelPage> {
   const open = await requireSlack(deps);
-  const data = await slackCall(open.user ?? open.bot, 'conversations.list', {
+  const data = await slackCall(open.user ?? open.main, 'conversations.list', {
     types: 'public_channel,private_channel',
     exclude_archived: true,
     limit: PAGE_SIZE,
@@ -61,10 +61,10 @@ export async function slackConversation(
   open: OpenSlack,
   channelId: string,
 ): Promise<RawConversation> {
-  const lookup = (client: OpenSlack['bot']) =>
+  const lookup = (client: OpenSlack['main']) =>
     slackCall(client, 'conversations.info', { channel: channelId });
-  const data = await lookup(open.bot).catch((error: unknown) => {
-    if (!open.user) throw error;
+  const data = await lookup(open.main).catch((error: unknown) => {
+    if (!open.user || open.user === open.main) throw error;
     return lookup(open.user);
   });
   return (data.channel ?? {}) as RawConversation;

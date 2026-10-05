@@ -7,9 +7,9 @@ import type {
 import { allowedSlackDms, recordSlackEvent, replaceAllowedSlackDms } from '../persistence/slack.ts';
 import type { RawConversation } from './channels.ts';
 import {
-  DIRECT_MESSAGES_NEED_SCOPES,
   DIRECT_MESSAGES_NEED_USER_TOKEN,
   directMessagesBlock,
+  directMessagesScopeMessage,
   requireSlack,
   slackStatus,
   slackUserScopes,
@@ -34,7 +34,10 @@ export async function requireDirectMessages(
   const scopes = await slackUserScopes(deps, open.connection, open.tokens.user);
   const { blockedBy } = directMessagesBlock(open.user !== null, scopes);
   if (blockedBy === 'scopes') {
-    throw new SlackApiError('direct_messages_unavailable', DIRECT_MESSAGES_NEED_SCOPES);
+    throw new SlackApiError(
+      'direct_messages_unavailable',
+      directMessagesScopeMessage(open.connection),
+    );
   }
   if (!open.user) {
     throw new SlackApiError('direct_messages_unavailable', DIRECT_MESSAGES_NEED_USER_TOKEN);
@@ -52,7 +55,7 @@ export function slackGroupName(raw: string): string {
 }
 
 async function personName(open: OpenSlack, userId: string): Promise<string> {
-  const data = await slackCall(open.bot, 'users.info', { user: userId }).catch(() => null);
+  const data = await slackCall(open.main, 'users.info', { user: userId }).catch(() => null);
   const user = (data?.user ?? {}) as { real_name?: unknown; name?: unknown };
   const name = slackText(user.real_name) || slackText(user.name) || userId;
   return userId === open.connection.memberId ? `${name} (you)` : name;

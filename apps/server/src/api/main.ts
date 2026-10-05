@@ -34,6 +34,7 @@ import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { startSlackNotifier } from '../slack/notifier.ts';
+import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { pruneOldRows } from './startup-prune.ts';
 
@@ -62,7 +63,15 @@ const previews = new PreviewServers(db, workspaceId, previewRuntime());
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 
 const secrets = configuredSecretStore(config);
-const slackDeps = { db, workspaceId, secrets, fetch, slackApiUrl: config.SLACK_API_URL };
+const slackSignIn = slackSignInConfig(config);
+const slackDeps = {
+  db,
+  workspaceId,
+  secrets,
+  fetch,
+  slackApiUrl: config.SLACK_API_URL,
+  signIn: slackSignIn,
+};
 const slackNotifier = startSlackNotifier(slackDeps, { linkScheme: config.SPARK_LINK_SCHEME });
 const slackSocket = startSlackSocket({
   ...slackDeps,
@@ -113,6 +122,7 @@ const app = createApp({
   githubApp,
   linearApiUrl: config.LINEAR_API_URL,
   slackApiUrl: config.SLACK_API_URL,
+  slackSignIn,
   slackNotifier,
   slackSocket,
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,

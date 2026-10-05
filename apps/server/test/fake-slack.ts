@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { SLACK_BOT_SCOPES, SLACK_USER_SCOPES } from '@spark-outpost/contracts';
+import { fakeSlackOAuth, type FakeSlackOAuth } from './fake-slack-oauth.ts';
 
 export const SLACK_BOT_TOKEN = 'xoxb-1111111111-fakebotabcdefghij';
 export const SLACK_USER_TOKEN = 'xoxp-2222222222-fakeuserabcdefghij';
@@ -54,6 +55,7 @@ export interface FakeSlack {
   failPosts: string | null;
   pageSize: number;
   socketUrl: string | null;
+  oauth: FakeSlackOAuth;
   handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
 }
 
@@ -156,11 +158,16 @@ export function fakeSlack(): FakeSlack {
     failPosts: null,
     pageSize: 3,
     socketUrl: null,
+    oauth: fakeSlackOAuth({ id: SLACK_ME, teamId: 'T0ACME', team: 'Acme' }),
     handle,
   };
 
+  const signedIn = (token: string) => token !== '' && token === slack.oauth.access;
+  const asUser = (token: string) => token === SLACK_USER_TOKEN || signedIn(token);
+  const userScopes = (token: string) => (signedIn(token) ? slack.oauth.scopes : slack.userScopes);
+
   const visibleTo = (token: string, channel: FakeSlackChannel) =>
-    token === SLACK_USER_TOKEN ? channel.userCanSee : channel.botIsMember || !channel.isPrivate;
+    asUser(token) ? channel.userCanSee : channel.botIsMember || !channel.isPrivate;
 
   const rawChannel = (channel: FakeSlackChannel) => ({
     id: channel.id,
@@ -177,13 +184,13 @@ export function fakeSlack(): FakeSlack {
 
   const missingFor = (token: string, direct: FakeSlackDirect, access: 'read' | 'history') => {
     const scope = `${direct.kind}:${access}`;
-    return token === SLACK_USER_TOKEN && !slack.userScopes.includes(scope) ? scope : null;
+    return asUser(token) && !userScopes(token).includes(scope) ? scope : null;
   };
 
   const directFor = (token: string, id: string | null) => {
     const direct = slack.directs.find((entry) => entry.id === id);
     if (!direct) return null;
-    return token === SLACK_USER_TOKEN || direct.botIsMember ? direct : null;
+    return asUser(token) || direct.botIsMember ? direct : null;
   };
 
   function replies(res: ServerResponse, token: string, form: URLSearchParams) {
@@ -222,7 +229,9 @@ export function fakeSlack(): FakeSlack {
     const target = form.get('channel') ?? '';
     const channel = slack.channels.find((entry) => entry.id === target) ?? directFor(token, target);
     if (!channel && !slack.users[target]) return fail(res, 'channel_not_found');
-    if (channel && !channel.botIsMember) return fail(res, 'not_in_channel');
+    const mayPost = (place: FakeSlackChannel | FakeSlackDirect) =>
+      asUser(token) ? !('userCanSee' in place) || place.userCanSee : place.botIsMember;
+    if (channel && !mayPost(channel)) return fail(res, 'not_in_channel');
     const ts = `1770000000.${String(slack.posted.length + 1).padStart(6, '0')}`;
     slack.posted.push({
       channel: target,
@@ -234,7 +243,7 @@ export function fakeSlack(): FakeSlack {
   }
 
   function search(res: ServerResponse, token: string, form: URLSearchParams) {
-    if (token !== SLACK_USER_TOKEN) return fail(res, 'not_allowed_token_type');
+    if (!asUser(token)) return fail(res, 'not_allowed_token_type');
     const query = (form.get('query') ?? '').replace(/\s+in:#\S+/, '').toLowerCase();
     const places = [
       ...slack.channels.map((channel) => ({ id: channel.id, name: channel.name })),
@@ -292,8 +301,18 @@ export function fakeSlack(): FakeSlack {
     const token = (req.headers.authorization ?? '').replace(/^Bearer /, '');
     const form = await read(req);
     slack.calls.push(method);
-    if (![SLACK_BOT_TOKEN, SLACK_USER_TOKEN, SLACK_APP_TOKEN].includes(token)) {
+    if (method === 'oauth.v2.access') {
+      return send(
+        res,
+        token ? { ok: false, error: 'invalid_arguments' } : await slack.oauth.grant(form),
+      );
+    }
+    if (![SLACK_BOT_TOKEN, SLACK_USER_TOKEN, SLACK_APP_TOKEN].includes(token) && !signedIn(token)) {
       return fail(res, 'invalid_auth');
+    }
+    if (method === 'auth.revoke') {
+      slack.oauth.revoke(token);
+      return send(res, { ok: true, revoked: true });
     }
     if (method === 'apps.connections.open') {
       if (token !== SLACK_APP_TOKEN) return fail(res, 'not_allowed_token_type');
@@ -302,7 +321,7 @@ export function fakeSlack(): FakeSlack {
     if (token === SLACK_APP_TOKEN) return fail(res, 'not_allowed_token_type');
     res.setHeader(
       'x-oauth-scopes',
-      (token === SLACK_USER_TOKEN ? slack.userScopes : Object.keys(SLACK_BOT_SCOPES)).join(','),
+      (asUser(token) ? userScopes(token) : Object.keys(SLACK_BOT_SCOPES)).join(','),
     );
     if (method === 'auth.test') {
       const bot = token === SLACK_BOT_TOKEN;

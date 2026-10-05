@@ -5,12 +5,14 @@ import { keychainCache, nativeKeyring, type Keyring, type KeychainTiming } from 
 export type TicketSecretId = `ticket:${TicketSourceId}`;
 export type SlackSecretId = 'slack:bot' | 'slack:user' | 'slack:app';
 export const SLACK_SECRET_IDS: readonly SlackSecretId[] = ['slack:bot', 'slack:user', 'slack:app'];
+export const SLACK_SIGN_IN_SECRET = 'slack:sign-in';
 export type SecretId =
   | ConnectableId
   | 'github'
   | 'github-app'
   | TicketSecretId
   | SlackSecretId
+  | typeof SLACK_SIGN_IN_SECRET
   | `mcp:${string}`
   | `signin:${string}`;
 

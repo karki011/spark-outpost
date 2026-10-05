@@ -48,7 +48,7 @@ export interface AppOptions
     SetupDeps,
     ShipRouteDeps,
     TicketRouteDeps,
-    Pick<SlackRouteDeps, 'slackApiUrl' | 'slackNotifier' | 'slackSocket'>,
+    Pick<SlackRouteDeps, 'slackApiUrl' | 'slackSignIn' | 'slackNotifier' | 'slackSocket'>,
     ChatSettingsDeps,
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
