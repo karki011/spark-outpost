@@ -18,7 +18,7 @@ When the agent needs you, the line says **Waiting for you**. Select it, or press
 
 ## Stop a turn
 
-1. Select **Stop**. It replaces the send button while a turn runs.
+1. Select **Stop**, which replaces the send button.
 
 ## Queue messages
 
@@ -40,7 +40,7 @@ Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 1. Open the chat's **…** menu and select **Delete**, then **Confirm delete**.
 2. To take it back, select **Undo**.
 
-A running chat can be deleted too; Spark stops it first.
+A running chat can be deleted too: Spark stops the running work first.
 
 ## After a turn
 
