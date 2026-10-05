@@ -12,19 +12,21 @@ First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
 
 ## Find your tickets
 
-1. Select **Tickets** in the rail. Groups are listed most urgent first. See [Ticket groups](statuses-and-limits.md#ticket-groups).
-2. Select a view in the side column to show only that group.
+1. Select **Tickets** in the rail. See [Ticket groups](statuses-and-limits.md#ticket-groups).
+2. Select a view in the side column, such as **Needs you**.
 3. Narrow with **Source**, **Team or project** and **Assignee**, or search.
 
 ![The Tickets inbox grouped by where each ticket is](images/tickets-inbox-light.png)
 
-Snooze a ticket to hide it until later.
+Snooze hides a ticket until later. **Dismiss** clears a **Needs you** ticket until something changes.
 
-Select a ticket for its details: status, assignee, reporter, created date and pull requests. Drag the pane's edge to resize it.
+Failing checks show as a badge in **In review / PR open**; opening the ticket marks them seen.
+
+Select a ticket for its details and pull requests. Drag the pane's edge to resize it.
 
 ## Start a chat from a ticket
 
-1. Point at the ticket's row and select **Start** at its end.
+1. Point at a ticket's row and select **Start**.
 2. Under **How to start**, pick **Plan first** or **Build**.
 3. Pick the **Project folder**.
 4. Leave **Move** _KEY_ **to In progress** on to update your tracker.
@@ -39,7 +41,7 @@ Ticket text is data, never instructions. For a link or a folder, Spark sends onl
 
 ## Follow it to a pull request
 
-When you ship the chat's work, Spark adds the PR link to the ticket and moves it along if you allow it.
+When you ship, Spark adds the PR link to the ticket and moves it if you allow it.
 
 Select **Open chat** on a ticket's row to return to its chat.
 

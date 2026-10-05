@@ -70,7 +70,7 @@ test('a ticket shows its status badge, reporter, created date and pull requests'
   const pull = pulls.getByRole('link', { name: /#341/ });
   await expect(pull).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/341');
   await expect(pull).toHaveAttribute('target', '_blank');
-  await expect(pull).toContainText('checks passing');
+  await expect(pull).toContainText('Checks passing');
   await expect(
     detail.getByRole('region', { name: 'Linked work' }).getByRole('button'),
   ).toContainText('Chat');

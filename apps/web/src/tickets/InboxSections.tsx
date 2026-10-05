@@ -3,8 +3,8 @@ import type { AttentionSettings, InboxTicket, TicketSection } from '@spark-outpo
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { rowPreview } from './row-preview.ts';
 import { SectionHeader } from './SectionHeader.tsx';
-import { SparkFace } from './StatusChip.tsx';
-import { rowLine, type LiveTicket } from './ticket-flow.ts';
+import { ChecksBadge, SparkFace } from './StatusChip.tsx';
+import { rowChecks, rowLine, type LiveTicket } from './ticket-flow.ts';
 import {
   ageTitle,
   attentionRule,
@@ -65,6 +65,7 @@ const InboxRow = memo(function InboxRow({
 }) {
   const { ticket } = entry;
   const action = rowAction({ ...ticket, section: entry.section });
+  const checks = rowChecks(entry);
   return (
     <TicketRow
       id={ticketId(ticket)}
@@ -78,6 +79,11 @@ const InboxRow = memo(function InboxRow({
       reason={rowLine(entry)}
       tone={entry.tone}
       reasonIcon={entry.section === 'spark' ? <SparkFace chat={entry.chat} /> : undefined}
+      reasonBadge={
+        checks ? (
+          <ChecksBadge checks={checks} unseen={ticket.notice ? !ticket.notice.seen : false} />
+        ) : undefined
+      }
       more={entry.section === 'attention' ? ticket.flags.slice(1).map((flag) => flag.text) : []}
       age={
         ticket.age

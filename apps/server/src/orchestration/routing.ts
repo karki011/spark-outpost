@@ -1,5 +1,6 @@
 import type {
   AgentPick,
+  ModelRef,
   ModelRouting,
   Ratings,
   RouteSource,
@@ -55,6 +56,7 @@ export interface RouteContext {
   providerEffort: string | null;
   mainModel?: string | null;
   candidates: readonly AdvisorCandidate[];
+  leftOut?: Readonly<Record<string, readonly ModelRef[]>>;
   request?: string;
   now?: Date;
 }

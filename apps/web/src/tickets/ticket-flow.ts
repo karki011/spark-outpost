@@ -5,6 +5,7 @@ import {
   type ConversationAttention,
   type ConversationSummary,
   type InboxTicket,
+  type PullRequestChecks,
   type TicketSection,
 } from '@spark-outpost/contracts';
 import type { RowTone } from './TicketRow.tsx';
@@ -90,10 +91,20 @@ export function liveTicket(ticket: InboxTicket, chats: ChatLookup): LiveTicket {
   return { ticket, section, line: ticket.reason, tone: ticket.tone, chat };
 }
 
-export function rowLine({ ticket, line }: LiveTicket): string | null {
+export function rowChecks({ ticket, line }: LiveTicket): PullRequestChecks | null {
+  const pull = ticket.pullRequest;
+  if (ticket.section !== 'review' || line !== ticket.reason || !pull) return null;
+  return pull.state === 'merged' || pull.state === 'closed' ? null : pull.checks;
+}
+
+export function rowLine(entry: LiveTicket): string | null {
+  const { ticket, line } = entry;
   if (line !== ticket.reason) return line;
   const pull = ticket.pullRequest;
   switch (ticket.section) {
+    case 'review':
+      if (!pull || !rowChecks(entry)) return line;
+      return pull.state === 'draft' ? `Draft PR #${pull.number}` : `PR #${pull.number}`;
     case 'up_next':
       return ticket.dueDate ? line : null;
     case 'started':

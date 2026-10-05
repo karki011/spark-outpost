@@ -26,7 +26,7 @@ To set it, see [Pick the model, effort and mode](agent-mode.md).
 | Trivial edits    | A middle model                                                            |
 | Everything else  | The best score: each model's chance of getting it right, against its cost |
 
-Spark never runs a Builder on a small, fast model. It raises it to the next model up and says so.
+Spark never runs a Builder on a small, fast model; it raises it one model up and says so. Auto skips models your sign-in can't use.
 
 ## With Jev and without
 
@@ -37,11 +37,11 @@ The score uses four ratings of the request, from 1 to 5: complexity, ambiguity, 
 | With Jev    | Jev. Ratings it's unsure about fall back to the rules. |
 | Without Jev | Rules estimate all four from the request and the code. |
 
-Either way, code calculates the score and picks the model. Jev never picks it.
+Either way, code picks the model; Jev never does.
 
 ## Builders in a pinned chat
 
-A Builder can run one model down for clearly simple work when Jev is sure, and step up a model for hard work. Destructive work goes to the top model.
+A Builder can run one model down for clearly simple work when Jev is sure, and step up a model for hard work.
 
 Without Jev, or when Jev isn't sure, the Builder keeps your pinned model.
 

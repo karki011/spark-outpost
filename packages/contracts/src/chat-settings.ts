@@ -6,6 +6,7 @@ import {
   configValuesSchema,
 } from './agent-modes.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
+import { modelAvailabilitySchema, modelRefSchema, providerAccessSchema } from './model-access.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './setup.ts';
 
@@ -19,6 +20,8 @@ export type CapabilityOption = z.infer<typeof capabilityOptionSchema>;
 export const modelOptionSchema = capabilityOptionSchema.extend({
   retiresNotBefore: z.string().nullable().optional(),
   retired: z.boolean().optional(),
+  availability: modelAvailabilitySchema.optional(),
+  switchTo: modelRefSchema.nullable().optional(),
 });
 export type ModelOption = z.infer<typeof modelOptionSchema>;
 
@@ -51,6 +54,7 @@ export const providerCapabilitiesSchema = z.object({
   defaultMode: z.string().nullable().default(null),
   options: z.array(configOptionInfoSchema).default([]),
   capturedAt: z.string(),
+  access: providerAccessSchema.nullable().optional(),
 });
 export type ProviderCapabilities = z.infer<typeof providerCapabilitiesSchema>;
 

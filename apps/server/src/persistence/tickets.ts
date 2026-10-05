@@ -63,6 +63,8 @@ export interface TicketTimes {
   statusSince: Date | null;
   firstSeenAssignedAt: Date | null;
   snooze: TicketSnooze | null;
+  dismissed: string[];
+  noticeSeen: string | null;
 }
 
 export async function ticketTimes(
@@ -77,8 +79,11 @@ export async function ticketTimes(
     first_seen_assigned_at: Date | null;
     snoozed_until: Date | null;
     snoozed_rules: AttentionRule[];
+    dismissed_flags: string[];
+    notice_seen: string | null;
   }>(
-    `SELECT source, key, status_since, first_seen_assigned_at, snoozed_until, snoozed_rules
+    `SELECT source, key, status_since, first_seen_assigned_at, snoozed_until, snoozed_rules,
+       dismissed_flags, notice_seen
      FROM tickets
      WHERE workspace_id = $1 AND (source || ':' || key) = ANY($2::text[])`,
     [workspaceId, tickets.map((ticket) => ticketRef(ticket.source, ticket.key))],
@@ -92,9 +97,41 @@ export async function ticketTimes(
         snooze: row.snoozed_until
           ? { until: row.snoozed_until.toISOString(), rules: row.snoozed_rules }
           : null,
+        dismissed: row.dismissed_flags,
+        noticeSeen: row.notice_seen,
       },
     ]),
   );
+}
+
+type TicketId = { source: TicketSourceId; key: string };
+
+export async function setDismissedFlags(
+  db: Queryable,
+  workspaceId: string,
+  ticket: TicketId,
+  flags: readonly string[],
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE tickets SET dismissed_flags = $4
+     WHERE workspace_id = $1 AND source = $2 AND key = $3`,
+    [workspaceId, ticket.source, ticket.key, [...flags]],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function setNoticeSeen(
+  db: Queryable,
+  workspaceId: string,
+  ticket: TicketId,
+  notice: string,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE tickets SET notice_seen = $4
+     WHERE workspace_id = $1 AND source = $2 AND key = $3`,
+    [workspaceId, ticket.source, ticket.key, notice],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function setTicketSnooze(

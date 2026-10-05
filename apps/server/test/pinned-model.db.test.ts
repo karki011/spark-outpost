@@ -40,7 +40,7 @@ async function sendMessage(send: ReturnType<typeof client>, conversationId: stri
     id: randomUUID(),
     content: 'Keep building',
   }).expect(201);
-  return response.body.run as { model: string | null };
+  return response.body.run as { model: string | null; modelSwitch: unknown };
 }
 
 describe('a pinned model across an app restart', () => {
@@ -57,7 +57,8 @@ describe('a pinned model across an app restart', () => {
       model: 'opus',
       routing: 'pinned',
     }).expect(200);
-    expect((await sendMessage(before, id)).model).toBe('opus');
+    const kept = await sendMessage(before, id);
+    expect(kept).toMatchObject({ model: 'opus', modelSwitch: null });
 
     await saveCapabilities(
       t.db,
@@ -81,6 +82,14 @@ describe('a pinned model across an app restart', () => {
       model: 'opus',
       routing: 'pinned',
     }).expect(200);
-    expect((await sendMessage(send, id)).model).toBe('default');
+    const run = await sendMessage(send, id);
+    expect(run.model).toBe('default');
+    expect(run.modelSwitch).toEqual({
+      provider: 'claude',
+      signIn: 'Claude sign-in',
+      from: { id: 'opus', label: 'opus' },
+      to: { id: 'default', label: 'Default (recommended)' },
+      learned: false,
+    });
   });
 });

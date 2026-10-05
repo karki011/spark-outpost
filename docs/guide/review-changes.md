@@ -42,13 +42,13 @@ Only the agent's own edits are counted and reverted, not changes it pulls in fro
 
 ## Checks after a change
 
-After a Builder's turn, Spark runs the project's checks and adds one **Checks** row to **Tasks**. Open it for the output.
+After a Builder's turn, Spark runs project checks and adds one **Checks** row to **Tasks**. Open it for output.
 
 | The row says                                    | Meaning                                       |
 | ----------------------------------------------- | --------------------------------------------- |
 | **failed**                                      | The change caused it. The Builder fixes once. |
 | **already failing before this change**          | It fails without the change too.              |
-| **could not finish in time**, **could not run** | Not counted. The row says what to do.         |
+| **could not finish in time**, **could not run** | Not counted. The row says why.                |
 
 Choose the commands, or **Off**, in **Settings → Projects**.
 

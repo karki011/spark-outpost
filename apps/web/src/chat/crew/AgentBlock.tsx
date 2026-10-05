@@ -3,6 +3,7 @@ import {
   isCheckApproval,
   type Approval,
   type MemberMessage,
+  type ModelSwitch,
   type Project,
 } from '@spark-outpost/contracts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
@@ -17,6 +18,7 @@ import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
+import { ErrorLine, ModelSwitchNote } from '../ModelSwitchNote.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -122,6 +124,8 @@ interface BodyProps {
   steps: readonly RunStep[];
   text: string;
   error: string | null;
+  errorDetails?: string | null;
+  modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
 }
@@ -135,6 +139,8 @@ function AgentBody({
   steps,
   text,
   error,
+  errorDetails = null,
+  modelSwitch = null,
   approvals,
   repo,
 }: BodyProps & { liveId?: string | null }) {
@@ -176,7 +182,8 @@ function AgentBody({
         {agent.state === 'queued' && !agent.spark && (
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
         )}
-        {error && <p className="error-line">{error}</p>}
+        <ModelSwitchNote change={modelSwitch} />
+        <ErrorLine error={error} details={errorDetails} change={modelSwitch} />
       </div>
     </>
   );
@@ -196,6 +203,7 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
       steps={steps}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
+      modelSwitch={stored.modelSwitch ?? stream.modelSwitch}
       approvals={shownApprovals(stored.approvals, stream.approvals)}
     />
   );
@@ -212,6 +220,8 @@ interface AgentBlockProps {
   steps: readonly RunStep[];
   text: string;
   error: string | null;
+  errorDetails?: string | null;
+  modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
   after?: ReactNode;

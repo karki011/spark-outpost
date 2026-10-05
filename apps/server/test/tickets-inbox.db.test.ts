@@ -248,19 +248,93 @@ describe('tickets inbox', () => {
     expect(await checks()).toBe('pending');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'failure' };
     expect(await checks()).toBe('failing');
-    const rules = async () => (await ticketIn('ENG-12')).flags.map((flag) => flag.rule);
-    await setRuns('running');
-    expect(await rules()).not.toContain('pr-checks');
-    await setRuns('succeeded');
-    expect(await ticketIn('ENG-12')).toMatchObject({
-      section: 'attention',
-      reason: 'PR #1 checks failing',
-      tone: 'error',
-    });
-    pull.checkRuns[1] = { status: 'completed', conclusion: 'success' };
-    expect(await rules()).not.toContain('pr-checks');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'skipped' };
     expect(await checks()).toBe('passing');
+    pull.checkRuns = [
+      { name: 'lint', status: 'completed', conclusion: 'failure' },
+      { name: 'unit', status: 'in_progress', conclusion: null },
+    ];
+    expect(await checks()).toBe('pending');
+  });
+
+  it('keeps a ticket with failing checks in review and notifies once per head commit', async () => {
+    await connect();
+    await connectGitHubToken();
+    fakePull(1, {});
+    await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/1');
+    await setRuns('succeeded');
+    await send('patch', '/api/tickets/attention-settings', { reviewDays: 30 }).expect(200);
+    const pull = github.github.pulls[0]!;
+    pull.checkRuns = [{ name: 'unit', status: 'in_progress', conclusion: null }];
+    expect((await ticketIn('ENG-12')).notice).toBeUndefined();
+
+    pull.checkRuns = [
+      { name: 'unit', status: 'completed', conclusion: 'failure' },
+      { name: 'lint', status: 'completed', conclusion: 'success' },
+    ];
+    const failed = await ticketIn('ENG-12');
+    expect(failed).toMatchObject({
+      section: 'review',
+      reason: 'PR #1 · checks failing',
+      tone: 'none',
+      flags: [],
+      notice: { text: 'PR #1 checks failing', seen: false },
+    });
+    expect(failed.pullRequest).toMatchObject({ headSha: 'sha-1', failedChecks: ['unit'] });
+    const needsYou = (await inbox()).tickets.filter((ticket) => ticket.section === 'attention');
+    expect(needsYou.map((ticket) => ticket.key)).not.toContain('ENG-12');
+    const { rows } = await t.db.query<{ items: { key: string }[] }>(
+      'SELECT items FROM attention_snapshots',
+    );
+    expect(rows[0]!.items.map((item) => item.key)).not.toContain('ENG-12');
+
+    await setRuns('running');
+    expect((await ticketIn('ENG-12')).notice).toBeUndefined();
+    await setRuns('succeeded');
+
+    const seen = { notice: failed.notice!.id };
+    await send('put', '/api/tickets/linear/ENG-12/notice-seen', seen).expect(200, { ok: true });
+    await send('put', '/api/tickets/linear/ENG-12/notice-seen', {}).expect(400);
+    await send('put', '/api/tickets/linear/NOPE-1/notice-seen', seen).expect(404);
+    expect((await ticketIn('ENG-12')).notice).toMatchObject({ id: seen.notice, seen: true });
+
+    pull.sha = 'sha-pushed';
+    expect((await ticketIn('ENG-12')).notice).toMatchObject({ seen: false });
+    expect((await ticketIn('ENG-12')).notice!.id).not.toBe(seen.notice);
+    pull.checkRuns = [{ name: 'unit', status: 'completed', conclusion: 'success' }];
+    expect((await ticketIn('ENG-12')).notice).toBeUndefined();
+  });
+
+  it('dismisses a Needs you row until its state changes, apart from snoozing', async () => {
+    await connect();
+    const issue = stubs.linear.issues.find((entry) => entry.identifier === 'ENG-12')!;
+    issue.labels = ['blocked'];
+    const flagged = await ticketIn('ENG-12');
+    expect(flagged).toMatchObject({ section: 'attention', reason: 'Blocked' });
+    const flags = flagged.flags.map((flag) => flag.key);
+
+    await send('put', '/api/tickets/linear/ENG-12/dismiss', { flags: [] }).expect(400);
+    await send('put', '/api/tickets/linear/NOPE-1/dismiss', { flags }).expect(404);
+    const after = ticketInboxSchema.parse(
+      (await send('put', '/api/tickets/linear/ENG-12/dismiss', { flags }).expect(200)).body,
+    );
+    const dismissed = after.tickets.find((ticket) => ticket.key === 'ENG-12')!;
+    expect(dismissed).toMatchObject({ section: 'up_next', flags: [] });
+    expect(dismissed.snooze).toBeUndefined();
+    expect(sectionOf(await inbox(), 'ENG-12')).toBe('up_next');
+
+    const undone = await request(app)
+      .delete('/api/tickets/linear/ENG-12/dismiss')
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .expect(200);
+    expect(sectionOf(ticketInboxSchema.parse(undone.body), 'ENG-12')).toBe('attention');
+
+    await send('put', '/api/tickets/linear/ENG-12/dismiss', { flags }).expect(200);
+    issue.labels = [];
+    expect(sectionOf(await inbox(), 'ENG-12')).toBe('up_next');
+    issue.labels = ['blocked'];
+    expect(sectionOf(await inbox(), 'ENG-12')).toBe('attention');
   });
 
   it('shows Not available when the pull request cannot be read', async () => {

@@ -19,6 +19,8 @@ export interface PullRequestDetail extends PullRequest {
   mergedAt: string | null;
   reviews: { user: string; state: string }[];
   checks: PullRequestChecks | null;
+  headSha: string | null;
+  failedChecks: string[];
 }
 
 export interface NewPullRequest {
@@ -98,16 +100,31 @@ const reviewsSchema = z.array(
 );
 
 const checkRunsSchema = z.object({
-  check_runs: z.array(z.object({ status: z.string(), conclusion: z.string().nullable() })),
+  check_runs: z.array(
+    z.object({
+      name: z.string().optional(),
+      status: z.string(),
+      conclusion: z.string().nullable(),
+    }),
+  ),
 });
+type CheckRuns = z.infer<typeof checkRunsSchema>['check_runs'];
 
 const FAILED_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required']);
 
-function checksOf(runs: z.infer<typeof checkRunsSchema>['check_runs']) {
+const failedRuns = (runs: CheckRuns) =>
+  runs.filter((run) => FAILED_CONCLUSIONS.has(run.conclusion ?? ''));
+
+function checksOf(runs: CheckRuns): PullRequestChecks | null {
   if (runs.length === 0) return null;
-  if (runs.some((run) => FAILED_CONCLUSIONS.has(run.conclusion ?? ''))) return 'failing';
   if (runs.some((run) => run.status !== 'completed')) return 'pending';
-  return 'passing';
+  return failedRuns(runs).length > 0 ? 'failing' : 'passing';
+}
+
+function checkFacts(runs: CheckRuns) {
+  const checks = checksOf(runs);
+  const failed = checks === 'failing' ? failedRuns(runs).flatMap((run) => run.name ?? []) : [];
+  return { checks, failedChecks: [...new Set(failed)] };
 }
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -146,13 +163,13 @@ export function restConnection(
   request: GitHubRequest,
 ): GitHubConnection {
   async function readChecks(repo: RepoRef, sha: string | undefined) {
-    if (!sha) return null;
+    if (!sha) return checkFacts([]);
     const answer = await request(
       'GET',
       `${repoPath(repo)}/commits/${segment(sha)}/check-runs?per_page=100`,
     ).catch(() => null);
     const parsed = answer && answer.status === 200 ? checkRunsSchema.safeParse(answer.data) : null;
-    return parsed?.success ? checksOf(parsed.data.check_runs) : null;
+    return checkFacts(parsed?.success ? parsed.data.check_runs : []);
   }
 
   return {
@@ -196,7 +213,8 @@ export function restConnection(
           user: review.user?.login ?? '',
           state: review.state,
         })),
-        checks: await readChecks(repo, pull.head?.sha),
+        headSha: pull.head?.sha ?? null,
+        ...(await readChecks(repo, pull.head?.sha)),
       };
     },
     async createPullRequest(repo, pull) {

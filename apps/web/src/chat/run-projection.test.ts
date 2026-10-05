@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventType, type RunEvent } from '@spark-outpost/contracts';
+import { EventType, modelSwitchText, type RunEvent } from '@spark-outpost/contracts';
 import {
   applyRunEvent,
   initialRunProjection,
@@ -57,6 +57,31 @@ describe('applyRunEvent', () => {
       message: 'Rate limit reached',
     });
     expect(failed).toMatchObject({ status: 'failed', error: 'Rate limit reached' });
+  });
+});
+
+describe('a model switch during a run', () => {
+  const change = {
+    provider: 'codex',
+    signIn: 'ChatGPT sign-in',
+    from: { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol' },
+    to: { id: 'gpt-6-sol', label: '6 Sol' },
+    learned: true,
+  };
+  const activity = (content: Record<string, unknown>): RunEvent => ({
+    type: EventType.ACTIVITY_SNAPSHOT,
+    messageId: 'model_switch',
+    activityType: 'model_switch',
+    content,
+    replace: true,
+  });
+
+  it('is kept for the live note and ignores a malformed payload', () => {
+    expect(replay([[1, activity(change)]]).modelSwitch).toEqual(change);
+    expect(replay([[1, activity({ from: 'x' })]]).modelSwitch).toBeNull();
+    expect(modelSwitchText(change)).toBe(
+      "Your ChatGPT sign-in can't use GPT-6.1 Sol, so this turn ran on 6 Sol instead.",
+    );
   });
 });
 

@@ -4,7 +4,7 @@ import {
   type PullRequestStatus,
   type TicketListItem,
 } from '@spark-outpost/contracts';
-import { attentionFlags, dueText, type TicketFacts } from './attention.ts';
+import { attentionFlags, dueText, settledDismissals, type TicketFacts } from './attention.ts';
 import { placeTicket, sortInbox } from './sections.ts';
 
 const now = new Date(2026, 8, 28, 10, 0, 0);
@@ -59,6 +59,7 @@ const pull = (state: PullRequestStatus['state']): PullRequestStatus => ({
 });
 
 const work = [{ taskId: TASK, conversationId: CHAT, startedAt: daysAgo(2), pullRequests: [] }];
+const place = (input: TicketFacts) => placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
 const rules = (input: TicketFacts) =>
   attentionFlags(input, DEFAULT_ATTENTION_SETTINGS, now).map((flag) => flag.rule);
 
@@ -121,22 +122,59 @@ describe('attention rules', () => {
     expect(rules(quick)).toEqual([]);
   });
 
-  it('flags failing checks on an open pull request unless a chat is fixing them', () => {
-    const failing = { ...pull('review'), checks: 'failing' as const };
-    const input = facts({ pullRequest: failing });
-    expect(attentionFlags(input, DEFAULT_ATTENTION_SETTINGS, now)[0]).toMatchObject({
-      rule: 'pr-checks',
-      text: 'PR #88 checks failing',
-      severity: 'error',
+  it('keeps failing checks out of Needs you and raises a notice for the head commit', () => {
+    const failing = { ...pull('review'), checks: 'failing' as const, headSha: 'abc' };
+    const input = facts({ pullRequest: failing }, { status: 'in_review' });
+    expect(rules(input)).toEqual([]);
+    expect(place(input)).toMatchObject({
+      section: 'review',
+      reason: 'PR #88 · checks failing',
+      tone: 'none',
+      notice: { id: `${failing.url}@abc`, text: 'PR #88 checks failing', seen: false },
     });
+    expect(place({ ...input, noticeSeen: `${failing.url}@abc` }).notice?.seen).toBe(true);
+    const pushed = { ...input, pullRequest: { ...failing, headSha: 'def' } };
+    expect(place({ ...pushed, noticeSeen: `${failing.url}@abc` }).notice).toMatchObject({
+      id: `${failing.url}@def`,
+      seen: false,
+    });
+  });
+
+  it('raises no notice while checks run, pass, a chat is fixing them or the PR is closed', () => {
+    const noticeOf = (input: TicketFacts) => place(input).notice;
+    const failing = { ...pull('review'), checks: 'failing' as const, headSha: 'abc' };
     const running = {
       conversationId: CHAT,
       title: 'Chat',
       state: 'running' as const,
       at: now.toISOString(),
     };
-    expect(rules(facts({ pullRequest: failing, chat: running }))).toEqual([]);
-    expect(rules(facts({ pullRequest: { ...pull('merged'), checks: 'failing' } }))).toEqual([]);
+    expect(noticeOf(facts({ pullRequest: { ...failing, checks: 'pending' } }))).toBeUndefined();
+    expect(noticeOf(facts({ pullRequest: { ...failing, checks: 'passing' } }))).toBeUndefined();
+    expect(noticeOf(facts({ pullRequest: failing, chat: running }))).toBeUndefined();
+    expect(
+      noticeOf(facts({ pullRequest: { ...pull('merged'), checks: 'failing' } })),
+    ).toBeUndefined();
+    expect(
+      noticeOf(facts({ pullRequest: { ...pull('closed'), checks: 'failing' } })),
+    ).toBeUndefined();
+  });
+
+  it('hides a dismissed flag until its state changes and forgets it once it settles', () => {
+    const blocked = facts({}, { labels: ['blocked'] });
+    const [raised] = attentionFlags(blocked, DEFAULT_ATTENTION_SETTINGS, now);
+    const dismissed = { ...blocked, dismissed: [raised!.key] };
+    expect(rules(dismissed)).toEqual([]);
+    expect(place(dismissed).section).toBe('up_next');
+    expect(settledDismissals(dismissed, DEFAULT_ATTENTION_SETTINGS, now)).toEqual([]);
+    const cleared = { ...dismissed, ticket: ticket() };
+    expect(settledDismissals(cleared, DEFAULT_ATTENTION_SETTINGS, now)).toEqual([raised!.key]);
+
+    const asking = (at: string) =>
+      facts({ chat: { conversationId: CHAT, title: 'Chat', state: 'asking', at } });
+    const first = attentionFlags(asking(daysAgo(1)), DEFAULT_ATTENTION_SETTINGS, now)[0]!;
+    expect(rules({ ...asking(daysAgo(1)), dismissed: [first.key] })).toEqual([]);
+    expect(rules({ ...asking(daysAgo(0)), dismissed: [first.key] })).toEqual(['chat-asking']);
   });
 
   it('never flags done tickets', () => {
@@ -185,7 +223,6 @@ describe('snoozed tickets', () => {
 });
 
 describe('inbox sections', () => {
-  const place = (input: TicketFacts) => placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
   const chat = (state: 'running' | 'finished' | 'idle' | 'asking', more = {}) => ({
     conversationId: CHAT,
     title: 'Chat',

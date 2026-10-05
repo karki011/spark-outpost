@@ -14,11 +14,19 @@ export interface PullBadge {
   glyph: GlyphName;
 }
 
+const isOpen = (pull: PullRequestStatus) => pull.state !== 'merged' && pull.state !== 'closed';
+
 export function pullBadge(pull: PullRequestStatus | null): PullBadge {
+  if (pull && isOpen(pull) && pull.checks === 'failing') {
+    return { label: 'checks failing', tone: 'bad', glyph: 'x-circle' };
+  }
+  return reviewBadge(pull);
+}
+
+export function reviewBadge(pull: PullRequestStatus | null): PullBadge {
   if (!pull) return { label: 'status not available', tone: 'muted', glyph: 'pr' };
   if (pull.state === 'merged') return { label: 'merged', tone: 'merged', glyph: 'pr-merged' };
   if (pull.state === 'closed') return { label: 'closed', tone: 'muted', glyph: 'pr-closed' };
-  if (pull.checks === 'failing') return { label: 'checks failing', tone: 'bad', glyph: 'x-circle' };
   if (pull.state === 'draft') return { label: 'draft', tone: 'muted', glyph: 'pr-draft' };
   if (pull.state === 'changes_requested') {
     return { label: 'changes requested', tone: 'warn', glyph: 'warn' };
@@ -55,6 +63,7 @@ export interface PullEntry {
   title: string | null;
   badge: PullBadge;
   checks: PullRequestChecks | null;
+  failedChecks: string[];
 }
 
 function entryOf(ref: TicketRef, status: PullRequestStatus | null): PullEntry {
@@ -65,8 +74,9 @@ function entryOf(ref: TicketRef, status: PullRequestStatus | null): PullEntry {
     number: known?.number ?? (match ? Number(match[2]) : null),
     repo: known?.repo ?? match?.[1] ?? null,
     title: ref.title === ref.url ? null : ref.title,
-    badge: pullBadge(known),
-    checks: known && known.state !== 'merged' && known.state !== 'closed' ? known.checks : null,
+    badge: reviewBadge(known),
+    checks: known && isOpen(known) ? known.checks : null,
+    failedChecks: known && isOpen(known) ? (known.failedChecks ?? []) : [],
   };
 }
 

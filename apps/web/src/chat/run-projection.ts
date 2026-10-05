@@ -1,8 +1,11 @@
 import {
   EventType,
+  MODEL_SWITCH_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
+  modelSwitchSchema,
   orchestrationSchema,
   type Approval,
+  type ModelSwitch,
   type Orchestration,
   type RunEvent,
 } from '@spark-outpost/contracts';
@@ -51,6 +54,7 @@ export interface RunProjection {
   lastSeq: number;
   approvals: readonly Approval[];
   orchestration: Orchestration | null;
+  modelSwitch: ModelSwitch | null;
 }
 
 export const initialRunProjection: RunProjection = {
@@ -61,6 +65,7 @@ export const initialRunProjection: RunProjection = {
   lastSeq: 0,
   approvals: [],
   orchestration: null,
+  modelSwitch: null,
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
@@ -85,6 +90,10 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
     case EventType.RUN_ERROR:
       return { ...next, status: 'failed', error: event.message };
     case EventType.ACTIVITY_SNAPSHOT: {
+      if (event.activityType === MODEL_SWITCH_ACTIVITY) {
+        const change = modelSwitchSchema.safeParse(event.content);
+        return change.success ? { ...next, modelSwitch: change.data } : next;
+      }
       if (event.activityType !== ORCHESTRATION_ACTIVITY) return next;
       const parsed = orchestrationSchema.safeParse(event.content);
       return parsed.success ? { ...next, orchestration: parsed.data } : next;

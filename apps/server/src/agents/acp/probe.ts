@@ -10,7 +10,14 @@ import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { cliEnvironment, type CliLocator } from './agent-cli.ts';
 import { prepareCodexLaunch } from './codex-launch.ts';
-import { capabilitiesFrom, offeredCapabilities, sessionCapabilities } from './capabilities.ts';
+import type { ProviderAccount } from '@spark-outpost/contracts';
+import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
+import {
+  capabilitiesFrom,
+  offeredCapabilities,
+  reportedAccess,
+  sessionCapabilities,
+} from './capabilities.ts';
 import { findOption } from './session-config.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
 import { assertProtocolVersion, toProviderError } from './errors.ts';
@@ -24,6 +31,7 @@ export interface ProbeOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 45_000;
+const ACCOUNT_WAIT_MS = 400;
 
 export async function probeCapabilities(
   definition: AgentDefinition,
@@ -43,7 +51,22 @@ export async function probeCapabilities(
     };
     agent = startAgentProcess(options.launch ?? definition.launch(), workdir, env);
     const running = agent;
-    const read = acp.client(CLIENT_INFO).connectWith(running.stream, async (ctx) => {
+    let account: ProviderAccount | null = null;
+    const client = acp
+      .client(CLIENT_INFO)
+      .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, (notified) => {
+        account = notified.params ?? account;
+      });
+    const withAccess = async (
+      report: ProviderCapabilityReport,
+      initial: readonly acp.SessionConfigOption[],
+    ): Promise<ProviderCapabilityReport> => {
+      if (definition.reportsModelAccess && account === null) await delay(ACCOUNT_WAIT_MS);
+      const offered = offeredCapabilities(report, definition.offers);
+      const access = reportedAccess(definition, initial);
+      return { ...offered, access: { ...access, account: access.reported ? account : null } };
+    };
+    const read = client.connectWith(running.stream, async (ctx) => {
       const init = await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
         acp.methods.agent.initialize,
         {
@@ -59,9 +82,10 @@ export async function probeCapabilities(
         _meta: definition.probeSessionMeta ?? definition.conversationSessionMeta?.() ?? null,
       });
       const report = sessionCapabilities(session);
-      if (report.efforts.length > 0) return offeredCapabilities(report, definition.offers);
-      const modelOption = findOption(session.configOptions ?? [], 'model');
-      if (!modelOption) return offeredCapabilities(report, definition.offers);
+      const initial = session.configOptions ?? [];
+      if (report.efforts.length > 0) return withAccess(report, initial);
+      const modelOption = findOption(initial, 'model');
+      if (!modelOption) return withAccess(report, initial);
       const efforts = new Map(report.efforts.map((effort) => [effort.id, effort]));
       for (const model of report.models) {
         if (model.id === report.defaultModel) continue;
@@ -74,7 +98,7 @@ export async function probeCapabilities(
           if (!efforts.has(effort.id)) efforts.set(effort.id, effort);
         }
       }
-      return offeredCapabilities({ ...report, efforts: [...efforts.values()] }, definition.offers);
+      return withAccess({ ...report, efforts: [...efforts.values()] }, initial);
     });
     const timeout = delay(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, undefined, {
       signal: timer.signal,
