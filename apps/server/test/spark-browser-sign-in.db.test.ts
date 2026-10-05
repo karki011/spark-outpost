@@ -405,7 +405,9 @@ describe('a planted sign-in never reaches the agent or the record', () => {
     expect(plantedIn(JSON.stringify(recorded.events))).toEqual([]);
     expect(plantedIn(JSON.stringify(recorded.audited))).toEqual([]);
     expect(plantedIn(await everyStoredValue(t))).toEqual([]);
-    const lines = logged.flatMap((spy) => spy.mock.calls.map((printed: unknown[]) => JSON.stringify(printed)));
+    const lines = logged.flatMap((spy) =>
+      spy.mock.calls.map((printed: unknown[]) => JSON.stringify(printed)),
+    );
     expect(plantedIn(lines.join('\n'))).toEqual([]);
   });
 

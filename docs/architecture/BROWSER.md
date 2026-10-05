@@ -1,6 +1,6 @@
 # Browser pane
 
-> **Status: phase 1 ("see") built.** The user browses in a pane next to a chat; agents open local pages and read them (outline, text, screenshot, console and network logs); the user selects an element or a region for the next message. Clicking, typing and external sites for agents are phase 2 and 3 ([Seams](#seams-for-phase-2-and-3)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
+> **Status: phase 1 ("see") built.** The user browses in a pane next to a chat; agents open local pages and read them (outline, text, screenshot, console and network logs); the user selects an element or a region for the next message. Spark can also fill a saved test sign-in for an agent ([Saved sign-ins](#saved-sign-ins)). Clicking, typing and external sites for agents are phase 2 and 3 ([Seams](#seams-for-phase-2-and-3)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
 
 Spark is a moderator here too: it honours the agent's mode, keeps a few hard rails, and records what happened.
 
@@ -11,7 +11,8 @@ Spark is a moderator here too: it honours the agent's mode, keeps a few hard rai
 | Contracts | `packages/contracts/src/browser.ts`, `browser-bridge.ts`                       | URL classification, tab and pane state, the worker↔main protocol, the untrusted `page_evidence` marking |
 | Views     | `apps/desktop/src/browser/`                                                    | One `WebContentsView` per tab, owned by main, driven with `webContents.debugger` (CDP)                  |
 | Bridge    | `apps/desktop/src/browser/bridge.ts`, `apps/server/src/browser/host-client.ts` | Typed requests from the worker to main                                                                  |
-| Tools     | `apps/server/src/spark-mcp/tools/browser/`                                     | `spark_browser_open`, `_tabs`, `_read`, `_screenshot`, `_logs`, `_preview`                              |
+| Tools     | `apps/server/src/spark-mcp/tools/browser/`                                     | `spark_browser_open`, `_tabs`, `_read`, `_screenshot`, `_logs`, `_preview`, `_signins`, `_sign_in`      |
+| Sign-ins  | `apps/server/src/browser/sign-ins.ts`, `apps/desktop/src/browser/sign-in*.ts`  | Saved test sign-ins: keychain storage, and the shell's form finder and filler                           |
 | Preview   | `apps/server/src/preview/`, `persistence/preview-servers.ts`                   | The project's dev server, run by the API process ([Preview server](#preview-server))                    |
 | Pane      | `apps/web/src/browser/`                                                        | Tab strip, address bar, Select, per-chat open state, and the element whose bounds the view follows      |
 
@@ -78,9 +79,46 @@ Verified in the adapters' sources, not with a live model: `claude-agent-acp` 0.8
 | `open` an external site                                     | None; refused with a note that the user can open it                                                                                                                     | Audit (`refused_external`)              |
 | `tabs`                                                      | None                                                                                                                                                                    | Audit                                   |
 | `read`, `screenshot`, `logs` on a local page                | None, in every mode                                                                                                                                                     | Audit                                   |
+| `signins`                                                   | None                                                                                                                                                                    | Audit                                   |
+| `sign_in`                                                   | **Sign in to … as …?**, the first time a chat uses that sign-in, in every mode                                                                                          | Audit, every use                        |
 | The same on an external page                                | The Spark action policy: no card in Auto, Bypass, Full access or Full auto → PR, or in Accept edits when the message asked; otherwise **Let the agent read this page?** | Audit, and a `web_page` run observation |
 
 Allowing the card covers that site for the rest of the chat. The observation feeds the existing read-then-send rule, so later actions in that run ask first. The page is fetched from main before the card, but nothing reaches the agent until it is cleared. Audit entries (`spark/browser`) carry the tool, run, origin and path (never the query), the action and the decision.
+
+## Saved sign-ins
+
+A user saves test sign-ins per project in Settings → Projects → **Saved sign-ins**: a label, a site origin, a username and a password. An agent asks Spark to use one by label; Spark types it into the page. The agent never holds the values.
+
+**Who holds what**
+
+| Place                             | Holds                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Keychain (`signin:<id>`)          | `{ username, password }` as JSON, through the same `SecretStore` as provider, Jev and MCP secrets |
+| `browser_sign_ins` (0124)         | `id`, `project_id`, `label`, `origin`, `keychain_ref`, `created_at`, `updated_at`                 |
+| API (`/projects/:id/sign-ins`)    | Takes values on create and edit; returns label, origin and a masked username (`a•••@example.com`) |
+| Approval payload, events, audit   | Sign-in id, project id, label and origin. The card reads the masked username from the API         |
+| Worker → main (`sign_in` request) | The values, once per fill, over the worker's `parentPort`; never logged, never in a response      |
+| The page                          | The values, typed as input into its own form                                                      |
+
+The feature needs the shell: the Settings block is disabled and the tools are not registered without it. Removing a sign-in, removing its project or a reset deletes the keychain entries. A removed project that is restored with Undo comes back without its sign-ins.
+
+**Rules, enforced in code**
+
+- **Origin.** `signInOriginProblem` (contracts) requires the tab's top-level origin to equal the saved origin exactly, and the scheme to be https or the host local (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`, `*.test`). The worker checks before it posts a card or reads the keychain; main checks again from `Page.getFrameTree` before the first field and again before the password, including after the username step of a two-step sign-in.
+- **Fields.** Main reads `DOM.getDocument` and decides alone (`sign-in-fields.ts`): one visible password input inside a `<form>` of the page itself, the one username-like text input of that form, and a submit control. A username-only form is the first step; Spark submits it and waits up to 6 s for the password form on the same origin. More than one candidate form, more than one password field, a `new-password` field, a password field outside a form or inside any frame, or two unmarked text fields: it fails with a plain reason and fills nothing.
+- **Typing.** `DOM.focus`, a check through the accessibility tree that the field has the focus, select-all, `Input.insertText`, then Enter. No script runs in the page, and the agent supplies nothing but the label.
+- **Card.** `spark_browser_sign_in` posts a `browser_sign_in` Spark action that is always a confirm card, whatever the agent mode or autonomy. A user's **Allow for this chat** is found again by chat, sign-in id and origin, so an edited origin asks again.
+- **Result.** `form_submitted` with the origin and path the tab ended on, or the reason. Never the values or their lengths. Whether the site accepted the sign-in is for the agent to read from the page.
+- **Audit.** Each call writes a `spark/browser` entry: tool, label, saved origin, page, decision (`user_allowed`, `allowed_earlier`, `user_declined`, `waiting_for_user`, `refused_origin`, `failed`), who decided, and the outcome.
+
+**Keeping the values out of what agents read**
+
+- Password fields were already masked. A field Spark filled is added to the tab's `filled` set until the next navigation, so the username shows `[masked]` in the outline, is painted over in screenshots and is left out of a selection.
+- The worker replaces the exact saved usernames and passwords of the chat's project with `[saved sign-in]` in every `open`, `tabs`, `read`, `screenshot`, `logs` and `preview` logs result (`scrub.ts`), also in their URL-encoded, form-encoded and JSON-escaped spellings and when a clipped line cuts one short. If the keychain cannot be read, those tools fail instead of answering unscrubbed.
+- With saved sign-ins, `logs` filters after scrubbing, so a filter cannot test for a value.
+- Request bodies and query strings were never recorded; that is unchanged.
+
+**What this does not stop.** The page receives the values, as any sign-in form does. An agent that can change that site's code or read its server's output can make the site reveal what was typed, and a page can show a value in a form the scrubber does not know (reversed, encoded, drawn in an image). A screenshot of a page that prints the username shows it. That is why the form says test accounts only.
 
 ## User pointing
 
@@ -92,14 +130,15 @@ Allowing the card covers that site for the rest of the chat. The observation fee
 - **Takeover handoff and "Spark is driving":** `PaneTab.driving` and `whileDriving` already mark agent work on a tab; a pause flag like `picking` blocks agent ops.
 - **Numbered annotations and "Ask about this":** extend `BrowserPick` and `pick-files.ts`.
 - **External sites for agents:** `agentMayOpen` and `EXTERNAL_NOT_YET` are the two places that refuse today; the read gate and the `web_page` observation already cover external pages.
-- **Test-login vault, downloads:** none built; `will-download` is cancelled in `sessions.ts`.
+- **Downloads:** none built; `will-download` is cancelled in `sessions.ts`.
+- **Sign-ins, later:** agent click and type, one-time codes, passkeys, sign-in through another identity provider, sharing across projects, import and export, and a secret store on other systems.
 - Frames: the outline covers the main frame only.
 - A deleted chat's tabs are dropped only by the idle timer; nothing tells main that a chat is gone.
 - The pane tells main which folders `file://` may load (the chat's projects and worktree); the agent path reads them from the database instead.
 
 ## Fixture site
 
-`pnpm exec tsx tests/fixtures/browser-pane/serve.ts` serves static pages on `127.0.0.1:47611` for checks in the real shell: a form with password and card fields, console errors and a failing fetch, a probe that tries Spark's API, a page with text addressed to the agent, and a link that opens a tab.
+`pnpm exec tsx tests/fixtures/browser-pane/serve.ts` serves static pages on `127.0.0.1:47611` for checks in the real shell: a form with password and card fields, sign-in pages (`login.html`, the two-step `login-step1.html`, a single-page one that repeats what was typed, two forms, a form in a frame), console errors and a failing fetch, a probe that tries Spark's API, a page with text addressed to the agent, and a link that opens a tab.
 
 ## Verified
 
@@ -121,5 +160,7 @@ Later on 2026-10-04, in the same kind of dev build with a throwaway data folder 
 - Quitting the app ended the preview process and recorded a stop with reason `shutdown`.
 
 ## Not verified
+
+Saved sign-ins were not run in the shell: the fill was driven over CDP in Playwright's Chromium against the fixture pages (`tests/browser/sign-in-fill.spec.ts`), and the tools with a fake browser host. A real keychain on a signed build, a real `WebContentsView`, and real sites were not tried.
 
 Real Claude and Codex sessions were not run against the preview server or the brief line; only the fake agent was. A crash and restart of a real dev server, and a preview inside a chat's git worktree, were covered by tests with a fake process, not in the shell.
