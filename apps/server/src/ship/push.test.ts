@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listRemoteHeads } from './git.ts';
-import { pushCommand, TOKEN_ENV, withTokenAccess } from './push.ts';
+import { pushCommand, TOKEN_ENV, withOneShotToken, withTokenAccess } from './push.ts';
 
 const TOKEN = 'github_pat_11SECRETSECRET_0123456789abcdef';
 let root: string;
@@ -33,6 +33,26 @@ describe('pushing with the GitHub connection', { timeout: 20_000 }, () => {
         encoding: 'utf8',
       });
       expect(answer.trim()).toBe(TOKEN);
+    });
+    await expect(readdir(path.dirname(script))).rejects.toThrow();
+  });
+
+  it('answers a push with the token once and keeps it out of the environment hooks inherit', async () => {
+    let script = '';
+    await withOneShotToken(TOKEN, async (access) => {
+      script = access.env.GIT_ASKPASS!;
+      expect(Object.values(access.env).join(' ')).not.toContain(TOKEN);
+      expect(access.env[TOKEN_ENV]).toBeUndefined();
+      expect(await readFile(script, 'utf8')).not.toContain(TOKEN);
+      const ask = (prompt: string) =>
+        execFileSync(script, [prompt], {
+          env: { ...process.env, ...access.env },
+          encoding: 'utf8',
+        });
+      expect(ask("Username for 'https://github.com':").trim()).toBe('x-access-token');
+      expect(ask("Password for 'https://x-access-token@github.com':").trim()).toBe(TOKEN);
+      expect(ask("Password for 'https://x-access-token@github.com':").trim()).toBe('');
+      expect(await readdir(path.dirname(script))).toEqual(['askpass.sh']);
     });
     await expect(readdir(path.dirname(script))).rejects.toThrow();
   });

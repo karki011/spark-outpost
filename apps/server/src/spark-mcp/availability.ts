@@ -1,5 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
-import { gitHubConnected } from '../ship/github/access.ts';
+import { gitHubStatus } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
 import { connectedSources } from '../tickets/connections.ts';
 import {
@@ -18,12 +18,21 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   slack: true,
   pull_requests: true,
   project: true,
+  publish: true,
+  pull_request_create: true,
   browser: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
   if (!scope.conversationId) return false;
   return (await conversationProjectIds(deps.db, scope.conversationId)).length > 0;
+}
+
+async function gitHubReach(deps: SparkToolDeps, scope: SparkScope) {
+  const status = await gitHubStatus(gitHubDepsFor(deps, scope));
+  const saved = status.token !== null || status.app.state === 'connected';
+  const gh = status.ghCli.login !== null;
+  return { connected: saved || gh, ownLogin: saved && !gh };
 }
 
 export async function sparkAvailability(
@@ -35,16 +44,22 @@ export async function sparkAvailability(
     openSlack(slackDepsFor(deps, scope)),
     chatHasProject(deps, scope),
   ]);
+  const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
     tickets: sources.length > 0,
     slack: slack !== null,
-    pull_requests: project && (await gitHubConnected(gitHubDepsFor(deps, scope))),
+    pull_requests: gitHub.connected,
     project,
+    publish: project,
+    pull_request_create: gitHub.ownLogin,
     browser: deps.browser !== undefined,
   };
 }
 
-const HOW_TO_GET: Record<Exclude<SparkToolNeed, 'browser'>, string> = {
+const HOW_TO_GET: Record<
+  Exclude<SparkToolNeed, 'browser' | 'publish' | 'pull_request_create'>,
+  string
+> = {
   tickets: 'ticket tools (connect Jira or Linear in Settings → Connectors)',
   slack: 'Slack tools (connect Slack in Settings → Connectors)',
   pull_requests:

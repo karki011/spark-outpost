@@ -4,6 +4,7 @@ import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import type { PublishScope } from '../ship/agent-push.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { SlackDeps } from '../slack/connection.ts';
@@ -47,6 +48,7 @@ export interface SparkScope {
   readOnly?: boolean;
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
+  publish?: PublishScope | null | undefined;
 }
 
 export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {

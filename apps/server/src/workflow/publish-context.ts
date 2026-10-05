@@ -14,6 +14,7 @@ import type { Queryable } from '../persistence/db.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
+import type { PublishScope } from '../ship/agent-push.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
@@ -68,4 +69,15 @@ export async function publishBrief(
   if (!basis) return null;
   const task = await taskBranch(db, input.projectRoots[0] ?? null).catch(() => null);
   return task ? { basis, branch: task.branch } : null;
+}
+
+export async function publishScope(
+  db: Queryable,
+  input: StartFacts & Pick<RunInput, 'projectRoots'>,
+): Promise<PublishScope | null> {
+  const basis = startBasis(input);
+  const root = input.projectRoots[0] ?? null;
+  if (!basis || !root) return null;
+  const task = await taskBranch(db, root).catch(() => null);
+  return task ? { basis, task, root } : null;
 }
