@@ -3,6 +3,7 @@ import {
   conversationObservations,
   recordObservation,
   type Observation,
+  type ObservationSource,
 } from '../persistence/observations.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
@@ -15,7 +16,7 @@ export interface EgressAsk {
 
 export interface RunObservations {
   record(observation: Observation): void;
-  labels(): Promise<string[]>;
+  labels(except?: readonly ObservationSource[]): Promise<string[]>;
   egressAsked(ask: EgressAsk): void;
   settled(): Promise<void>;
 }
@@ -59,14 +60,17 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       audit('spark/observed', { source: kept.source, label: kept.label });
       save(kept);
     },
-    async labels() {
+    async labels(except = []) {
       const stored = await conversationObservations(options.db, options.conversationId).catch(
         (error: unknown) => {
           console.error('Could not read observations', error);
           return [];
         },
       );
-      return [...new Set([...stored, ...seen.values()].map((observation) => observation.label))];
+      const counted = [...stored, ...seen.values()].filter(
+        (observation) => !except.includes(observation.source),
+      );
+      return [...new Set(counted.map((observation) => observation.label))];
     },
     egressAsked(ask) {
       audit('spark/egress', {

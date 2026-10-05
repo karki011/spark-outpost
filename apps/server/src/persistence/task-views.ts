@@ -22,6 +22,9 @@ import {
   type TaskItemState,
   type TaskListEvent,
   type AgentRole,
+  type SparkAction,
+  type SparkResult,
+  sparkActionLabels,
 } from '@spark-outpost/contracts';
 import { latestPlans, planVersions } from './artifacts.ts';
 import { latestApprovedPlan } from './plan-documents.ts';
@@ -104,6 +107,8 @@ interface ApprovalEventRow {
   status: ApprovalStatus;
   option_name: string | null;
   full_paths: string[] | null;
+  spark_action: SparkAction | null;
+  spark_result: SparkResult | null;
 }
 
 const APPROVAL_STATES: Record<ApprovalStatus, TaskItemState> = {
@@ -127,6 +132,35 @@ function approvalDecision(row: ApprovalEventRow): string {
   return row.option_name ? `${decision}: ${row.option_name}` : decision;
 }
 
+type ApprovalProgress = Pick<TaskListEvent, 'state' | 'label' | 'detail' | 'action' | 'url'>;
+
+const ACTION_STATES: Record<SparkResult['state'], 'active' | 'done' | 'failed'> = {
+  waiting: 'active',
+  running: 'active',
+  done: 'done',
+  failed: 'failed',
+  unknown: 'failed',
+};
+
+function approvalProgress(row: ApprovalEventRow): ApprovalProgress {
+  const { spark_action: action, spark_result: result } = row;
+  if (row.status === 'pending') return { state: 'waiting', label: `Waiting for you: ${row.title}` };
+  if (row.status !== 'allowed' || !action || !result) {
+    return { state: APPROVAL_STATES[row.status], label: row.title, detail: approvalDecision(row) };
+  }
+  const state = ACTION_STATES[result.state];
+  const doing = sparkActionLabels[action.action].doing;
+  const label = { active: doing, done: result.message ?? row.title, failed: row.title }[state];
+  const detail = state === 'failed' ? (result.message ?? undefined) : row.title;
+  return {
+    state,
+    label,
+    action: true,
+    ...(detail ? { detail } : {}),
+    ...(result.url ? { url: result.url } : {}),
+  };
+}
+
 function grouped<T>(entries: readonly (readonly [string, T])[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   for (const [key, value] of entries) {
@@ -143,12 +177,14 @@ async function approvalEvents(
 ): Promise<Map<string, TaskListEvent[]>> {
   const { rows } = await db.query<ApprovalEventRow>(
     `SELECT a.id, r.task_id, a.run_id, a.kind, a.title, a.status,
-       a.payload->'fullPaths' AS full_paths,
+       a.payload->'fullPaths' AS full_paths, a.payload->'sparkAction' AS spark_action,
+       a.payload->'sparkResult' AS spark_result,
        (SELECT o->>'name' FROM jsonb_array_elements(a.options) o
         WHERE o->>'optionId' = a.decision_option_id LIMIT 1) AS option_name
      FROM approvals a JOIN runs r ON r.id = a.run_id
      WHERE r.task_id = ANY($1::uuid[])
-       AND (a.status = 'pending' OR a.decided_by IN ('user', 'auto'))
+       AND (a.status = 'pending' OR a.decided_by IN ('user', 'auto')
+         OR a.payload ? 'sparkResult')
      ORDER BY a.created_at, a.id`,
     [taskIds],
   );
@@ -159,11 +195,9 @@ async function approvalEvents(
         id: row.id,
         kind: 'waiting',
         runId: row.run_id,
-        state: APPROVAL_STATES[row.status],
         ...(row.full_paths?.length ? { hint: row.full_paths.join('\n') } : {}),
         ...(row.kind === 'execute' ? { command: true } : {}),
-        ...(row.status === 'pending' ? {} : { detail: approvalDecision(row) }),
-        label: row.status === 'pending' ? `Waiting for you: ${row.title}` : row.title,
+        ...approvalProgress(row),
       },
     ]),
   );

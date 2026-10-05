@@ -17,7 +17,16 @@ const QUICK_MS = 15_000;
 const SLOW_MS = 120_000;
 const MAX_BUFFER = 16 * 1024 * 1024;
 
-export class ShipGitError extends Error {}
+const OUTPUT_LINES = 40;
+
+export class ShipGitError extends Error {
+  readonly output: string;
+
+  constructor(message: string, output = '') {
+    super(message);
+    this.output = output;
+  }
+}
 
 interface GitResult {
   code: number;
@@ -56,9 +65,11 @@ export function runGit(
 }
 
 function failure(action: string, result: GitResult): ShipGitError {
-  const detail = redactText(`${result.stderr}\n${result.stdout}`.trim()).split('\n').slice(-6);
+  const lines = redactText(`${result.stderr}\n${result.stdout}`.trim()).split('\n');
+  const detail = lines.slice(-6);
   return new ShipGitError(
     `${action} failed: ${detail.join(' ').trim() || `git exited ${result.code}`}`,
+    lines.slice(-OUTPUT_LINES).join('\n'),
   );
 }
 

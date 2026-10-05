@@ -221,7 +221,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no card; section spark-tools maps questions.
 
-Action tools: ticket create, comment, move, assign; spark_open_pr, spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card first. Audited.`,
+Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card first, and the card then shows the result or the failure with Try again. Audited. There is no PR tool: when publishing is allowed the agent runs git push and gh pr create itself, never skipping hooks, and Spark records the PR.`,
   },
   {
     id: 'spark-tools',

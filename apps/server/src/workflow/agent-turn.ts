@@ -29,7 +29,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
-import { publishGrant, startBasis } from './publish-context.ts';
+import { publishGrant, startBasis, withPublishNote } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
 import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { createSpendMeter } from './spend-meter.ts';
@@ -350,7 +350,9 @@ export async function runAgentTurn(
       teammate: await sessionBrief(deps.db, input),
     };
     auditSparkHandoff(audit, input, spark.teammate);
-    const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
+    const preamble = input.assistant
+      ? ASSISTANT_PREAMBLE
+      : withMoveNote({ ...input, preamble: await withPublishNote(deps.db, input) });
 
     for await (const output of provider.run({
       prompt: withBrowserCheck({

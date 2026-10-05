@@ -152,35 +152,6 @@ function Facts({ action }: { action: SparkAction }) {
           <Fact label="After">{action.to === 'me' ? 'You' : 'Unassigned'}</Fact>
         </dl>
       );
-    case 'open_pr':
-      return (
-        <dl className="sac-facts">
-          {action.repo && <Fact label="Repository">{action.repo}</Fact>}
-          <Fact label="Branch">
-            <code>{action.branch}</code>
-            {action.base && (
-              <>
-                {' '}
-                into <code>{action.base}</code>
-              </>
-            )}
-          </Fact>
-          <Fact label="Files">
-            <ul className="sac-files">
-              {action.files.slice(0, FILES_SHOWN).map((file) => (
-                <li key={file.path}>
-                  <code>{file.path}</code> <span>{file.change}</span>
-                </li>
-              ))}
-            </ul>
-            {action.files.length + action.moreFiles > FILES_SHOWN && (
-              <span className="sac-more">
-                and {action.files.length + action.moreFiles - FILES_SHOWN} more
-              </span>
-            )}
-          </Fact>
-        </dl>
-      );
     case 'pr_follow_up_round':
       return <PrRoundFacts action={action} />;
     case 'create_teammate':
@@ -223,6 +194,7 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
+    case 'open_pr':
     case 'pr_follow_up':
       return null;
   }

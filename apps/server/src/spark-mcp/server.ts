@@ -7,7 +7,6 @@ import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { renderResult } from './format.ts';
 import { SparkBlocks, SparkToolError, type SparkTool, type SparkToolContext } from './tool.ts';
 import { browserTools } from './tools/browser/tools.ts';
-import { pullRequestActionTool } from './actions/pr-action.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
 import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
@@ -58,7 +57,6 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   prFollowUpTool,
   slackTool,
   ...ticketActionTools,
-  pullRequestActionTool,
   prFollowUpRoundTool,
   createTeammateTool,
   updateTeammateTool,

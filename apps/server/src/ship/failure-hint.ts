@@ -3,9 +3,32 @@ import { GitHubApiError } from './github/connection.ts';
 import { GIT_AUTH } from './push.ts';
 
 const PROTECTED = /protected branch|GH006|pre-receive hook declined|push declined/i;
+const PUSH_HOOK = /pre-push|husky/i;
+const HOOK_REASON = /fail|error|not found|denied|ELIFECYCLE|exit(ed)? (code )?[1-9]/i;
+const HOOK_NOISE = /^(husky\b|error: failed to push some refs)/i;
+const REASON_MAX = 200;
+
+function hookReason(output: string): string | null {
+  const lines = output
+    .split('\n')
+    .map((line) => line.replace(/^[^\w\[(]+/, '').trim())
+    .filter((line) => line !== '' && !HOOK_NOISE.test(line));
+  const reason = lines.find((line) => HOOK_REASON.test(line)) ?? lines.at(-1);
+  return reason ? reason.slice(0, REASON_MAX) : null;
+}
+
+function stoppedByHook(error: unknown): error is ShipGitError {
+  return (
+    error instanceof ShipGitError && PUSH_HOOK.test(error.output) && !PROTECTED.test(error.message)
+  );
+}
 
 export function shipFailureMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
+  if (stoppedByHook(error)) {
+    const reason = hookReason(error.output);
+    return `The push was stopped by this repository's pre-push check${reason ? `: ${reason}` : '.'} Spark never skips hooks; fix what the check reports, then try again.`;
+  }
   if (error instanceof GitHubApiError && (error.status === 401 || error.status === 403)) {
     return `${message} Reconnect GitHub in Settings → Integrations, then try again.`;
   }

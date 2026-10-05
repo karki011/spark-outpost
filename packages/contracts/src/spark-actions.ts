@@ -240,23 +240,93 @@ export function applySparkEdits(action: SparkAction, edits: SparkActionEdits | n
   return sparkActionSchema.parse({ ...action, ...picked });
 }
 
-export const sparkActionLabels: Record<SparkActionName, { question: string; confirm: string }> = {
-  create_ticket: { question: 'Create this ticket?', confirm: 'Create ticket' },
-  comment_ticket: { question: 'Post this comment?', confirm: 'Post comment' },
-  transition_ticket: { question: 'Move this ticket?', confirm: 'Move ticket' },
-  assign_ticket: { question: 'Change who owns this ticket?', confirm: 'Assign' },
-  open_pr: { question: 'Open a pull request?', confirm: 'Open PR' },
-  pr_follow_up: { question: 'Address PR feedback?', confirm: 'Push and reply' },
-  pr_follow_up_round: { question: 'Start a PR follow-up round?', confirm: 'Start round' },
-  create_teammate: { question: 'Add this Spark?', confirm: 'Add Spark' },
-  update_teammate: { question: 'Change this Spark?', confirm: 'Save changes' },
-  add_mcp_server: { question: 'Add this MCP server?', confirm: 'Add server' },
-  update_mcp_server: { question: 'Change this MCP server?', confirm: 'Save changes' },
-  switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
-  remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
-  read_page: { question: 'Let the agent read this page?', confirm: 'Allow for this chat' },
-  browser_sign_in: { question: 'Use this saved sign-in?', confirm: 'Allow for this chat' },
-  post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
+interface SparkActionLabel {
+  question: string;
+  confirm: string;
+  doing: string;
+}
+
+export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
+  create_ticket: {
+    question: 'Create this ticket?',
+    confirm: 'Create ticket',
+    doing: 'Creating the ticket…',
+  },
+  comment_ticket: {
+    question: 'Post this comment?',
+    confirm: 'Post comment',
+    doing: 'Posting the comment…',
+  },
+  transition_ticket: {
+    question: 'Move this ticket?',
+    confirm: 'Move ticket',
+    doing: 'Moving the ticket…',
+  },
+  assign_ticket: {
+    question: 'Change who owns this ticket?',
+    confirm: 'Assign',
+    doing: 'Changing who owns the ticket…',
+  },
+  open_pr: {
+    question: 'Open a pull request?',
+    confirm: 'Open PR',
+    doing: 'Opening the pull request…',
+  },
+  pr_follow_up: {
+    question: 'Address PR feedback?',
+    confirm: 'Push and reply',
+    doing: 'Pushing the fixes and replying…',
+  },
+  pr_follow_up_round: {
+    question: 'Start a PR follow-up round?',
+    confirm: 'Start round',
+    doing: 'Starting the follow-up round…',
+  },
+  create_teammate: {
+    question: 'Add this Spark?',
+    confirm: 'Add Spark',
+    doing: 'Adding the Spark…',
+  },
+  update_teammate: {
+    question: 'Change this Spark?',
+    confirm: 'Save changes',
+    doing: 'Saving the Spark…',
+  },
+  add_mcp_server: {
+    question: 'Add this MCP server?',
+    confirm: 'Add server',
+    doing: 'Adding the MCP server…',
+  },
+  update_mcp_server: {
+    question: 'Change this MCP server?',
+    confirm: 'Save changes',
+    doing: 'Saving the MCP server…',
+  },
+  switch_mcp_server: {
+    question: 'Switch this MCP server?',
+    confirm: 'Switch',
+    doing: 'Switching the MCP server…',
+  },
+  remove_mcp_server: {
+    question: 'Remove this MCP server?',
+    confirm: 'Remove server',
+    doing: 'Removing the MCP server…',
+  },
+  read_page: {
+    question: 'Let the agent read this page?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the page…',
+  },
+  browser_sign_in: {
+    question: 'Use this saved sign-in?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the sign-in…',
+  },
+  post_slack: {
+    question: 'Post this to Slack?',
+    confirm: 'Post to Slack',
+    doing: 'Posting to Slack…',
+  },
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -269,7 +339,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   return sparkActionLabels[action.action].question;
 }
 
-export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);
+export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed', 'unknown']);
 export type SparkResultState = z.infer<typeof sparkResultStateSchema>;
 
 export const sparkResultSchema = z.object({
@@ -281,5 +351,22 @@ export const sparkResultSchema = z.object({
 export type SparkResult = z.infer<typeof sparkResultSchema>;
 
 export function sparkResultFinished(result: SparkResult | undefined): boolean {
-  return result?.state === 'done' || result?.state === 'failed';
+  return result?.state === 'done' || result?.state === 'failed' || result?.state === 'unknown';
+}
+
+const REPEATABLE: ReadonlySet<SparkActionName> = new Set([
+  'pr_follow_up_round',
+  'transition_ticket',
+  'assign_ticket',
+  'update_teammate',
+  'update_mcp_server',
+  'switch_mcp_server',
+  'remove_mcp_server',
+  'read_page',
+  'browser_sign_in',
+]);
+
+export function sparkRetryAllowed(action: SparkAction, result: SparkResult | undefined): boolean {
+  if (result?.state === 'failed') return true;
+  return result?.state === 'unknown' && REPEATABLE.has(action.action);
 }

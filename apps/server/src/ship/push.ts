@@ -62,8 +62,9 @@ export async function tokensForRemote(deps: GitHubDeps, url: string): Promise<Re
 }
 
 export async function loginEnv(deps: GitHubDeps): Promise<Record<string, string>> {
+  const shell = await (deps.loginEnv?.() ?? Promise.resolve(null)).catch(() => null);
   const loginPath = await (deps.loginPath?.() ?? Promise.resolve(null)).catch(() => null);
-  return loginPath ? { PATH: loginPath } : {};
+  return { ...shell, ...(loginPath ? { PATH: loginPath } : {}) };
 }
 
 function quoted(value: string): string {
@@ -126,6 +127,7 @@ export async function pushWithCredentials(
     if (!isAuthFailure(error)) throw error;
     throw new ShipGitError(
       `${error.message} Run \`${pushCommand(root, remote.name, branch)}\` in a terminal to see what git needs, or connect GitHub in Settings → Connectors.`,
+      error.output,
     );
   }
 }

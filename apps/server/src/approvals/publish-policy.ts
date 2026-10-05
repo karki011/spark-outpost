@@ -57,7 +57,7 @@ export function publishBasis(posture: ModePosture, grant: PublishGrant): Publish
 }
 
 const PR_ASK =
-  /\b(open|create|make|raise|submit|send|ship|put up)\b[^.?!\n]{0,40}\b(pr|prs|pull requests?)\b/i;
+  /\b(open|create|make|raise|submit|send|ship|put up)\b[^.?!\n]{0,40}\b(pr|prs|pull requests?)\b|\b(take|get|bring|carry|turn)\b[^.?!\n]{0,40}\b(to|into)\s+(an?\s+|the\s+)?(draft\s+)?(pr|pull request)\b/i;
 const PUSH_ASK =
   /\b(push|publish)\s+(it|this|that|them|up|everything|the\s+(branch|changes?|commits?|code|work|fix))\b|\b(push|publish)\s+to\s+(origin|remote|github|gitlab)\b|\bgit push\b|^\s*(please\s+)?(push|publish)\s*[.!]?\s*$/i;
 const DECLINED =

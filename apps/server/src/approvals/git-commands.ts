@@ -37,6 +37,14 @@ function pushArgs(command: string): string[][] {
     .map((sub) => sub.rest);
 }
 
+const HOOK_SKIPS = /(^|\s)(HUSKY=0|core\.hooksPath=\S*)(\s|$)/;
+
+export function skipsPushHooks(command: string): boolean {
+  const pushes = pushArgs(command);
+  if (pushes.length === 0) return false;
+  return pushes.some((args) => args.includes('--no-verify')) || HOOK_SKIPS.test(command);
+}
+
 export function isGitPush(command: string): boolean {
   return pushArgs(command).length > 0;
 }

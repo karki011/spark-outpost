@@ -131,8 +131,18 @@ export const INCREMENT_RULE =
 export const SHIP_RULE =
   "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes: Spark Outpost commits, pushes and opens the PR itself when the task is done, even when the request says to ship it.";
 
+export const PUSH_HOOK_RULE =
+  "Never skip hooks (no `--no-verify`). If a pre-push check or `gh` fails, read its output and deal with it in this turn: when dependencies are missing or stale, run the project's reproducible install (for example `pnpm install --frozen-lockfile`) and push again; when your change caused it (lint, types, tests, a build), fix it and push again. When you cannot fix it (an expired registry or `gh` login, no network, a check that fails on the base branch too), stop and tell the user once exactly what is needed, with the last lines of the output. Push at most 3 times in a turn.";
+
 function publishSteps(branch: string): string {
-  return `commit it, push this chat's own branch with \`git push origin ${branch}\` and open its pull request with \`gh pr create\` (\`gh pr view\` and \`gh pr edit\` work on that PR). Never force-push, push any other branch or the base branch, or change git remotes; nothing merges.`;
+  return `commit it, push this chat's own branch with \`git push origin ${branch}\` and open its pull request with \`gh pr create\` (\`gh pr view\` and \`gh pr edit\` work on that PR). Never force-push, push any other branch or the base branch, or change git remotes; nothing merges. ${PUSH_HOOK_RULE}`;
+}
+
+const PUBLISH_REPORT_RULE =
+  'Spark records the pull request from the command output, so give the user its link. If `gh` is missing or not signed in, say so and point the user to the Ship button. Say a card is waiting only when a tool returned waiting_for_user.';
+
+export function mainAgentPublishNote(branch: string): string {
+  return `The user asked for this to be pushed or opened as a pull request. Do it yourself: ${publishSteps(branch)} ${PUBLISH_REPORT_RULE}`;
 }
 
 export function publishRule(publish: PublishBrief | null | undefined): string {

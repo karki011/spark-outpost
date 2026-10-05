@@ -38,6 +38,7 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
+import { OWN_WORK_SOURCES } from '../persistence/observations.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
@@ -392,6 +393,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
+      ownRepoObserved: (await deps.observations?.labels(OWN_WORK_SOURCES)) ?? [],
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),

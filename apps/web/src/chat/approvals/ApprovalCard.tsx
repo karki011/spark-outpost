@@ -6,6 +6,7 @@ import {
   humanizeToolName,
   isCheckApproval,
   parseMcpTool,
+  sparkActionLabels,
   sparkActionQuestion,
   type Approval,
   type ApprovalDecidedValue,
@@ -22,6 +23,7 @@ import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
 import { approvalSummary } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
+import { useActionReport } from '../status/status-context.ts';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
@@ -29,6 +31,7 @@ import { CommandPreview } from './CommandPreview.tsx';
 import { DiffView } from './DiffView.tsx';
 import { askReason, fromSandbox } from './ask-reason.ts';
 import { ObservedNote } from './ObservedNote.tsx';
+import { RetryAction } from './RetryAction.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
 import { McpSettingsButton, isMcpAction } from '../../settings/mcp/McpActionFacts.tsx';
 
@@ -115,11 +118,20 @@ function subject(approval: Approval): string | null {
   return approval.kind === 'edit' ? null : friendlyStep(approval.title);
 }
 
+function retired(approval: Approval): boolean {
+  return approval.payload.sparkAction?.action === 'open_pr';
+}
+
 function ResolvedApproval({ approval }: { approval: Approval }) {
   const headingId = useId();
   const result = outcome(approval);
   const shown = subject(approval);
   const denied = result.icon === 'no';
+  const action = approval.payload.sparkAction;
+  useActionReport(
+    `action:${approval.id}`,
+    result.icon === 'busy' && action ? sparkActionLabels[action.action].doing : null,
+  );
   const mcpAction = approval.payload.sparkAction && isMcpAction(approval.payload.sparkAction);
   return (
     <div
@@ -128,9 +140,13 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
       aria-labelledby={headingId}
       id={approvalAnchor(approval.id)}
     >
-      <span className="ic" aria-hidden="true">
-        {denied ? <XIcon /> : <CheckIcon />}
-      </span>
+      {result.icon === 'busy' ? (
+        <span className="ic appr-busy" aria-hidden="true" />
+      ) : (
+        <span className="ic" aria-hidden="true">
+          {denied ? <XIcon /> : <CheckIcon />}
+        </span>
+      )}
       <span id={headingId} className="appr-what">
         <b>{heading(approval)}</b>
         {shown && <code title={shown}>{shown}</code>}
@@ -151,6 +167,7 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
             </a>
           </>
         )}
+        <RetryAction approval={approval} />
         {mcpAction && approval.status === 'allowed' && (
           <>
             {' '}
@@ -166,7 +183,9 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval =
     local && incoming.status === 'pending' ? mergeDecision([incoming], local)[0]! : incoming;
-  if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
+  if (approval.status !== 'pending' || retired(approval)) {
+    return <ResolvedApproval approval={approval} />;
+  }
   return (
     <Pending
       id={approval.id}

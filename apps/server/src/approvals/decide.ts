@@ -8,6 +8,7 @@ import {
   isGitPush,
   publishesBesidesPush,
   publishesCode,
+  skipsPushHooks,
   setsGitConfig,
   type ForcePush,
 } from './git-commands.ts';
@@ -73,6 +74,8 @@ export type Decision =
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
 export const PUSH_REASON = 'Pushing publishes outside this computer';
+export const PUSH_HOOKS_REASON =
+  "Pushes never skip this repository's hooks. Read what the hook reports and fix it, or tell the user what it needs";
 export const BUILDER_PUBLISH_REASON =
   "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
@@ -196,6 +199,7 @@ export interface DecideOptions {
   askAutoWhy?: string | null;
   defaultBranch?: string | null;
   observed?: readonly string[];
+  ownRepoObserved?: readonly string[];
   instructionGrants?: ReadonlySet<string>;
   shell?: ShellScript | null;
   agentAsks?: boolean;
@@ -224,8 +228,10 @@ function taintedEgress(
   request: ApprovalRequest,
   options: DecideOptions,
   files: FileLister,
+  published: PublishVerdict | null,
 ): Decision | null {
-  const observed = options.observed ?? [];
+  const toOwnRepo = published?.kind === 'allow' && options.ownRepoObserved !== undefined;
+  const observed = (toOwnRepo ? options.ownRepoObserved : options.observed) ?? [];
   if (observed.length === 0) return null;
   const egress = egressOf(request, files);
   if (!egress) return null;
@@ -274,6 +280,7 @@ function refusal(
       return BUILDER_PUBLISH_REASON;
     }
   }
+  if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
@@ -375,7 +382,7 @@ export function decide(
     return { verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: guarded.instructions };
   }
   const files = options.files ?? NO_FILES;
-  const tainted = taintedEgress(request, options, files);
+  const tainted = taintedEgress(request, options, files, published);
   if (tainted) return tainted;
   const always = alwaysAskReason(request, files, view);
   if (always) return { verdict: 'ask', reason: always };

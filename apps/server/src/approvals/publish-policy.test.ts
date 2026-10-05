@@ -48,6 +48,9 @@ describe('publishRequested()', () => {
     'dont use spark to open pr',
     'git push it to origin',
     'push',
+    'lets take it all they way to PR',
+    'get this to a draft pull request',
+    'turn it into a PR',
   ])('counts "%s"', (text) => {
     expect(publishRequested(text)).toBe(true);
   });
@@ -58,6 +61,8 @@ describe('publishRequested()', () => {
     'do not open a PR',
     'fix the date parser',
     'never push to main',
+    'what happened to the PR?',
+    'take a look at the PR comments',
   ])('ignores "%s"', (text) => {
     expect(publishRequested(text)).toBe(false);
   });

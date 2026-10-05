@@ -259,6 +259,10 @@ export function ticketFakes() {
     volume() {
       jira = seedVolume();
     },
+    slowCreates(delayMs: number, failures: number) {
+      linear.creating.delayMs = delayMs;
+      linear.creating.failures = failures;
+    },
     denyAssign(project: string) {
       jira.denyAssign.add(project);
     },

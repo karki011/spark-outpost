@@ -129,29 +129,6 @@ describe('SparkActionCard', () => {
     );
   });
 
-  it('shows the branch, base and files of a pull request', () => {
-    show(
-      card(
-        {
-          action: 'open_pr',
-          taskId: '7f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
-          title: 'Tidy notes',
-          body: 'Why',
-          branch: 'spark/tidy-notes',
-          base: 'main',
-          repo: 'acme/widgets',
-          files: [{ path: 'notes.txt', change: 'modified' }],
-          moreFiles: 0,
-        },
-        'Open a pull request? Tidy notes',
-      ),
-    );
-    const group = screen.getByRole('group', { name: /Open a pull request\?/ });
-    expect(group.textContent).toContain('spark/tidy-notes into main');
-    expect(group.textContent).toContain('notes.txt modified');
-    expect(within(group).getByLabelText('Description')).toHaveProperty('value', 'Why');
-  });
-
   it('shows the exact MCP command, the names that need values and no editable fields', () => {
     const opened = vi.fn();
     render(<SettingsListener onOpen={opened} />);

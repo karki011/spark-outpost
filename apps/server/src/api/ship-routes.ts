@@ -13,7 +13,7 @@ import { GitHubApiError } from '../ship/github/connection.ts';
 import { ShipBlockedError, type ShipDeps } from '../ship/prepare.ts';
 import { conversationPrRoute, forgetPrRoutes, testGitHub } from '../ship/route-check.ts';
 import { shipPreview, shipTask } from '../ship/service.ts';
-import { loginShellPath } from '../setup/login-path.ts';
+import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
 import { gitHubAppRoutes } from './github-app-routes.ts';
 import { paramId, parseBody } from './validation.ts';
 
@@ -53,6 +53,7 @@ export function gitHubDepsOf(deps: GitHubRouteDeps): GitHubDeps {
     apiUrl: deps.githubApiUrl,
     locateGh: deps.locateGh ?? (() => locateCli('gh', deps.runCommand, deps.loginShell)),
     loginPath: loginShellPath(deps.runCommand, deps.loginShell),
+    loginEnv: loginShellEnv(deps.runCommand, deps.loginShell),
     app: deps.githubApp,
   };
 }

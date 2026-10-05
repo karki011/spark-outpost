@@ -133,6 +133,11 @@ const server = createServer((req, res) => {
     tickets.volume();
     return send(res, 200, { ok: true });
   }
+  if (path === '/tickets-test/slow-creates') {
+    const wanted = new URL(req.url ?? '', 'http://stub').searchParams;
+    tickets.slowCreates(Number(wanted.get('delay') ?? 0), Number(wanted.get('failures') ?? 0));
+    return send(res, 200, { ok: true });
+  }
   if (path === '/tickets-test/deny-assign') {
     tickets.denyAssign('API');
     return send(res, 200, { ok: true });

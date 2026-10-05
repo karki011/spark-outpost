@@ -40,6 +40,7 @@ export interface FakeLinear {
   teams: Record<string, FakeLinearState[]>;
   issues: FakeLinearIssue[];
   calls: string[];
+  creating: { delayMs: number; failures: number };
   handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
 }
 
@@ -170,6 +171,7 @@ export function fakeLinear(): FakeLinear {
   const teams = seedTeams();
   const issues = seedIssues();
   const calls: string[] = [];
+  const creating = { delayMs: 0, failures: 0 };
 
   const stateOf = (item: FakeLinearIssue) =>
     teams[item.team]!.find((entry) => entry.id === item.stateId)!;
@@ -353,6 +355,7 @@ export function fakeLinear(): FakeLinear {
     teams,
     issues,
     calls,
+    creating,
     async handle(req, res) {
       const body = await readJson(req);
       if (req.headers.authorization !== LINEAR_KEY) {
@@ -369,6 +372,13 @@ export function fakeLinear(): FakeLinear {
       const operation =
         OPERATION.exec(query)?.[1] ?? (query.includes('viewer { id name') ? 'Viewer' : '');
       calls.push(operation);
+      if (operation === 'Create') {
+        await new Promise((resolve) => setTimeout(resolve, creating.delayMs));
+        if (creating.failures > 0) {
+          creating.failures -= 1;
+          return send(res, 200, { errors: [{ message: 'Linear is not taking new issues' }] });
+        }
+      }
       const data = answer(operation, body.variables ?? {});
       if (!data) return send(res, 200, { errors: [{ message: 'Entity not found' }] });
       send(res, 200, { data });
