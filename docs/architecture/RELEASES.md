@@ -137,6 +137,8 @@ Clients never downgrade (`allowDowngrade` is off, including when someone switche
 - `pnpm desktop:package --arch current` builds an ad-hoc signed app in `apps/desktop/release/<version>/`. Set `SPARK_UPDATE_FEED_URL` to any URL to also get the channel files, so `pnpm desktop:release` can show a dry run. Launch it with `SPARK_APP_DATA=/tmp/somewhere` so it does not touch `~/Library/Application Support/Spark Outpost`.
 - `pnpm desktop:e2e-update` builds 0.0.1, 0.0.2 (with an extra migration) and 0.0.3 (with a failing one) for the current arch, serves 0.0.2 from a local feed and prints which checks were verified and which are blocked by signing. It uses its own updater cache name (`spark-outpost-e2e-updater`) and data folder under `apps/desktop/release/e2e/`.
 
+With `CSC_NAME` set, the same command signs the test builds, clicks **Restart to update** in 0.0.1 with the island open and checks that the app quits and Squirrel.Mac replaces it with 0.0.2 (verified 2026-10-05, x64, Developer ID signed, not notarized; the swap takes about a minute). That path hung in 0.1.0-beta.1 to beta.4 because the island window cannot be closed, so users of those builds turn the island off before updating. The signed run installs under the system temp folder, because macOS blocks the installer inside `~/Documents`.
+
 Last run on an Intel Mac without a Developer ID (2026-10-01, x64, ad-hoc signed, zip only):
 
 | Check                                                                                             | Result                                                                                                                                                                           |

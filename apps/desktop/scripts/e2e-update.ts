@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
@@ -10,7 +10,7 @@ import { packageDesktop, releaseDir } from './stage.ts';
 
 const work = path.join(releaseDir, 'e2e');
 const feedDir = path.join(work, 'feed');
-const installDir = path.join(work, 'Applications');
+const installDir = path.join(os.tmpdir(), 'spark-outpost-e2e-applications');
 const appData = path.join(work, 'app-data');
 const userData = path.join(appData, 'Spark Outpost');
 const PACKAGE_NAME = 'spark-outpost-e2e';
@@ -20,6 +20,8 @@ const updaterCache = path.join(caches, `${PACKAGE_NAME}-updater`);
 const testCaches = [updaterCache, path.join(caches, APP_ID), path.join(caches, `${APP_ID}.ShipIt`)];
 const arch: MacArch = os.arch() === 'arm64' ? 'arm64' : 'x64';
 const appName = 'Spark Outpost.app';
+const signingName = process.env.CSC_NAME;
+const DEBUG_PORT = 39222;
 const GOOD_MIGRATION = ['9990_e2e_update.sql', 'CREATE TABLE e2e_update (id int PRIMARY KEY);'];
 const BROKEN_MIGRATION = [
   '9991_e2e_broken.sql',
@@ -59,7 +61,10 @@ function buildEnv(feedUrl: string): Record<string, string | undefined> {
   for (const name of Object.keys(env)) {
     if (name.startsWith('APPLE_') || name.startsWith('CSC_')) delete env[name];
   }
-  return { ...env, SPARK_UPDATE_FEED_URL: feedUrl, CSC_IDENTITY_AUTO_DISCOVERY: 'false' };
+  const signing = signingName
+    ? { CSC_NAME: signingName }
+    : { CSC_IDENTITY_AUTO_DISCOVERY: 'false' };
+  return { ...env, SPARK_UPDATE_FEED_URL: feedUrl, ...signing };
 }
 
 async function addMigrations(serverDir: string, migrations: string[][]): Promise<void> {
@@ -113,8 +118,8 @@ interface Running {
   exited: Promise<number | null>;
 }
 
-function launch(app: string): Running {
-  const child = spawn(path.join(app, 'Contents/MacOS/Spark Outpost'), [], {
+function launch(app: string, args: string[] = []): Running {
+  const child = spawn(path.join(app, 'Contents/MacOS/Spark Outpost'), args, {
     env: { ...process.env, SPARK_APP_DATA: appData },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -169,7 +174,7 @@ async function readJson(file: string): Promise<Record<string, unknown> | null> {
 
 async function updateCycle(v1: string): Promise<void> {
   const app = await install(v1);
-  const running = launch(app);
+  const running = launch(app, signingName ? [`--remote-debugging-port=${DEBUG_PORT}`] : []);
   const ready = await waitForLine(running, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
   record(
     '0.0.1 packaged app launches, migrates a fresh database and serves the window',
@@ -196,6 +201,10 @@ async function updateCycle(v1: string): Promise<void> {
     'blocked',
     `the first update after a fresh install has no cached update.zip, so it downloads in full. ${fullDownload ?? ''}`.trim(),
   );
+  if (signingName) {
+    await restartToUpdate(app, running);
+    return;
+  }
   const code = await quit(running);
   const squirrel = running.lines.filter((line) =>
     /Squirrel|code signature|ShipIt|signature/i.test(line),
@@ -208,6 +217,67 @@ async function updateCycle(v1: string): Promise<void> {
       ? 'bundle replaced'
       : `bundle still ${installed}; Squirrel.Mac refuses updates whose code signature does not match a Developer ID designated requirement. Exit ${code}. ${squirrel.slice(-2).join(' | ')}`,
   );
+}
+
+interface DebugPage {
+  url: string;
+  webSocketDebuggerUrl: string;
+}
+
+async function clickRestartToUpdate(): Promise<void> {
+  const pages = (await (await fetch(`http://127.0.0.1:${DEBUG_PORT}/json`)).json()) as DebugPage[];
+  const page = pages.find((entry) => /^http/.test(entry.url) && !entry.url.includes('/island'));
+  if (!page) throw new Error('The main window is not open.');
+  const socket = new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    socket.addEventListener('open', resolve);
+    socket.addEventListener('error', reject);
+  });
+  socket.send(
+    JSON.stringify({
+      id: 1,
+      method: 'Runtime.evaluate',
+      params: { expression: 'window.sparkDesktop.updates.install()', awaitPromise: true },
+    }),
+  );
+  await delay(1_000);
+  socket.close();
+}
+
+async function untilInstalled(app: string, version: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if ((await bundleVersion(app).catch(() => null)) === version) return true;
+    await delay(1_000);
+  }
+  return false;
+}
+
+function stopRelaunched(): void {
+  try {
+    execFileSync('pkill', ['-f', installDir]);
+  } catch {
+    return;
+  }
+}
+
+async function restartToUpdate(app: string, running: Running): Promise<void> {
+  execFileSync('launchctl', ['setenv', 'SPARK_APP_DATA', appData]);
+  try {
+    await clickRestartToUpdate();
+    const exited = await Promise.race([running.exited, delay(90_000).then(() => 'timeout')]);
+    const installed = exited !== 'timeout' && (await untilInstalled(app, '0.0.2', 300_000));
+    record(
+      'Restart to update quits with the island open, and Squirrel.Mac replaces the bundle',
+      installed ? 'verified' : 'failed',
+      exited === 'timeout' ? 'the app never quit' : `bundle is ${await bundleVersion(app)}`,
+    );
+    if (exited === 'timeout') running.child.kill('SIGKILL');
+    await delay(10_000);
+  } finally {
+    stopRelaunched();
+    execFileSync('launchctl', ['unsetenv', 'SPARK_APP_DATA']);
+  }
 }
 
 async function migrationCycle(v2: string, v3: string): Promise<void> {
@@ -255,7 +325,11 @@ async function migrationCycle(v2: string, v3: string): Promise<void> {
 }
 
 async function removeTestCaches(): Promise<void> {
-  for (const dir of testCaches) await rm(dir, { recursive: true, force: true });
+  for (const dir of [...testCaches, installDir]) await rm(dir, { recursive: true, force: true });
+  const byHost = path.join(os.homedir(), 'Library/Preferences/ByHost');
+  for (const name of existsSync(byHost) ? await readdir(byHost) : []) {
+    if (name.startsWith(`${APP_ID}.ShipIt.`)) await rm(path.join(byHost, name), { force: true });
+  }
 }
 
 await rm(work, { recursive: true, force: true });
