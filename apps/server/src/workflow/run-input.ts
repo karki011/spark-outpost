@@ -53,6 +53,7 @@ export interface RunInput {
   seed?: ChatSeed | null;
   continuesRunId?: string | null;
   modelSwitch?: ModelSwitch | null;
+  followUpRound?: boolean;
 }
 
 export interface ChatSeed {
@@ -81,6 +82,7 @@ interface RunRow {
   run_mode: RunMode | null;
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
+  follow_up_round: boolean | null;
   agent_mode: string | null;
   config_values: ConfigValues | null;
   parent_run_id: string | null;
@@ -156,6 +158,8 @@ async function loadHistory(
 export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   const { rows } = await db.query<RunRow>(
     `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider, m.content,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'pr_follow_up' AS follow_up_round,
             r.model AS run_model, r.effort AS run_effort,
             r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
@@ -222,6 +226,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     agentMode: row.agent_mode,
     parentRunId: null,
     userRequest: row.content,
+    followUpRound: row.follow_up_round === true,
     role: row.run_role,
     copyOf: null,
     askTitle: row.title_source !== 'user',
@@ -288,6 +293,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     agentMode: row.agent_mode,
     parentRunId: row.parent_run_id,
     userRequest: row.content,
+    followUpRound: row.follow_up_round === true,
     role: row.run_role,
     copyOf: row.worktree_path ? (row.run_name ?? 'Builder') : null,
     askTitle: row.run_role === 'architect' && row.title_source !== 'user',

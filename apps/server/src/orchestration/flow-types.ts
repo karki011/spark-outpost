@@ -12,7 +12,7 @@ import type { Verdict } from '../advisor/verify-questions.ts';
 import { IDLE_REVIEW, type ReviewLoop } from './review-loop.ts';
 
 export type SpawnReason =
-  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'escalate' | 'recheck';
+  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'escalate' | 'recheck' | 'publish';
 
 export interface CascadeEvidence {
   checksPass: boolean;

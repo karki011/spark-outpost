@@ -1,15 +1,11 @@
 import { PR_FOLLOW_UP_MAX_ROUNDS, type PrWatch } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
-import {
-  feedbackFor,
-  feedbackView,
-  watchesForConversation,
-  type Watch,
-} from '../persistence/pr-watches.ts';
+import { feedbackFor, feedbackView } from '../persistence/pr-watches.ts';
+import { trackedPullsOf, type TrackedPull } from '../persistence/tracked-pulls.ts';
 
 const OPEN_STATES = new Set(['queued', 'held', 'needs_user', 'in_round', 'planned']);
 
-export async function watchView(db: Queryable, watch: Watch, excerptChars?: number) {
+export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?: number) {
   const items = await feedbackFor(db, watch.id);
   const view: PrWatch = {
     id: watch.id,
@@ -17,12 +13,25 @@ export async function watchView(db: Queryable, watch: Watch, excerptChars?: numb
     repo: `${watch.owner}/${watch.repo}`,
     number: watch.number,
     url: watch.url,
+    title: watch.title,
     branch: watch.branch,
+    base: watch.base,
+    outside: watch.outside,
+    followUp: watch.followUp,
+    opened: {
+      via: watch.openedVia,
+      by: watch.openedBy,
+      runId: watch.openedRunId,
+      at: watch.openedAt.toISOString(),
+    },
     phase: watch.phase,
     doing: watch.doing,
     prState: watch.prState,
     draft: watch.draft,
     checks: watch.checks,
+    failingChecks: watch.failingChecks,
+    review: watch.review,
+    unknownReason: watch.statusReason,
     rounds: watch.rounds,
     maxRounds: PR_FOLLOW_UP_MAX_ROUNDS,
     newComments: items.filter((item) => item.kind !== 'check' && OPEN_STATES.has(item.state))
@@ -40,6 +49,6 @@ export async function conversationWatches(
   workspaceId: string,
   conversationId: string,
 ): Promise<PrWatch[]> {
-  const watches = await watchesForConversation(db, workspaceId, conversationId);
+  const watches = await trackedPullsOf(db, workspaceId, conversationId);
   return Promise.all(watches.map((watch) => watchView(db, watch)));
 }

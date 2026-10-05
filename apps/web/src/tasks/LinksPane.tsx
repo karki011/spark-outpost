@@ -1,9 +1,11 @@
 import './task-panes.css';
 import { useState, type FormEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TaskLink } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
+import { prWatchesQuery } from '../chat/pull-request/pr-follow-up-api.ts';
+import { PullRequestList } from '../chat/pull-request/PullRequestList.tsx';
 import { FolderIcon, PlusIcon } from '../ui/icons.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { GitHubIcon, LinkIcon } from './TaskIcons.tsx';
@@ -69,6 +71,9 @@ interface LinksPaneProps {
 
 export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
   const queryClient = useQueryClient();
+  const watches = useQuery(prWatchesQuery(conversationId)).data?.watches ?? [];
+  const tracked = new Set(watches.map((watch) => watch.url));
+  const others = links.filter((link) => !(link.kind === 'pr' && tracked.has(link.url)));
   const [adding, setAdding] = useState(false);
   const [url, setUrl] = useState('');
   const add = useMutation({
@@ -91,12 +96,13 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
 
   return (
     <div className="wsec">
-      {links.length === 0 && (
+      {links.length === 0 && watches.length === 0 && (
         <p className="wnote first">
           No links yet. Pull requests and the links, files and folders you add show up here.
         </p>
       )}
-      {links.map((link) => (
+      <PullRequestList watches={watches} />
+      {others.map((link) => (
         <LinkChip key={link.id} link={link} />
       ))}
       {adding ? (

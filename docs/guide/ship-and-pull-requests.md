@@ -15,31 +15,33 @@ You'll ship a finished change as a commit, a pushed branch or a pull request. Ab
 
 ![Ship this task with the PR option, branch and files](images/ship-panel-light.png)
 
-Ship commits only the task's own files and leaves secret files out. Once a PR exists, the button reads **Update PR**. Spark never merges a pull request.
+Ship commits only the task's own files, without secret files. Once a PR exists, the button reads **Update PR**. Nothing merges.
 
-## How Spark pushes and opens the PR
+## When the agent publishes
 
-Spark does it itself, so your credentials never reach the agent.
+Ask for a pull request in your message, or set **Full auto → PR**. After the checks, the agent pushes the branch and opens the PR.
 
-| Step        | Spark tries, in order                                                                                             |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| Push        | Your own git login, then your GitHub sign-in or saved token. Neither is written to git config or logs.            |
-| Open the PR | Your GitHub sign-in for repositories it covers, then a token, your `gh` login, or a **Create PR on GitHub** link. |
+| The chat says                                               | Meaning                    |
+| ----------------------------------------------------------- | -------------------------- |
+| **Opened pull request #12**                                 | Spark tracks it.           |
+| "The branch was pushed, but no pull request was opened."    | Use the link to create it. |
+| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.        |
 
-GitLab and Bitbucket remotes get a link to their merge request page. Hover the chat's branch chip to see the route.
+The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
+
+Every pull request opened in the chat, also from its terminal, is listed under **Links** with checks and review.
 
 ## Ready for review or draft
 
-1. Open **Settings → Spark** and find **Pull requests**.
-2. Set **Open pull requests as** to **Ready for review** (the default) or **Draft**.
+In **Settings → Spark**, set **Open pull requests as** to **Ready for review** (the default) or **Draft**.
 
 ## When checks still fail in Full auto
 
-At **Full auto → PR**, Spark ships by itself. **When checks still fail in Full auto** in **Settings → Spark** decides what happens:
+**When checks still fail in Full auto** in **Settings → Spark** decides what happens:
 
 | Choice                        | Result                                           |
 | ----------------------------- | ------------------------------------------------ |
 | **Open a draft PR** (default) | The PR opens as a draft marked "Checks failing". |
-| **Stop and ask**              | Spark stops before shipping and asks you.        |
+| **Stop and ask**              | Spark stops before publishing and asks you.      |
 
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)

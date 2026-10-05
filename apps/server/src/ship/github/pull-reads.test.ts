@@ -12,18 +12,20 @@ describe('ciStatus', () => {
     expect(ciStatus([])).toEqual({ state: 'none' });
   });
 
-  it('names every failing run even while others are still running', () => {
+  it('names every failing run once all of them have finished', () => {
     expect(
       ciStatus([
         run('lint', 'completed', 'success'),
         run('test', 'completed', 'failure'),
         run('e2e', 'completed', 'timed_out'),
-        run('build', 'in_progress', null),
       ]),
     ).toEqual({ state: 'failing', failing: ['test', 'e2e'] });
   });
 
-  it('is pending while a run has not finished and none failed', () => {
+  it('is pending while any run has not finished, even when another already failed', () => {
+    expect(ciStatus([run('test', 'completed', 'failure'), run('build', 'queued', null)])).toEqual({
+      state: 'pending',
+    });
     expect(ciStatus([run('lint', 'completed', 'success'), run('test', 'queued', null)])).toEqual({
       state: 'pending',
     });

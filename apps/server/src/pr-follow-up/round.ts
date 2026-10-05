@@ -9,8 +9,10 @@ import {
   type PrFollowUpAction,
   type RunStatus,
 } from '@spark-outpost/contracts';
-import { resolveChatSettings } from '../persistence/chat-settings.ts';
+import { redactText, redactValue } from '../audit/redact.ts';
 import { insertApproval } from '../persistence/approvals.ts';
+import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
+import { primaryChatWorktree } from '../persistence/chat-worktrees.ts';
 import { prFollowUpSettings } from '../persistence/pr-settings.ts';
 import {
   feedbackFor,
@@ -20,13 +22,16 @@ import {
   type Watch,
 } from '../persistence/pr-watches.ts';
 import { getTaskShip } from '../persistence/task-ships.ts';
+import { pushedHead } from '../ship/published.ts';
 import { syncWithPull } from './branch-sync.ts';
 import { connectTo, shipDepsOf, startRoundRun, type FollowUpDeps } from './deps.ts';
 import { FollowUpBlocked, pendingPush, postReply, pushRound, replyText } from './outward.ts';
-import { builderSkipped, itemNotes, roundPrompt } from './prompt.ts';
-import { roundLine } from './rounds.ts';
+import { followUpMode } from './mode.ts';
+import { itemNotes, noteKind, roundPrompt } from './prompt.ts';
+import { CHAT_BUSY_LINE, heldBackLine, roundLine, splitRound } from './rounds.ts';
 
 const NEW_COMMIT = 'the new commit';
+export const PR_REPLY_METHOD = 'ship/pr_reply';
 const CARD_FILES = 30;
 
 const SYNC_LINES = {
@@ -40,20 +45,46 @@ function needsYou(watch: Watch, doing: string): Watch {
   return { ...watch, phase: 'needs_you', doing, roundRunId: null, approvalId: null };
 }
 
+async function chatBusy(deps: FollowUpDeps, conversationId: string): Promise<boolean> {
+  const { rows } = await deps.db.query<{ busy: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM runs r WHERE r.conversation_id = $1
+         AND r.status IN ('queued', 'running', 'awaiting_approval')
+     ) OR EXISTS (
+       SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.conversation_id = $1 AND a.status = 'pending'
+     ) AS busy`,
+    [conversationId],
+  );
+  return rows[0]?.busy === true;
+}
+
+async function holdBack(deps: FollowUpDeps, watch: Watch, queued: readonly StoredFeedback[]) {
+  const split = splitRound(queued, await feedbackFor(deps.db, watch.id), watch.rounds);
+  const held = [...split.unchanged, ...split.repeated];
+  await updateFeedback(
+    deps.db,
+    held.map((item) => item.id),
+    { state: 'needs_user' },
+  );
+  return { run: split.run, line: heldBackLine(split.unchanged, split.repeated.length) };
+}
+
 export async function startRound(
   deps: FollowUpDeps,
   watch: Watch,
-  queued: readonly StoredFeedback[],
+  all: readonly StoredFeedback[],
 ): Promise<Watch> {
-  const ship = await getTaskShip(deps.db, watch.taskId);
-  if (!ship) return needsYou(watch, 'Spark lost track of the branch this PR came from.');
+  if (await chatBusy(deps, watch.conversationId)) {
+    return { ...watch, phase: 'watching', doing: CHAT_BUSY_LINE };
+  }
+  const { run: queued, line } = await holdBack(deps, watch, all);
+  if (queued.length === 0) return needsYou(watch, line);
+  const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
+  const root = await roundRoot(deps, watch);
+  if (!root) return needsYou(watch, 'Spark lost track of the branch this PR came from.');
   if (watch.headSha) {
-    const sync = await syncWithPull(
-      ship.rootPath,
-      ship.remote ?? 'origin',
-      watch.branch,
-      watch.headSha,
-    );
+    const sync = await syncWithPull(root, ship?.remote ?? 'origin', watch.branch, watch.headSha);
     if (sync === 'diverged' || sync === 'unreachable') return needsYou(watch, SYNC_LINES[sync]);
   }
   const round = watch.rounds + 1;
@@ -70,7 +101,7 @@ export async function startRound(
   return {
     ...watch,
     phase: 'fixing',
-    doing: roundLine(queued.length, round),
+    doing: [line, roundLine(queued.length, round)].filter(Boolean).join(' '),
     rounds: round,
     roundRunId: runId,
     requested: false,
@@ -152,8 +183,11 @@ export async function finishRound(deps: FollowUpDeps, watch: Watch): Promise<Wat
     return needsYou(watch, `The fix round ${how}. Ask Spark in the chat to try again.`);
   }
   const notes = itemNotes(run.reply);
-  const ship = shipDepsOf(deps, watch.workspaceId);
   const taskId = run.taskId ?? watch.taskId;
+  if ((await followUpMode(deps.db, watch)) !== 'ask') {
+    return settleRound(deps, watch, items, notes);
+  }
+  const ship = shipDepsOf(deps, watch.workspaceId);
   let preview;
   try {
     preview = await pendingPush(ship, watch, taskId);
@@ -187,8 +221,6 @@ export async function finishRound(deps: FollowUpDeps, watch: Watch): Promise<Wat
     ),
     skip: [],
   };
-  const level = (await resolveChatSettings(deps.db, watch.conversationId)).level;
-  if (level === 'full-auto') return perform(deps, watch, action, taskId);
   const card = await askToConfirm(deps, watch, action);
   const replies = action.items.filter((item) => item.reply).length;
   const pushLine = preview ? 'the push and ' : '';
@@ -211,6 +243,119 @@ function doneLine(commit: string | null, replies: number, needs: number): string
   return `${head}${after} ${WATCHING_LINE}`;
 }
 
+interface Settlement {
+  commit: string | null;
+  skip: ReadonlySet<string>;
+  replies: boolean;
+  unpushed: boolean;
+}
+
+async function auditReply(deps: FollowUpDeps, watch: Watch, item: StoredFeedback, text: string) {
+  if (!watch.roundRunId) return;
+  const payload = redactValue({
+    repo: `${watch.owner}/${watch.repo}`,
+    number: watch.number,
+    url: watch.url,
+    item: item.label,
+    to: item.author,
+    kind: item.kind,
+    text,
+  });
+  await insertFinishedRunEntries(deps.db, watch.roundRunId, [
+    {
+      at: new Date(),
+      direction: 'harness',
+      kind: 'ship',
+      method: PR_REPLY_METHOD,
+      rpcId: null,
+      sizeBytes: Buffer.byteLength(JSON.stringify(payload)),
+      truncated: false,
+      payload,
+    },
+  ]).catch((error: unknown) => console.error('Could not audit a pull request reply', error));
+}
+
+function unpushedLine(unpushed: boolean): string | null {
+  return unpushed
+    ? 'The fix is in the chat but was not pushed; the chat says what stopped it.'
+    : null;
+}
+
+async function settle(
+  deps: FollowUpDeps,
+  watch: Watch,
+  items: readonly StoredFeedback[],
+  settlement: Settlement,
+): Promise<Watch> {
+  const { commit, skip } = settlement;
+  const connection = await connectTo(deps, watch);
+  let replied = 0;
+  let needs = 0;
+  for (const item of items) {
+    if (skip.has(item.id)) {
+      await updateFeedback(deps.db, [item.id], { state: 'skipped' });
+      continue;
+    }
+    const kind = noteKind(item.reply, item.triage === 'question');
+    const text = settlement.replies
+      ? replyText(item, item.reply, commit?.slice(0, 7) ?? null)
+      : null;
+    const unfixed = kind === 'fixed' && !commit;
+    if (kind === 'left' || unfixed || (item.kind !== 'check' && text && !connection)) {
+      needs += 1;
+      await updateFeedback(deps.db, [item.id], { state: 'needs_user' });
+      continue;
+    }
+    const posts = item.kind !== 'check' && text !== null && connection !== null;
+    const replyId = posts ? await postReply(connection, watch, item, text) : null;
+    if (posts) await auditReply(deps, watch, item, redactText(text));
+    if (replyId) replied += 1;
+    await updateFeedback(deps.db, [item.id], { state: 'done', replyId });
+  }
+  const line = [unpushedLine(settlement.unpushed), doneLine(commit, replied, needs)]
+    .filter(Boolean)
+    .join(' ');
+  return {
+    ...watch,
+    phase: needs > 0 ? 'needs_you' : 'watching',
+    doing: line,
+    roundRunId: null,
+    approvalId: null,
+  };
+}
+
+async function roundRoot(deps: FollowUpDeps, watch: Watch): Promise<string | null> {
+  const worktree = await primaryChatWorktree(deps.db, watch.conversationId);
+  if (worktree?.branch === watch.branch) return worktree.path;
+  const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
+  return ship?.rootPath ?? worktree?.path ?? null;
+}
+
+async function settleRound(
+  deps: FollowUpDeps,
+  watch: Watch,
+  items: readonly StoredFeedback[],
+  notes: ReadonlyMap<string, string>,
+): Promise<Watch> {
+  for (const item of items) {
+    await updateFeedback(deps.db, [item.id], {
+      state: 'planned',
+      reply: notes.get(item.label) ?? null,
+    });
+  }
+  const planned = await feedbackFor(deps.db, watch.id, ['planned']);
+  const root = await roundRoot(deps, watch);
+  const state = root ? await pushedHead(root, watch.branch) : null;
+  const moved = state?.head != null && state.head !== watch.headSha;
+  const settings = await prFollowUpSettings(deps.db, watch.workspaceId);
+  return settle(deps, watch, planned, {
+    commit: moved && state.pushed ? state.head : null,
+    skip: new Set(),
+    replies: settings.reply,
+    unpushed: moved && !state.pushed,
+  });
+}
+
 async function perform(
   deps: FollowUpDeps,
   watch: Watch,
@@ -231,35 +376,10 @@ async function perform(
     );
     return needsYou(watch, `Spark couldn’t push: ${(error as Error).message}`);
   }
-  const connection = await connectTo(deps, watch);
-  const proposed = new Map(action.items.map((item) => [item.id, item]));
-  let replied = 0;
-  let needs = 0;
-  for (const item of items) {
-    if (skip.has(item.id)) {
-      await updateFeedback(deps.db, [item.id], { state: 'skipped' });
-      continue;
-    }
-    const unfixed = item.triage !== 'question' && (!commit || builderSkipped(item.reply));
-    const unanswered = item.triage === 'question' && !item.reply;
-    const wantsReply = proposed.get(item.id)?.reply != null;
-    const text = wantsReply ? replyText(item, item.reply, commit?.slice(0, 7) ?? null) : null;
-    if (unfixed || unanswered || (text && !connection)) {
-      needs += 1;
-      await updateFeedback(deps.db, [item.id], { state: 'needs_user' });
-      continue;
-    }
-    const replyId = text && connection ? await postReply(connection, watch, item, text) : null;
-    if (replyId) replied += 1;
-    await updateFeedback(deps.db, [item.id], { state: 'done', replyId });
-  }
-  return {
-    ...watch,
-    phase: needs > 0 ? 'needs_you' : 'watching',
-    doing: doneLine(commit, replied, needs),
-    roundRunId: null,
-    approvalId: null,
-  };
+  const wanted = new Set(action.items.filter((item) => item.reply != null).map((item) => item.id));
+  const unasked = items.filter((item) => !wanted.has(item.id) && item.kind !== 'check');
+  const silent = new Set([...skip, ...unasked.map((item) => item.id)]);
+  return settle(deps, watch, items, { commit, skip: silent, replies: true, unpushed: false });
 }
 
 export async function afterDecision(

@@ -7,6 +7,7 @@ import { repoPath, type GitHubConnection } from '../ship/github/connection.ts';
 import type { ShipDeps } from '../ship/prepare.ts';
 import { shipPreview, shipTask } from '../ship/service.ts';
 import { SPARK_REPLY_MARKER } from './gather.ts';
+import { noteKind, noteText } from './prompt.ts';
 
 const replySchema = z.object({ id: z.number().int() });
 
@@ -52,9 +53,13 @@ export async function pushRound(
 }
 
 export function replyText(item: StoredFeedback, note: string | null, commit: string | null) {
-  if (item.triage === 'question') return note;
+  const kind = noteKind(note, item.triage === 'question');
+  if (kind === 'left' || note === null) return null;
+  const text = noteText(note);
+  if (kind === 'answer') return text || null;
+  if (kind === 'pushed_back') return text ? `Not changed: ${text}` : null;
   if (!commit) return null;
-  return note ? `Fixed in ${commit}: ${note}` : `Fixed in ${commit}.`;
+  return text ? `Fixed in ${commit}: ${text}` : `Fixed in ${commit}.`;
 }
 
 export async function postReply(

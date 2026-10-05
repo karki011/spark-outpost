@@ -2,7 +2,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { gitHubToken } from '../persistence/github-tokens.ts';
-import { pushBranch, ShipGitError, type GitAccess, type Remote } from './git.ts';
+import { hiddenValues, secretNamed, withoutSecretNamed } from '../setup/environment.ts';
+import { ShipGitError, type GitAccess, type Remote } from './git.ts';
+import { pushBranch } from './push-branch.ts';
 import { appCovers, type GitHubDeps } from './github/access.ts';
 import { appAccessToken } from './github/app-tokens.ts';
 import { parseRemoteUrl } from './remote.ts';
@@ -26,9 +28,11 @@ interface RemoteToken {
   token: string;
 }
 
+export type TokenGitAccess = Required<Pick<GitAccess, 'env' | 'config'>>;
+
 export async function withTokenAccess<T>(
   token: string,
-  work: (access: Required<GitAccess>) => Promise<T>,
+  work: (access: TokenGitAccess) => Promise<T>,
 ): Promise<T> {
   const dir = await mkdtemp(path.join(tmpdir(), 'spark-askpass-'));
   const script = path.join(dir, 'askpass.sh');
@@ -79,50 +83,113 @@ export function isAuthFailure(error: unknown): error is ShipGitError {
   return error instanceof ShipGitError && GIT_AUTH.test(error.message);
 }
 
+const ONCE_FILE = 'once';
+
+const ONE_SHOT_ASKPASS = `#!/bin/sh
+case "$1" in
+  Username*) printf '%s\\n' x-access-token ;;
+  *)
+    once="$(dirname "$0")/${ONCE_FILE}"
+    if [ -f "$once" ]; then
+      answer=$(cat "$once")
+      rm -f "$once"
+      printf '%s\\n' "$answer"
+    fi
+    ;;
+esac
+`;
+
+export async function withOneShotToken<T>(
+  token: string,
+  work: (access: TokenGitAccess) => Promise<T>,
+): Promise<T> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'spark-askpass-'));
+  const script = path.join(dir, 'askpass.sh');
+  try {
+    await writeFile(path.join(dir, ONCE_FILE), `${token}\n`, { mode: 0o600 });
+    await writeFile(script, ONE_SHOT_ASKPASS, { mode: 0o700 });
+    return await work({
+      env: { GIT_ASKPASS: script, GIT_TERMINAL_PROMPT: '0' },
+      config: ['-c', 'credential.helper='],
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+type TokenAccess = <T>(token: string, work: (access: TokenGitAccess) => Promise<T>) => Promise<T>;
+
+async function credentialed<T>(
+  tokens: () => Promise<RemoteToken[]>,
+  env: Record<string, string>,
+  tokenAccess: TokenAccess,
+  run: (access: GitAccess, token: string | null) => Promise<T>,
+): Promise<{ route: GitRoute; value: T }> {
+  let refused: ShipGitError;
+  try {
+    return { route: 'git', value: await run({ env }, null) };
+  } catch (error) {
+    if (!isAuthFailure(error)) throw error;
+    refused = error;
+  }
+  for (const { route, token } of await tokens()) {
+    try {
+      const value = await tokenAccess(token, (access) =>
+        run({ ...access, env: { ...env, ...access.env } }, token),
+      );
+      return { route, value };
+    } catch (error) {
+      if (!isAuthFailure(error)) throw error;
+      refused = error;
+    }
+  }
+  throw refused;
+}
+
 export async function withCredentials(
   deps: GitHubDeps,
   remote: Remote,
   run: (access: GitAccess) => Promise<void>,
 ): Promise<GitRoute> {
   const env = await loginEnv(deps);
-  try {
-    await run({ env });
-    return 'git';
-  } catch (error) {
-    if (!isAuthFailure(error)) throw error;
-    return withSparkToken(await tokensForRemote(deps, remote.url), env, run, error);
-  }
+  const tokens = () => tokensForRemote(deps, remote.url);
+  return (await credentialed(tokens, env, withTokenAccess, run)).route;
 }
 
-async function withSparkToken(
-  tokens: RemoteToken[],
-  env: Record<string, string>,
-  run: (access: GitAccess) => Promise<void>,
-  refused: ShipGitError,
-): Promise<GitRoute> {
-  let last = refused;
-  for (const { route, token } of tokens) {
-    try {
-      await withTokenAccess(token, (access) => run({ ...access, env: { ...env, ...access.env } }));
-      return route;
-    } catch (error) {
-      if (!isAuthFailure(error)) throw error;
-      last = error;
-    }
-  }
-  throw last;
+export interface PushOptions {
+  signal?: AbortSignal | undefined;
+  timeoutMs?: number | undefined;
+  withholdSecrets?: boolean | undefined;
 }
 
-export async function pushWithCredentials(
+export interface PushOutcome {
+  route: GitRoute;
+  output: string;
+  secretNames: string[];
+}
+
+export async function pushOwnBranch(
   deps: GitHubDeps,
   root: string,
   remote: Remote,
   branch: string,
-): Promise<GitRoute> {
+  options: PushOptions = {},
+): Promise<PushOutcome> {
+  const shell = await loginEnv(deps);
+  const env = options.withholdSecrets ? withoutSecretNamed(shell) : shell;
+  const hidden = hiddenValues(env);
+  const secretNames = Object.keys(secretNamed(env)).sort();
+  const tokens = () => tokensForRemote(deps, remote.url);
   try {
-    return await withCredentials(deps, remote, (access) =>
-      pushBranch(root, remote.name, branch, access),
+    const pushed = await credentialed(tokens, env, withOneShotToken, (access, token) =>
+      pushBranch(root, remote.name, branch, {
+        ...access,
+        signal: options.signal,
+        timeoutMs: options.timeoutMs,
+        hidden: token ? [...hidden, token] : hidden,
+      }),
     );
+    return { route: pushed.route, output: pushed.value, secretNames };
   } catch (error) {
     if (!isAuthFailure(error)) throw error;
     throw new ShipGitError(
@@ -130,4 +197,14 @@ export async function pushWithCredentials(
       error.output,
     );
   }
+}
+
+export async function pushWithCredentials(
+  deps: GitHubDeps,
+  root: string,
+  remote: Remote,
+  branch: string,
+  options: PushOptions = {},
+): Promise<GitRoute> {
+  return (await pushOwnBranch(deps, root, remote, branch, options)).route;
 }

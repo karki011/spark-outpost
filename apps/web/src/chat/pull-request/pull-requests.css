@@ -1,0 +1,174 @@
+.prl {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.prl ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prl-repo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font:
+    500 12px/1.4 'Geist Mono',
+    ui-monospace,
+    monospace;
+  color: var(--muted);
+}
+
+.prl-outside {
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.prl-item {
+  display: grid;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.prl-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.prl-title > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.prl-title b {
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prl-title:hover b {
+  text-decoration: underline;
+}
+
+.prl-number {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  color: var(--muted);
+}
+
+.prl-facts,
+.prl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.prl-meta {
+  color: var(--faint);
+}
+
+.prl-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.prl-failing {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.prl .prl-failing ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
+.prl-failing a {
+  color: var(--text);
+}
+
+.prl-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.prl-title:focus-visible,
+.prl-failing a:focus-visible,
+.pr-opened a:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.prchip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.prchip-dot.ok {
+  background: var(--success);
+}
+
+.prchip-dot.prog {
+  background: var(--accent);
+}
+
+.prchip-dot.bad {
+  background: var(--danger);
+}
+
+.prchip {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.pr-opened {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  font-size: 13px;
+}
+
+.pr-opened svg {
+  color: var(--faint);
+}
+
+.pr-opened a {
+  color: var(--text);
+}
+
+.pr-opened .pr-opened-repo {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}

@@ -90,6 +90,26 @@ describe('railRows', () => {
     });
   });
 
+  it('counts several pull requests and opens Links to list them', () => {
+    const watch = {
+      repo: 'acme/widgets',
+      number: 8,
+      url: 'https://github.com/acme/widgets/pull/8',
+      prState: 'open',
+      draft: false,
+      checks: 'failing',
+    } as const;
+    const row = (hasTask: boolean) =>
+      railRows({ ...base, hasTask, watch, pulls: 3 }).find((entry) => entry.id === 'pr');
+    expect(row(true)).toMatchObject({
+      text: '3 pull requests',
+      detail: '#8 Open',
+      label: '3 pull requests. acme/widgets#8 is open',
+      action: { kind: 'tab', tab: 'links' },
+    });
+    expect(row(false)!.action).toEqual({ kind: 'link', href: watch.url });
+  });
+
   it('sums tokens, cost and context, and opens Cost only when there is a task', () => {
     const usage = { ...EMPTY_CONVERSATION_USAGE, totalTokens: 12_400, costUsd: 0.08 };
     const row = railRows({ ...base, usage, contextPercent: 23, hasTask: true }).at(-1);

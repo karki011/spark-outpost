@@ -11,7 +11,7 @@ import {
 import { builderSkipped, itemNotes, quoted, roundPrompt } from './prompt.ts';
 import type { StoredFeedback } from '../persistence/pr-watches.ts';
 
-const ALL_ON = { enabled: true, fixChecks: true, handleReviews: true, reply: true };
+const ALL_ON = { enabled: true, fixChecks: true, handleReviews: true, reply: true, ask: false };
 const trusted = { kind: 'review_comment' as const, trusted: true };
 
 describe('stateFor', () => {

@@ -92,6 +92,8 @@ describe('what a Spark tools session can use', () => {
       slack: false,
       pull_requests: false,
       project: false,
+      publish: false,
+      pull_request_create: false,
       browser: false,
     });
   });

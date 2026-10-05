@@ -11,6 +11,7 @@ import type {
 import { ModelRejectedError, ProviderError } from './provider.ts';
 import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
+import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 import {
@@ -294,6 +295,10 @@ async function* fakeTurn(
     throw new ProviderError(
       'The fake provider failed on purpose because the message contains #fail.',
     );
+  }
+  if (wantsPublish(turn.prompt)) {
+    yield* fakePublishTurn(turn);
+    return;
   }
   if (wantsApproval(turn.prompt)) {
     await delay(timing.stepMs, undefined, { signal: turn.signal });

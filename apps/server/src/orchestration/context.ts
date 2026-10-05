@@ -129,29 +129,66 @@ export const INCREMENT_RULE =
   'Work in a small increment: make this change and stop. If the request is a whole feature, do the first useful slice, say in one line what is left, and stop there. Plan for yourself only when the change needs several steps.';
 
 export const SHIP_RULE =
-  "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes: Spark Outpost commits, pushes and opens the PR itself when the task is done, even when the request says to ship it.";
+  "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes, even when the request says to ship it: the user publishes with Ship, or asks for it in a message.";
 
 const PUSH_HOOK_RULE =
-  "Never skip hooks (no `--no-verify`). If a pre-push check or `gh` fails, read its output and deal with it in this turn: when dependencies are missing or stale, run the project's reproducible install (for example `pnpm install --frozen-lockfile`) and push again; when your change caused it (lint, types, tests, a build), fix it and push again. When you cannot fix it (an expired registry or `gh` login, no network, a check that fails on the base branch too), stop and tell the user once exactly what is needed, with the last lines of the output. Push at most 3 times in a turn.";
+  "Never skip hooks (no `--no-verify`). If the push's pre-push check or the pull request step fails, read its output and deal with it in this turn: when dependencies are missing or stale, run the project's reproducible install (for example `pnpm install --frozen-lockfile`) and push again; when your change caused it (lint, types, tests, a build), fix it and push again. When you cannot fix it (an expired registry or GitHub login, no network, a check that fails on the base branch too), stop and tell the user once exactly what is needed, with the last lines of the output. Push at most 3 times in a turn.";
 
 function publishSteps(branch: string): string {
-  return `commit it, push this chat's own branch with \`git push origin ${branch}\` and open its pull request with \`gh pr create\` (\`gh pr view\` and \`gh pr edit\` work on that PR). Never force-push, push any other branch or the base branch, or change git remotes; nothing merges. ${PUSH_HOOK_RULE}`;
+  return `commit it, push this chat's own branch with the \`spark_push\` tool (Spark runs the push with the user's own shell logins so the repository's pre-push check can pass; without that tool use \`git push origin ${branch}\`) and open its pull request with \`gh pr create\` (\`gh pr view\` and \`gh pr edit\` work on that PR), or with \`spark_pull_request\` when you have that tool. Never force-push, push any other branch or the base branch, or change git remotes; nothing merges. ${PUSH_HOOK_RULE}`;
 }
 
 const PUBLISH_REPORT_RULE =
-  'Spark records the pull request from the command output, so give the user its link. If `gh` is missing or not signed in, say so and point the user to the Ship button. Say a card is waiting only when a tool returned waiting_for_user.';
+  'Spark records the pull request from the command output, so give the user its link. If the branch is pushed but no pull request could be opened, say so plainly. Say a card is waiting only when a tool returned waiting_for_user.';
 
 export function mainAgentPublishNote(branch: string): string {
   return `The user asked for this to be pushed or opened as a pull request. Do it yourself: ${publishSteps(branch)} ${PUBLISH_REPORT_RULE}`;
 }
 
+export const PUBLISH_LATER_RULE =
+  "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes in this turn: when the work is done and checked, Spark Outpost asks you in a separate turn to publish it.";
+
 export function publishRule(publish: PublishBrief | null | undefined): string {
   if (!publish) return SHIP_RULE;
-  const steps = publishSteps(publish.branch);
-  if (publish.basis === 'requested') {
-    return `The user asked for this to be pushed or opened as a pull request, so after the change ${steps}`;
+  if (publish.basis !== 'mode') return PUBLISH_LATER_RULE;
+  return `Leave the change in the working tree unless the user asks you to publish it. If they ask, ${publishSteps(publish.branch)}`;
+}
+
+export const PUBLISH_TURN_HEADING = '## Publish this change';
+
+export interface PublishTurn {
+  branch: string;
+  draft: boolean;
+  titlePrefix: string | null;
+  notes: readonly string[];
+  followUp?: boolean;
+}
+
+function followUpPublishPrompt(branch: string): string {
+  return [
+    PUBLISH_TURN_HEADING,
+    `The fix for this pull request's feedback is finished and checked. If you changed files, commit them and push this chat's own branch with the \`spark_push\` tool (without that tool use \`git push origin ${branch}\`); the pull request updates itself. If you changed nothing, do nothing. Don't open another pull request, reply on GitHub or resolve threads: Spark posts your per-item lines as the replies. Never force-push or push any other branch; nothing merges. ${PUSH_HOOK_RULE}`,
+    'End your reply with the same per-item lines as before.',
+  ].join('\n');
+}
+
+export function publishTurnPrompt(turn: PublishTurn): string {
+  if (turn.followUp) return followUpPublishPrompt(turn.branch);
+  const lines = [
+    PUBLISH_TURN_HEADING,
+    `The work on this task is finished and checked. Publish it now, in this turn, and change nothing else: ${publishSteps(turn.branch)}`,
+    'Open exactly one pull request for the whole change; when one already exists for this branch, push to it and update its description instead of opening another.',
+  ];
+  if (turn.draft) lines.push('Open it as a draft (`gh pr create --draft`, or `draft: true`).');
+  if (turn.titlePrefix) lines.push(`Start the pull request title with "${turn.titlePrefix}".`);
+  if (turn.notes.length > 0) {
+    lines.push(
+      'Include these notes in the pull request description, word for word:',
+      ...turn.notes.map((note) => `- ${note}`),
+    );
   }
-  return `Leave the change in the working tree unless the user asks you to publish it: Spark Outpost commits, pushes and opens the PR when the task is done. If they ask, ${steps}`;
+  lines.push(`${PUBLISH_REPORT_RULE} End your reply with the pull request link.`);
+  return lines.join('\n');
 }
 
 function checkSection(commands: readonly string[] | undefined): string[] {

@@ -7,6 +7,8 @@ const NOTHING: SparkAvailability = {
   slack: false,
   pull_requests: false,
   project: false,
+  publish: false,
+  pull_request_create: false,
   browser: false,
 };
 
@@ -27,6 +29,8 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
     ['spark_pull_requests', 'spark_pr', 'spark_pr_follow_up', 'spark_pr_follow_up_round'],
   ],
   ['project', ['spark_map', 'spark_find']],
+  ['publish', ['spark_push']],
+  ['pull_request_create', ['spark_pull_request']],
   [
     'browser',
     [

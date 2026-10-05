@@ -3,19 +3,28 @@ import { getApproval } from '../persistence/approvals.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { prFollowUpSettings, type PrFollowUpSettings } from '../persistence/pr-settings.ts';
 import {
-  dueWatches,
   feedbackFor,
   insertFeedback,
+  isWatch,
   knownSourceKeys,
-  saveWatch,
   updateFeedback,
   WATCHING_LINE,
   type Watch,
 } from '../persistence/pr-watches.ts';
+import { deferPulls, duePulls, savePull, type TrackedPull } from '../persistence/tracked-pulls.ts';
+import {
+  accessReason,
+  endedPull,
+  isRateLimited,
+  readFacts,
+  statusChanged,
+  trackOpenPull,
+  withFacts,
+} from '../pr-tracking/status.ts';
 import type { JevAccess } from '../orchestration/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
-import { readChecks, readComments, readPullFacts } from './gather.ts';
+import { readChecks, readComments } from './gather.ts';
 import { afterDecision, finishRound, startRound } from './round.ts';
 import {
   BUSY_INTERVAL_SECONDS,
@@ -31,6 +40,8 @@ import { isTrusted, writersAmong } from './trust.ts';
 
 const TICK_MS = 15_000;
 const MAX_ERROR_CHARS = 300;
+const FOLLOW_UP_OFF_LINE = 'PR follow-up is off in Settings.';
+const RATE_LIMIT_LINE = 'GitHub’s rate limit is used up.';
 
 async function jevAccess(
   deps: FollowUpDeps,
@@ -56,9 +67,11 @@ async function ingest(
   const repo = { owner: watch.owner, name: watch.repo };
   const checks = await readChecks(connection, repo, watch.headSha!);
   watch.checks = checks.state;
+  watch.failingChecks = checks.failingChecks;
   const comments = await readComments(connection, repo, watch.number);
+  watch.review = comments.review;
   const fresh = newSourceKeys(
-    [...checks.failing, ...comments],
+    [...checks.failing, ...comments.gathered],
     await knownSourceKeys(deps.db, watch.id),
   );
   if (fresh.length === 0) return 0;
@@ -115,82 +128,127 @@ async function decideNext(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
   };
 }
 
-function ended(watch: Watch, state: 'merged' | 'closed'): Watch {
+const pending = (pull: TrackedPull) => pull.checks === 'pending';
+
+async function follow(
+  deps: FollowUpDeps,
+  watch: Watch,
+  seen: Watch,
+  connection: GitHubConnection,
+  settings: PrFollowUpSettings,
+): Promise<TrackedPull> {
+  const added = await ingest(deps, seen, connection, settings);
+  const next = await decideNext(deps, seen);
   return {
-    ...watch,
-    prState: state,
-    phase: 'done',
-    doing: `The PR was ${state}. Spark stopped watching it.`,
+    ...next,
+    intervalSeconds: nextInterval(watch.intervalSeconds, added > 0 || pending(next)),
   };
 }
 
-async function observe(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
-  const connection = await connectTo(deps, watch);
-  if (!connection) throw new Error(`GitHub is not connected for ${watch.host}.`);
-  const facts = await readPullFacts(
-    connection,
-    { owner: watch.owner, name: watch.repo },
-    watch.number,
-  );
-  const seen: Watch = { ...watch, draft: facts.draft, headSha: facts.headSha };
-  if (facts.state !== 'open') return ended(seen, facts.state);
-  if (watch.phase === 'fixing' || watch.phase === 'confirming') return seen;
-  const settings = await prFollowUpSettings(deps.db, watch.workspaceId);
-  const added = await ingest(deps, seen, connection, settings);
-  const next = await decideNext(deps, seen);
-  return { ...next, intervalSeconds: nextInterval(watch.intervalSeconds, added > 0) };
-}
-
-async function advance(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
-  if (watch.phase === 'fixing') return finishRound(deps, watch);
-  if (watch.phase === 'confirming' && watch.approvalId) {
-    const approval = await getApproval(deps.db, watch.approvalId);
-    if (!approval) return { ...watch, phase: 'watching', approvalId: null };
-    return afterDecision(deps, watch, approval);
+async function observe(
+  deps: FollowUpDeps,
+  pull: TrackedPull,
+  settings: PrFollowUpSettings,
+): Promise<TrackedPull> {
+  const { connection, facts } = await readFacts(await connectTo(deps, pull), pull);
+  const seen = withFacts(pull, facts);
+  if (facts.state !== 'open') return endedPull(seen, facts.state);
+  if (busy(pull)) return seen;
+  if (settings.enabled && isWatch(seen) && isWatch(pull)) {
+    return follow(deps, pull, seen, connection, settings);
   }
-  return observe(deps, watch);
+  const tracked = await trackOpenPull(connection, seen);
+  const next = isWatch(seen) ? { ...tracked, doing: FOLLOW_UP_OFF_LINE } : tracked;
+  return {
+    ...next,
+    intervalSeconds: nextInterval(pull.intervalSeconds, statusChanged(pull, next) || pending(next)),
+  };
 }
 
-function busy(watch: Watch): boolean {
-  return watch.phase === 'fixing' || watch.phase === 'confirming';
+async function advance(
+  deps: FollowUpDeps,
+  pull: TrackedPull,
+  settings: PrFollowUpSettings,
+): Promise<TrackedPull> {
+  if (isWatch(pull) && pull.phase === 'fixing') return finishRound(deps, pull);
+  if (isWatch(pull) && pull.phase === 'confirming' && pull.approvalId) {
+    const approval = await getApproval(deps.db, pull.approvalId);
+    if (!approval) return { ...pull, phase: 'watching', approvalId: null };
+    return afterDecision(deps, pull, approval);
+  }
+  return observe(deps, pull, settings);
 }
 
-function schedule(deps: FollowUpDeps, watch: Watch): Watch {
+function busy(pull: TrackedPull): boolean {
+  return pull.phase === 'fixing' || pull.phase === 'confirming';
+}
+
+function schedule(deps: FollowUpDeps, pull: TrackedPull): TrackedPull {
   const now = nowOf(deps);
-  const seconds = busy(watch) ? BUSY_INTERVAL_SECONDS : watch.intervalSeconds;
-  return { ...watch, lastPolledAt: now, nextPollAt: new Date(now.getTime() + seconds * 1000) };
+  const seconds = busy(pull) ? BUSY_INTERVAL_SECONDS : pull.intervalSeconds;
+  return { ...pull, lastPolledAt: now, nextPollAt: new Date(now.getTime() + seconds * 1000) };
 }
 
-export async function pollWatch(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
-  const settings = await prFollowUpSettings(deps.db, watch.workspaceId);
-  let next: Watch;
-  if (!settings.enabled && !busy(watch)) {
-    next = {
-      ...watch,
-      doing: 'PR follow-up is off in Settings.',
-      intervalSeconds: MAX_INTERVAL_SECONDS,
-    };
-  } else {
-    try {
-      next = { ...(await advance(deps, watch)), lastError: null };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      next = {
-        ...watch,
-        lastError: message.slice(0, MAX_ERROR_CHARS),
-        intervalSeconds: nextInterval(watch.intervalSeconds, false),
-      };
-    }
+function failed(pull: TrackedPull, error: unknown): TrackedPull {
+  const message = error instanceof Error ? error.message : String(error);
+  const reason = accessReason(pull, error);
+  return {
+    ...pull,
+    lastError: message.slice(0, MAX_ERROR_CHARS),
+    statusReason: reason ?? pull.statusReason,
+    intervalSeconds: reason ? MAX_INTERVAL_SECONDS : nextInterval(pull.intervalSeconds, false),
+  };
+}
+
+export interface Polled {
+  pull: TrackedPull;
+  rateLimited: boolean;
+}
+
+async function poll(deps: FollowUpDeps, pull: TrackedPull): Promise<Polled> {
+  const settings = await prFollowUpSettings(deps.db, pull.workspaceId);
+  let next: TrackedPull;
+  let rateLimited = false;
+  try {
+    next = { ...(await advance(deps, pull, settings)), lastError: null };
+  } catch (error) {
+    rateLimited = isRateLimited(error);
+    next = failed(pull, error);
   }
   const saved = schedule(deps, next);
-  await saveWatch(deps.db, saved);
-  return saved;
+  await savePull(deps.db, saved);
+  return { pull: saved, rateLimited };
+}
+
+export async function pollWatch(deps: FollowUpDeps, pull: TrackedPull): Promise<TrackedPull> {
+  return (await poll(deps, pull)).pull;
+}
+
+async function pauseHost(deps: FollowUpDeps, limited: TrackedPull): Promise<void> {
+  const until = new Date(nowOf(deps).getTime() + MAX_INTERVAL_SECONDS * 1000);
+  await deferPulls(
+    deps.db,
+    limited.workspaceId,
+    limited.host,
+    until,
+    limited.lastError ?? RATE_LIMIT_LINE,
+  );
 }
 
 export async function pollDue(deps: FollowUpDeps): Promise<number> {
-  const watches = await dueWatches(deps.db, nowOf(deps));
-  for (const watch of watches) await pollWatch(deps, watch);
-  return watches.length;
+  const pulls = await duePulls(deps.db, nowOf(deps));
+  const paused = new Set<string>();
+  let polled = 0;
+  for (const pull of pulls) {
+    const key = `${pull.workspaceId} ${pull.host}`;
+    if (paused.has(key)) continue;
+    const result = await poll(deps, pull);
+    polled += 1;
+    if (!result.rateLimited) continue;
+    paused.add(key);
+    await pauseHost(deps, result.pull);
+  }
+  return polled;
 }
 
 export interface PrFollowUp {

@@ -42,6 +42,7 @@ export interface RailFacts {
   autonomy: InvolvementLevel | null;
   changes: { files: number; added: number; removed: number } | null;
   watch: Pick<PrWatch, 'repo' | 'number' | 'url' | 'prState' | 'draft' | 'checks'> | null;
+  pulls?: number;
   usage: ConversationUsage;
   contextPercent: number | null;
   hasTask: boolean;
@@ -57,6 +58,26 @@ const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
 function prState(watch: NonNullable<RailFacts['watch']>): string {
   if (watch.prState !== 'open') return watch.prState === 'merged' ? 'Merged' : 'Closed';
   return watch.draft ? 'Draft' : 'Open';
+}
+
+function pullRow(watch: NonNullable<RailFacts['watch']>, count: number, hasTask: boolean): RailRow {
+  const name = `${watch.repo}#${watch.number}`;
+  if (count > 1) {
+    return {
+      id: 'pr',
+      text: `${count} pull requests`,
+      detail: `#${watch.number} ${prState(watch)}`,
+      label: `${count} pull requests. ${name} is ${prState(watch).toLowerCase()}`,
+      action: hasTask ? { kind: 'tab', tab: 'links' } : { kind: 'link', href: watch.url },
+    };
+  }
+  return {
+    id: 'pr',
+    text: `PR #${watch.number}`,
+    detail: prState(watch),
+    label: `Pull request ${name}, ${prState(watch)}. Opens on GitHub`,
+    action: { kind: 'link', href: watch.url },
+  };
 }
 
 function projectRow(facts: RailFacts): RailRow {
@@ -142,14 +163,7 @@ export function railRows(facts: RailFacts): RailRow[] {
       action: facts.hasTask ? { kind: 'tab', tab: 'tasks' } : null,
       ...(checks.tone ? { tone: checks.tone } : {}),
     });
-    const name = `${facts.watch.repo}#${facts.watch.number}`;
-    rows.push({
-      id: 'pr',
-      text: `PR #${facts.watch.number}`,
-      detail: prState(facts.watch),
-      label: `Pull request ${name}, ${prState(facts.watch)}. Opens on GitHub`,
-      action: { kind: 'link', href: facts.watch.url },
-    });
+    rows.push(pullRow(facts.watch, facts.pulls ?? 1, facts.hasTask));
   }
   const usage = usageRow(facts);
   if (usage) rows.push(usage);

@@ -38,6 +38,7 @@ interface ProfileRow {
   pr_follow_up_checks: boolean;
   pr_follow_up_reviews: boolean;
   pr_follow_up_replies: boolean;
+  pr_follow_up_ask: boolean;
   personality: Personality;
   spark_enabled: boolean;
   default_level: InvolvementLevel;
@@ -91,7 +92,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
-       pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
+       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, default_level,
        spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
@@ -186,6 +187,7 @@ export async function getSetupState(
     prFollowUpChecks: profile.pr_follow_up_checks,
     prFollowUpReviews: profile.pr_follow_up_reviews,
     prFollowUpReplies: profile.pr_follow_up_replies,
+    prFollowUpAsk: profile.pr_follow_up_ask,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
     defaultLevel: profile.default_level,
@@ -252,6 +254,7 @@ export async function updateProfile(
        heartbeat = COALESCE($24, heartbeat),
        wide_window = COALESCE($25, wide_window),
        busy_enter = COALESCE($26, busy_enter),
+       pr_follow_up_ask = COALESCE($27, pr_follow_up_ask),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -281,6 +284,7 @@ export async function updateProfile(
       update.heartbeat ?? null,
       update.wideWindow ?? null,
       update.busyEnter ?? null,
+      update.prFollowUpAsk ?? null,
     ],
   );
 }

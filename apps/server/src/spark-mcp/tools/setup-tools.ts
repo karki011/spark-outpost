@@ -200,6 +200,7 @@ async function settings({ deps, scope }: SparkToolContext) {
       fixFailingChecks: profile.prFollowUpChecks,
       handleReviewComments: profile.prFollowUpReviews,
       replyOnGitHub: profile.prFollowUpReplies,
+      askBeforePushingAndReplying: profile.prFollowUpAsk,
     },
     anonymousHeartbeat: profile.heartbeat,
     fullDiskAccess: fullDiskAccess.status,

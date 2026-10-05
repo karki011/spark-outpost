@@ -18,7 +18,8 @@ export class SparkBlocks {
   }
 }
 
-export type SparkToolNeed = 'tickets' | 'slack' | 'pull_requests' | 'project' | 'browser';
+export type SparkToolNeed =
+  'tickets' | 'slack' | 'pull_requests' | 'project' | 'publish' | 'pull_request_create' | 'browser';
 
 export interface SparkTool {
   name: string;

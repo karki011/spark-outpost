@@ -53,7 +53,9 @@ import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
+import { PrChip } from './pull-request/PrChip.tsx';
 import { PrStatusCard } from './pull-request/PrStatusCard.tsx';
+import { usePullRequestRefresh } from './pull-request/use-pull-request-refresh.ts';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
@@ -185,6 +187,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     setPanelTab(tab);
     panel.setView('work');
   });
+  const openLinks = useStableCallback(() => {
+    setPanelTab('links');
+    panel.setView('work');
+  });
+  usePullRequestRefresh(conversationId, running !== null);
   const openAutonomyPanel = useStableCallback(openAutonomy);
   const reviewChanges = useStableCallback(toggleDiff);
   const collapseRail = useStableCallback(setRailCollapsed);
@@ -249,6 +256,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   open={diff.request !== null}
                   onToggle={toggleDiff}
                 />
+                <PrChip conversationId={conversationId} onOpen={task ? openLinks : null} />
                 <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
                 {openAudit && (
                   <ChatHeaderMenu
