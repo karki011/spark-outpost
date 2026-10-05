@@ -35,12 +35,12 @@ When the agent needs you, the line says **Waiting for you**. Select it, or press
 
 Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 
-## Delete a chat
+## Delete a running chat
 
 1. Open the chat's **…** menu and select **Delete**, then **Confirm delete**.
 2. To take it back, select **Undo**.
 
-A running chat can be deleted too: Spark stops the running work first.
+You can delete a chat that is running: Spark stops the work first.
 
 ## After a turn
 
