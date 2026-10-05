@@ -16,10 +16,10 @@ You'll choose what Spark does with finished work. About 1 minute.
 
 ![The Work panel with the Spark autonomy levels](images/chats-and-modes-autonomy-light.png)
 
-| Level                        | What Spark does                                                                                                                                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Automatic**                | Keeps changes. A plan waits for **Build**. You ship.                                                                                                                          |
-| **Full auto → PR** (default) | Works in a worktree copy. A plan builds after a countdown. Spark opens a pull request, or keeps the change and says "No pull request" without a GitHub remote and connection. |
+| Level                        | What Spark does                                                                                                                                          |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic**                | Keeps changes. A plan waits for **Build**. You ship.                                                                                                     |
+| **Full auto → PR** (default) | Works in a worktree copy. A plan builds after a countdown. Spark opens a pull request, or says "No pull request" without a GitHub remote and connection. |
 
 ## For every new chat
 
