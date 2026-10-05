@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { AddressInfo } from 'node:net';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { sparkAvailability, type SparkAvailability } from './availability.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { sparkMcpServer } from './server.ts';
 import { endBrowserRun } from './tools/browser/end-run.ts';
@@ -16,7 +17,7 @@ export interface SparkGrant {
 export interface SparkMcpHost {
   port: number;
   browser: boolean;
-  grant(scope: SparkScope): SparkGrant;
+  grant(scope: SparkScope): Promise<SparkGrant>;
   close(): Promise<void>;
 }
 
@@ -68,8 +69,16 @@ function cancelledId(body: unknown): string | null {
   return typeof requestId === 'string' || typeof requestId === 'number' ? String(requestId) : null;
 }
 
-export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHost> {
-  const grants = new Map<string, SparkScope>();
+interface Session {
+  scope: SparkScope;
+  available: SparkAvailability;
+}
+
+export async function startSparkMcpHost(
+  deps: SparkToolDeps,
+  availabilityOf: typeof sparkAvailability = sparkAvailability,
+): Promise<SparkMcpHost> {
+  const grants = new Map<string, Session>();
   let host = '';
 
   const calls = new Map<string, AbortController>();
@@ -77,7 +86,7 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
   const serve = async (
     req: IncomingMessage,
     res: ServerResponse,
-    scope: SparkScope,
+    session: Session,
     grant: string,
   ) => {
     let body: unknown;
@@ -93,7 +102,7 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
     const key = call === null ? null : `${grant}:${call}`;
     const controller = new AbortController();
     if (key) calls.set(key, controller);
-    const server = sparkMcpServer(deps, scope, controller.signal);
+    const server = sparkMcpServer(deps, session.scope, session.available, controller.signal);
     const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
     res.on('close', () => {
       controller.abort();
@@ -112,10 +121,10 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
     }
     const token = bearer(req);
     const grant = token ? digest(token) : '';
-    const scope = grants.get(grant);
-    if (!scope) return reply(res, 401, 'This Spark session has ended or the token is wrong.');
+    const session = grants.get(grant);
+    if (!session) return reply(res, 401, 'This Spark session has ended or the token is wrong.');
     if (req.method !== 'POST') return reply(res, 405, 'Spark tools answer POST requests only.');
-    await serve(req, res, scope, grant);
+    await serve(req, res, session, grant);
   };
 
   const server = createServer((req, res) => {
@@ -135,10 +144,11 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
   return {
     port,
     browser: deps.browser !== undefined,
-    grant(scope) {
+    async grant(scope) {
+      const available = await availabilityOf(deps, scope);
       const token = randomBytes(32).toString('base64url');
       const key = digest(token);
-      grants.set(key, scope);
+      grants.set(key, { scope, available });
       return {
         url,
         token,

@@ -7,7 +7,7 @@ let host: SparkMcpHost;
 
 beforeEach(async () => {
   host = await startSparkMcpHost({
-    db: {} as Db,
+    db: { query: async () => ({ rows: [] }) } as unknown as Db,
     secrets: memorySecretStore(),
     fetch,
     github: {
@@ -39,7 +39,7 @@ function post(url: string, headers: Record<string, string>, body = LIST) {
 
 describe('Spark tools host', () => {
   it('answers a session that shows its token', async () => {
-    const grant = host.grant(scope);
+    const grant = await host.grant(scope);
     const response = await post(grant.url, { Authorization: `Bearer ${grant.token}` });
     expect(response.status).toBe(200);
     const body = (await response.json()) as { result: { tools: { name: string }[] } };
@@ -47,7 +47,7 @@ describe('Spark tools host', () => {
   });
 
   it('refuses missing, wrong and revoked tokens', async () => {
-    const grant = host.grant(scope);
+    const grant = await host.grant(scope);
     expect((await post(grant.url, {})).status).toBe(401);
     expect((await post(grant.url, { Authorization: 'Bearer nope' })).status).toBe(401);
     grant.revoke();
@@ -55,7 +55,7 @@ describe('Spark tools host', () => {
   });
 
   it('refuses browsers, other host names, other paths and streams', async () => {
-    const grant = host.grant(scope);
+    const grant = await host.grant(scope);
     const auth = { Authorization: `Bearer ${grant.token}` };
     expect((await post(grant.url, { ...auth, Origin: 'https://evil.example' })).status).toBe(403);
     const port = new URL(grant.url).port;

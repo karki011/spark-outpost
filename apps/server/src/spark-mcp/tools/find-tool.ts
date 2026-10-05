@@ -53,6 +53,7 @@ async function find(
 
 export const findTool = sparkTool({
   name: 'spark_find',
+  needs: 'project',
   title: 'Find code',
   description:
     "Finds where something lives in a project's code: files ranked for a request or a symbol, each with a score, why it matched, its Map area and its top declarations as name@startLine-endLine, so you can read just those lines. Returns no file contents and never lists secret files. status is complete, partial (out of time, or line ranges missing) or index_building, with issues saying what is missing. A ranking hint, not a limit. Defaults to this chat's project.",

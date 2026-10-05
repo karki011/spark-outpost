@@ -10,7 +10,7 @@ import { DEFAULT_BRANCH_PREFIX } from '../../projects/worktrees.ts';
 import type { ShipDeps } from '../../ship/prepare.ts';
 import { shipPreview, shipTask } from '../../ship/service.ts';
 import { gitHubDepsFor } from '../deps.ts';
-import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
+import { sparkTool, SparkToolError, uuidInput, type SparkToolContext } from '../tool.ts';
 import { proposeAction } from './confirm.ts';
 import type { Performed } from './performed.ts';
 import { ACTION_NOTE } from './action-note.ts';
@@ -107,13 +107,14 @@ export const pullRequestActionTool = sparkTool({
   name: 'spark_open_pr',
   title: 'Open a PR',
   acts: true,
+  needs: 'pull_requests',
   description:
-    "Open a pull request for this chat's changes through Spark's Ship flow (commit, push the task's own branch, open a PR, ready for review or draft per Settings → Spark → Open pull requests as; nothing merges, never force-pushes, never pushes the default branch). You propose the title and description. When the user asks you to open a PR, use this tool rather than git push or gh. Returns the PR URL and number when Spark opened it. " +
+    "Open a pull request for this chat's changes through Spark's Ship flow: commit, push the task's own branch, open a PR (ready for review or draft per Settings → Spark → Open pull requests as). Nothing merges, never force-pushes, never pushes the default branch. You propose the title and description. When the user asks for a PR, use this tool, not git push or gh. Returns the PR URL and number. " +
     ACTION_NOTE,
   input: {
     title: z.string().trim().min(1).max(SPARK_TITLE_MAX),
     body: z.string().max(SPARK_TEXT_MAX).default('').describe('What changed and why.'),
-    task: z.uuid().optional().describe("Task id; defaults to the chat's latest task."),
+    task: uuidInput.optional().describe("Task id; defaults to the chat's latest task."),
   },
   run: (args, context) => openPr(context, args),
 });

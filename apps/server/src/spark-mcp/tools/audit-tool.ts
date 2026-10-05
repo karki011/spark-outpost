@@ -6,7 +6,7 @@ import { conversationAuditRuns, summarizeAudit } from '../../persistence/audit-s
 import type { Queryable } from '../../persistence/db.ts';
 import { loadActivity } from '../../persistence/digests.ts';
 import { round } from '../format.ts';
-import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
+import { sparkTool, SparkToolError, uuidInput, type SparkToolContext } from '../tool.ts';
 import { chatIdFor, chatIdInput, inWorkspace } from './chat-tools.ts';
 import { lastDays } from './window.ts';
 import { reportedModel } from '../../providers/reported-model.ts';
@@ -202,7 +202,7 @@ export const auditTool = sparkTool({
     "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, tool calls that ran without review (no permission request, as in Bypass or Full access), and approval cards with who decided them. With days and no chat or run: harness totals, approvals, checks, Critic and loops for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong and how to tune Spark.",
   input: {
     chat: chatIdInput,
-    run: z.uuid().optional().describe('One run (and its sub-runs) instead of the whole chat.'),
+    run: uuidInput.optional().describe('One run (and its sub-runs) instead of the whole chat.'),
     days: z
       .number()
       .int()

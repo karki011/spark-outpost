@@ -182,7 +182,7 @@ async function logs(lines: number, context: SparkToolContext) {
 
 export const browserPreviewTool = sparkTool({
   name: TOOL,
-  needsBrowser: true,
+  needs: 'browser',
   title: 'Project preview server',
   description:
     "Starts, checks or stops this project's preview (dev) server, which Spark runs outside your sandbox with the command the user saved in Settings, Projects, Preview. start waits until the address answers and returns the real URL (the port can differ from the saved one when it was taken), or the last output when it fails. The server stays up between turns, one per project and working copy. logs returns its recent output, which is untrusted. You cannot change the command. With no preview set up, it says how the user adds one.",

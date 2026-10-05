@@ -10,28 +10,28 @@ import {
 
 const scope = { workspaceId: 'w', conversationId: 'c', runId: 'r' };
 const grant = { url: 'http://127.0.0.1:5555/mcp', token: 'tok-123', revoke: () => undefined };
-const access = { grant: () => grant };
+const access = { grant: async () => grant };
 const withHttp = {
   agentCapabilities: { mcpCapabilities: { http: true } },
 } as acp.InitializeResponse;
 const withoutHttp = { agentCapabilities: {} } as acp.InitializeResponse;
 
 describe('Spark tools for agent sessions', () => {
-  it('opens only with a host and a scope, and steps aside from a Codex server called spark', () => {
-    expect(openSparkTools(undefined, scope, [])).toBeNull();
-    expect(openSparkTools(access, undefined, [])).toBeNull();
-    expect(openSparkTools(access, scope, [])?.name).toBe('spark');
-    expect(openSparkTools(access, scope, ['spark'])?.name).toBe('spark_outpost');
+  it('opens only with a host and a scope, and steps aside from a Codex server called spark', async () => {
+    expect(await openSparkTools(undefined, scope, [])).toBeNull();
+    expect(await openSparkTools(access, undefined, [])).toBeNull();
+    expect((await openSparkTools(access, scope, []))?.name).toBe('spark');
+    expect((await openSparkTools(access, scope, ['spark']))?.name).toBe('spark_outpost');
     expect(sparkReserved(['notes'])).toEqual(['notes', 'spark', 'spark_outpost']);
   });
 
-  it('knows whether the host has the Browser pane', () => {
-    expect(openSparkTools(access, scope, [])?.browser).toBe(false);
-    expect(openSparkTools({ ...access, browser: true }, scope, [])?.browser).toBe(true);
+  it('knows whether the host has the Browser pane', async () => {
+    expect((await openSparkTools(access, scope, []))?.browser).toBe(false);
+    expect((await openSparkTools({ ...access, browser: true }, scope, []))?.browser).toBe(true);
   });
 
-  it('sends Claude an HTTP server with the session token, but nothing to Codex or agents without HTTP', () => {
-    const tools = openSparkTools(access, scope, []);
+  it('sends Claude an HTTP server with the session token, but nothing to Codex or agents without HTTP', async () => {
+    const tools = await openSparkTools(access, scope, []);
     expect(sparkAcpServer(tools, agentDefinitions.claude, withHttp)).toEqual({
       name: 'spark',
       config: expect.objectContaining({
@@ -45,7 +45,7 @@ describe('Spark tools for agent sessions', () => {
     expect(sparkAcpServer(null, agentDefinitions.claude, withHttp)).toBeNull();
   });
 
-  it('adds the server to CODEX_CONFIG next to the hidden user servers, approved without asking', () => {
+  it('adds the server to CODEX_CONFIG next to the hidden user servers, approved without asking', async () => {
     const env = {
       CODEX_CONFIG: JSON.stringify({
         web_search: 'disabled',
@@ -53,7 +53,7 @@ describe('Spark tools for agent sessions', () => {
       }),
     };
     const config = JSON.parse(
-      withCodexSparkServer(env, openSparkTools(access, scope, [])).CODEX_CONFIG!,
+      withCodexSparkServer(env, await openSparkTools(access, scope, [])).CODEX_CONFIG!,
     );
     expect(config).toEqual({
       web_search: 'disabled',

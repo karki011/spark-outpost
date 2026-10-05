@@ -97,6 +97,7 @@ export const prFollowUpRoundTool = sparkTool({
   name: 'spark_pr_follow_up_round',
   title: 'Request a PR follow-up round',
   acts: true,
+  needs: 'pull_requests',
   description:
     "Ask Spark to run one more follow-up round on a pull request it opened (default: this chat's): a Builder fixes the chosen items in the chat's worktree, then the push and GitHub replies follow the chat's autonomy level. Pass item labels (F1, F2, …) from spark_pr_follow_up to include items Spark held back, such as comments from people without write access, or items past the round limit; with no labels it takes every open item except held ones. " +
     ACTION_NOTE,

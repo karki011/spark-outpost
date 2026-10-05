@@ -151,7 +151,7 @@ async function runSession(
       definition.repoStyle === 'codex'
         ? await codexUserMcpNames(options.env ?? childEnvironment(process.env))
         : [];
-    spark = openSparkTools(options.sparkTools, turn.sparkScope, own);
+    spark = await openSparkTools(options.sparkTools, turn.sparkScope, own);
     const reserved = sparkReserved(own);
     const repo =
       policy && turn.repo

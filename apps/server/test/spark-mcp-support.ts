@@ -11,6 +11,7 @@ import {
 import { decideApproval, getApproval, type UserDecision } from '../src/persistence/approvals.ts';
 import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import type { SparkActionHooks, SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
+import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { startSparkMcpHost, type SparkGrant, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { startSparkActionFollowThrough } from '../src/spark-mcp/actions/follow-through.ts';
@@ -60,9 +61,12 @@ export async function startSparkTools(
   overrides: Partial<SparkToolDeps> = {},
 ): Promise<SparkToolsHarness> {
   const deps = toolDeps(t, overrides);
-  const host = await startSparkMcpHost(deps);
+  const host = await startSparkMcpHost(deps, async () => ({
+    ...EVERYTHING_AVAILABLE,
+    browser: deps.browser !== undefined,
+  }));
   const followThrough = await startSparkActionFollowThrough(deps, 25);
-  const grant = host.grant({
+  const grant = await host.grant({
     workspaceId: t.workspaceId,
     conversationId: null,
     runId: null,

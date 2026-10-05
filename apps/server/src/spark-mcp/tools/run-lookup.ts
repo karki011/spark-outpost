@@ -1,6 +1,5 @@
-import { z } from 'zod';
 import type { InvolvementLevel, RunStatus } from '@spark-outpost/contracts';
-import { SparkToolError, type SparkToolContext } from '../tool.ts';
+import { SparkToolError, uuidInput, type SparkToolContext } from '../tool.ts';
 import { chatIdFor, chatIdInput } from './chat-tools.ts';
 
 export interface TopRun {
@@ -22,10 +21,9 @@ const COLUMNS = `t.id, t.conversation_id, c.title AS chat_title, t.task_id, t.st
 
 export const runLookupInput = {
   chat: chatIdInput,
-  run: z
-    .uuid()
+  run: uuidInput
     .optional()
-    .describe("A run id (from spark_chat or spark_audit). Defaults to the chat's latest run."),
+    .describe("Run id (from spark_chat or spark_audit). Default: the chat's latest run."),
 };
 
 async function byRun(context: SparkToolContext, runId: string): Promise<TopRun | null> {

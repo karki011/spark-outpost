@@ -277,7 +277,7 @@ describe('the Spark tools server', () => {
   it('marks only the confirmed actions as not read-only and stops answering once the grant is revoked', async () => {
     const harness = await startSparkTools(t);
     tools = harness;
-    const grant = harness.host.grant({
+    const grant = await harness.host.grant({
       workspaceId: t.workspaceId,
       conversationId: null,
       runId: null,

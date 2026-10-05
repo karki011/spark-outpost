@@ -16,14 +16,14 @@ export interface SparkTools {
 const FALLBACK_NAME = 'spark_outpost';
 const CODEX_TOOL_TIMEOUT_SEC = 3_600;
 
-export function openSparkTools(
+export async function openSparkTools(
   access: SparkToolsAccess | undefined,
   scope: SparkScope | undefined,
   reserved: readonly string[],
-): SparkTools | null {
+): Promise<SparkTools | null> {
   if (!access || !scope) return null;
   const name = reserved.includes(SPARK_MCP_NAME) ? FALLBACK_NAME : SPARK_MCP_NAME;
-  return { name, grant: access.grant(scope), browser: access.browser === true };
+  return { name, grant: await access.grant(scope), browser: access.browser === true };
 }
 
 export function sparkReserved(reserved: readonly string[]): string[] {

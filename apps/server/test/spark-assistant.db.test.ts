@@ -4,6 +4,7 @@ import { modeForLegacy, sparkAssistantSchema } from '@spark-outpost/contracts';
 import { ASSISTANT_PREAMBLE } from '../src/companion/assistant.ts';
 import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
 import type { Provider, ProviderTurn } from '../src/providers/provider.ts';
+import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
 import { sparkToolsFor } from '../src/spark-mcp/server.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -99,10 +100,10 @@ describe('Ask Spark', () => {
     expect(turn.userMcp).toBeUndefined();
     expect(turn.preamble).toBe(ASSISTANT_PREAMBLE);
 
-    const tools = sparkToolsFor(turn.sparkScope!);
+    const tools = sparkToolsFor(turn.sparkScope!, EVERYTHING_AVAILABLE);
     expect(tools.length).toBeGreaterThan(0);
     expect(tools.some((tool) => tool.acts)).toBe(false);
-    expect(sparkToolsFor({}).some((tool) => tool.acts)).toBe(true);
+    expect(sparkToolsFor({}, EVERYTHING_AVAILABLE).some((tool) => tool.acts)).toBe(true);
   });
 
   it('refuses before setup is finished', async () => {
