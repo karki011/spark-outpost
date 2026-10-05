@@ -432,6 +432,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
   });
 
   it('marks the running piece failed with an unknown outcome after a crash', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 10 });
     const { runId } = await begin('#pieces #slowpiece', 'full-auto');
     await eventually(async () => {
       const taskId = (await loadOrchestration(t.db, runId))?.taskId;

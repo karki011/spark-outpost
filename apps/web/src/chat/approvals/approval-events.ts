@@ -36,6 +36,15 @@ export function applyApprovalEvent(
   return approvals;
 }
 
+export function decidedFirst<T extends Pick<Approval, 'status'>>(
+  approvals: readonly T[],
+): { decided: T[]; pending: T[] } {
+  return {
+    decided: approvals.filter((approval) => approval.status !== 'pending'),
+    pending: approvals.filter((approval) => approval.status === 'pending'),
+  };
+}
+
 export function hasPending(approvals: readonly Approval[]): boolean {
   return approvals.some((approval) => approval.status === 'pending');
 }

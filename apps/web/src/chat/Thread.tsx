@@ -17,6 +17,7 @@ import { PendingSends } from './send/PendingSends.tsx';
 import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
 import { RailContext } from './rail/rail-context.ts';
+import { usePendingArrival } from './status/status-context.ts';
 
 function RailSlot() {
   const rail = use(RailContext);
@@ -50,6 +51,8 @@ export const Thread = memo(function Thread({
       return [last ? (parentOf.get(last) ?? last) : undefined, task];
     }),
   );
+
+  usePendingArrival(follow);
 
   const pendingCount = sends.pending.length;
   useEffect(() => {

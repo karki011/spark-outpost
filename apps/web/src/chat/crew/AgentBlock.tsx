@@ -19,6 +19,7 @@ import {
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
+import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { Markdown } from '../markdown/Markdown.tsx';
@@ -122,24 +123,27 @@ interface BodyProps {
 function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: BodyProps) {
   const state = TURN_STATES[agent.state];
   const busy = agent.state === 'working' || agent.state === 'thinking';
+  const cards = decidedFirst(
+    approvals.filter(
+      (approval) =>
+        approval.runId === agent.id && !isCheckpoint(approval) && !isCheckApproval(approval),
+    ),
+  );
+  const approvalCard = (approval: Approval) => (
+    <ApprovalCard
+      key={approval.id}
+      approval={approval}
+      provider={agent.provider}
+      agent={agent.name}
+      repo={repo}
+    />
+  );
   return (
     <>
       <WorkLog steps={[...steps]} state={state} seconds={seconds} />
-      {approvals
-        .filter(
-          (approval) =>
-            approval.runId === agent.id && !isCheckpoint(approval) && !isCheckApproval(approval),
-        )
-        .map((approval) => (
-          <ApprovalCard
-            key={approval.id}
-            approval={approval}
-            provider={agent.provider}
-            agent={agent.name}
-            repo={repo}
-          />
-        ))}
+      {cards.decided.map(approvalCard)}
       {text && <Markdown text={text} streaming={busy} />}
+      {cards.pending.map(approvalCard)}
       {busy && !text && steps.length === 0 && (
         <span className="dots" role="status" aria-label={`${agent.name} is working`}>
           <i />

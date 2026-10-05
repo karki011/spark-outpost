@@ -2,6 +2,7 @@
   flex: 1;
   position: relative;
   min-height: 0;
+  container: thread / size;
 }
 
 .thread {
@@ -135,11 +136,38 @@
 }
 
 .provider-name {
+  flex-shrink: 0;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .mood {
+  flex-shrink: 0;
   color: var(--faint);
+  white-space: nowrap;
+}
+
+.ai-head .steps-head {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ai-task {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ai-task:hover {
+  color: var(--text);
+}
+.ai-jev {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-size: 12px;
 }
 .ai-following {
   min-width: 0;

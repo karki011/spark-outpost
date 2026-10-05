@@ -7,6 +7,7 @@ import type {
   InvolvementLevel,
   Project,
   ProviderId,
+  TaskOverview,
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
@@ -24,6 +25,7 @@ import { prFollowUpApi, prWatchesKey } from '../pull-request/pr-follow-up-api.ts
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailOutline } from './RailOutline.tsx';
 import { RailSummary } from './RailSummary.tsx';
+import { RailTasks } from './RailTasks.tsx';
 import { RailTv } from './RailTv.tsx';
 import { chatOutline } from './outline-model.ts';
 import { railRows, type RailAction } from './rail-model.ts';
@@ -33,6 +35,7 @@ interface ChatRailProps {
   detail: ConversationDetail;
   repos: readonly Project[];
   taskId: string | null;
+  task: TaskOverview | null;
   autonomy: InvolvementLevel | null;
   running: boolean;
   collapsed: boolean;
@@ -74,6 +77,7 @@ function OpenRail({
   detail,
   repos,
   taskId,
+  task,
   autonomy,
   running,
   onCollapse,
@@ -150,6 +154,7 @@ function OpenRail({
         <RailToggle open onToggle={() => onCollapse(true)} />
       </div>
       <RailSummary rows={rows} provider={provider} onAction={act} />
+      {task && <RailTasks task={task} onOpen={() => onTab('tasks')} />}
       <RailOutline entries={outline} />
       <AnimatePresence>
         {agents.length > 0 && <RailTv key="tv" conversationId={conversationId} agents={agents} />}

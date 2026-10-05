@@ -96,7 +96,9 @@ export async function openHeavyChat(page: Page, keepLive = false): Promise<void>
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 30_000 });
+  await expect(page.locator('.taskc, .crail-tasks-head')).toContainText(/Task 6\/6|6 of 6/, {
+    timeout: 30_000,
+  });
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();

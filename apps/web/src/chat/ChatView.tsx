@@ -59,7 +59,8 @@ import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { ChatRail } from './rail/ChatRail.tsx';
-import { RailContext } from './rail/rail-context.ts';
+import { showsTaskCard } from '../tasks/task-card-shown.ts';
+import { RailContext, RailTaskContext } from './rail/rail-context.ts';
 import { useRailCollapsed, useRoomy } from './rail/use-rail-layout.ts';
 import { panelOpensByDefault, railState } from './rail/wide-layout.ts';
 import { Thread } from './Thread.tsx';
@@ -169,6 +170,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const diff = useDiffDrawer();
   const openDiff = diff.open;
   const taskId = task?.id ?? null;
+  const railTask = task && showsTaskCard(task) ? task : null;
   const viewChanges = useMemo(
     () =>
       taskId ? (target?: string, file?: ChangeEntry) => openDiff(target ?? taskId, file) : null,
@@ -275,6 +277,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                         detail={detail.data}
                         repos={repos}
                         taskId={taskId}
+                        task={railTask}
                         autonomy={autonomyLevel}
                         running={running !== null}
                         collapsed={rail === 'collapsed'}
@@ -286,14 +289,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     )
                   }
                 >
-                  <Thread
-                    detail={detail.data}
-                    repos={repos}
-                    sends={sends}
-                    onOpenTask={openTask}
-                    onOpenChat={openChat}
-                    quotes={quotes}
-                  />
+                  <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
+                    <Thread
+                      detail={detail.data}
+                      repos={repos}
+                      sends={sends}
+                      onOpenTask={openTask}
+                      onOpenChat={openChat}
+                      quotes={quotes}
+                    />
+                  </RailTaskContext>
                 </RailContext>
               </PanelOpenContext>
             ) : (

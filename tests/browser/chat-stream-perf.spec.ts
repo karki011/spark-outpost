@@ -151,7 +151,7 @@ test('a heavy chat streams a long reply smoothly without leaking', async ({ page
   test.setTimeout(240_000 + SOAK_MS * 2);
   await streamHeavyChat(page, {
     report: 'chat-stream',
-    viewport: { width: 1440, height: 900 },
+    viewport: { width: 1400, height: 900 },
     rail: false,
   });
 });

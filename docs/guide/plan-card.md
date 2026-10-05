@@ -25,7 +25,7 @@ After **Build**, the work runs by itself.
 | **Automatic**      | Waits for you, in every agent mode                            | Waits for you    |
 | **Full auto → PR** | Builds after a countdown, such as "Building this plan in 10s" | Waits for you    |
 
-At **Full auto → PR**, select **Edit** or **Stop** before the countdown ends to hold the plan. The countdown is the **If you don't answer a question** time, or 30 seconds when that setting is **Off**.
+At **Full auto → PR**, select **Edit** or **Stop** before the countdown ends to hold the plan. The countdown is the **Wait before going with best guesses** time, or 30 seconds when that setting is **Never**.
 
 A destructive plan deletes, drops or truncates data. Its card says "this would change data permanently".
 

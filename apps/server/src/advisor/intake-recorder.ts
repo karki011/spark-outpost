@@ -149,19 +149,27 @@ export interface AskedIntake {
   outcome: JevOutcome;
 }
 
+async function jevOutcome(
+  deps: IntakeDeps | null,
+  request: IntakeRequest,
+  context: IntakeContext,
+  skipReason: string | null,
+): Promise<JevOutcome> {
+  if (!deps || !context.jevModel) return { status: 'not_connected' };
+  if (skipReason) return { status: 'not_asked', reason: skipReason };
+  return askJev(deps, request, context.jevModel);
+}
+
 export async function askIntake(
   db: Db,
   deps: IntakeDeps | null,
   input: RunInput,
   extra: IntakeExtra,
+  skipReason: string | null = null,
 ): Promise<AskedIntake> {
   const context = await loadIntakeContext(db, input.workspaceId, input.identity.threadId);
   const request = intakeRequest(input, context, extra);
-  const outcome =
-    deps && context.jevModel
-      ? await askJev(deps, request, context.jevModel)
-      : ({ status: 'not_connected' } as const);
-  return { request, context, outcome };
+  return { request, context, outcome: await jevOutcome(deps, request, context, skipReason) };
 }
 
 export async function saveIntake(

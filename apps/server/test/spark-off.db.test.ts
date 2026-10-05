@@ -1,3 +1,4 @@
+import { conversationAdvice } from '../src/persistence/advice.ts';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { modeForLegacy } from '@spark-outpost/contracts';
@@ -115,6 +116,8 @@ describe('Spark off', () => {
     ]);
     const route = orchestration.decisions.find((decision) => decision.kind === 'route');
     expect(route?.summary).toContain('Spark off → your pick');
+    const advice = (await conversationAdvice(t.db, conversationId)).byRun[runId];
+    expect(advice).toMatchObject({ jevStatus: 'not_asked', jevError: 'Spark is off', jev: null });
   }, 60_000);
 
   it('keeps team mode and the name for Codex in its developer instructions', async () => {

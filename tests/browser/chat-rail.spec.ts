@@ -160,13 +160,69 @@ test.describe('plain chats', () => {
     await header(page).getByRole('button', { name: 'Hide work panel' }).click();
     await expect(rail(page)).toBeVisible();
 
-    for (const width of [1600, 1280, 700]) {
+    for (const width of [1280, 700]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(rail(page)).toHaveCount(0);
       expect(await pageScroll(page)).toBe(0);
     }
     await page.setViewportSize(WIDE);
     await expect(rail(page)).toBeVisible();
+  });
+
+  test('the rail shows at laptop widths whenever the work panel is closed, and hides when it opens or the window is small', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await longChat(page, PROMPTS.slice(0, 1));
+    const showPanel = header(page).getByRole('button', { name: 'Show work panel' });
+    const hidePanel = header(page).getByRole('button', { name: 'Hide work panel' });
+
+    for (const width of [1728, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(rail(page)).toBeVisible();
+      await expect
+        .poll(async () => {
+          const [column, composer] = await Promise.all([
+            page.locator('.col').boundingBox(),
+            page.locator('.composer').boundingBox(),
+          ]);
+          return Math.abs(column!.x - composer!.x) + Math.abs(column!.width - composer!.width);
+        })
+        .toBeLessThan(34);
+      await expect
+        .poll(async () => (await page.locator('.col').boundingBox())!.width)
+        .toBeGreaterThanOrEqual(700);
+      const column = (await page.locator('.col').boundingBox())!;
+      const railBox = (await rail(page).boundingBox())!;
+      const thread = (await page.locator('.thread').boundingBox())!;
+      expect(column.width).toBeGreaterThanOrEqual(700);
+      expect(railBox.x).toBeGreaterThanOrEqual(column.x + column.width + 16);
+      expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
+      expect(await pageScroll(page)).toBe(0);
+      await shoot(page, `laptop-${width}`);
+
+      await showPanel.click();
+      await expect(workPanel(page)).toBeVisible();
+      await expect(rail(page)).toHaveCount(0);
+      expect(await pageScroll(page)).toBe(0);
+      await hidePanel.click();
+      await expect(rail(page)).toBeVisible();
+    }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(rail(page)).toHaveCount(0);
+    await showPanel.click();
+    await expect(workPanel(page)).toBeVisible();
+    await expect(rail(page)).toHaveCount(0);
+    await hidePanel.click();
+    await expect(workPanel(page)).toBeHidden();
+    await expect(rail(page)).toHaveCount(0);
+    const columnWidth = async () => (await page.locator('.col').boundingBox())!.width;
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(700);
+
+    await page.getByRole('button', { name: 'Hide sidebar' }).click();
+    await expect(rail(page)).toBeVisible();
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(700);
   });
 
   test('the outline jumps to a prompt, follows the section in view and works from the keyboard', async ({
@@ -190,7 +246,10 @@ test.describe('plain chats', () => {
           turns(page).nth(1).boundingBox(),
           page.locator('.thread').boundingBox(),
         ]);
-        return Math.abs(section!.y - thread!.y);
+        const toEnd = await page
+          .locator('.thread')
+          .evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight);
+        return Math.min(Math.abs(section!.y - thread!.y), toEnd);
       })
       .toBeLessThan(40);
     await shoot(page, 'outline-2000');

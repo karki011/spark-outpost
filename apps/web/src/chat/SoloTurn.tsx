@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   isTerminalRunStatus,
   type Approval,
@@ -10,7 +11,7 @@ import {
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
 import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
-import { hasPending } from './approvals/approval-events.ts';
+import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from './../browser/BrowserShots.tsx';
 import { RailFlags } from './approvals/RailFlags.tsx';
@@ -70,6 +71,7 @@ const finishedMoods: Record<TerminalRunStatus, string> = {
 
 interface SoloTurnProps {
   run: Run;
+  taskCount?: ReactNode;
   detail: ConversationDetail;
   assistantMessage: Message | null;
   repo: Project | null;
@@ -96,7 +98,7 @@ function turnApprovals(
   );
   if (isTerminalRunStatus(run.status)) return shownApprovals(stored);
   const pendingCheckpoint = detail.orchestrations?.[run.id]?.pendingCheckpoint;
-  return shownApprovals(stored, stream.approvals, pendingCheckpoint ? [pendingCheckpoint] : []);
+  return shownApprovals(stored, pendingCheckpoint ? [pendingCheckpoint] : [], stream.approvals);
 }
 
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
@@ -107,7 +109,7 @@ function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
   return { state: liveStates[stream.status], label: liveMoods[stream.status] };
 }
 
-export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps) {
+export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
   const finished = isTerminalRunStatus(run.status);
@@ -117,6 +119,13 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   const working = !finished && active;
   const approvals = turnApprovals(run, detail, stream, member?.runId ?? null);
   const waiting = working && hasPending(approvals);
+  const cards = decidedFirst(approvals);
+  const approvalCard = (approval: Approval) =>
+    isCheckpoint(approval) ? (
+      <CheckpointCard key={approval.id} approval={approval} />
+    ) : (
+      <ApprovalCard key={approval.id} approval={approval} provider={provider} repo={repo} />
+    );
   const { state, label } = turnStatus(run, stream, waiting);
 
   const persistedSteps = detail.activity[run.id]?.length
@@ -156,14 +165,25 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   return (
     <AiTurn
       provider={provider}
-      label={label}
+      label={working && !waiting && !log && !text ? 'thinking' : label}
       state={state}
+      liveId={working && !waiting ? run.id : null}
       category={run.category}
       advice={detail.advice?.[run.id]}
       following={child?.following ?? run.following}
       status={
-        log ? (
-          <StepToggle log={log} label={turnHeading(log.views, state, seconds, log.open)} />
+        log || taskCount ? (
+          <>
+            {log && (
+              <StepToggle log={log} label={turnHeading(log.views, state, seconds, log.open)} />
+            )}
+            {log && taskCount && (
+              <span className="mood-dot" aria-hidden="true">
+                ·
+              </span>
+            )}
+            {taskCount}
+          </>
         ) : null
       }
     >
@@ -175,21 +195,9 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       <BrowserShots detail={detail} runId={run.id} />
-      {approvals.map((approval) =>
-        isCheckpoint(approval) ? (
-          <CheckpointCard key={approval.id} approval={approval} />
-        ) : (
-          <ApprovalCard key={approval.id} approval={approval} provider={provider} repo={repo} />
-        ),
-      )}
+      {cards.decided.map(approvalCard)}
       {text && <Markdown text={text} streaming={leads && active} />}
-      {working && !waiting && !text && !log && (
-        <span className="dots" role="status" aria-label="Working">
-          <i />
-          <i />
-          <i />
-        </span>
-      )}
+      {cards.pending.map(approvalCard)}
       <ReplyPlanAction
         detail={detail}
         message={assistantMessage}

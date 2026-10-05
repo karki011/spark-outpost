@@ -76,6 +76,10 @@ export function useStatusLine({
   };
 }
 
+export function useHeadInView(store: StatusStore): boolean {
+  return useSyncExternalStore(store.subscribe, () => store.snapshot().headsInView.length > 0);
+}
+
 export function useNow(ticking: boolean): number {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

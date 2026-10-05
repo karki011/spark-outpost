@@ -1,9 +1,21 @@
-.main.crail-open .col {
+.main.crail-open {
   --rail-reserve: 216px;
 }
 
-.main.crail-collapsed .col {
-  --rail-reserve: 24px;
+.main.crail-collapsed {
+  --rail-reserve: 32px;
+}
+
+.main:is(.crail-open, .crail-collapsed) {
+  --rail-pad: clamp(
+    0px,
+    2 * var(--rail-reserve) - (100cqi - 64px - var(--chat-col)),
+    var(--rail-reserve)
+  );
+}
+
+.main:is(.crail-open, .crail-collapsed) :is(.thread, .composer-wrap, .cstatus, .qwrap) {
+  padding-right: calc(16px + var(--rail-pad));
 }
 
 .crail-slot {
@@ -16,7 +28,7 @@
 .crail {
   position: absolute;
   top: 6px;
-  right: 0;
+  right: calc(-1 * var(--rail-pad, 0px));
   display: flex;
   flex-direction: column;
   width: 200px;
@@ -69,7 +81,7 @@
 .crail-show {
   position: absolute;
   top: 6px;
-  right: 0;
+  right: calc(-1 * var(--rail-pad, 0px));
 }
 
 .crail-rows,
@@ -295,4 +307,108 @@
   .crail {
     animation: none;
   }
+}
+
+.crail-tasks {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 64px;
+  margin-top: 14px;
+}
+
+.crail-tasks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px 6px;
+}
+
+.crail-tasks-count {
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.crail-tasks-count:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-tasks ol {
+  min-height: 0;
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.crail-tasks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.crail-tasks li[data-state='pending'] {
+  color: var(--faint);
+}
+
+.crail-tasks li[aria-current] {
+  background: var(--raise);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.crail-tasks li[data-state='waiting'] {
+  background: color-mix(in srgb, var(--warn) 9%, var(--raise));
+}
+
+.crail-task-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 16px;
+  height: 17px;
+}
+
+.crail-tasks li[data-state='done'] .crail-task-mark {
+  color: var(--accent);
+}
+
+.crail-tasks li[data-state='failed'] .crail-task-mark {
+  color: var(--danger);
+}
+
+.crail-task-dot {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.crail-tasks li[data-state='waiting'] .crail-task-dot {
+  border-color: var(--warn);
+  background: var(--warn);
+}
+
+.crail-task-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.crail-task-detail {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
 }

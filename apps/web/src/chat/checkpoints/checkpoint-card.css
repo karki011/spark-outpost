@@ -159,8 +159,17 @@
 .ck-auto {
   font-variant-numeric: tabular-nums;
 }
+.ck-own {
+  display: contents;
+}
 .ck-questions {
+  display: flex;
+  flex-direction: column;
+  max-height: max(240px, 100cqb - 104px);
   padding: 0 14px;
+}
+.ck-questions > * {
+  flex-shrink: 0;
 }
 .ck-questions > .inp {
   display: block;
@@ -173,11 +182,17 @@
   padding-left: 0;
   padding-right: 0;
 }
+.ck-questions > .ck-q-list {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .ck-q-list {
   display: grid;
   gap: 12px;
   margin: 10px 0 0;
-  padding: 0 0 0 20px;
+  padding: 0 4px 2px 20px;
   font-size: 13px;
 }
 .ck-q::marker {

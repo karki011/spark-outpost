@@ -45,7 +45,12 @@ async function answer(cardId: string, runId: string, optionId: string) {
 
 describe('custom compaction thresholds', { timeout: 60_000 }, () => {
   it('asks at the saved point with automatic compaction off, and again 10 points later', async () => {
-    await start({ compactWarnPercent: 40, compactAtPercent: 60, autoCompact: false });
+    await start({
+      compactWarnPercent: 40,
+      compactAtPercent: 60,
+      autoCompact: false,
+      autoContinueSeconds: 10,
+    });
     const id = await newChat(h, 'hands-off');
     await say(h, id, 'Start #ctx55');
     const quiet = await say(h, id, 'Go on #ctx62');

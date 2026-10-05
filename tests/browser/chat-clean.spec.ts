@@ -103,7 +103,10 @@ test('a running turn has one status, with steps in plain words', async ({ page }
   ]);
   await expect(page.locator('.thread')).not.toContainText('mcp__');
   await expect(page.locator('.thread .dots')).toHaveCount(0);
-  await expect(status(page)).toHaveText('Claude is working · Checking pull requests');
+  await expect(status(page)).toHaveCount(0);
+  await expect(page.locator('.cstatus').getByRole('status')).toHaveText(
+    'Claude is working: Checking pull requests',
+  );
   await expect(page.getByText(/^Working$/)).toHaveCount(0);
   await shots(page, 'running');
 
