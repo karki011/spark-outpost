@@ -1,0 +1,97 @@
+import {
+  BROWSER_HOST_ENV,
+  browserBridgeToHostSchema,
+  browserPlaceOf,
+  type BrowserHostRequest,
+} from '../../packages/contracts/src/index.ts';
+
+type Listener = (event: { data: unknown }) => void;
+
+const listeners = new Set<Listener>();
+const tab = { url: 'about:blank', title: '', typed: [] as string[] };
+
+function facts() {
+  return {
+    tabId: 'tab1',
+    url: tab.url,
+    title: tab.title,
+    place: browserPlaceOf(tab.url),
+    owner: 'agent',
+  };
+}
+
+function answer(request: BrowserHostRequest): unknown {
+  if (request.op === 'open') {
+    tab.url = request.url;
+    tab.title = 'Fixture login';
+    return { ...facts(), status: 200, reused: false };
+  }
+  if (request.op === 'tabs') {
+    return { tabs: [{ id: 'tab1', ...facts(), active: true }] };
+  }
+  if (request.op === 'sign_in') {
+    tab.typed = [request.username, request.password];
+    tab.url = `${request.origin}/home?as=${encodeURIComponent(request.username)}`;
+    tab.title = `Welcome ${request.username}`;
+    return { ...facts(), steps: 1 };
+  }
+  if (request.op === 'read') {
+    const echoed = tab.typed.join(' and ');
+    return {
+      ...facts(),
+      mode: request.mode,
+      text: `- heading "Welcome" [ref_1]\n- paragraph "The page repeats ${echoed}"`,
+      total: 2,
+      offset: 0,
+      nextOffset: null,
+      masked: 0,
+    };
+  }
+  if (request.op === 'logs') {
+    return {
+      ...facts(),
+      kind: request.kind,
+      entries: [
+        {
+          at: new Date().toISOString(),
+          level: 'log',
+          text: `submitted ${tab.typed.join(' ')}`,
+          source: null,
+          status: null,
+          method: null,
+        },
+      ],
+      dropped: 0,
+    };
+  }
+  if (request.op === 'end_run') return { closed: 0 };
+  if (request.op === 'page') return facts();
+  throw new Error('The fake browser takes no screenshots.');
+}
+
+function receive(raw: unknown): void {
+  const parsed = browserBridgeToHostSchema.safeParse(raw);
+  if (!parsed.success || parsed.data.kind !== 'browser:request') return;
+  const { id, request } = parsed.data;
+  let response: unknown;
+  try {
+    response = { kind: 'browser:response', id, ok: true, result: answer(request) };
+  } catch (error) {
+    response = {
+      kind: 'browser:response',
+      id,
+      ok: false,
+      code: 'failed',
+      message: (error as Error).message,
+    };
+  }
+  queueMicrotask(() => listeners.forEach((listener) => listener({ data: response })));
+}
+
+process.env[BROWSER_HOST_ENV] = '1';
+Object.assign(process, {
+  parentPort: {
+    postMessage: receive,
+    on: (_event: 'message', listener: Listener) => listeners.add(listener),
+  },
+});

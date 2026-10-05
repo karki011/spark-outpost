@@ -135,7 +135,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
   const session = browserSession(context);
   const { row, page } = attempt;
   const approval = clearance.approvalId ? { approvalId: clearance.approvalId } : {};
-  const secret = await readSignInSecret(context.deps.secrets, row.keychain_ref);
+  const secret = await readSignInSecret({ get: context.deps.secrets.fresh }, row.keychain_ref);
   if (!secret) {
     record(context, attempt, 'failed', { ...approval, result: 'missing_from_keychain' });
     return notSignedIn(SIGN_IN_MISSING_SECRET);

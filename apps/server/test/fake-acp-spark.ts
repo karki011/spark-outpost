@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
-const SPARK_TRIGGER = /#spark (\w+)(?: (\{.*?\}))?/;
+const SPARK_TRIGGER = /#spark (\w+)(?: (\{.*?\}))?/g;
 
 interface SparkEndpoint {
   name: string;
@@ -41,7 +41,7 @@ export async function sparkTurn(
   update: (value: acp.SessionUpdate) => Promise<void>,
   say: (chunk: string) => Promise<void>,
 ): Promise<acp.StopReason | null> {
-  const match = SPARK_TRIGGER.exec(text);
+  const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
   if (!match) return null;
   const endpoint = fromAcp(servers) ?? fromCodexConfig(process.env.CODEX_CONFIG);
   if (!endpoint) {

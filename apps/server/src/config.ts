@@ -16,6 +16,7 @@ const memorySecretsSchema = z.partialRecord(
     connectableIdSchema,
     z.literal('github'),
     z.enum(['ticket:linear', 'ticket:jira', 'slack:bot', 'slack:user', 'slack:app']),
+    z.templateLiteral(['signin:', z.uuid()]),
   ]),
   z.string().min(1),
 );

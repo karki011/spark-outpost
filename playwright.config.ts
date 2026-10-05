@@ -17,6 +17,7 @@ import {
   MAP_ROOT_PREFIX,
   PACKAGED,
   SERVER_LOG_DIR,
+  SIGN_IN_FIXTURE,
   slot,
   STUB_PORT,
   TEST_DATABASE_URL,
@@ -52,6 +53,10 @@ const serverEnv = {
     'ticket:linear': LINEAR_KEY,
     'slack:bot': SLACK_BOT_TOKEN,
     'slack:user': SLACK_USER_TOKEN,
+    [`signin:${SIGN_IN_FIXTURE.id}`]: JSON.stringify({
+      username: SIGN_IN_FIXTURE.username,
+      password: SIGN_IN_FIXTURE.password,
+    }),
   }),
   AGENT_RUNTIME: 'fake',
   COORDINATOR_MODE: 'parallel',
@@ -73,6 +78,10 @@ const serverEnv = {
 
 const node = JSON.stringify(process.execPath);
 const serverCommand = (entry: string) => `${node} --import tsx ${entry}`;
+const workerCommand =
+  process.env.SPARK_FAKE_BROWSER === '1'
+    ? `${node} --import tsx --import ../../tests/browser/fake-browser-host.ts src/workflow/main.ts`
+    : serverCommand('src/workflow/main.ts');
 const logged = (command: string, name: string) =>
   `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
 const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
@@ -135,7 +144,7 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: logged(serverCommand('src/workflow/main.ts'), 'worker'),
+      command: logged(workerCommand, 'worker'),
       cwd: 'apps/server',
       env: serverEnv,
       wait: { stdout: /Worker running/ },
