@@ -4,6 +4,7 @@ import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
 import { withTurnFailure } from './fake-acp-limits.ts';
+import { pushAuthStatus, rejectedTurn } from './fake-acp-access.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -409,6 +410,7 @@ acp
     sessionDirectories = ctx.params.additionalDirectories ?? null;
     const sessionId = newSessionId();
     createFakeSession(sessionId, sessionCwd, sessionDirectories);
+    pushAuthStatus(ctx.client);
     return process.env.FAKE_ACP_LEGACY
       ? {
           sessionId: 'fake-session',
@@ -467,6 +469,11 @@ acp
     const text = ctx.params.prompt.map((block) => (block.type === 'text' ? block.text : ''));
     try {
       recordPrompt(ctx.params.sessionId, text.join(''));
+      const sessionId = ctx.params.sessionId;
+      const refused = await rejectedTurn(text.join(''), config.model ?? '', (update) =>
+        ctx.client.notify(acp.methods.client.session.update, { sessionId, update }),
+      );
+      if (refused) return refused;
       const stopReason = await turn(ctx.params, ctx.client, controller.signal);
       return withTurnFailure(ctx.params.sessionId, { stopReason, usage: FAKE_USAGE });
     } catch (error) {

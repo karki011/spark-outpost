@@ -106,6 +106,8 @@ function reviewState(pull: PullDetail, reviews: Review[]): PullRequestState {
     mergedAt: pull.merged_at ?? null,
     reviews: reviews.map((review) => ({ user: login(review.user), state: review.state })),
     checks: null,
+    headSha: pull.head.sha,
+    failedChecks: [],
   });
 }
 

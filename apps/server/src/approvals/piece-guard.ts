@@ -10,6 +10,9 @@ import { FULL_CHECKS_REASON, runsWholeProject } from '../coordinator/scoped-chec
 import { isPackageInstall } from './command-kinds.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { changesGitState } from './git-commands.ts';
+import { scratchWorktree } from './git-worktrees.ts';
+import { commandCwd } from './request-place.ts';
+import { harmlessOutput, toolWriteTargets } from './tool-writes.ts';
 import { writeTargets } from './write-targets.ts';
 
 export const BUILDER_GIT_REASON =
@@ -50,19 +53,36 @@ export function ownershipReason(owned: OwnedFiles, relative: string): string {
   return `${who} \`${relative}\`; this piece (${ownerLabel(owned)}) owns ${ownList(owned)}; ask the coordinator in your reply if you need it changed`;
 }
 
+function scratchOutput(owned: OwnedFiles, relative: string): boolean {
+  return harmlessOutput(relative) && ownerOf(owned, relative) === null;
+}
+
 function outsidePiece(owned: OwnedFiles, targets: readonly string[], relativeOf: RelativeOf) {
   for (const target of targets) {
     const relative = relativeOf(target);
-    if (relative !== null && !owns(owned, relative)) return relative;
+    if (relative === null || owns(owned, relative)) continue;
+    if (!scratchOutput(owned, relative)) return relative;
   }
   return null;
 }
 
+function rootOf(request: ApprovalRequest, target: string): boolean {
+  return request.roots.some((root) => root.path === target);
+}
+
+function rewrittenByTools(request: ApprovalRequest): string[] {
+  if (!request.command) return [];
+  return toolWriteTargets(request.command, commandCwd(request), request.home);
+}
+
 function commandTargets(request: ApprovalRequest): string[] {
   if (!request.command) return [];
-  const cwd = request.cwd ?? request.roots[0]?.path ?? request.home;
-  return writeTargets(request.command, cwd, request.home) ?? [];
+  const written = writeTargets(request.command, commandCwd(request), request.home) ?? [];
+  return [...written, ...rewrittenByTools(request)];
 }
+
+export const WHOLE_TREE_REWRITE_REASON =
+  "This rewrites files across the whole folder; name this piece's own files instead";
 
 export function pieceRefusal(
   request: ApprovalRequest,
@@ -70,11 +90,15 @@ export function pieceRefusal(
   relativeOf: RelativeOf,
 ): string | null {
   const command = request.command;
-  if (guard.coordinated && command && changesGitState(command)) return BUILDER_GIT_REASON;
+  const scratch = scratchWorktree(commandCwd(request), request.home);
+  if (guard.coordinated && command && changesGitState(command, scratch)) return BUILDER_GIT_REASON;
   const owned = guard.owned;
   if (!owned) return null;
   if (command && guard.sharesTree && isPackageInstall(command)) return SHARED_INSTALL_REASON;
   if (command && runsWholeProject(command)) return `Inside a piece, ${FULL_CHECKS_REASON}`;
+  if (rewrittenByTools(request).some((target) => rootOf(request, target))) {
+    return WHOLE_TREE_REWRITE_REASON;
+  }
   const targets = request.kind === 'edit' ? request.paths : commandTargets(request);
   const outside = outsidePiece(owned, targets, relativeOf);
   return outside === null ? null : ownershipReason(owned, outside);

@@ -34,11 +34,27 @@ const LANGUAGES: Record<string, Loader> = {
   java: () => import('@codemirror/lang-java').then((mod) => mod.java()),
 };
 
-export function languageLoader(path: string): Loader | null {
+const loaded = new Map<string, LanguageSupport>();
+
+function extensionOf(path: string): string | null {
   const name = path.split('/').at(-1) ?? '';
   const dot = name.lastIndexOf('.');
-  if (dot <= 0) return null;
-  return LANGUAGES[name.slice(dot + 1).toLowerCase()] ?? null;
+  return dot <= 0 ? null : name.slice(dot + 1).toLowerCase();
+}
+
+export function loadedLanguage(path: string): LanguageSupport | null {
+  return loaded.get(extensionOf(path) ?? '') ?? null;
+}
+
+export function languageLoader(path: string): Loader | null {
+  const extension = extensionOf(path);
+  const load = extension === null ? undefined : LANGUAGES[extension];
+  if (!extension || !load) return null;
+  return async () => {
+    const language = await load();
+    loaded.set(extension, language);
+    return language;
+  };
 }
 
 const token = (name: string) => `var(--code-token-${name})`;
@@ -66,10 +82,21 @@ const highlightStyle = HighlightStyle.define([
   { tag: tags.strong, fontWeight: '600' },
 ]);
 
-const ADD = 'color-mix(in srgb, var(--success) 12%, transparent)';
-const ADD_TEXT = 'color-mix(in srgb, var(--success) 24%, transparent)';
-const REMOVE = 'color-mix(in srgb, var(--danger) 11%, transparent)';
-const REMOVE_TEXT = 'color-mix(in srgb, var(--danger) 20%, transparent)';
+const WORD_TOKENS = [
+  'comment',
+  'keyword',
+  'constant',
+  'string',
+  'string-expression',
+  'function',
+  'parameter',
+  'punctuation',
+  'link',
+];
+const wordTokens = Object.fromEntries(
+  WORD_TOKENS.map((name) => [`--code-token-${name}`, `var(--code-word-${name})`]),
+);
+const SIGN = { position: 'absolute', left: '7px', userSelect: 'none' };
 
 const theme = EditorView.theme({
   '&': {
@@ -104,15 +131,40 @@ const theme = EditorView.theme({
     borderColor: 'var(--line)',
   },
   '.cm-panel input, .cm-panel button': { font: 'inherit', color: 'var(--text)' },
-  '.cm-changedLine, .cm-insertedLine, &.cm-merge-b .cm-changedLine': { backgroundColor: ADD },
-  '.cm-changedText, &.cm-merge-b .cm-changedText': { background: ADD_TEXT },
-  '.cm-deletedChunk, .cm-deletedLine, &.cm-merge-a .cm-changedLine': { backgroundColor: REMOVE },
-  '.cm-deletedChunk .cm-deletedText, &.cm-merge-a .cm-changedText, .cm-deletedLine del': {
-    background: REMOVE_TEXT,
+  '.cm-line, .cm-deletedChunk .cm-deletedLine': { position: 'relative', padding: '0 2px 0 22px' },
+  '.cm-deletedChunk': { paddingLeft: '0', backgroundColor: 'var(--diff-remove)' },
+  '.cm-changedLine': { backgroundColor: 'var(--diff-add)' },
+  '&.cm-merge-a .cm-changedLine': { backgroundColor: 'var(--diff-remove)' },
+  '.cm-insertedLine, .cm-deletedLine, .cm-deletedLine del': {
+    background: 'none',
     textDecoration: 'none',
   },
+  '.dd-word': { ...wordTokens, borderRadius: '3px', backgroundColor: 'var(--diff-add-word)' },
+  '&.cm-merge-a .dd-word, .cm-deletedChunk .dd-word': {
+    backgroundColor: 'var(--diff-remove-word)',
+  },
+  '.cm-changedLine::before, &.dd-new .cm-line::before': {
+    ...SIGN,
+    content: '"+"',
+    color: 'var(--success)',
+  },
+  '.cm-deletedChunk .cm-deletedLine::before, &.cm-merge-a .cm-changedLine::before, &.dd-gone .cm-line::before':
+    {
+      ...SIGN,
+      content: '"−"',
+      color: 'var(--danger)',
+    },
+  '&.dd-new .cm-line': { backgroundColor: 'var(--diff-add)' },
+  '&.dd-gone .cm-line': { backgroundColor: 'var(--diff-remove)' },
   '.cm-changedLineGutter, &.cm-merge-b .cm-changedLineGutter': { background: 'var(--success)' },
   '.cm-deletedLineGutter, &.cm-merge-a .cm-changedLineGutter': { background: 'var(--danger)' },
+  '.dd-old-numbers .cm-gutterElement': {
+    boxSizing: 'border-box',
+    minWidth: '20px',
+    padding: '0 3px 0 5px',
+    textAlign: 'right',
+    whiteSpace: 'nowrap',
+  },
   '.cm-collapsedLines': {
     color: 'var(--muted)',
     background: 'var(--raise)',

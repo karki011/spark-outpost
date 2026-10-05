@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InboxTicket, PullRequestStatus } from '@spark-outpost/contracts';
-import { pullBadge, ticketPulls } from './row-links.ts';
+import { pullBadge, reviewBadge, ticketPulls } from './row-links.ts';
 
 const pull = (fields: Partial<PullRequestStatus> = {}): PullRequestStatus => ({
   url: 'https://github.com/acme/web/pull/88',
@@ -37,6 +37,11 @@ describe('pull request badge', () => {
     expect(label({ state: 'closed', checks: 'failing' })).toBe('closed');
   });
 
+  it('keeps the review state apart from the checks for the detail pane', () => {
+    expect(reviewBadge(pull({ checks: 'failing' })).label).toBe('open');
+    expect(reviewBadge(pull({ state: 'approved', checks: 'failing' })).label).toBe('approved');
+  });
+
   it('says so when the pull request cannot be read', () => {
     expect(pullBadge(null)).toEqual({ label: 'status not available', tone: 'muted', glyph: 'pr' });
   });
@@ -53,7 +58,7 @@ describe('pull requests on a ticket', () => {
     ({ pullRequest: null, work: [], ...fields }) as InboxTicket;
 
   it('lists the PR Spark opened once, with its status, checks and title', () => {
-    const status = pull({ checks: 'failing' });
+    const status = pull({ checks: 'failing', failedChecks: ['unit', 'lint'] });
     const pulls = ticketPulls(inbox({ pullRequest: status, work: [work(status.url, 'Fix CSV')] }), [
       { title: 'acme/web#88', url: status.url },
     ]);
@@ -63,8 +68,9 @@ describe('pull requests on a ticket', () => {
         number: 88,
         repo: 'acme/web',
         title: 'Fix CSV',
-        badge: pullBadge(status),
+        badge: reviewBadge(status),
         checks: 'failing',
+        failedChecks: ['unit', 'lint'],
       },
     ]);
   });

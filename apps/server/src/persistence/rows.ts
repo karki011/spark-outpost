@@ -2,6 +2,7 @@ import {
   friendlyStep,
   agentRoleSchema,
   categorySchema,
+  modelSwitchSchema,
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
@@ -68,6 +69,8 @@ export interface RunRow {
   followed_instructions?: string[] | null;
   continues_run_id?: string | null;
   interruption_choice?: InterruptionChoice | null;
+  model_switch?: unknown;
+  error_details?: string | null;
 }
 
 export interface ConversationSummaryRow extends PendingApprovalRow {
@@ -142,6 +145,8 @@ export function toRun(row: RunRow): Run {
     following: row.followed_instructions ?? null,
     continuesRunId: row.continues_run_id ?? null,
     interruptionChoice: row.interruption_choice ?? null,
+    modelSwitch: modelSwitchSchema.safeParse(row.model_switch).data ?? null,
+    errorDetails: row.error_details ?? null,
   };
 }
 

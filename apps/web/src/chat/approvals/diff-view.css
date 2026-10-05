@@ -1,10 +1,4 @@
 .dv {
-  --dv-add: color-mix(in srgb, var(--success) 11%, transparent);
-  --dv-add-edge: color-mix(in srgb, var(--success) 14%, transparent);
-  --dv-add-word: color-mix(in srgb, var(--success) 30%, transparent);
-  --dv-remove: color-mix(in srgb, var(--danger) 10%, transparent);
-  --dv-remove-edge: color-mix(in srgb, var(--danger) 13%, transparent);
-  --dv-remove-word: color-mix(in srgb, var(--danger) 28%, transparent);
   min-width: 0;
 }
 
@@ -111,11 +105,11 @@
 
 .dv-row.add .dv-c,
 .dv-row.add .dv-m {
-  background: var(--dv-add);
+  background: var(--diff-add);
 }
 
 .dv-row.add .dv-n {
-  background-image: linear-gradient(var(--dv-add-edge), var(--dv-add-edge));
+  background-image: linear-gradient(var(--diff-add-edge), var(--diff-add-edge));
 }
 
 .dv-row.add .dv-m {
@@ -124,25 +118,36 @@
 
 .dv-row.remove .dv-c,
 .dv-row.remove .dv-m {
-  background: var(--dv-remove);
+  background: var(--diff-remove);
 }
 
 .dv-row.remove .dv-n {
-  background-image: linear-gradient(var(--dv-remove-edge), var(--dv-remove-edge));
+  background-image: linear-gradient(var(--diff-remove-edge), var(--diff-remove-edge));
 }
 
 .dv-row.remove .dv-m {
   color: var(--danger);
 }
 
-.dv-row.add .dv-w {
+.dv-w {
   border-radius: 3px;
-  background: var(--dv-add-word);
+  --code-token-comment: var(--code-word-comment);
+  --code-token-keyword: var(--code-word-keyword);
+  --code-token-constant: var(--code-word-constant);
+  --code-token-string: var(--code-word-string);
+  --code-token-string-expression: var(--code-word-string-expression);
+  --code-token-function: var(--code-word-function);
+  --code-token-parameter: var(--code-word-parameter);
+  --code-token-punctuation: var(--code-word-punctuation);
+  --code-token-link: var(--code-word-link);
+}
+
+.dv-row.add .dv-w {
+  background: var(--diff-add-word);
 }
 
 .dv-row.remove .dv-w {
-  border-radius: 3px;
-  background: var(--dv-remove-word);
+  background: var(--diff-remove-word);
 }
 
 .dv-row:first-child td {

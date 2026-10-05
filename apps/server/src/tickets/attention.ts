@@ -8,6 +8,7 @@ import {
   type TicketChatState,
   type TicketLastSync,
   type TicketListItem,
+  type TicketNotice,
   type TicketSnooze,
 } from '@spark-outpost/contracts';
 
@@ -29,6 +30,8 @@ export interface TicketFacts {
   assignedSince: string | null;
   snooze?: TicketSnooze | null;
   prFeedback?: PrFeedbackWaiting | null;
+  dismissed?: readonly string[];
+  noticeSeen?: string | null;
 }
 
 export interface PrFeedbackWaiting {
@@ -36,6 +39,8 @@ export interface PrFeedbackWaiting {
   waiting: number;
   since: string;
 }
+
+type Notice = Pick<TicketNotice, 'id' | 'text'>;
 
 export function activeSnooze(facts: TicketFacts, now: Date): TicketSnooze | null {
   const snooze = facts.snooze;
@@ -46,7 +51,6 @@ export const RULE_ORDER: readonly AttentionRule[] = [
   'chat-asking',
   'chat-error',
   'pr-feedback',
-  'pr-checks',
   'sync-failed',
   'blocked',
   'high-idle',
@@ -101,7 +105,14 @@ const flag = (
   rationale: string,
   since: string | null,
   severity: AttentionFlag['severity'] = 'warn',
-): AttentionFlag => ({ rule, text, rationale, since, severity });
+): AttentionFlag => ({
+  rule,
+  key: [rule, text, since ?? ''].join('|'),
+  text,
+  rationale,
+  since,
+  severity,
+});
 
 function chatFlags(facts: TicketFacts): AttentionFlag[] {
   if (facts.chat?.state === 'asking') {
@@ -140,18 +151,13 @@ function feedbackFlags({ prFeedback }: TicketFacts): AttentionFlag[] {
   ];
 }
 
-function checksFlags({ pullRequest: pull, chat }: TicketFacts): AttentionFlag[] {
+export function checksNotice({ pullRequest: pull, chat }: TicketFacts): Notice | null {
   const open = pull && pull.state !== 'merged' && pull.state !== 'closed';
-  if (!open || pull.checks !== 'failing' || chat?.state === 'running') return [];
-  return [
-    flag(
-      'pr-checks',
-      `PR #${pull.number} checks failing`,
-      'Rule: Checks are failing on the linked pull request and no chat is fixing them.',
-      null,
-      'error',
-    ),
-  ];
+  if (!open || pull.checks !== 'failing' || chat?.state === 'running') return null;
+  return {
+    id: `${pull.url}@${pull.headSha ?? 'unknown'}`,
+    text: `PR #${pull.number} checks failing`,
+  };
 }
 
 function syncFlags({ ticket, lastSync }: TicketFacts): AttentionFlag[] {
@@ -240,18 +246,26 @@ function pullFlags(facts: TicketFacts, limits: Thresholds, now: Date): Attention
   return flags;
 }
 
-export function attentionFlags(facts: TicketFacts, limits: Thresholds, now: Date): AttentionFlag[] {
+function raisedFlags(facts: TicketFacts, limits: Thresholds, now: Date): AttentionFlag[] {
   if (facts.ticket.status === 'done') return [];
-  const flags = [
+  return [
     ...chatFlags(facts),
     ...feedbackFlags(facts),
-    ...checksFlags(facts),
     ...syncFlags(facts),
     ...workFlags(facts, limits, now),
     ...pullFlags(facts, limits, now),
   ];
+}
+
+export function attentionFlags(facts: TicketFacts, limits: Thresholds, now: Date): AttentionFlag[] {
   const snoozed = activeSnooze(facts, now)?.rules ?? [];
-  return flags
-    .filter((entry) => !snoozed.includes(entry.rule))
+  const dismissed = facts.dismissed ?? [];
+  return raisedFlags(facts, limits, now)
+    .filter((entry) => !snoozed.includes(entry.rule) && !dismissed.includes(entry.key))
     .toSorted((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule));
+}
+
+export function settledDismissals(facts: TicketFacts, limits: Thresholds, now: Date): string[] {
+  const raised = new Set(raisedFlags(facts, limits, now).map((entry) => entry.key));
+  return (facts.dismissed ?? []).filter((key) => !raised.has(key));
 }

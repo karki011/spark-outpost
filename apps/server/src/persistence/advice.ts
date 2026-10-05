@@ -5,11 +5,14 @@ import {
   type AdviceSummary,
   type AdvisorUsage,
   type CapabilityOption,
+  type ModelRef,
   type ModelRouting,
   type ProviderId,
   type ProviderModel,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
+import { selectable, selectableDefault, type StoredAccess } from '../model-access/access.ts';
+import { loadAllAccess } from '../model-access/store.ts';
 import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import { reportedEfforts } from '../providers/efforts.ts';
@@ -123,13 +126,17 @@ interface CandidateRow {
   effort: string | null;
 }
 
-function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandidate {
+type KnownRow = CandidateRow & { provider: ProviderId; access: StoredAccess | null };
+
+function toCandidate(row: KnownRow): AdvisorCandidate {
   const entry = catalogEntry(row.provider);
   const reportedModels = row.capability_models ?? [];
-  const models =
+  const models = selectable(
     reportedModels.length > 0
       ? reportedModels
-      : row.models.map((model) => ({ ...model, description: null }));
+      : row.models.map((model) => ({ ...model, description: null })),
+    row.access,
+  );
   const efforts = reportedEfforts(row.provider, row.capability_efforts);
   return {
     provider: row.provider,
@@ -140,9 +147,11 @@ function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandi
   };
 }
 
-function defaultModelEntry(row: CandidateRow & { provider: ProviderId }): [string, string][] {
-  const models = row.capability_models ?? row.models;
-  const model = effectiveDefaultModel(row.provider, models, row.capability_default_model);
+function defaultModelEntry(row: KnownRow): [string, string][] {
+  const all = row.capability_models ?? row.models;
+  const models = selectable(all, row.access);
+  const adapterDefault = selectableDefault(all, models, row.capability_default_model);
+  const model = effectiveDefaultModel(row.provider, models, adapterDefault);
   return model ? [[row.provider, model]] : [];
 }
 
@@ -152,6 +161,7 @@ export interface IntakeContext {
   candidates: AdvisorCandidate[];
   defaultEfforts: Readonly<Record<string, string>>;
   defaultModels: Readonly<Record<string, string>>;
+  leftOut?: Readonly<Record<string, readonly ModelRef[]>>;
 }
 
 export async function loadIntakeContext(
@@ -159,7 +169,7 @@ export async function loadIntakeContext(
   workspaceId: string,
   conversationId: string,
 ): Promise<IntakeContext> {
-  const [candidates, jev, conversation, stats] = await Promise.all([
+  const [candidates, jev, conversation, stats, access] = await Promise.all([
     db.query<CandidateRow>(
       `SELECT pc.provider, pc.models, pc.effort, cap.models AS capability_models,
          cap.efforts AS capability_efforts, cap.default_model AS capability_default_model
@@ -179,11 +189,14 @@ export async function loadIntakeContext(
       [conversationId],
     ),
     listModelStats(db),
+    loadAllAccess(db, workspaceId),
   ]);
   const jevRow = jev.rows[0];
   const known = candidates.rows.flatMap((row) => {
     const provider = providerIdSchema.safeParse(row.provider);
-    return provider.success ? [{ ...row, provider: provider.data }] : [];
+    return provider.success
+      ? [{ ...row, provider: provider.data, access: access.get(provider.data) ?? null }]
+      : [];
   });
   return {
     jevModel: jevRow ? (jevRow.model ?? advisorEntry('jev').defaultModel) : null,
@@ -193,5 +206,11 @@ export async function loadIntakeContext(
       known.flatMap((row) => (row.effort ? [[row.provider, row.effort]] : [])),
     ),
     defaultModels: Object.fromEntries(known.flatMap(defaultModelEntry)),
+    leftOut: Object.fromEntries(
+      known.map((row) => [
+        row.provider,
+        (row.access?.rejected ?? []).map(({ id, label }) => ({ id, label })),
+      ]),
+    ),
   };
 }

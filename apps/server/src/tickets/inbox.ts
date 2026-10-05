@@ -13,9 +13,15 @@ import type { FlaggedItem } from '../persistence/attention-settings.ts';
 import { listConversations } from '../persistence/conversations.ts';
 import { prFeedbackWaiting } from '../persistence/pr-watches.ts';
 import { lastTicketSyncs, mergeMoveTried } from '../persistence/ticket-events.ts';
-import { cacheTickets, ticketRef, ticketTimes, ticketWork } from '../persistence/tickets.ts';
+import {
+  cacheTickets,
+  setDismissedFlags,
+  ticketRef,
+  ticketTimes,
+  ticketWork,
+} from '../persistence/tickets.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
-import type { TicketFacts } from './attention.ts';
+import { settledDismissals, type Thresholds, type TicketFacts } from './attention.ts';
 import { connectedSources, type OpenSource, type TicketDeps } from './connections.ts';
 import { readPullStatuses } from './pull-status.ts';
 import { placeTicket, sortInbox } from './sections.ts';
@@ -144,7 +150,26 @@ async function factsFor(
         assignedSince: times.get(ref)?.firstSeenAssignedAt?.toISOString() ?? null,
         snooze: times.get(ref)?.snooze ?? null,
         prFeedback: pullUrl ? (feedback.get(pullUrl) ?? null) : null,
+        dismissed: times.get(ref)?.dismissed ?? [],
+        noticeSeen: times.get(ref)?.noticeSeen ?? null,
       };
+    }),
+  );
+}
+
+async function forgetSettledDismissals(
+  deps: InboxDeps,
+  facts: readonly TicketFacts[],
+  limits: Thresholds,
+  now: Date,
+): Promise<TicketFacts[]> {
+  return Promise.all(
+    facts.map(async (fact) => {
+      const settled = settledDismissals(fact, limits, now);
+      if (settled.length === 0) return fact;
+      const dismissed = (fact.dismissed ?? []).filter((key) => !settled.includes(key));
+      await setDismissedFlags(deps.db, deps.workspaceId, fact.ticket, dismissed);
+      return { ...fact, dismissed };
     }),
   );
 }
@@ -156,7 +181,12 @@ export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
   const fetched = await Promise.all(sources.map(fetchMine));
   const summaries = fetched.flatMap((result) => result.tickets);
   await cacheTickets(deps.db, deps.workspaceId, summaries, { assignedToMe: true });
-  const facts = await factsFor(deps, sources, summaries);
+  const facts = await forgetSettledDismissals(
+    deps,
+    await factsFor(deps, sources, summaries),
+    settings,
+    now,
+  );
   const tickets = sortInbox(facts.map((fact) => placeTicket(fact, settings, now)));
   const flagged = tickets
     .filter((ticket) => ticket.section === 'attention')

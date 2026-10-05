@@ -1,6 +1,7 @@
 import { commandTree, SHELLS } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';
 import { withoutHereText } from './inline-code.ts';
+import { withTempVariable } from './temp-dirs.ts';
 
 const UNKNOWN_WORD = /\$|`/;
 const REDIRECT = /(?:^|[^<>&\d])\d?>>?(?!&)\s*([^\s;&|<>()]+)/g;
@@ -92,7 +93,7 @@ export function writeTargets(written: string, cwd: string, home: string): string
   const words = [
     ...all.flatMap(redirectWords),
     ...tree.commands.flatMap(programWords).filter((word) => !inputs.has(word)),
-  ];
+  ].map(withTempVariable);
   if (words.some((word) => UNKNOWN_WORD.test(word))) return null;
   return [...new Set(words.map((word) => resolveCommandPath(word, cwd, home)))];
 }

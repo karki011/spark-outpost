@@ -8,6 +8,7 @@ import {
 } from './advice.ts';
 import { approvalSchema, runModeSchema } from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
+import { modelSwitchSchema } from './model-access.ts';
 import { costSourceSchema, totalCostSourceSchema } from './audit.ts';
 import { runStatusSchema } from './runs.ts';
 import { agentPickSchema, budgetLimitSchema, routeSourceSchema } from './checkpoints.ts';
@@ -116,6 +117,8 @@ export const crewMemberSchema = z.object({
   routeNote: z.string().optional(),
   budget: z.string().optional(),
   spark: crewSparkSchema.optional(),
+  modelSwitch: modelSwitchSchema.optional(),
+  errorDetails: z.string().optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 

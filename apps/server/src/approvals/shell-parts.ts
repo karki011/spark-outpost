@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { gitSubcommand } from './git-commands.ts';
-import { inTempDir } from './request-place.ts';
+import { inTempDir } from './temp-dirs.ts';
 import { LISTERS, readOperands } from './read-operands.ts';
 import { DYNAMIC, type ShellCommand, type ShellRedirect, type ShellWord } from './shell-parse.ts';
 
@@ -83,8 +83,10 @@ function gitReads(args: readonly ShellWord[]): boolean {
   if (sub.rest.some((arg) => GIT_REFUSED_ARGS.test(arg))) return false;
   if (GIT_READS.has(sub.name)) return true;
   const listing = GIT_LISTS[sub.name];
-  return (
-    listing !== undefined && sub.rest.every((arg) => listing.has(arg) || GIT_LIST_VALUE.test(arg))
+  if (listing === undefined) return false;
+  const patterns = sub.rest.includes('--list') || (listing.has('-l') && sub.rest.includes('-l'));
+  return sub.rest.every(
+    (arg) => listing.has(arg) || GIT_LIST_VALUE.test(arg) || (patterns && !arg.startsWith('-')),
   );
 }
 

@@ -10,6 +10,7 @@ import {
 import {
   activeSnooze,
   attentionFlags,
+  checksNotice,
   dueText,
   RULE_ORDER,
   type TicketFacts,
@@ -105,6 +106,7 @@ function upNext(facts: TicketFacts, now: Date): Placement {
 export function placeTicket(facts: TicketFacts, limits: Thresholds, now: Date): InboxTicket {
   const flags = attentionFlags(facts, limits, now);
   const snooze = activeSnooze(facts, now);
+  const notice = checksNotice(facts);
   const lead = flags[0];
   const placement: Placement = lead
     ? {
@@ -132,6 +134,7 @@ export function placeTicket(facts: TicketFacts, limits: Thresholds, now: Date): 
     pullRequest: facts.pullRequest,
     lastSync: facts.lastSync,
     ...(snooze ? { snooze } : {}),
+    ...(notice ? { notice: { ...notice, seen: facts.noticeSeen === notice.id } } : {}),
   };
 }
 

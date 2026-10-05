@@ -3,7 +3,7 @@ import {
   type SnoozeTicketRequest,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
-import { setTicketSnooze } from '../persistence/tickets.ts';
+import { setDismissedFlags, setNoticeSeen, setTicketSnooze } from '../persistence/tickets.ts';
 import type { TicketDeps } from './connections.ts';
 import { TicketApiError } from './source.ts';
 
@@ -17,19 +17,37 @@ export function snoozeProblem(until: Date, now: Date): string | null {
   return null;
 }
 
+type TicketId = { source: TicketSourceId; key: string };
+
+function requireFound(found: boolean, ticket: TicketId): void {
+  if (found) return;
+  throw new TicketApiError(404, `${ticket.key} isn't in your ticket inbox. Refresh and try again.`);
+}
+
 export async function snoozeTicket(
   deps: TicketDeps,
-  ticket: { source: TicketSourceId; key: string },
+  ticket: TicketId,
   request: SnoozeTicketRequest | null,
 ): Promise<void> {
   const snooze = request
     ? { until: new Date(request.until), rules: [...new Set(request.rules)] }
     : null;
-  const found = await setTicketSnooze(deps.db, deps.workspaceId, ticket, snooze);
-  if (!found) {
-    throw new TicketApiError(
-      404,
-      `${ticket.key} isn't in your ticket inbox. Refresh and try again.`,
-    );
-  }
+  requireFound(await setTicketSnooze(deps.db, deps.workspaceId, ticket, snooze), ticket);
+}
+
+export async function dismissFlags(
+  deps: TicketDeps,
+  ticket: TicketId,
+  flags: readonly string[],
+): Promise<void> {
+  const unique = [...new Set(flags)];
+  requireFound(await setDismissedFlags(deps.db, deps.workspaceId, ticket, unique), ticket);
+}
+
+export async function markNoticeSeen(
+  deps: TicketDeps,
+  ticket: TicketId,
+  notice: string,
+): Promise<void> {
+  requireFound(await setNoticeSeen(deps.db, deps.workspaceId, ticket, notice), ticket);
 }

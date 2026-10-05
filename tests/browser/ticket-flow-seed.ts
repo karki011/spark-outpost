@@ -17,7 +17,7 @@ interface FlowChat {
   approval?: SeedApproval;
   plan?: string[];
   spark?: string;
-  pull?: { number: number; checks: 'passing' | 'failing' };
+  pull?: { number: number; checks: PullChecks };
 }
 
 export interface LinkedChat {
@@ -29,18 +29,27 @@ export interface LinkedChat {
 const PULL_URL = (number: number) => `https://github.com/acme/widgets/pull/${number}`;
 
 const CHECK_RUNS = {
-  passing: [{ status: 'completed', conclusion: 'success' }],
-  failing: [{ status: 'completed', conclusion: 'failure' }],
+  passing: [{ name: 'unit', status: 'completed', conclusion: 'success' }],
+  failing: [
+    { name: 'unit', status: 'completed', conclusion: 'failure' },
+    { name: 'lint', status: 'completed', conclusion: 'success' },
+  ],
+  pending: [
+    { name: 'lint', status: 'completed', conclusion: 'failure' },
+    { name: 'unit', status: 'in_progress', conclusion: null },
+  ],
 };
 
-export async function setPullChecks(number: number, checks: 'passing' | 'failing') {
+export type PullChecks = keyof typeof CHECK_RUNS;
+
+export async function setPullChecks(number: number, checks: PullChecks, sha?: string) {
   await fetch(`${STUB_URL}/github-test/pulls/${number}`, {
     method: 'POST',
-    body: JSON.stringify({ checkRuns: CHECK_RUNS[checks] }),
+    body: JSON.stringify({ checkRuns: CHECK_RUNS[checks], ...(sha ? { sha } : {}) }),
   });
 }
 
-async function addPull(number: number, checks: 'passing' | 'failing') {
+async function addPull(number: number, checks: PullChecks) {
   await fetch(`${STUB_URL}/github-test/pulls`, {
     method: 'POST',
     body: JSON.stringify({ number, checkRuns: CHECK_RUNS[checks] }),

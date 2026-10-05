@@ -466,4 +466,10 @@ body {
   --composer-line: color-mix(in srgb, var(--line-strong) 35%, var(--line));
   --composer-focus-line: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
   --composer-focus: 0 0 0 3px var(--accent-soft);
+  --diff-add: color-mix(in srgb, var(--success) 10%, transparent);
+  --diff-add-edge: color-mix(in srgb, var(--success) 13%, transparent);
+  --diff-add-word: color-mix(in srgb, var(--success) 14%, transparent);
+  --diff-remove: color-mix(in srgb, var(--danger) 10%, transparent);
+  --diff-remove-edge: color-mix(in srgb, var(--danger) 13%, transparent);
+  --diff-remove-word: color-mix(in srgb, var(--danger) 14%, transparent);
 }

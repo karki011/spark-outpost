@@ -3,6 +3,7 @@ import {
   isCheckApproval,
   type Approval,
   type MemberMessage,
+  type ModelSwitch,
   type Project,
 } from '@spark-outpost/contracts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
@@ -10,13 +11,14 @@ import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
 import { MemberMessageList } from '../../crew/MemberMessageList.tsx';
 import '../../crew/member-chat.css';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
+import { memberReplyText } from '../../crew/member-reply.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
-import { Markdown } from '../markdown/Markdown.tsx';
+import { ErrorLine, ModelSwitchNote } from '../ModelSwitchNote.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -24,6 +26,7 @@ import { WorkLog } from '../WorkLog.tsx';
 import { blockStatus, type BlockStatus } from './block-status.ts';
 import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
+import { MemberReplyText } from './MemberReplyText.tsx';
 import { SparkCrewFace } from '../../teammates/SparkCrewFace.tsx';
 
 const NO_MESSAGES: readonly MemberMessage[] = [];
@@ -121,6 +124,8 @@ interface BodyProps {
   steps: readonly RunStep[];
   text: string;
   error: string | null;
+  errorDetails?: string | null;
+  modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
 }
@@ -134,6 +139,8 @@ function AgentBody({
   steps,
   text,
   error,
+  errorDetails = null,
+  modelSwitch = null,
   approvals,
   repo,
 }: BodyProps & { liveId?: string | null }) {
@@ -170,12 +177,13 @@ function AgentBody({
       <div id={bodyId}>
         <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} />
         {cards.decided.map(approvalCard)}
-        {text && <Markdown text={text} streaming={busy} />}
+        {text && <MemberReplyText role={agent.role} text={text} streaming={busy} />}
         {cards.pending.map(approvalCard)}
         {agent.state === 'queued' && !agent.spark && (
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
         )}
-        {error && <p className="error-line">{error}</p>}
+        <ModelSwitchNote change={modelSwitch} />
+        <ErrorLine error={error} details={errorDetails} change={modelSwitch} />
       </div>
     </>
   );
@@ -195,6 +203,7 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
       steps={steps}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
+      modelSwitch={stored.modelSwitch ?? stream.modelSwitch}
       approvals={shownApprovals(stored.approvals, stream.approvals)}
     />
   );
@@ -211,6 +220,8 @@ interface AgentBlockProps {
   steps: readonly RunStep[];
   text: string;
   error: string | null;
+  errorDetails?: string | null;
+  modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
   after?: ReactNode;
@@ -262,7 +273,9 @@ export function AgentBlock({
           </span>
           <AgentName agent={agent} />
           <span className="agent-role">{roleLabel(agent)}</span>
-          <span className="fold-text">{firstLine(body.text) || agent.line}</span>
+          <span className="fold-text">
+            {firstLine(memberReplyText(agent.role, body.text, false)) || agent.line}
+          </span>
           <span className="fold-meta">{usageParts(agent).join(' · ')}</span>
           <ChevronIcon />
         </button>

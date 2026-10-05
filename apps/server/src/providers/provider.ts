@@ -6,6 +6,7 @@ import type {
   FileFocus,
   PlanDocumentSource,
   PlanEntry,
+  ProviderAccount,
   ProtocolDirection,
   RunMode,
   SparkSessionPrefs,
@@ -38,6 +39,7 @@ export interface AgentSettings {
   effort: string | null;
   mode?: string | null;
   options?: ConfigValues;
+  avoidModels?: readonly string[];
 }
 
 export interface ModeRequests {
@@ -122,7 +124,14 @@ export interface CapabilityChoice {
   description: string | null;
 }
 
+export interface ReportedModelAccess {
+  reported: boolean;
+  unlisted: string[];
+  account?: ProviderAccount | null;
+}
+
 export interface ProviderCapabilityReport {
+  access?: ReportedModelAccess;
   models: CapabilityChoice[];
   efforts: CapabilityChoice[];
   defaultModel: string | null;
@@ -179,11 +188,31 @@ export type ProviderOutput =
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
   | { kind: 'commands'; commands: AgentCommand[] }
   | { kind: 'instructions'; files: string[] }
-  | { kind: 'rail_flag'; flag: ObservedRail };
+  | { kind: 'rail_flag'; flag: ObservedRail }
+  | { kind: 'account'; account: ProviderAccount };
 
 export interface Provider {
   readonly name: string;
   run(turn: ProviderTurn): AsyncIterable<ProviderOutput>;
 }
 
-export class ProviderError extends Error {}
+export class ProviderError extends Error {
+  readonly details: string | null;
+
+  constructor(message: string, details: string | null = null) {
+    super(message);
+    this.details = details;
+  }
+}
+
+export class ModelRejectedError extends ProviderError {
+  readonly model: string | null;
+
+  constructor(agentName: string, model: string | null, details: string | null) {
+    super(
+      `${agentName} can't use this model with your sign-in. Pick another model in Settings > Models.`,
+      details,
+    );
+    this.model = model;
+  }
+}

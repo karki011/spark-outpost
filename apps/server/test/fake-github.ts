@@ -20,7 +20,7 @@ export interface FakePull {
   merged?: boolean;
   created_at?: string;
   reviews?: { user: { login: string }; state: string }[];
-  checkRuns?: { status: string; conclusion: string | null }[];
+  checkRuns?: { name?: string; status: string; conclusion: string | null }[];
   html_url: string;
   openedBy: string;
   via: 'gh_cli' | 'token' | 'app';

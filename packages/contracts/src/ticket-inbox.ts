@@ -75,6 +75,8 @@ export const pullRequestStatusSchema = z.object({
   openedAt: z.string(),
   mergedAt: z.string().nullable(),
   checks: pullRequestChecksSchema.nullable(),
+  headSha: z.string().nullable().optional(),
+  failedChecks: z.array(z.string()).optional(),
 });
 export type PullRequestStatus = z.infer<typeof pullRequestStatusSchema>;
 
@@ -95,6 +97,7 @@ export type AttentionRule = z.infer<typeof attentionRuleSchema>;
 
 export const attentionFlagSchema = z.object({
   rule: attentionRuleSchema,
+  key: z.string(),
   text: z.string(),
   rationale: z.string(),
   since: z.string().nullable(),
@@ -152,6 +155,20 @@ export const snoozeTicketRequestSchema = z.object({
 });
 export type SnoozeTicketRequest = z.infer<typeof snoozeTicketRequestSchema>;
 
+export const dismissTicketRequestSchema = z.object({
+  flags: z.array(z.string().min(1).max(400)).min(1).max(attentionRuleSchema.options.length),
+});
+export type DismissTicketRequest = z.infer<typeof dismissTicketRequestSchema>;
+
+export const ticketNoticeSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  seen: z.boolean(),
+});
+export type TicketNotice = z.infer<typeof ticketNoticeSchema>;
+
+export const seenTicketNoticeRequestSchema = z.object({ notice: z.string().min(1).max(800) });
+
 export const ticketAgeSchema = z.object({ at: z.string(), label: z.string() });
 export type TicketAge = z.infer<typeof ticketAgeSchema>;
 
@@ -167,6 +184,7 @@ export const inboxTicketSchema = ticketListItemSchema.extend({
   pullRequest: pullRequestStatusSchema.nullable(),
   lastSync: ticketLastSyncSchema.nullable(),
   snooze: ticketSnoozeSchema.optional(),
+  notice: ticketNoticeSchema.optional(),
 });
 export type InboxTicket = z.infer<typeof inboxTicketSchema>;
 

@@ -175,11 +175,11 @@ In a chat worktree, the keep card offers "Bring changes into <your branch>", "Op
     id: 'tickets',
     title: 'Tickets inbox, links to chats and PRs',
     keywords: ['ticket', 'jira', 'linear', 'inbox', 'attention', 'link', 'unlink', 'priority'],
-    text: `Tickets pulls your Jira and Linear tickets into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; a side column of views filters. Rows show a status badge, Spark progress, priority, assignee, and chat and PR links; the detail pane adds reporter, created date and pull requests. Search covers every ticket.
+    text: `Tickets groups your Jira and Linear tickets by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; side views filter. Rows show a status badge, Spark progress, priority, assignee, chat and PR links; the detail adds reporter, created date and pull requests. Failing PR checks are a badge in In review, never Needs you. Search covers every ticket.
 
 A build turn that names exactly one ticket links the chat to it; other mentions only suggest. Linked chats show a "KEY · title" chip (Unlink, Undo), their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
 
-spark_tickets: live data; sort=priority for most urgent, action=read for one in full, action=search for any ticket in the trackers.`,
+spark_tickets: live data; sort=priority for most urgent, action=read for one in full, action=search for any ticket.`,
   },
   {
     id: 'attention-brief',

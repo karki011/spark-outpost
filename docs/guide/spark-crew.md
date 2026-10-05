@@ -26,7 +26,7 @@ See [Watch and steer the crew](pieces.md).
 | **Plan, then build**         | A [plan](plan-card.md) request, or a big or destructive change |
 | **Plan, build, then review** | The same, when a review is warranted                           |
 
-A vague request first gets 1 to 3 questions. [Jev](jev.md) helps make these calls; without it, rules decide from the wording.
+A vague request first gets 1 to 3 questions. [Jev](jev.md) helps make these calls; without it, rules decide.
 
 ## When the Critic reviews
 
@@ -36,7 +36,7 @@ A Builder fixes its findings, up to 3 rounds.
 
 ## Pieces
 
-A Coordinator splits a big plan into pieces such as **P1**, one Builder each, then joins them. Jev picks 1 to 4 Builders. Without Jev, rules split when you ask or the plan is large.
+A Coordinator splits a big plan into pieces such as **P1**, one Builder each. Jev picks 1 to 4 Builders; without Jev, rules do.
 
 | Where pieces run     | Means                                        | Used for                                            |
 | -------------------- | -------------------------------------------- | --------------------------------------------------- |
@@ -44,6 +44,6 @@ A Coordinator splits a big plan into pieces such as **P1**, one Builder each, th
 | **shared tree**      | Builders side by side, each on its own files | Independent pieces                                  |
 | _Builder_**'s copy** | Each Builder in its own worktree copy        | Data or migration work, lockfiles, package installs |
 
-In a shared tree, Spark checks each Builder's edits and commands so it stays in its own files.
+In a shared tree, Spark refuses edits and commands that leave a Builder's own files. A card appears only when your agent mode asks or Spark can't read a command.
 
 If two copies clash, you get a card. At **Full auto → PR**, Spark stops and reports.

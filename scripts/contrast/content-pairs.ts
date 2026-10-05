@@ -1,7 +1,46 @@
 import type { Pair } from './pair-types.ts';
 
-const DIFF_ADD = ['var(--code)', 'var(--dv-add)'];
-const DIFF_REMOVE = ['var(--code)', 'var(--dv-remove)'];
+const DIFF_ADD = ['var(--code)', 'var(--diff-add)'];
+const DIFF_REMOVE = ['var(--code)', 'var(--diff-remove)'];
+
+const DIFF_TINTS = [
+  { id: 'add', label: 'added line', ink: 'token', bg: DIFF_ADD },
+  {
+    id: 'add-word',
+    label: 'added word highlight',
+    ink: 'word',
+    bg: [...DIFF_ADD, 'var(--diff-add-word)'],
+  },
+  { id: 'remove', label: 'removed line', ink: 'token', bg: DIFF_REMOVE },
+  {
+    id: 'remove-word',
+    label: 'removed word highlight',
+    ink: 'word',
+    bg: [...DIFF_REMOVE, 'var(--diff-remove-word)'],
+  },
+];
+const CODE_TOKENS = [
+  'comment',
+  'keyword',
+  'constant',
+  'string',
+  'string-expression',
+  'function',
+  'parameter',
+  'punctuation',
+  'link',
+];
+
+const TOKENS_ON_TINT: Pair[] = DIFF_TINTS.flatMap((tint) =>
+  CODE_TOKENS.map((token): Pair => ({
+    id: `code.${token}-on-${tint.id}`,
+    group: 'Diff and code',
+    label: `code ${token} on ${tint.label}`,
+    fg: `var(--code-${tint.ink}-${token})`,
+    bg: tint.bg,
+    kind: 'text',
+  })),
+);
 
 export const DIFF: Pair[] = [
   {
@@ -17,7 +56,7 @@ export const DIFF: Pair[] = [
     group: 'Diff and code',
     label: 'added word highlight',
     fg: 'var(--code-foreground)',
-    bg: [...DIFF_ADD, 'var(--dv-add-word)'],
+    bg: [...DIFF_ADD, 'var(--diff-add-word)'],
     kind: 'text',
   },
   {
@@ -33,7 +72,7 @@ export const DIFF: Pair[] = [
     group: 'Diff and code',
     label: 'removed word highlight',
     fg: 'var(--code-foreground)',
-    bg: [...DIFF_REMOVE, 'var(--dv-remove-word)'],
+    bg: [...DIFF_REMOVE, 'var(--diff-remove-word)'],
     kind: 'text',
   },
   {
@@ -57,7 +96,7 @@ export const DIFF: Pair[] = [
     group: 'Diff and code',
     label: 'line number on added line',
     fg: 'var(--faint)',
-    bg: ['var(--code)', 'var(--dv-add-edge)'],
+    bg: ['var(--code)', 'var(--diff-add-edge)'],
     kind: 'text',
   },
   {
@@ -65,7 +104,7 @@ export const DIFF: Pair[] = [
     group: 'Diff and code',
     label: 'line number on removed line',
     fg: 'var(--faint)',
-    bg: ['var(--code)', 'var(--dv-remove-edge)'],
+    bg: ['var(--code)', 'var(--diff-remove-edge)'],
     kind: 'text',
   },
   {
@@ -108,22 +147,7 @@ export const DIFF: Pair[] = [
     bg: ['var(--code)'],
     kind: 'text',
   },
-  {
-    id: 'code.function-on-add',
-    group: 'Diff and code',
-    label: 'code function on added line',
-    fg: 'var(--code-token-function)',
-    bg: DIFF_ADD,
-    kind: 'text',
-  },
-  {
-    id: 'code.keyword-on-remove',
-    group: 'Diff and code',
-    label: 'code keyword on removed line',
-    fg: 'var(--code-token-keyword)',
-    bg: DIFF_REMOVE,
-    kind: 'text',
-  },
+  ...TOKENS_ON_TINT,
   {
     id: 'code.inline',
     group: 'Diff and code',

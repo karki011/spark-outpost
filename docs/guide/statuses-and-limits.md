@@ -39,14 +39,14 @@ Hover the chip on a reply, such as **Question**.
 
 ## Ticket groups
 
-| Group                      | Holds                                                             |
-| -------------------------- | ----------------------------------------------------------------- |
-| **Needs you**              | A linked chat waits, checks fail on its PR, or a rule flagged it. |
-| **In progress with Spark** | A linked chat is running, such as "8/10 · Pip working".           |
-| **Started**                | In progress in your tracker, with no chat running.                |
-| **Up next**                | Assigned to you and not started.                                  |
-| **In review / PR open**    | In review, or its PR is open.                                     |
-| **Done recently**          | Done, or its PR merged, in the last 7 days.                       |
+| Group                      | Holds                                                   |
+| -------------------------- | ------------------------------------------------------- |
+| **Needs you**              | A linked chat waits, or a rule flagged it.              |
+| **In progress with Spark** | A linked chat is running, such as "8/10 · Pip working". |
+| **Started**                | In progress in your tracker, with no chat running.      |
+| **Up next**                | Assigned to you and not started.                        |
+| **In review / PR open**    | In review, or its PR is open, with a checks badge.      |
+| **Done recently**          | Done, or its PR merged, in the last 7 days.             |
 
 ## Map status
 

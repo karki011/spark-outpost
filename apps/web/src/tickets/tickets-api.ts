@@ -9,6 +9,7 @@ import {
   type AssignTicketRequest,
   type AssignTicketResponse,
   type AttentionSettings,
+  type DismissTicketRequest,
   type SaveTicketConnectionRequest,
   type SnoozeTicketRequest,
   type StartTicketRequest,
@@ -22,6 +23,7 @@ import {
   type UpdateAttentionSettings,
   type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
+import { z } from 'zod';
 import { request } from '../api/client.ts';
 
 export const ticketKeys = {
@@ -100,6 +102,22 @@ export const ticketsApi = {
     }),
   unsnooze: (source: TicketSourceId, key: string): Promise<TicketInbox> =>
     request(ticketInboxSchema, `${ticketPath(source, key)}/snooze`, { method: 'DELETE' }),
+  dismiss: (
+    source: TicketSourceId,
+    key: string,
+    body: DismissTicketRequest,
+  ): Promise<TicketInbox> =>
+    request(ticketInboxSchema, `${ticketPath(source, key)}/dismiss`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  undismiss: (source: TicketSourceId, key: string): Promise<TicketInbox> =>
+    request(ticketInboxSchema, `${ticketPath(source, key)}/dismiss`, { method: 'DELETE' }),
+  noticeSeen: (source: TicketSourceId, key: string, notice: string): Promise<{ ok: boolean }> =>
+    request(z.object({ ok: z.boolean() }), `${ticketPath(source, key)}/notice-seen`, {
+      method: 'PUT',
+      body: JSON.stringify({ notice }),
+    }),
   start: (
     source: TicketSourceId,
     key: string,

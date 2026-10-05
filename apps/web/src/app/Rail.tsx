@@ -14,6 +14,7 @@ interface RailProps {
   view: AppView;
   waiting: number;
   ticketsWaiting: number;
+  ticketNotices: number;
   mood: ScoutMood;
   onView: (view: AppView) => void;
   onIntent: (view: AppView) => void;
@@ -123,6 +124,7 @@ export function Rail({
   view,
   waiting,
   ticketsWaiting,
+  ticketNotices,
   mood,
   onView,
   onIntent,
@@ -187,6 +189,12 @@ export function Rail({
             >
               {ticketsWaiting}
             </i>
+          )}
+          {item.id === 'tickets' && ticketNotices > 0 && (
+            <i
+              className={ticketsWaiting > 0 ? 'rdot beside' : 'rdot'}
+              aria-label={`${ticketNotices} ticket ${ticketNotices === 1 ? 'update' : 'updates'} to look at`}
+            />
           )}
         </button>
       ))}
