@@ -1,5 +1,5 @@
 import './chat-rail.css';
-import { memo, useMemo, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import type {
@@ -137,6 +137,7 @@ function OpenRail({
       ),
     [messages, runs, approvals, plans, changedRuns, watches.data],
   );
+  const openTasks = useCallback(() => onTab('tasks'), [onTab]);
   const orchestration = running ? latestOrchestration(detail) : null;
   const agents = orchestration ? crewAgents(orchestration, detail.activity) : [];
 
@@ -154,7 +155,7 @@ function OpenRail({
         <RailToggle open onToggle={() => onCollapse(true)} />
       </div>
       <RailSummary rows={rows} provider={provider} onAction={act} />
-      {task && <RailTasks task={task} onOpen={() => onTab('tasks')} />}
+      {task && <RailTasks task={task} onOpen={openTasks} />}
       <RailOutline entries={outline} />
       <AnimatePresence>
         {agents.length > 0 && <RailTv key="tv" conversationId={conversationId} agents={agents} />}
