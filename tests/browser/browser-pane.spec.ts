@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { openChats } from './navigation.ts';
@@ -7,6 +7,13 @@ import { openChats } from './navigation.ts';
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
 });
+
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 async function openPane(page: Page) {
   await openChats(page);
@@ -253,9 +260,7 @@ test('the header is one row of tabs with New tab next to them', async ({ page })
       { chat: id, tabs },
     );
   const placed = async () => {
-    const last = ((await calls(page, 'place')) as { bounds: Record<string, number> | null }[]).at(
-      -1,
-    );
+    const last = ((await calls(page, 'place')) as { bounds: Box | null }[]).at(-1);
     const box = await page.locator('#bp-view').boundingBox();
     if (!last?.bounds || !box) return null;
     return [
@@ -273,18 +278,19 @@ test('the header is one row of tabs with New tab next to them', async ({ page })
   await expect(tab).toBeVisible();
   await expect(page.getByRole('tablist', { name: 'Panel' })).toHaveCount(0);
   await expect(pane.locator('.bp-title')).toHaveCount(0);
-  const [tabBox, addBox, closeBox, addressBox, viewBox] = await Promise.all(
-    [tab, add, close, pane.getByLabel('Address'), page.locator('#bp-view')].map((locator) =>
-      locator.boundingBox(),
-    ),
-  );
-  const middle = (box: { y: number; height: number } | null) => box!.y + box!.height / 2;
+  const boxOf = async (locator: Locator) => (await locator.boundingBox())!;
+  const tabBox = await boxOf(tab);
+  const addBox = await boxOf(add);
+  const closeBox = await boxOf(close);
+  const addressBox = await boxOf(pane.getByLabel('Address'));
+  const viewBox = await boxOf(page.locator('#bp-view'));
+  const middle = (box: Box) => box.y + box.height / 2;
   expect(Math.abs(middle(tabBox) - middle(addBox))).toBeLessThan(3);
   expect(Math.abs(middle(tabBox) - middle(closeBox))).toBeLessThan(3);
-  expect(addBox!.x - (tabBox!.x + tabBox!.width)).toBeLessThan(40);
-  expect(closeBox!.x).toBeGreaterThan(addBox!.x + 100);
-  expect(addressBox!.y).toBeGreaterThan(tabBox!.y + tabBox!.height);
-  expect(viewBox!.y - (addressBox!.y + addressBox!.height)).toBeLessThan(16);
+  expect(addBox.x - (tabBox.x + tabBox.width)).toBeLessThan(40);
+  expect(closeBox.x).toBeGreaterThan(addBox.x + 100);
+  expect(addressBox.y).toBeGreaterThan(tabBox.y + tabBox.height);
+  expect(viewBox.y - (addressBox.y + addressBox.height)).toBeLessThan(16);
   await expect.poll(placed).toEqual([0, 0, 0, 0]);
 
   await push(
@@ -368,9 +374,9 @@ test('closing the pane keeps it closed when the chat gets work', async ({ page }
   );
   const tabs = pane.locator('.bp-tabs [role="tab"]').first();
   const switchBox = await pane.getByRole('tablist', { name: 'Panel' }).boundingBox();
-  const tabBox = await tabs.boundingBox();
+  const tabBox = (await tabs.boundingBox())!;
   expect(
-    Math.abs(switchBox!.y + switchBox!.height / 2 - (tabBox!.y + tabBox!.height / 2)),
+    Math.abs(switchBox!.y + switchBox!.height / 2 - (tabBox.y + tabBox.height / 2)),
   ).toBeLessThan(3);
   const axe = await new AxeBuilder({ page }).include('#work-panel').analyze();
   expect(axe.violations).toEqual([]);
