@@ -15,12 +15,16 @@ export function startDepsPrep(
   main: string,
   copy: string,
   options: DepsOptions,
+  report: (prep: DepsPrep) => Promise<void> = async () => undefined,
 ): void {
   const entry: Pending = { waitedMs: 0, promise: Promise.resolve(null) };
   entry.promise = prepareDependencies(main, copy, options)
     .catch(() => null)
     .then(async (prep) => {
-      if (prep) await saveDeps(db, runId, { ...prep, waitedMs: entry.waitedMs }).catch(() => null);
+      if (prep) {
+        await saveDeps(db, runId, { ...prep, waitedMs: entry.waitedMs }).catch(() => null);
+        await report(prep).catch(() => undefined);
+      }
       return prep;
     });
   pending.set(runId, entry);
