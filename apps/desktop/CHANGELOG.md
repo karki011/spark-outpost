@@ -2,6 +2,19 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.4
+
+- Chat: question, plan and approval cards sit just above the message box. Question cards are calmer, take several quick answers per question, wait 60 seconds by default and have a setting for the wait.
+- Chat: one working status per turn and per crew member. Tasks show as a list in the context rail, and each turn says what Jev did.
+- The context rail shows whenever the right sidebar is closed and the window has room. On very wide screens it stays beside the thread.
+- Browser: tabs sit in the top row with + after the last tab, a picked element is one "Selected:" chip, and a new chat starts with the pane closed. A per-project Preview setting starts your dev server for agents.
+- Spark Island: shows the file being read or edited and each edit's change, shows changed lines on edit approvals, is Large by default and hides while Spark is focused.
+- Share a chat with another chat: Copy chat link, then paste it or pick it from the plus menu. Agents read the other chat read-only.
+- Tickets: one-line views in the sidebar, compact status badges, and Start at the end of the row on hover with nothing hidden.
+- Settings: Teammates replaces the second Spark section, Projects and Models are shorter lists, cards have no outer border, and the version moved to Updates.
+- Look: the area around the main panel matches the sidebar, and the Dock icon sits on a graphite tile.
+- Known: with the context rail showing, sending a message in a very long chat can take a little over 100 ms to draw. Hiding on focus and the notch edge of Spark Island were not checked on a real screen before this build.
+
 ## 0.1.0-beta.3
 
 - Browser: a Browser tab in the work panel that you and agents share. Agents open local pages, read them, take screenshots and read console and network logs. Pick an element or drag a region to point at something. Sign-ins are kept per project.
