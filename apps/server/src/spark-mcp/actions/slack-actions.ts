@@ -108,7 +108,8 @@ export const slackPostTool = sparkTool({
   name: 'spark_slack_post',
   title: 'Post to Slack',
   acts: true,
-  description: `Post a short update, PR link or question to an allowed Slack channel or thread as the user's Spark app. An allowed group direct message always asks the user first; one-to-one direct messages are never posted in. Pass channel (name or id) or threadUrl (a message link, to reply in that thread); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
+  needs: 'slack',
+  description: `Post a short update, PR link or question to an allowed Slack channel or thread as the user's Spark app. An allowed group direct message always asks the user first; one-to-one direct messages are never posted in. Pass channel (name or id) or threadUrl (a message link, to reply there); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
   input: {
     channel: z.string().trim().min(1).max(120).optional(),
     threadUrl: z.string().trim().max(2000).optional(),

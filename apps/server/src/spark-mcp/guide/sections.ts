@@ -217,11 +217,11 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Every agent session Spark launches gets a built-in MCP server named "spark", so agents can answer questions about Spark.
+    text: `Every agent session gets an MCP server named "spark" with the tools its chat can use: ticket, Slack and PR tools need their connector (Settings → Connectors); PR tools, spark_map and spark_find need a linked project. New ones come with the next message.
 
-Read tools need no approval card; section spark-tools says which one answers which question.
+Read tools need no card; section spark-tools maps questions.
 
-Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark, spark_update_spark and the spark_*_mcp_server tools. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
+Action tools: ticket create, comment, move, assign; spark_open_pr, spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card first. Audited.`,
   },
   {
     id: 'spark-tools',

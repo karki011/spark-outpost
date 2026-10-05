@@ -6,7 +6,9 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Every agent in every chat gets Spark's own `spark_*` tools. Ask in plain words, such as "Which chats are waiting for me?" or "What did I spend today?".
+Agents get the `spark_*` tools their chat can use. Ask in plain words: "What did I spend today?"
+
+Ticket, Slack and pull request tools need their connector; pull request tools, `spark_map` and `spark_find` need a linked project. New tools arrive with your next message.
 
 ## Tools that read
 
@@ -48,25 +50,25 @@ An MCP server card shows the exact command, because it runs on your computer. Ag
 
 ## When actions ask first
 
-| Agent mode or autonomy                                                                       | Spark                                                           |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| **Auto**, **Bypass permissions**, **Approve for me**, **Full access**, or **Full auto → PR** | Does it straight away and shows a link.                         |
-| **Accept edits**                                                                             | Does it when your message asked for it. Otherwise shows a card. |
-| **Manual**, **Plan** and read-only modes                                                     | Always shows a card.                                            |
-| Any, after the agent read secrets or private work data in the turn                           | Always shows a card.                                            |
+| Agent mode or autonomy                                                                       | Spark                                                    |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| **Auto**, **Bypass permissions**, **Approve for me**, **Full access**, or **Full auto → PR** | Does it at once, with a link.                            |
+| **Accept edits**                                                                             | Does it when your message asked. Otherwise shows a card. |
+| **Manual**, **Plan** and read-only modes                                                     | Always shows a card.                                     |
+| Any, after the agent read secrets or private data that turn                                  | Always shows a card.                                     |
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-On the card, change any field, then select the confirm button, such as **Create ticket**, or **Don't**. The agent doesn't wait: answer whenever you like. Every action goes into the audit log.
+On the card, change any field, then select the confirm button, such as **Create ticket**, or **Don't**. The agent doesn't wait. Every action is audited.
 
 ## What the tools never return
 
-| Never returned                     | Instead                                               |
-| ---------------------------------- | ----------------------------------------------------- |
-| File contents                      | `spark_find` gives files, functions and line numbers. |
-| Terminal output                    | A terminal's name, folder and running program.        |
-| Password and card fields on a page | `[masked]`, and painted over in screenshots.          |
-| Secrets, API keys and tokens       | Results are redacted before the agent sees them.      |
-| Feedback comments                  | Analytics give counts only.                           |
+| Never returned               | Instead                                               |
+| ---------------------------- | ----------------------------------------------------- |
+| File contents                | `spark_find` gives files, functions and line numbers. |
+| Terminal output              | A terminal's name, folder and running program.        |
+| Password and card fields     | `[masked]`, and painted over in screenshots.          |
+| Secrets, API keys and tokens | Redacted before the agent sees them.                  |
+| Feedback comments            | Analytics give counts only.                           |
 
 After a tool reads private data, such as your chats or spend, Spark asks before that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).

@@ -156,7 +156,7 @@ async function start(session: Session = {}) {
   host = await startSparkMcpHost(
     toolDeps(t, { browser: 'browser' in session ? session.browser : fake, shotDir }),
   );
-  const grant = host.grant({
+  const grant = await host.grant({
     workspaceId: t.workspaceId,
     conversationId: chat.conversationId,
     runId: chat.runId,

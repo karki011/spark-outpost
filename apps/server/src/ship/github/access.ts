@@ -170,19 +170,30 @@ async function appStatus(deps: GitHubDeps): Promise<GitHubAppStatus> {
   };
 }
 
-export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
+async function savedToken(deps: GitHubDeps) {
   const token = await gitHubToken(deps.db, deps.workspaceId);
-  const tokenSaved =
-    token !== null && (await deps.secrets.get('github').catch(() => null)) !== null;
+  const saved = token !== null && (await deps.secrets.get('github').catch(() => null)) !== null;
+  return saved ? token : null;
+}
+
+export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
+  const token = await savedToken(deps);
   const cli = await ghCli(deps, DEFAULT_GITHUB_HOST);
   const app = await appStatus(deps);
-  const fallback = tokenSaved ? 'token' : cli?.login ? 'gh_cli' : null;
+  const fallback = token ? 'token' : cli?.login ? 'gh_cli' : null;
   return {
     active: app.state === 'connected' ? 'app' : fallback,
     ghCli: { installed: cli !== null, host: DEFAULT_GITHUB_HOST, login: cli?.login ?? null },
-    token: tokenSaved ? token : null,
+    token,
     app,
   };
+}
+
+export async function gitHubConnected(deps: GitHubDeps): Promise<boolean> {
+  if ((await savedToken(deps)) !== null) return true;
+  if ((await signedInApp(deps)) !== null && (await appTokensSaved(deps))) return true;
+  const cli = await ghCli(deps, DEFAULT_GITHUB_HOST);
+  return Boolean(cli?.login);
 }
 
 export async function recheckAppRepos(deps: GitHubDeps): Promise<GitHubConnectionStatus> {

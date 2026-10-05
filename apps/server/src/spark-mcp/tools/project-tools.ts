@@ -209,6 +209,7 @@ export const projectTools = [
   }),
   sparkTool({
     name: 'spark_map',
+    needs: 'project',
     title: 'Project map',
     description:
       "A project's Map: its main areas (name, category, what it does, size, top files) and counts per category. With file: that file's neighbors on the Map, what it imports and what imports it (1 or 2 hops), and what breaks if it changes (how many files and which core areas depend on it). Defaults to this chat's project.",

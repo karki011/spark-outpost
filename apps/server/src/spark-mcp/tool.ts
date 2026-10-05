@@ -18,13 +18,15 @@ export class SparkBlocks {
   }
 }
 
+export type SparkToolNeed = 'tickets' | 'slack' | 'pull_requests' | 'project' | 'browser';
+
 export interface SparkTool {
   name: string;
   title: string;
   description: string;
   acts?: boolean;
   privateData?: boolean;
-  needsBrowser?: boolean;
+  needs?: SparkToolNeed;
   input: z.ZodRawShape;
   run(args: unknown, context: SparkToolContext): Promise<unknown>;
 }
@@ -44,12 +46,19 @@ export function sparkTool<Shape extends z.ZodRawShape>(
   };
 }
 
+const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
+export const uuidInput = z
+  .string()
+  .max(36)
+  .refine((value) => UUID.test(value), 'Pass an id (a UUID).');
+
 export const limitInput = (fallback: number, max: number) =>
-  z.number().int().min(1).max(max).default(fallback).describe(`How many to return (1-${max}).`);
+  z.number().int().min(1).max(max).default(fallback);
 
 export const offsetInput = z
   .number()
   .int()
   .min(0)
   .default(0)
-  .describe('How many to skip, for paging. Use nextOffset from the previous result.');
+  .describe('Skip this many; pass nextOffset from the last result.');

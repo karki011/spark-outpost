@@ -225,7 +225,7 @@ export const setupTools = [
     name: 'spark_connectors',
     title: 'Connectors',
     description:
-      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens.",
+      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens. Ticket, Slack and pull request tools are offered only while their connector is connected (Settings → Connectors); after the user connects one they arrive with the next message.",
     input: {},
     run: (_args, context) => connectors(context),
   }),

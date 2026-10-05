@@ -21,9 +21,7 @@ import { ACTION_NOTE } from './action-note.ts';
 import { proposeAction } from './confirm.ts';
 import type { Performed } from './performed.ts';
 
-const sourceInput = ticketSourceIdSchema
-  .optional()
-  .describe('jira or linear. Defaults to the only connected one.');
+const sourceInput = ticketSourceIdSchema.optional().describe('Defaults to the only connected one.');
 const keyInput = ticketKeySchema.describe('Ticket key, such as ENG-12.');
 
 export async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
@@ -201,7 +199,8 @@ export const ticketActionTools = [
     name: 'spark_create_ticket',
     title: 'Create a ticket',
     acts: true,
-    description: `Create a Jira or Linear ticket through Spark's connector. ${ACTION_NOTE} Returns the new key and URL, or that the user declined.`,
+    needs: 'tickets',
+    description: `Create a Jira or Linear ticket. ${ACTION_NOTE} Returns the new key and URL, or that the user declined.`,
     input: createInput,
     run: (args, context) => create(context, args),
   }),
@@ -209,6 +208,7 @@ export const ticketActionTools = [
     name: 'spark_comment_ticket',
     title: 'Comment on a ticket',
     acts: true,
+    needs: 'tickets',
     description: `Post a comment on a Jira or Linear ticket. ${ACTION_NOTE}`,
     input: {
       source: sourceInput,
@@ -221,6 +221,7 @@ export const ticketActionTools = [
     name: 'spark_transition_ticket',
     title: 'Move a ticket',
     acts: true,
+    needs: 'tickets',
     description: `Move a Jira or Linear ticket to todo, in_progress, in_review or done (mapped to the project's own statuses). ${ACTION_NOTE}`,
     input: { source: sourceInput, key: keyInput, status: ticketStatusSchema },
     run: (args, context) => transition(context, args),
@@ -229,6 +230,7 @@ export const ticketActionTools = [
     name: 'spark_assign_ticket',
     title: 'Assign a ticket',
     acts: true,
+    needs: 'tickets',
     description: `Assign a Jira or Linear ticket to the user (me) or unassign it (nobody). The card names the current assignee, so taking someone else's ticket is confirmed explicitly. ${ACTION_NOTE}`,
     input: { source: sourceInput, key: keyInput, to: z.enum(['me', 'nobody']) },
     run: (args, context) => assign(context, args),

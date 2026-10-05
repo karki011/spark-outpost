@@ -75,7 +75,7 @@ beforeEach(async () => {
   runId = sent.run.id;
   host = await startSparkMcpHost(toolDeps(t, { browser }));
   client = await connectClient(
-    host.grant({
+    await host.grant({
       workspaceId: t.workspaceId,
       conversationId: chat.conversationId,
       runId,

@@ -26,13 +26,8 @@ const fieldsInput = {
   face: teammateFaceSchema
     .nullable()
     .optional()
-    .describe(
-      'Blob face: shape and colour. Leave it out so the blob comes from the name; null puts a Spark back on its name-based blob.',
-    ),
-  provider: providerIdSchema
-    .nullable()
-    .optional()
-    .describe('claude, codex or zai; null = default.'),
+    .describe('Omit to draw the blob from the name; null goes back to that.'),
+  provider: providerIdSchema.nullable().optional().describe('null = default.'),
   model: z.string().trim().min(1).max(200).nullable().optional(),
   agentMode: z.string().trim().min(1).max(200).nullable().optional(),
   autonomy: teammateLevelSchema
