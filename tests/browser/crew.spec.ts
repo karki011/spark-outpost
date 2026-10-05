@@ -198,13 +198,12 @@ test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own
   await expect(page.getByRole('group', { name: /Keep these/ })).toContainText(
     'Kept by Full auto → PR.',
   );
-  await agentHead(page, 'Bolt').click();
-  await agentBlock(page, 'Bolt')
-    .getByRole('button', { name: /^\d+ steps$/ })
-    .click();
-  await expect(agentBlock(page, 'Bolt')).toContainText("Only this chat's own branch can be pushed");
+  await agentHead(page, 'Bolt').first().click();
+  const build = agentBlock(page, 'Bolt').first();
+  await build.getByRole('button', { name: /^\d+ steps$/ }).click();
+  await expect(build).toContainText("Only this chat's own branch can be pushed");
   for (const name of ['Bolt', 'Hawk']) {
-    await expect(agentHead(page, name)).toBeVisible();
+    await expect(agentHead(page, name).first()).toBeVisible();
   }
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
