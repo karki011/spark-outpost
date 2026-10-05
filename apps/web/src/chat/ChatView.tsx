@@ -63,6 +63,7 @@ import { showsTaskCard } from '../tasks/task-card-shown.ts';
 import { RailContext, RailTaskContext } from './rail/rail-context.ts';
 import { useRailCollapsed, useRoomy } from './rail/use-rail-layout.ts';
 import { panelOpensByDefault, railState } from './rail/wide-layout.ts';
+import { createFollowRequests, FollowContext } from './follow-requests.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { useChatSend } from './send/use-chat-send.ts';
@@ -193,6 +194,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
   const [status] = useState(createStatusStore);
+  const [followRequests] = useState(createFollowRequests);
   const browsing = panel.open && panel.view === 'browser';
   const toggleBrowser = useStableCallback(() => {
     if (browsing) panel.closeBrowser();
@@ -290,14 +292,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   }
                 >
                   <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
-                    <Thread
-                      detail={detail.data}
-                      repos={repos}
-                      sends={sends}
-                      onOpenTask={openTask}
-                      onOpenChat={openChat}
-                      quotes={quotes}
-                    />
+                    <FollowContext value={followRequests}>
+                      <Thread
+                        detail={detail.data}
+                        repos={repos}
+                        sends={sends}
+                        onOpenTask={openTask}
+                        onOpenChat={openChat}
+                        quotes={quotes}
+                      />
+                    </FollowContext>
                   </RailTaskContext>
                 </RailContext>
               </PanelOpenContext>
@@ -341,8 +345,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 sends.send({ content, attachments: files, annotations });
               }}
               onStop={stop.stop}
-              onQueue={queue.add}
-              onSendNow={queue.sendFirst}
+              onQueue={(content) => {
+                followRequests.request();
+                return queue.add(content);
+              }}
+              onSendNow={(content) => {
+                followRequests.request();
+                return queue.sendFirst(content);
+              }}
               busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}

@@ -16,6 +16,7 @@ import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
 import { PendingSends } from './send/PendingSends.tsx';
 import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
+import { FollowContext } from './follow-requests.ts';
 import { RailContext } from './rail/rail-context.ts';
 import { usePendingArrival } from './status/status-context.ts';
 
@@ -53,6 +54,9 @@ export const Thread = memo(function Thread({
   );
 
   usePendingArrival(follow);
+
+  const followRequests = use(FollowContext);
+  useEffect(() => followRequests?.subscribe(follow), [followRequests, follow]);
 
   const pendingCount = sends.pending.length;
   useEffect(() => {

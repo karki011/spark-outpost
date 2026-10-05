@@ -177,3 +177,43 @@ test('a streaming reply follows the bottom, yields to the reader, and settles in
   expectSteadyGrowth([...pinned, ...afterRefetch, ...settled]);
   await expect(reply.locator('.md-pre span[style]').first()).toBeVisible();
 });
+
+test('a message queued or sent now while a turn runs brings the thread back to the latest', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  const input = page.getByRole('textbox', { name: 'Message' });
+  const jump = page.getByRole('button', { name: 'Jump to latest' });
+  const scrollUp = async () => {
+    await page.locator('.thread').hover();
+    await page.mouse.wheel(0, -600);
+    await expect(jump).toBeVisible();
+  };
+  await input.fill('Paragraph one. ' + 'history words fill the thread '.repeat(40));
+  await input.press('Enter');
+  await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 45_000 });
+  await input.fill('Keep going until I stop you #slowbuild');
+  await input.press('Enter');
+  await expect(page.locator('.thread .ai-head').last().locator('.mood')).toHaveText('working');
+
+  await scrollUp();
+  await input.fill('Queue this for later');
+  await input.press('Enter');
+  await expect(page.getByRole('list', { name: 'Queued messages' })).toContainText(
+    'Queue this for later',
+  );
+  await expect(jump).toBeHidden();
+  await expect.poll(async () => (await scrollState(page)).gap).toBeLessThanOrEqual(2);
+
+  await scrollUp();
+  await input.fill('Send this one now');
+  await input.press('ControlOrMeta+Enter');
+  await expect(jump).toBeHidden();
+  await expect(page.locator('.msg.me', { hasText: 'Send this one now' })).toBeInViewport({
+    timeout: 30_000,
+  });
+  await expect(jump).toBeHidden();
+});

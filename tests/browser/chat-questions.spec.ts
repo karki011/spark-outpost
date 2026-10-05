@@ -154,6 +154,32 @@ test.describe('question cards', () => {
     expect(Math.min(...opacity)).toBeGreaterThan(0.99);
   });
 
+  test('answering a question card after scrolling up brings the thread back to the latest', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1280, height: 560 });
+    await autoContinueAfter(page, null);
+    await crewChat(page, repo, 'Auto-edit');
+    await send(page, `${'Some background on the repo first. '.repeat(40)}${THREE}`);
+    await expect(questions(page)).toBeVisible({ timeout: 30_000 });
+    const gap = () =>
+      thread(page).evaluate(
+        (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+      );
+    const jump = page.getByRole('button', { name: 'Jump to latest' });
+    await thread(page).evaluate((element) => element.scrollTo({ top: 0 }));
+    await expect(jump).toBeVisible();
+    expect(await gap()).toBeGreaterThan(80);
+
+    await questions(page).getByRole('button', { name: 'Explorer' }).dispatchEvent('click');
+    await questions(page).getByRole('button', { name: 'Send' }).dispatchEvent('click');
+    await expect(jump).toBeHidden();
+    await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 60_000 });
+    await expect.poll(gap).toBeLessThanOrEqual(2);
+    await expect(jump).toBeHidden();
+  });
+
   test('several quick answers and typed words go as one answer; Enter sends and Shift+Enter adds a line', async ({
     page,
   }) => {
