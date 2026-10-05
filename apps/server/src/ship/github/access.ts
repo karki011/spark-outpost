@@ -41,6 +41,7 @@ export interface GitHubDeps {
   fetch: typeof fetch;
   apiUrl?: string | undefined;
   loginPath?: () => Promise<string | null>;
+  loginEnv?: () => Promise<Record<string, string> | null>;
   app?: GitHubAppConfig | null | undefined;
   now?: (() => number) | undefined;
 }

@@ -179,7 +179,7 @@ async function runSession(
       home,
       browsing,
       codex,
-      builder,
+      builder && turn.publishes !== true,
       turn.env,
     );
     if (definition.repoStyle === 'codex' && !prepared.profiles) {

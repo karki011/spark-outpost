@@ -16,6 +16,10 @@ export async function seedTicketVolume(): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/volume`);
 }
 
+export async function slowTicketCreates(delayMs: number, failures = 0): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/slow-creates?delay=${delayMs}&failures=${failures}`);
+}
+
 export async function denyJiraAssign(): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/deny-assign`);
 }

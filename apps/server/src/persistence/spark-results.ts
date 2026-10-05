@@ -1,5 +1,16 @@
-import { SPARK_ACTION_KIND, type Approval, type SparkResult } from '@spark-outpost/contracts';
-import { notifyApprovalChanged, toApproval, type ApprovalRow } from './approvals.ts';
+import {
+  SPARK_ACTION_KIND,
+  sparkRetryAllowed,
+  type Approval,
+  type SparkResult,
+} from '@spark-outpost/contracts';
+import {
+  ApprovalConflictError,
+  ApprovalNotFoundError,
+  notifyApprovalChanged,
+  toApproval,
+  type ApprovalRow,
+} from './approvals.ts';
 import type { Queryable } from './db.ts';
 
 export interface ClaimedSparkAction {
@@ -48,15 +59,69 @@ export async function finishSparkAction(
   await notifyApprovalChanged(db, id);
 }
 
+export async function lastFailedAttempt(
+  db: Queryable,
+  conversationId: string | null,
+  action: string,
+): Promise<string | null> {
+  if (!conversationId) return null;
+  const { rows } = await db.query<{ state: string | null; message: string | null }>(
+    `SELECT a.payload->'sparkResult'->>'state' AS state,
+       a.payload->'sparkResult'->>'message' AS message
+     FROM approvals a JOIN runs r ON r.id = a.run_id
+     WHERE r.conversation_id = $1 AND a.kind = $2 AND a.status = 'allowed'
+       AND a.payload->'sparkAction'->>'action' = $3
+     ORDER BY a.created_at DESC, a.id DESC LIMIT 1`,
+    [conversationId, SPARK_ACTION_KIND, action],
+  );
+  return rows[0]?.state === 'failed' ? (rows[0].message ?? 'It failed.') : null;
+}
+
 export async function abandonRunningSparkActions(db: Queryable, message: string): Promise<number> {
   const { rows } = await db.query<{ id: string }>(
     `UPDATE approvals
      SET payload = jsonb_set(payload, '{sparkResult}', jsonb_build_object(
-       'state', 'failed', 'message', $2::text, 'url', NULL))
+       'state', 'unknown', 'message', $2::text, 'url', NULL))
      WHERE kind = $1 AND payload->'sparkResult'->>'state' = 'running'
      RETURNING id`,
     [SPARK_ACTION_KIND, message],
   );
   for (const row of rows) await notifyApprovalChanged(db, row.id);
   return rows.length;
+}
+
+export async function retrySparkAction(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+): Promise<Approval> {
+  const found = await db.query<ApprovalRow>(
+    `SELECT a.* FROM approvals a JOIN runs r ON r.id = a.run_id
+     JOIN conversations c ON c.id = r.conversation_id
+     WHERE a.id = $1 AND c.workspace_id = $2 AND a.kind = $3`,
+    [id, workspaceId, SPARK_ACTION_KIND],
+  );
+  if (!found.rows[0]) throw new ApprovalNotFoundError();
+  const current = toApproval(found.rows[0]);
+  const { sparkAction, sparkResult } = current.payload;
+  if (
+    current.status !== 'allowed' ||
+    !sparkAction ||
+    !sparkRetryAllowed(sparkAction, sparkResult)
+  ) {
+    throw new ApprovalConflictError(
+      sparkResult?.state === 'unknown'
+        ? 'Repeating this could do it twice. Check what happened, then ask the agent again.'
+        : 'Spark is already doing this, or it is done.',
+    );
+  }
+  const { rows } = await db.query<ApprovalRow>(
+    `UPDATE approvals SET payload = jsonb_set(payload, '{sparkResult}', $2::jsonb)
+     WHERE id = $1 AND payload->'sparkResult'->>'state' = $3
+     RETURNING *`,
+    [id, JSON.stringify(WAITING_RESULT), sparkResult!.state],
+  );
+  if (!rows[0]) throw new ApprovalConflictError('Spark is already doing this, or it is done.');
+  await notifyApprovalChanged(db, id);
+  return toApproval(rows[0]);
 }

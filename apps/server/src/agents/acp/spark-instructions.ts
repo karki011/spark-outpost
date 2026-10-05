@@ -25,7 +25,7 @@ const TONE: Record<Personality, string> = {
 };
 
 const SPARK_TOOLS_LINE =
-  'For any question about Spark itself (what needs the user, chats, runs, crew and Jev picks, plans, files changed, spend, outcomes, models, Map, terminals, tickets, PRs, settings, how it works), use the spark_* tools; spark_guide section spark-tools maps questions to tools, and spark_docs answers how-do-I questions from the user guide. Their ticket and PR actions run only after the user confirms a card.';
+  'For any question about Spark itself (what needs the user, chats, runs, crew and Jev picks, plans, files changed, spend, outcomes, models, Map, terminals, tickets, PRs, settings, how it works), use the spark_* tools; spark_guide section spark-tools maps questions to tools, and spark_docs answers how-do-I questions from the user guide. Their actions may wait for the user to confirm a card.';
 
 const SPARK_BROWSER_LINE =
   'To open or check a web page, use the spark_browser_* tools (the Browser pane here), not another browser tool.';

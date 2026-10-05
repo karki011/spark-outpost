@@ -13,6 +13,7 @@ import {
 import type { Queryable } from '../persistence/db.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
+import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
@@ -47,6 +48,16 @@ type StartFacts = Pick<RunInput, 'level' | 'userRequest' | 'provider' | 'agentMo
 export function startBasis(input: StartFacts): PublishBasis | null {
   if (input.piece?.coordinated) return null;
   return publishBasis(modePosture(input.provider, input.agentMode), publishGrant(input));
+}
+
+type NoteFacts = StartFacts & Pick<RunInput, 'projectRoots' | 'role' | 'mode' | 'preamble'>;
+
+export async function withPublishNote(db: Queryable, input: NoteFacts): Promise<string | null> {
+  const own = input.preamble ?? null;
+  if (input.role !== null || input.mode !== 'do') return own;
+  const brief = await publishBrief(db, input);
+  if (brief?.basis !== 'requested') return own;
+  return [own, mainAgentPublishNote(brief.branch)].filter(Boolean).join('\n\n');
 }
 
 export async function publishBrief(

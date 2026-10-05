@@ -24,6 +24,8 @@ export const approvalsApi = {
       method: 'POST',
       body: JSON.stringify(decision),
     }),
+  retry: (id: string): Promise<Approval> =>
+    request(approvalSchema, `/approvals/${id}/retry`, { method: 'POST', body: '{}' }),
   hold: (id: string): Promise<Approval> =>
     request(approvalSchema, `/approvals/${id}/hold`, { method: 'POST', body: '{}' }),
   changes: (runId: string): Promise<RunChanges> =>

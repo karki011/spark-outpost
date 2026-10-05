@@ -3,6 +3,8 @@ import { newId } from './ids.ts';
 
 export type ObservationSource = 'secret_file' | 'secret_output' | 'private_data' | 'web_page';
 
+export const OWN_WORK_SOURCES: readonly ObservationSource[] = ['private_data'];
+
 export interface Observation {
   source: ObservationSource;
   label: string;

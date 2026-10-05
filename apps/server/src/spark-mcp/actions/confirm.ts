@@ -12,7 +12,7 @@ import { redactValue } from '../../audit/redact.ts';
 import { getApproval, insertApproval, notifyApprovalChanged } from '../../persistence/approvals.ts';
 import type { Queryable } from '../../persistence/db.ts';
 import { LeaseLostError } from '../../persistence/run-events.ts';
-import { WAITING_RESULT } from '../../persistence/spark-results.ts';
+import { lastFailedAttempt, WAITING_RESULT } from '../../persistence/spark-results.ts';
 import { runEvents } from '../../workflow/run-events.ts';
 import type { SparkActionHooks, SparkScope } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
@@ -22,6 +22,9 @@ export const RESULT_WAIT_MS = 40_000;
 
 export const WAITING_MESSAGE =
   'Spark showed the user a confirm card in the chat and will do it as soon as they confirm; the result appears on that card. Do not call this again and do not ask the user to do it by hand. Tell them it is waiting for their confirmation.';
+
+const LAST_ATTEMPT_FAILED =
+  'The last time the user confirmed this it failed, and nothing has retried it. Tell the user why, and fix the cause if it is yours, before relying on this card:';
 
 export const IN_PROGRESS_MESSAGE =
   'Spark is still doing it; the result appears on the card in the chat. Do not call this again.';
@@ -164,6 +167,11 @@ export async function proposeAction(
     action.action,
   );
   const path = options.alwaysAsk ? 'confirm' : actionPath(facts);
+  const failedBefore = await lastFailedAttempt(
+    context.deps.db,
+    run.scope.conversationId,
+    action.action,
+  );
   const card = await postCard(context.deps.db, run, action, {
     path,
     requested: facts.requested,
@@ -171,7 +179,12 @@ export async function proposeAction(
   });
   if (path === 'confirm') {
     auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
-    return { outcome: 'waiting_for_user', approvalId: card.id, message: WAITING_MESSAGE };
+    return {
+      outcome: 'waiting_for_user',
+      approvalId: card.id,
+      message: WAITING_MESSAGE,
+      ...(failedBefore ? { lastAttempt: `${LAST_ATTEMPT_FAILED} ${failedBefore}` } : {}),
+    };
   }
   auditAction(run, action, { outcome: 'performing', approvalId: card.id });
   const settled = await awaitResult(context, run, card.id);

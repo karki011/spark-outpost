@@ -8,6 +8,7 @@ import {
   decideApproval,
   holdApproval,
 } from '../persistence/approvals.ts';
+import { retrySparkAction } from '../persistence/spark-results.ts';
 import {
   RevertConflictError,
   RunNotFoundError,
@@ -33,6 +34,10 @@ export function approvalRoutes({ db, workspaceId }: ApprovalRouteDeps): Router {
 
   router.post('/approvals/:id/hold', async (req, res) => {
     res.json(await holdApproval(db, workspaceId, paramId(req)));
+  });
+
+  router.post('/approvals/:id/retry', async (req, res) => {
+    res.json(await retrySparkAction(db, workspaceId, paramId(req)));
   });
 
   router.get('/runs/:id/changes', async (req, res) => {

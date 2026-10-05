@@ -24,13 +24,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ['slack', ['spark_slack', 'spark_slack_post']],
   [
     'pull_requests',
-    [
-      'spark_pull_requests',
-      'spark_pr',
-      'spark_pr_follow_up',
-      'spark_open_pr',
-      'spark_pr_follow_up_round',
-    ],
+    ['spark_pull_requests', 'spark_pr', 'spark_pr_follow_up', 'spark_pr_follow_up_round'],
   ],
   ['project', ['spark_map', 'spark_find']],
   [

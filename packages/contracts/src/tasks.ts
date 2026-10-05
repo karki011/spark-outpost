@@ -31,6 +31,8 @@ export const taskListItemSchema = z.object({
   hint: z.string().optional(),
   output: z.string().optional(),
   command: z.boolean().optional(),
+  action: z.boolean().optional(),
+  url: z.string().optional(),
   agent: taskAgentSchema.optional(),
   role: agentRoleSchema.optional(),
   runId: z.uuid().optional(),
@@ -145,6 +147,8 @@ export interface TaskListEvent {
   detail?: string;
   output?: string;
   command?: boolean;
+  action?: boolean;
+  url?: string;
 }
 
 export interface TaskListTask {
@@ -317,6 +321,8 @@ export function taskList(
       ...(event.detail ? { detail: event.detail } : {}),
       ...(event.output ? { output: event.output } : {}),
       ...(event.command ? { command: true } : {}),
+      ...(event.action ? { action: true } : {}),
+      ...(event.url ? { url: event.url } : {}),
     })),
     ...runs.map((run, index) => runItem(run, index, asking)),
     ...prItems(task),

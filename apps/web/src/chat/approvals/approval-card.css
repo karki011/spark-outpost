@@ -32,6 +32,18 @@
   place-items: center;
   color: var(--muted);
 }
+.appr.resolved .appr-busy {
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation:
+    fade 0.2s var(--out) 0.4s backwards,
+    rot 0.9s linear infinite;
+}
+.appr-retry-err {
+  color: var(--danger);
+}
 .appr-what {
   display: flex;
   align-items: center;
@@ -244,6 +256,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .appr-dia::after {
+    animation: none;
+  }
+  .appr.resolved .appr-busy {
     animation: none;
   }
 }

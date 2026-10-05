@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval } from '@spark-outpost/contracts';
+import type { Approval, SparkAction } from '@spark-outpost/contracts';
 import { outcome, shownOptions } from './approval-outcome.ts';
 
 const pending: Approval = {
@@ -121,6 +121,73 @@ describe('approval outcome', () => {
       icon: 'no',
       label: 'It failed.',
       detail: 'GitHub said no.',
+    });
+  });
+
+  const ticket: SparkAction = {
+    action: 'create_ticket',
+    source: 'linear',
+    project: 'ENG',
+    title: 'Crash on save',
+    description: '',
+    type: null,
+    priority: null,
+    labels: [],
+    assignToMe: false,
+  };
+
+  const acted = (
+    sparkAction: SparkAction,
+    sparkResult: NonNullable<Approval['payload']['sparkResult']>,
+    status: Approval['status'] = 'allowed',
+  ) =>
+    outcome(
+      decided({
+        status,
+        decidedBy: status === 'pending' ? null : 'user',
+        decisionOptionId: status === 'pending' ? null : 'confirm',
+        scope: 'once',
+        payload: { ...pending.payload, sparkAction, sparkResult },
+      }),
+    );
+
+  it('says in plain words what Spark is doing while a confirmed action runs', () => {
+    expect(acted(ticket, { state: 'waiting', message: null, url: null })).toEqual({
+      icon: 'busy',
+      label: 'Confirmed. Creating the ticket…',
+      detail: '',
+    });
+    expect(acted(ticket, { state: 'running', message: null, url: null }).icon).toBe('busy');
+  });
+
+  it('warns before repeating an action whose outcome is unknown after a restart', () => {
+    const lost = { state: 'unknown', message: 'Spark restarted.', url: null } as const;
+    expect(acted(ticket, lost)).toMatchObject({ icon: 'no', label: 'Outcome unknown.' });
+    expect(acted(ticket, lost).detail).toContain('not done twice');
+    const move: SparkAction = {
+      action: 'transition_ticket',
+      ticket: { source: 'linear', key: 'ENG-1', title: 'Crash', url: null },
+      from: 'Todo',
+      status: 'done',
+    };
+    expect(acted(move, lost).detail).toContain('Trying again is safe');
+  });
+
+  it('shows an old open-pull-request card as a past record that can no longer act', () => {
+    const old: SparkAction = {
+      action: 'open_pr',
+      taskId: '7f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
+      title: 'Tidy notes',
+      body: '',
+      branch: 'spark/tidy-notes',
+      base: 'main',
+      repo: 'acme/widgets',
+      files: [],
+      moreFiles: 0,
+    };
+    expect(acted(old, { state: 'waiting', message: null, url: null }, 'pending')).toMatchObject({
+      icon: 'no',
+      label: 'No longer offered.',
     });
   });
 });

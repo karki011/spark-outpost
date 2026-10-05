@@ -37,6 +37,22 @@ export function useLiveReport(
   useEffect(() => () => store?.forget(id), [store, id]);
 }
 
+export function useActionReport(id: string, doing: string | null): void {
+  const store = use(StatusContext);
+  useEffect(() => {
+    if (!store || !doing) return;
+    store.report({
+      id,
+      name: 'Spark',
+      provider: 'spark',
+      kind: 'crew',
+      working: true,
+      step: doing,
+    });
+    return () => store.forget(id);
+  }, [store, id, doing]);
+}
+
 export function usePendingArrival(onArrival: () => void): void {
   const store = use(StatusContext);
   useEffect(() => {

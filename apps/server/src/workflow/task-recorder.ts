@@ -4,6 +4,7 @@ import type { Db } from '../persistence/db.ts';
 import { addTaskLink, runTask, taskForWorkingRun, type RunTask } from '../persistence/tasks.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { nextPlanWrite, type StoredPlan } from '../tasks/plan-versions.ts';
+import { adoptAgentPullRequest } from '../tasks/agent-pull-request.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
@@ -60,6 +61,11 @@ export function createTaskRecorder(
     if (!owner) return;
     const saved = await addTaskLink(db, owner.taskId, { kind: 'pr', ...link });
     if (!saved.created) return;
+    if (link.source === 'tool_output') {
+      await adoptAgentPullRequest(db, runId, owner.taskId, saved.link.url).catch((error: unknown) =>
+        console.error('Could not watch a pull request the agent opened', error),
+      );
+    }
     await append(
       runEvents.activity(`link:${saved.link.id}`, 'link', {
         url: saved.link.url,

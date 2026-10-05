@@ -18,8 +18,7 @@ export interface SparkActionFollowThrough {
 
 const SWEEP_MS = 5_000;
 
-export const RESTARTED_MESSAGE =
-  'Spark restarted before it finished, so it may be half done. Check, then ask again or use Ship.';
+export const RESTARTED_MESSAGE = 'Spark restarted before this finished, so it may be half done.';
 
 async function audit(
   deps: SparkToolDeps,

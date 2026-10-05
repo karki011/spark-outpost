@@ -41,14 +41,13 @@ The agent proposes, and Spark does it.
 | Action                                      | Tool                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
-| Open a pull request                         | `spark_open_pr`                                                                                         |
 | Post to an allowed Slack channel or thread  | `spark_slack_post`                                                                                      |
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
 
-An MCP server card shows the exact command, because it runs on your computer. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**. Changes apply to new agent sessions.
+An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
 
 ## When actions ask first
 
@@ -61,7 +60,9 @@ An MCP server card shows the exact command, because it runs on your computer. Ag
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-On the card, change any field, then select the confirm button, such as **Create ticket**, or **Don't**. The agent doesn't wait. Every action is audited.
+Change any field, then select the confirm button or **Don't**. The card then shows the result with a link, or why it failed with **Try again**. Every action is audited.
+
+Agents open pull requests themselves.
 
 ## What the tools never return
 

@@ -1,7 +1,12 @@
-import type { Approval, ApprovalOption } from '@spark-outpost/contracts';
+import {
+  sparkActionLabels,
+  sparkRetryAllowed,
+  type Approval,
+  type ApprovalOption,
+} from '@spark-outpost/contracts';
 
 interface Outcome {
-  icon: 'ok' | 'no';
+  icon: 'ok' | 'no' | 'busy';
   label: string;
   detail: string;
 }
@@ -72,8 +77,20 @@ function sparkOutcome(approval: Approval): Outcome | null {
   const result = approval.payload.sparkResult;
   if (!result || approval.status !== 'allowed') return null;
   const byMode = approval.decidedBy === 'level';
+  const action = approval.payload.sparkAction;
   if (result.state === 'failed') {
     return { icon: 'no', label: 'It failed.', detail: result.message ?? '' };
+  }
+  if (result.state === 'unknown') {
+    return {
+      icon: 'no',
+      label: 'Outcome unknown.',
+      detail: `${result.message ?? ''} ${
+        action && sparkRetryAllowed(action, result)
+          ? 'Trying again is safe.'
+          : 'Check before asking the agent again, so it is not done twice.'
+      }`.trim(),
+    };
   }
   if (result.state === 'done') {
     return {
@@ -84,14 +101,20 @@ function sparkOutcome(approval: Approval): Outcome | null {
         : '',
     };
   }
-  return {
-    icon: 'ok',
-    label: byMode ? 'Spark is doing it…' : 'Confirmed. Spark is doing it…',
-    detail: '',
-  };
+  const doing = action ? sparkActionLabels[action.action].doing : 'Spark is doing it…';
+  return { icon: 'busy', label: byMode ? doing : `Confirmed. ${doing}`, detail: '' };
 }
 
+const RETIRED_OPEN_PR: Outcome = {
+  icon: 'no',
+  label: 'No longer offered.',
+  detail: 'Agents open pull requests themselves now. Ask the agent, or use Ship.',
+};
+
 export function outcome(approval: Approval): Outcome {
+  if (approval.status === 'pending' && approval.payload.sparkAction?.action === 'open_pr') {
+    return RETIRED_OPEN_PR;
+  }
   const spark = sparkOutcome(approval);
   if (spark) return spark;
   const chosen = chosenOption(approval);

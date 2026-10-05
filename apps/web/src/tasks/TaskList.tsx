@@ -56,8 +56,14 @@ interface DecisionTag {
   tone: 'ok' | 'bad';
 }
 
+function actionTag(item: TaskListItem): DecisionTag | null {
+  if (item.state === 'failed') return { text: 'Failed', tone: 'bad' };
+  return item.state === 'done' ? { text: 'Done', tone: 'ok' } : null;
+}
+
 function decisionTag(item: TaskListItem): DecisionTag | null {
   if (!waitingApprovalId(item) || item.state === 'waiting') return null;
+  if (item.action) return actionTag(item);
   return item.state === 'done'
     ? { text: 'Allowed', tone: 'ok' }
     : { text: 'Not allowed', tone: 'bad' };
@@ -135,6 +141,14 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {agentLine(item)}
           {item.detail ? ` · ${item.detail}` : ''}
           {numbers ? ` · ${numbers}` : ''}
+          {item.url && (
+            <>
+              {' · '}
+              <a href={item.url} target="_blank" rel="noreferrer">
+                Open
+              </a>
+            </>
+          )}
           {item.output && (
             <pre className="ti-out" tabIndex={0} aria-label={outputLabel(item)}>
               {item.output}
