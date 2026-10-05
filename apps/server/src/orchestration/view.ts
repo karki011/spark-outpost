@@ -6,6 +6,7 @@ import {
   agentLabel,
   agentName,
   crewMemberSchema,
+  modelSwitchSchema,
   depthLabel,
   mergeCostSource,
   orchestrationDecisionSchema,
@@ -57,6 +58,8 @@ export interface MemberRow {
   route: StoredRoute | null;
   status: RunStatus;
   error: string | null;
+  model_switch?: unknown;
+  error_details?: string | null;
   tokens: number | null;
   cost_usd: string | null;
   cost_source: CostSource | null;
@@ -146,6 +149,15 @@ export function toCrewMember(row: MemberRow): CrewMember {
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
     ...(route.spark ? { spark: route.spark } : {}),
+    ...memberAccess(row),
+  };
+}
+
+function memberAccess(row: MemberRow): Pick<CrewMember, 'modelSwitch' | 'errorDetails'> {
+  const change = modelSwitchSchema.safeParse(row.model_switch);
+  return {
+    ...(change.success ? { modelSwitch: change.data } : {}),
+    ...(row.error_details ? { errorDetails: row.error_details } : {}),
   };
 }
 

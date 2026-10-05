@@ -1,7 +1,11 @@
 import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { AgentModeOption, ConfigOptionInfo, ConfigValues } from '@spark-outpost/contracts';
-import type { CapabilityChoice, ProviderCapabilityReport } from '../../providers/provider.ts';
-import type { AgentOffers } from './agents.ts';
+import type {
+  CapabilityChoice,
+  ProviderCapabilityReport,
+  ReportedModelAccess,
+} from '../../providers/provider.ts';
+import type { AgentDefinition, AgentOffers } from './agents.ts';
 import { sessionOptions } from './legacy-options.ts';
 import { choices, currentValue, findOption } from './session-config.ts';
 
@@ -97,6 +101,16 @@ export function capabilitiesFrom(
     modes: modesFrom(options),
     defaultMode: currentValue(defaultsFrom, 'mode'),
     options: extraOptions(defaultsFrom),
+  };
+}
+
+export function reportedAccess(
+  definition: Pick<AgentDefinition, 'reportsModelAccess' | 'unlistedModels'>,
+  initial: readonly SessionConfigOption[],
+): ReportedModelAccess {
+  return {
+    reported: definition.reportsModelAccess === true,
+    unlisted: definition.unlistedModels?.(initial) ?? [],
   };
 }
 

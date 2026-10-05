@@ -30,8 +30,10 @@ import {
   contextSteps,
   conversationBlocks,
   followUpBlocks,
-  type PromptSupport,
+  promptSupport,
+  promptText,
 } from './conversation-prompt.ts';
+import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
 import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName } from './apply-settings.ts';
@@ -69,8 +71,7 @@ import {
 } from './session-open.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { promptTokens } from './prompt-usage.ts';
-import { slashPrompt, type SlashPrompt } from './slash-commands.ts';
-import { TITLE_REQUEST } from '../../titles/title-line.ts';
+import { slashPrompt } from './slash-commands.ts';
 
 export interface AcpProviderOptions {
   definition: AgentDefinition;
@@ -288,28 +289,6 @@ export function noFolderAccessNote(definition: AgentDefinition): string {
   return `${definition.name} can't browse project folders; attach files with @ instead`;
 }
 
-function promptSupport(init: acp.InitializeResponse): PromptSupport {
-  const capabilities = init.agentCapabilities?.promptCapabilities;
-  return {
-    image: capabilities?.image === true,
-    embeddedContext: capabilities?.embeddedContext === true,
-  };
-}
-
-function promptText(
-  turn: ProviderTurn,
-  request: string,
-  slash: SlashPrompt,
-  continued: boolean,
-): string {
-  const asked = continued ? slash.text : request;
-  const primed =
-    !continued && turn.preamble && slash.kind !== 'command'
-      ? `${turn.preamble}\n\n${asked}`
-      : asked;
-  return turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
-}
-
 async function converse(
   agent: AgentProcess,
   definition: AgentDefinition,
@@ -354,7 +333,10 @@ async function converse(
       doing
         ? writeWithApproval(ctx.params, doing)
         : refuseWrite(ctx.params, policy !== null, report),
-    );
+    )
+    .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, ({ params }) => {
+      if (params) push([{ kind: 'account', account: params }]);
+    });
   if (policy) {
     client.onRequest(acp.methods.client.fs.readTextFile, (ctx) =>
       readTextFile(policy, ctx.params, report),

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { runModeSchema } from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
+import { modelSwitchSchema } from './model-access.ts';
 import { runUsageSchema } from './usage.ts';
 import { agentRoleSchema } from './roles.ts';
 import { categorySchema } from './categories.ts';
@@ -71,6 +72,8 @@ export const runSchema = z.object({
   following: z.array(z.string()).nullable().optional(),
   continuesRunId: z.uuid().nullable().optional(),
   interruptionChoice: interruptionChoiceSchema.nullable().optional(),
+  modelSwitch: modelSwitchSchema.nullable().optional(),
+  errorDetails: z.string().nullable().optional(),
 });
 export type Run = z.infer<typeof runSchema>;
 

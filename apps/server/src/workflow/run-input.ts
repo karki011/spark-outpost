@@ -4,6 +4,7 @@ import {
   type ConfigValues,
   type Attachment,
   type InvolvementLevel,
+  type ModelSwitch,
   type RunMode,
   type StartAs,
 } from '@spark-outpost/contracts';
@@ -19,6 +20,7 @@ import { builderEnvSchema, pieceGuardSchema, type PieceGuard } from '../approval
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import type { RunIdentity } from './run-events.ts';
 import { withInterruptionNote } from './continue-note.ts';
+import { usableSettings } from './model-guard.ts';
 
 export interface RunInput {
   identity: RunIdentity;
@@ -50,6 +52,7 @@ export interface RunInput {
   assistant?: boolean;
   seed?: ChatSeed | null;
   continuesRunId?: string | null;
+  modelSwitch?: ModelSwitch | null;
 }
 
 export interface ChatSeed {
@@ -195,7 +198,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   );
   const row = rows[0];
   if (!row) throw new Error(`Run ${runId} was not found.`);
-  if (row.parent_run_id) return childInput(runId, row);
+  if (row.parent_run_id) return withUsableModel(db, childInput(runId, row));
   const history = await db.query<HistoryRow>(
     `SELECT id, role, content FROM messages
      WHERE conversation_id = $1
@@ -229,7 +232,18 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     seed,
     continuesRunId: row.continues_run_id,
   };
-  return row.continues_run_id ? withInterruptionNote(db, input, row.continues_run_id) : input;
+  const usable = await withUsableModel(db, input);
+  return row.continues_run_id ? withInterruptionNote(db, usable, row.continues_run_id) : usable;
+}
+
+async function withUsableModel(db: Db, input: RunInput): Promise<RunInput> {
+  const { settings, change } = await usableSettings(
+    db,
+    input.workspaceId,
+    input.provider,
+    input.settings,
+  );
+  return change ? { ...input, settings, modelSwitch: change } : input;
 }
 
 async function chatSeed(

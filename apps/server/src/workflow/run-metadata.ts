@@ -1,4 +1,4 @@
-import { providerIdSchema } from '@spark-outpost/contracts';
+import { providerIdSchema, type CapabilityOption } from '@spark-outpost/contracts';
 import { getCapabilities, saveCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
@@ -16,11 +16,22 @@ export async function recordCapabilities(
   await saveCapabilities(db, input.workspaceId, {
     provider: provider.data,
     ...report,
+    models: withUnlisted(known?.models ?? [], report),
     efforts: mergeById(known?.efforts ?? [], report.efforts),
     modes: mergeById(known?.modes ?? [], report.modes ?? []),
     defaultMode: report.defaultMode ?? null,
     options: mergeById(known?.options ?? [], report.options ?? []),
   });
+}
+
+function withUnlisted(
+  known: readonly CapabilityOption[],
+  report: ProviderCapabilityReport,
+): CapabilityOption[] {
+  const missing = (report.access?.unlisted ?? []).filter(
+    (id) => !report.models.some((model) => model.id === id),
+  );
+  return [...known.filter((model) => missing.includes(model.id)), ...report.models];
 }
 
 export function mergeById<T extends { id: string }>(

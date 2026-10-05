@@ -187,8 +187,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(update),
     }).then(saved(conversationId)),
-  getCapabilities: (provider: ProviderId): Promise<ProviderCapabilities> =>
-    request(providerCapabilitiesSchema, `/providers/${provider}/capabilities`),
+  getCapabilities: (provider: ProviderId, refresh = false): Promise<ProviderCapabilities> =>
+    request(
+      providerCapabilitiesSchema,
+      `/providers/${provider}/capabilities${refresh ? '?refresh=1' : ''}`,
+    ),
   getUsageSummary: (): Promise<UsageSummary> => request(usageSummarySchema, '/usage/summary'),
 };
 

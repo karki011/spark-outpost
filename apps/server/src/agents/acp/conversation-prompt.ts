@@ -1,5 +1,7 @@
 import type * as acp from '@agentclientprotocol/sdk';
-import type { ConversationTurn, TurnAttachment } from '../../providers/provider.ts';
+import type { ConversationTurn, ProviderTurn, TurnAttachment } from '../../providers/provider.ts';
+import { TITLE_REQUEST } from '../../titles/title-line.ts';
+import type { SlashPrompt } from './slash-commands.ts';
 
 export const HISTORY_BUDGET_BYTES = 36_000;
 
@@ -216,4 +218,26 @@ export function conversationPrompt(
   return conversationBlocks(history, prompt, { budget })
     .map((block) => (block.type === 'text' ? block.text : ''))
     .join('\n\n');
+}
+
+export function promptSupport(init: acp.InitializeResponse): PromptSupport {
+  const capabilities = init.agentCapabilities?.promptCapabilities;
+  return {
+    image: capabilities?.image === true,
+    embeddedContext: capabilities?.embeddedContext === true,
+  };
+}
+
+export function promptText(
+  turn: ProviderTurn,
+  request: string,
+  slash: SlashPrompt,
+  continued: boolean,
+): string {
+  const asked = continued ? slash.text : request;
+  const primed =
+    !continued && turn.preamble && slash.kind !== 'command'
+      ? `${turn.preamble}\n\n${asked}`
+      : asked;
+  return turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
 }

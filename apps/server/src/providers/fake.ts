@@ -8,7 +8,7 @@ import type {
   ProviderTurn,
   TurnAttachment,
 } from './provider.ts';
-import { ProviderError } from './provider.ts';
+import { ModelRejectedError, ProviderError } from './provider.ts';
 import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
@@ -22,6 +22,8 @@ import {
 
 export const FAKE_PROVIDER_NAME = 'fake';
 const FAKE_FAILURE_TRIGGER = '#fail';
+export const FAKE_REJECTED_MODEL = 'gpt-6.1-sol';
+export const FAKE_REJECTION_BODY = `{"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The '${FAKE_REJECTED_MODEL}' model is not supported when using Codex with a ChatGPT account."}}`;
 const FAKE_PLAN_TRIGGER = '#plan';
 const FAKE_TITLE_TRIGGER = '#title';
 export const FAKE_TITLE = 'Tidy the fake reply';
@@ -284,6 +286,9 @@ async function* fakeTurn(
   turn: ProviderTurn,
   timing: FakeProviderTiming,
 ): AsyncGenerator<ProviderOutput> {
+  if (turn.settings.model === FAKE_REJECTED_MODEL) {
+    throw new ModelRejectedError('The fake provider', FAKE_REJECTED_MODEL, FAKE_REJECTION_BODY);
+  }
   if (turn.prompt.includes(FAKE_FAILURE_TRIGGER)) {
     await delay(timing.stepMs, undefined, { signal: turn.signal });
     throw new ProviderError(

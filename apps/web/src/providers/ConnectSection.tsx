@@ -6,6 +6,7 @@ import { relativeTime } from '../ui/relative-time.ts';
 import { fadeReveal } from '../ui/transitions.tsx';
 import { Detail } from './Detail.tsx';
 import { MethodPanel } from './MethodPanel.tsx';
+import { ModelAccessDetails } from './ModelAccessDetails.tsx';
 import type { ProviderConnect } from './use-provider-connect.ts';
 import { methodLabel, methodTitle } from './verify-log.ts';
 
@@ -35,6 +36,7 @@ function ConnectedDetails({ setup, connect }: { setup: ConnectSetup; connect: Pr
           {isKey ? `Verified with ${setup.maker} ` : ''}
           {relativeTime(connection.verifiedAt)}
         </Detail>
+        {!isAdvisor(setup) && <ModelAccessDetails provider={setup.id} />}
       </dl>
       <div className="pconf-actions">
         {!isKey && !isAdvisor(setup) && (

@@ -279,7 +279,7 @@ export async function spentUsd(db: Queryable, runId: string): Promise<number> {
 const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;
 
 const MEMBER_COLUMNS = `r.id, r.role, r.step_index, r.attempt, r.agent_label, r.provider, r.model,
-  r.effort, r.mode, r.route, r.status, r.error,
+  r.effort, r.mode, r.route, r.status, r.error, r.model_switch, r.error_details,
   COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
   r.cost_usd, r.cost_source, r.duration_ms, r.tool_call_count, r.context_used, r.context_size, r.started_at, r.finished_at`;
 
