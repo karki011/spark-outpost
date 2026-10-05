@@ -50,6 +50,16 @@ describe('buildDiff', () => {
     expect(added!.words).toBeNull();
   });
 
+  it('skips word marks for an indent-only change and inside a rewritten block', () => {
+    const indent = buildDiff('run();\n', '  run();\n').rows;
+    expect(indent.map((row) => row.words)).toEqual([null, null]);
+    const block = buildDiff(
+      'let sum = 0;\nfor (const order of orders) {\n  return rounded(sum);\n',
+      'const open = orders.filter(isOpen);\nopen.forEach(check);\n  return rounded(total);\n',
+    ).rows;
+    expect(block.map((row) => row.words)).toEqual([null, null, null, null, null, null]);
+  });
+
   it('falls back to remove-then-add for very large rewrites', () => {
     const rewrite = (removed: number) =>
       buildDiff(
