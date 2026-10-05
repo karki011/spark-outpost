@@ -4,6 +4,11 @@
 .agent-block.folded + .agent-block.folded {
   margin-top: 4px;
 }
+.agent-block.still,
+.agent-block.still .appr,
+.agent-block.still .agent-state {
+  animation: none;
+}
 .agent-head {
   display: flex;
   align-items: center;

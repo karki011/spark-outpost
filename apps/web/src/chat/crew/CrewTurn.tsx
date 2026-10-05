@@ -1,5 +1,5 @@
 import './crew-turn.css';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
@@ -52,6 +52,7 @@ interface CrewTurnProps {
   orchestration: Orchestration;
   repo: Project | null;
   taskCard: ReactNode;
+  continued: boolean;
 }
 
 interface BodyProps extends CrewTurnProps {
@@ -64,7 +65,18 @@ function newer(live: Orchestration | null, stored: Orchestration): Orchestration
 
 const NO_STEPS: RunStep[] = [];
 
-function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApprovals }: BodyProps) {
+function CrewTurnBody({
+  run,
+  detail,
+  orchestration,
+  repo,
+  taskCard,
+  continued,
+  liveApprovals,
+}: BodyProps) {
+  const [alreadyShown] = useState(
+    () => new Set(continued ? orchestration.crew.map((member) => member.runId) : []),
+  );
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
@@ -78,7 +90,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
     approvals,
   );
   const checkApprovals = approvals.filter(isCheckApproval);
-  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
+  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
@@ -131,6 +143,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         live={!isTerminalRunStatus(member.status)}
         settled={member.runId === run.id && handedOffAt !== null}
         collapsed={collapsible && agent.state === 'done'}
+        still={alreadyShown.has(member.runId)}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
@@ -146,7 +159,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
 
   return (
     <div className="crew-turn">
-      <div className="msg ai agent-block jev">
+      <div className={continued ? 'msg ai agent-block jev still' : 'msg ai agent-block jev'}>
         <AgentHead
           agent={jev}
           anchor={agentAnchor(orchestration.runId, 'jev')}

@@ -78,13 +78,17 @@ export function crewItems(
   crew: readonly CrewMember[],
   checkpoints: readonly CheckpointApproval[],
   runApprovals: readonly Approval[] = [],
+  rootRunId: string | null = null,
 ): CrewItem[] {
   const runIds = new Set(crew.map((member) => member.runId));
+  const handedOffAt = rootRunId ? handOffAt(crew, rootRunId) : null;
+  const afterHandOff = (approval: CheckpointApproval) =>
+    approval.runId === rootRunId && handedOffAt !== null && approval.createdAt > handedOffAt;
   const own = (member: CrewMember) =>
-    checkpoints.filter((approval) => approval.runId === member.runId);
+    checkpoints.filter((approval) => approval.runId === member.runId && !afterHandOff(approval));
   const loose: LooseItem[] = [
     ...checkpoints
-      .filter((approval) => !runIds.has(approval.runId))
+      .filter((approval) => !runIds.has(approval.runId) || afterHandOff(approval))
       .map((approval) => ({ kind: 'checkpoint' as const, approval })),
     ...runApprovals.map((approval) => ({ kind: 'approval' as const, approval })),
   ].sort((a, b) => a.approval.createdAt.localeCompare(b.approval.createdAt));

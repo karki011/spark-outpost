@@ -91,6 +91,32 @@ describe('memberTexts', () => {
   });
 });
 
+describe('crewItems', () => {
+  const crew = [
+    { runId: 'root', role: 'scout', startedAt: '2026-09-27T00:00:01Z' },
+    { runId: 'bolt', role: 'builder', startedAt: '2026-09-27T00:00:05Z' },
+  ] as CrewMember[];
+  const checkpoint = (id: string, second: number) =>
+    ({ ...approval(id, 'root'), createdAt: `2026-09-27T00:00:0${second}Z` }) as Parameters<
+      typeof crewItems
+    >[1][number];
+
+  it("keeps the Reader's question with the Reader and puts the keep card after the Builder", () => {
+    const question = checkpoint('question', 3);
+    const keep = checkpoint('keep', 8);
+    const items = crewItems(crew, [question, keep], [], 'root');
+    expect(items.map((item) => item.kind)).toEqual(['agent', 'agent', 'checkpoint']);
+    expect(items[0]?.kind === 'agent' && items[0].checkpoints).toEqual([question]);
+    expect(items[2]?.kind === 'checkpoint' && items[2].approval).toBe(keep);
+  });
+
+  it('leaves every card with a root member that never handed off', () => {
+    const keep = checkpoint('keep', 8);
+    const items = crewItems(crew.slice(0, 1), [keep], [], 'root');
+    expect(items).toEqual([{ kind: 'agent', member: crew[0], checkpoints: [keep] }]);
+  });
+});
+
 const crewMember = (runId: string, placement: CrewMember['placement'] = undefined) =>
   ({ runId, placement, startedAt: null }) as CrewMember;
 

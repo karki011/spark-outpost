@@ -1,6 +1,6 @@
 import '../approvals/approval-card.css';
 import './checkpoint-card.css';
-import { useId, useState, type ReactNode } from 'react';
+import { use, useId, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CHECKPOINT_OPTION,
@@ -18,6 +18,7 @@ import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
 import { CrewHint } from '../crew/CrewHint.tsx';
+import { FollowContext } from '../follow-requests.ts';
 import { checkpointSummary } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
 import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx';
@@ -367,9 +368,12 @@ export function CheckpointCard({
     },
   });
   const { countdown, hold } = useAutoContinue(approval);
+  const followRequests = use(FollowContext);
   const decide: Decide = Object.assign(
-    (optionId: string, note?: string) =>
-      mutation.mutate(note === undefined ? { optionId } : { optionId, note }),
+    (optionId: string, note?: string) => {
+      followRequests?.request();
+      mutation.mutate(note === undefined ? { optionId } : { optionId, note });
+    },
     { busy: mutation.isPending, countdown, hold },
   );
   const checkpoint = approval.payload.checkpoint;

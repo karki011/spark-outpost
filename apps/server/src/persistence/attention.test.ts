@@ -93,6 +93,16 @@ describe('toAttention', () => {
     expect(
       toAttention(
         pending({
+          pending_kind: 'clarify',
+          pending_title: 'A few questions first',
+          pending_asker: 'Pip',
+          pending_questions: true,
+        }),
+      ),
+    ).toMatchObject({ kind: 'input', agentName: 'Spark', provider: 'claude' });
+    expect(
+      toAttention(
+        pending({
           pending_kind: 'budget',
           pending_title: 'Continue past the budget?',
           pending_agent: 'Bolt',
