@@ -1,6 +1,14 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
+import {
+  app,
+  autoUpdater as nativeUpdater,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+} from 'electron';
 import { isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
 import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
@@ -467,6 +475,10 @@ if (!app.requestSingleInstanceLock()) {
     if (!companionHost?.companion.running()) app.quit();
   });
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
+  nativeUpdater.on('before-quit-for-update', () => {
+    companionHost?.dispose();
+    companionHost = null;
+  });
   app.on('before-quit', (event) => {
     event.preventDefault();
     if (updater?.takeOverQuit()) return;
