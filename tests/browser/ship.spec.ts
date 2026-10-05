@@ -176,7 +176,9 @@ test('Full auto runs to a PR: the reply and the auto-kept card show the PR link'
   await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toContainText('Kept by Full auto → PR.');
-  await expect(keep).toContainText('Opened pull request #1: https://github.com/acme/widgets/pull/1');
+  await expect(keep).toContainText(
+    'Opened pull request #1: https://github.com/acme/widgets/pull/1',
+  );
   await expect(keep).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
   const chip = keep.locator('.ship .lchip');
   await expect(chip).toContainText('acme/widgets#1');
