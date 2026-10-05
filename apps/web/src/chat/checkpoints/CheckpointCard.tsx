@@ -21,7 +21,7 @@ import { CrewHint } from '../crew/CrewHint.tsx';
 import { checkpointSummary } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
 import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx';
-import { ClarifyBody } from './ClarifyBody.tsx';
+import { AskedList, ClarifyBody } from './ClarifyBody.tsx';
 import {
   asksQuestions,
   budgetLine,
@@ -33,6 +33,7 @@ import {
   optionName,
   escalateLabel,
   retryLine,
+  saidNote,
   type CheckpointApproval,
 } from './checkpoint-model.ts';
 import { useAutoContinue } from './use-auto-continue.ts';
@@ -334,18 +335,6 @@ function CheckpointHeading({ payload, title }: { payload: CheckpointPayload; tit
   );
 }
 
-function AskedList({ payload }: { payload: CheckpointPayload }) {
-  return (
-    <ol className="ck-asked">
-      {payload.questions.map((question) => (
-        <li key={question.question}>
-          {question.question} <span>Best guess: {question.default}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
@@ -392,6 +381,7 @@ export function CheckpointCard({
   const actionsFirst = pending && checkpoint.kind === 'accept';
   const title = checkpointTitle(checkpoint);
   const questions = asksQuestions(checkpoint);
+  const said = saidNote(approval);
 
   return (
     <Pending
@@ -426,14 +416,14 @@ export function CheckpointCard({
         )}
         {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
         <CheckpointNotes payload={checkpoint} />
-        {questions && !pending && <AskedList payload={checkpoint} />}
+        {questions && !pending && <AskedList approval={approval} />}
         {pending ? (
           <PendingBody approval={approval} decide={decide} />
         ) : (
           <div className="appr-res" role="status">
             {stopped ? <XIcon /> : <CheckIcon />}
             <b>{checkpointResult(approval)}</b>
-            {approval.note && <span className="ck-said">“{approval.note}”</span>}
+            {said && <span className="ck-said">“{said}”</span>}
           </div>
         )}
         {!pending && footer}

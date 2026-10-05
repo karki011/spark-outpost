@@ -67,17 +67,78 @@ export function quickPicks(question: CheckpointQuestion): string[] {
   return [...new Set([question.default, ...question.options])];
 }
 
+export interface QuestionAnswer {
+  picks: readonly string[];
+  text: string;
+}
+
+export const NO_ANSWER: QuestionAnswer = { picks: [], text: '' };
+
+export function togglePick(answer: QuestionAnswer, pick: string): QuestionAnswer {
+  const picks = answer.picks.includes(pick)
+    ? answer.picks.filter((picked) => picked !== pick)
+    : [...answer.picks, pick];
+  return { ...answer, picks };
+}
+
+function answerText(question: CheckpointQuestion, answer: QuestionAnswer): string {
+  const picked = quickPicks(question)
+    .filter((pick) => answer.picks.includes(pick))
+    .join(', ');
+  const typed = answer.text.trim().replace(/\s*\n\s*/g, ' ');
+  if (picked && typed) return `${picked} — plus: ${typed}`;
+  return picked || typed;
+}
+
+const ANSWERS = ' → ';
+
 export function clarifyAnswer(
   questions: readonly CheckpointQuestion[],
-  answers: readonly string[],
+  answers: readonly QuestionAnswer[],
   ownWords: string,
 ): string {
   const answered = questions.flatMap((question, index) => {
-    const answer = answers[index]?.trim();
-    return answer ? [`${question.question} → ${answer}`] : [];
+    const answer = answerText(question, answers[index] ?? NO_ANSWER);
+    return answer ? [`${question.question}${ANSWERS}${answer}`] : [];
   });
   const own = ownWords.trim();
   return [...answered, ...(own ? [own] : [])].join('\n');
+}
+
+interface SentAnswers {
+  answers: (string | null)[];
+  ownWords: string;
+}
+
+export function sentAnswers(
+  questions: readonly CheckpointQuestion[],
+  note: string | null,
+): SentAnswers {
+  const answers: (string | null)[] = questions.map(() => null);
+  const own: string[] = [];
+  for (const line of (note ?? '').split('\n')) {
+    const index = questions.findIndex(
+      (question, at) => answers[at] === null && line.startsWith(`${question.question}${ANSWERS}`),
+    );
+    if (index < 0) {
+      own.push(line);
+      continue;
+    }
+    answers[index] = line.slice(questions[index]!.question.length + ANSWERS.length);
+  }
+  return { answers, ownWords: own.join('\n').trim() };
+}
+
+export function answeredNote(approval: Approval): string | null {
+  return approval.decisionOptionId === CHECKPOINT_OPTION.answer ? (approval.note ?? null) : null;
+}
+
+export function saidNote(approval: Approval): string | null {
+  const checkpoint = approval.payload.checkpoint;
+  if (!checkpoint || !asksQuestions(checkpoint) || answeredNote(approval) === null) {
+    return approval.note ?? null;
+  }
+  return sentAnswers(checkpoint.questions, approval.note ?? null).ownWords || null;
 }
 
 export function checkpointQuestion(payload: CheckpointPayload): string | null {

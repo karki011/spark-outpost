@@ -46,9 +46,11 @@ export const RailTasks = memo(function RailTasks({ task, onOpen }: RailTasksProp
               <span className="crail-task-mark" aria-hidden="true">
                 <StateMark state={item.state} />
               </span>
-              <span className="crail-task-text">
-                <span className="sr-only">{STATE_WORDS[item.state]}: </span>
-                {item.label}
+              <span>
+                <span className="crail-task-label" title={item.label}>
+                  <span className="sr-only">{STATE_WORDS[item.state]}: </span>
+                  {item.label}
+                </span>
                 {current && item.detail && <span className="crail-task-detail">{item.detail}</span>}
               </span>
             </li>
