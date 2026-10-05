@@ -1,4 +1,4 @@
-import { memo, use } from 'react';
+import { memo, use, useState } from 'react';
 import {
   isTerminalRunStatus,
   type ConversationDetail,
@@ -62,6 +62,7 @@ export const TurnSection = memo(function TurnSection({
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
+  const [startedSolo] = useState(crew === null);
   const handedTo = sparkMembers(orchestration);
   const inRail = use(RailTaskContext) === task?.id;
   const shownTask = onOpenTask && task && !inRail && showsTaskCard(task) ? task : null;
@@ -123,7 +124,14 @@ export const TurnSection = memo(function TurnSection({
       )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
-        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
+        <CrewTurn
+          run={run}
+          detail={detail}
+          orchestration={crew}
+          repo={repo}
+          taskCard={taskCard}
+          continued={startedSolo}
+        />
       ) : (
         <>
           <SoloTurn

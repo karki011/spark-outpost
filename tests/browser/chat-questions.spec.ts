@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  agentBlock,
   autoContinueAfter,
   crewChat,
   crewRepo,
@@ -113,6 +114,44 @@ test.describe('question cards', () => {
     const answered = thread(page).getByRole('group', { name: QUESTIONS });
     await expect(answered).toContainText('Which area should I focus on? → Explorer');
     await expect(answered.getByRole('button', { name: 'Send' })).toHaveCount(0);
+  });
+
+  test('an answered question card stays on screen while the crew takes over the turn', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await autoContinueAfter(page, null);
+    await crewChat(page, repo, 'Auto-edit');
+    await send(page, 'Make the reports better #build #vague #questions');
+    await expect(questions(page)).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      const scope = window as unknown as { cardOpacity: number[] };
+      scope.cardOpacity = [];
+      const shown = (card: Element | null) => {
+        let opacity = card ? 1 : 0;
+        for (let node = card; node && !node.classList.contains('col'); node = node.parentElement) {
+          opacity *= Number(getComputedStyle(node).opacity);
+        }
+        return opacity;
+      };
+      const sample = () => {
+        scope.cardOpacity.push(shown(document.querySelector('.thread .appr.ck.clarify')));
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    await questions(page).getByRole('button', { name: 'Usage' }).click();
+    await questions(page).getByRole('button', { name: 'Send' }).click();
+    await expect(agentBlock(page, 'Bolt')).toBeVisible({ timeout: 30_000 });
+    await expect(questions(page)).toContainText('Which report? → Usage');
+    await page.waitForTimeout(400);
+    const opacity = await page.evaluate(
+      () => (window as unknown as { cardOpacity: number[] }).cardOpacity,
+    );
+    expect(opacity.length).toBeGreaterThan(20);
+    expect(Math.min(...opacity)).toBeGreaterThan(0.99);
   });
 
   test('several quick answers and typed words go as one answer; Enter sends and Shift+Enter adds a line', async ({

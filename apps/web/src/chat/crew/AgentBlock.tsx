@@ -206,6 +206,7 @@ interface AgentBlockProps {
   live: boolean;
   settled?: boolean;
   collapsed: boolean;
+  still?: boolean;
   conversationId: string;
   steps: readonly RunStep[];
   text: string;
@@ -231,6 +232,7 @@ export function AgentBlock({
   live,
   settled = false,
   collapsed,
+  still = false,
   conversationId,
   after,
   changes,
@@ -241,9 +243,12 @@ export function AgentBlock({
   const bodyId = useId();
   const open = choice ?? !collapsed;
   const block = { agent, anchor, bodyId, conversationId };
+  const className = ['msg ai agent-block', open ? '' : 'folded', still ? 'still' : '']
+    .filter(Boolean)
+    .join(' ');
   if (!open) {
     return (
-      <div className="msg ai agent-block folded" data-agent={agent.id}>
+      <div className={className} data-agent={agent.id}>
         <button
           type="button"
           className="agent-fold"
@@ -267,7 +272,7 @@ export function AgentBlock({
     );
   }
   return (
-    <div className="msg ai agent-block" data-agent={agent.id}>
+    <div className={className} data-agent={agent.id}>
       {settled ? (
         <AgentBody {...block} {...body} />
       ) : (
