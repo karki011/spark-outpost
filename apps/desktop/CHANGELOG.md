@@ -2,6 +2,11 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.5
+
+- Updates: Restart to update installs with Spark Island on. Earlier betas stayed on "Installing…"; on those, turn the island off in Settings, update, then turn it back on.
+- Plans: Spark offers to save a reply as the agreed plan only when Jev reads that reply as a plan of work, so a plain "ok" in a casual chat no longer brings up the offer.
+
 ## 0.1.0-beta.4
 
 - Chat: question, plan and approval cards sit just above the message box. Question cards are calmer, take several quick answers per question, wait 60 seconds by default and have a setting for the wait.
