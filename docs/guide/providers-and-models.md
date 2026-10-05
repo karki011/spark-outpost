@@ -27,15 +27,14 @@ Changes apply to new chats. A fixed **Effort** also applies to every Builder; **
 ## Read the model cards
 
 1. Open **Settings → Models** and pick a provider, or **All**.
-2. Select **Details** on a card for effort levels, **Good at**, **Watch out for** and sources.
+2. Select a model's row for its price, effort levels, **Good at**, **Watch out for** and sources.
 
-![Settings → Models with the model cards](images/providers-model-cards-light.png)
+![Settings → Models with one row per model](images/providers-model-cards-light.png)
 
-| Card says                 | Spark uses it for                 |
-| ------------------------- | --------------------------------- |
-| **mid tier**              | Everyday Builder, Critic, answers |
-| **top tier**              | Complex and risky work            |
-| **Only when you pick it** | Nothing, unless you pin it        |
+| Group                      | Spark uses it for          |
+| -------------------------- | -------------------------- |
+| **Spark picks from these** | The job named on each row  |
+| **Only when you pick it**  | Nothing, unless you pin it |
 
 ## Connect Jev
 

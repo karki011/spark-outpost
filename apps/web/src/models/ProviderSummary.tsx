@@ -18,20 +18,18 @@ export function ProviderSummary({ card }: { card: ProviderCard }) {
     ['Cost', card.costSource],
   ];
   return (
-    <div className="mc-summary">
-      <p className="mc-line">{line}</p>
-      <details className="mc-more">
-        <summary>About {card.label}</summary>
-        <dl className="mc-about">
-          {facts.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <p>{card.sandbox}</p>
-      </details>
-    </div>
+    <details className="mc-more">
+      <summary>About {card.label}</summary>
+      <p>{line}</p>
+      <dl className="mc-about">
+        {facts.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p>{card.sandbox}</p>
+    </details>
   );
 }

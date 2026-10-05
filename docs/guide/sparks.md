@@ -41,8 +41,8 @@ In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?
 
 ## Change or delete one
 
-1. On **Home**, point at the card and select **Edit**, or open **Settings → Sparks**.
+1. On **Home**, point at the card and select **Edit**, or open **Settings → Teammates**.
 2. Change what you need and select **Save**.
-3. To delete it, select **Delete** in **Settings → Sparks**, then hold **Hold to delete**. You get 10 seconds to **Undo**. Its chats stay.
+3. To delete it, select **Delete** in **Settings → Teammates**, then hold **Hold to delete**. You get 10 seconds to **Undo**. Its chats stay.
 
 **Next:** [Watch and steer the crew](pieces.md)

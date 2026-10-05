@@ -1,63 +1,20 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Project, ProjectTrust } from '@spark-outpost/contracts';
 import { agentConfigApi, agentConfigKey, projectTrustKey } from '../api/agent-config.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
-import { ProjectBrowser } from './ProjectBrowser.tsx';
-import { ProjectBuilders } from './ProjectBuilders.tsx';
-import { ProjectPreview } from './ProjectPreview.tsx';
+import { countLabel, filterProjects, openProjectId } from './project-filter.ts';
+import { ProjectRow } from './ProjectRow.tsx';
 
-function trustLabel(trust: ProjectTrust | undefined): string {
-  if (!trust) return 'Not asked yet';
-  if (!trust.trusted) return 'Not trusted';
-  return trust.redirectsConfirmed ? 'Trusted, with key and proxy settings' : 'Trusted';
-}
-
-function ProjectRow({
-  project,
-  trust,
-  busy,
-  parallelAvailable,
-  onRevoke,
-}: {
-  project: Project;
-  trust: ProjectTrust | undefined;
-  busy: boolean;
-  parallelAvailable: boolean;
-  onRevoke: () => void;
-}) {
-  return (
-    <li className="set-project">
-      <div className="set-project-head">
-        <span className="set-project-text">
-          <b>{project.name}</b>
-          <small>{project.rootPath}</small>
-        </span>
-        <span className="set-project-trust">{trustLabel(trust)}</span>
-        {trust?.trusted && (
-          <button
-            type="button"
-            className="btn line sm"
-            aria-label={`Stop trusting ${project.name}`}
-            disabled={busy}
-            onClick={onRevoke}
-          >
-            Stop trusting
-          </button>
-        )}
-      </div>
-      <ProjectBuilders project={project} available={parallelAvailable} />
-      <ProjectBrowser project={project} />
-      <ProjectPreview project={project} />
-    </li>
-  );
-}
+const FILTER_FROM = 6;
 
 export function ProjectsSection() {
   const queryClient = useQueryClient();
   const projects = useProjects();
   const trust = useQuery({ queryKey: projectTrustKey, queryFn: agentConfigApi.trustList });
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const [filter, setFilter] = useState('');
+  const [chosen, setChosen] = useState<string | null | undefined>(undefined);
   const revoke = useMutation({
     mutationFn: (projectId: string) => agentConfigApi.setTrust(projectId, { trusted: false }),
     onSuccess: (config) => {
@@ -67,6 +24,10 @@ export function ProjectsSection() {
   });
   const byProject = new Map((trust.data ?? []).map((entry) => [entry.projectId, entry]));
   const error = projects.error ?? trust.error ?? revoke.error;
+  const all = projects.data ?? [];
+  const filterable = all.length >= FILTER_FROM;
+  const shown = filterable ? filterProjects(all, filter) : all;
+  const openId = openProjectId(all, chosen);
   return (
     <>
       <p className="lede">
@@ -79,14 +40,34 @@ export function ProjectsSection() {
         </p>
       )}
       {projects.data?.length === 0 && <p className="set-hint">No linked folders yet.</p>}
+      {filterable && (
+        <div className="set-projects-bar">
+          <input
+            type="search"
+            className="inp"
+            aria-label="Filter projects"
+            placeholder="Filter by name or path"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+          />
+          <span className="set-hint" role="status">
+            {countLabel(shown.length, all.length)}
+          </span>
+        </div>
+      )}
+      {filterable && shown.length === 0 && (
+        <p className="set-hint">No projects match “{filter.trim()}”.</p>
+      )}
       <ul className="set-projects" aria-label="Linked folders">
-        {(projects.data ?? []).map((project) => (
+        {shown.map((project) => (
           <ProjectRow
             key={project.id}
             project={project}
             trust={byProject.get(project.id)}
+            open={project.id === openId}
             busy={revoke.isPending}
             parallelAvailable={setup.data?.parallelBuilders ?? true}
+            onToggle={() => setChosen(project.id === openId ? null : project.id)}
             onRevoke={() => revoke.mutate(project.id)}
           />
         ))}

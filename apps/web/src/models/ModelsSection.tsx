@@ -4,10 +4,10 @@ import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
-import { ModelCardItem } from './ModelCardItem.tsx';
+import { ModelRow } from './ModelRow.tsx';
 import {
   ALL_PROVIDERS,
-  orderModels,
+  groupModels,
   readSavedProvider,
   shownProvider,
   writeSavedProvider,
@@ -32,11 +32,18 @@ function ProviderModels({ view }: { view: ProviderCardsView }) {
         {!view.connected && <span className="mc-tag">not connected</span>}
       </div>
       <ProviderSummary card={view.provider} />
-      <ul className="mc-grid">
-        {orderModels(view.models).map((model) => (
-          <ModelCardItem key={model.card.id} view={model} />
-        ))}
-      </ul>
+      {groupModels(view.models).map((group) => (
+        <div className="mc-group" key={group.id}>
+          <p className="mc-group-title" id={`${headingId}-${group.id}`}>
+            {group.title}
+          </p>
+          <ul className="mc-list" aria-labelledby={`${headingId}-${group.id}`}>
+            {group.models.map((model) => (
+              <ModelRow key={model.card.id} view={model} />
+            ))}
+          </ul>
+        </div>
+      ))}
       {view.uncardedModels.length > 0 && (
         <p className="mc-warn" role="note">
           No card for {view.uncardedModels.map((model) => model.label).join(', ')}: Jev sees the
@@ -73,7 +80,8 @@ export function ModelsSection() {
   return (
     <div className="mc">
       <p className="lede">
-        What each model costs, how it did on our benchmark, and when Spark uses it.
+        The models each agent offers and when Spark uses them. Open one for cost and benchmark
+        results.
         <InfoTip
           topic="model cards"
           doc={{ page: 'providers-and-models', heading: 'read-the-model-cards' }}

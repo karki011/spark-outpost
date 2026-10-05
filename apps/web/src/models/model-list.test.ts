@@ -4,14 +4,17 @@ import {
   ALL_PROVIDERS,
   benchmarkBadge,
   effortRange,
-  metaLine,
-  modelTag,
+  fullPrice,
+  groupModels,
+  modelFacts,
   orderModels,
   readSavedProvider,
+  purposeLine,
   retirementDetail,
+  retirementTag,
   roleLine,
-  shortPrice,
   shownProvider,
+  staleNote,
   usedBySpark,
   writeSavedProvider,
 } from './model-list.ts';
@@ -111,11 +114,61 @@ describe('model list', () => {
     expect(roleLine(view({ tier: 'small' }))).toBeNull();
   });
 
-  it('writes a compact meta line and effort range', () => {
-    expect(metaLine(card({}))).toEqual(['$2 / $10', '200K context', 'fast']);
-    expect(shortPrice(card({ price: null }))).toBe('No price listed');
+  it('groups the models Spark picks apart from the ones only you pick', () => {
+    const retiring = view({ id: 'old', tier: 'top' });
+    retiring.staleness = { ...retiring.staleness, retiring: true };
+    const groups = groupModels([
+      view({ id: 'frontier', tier: 'frontier' }),
+      retiring,
+      view({ id: 'top', tier: 'top' }),
+      view({ id: 'mid', tier: 'mid' }),
+    ]);
+    expect(
+      groups.map((group) => [group.title, group.models.map((model) => model.card.id)]),
+    ).toEqual([
+      ['Spark picks from these', ['mid', 'top']],
+      ['Only when you pick it', ['old', 'frontier']],
+    ]);
+    expect(groupModels([view({ tier: 'small' })]).map((group) => group.id)).toEqual(['manual']);
+  });
+
+  it('gives each row one line of purpose: the job Spark uses it for, else its first strength', () => {
+    expect(purposeLine(view({}))).toBe('Everyday Builder, Critic, answers');
+    expect(purposeLine(view({ tier: 'small', strengths: ['Cheap and fast', 'Other'] }))).toBe(
+      'Cheap and fast',
+    );
+    expect(purposeLine(view({ tier: 'small' }))).toBeNull();
+  });
+
+  it('lists the secondary facts for the details panel', () => {
+    const now = Date.parse('2026-09-28T12:00:00Z');
+    expect(modelFacts(card({ retiresNotBefore: '2027-06-30' }), now)).toEqual([
+      ['Tier', 'mid'],
+      ['Price', '$2 in · $0.2 cached · $10 out per million tokens'],
+      ['Context', '200K · 64K max output'],
+      ['Speed', 'fast'],
+      ['Effort', 'low–high (default medium)'],
+      ['Retirement', 'Retires 2027-06-30'],
+    ]);
+    expect(fullPrice(card({ price: null }))).toBe('No price listed');
+    expect(modelFacts(card({}), now).map(([label]) => label)).not.toContain('Retirement');
     expect(effortRange(card({}))).toBe('low–high');
     expect(effortRange(card({ reasoning: { ...card({}).reasoning, efforts: [] } }))).toBe('none');
+  });
+
+  it('notes stale facts briefly on the row and in full in the details', () => {
+    expect(staleNote(view({}))).toBeNull();
+    const stale = view({});
+    stale.staleness = { ...stale.staleness, checkStale: true, checkedDaysAgo: 40 };
+    expect(staleNote(stale)).toEqual({
+      short: 'Checked 40 days ago',
+      full: 'Checked 40 days ago',
+    });
+    stale.staleness = { ...stale.staleness, factsExpired: true };
+    expect(staleNote(stale)).toEqual({
+      short: 'Facts out of date',
+      full: 'Facts are over 120 days old: Jev no longer sees its price',
+    });
   });
 
   it('badges the best pass rate and keeps the cost and work for its tooltip', () => {
@@ -133,18 +186,18 @@ describe('model list', () => {
     });
   });
 
-  it('tags a model Spark never picks and shows a retirement only when it is near', () => {
+  it('tags a retirement only when it is near', () => {
     const now = Date.parse('2026-09-28T12:00:00Z');
-    expect(modelTag(view({}), now)).toBeNull();
-    expect(modelTag(view({ retiresNotBefore: '2027-06-30' }), now)).toBeNull();
-    expect(modelTag(view({ retiresNotBefore: '2026-12-01' }), now)).toBe('Retiring Dec 1');
-    expect(modelTag(view({ tier: 'frontier', retiresNotBefore: '2027-09-01' }), now)).toBe(
-      'Only when you pick it',
-    );
-    expect(modelTag(view({ tier: 'small', retiresNotBefore: '2026-10-15' }), now)).toBe(
+    expect(retirementTag(view({}), now)).toBeNull();
+    expect(retirementTag(view({ retiresNotBefore: '2027-06-30' }), now)).toBeNull();
+    expect(retirementTag(view({ retiresNotBefore: '2026-12-01' }), now)).toBe('Retiring Dec 1');
+    expect(
+      retirementTag(view({ tier: 'frontier', retiresNotBefore: '2027-09-01' }), now),
+    ).toBeNull();
+    expect(retirementTag(view({ tier: 'small', retiresNotBefore: '2026-10-15' }), now)).toBe(
       'Retiring Oct 15',
     );
-    expect(modelTag(view({ retiresNotBefore: '2027-01-10' }), Date.parse('2026-12-01'))).toBe(
+    expect(retirementTag(view({ retiresNotBefore: '2027-01-10' }), Date.parse('2026-12-01'))).toBe(
       'Retiring Jan 10, 2027',
     );
     expect(retirementDetail(card({ retiresNotBefore: '2027-06-30' }), now)).toBe(
@@ -156,11 +209,11 @@ describe('model list', () => {
   it('says retired once the date has passed or the card is marked retired', () => {
     const after = Date.parse('2026-10-16T00:00:00Z');
     const haiku = { tier: 'small' as const, retiresNotBefore: '2026-10-15' };
-    expect(modelTag(view(haiku), Date.parse('2026-10-15T23:00:00Z'))).toBe('Retiring Oct 15');
-    expect(modelTag(view(haiku), after)).toBe('Retired Oct 15');
+    expect(retirementTag(view(haiku), Date.parse('2026-10-15T23:00:00Z'))).toBe('Retiring Oct 15');
+    expect(retirementTag(view(haiku), after)).toBe('Retired Oct 15');
     expect(retirementDetail(card(haiku), after)).toBe('Retired 2026-10-15');
     const marked = { retiresNotBefore: '2026-11-01', retired: true };
-    expect(modelTag(view(marked), Date.parse('2026-09-28T12:00:00Z'))).toBe('Retired Nov 1');
+    expect(retirementTag(view(marked), Date.parse('2026-09-28T12:00:00Z'))).toBe('Retired Nov 1');
     expect(retirementDetail(card({ retired: true }), after)).toBe('Retired');
   });
 
