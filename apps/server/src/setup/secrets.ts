@@ -6,7 +6,13 @@ export type TicketSecretId = `ticket:${TicketSourceId}`;
 export type SlackSecretId = 'slack:bot' | 'slack:user' | 'slack:app';
 export const SLACK_SECRET_IDS: readonly SlackSecretId[] = ['slack:bot', 'slack:user', 'slack:app'];
 export type SecretId =
-  ConnectableId | 'github' | 'github-app' | TicketSecretId | SlackSecretId | `mcp:${string}`;
+  | ConnectableId
+  | 'github'
+  | 'github-app'
+  | TicketSecretId
+  | SlackSecretId
+  | `mcp:${string}`
+  | `signin:${string}`;
 
 export interface SecretStore {
   set(provider: SecretId, secret: string): Promise<void>;
@@ -19,7 +25,7 @@ export interface SecretStore {
 export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 function account(provider: SecretId): string {
-  if (provider.startsWith('mcp:')) return provider;
+  if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
   if (provider === 'github') return 'github:token';
   if (provider === 'github-app') return 'github:app';
   if (provider.startsWith('ticket:') || provider.startsWith('slack:')) return `${provider}:token`;

@@ -52,6 +52,11 @@ export function performSparkAction(
         message: `The agent can read ${action.origin} in this chat.`,
         url: null,
       });
+    case 'browser_sign_in':
+      return Promise.resolve({
+        message: `The agent can use ${action.label} on ${action.origin} in this chat.`,
+        url: null,
+      });
     case 'post_slack':
       return performPostSlack(context, action);
     case 'pr_follow_up':

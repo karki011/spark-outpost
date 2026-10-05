@@ -17,6 +17,8 @@ import { asToolError, auditBrowser, browserSession, chatHome } from './context.t
 import { browserPreviewTool, ensurePreview } from './preview.ts';
 import { clearPage } from './read-flow.ts';
 import { browserScreenshotTool } from './screenshot.ts';
+import { signInScrub } from './scrub.ts';
+import { browserSignInTools } from './sign-in.ts';
 
 const tabInput = z
   .string()
@@ -26,6 +28,8 @@ const tabInput = z
 
 export const EXTERNAL_NOT_YET =
   'Agents can open local pages only for now (localhost, 127.0.0.1, *.localhost, *.test and project files). External sites come in a later version. The user can open this address themselves in the Browser pane; you can read it after they do.';
+
+const keep = (text: string) => text;
 
 interface OpenArgs {
   url?: string | undefined;
@@ -80,11 +84,12 @@ async function open(args: OpenArgs, context: SparkToolContext) {
     place: opened.place,
     decision: 'local',
   });
+  const hidden = (await signInScrub(context)) ?? keep;
   return {
     outcome: 'opened',
     tab: opened.tabId,
-    url: opened.url,
-    title: opened.title,
+    url: hidden(opened.url),
+    title: hidden(opened.title),
     status: opened.status,
     place: opened.place,
     reusedTab: opened.reused,
@@ -106,10 +111,12 @@ async function tabs(context: SparkToolContext) {
     place: null,
     decision: 'local',
   });
+  const hidden = (await signInScrub(context)) ?? keep;
   return {
     tabs: listed.tabs.map((tab) => ({
       ...tab,
-      url: tab.place === 'external' ? originAndPath(tab.url) : tab.url,
+      title: hidden(tab.title),
+      url: hidden(tab.place === 'external' ? originAndPath(tab.url) : tab.url),
     })),
     note: `Titles and addresses come from pages. ${UNTRUSTED_PAGE_NOTE}`,
   };
@@ -131,10 +138,11 @@ async function read(args: ReadArgs, context: SparkToolContext) {
     });
   const cleared = await clearPage(context, 'spark_browser_read', 'read', page);
   if (!cleared.cleared) return cleared.result;
+  const hidden = (await signInScrub(context)) ?? keep;
   const facts = {
     tab: page.tabId,
-    url: page.url,
-    title: page.title,
+    url: hidden(page.url),
+    title: hidden(page.title),
     place: page.place,
     mode: page.mode,
     lines: page.total,
@@ -148,7 +156,7 @@ async function read(args: ReadArgs, context: SparkToolContext) {
   };
   return new SparkBlocks([
     { type: 'text', text: renderResult(facts) },
-    { type: 'text', text: untrustedPage(page.url, redactText(page.text)) },
+    { type: 'text', text: untrustedPage(hidden(page.url), redactText(hidden(page.text))) },
   ]);
 }
 
@@ -165,20 +173,30 @@ interface LogArgs {
   limit: number;
 }
 
+function matching(lines: readonly string[], args: LogArgs): string[] {
+  const needle = args.filter?.toLowerCase();
+  const kept = needle ? lines.filter((line) => line.toLowerCase().includes(needle)) : lines;
+  return kept.slice(-args.limit);
+}
+
 async function logs(args: LogArgs, context: SparkToolContext) {
   const session = browserSession(context);
+  const hidden = await signInScrub(context);
+  const asked = hidden ? { ...args, filter: undefined, limit: BROWSER_LOG_ENTRIES_MAX } : args;
   const found = await session.host
-    .request({ op: 'logs', chatId: session.chatId, runId: session.runId, ...args }, context.signal)
+    .request({ op: 'logs', chatId: session.chatId, runId: session.runId, ...asked }, context.signal)
     .catch((error: unknown) => {
       throw asToolError(error);
     });
   const cleared = await clearPage(context, 'spark_browser_logs', 'logs', found);
   if (!cleared.cleared) return cleared.result;
+  const written = found.entries.map(logLine);
+  const lines = hidden ? matching(written.map(hidden), args) : written;
   const facts = {
     tab: found.tabId,
-    url: found.url,
+    url: (hidden ?? keep)(found.url),
     kind: found.kind,
-    entries: found.entries.length,
+    entries: lines.length,
     droppedOlder: found.dropped,
     note: 'Newest last. Request and response headers and query strings are never recorded.',
   };
@@ -186,7 +204,7 @@ async function logs(args: LogArgs, context: SparkToolContext) {
     { type: 'text', text: renderResult(facts) },
     {
       type: 'text',
-      text: untrustedPage(found.url, redactText(found.entries.map(logLine).join('\n'))),
+      text: untrustedPage((hidden ?? keep)(found.url), redactText(lines.join('\n'))),
     },
   ]);
 }
@@ -258,4 +276,5 @@ export const browserTools = [
   browserScreenshotTool,
   browserLogsTool,
   browserPreviewTool,
+  ...browserSignInTools,
 ];

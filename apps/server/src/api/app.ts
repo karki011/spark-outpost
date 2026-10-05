@@ -29,6 +29,7 @@ import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { previewRoutes } from './preview-routes.ts';
+import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
@@ -113,6 +114,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', diagnosticsRoutes(options));
   app.use('/api', terminalRoutes(options));
   app.use('/api', previewRoutes(options));
+  app.use('/api', signInRoutes(options));
   app.use(
     '/api',
     resetRoutes({
