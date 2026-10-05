@@ -4,6 +4,7 @@ import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
 import { watchPullRequest } from '../persistence/pr-watches.ts';
 import { saveTaskShip } from '../persistence/task-ships.ts';
 import { addTaskLink } from '../persistence/tasks.ts';
+import { pickRemote } from '../ship/git.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import { publishedLine, publishedState, type Published } from '../ship/published.ts';
 import { repoSlug } from '../ship/remote.ts';
@@ -14,7 +15,7 @@ import { runMember } from './members.ts';
 import type { Session } from './session.ts';
 
 export const NO_OWN_BRANCH_LINE =
-  'Not published: this chat works in your checkout, so it has no branch of its own to push. Use Ship to commit and open the pull request.';
+  'Not published: this chat has no branch of its own with a remote to push to (it works in your checkout, or the folder has no remote). Use Ship instead.';
 
 const AGENT_REPLY_CHARS = 1_200;
 
@@ -27,6 +28,7 @@ export interface PublishPlan {
 export async function agentPublishPlan(s: Session): Promise<PublishPlan | null> {
   const scope = await publishScope(s.deps.db, s.input);
   if (!scope || scope.task.protectedBranches.includes(scope.task.branch)) return null;
+  if (!(await pickRemote(scope.root, scope.task.branch))) return null;
   const worktree = await chatWorktreeAt(s.deps.db, scope.root);
   return { root: scope.root, branch: scope.task.branch, base: worktree?.baseBranch ?? null };
 }
