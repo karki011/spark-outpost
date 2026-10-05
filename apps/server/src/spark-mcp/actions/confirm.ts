@@ -23,7 +23,7 @@ export const RESULT_WAIT_MS = 40_000;
 export const WAITING_MESSAGE =
   'Spark showed the user a confirm card in the chat and will do it as soon as they confirm; the result appears on that card. Do not call this again and do not ask the user to do it by hand. Tell them it is waiting for their confirmation.';
 
-export const LAST_ATTEMPT_FAILED =
+const LAST_ATTEMPT_FAILED =
   'The last time the user confirmed this it failed, and nothing has retried it. Tell the user why, and fix the cause if it is yours, before relying on this card:';
 
 export const IN_PROGRESS_MESSAGE =

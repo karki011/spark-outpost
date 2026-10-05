@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval } from '@spark-outpost/contracts';
+import type { Approval, SparkAction } from '@spark-outpost/contracts';
 import { outcome, shownOptions } from './approval-outcome.ts';
 
 const pending: Approval = {

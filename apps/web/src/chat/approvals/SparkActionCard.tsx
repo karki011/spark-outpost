@@ -34,8 +34,6 @@ interface Draft {
   skip: string[];
 }
 
-const FILES_SHOWN = 8;
-
 const STATUS_CHOICES = ticketStatusSchema.options.map((status) => ({
   id: status,
   label: ticketStatusLabels[status],

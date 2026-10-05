@@ -11,7 +11,7 @@ const REASON_MAX = 200;
 function hookReason(output: string): string | null {
   const lines = output
     .split('\n')
-    .map((line) => line.replace(/^[^\w\[(]+/, '').trim())
+    .map((line) => line.replace(/^[^\w[(]+/, '').trim())
     .filter((line) => line !== '' && !HOOK_NOISE.test(line));
   const reason = lines.find((line) => HOOK_REASON.test(line)) ?? lines.at(-1);
   return reason ? reason.slice(0, REASON_MAX) : null;

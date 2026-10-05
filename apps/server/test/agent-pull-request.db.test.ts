@@ -17,7 +17,7 @@ afterEach(async () => {
 const URL_ONE = 'https://github.com/acme/widgets/pull/7';
 
 async function recorderFor(runId: string) {
-  const recorder = createTaskRecorder(t.db, runId, 'Tidy the notes', async () => undefined);
+  const recorder = createTaskRecorder(t.db, runId, 'Tidy the notes', async () => null);
   await recorder.observe({ kind: 'step_started', name: 'gh pr create', tool: true });
   return recorder;
 }
@@ -64,7 +64,7 @@ describe('a pull request the agent opened itself', () => {
       title: 'acme/widgets#7',
       source: 'tool_output',
     } as never);
-    expect(await watchesForConversation(t.db, conversationId)).toEqual([]);
+    expect(await watchesForConversation(t.db, t.workspaceId, conversationId)).toEqual([]);
     expect((await audited(runId))[0]!.payload).toMatchObject({ watched: false, branch: null });
   });
 });
