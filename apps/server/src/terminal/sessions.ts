@@ -101,6 +101,7 @@ export interface ShellRequest {
 
 export interface ShellWatcher {
   opened(shell: OpenShell): void;
+  output?(id: string, data: string): void;
   ended(id: string): void;
 }
 
@@ -331,6 +332,7 @@ export class TerminalSessions {
 
   private handleOutput(session: Session, data: string) {
     session.client?.output(data);
+    if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;
     session.commandOutput = (session.commandOutput + data).slice(-OUTPUT_TAIL_BYTES);
     const detected = detectHint(session.kind.entry, session.commandOutput);

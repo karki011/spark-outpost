@@ -46,10 +46,11 @@ Ship also leaves these out of commits.
 
 ## When an agent may publish
 
-An agent may push the chat's own `spark/` branch and open its pull request only when one of these is true:
+An agent may push the chat's own `spark/` branch and open its pull request only when:
 
 - your message asks for it, such as "open a PR" or "push it";
 - the chat is at **Full auto → PR**;
-- the agent's mode is **Auto**, **Bypass permissions** or **Full access**.
+- the agent's mode is **Auto**, **Bypass permissions** or **Full access**;
+- the turn fixes [feedback](pr-follow-up.md) on the chat's own open pull request.
 
-Otherwise Builders don't publish, and Spark [ships](ship-and-pull-requests.md) when you ask.
+Otherwise you [ship](ship-and-pull-requests.md).

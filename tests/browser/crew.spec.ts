@@ -202,13 +202,12 @@ test("Full auto asks for nothing, keeps by itself with one line when there is no
     1,
   );
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await agentHead(page, 'Bolt').click();
-  await agentBlock(page, 'Bolt')
-    .getByRole('button', { name: /^\d+ steps$/ })
-    .click();
-  await expect(agentBlock(page, 'Bolt')).toContainText("Only this chat's own branch can be pushed");
+  await agentHead(page, 'Bolt').first().click();
+  const build = agentBlock(page, 'Bolt').first();
+  await build.getByRole('button', { name: /^\d+ steps$/ }).click();
+  await expect(build).toContainText("Only this chat's own branch can be pushed");
   for (const name of ['Bolt', 'Hawk']) {
-    await expect(agentHead(page, name)).toBeVisible();
+    await expect(agentHead(page, name).first()).toBeVisible();
   }
   expect(repo.notes()).toBe('start\nstep 1\n');
 });

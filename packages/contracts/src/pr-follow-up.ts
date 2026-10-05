@@ -32,6 +32,15 @@ export type PrWatchPhase = z.infer<typeof prWatchPhaseSchema>;
 export const prChecksSchema = z.enum(['none', 'pending', 'passing', 'failing']);
 export type PrChecks = z.infer<typeof prChecksSchema>;
 
+export const prReviewSchema = z.enum(['none', 'approved', 'changes_requested']);
+export type PrReview = z.infer<typeof prReviewSchema>;
+
+export const prOpenedViaSchema = z.enum(['ship', 'agent', 'terminal', 'discovery']);
+export type PrOpenedVia = z.infer<typeof prOpenedViaSchema>;
+
+export const prFailingCheckSchema = z.object({ name: z.string(), url: z.string().nullable() });
+export type PrFailingCheck = z.infer<typeof prFailingCheckSchema>;
+
 export const feedbackItemSchema = z.object({
   id: z.uuid(),
   label: z.string(),
@@ -56,12 +65,25 @@ export const prWatchSchema = z.object({
   repo: z.string(),
   number: z.number().int().positive(),
   url: z.string(),
+  title: z.string().nullable(),
   branch: z.string(),
+  base: z.string().nullable(),
+  outside: z.boolean(),
+  followUp: z.boolean(),
+  opened: z.object({
+    via: prOpenedViaSchema,
+    by: z.string().nullable(),
+    runId: z.uuid().nullable(),
+    at: z.string(),
+  }),
   phase: prWatchPhaseSchema,
   doing: z.string(),
   prState: z.enum(['open', 'merged', 'closed']),
   draft: z.boolean(),
   checks: prChecksSchema,
+  failingChecks: z.array(prFailingCheckSchema),
+  review: prReviewSchema,
+  unknownReason: z.string().nullable(),
   rounds: z.number().int().nonnegative(),
   maxRounds: z.number().int().positive(),
   newComments: z.number().int().nonnegative(),

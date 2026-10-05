@@ -4,6 +4,7 @@ import type { RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { createTestApp, installedClis, jsonResponse, localClient, noClis } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
+import { NEW_PROFILE } from './setup-defaults.ts';
 
 const VALID_CLAUDE_KEY = `sk-ant-api03-${'x'.repeat(24)}4f2a`;
 const VALID_OPENAI_KEY = `sk-proj-${'y'.repeat(24)}9k1z`;
@@ -48,34 +49,12 @@ function appWith(options: { fetch?: typeof fetch; runCommand?: RunCommand } = {}
 describe('setup state', () => {
   it('starts with no name, no connections, and onboarding not completed', async () => {
     const { body } = await appWith().get('/api/setup').expect(200);
-    expect(body.profile).toEqual({
-      displayName: '',
-      defaultProvider: null,
-      onboardingCompleted: false,
-      autoContinueSeconds: 60,
-      jevDiffs: true,
-      shipFailingChecks: true,
-      prReadyForReview: true,
-      prFollowUp: true,
-      prFollowUpChecks: true,
-      prFollowUpReviews: true,
-      prFollowUpReplies: true,
-      personality: 'friendly',
-      sparkEnabled: true,
-      defaultLevel: 'full-auto',
-      defaultLevelNotice: false,
-      spendCapUsd: null,
-      morningBrief: true,
-      morningBriefTime: '07:00',
-      compactWarnPercent: 60,
-      compactAtPercent: 80,
-      autoCompact: true,
-      heartbeat: true,
-      wideWindow: 'rail',
-      busyEnter: 'queue',
-    });
-    const ids = body.providers.map((provider: { id: string }) => provider.id);
-    expect(ids).toEqual(['claude', 'codex', 'zai']);
+    expect(body.profile).toEqual(NEW_PROFILE);
+    expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
+      'claude',
+      'codex',
+      'zai',
+    ]);
     expect(
       body.providers.every((provider: { connection: unknown }) => provider.connection === null),
     ).toBe(true);

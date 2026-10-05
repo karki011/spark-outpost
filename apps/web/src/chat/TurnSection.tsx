@@ -21,7 +21,9 @@ import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './rail/outline-model.ts';
 import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
-import { sameTurnDetail } from './turn-props.ts';
+import { sameTurnDetail, turnRunIds } from './turn-props.ts';
+import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
+import { PushNotices } from './pull-request/PushNotices.tsx';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 
@@ -146,6 +148,11 @@ export const TurnSection = memo(function TurnSection({
           {shownTask && !live && taskCard}
         </>
       )}
+      <OpenedPullRequests
+        conversationId={detail.conversation.id}
+        runIds={turnRunIds(detail, run.id)}
+      />
+      <PushNotices conversationId={detail.conversation.id} runIds={turnRunIds(detail, run.id)} />
       <InterruptedNote run={run} detail={detail} />
       {detail.interruption?.runId === run.id && (
         <InterruptedCard

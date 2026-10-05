@@ -62,7 +62,7 @@ import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { escalatedHighStakes, wantsCritic } from './critic-rule.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
-import { autoKeep, shipFullAuto } from './full-auto-ship.ts';
+import { autoKeep, publishWhenAsked, shipFullAuto } from './full-auto-ship.ts';
 import { keepWithoutPullRequest } from './no-pull-request.ts';
 import {
   baseLimits,
@@ -224,6 +224,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       return wrappedUp(s);
     case 'keep':
       await autoKeep(s, 'hands-off', [action.note ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      await publishWhenAsked(s);
       return { type: 'kept' };
     case 'ship':
       return (await keepWithoutPullRequest(s, action.keptNote ?? null)) ?? shipFullAuto(s);

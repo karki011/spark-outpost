@@ -11,6 +11,7 @@ import type { GitHubAppConfig } from '../ship/github/app-config.ts';
 import type { Sleep } from '../ship/github/app-sign-in.ts';
 import { GitHubApiError } from '../ship/github/connection.ts';
 import { ShipBlockedError, type ShipDeps } from '../ship/prepare.ts';
+import { conversationPushes } from '../ship/push-notices.ts';
 import { conversationPrRoute, forgetPrRoutes, testGitHub } from '../ship/route-check.ts';
 import { shipPreview, shipTask } from '../ship/service.ts';
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
@@ -97,6 +98,10 @@ export function shipRoutes(routeDeps: ShipRouteDeps): Router {
 
   router.get('/conversations/:id/pr-route', async (req, res) => {
     res.json({ info: await conversationPrRoute(deps, paramId(req)) });
+  });
+
+  router.get('/conversations/:id/pushes', async (req, res) => {
+    res.json({ pushes: await conversationPushes(deps.db, deps.workspaceId, paramId(req)) });
   });
 
   return router;

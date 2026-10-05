@@ -4,7 +4,7 @@ type DetailKey = keyof ConversationDetail;
 
 const PER_RUN_KEYS = new Set<DetailKey>(['activity', 'orchestrations', 'advice', 'runs']);
 
-function turnRunIds(detail: ConversationDetail, runId: string): string[] {
+export function turnRunIds(detail: ConversationDetail, runId: string): string[] {
   const crew = detail.orchestrations?.[runId]?.crew ?? [];
   return [runId, ...crew.map((member) => member.runId)];
 }

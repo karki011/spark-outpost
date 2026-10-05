@@ -382,10 +382,12 @@ function publishing(
 
 export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';
 export const PUBLISH_FULL_AUTO_WHY = 'Full auto → PR';
+export const PUBLISH_FOLLOW_UP_WHY = "a fix for this chat's open pull request";
 
 function publishAllowed(basis: PublishBasis): Decision {
   if (basis === 'requested') return { verdict: 'allow', by: 'level', why: PUBLISH_ASKED_WHY };
   if (basis === 'full_auto') return { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
+  if (basis === 'follow_up') return { verdict: 'allow', by: 'level', why: PUBLISH_FOLLOW_UP_WHY };
   return { verdict: 'allow', by: 'level' };
 }
 

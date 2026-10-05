@@ -303,22 +303,9 @@ export async function harnessCommitsToPush(
 export interface GitAccess {
   env?: Record<string, string>;
   config?: readonly string[];
-}
-
-export async function pushBranch(
-  root: string,
-  remote: string,
-  branch: string,
-  access: GitAccess = {},
-): Promise<void> {
-  const ref = `refs/heads/${branch}`;
-  await gitOut(
-    root,
-    [...(access.config ?? []), 'push', '--set-upstream', remote, `${ref}:${ref}`],
-    `Pushing ${branch}`,
-    SLOW_MS,
-    access.env,
-  );
+  signal?: AbortSignal | undefined;
+  timeoutMs?: number | undefined;
+  hidden?: readonly string[] | undefined;
 }
 
 export async function listRemoteHeads(

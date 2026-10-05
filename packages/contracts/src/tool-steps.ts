@@ -31,6 +31,8 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_transition_ticket: 'Moving a ticket',
   spark_assign_ticket: 'Assigning a ticket',
   spark_open_pr: 'Opening a PR',
+  spark_push: 'Pushing the branch',
+  spark_pull_request: 'Opening the pull request',
   spark_pr_follow_up_round: 'Requesting a PR follow-up round',
   spark_create_spark: 'Adding a Spark',
   spark_update_spark: 'Changing a Spark',

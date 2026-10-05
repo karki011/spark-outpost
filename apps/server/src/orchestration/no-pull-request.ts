@@ -3,7 +3,7 @@ import { pickRemote, repoState } from '../ship/git.ts';
 import { parseRemoteUrl } from '../ship/remote.ts';
 import { KEPT_BY_AUTO_EDIT } from './checkpoint-policy.ts';
 import { sessionReviewLine } from './critic-fix.ts';
-import { autoKeep } from './full-auto-ship.ts';
+import { autoKeep, publishWhenAsked } from './full-auto-ship.ts';
 import type { Session } from './session.ts';
 import type { FlowEvent } from './transitions.ts';
 
@@ -61,5 +61,6 @@ export async function keepWithoutPullRequest(
   if (line === null) return null;
   s.shipLine = line;
   await autoKeep(s, 'hands-off', [keptNote ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s), line]);
+  await publishWhenAsked(s);
   return { type: 'kept' };
 }

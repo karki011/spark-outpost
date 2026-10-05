@@ -52,6 +52,7 @@ export interface MemberOptions {
   checkFailures?: string;
   seat?: Seat;
   resumeKey?: string;
+  publishes?: boolean;
 }
 
 export interface MemberOutcome {
@@ -283,6 +284,7 @@ async function runChild(
       ),
       route: storedRoute(route, name, {
         ...seat?.route,
+        ...(options.publishes ? { guard: null } : {}),
         ...(branch ? { copy: branch } : {}),
         ...(resumeKey ? { resumeKey } : {}),
         ...(followUp ? { followUp } : {}),

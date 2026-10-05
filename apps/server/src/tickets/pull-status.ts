@@ -1,4 +1,4 @@
-import type { PullRequestState, PullRequestStatus } from '@spark-outpost/contracts';
+import type { PrReview, PullRequestState, PullRequestStatus } from '@spark-outpost/contracts';
 import { connectionFor, type GitHubDeps } from '../ship/github/access.ts';
 import type { GitHubConnection, PullRequestDetail } from '../ship/github/connection.ts';
 
@@ -26,14 +26,18 @@ function latestReviewStates(reviews: PullRequestDetail['reviews']): string[] {
   return [...byUser.values()];
 }
 
+export function reviewVerdict(reviews: PullRequestDetail['reviews']): PrReview {
+  const states = latestReviewStates(reviews);
+  if (states.includes('CHANGES_REQUESTED')) return 'changes_requested';
+  return states.includes('APPROVED') ? 'approved' : 'none';
+}
+
 export function pullRequestState(pull: PullRequestDetail): PullRequestState {
   if (pull.merged) return 'merged';
   if (pull.state === 'closed') return 'closed';
   if (pull.draft) return 'draft';
-  const states = latestReviewStates(pull.reviews);
-  if (states.includes('CHANGES_REQUESTED')) return 'changes_requested';
-  if (states.includes('APPROVED')) return 'approved';
-  return 'review';
+  const verdict = reviewVerdict(pull.reviews);
+  return verdict === 'none' ? 'review' : verdict;
 }
 
 async function readOne(

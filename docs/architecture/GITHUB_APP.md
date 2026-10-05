@@ -59,13 +59,49 @@ With an empty client ID the **GitHub sign-in** option is hidden and the token an
 
 For a repository on github.com that the sign-in covers, `app` is the first choice:
 
-| Step      | Order                                                                                                                                 |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Push      | The user's git login, then the app token, then a saved token (HTTPS remotes only, one-shot `GIT_ASKPASS`, username `x-access-token`). |
-| API calls | App sign-in, then saved token, then `gh`, then a compare link.                                                                        |
-| Clone     | The user's git login, then the app token, then a saved token, the same one-shot `GIT_ASKPASS` as a push. Only from **Add project**.   |
+| Step      | Order                                                                                                                                          |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Push      | The user's git login, then the app token, then a saved token (HTTPS remotes only, `GIT_ASKPASS` that answers once, username `x-access-token`). |
+| API calls | App sign-in, then saved token, then `gh`, then a compare link.                                                                                 |
+| Clone     | The user's git login, then the app token, then a saved token, the same one-shot `GIT_ASKPASS` as a push. Only from **Add project**.            |
 
-Pull requests are opened as the user (user-to-server token). A repository the sign-in does not cover skips `app` entirely. `GET /api/github/connection`, the branch chip tooltip, the Settings **Test** button, `spark_connectors`, `spark_pull_requests` and `spark_pr` name the route. Credentials never enter an agent's environment: Spark itself pushes and calls the API.
+Pull requests are opened as the user (user-to-server token). A repository the sign-in does not cover skips `app` entirely. `GET /api/github/connection`, the branch chip tooltip, the Settings **Test** button, `spark_connectors`, `spark_pull_requests` and `spark_pr` name the route. Credentials never enter an agent's environment: an authorized agent asks Spark to push (`spark_push`) and, when `gh` is not signed in, to open the pull request (`spark_pull_request`); Spark runs both.
+
+## Pushes, hooks and the environment
+
+A `git push` runs the repository's `pre-push` hook, and that hook is repository code: on many projects it installs, builds or tests against a private registry. Three shells differ in what such a hook can see:
+
+| Variable                                                      | Terminal tab (`terminal/pty.ts`)                   | Agent's own shell (`agents/acp/agent-env.ts`)                                                    | Push run by Spark (`ship/push.ts`, `ship/push-branch.ts`)                           |
+| ------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Starting point                                                | Spark's environment without secret-named variables | Spark's environment without secret-named variables                                               | Spark's environment without secret-named variables                                  |
+| Login shell (`$SHELL -l`, profile and rc files)               | Yes, interactive: every export of the user is back | No                                                                                               | Yes: read once with `$SHELL -ilc 'env -0'` and overlaid                             |
+| `PATH`                                                        | The login shell's                                  | Spark's                                                                                          | The login shell's                                                                   |
+| `NPM_TOKEN`, `NODE_AUTH_TOKEN`, other `*TOKEN*`/`*KEY*` names | Present when the user's shell exports them         | Absent (`setup/environment.ts` strips `SECRET\|TOKEN\|PASSWORD\|KEY`)                            | Present from the login shell; withheld for a folder marked **Not trusted**          |
+| `GH_TOKEN`, `GITHUB_TOKEN`                                    | Present when exported                              | Absent; a Builder that may not publish also gets an empty `gh` config dir and a blocked push URL | Present from the login shell                                                        |
+| `npm_config_userconfig`, `HOME`, proxy settings               | Present                                            | Present when Spark's own environment has them                                                    | Present                                                                             |
+| Spark's own secrets (`DATABASE_URL`, launch token)            | Absent                                             | Absent                                                                                           | Absent                                                                              |
+| Spark's GitHub token (token route)                            | Never                                              | Never                                                                                            | Not in the environment: `GIT_ASKPASS` reads it from a 0600 file once and deletes it |
+
+So an agent's own `git push` can fail in a hook that the same push passes from the terminal tab. The design keeps secret-named variables out of the agent and moves the push instead:
+
+- `spark_push` (a Spark tool, offered when the chat has a project) asks Spark to push. `ship/agent-push.ts` checks the turn's publish authorization (the user's message asks, the chat is at Full auto → PR, the mode is Auto or Bypass permissions/Full access, or the turn is a follow-up round on the chat's own open pull request), takes only the chat's own `spark/` branch and its configured remote, refuses a protected branch and a branch carrying Spark's internal commits, and never passes `--no-verify` or `--force`. There are no arguments to widen it.
+- The push runs with the login-shell environment in its own process group, with no time limit shorter than 30 minutes (`PUSH_TIMEOUT_MS`; a build in a hook takes minutes, and the old 120 s limit killed it), and stops with the turn: cancelling the tool call or the run sends `SIGTERM` to the group, then `SIGKILL` after 5 s.
+- The agent gets back the outcome, the hook's name when a hook stopped the push, and the last 40 lines of output. Before anything leaves the push, the exact value of every secret-named variable that was passed (6 characters or longer) and the token are replaced with `[hidden]`, on top of the usual pattern redaction. The audit entry `ship/agent_push` holds the same redacted tail and the names, never the values, of the secret-named variables that were passed. The chat shows a row for the push; a stopped push names the hook and expands to the tail.
+- The agent's own `git push origin <branch>` is still allowed by the gate under the same authorization and is the path when Spark tools are not in the session; its hooks get the agent's environment.
+
+### Threat model
+
+A hook is code from the repository, and the agent can edit the repository. Whatever a hook is given, a hostile or careless hook can send elsewhere or write to disk in a form the output redaction does not recognise (encoded, split, or written to a file the agent then reads). The limits that hold:
+
+- The hook gets what the user's own terminal already gives it: nothing is added beyond the login shell, and Spark's own secrets are never in it.
+- Only an authorized publish of the chat's own branch to the repository's configured remote runs this way; an agent cannot use `spark_push` to run a command of its choosing with the environment.
+- A folder the user marked **Not trusted** in Settings → Projects (`project_trust.trusted = false`) gets the login-shell environment without secret-named variables, and a failed push says so. A folder with no decision gets them, like the terminal; trust is asked only for folders that carry hooks, allow rules or MCP servers for agents, so requiring it would break every other project.
+- Edits to git hooks and git config ask with hold-to-confirm in every mode; edits to files a hook calls (a package script, `.husky/pre-push`) are ordinary edits and are the residual risk in modes that do not ask.
+- Stripping secret-named variables from the agent's shell is a guard against casual disclosure (`env`, `printenv`, a logged command line), not a sandbox: a command that starts the user's login shell re-reads the same profile files the terminal does.
+
+### Spark's token and hook code
+
+On the token route the old `GIT_ASKPASS` script printed `$SPARK_GIT_TOKEN`, which every child of `git`, the hook included, inherited. A push now uses `withOneShotToken`: the token sits in a 0600 file next to the script in a private temp directory, the script prints it for the first password prompt and deletes the file, and the directory is removed when the push ends. `git` asks before it runs `pre-push` (it needs the remote's refs first), so the hook starts with nothing to read. What remains: a process of the same user can read the file in the moment before git asks; a host that lets `git` list refs without signing in would run the hook first; and a hook that itself needs GitHub credentials over HTTPS (Git LFS) gets none on this route, so such repositories need the user's own git login. Clone (`withTokenAccess`) keeps the environment variable: a fresh clone has no repository hooks, and a clone can ask more than once.
 
 ## Limits
 

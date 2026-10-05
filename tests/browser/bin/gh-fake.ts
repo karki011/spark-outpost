@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -56,6 +57,31 @@ async function api() {
   if (!response.ok) fail(`gh: ${response.statusText} (HTTP ${response.status})`);
 }
 
+function git(...gitArgs: string[]): string {
+  return execFileSync('git', gitArgs, { encoding: 'utf8' }).trim();
+}
+
+async function createPullRequest() {
+  if (!login) fail('To get started with GitHub CLI, please run:  gh auth login', 4);
+  const base = process.env.FAKE_GH_API ?? fail('fake gh: FAKE_GH_API is not set');
+  const slug = /[/:]([^/:]+\/[^/]+?)(?:\.git)?$/.exec(git('remote', 'get-url', 'origin'))?.[1];
+  if (!slug) fail('fake gh: origin is not a GitHub remote');
+  const response = await fetch(`${base}/repos/${slug}/pulls`, {
+    method: 'POST',
+    headers: { 'x-fake-gh': login, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      title: option('--title') ?? 'Untitled',
+      body: option('--body') ?? '',
+      head: option('--head') ?? git('rev-parse', '--abbrev-ref', 'HEAD'),
+      base: option('--base') ?? 'main',
+      draft: args.includes('--draft'),
+    }),
+  });
+  const created = (await response.json()) as { html_url?: string; message?: string };
+  if (!response.ok || !created.html_url) fail(`gh: ${created.message ?? response.statusText}`);
+  process.stdout.write(`${created.html_url}\n`);
+}
+
 const [command, subcommand] = args;
 if (command === '--version') {
   process.stdout.write('gh version 2.80.0 (2026-09-01)\n');
@@ -66,6 +92,8 @@ if (command === '--version') {
   );
 } else if (command === 'api') {
   await api();
+} else if (command === 'pr' && subcommand === 'create') {
+  await createPullRequest();
 } else {
   fail(`fake gh does not support: ${args.join(' ')}`, 2);
 }

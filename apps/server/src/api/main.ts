@@ -16,6 +16,9 @@ import { loginShellSpawner } from '../terminal/pty.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
+import { shellWatchers } from '../terminal/shell-watchers.ts';
+import { pullRequestScan } from '../terminal/pull-request-scan.ts';
+import { terminalPullTracker } from '../pr-tracking/terminal.ts';
 import { forgetAllShells } from '../persistence/terminal-shells.ts';
 import { stopAllPreviewRows } from '../persistence/preview-servers.ts';
 import { previewRuntime } from '../preview/process.ts';
@@ -54,11 +57,6 @@ const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
 ensureSpawnHelperExecutable();
 await forgetAllShells(db, workspaceId);
-const terminals = new TerminalSessions(
-  loginShellSpawner(),
-  defaultLimits,
-  shellRegistry(db, workspaceId),
-);
 await stopAllPreviewRows(db, workspaceId);
 const previews = new PreviewServers(db, workspaceId, previewRuntime());
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
@@ -107,6 +105,17 @@ const cloneDeps = {
       : null,
   reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
 };
+const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
+const terminals = new TerminalSessions(
+  loginShellSpawner(),
+  defaultLimits,
+  shellWatchers(
+    shellRegistry(db, workspaceId),
+    pullRequestScan(
+      terminalPullTracker(gitHubDepsOf({ ...githubDeps, githubApiUrl: config.GITHUB_API_URL })),
+    ),
+  ),
+);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const app = createApp({
@@ -157,7 +166,6 @@ const app = createApp({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
-const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
 const morningBrief = config.MORNING_BRIEF
   ? startMorningBrief(db, workspaceId, () =>
       loadInbox({

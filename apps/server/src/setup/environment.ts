@@ -18,3 +18,25 @@ export function childEnvironment(env: NodeJS.ProcessEnv): Record<string, string>
   }
   return clean;
 }
+
+const HIDDEN_VALUE_MIN_LENGTH = 6;
+export const HIDDEN_VALUE = '[hidden]';
+
+export function secretNamed(env: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).filter(([name]) => isSecretEnvName(name)));
+}
+
+export function withoutSecretNamed(env: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).filter(([name]) => !isSecretEnvName(name)));
+}
+
+export function hiddenValues(env: Readonly<Record<string, string>>): string[] {
+  const values = Object.values(secretNamed(env)).filter(
+    (value) => value.length >= HIDDEN_VALUE_MIN_LENGTH,
+  );
+  return [...new Set(values)].sort((a, b) => b.length - a.length);
+}
+
+export function withoutValues(text: string, values: readonly string[]): string {
+  return values.reduce((shown, value) => shown.replaceAll(value, HIDDEN_VALUE), text);
+}

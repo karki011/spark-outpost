@@ -68,7 +68,7 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
 
 Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept when checks pass, Critic findings are fixed in a loop, risky work runs in a worktree copy, Revert is always there. "Build this plan?" (Build, Edit, Stop) waits for the user in any agent mode, without auto-continue; after Build the rest runs alone.
 
-Full auto → PR (default for new chats): the same in a worktree copy, but a plan builds after a countdown (auto-continue seconds, else 30 s); then Ship pushes the task branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask. With no project, git repository, GitHub remote or GitHub connection it keeps the change like Automatic and ends with one line, "No pull request: …".
+Full auto → PR (default for new chats): the same in a worktree copy, but a plan builds after a countdown (auto-continue seconds, else 30 s); then the agent pushes the branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask. With no project, git repository, GitHub remote or GitHub connection it keeps the change like Automatic and ends with one line, "No pull request: …".
 
 The safety floor holds at every level.`,
   },
@@ -161,15 +161,15 @@ A Critic review — from a different provider when one is connected — runs for
     id: 'ship',
     title: 'Ship: commit, push, open a PR',
     keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
-    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a Full auto PR whose checks still fail is always a draft marked "Checks failing". Ship never merges anything — that stays your decision. It refuses to push a branch that carries Spark's own internal snapshot commits, and only pushes its own single-level spark/<slug>-<id> branches, never a raw worktree branch.
+    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a Full auto PR whose checks still fail is always a draft marked "Checks failing". Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
 
-In a chat worktree, the keep card offers "Bring changes into <your branch>", "Open PR" (Ship), or leaving the work on the chat's own branch. At Full auto → PR, Ship runs automatically after an auto-decided keep: it opens a PR when GitHub is connected, otherwise pushes, or commits only when there's no remote — and the result always includes the link.`,
+In a chat worktree, the keep card offers "Bring changes into <your branch>", "Open PR" (Ship), or leaving the work on the chat's own branch. At Full auto → PR, or when you ask for a PR, the agent publishes in one publish turn after the checks: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark checks GitHub and gives the link, or says no PR was opened.`,
   },
   {
     id: 'pr-follow-up',
     title: 'PR follow-up: Spark handles checks and review feedback',
     keywords: ['follow up', 'review comments', 'failing checks', 'reply', 'copilot', 'coderabbit'],
-    text: `After Spark opens a PR from a chat it watches it until merged or closed: failing checks, review comments, reviews and PR comments, bots included. Jev triages each item (rules without Jev): fix, question, needs you, nit, already addressed, information. Spark acts only on failing checks and comments from people with write access; others are shown, never acted on, and disagreements go to you. A Builder fixes everything in one round in the chat's worktree; the push and replies ("Fixed in <sha>: …") need one confirm card in Automatic, none in Full auto. Never force-pushes, merges, approves, resolves threads or dismisses reviews; 3 rounds per PR. Tools: spark_pr_follow_up, spark_pr_follow_up_round.`,
+    text: `After Spark opens a PR from a chat it watches it until merged or closed: failing checks, review comments, reviews and PR comments, bots included. Jev triages each item (rules without Jev): fix, question, needs you, nit, already addressed, information. Spark acts only on failing checks and comments from people with write access; others are shown, never acted on, and disagreements go to you. One round in the chat: the agent fixes what is right, pushes back with a reason, and pushes the fix at every level; Spark replies ("Fixed in <sha>: …"). Ask before pushing and replying restores the confirm card. Never force-pushes, merges, approves, resolves threads or dismisses reviews; 3 rounds per PR. Tools: spark_pr_follow_up, spark_pr_follow_up_round.`,
   },
   {
     id: 'tickets',

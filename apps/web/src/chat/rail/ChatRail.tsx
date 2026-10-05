@@ -21,7 +21,8 @@ import { permissionState } from '../composer/mode-summary.ts';
 import { requestProjectMenu } from '../project/project-menu-request.ts';
 import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
-import { prFollowUpApi, prWatchesKey } from '../pull-request/pr-follow-up-api.ts';
+import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
+import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailOutline } from './RailOutline.tsx';
 import { RailSummary } from './RailSummary.tsx';
@@ -96,14 +97,11 @@ function OpenRail({
     queryFn: () => diffApi.summary(taskId ?? ''),
     enabled: taskId !== null,
   });
-  const watches = useQuery({
-    queryKey: prWatchesKey(conversationId),
-    queryFn: () => prFollowUpApi.get(conversationId),
-  });
+  const watches = useQuery(prWatchesQuery(conversationId));
   const workspace = useChatWorkspace(conversationId, Boolean(detail.conversation.branch));
 
   const list = watches.data?.watches ?? [];
-  const watch = list.find((entry) => entry.phase !== 'done') ?? list[0] ?? null;
+  const watch = primaryPull(list);
   const branch = workspace.data?.current ?? null;
   const reading = latestContext(detail.runs, settings.provider);
   const model = currentModel(settings, capabilities.data);
@@ -116,6 +114,7 @@ function OpenRail({
     autonomy,
     changes: changes.data ?? null,
     watch,
+    pulls: list.length,
     usage: detail.usageTotals,
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,

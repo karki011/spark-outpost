@@ -1,8 +1,10 @@
 import { z } from 'zod';
-import type { PrChecks } from '@spark-outpost/contracts';
+import type { PrChecks, PrFailingCheck, PrReview } from '@spark-outpost/contracts';
 import type { NewFeedback } from '../persistence/pr-watches.ts';
 import { repoPath, type GitHubConnection, type RepoRef } from '../ship/github/connection.ts';
-import { ciStatus, GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
+import { checkRunsState, failedCheckRuns } from '../ship/github/check-runs.ts';
+import { GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
+import { reviewVerdict } from '../tickets/pull-status.ts';
 
 export const SPARK_REPLY_MARKER = '<!-- spark-outpost:follow-up -->';
 export const MAX_BODY_CHARS = 4_000;
@@ -17,7 +19,11 @@ const pullSchema = z.object({
   draft: z.boolean().optional(),
   merged: z.boolean().optional(),
   merged_at: z.string().nullable().optional(),
-  head: z.object({ sha: z.string().min(1) }),
+  title: z.string().optional(),
+  user: loginSchema.optional(),
+  created_at: z.string().optional(),
+  head: z.object({ sha: z.string().min(1), ref: z.string().optional() }),
+  base: z.object({ ref: z.string().optional() }).optional(),
 });
 
 const checkRunSchema = z.object({
@@ -70,11 +76,15 @@ export interface PullFacts {
   state: 'open' | 'merged' | 'closed';
   draft: boolean;
   headSha: string;
+  title: string | null;
+  head: string | null;
+  base: string | null;
+  author: string | null;
+  createdAt: string | null;
 }
 
 export type Gathered = Omit<NewFeedback, 'trusted'>;
 
-const FAILED = new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure']);
 const login = (user: z.infer<typeof loginSchema>) => user?.login ?? 'ghost';
 const capped = (text: string) =>
   text.length > MAX_BODY_CHARS ? `${text.slice(0, MAX_BODY_CHARS - 1)}…` : text;
@@ -94,6 +104,11 @@ export async function readPullFacts(
     state: merged ? 'merged' : pull.state,
     draft: pull.draft ?? false,
     headSha: pull.head.sha,
+    title: pull.title ?? null,
+    head: pull.head.ref ?? null,
+    base: pull.base?.ref ?? null,
+    author: pull.user?.login ?? null,
+    createdAt: pull.created_at ?? null,
   };
 }
 
@@ -133,7 +148,7 @@ async function annotations(connection: GitHubConnection, repo: RepoRef, id: numb
 async function checkExcerpt(
   connection: GitHubConnection,
   repo: RepoRef,
-  run: z.infer<typeof checkRunSchema>,
+  run: CheckRun,
 ): Promise<string> {
   const lines = [
     `Check "${run.name}" ended with ${run.conclusion}.`,
@@ -144,19 +159,55 @@ async function checkExcerpt(
   return capped(lines.filter((line) => line.trim()).join('\n'));
 }
 
-export async function readChecks(
+type CheckRun = z.infer<typeof checkRunSchema>;
+
+export interface CheckSummary {
+  state: PrChecks;
+  failingChecks: PrFailingCheck[];
+}
+
+export const MAX_FAILING_NAMES = 20;
+
+function failingNames(runs: readonly CheckRun[]): PrFailingCheck[] {
+  const byName = new Map<string, PrFailingCheck>();
+  for (const run of runs) {
+    if (!byName.has(run.name)) byName.set(run.name, { name: run.name, url: run.html_url ?? null });
+  }
+  return [...byName.values()].slice(0, MAX_FAILING_NAMES);
+}
+
+async function failedRuns(
   connection: GitHubConnection,
   repo: RepoRef,
   headSha: string,
-): Promise<{ state: PrChecks; failing: Gathered[] }> {
+): Promise<CheckSummary & { failed: CheckRun[] }> {
   const { check_runs: runs } = await connection.get(
     `${repoPath(repo)}/commits/${encodeURIComponent(headSha)}/check-runs?per_page=${GITHUB_PAGE_SIZE}`,
     checkRunsSchema,
     'reading the checks',
   );
-  const failingRuns = runs.filter((run) => run.conclusion && FAILED.has(run.conclusion));
+  const state = checkRunsState(runs);
+  const failed = state === 'failing' ? failedCheckRuns(runs) : [];
+  return { state, failingChecks: failingNames(failed), failed };
+}
+
+export async function readCheckSummary(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  headSha: string,
+): Promise<CheckSummary> {
+  const { state, failingChecks } = await failedRuns(connection, repo, headSha);
+  return { state, failingChecks };
+}
+
+export async function readChecks(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  headSha: string,
+): Promise<CheckSummary & { failing: Gathered[] }> {
+  const { state, failingChecks, failed } = await failedRuns(connection, repo, headSha);
   const failing: Gathered[] = [];
-  for (const run of failingRuns.slice(0, MAX_FAILING_CHECKS)) {
+  for (const run of failed.slice(0, MAX_FAILING_CHECKS)) {
     failing.push({
       sourceKey: `check:${run.name}:${headSha}`,
       kind: 'check',
@@ -168,16 +219,37 @@ export async function readChecks(
       url: run.html_url ?? null,
     });
   }
-  return { state: ciStatus(runs).state, failing };
+  return { state, failingChecks, failing };
 }
 
+const verdictSchema = z.object({ user: loginSchema, state: z.string() });
+
 const fromSpark = (body: string) => body.includes(SPARK_REPLY_MARKER);
+
+export async function readReview(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  number: number,
+): Promise<PrReview> {
+  const reviews = await connection.get(
+    `${repoPath(repo)}/pulls/${number}/reviews?per_page=${GITHUB_PAGE_SIZE}`,
+    z.array(verdictSchema),
+    'reading reviews',
+  );
+  return verdictOf(reviews);
+}
+
+function verdictOf(reviews: readonly z.infer<typeof verdictSchema>[]): PrReview {
+  return reviewVerdict(
+    reviews.map((review) => ({ user: login(review.user), state: review.state })),
+  );
+}
 
 export async function readComments(
   connection: GitHubConnection,
   repo: RepoRef,
   number: number,
-): Promise<Gathered[]> {
+): Promise<{ gathered: Gathered[]; review: PrReview }> {
   const pull = `${repoPath(repo)}/pulls/${number}`;
   const [inline, reviews, issue] = await Promise.all([
     pages(connection, `${pull}/comments`, reviewCommentSchema, 'reading review comments'),
@@ -232,5 +304,5 @@ export async function readComments(
       url: comment.html_url ?? null,
     });
   }
-  return gathered;
+  return { gathered, review: verdictOf(reviews) };
 }

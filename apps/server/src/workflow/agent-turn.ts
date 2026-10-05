@@ -29,7 +29,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
-import { publishGrant, startBasis, withPublishNote } from './publish-context.ts';
+import { publishGrant, publishScope, startBasis, withPublishNote } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
 import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { createSpendMeter } from './spend-meter.ts';
@@ -401,6 +401,7 @@ export async function runAgentTurn(
         runId: lease.runId,
         ...(input.assistant ? { readOnly: true } : {}),
         observations,
+        publish: await publishScope(deps.db, input),
         actions: {
           append,
           waiters: deps.approvalWaiters ?? new ApprovalWaiters(),

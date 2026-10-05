@@ -8,19 +8,23 @@ const OPEN_AS_CHOICES = [
 ];
 
 const FOLLOW_UP_INFO = {
-  lead: 'After Spark opens a PR from a chat, it watches checks and reviews until the PR is merged or closed.',
+  lead: 'After a chat opens a PR, Spark watches its checks and reviews until the PR is merged or closed, and asks the chat to handle what comes in.',
   items: [
     {
       label: 'Acts on',
       text: 'Failing checks and comments from people who can write to the repo. Anyone else is shown to you, never acted on.',
     },
     {
+      label: 'The agent decides',
+      text: 'It fixes what is right, pushes back with a reason on what is not, and leaves scope changes and repeated requests to you.',
+    },
+    {
       label: 'Pushes and replies',
-      text: 'One confirm card in Automatic; by itself in Full auto.',
+      text: 'By itself, to the PR’s own branch, at every autonomy level. Turn on Ask before pushing and replying for one confirm card instead.',
     },
     {
       label: 'Never',
-      text: 'Force-pushes, merges, approves, resolves threads or dismisses reviews. Disagreements go to you; 3 rounds per PR at most.',
+      text: 'Force-pushes, merges, approves, resolves threads or dismisses reviews. 3 rounds per PR at most, and it stops when CI fails the same way twice.',
     },
   ],
 };
@@ -53,10 +57,18 @@ export function PrFollowUpSettings({ profile }: { profile: Profile }) {
         doc={{ page: 'pr-follow-up' }}
         hint={(on) =>
           on
-            ? 'Spark fixes failing checks and review feedback, then pushes and replies.'
+            ? 'The chat fixes failing checks and handles review feedback, then pushes and replies.'
             : 'Spark leaves PRs alone after it opens them.'
         }
         toUpdate={(value) => ({ prFollowUp: value })}
+      />
+      <ProfileSwitchSetting
+        enabled={profile.prFollowUpAsk}
+        disabled={off}
+        label="Ask before pushing and replying"
+        info="Off: the agent pushes its fix to the PR’s branch and Spark replies on the threads. On: the fix waits in the chat and one card asks before anything leaves your computer."
+        hint={(on) => (on ? 'One confirm card per round.' : 'Fixes are pushed without a card.')}
+        toUpdate={(value) => ({ prFollowUpAsk: value })}
       />
       <ProfileSwitchSetting
         enabled={profile.prFollowUpChecks}

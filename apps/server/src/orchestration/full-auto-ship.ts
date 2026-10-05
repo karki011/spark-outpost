@@ -16,6 +16,12 @@ import { memorySecretStore } from '../setup/secrets.ts';
 import { planShip, type ShipDeps, type ShipOptions, type ShipPlan } from '../ship/prepare.ts';
 import { shipPiece, shipTask } from '../ship/service.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import {
+  agentPublishPlan,
+  NO_OWN_BRANCH_LINE,
+  publishAsked,
+  publishByAgent,
+} from './agent-publish.ts';
 import { checkBudget } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
@@ -123,6 +129,20 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   return { type: 'shipped' };
 }
 
+export async function publishWhenAsked(s: Session): Promise<void> {
+  if (!publishAsked(s)) return;
+  const followUp = s.input.followUpRound === true;
+  const plan = await agentPublishPlan(s);
+  if (!plan) {
+    s.shipLine = followUp ? null : NO_OWN_BRANCH_LINE;
+    return;
+  }
+  const failing = checksFailing(s);
+  const titlePrefix = failing ? `[${CHECKS_FAILING_NOTE}]` : null;
+  const facts = { failing, titlePrefix, notes: [], ...(followUp ? { followUp } : {}) };
+  s.shipLine = await publishByAgent(s, shipDeps(s), plan, facts);
+}
+
 export function shipFailureLine(error: unknown): string {
   const reason = error instanceof Error ? error.message : String(error);
   return `Full auto → PR kept the change but could not ship it: ${reason}`;
@@ -159,6 +179,11 @@ async function ship(s: Session, failing: boolean, separate: readonly TaskPiece[]
     ...(s.prNotes ?? []),
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);
+  const plan = separate.length === 0 ? await agentPublishPlan(s) : null;
+  if (plan) {
+    const titlePrefix = failing ? `[${CHECKS_FAILING_NOTE}]` : null;
+    return publishByAgent(s, deps, plan, { failing, titlePrefix, notes });
+  }
   const pieceLines = await shipPieces(s, deps, separate, { duringRun: true, notes });
   const exclude = separate.flatMap((piece) => piece.filesChanged);
   const options = {

@@ -7,4 +7,13 @@ export const prWatchesKey = (conversationId: string) =>
 export const prFollowUpApi = {
   get: (conversationId: string): Promise<PrWatchList> =>
     request(prWatchListSchema, `/conversations/${conversationId}/pull-requests`),
+  refresh: (conversationId: string): Promise<PrWatchList> =>
+    request(prWatchListSchema, `/conversations/${conversationId}/pull-requests/refresh`, {
+      method: 'POST',
+    }),
 };
+
+export const prWatchesQuery = (conversationId: string) => ({
+  queryKey: prWatchesKey(conversationId),
+  queryFn: () => prFollowUpApi.get(conversationId),
+});

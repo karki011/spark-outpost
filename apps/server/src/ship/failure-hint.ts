@@ -23,6 +23,24 @@ function stoppedByHook(error: unknown): error is ShipGitError {
   );
 }
 
+const HOOK_RUNNERS = ['husky', 'lefthook'] as const;
+const REMOTE_HOOK = /pre-receive hook declined/i;
+
+export interface PushFailureDetail {
+  hook: string;
+  output: string;
+}
+
+export function pushFailureDetail(error: unknown): PushFailureDetail | null {
+  if (!(error instanceof ShipGitError)) return null;
+  if (REMOTE_HOOK.test(error.output) || REMOTE_HOOK.test(error.message)) {
+    return { hook: 'pre-receive (on the remote)', output: error.output };
+  }
+  if (!stoppedByHook(error)) return null;
+  const runner = HOOK_RUNNERS.find((name) => new RegExp(`\\b${name}\\b`, 'i').test(error.output));
+  return { hook: runner ? `pre-push (${runner})` : 'pre-push', output: error.output };
+}
+
 export function shipFailureMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (stoppedByHook(error)) {

@@ -205,13 +205,6 @@ export async function gitHubStatus(deps: GitHubDeps): Promise<GitHubConnectionSt
   };
 }
 
-export async function gitHubConnected(deps: GitHubDeps): Promise<boolean> {
-  if ((await savedToken(deps)) !== null) return true;
-  if ((await signedInApp(deps)) !== null && (await appTokensSaved(deps))) return true;
-  const cli = await ghCli(deps, DEFAULT_GITHUB_HOST);
-  return Boolean(cli?.login);
-}
-
 export async function recheckAppRepos(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
   if (await signedInApp(deps)) {
     await saveAppRepos(deps.db, deps.workspaceId, await reachableRepos(appApiRequest(deps)));

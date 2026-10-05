@@ -43,6 +43,7 @@ The agent proposes, and Spark does it.
 | Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
 | Post to an allowed Slack channel or thread  | `spark_slack_post`                                                                                      |
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
+| Push the chat's branch, open its PR         | `spark_push`, `spark_pull_request` (no card)                                                            |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |

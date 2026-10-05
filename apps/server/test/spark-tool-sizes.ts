@@ -9,12 +9,19 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   slack: false,
   pull_requests: false,
   project: false,
+  publish: false,
+  pull_request_create: false,
   browser: false,
 };
 
 export const SESSION_CASES = {
   'plain chat, nothing connected': NOTHING_AVAILABLE,
-  'linked project, GitHub connected': { ...NOTHING_AVAILABLE, project: true, pull_requests: true },
+  'linked project, GitHub connected': {
+    ...NOTHING_AVAILABLE,
+    project: true,
+    publish: true,
+    pull_requests: true,
+  },
   'everything connected, Browser pane': EVERYTHING_AVAILABLE,
 } satisfies Record<string, SparkAvailability>;
 

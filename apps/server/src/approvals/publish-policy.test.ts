@@ -109,12 +109,33 @@ describe('publishVerdict() leaves Manual runs without a request to the old rules
   });
 });
 
+const FOLLOW_UP: PublishGrant = {
+  level: 'hands-off',
+  requested: false,
+  followUp: { workspaceId: 'w', conversationId: 'c' },
+};
+
+describe('publishVerdict() for a follow-up round on the chat’s own open pull request', () => {
+  it('allows pushing the chat’s own branch at Automatic in an asking mode', () => {
+    expect(publishVerdict(`git push origin ${BRANCH}`, 'asks', context(FOLLOW_UP))).toEqual({
+      kind: 'allow',
+      basis: 'follow_up',
+    });
+  });
+
+  it('gives nothing once the round is not tied to an open pull request', () => {
+    const lapsed = { ...FOLLOW_UP, followUp: null };
+    expect(publishVerdict(`git push origin ${BRANCH}`, 'asks', context(lapsed))).toBeNull();
+  });
+});
+
 describe('publishVerdict() keeps the rails in every permitted mode', () => {
   const permitted: [ModePosture, PublishGrant][] = [
     ['full_access', MANUAL],
     ['auto', MANUAL],
     ['asks', { level: 'full-auto', requested: false }],
     ['asks', { level: 'hands-off', requested: true }],
+    ['asks', FOLLOW_UP],
   ];
 
   it.each([

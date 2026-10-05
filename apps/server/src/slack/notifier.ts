@@ -62,6 +62,7 @@ async function candidates(
      UNION ALL
      SELECT 'pr:' || w.id, 'pr_opened', NULL, w.url FROM pr_watches w
      WHERE w.conversation_id = $1 AND w.created_at >= $2
+       AND w.opened_via IN ('ship', 'agent')
      UNION ALL
      SELECT 'flag:' || f.id, 'flag', NULL, NULL FROM rail_flags f
      WHERE f.conversation_id = $1 AND f.status = 'open' AND f.created_at >= $2`,
