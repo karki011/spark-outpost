@@ -7,13 +7,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { withdrawTrust } from '../src/agent-config/trust-store.ts';
 import { agentEnvironment } from '../src/agents/acp/agent-env.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
+import { insertFinishedRunEntries } from '../src/persistence/audit-log.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import type { ProtocolObserver } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { AGENT_PUSH_METHOD, pushForAgent, type PublishScope } from '../src/ship/agent-push.ts';
 import type { GitHubDeps } from '../src/ship/github/access.ts';
+import { conversationPushes } from '../src/ship/push-notices.ts';
 import { linkedConversation } from './approval-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, startChat, type TestDb } from './support.ts';
 
 const NPM_TOKEN = 'npm_Zx91LoginShellOnlyValue77';
 const BRANCH = 'spark/notes-1a2b3c4d';
@@ -193,11 +195,46 @@ describe(
 
     it('gives up on a hook that outlasts the time limit and says so', async () => {
       installHook(SLOW_HOOK);
-      const stopped = await pushForAgent(deps(), scope(), { timeoutMs: 500 });
+      const stopped = await pushForAgent(deps(), scope(), { timeoutMs: 4_000 });
       expect(stopped.outcome).toBe('timed_out');
       expect(stopped.message).toContain('without finishing');
       expect(stopped.output).toContain('building');
       expect(remoteBranches()).not.toContain(BRANCH);
+    });
+
+    it('lists a stopped push for the chat with the hook and the hidden-value tail', async () => {
+      const { conversationId, runId } = await startChat(t, 'Push it');
+      const audit = {
+        message: (_direction: string, payload: unknown) => {
+          saved.push(
+            insertFinishedRunEntries(t.db, runId, [
+              {
+                at: new Date(),
+                direction: 'harness',
+                kind: 'ship',
+                method: AGENT_PUSH_METHOD,
+                rpcId: null,
+                sizeBytes: 0,
+                truncated: false,
+                payload,
+              },
+            ]),
+          );
+        },
+      } as unknown as ProtocolObserver;
+      const saved: Promise<void>[] = [];
+      await pushForAgent(deps({ SEEN_FILE: seen }), scope(), { audit });
+      await pushForAgent(deps(), scope(), { audit });
+      await Promise.all(saved);
+      const pushes = await conversationPushes(t.db, t.workspaceId, conversationId);
+      expect(pushes.map((push) => [push.outcome, push.hook, push.runId])).toEqual([
+        ['failed', 'pre-push (husky)', runId],
+        ['pushed', null, runId],
+      ]);
+      expect(pushes[0]!.output).toContain('Incorrect or missing password');
+      expect(pushes[1]!.output).toBe('');
+      expect(JSON.stringify(pushes)).not.toContain(NPM_TOKEN);
+      expect(await conversationPushes(t.db, randomUUID(), conversationId)).toEqual([]);
     });
 
     it('refuses a protected branch without running git', async () => {

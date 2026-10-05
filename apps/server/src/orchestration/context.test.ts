@@ -8,6 +8,9 @@ import {
   INCREMENT_RULE,
   MAKE_CHANGE_RULE,
   SHIP_RULE,
+  PUBLISH_LATER_RULE,
+  PUBLISH_TURN_HEADING,
+  publishTurnPrompt,
   PATCH_LIMIT,
   PLAN_FOLLOW_RULE,
   builderPrompt,
@@ -52,21 +55,52 @@ describe('context assembly', () => {
     expect(prompt).not.toContain('Architect');
   });
 
-  it('tells the Builder what publishing this run allows', () => {
+  it('tells the Builder to leave publishing to the separate publish turn', () => {
     const base = { request: 'Add a CSV export', history: [], note: null, findings: [] };
-    const asked = builderPrompt({
-      ...base,
-      publish: { basis: 'requested', branch: 'spark/csv-1a' },
-    });
-    expect(asked).not.toContain(SHIP_RULE);
-    expect(asked).toContain('The user asked for this to be pushed');
-    expect(asked).toContain('`git push origin spark/csv-1a`');
-    expect(asked).toContain('`gh pr create`');
-    expect(asked).toMatch(/Never force-push, push any other branch or the base branch/);
+    for (const basis of ['requested', 'full_auto', 'follow_up'] as const) {
+      const asked = builderPrompt({ ...base, publish: { basis, branch: 'spark/csv-1a' } });
+      expect(asked).not.toContain(SHIP_RULE);
+      expect(asked).toContain(PUBLISH_LATER_RULE);
+      expect(asked).not.toContain('gh pr create');
+    }
     const allowed = builderPrompt({ ...base, publish: { basis: 'mode', branch: 'spark/csv-1a' } });
     expect(allowed).toContain('Leave the change in the working tree unless the user asks');
     expect(allowed).toContain('`git push origin spark/csv-1a`');
+    expect(allowed).toContain('`spark_push`');
     expect(builderPrompt({ ...base, publish: null })).toContain(SHIP_RULE);
+  });
+
+  it('asks for exactly one pull request in the publish turn, with the notes Spark adds', () => {
+    const prompt = publishTurnPrompt({
+      branch: 'spark/csv-1a',
+      draft: true,
+      titlePrefix: '[Checks failing]',
+      notes: ['Checks failing', 'Jev could not verify this change'],
+    });
+    expect(prompt.startsWith(PUBLISH_TURN_HEADING)).toBe(true);
+    expect(prompt).toContain('`spark_push`');
+    expect(prompt).toContain('`git push origin spark/csv-1a`');
+    expect(prompt).toContain('`gh pr create`');
+    expect(prompt).toContain('`spark_pull_request`');
+    expect(prompt).toContain('Open exactly one pull request');
+    expect(prompt).toContain('as a draft');
+    expect(prompt).toContain('Start the pull request title with "[Checks failing]"');
+    expect(prompt).toContain('- Jev could not verify this change');
+    expect(prompt).toMatch(/Never force-push, push any other branch or the base branch/);
+    expect(prompt).toMatch(/no `--no-verify`/);
+  });
+
+  it('asks a follow-up round only to push the fix to the existing pull request', () => {
+    const prompt = publishTurnPrompt({
+      branch: 'spark/csv-1a',
+      draft: false,
+      titlePrefix: null,
+      notes: [],
+      followUp: true,
+    });
+    expect(prompt).toContain('`spark_push`');
+    expect(prompt).toContain("Don't open another pull request, reply on GitHub or resolve threads");
+    expect(prompt).not.toContain('gh pr create');
   });
 
   it('tells the Builder the user chose to apply the previous answer, and includes it', () => {

@@ -9,9 +9,15 @@ import {
   type PushTarget,
 } from './git-commands.ts';
 
+export interface FollowUpRound {
+  workspaceId: string;
+  conversationId: string;
+}
+
 export interface PublishGrant {
   level: InvolvementLevel | null;
   requested: boolean;
+  followUp?: FollowUpRound | null;
 }
 
 export interface TaskBranch {
@@ -24,7 +30,7 @@ export interface PublishContext {
   task: TaskBranch | null;
 }
 
-export type PublishBasis = 'requested' | 'full_auto' | 'mode';
+export type PublishBasis = 'requested' | 'full_auto' | 'follow_up' | 'mode';
 
 export interface PublishBrief {
   basis: PublishBasis;
@@ -52,6 +58,7 @@ const PERFORMING_POSTURES: ReadonlySet<ModePosture> = new Set(['auto', 'full_acc
 export function publishBasis(posture: ModePosture, grant: PublishGrant): PublishBasis | null {
   if (grant.requested) return 'requested';
   if (grant.level === 'full-auto') return 'full_auto';
+  if (grant.followUp) return 'follow_up';
   if (PERFORMING_POSTURES.has(posture)) return 'mode';
   return null;
 }
