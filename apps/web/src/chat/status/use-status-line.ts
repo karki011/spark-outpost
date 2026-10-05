@@ -17,7 +17,7 @@ const ENDED_WORDS: Record<TerminalRunStatus, string> = {
   succeeded: 'Done',
   failed: 'Failed',
   cancelled: 'Stopped',
-  outcome_unknown: 'Ended',
+  outcome_unknown: 'Interrupted',
 };
 
 interface StatusInput {

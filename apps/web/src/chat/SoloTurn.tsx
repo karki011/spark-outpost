@@ -59,14 +59,14 @@ const finishedStates: Record<TerminalRunStatus, TurnState> = {
   succeeded: 'done',
   failed: 'failed',
   cancelled: 'stopped',
-  outcome_unknown: 'failed',
+  outcome_unknown: 'stopped',
 };
 
 const finishedMoods: Record<TerminalRunStatus, string> = {
   succeeded: 'done',
   failed: 'hit a problem',
   cancelled: 'stopped',
-  outcome_unknown: 'outcome unknown',
+  outcome_unknown: 'interrupted',
 };
 
 interface SoloTurnProps {
@@ -142,7 +142,8 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
       ?.content;
   const text = shownText(stream, persistedText, finished);
-  const error = finished ? run.error : stream.error;
+  const interrupted = run.status === 'outcome_unknown';
+  const error = finished ? (interrupted ? null : run.error) : stream.error;
   const checkpoints = finished
     ? mergeCheckpoints(detail.orchestrations?.[run.id]?.checkpoints ?? [])
     : [];
