@@ -4,7 +4,7 @@ import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { rowPreview } from './row-preview.ts';
 import { SectionHeader } from './SectionHeader.tsx';
 import { SparkFace } from './StatusChip.tsx';
-import type { LiveTicket } from './ticket-flow.ts';
+import { rowLine, type LiveTicket } from './ticket-flow.ts';
 import {
   ageTitle,
   attentionRule,
@@ -75,7 +75,7 @@ const InboxRow = memo(function InboxRow({
       status={ticket.status}
       statusName={ticket.statusName}
       assignee={ticket.assignedTo?.name ?? null}
-      reason={entry.line}
+      reason={rowLine(entry)}
       tone={entry.tone}
       reasonIcon={entry.section === 'spark' ? <SparkFace chat={entry.chat} /> : undefined}
       more={entry.section === 'attention' ? ticket.flags.slice(1).map((flag) => flag.text) : []}
@@ -167,7 +167,7 @@ export function InboxSections(props: InboxSectionsProps) {
             />
             {open && rows.length === 0 && <EmptyScene fill>{EMPTY_TEXT[view]}</EmptyScene>}
             {open && rows.length > 0 && (
-              <ul id={listId} className="tk-rows">
+              <ul id={listId} className="tk-rows with-links">
                 {shown.map((entry) => (
                   <InboxRow
                     key={ticketId(entry.ticket)}

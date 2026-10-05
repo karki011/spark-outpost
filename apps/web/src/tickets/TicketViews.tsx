@@ -1,5 +1,6 @@
-import type { KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import type { AttentionSettings } from '@spark-outpost/contracts';
+import { ChevronIcon } from '../ui/icons.tsx';
 import { Glyph, type GlyphName } from './ticket-icons.tsx';
 import { attentionRule, type TicketView } from './ticket-model.ts';
 import { nextViewIndex, type ViewItem } from './ticket-views.ts';
@@ -23,7 +24,7 @@ const GLYPHS: Record<TicketView, GlyphName> = {
 };
 
 function itemClass(item: ViewItem): string {
-  if (item.count === 0) return 'ib-item empty';
+  if (item.count === 0) return 'ib-item zero';
   return item.id === 'attention' ? 'ib-item attn' : 'ib-item';
 }
 
@@ -34,6 +35,28 @@ function moveFocus(event: KeyboardEvent<HTMLElement>) {
   if (next === null) return;
   event.preventDefault();
   buttons[next]?.focus();
+}
+
+function AttentionRules({ settings }: { settings: AttentionSettings }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className="ib-foot">
+      <button
+        type="button"
+        className="ib-rules"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        <ChevronIcon />
+        Attention rules
+      </button>
+      <p id={id} hidden={!open}>
+        {attentionRule(settings)}
+      </p>
+    </div>
+  );
 }
 
 export function TicketViews({ items, current, settings, onView }: TicketViewsProps) {
@@ -51,14 +74,13 @@ export function TicketViews({ items, current, settings, onView }: TicketViewsPro
           onClick={() => onView(item.id)}
         >
           <Glyph name={GLYPHS[item.id]} size={15} />
-          <span className="l">{item.label}</span>
+          <span className="l" title={item.label}>
+            {item.label}
+          </span>
           <span className="n">{item.count}</span>
         </button>
       ))}
-      <div className="ib-foot">
-        <b>Attention rules</b>
-        <p>{attentionRule(settings)}</p>
-      </div>
+      <AttentionRules settings={settings} />
     </nav>
   );
 }

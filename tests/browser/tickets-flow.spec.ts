@@ -107,6 +107,7 @@ test('groups tickets by where they are in your flow, with a chip and Spark progr
     /^Up next\s*1$/,
     /^In review \/ PR open\s*1$/,
     /^Done recently\s*2$/,
+    /^Attention rules$/,
   ]);
   await expect(page.getByRole('complementary')).toHaveCount(0);
   await expect(main(page).locator('.tk-none')).toBeHidden();

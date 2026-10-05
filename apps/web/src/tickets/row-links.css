@@ -1,23 +1,19 @@
-.tk .irow.with-links {
-  --links-w: 96px;
-}
-
-.tk .irow.with-links .ir-main {
-  padding-right: 8px;
-}
-
-.tk .ir-links {
-  width: var(--links-w);
-  flex-shrink: 0;
-  display: flex;
+.tk .irow > .ir-links {
+  grid-column: 7;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 26px auto;
   align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  padding-right: 12px;
+  justify-items: start;
+  column-gap: 2px;
 }
 
-.tk .irow.with-links .ir-acts {
-  right: var(--links-w);
+.tk .irow > .ir-links:empty {
+  display: none;
+}
+
+.tk .ir-links > .irl-pr {
+  grid-column: 2;
 }
 
 .tk .irl-chat,
@@ -102,9 +98,12 @@
 }
 
 @container tk-list (max-width: 760px) {
-  .tk .ir-links {
-    align-self: flex-start;
-    padding-top: 6px;
+  .tk .irow > .ir-links {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    justify-content: end;
+    padding-right: 8px;
   }
 }
 

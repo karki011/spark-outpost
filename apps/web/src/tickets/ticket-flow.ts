@@ -90,6 +90,21 @@ export function liveTicket(ticket: InboxTicket, chats: ChatLookup): LiveTicket {
   return { ticket, section, line: ticket.reason, tone: ticket.tone, chat };
 }
 
+export function rowLine({ ticket, line }: LiveTicket): string | null {
+  if (line !== ticket.reason) return line;
+  const pull = ticket.pullRequest;
+  switch (ticket.section) {
+    case 'up_next':
+      return ticket.dueDate ? line : null;
+    case 'started':
+      return ticket.chat ? line : null;
+    case 'done':
+      return pull?.state === 'merged' ? `PR #${pull.number} merged` : null;
+    default:
+      return line;
+  }
+}
+
 export function liveTickets(
   tickets: readonly InboxTicket[],
   chats: ChatLookup,

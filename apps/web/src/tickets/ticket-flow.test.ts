@@ -7,7 +7,14 @@ import {
   type PullRequestStatus,
   type RunStatus,
 } from '@spark-outpost/contracts';
-import { askingText, chatLookup, liveTicket, liveTickets, staleChats } from './ticket-flow.ts';
+import {
+  askingText,
+  chatLookup,
+  liveTicket,
+  liveTickets,
+  rowLine,
+  staleChats,
+} from './ticket-flow.ts';
 import { countBy } from './ticket-model.ts';
 
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -200,6 +207,36 @@ describe('live ticket flow', () => {
     expect(staleChats(tickets, chats)).toBe('linear:RUN-1=running');
     expect(staleChats(tickets, chatLookup([conversation(null)]))).toBe('');
     expect(countBy(liveTickets(tickets, chats))).toMatchObject({ spark: 1, up_next: 1, done: 1 });
+  });
+});
+
+describe('what a row says about the work', () => {
+  const line = (entry: InboxTicket, chat: ConversationSummary | null = null) =>
+    rowLine(liveTicket(entry, chatLookup(chat ? [chat] : [])));
+
+  it('stays quiet when the status badge already says it', () => {
+    expect(line(ticket())).toBeNull();
+    expect(line(ticket({ section: 'started', reason: 'No chat yet' }))).toBeNull();
+    expect(line(ticket({ section: 'done', status: 'done', reason: 'Done' }))).toBeNull();
+  });
+
+  it('speaks when a due date, a chat, a pull request or a flag carries news', () => {
+    expect(line(ticket({ dueDate: '2026-10-09', reason: 'Due in 5 days' }))).toBe('Due in 5 days');
+    expect(line(ticket({ section: 'started', reason: 'Chat idle', chat: linked('idle') }))).toBe(
+      'Chat idle',
+    );
+    expect(
+      line(
+        ticket({ section: 'done', status: 'done', reason: 'Done', pullRequest: pull('merged') }),
+      ),
+    ).toBe('PR #341 merged');
+    expect(line(ticket({ section: 'attention', reason: 'Blocked', tone: 'warn' }))).toBe('Blocked');
+    expect(
+      line(
+        ticket({ section: 'started', reason: 'Chat idle', chat: linked('idle') }),
+        asking('input'),
+      ),
+    ).toBe('Answer a question');
   });
 });
 

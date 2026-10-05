@@ -24,7 +24,7 @@ export interface TicketRowProps {
   status: TicketStatus;
   statusName: string;
   assignee: string | null;
-  reason: string;
+  reason: string | null;
   tone: RowTone;
   reasonIcon?: ReactNode;
   more: string[];
@@ -61,17 +61,8 @@ function Assignee({ name }: { name: string | null }) {
 export function TicketRow(props: TicketRowProps) {
   const { action, pinned, below, links } = props;
   const preview = useTooltip(props.preview ?? '');
-  const classes = [
-    'irow',
-    action ? 'acts' : '',
-    links ? 'with-links' : '',
-    props.selected ? 'sel' : '',
-    pinned ? 'pinned' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
   return (
-    <li className={classes} data-ticket={props.id}>
+    <li className={props.selected ? 'irow sel' : 'irow'} data-ticket={props.id}>
       <button
         type="button"
         className="ir-main"
@@ -87,8 +78,12 @@ export function TicketRow(props: TicketRowProps) {
         <StatusBadge status={props.status} name={props.statusName} />
         <span className="tk-title">{props.title}</span>
         <span className="why-r">
-          {props.reasonIcon ?? <i className={TONE_CLASS[props.tone]} aria-hidden="true" />}
-          <span className="txt">{props.reason}</span>
+          {props.reason !== null && (
+            <>
+              {props.reasonIcon ?? <i className={TONE_CLASS[props.tone]} aria-hidden="true" />}
+              <span className="txt">{props.reason}</span>
+            </>
+          )}
           {props.more.length > 0 && (
             <span className="tk-more" title={props.more.join(' · ')}>
               +{props.more.length}

@@ -115,6 +115,10 @@ const server = createServer((req, res) => {
     tickets.reset();
     return send(res, 200, { ok: true });
   }
+  if (path === '/tickets-test/volume') {
+    tickets.volume();
+    return send(res, 200, { ok: true });
+  }
   if (path === '/tickets-test/deny-assign') {
     tickets.denyAssign('API');
     return send(res, 200, { ok: true });

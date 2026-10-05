@@ -10,6 +10,7 @@ summary: Recent changes you can see in the app, newest first, and what to do abo
 
 | What changed                                                                                                                                   | What to do                                                                   |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Hovering a ticket row hides nothing; **Start** shows at its end. Quiet rows say less.                                                          | See [Tickets inbox](tickets-inbox.md).                                       |
 | Settings: **Sparks** is now **Teammates**. Shorter **Models** and **Projects** lists. No version in the rail.                                  | The version is in **Settings → Updates**.                                    |
 | Share a chat with another chat: **Copy chat link**, then paste it there. The agent gets a summary.                                             | See [Share a chat](start-a-chat.md#share-a-chat-with-another-chat).          |
 | Spark Island shows the file being read or edited and each edit's change. **Large** by default; hides while Spark is focused.                   | See [Use Spark Island](desktop-companion.md#open-it).                        |
