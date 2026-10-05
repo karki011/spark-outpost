@@ -201,25 +201,25 @@ The Map builds in the worker at low priority, pauses while an agent runs, and up
     id: 'mcp-servers',
     title: 'MCP servers: user-level and repo .mcp.json',
     keywords: ['mcp', 'mcp server', 'mcp.json', 'trust'],
-    text: `Agent sessions can use MCP servers from two sources: user-level servers you add by hand in Settings → MCP servers (scoped to all chats, a project, or a single chat), and a linked repo's own .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, by name only; you fill values in Settings.
+    text: `Agent sessions can use MCP servers from two sources: servers you add in Settings → MCP servers (for all chats, a project or one chat), and a linked repo's .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, by name only; you fill values in Settings.
 
-A repo's .mcp.json, hooks, and allow rules only load after you trust that folder (a one-time "Trust this folder?" decision); trust is fingerprinted, so a changed hooks/MCP/allow-rules set asks again. Env and header secret values for MCP servers live in the OS keychain, never in the database, and are redacted in the audit log.`,
+A repo's .mcp.json, hooks, and allow rules only load after you trust that folder (a one-time "Trust this folder?" decision); trust is fingerprinted, so a changed hooks/MCP/allow-rules set asks again. Env and header secret values live in the OS keychain, never in the database, and are redacted in the audit log.`,
   },
   {
     id: 'repo-agent-config',
     title: "A repo's own agent config: instructions, skills, hooks",
     keywords: ['agents.md', 'claude.md', 'instructions', 'skills', 'hooks', 'trust', 'repo config'],
-    text: `Spark reads a linked repo's own agent setup and passes it on carefully. Instructions (CLAUDE.md, AGENTS.md, .cursorrules and similar) and skills/commands/subagents are on by default: Claude gets instructions appended to its system prompt and skills as a sanitized local plugin; Codex reads AGENTS.md itself and gets other instruction files as developer instructions.
+    text: `Spark reads a linked repo's agent setup and passes it on carefully. Instructions (CLAUDE.md, AGENTS.md, .cursorrules and similar) and skills/commands/subagents are on by default: Claude gets instructions appended to its system prompt and skills as a sanitized local plugin; Codex reads AGENTS.md itself and gets other instruction files as developer instructions.
 
-Hooks and a repo's permissions.allow rules are off until you trust the folder (or approve that exact set); some allow rules — like bare Bash or Edit, or anything touching git push/remote — are never applied even when trusted. MCP servers and "keys and traffic" env settings (like a custom ANTHROPIC_BASE_URL) are off per item until reviewed. Every switch and every trust decision is recorded in the audit log.`,
+Hooks and a repo's permissions.allow rules are off until you trust the folder (or approve that exact set); some allow rules — like bare Bash or Edit, or anything touching git push/remote — are never applied even when trusted. MCP servers and "keys and traffic" env settings (like a custom ANTHROPIC_BASE_URL) are off per item until reviewed. Every switch and trust decision is recorded in the audit log.`,
   },
   {
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Every agent session Spark launches gets a built-in MCP server named "spark", so agents can answer questions about Spark.
+    text: `Every agent session gets a built-in MCP server named "spark", so agents can answer questions about Spark.
 
-Read tools need no approval card; section spark-tools says which one answers which question.
+Read tools need no card; section spark-tools says which answers what.
 
 Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark, spark_update_spark and the spark_*_mcp_server tools. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
   },
@@ -227,9 +227,9 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue, crew messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
+    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
 Spend: spark_spend. Trends, outcomes: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview.`,
+Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins.`,
   },
   {
     id: 'compaction',
@@ -305,7 +305,7 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
     id: 'browser-pane',
     title: 'The Browser pane',
     keywords: ['browser', 'pane', 'page', 'screenshot', 'localhost', 'dev server', 'console'],
-    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere. Agents open local pages only (localhost, *.test, project files) and read an outline, text, screenshot or logs. Page content is untrusted. A site the user opened follows the agent mode. Sign-ins are kept per project (Settings → Projects). Dev server: spark_browser_preview.`,
+    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere. Agents open local pages only (localhost, *.test, project files) and read an outline, text, screenshot or logs. Page content is untrusted. A site the user opened follows the agent mode. Cookies are kept per project. Saved sign-ins (Settings → Projects): spark_browser_sign_in types a test login after a card; you never see the values. Dev server: spark_browser_preview.`,
   },
   {
     id: 'heartbeat',

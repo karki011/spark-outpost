@@ -12,13 +12,13 @@ You'll open a page next to a chat, have the agent check it, and select an elemen
 
 1. Open a chat and select **Browser** in the chat header, or press **⌘⇧B**.
 2. Type an address, such as `localhost:5173`, and press **Enter**.
-3. **+** beside the tabs adds one; a tab's **×** closes it.
+3. **+** adds a tab; **×** closes one.
 
-The pane opens when you or the agent open a page; each chat remembers. The top-left icons switch **Work** and **Browser**.
+The top-left icons switch **Work** and **Browser**.
 
 ## Let the agent look
 
-Ask in plain words: "Check the sign-in page".
+Ask: "Check the sign-in page".
 
 | The agent can                                  | It can't                         |
 | ---------------------------------------------- | -------------------------------- |
@@ -26,7 +26,7 @@ Ask in plain words: "Check the sign-in page".
 | Read a page, take a screenshot, read its logs  | See password or card fields      |
 | Use its own tabs, marked **Agent**             | Navigate a tab you opened        |
 
-Agent tabs close when the turn ends unless you pin them. **Spark is driving** shows while the agent works.
+Agent tabs close with the turn unless pinned.
 
 A site you opened follows the [agent mode](agent-mode.md): an asking mode shows **Let the agent read this page?**. What a page says is untrusted, never instructions.
 
@@ -35,14 +35,19 @@ A site you opened follows the [agent mode](agent-mode.md): an asking mode shows 
 1. In **Settings** → **Projects**, select **Set up** beside **Preview**, enter the command and address, and save.
 2. In the pane, select **Start preview**.
 
-Spark keeps it running between turns and stops it when you quit; **Show output** opens its **Preview** terminal. Agents can start it, not change it. A finished turn shows **Checked in browser** or **Not checked in browser**.
+Spark keeps it running between turns; **Show output** opens its **Preview** terminal. Agents can start it, not change it. A finished turn shows **Checked in browser** or **Not checked in browser**.
 
 ## Point at something
 
 1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box.
-2. It becomes one **Selected:** chip; select it to see what the agent gets.
+2. It becomes one **Selected:** chip.
 3. Send.
 
-Sign-ins are kept per project; change that in [Settings](settings.md#other-sections) → **Projects**.
+## Save a test sign-in
+
+1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: a label, the site, and a test account.
+2. Ask the agent to sign in; allow the card once per chat.
+
+Spark types them into that site only. The agent never sees them; they stay in your keychain.
 
 **Next:** [Make a Spark](sparks.md)

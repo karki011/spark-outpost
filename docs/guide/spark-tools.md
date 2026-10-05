@@ -6,7 +6,7 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Every agent in every chat gets Spark's own `spark_*` tools. Ask in plain words, such as "Which chats are waiting for me?" or "What did I spend today?".
+Every agent in every chat gets Spark's own `spark_*` tools. Ask in plain words, such as "Which chats are waiting for me?".
 
 ## Tools that read
 
@@ -25,6 +25,7 @@ These change nothing.
 | Your MCP servers and where each is on                      | `spark_mcp_servers`                                                                                                                         |
 | Open terminals                                             | `spark_terminals`                                                                                                                           |
 | The Browser pane's tabs, pages, screenshots, logs, preview | `spark_browser_tabs`, `spark_browser_open`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
+| Saved sign-ins, without their values                       | `spark_browser_signins`                                                                                                                     |
 | Tickets, one in full, or a search of every ticket          | `spark_tickets`                                                                                                                             |
 | A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                                               |
 | Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                                                |
@@ -43,6 +44,7 @@ The agent proposes, and Spark does it.
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+| Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
 
 An MCP server card shows the exact command, because it runs on your computer. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**. Changes apply to new agent sessions.
 
@@ -57,7 +59,7 @@ An MCP server card shows the exact command, because it runs on your computer. Ag
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
-On the card, change any field, then select the confirm button, such as **Create ticket**, or **Don't**. The agent doesn't wait: answer whenever you like. Every action goes into the audit log.
+On the card, change any field, then select the confirm button or **Don't**. The agent doesn't wait: answer whenever you like. Every action goes into the audit log.
 
 ## What the tools never return
 

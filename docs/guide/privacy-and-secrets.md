@@ -6,7 +6,7 @@ order: 522
 summary: Where your keys are stored, what leaves your computer and where it goes, and how Spark redacts secrets.
 ---
 
-Your chats, settings and code stay on your computer, and keys live in your system keychain. Only what your AI provider, Jev and connected tools need leaves it.
+Your chats, settings and code stay on your computer, and keys live in your keychain. Only what your AI provider, Jev and connected tools need leaves it.
 
 ## What leaves your computer
 
@@ -18,13 +18,13 @@ Your chats, settings and code stay on your computer, and keys live in your syste
 | **Slack**                             | Notifications, confirmed posts. Never direct message text.                               | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
-Without Jev, nothing is sent to TypeSafe.
+Without Jev, nothing goes to TypeSafe.
 
 ## Where your keys live
 
-- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider and Jev keys, and connector and MCP tokens.
+- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider and Jev keys, connector and MCP tokens, saved sign-ins.
 - Spark's database keeps a masked hint. Logs never hold keys.
-- A **Local CLI** sign-in stays in that CLI. Spark never reads or stores it.
+- A **Local CLI** sign-in stays in that CLI. Spark never reads it.
 
 See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
@@ -38,10 +38,10 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 
 - [Secret files](protected-paths.md#secret-files) and anything in `.sparkignore`. Ship leaves them out of commits too.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets and keys.
-- [Browser pane](use-the-browser.md): password and card fields. Cookies stay on this Mac.
+- [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 
-After a run reads private data, Spark asks before it [sends data out](approvals.md#sending-data-out-after-reading-secrets).
+After a run reads private data, Spark asks before [sending data out](approvals.md#sending-data-out-after-reading-secrets).
 
 ## When you reset
 
-**Settings → Reset** removes GitHub, ticket, Slack and MCP tokens. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).
+**Settings → Reset** removes GitHub, ticket, Slack and MCP tokens and saved sign-ins. **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).
