@@ -29,6 +29,7 @@ export interface TestAppOptions {
   githubSignInSleep?: AppOptions['githubSignInSleep'];
   linearApiUrl?: string;
   slackApiUrl?: string;
+  slackSignIn?: AppOptions['slackSignIn'];
   slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
   serverSpendCapUsd?: number;
@@ -85,6 +86,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     ...(options.githubSignInSleep ? { githubSignInSleep: options.githubSignInSleep } : {}),
     linearApiUrl: options.linearApiUrl,
     slackApiUrl: options.slackApiUrl,
+    slackSignIn: options.slackSignIn,
     ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,

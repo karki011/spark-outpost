@@ -7,6 +7,7 @@ import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { SlackDeps } from '../slack/connection.ts';
+import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -17,6 +18,7 @@ export interface SparkToolDeps {
   fetch: typeof fetch;
   linearApiUrl?: string | undefined;
   slackApiUrl?: string | undefined;
+  slackSignIn?: SlackSignInConfig | null | undefined;
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
   serverSpendCapUsd: number | null;
   parallelBuilders?: boolean;
@@ -64,6 +66,7 @@ export function slackDepsFor(deps: SparkToolDeps, scope: SparkScope): SlackDeps 
     secrets: deps.secrets,
     fetch: deps.fetch,
     slackApiUrl: deps.slackApiUrl,
+    signIn: deps.slackSignIn,
   };
 }
 

@@ -10,6 +10,7 @@ import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
+import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { locateCli } from '../setup/verify.ts';
 import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
@@ -50,6 +51,7 @@ const sparkDeps: SparkToolDeps = {
   fetch,
   linearApiUrl: config.LINEAR_API_URL,
   slackApiUrl: config.SLACK_API_URL,
+  slackSignIn: slackSignInConfig(config),
   github: {
     runCommand,
     apiUrl: config.GITHUB_API_URL,

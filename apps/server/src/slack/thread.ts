@@ -64,7 +64,7 @@ interface Readers {
 
 function readersFor(open: OpenSlack, place: SlackPlace): Readers {
   if (place.kind !== 'channel' && open.user) return { first: open.user, fallback: null };
-  return { first: open.bot, fallback: open.user };
+  return { first: open.main, fallback: open.user === open.main ? null : open.user };
 }
 
 async function visible<T>(readers: Readers, call: (client: SlackClient) => Promise<T>): Promise<T> {
@@ -98,7 +98,7 @@ async function authorNames(open: OpenSlack, messages: RawMessage[]): Promise<Map
   const ids = [...new Set(messages.map((message) => slackText(message.user)).filter(Boolean))];
   const names = new Map<string, string>();
   for (const id of ids.slice(0, 30)) {
-    const data = await slackCall(open.bot, 'users.info', { user: id }).catch(() => null);
+    const data = await slackCall(open.main, 'users.info', { user: id }).catch(() => null);
     const user = (data?.user ?? {}) as { real_name?: unknown; name?: unknown };
     names.set(id, slackText(user.real_name) || slackText(user.name) || id);
   }

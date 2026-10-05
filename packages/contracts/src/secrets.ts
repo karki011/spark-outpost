@@ -86,7 +86,7 @@ const TEXT_RULES: TextRule[] = [
   },
   { kind: 'github_token', pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g },
   { kind: 'github_token', pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g },
-  { kind: 'slack_token', pattern: /\bx(?:ox[abposr]|app)-[A-Za-z0-9-]{10,}/g },
+  { kind: 'slack_token', pattern: /\b(?:xoxe\.)?x(?:ox[abeposr]|app)-[A-Za-z0-9-]{10,}/g },
   { kind: 'api_key', pattern: /\bsk-[A-Za-z0-9_-]{16,}/g },
   { kind: 'api_key', pattern: /\b[rsp]k_(?:live|test)_[A-Za-z0-9]{16,}/g },
   { kind: 'api_key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g },

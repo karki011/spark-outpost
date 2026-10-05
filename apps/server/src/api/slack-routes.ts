@@ -3,14 +3,18 @@ import {
   SLACK_CHANNEL_NOT_ALLOWED,
   allowSlackChannelsRequestSchema,
   allowSlackDmsRequestSchema,
-  saveSlackConnectionRequestSchema,
+  putSlackConnectionRequestSchema,
   slackChannelIdSchema,
   slackConversationIdSchema,
   slackLinkRequestSchema,
   slackPresenceRequestSchema,
+  slackSignInCallbackRequestSchema,
+  slackSignInFlowSchema,
   startSlackRequestSchema,
+  startSlackSignInRequestSchema,
   updateSlackSettingsRequestSchema,
   type SlackNotAllowed,
+  type SlackSignInFlow,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -27,6 +31,8 @@ import {
 import { slackContextFromLink } from '../slack/context.ts';
 import { allowOneSlackDm, allowSlackDms, listSlackDms } from '../slack/direct.ts';
 import type { SlackNotifier } from '../slack/notifier.ts';
+import { createSlackSignIn } from '../slack/sign-in.ts';
+import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import { sendTestNotification } from '../slack/test-message.ts';
 import type { SlackSocket } from '../slack/socket.ts';
 import { SlackStartRefusedError, startFromSlack } from '../slack/start.ts';
@@ -46,6 +52,7 @@ export interface SlackRouteDeps {
   endpoints: ApiEndpoints;
   fixedRunProvider?: string;
   slackApiUrl?: string | undefined;
+  slackSignIn?: SlackSignInConfig | null | undefined;
   slackNotifier?: Pick<SlackNotifier, 'setFocused'>;
   slackSocket?: Pick<SlackSocket, 'state' | 'refresh'>;
 }
@@ -65,7 +72,20 @@ const USER_ERRORS = new Set([
   'not_direct_message',
   'not_allowed_token_type',
   'user_not_found',
+  'needs_own_app',
+  'bad_callback',
+  'bad_state',
+  'sign_in_refused',
+  'not_user_token',
 ]);
+
+const SIGN_IN_NOT_SET_UP = 'Signing in with Slack is not set up in this build.';
+const NO_SIGN_IN: SlackSignInFlow = slackSignInFlowSchema.parse({
+  status: 'idle',
+  authorizeUrl: null,
+  expiresAt: null,
+  message: null,
+});
 
 export function slackErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof SlackNotConnectedError || error instanceof SlackStartRefusedError) {
@@ -73,6 +93,7 @@ export function slackErrorStatus(error: unknown): { status: number; message: str
   }
   if (error instanceof SlackChannelNotAllowedError) return { status: 409, message: error.message };
   if (error instanceof SlackApiError) {
+    if (error.code === 'method_switch') return { status: 409, message: error.message };
     return { status: USER_ERRORS.has(error.code) ? 400 : 502, message: error.message };
   }
   return null;
@@ -97,7 +118,9 @@ export function slackRoutes(routeDeps: SlackRouteDeps): Router {
     secrets: routeDeps.secrets,
     fetch: routeDeps.endpoints.fetch,
     slackApiUrl: routeDeps.slackApiUrl,
+    signIn: routeDeps.slackSignIn,
   };
+  const signIn = deps.signIn ? createSlackSignIn({ ...deps, signIn: deps.signIn }) : null;
   const socketState = () => routeDeps.slackSocket?.state() ?? 'off';
   const status = () => slackStatus(deps, socketState());
   const refreshed = async () => {
@@ -111,13 +134,36 @@ export function slackRoutes(routeDeps: SlackRouteDeps): Router {
   });
 
   router.put('/slack/connection', async (req, res) => {
-    await saveSlack(deps, parseBody(saveSlackConnectionRequestSchema, req));
+    const { replace, ...tokens } = parseBody(putSlackConnectionRequestSchema, req);
+    await saveSlack(deps, tokens, { replace });
+    signIn?.cancel();
     res.json(await refreshed());
   });
 
   router.delete('/slack/connection', async (_req, res) => {
+    signIn?.cancel();
     await removeSlack(deps);
     res.json(await refreshed());
+  });
+
+  router.get('/slack/sign-in', (_req, res) => {
+    res.json(signIn?.state() ?? NO_SIGN_IN);
+  });
+
+  router.post('/slack/sign-in', async (req, res) => {
+    if (!signIn) throw new BadRequestError(SIGN_IN_NOT_SET_UP);
+    res.json(await signIn.start(parseBody(startSlackSignInRequestSchema, req)));
+  });
+
+  router.delete('/slack/sign-in', (_req, res) => {
+    res.json(signIn?.cancel() ?? NO_SIGN_IN);
+  });
+
+  router.post('/slack/sign-in/callback', async (req, res) => {
+    if (!signIn) throw new BadRequestError(SIGN_IN_NOT_SET_UP);
+    const flow = await signIn.complete(parseBody(slackSignInCallbackRequestSchema, req).url);
+    await routeDeps.slackSocket?.refresh();
+    res.json(flow);
   });
 
   router.patch('/slack/settings', async (req, res) => {

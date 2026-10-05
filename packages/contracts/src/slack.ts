@@ -34,12 +34,32 @@ export const SLACK_USER_SCOPES = {
   'mpim:history': 'Read a group direct message you allowed.',
 } as const;
 
+export const SLACK_SIGN_IN_SCOPES = {
+  'channels:history': 'Read a thread you share from a public channel.',
+  'groups:history': 'Read a thread you share from a private channel you are in.',
+  'channels:read': 'List public channels so you can pick the ones Spark may use.',
+  'groups:read': 'List your private channels in the same picker.',
+  'users:read': 'Show who wrote each message by name.',
+  'chat:write': 'Send your notifications to you and post the updates you confirm, as you.',
+  'search:read': 'Search messages for an agent, limited afterwards to channels you allowed.',
+} as const;
+
 export const SLACK_DM_SCOPES = ['im:read', 'im:history', 'mpim:read', 'mpim:history'] as const;
 export type SlackDmScope = (typeof SLACK_DM_SCOPES)[number];
 
 export function missingSlackDmScopes(granted: readonly string[] | null): SlackDmScope[] {
   return SLACK_DM_SCOPES.filter((scope) => !granted?.includes(scope));
 }
+
+export function slackSignInScopes(directMessages: boolean): string[] {
+  return [...Object.keys(SLACK_SIGN_IN_SCOPES), ...(directMessages ? SLACK_DM_SCOPES : [])];
+}
+
+export const slackMethodSchema = z.enum(['own_app', 'sign_in']);
+export type SlackMethod = z.infer<typeof slackMethodSchema>;
+
+export const slackConnectionStateSchema = z.enum(['connected', 'needs_sign_in']);
+export type SlackConnectionState = z.infer<typeof slackConnectionStateSchema>;
 
 export const SLACK_APP_SCOPES = {
   'connections:write': 'Open the Socket Mode connection, so Slack needs no public URL.',
@@ -103,6 +123,32 @@ export const saveSlackConnectionRequestSchema = z.object({
   appToken: optionalToken('xapp', 'app-level token'),
 });
 export type SaveSlackConnectionRequest = z.infer<typeof saveSlackConnectionRequestSchema>;
+
+export const putSlackConnectionRequestSchema = saveSlackConnectionRequestSchema.extend({
+  replace: z.boolean().default(false),
+});
+
+export const startSlackSignInRequestSchema = z.object({
+  directMessages: z.boolean().default(false),
+  replace: z.boolean().default(false),
+});
+export type StartSlackSignInRequest = z.infer<typeof startSlackSignInRequestSchema>;
+
+export const SLACK_AUTHORIZE_URL = 'https://slack.com/oauth/v2/authorize';
+
+export function isSlackAuthorizeUrl(raw: string): boolean {
+  return /^https:\/\/slack\.com(?:[/?#]|$)/.test(raw);
+}
+
+export const slackSignInFlowSchema = z.object({
+  status: z.enum(['idle', 'waiting', 'connected', 'failed']),
+  authorizeUrl: z.string().refine(isSlackAuthorizeUrl).nullable(),
+  expiresAt: z.string().nullable(),
+  message: z.string().nullable(),
+});
+export type SlackSignInFlow = z.infer<typeof slackSignInFlowSchema>;
+
+export const slackSignInCallbackRequestSchema = z.object({ url: z.string().min(1).max(4000) });
 
 export const slackChannelIdSchema = z.string().regex(/^[CG][A-Z0-9]{2,20}$/);
 export const slackUserIdSchema = z.string().regex(/^[UW][A-Z0-9]{2,20}$/);
@@ -246,6 +292,8 @@ export const slackCapabilitiesSchema = z.object({
 export type SlackCapabilities = z.infer<typeof slackCapabilitiesSchema>;
 
 export const slackConnectionSchema = z.object({
+  method: slackMethodSchema.default('own_app'),
+  state: slackConnectionStateSchema.default('connected'),
   team: z.string(),
   teamUrl: z.string(),
   botName: z.string(),
@@ -261,7 +309,10 @@ export const slackConnectionSchema = z.object({
 });
 export type SlackConnection = z.infer<typeof slackConnectionSchema>;
 
-export const slackStatusSchema = z.object({ connection: slackConnectionSchema.nullable() });
+export const slackStatusSchema = z.object({
+  connection: slackConnectionSchema.nullable(),
+  signInAvailable: z.boolean().default(false),
+});
 export type SlackStatus = z.infer<typeof slackStatusSchema>;
 
 export const slackTestResponseSchema = z.object({ sentTo: z.string() });
@@ -358,4 +409,33 @@ const CHAT_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 export function parseSparkChatLink(raw: string, scheme: string = SPARK_URL_SCHEME): string | null {
   if (!/^[a-z][a-z0-9-]*$/.test(scheme)) return null;
   return new RegExp(`^${scheme}://chat/(${CHAT_ID})$`).exec(raw)?.[1] ?? null;
+}
+
+export interface SlackCallback {
+  code: string | null;
+  state: string | null;
+  error: string | null;
+}
+
+const CALLBACK_VALUE = /^[A-Za-z0-9._~-]{1,512}$/;
+
+export function slackCallbackUri(scheme: string = SPARK_URL_SCHEME): string {
+  return `${scheme}://slack/callback`;
+}
+
+export function parseSlackCallbackLink(
+  raw: string,
+  scheme: string = SPARK_URL_SCHEME,
+): SlackCallback | null {
+  const base = slackCallbackUri(scheme);
+  if (raw !== base && !raw.startsWith(`${base}?`)) return null;
+  const pairs = raw
+    .slice(base.length + 1)
+    .split('&')
+    .map((pair) => pair.split('='));
+  const value = (name: string) => {
+    const found = pairs.find(([key]) => key === name)?.[1];
+    return found !== undefined && CALLBACK_VALUE.test(found) ? found : null;
+  };
+  return { code: value('code'), state: value('state'), error: value('error') };
 }

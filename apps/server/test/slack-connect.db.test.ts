@@ -204,7 +204,7 @@ describe('Slack routes', () => {
     expect(stub.slack.posted.at(-1)).toMatchObject({ channel: SLACK_ME });
 
     const gone = await request(app()).delete('/api/slack/connection').set(LOCAL_HEADERS);
-    expect(gone.body).toEqual({ connection: null });
+    expect(gone.body).toEqual({ connection: null, signInAvailable: false });
   });
 
   it('answers 400 for a rejected token and a malformed one', async () => {

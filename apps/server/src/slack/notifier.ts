@@ -7,12 +7,11 @@ import {
   settleSlackDeliveries,
   slackChatThread,
 } from '../persistence/slack.ts';
-import { openSlack, type SlackDeps } from './connection.ts';
+import { openSlack, slackNotifyTarget, type SlackDeps } from './connection.ts';
 import {
   NotifyBatcher,
   notificationText,
   notifyDecision,
-  notifyTarget,
   threadUpdateText,
   type NotifyCandidate,
   type NotifyChat,
@@ -128,7 +127,7 @@ export function startSlackNotifier(
       'resolved',
     );
     const [open, chat] = await Promise.all([openSlack(deps), chatOf(deps, conversationId)]);
-    const target = open ? notifyTarget(open.connection.memberId, open.connection.settings) : null;
+    const target = open ? slackNotifyTarget(open.connection) : null;
     const liveIds = live.map((item) => item.deliveryId);
     if (live.length === 0) return;
     if (!open || !chat || !target) {
@@ -166,6 +165,10 @@ export function startSlackNotifier(
     });
     if (!claimed) return;
     const open = await openSlack(deps);
+    if (open?.connection.method === 'sign_in') {
+      await settleSlackDeliveries(deps.db, [claimed], 'skipped', 'needs_own_app');
+      return;
+    }
     if (!open || !open.connection.settings.postUpdatesToThread) {
       await settleSlackDeliveries(deps.db, [claimed], 'skipped', 'off');
       return;
@@ -189,7 +192,7 @@ export function startSlackNotifier(
     const facts = {
       settings: connection.settings,
       focused: focused(),
-      target: notifyTarget(connection.memberId, connection.settings),
+      target: slackNotifyTarget(connection),
     };
     for (const candidate of await candidates(deps, conversationId, since)) {
       await updateThread(conversationId, candidate);

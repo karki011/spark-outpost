@@ -1,7 +1,9 @@
 import {
   slackSettingsSchema,
   type SlackAllowedChannel,
+  type SlackConnectionState,
   type SlackDm,
+  type SlackMethod,
   type SlackPlaceKind,
   type SlackSettings,
 } from '@spark-outpost/contracts';
@@ -10,6 +12,11 @@ import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
 export interface SlackConnectionRow {
+  method: SlackMethod;
+  state: SlackConnectionState;
+  generation: number;
+  accessExpiresAt: Date | null;
+  refreshExpiresAt: Date | null;
   teamId: string;
   teamName: string;
   teamUrl: string;
@@ -25,6 +32,11 @@ export interface SlackConnectionRow {
 }
 
 interface StoredSlackConnection {
+  method: SlackMethod;
+  state: SlackConnectionState;
+  generation: number;
+  access_expires_at: Date | null;
+  refresh_expires_at: Date | null;
   team_id: string;
   team_name: string;
   team_url: string;
@@ -44,6 +56,11 @@ export const DEFAULT_SLACK_SETTINGS: SlackSettings = slackSettingsSchema.parse({
 function toConnection(row: StoredSlackConnection): SlackConnectionRow {
   const settings = slackSettingsSchema.safeParse(row.settings);
   return {
+    method: row.method,
+    state: row.state,
+    generation: row.generation,
+    accessExpiresAt: row.access_expires_at,
+    refreshExpiresAt: row.refresh_expires_at,
     teamId: row.team_id,
     teamName: row.team_name,
     teamUrl: row.team_url,
@@ -95,7 +112,8 @@ export async function saveSlackConnection(
        bot_user_id = EXCLUDED.bot_user_id, bot_name = EXCLUDED.bot_name,
        member_id = COALESCE(EXCLUDED.member_id, slack_connections.member_id),
        member_name = COALESCE(EXCLUDED.member_name, slack_connections.member_name),
-       user_scopes = EXCLUDED.user_scopes,
+       user_scopes = EXCLUDED.user_scopes, method = 'own_app', state = 'connected',
+       access_expires_at = NULL, refresh_expires_at = NULL,
        problem = NULL, problem_at = NULL, validated_at = now()`,
     [
       workspaceId,
@@ -270,6 +288,7 @@ export async function replaceAllowedSlackDms(
 
 export type SlackEventAction =
   | 'connect'
+  | 'refresh'
   | 'disconnect'
   | 'settings'
   | 'channels'

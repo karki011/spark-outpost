@@ -67,10 +67,12 @@ async function propose(
     const place = await placeFor(deps, context.scope.conversationId, args);
     const channel = await requirePostablePlace(deps, open, place.channelId);
     const direct = channel.kind !== 'channel';
+    const asYou = open.connection.method === 'sign_in';
     return {
-      alwaysAsk: direct,
+      alwaysAsk: direct || asYou,
       action: {
         action: 'post_slack',
+        ...(asYou ? { asYou } : {}),
         channel: {
           id: channel.id,
           name: direct ? `${channel.name} (group message)` : channel.name,
@@ -108,7 +110,7 @@ export const slackPostTool = sparkTool({
   name: 'spark_slack_post',
   title: 'Post to Slack',
   acts: true,
-  description: `Post a short update, PR link or question to an allowed Slack channel or thread as the user's Spark app. An allowed group direct message always asks the user first; one-to-one direct messages are never posted in. Pass channel (name or id) or threadUrl (a message link, to reply in that thread); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
+  description: `Post a short update, PR link or question to an allowed Slack channel or thread. With the user's own Slack app it posts as that app; with Slack sign-in there is no bot, so it posts as the user, under their name, and always asks them first. An allowed group direct message always asks the user first; one-to-one direct messages are never posted in. Pass channel (name or id) or threadUrl (a message link, to reply in that thread); with neither, Spark uses the thread this chat started from, then the default updates channel. Plain text; mentions and links are not expanded. ${ACTION_NOTE}`,
   input: {
     channel: z.string().trim().min(1).max(120).optional(),
     threadUrl: z.string().trim().max(2000).optional(),

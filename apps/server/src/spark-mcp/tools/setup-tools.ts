@@ -92,7 +92,9 @@ function slackFacts(connection: SlackConnection | null) {
   return {
     connected: true,
     workspace: connection.team,
-    bot: connection.botName,
+    method: connection.method,
+    state: connection.state,
+    bot: connection.method === 'sign_in' ? null : connection.botName,
     notifies: connection.member?.name ?? null,
     tokens: connection.tokens,
     capabilities: connection.capabilities,

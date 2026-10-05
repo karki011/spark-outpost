@@ -4,11 +4,15 @@ import {
   SLACK_BOT_SCOPES,
   SLACK_DM_SCOPES,
   escapeSlackText,
+  isSlackAuthorizeUrl,
   missingSlackDmScopes,
+  parseSlackCallbackLink,
   parseSlackMessageUrl,
   saveSlackConnectionRequestSchema,
   slackPlaceLabel,
   slackSettingsSchema,
+  slackSignInScopes,
+  slackStatusSchema,
 } from './slack.ts';
 import { redactText } from './secrets.ts';
 
@@ -127,6 +131,50 @@ describe('Slack manifest and defaults', () => {
       quietWhenFocused: true,
       notifyChannelId: null,
       allowedUserIds: [],
+    });
+  });
+
+  it('reads a sign-in callback only on its own scheme and path', () => {
+    expect(parseSlackCallbackLink('spark-outpost://slack/callback?code=abc.123&state=s-1')).toEqual(
+      { code: 'abc.123', state: 's-1', error: null },
+    );
+    expect(
+      parseSlackCallbackLink(
+        'spark-outpost-dev://slack/callback?error=access_denied&state=s',
+        'spark-outpost-dev',
+      ),
+    ).toEqual({ code: null, state: 's', error: 'access_denied' });
+    expect(parseSlackCallbackLink('spark-outpost://slack/callback')).toEqual({
+      code: null,
+      state: null,
+      error: null,
+    });
+    expect(parseSlackCallbackLink('spark-outpost://slack/callbacks?code=a')).toBeNull();
+    expect(parseSlackCallbackLink('spark-outpost://chat/callback?code=a')).toBeNull();
+    expect(parseSlackCallbackLink('other://slack/callback?code=a')).toBeNull();
+    expect(parseSlackCallbackLink('spark-outpost://slack/callback?code=a%20b')?.code).toBeNull();
+  });
+
+  it('accepts an authorize address only on slack.com over HTTPS', () => {
+    expect(isSlackAuthorizeUrl('https://slack.com/oauth/v2/authorize?client_id=1.2')).toBe(true);
+    expect(isSlackAuthorizeUrl('http://slack.com/oauth/v2/authorize')).toBe(false);
+    expect(isSlackAuthorizeUrl('https://slack.com.evil.example/oauth')).toBe(false);
+    expect(isSlackAuthorizeUrl('https://evil.example/?https://slack.com/')).toBe(false);
+    expect(isSlackAuthorizeUrl('nope')).toBe(false);
+  });
+
+  it('asks sign-in for user scopes only, and for direct message scopes only on request', () => {
+    expect(slackSignInScopes(false).some((scope) => /^m?pim:/.test(scope))).toBe(false);
+    expect(slackSignInScopes(true)).toEqual(expect.arrayContaining([...SLACK_DM_SCOPES]));
+    for (const scope of slackSignInScopes(true)) {
+      expect(['app_mentions:read', 'commands', 'connections:write']).not.toContain(scope);
+    }
+  });
+
+  it('reads a status saved before sign-in existed as an own-app connection', () => {
+    expect(slackStatusSchema.parse({ connection: null })).toEqual({
+      connection: null,
+      signInAvailable: false,
     });
   });
 });

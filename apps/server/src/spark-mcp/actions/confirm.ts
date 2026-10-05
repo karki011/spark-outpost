@@ -3,6 +3,7 @@ import {
   SPARK_ACTION_KIND,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
+  sparkActionQuestion,
   sparkResultFinished,
   type Approval,
   type SparkAction,
@@ -49,7 +50,7 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 }
 
 function cardTitle(action: SparkAction): string {
-  const question = sparkActionLabels[action.action].question;
+  const question = sparkActionQuestion(action);
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;

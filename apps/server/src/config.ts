@@ -85,6 +85,11 @@ const configSchema = z.object({
     .default(''),
   LINEAR_API_URL: providerUrl.optional(),
   SLACK_API_URL: providerUrl.optional(),
+  SPARK_SLACK_CLIENT_ID: z
+    .string()
+    .trim()
+    .regex(/^(?:\d{1,20}\.\d{1,20})?$/)
+    .default(''),
   SPARK_LINK_SCHEME: z
     .string()
     .regex(/^[a-z][a-z0-9-]*$/)

@@ -12,6 +12,8 @@ describe('pastedSecretKinds', () => {
     ['github_pat_11ABCDEFG0123456789_abcdefghijklmnop', 'github_token'],
     ['AKIAIOSFODNN7EXAMPLE', 'aws_key'],
     ['xoxb-1234567890-0987654321-AbCdEfGhIjKl', 'slack_token'],
+    ['xoxe.xoxp-1-Mi0yLTEyMzQ1Njc4OTAtYWJjZGVm', 'slack_token'],
+    ['xoxe-1-My0xLTEyMzQ1Njc4OTAtYWJjZGVm', 'slack_token'],
     [JWT, 'jwt'],
     [
       '-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXk\n-----END OPENSSH PRIVATE KEY-----',

@@ -7,7 +7,6 @@ import type {
   SlackStatus,
   UpdateSlackSettingsRequest,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
 import {
   allowedSlackChannels,
   allowedSlackDms,
@@ -21,8 +20,17 @@ import {
   saveSlackUserScopes,
   type SlackConnectionRow,
 } from '../persistence/slack.ts';
-import { SLACK_SECRET_IDS, type SecretStore, type SlackSecretId } from '../setup/secrets.ts';
+import { SLACK_SECRET_IDS, type SlackSecretId } from '../setup/secrets.ts';
+import { notifyTarget } from './notify-plan.ts';
 import {
+  forgetSlackSignIn,
+  refreshSlackSignInToken,
+  savedSlackSignInToken,
+  slackSignInToken,
+  type SlackTokenDeps,
+} from './user-token.ts';
+import {
+  SLACK_SIGN_IN_AGAIN,
   SlackApiError,
   SlackChannelNotAllowedError,
   SlackNotConnectedError,
@@ -32,12 +40,7 @@ import {
   type SlackClient,
 } from './web-api.ts';
 
-export interface SlackDeps {
-  db: Db;
-  workspaceId: string;
-  secrets: SecretStore;
-  fetch: typeof fetch;
-  slackApiUrl?: string | undefined;
+export interface SlackDeps extends SlackTokenDeps {
   sleep?: ((ms: number) => Promise<void>) | undefined;
 }
 
@@ -60,28 +63,53 @@ export function clientFor(deps: SlackDeps, token: string, botName?: string): Sla
 
 export interface OpenSlack {
   connection: SlackConnectionRow;
-  tokens: SlackTokens;
-  bot: SlackClient;
+  tokens: Pick<SlackTokens, 'user' | 'app'>;
+  main: SlackClient;
   user: SlackClient | null;
+}
+
+async function openSignedIn(
+  deps: SlackDeps,
+  connection: SlackConnectionRow,
+): Promise<OpenSlack | null> {
+  const token = await slackSignInToken(deps, connection);
+  if (!token) return null;
+  const client: SlackClient = {
+    ...clientFor(deps, token),
+    asUser: true,
+    renew: (usedToken) => refreshSlackSignInToken(deps, usedToken),
+  };
+  return { connection, tokens: { user: token, app: null }, main: client, user: client };
 }
 
 export async function openSlack(deps: SlackDeps): Promise<OpenSlack | null> {
   const connection = await getSlackConnection(deps.db, deps.workspaceId);
   if (!connection) return null;
+  if (connection.method === 'sign_in') return openSignedIn(deps, connection);
   const tokens = await slackTokens(deps);
   if (!tokens) return null;
   return {
     connection,
     tokens,
-    bot: clientFor(deps, tokens.bot, connection.botName),
+    main: clientFor(deps, tokens.bot, connection.botName),
     user: tokens.user ? clientFor(deps, tokens.user, connection.botName) : null,
   };
 }
 
 export async function requireSlack(deps: SlackDeps): Promise<OpenSlack> {
   const open = await openSlack(deps);
-  if (!open) throw new SlackNotConnectedError();
-  return open;
+  if (open) return open;
+  const connection = await getSlackConnection(deps.db, deps.workspaceId);
+  throw new SlackNotConnectedError(
+    connection?.method === 'sign_in' ? SLACK_SIGN_IN_AGAIN : undefined,
+  );
+}
+
+export const NEEDS_OWN_APP = 'your own Slack app (Settings → Connectors → Slack)';
+
+export function slackNotifyTarget(connection: SlackConnectionRow): string | null {
+  if (connection.method === 'sign_in') return connection.memberId;
+  return notifyTarget(connection.memberId, connection.settings);
 }
 
 export async function slackUserScopes(
@@ -89,8 +117,8 @@ export async function slackUserScopes(
   connection: SlackConnectionRow,
   userToken: string | null,
 ): Promise<string[] | null> {
-  if (!userToken) return null;
   if (connection.userScopes) return connection.userScopes;
+  if (!userToken) return null;
   const scopes = await slackAnswer(clientFor(deps, userToken), 'auth.test').then(
     (answer) => answer.scopes,
     () => null,
@@ -114,20 +142,47 @@ export const DIRECT_MESSAGES_NEED_USER_TOKEN =
 export const DIRECT_MESSAGES_NEED_SCOPES =
   'Update the Slack app to allow direct messages: Settings → Connectors → Slack shows the steps.';
 
+export const DIRECT_MESSAGES_NEED_SIGN_IN =
+  'Reading direct messages needs your approval in Slack: Settings → Connectors → Slack → Allow direct messages in Slack.';
+
+export function directMessagesScopeMessage(connection: SlackConnectionRow): string {
+  return connection.method === 'sign_in'
+    ? DIRECT_MESSAGES_NEED_SIGN_IN
+    : DIRECT_MESSAGES_NEED_SCOPES;
+}
+
 function capabilities(
   connection: SlackConnectionRow,
   tokens: { user: boolean; app: boolean },
   directBlocked: boolean,
 ): SlackCapabilities {
   const { settings } = connection;
+  const usable = connection.state === 'connected';
   return {
-    readDirectMessages: settings.readDirectMessages && !directBlocked,
-    notify: connection.memberId !== null || settings.notifyChannelId !== null,
-    readThreads: true,
-    readUnjoined: tokens.user,
-    search: tokens.user,
-    post: true,
-    startFromSlack: tokens.app && settings.startFromSlack,
+    readDirectMessages: usable && settings.readDirectMessages && !directBlocked,
+    notify: usable && slackNotifyTarget(connection) !== null,
+    readThreads: usable,
+    readUnjoined: usable && tokens.user,
+    search: usable && tokens.user,
+    post: usable,
+    startFromSlack: usable && tokens.app && settings.startFromSlack,
+  };
+}
+
+type TokensPresent = NonNullable<SlackStatus['connection']>['tokens'];
+
+async function tokensPresent(
+  deps: SlackDeps,
+  connection: SlackConnectionRow,
+): Promise<{ present: TokensPresent; userToken: string | null } | null> {
+  if (connection.method === 'sign_in') {
+    return { present: { bot: false, user: true, app: false }, userToken: null };
+  }
+  const tokens = await slackTokens(deps);
+  if (!tokens) return null;
+  return {
+    present: { bot: true, user: tokens.user !== null, app: tokens.app !== null },
+    userToken: tokens.user,
   };
 }
 
@@ -135,16 +190,20 @@ export async function slackStatus(
   deps: SlackDeps,
   socket: SlackSocketState = 'off',
 ): Promise<SlackStatus> {
+  const signInAvailable = Boolean(deps.signIn);
   const connection = await getSlackConnection(deps.db, deps.workspaceId);
-  const tokens = connection ? await slackTokens(deps) : null;
-  if (!connection || !tokens) return { connection: null };
-  const present = { bot: true, user: tokens.user !== null, app: tokens.app !== null };
+  const tokens = connection ? await tokensPresent(deps, connection) : null;
+  if (!connection || !tokens) return { connection: null, signInAvailable };
+  const { present } = tokens;
   const block = directMessagesBlock(
     present.user,
-    await slackUserScopes(deps, connection, tokens.user),
+    await slackUserScopes(deps, connection, tokens.userToken),
   );
   return {
+    signInAvailable,
     connection: {
+      method: connection.method,
+      state: connection.state,
       team: connection.teamName,
       teamUrl: connection.teamUrl,
       botName: connection.botName,
@@ -167,7 +226,7 @@ export async function slackStatus(
   };
 }
 
-interface Who {
+export interface SlackWho {
   teamId: string;
   team: string;
   url: string;
@@ -177,7 +236,7 @@ interface Who {
   scopes: string[] | null;
 }
 
-async function authTest(client: SlackClient): Promise<Who> {
+export async function slackAuthTest(client: SlackClient): Promise<SlackWho> {
   const { data, scopes } = await slackAnswer(client, 'auth.test');
   return {
     scopes,
@@ -190,18 +249,18 @@ async function authTest(client: SlackClient): Promise<Who> {
   };
 }
 
-async function memberName(client: SlackClient, userId: string): Promise<string> {
+export async function slackMemberName(client: SlackClient, userId: string): Promise<string> {
   const data = await slackCall(client, 'users.info', { user: userId });
   const user = (data.user ?? {}) as { real_name?: unknown; name?: unknown };
   return slackText(user.real_name) || slackText(user.name) || userId;
 }
 
 async function validated(deps: SlackDeps, request: SaveSlackConnectionRequest) {
-  const bot = await authTest(clientFor(deps, request.botToken));
+  const bot = await slackAuthTest(clientFor(deps, request.botToken));
   if (!bot.isBot) {
     throw new SlackApiError('not_bot_token', 'That token is not a bot token (xoxb-).');
   }
-  const user = request.userToken ? await authTest(clientFor(deps, request.userToken)) : null;
+  const user = request.userToken ? await slackAuthTest(clientFor(deps, request.userToken)) : null;
   if (user && user.teamId !== bot.teamId) {
     throw new SlackApiError(
       'team_mismatch',
@@ -226,10 +285,23 @@ async function storeTokens(deps: SlackDeps, request: SaveSlackConnectionRequest)
   }
 }
 
+export const SWITCH_TO_OWN_APP =
+  'Slack is connected by sign-in. Confirm the switch to use your own Slack app instead.';
+
+async function endSignIn(deps: SlackDeps): Promise<void> {
+  const token = await savedSlackSignInToken(deps);
+  if (token) await slackCall(clientFor(deps, token), 'auth.revoke').catch(() => undefined);
+  await forgetSlackSignIn(deps);
+}
+
 export async function saveSlack(
   deps: SlackDeps,
   request: SaveSlackConnectionRequest,
+  options: { replace?: boolean } = {},
 ): Promise<SlackStatus> {
+  const before = await getSlackConnection(deps.db, deps.workspaceId);
+  const switching = before?.method === 'sign_in';
+  if (switching && !options.replace) throw new SlackApiError('method_switch', SWITCH_TO_OWN_APP);
   let who: Awaited<ReturnType<typeof validated>>;
   try {
     who = await validated(deps, request);
@@ -241,15 +313,15 @@ export async function saveSlack(
     });
     throw error;
   }
-  const before = await getSlackConnection(deps.db, deps.workspaceId);
   if (before && before.teamId !== who.bot.teamId) {
     await deleteSlackConnection(deps.db, deps.workspaceId);
   }
+  if (switching) await endSignIn(deps);
   await storeTokens(deps, request);
   const member = who.user
     ? {
         id: who.user.userId,
-        name: await memberName(clientFor(deps, request.botToken), who.user.userId).catch(
+        name: await slackMemberName(clientFor(deps, request.botToken), who.user.userId).catch(
           () => who.user!.user,
         ),
       }
@@ -268,6 +340,8 @@ export async function saveSlack(
     outcome: 'succeeded',
     detail: {
       team: who.bot.team,
+      method: 'own_app',
+      replaced: switching ? 'sign_in' : null,
       userToken: Boolean(request.userToken),
       appToken: Boolean(request.appToken),
     },
@@ -276,10 +350,11 @@ export async function saveSlack(
 }
 
 export async function removeSlack(deps: SlackDeps): Promise<SlackStatus> {
+  await endSignIn(deps);
   await deleteSlackConnection(deps.db, deps.workspaceId);
   for (const id of SLACK_SECRET_IDS) await deps.secrets.delete(id).catch(() => undefined);
   await recordSlackEvent(deps.db, deps.workspaceId, { action: 'disconnect', outcome: 'succeeded' });
-  return { connection: null };
+  return { connection: null, signInAvailable: Boolean(deps.signIn) };
 }
 
 export async function refreshSlackScopes(deps: SlackDeps): Promise<void> {
@@ -306,7 +381,9 @@ async function directMessageChoice(
     if (blockedBy) {
       throw new SlackApiError(
         'direct_messages_unavailable',
-        blockedBy === 'scopes' ? DIRECT_MESSAGES_NEED_SCOPES : DIRECT_MESSAGES_NEED_USER_TOKEN,
+        blockedBy === 'scopes'
+          ? directMessagesScopeMessage(open.connection)
+          : DIRECT_MESSAGES_NEED_USER_TOKEN,
       );
     }
   }
@@ -322,9 +399,16 @@ export async function changeSlackSettings(
 ): Promise<SlackStatus> {
   const open = await requireSlack(deps);
   const { memberId, notify, ...rest } = update;
+  const signedIn = open.connection.method === 'sign_in';
+  if (signedIn && (memberId !== undefined || Boolean(rest.notifyChannelId))) {
+    throw new SlackApiError(
+      'needs_own_app',
+      `With Slack sign-in, notifications go to you. Another member or a channel needs ${NEEDS_OWN_APP}.`,
+    );
+  }
   if (memberId !== undefined) {
     const member =
-      memberId === null ? null : { id: memberId, name: await memberName(open.bot, memberId) };
+      memberId === null ? null : { id: memberId, name: await slackMemberName(open.main, memberId) };
     await saveSlackMember(deps.db, deps.workspaceId, member);
   }
   const allowed = new Set(

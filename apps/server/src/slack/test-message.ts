@@ -1,6 +1,5 @@
 import { setSlackProblem } from '../persistence/slack.ts';
-import { requireSlack, type SlackDeps } from './connection.ts';
-import { notifyTarget } from './notify-plan.ts';
+import { requireSlack, slackNotifyTarget, type SlackDeps } from './connection.ts';
 import { sendSlackMessage } from './post.ts';
 import { SlackApiError } from './web-api.ts';
 
@@ -10,7 +9,7 @@ export const SLACK_TEST_TEXT =
 export async function sendTestNotification(deps: SlackDeps): Promise<{ sentTo: string }> {
   const open = await requireSlack(deps);
   const { connection } = open;
-  const target = notifyTarget(connection.memberId, connection.settings);
+  const target = slackNotifyTarget(connection);
   if (!target) {
     throw new SlackApiError(
       'bad_link',
@@ -19,6 +18,7 @@ export async function sendTestNotification(deps: SlackDeps): Promise<{ sentTo: s
   }
   await sendSlackMessage(deps, open, { channel: target, mrkdwn: SLACK_TEST_TEXT });
   if (connection.problem) await setSlackProblem(deps.db, deps.workspaceId, null);
+  if (connection.method === 'sign_in') return { sentTo: 'you, as a message to yourself' };
   const toChannel = target === connection.settings.notifyChannelId;
   return { sentTo: toChannel ? 'your notifications channel' : 'you, as a direct message' };
 }

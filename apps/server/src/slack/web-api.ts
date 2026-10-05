@@ -48,8 +48,13 @@ export interface SlackClient {
   apiUrl?: string | undefined;
   token: string;
   botName?: string | undefined;
+  asUser?: boolean | undefined;
+  renew?: ((usedToken: string) => Promise<string | null>) | undefined;
   sleep?: ((ms: number) => Promise<void>) | undefined;
 }
+
+export const SLACK_SIGN_IN_AGAIN =
+  'Your Slack sign-in ended. Sign in again in Settings → Connectors → Slack.';
 
 type Params = Record<string, string | number | boolean | undefined>;
 
@@ -61,16 +66,29 @@ const TOKEN_REJECTED = new Set([
   'account_inactive',
 ]);
 
-function messageFor(code: string, data: Record<string, unknown>, botName: string): string {
+function signedInMessage(code: string, needed: string): string | null {
+  if (TOKEN_REJECTED.has(code)) return SLACK_SIGN_IN_AGAIN;
+  if (code === 'missing_scope') {
+    return `Your Slack sign-in is missing a permission${needed}. Sign in again in Settings → Connectors → Slack.`;
+  }
+  if (code === 'not_in_channel' || code === 'channel_not_found') {
+    return "Slack can't find that channel for you. Join it in Slack, then try again.";
+  }
+  return null;
+}
+
+function messageFor(code: string, data: Record<string, unknown>, client: SlackClient): string {
+  const needed = typeof data.needed === 'string' ? ` (${data.needed.slice(0, 80)})` : '';
+  const signedIn = client.asUser ? signedInMessage(code, needed) : null;
+  if (signedIn) return signedIn;
   if (TOKEN_REJECTED.has(code)) {
     return 'Slack rejected this token. Check that it was copied in full and the app is still installed.';
   }
   if (code === 'missing_scope') {
-    const needed = typeof data.needed === 'string' ? ` (${data.needed.slice(0, 80)})` : '';
     return `The Slack app is missing a permission${needed}. Update the app from the manifest in Settings → Connectors → Slack and reinstall it.`;
   }
   if (code === 'not_in_channel' || code === 'channel_not_found') {
-    return `The Spark app isn't in that channel. In Slack, type /invite @${botName} in the channel, then try again.`;
+    return `The Spark app isn't in that channel. In Slack, type /invite @${client.botName ?? 'Spark'} in the channel, then try again.`;
   }
   if (code === 'thread_not_found' || code === 'message_not_found') {
     return "Slack can't find that message. It may have been deleted.";
@@ -90,12 +108,17 @@ function body(params: Params): URLSearchParams {
 
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function post(client: SlackClient, method: string, params: Params): Promise<Response> {
+async function post(
+  client: SlackClient,
+  token: string,
+  method: string,
+  params: Params,
+): Promise<Response> {
   try {
     return await client.fetch(`${client.apiUrl ?? SLACK_API_URL}/${method}`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${client.token}`,
+        authorization: `Bearer ${token}`,
         'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
       },
       body: body(params),
@@ -138,13 +161,14 @@ export async function slackAnswer(
   method: string,
   params: Params = {},
 ): Promise<SlackAnswer> {
-  const botName = client.botName ?? 'Spark';
+  let token = client.token;
+  let renewed = false;
   for (let attempt = 0; ; attempt += 1) {
-    const response = await post(client, method, params);
+    const response = await post(client, token, method, params);
     if (response.status === 429) {
       const wait = retryAfterMs(response);
       if (attempt >= RATE_LIMIT_RETRIES || wait > RATE_LIMIT_WAIT_MAX_MS) {
-        throw new SlackApiError('ratelimited', messageFor('ratelimited', {}, botName));
+        throw new SlackApiError('ratelimited', messageFor('ratelimited', {}, client));
       }
       await (client.sleep ?? pause)(wait);
       continue;
@@ -155,7 +179,15 @@ export async function slackAnswer(
     }
     if (data.ok === true) return { data, scopes: grantedScopes(response) };
     const code = typeof data.error === 'string' ? data.error : 'unknown_error';
-    throw new SlackApiError(code, messageFor(code, data, botName));
+    if (client.renew && !renewed && TOKEN_REJECTED.has(code)) {
+      renewed = true;
+      const next = await client.renew(token).catch(() => null);
+      if (next) {
+        token = next;
+        continue;
+      }
+    }
+    throw new SlackApiError(code, messageFor(code, data, client));
   }
 }
 

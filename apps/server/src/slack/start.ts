@@ -21,7 +21,7 @@ import {
 import { PLAN_FIRST_LINE } from '../tickets/request.ts';
 import { requireSlackPlace } from './access.ts';
 import { saveSlackThreadAttachment } from './context.ts';
-import { requireSlack, type OpenSlack, type SlackDeps } from './connection.ts';
+import { NEEDS_OWN_APP, requireSlack, type OpenSlack, type SlackDeps } from './connection.ts';
 import { sendSlackMessage } from './post.ts';
 import { readSlackThread, type SlackThread } from './thread.ts';
 import { SlackChannelNotAllowedError } from './web-api.ts';
@@ -95,6 +95,13 @@ async function refuse(
 async function checked(deps: SlackDeps, request: SlackStartRequest): Promise<OpenSlack> {
   const open = await requireSlack(deps);
   const fromSlack = request.source !== 'link';
+  if (fromSlack && open.connection.method === 'sign_in') {
+    return refuse(
+      deps,
+      request,
+      new SlackStartRefusedError('off', `Starting work from inside Slack needs ${NEEDS_OWN_APP}.`),
+    );
+  }
   if (fromSlack && !open.connection.settings.startFromSlack) {
     return refuse(
       deps,

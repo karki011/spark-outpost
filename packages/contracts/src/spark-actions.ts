@@ -157,6 +157,7 @@ export const readPageActionSchema = z.object({
 export type ReadPageAction = z.infer<typeof readPageActionSchema>;
 export const postSlackActionSchema = z.object({
   action: z.literal('post_slack'),
+  asYou: z.boolean().optional(),
   channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
   threadTs: z.string().nullable(),
   permalink: z.string().nullable(),
@@ -246,6 +247,13 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   read_page: { question: 'Let the agent read this page?', confirm: 'Allow for this chat' },
   post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
 };
+
+const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
+
+export function sparkActionQuestion(action: SparkAction): string {
+  if (action.action === 'post_slack' && action.asYou) return SLACK_POST_AS_YOU_QUESTION;
+  return sparkActionLabels[action.action].question;
+}
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);
 export type SparkResultState = z.infer<typeof sparkResultStateSchema>;

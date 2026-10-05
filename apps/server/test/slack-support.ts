@@ -1,9 +1,13 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { StartSlackSignInRequest } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { allowSlackChannels } from '../src/slack/channels.ts';
 import { saveSlack, type SlackDeps } from '../src/slack/connection.ts';
+import type { SlackSignInConfig } from '../src/slack/sign-in-config.ts';
+import { createSlackSignIn, type SlackSignIn } from '../src/slack/sign-in.ts';
+import { SLACK_CLIENT_ID } from './fake-slack-oauth.ts';
 import {
   SLACK_APP_TOKEN,
   SLACK_BOT_TOKEN,
@@ -76,6 +80,12 @@ export async function startSlackStub(): Promise<SlackStub> {
   };
 }
 
+export const SLACK_SIGN_IN: SlackSignInConfig = {
+  clientId: SLACK_CLIENT_ID,
+  linkScheme: 'spark-outpost-dev',
+  redirectUri: 'spark-outpost-dev://slack/callback',
+};
+
 export function slackDeps(t: TestDb, stub: SlackStub, secrets: SecretStore = memorySecretStore()) {
   return {
     db: t.db,
@@ -83,8 +93,20 @@ export function slackDeps(t: TestDb, stub: SlackStub, secrets: SecretStore = mem
     secrets,
     fetch,
     slackApiUrl: stub.apiUrl,
+    signIn: SLACK_SIGN_IN,
     sleep: () => Promise.resolve(),
   } satisfies SlackDeps;
+}
+
+export async function signInToSlack(
+  deps: SlackDeps,
+  stub: SlackStub,
+  request: Partial<StartSlackSignInRequest> = {},
+): Promise<SlackSignIn> {
+  const signIn = createSlackSignIn({ ...deps, signIn: SLACK_SIGN_IN });
+  const flow = await signIn.start({ directMessages: false, replace: false, ...request });
+  await signIn.complete(stub.slack.oauth.authorize(flow.authorizeUrl!));
+  return signIn;
 }
 
 export const ALL_SLACK_TOKENS = {
