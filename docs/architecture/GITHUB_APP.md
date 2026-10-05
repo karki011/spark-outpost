@@ -63,6 +63,7 @@ For a repository on github.com that the sign-in covers, `app` is the first choic
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Push      | The user's git login, then the app token, then a saved token (HTTPS remotes only, one-shot `GIT_ASKPASS`, username `x-access-token`). |
 | API calls | App sign-in, then saved token, then `gh`, then a compare link.                                                                        |
+| Clone     | The user's git login, then the app token, then a saved token, the same one-shot `GIT_ASKPASS` as a push. Only from **Add project**.   |
 
 Pull requests are opened as the user (user-to-server token). A repository the sign-in does not cover skips `app` entirely. `GET /api/github/connection`, the branch chip tooltip, the Settings **Test** button, `spark_connectors`, `spark_pull_requests` and `spark_pr` name the route. Credentials never enter an agent's environment: Spark itself pushes and calls the API.
 
