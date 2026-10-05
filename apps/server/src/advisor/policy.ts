@@ -40,7 +40,7 @@ export const POLICY_REVIEW_AT = 0.5;
 export const LARGE_DIFF_LINES = 400;
 export const LARGE_DIFF_FILES = 10;
 
-export const CHECK_FIXES = 2;
+export const CHECK_FIXES = 1;
 export const CRITIC_FIX_ROUNDS = 3;
 export const FIX_ROUND_TOOL_SHARE = 0.25;
 export const FIX_ROUND_MIN_TOOL_CALLS = 20;

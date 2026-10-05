@@ -1,27 +1,37 @@
-import { access, readdir, rm } from 'node:fs/promises';
+import { access, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { CONFIG_FILES, packageManager, type CheckCommand } from '../checks/detect.ts';
+import { CONFIG_FILES, TOOL_FILES, packageManager, type CheckCommand } from '../checks/detect.ts';
 import { runCheck, type CheckRun } from '../checks/run-check.ts';
+import {
+  installCommand,
+  installFailure,
+  lockfileFingerprint,
+  rememberDeps,
+} from './deps-install.ts';
 
-export type DepsMethod = 'clone' | 'copy' | 'offline_install' | 'skipped';
+export type DepsMethod = 'clone' | 'copy' | 'offline_install' | 'install' | 'skipped';
 
 export interface DepsPrep {
   method: DepsMethod;
   durationMs: number;
   note: string | null;
   folders: number;
+  lockfileMatched: boolean | null;
+  stale: boolean;
 }
 
-export type RunCommand = (argv: string[], cwd: string) => Promise<CheckRun>;
+export type RunCommand = (argv: string[], cwd: string, network?: boolean) => Promise<CheckRun>;
 
 export interface DepsOptions {
   platform?: NodeJS.Platform;
   root: string;
   signal?: AbortSignal;
   run?: RunCommand;
+  onInstall?: (command: string) => void;
 }
 
 export const DEPS_PREP_LIMIT_MS = 90_000;
+export const DEPS_INSTALL_LIMIT_MS = 300_000;
 const SEARCH_DEPTH = 3;
 const MAX_FOLDERS = 50;
 const SKIPPED_DIRS = new Set(['node_modules', '.git', '.spark', 'dist', 'build', 'coverage']);
@@ -78,12 +88,13 @@ export function offlineInstall(present: ReadonlySet<string>): string[] | null {
 }
 
 function defaultRun(options: DepsOptions): RunCommand {
-  return (argv, cwd) => {
+  return (argv, cwd, network = false) => {
     const check: CheckCommand = { kind: 'custom', command: argv.join(' '), argv };
     return runCheck(check, {
       root: options.root,
       cwd,
-      timeoutMs: DEPS_PREP_LIMIT_MS,
+      timeoutMs: network ? DEPS_INSTALL_LIMIT_MS : DEPS_PREP_LIMIT_MS,
+      registryEnv: network,
       ...(options.signal ? { signal: options.signal } : {}),
     });
   };
@@ -126,7 +137,9 @@ async function cloneFolders(
 
 async function lockfiles(project: string): Promise<Set<string>> {
   const found = await Promise.all(
-    CONFIG_FILES.map(async (file) => [file, await exists(path.join(project, file))] as const),
+    [...CONFIG_FILES, ...TOOL_FILES].map(
+      async (file) => [file, await exists(path.join(project, file))] as const,
+    ),
   );
   return new Set(found.filter(([, present]) => present).map(([file]) => file));
 }
@@ -141,12 +154,22 @@ export async function prepareDependencies(
   const platform = options.platform ?? process.platform;
   const run = options.run ?? defaultRun(options);
   const folders = await nodeModulesFolders(main);
-  const done = (method: DepsMethod, note: string | null): DepsPrep => ({
-    method,
-    durationMs: Date.now() - started,
-    note,
-    folders: method === 'clone' || method === 'copy' ? folders.length : 0,
-  });
+  const [mainLock, copyLock] = await Promise.all([
+    lockfileFingerprint(main),
+    lockfileFingerprint(copy),
+  ]);
+  const lockfileMatched = mainLock && copyLock ? mainLock === copyLock : null;
+  const done = (method: DepsMethod, note: string | null, stale = false): DepsPrep => {
+    if (copyLock) rememberDeps(copy, copyLock, stale ? note : null);
+    return {
+      method,
+      durationMs: Date.now() - started,
+      note,
+      folders: method === 'clone' || method === 'copy' ? folders.length : 0,
+      lockfileMatched,
+      stale,
+    };
+  };
   const present = await lockfiles(copy);
   const install = offlineInstall(present);
   const notes: string[] = [];
@@ -170,7 +193,17 @@ export async function prepareDependencies(
   };
   const note = () => (notes.length > 0 ? notes.join('; ') : null);
   const cloned = platform === 'darwin' ? 'clone' : 'copy';
-  if (packageManager(present) === 'pnpm' && install) {
+  const manager = packageManager(present, await readFile(path.join(copy, 'package.json'), 'utf8'));
+  if (lockfileMatched === false) {
+    if (manager === 'pnpm' && (await tryInstall())) return done('offline_install', note());
+    const seeded = manager !== 'npm' && (await tryClone());
+    const command = installCommand(manager, present, true);
+    options.onInstall?.(command.join(' '));
+    const installed = await run(command, copy, true);
+    if (succeeded(installed)) return done('install', null);
+    return done(seeded ? cloned : 'skipped', installFailure(command, installed), true);
+  }
+  if (manager === 'pnpm' && install) {
     if (await tryInstall()) return done('offline_install', note());
     if (await tryClone()) return done(cloned, note());
     return done('skipped', note());

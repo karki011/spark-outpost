@@ -30,7 +30,7 @@ Select a Spark tile to chat, right-click to edit or delete, or select **New Spar
 
 Steps show verbs and file names, never full paths or secrets. A file being read or edited shows beside them. Scout's faces: [Spark Island states](statuses-and-limits.md#spark-island-states).
 
-Select an edit, such as **Edited · invoice.ts +12 −3**, to see the change; **Open chat** jumps to that turn. A finished chat shows the reply's first sentence.
+Select an edit to see the change; **Open chat** jumps to that turn. A finished chat shows the reply's first sentence.
 
 ## Answer a card
 

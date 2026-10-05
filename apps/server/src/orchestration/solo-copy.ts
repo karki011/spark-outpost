@@ -34,7 +34,9 @@ import {
   worktreePath,
   type MergeAttempt,
 } from '../projects/worktrees.ts';
+import { planNote } from '../workflow/plan-recorder.ts';
 import { askCard, CheckpointTimeout, mergeConflictCard } from './checkpoint.ts';
+import { auditDepsPrep, depsNote, installingNote } from './deps-audit.ts';
 import { checkAndFix } from './land.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import type { Session } from './session.ts';
@@ -104,10 +106,23 @@ export function copyFor(s: Session, copies: CopyBase): NonNullable<Place['copy']
           baseCommit: copies.base,
         });
         await addWorktree(copies.root, target, branch, copies.base);
-        startDepsPrep(s.deps.db, runId, copies.root, project, {
-          root: copies.root,
-          signal: s.control.signal,
-        });
+        startDepsPrep(
+          s.deps.db,
+          runId,
+          copies.root,
+          project,
+          {
+            root: copies.root,
+            signal: s.control.signal,
+            onInstall: (command) =>
+              void planNote(s.append, installingNote(command)).catch(() => null),
+          },
+          async (prep) => {
+            await auditDepsPrep(s.deps.db, s.lease, prep, project);
+            const note = depsNote(prep);
+            if (note) await planNote(s.append, note);
+          },
+        );
       },
     };
   };

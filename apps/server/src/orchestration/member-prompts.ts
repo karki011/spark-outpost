@@ -26,7 +26,7 @@ interface GitSnapshot {
   ref: string;
 }
 
-async function gitSnapshot(s: Session): Promise<GitSnapshot | null> {
+export async function runBase(s: Session): Promise<GitSnapshot | null> {
   const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
   const snapshot = state?.snapshot;
   if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return null;
@@ -43,7 +43,7 @@ function originOf(
 }
 
 export async function changesSoFar(s: Session): Promise<ChangeSummary> {
-  const snapshot = await gitSnapshot(s);
+  const snapshot = await runBase(s);
   if (!snapshot) return { files: [], patch: '' };
   const diff = await gitDiffSince(snapshot.root, snapshot.ref).catch(() => null);
   return diff ? { files: diff.stats, patch: diff.patch } : { files: [], patch: '' };
@@ -60,7 +60,7 @@ export async function changedLines(s: Session): Promise<ChangedLines> {
 
 export async function changesForReview(s: Session): Promise<ChangeSummary> {
   const own = await changesSoFar(s);
-  const snapshot = await gitSnapshot(s);
+  const snapshot = await runBase(s);
   if (!snapshot) return own;
   const head = await headCommit(snapshot.root).catch(() => null);
   if (!head) return own;

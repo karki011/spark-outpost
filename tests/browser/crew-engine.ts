@@ -89,7 +89,7 @@ export async function linkedChat(page: Page, repo: CrewRepo): Promise<void> {
 }
 
 export async function failingCheck(page: Page, root: string): Promise<void> {
-  const command = `${process.execPath} -e 'process.exit(1)'`;
+  const command = `${process.execPath} -e 'process.exit(require("fs").readFileSync("notes.txt","utf8").includes("step")?1:0)'`;
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
     (candidate) => candidate.rootPath === root,

@@ -143,12 +143,23 @@ function updateSummary(payload: Record<string, unknown>): string | null {
   return title ? `${kind} · ${title}` : kind;
 }
 
+const CHECK_CAUSES: Record<string, string> = {
+  baseline: 'already failing before this change',
+  timeout: 'could not finish in time',
+  environment: 'could not run',
+};
+
 export function entrySummary(entry: ProtocolLogEntry): string {
   const payload = record(entry.payload) ?? {};
   if (entry.kind === 'stderr') return text(payload.text) ?? 'stderr output';
   if (entry.kind === 'check') {
-    const outcome = text(payload.outcome)?.replace('_', ' ') ?? 'ran';
-    return `${text(payload.command) ?? 'check'} · ${outcome}`;
+    const outcome = text(payload.outcome)?.replace(/_/g, ' ') ?? 'ran';
+    if (entry.method === 'deps/prepare') {
+      const lockfile = payload.lockfileMatched === false ? ' · lockfile differed' : '';
+      return `dependencies · ${text(payload.method) ?? 'prepared'}${lockfile} · ${outcome}`;
+    }
+    const cause = CHECK_CAUSES[text(payload.cause) ?? ''];
+    return `${text(payload.command) ?? 'check'} · ${cause ?? outcome}`;
   }
   if (entry.truncated) return `${entry.method ?? entry.kind} · truncated`;
   if (entry.kind === 'error') {

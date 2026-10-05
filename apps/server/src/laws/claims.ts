@@ -1,4 +1,10 @@
-import type { CheckBody, CheckResult } from '@spark-outpost/contracts';
+import {
+  checkCause,
+  failingChecks,
+  unsettledChecks,
+  type CheckBody,
+  type CheckResult,
+} from '@spark-outpost/contracts';
 import { code, type LawFinding } from './finding.ts';
 
 export interface BuilderReply {
@@ -19,19 +25,28 @@ export function claimsChecksPass(text: string): boolean {
     .some((sentence) => PASS_CLAIM.test(sentence) && !NEGATED.test(sentence));
 }
 
-function failed(result: CheckResult): boolean {
-  return result.outcome === 'failed' || result.outcome === 'timed_out';
-}
-
 function failureText(result: CheckResult): string {
-  if (result.outcome === 'timed_out') return `${code(result.command)} timed out`;
   return `${code(result.command)} exited ${result.exitCode ?? 'with an error'}`;
 }
 
+const UNCONFIRMED: Record<string, string> = {
+  baseline: 'fails, as it did before this change',
+  timeout: 'could not finish in time',
+  environment: 'could not run',
+};
+
+function unconfirmed(result: CheckResult): string {
+  return `${code(result.command)} ${UNCONFIRMED[checkCause(result) ?? ''] ?? 'was not run'}`;
+}
+
 function contradiction(reply: BuilderReply, body: CheckBody): string | null {
-  const failing = body.results.filter(failed);
+  const failing = failingChecks(body);
   if (failing.length > 0) {
     return `${reply.name} said the checks pass, but Spark's own run failed: ${failing.map(failureText).join(', ')}.`;
+  }
+  const open = unsettledChecks(body);
+  if (open.length > 0) {
+    return `${reply.name} said the checks pass, but Spark could not confirm it: ${open.map(unconfirmed).join(', ')}.`;
   }
   if (body.status === 'skipped') {
     const note = body.results.find((result) => result.note)?.note ?? 'they were not run';

@@ -32,7 +32,7 @@ const summary: ShipSummary = {
     { path: 'notes.txt', change: 'modified' },
     { path: 'docs/new.md', change: 'added' },
   ],
-  checks: ['Checks passed for Bolt: pnpm test passed in 1.2 s'],
+  checks: ['Checks for Bolt: tests passed'],
   review: {
     verdict: 'concerns',
     findings: ['Sorting drops the header line.'],
@@ -48,7 +48,7 @@ describe('ship messages', () => {
     const body = pullRequestBody(summary);
     expect(body).toContain('## Summary\nSorted the notes and removed duplicate lines.');
     expect(body).toContain('- `notes.txt` (modified)\n- `docs/new.md` (added)');
-    expect(body).toContain('## Checks\n- Checks passed for Bolt: pnpm test passed in 1.2 s');
+    expect(body).toContain('## Checks\n- Checks for Bolt: tests passed');
     expect(body).toContain(
       '## Critic findings\nAI review has concerns\n- Sorting drops the header line.',
     );
@@ -127,7 +127,7 @@ describe('ship messages', () => {
   it('keeps the commit subject short and puts checks and review notes in the body', () => {
     expect(commitSubject(`Refactor ${'the very long module name '.repeat(5)}`).length).toBe(72);
     const body = commitBody(summary);
-    expect(body).toContain('Checks: Checks passed for Bolt');
+    expect(body).toContain('Checks: Checks for Bolt');
     expect(body).toContain('Review: AI review has concerns\n- Sorting drops the header line.');
     expect(body.endsWith(SHIP_FOOTER)).toBe(true);
   });

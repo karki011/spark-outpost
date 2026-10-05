@@ -3,7 +3,9 @@ import path from 'node:path';
 import type { Queryable } from '../persistence/db.ts';
 import {
   CONFIG_FILES,
+  LOCKFILE_NAMES,
   PACKAGE_RUNNERS,
+  TOOL_FILES,
   configuredChecks,
   detectChecks,
   packageScripts,
@@ -28,14 +30,35 @@ async function optionalText(file: string): Promise<string | null> {
   return readFile(file, 'utf8').catch(() => null);
 }
 
-export async function readProjectFiles(root: string): Promise<ProjectFiles> {
+const LOCKFILE_SEARCH_DEPTH = 4;
+
+async function filesIn(dir: string, names: readonly string[]): Promise<string[]> {
   const found = await Promise.all(
-    CONFIG_FILES.map(async (file) => [file, await exists(path.join(root, file))] as const),
+    names.map(async (file) => [file, await exists(path.join(dir, file))] as const),
   );
+  return found.filter(([, present]) => present).map(([file]) => file);
+}
+
+async function inheritedLockfiles(root: string): Promise<string[]> {
+  let dir = root;
+  for (let depth = 0; depth < LOCKFILE_SEARCH_DEPTH; depth += 1) {
+    if (await exists(path.join(dir, '.git'))) return [];
+    const parent = path.dirname(dir);
+    if (parent === dir) return [];
+    dir = parent;
+    const found = await filesIn(dir, LOCKFILE_NAMES);
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+export async function readProjectFiles(root: string): Promise<ProjectFiles> {
+  const present = await filesIn(root, [...CONFIG_FILES, ...TOOL_FILES]);
+  const locked = LOCKFILE_NAMES.some((file) => present.includes(file));
   return {
     packageJson: await optionalText(path.join(root, 'package.json')),
     pyproject: await optionalText(path.join(root, 'pyproject.toml')),
-    present: new Set(found.filter(([, present]) => present).map(([file]) => file)),
+    present: new Set([...present, ...(locked ? [] : await inheritedLockfiles(root))]),
   };
 }
 
