@@ -15,14 +15,14 @@ Your chats, settings and code stay on your computer, and keys live in your syste
 | **Your AI provider**                  | Your messages, and files, command output and allowed Slack messages the agent reads.     | Use [`.sparkignore`](sparkignore.md) for files                   |
 | **Jev**, if connected                 | Short, redacted facts about a request. Diffs and short file previews. Map file contents. | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them.                                                    | Disconnect them                                                  |
-| **Slack**                             | Notifications, confirmed posts. Never direct message text.                               | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
+| **Slack**                             | Notifications, confirmed posts (as you after sign-in). Never direct message text.        | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
 | **Spark Outpost team**, Mac app only  | The anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 Without Jev, nothing is sent to TypeSafe.
 
 ## Where your keys live
 
-- API keys and tokens are in your Mac's Keychain, under **Spark Outpost**: provider and Jev keys, and connector and MCP tokens.
+- Keys and tokens are in your Keychain, under **Spark Outpost**: provider and Jev keys, connector and MCP tokens.
 - Spark's database keeps a masked hint. Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI. Spark never reads or stores it.
 
