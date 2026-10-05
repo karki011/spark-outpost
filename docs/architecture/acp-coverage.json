@@ -112,8 +112,9 @@
     "note": "Elicitation isn't advertised."
   },
   "agent-notification:_*": {
-    "status": "not_applicable",
-    "note": "Unknown notifications are ignored by the SDK."
+    "status": "partial",
+    "where": "auth-status.ts, acp-provider.ts, probe.ts",
+    "note": "One extension notification is read: _auth/status_update, which claude-agent-acp 0.81.2 and codex-acp 1.13.1 push with the sign-in the agent uses. Only authStatus.kind, label and account.plan are kept (validated with zod; the email is dropped) and stored with the provider's model availability. A payload that doesn't parse is ignored. Every other extension notification is ignored by the SDK."
   },
   "client-notification:session/cancel": {
     "status": "partial",

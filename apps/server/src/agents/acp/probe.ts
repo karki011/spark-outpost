@@ -63,7 +63,8 @@ export async function probeCapabilities(
     ): Promise<ProviderCapabilityReport> => {
       if (definition.reportsModelAccess && account === null) await delay(ACCOUNT_WAIT_MS);
       const offered = offeredCapabilities(report, definition.offers);
-      return { ...offered, access: { ...reportedAccess(definition, initial), account } };
+      const access = reportedAccess(definition, initial);
+      return { ...offered, access: { ...access, account: access.reported ? account : null } };
     };
     const read = client.connectWith(running.stream, async (ctx) => {
       const init = await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(

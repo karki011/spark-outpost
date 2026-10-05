@@ -24,6 +24,9 @@ message → run (Postgres) → worker claims job → ACP provider
   - refusal
   - turn limit
   - failed start
+  - a model the sign-in can't use, usage limit, rate limit, expired sign-in, context too long and overload (see "Model availability per sign-in")
+
+  A provider's JSON error body is never the message: its inner `error.message` is shown, and the redacted raw text is kept in `runs.error_details` (the "Details from the provider" disclosure) and in the audit log.
 
   Agent stderr is kept in the run's audit log (redacted, up to 1 MB), never shown in the chat.
 
@@ -97,6 +100,44 @@ A chat linked to a project runs in Do mode when its agent mode (`overrides[provi
   - The composer's context ring shows the current provider's last context reading, plus the chat totals and per-provider lines when more than one provider was used.
   - `GET /api/usage/summary` totals runs, cost, and tokens per provider for the last 30 days and all time. Settings shows them under Usage.
 - **Tests without real agents.** With `AGENT_RUNTIME=fake`, the API returns a fixed fake capability snapshot and the fake provider reports usage, so browser tests never start real agents.
+
+## Model availability per sign-in (October 5, 2026)
+
+A released build showed `Codex stopped with an error: {"type":"error","status":400,…"The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account."}`. Spark has no card for that model; it reached the run through the agent's own list. This section is what Spark now knows per connection and how it reacts. Nothing here was run against a real ChatGPT-account session.
+
+**What the pinned adapters report**
+
+|                       | claude-agent-acp 0.81.2                                                                                                          | codex-acp 1.13.1                                                                                                                                                    | Z.ai (claude-agent-acp)                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Model list            | `model` config option, built from the SDK's model list for the signed-in account                                                 | `model` config option, built from the app-server's `model/list`. When the configured model is not in that list the adapter adds it first, with a `null` description | The slots Spark configures through `ANTHROPIC_DEFAULT_*`, not a list |
+| Account kind          | `_auth/status_update` push: `kind` (`account`, `api_key`, `gateway`, `external`, `none`), `label` ("Claude Max"), `account.plan` | The same push: `label` "ChatGPT Plus" or "OpenAI API key", `account.plan` from the app-server's `planType`                                                          | Not used: the key decides                                            |
+| Availability recorded | Listed models are `usable`                                                                                                       | Listed models are `usable`; the added, undescribed current model is `unknown`                                                                                       | Always `unknown` (`reportsModelAccess` is off)                       |
+| Model rejection       | JSON-RPC error on `session/prompt` with `data.errorKind: "model_not_found"`                                                      | `sessionFailure` with category `request` whose title is the raw HTTP body                                                                                           | As Claude, or Z.ai code `1211`                                       |
+
+Whether either list matches what an account can really use is unverified, and the report above shows it can be wrong. That is why a rejection is also learned.
+
+**What is stored.** `provider_model_access` (migration 0129) holds one row per provider connection: `method`, `account_kind`, `account_label`, `account_plan`, `listed`, `unlisted`, `rejected` (`[{id, label, at}]`) and `reported_at`. The probe (connect, verify and `?refresh=1`) and every run's `capabilities` output refresh the list; an `account` output records the sign-in. A different method, account kind or plan clears `rejected`, and so does verifying the provider again. `model-access/access.ts` rates a model `unusable` (rejected), `usable` (listed in a report) or `unknown` (everything else, including every model of a provider that reports no list).
+
+**Where it is applied**
+
+- `getCapabilities` adds `availability` and, for an unusable model, `switchTo` (the nearest usable one) to each model, an `access` summary (account, counts, `defaultIssue`), and never returns an unusable or unlisted model as the default while a usable one exists.
+- `loadIntakeContext` gives routing only the selectable models (confirmed ones first, unknown ones only when none is confirmed), so rules, Jev tiers, the Critic, pieces, the Integrator and "one tier up" all pick from them. A route whose pick stands in for a rejected model records it in the route note and the decision summary ("GPT-6.1 Sol not usable with this sign-in → 6 Sol").
+- `loadRunInput` is the last gate for every run, child runs included: a model known to be unusable is replaced by the nearest usable one (`model-access/nearest.ts`: same tier, then the nearer tier, lower before higher, never the frontier tier unless that was asked for) and the turn says so.
+- `workflow/model-guard.ts` wraps the provider call. On a `ModelRejectedError` it marks the model, and retries the turn once on the nearest usable model only if no tool call, edit, plan or reply text has been produced; otherwise the run fails with a plain message. Both cases store `runs.model_switch` and emit a `model_switch` activity, which the chat shows with a link to Settings > Models.
+
+**Error shapes matched** (`agents/acp/provider-failures.ts`, tests in `provider-failures.test.ts`)
+
+- Model not usable: Codex "The '…' model is not supported when using Codex with a ChatGPT account."; OpenAI `code: "model_not_found"` or "The model … does not exist or you do not have access to it"; Anthropic `not_found_error` with `model: …`; Claude Code "There's an issue with the selected model (…)"; the Claude adapter's `errorKind: "model_not_found"`; Z.ai code `1211` with "Unknown Model".
+- Usage limit: `insufficient_quota`, `billing_error`, "usage limit", "credit balance is too low", Z.ai `1113` and `1308`–`1321`.
+- Rate limit: status or code 429, `rate_limit_error`, Z.ai `1302` and `1305`.
+- Sign-in expired: status 401, `authentication_error`, `invalid_api_key`, "token expired".
+- Context too long: `context_length_exceeded`, "prompt is too long", "maximum context length", "context window".
+- Overloaded: status 529, `overloaded_error`.
+- Any other JSON body: its inner message after "… stopped with an error:".
+
+A pin the agent no longer lists at all still falls back to the default when the message is sent (`api/run-target.ts`), and the run now carries the same chat note.
+
+**Known gaps:** API-key connections for Claude and Codex still don't run; a model that works for one effort or mode only is not modelled.
 
 ## Z.ai (GLM) (September 26, 2026)
 
@@ -212,6 +253,7 @@ No resume call failed and no transcript repair was needed. One oddity on Claude:
 ## Tests
 
 - `pnpm test` covers update mapping, config planning, the permission policy, the conversation prompt, the channel, the ACP provider against `test/fake-acp-agent.ts` (streaming, config, permission, cancel, crash, auth, refusal), project reads and writes, the path policy, and approval decisions (mode posture, run rules, allowlist, safe reads and installs) including a fake Codex Do agent.
+- `test/acp-model-access.test.ts` runs the provider and the probe against a fake agent that lists a restricted model set, pushes a ChatGPT account and rejects a model with the exact Codex body or the Claude `errorKind`. `test/model-access.db.test.ts` and `test/model-access-crew.db.test.ts` cover the picker data, the flagged default, routing, the single retry, no retry after a tool call, a restart, and the retry-one-tier-up path.
 - `pnpm test:db` covers the approval gate end to end (run rules, races, payload hashes, Stop, timeout, revert in and outside git), a Codex-only crew in place and in a worktree, run input, and project/attachment routes.
 - `pnpm test:live` runs the installed Claude and Codex logins: a temp-repo edit, `ls`, a blocked `git push` with revert; Codex Do at each level with an approval receipt on every tool call; conversation-context recall; a blocked write outside the sandbox; and a cancel mid-reply. Set `SPARK_LIVE_DIR` to keep its repos in a scratch folder. It uses a small amount of each account's usage.
 - Audit tests cover redaction, protocol entries, the hash chain, the recorder, price estimates, storage, paging, tamper detection, pruning, the summary and the export.

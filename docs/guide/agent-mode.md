@@ -16,14 +16,16 @@ You'll choose the model, effort and permissions for one chat. About 1 minute.
 
 ![The model picker open on the Model tab](images/chats-and-modes-picker-light.png)
 
+Models your sign-in can't use are left out; a pinned one shows **Unavailable** and **Switch to …**.
+
 A new chat starts pinned to your default model. See [How Spark picks a model](model-routing.md).
 
 ## Set the effort
 
 1. Select the **Effort** tab.
-2. Pick a level, from **Low** (quick) to **Max** (deepest and slowest). The list comes from the model.
+2. Pick a level, from **Low** (quick) to **Max** (deepest and slowest).
 
-Higher effort is slower and costs more.
+Higher effort is slower and costlier.
 
 ## Pick the agent's mode
 

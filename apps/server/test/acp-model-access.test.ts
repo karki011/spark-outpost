@@ -70,7 +70,7 @@ describe('model access reported over ACP by a fake agent', { timeout: 20_000 }, 
 
   it('marks a provider that reports no availability', async () => {
     const zai = { ...definition, reportsModelAccess: false };
-    const report = await probeCapabilities(zai, { launch, env: env({ FAKE_ACP_AUTH_STATUS: '' }) });
+    const report = await probeCapabilities(zai, { launch, env: env() });
     expect(report.access).toEqual({ reported: false, unlisted: [], account: null });
   });
 

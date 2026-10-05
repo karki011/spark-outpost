@@ -335,7 +335,7 @@ async function converse(
         : refuseWrite(ctx.params, policy !== null, report),
     )
     .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, ({ params }) => {
-      if (params) push([{ kind: 'account', account: params }]);
+      if (params && definition.reportsModelAccess) push([{ kind: 'account', account: params }]);
     });
   if (policy) {
     client.onRequest(acp.methods.client.fs.readTextFile, (ctx) =>
