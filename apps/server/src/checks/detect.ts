@@ -43,8 +43,31 @@ export const CONFIG_FILES = [
   ...LOCKFILES.map(([file]) => file),
 ];
 
-export function packageManager(present: ReadonlySet<string>): PackageManager {
-  return LOCKFILES.find(([file]) => present.has(file))?.[1] ?? 'npm';
+export const LOCKFILE_NAMES = LOCKFILES.map(([file]) => file);
+
+export const TOOL_FILES = ['nx.json', 'turbo.json', 'pnpm-workspace.yaml', '.yarnrc.yml'];
+
+const MANAGERS: readonly PackageManager[] = ['npm', 'pnpm', 'yarn', 'bun'];
+
+export function declaredManager(packageJson: string | null): PackageManager | null {
+  if (!packageJson) return null;
+  try {
+    const declared = (JSON.parse(packageJson) as { packageManager?: unknown }).packageManager;
+    if (typeof declared !== 'string') return null;
+    const name = declared.split('@')[0];
+    return MANAGERS.find((manager) => manager === name) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function packageManager(
+  present: ReadonlySet<string>,
+  packageJson: string | null = null,
+): PackageManager {
+  return (
+    declaredManager(packageJson) ?? LOCKFILES.find(([file]) => present.has(file))?.[1] ?? 'npm'
+  );
 }
 
 export function packageScripts(packageJson: string | null): Record<string, string> {
@@ -75,7 +98,7 @@ function scriptCommand(manager: PackageManager, kind: CheckKind, name: string): 
 
 function scriptChecks(files: ProjectFiles): CheckCommand[] {
   const scripts = packageScripts(files.packageJson);
-  const manager = packageManager(files.present);
+  const manager = packageManager(files.present, files.packageJson);
   return SCRIPT_NAMES.flatMap(([kind, names]) => {
     const name = names.find((candidate) => scripts[candidate] !== undefined);
     return name && usable(kind, scripts[name]!) ? [scriptCommand(manager, kind, name)] : [];

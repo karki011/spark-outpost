@@ -21,6 +21,7 @@ const ok: CheckRun = {
   durationMs: 1,
   outputTail: '',
   truncated: false,
+  failures: [],
 };
 
 async function put(file: string, text = 'x') {
