@@ -133,6 +133,13 @@ async function configureCheck(source: string): Promise<void> {
   await setCheckCommands(t, repo.root, ['node check.mjs']);
 }
 
+const RED_AFTER_THE_CHANGE = `import { readFileSync } from 'node:fs';
+if (readFileSync('notes.txt', 'utf8').includes('step')) {
+  console.error('red since the change');
+  process.exit(1);
+}
+`;
+
 const remoteBranches = () =>
   git(repo.bare, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n');
 
@@ -270,7 +277,7 @@ describe('Full auto runs to a draft PR', () => {
   it('opens the draft PR marked "Checks failing" when checks still fail after the fix turns', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
-    await configureCheck("console.error('always red'); process.exit(1);\n");
+    await configureCheck(RED_AFTER_THE_CHANGE);
     start();
     const { reply, asked } = await runFullAuto();
     expect(asked).toEqual([]);
@@ -284,7 +291,7 @@ describe('Full auto runs to a draft PR', () => {
   it('stops at the keep card instead when the setting says not to ship failing checks', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
-    await configureCheck("console.error('always red'); process.exit(1);\n");
+    await configureCheck(RED_AFTER_THE_CHANGE);
     await updateProfile(t.db, t.workspaceId, { shipFailingChecks: false });
     start();
     const { asked, orchestration } = await runFullAuto();

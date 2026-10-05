@@ -3,18 +3,29 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import {
   CHECK_TOOL_CALL_PREFIX,
+  checkStatusOf,
   type CheckBody,
   type CheckResult,
-  type CheckStatus,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import type { CheckCommand } from '../checks/detect.ts';
 import { runsPackageScript, scriptsFingerprint } from '../checks/project-checks.ts';
-import { runCheck, type CheckRun } from '../checks/run-check.ts';
+import { CHECK_TIMEOUT_MS, runCheck } from '../checks/run-check.ts';
+import { refreshDependencies, type DepsRefresh } from '../projects/deps-refresh.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import { createApprovalGate } from '../workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import {
+  UNFINISHED_NOTE,
+  attributed,
+  closeRound,
+  openRound,
+  staleResult,
+  type PlannedCheck,
+  type Round,
+} from './check-attribution.ts';
+import { checkMemory } from './check-results.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { appendNewArtifact, publish, type Session } from './session.ts';
 
@@ -27,6 +38,7 @@ export interface CheckTarget {
   cwd: string;
   copy: string | null;
   env?: Readonly<Record<string, string>>;
+  before?: string | null;
 }
 
 function checkRequest(check: CheckCommand, target: CheckTarget, root: string): ApprovalRequest {
@@ -58,21 +70,6 @@ async function approvalIdFor(s: Session, toolCallId: string): Promise<string | n
   return rows[0]?.id ?? null;
 }
 
-function resultOf(check: CheckCommand, run: CheckRun, approvalId: string | null): CheckResult {
-  const outcome = run.timedOut ? 'timed_out' : run.exitCode === 0 ? 'passed' : 'failed';
-  return {
-    command: check.command,
-    kind: check.kind,
-    outcome,
-    exitCode: run.exitCode,
-    durationMs: run.durationMs,
-    outputTail: run.outputTail,
-    truncated: run.truncated,
-    note: null,
-    approvalId,
-  };
-}
-
 function notRun(
   check: CheckCommand,
   outcome: 'skipped' | 'denied',
@@ -92,13 +89,6 @@ function notRun(
   };
 }
 
-function checkStatus(results: readonly CheckResult[]): CheckStatus {
-  if (results.some((result) => result.outcome === 'failed' || result.outcome === 'timed_out')) {
-    return 'failed';
-  }
-  return results.some((result) => result.outcome === 'passed') ? 'passed' : 'skipped';
-}
-
 function relativeCwd(root: string, cwd: string): string {
   return path.relative(root, cwd) || '.';
 }
@@ -113,6 +103,10 @@ async function audit(s: Session, target: CheckTarget, result: CheckResult, root:
     exitCode: result.exitCode,
     durationMs: result.durationMs,
     note: result.note,
+    cause: result.cause ?? null,
+    scope: result.scope ?? null,
+    baseline: result.baseline ?? null,
+    failures: result.failures ?? [],
     outputTail: result.outputTail,
   });
   await insertProtocolEntries(s.deps.db, s.lease, [
@@ -164,16 +158,44 @@ function checkGate(s: Session, target: CheckTarget, timedOut: () => void) {
   });
 }
 
+async function auditDeps(s: Session, target: CheckTarget, refresh: DepsRefresh, root: string) {
+  const payload = {
+    command: refresh.command,
+    cwd: relativeCwd(root, target.cwd),
+    reason: 'The lockfile changed during this run.',
+    lockfileMatched: false,
+    outcome: refresh.installed ? 'installed' : 'failed',
+    durationMs: refresh.durationMs,
+  };
+  await insertProtocolEntries(s.deps.db, s.lease, [
+    {
+      at: new Date(),
+      direction: 'harness',
+      kind: 'check',
+      method: 'deps/install',
+      rpcId: null,
+      sizeBytes: Buffer.byteLength(JSON.stringify(payload)),
+      truncated: false,
+      payload,
+    },
+  ]);
+}
+
 async function runOne(
   s: Session,
-  check: CheckCommand,
+  planned: PlannedCheck,
   target: CheckTarget,
   root: string,
+  round: Round,
 ): Promise<CheckResult | null> {
+  const { check } = planned;
   const scripts = s.checks?.scripts ?? '';
   if (runsPackageScript(check) && (await scriptsFingerprint(target.cwd)) !== scripts) {
     return notRun(check, 'skipped', SCRIPTS_CHANGED_NOTE);
   }
+  const whole = planned.scope?.whole ?? check.command;
+  if (checkMemory(s).unfinished.has(whole)) return notRun(check, 'skipped', UNFINISHED_NOTE);
+  if (round.stale) return staleResult(check, round.stale);
   let timedOut = false;
   const request = checkRequest(check, target, root);
   const answer = await checkGate(s, target, () => (timedOut = true)).review(
@@ -189,11 +211,24 @@ async function runOne(
   const run = await runCheck(check, {
     root,
     cwd: target.cwd,
+    timeoutMs: round.limitMs,
     signal: s.control.signal,
     ...(target.env ? { builderEnv: target.env } : {}),
   });
   if (run.cancelled) return null;
-  return resultOf(check, run, approvalId);
+  const outcome = await attributed(planned, run, round);
+  if (outcome === null) return null;
+  if (outcome === 'retry_whole') {
+    return runOne(
+      s,
+      { check: planned.whole ?? check, scope: null, whole: null },
+      target,
+      root,
+      round,
+    );
+  }
+  if (outcome.outcome === 'timed_out') checkMemory(s).unfinished.add(whole);
+  return { ...outcome, approvalId };
 }
 
 export async function runChecks(
@@ -204,21 +239,37 @@ export async function runChecks(
   const root = s.input.projectRoots[0];
   const commands = scoped ?? s.checks?.commands;
   if (!commands || !root) return null;
+  const deps = await refreshDependencies(target.cwd, {
+    root,
+    before: target.before ?? null,
+    signal: s.control.signal,
+  });
+  if (!deps) return null;
+  if (deps.refresh) await auditDeps(s, target, deps.refresh, root);
   s.checkRounds += 1;
-  const round = s.checkRounds;
+  const round = await openRound(s, target.cwd, {
+    commands,
+    scope: scoped === null && s.checks?.source === 'detected',
+    stale: deps.stale,
+    limitMs: s.deps.checkTimeoutMs ?? CHECK_TIMEOUT_MS,
+  });
   const results: CheckResult[] = [];
-  for (const check of commands) {
-    const result = await runOne(s, check, target, root);
-    if (!result) return null;
-    results.push(result);
-    await audit(s, target, result, root);
+  try {
+    for (const planned of round.planned) {
+      const result = await runOne(s, planned, target, root, round);
+      if (!result) return null;
+      results.push(result);
+      await audit(s, target, result, root);
+    }
+  } finally {
+    await closeRound(round);
   }
   const body: CheckBody = {
     runId: target.runId,
     name: target.name,
     copy: target.copy,
-    round,
-    status: checkStatus(results),
+    round: s.checkRounds,
+    status: checkStatusOf(results),
     results,
   };
   s.checkBodies.push(body);

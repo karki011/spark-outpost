@@ -56,6 +56,15 @@ describe('check claims', () => {
     );
   });
 
+  it('says what Spark could not confirm when a check fails for another reason than the change', () => {
+    const old = result({ outcome: 'failed', exitCode: 1, cause: 'baseline' });
+    const slow = result({ command: 'pnpm run e2e', outcome: 'timed_out', exitCode: null });
+    const found = claimFindings([reply('All tests pass.')], [body('b1', [old, slow], 'skipped')]);
+    expect(found.map((finding) => finding.text)).toEqual([
+      'Bolt said the checks pass, but Spark could not confirm it: `pnpm test` fails, as it did before this change, `pnpm run e2e` could not finish in time.',
+    ]);
+  });
+
   it('stays quiet when Spark agrees or there is no claim', () => {
     const passing = body('b1', [result({})], 'passed');
     const failing = body('b1', [result({ outcome: 'failed', exitCode: 1 })], 'failed');

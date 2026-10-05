@@ -143,10 +143,12 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
 
 async function placeBeforeBuilding(s: Session): Promise<string | null> {
   s.placeLater = false;
-  const placed = await placeChatOrFailure(s.deps, s.input, s.append, true);
+  const placed = await placeChatOrFailure(s.deps, s.input, s.append, true, s.lease);
   if ('failed' in placed) return placed.failed;
   s.input = placed.input;
   if (placed.input.chatWorktree) s.needsCopy = false;
+  const root = placed.input.projectRoots[0];
+  if (s.checks && root) s.checks = await projectChecks(s.deps.db, s.lease.runId, root);
   return null;
 }
 
@@ -349,7 +351,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       );
     }
     if (doing && !readOnlyStart(decisions.start) && !placeLater) {
-      const created = await placeChatOrStop(deps, input, append, true);
+      const created = await placeChatOrStop(deps, input, append, true, lease);
       if (!created) return;
       input = created.input;
     }

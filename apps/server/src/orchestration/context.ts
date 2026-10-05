@@ -319,7 +319,6 @@ export interface FailingCheck {
 }
 
 function failureStatus(check: FailingCheck): string {
-  if (check.outcome === 'timed_out') return 'timed out';
   return `exited ${check.exitCode ?? 'with an error'}`;
 }
 

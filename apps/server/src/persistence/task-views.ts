@@ -3,8 +3,9 @@ import {
   shortcutsBodySchema,
   shortcutsLine,
   shortcutText,
+  checkCause,
+  checkDetails,
   checkLine,
-  failingChecks,
   mergeCostSource,
   taskList,
   taskRunSchema,
@@ -213,7 +214,9 @@ function checkEvents(rows: readonly ArtifactBody[]): TaskListEvent[] {
     const parsed = checkBodySchema.safeParse(row.body);
     if (!parsed.success) return [];
     const body = parsed.data;
-    const output = checkOutput(failingChecks(body).map((result) => result.outputTail));
+    const unfinished = body.results.filter((result) => checkCause(result) !== null);
+    const tails = checkOutput(unfinished.map((result) => result.outputTail));
+    const output = [checkDetails(body).join('\n'), ...(tails ? [tails] : [])].join('\n\n');
     const notes = body.results.flatMap((result) => (result.note ? [result.note] : []));
     return [
       {
@@ -223,7 +226,7 @@ function checkEvents(rows: readonly ArtifactBody[]): TaskListEvent[] {
         label: checkLine(body),
         state: body.status === 'failed' ? ('failed' as const) : ('done' as const),
         detail: `round ${body.round}${notes.length > 0 ? ` · ${notes.join(' ')}` : ''}`,
-        ...(output ? { output } : {}),
+        output,
       },
     ];
   });
