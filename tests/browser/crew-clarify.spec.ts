@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  agentBlock,
   allowEdit,
   card,
   crewChat,
@@ -70,9 +71,18 @@ test('the questions dock above the composer, wait without a countdown when auto-
   await expect(answered).toContainText('Which report? → Usage');
   await expect(statusLine(page)).not.toContainText('Waiting for you');
   await allowEdit(page);
-  await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
+  const keep = card(page, /Keep these changes\?/);
+  await expect(keep).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
   await shot(page, 'answered');
+
+  const builder = agentBlock(page, 'Bolt');
+  await expect(builder).toContainText('Built it');
+  const built = (await builder.boundingBox())!;
+  const keepBox = (await keep.boundingBox())!;
+  const answeredBox = (await answered.boundingBox())!;
+  expect(keepBox.y).toBeGreaterThanOrEqual(built.y + built.height);
+  expect(answeredBox.y + answeredBox.height).toBeLessThanOrEqual(built.y);
 });
 
 test('Automatic goes with the best guesses when the wait runs out, and says so', async ({

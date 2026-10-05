@@ -78,7 +78,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
     approvals,
   );
   const checkApprovals = approvals.filter(isCheckApproval);
-  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
+  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
