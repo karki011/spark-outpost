@@ -3,6 +3,7 @@ import type { Project, ProjectTrust } from '@spark-outpost/contracts';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectBuilders } from './ProjectBuilders.tsx';
+import { ProjectChecks } from './ProjectChecks.tsx';
 import { ProjectPreview } from './ProjectPreview.tsx';
 import { ProjectSignIns } from './ProjectSignIns.tsx';
 
@@ -70,6 +71,7 @@ export function ProjectRow({
         >
           <p className="set-project-root">{project.rootPath}</p>
           <ProjectBuilders project={project} available={parallelAvailable} />
+          <ProjectChecks project={project} />
           <ProjectBrowser project={project} />
           <ProjectSignIns project={project} />
           <ProjectPreview project={project} />
