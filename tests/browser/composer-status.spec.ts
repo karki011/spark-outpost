@@ -230,7 +230,9 @@ test('a question from Spark is one line that names the question', async ({ page 
   }
 });
 
-test("the line stays away while the working crew member's header is in view", async ({ page }) => {
+test("the line stays away while a short turn's header is in view, and shows under a long one", async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   await resetCrew();
   const repo = crewRepo();
@@ -255,6 +257,12 @@ test("the line stays away while the working crew member's header is in view", as
     await thread.evaluate((element) => (element.scrollTop = 0));
     await expect(head).toBeInViewport();
     await expect(shown(page)).toHaveCount(0);
+
+    await head.evaluate((element) => {
+      element.parentElement!.style.minHeight = '600px';
+    });
+    await expect(head).toBeInViewport();
+    await expect(shown(page)).toHaveText(/^Bolt is (working|thinking)/);
     await page.getByRole('button', { name: 'Stop' }).click();
     await expect(head.locator('.agent-state')).toHaveText('stopped', { timeout: 30_000 });
   } finally {

@@ -51,18 +51,33 @@ export function usePendingArrival(onArrival: () => void): void {
   }, [store, onArrival]);
 }
 
+const SHORT_TURN_PX = 320;
+
 export function useLiveHead(id: string | null) {
   const store = use(StatusContext);
   return useCallback(
     (element: HTMLElement | null) => {
       if (!element || !store || !id || typeof IntersectionObserver !== 'function') return;
-      const observer = new IntersectionObserver(
-        (entries) => store.showHead(id, entries.at(-1)?.isIntersecting ?? false),
+      const block = element.parentElement ?? element;
+      let seen = false;
+      let short = block.getBoundingClientRect().height <= SHORT_TURN_PX;
+      const report = () => store.showHead(id, seen && short);
+      const view = new IntersectionObserver(
+        (entries) => {
+          seen = entries.at(-1)?.isIntersecting ?? false;
+          report();
+        },
         { root: element.closest('.thread') },
       );
-      observer.observe(element);
+      const size = new ResizeObserver((entries) => {
+        short = (entries.at(-1)?.contentRect.height ?? 0) <= SHORT_TURN_PX;
+        report();
+      });
+      view.observe(element);
+      size.observe(block);
       return () => {
-        observer.disconnect();
+        view.disconnect();
+        size.disconnect();
         store.showHead(id, false);
       };
     },
