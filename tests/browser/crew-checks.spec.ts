@@ -78,7 +78,7 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
 
 test('a check that already failed before the change is one calm row, with no fix turn', async ({
   page,
-}, testInfo) => {
+}) => {
   test.setTimeout(120_000);
   repo.commit('lint.mjs', "console.log('clean');\n");
   repo.commit('typecheck.mjs', OLD_TYPE_ERROR);
@@ -107,10 +107,6 @@ test('a check that already failed before the change is one calm row, with no fix
   const output = work.getByLabel('Check output');
   await expect(output).toContainText('also fails before this change');
   await expect(output).toContainText('same failures: type src/old.ts TS2322');
-  for (const scheme of ['light', 'dark'] as const) {
-    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-    await work.screenshot({ path: testInfo.outputPath(`checks-row-${scheme}.png`) });
-  }
 });
 
 test('Accept edits: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({
