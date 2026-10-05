@@ -178,6 +178,18 @@ In a chat there is little to show: Claude's built-in tools are off, so a Claude 
 | Cancel                    | stops with `cancelled` in under 60 ms                                                                                | stops with `cancelled` in under 30 ms                                   |
 | Session resume and load   | both advertised; resume verified across processes, used by M6                                                        | both advertised; resume verified across processes, used by M6           |
 
+## Interrupted turns spike (October 5, 2026)
+
+Live providers through `createAcpProvider` in a throwaway repo (claude-agent-acp 0.81.2 with Claude Agent SDK 0.3.280 and Claude Code 2.1.282, model Haiku 4.5; codex-acp 1.13.1 with `@openai/codex` 0.156.1 and codex-cli 0.157.0, model 6 Luna · low; ACP SDK 1.5.0). The agent process was killed with `SIGKILL` mid-turn, then a new process sent `session/resume` with the stored id and a short "you were interrupted" message. This is separate from the fake-agent tests.
+
+| Killed                                   | Claude                                                                                  | Codex                                                                                      |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| While text was streaming                 | Resumed; recalled a codeword from before the kill; read the file state before answering | Resumed; recalled the codeword; still obeyed an instruction from the killed turn           |
+| While a command ran (`sleep 20 && echo`) | Resumed; checked `notes.txt` first, saw the command never finished, then ran it once    | Resumed; saw the command never finished and said it would need to rerun it; did not rerun  |
+| Right after a command finished           | Resumed; saw the command's effect on disk and did not run it again                      | Not run (turn budget); expected to be the easier case since the call and result are stored |
+
+No resume call failed and no transcript repair was needed. One oddity on Claude: on resume the adapter reported the session's model as Haiku (read from the transcript), Spark therefore sent no `session/set_config_option`, and usage (a 1M context size and 15 to 20 times the cost) suggests the turn ran on the account default model instead. Not fixed here.
+
 ## Chat lockdown and known limits
 
 - **Claude:** built-in tools are turned off (`_meta.claudeCode.options.tools: []`, `strictMcpConfig`), so a chat cannot read or write files or run commands beyond the `spark` MCP server every session gets (see REPO_AGENT_CONFIG.md). Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and no tools of its own.

@@ -35,6 +35,11 @@ export type ActiveRuns = z.infer<typeof activeRunsSchema>;
 export const startAsSchema = z.enum(['change', 'continue']);
 export type StartAs = z.infer<typeof startAsSchema>;
 
+export const interruptionChoiceSchema = z.enum(['continue', 'fresh']);
+export type InterruptionChoice = z.infer<typeof interruptionChoiceSchema>;
+
+export const CONTINUE_MESSAGE = 'Continue from here';
+
 export const messageSourceSchema = z.enum(['ui', 'e2e', 'bench']);
 export type MessageSource = z.infer<typeof messageSourceSchema>;
 
@@ -64,5 +69,20 @@ export const runSchema = z.object({
   agentLabel: z.string().nullable().optional(),
   category: categorySchema.nullable().optional(),
   following: z.array(z.string()).nullable().optional(),
+  continuesRunId: z.uuid().nullable().optional(),
+  interruptionChoice: interruptionChoiceSchema.nullable().optional(),
 });
 export type Run = z.infer<typeof runSchema>;
+
+export const continueRunRequestSchema = z.object({ id: z.uuid() });
+export type ContinueRunRequest = z.infer<typeof continueRunRequestSchema>;
+
+export const interruptionBlockSchema = z.enum(['crew']);
+export type InterruptionBlock = z.infer<typeof interruptionBlockSchema>;
+
+export const interruptionSchema = z.object({
+  runId: z.uuid(),
+  stoppedAt: z.string().nullable(),
+  blocked: interruptionBlockSchema.nullable(),
+});
+export type Interruption = z.infer<typeof interruptionSchema>;

@@ -18,6 +18,7 @@ import { latestSparkSeed } from '../persistence/compactions.ts';
 import { builderEnvSchema, pieceGuardSchema, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import type { RunIdentity } from './run-events.ts';
+import { withInterruptionNote } from './continue-note.ts';
 
 export interface RunInput {
   identity: RunIdentity;
@@ -48,6 +49,7 @@ export interface RunInput {
   chatWorktree?: boolean;
   assistant?: boolean;
   seed?: ChatSeed | null;
+  continuesRunId?: string | null;
 }
 
 export interface ChatSeed {
@@ -90,6 +92,7 @@ interface RunRow {
   in_chat_worktree: boolean;
   title_source: string;
   assistant: boolean;
+  continues_run_id: string | null;
 }
 
 interface HistoryRow {
@@ -159,6 +162,9 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             (SELECT w.path FROM run_worktrees w
              WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
+            COALESCE(r.continues_run_id, (
+              SELECT p.continues_run_id FROM runs p WHERE p.id = r.parent_run_id
+            )) AS continues_run_id,
             EXISTS (
               SELECT 1 FROM profiles pf
               WHERE pf.workspace_id = c.workspace_id AND pf.assistant_conversation_id = c.id
@@ -199,7 +205,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   );
   const turns = await loadHistory(db, history.rows, row.user_message_id);
   const seed = await chatSeed(db, row.conversation_id, history.rows);
-  return {
+  const input: RunInput = {
     identity: { runId, threadId: row.conversation_id },
     workspaceId: row.workspace_id,
     prompt: row.content,
@@ -221,7 +227,9 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     startAs: row.start_as,
     chatWorktree: row.in_chat_worktree,
     seed,
+    continuesRunId: row.continues_run_id,
   };
+  return row.continues_run_id ? withInterruptionNote(db, input, row.continues_run_id) : input;
 }
 
 async function chatSeed(
@@ -281,5 +289,6 @@ function childInput(runId: string, row: RunRow): RunInput {
       .catch(null)
       .parse(row.builder_env ?? null),
     chatWorktree: row.in_chat_worktree,
+    continuesRunId: row.continues_run_id,
   };
 }

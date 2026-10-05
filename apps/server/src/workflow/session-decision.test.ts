@@ -194,3 +194,54 @@ describe('stoppedFollowUp', () => {
     expect(stoppedFollowUp('go on', files)).toContain('`f19.ts`, and 3 more.');
   });
 });
+
+describe('an explicit Continue after an interruption', () => {
+  const unfinished: StoredState = { ...stored, lastMessageId: null, lastReplyHash: null };
+  const session = { sessionId: 's-1', cwd: '/work/app', additionalDirectories: [] };
+
+  it('reopens the session whose last turn never finished, only when the user asked', () => {
+    expect(decideResume({ ...input, stored: unfinished }).freshReason).toBe(
+      'last turn did not finish',
+    );
+    expect(decideResume({ ...input, stored: unfinished, continuing: true })).toEqual({
+      resume: session,
+      freshReason: null,
+      interrupted: true,
+    });
+  });
+
+  it('reopens it after the idle limit, also when the sweep already closed it as idle', () => {
+    const later = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const waited = { ...input, stored: unfinished, now: later, continuing: true };
+    expect(decideResume(waited).resume).toEqual(session);
+    const swept = { ...unfinished, closeReason: 'idle' };
+    expect(decideResume({ ...waited, stored: swept }).resume).toEqual(session);
+  });
+
+  it('reopens it when the worker closed it as unfinished while winding the turn down', () => {
+    const wound = { ...unfinished, closeReason: 'last turn did not finish' };
+    expect(decideResume({ ...input, stored: wound, continuing: true }).resume).toEqual(session);
+    expect(decideResume({ ...input, stored: wound }).freshReason).toBe('last turn did not finish');
+  });
+
+  it('still starts fresh when the session was closed for another reason or the settings changed', () => {
+    for (const closeReason of ['started fresh', 'chat archived', 'too many open sessions']) {
+      expect(
+        decideResume({ ...input, stored: { ...unfinished, closeReason }, continuing: true }),
+      ).toEqual({ resume: null, freshReason: closeReason });
+    }
+    expect(
+      decideResume({ ...input, stored: unfinished, hash: 'other', continuing: true }).freshReason,
+    ).toBe('settings changed');
+  });
+
+  it('changes nothing for a session whose last turn finished', () => {
+    const later = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    expect(decideResume({ ...input, continuing: true })).toEqual(decideResume(input));
+    expect(decideResume({ ...input, now: later, continuing: true }).freshReason).toBe('idle');
+    expect(
+      decideResume({ ...input, stored: { ...stored, closeReason: 'idle' }, continuing: true })
+        .freshReason,
+    ).toBe('idle');
+  });
+});

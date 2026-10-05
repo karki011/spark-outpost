@@ -96,7 +96,9 @@ export async function prepareTurnSession(
     now,
     idleMs: limits.idleMs,
     cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
+    continuing: input.continuesRunId != null,
   });
+  const interrupted = input.continuesRunId != null && stored?.lastReplyHash === null;
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
   const commands = decision.resume && stored ? await sessionCommands(db, stored.id) : [];
   const resume =
@@ -144,6 +146,7 @@ export async function prepareTurnSession(
       resume,
       freshReason: decision.freshReason,
       ...(followUp ? { followUp } : {}),
+      ...(interrupted ? { interrupted } : {}),
     },
     noteSession,
     async started(output) {

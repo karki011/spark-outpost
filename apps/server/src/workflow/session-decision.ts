@@ -86,10 +86,11 @@ export interface DecisionInput {
   now: Date;
   idleMs: number;
   cwd?: string | null;
+  continuing?: boolean;
 }
 
 export type ResumeDecision =
-  | { resume: StoredSession; freshReason: null; stopped?: true }
+  | { resume: StoredSession; freshReason: null; stopped?: true; interrupted?: true }
   | { resume: null; freshReason: string | null };
 
 const fresh = (freshReason: string | null): ResumeDecision => ({ resume: null, freshReason });
@@ -102,25 +103,34 @@ function chatMovedOn(input: DecisionInput, stored: StoredState): boolean {
   return replyHash(stored.lastMessageContent ?? '') !== stored.lastReplyHash;
 }
 
+function reopenable(closeReason: string): boolean {
+  return closeReason === RESUME_REASONS.idle || closeReason === RESUME_REASONS.unfinished;
+}
+
 export function decideResume(input: DecisionInput): ResumeDecision {
   const { stored } = input;
   if (!stored) return fresh(null);
-  if (stored.closeReason !== null) return fresh(stored.closeReason);
-  if (input.now.getTime() - stored.lastUsedAt.getTime() > input.idleMs) {
+  const interrupted = input.continuing === true && stored.lastReplyHash === null;
+  if (stored.closeReason !== null && !(interrupted && reopenable(stored.closeReason))) {
+    return fresh(stored.closeReason);
+  }
+  if (!interrupted && input.now.getTime() - stored.lastUsedAt.getTime() > input.idleMs) {
     return fresh(RESUME_REASONS.idle);
   }
   if (stored.settingsHash !== input.hash) {
     const moved = input.cwd && input.cwd !== stored.cwd;
     return fresh(moved ? RESUME_REASONS.project : RESUME_REASONS.settings);
   }
-  if (stored.lastReplyHash === null) {
-    return fresh(RESUME_REASONS.unfinished);
-  }
   const resume: StoredSession = {
     sessionId: stored.sessionId,
     cwd: stored.cwd,
     additionalDirectories: [...stored.additionalDirs],
   };
+  if (stored.lastReplyHash === null) {
+    return interrupted
+      ? { resume, freshReason: null, interrupted: true }
+      : fresh(RESUME_REASONS.unfinished);
+  }
   if (stored.lastReplyHash === STOPPED_REPLY) {
     if (!input.checksMessages) return { resume, freshReason: null, stopped: true };
     if (stored.lastMessageId === null) return fresh(RESUME_REASONS.unfinished);
@@ -133,10 +143,15 @@ export function decideResume(input: DecisionInput): ResumeDecision {
 
 const STOPPED_FILES_SHOWN = 20;
 
-export function stoppedFollowUp(message: string, changed: readonly string[]): string {
+export function shownFiles(changed: readonly string[]): string[] {
   const shown = changed.slice(0, STOPPED_FILES_SHOWN).map((path) => `\`${path}\``);
   const more = changed.length - shown.length;
   if (more > 0) shown.push(`and ${more} more`);
+  return shown;
+}
+
+export function stoppedFollowUp(message: string, changed: readonly string[]): string {
+  const shown = shownFiles(changed);
   const files = shown.length > 0 ? `\nFiles changed before the stop: ${shown.join(', ')}.` : '';
   return `${STOPPED_NOTE}${files}\n\n${message}`;
 }

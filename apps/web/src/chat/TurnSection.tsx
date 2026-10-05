@@ -22,6 +22,8 @@ import { turnAnchor } from './rail/outline-model.ts';
 import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { sameTurnDetail } from './turn-props.ts';
+import { InterruptedCard } from './interruption/InterruptedCard.tsx';
+import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 
 type Task = ConversationDetail['tasks'][number];
 
@@ -143,6 +145,13 @@ export const TurnSection = memo(function TurnSection({
           />
           {shownTask && !live && taskCard}
         </>
+      )}
+      <InterruptedNote run={run} detail={detail} />
+      {detail.interruption?.runId === run.id && (
+        <InterruptedCard
+          interruption={detail.interruption}
+          conversationId={detail.conversation.id}
+        />
       )}
       {detail.continuedIn
         ?.filter((continuation) => continuation.runId === run.id)

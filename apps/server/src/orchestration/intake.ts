@@ -45,6 +45,7 @@ export interface IntakeFacts {
   previousReply?: string | null;
   change?: boolean;
   continuing?: boolean;
+  resuming?: boolean;
   hasAgreedPlan?: boolean;
   now?: Date;
 }
@@ -212,7 +213,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     destructive: { ...destructiveCall, value: destructive },
   };
   let continues: boolean | null = null;
-  if (facts.currentTask && facts.continuing) {
+  if (facts.currentTask && (facts.continuing || facts.resuming)) {
     continues = true;
     calls.continues_task = USER_SAID;
   } else if (facts.currentTask) {

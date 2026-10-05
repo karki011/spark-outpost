@@ -158,6 +158,13 @@ export const api = {
         ...(startAs ? { startAs } : {}),
       }),
     }).then(saved(conversationId)),
+  continueRun: (runId: string, id: string): Promise<SendMessageResponse> =>
+    request(sendMessageResponseSchema, `/runs/${runId}/continue`, {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    }),
+  startFreshAfter: (runId: string): Promise<Run> =>
+    request(runSchema, `/runs/${runId}/start-fresh`, { method: 'POST', body: '{}' }),
   listAnnotations: async (conversationId: string): Promise<MessageAnnotation[]> => {
     if (drafts.has(conversationId)) return [];
     const list = await request(

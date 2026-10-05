@@ -335,7 +335,8 @@ async function turn(
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
   }
-  if (text.includes('#slow')) {
+  const stalls = text.includes('#stall') && !text.includes('previous turn was interrupted');
+  if (text.includes('#slow') || stalls) {
     for (let index = 0; ; index++) {
       await say(`word${index} `);
       await sleep(20, signal);

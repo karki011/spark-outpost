@@ -11,7 +11,14 @@ import { memberMessageSchema, queuedMessageSchema } from './crew-messages.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
-import { messageSourceSchema, runSchema, runStatusSchema, startAsSchema } from './runs.ts';
+import {
+  interruptionChoiceSchema,
+  interruptionSchema,
+  messageSourceSchema,
+  runSchema,
+  runStatusSchema,
+  startAsSchema,
+} from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
@@ -71,6 +78,7 @@ export const conversationSummarySchema = z.object({
       step: z.string().nullable(),
       provider: z.string().nullable().default(null),
       progress: planProgressSchema.nullable().default(null),
+      interruptionChoice: interruptionChoiceSchema.nullable().optional(),
     })
     .nullable(),
   archivedAt: z.string().nullable(),
@@ -128,6 +136,7 @@ export const conversationDetailSchema = z.object({
   memberMessages: z.array(memberMessageSchema).optional(),
   railFlags: z.array(railFlagSchema).optional(),
   browserShots: z.array(browserShotSchema).optional(),
+  interruption: interruptionSchema.nullable().optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

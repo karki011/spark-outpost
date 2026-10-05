@@ -366,7 +366,9 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#push')) await runCommand(turn, 'push-1', 'git push origin main');
   if (turn.text.includes('#pnpmbuild')) await runCommand(turn, 'build-1', 'pnpm build');
   if (turn.text.includes('#spend')) await spend(turn);
-  if (turn.text.includes('#slowbuild')) {
+  const stalls =
+    turn.text.includes('#stallbuild') && !turn.text.includes('previous turn was interrupted');
+  if (turn.text.includes('#slowbuild') || stalls) {
     for (;;) await sleep(50, turn.signal);
   }
   if (turn.text.includes('#stubbornbuild')) {

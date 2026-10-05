@@ -76,11 +76,9 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
     case 'failed':
       return { tone: 'error', label: 'Stopped with an error', sub: reason(run.error) };
     case 'outcome_unknown':
-      return {
-        tone: 'error',
-        label: 'Stopped with an error',
-        sub: 'Stopped: the outcome is unknown',
-      };
+      return run.interruptionChoice === 'fresh'
+        ? IDLE
+        : { tone: 'error', label: 'Interrupted', sub: 'Interrupted: continue or start fresh' };
     case 'succeeded':
       return chat.unread && !open
         ? { tone: 'done', label: 'Finished, not opened yet', sub: 'Finished · open to review' }

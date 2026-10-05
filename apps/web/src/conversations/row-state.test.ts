@@ -63,6 +63,16 @@ describe('rowState', () => {
     expect(rowState(chat({ latestRun: run('outcome_unknown') }), false).tone).toBe('error');
     expect(rowState(chat({ latestRun: run('cancelled') }), false).tone).toBe('idle');
   });
+
+  it('asks about an interrupted run until the user starts fresh', () => {
+    expect(rowState(chat({ latestRun: run('outcome_unknown') }), false)).toEqual({
+      tone: 'error',
+      label: 'Interrupted',
+      sub: 'Interrupted: continue or start fresh',
+    });
+    const fresh = { ...run('outcome_unknown')!, interruptionChoice: 'fresh' as const };
+    expect(rowState(chat({ latestRun: fresh }), false).tone).toBe('idle');
+  });
 });
 
 const APPROVAL = '00000000-0000-4000-8000-0000000000a1';

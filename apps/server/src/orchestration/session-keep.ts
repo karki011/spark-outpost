@@ -85,6 +85,7 @@ async function resumable(
     checksMessages: key === null,
     now,
     idleMs,
+    continuing: input.continuesRunId != null,
   });
   if (!decision.resume) return null;
   return {
