@@ -9,12 +9,14 @@ import {
   type GitHubAppIds,
 } from '../src/github-app.ts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
+import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
 const HEARTBEAT_URL = '';
 const GITHUB_APP_CLIENT_ID = 'Iv23li7XhI8fUF6WSltL';
 const GITHUB_APP_SLUG = 'spark-outpost';
+const SLACK_CLIENT_ID = '';
 
 export type MacArch = 'x64' | 'arm64';
 
@@ -54,6 +56,18 @@ export function packagedGitHubApp(env: Env): GitHubAppIds | null {
     );
   }
   return ids;
+}
+
+export function packagedSlackClientId(env: Env): string | null {
+  const wanted = (env[SLACK_CLIENT_ID_ENV] ?? SLACK_CLIENT_ID).trim();
+  if (wanted === '') return null;
+  const clientId = slackClientId(wanted);
+  if (!clientId) {
+    throw new Error(
+      `${SLACK_CLIENT_ID_ENV} must be the Slack app's client ID (digits, a dot, digits). Never a client secret, signing secret or token.`,
+    );
+  }
+  return clientId;
 }
 
 export const RELEASE_ARCHS: MacArch[] = ['x64', 'arm64'];
@@ -133,6 +147,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const feed = updateFeedUrl(options.env);
   const heartbeat = packagedHeartbeatUrl(options.env);
   const githubApp = packagedGitHubApp(options.env);
+  const slackApp = packagedSlackClientId(options.env);
   return {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
@@ -142,6 +157,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       name: options.packageName ?? 'spark-outpost',
       ...(heartbeat ? { heartbeatUrl: heartbeat } : {}),
       ...(githubApp ? { githubApp } : {}),
+      ...(slackApp ? { slackApp: { clientId: slackApp } } : {}),
     },
     directories: { output: options.outputDir },
     npmRebuild: false,
