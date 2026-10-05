@@ -9,14 +9,6 @@ export function filterProjects(projects: readonly Project[], filter: string): Pr
   });
 }
 
-export function openProjectId(
-  projects: readonly Project[],
-  chosen: string | null | undefined,
-): string | null {
-  if (chosen !== undefined) return chosen;
-  return projects.length === 1 ? projects[0]!.id : null;
-}
-
 export function countLabel(shown: number, total: number): string {
   if (shown === total) return `${total} projects`;
   return `${shown} of ${total} projects`;

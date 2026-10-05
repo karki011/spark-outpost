@@ -33,9 +33,14 @@ async function saved() {
   }
 }
 
-async function openProjects(page: Page) {
+async function openProjects(page: Page, name: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Projects' }).click();
+  const row = page
+    .getByRole('list', { name: 'Linked folders' })
+    .getByRole('button', { name: new RegExp(`^${name}\\b`) });
+  await expect(row).toHaveAttribute('aria-expanded', 'false');
+  await row.click();
 }
 
 async function shoot(page: Page, skin: string, file: string) {
@@ -56,7 +61,7 @@ test('Builders run in parallel by default; pick how many at once and where Spark
   expect(linked.ok()).toBe(true);
   expect(await saved()).toEqual({ parallel_pieces: true, piece_slots: 3, work_place: 'worktree' });
   await page.goto('/');
-  await openProjects(page);
+  await openProjects(page, name);
   const builders = page.getByRole('group', { name: `Builders in ${name}` });
   await expect(builders).toContainText('run at the same time');
   await expect(builders.getByRole('switch')).toHaveCount(0);
@@ -84,7 +89,7 @@ test('Builders run in parallel by default; pick how many at once and where Spark
     .toEqual({ parallel_pieces: true, piece_slots: 1, work_place: 'checkout' });
 
   await page.reload();
-  await openProjects(page);
+  await openProjects(page, name);
   await expect(slots).toContainText('1 at a time, in order');
   await expect(place).toContainText('In my files');
 });
