@@ -8,7 +8,8 @@ import {
 } from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
 import type { AxNode } from './outline.ts';
-import { boxOf, capturePage, sensitiveBackendIds } from './page-tools.ts';
+import { boxOf, sensitiveBackendIds } from './page-read.ts';
+import { capturePage } from './page-tools.ts';
 
 export type PickMode = 'element' | 'region';
 
@@ -124,9 +125,13 @@ function padded(box: BrowserBox): BrowserBox {
   return { x, y, width: box.width + CROP_PADDING * 2, height: box.height + CROP_PADDING * 2 };
 }
 
-async function cropped(cdp: Cdp, box: BrowserBox): Promise<string | null> {
+async function cropped(
+  cdp: Cdp,
+  box: BrowserBox,
+  filled: ReadonlySet<number>,
+): Promise<string | null> {
   try {
-    const shot = await capturePage(cdp, { box, maxWidth: PICK_IMAGE_WIDTH });
+    const shot = await capturePage(cdp, { box, maxWidth: PICK_IMAGE_WIDTH, filled });
     return `data:${shot.mediaType};base64,${shot.data.toString('base64')}`;
   } catch {
     return null;
@@ -154,8 +159,12 @@ async function nodesInside(cdp: Cdp, box: BrowserBox): Promise<number[]> {
 
 export type PickFacts = Pick<BrowserPick, 'kind' | 'box' | 'elements' | 'image'>;
 
-async function pickedElement(cdp: Cdp, backendNodeId: number): Promise<PickFacts | null> {
-  const sensitive = new Set(await sensitiveBackendIds(cdp));
+async function pickedElement(
+  cdp: Cdp,
+  backendNodeId: number,
+  filled: ReadonlySet<number>,
+): Promise<PickFacts | null> {
+  const sensitive = new Set([...(await sensitiveBackendIds(cdp)), ...filled]);
   const element = await describeElement(cdp, backendNodeId, {
     sensitive,
     htmlMax: BROWSER_PICK_HTML_MAX,
@@ -166,12 +175,16 @@ async function pickedElement(cdp: Cdp, backendNodeId: number): Promise<PickFacts
     kind: 'element',
     box: element.box,
     elements: [element],
-    image: await cropped(cdp, padded(element.box)),
+    image: await cropped(cdp, padded(element.box), filled),
   };
 }
 
-async function pickedRegion(cdp: Cdp, box: BrowserBox): Promise<PickFacts> {
-  const sensitive = new Set(await sensitiveBackendIds(cdp));
+async function pickedRegion(
+  cdp: Cdp,
+  box: BrowserBox,
+  filled: ReadonlySet<number>,
+): Promise<PickFacts> {
+  const sensitive = new Set([...(await sensitiveBackendIds(cdp)), ...filled]);
   const elements: PickedElement[] = [];
   for (const backendNodeId of await nodesInside(cdp, box)) {
     const element = await describeElement(cdp, backendNodeId, {
@@ -181,7 +194,7 @@ async function pickedRegion(cdp: Cdp, box: BrowserBox): Promise<PickFacts> {
     });
     if (element) elements.push(element);
   }
-  return { kind: 'region', box, elements, image: await cropped(cdp, box) };
+  return { kind: 'region', box, elements, image: await cropped(cdp, box, filled) };
 }
 
 export interface PickSession {
@@ -192,16 +205,17 @@ export async function startPick(
   cdp: Cdp,
   mode: PickMode,
   done: (picked: PickFacts | null) => void,
+  filled: ReadonlySet<number> = new Set(),
 ): Promise<PickSession> {
   let finished = false;
   const stopListening = cdp.listen((method, params) => {
     if (finished) return;
     if (method === 'Overlay.inspectNodeRequested') {
-      void finish(() => pickedElement(cdp, Number(params.backendNodeId)));
+      void finish(() => pickedElement(cdp, Number(params.backendNodeId), filled));
     }
     if (method === 'Overlay.screenshotRequested') {
       const viewport = params.viewport as BrowserBox;
-      void finish(() => pickedRegion(cdp, viewport));
+      void finish(() => pickedRegion(cdp, viewport, filled));
     }
     if (method === 'Overlay.inspectModeCanceled') void finish(async () => null);
   });

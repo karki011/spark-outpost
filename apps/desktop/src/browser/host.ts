@@ -72,20 +72,25 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     tab.picking = true;
     panes.noteChange(tab.chatId);
     view.webContents.focus();
-    const session = await startPick(cdp, mode, (picked) => {
-      picks.delete(tab.id);
-      tab.picking = false;
-      panes.noteChange(tab.chatId);
-      if (!picked) return;
-      const result: BrowserPick = {
-        chatId: tab.chatId,
-        url: tab.currentUrl().slice(0, 4096),
-        title: tab.currentTitle().slice(0, 300),
-        ...picked,
-      };
-      send(IPC.browserPicked, result);
-      options.window()?.webContents.focus();
-    });
+    const session = await startPick(
+      cdp,
+      mode,
+      (picked) => {
+        picks.delete(tab.id);
+        tab.picking = false;
+        panes.noteChange(tab.chatId);
+        if (!picked) return;
+        const result: BrowserPick = {
+          chatId: tab.chatId,
+          url: tab.currentUrl().slice(0, 4096),
+          title: tab.currentTitle().slice(0, 300),
+          ...picked,
+        };
+        send(IPC.browserPicked, result);
+        options.window()?.webContents.focus();
+      },
+      tab.filled,
+    );
     picks.set(tab.id, session);
   };
 

@@ -5,6 +5,7 @@ import {
   browserPlaceSchema,
   browserTabSchema,
 } from './browser.ts';
+import { SIGN_IN_ORIGIN_MAX, SIGN_IN_PASSWORD_MAX, SIGN_IN_USERNAME_MAX } from './sign-ins.ts';
 
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
 export const BROWSER_REQUEST_TIMEOUT_MS = 30_000;
@@ -56,6 +57,15 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     limit: z.number().int().min(1).max(BROWSER_LOG_ENTRIES_MAX),
   }),
   z.object({ op: z.literal('end_run'), ...chat }),
+  z.object({ op: z.literal('page'), ...chat, tab }),
+  z.object({
+    op: z.literal('sign_in'),
+    ...chat,
+    tab: z.string().min(1).max(40),
+    origin: z.string().min(1).max(SIGN_IN_ORIGIN_MAX),
+    username: z.string().min(1).max(SIGN_IN_USERNAME_MAX),
+    password: z.string().min(1).max(SIGN_IN_PASSWORD_MAX),
+  }),
 ]);
 export type BrowserHostRequest = z.infer<typeof browserHostRequestSchema>;
 export type BrowserHostOp = BrowserHostRequest['op'];
@@ -121,6 +131,15 @@ export type BrowserLogsResult = z.infer<typeof browserLogsResultSchema>;
 
 export const browserEndRunResultSchema = z.object({ closed: z.number().int().nonnegative() });
 
+export const browserPageResultSchema = z.object(tabFacts);
+export type BrowserPageResult = z.infer<typeof browserPageResultSchema>;
+
+export const browserSignInResultSchema = z.object({
+  ...tabFacts,
+  steps: z.union([z.literal(1), z.literal(2)]),
+});
+export type BrowserSignInResult = z.infer<typeof browserSignInResultSchema>;
+
 export const browserHostResultSchemas = {
   open: browserOpenResultSchema,
   tabs: browserTabsResultSchema,
@@ -128,6 +147,8 @@ export const browserHostResultSchemas = {
   screenshot: browserScreenshotResultSchema,
   logs: browserLogsResultSchema,
   end_run: browserEndRunResultSchema,
+  page: browserPageResultSchema,
+  sign_in: browserSignInResultSchema,
 } as const;
 
 export const browserHostErrorCodeSchema = z.enum([
@@ -137,6 +158,7 @@ export const browserHostErrorCodeSchema = z.enum([
   'tab_limit',
   'user_picking',
   'load_failed',
+  'no_form',
   'cancelled',
   'failed',
 ]);

@@ -28,11 +28,14 @@ import {
   orderProjects,
   updateProject,
 } from '../projects/projects.ts';
+import type { SecretStore } from '../setup/secrets.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
+import { forgettingProjectSignIns } from '../browser/sign-ins.ts';
 
 export interface ProjectRouteDeps {
   db: Db;
   workspaceId: string;
+  secrets: SecretStore;
 }
 
 const TOO_LARGE = `That file is too large. Text files must be ${ATTACHMENT_TEXT_MAX_BYTES / 1024} KB or smaller.`;
@@ -74,7 +77,7 @@ async function readForAttachment(policy: PathPolicy, requested: string) {
   }
 }
 
-export function projectRoutes({ db, workspaceId }: ProjectRouteDeps): Router {
+export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): Router {
   const router = Router();
 
   router.get('/folders', async (req, res) => {
@@ -125,7 +128,10 @@ export function projectRoutes({ db, workspaceId }: ProjectRouteDeps): Router {
   });
 
   router.delete('/projects/:id', async (req, res) => {
-    res.json(await removeProject(db, workspaceId, paramId(req)));
+    const id = paramId(req);
+    res.json(
+      await forgettingProjectSignIns({ db, secrets }, id, () => removeProject(db, workspaceId, id)),
+    );
   });
 
   router.get('/projects/:id/git', async (req, res) => {

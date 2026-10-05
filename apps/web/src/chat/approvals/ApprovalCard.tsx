@@ -6,7 +6,7 @@ import {
   humanizeToolName,
   isCheckApproval,
   parseMcpTool,
-  sparkActionLabels,
+  sparkActionQuestion,
   type Approval,
   type ApprovalDecidedValue,
   type ApprovalScope,
@@ -60,7 +60,7 @@ function fullPath(approval: Approval, shown: string): string | undefined {
 
 function heading(approval: Approval): string {
   const action = approval.payload.sparkAction;
-  if (action) return sparkActionLabels[action.action].question;
+  if (action) return sparkActionQuestion(action);
   if (approval.payload.plan) return 'Approve the plan?';
   if (approval.payload.forcePush) return 'Force push?';
   if (approval.payload.gitControl) return 'Change git hooks or config?';

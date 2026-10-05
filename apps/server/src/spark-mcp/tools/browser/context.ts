@@ -64,6 +64,7 @@ export type BrowserDecision =
   | 'waiting_for_user'
   | 'user_declined'
   | 'refused_external'
+  | 'refused_origin'
   | 'failed';
 
 export interface BrowserAuditEntry {

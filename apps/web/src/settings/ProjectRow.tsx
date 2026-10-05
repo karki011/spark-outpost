@@ -4,6 +4,7 @@ import { ChevronIcon } from '../ui/icons.tsx';
 import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectBuilders } from './ProjectBuilders.tsx';
 import { ProjectPreview } from './ProjectPreview.tsx';
+import { ProjectSignIns } from './ProjectSignIns.tsx';
 
 function trustLabel(trust: ProjectTrust | undefined): string {
   if (!trust) return 'Not asked yet';
@@ -70,6 +71,7 @@ export function ProjectRow({
           <p className="set-project-root">{project.rootPath}</p>
           <ProjectBuilders project={project} available={parallelAvailable} />
           <ProjectBrowser project={project} />
+          <ProjectSignIns project={project} />
           <ProjectPreview project={project} />
         </div>
       )}

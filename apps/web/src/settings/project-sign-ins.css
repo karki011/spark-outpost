@@ -1,0 +1,42 @@
+.signin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.signin-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  font-size: 12.5px;
+}
+.signin-label {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--text);
+}
+.signin-origin,
+.signin-user {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signin-user {
+  flex: 1;
+  color: var(--faint);
+}
+.signin-form {
+  padding-top: 6px;
+}
+@media (max-width: 700px) {
+  .signin-item {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    padding: 4px 0;
+  }
+}

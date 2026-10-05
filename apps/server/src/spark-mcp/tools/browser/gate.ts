@@ -39,7 +39,7 @@ export interface Clearance {
 export const WAITING_FOR_PAGE =
   'Spark showed the user a card asking whether you may read this site. Tell them it is waiting; call the tool again after they allow it.';
 
-async function decided(
+export async function cardDecision(
   context: SparkToolContext,
   approvalId: string,
   waitMs: number,
@@ -81,7 +81,7 @@ export async function clearExternalRead(
     requested: facts.requested,
     observed: [],
   });
-  const outcome = await decided(context, card.id, waitMs);
+  const outcome = await cardDecision(context, card.id, waitMs);
   if (outcome === 'allowed')
     return { cleared: true, decision: 'user_allowed', approvalId: card.id };
   return {

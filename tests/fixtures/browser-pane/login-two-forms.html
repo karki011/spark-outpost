@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixture login, two forms</title>
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <h1>Sign in or join</h1>
+    <form method="post" action="welcome.html">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="username"
+        value="old@example.test"
+      />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" />
+      <label><input type="checkbox" name="remember" /> Remember me</label>
+      <button type="submit">Sign in</button>
+    </form>
+    <form method="post" action="welcome.html">
+      <label for="email2">Email</label>
+      <input
+        id="email2"
+        name="email"
+        type="email"
+        autocomplete="username"
+        value="old@example.test"
+      />
+      <label for="password2">Password</label>
+      <input id="password2" name="password" type="password" autocomplete="current-password" />
+      <label><input type="checkbox" name="remember" /> Remember me</label>
+      <button type="submit">Sign in</button>
+    </form>
+  </body>
+</html>

@@ -13,7 +13,7 @@ const SENSITIVE_FIELD =
   /pass(word|wd|code)|card.?(number|num|no)|cc.?(num|number|csc|cvv)|cvv|cvc|otp|secret|token/i;
 const FIELD_TAGS = new Set(['INPUT', 'TEXTAREA']);
 
-function attributesOf(node: DomNode): Map<string, string> {
+export function attributesOf(node: DomNode): Map<string, string> {
   const found = new Map<string, string>();
   const list = node.attributes ?? [];
   for (let index = 0; index + 1 < list.length; index += 2) {

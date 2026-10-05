@@ -14,6 +14,7 @@ import { SparkBlocks, sparkTool, type SparkBlock, type SparkToolContext } from '
 import { asToolError, auditBrowser, browserSession } from './context.ts';
 import { runShotDir } from './end-run.ts';
 import { clearPage } from './read-flow.ts';
+import { signInScrub } from './scrub.ts';
 
 export function takesImageResults(provider: string | null, model: string | null): boolean {
   if (provider === 'claude' || provider === 'codex') return true;
@@ -57,6 +58,8 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     });
   const cleared = await clearPage(context, 'spark_browser_screenshot', 'screenshot', shot, false);
   if (!cleared.cleared) return cleared.result;
+  const hidden = await signInScrub(context);
+  const seen = hidden ? { url: hidden(shot.url), title: hidden(shot.title) } : shot;
   const data = Buffer.from(shot.data, 'base64');
   const sha256 = createHash('sha256').update(data).digest('hex');
   const name = shotName(deps.now?.() ?? new Date(), shot.mediaType);
@@ -69,8 +72,8 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     const shotId = await insertBrowserShot(deps.db, {
       runId: scope.runId,
       attachment,
-      page: originAndPath(shot.url),
-      title: shot.title,
+      page: originAndPath(seen.url),
+      title: seen.title,
       width: shot.width,
       height: shot.height,
       sha256,
@@ -83,7 +86,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
           {
             shotId,
             attachmentId: attachment.id,
-            page: originAndPath(shot.url),
+            page: originAndPath(seen.url),
             width: shot.width,
             height: shot.height,
           },
@@ -96,7 +99,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
   auditBrowser(context, {
     tool: 'spark_browser_screenshot',
     action: 'screenshot',
-    page: shot.url,
+    page: seen.url,
     place: shot.place,
     decision: cleared.decision,
     detail: {
@@ -109,8 +112,8 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
   });
   const facts = {
     tab: shot.tabId,
-    url: shot.url,
-    title: shot.title,
+    url: seen.url,
+    title: seen.title,
     place: shot.place,
     width: shot.width,
     height: shot.height,
@@ -129,7 +132,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
   return {
     ...facts,
     file,
-    description: `Screenshot of "${shot.title || 'untitled page'}" at ${originAndPath(shot.url)}, ${shot.width}×${shot.height} px. This model does not take images from tools; the file is kept until this turn ends. Use spark_browser_read for what the page says.`,
+    description: `Screenshot of "${seen.title || 'untitled page'}" at ${originAndPath(seen.url)}, ${shot.width}×${shot.height} px. This model does not take images from tools; the file is kept until this turn ends. Use spark_browser_read for what the page says.`,
   };
 }
 

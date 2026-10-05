@@ -155,6 +155,14 @@ export const readPageActionSchema = z.object({
   what: z.enum(['read', 'screenshot', 'logs']),
 });
 export type ReadPageAction = z.infer<typeof readPageActionSchema>;
+export const browserSignInActionSchema = z.object({
+  action: z.literal('browser_sign_in'),
+  signInId: z.uuid(),
+  projectId: z.uuid(),
+  label: z.string().max(60),
+  origin: z.string().max(300),
+});
+export type BrowserSignInAction = z.infer<typeof browserSignInActionSchema>;
 export const postSlackActionSchema = z.object({
   action: z.literal('post_slack'),
   channel: z.object({ id: slackChannelIdSchema, name: z.string() }),
@@ -178,6 +186,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
   readPageActionSchema,
+  browserSignInActionSchema,
   postSlackActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
@@ -213,6 +222,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   switch_mcp_server: [],
   remove_mcp_server: [],
   read_page: [],
+  browser_sign_in: [],
   post_slack: ['body'],
 };
 
@@ -244,8 +254,16 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   switch_mcp_server: { question: 'Switch this MCP server?', confirm: 'Switch' },
   remove_mcp_server: { question: 'Remove this MCP server?', confirm: 'Remove server' },
   read_page: { question: 'Let the agent read this page?', confirm: 'Allow for this chat' },
+  browser_sign_in: { question: 'Use this saved sign-in?', confirm: 'Allow for this chat' },
   post_slack: { question: 'Post this to Slack?', confirm: 'Post to Slack' },
 };
+
+export function sparkActionQuestion(action: SparkAction): string {
+  if (action.action === 'browser_sign_in') {
+    return `Sign in to ${action.origin} as ${action.label}?`;
+  }
+  return sparkActionLabels[action.action].question;
+}
 
 export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);
 export type SparkResultState = z.infer<typeof sparkResultStateSchema>;

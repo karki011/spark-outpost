@@ -6,9 +6,9 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Agents get the `spark_*` tools their chat can use. Ask in plain words: "What did I spend today?"
+Agents get the `spark_*` tools their chat can use. Ask in plain words.
 
-Ticket, Slack and pull request tools need their connector; pull request tools, `spark_map` and `spark_find` need a linked project. New tools arrive with your next message.
+Ticket, Slack and pull request tools need their connector; pull request and map tools need a linked project.
 
 ## Tools that read
 
@@ -27,6 +27,7 @@ These change nothing.
 | Your MCP servers and where each is on                      | `spark_mcp_servers`                                                                                                                         |
 | Open terminals                                             | `spark_terminals`                                                                                                                           |
 | The Browser pane's tabs, pages, screenshots, logs, preview | `spark_browser_tabs`, `spark_browser_open`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
+| Saved sign-ins, without their values                       | `spark_browser_signins`                                                                                                                     |
 | Tickets, one in full, or a search of every ticket          | `spark_tickets`                                                                                                                             |
 | A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                                               |
 | Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                                                |
@@ -45,6 +46,7 @@ The agent proposes, and Spark does it.
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+| Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
 
 An MCP server card shows the exact command, because it runs on your computer. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**. Changes apply to new agent sessions.
 

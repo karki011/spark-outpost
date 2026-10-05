@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { redactText } from '@spark-outpost/contracts';
+import { signInScrub } from './scrub.ts';
 import {
   askPreviewStop,
   previewRowAt,
@@ -170,7 +171,9 @@ async function logs(lines: number, context: SparkToolContext) {
   const found = await placed(context);
   if ('missing' in found) return found.missing;
   const row = await previewRowAt(context.deps.db, found.place.projectId, found.place.folder);
-  const text = lastLines(row?.logTail ?? '', lines);
+  const hidden = await signInScrub(context);
+  const tail = lastLines(row?.logTail ?? '', lines);
+  const text = hidden ? hidden(tail) : tail;
   return new SparkBlocks([
     {
       type: 'text',
