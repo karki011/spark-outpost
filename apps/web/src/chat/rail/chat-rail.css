@@ -344,6 +344,8 @@
 }
 
 .crail-tasks ol {
+  display: grid;
+  gap: 2px;
   min-height: 0;
   max-height: 220px;
   margin: 0;
@@ -354,34 +356,26 @@
 }
 
 .crail-tasks li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 3px 6px;
-  border-radius: var(--r-sm);
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+  min-height: 26px;
+  padding: 4px 6px;
   color: var(--muted);
 }
 
-.crail-tasks li[data-state='pending'] {
-  color: var(--faint);
-}
-
 .crail-tasks li[aria-current] {
-  background: var(--raise);
   color: var(--text);
   font-weight: 500;
 }
 
-.crail-tasks li[data-state='waiting'] {
-  background: color-mix(in srgb, var(--warn) 9%, var(--raise));
-}
-
 .crail-task-mark {
   display: grid;
-  flex-shrink: 0;
   place-items: center;
   width: 16px;
   height: 17px;
+  color: var(--faint);
 }
 
 .crail-tasks li[data-state='done'] .crail-task-mark {
@@ -393,8 +387,8 @@
 }
 
 .crail-task-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border: 1.5px solid currentColor;
   border-radius: 50%;
 }
@@ -404,13 +398,17 @@
   background: var(--warn);
 }
 
-.crail-task-text {
-  min-width: 0;
+.crail-task-label {
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .crail-task-detail {
   display: block;
+  margin-top: 1px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;

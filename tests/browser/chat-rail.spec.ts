@@ -384,6 +384,65 @@ test.describe('working chats', () => {
     await shoot(page, 'crew-done-2000');
   });
 
+  test('tasks read as a plain list: one row per step with its state, the current one marked, no filled rows', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await resetCrew();
+    await useSystemTheme(page);
+    await page.emulateMedia({ colorScheme: 'light' });
+    repo = crewRepo();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const profile = await page.request.patch('/api/profile', {
+      data: { autoContinueSeconds: null },
+    });
+    expect(profile.ok()).toBe(true);
+    await crewChat(page, repo, 'Auto-edit');
+    await send(page, 'Tell me anything about this repo #build #vague #questions #three');
+    await expect(page.getByRole('group', { name: /Spark has a few questions/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
+    await expect(tasks.getByRole('button', { name: /^1 of 3 tasks done/ })).toHaveText('1 of 3');
+    const steps = tasks.getByRole('list', { name: 'Task steps' });
+    const rows = steps.getByRole('listitem');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.first()).toHaveText(/^Done: /);
+    await expect(rows.first()).not.toHaveAttribute('aria-current');
+    const current = steps.locator('li[aria-current="step"]');
+    await expect(current.first()).toHaveText(/^(Waiting for you|In progress): /);
+    await expect(steps.locator('li[data-state="waiting"]')).toContainText('Waiting for you');
+
+    const layout = await steps.evaluate((list) =>
+      [...list.querySelectorAll('li')].map((row) => {
+        const box = row.getBoundingClientRect();
+        const mark = row.querySelector('.crail-task-mark')!.getBoundingClientRect();
+        const label = row.querySelector('.crail-task-label')!.getBoundingClientRect();
+        return {
+          top: box.top,
+          bottom: box.bottom,
+          mark: Math.round(mark.left - box.left),
+          label: Math.round(label.left - box.left),
+          fill: getComputedStyle(row).backgroundColor,
+          weight: getComputedStyle(row).fontWeight,
+          current: row.hasAttribute('aria-current'),
+        };
+      }),
+    );
+    expect(new Set(layout.map((row) => row.fill))).toEqual(new Set(['rgba(0, 0, 0, 0)']));
+    expect(new Set(layout.map((row) => row.mark)).size).toBe(1);
+    expect(new Set(layout.map((row) => row.label)).size).toBe(1);
+    expect(layout[0]!.label).toBeGreaterThan(layout[0]!.mark);
+    for (const [index, row] of layout.entries()) {
+      expect(row.weight).toBe(row.current ? '500' : '400');
+      if (index > 0) expect(row.top - layout[index - 1]!.bottom).toBe(2);
+    }
+    const axe = await new AxeBuilder({ page }).include('.crail-tasks').analyze();
+    expect(axe.violations).toEqual([]);
+    await shoot(page, 'tasks-list-1440');
+  });
+
   test('a chat with a pull request shows its checks and links the PR', async ({ page }) => {
     await resetTestDatabase({ onboarded: true });
     await useSystemTheme(page);

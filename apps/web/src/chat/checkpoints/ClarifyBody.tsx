@@ -1,16 +1,28 @@
-import { useId, useState, type FocusEvent } from 'react';
+import {
+  useId,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type TextareaHTMLAttributes,
+} from 'react';
 import {
   CHECKPOINT_OPTION,
   clarifyOptionId,
   type CheckpointQuestion,
 } from '@spark-outpost/contracts';
+import { CheckIcon } from '../../ui/icons.tsx';
 import { Action, NoteForm, type Decide } from './card-parts.tsx';
 import {
+  answeredNote,
   clarifyAnswer,
+  NO_ANSWER,
   offers,
   optionName,
   quickPicks,
+  sentAnswers,
+  togglePick,
   type CheckpointApproval,
+  type QuestionAnswer,
 } from './checkpoint-model.ts';
 
 interface BodyProps {
@@ -42,6 +54,18 @@ function ClarifyFoot({ approval, decide }: BodyProps) {
   );
 }
 
+function sendOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+  if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
+}
+
+function AnswerBox({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea className={`inp ck-box ${className ?? ''}`} onKeyDown={sendOnEnter} {...props} />
+  );
+}
+
 function QuestionItem({
   question,
   number,
@@ -50,8 +74,8 @@ function QuestionItem({
 }: {
   question: CheckpointQuestion;
   number: number;
-  answer: string;
-  onAnswer(answer: string): void;
+  answer: QuestionAnswer;
+  onAnswer(answer: QuestionAnswer): void;
 }) {
   const id = useId();
   return (
@@ -62,26 +86,35 @@ function QuestionItem({
       <p className="ck-guess">
         Best guess: <b>{question.default}</b>
       </p>
-      <div className="ck-picks" role="group" aria-label={`Quick answers to question ${number}`}>
-        {quickPicks(question).map((pick) => (
-          <button
-            key={pick}
-            type="button"
-            className="ck-pick"
-            aria-pressed={answer === pick}
-            onClick={() => onAnswer(answer === pick ? '' : pick)}
-          >
-            {pick}
-          </button>
-        ))}
+      <div
+        className="ck-picks"
+        role="group"
+        aria-label={`Quick answers to question ${number}, choose any`}
+      >
+        {quickPicks(question).map((pick) => {
+          const picked = answer.picks.includes(pick);
+          return (
+            <button
+              key={pick}
+              type="button"
+              className="ck-pick"
+              aria-pressed={picked}
+              onClick={() => onAnswer(togglePick(answer, pick))}
+            >
+              {picked && <CheckIcon className="ck-pick-on" />}
+              {pick}
+            </button>
+          );
+        })}
       </div>
-      <input
-        className="inp ck-q-answer"
+      <AnswerBox
+        className="ck-q-answer"
+        rows={1}
         aria-labelledby={`${id}-q`}
         aria-describedby={`${id}-hint`}
         placeholder="Your answer (optional)"
-        value={answer}
-        onChange={(event) => onAnswer(event.target.value)}
+        value={answer.text}
+        onChange={(event) => onAnswer({ ...answer, text: event.target.value })}
       />
       <span id={`${id}-hint`} className="sr-only">
         Leave it empty to go with the best guess.
@@ -92,11 +125,11 @@ function QuestionItem({
 
 function QuestionsBody({ approval, decide }: BodyProps) {
   const questions = approval.payload.checkpoint.questions;
-  const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ''));
+  const [answers, setAnswers] = useState<QuestionAnswer[]>(() => questions.map(() => NO_ANSWER));
   const [ownWords, setOwnWords] = useState('');
   const ownId = useId();
   const reply = clarifyAnswer(questions, answers, ownWords);
-  const answer = (index: number, value: string) => {
+  const answer = (index: number, value: QuestionAnswer) => {
     decide.hold();
     setAnswers((current) => current.map((old, at) => (at === index ? value : old)));
   };
@@ -106,7 +139,7 @@ function QuestionsBody({ approval, decide }: BodyProps) {
       onFocus={holdOnField(decide.hold)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (reply) decide(CHECKPOINT_OPTION.answer, reply);
+        if (reply && !decide.busy) decide(CHECKPOINT_OPTION.answer, reply);
       }}
     >
       <ol className="ck-q-list">
@@ -115,7 +148,7 @@ function QuestionsBody({ approval, decide }: BodyProps) {
             key={question.question}
             question={question}
             number={index + 1}
-            answer={answers[index] ?? ''}
+            answer={answers[index] ?? NO_ANSWER}
             onAnswer={(value) => answer(index, value)}
           />
         ))}
@@ -125,20 +158,15 @@ function QuestionsBody({ approval, decide }: BodyProps) {
           <label htmlFor={ownId} className="sr-only">
             Answer in your own words
           </label>
-          <textarea
+          <AnswerBox
             id={ownId}
-            className="inp"
-            rows={2}
+            className="ck-own-words"
+            rows={1}
             placeholder="Answer in your own words"
             value={ownWords}
             onChange={(event) => {
               decide.hold();
               setOwnWords(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                event.currentTarget.form?.requestSubmit();
-              }
             }}
           />
         </>
@@ -150,6 +178,26 @@ function QuestionsBody({ approval, decide }: BodyProps) {
         <ClarifyFoot approval={approval} decide={decide} />
       </div>
     </form>
+  );
+}
+
+export function AskedList({ approval }: { approval: CheckpointApproval }) {
+  const questions = approval.payload.checkpoint.questions;
+  const note = answeredNote(approval);
+  const sent = sentAnswers(questions, note);
+  const guessed = approval.decisionOptionId !== CHECKPOINT_OPTION.answer || note !== null;
+  return (
+    <ol className="ck-asked">
+      {questions.map((question, index) => {
+        const answer = sent.answers[index];
+        return (
+          <li key={question.question}>
+            {question.question} {answer && <b>→ {answer}</b>}
+            {!answer && guessed && <span>Best guess: {question.default}</span>}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

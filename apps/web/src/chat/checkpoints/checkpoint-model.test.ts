@@ -9,11 +9,15 @@ import {
   changesSummary,
   checkpointQuestion,
   clarifyAnswer,
+  NO_ANSWER,
   quickPicks,
+  sentAnswers,
+  togglePick,
   checkpointResult,
   checkpointTitle,
   isCheckpoint,
   retryLine,
+  saidNote,
   secondsLeft,
   waitingLabel,
 } from './checkpoint-model.ts';
@@ -58,11 +62,67 @@ describe('checkpoint wording', () => {
       { question: 'Which report?', options: [], default: 'Spend' },
       { question: 'Which period?', options: [], default: 'This month' },
     ];
-    expect(clarifyAnswer(questions, ['', ' Last year '], '')).toBe('Which period? → Last year');
-    expect(clarifyAnswer(questions, ['Usage', ''], ' keep it short ')).toBe(
+    const typed = (text: string) => ({ picks: [], text });
+    expect(clarifyAnswer(questions, [NO_ANSWER, typed(' Last year ')], '')).toBe(
+      'Which period? → Last year',
+    );
+    expect(clarifyAnswer(questions, [typed('Usage'), NO_ANSWER], ' keep it short ')).toBe(
       'Which report? → Usage\nkeep it short',
     );
-    expect(clarifyAnswer(questions, ['', ''], '  ')).toBe('');
+    expect(clarifyAnswer(questions, [NO_ANSWER, NO_ANSWER], '  ')).toBe('');
+    expect(clarifyAnswer(questions, [], '')).toBe('');
+  });
+
+  it('joins several picked answers in the order offered, then what was typed', () => {
+    const questions = [
+      { question: 'Which area?', options: ['Explorer', 'Views'], default: 'Pulse' },
+      { question: 'How deep?', options: ['Quick summary'], default: 'Walkthrough' },
+    ];
+    const both = togglePick(togglePick(NO_ANSWER, 'Explorer'), 'Pulse');
+    expect(both.picks).toEqual(['Explorer', 'Pulse']);
+    expect(clarifyAnswer(questions, [both, NO_ANSWER], '')).toBe('Which area? → Pulse, Explorer');
+    expect(
+      clarifyAnswer(questions, [{ ...both, text: ' focus on tests\nand docs ' }, NO_ANSWER], ''),
+    ).toBe('Which area? → Pulse, Explorer — plus: focus on tests and docs');
+    expect(togglePick(both, 'Explorer').picks).toEqual(['Pulse']);
+    expect(clarifyAnswer(questions, [togglePick(both, 'Pulse'), NO_ANSWER], 'go')).toBe(
+      'Which area? → Explorer\ngo',
+    );
+  });
+
+  it('reads the sent answers back per question, leaving the own words', () => {
+    const questions = [
+      { question: 'Which area?', options: ['Explorer'], default: 'Pulse' },
+      { question: 'How deep?', options: [], default: 'Walkthrough' },
+    ];
+    const note = 'Which area? → Pulse, Explorer — plus: tests\nkeep it short\nand plain';
+    expect(sentAnswers(questions, note)).toEqual({
+      answers: ['Pulse, Explorer — plus: tests', null],
+      ownWords: 'keep it short\nand plain',
+    });
+    expect(sentAnswers(questions, null)).toEqual({ answers: [null, null], ownWords: '' });
+    const twice = [questions[1]!, questions[1]!];
+    expect(sentAnswers(twice, 'How deep? → A\nHow deep? → B').answers).toEqual(['A', 'B']);
+  });
+
+  it('quotes only the own words on an answered question card', () => {
+    const questions = [{ question: 'Which area?', options: [], default: 'Pulse' }];
+    const answered = (note: string, decisionOptionId: string) => ({
+      ...checkpoint({ kind: 'clarify', questions }),
+      status: 'allowed' as const,
+      decisionOptionId,
+      note,
+    });
+    const note = 'Which area? → Views\nkeep it short';
+    expect(saidNote(answered(note, CHECKPOINT_OPTION.answer))).toBe('keep it short');
+    expect(saidNote(answered('Which area? → Views', CHECKPOINT_OPTION.answer))).toBeNull();
+    expect(saidNote(answered(note, CHECKPOINT_OPTION.stop))).toBe(note);
+    expect(
+      saidNote({
+        ...answered(note, CHECKPOINT_OPTION.answer),
+        payload: checkpoint({ kind: 'clarify' }).payload,
+      }),
+    ).toBe(note);
   });
 
   it('does not repeat the title as the question', () => {

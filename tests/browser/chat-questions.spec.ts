@@ -115,6 +115,75 @@ test.describe('question cards', () => {
     await expect(answered.getByRole('button', { name: 'Send' })).toHaveCount(0);
   });
 
+  test('several quick answers and typed words go as one answer; Enter sends and Shift+Enter adds a line', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await autoContinueAfter(page, null);
+    await crewChat(page, repo, 'Auto-edit');
+    await send(page, THREE);
+    await expect(questions(page)).toBeVisible({ timeout: 30_000 });
+    const sendButton = questions(page).getByRole('button', { name: 'Send' });
+    await expect(sendButton).toBeDisabled();
+
+    const picks = questions(page).getByRole('group', {
+      name: 'Quick answers to question 2, choose any',
+    });
+    const pressed = picks.locator('[aria-pressed="true"]');
+    await picks.getByRole('button', { name: 'Explorer' }).click();
+    await picks.getByRole('button', { name: 'Pulse' }).click();
+    await picks.getByRole('button', { name: 'Views' }).click();
+    await expect(pressed).toHaveCount(3);
+    await picks.getByRole('button', { name: 'Views' }).click();
+    await expect(pressed).toHaveText(['Pulse', 'Explorer']);
+    await expect(sendButton).toBeEnabled();
+
+    const area = questions(page).getByRole('textbox', { name: 'Which area should I focus on?' });
+    const oneLine = (await area.boundingBox())!.height;
+    await area.fill('focus on tests');
+    await area.press('Shift+Enter');
+    await area.pressSequentially('and docs');
+    await expect(area).toHaveValue('focus on tests\nand docs');
+    expect((await area.boundingBox())!.height).toBeGreaterThan(oneLine);
+    await expect(pressed).toHaveCount(2);
+    await expect(sendButton).toBeVisible();
+
+    const edges = await questions(page).evaluate((card) => {
+      const boxes = [...card.querySelectorAll('textarea, .ck-foot, .ck-picks, .ck-q-text')].map(
+        (element) => element.getBoundingClientRect(),
+      );
+      const fields = [...card.querySelectorAll('textarea')].map((element) =>
+        element.getBoundingClientRect(),
+      );
+      const foot = card.querySelector('.ck-foot .btn')!.getBoundingClientRect();
+      const outer = card.getBoundingClientRect();
+      return {
+        lefts: [...new Set(boxes.map((box) => Math.round(box.left - outer.left)))],
+        rights: [...new Set(fields.map((box) => Math.round(outer.right - box.right)))],
+        below: Math.round(outer.bottom - foot.bottom),
+      };
+    });
+    expect(edges.lefts).toEqual([16]);
+    expect(edges.rights).toEqual([16]);
+    expect(edges.below).toBe(16);
+    await shot(page, 'picked');
+
+    const own = questions(page).getByRole('textbox', { name: 'Answer in your own words' });
+    await own.fill('keep it short');
+    await own.press('Enter');
+    const answered = thread(page).getByRole('group', { name: QUESTIONS });
+    await expect(answered.getByRole('button', { name: 'Send' })).toHaveCount(0);
+    const asked = answered.getByRole('listitem');
+    await expect(asked).toHaveText([
+      'What would you like next? Best guess: Deep dive on one feature',
+      'Which area should I focus on? → Pulse, Explorer — plus: focus on tests and docs',
+      /^How deep should it go\? Best guess: /,
+    ]);
+    await expect(answered.getByRole('status')).toHaveText('Answered.“keep it short”');
+    await shot(page, 'answered');
+  });
+
   test('the countdown belongs to the server: it survives a reload and stops when an answer field takes focus', async ({
     page,
   }) => {

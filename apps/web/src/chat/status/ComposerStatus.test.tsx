@@ -301,10 +301,18 @@ describe('clarify questions', () => {
     const usage = within(card).getByRole('button', { name: 'Usage' });
     fireEvent.click(usage);
     expect(usage.getAttribute('aria-pressed')).toBe('true');
+    const spend = within(card).getByRole('button', { name: 'Spend' });
+    fireEvent.click(spend);
+    expect(usage.getAttribute('aria-pressed')).toBe('true');
+    expect(spend.getAttribute('aria-pressed')).toBe('true');
+    expect(within(card).getByRole('group', { name: /question 1, choose any$/ })).toBeTruthy();
     expect(
-      (within(card).getByRole('textbox', { name: 'Which report?' }) as HTMLInputElement).value,
-    ).toBe('Usage');
+      (within(card).getByRole('textbox', { name: 'Which report?' }) as HTMLTextAreaElement).value,
+    ).toBe('');
     expect(send.disabled).toBe(false);
+    fireEvent.click(usage);
+    fireEvent.click(spend);
+    expect(send.disabled).toBe(true);
     expect(within(card).getByRole('button', { name: 'Go with my best guesses' })).toBeTruthy();
     expect(within(card).getByRole('button', { name: 'Stop' })).toBeTruthy();
   });
