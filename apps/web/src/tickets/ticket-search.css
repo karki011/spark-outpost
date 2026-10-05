@@ -44,7 +44,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 18px 10px 58px;
+  padding: 8px 18px 10px 56px;
   font-size: 12.5px;
   background: var(--danger-soft);
 }
@@ -94,16 +94,17 @@
 .tk .sk-irow {
   min-height: var(--row-h);
   display: grid;
-  grid-template-columns: 10px 16px 66px 132px minmax(0, 1fr) 110px 34px 18px;
+  grid-template-columns: 20px 16px 72px 112px minmax(0, 1fr) 110px 34px 18px;
   align-items: center;
   gap: 10px;
-  padding: 0 18px 0 10px;
+  padding-right: 102px;
   border-bottom: 1px solid var(--line);
 }
 
 @container tk-list (max-width: 760px) {
   .tk .sk-irow {
     grid-template-columns: 10px 16px 66px 96px minmax(0, 1fr) 18px;
+    padding: 0 18px 0 10px;
   }
 
   .tk .sk-irow > :nth-child(6),

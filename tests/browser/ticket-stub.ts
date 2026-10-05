@@ -199,6 +199,55 @@ function seedJira() {
   return jira;
 }
 
+const VOLUME_TITLES = [
+  'Work items tab rolls AI cost up the ticket hierarchy',
+  'We need to be able to determine across an organization whether or not Collector is installed everywhere and working as expected',
+  'Design system: light-mode warning token is too low-contrast for text',
+  'Telemetry page should keep search and sort when returning from a stream detail page',
+  'Dimension Workload page: count hierarchy on the classification card, and the mean label while the meter is under review',
+  'Host in github page',
+  'Explorer Results: rename the Change summary toggle to Aggregate',
+  'Five permissions on the role screen have no description, and a customer read MCP Settings as controlling MCP access',
+];
+
+const VOLUME_GROUPS: { count: number; fields: (index: number) => Partial<FakeJiraIssue> }[] = [
+  { count: 3, fields: () => ({ status: 'In Progress' }) },
+  {
+    count: 20,
+    fields: (index) => ({ status: 'Backlog', priority: index % 7 === 6 ? 'Low' : 'Medium' }),
+  },
+  { count: 2, fields: () => ({ status: 'Ready for Code Review' }) },
+  {
+    count: 46,
+    fields: (index) => ({
+      status: index % 9 === 1 ? 'Rejected' : 'Done',
+      resolutiondate: jiraDaysAgo(1 + (index % 6)),
+    }),
+  },
+];
+
+function seedVolume() {
+  const jira = fakeJira();
+  jira.workflows.CP = {
+    Backlog: 'new',
+    'In Progress': 'indeterminate',
+    'Ready for Code Review': 'indeterminate',
+    Done: 'done',
+    Rejected: 'done',
+  };
+  const issues = VOLUME_GROUPS.flatMap((group) =>
+    Array.from({ length: group.count }, (_, index) => group.fields(index)),
+  ).map((fields, index) =>
+    jiraIssue({
+      key: `CP-${48_001 + index}`,
+      summary: VOLUME_TITLES[index % VOLUME_TITLES.length]!,
+      ...fields,
+    }),
+  );
+  jira.issues.splice(0, jira.issues.length, ...issues);
+  return jira;
+}
+
 export function ticketFakes() {
   let linear = seedLinear();
   let jira = seedJira();
@@ -206,6 +255,9 @@ export function ticketFakes() {
     reset() {
       linear = seedLinear();
       jira = seedJira();
+    },
+    volume() {
+      jira = seedVolume();
     },
     denyAssign(project: string) {
       jira.denyAssign.add(project);

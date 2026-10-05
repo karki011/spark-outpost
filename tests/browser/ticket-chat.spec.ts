@@ -153,7 +153,8 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
 
   await page.request.patch('/api/tickets/connections/linear', { data: { moveOnMerge: true } });
   await refreshTickets(page);
-  await expect(ticketRow).not.toContainText('PR #1 merged', { timeout: 15_000 });
+  await expect(ticketRow).toContainText(/Done.*PR #1 merged/, { timeout: 15_000 });
+  await expect(ticketRow.locator('.fchip')).toHaveText('Done');
   await expect(done).toContainText('ENG-1210');
 
   await chatLink.click();

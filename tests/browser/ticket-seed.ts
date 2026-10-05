@@ -12,6 +12,10 @@ export async function resetTicketFakes(): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/reset`);
 }
 
+export async function seedTicketVolume(): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/volume`);
+}
+
 export async function denyJiraAssign(): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/deny-assign`);
 }

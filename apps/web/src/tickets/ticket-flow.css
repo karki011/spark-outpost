@@ -1,6 +1,7 @@
 .tk .fchip {
   --tone: var(--muted);
   justify-self: start;
+  min-width: 0;
   max-width: 100%;
   height: 20px;
   display: inline-flex;
@@ -47,10 +48,6 @@
 
 .tk .fchip:is(.todo, .done) {
   border-color: var(--line);
-}
-
-.tk .ir-main > .fchip {
-  justify-self: stretch;
 }
 
 .tk .ir-who {

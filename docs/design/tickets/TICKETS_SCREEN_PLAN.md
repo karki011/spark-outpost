@@ -85,6 +85,15 @@ Spark reads PR status (`apps/server/src/tickets/pull-status.ts`, `getPullRequest
 
 **States.** Default; Compact; Search; Assign confirm, Assigned with undo, and Assign failed; No results; Loading (skeletons for the side column, brief, section headers, rows and detail, with an `aria-busy` region and hidden "Loading tickets from Linear and Jira"); Brief writing, off, and settings; Empty (no source: "Connect Linear or Jira", tokens stay in the keychain, and Spark changes a ticket only when you start work, open a draft PR or assign it to yourself); Token rejected (a banner naming Jira and the last good sync; Jira rows get an amber "Out of date" glyph, with Start, Assign and Retry disabled; Linear works as usual).
 
+## Row layout as built
+
+The build departs from the mockup's rows in four ways, after feedback from a 69-ticket Jira inbox.
+
+- Hover and focus never hide a cell. The row action (Start, Open chat, Open PR, Answer, Assign to me) fades into a fixed slot at the end of the row; the selected row keeps it showing, and touch screens always show it.
+- Each group is one grid that its rows share (subgrid), so priority, key, status, title, age and assignee line up in every group. The status badge is as wide as its label inside a fixed column. The work-state column is as wide as the longest line in its group, up to 230px, and the chat and PR links sit beside it.
+- The work-state cell stays empty when the status badge already says it: not started with no due date, started with no chat, and done with no merged pull request. A done ticket with a merged pull request says "PR #N merged".
+- Attention rules in the side column is a collapsed disclosure. The same text is on the Needs you group's info button.
+
 ## Attention rules
 
 The rules are deterministic, free and instant. Each flag carries its rule's wording ("Rule: High or Urgent, not started, assigned to you 2 or more days ago.") and its value ("assigned 3 days ago"). A row shows the short form below; the detail pane shows the long form and the rule.

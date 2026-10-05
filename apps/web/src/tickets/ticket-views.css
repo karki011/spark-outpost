@@ -76,6 +76,9 @@
 }
 
 .tk .ib-item .n {
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: right;
   font-size: 12px;
   font-weight: 400;
   color: var(--faint);
@@ -87,25 +90,52 @@
   font-weight: 600;
 }
 
-.tk .ib-item.empty:not([aria-pressed='true'], :hover) .l {
+.tk .ib-item.zero:not([aria-pressed='true'], :hover) .l {
   color: var(--faint);
 }
 
 .tk .ib-foot {
-  margin: auto 10px 0;
+  margin: auto 0 0;
   padding-top: 18px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--faint);
 }
 
-.tk .ib-foot b {
-  font-weight: 500;
+.tk .ib-rules {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
   color: var(--muted);
+  text-align: left;
+}
+
+.tk .ib-rules:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.tk .ib-rules:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+
+.tk .ib-rules .chev {
+  flex-shrink: 0;
+  color: var(--faint);
+  transition: transform 0.3s var(--out);
+}
+
+.tk .ib-rules[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
 }
 
 .tk .ib-foot p {
-  margin: 2px 0 0;
+  margin: 2px 10px 0;
 }
 
 .tk .tk-detail.tk-none {
@@ -166,7 +196,7 @@
 
   .tk .ib-sec,
   .tk .ib-foot,
-  .tk .ib-item.empty:not([aria-pressed='true']) {
+  .tk .ib-item.zero:not([aria-pressed='true']) {
     display: none;
   }
 

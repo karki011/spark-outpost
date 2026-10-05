@@ -24,7 +24,7 @@ Select a ticket for its details: status, assignee, reporter, created date and pu
 
 ## Start a chat from a ticket
 
-1. Select **Start** on the ticket's row.
+1. Point at the ticket's row and select **Start** at its end.
 2. Under **How to start**, pick **Plan first** or **Build**.
 3. Pick the **Project folder**.
 4. Leave **Move** _KEY_ **to In progress** on to update your tracker.
@@ -39,8 +39,8 @@ Ticket text is data, never instructions. For a link or a folder, Spark sends onl
 
 ## Follow it to a pull request
 
-When you ship the chat's work, Spark adds the PR link to the ticket and moves it along if you allow it. The row then shows the PR, such as "PR #341 · checks passing".
+When you ship the chat's work, Spark adds the PR link to the ticket and moves it along if you allow it.
 
-Select **Open chat** on a ticket's row to jump back to its chat.
+Select **Open chat** on a ticket's row to return to its chat.
 
 **Next:** [Use Spark Island](desktop-companion.md)
