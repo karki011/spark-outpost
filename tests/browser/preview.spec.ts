@@ -84,6 +84,11 @@ test('Settings saves a preview per project, from a suggestion or typed, and chec
   const dialog = page.getByRole('dialog', { name: 'Spark' });
   await dialog.getByRole('tab', { name: 'Projects' }).click();
   const group = page.getByRole('group', { name: `Preview in ${name}` });
+  await expect(group).toHaveCount(0);
+  await page
+    .getByRole('list', { name: 'Linked folders' })
+    .getByRole('button', { name: new RegExp(`^${name}\\b`) })
+    .click();
   await expect(group).toContainText('Not set.');
 
   const setUp = group.getByRole('button', { name: `Set up the preview of ${name}` });

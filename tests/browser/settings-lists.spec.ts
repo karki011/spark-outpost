@@ -154,15 +154,25 @@ test('fifteen projects fit a compact list that filters and opens one at a time',
   await inEveryTheme(page, 'projects');
 });
 
-test('one project opens by itself and a few show no filter', async ({ page }) => {
+test('one project starts closed, opens from the keyboard, and a few show no filter', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await linkProjects(page, ['api']);
   const one = await openSection(page, 'Projects');
-  await expect(row(one, 'api')).toHaveAttribute('aria-expanded', 'true');
-  await expect(one.getByRole('group', { name: 'Builders in api' })).toBeVisible();
+  const api = row(one, 'api');
+  await expect(api).toHaveAttribute('aria-expanded', 'false');
+  await expect(one.getByRole('group', { name: /^Settings for / })).toHaveCount(0);
   await expect(one.getByRole('searchbox', { name: 'Filter projects' })).toHaveCount(0);
-  await row(one, 'api').click();
+  await api.focus();
+  await page.keyboard.press('Space');
+  await expect(api).toHaveAttribute('aria-expanded', 'true');
+  await expect(one.getByRole('group', { name: 'Builders in api' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(api).toHaveAttribute('aria-expanded', 'false');
   await expect(one.getByRole('group', { name: 'Builders in api' })).toHaveCount(0);
+  await api.click();
+  await expect(api).toHaveAttribute('aria-expanded', 'true');
 
   await resetTestDatabase({ onboarded: true });
   await linkProjects(page, ['api', 'cli', 'web']);
