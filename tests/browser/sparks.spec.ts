@@ -210,8 +210,8 @@ test('Settings lists Sparks and opens the same sheet', async ({ page }) => {
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Teammates' }).click();
-  const section = page.getByRole('dialog', { name: 'Teammates' });
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Crew' }).click();
+  const section = page.getByRole('dialog', { name: 'Crew' });
   await expect(section.getByRole('list', { name: 'Your Sparks' })).toContainText('Pip');
   await section.getByRole('button', { name: 'Edit Pip' }).click();
   await expect(sheet(page, 'Edit Pip')).toBeVisible();
@@ -228,8 +228,8 @@ test('Settings deletes a Spark with hold to delete and Undo @packaged', async ({
   const { conversationId } = (await opened.json()) as { conversationId: string };
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Teammates' }).click();
-  const section = page.getByRole('dialog', { name: 'Teammates' });
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Crew' }).click();
+  const section = page.getByRole('dialog', { name: 'Crew' });
   const list = section.getByRole('list', { name: 'Your Sparks' });
 
   await list.getByRole('button', { name: 'Delete Pip' }).click();
@@ -272,9 +272,9 @@ test('a Spark that cannot be deleted comes back with the reason', async ({ page 
   );
   await page.clock.install();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Teammates' }).click();
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Crew' }).click();
   const list = page
-    .getByRole('dialog', { name: 'Teammates' })
+    .getByRole('dialog', { name: 'Crew' })
     .getByRole('list', { name: 'Your Sparks' });
   await list.getByRole('button', { name: 'Delete Pip' }).click();
   const hold = page.getByRole('button', { name: 'Hold to delete Pip' });

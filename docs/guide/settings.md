@@ -36,7 +36,7 @@ The Spark Island rows show in the Mac app only.
 
 | Section          | Holds                                                                                                                           | Read more                                                   |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Teammates**    | Your named Sparks.                                                                                                              | [Make a Spark](sparks.md)                                   |
+| **Crew**         | Your named Sparks.                                                                                                              | [Make a Spark](sparks.md)                                   |
 | **AI providers** | Claude, Codex, Z.ai, and Jev under **Advisor**.                                                                                 | [Manage providers](providers-and-models.md)                 |
 | **Models**       | A row per model. Open one for cost and benchmarks.                                                                              | [Model cards](providers-and-models.md#read-the-model-cards) |
 | **Usage**        | Tokens and cost per reply, by provider. Codex costs are estimates, marked **~**.                                                | [Jev's cost](jev.md#what-it-costs)                          |

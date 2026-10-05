@@ -47,7 +47,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   },
   {
     id: 'sparks',
-    label: 'Teammates',
+    label: 'Crew',
     icon: (
       <>
         <circle cx="9" cy="10" r="3.2" />

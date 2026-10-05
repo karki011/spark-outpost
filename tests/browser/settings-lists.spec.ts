@@ -85,17 +85,17 @@ async function inEveryTheme(page: Page, screen: string) {
 const row = (dialog: Locator, name: string) =>
   dialog.getByRole('button', { name: new RegExp(`^${name}\\b`) });
 
-test('Settings names the teammates section Teammates and keeps Spark for app behaviour', async ({
+test('Settings names the teammates section Crew and keeps Spark for app behaviour', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
-  const dialog = await openSection(page, 'Teammates');
+  const dialog = await openSection(page, 'Crew');
   const tabs = dialog.getByRole('tablist', { name: 'Settings sections' }).getByRole('tab');
   await expect(tabs.nth(0)).toHaveText('Spark');
-  await expect(tabs.nth(1)).toHaveText('Teammates');
+  await expect(tabs.nth(1)).toHaveText('Crew');
   await expect(dialog.getByRole('tab', { name: 'Sparks' })).toHaveCount(0);
-  const teammates = page.getByRole('dialog', { name: 'Teammates' });
-  await expect(teammates.getByRole('heading', { name: 'Teammates' })).toBeVisible();
+  const teammates = page.getByRole('dialog', { name: 'Crew' });
+  await expect(teammates.getByRole('heading', { name: 'Crew' })).toBeVisible();
   await expect(teammates.getByRole('button', { name: 'New Spark' })).toBeVisible();
 });
 
@@ -230,7 +230,7 @@ test('settings cards have no outer border and the last provider row follows the 
   for (const [tab, card] of [
     ['Appearance', '.tcard'],
     ['Reset', '.reset-list'],
-    ['Teammates', '.tm-starter'],
+    ['Crew', '.tm-starter'],
   ] as const) {
     await page.getByRole('dialog').getByRole('tab', { name: tab }).click();
     const first = page.getByRole('dialog', { name: tab }).locator(card).first();
