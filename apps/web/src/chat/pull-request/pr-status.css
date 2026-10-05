@@ -64,6 +64,10 @@
   color: var(--danger);
 }
 
+.prs-unknown {
+  margin: 4px 0 0;
+}
+
 .prs-items {
   margin-top: 4px;
 }

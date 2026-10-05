@@ -33,7 +33,13 @@ export interface FakePull {
   files?: { filename: string; status: string; additions: number; deletions: number }[];
   reviewComments?: { path: string; line: number | null; user: { login: string }; body: string }[];
   issueComments?: { user: { login: string }; body: string }[];
-  checks?: { name: string; status: string; conclusion: string | null }[];
+  checks?: {
+    id?: number;
+    name: string;
+    status: string;
+    conclusion: string | null;
+    html_url?: string;
+  }[];
 }
 
 export interface FakeGitHub {

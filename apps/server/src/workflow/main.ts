@@ -25,6 +25,7 @@ import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
 import { startPrFollowUp } from '../pr-follow-up/poller.ts';
 import { pollNowForApproval } from '../persistence/pr-watches.ts';
+import { POLL_CHANNEL } from '../pr-tracking/refresh.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 
 const config = loadConfig();
@@ -139,6 +140,7 @@ const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => 
     })
     .catch(() => undefined);
 });
+const prPollListener = await listen(config.DATABASE_URL, POLL_CHANNEL, () => prFollowUp.wake());
 console.log(
   `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
 );
@@ -147,6 +149,7 @@ const shutdown = async () => {
   stopLagMonitor();
   await listener.close();
   await approvalListener.close();
+  await prPollListener.close();
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();

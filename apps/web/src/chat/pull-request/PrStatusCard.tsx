@@ -7,7 +7,7 @@ import {
   type PrWatch,
 } from '@spark-outpost/contracts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
-import { prFollowUpApi, prWatchesKey } from './pr-follow-up-api.ts';
+import { prWatchesQuery } from './pr-follow-up-api.ts';
 
 const CHECKS: Record<PrChecks, string> = {
   none: 'No checks',
@@ -96,18 +96,19 @@ function WatchCard({ watch }: { watch: PrWatch }) {
           </>
         )}
       </p>
-      {watch.lastError && <p className="prs-error">Last check failed: {watch.lastError}</p>}
+      {watch.unknownReason ? (
+        <p className="prs-unknown">{watch.unknownReason}</p>
+      ) : (
+        watch.lastError && <p className="prs-error">Last check failed: {watch.lastError}</p>
+      )}
       {watch.items.length > 0 && <Items items={watch.items} />}
     </section>
   );
 }
 
 export function PrStatusCard({ conversationId }: { conversationId: string }) {
-  const watches = useQuery({
-    queryKey: prWatchesKey(conversationId),
-    queryFn: () => prFollowUpApi.get(conversationId),
-  });
-  const list = watches.data?.watches ?? [];
+  const watches = useQuery(prWatchesQuery(conversationId));
+  const list = (watches.data?.watches ?? []).filter((watch) => watch.followUp);
   const open = list.filter((watch) => watch.phase !== 'done');
   const shown = open.length > 0 ? open : list.slice(0, 1);
   if (shown.length === 0) return null;

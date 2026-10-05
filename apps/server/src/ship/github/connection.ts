@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { GitHubMethod, PullRequestChecks } from '@spark-outpost/contracts';
+import { checkRunsState, failedCheckRuns } from './check-runs.ts';
 
 export interface RepoRef {
   owner: string;
@@ -110,21 +111,10 @@ const checkRunsSchema = z.object({
 });
 type CheckRuns = z.infer<typeof checkRunsSchema>['check_runs'];
 
-const FAILED_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required']);
-
-const failedRuns = (runs: CheckRuns) =>
-  runs.filter((run) => FAILED_CONCLUSIONS.has(run.conclusion ?? ''));
-
-function checksOf(runs: CheckRuns): PullRequestChecks | null {
-  if (runs.length === 0) return null;
-  if (runs.some((run) => run.status !== 'completed')) return 'pending';
-  return failedRuns(runs).length > 0 ? 'failing' : 'passing';
-}
-
 function checkFacts(runs: CheckRuns) {
-  const checks = checksOf(runs);
-  const failed = checks === 'failing' ? failedRuns(runs).flatMap((run) => run.name ?? []) : [];
-  return { checks, failedChecks: [...new Set(failed)] };
+  const state = checkRunsState(runs);
+  const failed = state === 'failing' ? failedCheckRuns(runs).flatMap((run) => run.name ?? []) : [];
+  return { checks: state === 'none' ? null : state, failedChecks: [...new Set(failed)] };
 }
 
 const segment = (value: string) => encodeURIComponent(value);

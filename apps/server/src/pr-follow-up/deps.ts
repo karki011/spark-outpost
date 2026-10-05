@@ -23,7 +23,10 @@ export function shipDepsOf(deps: FollowUpDeps, workspaceId: string): ShipDeps {
   return { ...deps.github, db: deps.db, workspaceId, branchPrefix: deps.branchPrefix };
 }
 
-export function connectTo(deps: FollowUpDeps, watch: Watch): Promise<GitHubConnection | null> {
+export function connectTo(
+  deps: FollowUpDeps,
+  watch: Pick<Watch, 'workspaceId' | 'host' | 'owner' | 'repo'>,
+): Promise<GitHubConnection | null> {
   if (deps.connect) return deps.connect(watch.workspaceId, watch.host);
   return connectionFor(
     { ...deps.github, db: deps.db, workspaceId: watch.workspaceId },

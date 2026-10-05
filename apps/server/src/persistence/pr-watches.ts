@@ -3,11 +3,18 @@ import type {
   FeedbackKind,
   FeedbackState,
   FeedbackTriage,
-  PrChecks,
-  PrWatchPhase,
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import {
+  savePull,
+  toTrackedPull,
+  trackPull,
+  type PullRow,
+  type TrackedPull,
+} from './tracked-pulls.ts';
+
+export { WATCHING_LINE } from './tracked-pulls.ts';
 
 export interface WatchTarget {
   workspaceId: string;
@@ -22,119 +29,35 @@ export interface WatchTarget {
   draft?: boolean;
 }
 
-export interface Watch extends Required<WatchTarget> {
-  id: string;
-  phase: PrWatchPhase;
-  doing: string;
-  prState: 'open' | 'merged' | 'closed';
-  draft: boolean;
-  checks: PrChecks;
-  headSha: string | null;
-  rounds: number;
-  roundRunId: string | null;
-  approvalId: string | null;
-  requested: boolean;
-  intervalSeconds: number;
-  nextPollAt: Date;
-  lastPolledAt: Date | null;
-  lastError: string | null;
+export type Watch = TrackedPull & { taskId: string };
+
+export function isWatch(pull: TrackedPull): pull is Watch {
+  return pull.followUp && pull.taskId !== null;
 }
 
-interface WatchRow {
-  id: string;
-  workspace_id: string;
-  conversation_id: string;
-  task_id: string;
-  host: string;
-  owner: string;
-  repo: string;
-  number: number;
-  url: string;
-  branch: string;
-  phase: PrWatchPhase;
-  doing: string;
-  pr_state: Watch['prState'];
-  draft: boolean;
-  checks: PrChecks;
-  head_sha: string | null;
-  rounds: number;
-  round_run_id: string | null;
-  approval_id: string | null;
-  requested: boolean;
-  interval_seconds: number;
-  next_poll_at: Date;
-  last_polled_at: Date | null;
-  last_error: string | null;
-}
-
-export const WATCHING_LINE = 'Watching checks and reviews.';
-
-function toWatch(row: WatchRow): Watch {
-  return {
-    id: row.id,
-    workspaceId: row.workspace_id,
-    conversationId: row.conversation_id,
-    taskId: row.task_id,
-    host: row.host,
-    owner: row.owner,
-    repo: row.repo,
-    number: row.number,
-    url: row.url,
-    branch: row.branch,
-    phase: row.phase,
-    doing: row.doing,
-    prState: row.pr_state,
-    draft: row.draft,
-    checks: row.checks,
-    headSha: row.head_sha,
-    rounds: row.rounds,
-    roundRunId: row.round_run_id,
-    approvalId: row.approval_id,
-    requested: row.requested,
-    intervalSeconds: row.interval_seconds,
-    nextPollAt: row.next_poll_at,
-    lastPolledAt: row.last_polled_at,
-    lastError: row.last_error,
-  };
-}
+const FOLLOWED = 'follow_up AND task_id IS NOT NULL';
 
 export async function watchPullRequest(db: Queryable, target: WatchTarget): Promise<void> {
-  await db.query(
-    `INSERT INTO pr_watches (id, workspace_id, conversation_id, task_id, host, owner, repo, number,
-       url, branch, doing, draft)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-     ON CONFLICT (workspace_id, host, owner, repo, number) DO UPDATE SET
-       conversation_id = EXCLUDED.conversation_id, task_id = EXCLUDED.task_id,
-       branch = EXCLUDED.branch, url = EXCLUDED.url, next_poll_at = now(), updated_at = now()`,
-    [
-      newId(),
-      target.workspaceId,
-      target.conversationId,
-      target.taskId,
-      target.host,
-      target.owner,
-      target.repo,
-      target.number,
-      target.url,
-      target.branch,
-      WATCHING_LINE,
-      target.draft ?? false,
-    ],
-  );
+  await trackPull(db, {
+    ...target,
+    via: 'ship',
+    by: null,
+    runId: null,
+    outside: false,
+    followUp: true,
+  });
 }
 
-export async function dueWatches(db: Queryable, now: Date, limit = 10): Promise<Watch[]> {
-  const { rows } = await db.query<WatchRow>(
-    `SELECT * FROM pr_watches WHERE phase <> 'done' AND next_poll_at <= $1
-     ORDER BY next_poll_at LIMIT $2`,
-    [now, limit],
-  );
-  return rows.map(toWatch);
+function watches(rows: readonly PullRow[]): Watch[] {
+  return rows.map(toTrackedPull).filter(isWatch);
 }
 
 export async function getWatch(db: Queryable, id: string): Promise<Watch | null> {
-  const { rows } = await db.query<WatchRow>('SELECT * FROM pr_watches WHERE id = $1', [id]);
-  return rows[0] ? toWatch(rows[0]) : null;
+  const { rows } = await db.query<PullRow>(
+    `SELECT * FROM pr_watches WHERE id = $1 AND ${FOLLOWED}`,
+    [id],
+  );
+  return watches(rows)[0] ?? null;
 }
 
 export async function watchesForConversation(
@@ -142,40 +65,15 @@ export async function watchesForConversation(
   workspaceId: string,
   conversationId: string,
 ): Promise<Watch[]> {
-  const { rows } = await db.query<WatchRow>(
-    `SELECT * FROM pr_watches WHERE workspace_id = $1 AND conversation_id = $2
+  const { rows } = await db.query<PullRow>(
+    `SELECT * FROM pr_watches WHERE workspace_id = $1 AND conversation_id = $2 AND ${FOLLOWED}
      ORDER BY created_at DESC`,
     [workspaceId, conversationId],
   );
-  return rows.map(toWatch);
+  return watches(rows);
 }
 
-export async function saveWatch(db: Queryable, watch: Watch): Promise<void> {
-  await db.query(
-    `UPDATE pr_watches SET phase = $2, doing = $3, pr_state = $4, draft = $5, checks = $6,
-       head_sha = $7, rounds = $8, round_run_id = $9, approval_id = $10, requested = $11,
-       interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
-       updated_at = now()
-     WHERE id = $1`,
-    [
-      watch.id,
-      watch.phase,
-      watch.doing,
-      watch.prState,
-      watch.draft,
-      watch.checks,
-      watch.headSha,
-      watch.rounds,
-      watch.roundRunId,
-      watch.approvalId,
-      watch.requested,
-      watch.intervalSeconds,
-      watch.nextPollAt,
-      watch.lastPolledAt,
-      watch.lastError,
-    ],
-  );
-}
+export const saveWatch = savePull;
 
 export async function pollNow(db: Queryable, watchId: string): Promise<void> {
   await db.query('UPDATE pr_watches SET next_poll_at = now() WHERE id = $1', [watchId]);

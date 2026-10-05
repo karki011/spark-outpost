@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { PullRequestState } from '@spark-outpost/contracts';
 import { pullRequestState } from '../../tickets/pull-status.ts';
+import { checkRunsState, failedCheckRuns } from './check-runs.ts';
 import { repoPath, type GitHubConnection, type RepoRef } from './connection.ts';
 
 export const GITHUB_PAGE_SIZE = 100;
@@ -69,22 +70,10 @@ export interface Range {
   limit: number;
 }
 
-const FAILED_CONCLUSIONS = new Set([
-  'failure',
-  'timed_out',
-  'cancelled',
-  'action_required',
-  'startup_failure',
-]);
-
 export function ciStatus(runs: readonly CheckRun[]): CiStatus {
-  if (runs.length === 0) return { state: 'none' };
-  const failing = runs
-    .filter((run) => run.conclusion !== null && FAILED_CONCLUSIONS.has(run.conclusion))
-    .map((run) => run.name);
-  if (failing.length > 0) return { state: 'failing', failing };
-  if (runs.some((run) => run.status !== 'completed')) return { state: 'pending' };
-  return { state: 'passing' };
+  const state = checkRunsState(runs);
+  if (state !== 'failing') return { state };
+  return { state, failing: failedCheckRuns(runs).map((run) => run.name) };
 }
 
 export function pagesCovering(range: Range): number[] {
