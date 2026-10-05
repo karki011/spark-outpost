@@ -272,3 +272,26 @@
 .ck-laws code {
   font-size: 12px;
 }
+.appr.ck.clarify:not(.decided) {
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.appr.ck.clarify .appr-dia {
+  background: var(--accent);
+}
+.appr.ck.clarify .appr-dia::after {
+  display: none;
+}
+.appr.ck.clarify .btn.deny {
+  color: var(--muted);
+}
+.appr.ck.clarify .btn.deny:hover:not(:disabled) {
+  color: var(--danger);
+}
+.appr.ck.clarify .ck-q-answer,
+.appr.ck.clarify .ck-questions > .inp {
+  background: var(--raise);
+}
+.appr.ck.clarify .ck-pick {
+  border-color: var(--line);
+}
