@@ -31,8 +31,9 @@ import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserButton } from '../browser/BrowserButton.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
-import { browserAvailable, onBrowserPick } from '../browser/browser-store.ts';
-import { pickFiles } from '../browser/pick-files.ts';
+import { onBrowserPick } from '../browser/browser-store.ts';
+import { useBrowserPane } from '../browser/pane-open.ts';
+import { pickFiles, pickText } from '../browser/pick-files.ts';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
@@ -131,7 +132,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
     repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
-  const hasBrowser = browserAvailable();
+  const browserPane = useBrowserPane(conversationId);
+  const hasBrowser = browserPane !== null;
   const mainRef = useRef<HTMLElement>(null);
   const roomy = useRoomy(mainRef);
   const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
@@ -139,7 +141,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     detail.data?.tasks ?? NO_TASKS,
     autonomyLevel !== null,
     panelOpensByDefault(roomy, wideLayout),
-    hasBrowser,
+    browserPane,
   );
   const [railCollapsed, setRailCollapsed] = useRailCollapsed();
   const rail = railState({
@@ -161,7 +163,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const [panelTab, setPanelTab] = useState<WorkTab>('tasks');
   const [autonomyRequest, setAutonomyRequest] = useState(0);
   const openAutonomy = () => {
-    panel.setOpen(true);
+    panel.setView('work');
     setAutonomyRequest((request) => request + 1);
   };
   const diff = useDiffDrawer();
@@ -178,7 +180,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   };
   const openPanelTab = useStableCallback((tab: WorkTab) => {
     setPanelTab(tab);
-    panel.setOpen(true);
+    panel.setView('work');
   });
   const openAutonomyPanel = useStableCallback(openAutonomy);
   const reviewChanges = useStableCallback(toggleDiff);
@@ -191,16 +193,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const [status] = useState(createStatusStore);
   const browsing = panel.open && panel.view === 'browser';
   const toggleBrowser = useStableCallback(() => {
-    if (browsing) panel.setOpen(false);
+    if (browsing) panel.closeBrowser();
     else panel.setView('browser');
   });
-  const addFiles = attachments.add;
+  const addPick = attachments.addPick;
   useEffect(
     () =>
       onBrowserPick((pick) => {
-        if (pick.chatId === conversationId) addFiles(pickFiles(pick));
+        if (pick.chatId === conversationId) addPick(pickText(pick), pickFiles(pick));
       }),
-    [conversationId, addFiles],
+    [conversationId, addPick],
   );
   const firstRepo = repos[0] ?? null;
   const panelRoots = useMemo(
@@ -367,17 +369,21 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               view={panel.view}
               onView={panel.setView}
               browser={
-                hasBrowser ? (
-                  <BrowserPane
-                    home={{
-                      chatId: conversationId,
-                      projectId: firstRepo?.id ?? null,
-                      keepSignIns: firstRepo?.browserKeepSignIns ?? true,
-                      roots: panelRoots,
-                    }}
-                    shown={browsing}
-                  />
-                ) : null
+                hasBrowser
+                  ? ({ views, close }) => (
+                      <BrowserPane
+                        home={{
+                          chatId: conversationId,
+                          projectId: firstRepo?.id ?? null,
+                          keepSignIns: firstRepo?.browserKeepSignIns ?? true,
+                          roots: panelRoots,
+                        }}
+                        shown={browsing}
+                        lead={views}
+                        trail={close}
+                      />
+                    )
+                  : null
               }
               {...(openAudit ? { onAudit: openAudit } : {})}
             />

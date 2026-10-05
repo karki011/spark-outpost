@@ -1,9 +1,7 @@
 import './browser-pane.css';
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { addressToUrl, type BrowserPaneTab } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
-import { CloseIcon } from '../tasks/TaskIcons.tsx';
-import { PinIcon, PlusIcon, SpinnerIcon, UnpinIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import {
   NavBackIcon,
@@ -16,9 +14,11 @@ import {
 import {
   acceptBrowserState,
   activeTab,
+  dismissAgentOpened,
   sendBrowserCommand,
   useChatBrowser,
 } from './browser-store.ts';
+import { BrowserTabs } from './BrowserTabs.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { useViewPlacement, type BrowserHome } from './use-view-placement.ts';
@@ -26,6 +26,8 @@ import { useViewPlacement, type BrowserHome } from './use-view-placement.ts';
 interface BrowserPaneProps {
   home: BrowserHome;
   shown: boolean;
+  lead?: ReactNode;
+  trail?: ReactNode;
 }
 
 interface ToolButtonProps {
@@ -33,7 +35,7 @@ interface ToolButtonProps {
   disabled?: boolean;
   pressed?: boolean;
   onClick(): void;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function ToolButton({ label, disabled = false, pressed, onClick, children }: ToolButtonProps) {
@@ -53,74 +55,6 @@ function ToolButton({ label, disabled = false, pressed, onClick, children }: Too
       </button>
       {tip.tooltip}
     </>
-  );
-}
-
-function TabStrip({ chatId, tabs }: { chatId: string; tabs: readonly BrowserPaneTab[] }) {
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (step === 0 || tabs.length === 0) return;
-    event.preventDefault();
-    const current = tabs.findIndex((tab) => tab.active);
-    const next = tabs[(current + step + tabs.length) % tabs.length]!;
-    sendBrowserCommand(chatId, { command: 'select', tabId: next.id });
-    document.getElementById(`bp-tab-${next.id}`)?.focus();
-  };
-  return (
-    <div className="bp-tabs">
-      <div className="bp-tablist" role="group" aria-label="Browser tabs" onKeyDown={onKeyDown}>
-        {tabs.map((tab) => (
-          <div key={tab.id} className={tab.active ? 'bp-tab on' : 'bp-tab'}>
-            <button
-              type="button"
-              id={`bp-tab-${tab.id}`}
-              className="bp-tab-main"
-              aria-current={tab.active ? 'page' : undefined}
-              aria-controls="bp-view"
-              title={tab.url}
-              onClick={() => sendBrowserCommand(chatId, { command: 'select', tabId: tab.id })}
-            >
-              {tab.owner === 'agent' && <span className="bp-agent">Agent</span>}
-              <span className="bp-tab-title">{tabLabel(tab)}</span>
-            </button>
-            {tab.owner === 'agent' && (
-              <button
-                type="button"
-                className="bp-tab-x"
-                aria-label={tab.pinned ? `Unpin ${tabLabel(tab)}` : `Keep ${tabLabel(tab)} open`}
-                aria-pressed={tab.pinned}
-                title={tab.pinned ? 'Pinned: stays open' : 'Keep this tab after the turn ends'}
-                onClick={() =>
-                  sendBrowserCommand(chatId, {
-                    command: 'pin',
-                    tabId: tab.id,
-                    pinned: !tab.pinned,
-                  })
-                }
-              >
-                {tab.pinned ? <UnpinIcon /> : <PinIcon />}
-              </button>
-            )}
-            <button
-              type="button"
-              className="bp-tab-x"
-              aria-label={`Close ${tabLabel(tab)}`}
-              onClick={() => sendBrowserCommand(chatId, { command: 'close', tabId: tab.id })}
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        ))}
-      </div>
-      <button
-        type="button"
-        className="icon-btn bp-new"
-        aria-label="New tab"
-        onClick={() => sendBrowserCommand(chatId, { command: 'new_tab', url: null })}
-      >
-        <PlusIcon />
-      </button>
-    </div>
   );
 }
 
@@ -208,7 +142,7 @@ function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null
   );
 }
 
-export function BrowserPane({ home, shown }: BrowserPaneProps) {
+export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserPaneProps) {
   const { chatId } = home;
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
@@ -243,10 +177,18 @@ export function BrowserPane({ home, shown }: BrowserPaneProps) {
     });
   };
   const blank = !tab || tab.url === '' || tab.error !== null;
+  const agentTab = browser.tabs.find((candidate) => candidate.id === browser.agentOpened) ?? null;
 
   return (
     <section className="bp" aria-label="Browser">
-      <TabStrip chatId={chatId} tabs={browser.tabs} />
+      <div className="bp-head">
+        {lead}
+        <BrowserTabs chatId={chatId} tabs={browser.tabs} />
+        <span className="bp-head-status" aria-live="polite">
+          {tab?.driving && <span className="bp-badge drive">Spark is driving</span>}
+        </span>
+        {trail}
+      </div>
       <div className="bp-bar">
         <ToolButton label="Back" disabled={!tab?.canGoBack} onClick={() => act('back')}>
           <NavBackIcon />
@@ -263,7 +205,13 @@ export function BrowserPane({ home, shown }: BrowserPaneProps) {
             <ReloadIcon />
           </ToolButton>
         )}
-        <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
+        {tab?.picking ? (
+          <p className="bp-picking" role="status">
+            Click or drag a box. Esc cancels.
+          </p>
+        ) : (
+          <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
+        )}
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : 'Select an element for the chat'}
           disabled={blank}
@@ -281,16 +229,14 @@ export function BrowserPane({ home, shown }: BrowserPaneProps) {
         </ToolButton>
       </div>
       <div className="bp-status" aria-live="polite">
-        {tab?.loading && (
-          <span className="bp-loading" role="status" aria-label="Page is opening">
-            <SpinnerIcon />
+        {agentTab && (
+          <span className="bp-agent-opened" role="group" aria-label="Opened by the agent">
+            <span className="bp-badge drive">The agent opened {tabLabel(agentTab)}</span>
+            <button type="button" className="bp-link" onClick={() => dismissAgentOpened(chatId)}>
+              Dismiss
+            </button>
           </span>
         )}
-        {tab && <span className="bp-title">{tab.title}</span>}
-        {tab?.picking && (
-          <span className="bp-badge">Click an element or drag a box. Esc cancels.</span>
-        )}
-        {tab?.driving && <span className="bp-badge drive">Spark is driving</span>}
         <PreviewBadge chatId={chatId} />
       </div>
       <div className="bp-view" id="bp-view" ref={view}>

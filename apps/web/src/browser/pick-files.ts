@@ -67,3 +67,48 @@ export function pickFiles(pick: BrowserPick): File[] {
   const image = pick.image ? imageFile(pick.image, name) : null;
   return image ? [text, image] : [text];
 }
+
+const PICK_HEADING = 'The user selected ';
+const PICK_TEXT_NAME = /^(selected-[a-z0-9-]+)\.txt$/;
+
+export function pickLabel(text: string): string | null {
+  if (!text.startsWith(PICK_HEADING)) return null;
+  if (text.startsWith(`${PICK_HEADING}a region`)) return 'Selected region';
+  const element = /^Role: (.+?)(?: "(.*)")?$/m.exec(text);
+  if (!element) return 'Selected element';
+  const [, role, name] = element;
+  return name ? `Selected: ${name} ${role}` : `Selected: ${role}`;
+}
+
+interface NamedFile {
+  name: string;
+  kind: string | null;
+}
+
+export interface PickPair<T> {
+  text: T;
+  image: T | null;
+}
+
+export function groupPicks<T extends NamedFile>(files: readonly T[]): (T | PickPair<T>)[] {
+  const paired = new Set<T>();
+  const grouped: (T | PickPair<T>)[] = [];
+  for (const file of files) {
+    if (paired.has(file)) continue;
+    const base = file.kind === 'text' ? PICK_TEXT_NAME.exec(file.name)?.[1] : undefined;
+    if (!base) {
+      grouped.push(file);
+      continue;
+    }
+    const image =
+      files.find(
+        (other) =>
+          other.kind === 'image' &&
+          !paired.has(other) &&
+          (other.name === `${base}.png` || other.name === `${base}.jpg`),
+      ) ?? null;
+    if (image) paired.add(image);
+    grouped.push({ text: file, image });
+  }
+  return grouped.filter((entry) => 'text' in entry || !paired.has(entry));
+}

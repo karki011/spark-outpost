@@ -6,7 +6,9 @@ import { allowSlackPlaceLabel } from '../../slack/slack-api.ts';
 import { XIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { FileIcon, ProgressRing, RetryIcon } from './attachment-icons.tsx';
-import type { PendingAttachment } from './use-attachments.ts';
+import { pickLabel } from '../../browser/pick-files.ts';
+import { PickChip } from './PickChip.tsx';
+import type { PagePick, PendingAttachment } from './use-attachments.ts';
 
 interface AttachmentChipsProps {
   items: PendingAttachment[];
@@ -123,6 +125,41 @@ function FileChip({
   );
 }
 
+interface ChipSlot {
+  key: string;
+  pick: PagePick | null;
+  items: PendingAttachment[];
+}
+
+function chipSlots(items: readonly PendingAttachment[]): ChipSlot[] {
+  const slots = new Map<string, ChipSlot>();
+  for (const item of items) {
+    const failed = items.some(
+      (other) => other.pick?.id === item.pick?.id && other.status === 'error',
+    );
+    const pick = item.pick && !failed ? item.pick : null;
+    const key = pick?.id ?? item.key;
+    const slot = slots.get(key) ?? { key, pick, items: [] };
+    slot.items.push(item);
+    slots.set(key, slot);
+  }
+  return [...slots.values()];
+}
+
+function PendingPick({ slot, onRemove }: { slot: ChipSlot; onRemove: (key: string) => void }) {
+  const uploading = slot.items.filter((item) => item.status === 'uploading');
+  const text = slot.pick?.text ?? '';
+  return (
+    <PickChip
+      label={pickLabel(text) ?? 'Selected on the page'}
+      picture={slot.items.find((item) => item.kind === 'image')?.previewUrl ?? null}
+      text={text}
+      uploading={uploading.length > 0 ? Math.min(...uploading.map((item) => item.progress)) : null}
+      onRemove={() => slot.items.forEach((item) => onRemove(item.key))}
+    />
+  );
+}
+
 export function AttachmentChips({
   items,
   onRemove,
@@ -132,17 +169,24 @@ export function AttachmentChips({
   return (
     <div className="chips" aria-label="Attachments" role="group">
       <AnimatePresence initial={false}>
-        {items.map((item) => (
-          <motion.div key={item.key} className="chip-slot" {...chipMotion}>
-            {item.kind === 'image' && item.status !== 'error' ? (
-              <ImageTile item={item} onRemove={() => onRemove(item.key)} />
+        {chipSlots(items).map((slot) => (
+          <motion.div key={slot.key} className="chip-slot" {...chipMotion}>
+            {slot.pick ? (
+              <PendingPick slot={slot} onRemove={onRemove} />
             ) : (
-              <FileChip
-                item={item}
-                onRemove={() => onRemove(item.key)}
-                onRetry={() => onRetry(item.key)}
-                onAllow={onAllowSlackChannel ? () => onAllowSlackChannel(item.key) : undefined}
-              />
+              slot.items.map((item) =>
+                item.kind === 'image' && item.status !== 'error' ? (
+                  <ImageTile key={item.key} item={item} onRemove={() => onRemove(item.key)} />
+                ) : (
+                  <FileChip
+                    key={item.key}
+                    item={item}
+                    onRemove={() => onRemove(item.key)}
+                    onRetry={() => onRetry(item.key)}
+                    onAllow={onAllowSlackChannel ? () => onAllowSlackChannel(item.key) : undefined}
+                  />
+                ),
+              )
             )}
           </motion.div>
         ))}

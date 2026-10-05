@@ -88,6 +88,82 @@
   transform-origin: left center;
 }
 
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.msg-atts .pick {
+  align-items: flex-end;
+}
+.pick-chip {
+  padding: 3px 4px 3px 3px;
+  align-self: flex-start;
+}
+.msg-atts .pick-chip {
+  align-self: flex-end;
+  padding-right: 10px;
+}
+.pick-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border-radius: 6px;
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+.pick-toggle img {
+  width: 28px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--panel);
+  object-fit: cover;
+}
+.pick-toggle > svg {
+  flex-shrink: 0;
+  margin: 3px 0 3px 5px;
+}
+.pick-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(520px, 100%);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: left;
+}
+.pick-detail p {
+  margin: 0;
+}
+.pick-detail img {
+  max-width: 100%;
+  max-height: 160px;
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  object-fit: contain;
+}
+.pick-detail pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .att-tile {
   position: relative;
   width: 56px;

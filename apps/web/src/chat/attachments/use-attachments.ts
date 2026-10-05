@@ -30,6 +30,12 @@ export interface PendingAttachment {
   attachment: Attachment | null;
   slack?: SlackThreadPreview;
   blockedChannel?: SlackNotAllowed['channel'];
+  pick?: PagePick;
+}
+
+export interface PagePick {
+  id: string;
+  text: string;
 }
 
 export interface AttachmentsState {
@@ -39,6 +45,7 @@ export interface AttachmentsState {
   failed: boolean;
   uploaded: Attachment[];
   add: (files: File[]) => void;
+  addPick: (text: string, files: File[]) => void;
   addFromRepo: (projectId: string, file: ProjectFile) => void;
   addSlack: (url: string) => void;
   allowSlackChannel: (key: string) => void;
@@ -231,6 +238,14 @@ export function useAttachments(): AttachmentsState {
 
   const add = useCallback((files: File[]) => append(files.map(createItem)), [append]);
 
+  const addPick = useCallback(
+    (text: string, files: File[]) => {
+      const pick = { id: crypto.randomUUID(), text };
+      append(files.map((file) => ({ ...createItem(file), pick })));
+    },
+    [append],
+  );
+
   const addFromRepo = useCallback(
     (projectId: string, file: ProjectFile) => {
       const duplicate = itemsRef.current.some(
@@ -314,6 +329,7 @@ export function useAttachments(): AttachmentsState {
     failed: items.some((item) => item.status === 'error'),
     uploaded: items.flatMap((item) => (item.attachment ? [item.attachment] : [])),
     add,
+    addPick,
     addFromRepo,
     addSlack,
     allowSlackChannel,
