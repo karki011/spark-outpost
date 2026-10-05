@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { setTimeout as pause } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { conflictTurn, parallelBlock, pieceExtras } from './fake-acp-parallel.ts';
 import { codexLimited, rateLimited } from './fake-acp-limits.ts';
@@ -74,6 +75,21 @@ async function proposeInPlanMode(turn: RoleTurn, plan: string): Promise<void> {
   await turn.say('No response requested.');
 }
 
+export const SPLIT_RELEASE = 'release-split';
+const SPLIT_CHUNK = 24;
+
+async function saySlowly(turn: RoleTurn, text: string): Promise<void> {
+  const third = text.split('"key"', 3).join('"key"').length;
+  const release = join(mainRoot(turn.cwd), '.git', SPLIT_RELEASE);
+  for (let at = 0; at < text.length; at += SPLIT_CHUNK) {
+    while (at >= third - SPLIT_CHUNK && !existsSync(release) && !turn.signal.aborted) {
+      await pause(25);
+    }
+    await turn.say(text.slice(at, at + SPLIT_CHUNK));
+    await pause(5);
+  }
+}
+
 async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
@@ -86,7 +102,8 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
     await proposeInPlanMode(turn, split);
     return 'end_turn';
   }
-  await turn.say(split);
+  if (turn.text.includes('#slowsplit')) await saySlowly(turn, split);
+  else await turn.say(split);
   return 'end_turn';
 }
 

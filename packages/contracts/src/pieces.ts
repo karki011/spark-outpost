@@ -26,6 +26,30 @@ export const piecesBlockSchema = z.object({
 });
 export type PiecesBlock = z.infer<typeof piecesBlockSchema>;
 
+export const PIECES_FENCE = 'pieces';
+
+const FENCED_BLOCK = /```([\w-]*)\s*\n([\s\S]*?)```/g;
+
+export interface FencedBlock {
+  start: number;
+  end: number;
+  tagged: boolean;
+  body: string;
+}
+
+export function fencedPiecesBlock(text: string): FencedBlock | null {
+  const blocks = [...text.matchAll(FENCED_BLOCK)];
+  const tagged = blocks.find((block) => block[1] === PIECES_FENCE);
+  const chosen = tagged ?? blocks.at(-1);
+  if (!chosen) return null;
+  return {
+    start: chosen.index,
+    end: chosen.index + chosen[0].length,
+    tagged: tagged !== undefined,
+    body: chosen[2]!,
+  };
+}
+
 export const listPlacementSchema = z.enum(['in_order', 'shared', 'worktree']);
 export type ListPlacement = z.infer<typeof listPlacementSchema>;
 
