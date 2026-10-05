@@ -12,6 +12,7 @@ const run = promisify(execFile);
 const BODY = '#2bb39a';
 const SPARK = '#f2b54a';
 const INK = '#0c0f12';
+const PLATE_TOP = '#1b2126';
 const EYES = `<rect x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect x="35.9" y="32" width="5.6" height="11" rx="2.8"/>`;
 
 function scout(): string {
@@ -32,11 +33,13 @@ const DEV_BADGE = [
 function appIconSvg(dev: boolean): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <filter id="shadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.3"/>
-    </filter>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${PLATE_TOP}"/>
+      <stop offset="1" stop-color="${INK}"/>
+    </linearGradient>
   </defs>
-  <g filter="url(#shadow)"><g transform="translate(78 70) scale(13.5)">${scout()}</g></g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#plate)"/>
+  <g transform="translate(214 196) scale(9.4)">${scout()}</g>
   ${dev ? DEV_BADGE : ''}
 </svg>`;
 }
