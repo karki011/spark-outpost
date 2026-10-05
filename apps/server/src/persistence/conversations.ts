@@ -81,7 +81,7 @@ const summaryQuery = `
     ) AS needs_input,
     fl.flag_title,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
-    p.pending_agent, p.pending_member, p.pending_asker, p.pending_provider,
+    p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_provider,
     p.pending_pr_feedback,
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
@@ -100,6 +100,7 @@ const summaryQuery = `
       a.payload->>'command' AS pending_command, a.payload->'paths' AS pending_paths,
       CASE WHEN ar.parent_run_id IS NOT NULL THEN ar.route->>'name' END AS pending_agent,
       m.name AS pending_member, a.payload->'checkpoint'->>'agent' AS pending_asker,
+      a.payload->'checkpoint'->'questions'->0 IS NOT NULL AS pending_questions,
       COALESCE(m.provider, ar.provider) AS pending_provider,
       a.payload->'sparkAction'->>'action' = 'pr_follow_up' AS pending_pr_feedback
     FROM approvals a

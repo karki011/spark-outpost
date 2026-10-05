@@ -9,12 +9,14 @@ export interface PendingApprovalRow {
   pending_agent: string | null;
   pending_member: string | null;
   pending_asker: string | null;
+  pending_questions?: boolean | null;
   pending_provider: string | null;
   pending_pr_feedback?: boolean | null;
   flag_title?: string | null;
 }
 
 const JEV = 'Jev';
+const SPARK = 'Spark';
 
 const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   edit: 'permission',
@@ -62,6 +64,7 @@ function permissionTitle(row: PendingApprovalRow, kind: ApprovalKind): string {
 }
 
 function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {
+  if (kind === 'clarify' && row.pending_questions) return SPARK;
   if (kind === 'clarify') return row.pending_asker ?? JEV;
   if (kind === 'stuck') return row.pending_asker;
   if (kind === 'plan' || kind === 'accept') return row.pending_member ?? row.pending_agent;
