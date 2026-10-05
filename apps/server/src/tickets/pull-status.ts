@@ -51,6 +51,8 @@ async function readOne(
       openedAt: pull.createdAt,
       mergedAt: pull.mergedAt,
       checks: pull.checks,
+      headSha: pull.headSha,
+      failedChecks: pull.failedChecks,
     };
   } catch {
     return null;

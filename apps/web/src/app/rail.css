@@ -111,6 +111,24 @@
   animation: sb-popin 0.2s var(--out);
 }
 
+.rdot.beside {
+  top: 4px;
+  right: auto;
+  left: 9px;
+}
+
+.rdot {
+  position: absolute;
+  top: 7px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--rail);
+  animation: sb-popin 0.2s var(--out);
+}
+
 .rail-sp {
   flex: 1;
 }
@@ -179,6 +197,15 @@
 
   .rbadge {
     right: calc(50% - 22px);
+  }
+
+  .rdot {
+    right: calc(50% - 16px);
+  }
+
+  .rdot.beside {
+    right: auto;
+    left: calc(50% - 16px);
   }
 
   .app:has(> .rail) {

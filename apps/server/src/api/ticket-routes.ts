@@ -2,7 +2,9 @@ import { Router, type Request } from 'express';
 import {
   assignTicketRequestSchema,
   commentTicketRequestSchema,
+  dismissTicketRequestSchema,
   saveTicketConnectionRequestSchema,
+  seenTicketNoticeRequestSchema,
   snoozeTicketRequestSchema,
   startTicketRequestSchema,
   ticketKeySchema,
@@ -30,7 +32,7 @@ import {
 import { loadInbox } from '../tickets/inbox.ts';
 import { listTickets, ticketView } from '../tickets/list.ts';
 import { searchTickets } from '../tickets/search.ts';
-import { snoozeProblem, snoozeTicket } from '../tickets/snooze.ts';
+import { dismissFlags, markNoticeSeen, snoozeProblem, snoozeTicket } from '../tickets/snooze.ts';
 import { TicketApiError, TicketConflictError, TicketNotConnectedError } from '../tickets/source.ts';
 import { startTicket } from '../tickets/start.ts';
 import { moveTicket } from '../tickets/sync.ts';
@@ -162,6 +164,23 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   router.delete('/tickets/:source/:key/snooze', async (req, res) => {
     await snoozeTicket(deps, { source: sourceParam(req), key: keyParam(req) }, null);
     res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  });
+
+  router.put('/tickets/:source/:key/dismiss', async (req, res) => {
+    const { flags } = parseBody(dismissTicketRequestSchema, req);
+    await dismissFlags(deps, { source: sourceParam(req), key: keyParam(req) }, flags);
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  });
+
+  router.delete('/tickets/:source/:key/dismiss', async (req, res) => {
+    await dismissFlags(deps, { source: sourceParam(req), key: keyParam(req) }, []);
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  });
+
+  router.put('/tickets/:source/:key/notice-seen', async (req, res) => {
+    const { notice } = parseBody(seenTicketNoticeRequestSchema, req);
+    await markNoticeSeen(deps, { source: sourceParam(req), key: keyParam(req) }, notice);
+    res.json({ ok: true });
   });
 
   router.post('/tickets/:source/:key/comments', async (req, res) => {

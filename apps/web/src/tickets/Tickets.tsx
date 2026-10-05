@@ -36,6 +36,7 @@ import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
 import { useDetailWidth } from './use-detail-width.ts';
 import { useLiveTickets } from './use-live-tickets.ts';
+import { useNoticeSeen } from './use-notice-seen.ts';
 import { useTicketInbox } from './use-ticket-inbox.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { useTicketSearch } from './use-ticket-search.ts';
@@ -139,10 +140,17 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
     return mine ? { ...mine, mine: true, inbox: mine } : null;
   })();
 
+  const markSeen = useNoticeSeen();
+  const opened = detail?.inbox ?? null;
+  useEffect(() => {
+    if (opened) markSeen(opened);
+  }, [opened, markSeen]);
+
   const act = useStableCallback((ticket: InboxTicket, action: RowAction) => {
     if ((action.kind === 'answer' || action.kind === 'open-chat') && ticket.chat) {
       onOpenChat(ticket.chat.conversationId);
     } else if (action.kind === 'open-pr' && action.url) {
+      markSeen(ticket);
       window.open(action.url, '_blank', 'noopener,noreferrer');
     } else {
       setStarting({ ...ticket, mine: true, inbox: ticket });
@@ -272,6 +280,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   onAssign={() => assigner.request(detail, detail.mine, 'detail')}
                   onStart={() => setStarting(detail)}
                   onOpenChat={onOpenChat}
+                  onToast={toaster.show}
                 />
               ) : (
                 <div className="tk-detail tk-none">

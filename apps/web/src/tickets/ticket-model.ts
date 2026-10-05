@@ -19,7 +19,7 @@ export const SECTIONS: readonly SectionMeta[] = [
   {
     id: 'attention',
     label: 'Needs you',
-    rule: 'A linked chat is waiting on you, checks are failing, or a rule flagged it. Each row says why.',
+    rule: 'A linked chat is waiting on you, or a rule flagged it. Each row says why.',
   },
   { id: 'spark', label: 'In progress with Spark', rule: 'A linked chat is running now.' },
   {
@@ -35,7 +35,7 @@ export const SECTIONS: readonly SectionMeta[] = [
   {
     id: 'review',
     label: 'In review / PR open',
-    rule: 'In review in your tracker, or its pull request is open. Longest first.',
+    rule: 'In review in your tracker, or its pull request is open, with the state of its checks. Longest first.',
   },
   {
     id: 'done',
@@ -47,7 +47,7 @@ export const SECTIONS: readonly SectionMeta[] = [
 const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
 
 export function attentionRule(settings: Thresholds): string {
-  return `Needs you when a linked chat is waiting on you or stopped, checks fail on its PR, a PR has changes requested or is approved, it's blocked, a status move failed, it's due within ${days(settings.dueDays)}, in review ${days(settings.reviewDays)} or more, or High or Urgent and not started after ${days(settings.idleDays)}.`;
+  return `Needs you when a linked chat is waiting on you or stopped, a PR has changes requested or is approved, it's blocked, a status move failed, it's due within ${days(settings.dueDays)}, in review ${days(settings.reviewDays)} or more, or High or Urgent and not started after ${days(settings.idleDays)}. Failing checks on a pull request show as a badge in In review, not here.`;
 }
 
 export type TicketView = 'inbox' | TicketSection | 'snoozed';
@@ -88,7 +88,7 @@ export interface RowAction {
   url?: string;
 }
 
-const PR_RULES = new Set(['pr-checks', 'pr-changes', 'pr-approved', 'review-slow']);
+const PR_RULES = new Set(['pr-changes', 'pr-approved', 'review-slow']);
 
 export function pullUrl(ticket: InboxTicket): string | null {
   return (
@@ -171,6 +171,10 @@ export function countBy(
   const counts = { attention: 0, spark: 0, started: 0, up_next: 0, review: 0, done: 0 };
   for (const ticket of tickets) counts[ticket.section] += 1;
   return counts;
+}
+
+export function unseenNotices(tickets: readonly Pick<InboxTicket, 'notice'>[]): number {
+  return tickets.filter((ticket) => ticket.notice && !ticket.notice.seen).length;
 }
 
 export const ticketId = (ticket: { source: TicketSourceId; key: string }) =>

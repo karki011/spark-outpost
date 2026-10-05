@@ -43,3 +43,21 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+.tk .pr-t .pr-failed {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tk .pr-item .fchip.ci {
+  margin-left: auto;
+}
+
+.tk .tk-sec.lead {
+  margin: -6px 0 18px;
+}
+
+.tk .tk-sec.lead h4 {
+  margin-top: 0;
+}

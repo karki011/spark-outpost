@@ -1,8 +1,12 @@
-import type { ConversationSummary, TicketStatus } from '@spark-outpost/contracts';
+import type {
+  ConversationSummary,
+  PullRequestChecks,
+  TicketStatus,
+} from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
-import { Glyph } from './ticket-icons.tsx';
+import { Glyph, type GlyphName } from './ticket-icons.tsx';
 import { statusBadge } from './ticket-status.ts';
 
 const FACE_SIZE = 16;
@@ -23,6 +27,23 @@ export function StatusBadge({ status, name }: { status: TicketStatus; name: stri
     <span className={`fchip ${badge.category}`} title={badge.label}>
       <Glyph name={badge.glyph} size={12} />
       <span className="fchip-l">{badge.label}</span>
+    </span>
+  );
+}
+
+const CHECKS: Record<PullRequestChecks, { label: string; tone: string; glyph: GlyphName }> = {
+  failing: { label: 'Checks failing', tone: 'blocked', glyph: 'x-circle' },
+  pending: { label: 'Checks running', tone: 'todo', glyph: 'clock' },
+  passing: { label: 'Checks passing', tone: 'done', glyph: 'check' },
+};
+
+export function ChecksBadge({ checks, unseen }: { checks: PullRequestChecks; unseen?: boolean }) {
+  const badge = CHECKS[checks];
+  return (
+    <span className={`fchip ci ${badge.tone}${unseen ? ' unseen' : ''}`} title={badge.label}>
+      <Glyph name={badge.glyph} size={12} />
+      <span className="fchip-l">{badge.label}</span>
+      {unseen && <span className="sr-only">, new</span>}
     </span>
   );
 }

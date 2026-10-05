@@ -43,6 +43,7 @@ import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
+import { unseenNotices } from '../tickets/ticket-model.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
@@ -122,6 +123,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
     (ticket) => ticket.section === 'attention',
   ).length;
+  const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
   useAttentionTitle(waiting);
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
@@ -222,6 +224,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           view={view}
           waiting={waiting}
           ticketsWaiting={ticketsWaiting}
+          ticketNotices={ticketNotices}
           mood={mood}
           onIntent={preloadView}
           onView={(next) => {
