@@ -63,6 +63,7 @@ import { codexUserMcpNames } from './codex-mcp.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { childEnvironment } from '../../setup/environment.ts';
 import {
+  afterOpening,
   closeQuietly,
   openSession,
   replayFilter,
@@ -433,19 +434,19 @@ async function converse(
           plan.request.mcpServers.length > 0 ||
           (definition.repoStyle === 'codex' && workspace.spark !== null),
       };
-      const history = continued ? [] : turn.history;
-      for (const step of contextSteps(history, promptOptions)) push(mapper.note(step));
-      const request = continued ? (turn.session?.followUp ?? turn.prompt) : turn.prompt;
+      const sent = afterOpening(turn, continued);
+      for (const step of contextSteps(sent.history, promptOptions)) push(mapper.note(step));
+      const request = continued ? (sent.session?.followUp ?? turn.prompt) : turn.prompt;
       const slash = slashPrompt(
         request,
         definition.name,
         continued ? (turn.session?.resume?.commands ?? []) : null,
       );
       if (slash.note) push(mapper.note(slash.note));
-      const text = promptText(turn, request, slash, continued);
+      const text = promptText(sent, request, slash, continued);
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
-        : conversationBlocks(history, text, promptOptions);
+        : conversationBlocks(sent.history, text, promptOptions);
       const textOnly = { ...promptOptions, attachments: [] };
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
       let promptFailure = untilFailure(session.prompt(blocks));

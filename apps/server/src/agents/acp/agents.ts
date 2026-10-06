@@ -80,6 +80,7 @@ export interface AgentDefinition {
   askMode: string;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
+  resumesAcrossFolders?: boolean;
 }
 
 const CLAUDE_DO_TOOLS = [
@@ -243,6 +244,7 @@ function packageBin(packageName: string): AgentLaunch {
 
 const claudeSessions = {
   repoStyle: 'claude',
+  resumesAcrossFolders: true,
   conversationMode: 'default',
   askMode: 'default',
   doMode: CLAUDE_DO_MODE,

@@ -3,6 +3,7 @@ import { cardFor } from '../model-cards/cards.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { latestProviderSession } from '../persistence/provider-sessions.ts';
 import { agentKey, decideResume, settingsHash } from '../workflow/session-decision.ts';
+import { conversationKey, decideConversationResume } from '../workflow/conversation-session.ts';
 import { DEFAULT_SWEEP_LIMITS } from '../workflow/turn-session.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { keptText, leftText, type ResumableSession, type SessionChoice } from './cache-switch.ts';
@@ -104,6 +105,44 @@ async function resumable(
 const PREVIOUS_COLUMNS = `r.provider, r.model, r.route->>'modelLabel' AS model_label, r.effort,
   r.finished_at, r.thought_tokens AS reasoning_tokens, coalesce(r.context_used, coalesce(r.input_tokens, 0)
     + coalesce(r.cached_read_tokens, 0) + coalesce(r.cached_write_tokens, 0))::int AS context_tokens`;
+
+export async function resumableConversation(
+  db: Queryable,
+  input: RunInput,
+  now = new Date(),
+): Promise<ResumableSession | null> {
+  const stored = await latestProviderSession(
+    db,
+    input.identity.threadId,
+    conversationKey(input.provider),
+  );
+  const decision = decideConversationResume({
+    stored,
+    provider: input.provider,
+    model: stored?.model ?? null,
+    now,
+    continuing: input.continuesRunId != null,
+  });
+  if (!stored?.model || !decision.resume) return null;
+  const { rows } = await db.query<PreviousRow>(
+    `SELECT ${PREVIOUS_COLUMNS} FROM runs r
+     WHERE r.id = (SELECT e.run_id FROM provider_session_events e
+       WHERE e.session_row_id = $1 AND e.run_id IS NOT NULL ORDER BY e.at DESC LIMIT 1)`,
+    [stored.id],
+  );
+  const previous = rows[0];
+  return {
+    pick: {
+      provider: input.provider,
+      model: stored.model,
+      modelLabel: previous?.model === stored.model ? previous.model_label : null,
+      effort: previous?.effort ?? input.settings.effort,
+    },
+    contextTokens: stored.contextUsed ?? previous?.context_tokens ?? 0,
+    reasoningTokens: previous?.reasoning_tokens ?? null,
+    lastUsedAt: stored.lastUsedAt,
+  };
+}
 
 export async function resumableTask(
   db: Queryable,

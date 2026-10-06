@@ -26,6 +26,13 @@ import type { RunInput } from './run-input.ts';
 import { harnessSetting } from '../harness/setting.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
+import { agentDefinitions } from '../agents/acp/agents.ts';
+import {
+  conversationKey,
+  decideConversationResume,
+  usesConversationSession,
+} from './conversation-session.ts';
+import { loadSessionHandoff, missedMessages } from './session-handoff.ts';
 import {
   CREW_STOPPED_NOTE,
   RESUME_REASONS,
@@ -68,6 +75,15 @@ export const DEFAULT_SWEEP_LIMITS: SweepLimits = {
   openLimit: SESSION_OPEN_LIMIT,
 };
 
+const COULD_NOT_REOPEN = "the agent couldn't reopen it";
+const UNKEYED_SETTINGS = { model: null, effort: null, mode: null, planning: false, roots: [] };
+
+function acrossFolders(provider: string): boolean {
+  const definitions: Record<string, { resumesAcrossFolders?: boolean } | undefined> =
+    agentDefinitions;
+  return definitions[provider]?.resumesAcrossFolders === true;
+}
+
 const UNIQUE_VIOLATION = '23505';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -85,34 +101,63 @@ export async function prepareTurnSession(
   const resumeKey = input.resumeKey ?? null;
   if (!chatTurn && !resumeKey) return null;
   const conversationId = input.identity.threadId;
-  const key = agentKey(input.mode, chatTurn ? null : resumeKey);
-  const hash = settingsHash({
-    provider: input.provider,
-    model: input.settings.model,
-    effort: input.settings.effort,
-    mode: input.mode,
-    planning: plansThisTurn(input),
-    roots: input.projectRoots,
-    keyed: !chatTurn,
-  });
+  const conversation = harness === 'simple' && usesConversationSession(input);
+  const key = conversation
+    ? conversationKey(input.provider)
+    : agentKey(input.mode, chatTurn ? null : resumeKey);
+  const hash = settingsHash(
+    conversation
+      ? { provider: input.provider, ...UNKEYED_SETTINGS }
+      : {
+          provider: input.provider,
+          model: input.settings.model,
+          effort: input.settings.effort,
+          mode: input.mode,
+          planning: plansThisTurn(input),
+          roots: input.projectRoots,
+          keyed: !chatTurn,
+        },
+  );
   const stored = await latestProviderSession(db, conversationId, key);
-  const decision = decideResume({
-    stored,
-    hash,
-    previousMessageId: input.previousMessageId ?? null,
-    checksMessages: chatTurn,
-    now,
-    idleMs: limits.idleMs,
-    cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
-    continuing: input.continuesRunId != null,
-  });
+  const decision = conversation
+    ? decideConversationResume({
+        stored,
+        provider: input.provider,
+        model: input.settings.model,
+        now,
+        continuing: input.continuesRunId != null,
+      })
+    : decideResume({
+        stored,
+        hash,
+        previousMessageId: input.previousMessageId ?? null,
+        checksMessages: chatTurn,
+        now,
+        idleMs: limits.idleMs,
+        cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
+        continuing: input.continuesRunId != null,
+      });
+  const handoff =
+    conversation && stored
+      ? await loadSessionHandoff(db, input, decision.freshReason ?? COULD_NOT_REOPEN).catch(
+          (error: unknown) => {
+            console.error('Could not build the session handoff', error);
+            return null;
+          },
+        )
+      : null;
+  const missed =
+    conversation && stored && decision.resume
+      ? await missedMessages(db, input, stored.lastUsedAt, stored.lastReplyHash).catch(() => [])
+      : [];
   const interrupted = input.continuesRunId != null && stored?.lastReplyHash === null;
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
   const commands = decision.resume && stored ? await sessionCommands(db, stored.id) : [];
-  const resume =
-    decision.resume && commands.length > 0
-      ? { ...decision.resume, commands: commands.map((command) => command.name) }
-      : decision.resume;
+  const resume = decision.resume && {
+    ...decision.resume,
+    ...(commands.length > 0 ? { commands: commands.map((command) => command.name) } : {}),
+    ...(conversation && acrossFolders(input.provider) ? { anyFolder: true } : {}),
+  };
   const followUp =
     decision.resume && decision.stopped
       ? stoppedFollowUp(
@@ -127,8 +172,8 @@ export async function prepareTurnSession(
     agentKey: key,
     model: input.settings.model,
     previous: stored,
-    seedChars: seedChars(input),
-    handoff: false,
+    seedChars: handoff ? handoff.length + input.prompt.length : seedChars(input),
+    handoff: handoff !== null,
     now,
   };
   const record = (event: SessionEvent | null) =>
@@ -176,6 +221,8 @@ export async function prepareTurnSession(
       freshReason: decision.freshReason,
       ...(followUp ? { followUp } : {}),
       ...(interrupted ? { interrupted } : {}),
+      ...(handoff ? { handoff } : {}),
+      ...(missed.length > 0 ? { missed } : {}),
     },
     noteSession,
     async started(output) {

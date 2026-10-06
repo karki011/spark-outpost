@@ -65,6 +65,8 @@ import {
   type Session,
 } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
+import { harnessOf } from '../harness/setting.ts';
+import { CONVERSATION_KEY_PREFIX } from '../workflow/conversation-session.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, settleObservations } from './observe.ts';
@@ -96,12 +98,14 @@ async function ensureTask(s: Session, current: CurrentTask | null): Promise<void
 }
 
 async function closeTaskSessions(s: Session, taskId: string, reason: string): Promise<void> {
-  await closeKeyedSessions(
-    s.deps.db,
-    s.input.identity.threadId,
-    `key:${builderKey(taskId)}`,
-    reason,
-  ).catch(() => undefined);
+  const thread = s.input.identity.threadId;
+  await closeKeyedSessions(s.deps.db, thread, `key:${builderKey(taskId)}`, reason).catch(
+    () => undefined,
+  );
+  if (reason !== TASK_SESSION_CLOSED || harnessOf(s.deps) !== 'simple') return;
+  await closeKeyedSessions(s.deps.db, thread, CONVERSATION_KEY_PREFIX, reason).catch(
+    () => undefined,
+  );
 }
 
 async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEvent> {

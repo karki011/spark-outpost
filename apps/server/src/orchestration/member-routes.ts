@@ -9,7 +9,14 @@ import { ESCALATED_KINDS, type EscalationKind, type PriorEscalation } from './es
 import { handbackNote } from './handoff.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
 import { SCORED_MODELS, scoreText } from './route-score.ts';
-import { keepSession, resumableChat, resumableTask, type KeptRoute } from './session-keep.ts';
+import {
+  keepSession,
+  resumableChat,
+  resumableConversation,
+  resumableTask,
+  type KeptRoute,
+} from './session-keep.ts';
+import { harnessOf } from '../harness/setting.ts';
 import {
   builderComplexity,
   DESTRUCTIVE_RULE,
@@ -117,12 +124,18 @@ function withHandback(
   return { ...route, handback: handbackNote(prior.modelLabel ?? prior.model, s.input.history) };
 }
 
+function sharesConversation(s: Session): boolean {
+  return harnessOf(s.deps) === 'simple';
+}
+
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
   const facts = builderFacts(s);
   if (s.flow.solo) return { route: soloRoute(s.route) };
-  const session = s.taskId
-    ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
-    : null;
+  const session = sharesConversation(s)
+    ? await resumableConversation(s.deps.db, s.input)
+    : s.taskId
+      ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
+      : null;
   const prior = s.taskId ? await priorEscalation(s.deps.db, s.taskId) : null;
   const demotions = await demotionsFor(s.deps.db, s.input.workspaceId, taskKind(s)).catch(() => []);
   const demoted = demotedRates(demotions, s.route.chat.provider);
@@ -136,7 +149,9 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
 async function scoutRoute(s: Session): Promise<ResolvedRoute> {
   const route = mainSessionRoute(s.route, jevTier(s));
   const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
-  const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
+  const session = sharesConversation(s)
+    ? await resumableConversation(s.deps.db, s.input)
+    : await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
   const kept = keepScoutSession(route, session);
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }

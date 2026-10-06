@@ -12,7 +12,7 @@ import { railCrossings } from './fake-acp-rails.ts';
 import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
-import { describeBlock } from './fake-acp-support.ts';
+import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   createFakeSession,
@@ -436,7 +436,7 @@ acp
       : { sessionId, configOptions: configOptions() };
   })
   .onRequest(acp.methods.agent.session.resume, (ctx) => {
-    readFakeSession(ctx.params.sessionId);
+    restoreConfig(ctx.params.sessionId, config);
     sessionCwd = ctx.params.cwd;
     sessionDirectories = ctx.params.additionalDirectories ?? null;
     return { configOptions: configOptions() };
@@ -464,7 +464,7 @@ acp
       throw acp.RequestError.invalidParams({ configId }, 'Unknown config option.');
     }
     if (typeof value === 'boolean') fast = value;
-    else config[configId] = value;
+    else rememberConfig(ctx.params.sessionId, config, configId, value);
     return { configOptions: configOptions() };
   })
   .onRequest(acp.methods.agent.session.prompt, async (ctx) => {
