@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import type { AdvisorSetup, ProviderSetup } from '@spark-outpost/contracts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { TerminalPanel } from '../terminal/TerminalPanel.tsx';
 import { KeyIcon, TerminalIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
@@ -132,6 +133,12 @@ export function ConnectSection({
   compact: boolean;
 }) {
   const editing = !setup.connection || connect.changing;
+  const { remote } = useRemoteClient();
+  const terminal =
+    editing &&
+    connect.terminalOpen &&
+    (connect.method === 'cli' || connect.failureCode === 'cli_missing') &&
+    !isAdvisor(setup);
   return (
     <>
       {!isAdvisor(setup) && setup.note && <p className="prov-note">{setup.note}</p>}
@@ -140,30 +147,32 @@ export function ConnectSection({
       ) : (
         <ConnectedDetails setup={setup} connect={connect} />
       )}
+      {terminal && remote && (
+        <p className="hintline" role="status">
+          Finish signing in to {setup.name} on your Mac. The sign-in terminal only runs there.
+        </p>
+      )}
       <AnimatePresence mode="wait">
-        {editing &&
-          connect.terminalOpen &&
-          (connect.method === 'cli' || connect.failureCode === 'cli_missing') &&
-          !isAdvisor(setup) && (
-            <motion.div key={connect.terminalRun} className="pc-collapse" {...fadeReveal}>
-              <TerminalPanel
-                provider={setup.id}
-                providerName={setup.name}
-                reason={
-                  connect.reauth
-                    ? null
-                    : (connect.log.findLast((line) => line.status === 'bad')?.label ?? null)
-                }
-                step={connect.failureCode === 'not_logged_in' ? 'login' : 'install'}
-                onCheckAgain={() => {
-                  connect.closeTerminal();
-                  void connect.verify();
-                }}
-                onDismiss={connect.closeTerminal}
-                compact={compact}
-              />
-            </motion.div>
-          )}
+        {terminal && !remote && (
+          <motion.div key={connect.terminalRun} className="pc-collapse" {...fadeReveal}>
+            <TerminalPanel
+              provider={setup.id}
+              providerName={setup.name}
+              reason={
+                connect.reauth
+                  ? null
+                  : (connect.log.findLast((line) => line.status === 'bad')?.label ?? null)
+              }
+              step={connect.failureCode === 'not_logged_in' ? 'login' : 'install'}
+              onCheckAgain={() => {
+                connect.closeTerminal();
+                void connect.verify();
+              }}
+              onDismiss={connect.closeTerminal}
+              compact={compact}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
     </>
   );
