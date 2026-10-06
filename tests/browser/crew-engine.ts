@@ -195,6 +195,11 @@ export async function send(page: Page, text: string): Promise<void> {
 
 export const card = (page: Page, name: RegExp) => page.getByRole('group', { name });
 
+export async function buildThePlan(page: Page): Promise<void> {
+  const build = card(page, /Build this plan\?/).getByRole('button', { name: 'Build', exact: true });
+  await build.click({ timeout: 60_000 });
+}
+
 export function agentHead(page: Page, name: string) {
   return page
     .locator('.crew-turn .agent-head, .crew-turn .agent-fold')

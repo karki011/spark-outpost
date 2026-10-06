@@ -5,6 +5,7 @@ import { PIECE_CHECK_SCRIPT, SPLIT_RELEASE } from '../../apps/server/test/fake-a
 import {
   agentHead,
   autoContinueAfter,
+  buildThePlan,
   crewChat,
   crewRepo,
   resetCrew,
@@ -95,6 +96,7 @@ test('the Coordinator splitting the work shows one calm line and never the piece
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(page, REQUEST);
+  await buildThePlan(page);
 
   const atlas = page.locator('.agent-block', {
     has: page.locator('.agent-name', { hasText: /^Atlas$/ }),
@@ -152,6 +154,7 @@ test('a piece list the Coordinator proposes as a plan stays out of the chat too'
     page,
     'Split this up: build a store, add an API and add a view. #build #pieces #planfile',
   );
+  await buildThePlan(page);
 
   const board = page.getByRole('region', { name: 'Pieces' });
   await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 120_000 });
