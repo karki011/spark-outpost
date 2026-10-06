@@ -96,9 +96,7 @@ function sparkOutcome(approval: Approval): Outcome | null {
     return {
       icon: 'ok',
       label: result.message ?? 'Done.',
-      detail: byMode
-        ? ' Done without a card: the agent’s mode or the chat’s autonomy allows it.'
-        : '',
+      detail: byMode ? ' Done without a card: the agent’s mode allows it.' : '',
     };
   }
   const doing = action ? sparkActionLabels[action.action].doing : 'Spark is doing it…';

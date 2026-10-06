@@ -1,10 +1,5 @@
-import {
-  CHECKPOINT_OPTION,
-  checkpointPayloadSchema,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, checkpointPayloadSchema } from '@spark-outpost/contracts';
 import { insertPlanDocument } from '../persistence/plan-documents.ts';
-import { autoContinueSeconds } from '../persistence/setup.ts';
 import {
   announcePlan,
   approvalCommit,
@@ -35,17 +30,8 @@ export function planFirstPrompt(prompt: string, note: string | null): string {
 
 const PLAN_WAIT = 'Build it, edit it, or stop.';
 
-function fullAutoWait(seconds: number | null): string {
-  if (seconds !== null) return `Full auto builds it in ${seconds} s unless you edit or stop it.`;
-  return `Auto-continue is off, so Full auto waits ${FULL_AUTO_PLAN_SECONDS} s, then builds it unless you edit or stop it.`;
-}
-
-function fallbackSeconds(level: InvolvementLevel): number | null {
-  return level === 'full-auto' ? FULL_AUTO_PLAN_SECONDS : null;
-}
-
-function planCard(version: number, wait: string, autoOption: string | null): CheckpointCard {
-  const reason = `Saved as plan v${version}; nothing was changed yet. ${wait}`;
+export function planFirstCard(version: number): CheckpointCard {
+  const reason = `Saved as plan v${version}; nothing was changed yet. ${PLAN_WAIT}`;
   return {
     kind: 'plan',
     title: PLAN_QUESTION,
@@ -53,7 +39,7 @@ function planCard(version: number, wait: string, autoOption: string | null): Che
       kind: 'plan',
       question: PLAN_QUESTION,
       reason,
-      autoOption,
+      autoOption: null,
     }),
     options: [
       { optionId: CHECKPOINT_OPTION.makeChange, name: 'Build', kind: 'allow_once' },
@@ -61,15 +47,6 @@ function planCard(version: number, wait: string, autoOption: string | null): Che
       { optionId: CHECKPOINT_OPTION.stop, name: 'Stop', kind: 'reject_once' },
     ],
   };
-}
-
-export function planFirstCard(
-  version: number,
-  level: InvolvementLevel,
-  seconds: number | null,
-): CheckpointCard {
-  if (level !== 'full-auto') return planCard(version, PLAN_WAIT, null);
-  return planCard(version, fullAutoWait(seconds), CHECKPOINT_OPTION.makeChange);
 }
 
 export function planPrNote(body: string): string {
@@ -111,9 +88,9 @@ async function adoptRequestAsPlan(s: Session, request: string, reason: string): 
   return { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null };
 }
 
-function cardFor(s: Session, version: number, seconds: number | null): CheckpointCard {
-  if (!destructiveWork(s)) return planFirstCard(version, s.input.level, seconds);
-  return heldCard(planCard(version, PLAN_WAIT, null));
+function cardFor(s: Session, version: number): CheckpointCard {
+  const card = planFirstCard(version);
+  return destructiveWork(s) ? heldCard(card) : card;
 }
 
 function withEstimate(card: CheckpointCard, estimate: string | null): CheckpointCard {
@@ -131,12 +108,8 @@ export async function writePlanFirst(s: Session, note: string | null): Promise<F
   const { plan } = drafted;
   s.flow = { ...s.flow, phase: 'waiting', waitingFor: 'plan' };
   await save(s);
-  const seconds = await autoContinueSeconds(s.deps.db, s.input.workspaceId);
-  const card = withEstimate(
-    cardFor(s, plan.version, seconds),
-    (await ensureEstimate(s))?.text ?? null,
-  );
-  const answer = await askCard(s, card, held ? null : fallbackSeconds(s.input.level));
+  const card = withEstimate(cardFor(s, plan.version), (await ensureEstimate(s))?.text ?? null);
+  const answer = await askCard(s, card);
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   if (answer.type === 'stopped') {
     await settleQuietly(s, plan, CHECKPOINT_OPTION.stop);

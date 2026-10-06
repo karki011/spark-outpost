@@ -185,7 +185,7 @@ test.fixme("Review jumps to a second turn's keep card, which renders once", asyn
   await expect(keep).toBeInViewport();
 });
 
-test("Full auto asks for nothing, keeps by itself with one line when there is no GitHub remote, and refuses the Builder's own push", async ({
+test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own push", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -196,12 +196,8 @@ test("Full auto asks for nothing, keeps by itself with one line when there is no
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file|Run a command/ })).toHaveCount(0);
   await expect(page.getByRole('group', { name: /Keep these/ })).toContainText(
-    'Kept automatically.',
+    'Kept by Full auto → PR.',
   );
-  await expect(page.getByText('No pull request: this project has no GitHub remote.')).toHaveCount(
-    1,
-  );
-  await expect(page.getByRole('alert')).toHaveCount(0);
   await agentHead(page, 'Bolt').first().click();
   const build = agentBlock(page, 'Bolt').first();
   await build.getByRole('button', { name: /^\d+ steps$/ }).click();

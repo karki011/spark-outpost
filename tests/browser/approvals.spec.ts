@@ -46,11 +46,7 @@ test.afterAll(() => {
 
 test.beforeEach(async () => {
   writeFileSync(notes(), 'Remember the milk\n');
-  await resetTestDatabase({
-    onboarded: true,
-    connected: ['claude', 'codex'],
-    defaultLevel: 'hands-off',
-  });
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 
 async function shot(page: Page, name: string) {

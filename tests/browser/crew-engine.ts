@@ -12,7 +12,6 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import type { InvolvementLevel } from '../../packages/contracts/src/involvement-levels.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -60,13 +59,12 @@ export function crewRepo(): CrewRepo {
   };
 }
 
-export async function resetCrew(defaultLevel?: InvolvementLevel): Promise<void> {
+export async function resetCrew(): Promise<void> {
   await resetTestDatabase({
     onboarded: true,
     connected: ['claude', 'codex'],
     jev: true,
     catalog: true,
-    ...(defaultLevel ? { defaultLevel } : {}),
   });
 }
 

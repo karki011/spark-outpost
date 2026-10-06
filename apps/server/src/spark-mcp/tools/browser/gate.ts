@@ -70,11 +70,7 @@ export async function clearExternalRead(
   if (await allowedEarlier(deps.db, scope.conversationId, action.origin)) {
     return { cleared: true, decision: 'allowed_earlier' };
   }
-  const facts = await actionFacts(
-    deps.db,
-    { runId: scope.runId, conversationId: scope.conversationId, observed: false },
-    'read_page',
-  );
+  const facts = await actionFacts(deps.db, { runId: scope.runId, observed: false }, 'read_page');
   if (externalReadPath(facts) === 'read') return { cleared: true, decision: 'mode' };
   const card = await postCard(deps.db, actionRun(scope), action, {
     path: 'confirm',

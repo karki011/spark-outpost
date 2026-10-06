@@ -263,20 +263,28 @@ describe('Full auto runs to a draft PR', () => {
     expect(stub.github.pulls[0]!.body).toContain('Plan it followed:');
   }, 120_000);
 
-  it('keeps like Automatic with one quiet line when GitHub is not connected, pushing nothing', async () => {
+  it('pushes the branch and links Create PR when GitHub is not connected', async () => {
     await newRepo();
     start();
-    const { orchestration, reply, keep, asked, taskId } = await runFullAuto();
+    const { orchestration, reply, keep } = await runFullAuto();
     expect(orchestration.status).toBe('succeeded');
-    expectKeptLikeAutomatic(keep);
-    expect(asked.map((approval) => approval.kind)).not.toContain('accept');
+    expectAutoKept(keep);
     expect(stub.github.pulls).toEqual([]);
-    expect(reply.match(/No pull request/g)).toHaveLength(1);
-    expect(reply).toContain(NO_PULL_REQUEST.notConnected);
-    expect(reply).not.toMatch(/Full auto → PR kept the change but/);
-    expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(false);
-    expect(await getTaskShip(t.db, taskId!)).toBeNull();
-    expect(await readFile(path.join(repo.root, 'notes.txt'), 'utf8')).toContain('step');
+    expect(reply).toMatch(
+      /Pushed spark\/\S+\. Create PR on GitHub: https:\/\/github\.com\/acme\/widgets\/compare\//,
+    );
+    expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(true);
+    expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
+  }, 120_000);
+
+  it('commits on the branch when the repository has no remote', async () => {
+    await newRepo('none');
+    start();
+    const { reply, taskId } = await runFullAuto();
+    expect(reply).toMatch(/Committed [0-9a-f]{7} on spark\/\S+, not pushed\./);
+    expect(reply).toContain('no remote');
+    const ship = await getTaskShip(t.db, taskId!);
+    expect(git(repo.root, 'log', '-1', '--format=%s', ship!.branch)).toMatch(/^The divider shows/);
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   }, 120_000);
 
@@ -315,19 +323,6 @@ describe('Full auto runs to a draft PR', () => {
     },
     120_000,
   );
-
-  it('keeps like Automatic with one quiet line when the repository has no remote, committing nothing', async () => {
-    await newRepo('none');
-    start();
-    const { orchestration, reply, keep, taskId } = await runFullAuto();
-    expect(orchestration.status).toBe('succeeded');
-    expectKeptLikeAutomatic(keep);
-    expect(reply.match(/No pull request/g)).toHaveLength(1);
-    expect(reply).toContain(NO_PULL_REQUEST.noGitHubRemote);
-    expect(await getTaskShip(t.db, taskId!)).toBeNull();
-    expect(git(repo.root, 'branch', '--list', 'spark/*', '--format=%(refname:short)')).toBe('');
-    expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
-  }, 120_000);
 
   it('keeps like Automatic with one quiet line when the project is not a git repository', async () => {
     const folder = await mkdtemp(path.join(base, 'plain-'));

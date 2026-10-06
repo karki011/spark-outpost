@@ -9,7 +9,7 @@ const SHOTS = process.env.SPARK_SLACK_SHOTS;
 const THREAD = slackLink('C0ENG', '1760000000.000100');
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew('hands-off');
+  await resetCrew();
   await resetSlackFake();
   await page.setViewportSize({ width: 1400, height: 900 });
 });

@@ -251,7 +251,7 @@ describe('spark_slack_post', () => {
     expect(stub.slack.posted).toHaveLength(0);
   });
 
-  it('posts at once in Auto, in Full auto, and in Accept edits when the user asked', async () => {
+  it('posts at once in Auto and in Accept edits when the user asked, and asks at Full auto in Manual', async () => {
     await chatIn('Do the work', 'auto');
     expect((await post({ channel: 'eng', text: 'From auto' })).json()).toMatchObject({
       outcome: 'done',
@@ -260,25 +260,21 @@ describe('spark_slack_post', () => {
 
     await chatIn('Do the work', 'default', 'full-auto');
     expect((await post({ channel: 'eng', text: 'From full auto' })).json()).toMatchObject({
-      outcome: 'done',
+      outcome: 'waiting_for_user',
     });
     await tools!.close();
 
-    await chatIn('Fix it and post an update to the Slack channel', 'acceptEdits', 'hands-off');
+    await chatIn('Fix it and post an update to the Slack channel', 'acceptEdits');
     expect((await post({ channel: 'eng', text: 'Asked for' })).json()).toMatchObject({
       outcome: 'done',
     });
     await tools!.close();
 
-    await chatIn('Fix it', 'acceptEdits', 'hands-off');
+    await chatIn('Fix it', 'acceptEdits');
     expect((await post({ channel: 'eng', text: 'Not asked' })).json()).toMatchObject({
       outcome: 'waiting_for_user',
     });
-    expect(stub.slack.posted.map((entry) => entry.text)).toEqual([
-      'From auto',
-      'From full auto',
-      'Asked for',
-    ]);
+    expect(stub.slack.posted.map((entry) => entry.text)).toEqual(['From auto', 'Asked for']);
   });
 
   it('asks first after the run read Slack, even in Auto', async () => {

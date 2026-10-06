@@ -142,7 +142,6 @@ describe('checkpoint wording', () => {
   it('counts down the default answer from the server deadline', () => {
     expect(autoLabel(CHECKPOINT_OPTION.stopReport, 10)).toBe('Stop and report (10s)');
     expect(autoLabel(CHECKPOINT_OPTION.clarifyRules, 3)).toBe('Continue (3s)');
-    expect(autoLabel(CHECKPOINT_OPTION.makeChange, 12)).toBe('Building this plan in 12s');
     expect(autoLabel(CHECKPOINT_OPTION.useDefaults, 5)).toBe('Going with my best guesses in 5s');
     const at = '2026-09-26T10:00:10.000Z';
     expect(secondsLeft(at, Date.parse('2026-09-26T10:00:00.200Z'))).toBe(10);

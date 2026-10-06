@@ -50,8 +50,6 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   },
 };
 
-const KEPT_WITHOUT_A_GITHUB_REMOTE: InvolvementLevel = 'hands-off';
-
 let t: TestDb;
 let harness: Harness;
 
@@ -112,12 +110,12 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
       );
       const answersOnly = expected.crew.every((role) => role === SCOUT);
-      const keptBy = answersOnly ? [] : [KEPT_WITHOUT_A_GITHUB_REMOTE];
+      const keptBy = answersOnly ? [] : [level];
       expect(
         kept.map((approval) => approval.payload.checkpoint?.keptBy),
         context,
       ).toEqual(keptBy);
-      if (keptBy.length > 0) {
+      if (level === 'hands-off' && keptBy.length > 0) {
         expect(kept[0]!.reason, context).toContain('Kept automatically');
       }
 

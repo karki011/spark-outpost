@@ -20,12 +20,7 @@ After **Build**, the work runs by itself.
 
 ## When the card waits
 
-| Autonomy           | Ordinary plan                                                 | Destructive plan |
-| ------------------ | ------------------------------------------------------------- | ---------------- |
-| **Automatic**      | Waits for you, in every agent mode                            | Waits for you    |
-| **Full auto → PR** | Builds after a countdown, such as "Building this plan in 10s" | Waits for you    |
-
-At **Full auto → PR**, select **Edit** or **Stop** before the countdown ends to hold the plan. The countdown is the **Wait before going with best guesses** time, or 30 seconds when that setting is **Never**.
+The card waits for you at both autonomy levels and in every agent mode. Nothing counts down.
 
 A destructive plan deletes, drops or truncates data. Its card says "this would change data permanently".
 
