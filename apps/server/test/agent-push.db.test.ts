@@ -143,6 +143,21 @@ describe(
       });
     });
 
+    it('does not push commits that hold a value from a secret file, and names only the file', async () => {
+      const value = 'tok_live_9f8e7d6c5b4a3210';
+      writeFileSync(path.join(root, '.gitignore'), '.env\n');
+      writeFileSync(path.join(root, '.env'), `API_TOKEN=${value}\n`);
+      writeFileSync(path.join(root, 'config.ts'), `export const token = '${value}';\n`);
+      git('add', '.gitignore', 'config.ts');
+      git('commit', '-qm', 'config');
+      const { audit, entries } = auditLog();
+      const pushed = await pushForAgent(deps(), scope(), { audit });
+      expect(pushed).toMatchObject({ outcome: 'refused', remote: 'origin' });
+      expect(pushed.message).toContain('a value from .env');
+      expect(JSON.stringify([pushed, entries])).not.toContain(value);
+      expect(remoteBranches()).not.toContain(BRANCH);
+    });
+
     it("leaves the agent's own shell without the variable", async () => {
       const launched = { ...process.env, ...loginShell(), GH_TOKEN: 'ghp_fromTheUsersShell0000' };
       const env = await agentEnvironment(

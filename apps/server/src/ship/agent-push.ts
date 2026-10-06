@@ -1,5 +1,6 @@
 import type { PublishBasis, TaskBranch } from '../approvals/publish-policy.ts';
 import { otherBranchReason } from '../approvals/publish-policy.ts';
+import { pushedSecretFiles } from '../approvals/secret-send.ts';
 import { trustFor } from '../agent-config/trust-store.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
@@ -40,6 +41,10 @@ export interface AgentPushOptions {
 
 export const UNTRUSTED_FOLDER_NOTE =
   "This folder is marked Not trusted in Settings → Projects, so its hooks ran without the user's token and key variables.";
+
+export function secretValueLine(branch: string, files: readonly string[]): string {
+  return `${branch} was not pushed: its commits contain a value from ${files.join(', ')}. Take the value out of the commits and tell the user it was committed; only the user can decide to push it.`;
+}
 
 async function withholdsSecrets(deps: GitHubDeps, root: string): Promise<boolean> {
   const worktree = await chatWorktreeAt(deps.db, root);
@@ -92,6 +97,8 @@ export async function pushForAgent(
       remote.name,
     );
   }
+  const secret = await pushedSecretFiles(publish.root, branch);
+  if (secret.length > 0) return refuse(secretValueLine(branch, secret), remote.name);
   const hosted = parseRemoteUrl(remote.url);
   const secretsWithheld = await withholdsSecrets(deps, publish.root);
   const known = { ...base, remote: remote.name, repo: hosted ? repoSlug(hosted) : null };

@@ -18,7 +18,7 @@ These hold in every agent mode, at both autonomy levels, for every agent. No set
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` commands                                                                 | Ask with hold to confirm. Other files in `.git` can't be changed.              |
 | **Outside the linked repos** | Changing or deleting files outside the project                                                                       | Asks, naming the path. Temp folders such as `/tmp` follow your mode. No reads. |
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                         | Asks with hold to confirm; no "always" option.                                 |
-| **Sending data out**         | Any network send after the run read secrets                                                                          | Asks, once at a time.                                                          |
+| **Sending a secret value**   | A push or `gh` upload holding a secret file's value                                                                  | Asks with hold to confirm, naming the file.                                    |
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 

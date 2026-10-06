@@ -4,7 +4,6 @@ import type { Queryable } from '../../persistence/db.ts';
 export interface ActionFacts {
   posture: ModePosture;
   requested: boolean;
-  observed: boolean;
 }
 
 export type ActionPath = 'perform' | 'confirm';
@@ -55,7 +54,6 @@ export function explicitlyAsked(action: SparkActionName, request: string): boole
 }
 
 export function actionPath(facts: ActionFacts): ActionPath {
-  if (facts.observed) return 'confirm';
   if (PERFORMING_POSTURES.has(facts.posture)) return 'perform';
   if (facts.posture === 'edits' && facts.requested) return 'perform';
   return 'confirm';
@@ -79,13 +77,12 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
 
 export async function actionFacts(
   db: Queryable,
-  place: { runId: string; observed: boolean },
+  runId: string,
   action: SparkActionName,
 ): Promise<ActionFacts> {
-  const run = await runFacts(db, place.runId);
+  const run = await runFacts(db, runId);
   return {
     posture: modePosture(run.provider, run.mode),
     requested: explicitlyAsked(action, run.request ?? ''),
-    observed: place.observed,
   };
 }

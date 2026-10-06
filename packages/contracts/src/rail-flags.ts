@@ -7,6 +7,7 @@ export const railKindSchema = z.enum([
   'force_push',
   'git_control',
   'instructions',
+  'sent_out',
 ]);
 export type RailKind = z.infer<typeof railKindSchema>;
 
@@ -42,6 +43,7 @@ const RAIL_VERBS: Record<RailKind, string> = {
   force_push: 'force-pushed',
   git_control: 'changed git hooks or config',
   instructions: 'changed agent instructions',
+  sent_out: 'sent data out',
 };
 
 const SHOWN_PATHS = 3;
@@ -52,4 +54,17 @@ export function railFlagTitle(agent: string, rail: RailKind, paths: readonly str
   const shown = paths.slice(0, SHOWN_PATHS).join(', ');
   const more = paths.length > SHOWN_PATHS ? ` and ${paths.length - SHOWN_PATHS} more` : '';
   return `${verb}: ${shown}${more}`;
+}
+
+const SHOWN_READS = 3;
+
+function readList(read: readonly string[]): string {
+  const shown = read.slice(0, SHOWN_READS).join(', ');
+  const more = read.length - SHOWN_READS;
+  return more > 0 ? `${shown} and ${more} more` : shown;
+}
+
+export function sentOutTitle(agent: string, target: string, read: readonly string[]): string {
+  const sent = `${agent} sent data ${target}`;
+  return read.length > 0 ? `${sent} after reading ${readList(read)}` : sent;
 }

@@ -1,0 +1,165 @@
+import { gitSubcommand, pushTargetOf } from './git-commands.ts';
+
+export interface OwnRepo {
+  host: string;
+  slug: string;
+  branch: string | null;
+  pull: number | null;
+}
+
+const URL_WORD = /^[a-z][a-z0-9+.-]*:\/\/|^[\w.+-]+@[\w.-]+:/i;
+const REPO_PLACEHOLDER = '{owner}/{repo}';
+const GIT_ELSEWHERE = new Set(['-C', '--git-dir', '--work-tree']);
+const GIT_FETCHES = new Set(['clone', 'fetch', 'pull', 'ls-remote']);
+const GH_ELSEWHERE = /^(?:-R|--repo|--hostname)(?:=|$)/;
+const GH_READS: Readonly<Record<string, ReadonlySet<string>>> = {
+  pr: new Set(['view', 'checks', 'status', 'diff', 'list']),
+  run: new Set(['view', 'list', 'watch']),
+};
+const API_VALUE_FLAGS = new Set([
+  ...['-X', '--method', '-f', '-F', '--field', '--raw-field', '-H', '--header', '--input'],
+  ...['-q', '--jq', '-t', '--template', '--cache', '-p', '--preview'],
+]);
+const API_FIELD_FLAGS = new Set(['-f', '-F', '--field', '--raw-field']);
+const API_BODY_FLAGS = new Set([...API_FIELD_FLAGS, '--input']);
+const REPLY_MUTATIONS = new Set([
+  ...['addPullRequestReviewThreadReply', 'addPullRequestReviewComment', 'addComment'],
+  ...['resolveReviewThread', 'unresolveReviewThread'],
+]);
+const MUTATION_CALL = /\b([A-Za-z_]\w*)\s*\(\s*input\s*:/g;
+const ENV_ELSEWHERE = /\b(?:GH_HOST|GH_REPO|GIT_DIR|GIT_WORK_TREE)=/;
+
+function isUrl(word: string): boolean {
+  return URL_WORD.test(word);
+}
+
+function ownUrl(word: string, own: OwnRepo): boolean {
+  const lowered = word.toLowerCase();
+  const hosts = [own.host, `api.${own.host}`, `ssh.${own.host}`];
+  const onHost = hosts.some(
+    (host) => lowered.includes(`://${host}/`) || lowered.includes(`@${host}:`),
+  );
+  return onHost && new RegExp(`[/:]${escaped(own.slug)}(?:\\.git)?(?:[/?#]|$)`).test(lowered);
+}
+
+function escaped(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function flagName(token: string): string {
+  return token.split('=')[0]!;
+}
+
+function positionals(args: readonly string[], valueFlags: ReadonlySet<string>): string[] {
+  return args.filter((token, index) => {
+    if (token.startsWith('-')) return false;
+    const previous = args[index - 1];
+    return !previous || !valueFlags.has(previous);
+  });
+}
+
+function flagValues(args: readonly string[], flags: ReadonlySet<string>): string[] {
+  return args.flatMap((token, index) => {
+    if (!flags.has(flagName(token))) return [];
+    const inline = token.indexOf('=');
+    return [inline === -1 ? (args[index + 1] ?? '') : token.slice(inline + 1)];
+  });
+}
+
+export function ownGitUse(args: readonly string[], own: OwnRepo): boolean {
+  const sub = gitSubcommand(args);
+  if (!sub || args.some((token) => GIT_ELSEWHERE.has(flagName(token)))) return false;
+  if (GIT_FETCHES.has(sub.name)) {
+    const repo = sub.rest.find((token) => !token.startsWith('-'));
+    return repo !== undefined && isUrl(repo) && ownUrl(repo, own);
+  }
+  if (sub.name !== 'push' || !own.branch) return false;
+  const target = pushTargetOf(sub.rest);
+  if (target.widens || !target.remote) return false;
+  if (isUrl(target.remote) && !ownUrl(target.remote, own)) return false;
+  return target.branches.length > 0 && target.branches.every((name) => name === own.branch);
+}
+
+function ownSelector(word: string, own: OwnRepo): boolean {
+  if (isUrl(word)) return ownUrl(word, own);
+  if (word === own.branch) return true;
+  return own.pull !== null && word.replace(/^#/, '') === String(own.pull);
+}
+
+function selectors(args: readonly string[]): string[] {
+  return args.filter((token, index) => {
+    if (token.startsWith('-')) return false;
+    const previous = args[index - 1];
+    return !previous || !previous.startsWith('-') || previous.includes('=');
+  });
+}
+
+function namesOwnPull(args: readonly string[], own: OwnRepo): boolean {
+  return selectors(args).every((word) => ownSelector(word, own));
+}
+
+function opensOwnPull(args: readonly string[], own: OwnRepo): boolean {
+  if (!own.branch) return false;
+  const heads = flagValues(args, new Set(['-H', '--head']));
+  return heads.every((head) => head === own.branch) && namesOwnPull(args, own);
+}
+
+function apiMethod(args: readonly string[]): string {
+  const named = flagValues(args, new Set(['-X', '--method']))[0];
+  if (named) return named.toUpperCase();
+  return args.some((token) => API_BODY_FLAGS.has(flagName(token))) ? 'POST' : 'GET';
+}
+
+function ownGraphql(args: readonly string[], own: OwnRepo): boolean {
+  if (args.some((token) => flagName(token) === '--input')) return false;
+  const text = flagValues(args, API_FIELD_FLAGS).join('\n');
+  if (!/\bmutation\b/.test(text)) return true;
+  const calls = [...text.matchAll(MUTATION_CALL)].map((match) => match[1]!);
+  return own.pull !== null && calls.length > 0 && calls.every((name) => REPLY_MUTATIONS.has(name));
+}
+
+function replyEndpoint(endpoint: string, own: OwnRepo): boolean {
+  if (own.pull === null) return false;
+  const repo = `(?:${escaped(REPO_PLACEHOLDER)}|${escaped(own.slug)})`;
+  const pull = String(own.pull);
+  const routes = [
+    `pulls/${pull}/comments(?:/\\d+/replies)?`,
+    `issues/${pull}/comments`,
+    'pulls/comments/\\d+/replies',
+  ];
+  return new RegExp(`^/?repos/${repo}/(?:${routes.join('|')})/?$`, 'i').test(endpoint);
+}
+
+function ownApi(args: readonly string[], own: OwnRepo): boolean {
+  const endpoint = positionals(args, API_VALUE_FLAGS)[0];
+  if (!endpoint) return false;
+  if (isUrl(endpoint)) return apiMethod(args) === 'GET' && ownUrl(endpoint, own);
+  if (endpoint === 'graphql') return ownGraphql(args, own);
+  const method = apiMethod(args);
+  return method === 'GET' || (method === 'POST' && replyEndpoint(endpoint, own));
+}
+
+export function ownGhUse(args: readonly string[], own: OwnRepo): boolean {
+  if (args.some((token) => GH_ELSEWHERE.test(token))) return false;
+  const [group, verb, ...rest] = args;
+  if (!group) return false;
+  if (group === 'api') return ownApi(args.slice(1), own);
+  if (!verb || rest.some((word) => isUrl(word) && !ownUrl(word, own))) return false;
+  if (GH_READS[group]?.has(verb)) return true;
+  if (group !== 'pr') return false;
+  if (verb === 'comment') return own.pull !== null && namesOwnPull(rest, own);
+  return (verb === 'create' || verb === 'edit') && opensOwnPull(rest, own);
+}
+
+export function ghOnlyReads(args: readonly string[]): boolean {
+  const [group, verb] = args;
+  if (group !== 'api') return Boolean(group && verb && GH_READS[group]?.has(verb));
+  const rest = args.slice(1);
+  if (positionals(rest, API_VALUE_FLAGS)[0] !== 'graphql') return apiMethod(rest) === 'GET';
+  const text = flagValues(rest, API_BODY_FLAGS).join('\n');
+  return !/\bmutation\b/.test(text) && !rest.some((token) => flagName(token) === '--input');
+}
+
+export function namesAnotherRepo(command: string): boolean {
+  return ENV_ELSEWHERE.test(command);
+}

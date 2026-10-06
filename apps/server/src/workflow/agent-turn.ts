@@ -65,6 +65,7 @@ import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
 import { auditContinuedSession } from './continue-note.ts';
+import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
@@ -221,7 +222,6 @@ export async function runAgentTurn(
   const observations = createRunObservations({
     db: deps.db,
     runId: lease.runId,
-    conversationId: input.identity.threadId,
     audit,
   });
   if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
@@ -285,7 +285,8 @@ export async function runAgentTurn(
       });
   const steering = joinSteering([steerWatch, inbox]);
   const redaction = createRedactionFilter(secretValues);
-  const observer = scannedObserver(audit, secretValues, observations.record);
+  const watch = { ...input, db: deps.db, runId: lease.runId, observations };
+  const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');

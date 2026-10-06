@@ -1,6 +1,8 @@
+import { execFile } from 'node:child_process';
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import type { ProviderOutput, ProviderTurn } from './provider.ts';
@@ -8,6 +10,7 @@ import type { ProviderOutput, ProviderTurn } from './provider.ts';
 export const FAKE_COMMAND_TRIGGER = '#approve';
 export const FAKE_EDIT_TRIGGER = '#edit';
 export const FAKE_PUSH_TRIGGER = '#push';
+const FAKE_OWN_PUSH_TRIGGER = '#ownpush';
 export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
 export const FAKE_CURL_TRIGGER = '#curl';
 const FAKE_SANDBOX_TRIGGER = '#sandbox';
@@ -45,6 +48,7 @@ export function wantsApproval(prompt: string): boolean {
     FAKE_COMMAND_TRIGGER,
     FAKE_EDIT_TRIGGER,
     FAKE_PUSH_TRIGGER,
+    FAKE_OWN_PUSH_TRIGGER,
     FAKE_FORCE_PUSH_TRIGGER,
     FAKE_CURL_TRIGGER,
     FAKE_SANDBOX_TRIGGER,
@@ -63,6 +67,11 @@ async function currentText(target: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function currentBranch(root: string): Promise<string> {
+  const { stdout } = await promisify(execFile)('git', ['-C', root, 'branch', '--show-current']);
+  return stdout.trim();
 }
 
 async function fakeRequests(
@@ -118,6 +127,9 @@ async function fakeRequests(
   if (prompt.includes(FAKE_COMMAND_TRIGGER)) requests.push(command('fake-run', FAKE_COMMAND));
   if (prompt.includes(FAKE_PUSH_TRIGGER))
     requests.push(command('fake-push', 'git push origin main'));
+  if (prompt.includes(FAKE_OWN_PUSH_TRIGGER)) {
+    requests.push(command('fake-own-push', `git push origin ${await currentBranch(root)}`));
+  }
   if (prompt.includes(FAKE_READ_ENV_TRIGGER)) requests.push(command('fake-read-env', 'cat .env'));
   if (prompt.includes(FAKE_CURL_TRIGGER)) {
     requests.push(command('fake-curl', 'curl -sI https://example.com'));

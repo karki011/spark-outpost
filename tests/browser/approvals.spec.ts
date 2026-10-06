@@ -455,23 +455,19 @@ async function askChat(page: Page) {
   await expect(permissionChip(page)).toHaveText('Plan');
 }
 
-test('reads .env without a card, then asks before curl at Automatic', async ({ page }) => {
+test('reads .env and runs curl in an Ask chat at Automatic with no card, and flags the send', async ({
+  page,
+}) => {
   await askChat(page);
   await send(page, 'Check the site #readenv #curl');
-  const sending = page.locator('.appr', { hasText: '$ curl -sI https://example.com' });
-  await expect(sending).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('.appr', { hasText: '$ cat .env' })).toHaveCount(0);
-  await expect(sending.locator('.appr-observed')).toHaveText('Read sensitive data earlier: .env');
-  await expect(sending.locator('.appr-reason')).toContainText(
-    'This run read .env earlier; sending data to example.com needs your OK',
-  );
-  await expect(sending.getByRole('button', { name: 'Always allow in this project' })).toHaveCount(
-    0,
-  );
-  await sending.getByRole('button', { name: 'Allow', exact: true }).click();
   await expect(
     page.locator('.md', { hasText: 'Done. fake-read-env=allowed fake-curl=allowed' }),
   ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.appr:not(.resolved)')).toHaveCount(0);
+  const flag = page.getByRole('region', { name: 'Flagged by Spark' });
+  await expect(flag).toHaveCount(1);
+  await expect(flag).toContainText('sent data to example.com after reading .env');
+  await expect(flag).toContainText("Spark didn't stop the run.");
 });
 
 test('runs a command in an Ask chat at Automatic without asking', async ({ page }) => {

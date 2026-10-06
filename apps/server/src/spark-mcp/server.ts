@@ -5,7 +5,13 @@ import { redactText } from '../audit/redact.ts';
 import { unavailableNote, type SparkAvailability } from './availability.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { renderResult } from './format.ts';
-import { SparkBlocks, SparkToolError, type SparkTool, type SparkToolContext } from './tool.ts';
+import {
+  SparkBlocks,
+  SparkToolError,
+  returnsPrivateData,
+  type SparkTool,
+  type SparkToolContext,
+} from './tool.ts';
 import { browserTools } from './tools/browser/tools.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
@@ -108,7 +114,7 @@ export async function callSparkTool(
 ): Promise<CallToolResult> {
   try {
     const result = await tool.run(args, context);
-    if (tool.privateData) {
+    if (await returnsPrivateData(tool, args, context)) {
       context.scope.observations?.record({
         source: 'private_data',
         label: `private work data (${tool.name})`,
