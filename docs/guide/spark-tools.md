@@ -52,12 +52,12 @@ An MCP server card shows the exact command. Agents pass only names of variables 
 
 ## When actions ask first
 
-| Agent mode or autonomy                                                                       | Spark                                                    |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Auto**, **Bypass permissions**, **Approve for me**, **Full access**, or **Full auto → PR** | Does it at once, with a link.                            |
-| **Accept edits**                                                                             | Does it when your message asked. Otherwise shows a card. |
-| **Manual**, **Plan** and read-only modes                                                     | Always shows a card.                                     |
-| Any, after the agent read secrets or private data that turn                                  | Always shows a card.                                     |
+| Agent mode                                                              | Spark                                                    |
+| ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| **Auto**, **Bypass permissions**, **Approve for me** or **Full access** | Does it at once, with a link.                            |
+| **Accept edits**                                                        | Does it when your message asked. Otherwise shows a card. |
+| **Manual**, **Plan** and read-only modes                                | Always shows a card.                                     |
+| Any, after the agent read secrets or private data that turn             | Always shows a card.                                     |
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 

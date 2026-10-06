@@ -1,45 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import {
-  FULL_AUTO_PLAN_SECONDS,
-  planFirstCard,
-  planFirstPrompt,
-  planPrNote,
-  specPlanLine,
-} from './plan-first.ts';
+import { planFirstCard, planFirstPrompt, planPrNote, specPlanLine } from './plan-first.ts';
 import { specByRule } from './builder-complexity.ts';
 
 const SPEC = '- `src/a.ts` with `a()`\n- `src/b.ts` with `b()`\n- tests in `test/a.test.ts`';
 
 describe('the plan-first card', () => {
-  it('builds by itself at Full auto when the countdown runs out', () => {
-    const card = planFirstCard(3, 'full-auto', 10);
+  it('waits for the user at every level, with no countdown', () => {
+    const card = planFirstCard(3);
     expect(card.title).toBe('Build this plan?');
-    expect(card.payload.autoOption).toBe(CHECKPOINT_OPTION.makeChange);
+    expect(card.payload.autoOption).toBeNull();
     expect(card.options.map((option) => [option.optionId, option.name])).toEqual([
       [CHECKPOINT_OPTION.makeChange, 'Build'],
       [CHECKPOINT_OPTION.editPlan, 'Edit'],
       [CHECKPOINT_OPTION.stop, 'Stop'],
     ]);
-    expect(card.payload.reason).toContain('plan v3');
-    expect(card.payload.reason).toContain('Full auto builds it in 10 s');
-  });
-
-  it('says so when auto-continue is off and Full auto uses its own wait', () => {
-    const card = planFirstCard(1, 'full-auto', null);
-    expect(card.payload.reason).toContain(
-      `Auto-continue is off, so Full auto waits ${FULL_AUTO_PLAN_SECONDS} s`,
+    expect(card.payload.reason).toBe(
+      'Saved as plan v3; nothing was changed yet. Build it, edit it, or stop.',
     );
-  });
-
-  it('waits for the user at Automatic, whatever the auto-continue setting', () => {
-    for (const seconds of [10, 60, null]) {
-      const automatic = planFirstCard(1, 'hands-off', seconds);
-      expect(automatic.payload.autoOption).toBeNull();
-      expect(automatic.payload.reason).toBe(
-        'Saved as plan v1; nothing was changed yet. Build it, edit it, or stop.',
-      );
-    }
   });
 
   it('asks for a plan without changes, with the requested revision', () => {

@@ -107,8 +107,9 @@ export function finish(
   };
 }
 
-function ship(state: FlowState): FlowResult {
-  return { state: { ...state, waitingFor: null, shipping: true }, action: { type: 'ship' } };
+function ship(state: FlowState, keptNote: string | null = null): FlowResult {
+  const action = { type: 'ship' as const, ...(keptNote ? { keptNote } : {}) };
+  return { state: { ...state, waitingFor: null, shipping: true }, action };
 }
 
 function wrapUp(state: FlowState): FlowResult {
@@ -428,7 +429,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
         const line = filesChangedLine(event.filesChanged);
         return ask(state, 'accept', why ? `${line} ${why}` : line);
       }
-      if (shipsByItself(state.level, event.filesChanged)) return ship(state);
+      if (shipsByItself(state.level, event.filesChanged)) return ship(state, keptLine(facts));
       if (keepsByItself(state.level, event.filesChanged)) {
         const note = keptLine(facts);
         const action = { type: 'keep' as const, ...(note ? { note } : {}) };

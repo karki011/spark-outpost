@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -21,18 +21,23 @@ async function savedProfile(page: Page) {
   return (await (await page.request.get('/api/setup')).json()).profile;
 }
 
-test('the default autonomy is one setting that new chats start with', async ({ page }) => {
+test('new chats start at Full auto → PR, and one click in Settings puts the default back to Automatic', async ({
+  page,
+}) => {
+  const before = await (await page.request.get('/api/chat-settings/defaults')).json();
+  expect(before.level).toBe('full-auto');
   const spark = await openSpark(page);
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
-  await expect(level.getByRole('radio', { name: 'Automatic' })).toBeChecked();
+  await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
   await expect(level).toHaveAccessibleDescription(
     'The default for new chats, whichever agent they use.',
   );
   const saved = profileSaved(page);
-  await level.getByRole('radio', { name: 'Full auto → PR' }).click();
+  await level.getByRole('radio', { name: 'Automatic' }).click();
   await saved;
+  await expect(level.getByRole('radio', { name: 'Automatic' })).toBeChecked();
   const defaults = await (await page.request.get('/api/chat-settings/defaults')).json();
-  expect(defaults.level).toBe('full-auto');
+  expect(defaults.level).toBe('hands-off');
 });
 
 test('the spend cap turns on with an amount you can change', async ({ page }) => {
@@ -79,4 +84,62 @@ test('the morning brief saves its time and can be turned off', async ({ page }) 
   await expect
     .poll(() => savedProfile(page))
     .toMatchObject({ morningBrief: false, morningBriefTime: '08:30' });
+});
+
+async function markUpdatedInstall() {
+  const db = openTestDb();
+  try {
+    await db.query('UPDATE profiles SET default_level_notice = true');
+  } finally {
+    await db.end();
+  }
+}
+
+const NEW_DEFAULT_NOTICE =
+  'New chats now use Full auto → PR: Spark opens a pull request when the work is done.';
+
+test('a new install never sees the notice about the new default', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByText(NEW_DEFAULT_NOTICE)).toHaveCount(0);
+});
+
+test('an updated install is told once about the new default and can dismiss it', async ({
+  page,
+}) => {
+  await markUpdatedInstall();
+  await page.goto('/');
+  const notice = page.getByRole('complementary', { name: 'Default for new chats changed' });
+  await expect(notice).toContainText(NEW_DEFAULT_NOTICE);
+  await expect(page.locator('[role="alert"], [role="alertdialog"]')).toHaveCount(0);
+
+  const saved = profileSaved(page);
+  await notice.getByRole('button', { name: 'Dismiss' }).focus();
+  await page.keyboard.press('Enter');
+  await saved;
+  await expect(notice).toHaveCount(0);
+  expect((await savedProfile(page)).defaultLevel).toBe('full-auto');
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByText(NEW_DEFAULT_NOTICE)).toHaveCount(0);
+});
+
+test('the notice links to the setting, where Automatic is one click away', async ({ page }) => {
+  await markUpdatedInstall();
+  await page.goto('/');
+  const notice = page.getByRole('complementary', { name: 'Default for new chats changed' });
+  await notice.getByRole('button', { name: 'Change the default in Settings' }).click();
+
+  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
+  await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
+  await expect(notice).toHaveCount(0);
+  const saved = profileSaved(page);
+  await level.getByRole('radio', { name: 'Automatic' }).click();
+  await saved;
+  expect(await savedProfile(page)).toMatchObject({
+    defaultLevel: 'hands-off',
+    defaultLevelNotice: false,
+  });
 });

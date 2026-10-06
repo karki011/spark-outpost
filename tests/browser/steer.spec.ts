@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import {
   autoContinueAfter,
+  buildThePlan,
   crewChat,
   crewRepo,
   resetCrew,
@@ -32,6 +33,7 @@ test('steering a running piece from the chat queues a note it reads at its next 
     page,
     'Split this up: build a store, add an API and add a view. #build #pieces #holdpiece',
   );
+  await buildThePlan(page);
 
   const board = page.getByRole('region', { name: 'Pieces' });
   const api = board

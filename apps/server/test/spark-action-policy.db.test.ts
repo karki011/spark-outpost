@@ -96,9 +96,9 @@ describe('whether a Spark action asks first', () => {
     expect(await createTicket()).toMatchObject({ outcome: 'done' });
   });
 
-  it('acts at once at Full auto → PR whatever the mode', async () => {
+  it('asks at Full auto → PR in a mode that asks, as it does at Automatic', async () => {
     await chatIn('Look into the crash', 'default', { level: 'full-auto' });
-    expect(await createTicket()).toMatchObject({ outcome: 'done' });
+    expect(await createTicket()).toMatchObject({ outcome: 'waiting_for_user' });
   });
 
   it('acts in Accept edits only when the user asked for it', async () => {

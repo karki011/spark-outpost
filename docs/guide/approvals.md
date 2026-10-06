@@ -22,8 +22,7 @@ The checks run in Spark, not in the model, so nothing an agent says can approve 
 ## What never goes on without you
 
 - Approval cards, and protected paths in every mode and at both levels.
-- The plan card at **Automatic**, even in **Auto** or **Bypass permissions**.
-- Destructive plans and **Continue past the budget?**, at both levels.
+- The plan card and **Continue past the budget?**, at both levels and in every mode.
 - **Address PR feedback?** at **Automatic**.
 - Merging. Nothing ever merges.
 

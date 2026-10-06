@@ -252,7 +252,6 @@ const AUTO_LABELS: Record<string, string> = {
 };
 
 const COUNTDOWNS: Record<string, string> = {
-  [CHECKPOINT_OPTION.makeChange]: 'Building this plan in',
   [CHECKPOINT_OPTION.useDefaults]: 'Going with my best guesses in',
 };
 

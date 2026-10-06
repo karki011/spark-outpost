@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
-import { workPlaceSchema, type ProviderId, type WorkPlace } from '@spark-outpost/contracts';
+import {
+  providerIdSchema,
+  workPlaceSchema,
+  type InvolvementLevel,
+  type ProviderId,
+  type WorkPlace,
+} from '@spark-outpost/contracts';
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace, sendUserMessage } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
@@ -203,4 +209,16 @@ export async function activityTypesOf(db: Db, runId: string): Promise<string[]> 
     [runId],
   );
   return rows.map((row) => row.type);
+}
+
+export async function pinChatLevel(
+  db: Db,
+  conversationId: string,
+  level: InvolvementLevel,
+): Promise<void> {
+  const pinned = Object.fromEntries(providerIdSchema.options.map((id) => [id, { level }]));
+  await db.query(`UPDATE conversations SET overrides = $2::jsonb || overrides WHERE id = $1`, [
+    conversationId,
+    JSON.stringify(pinned),
+  ]);
 }

@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { AUTONOMY_LEVELS, DEFAULT_INVOLVEMENT_LEVEL, autonomyLabel } from './approvals.ts';
+import {
+  AUTONOMY_LEVELS,
+  DEFAULT_INVOLVEMENT_LEVEL,
+  UNSET_RUN_LEVEL,
+  autonomyLabel,
+} from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 
 describe('harness autonomy', () => {
-  it('offers two choices, Automatic by default', () => {
+  it('offers two choices, Full auto → PR by default', () => {
     expect(AUTONOMY_LEVELS.map((level) => [level.id, level.label])).toEqual([
       ['hands-off', 'Automatic'],
       ['full-auto', 'Full auto → PR'],
     ]);
-    expect(DEFAULT_INVOLVEMENT_LEVEL).toBe('hands-off');
+    expect(DEFAULT_INVOLVEMENT_LEVEL).toBe('full-auto');
+    expect(UNSET_RUN_LEVEL).toBe('hands-off');
     expect(autonomyLabel('full-auto')).toBe('Full auto → PR');
   });
 

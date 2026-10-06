@@ -3,6 +3,7 @@ import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.
 import {
   agentHead,
   autoContinueAfter,
+  buildThePlan,
   crewChat,
   crewRepo,
   resetCrew,
@@ -32,6 +33,7 @@ test('a story split into pieces is planned first, then shows the coordinator and
   await expect(page.getByRole('group', { name: /Build this plan\?/ })).toBeVisible({
     timeout: 30_000,
   });
+  await buildThePlan(page);
   const board = page.getByRole('region', { name: 'Pieces' });
   await expect(board).toBeVisible({ timeout: 60_000 });
   const rows = board.getByRole('listitem');
