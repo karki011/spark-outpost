@@ -1,0 +1,243 @@
+import { Router, type Request, type Response } from 'express';
+import {
+  pairingClaimRequestSchema,
+  pairingSubmitRequestSchema,
+  renameRemoteDeviceRequestSchema,
+  updateRemoteAccessRequestSchema,
+  updateRemoteSwitchesRequestSchema,
+  type PairingClaimResponse,
+  type PairingSubmitResponse,
+  type PendingPairingList,
+  type RemoteAuditList,
+  type RemoteDevice,
+  type RemoteDeviceList,
+} from '@spark-outpost/contracts';
+import { paramId, parseBody } from '../api/validation.ts';
+import type { Db } from '../persistence/db.ts';
+import { PairingRateLimitError, type Pairings } from './pairing.ts';
+import { isRemote } from './principal.ts';
+import { deviceCookie, newSecret, secretHash } from './session.ts';
+import {
+  addDevice,
+  listDevices,
+  listRemoteAudit,
+  recordRemoteAudit,
+  remoteAccess,
+  renameDevice,
+  revokeAllDevices,
+  revokeDevice,
+  saveRemoteHostname,
+  saveRemoteSwitches,
+  type AuditInput,
+  type DeviceRow,
+} from './store.ts';
+import type { DeviceStreams } from './streams.ts';
+
+export interface RemoteRouteDeps {
+  db: Db;
+  workspaceId: string;
+  pairings: Pairings;
+  streams: DeviceStreams;
+}
+
+const BAD_CODE = 'That code is not valid. Start pairing again on your Mac.';
+const PAIRING_GONE = 'This pairing ended. Start again on your Mac.';
+const NO_PAIRING = 'That pairing request is no longer waiting.';
+const NO_DEVICE = 'Device not found.';
+const MAC_ONLY = 'This is only available on your Mac.';
+
+export function remoteRoutes({ db, workspaceId, pairings, streams }: RemoteRouteDeps): Router {
+  const router = Router();
+  const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
+
+  const toDevice = (row: DeviceRow): RemoteDevice => ({
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at.toISOString(),
+    lastSeenAt: row.last_seen_at.toISOString(),
+    revokedAt: row.revoked_at?.toISOString() ?? null,
+    expired: row.expired,
+    connected: streams.connected(row.id),
+  });
+
+  const deviceList = async (): Promise<RemoteDeviceList> => ({
+    devices: (await listDevices(db, workspaceId)).map(toDevice),
+  });
+
+  const limited = async (res: Response, work: () => Promise<void>) => {
+    try {
+      await work();
+    } catch (error) {
+      if (!(error instanceof PairingRateLimitError)) throw error;
+      res.status(429).json({ error: error.message });
+    }
+  };
+
+  const remoteOnly = (res: Response): boolean => {
+    if (isRemote(res)) return true;
+    res.status(404).json({ error: 'Not found.' });
+    return false;
+  };
+
+  router.post('/remote/pair', async (req, res) => {
+    if (!remoteOnly(res)) return;
+    const { code, deviceName } = parseBody(pairingSubmitRequestSchema, req);
+    await limited(res, async () => {
+      const submitted = pairings.submit(code, deviceName);
+      if (!submitted) {
+        await audit({ action: 'pairing_failed', detail: { reason: 'code' } });
+        res.status(403).json({ error: BAD_CODE });
+        return;
+      }
+      await audit({
+        action: 'pairing_submitted',
+        detail: { pairingId: submitted.id, deviceName },
+      });
+      const body: PairingSubmitResponse = {
+        claim: submitted.claim,
+        matchCode: submitted.matchCode,
+        expiresAt: submitted.expiresAt,
+      };
+      res.set('Cache-Control', 'no-store').json(body);
+    });
+  });
+
+  router.post('/remote/pair/claim', async (req, res) => {
+    if (!remoteOnly(res)) return;
+    const { claim } = parseBody(pairingClaimRequestSchema, req);
+    const result = pairings.claim(claim);
+    if (!result) {
+      res.status(403).json({ error: PAIRING_GONE });
+      return;
+    }
+    res.set('Cache-Control', 'no-store');
+    if (result.status === 'waiting') {
+      res.status(202).json({ status: 'waiting' } satisfies PairingClaimResponse);
+      return;
+    }
+    const token = newSecret();
+    const device = await addDevice(db, workspaceId, {
+      name: result.deviceName,
+      tokenHash: secretHash(token),
+    });
+    await audit({
+      action: 'device_paired',
+      device: { id: device.id, name: device.name },
+      detail: { pairingId: result.id },
+    });
+    res
+      .set('Set-Cookie', deviceCookie(token))
+      .json({ status: 'paired' } satisfies PairingClaimResponse);
+  });
+
+  router.get('/remote/switches', async (_req, res) => {
+    res.json((await remoteAccess(db, workspaceId)).switches);
+  });
+
+  router.use('/remote', (_req: Request, res: Response, next) => {
+    if (isRemote(res)) {
+      res.status(403).json({ error: MAC_ONLY });
+      return;
+    }
+    next();
+  });
+
+  router.get('/remote/access', async (_req, res) => {
+    res.json(await remoteAccess(db, workspaceId));
+  });
+
+  router.put('/remote/access', async (req, res) => {
+    const { hostname } = parseBody(updateRemoteAccessRequestSchema, req);
+    const before = await remoteAccess(db, workspaceId);
+    const saved = await saveRemoteHostname(db, workspaceId, hostname);
+    if (before.hostname !== saved.hostname) {
+      streams.closeAll();
+      await audit({ action: 'hostname_changed', detail: { on: saved.hostname !== null } });
+    }
+    res.json(saved);
+  });
+
+  router.patch('/remote/switches', async (req, res) => {
+    const change = parseBody(updateRemoteSwitchesRequestSchema, req);
+    const saved = await saveRemoteSwitches(db, workspaceId, change);
+    await audit({ action: 'switches_changed', detail: change });
+    res.json(saved.switches);
+  });
+
+  router.get('/remote/devices', async (_req, res) => {
+    res.json(await deviceList());
+  });
+
+  router.patch('/remote/devices/:id', async (req, res) => {
+    const { name } = parseBody(renameRemoteDeviceRequestSchema, req);
+    const device = await renameDevice(db, workspaceId, paramId(req), name);
+    if (!device) {
+      res.status(404).json({ error: NO_DEVICE });
+      return;
+    }
+    await audit({ action: 'device_renamed', device: { id: device.id, name: device.name } });
+    res.json(toDevice(device));
+  });
+
+  router.delete('/remote/devices/:id', async (req, res) => {
+    const device = await revokeDevice(db, workspaceId, paramId(req));
+    if (!device) {
+      res.status(404).json({ error: NO_DEVICE });
+      return;
+    }
+    streams.close(device.id);
+    await audit({ action: 'device_revoked', device: { id: device.id, name: device.name } });
+    res.json(await deviceList());
+  });
+
+  router.post('/remote/devices/disconnect-all', async (_req, res) => {
+    const revoked = await revokeAllDevices(db, workspaceId);
+    streams.closeAll();
+    await audit({ action: 'devices_disconnected', detail: { count: revoked.length } });
+    res.json(await deviceList());
+  });
+
+  router.post('/remote/pairings', async (_req, res) => {
+    await limited(res, async () => {
+      const started = pairings.start();
+      await audit({ action: 'pairing_started', detail: { pairingId: started.id } });
+      res.status(201).set('Cache-Control', 'no-store').json(started);
+    });
+  });
+
+  router.get('/remote/pairings', (_req, res) => {
+    res.json({ pairings: pairings.pending() } satisfies PendingPairingList);
+  });
+
+  router.post('/remote/pairings/:id/confirm', async (req, res) => {
+    const pairing = pairings.confirm(paramId(req));
+    if (!pairing) {
+      res.status(409).json({ error: NO_PAIRING });
+      return;
+    }
+    await audit({
+      action: 'pairing_confirmed',
+      detail: { pairingId: pairing.id, deviceName: pairing.deviceName },
+    });
+    res.json({ pairings: pairings.pending() } satisfies PendingPairingList);
+  });
+
+  router.post('/remote/pairings/:id/deny', async (req, res) => {
+    const pairing = pairings.deny(paramId(req));
+    if (!pairing) {
+      res.status(409).json({ error: NO_PAIRING });
+      return;
+    }
+    await audit({
+      action: 'pairing_denied',
+      detail: { pairingId: pairing.id, deviceName: pairing.deviceName },
+    });
+    res.json({ pairings: pairings.pending() } satisfies PendingPairingList);
+  });
+
+  router.get('/remote/audit', async (_req, res) => {
+    res.json({ entries: await listRemoteAudit(db, workspaceId) } satisfies RemoteAuditList);
+  });
+
+  return router;
+}

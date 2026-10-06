@@ -67,8 +67,8 @@ export const slackApi = {
     request(slackStatusSchema, '/slack/scopes/check', json('POST')),
   test: (): Promise<{ sentTo: string }> =>
     request(slackTestResponseSchema, '/slack/test', json('POST')),
-  presence: (focused: boolean): Promise<null> =>
-    request(z.null(), '/slack/presence', json('POST', { focused })),
+  presence: (focused: boolean, clientId: string): Promise<null> =>
+    request(z.null(), '/slack/presence', json('POST', { focused, clientId })),
   context: (url: string, signal?: AbortSignal): Promise<SlackContextResponse> =>
     request(slackContextResponseSchema, '/slack/context', {
       ...json('POST', { url }),

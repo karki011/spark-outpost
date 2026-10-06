@@ -170,6 +170,20 @@ describe('Slack notifications', () => {
     notifier.setFocused(false);
   });
 
+  it('stays quiet while one client is focused after another blurs', async () => {
+    notifier.setFocused(true, 'local:window');
+    notifier.setFocused(true, 'device:phone');
+    notifier.setFocused(false, 'local:window');
+    await ask('execute', 'one');
+    await changed('approval');
+    expect(stub.slack.posted).toHaveLength(0);
+
+    notifier.setFocused(false, 'device:phone');
+    await finish('succeeded');
+    await changed();
+    expect(stub.slack.posted).toHaveLength(1);
+  });
+
   it('respects the per-event switches and sends flags only when asked', async () => {
     await changeSlackSettings(deps, { notify: { finished: false } });
     await finish('succeeded');

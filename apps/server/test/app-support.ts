@@ -40,6 +40,7 @@ export interface TestAppOptions {
   diagnostics?: AppOptions['diagnostics'];
   deleteSettleMs?: number;
   cloneTest?: AppOptions['cloneTest'];
+  webRoot?: string;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -96,6 +97,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
+    ...(options.webRoot ? { webRoot: options.webRoot } : {}),
   });
 }
 
