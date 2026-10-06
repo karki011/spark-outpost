@@ -156,7 +156,7 @@ export function WorkPanel({
         <div className={open ? 'wp-scrim on' : 'wp-scrim'} aria-hidden="true" onClick={onClose} />
       )}
       <aside
-        className={`wp${open ? ' on' : ''}${browsing ? ' browser' : ''}`}
+        className={`wp${open ? ' on' : ''}${wide ? '' : ' over'}${browsing ? ' browser' : ''}`}
         id="work-panel"
         aria-label="Work panel"
         inert={!open}

@@ -351,7 +351,7 @@
   overflow: auto;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .dd-body {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);

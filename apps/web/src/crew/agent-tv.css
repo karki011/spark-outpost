@@ -21,10 +21,8 @@
     0 0 0 2px var(--accent),
     0 18px 60px rgba(0, 0, 0, 0.32);
 }
-@media (min-width: 1101px) {
-  body:has(.wp.on) .tv:not(.watch) {
-    right: 392px;
-  }
+body:has(.wp.on:not(.over)) .tv:not(.watch) {
+  right: 392px;
 }
 @keyframes tv-in {
   from {
@@ -194,7 +192,7 @@
 .tv.paused *::after {
   animation-play-state: paused !important;
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .tv:not(.watch) {
     left: 8px;
     right: 8px;

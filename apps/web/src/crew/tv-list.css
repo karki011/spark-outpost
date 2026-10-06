@@ -2,7 +2,7 @@
   box-sizing: border-box;
   width: 340px;
   max-width: 100%;
-  max-height: min(62vh, 520px);
+  max-height: min(62dvh, 520px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 8px 8px 10px;
@@ -19,7 +19,7 @@
 }
 .tv.watch .tvl {
   width: min(720px, calc(100vw - 48px));
-  max-height: min(78vh, 760px);
+  max-height: min(78dvh, 760px);
   font-size: 13.5px;
 }
 .tvl-h {
@@ -244,12 +244,12 @@ button.tvl-ask:hover {
   place-items: center;
   padding: 3px 0;
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .tvl,
   .tv.size-m .tvl,
   .tv.size-l .tvl {
     width: 100%;
-    max-height: min(58vh, 480px);
+    max-height: min(58dvh, 480px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

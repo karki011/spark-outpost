@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { z } from 'zod';
 import type { Project } from '@spark-outpost/contracts';
 
 const SAVED_KEY = 'spark-outpost.map-projects';
-const PHONE = '(max-width: 640px)';
 
 function readSaved(): string[] {
   try {
@@ -33,17 +32,4 @@ export function useMapSelection(projects: readonly Project[]) {
     save(ids);
   }, []);
   return { selected, choose };
-}
-
-export function usePhone(): boolean {
-  const [phone, setPhone] = useState(
-    () => typeof matchMedia === 'function' && matchMedia(PHONE).matches,
-  );
-  useEffect(() => {
-    const media = matchMedia(PHONE);
-    const onChange = () => setPhone(media.matches);
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, []);
-  return phone;
 }

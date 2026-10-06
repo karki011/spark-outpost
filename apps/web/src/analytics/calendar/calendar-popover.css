@@ -15,7 +15,7 @@
   animation: an-cal-in 0.2s var(--out);
   width: max-content;
   max-width: calc(100vw - 24px);
-  max-height: min(560px, calc(100vh - 120px));
+  max-height: min(560px, calc(100dvh - 120px));
   padding: 12px 12px 10px;
   overflow-y: auto;
   display: flex;
@@ -77,14 +77,24 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .an-cal {
     right: auto;
     left: 0;
     width: calc(100vw - 20px);
   }
+  .an-cal {
+    max-height: calc(100dvh - 16px);
+  }
   .an-cal-body {
     flex-direction: column;
+  }
+  .an-cal-foot {
+    position: sticky;
+    bottom: -10px;
+    margin-bottom: -10px;
+    padding-bottom: 10px;
+    background: var(--panel);
   }
   .an-cal-presets {
     flex-direction: row;

@@ -38,25 +38,23 @@
   transition: border-color 0.15s;
 }
 
-@media (min-width: 1101px) {
-  .wp {
-    contain: layout;
-    will-change: width;
-  }
+.wp:where(:not(.over)) {
+  contain: layout;
+  will-change: width;
+}
 
-  .wp-in {
-    opacity: 0;
-    transform: translateX(var(--panel-slide));
-    transition:
-      transform var(--panel-dur) var(--panel-ease),
-      opacity var(--panel-dur) var(--panel-ease),
-      border-color 0.15s;
-  }
+:where(.wp:not(.over)) > .wp-in {
+  opacity: 0;
+  transform: translateX(var(--panel-slide));
+  transition:
+    transform var(--panel-dur) var(--panel-ease),
+    opacity var(--panel-dur) var(--panel-ease),
+    border-color 0.15s;
+}
 
-  .wp.on .wp-in {
-    opacity: 1;
-    transform: none;
-  }
+.wp.on:where(:not(.over)) .wp-in {
+  opacity: 1;
+  transform: none;
 }
 
 .wp-grab {
@@ -131,10 +129,6 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.wp-scrim {
-  display: none;
 }
 
 .wp-toggle {
@@ -288,52 +282,50 @@
   color: var(--danger);
 }
 
-@media (max-width: 1100px) {
-  .wp,
-  .wp.on {
-    position: fixed;
-    z-index: 22;
-    top: 8px;
-    right: 8px;
-    bottom: 8px;
-    width: min(420px, calc(100vw - 16px));
-    margin: 0;
-    transform: translateX(calc(100% + 24px));
-    transition:
-      transform var(--panel-dur) var(--panel-ease),
-      visibility 0s var(--panel-dur);
-  }
-
-  .wp.on {
-    transform: none;
-    transition:
-      transform var(--panel-dur) var(--panel-ease),
-      visibility 0s;
-  }
-
-  .wp-in {
-    width: 100%;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
-  }
-
-  .wp-scrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 21;
-    background: rgba(0, 0, 0, 0.35);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--panel-dur) var(--panel-ease);
-  }
-
-  .wp-scrim.on {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.wp:where(.over),
+.wp.on:where(.over) {
+  position: fixed;
+  z-index: 22;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: min(420px, calc(100vw - 16px));
+  margin: 0;
+  transform: translateX(calc(100% + 24px));
+  transition:
+    transform var(--panel-dur) var(--panel-ease),
+    visibility 0s var(--panel-dur);
 }
 
-@media (max-width: 640px) {
+.wp.on:where(.over) {
+  transform: none;
+  transition:
+    transform var(--panel-dur) var(--panel-ease),
+    visibility 0s;
+}
+
+:where(.wp.over) > .wp-in {
+  width: 100%;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+}
+
+.wp-scrim {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--panel-dur) var(--panel-ease);
+}
+
+.wp-scrim.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .wp,
   .wp.on {
     top: auto;
@@ -341,7 +333,7 @@
     right: 0;
     bottom: 0;
     width: auto;
-    height: min(84vh, calc(100% - 36px));
+    height: min(84dvh, calc(100% - 36px));
     transform: translateY(100%);
   }
 

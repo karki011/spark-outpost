@@ -15,6 +15,7 @@
 - `map/`: the Project Map design target. `project-map-mockup.html` is the mockup, built by `build-map-data.mjs` and loaded by `tests/browser/map-fixture.ts`. To compare the app with it, run `tests/browser/project-map.spec.ts` with `SPARK_SHOTS` set to an output folder.
 - `ux/spark-outpost-ux-flow.md`: the UX flow and interaction spec (still-general sections only; see the note in that file for screens it no longer covers).
 - `ACCESSIBILITY.md`: the WCAG 2.2 AA colour, typography, focus, target and motion rules, and how `pnpm a11y:contrast` checks them.
+- `RESPONSIVE.md`: the phone, tablet and touch queries, and where each lives.
 - `accessibility-report.html`: per-theme contrast ratios before and after the AA pass, with swatches and pass/fail status.
 
 Screenshots of shipped features (buttons, connectors, GitHub, inputs, MCP, models, reset, settings, Spark, Home, Tickets, etc.) were removed from this folder because they went stale. Regenerate them from the `*-shots` Playwright specs (`tests/browser/home-shots.spec.ts`, `tests/browser/spark-shots.spec.ts`) with `SPARK_SHOTS` set to an output folder.

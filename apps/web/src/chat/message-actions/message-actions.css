@@ -15,7 +15,7 @@
 .msg.me:focus-within .msg-actions {
   opacity: 1;
 }
-@media (hover: none), (max-width: 640px) {
+@media (hover: none), (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .msg-actions.user {
     opacity: 1;
   }

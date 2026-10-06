@@ -11,7 +11,7 @@
 .set-panel {
   width: 100%;
   max-width: 960px;
-  height: min(85vh, 820px, 100%);
+  height: min(85dvh, 820px, 100%);
   display: flex;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -25,6 +25,7 @@
   padding: 16px 10px;
   border-right: 1px solid var(--line);
   background: var(--bg);
+  overflow-y: auto;
 }
 .set-nav h2 {
   font-size: 15px;
@@ -106,14 +107,27 @@
   margin: 0 0 18px;
   font-size: 14px;
 }
+.set-off {
+  opacity: 0.55;
+}
+.set-off-note {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+  font-size: 13.5px;
+}
 .set-hint {
   margin: 6px 0 0;
   font-size: 12.5px;
   color: var(--faint);
 }
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .set {
-    padding: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
   .set-panel {
     height: 100%;
@@ -281,7 +295,7 @@
 .set-checks textarea {
   resize: vertical;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .set-project-title button {
     flex-wrap: wrap;
     row-gap: 0;

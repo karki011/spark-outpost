@@ -5,6 +5,8 @@ import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
@@ -97,10 +99,19 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   },
 ];
 
+const PRIMARY_ON_PHONE = 5;
+
 const PHONE_ICON = (
   <svg {...ICON}>
     <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
     <path d="M11 18.5h2" />
+  </svg>
+);
+
+const SETTINGS_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
   </svg>
 );
 
@@ -142,10 +153,34 @@ export function Rail({
   const name = setup.data?.profile.displayName.trim() || 'You';
   const { railRef, box } = useIndicator(view);
   const layout = useSidebarLayout();
-  const reopens = layout?.collapsed && !layout.narrow;
+  const phone = layout?.narrow ?? false;
+  const { remote } = useRemoteClient();
+  const reopens = layout?.collapsed && !phone;
+  const primary = phone ? VIEWS.slice(0, PRIMARY_ON_PHONE) : VIEWS;
+  const more = [
+    ...VIEWS.slice(primary.length).map((item) => ({
+      ...item,
+      current: view === item.id,
+      onSelect: () => onView(item.id),
+    })),
+    {
+      id: 'phone',
+      label: 'Phone',
+      icon: PHONE_ICON,
+      current: view === 'phone',
+      onSelect: () => onView('phone'),
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: SETTINGS_ICON,
+      current: false,
+      onSelect: onSettings,
+    },
+  ];
 
   return (
-    <nav ref={railRef} className="rail" aria-label="Main">
+    <nav ref={railRef} className="rail" aria-label="Main" data-bottom-bar={phone ? '' : undefined}>
       <button
         type="button"
         className="rail-logo"
@@ -165,7 +200,7 @@ export function Rail({
         aria-hidden="true"
         style={box ? { transform: `translateY(${box.top}px)`, height: box.height } : { opacity: 0 }}
       />
-      {VIEWS.map((item) => (
+      {primary.map((item) => (
         <button
           key={item.id}
           type="button"
@@ -205,27 +240,30 @@ export function Rail({
           )}
         </button>
       ))}
-      <span className="rail-sp" />
-      <UpdateBlob />
-      <button
-        type="button"
-        className="rail-btn"
-        data-view="phone"
-        aria-current={view === 'phone' ? 'page' : undefined}
-        onPointerEnter={() => onIntent('phone')}
-        onFocus={() => onIntent('phone')}
-        onClick={() => onView('phone')}
-      >
-        {PHONE_ICON}
-        Phone
-      </button>
-      <button type="button" className="rail-btn" onClick={onSettings}>
-        <svg {...ICON}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-        </svg>
-        Settings
-      </button>
+      {phone ? (
+        <RailMore items={more} />
+      ) : (
+        <>
+          <span className="rail-sp" />
+          {!remote && <UpdateBlob />}
+          <button
+            type="button"
+            className="rail-btn"
+            data-view="phone"
+            aria-current={view === 'phone' ? 'page' : undefined}
+            onPointerEnter={() => onIntent('phone')}
+            onFocus={() => onIntent('phone')}
+            onClick={() => onView('phone')}
+          >
+            {PHONE_ICON}
+            Phone
+          </button>
+          <button type="button" className="rail-btn" onClick={onSettings}>
+            {SETTINGS_ICON}
+            Settings
+          </button>
+        </>
+      )}
     </nav>
   );
 }

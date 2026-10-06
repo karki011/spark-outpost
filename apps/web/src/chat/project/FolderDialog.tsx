@@ -12,6 +12,7 @@ import { ClonePanel } from './clone/ClonePanel.tsx';
 import { useCloneNeedsAttention } from './clone/use-clone-jobs.ts';
 import { breadcrumbs } from './folder-path.ts';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
@@ -27,10 +28,15 @@ const WAYS = [
   { id: 'clone', label: 'Clone a repository' },
 ];
 
-const CLONE_COPY: Record<Exclude<Mode, 'browse'>, { title: string; lede: string; use: string }> = {
+const CLONE_COPY: Record<
+  Exclude<Mode, 'browse'>,
+  { title: string; lede: string; remoteLede?: string; use: string }
+> = {
   clone: {
     title: 'Clone a repository',
     lede: 'Spark runs git clone on this Mac, straight from the git host, then adds the new folder as a project.',
+    remoteLede:
+      'Spark runs git clone on your Mac, straight from the git host, then adds the new folder as a project.',
     use: '',
   },
   'clone-parent': {
@@ -96,6 +102,9 @@ export function FolderDialog({
   const mode = chosenMode ?? 'browse';
   const [cloneParent, setCloneParent] = useState<string | null>(null);
   const copy = mode === 'browse' ? COPY[purpose] : CLONE_COPY[mode];
+  const { remote } = useRemoteClient();
+  const remoteLede = remote && mode !== 'browse' ? CLONE_COPY[mode].remoteLede : undefined;
+  const lede = remoteLede ?? copy.lede;
   const picksFile = purpose === 'instructions';
   const [path, setPath] = useState<string | null>(startPath);
   const [hidden, setHidden] = useState(false);
@@ -270,7 +279,7 @@ export function FolderDialog({
         </button>
       </div>
       <p className="fdlg-lede" id={`${ids}lede`}>
-        {copy.lede}
+        {lede}
       </p>
       {onCloned && mode !== 'clone-parent' && (
         <div className="fdlg-ways">

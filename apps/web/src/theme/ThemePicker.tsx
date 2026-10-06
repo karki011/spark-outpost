@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import './theme-menu.css';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { useKeepInViewport } from '../ui/viewport-clamp.ts';
 import { revealTheme } from './reveal.ts';
 import { readTheme, themes, type ThemeId } from './theme.ts';
 
@@ -15,6 +16,7 @@ export function ThemePicker() {
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const tip = useTooltip('Theme');
+  useKeepInViewport(menuRef, open);
 
   useEffect(() => {
     if (!open) return;

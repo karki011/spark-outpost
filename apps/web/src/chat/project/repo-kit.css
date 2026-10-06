@@ -80,7 +80,7 @@
   border-radius: var(--r-sm);
   background: var(--panel);
   text-align: left;
-  max-height: clamp(180px, 38vh, 360px);
+  max-height: clamp(180px, 38dvh, 360px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;

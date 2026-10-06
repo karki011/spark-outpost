@@ -163,7 +163,7 @@
   margin-left: -6px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .chat-ticket-open .chat-ticket-key {
     flex-shrink: 1;
     min-width: 0;

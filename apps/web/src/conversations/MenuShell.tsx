@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckIcon } from '../ui/icons.tsx';
+import { clampStart, VIEWPORT_MARGIN } from '../ui/viewport-clamp.ts';
 
 export interface MenuAnchor {
   x: number;
@@ -15,8 +16,6 @@ export interface MenuAnchor {
   above: number;
   focusBack: HTMLElement | null;
 }
-
-const MARGIN = 8;
 
 interface ItemProps {
   icon?: ReactNode;
@@ -87,9 +86,9 @@ export function MenuShell({ anchor, label, page, onClose, onKey, children }: Men
     const menu = menuRef.current;
     if (!menu) return;
     const { offsetWidth: width, offsetHeight: height } = menu;
-    const left = Math.max(MARGIN, Math.min(anchor.x, innerWidth - width - MARGIN));
-    const fitsBelow = anchor.y + height <= innerHeight - MARGIN;
-    const top = fitsBelow ? anchor.y : Math.max(MARGIN, anchor.above - height);
+    const left = clampStart(anchor.x, width, innerWidth);
+    const fitsBelow = anchor.y + height <= innerHeight - VIEWPORT_MARGIN;
+    const top = fitsBelow ? anchor.y : Math.max(VIEWPORT_MARGIN, anchor.above - height);
     setPosition({ left, top, origin: fitsBelow ? 'top left' : 'bottom left' });
   }, [anchor, page]);
 

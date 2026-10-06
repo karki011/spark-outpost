@@ -178,11 +178,26 @@ Decisions the plan left open:
 
 Not verified: a real Tailscale CLI. The flags follow Tailscale's Serve documentation as read on 2026-10-06; that `serve --https=443 off` removes only the `/` handler is from reading, not from a run.
 
-### What T3 needs
+### T3, the layout pass (built)
+
+Done on `feat/phone-ready`. The rules live in `docs/design/RESPONSIVE.md`.
+
+- **One phone query.** `(max-width: 640px), (max-height: 500px) and (pointer: coarse)` in CSS and in `apps/web/src/ui/breakpoints.ts`, so a phone on its side gets the phone shell and the tab-strip Settings.
+- **Tab bar.** Home, Chats, Analytics, Tickets, Map and More; Docs, Phone and Settings are under More, which shows as active while one of its pages is open.
+- **Mac-only parts hidden.** `useRemoteClient` (`apps/web/src/phone/use-remote-client.ts`) reads `GET /api/remote/session`. On a paired device the Terminal button and dock, the Browser button, the update mark, Full Disk Access, Export diagnostics, a project's Preview and "Keep sign-ins in the browser", and "Open the worktree folder" are not rendered, and the clone dialog says "on your Mac". A Settings section whose switch is off is dimmed, inert and headed "Turned off for phones on your Mac".
+- **Install.** `manifest.webmanifest`, 192 and 512 icons, an apple-touch-icon and `theme-color` (kept in step with the chosen theme). The gateway serves these few files to an unpaired phone too, like `theme.css`; the manifest link asks for credentials so a paired phone gets it through the cookie.
+- **Viewport.** `viewport-fit=cover`, `interactive-widget=resizes-content`, a `100dvh` shell, safe-area padding, and the tab bar hidden while the keyboard is open.
+- **Touch.** 44px hit areas for the shared controls and 16px inputs under `(pointer: coarse)`.
+
+Not verified: any real iPhone or iPad. The keyboard handling, safe areas, zoom-on-focus and Add to Home Screen ran only in Chromium with touch emulation.
+
+### What is left for the phone app
 
 - A local HTTPS proxy standing in for Serve, so a phone-sized browser runs the whole flow with the real cookie.
-- Use `GET /api/remote/session` to hide the Browser pane, preview and terminal entry points on a phone; they are still shown and their requests are refused.
-- Manifest, service worker, the layout pass (the bottom bar now holds eight entries at 390px), asleep and offline states.
+- A service worker (none yet, so nothing works offline and there is no install prompt on Android).
+- "Your Mac is asleep or offline" states with the last-seen time.
+- A real-device check of the keyboard, safe areas and the home-screen app.
+- Controls outside Settings that a switch turns off (linking a folder, deleting a chat, raising the agent mode, high-risk cards) still show; the server refuses them with the "Turned off for phones on your Mac" message.
 - Show more than one waiting pairing request at a time; the scene shows the oldest.
 
 ## How the relay version fits together
@@ -216,7 +231,7 @@ Missing:
 - The launch token unlocks everything: terminal, folder listing, reset, provider keys.
 - No way to notify a phone.
 - "Quiet when focused" is one process-wide flag (`apps/server/src/slack/notifier.ts`), so two clients fight over it.
-- No web app manifest or service worker.
+- No web app manifest or service worker. (The manifest was added in T3.)
 
 ## Design
 

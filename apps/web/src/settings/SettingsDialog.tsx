@@ -1,8 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
+import type { RemoteSwitch } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ModelsSection } from '../models/ModelsSection.tsx';
+import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
 import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
 import { ProviderSetupView } from '../providers/ProviderSetupView.tsx';
 import { routeToProvider, useRoutedProvider } from '../providers/provider-route.ts';
@@ -140,7 +142,21 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
+const SECTION_SWITCH: Partial<Record<SettingsSection, RemoteSwitch>> = {
+  spark: 'settings',
+  sparks: 'settings',
+  models: 'settings',
+  projects: 'settings',
+  ai: 'connections',
+  tools: 'connections',
+  mcp: 'connections',
+  reset: 'reset',
+};
+
 export function SettingsDialog({ section, onSection, onClose }: SettingsDialogProps) {
+  const phone = useRemoteClient();
+  const gate = SECTION_SWITCH[section];
+  const off = gate !== undefined && !phone.allows(gate);
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const closeRef = useRef<HTMLButtonElement>(null);
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
@@ -244,9 +260,16 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
             </button>
           </div>
           <div className="set-body" role="tabpanel" aria-labelledby="set-title">
+            {off && (
+              <p className="set-off-note" role="note">
+                {PHONE_SWITCH_OFF}
+              </p>
+            )}
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={section}
+                className={off ? 'set-off' : undefined}
+                inert={off}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -291,7 +314,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     <ConnectorGrid />
                   </>
                 )}
-                {section === 'mcp' && <McpSection />}
+                {section === 'mcp' && !off && <McpSection />}
                 {section === 'look' && (
                   <>
                     <p className="lede">Pick a theme. It applies everywhere right away.</p>

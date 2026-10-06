@@ -108,7 +108,7 @@
   font-size: 12px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .pconf.compact .pconf-sec .pdefaults {
     grid-template-columns: 1fr;
   }

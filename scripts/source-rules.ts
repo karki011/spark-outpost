@@ -72,6 +72,23 @@ export function findPlainLoading(file: string, text: string): SourceViolation[] 
   }));
 }
 
+const PHONE_MEDIA = '(max-width: 640px), (max-height: 500px) and (pointer: coarse)';
+const NOT_PHONE_MEDIA = 'not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse)))';
+const PHONE_WIDTHS = /\b(6[0-9]{2}|7[0-9]{2}|800)px\b/;
+
+export function findStrayPhoneQueries(file: string, text: string): SourceViolation[] {
+  return [...text.matchAll(/@media\s+([^{]+)\{/g)]
+    .filter((match) => {
+      const rest = (match[1] ?? '').replace(NOT_PHONE_MEDIA, '').replace(PHONE_MEDIA, '');
+      return PHONE_WIDTHS.test(rest);
+    })
+    .map((match) => ({
+      file,
+      line: text.slice(0, match.index).split('\n').length,
+      message: 'Phone-width media query; use the phone query in docs/design/RESPONSIVE.md',
+    }));
+}
+
 export function checkSource(file: string, text: string): SourceViolation[] {
   const violations: SourceViolation[] = [];
   const lines = lineCount(text);
@@ -84,6 +101,9 @@ export function checkSource(file: string, text: string): SourceViolation[] {
     if (!file.includes('.test.')) violations.push(...findPlainLoading(file, text));
   }
   if (file.endsWith('.css')) violations.push(...findBlockComments(file, text, /\/\*[\s\S]*?\*\//g));
+  if (file.startsWith('apps/web/') && file.endsWith('.css')) {
+    violations.push(...findStrayPhoneQueries(file, text));
+  }
   if (file.endsWith('.sql')) violations.push(...findBlockComments(file, text, /^\s*--.*$/gm));
   if (file.endsWith('.sh')) violations.push(...findBlockComments(file, text, /^\s*#(?!!).*$/gm));
   return violations;

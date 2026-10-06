@@ -33,7 +33,7 @@
 .signin-form {
   padding-top: 6px;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .signin-item {
     flex-wrap: wrap;
     row-gap: 2px;

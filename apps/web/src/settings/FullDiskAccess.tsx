@@ -4,6 +4,7 @@ import {
   type FullDiskAccessStatusValue,
 } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { HelpLink } from '../tickets/TicketConnectForm.tsx';
 import { DocLink } from '../ui/DocLink.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
@@ -30,8 +31,9 @@ export function FullDiskAccess() {
   const queryClient = useQueryClient();
   const status = query.data?.status;
   const privacy = sparkDesktop()?.privacy;
+  const { remote } = useRemoteClient();
 
-  if (status === 'unsupported') return null;
+  if (remote || status === 'unsupported') return null;
 
   async function openSystemSettings() {
     if (privacy) await privacy.openFullDiskAccess();

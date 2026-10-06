@@ -98,11 +98,18 @@ describe('the web app over the remote host', () => {
     await writeFile(join(webRoot, 'theme.css'), ':root { --bg: #fff; }');
     await writeFile(join(webRoot, 'index.html'), '<title>Spark Outpost app</title>');
     await writeFile(join(webRoot, 'app.js'), 'window.app = true;');
+    await writeFile(join(webRoot, 'manifest.webmanifest'), '{"name":"Spark Outpost"}');
+    await writeFile(join(webRoot, 'icon-192.png'), 'png');
     try {
       app = createTestApp(t, { webRoot });
       const stranger = remoteClient(app);
       expect((await stranger.get('/theme.css').expect(200)).text).toContain('--bg');
+      const manifest = await stranger.get('/manifest.webmanifest').expect(200);
+      expect(manifest.headers['content-type']).toContain('application/manifest+json');
+      expect(manifest.body).toEqual({ name: 'Spark Outpost' });
+      await stranger.get('/icon-192.png').expect(200).expect('content-type', /image\/png/);
       expect((await stranger.get('/app.js').expect(200)).text).toContain('Pair this device');
+      expect((await stranger.get('/secrets.png').expect(200)).text).toContain('Pair this device');
       expect((await stranger.get('/').expect(200)).text).toContain('Pair this device');
 
       const device = await pairDevice(app);

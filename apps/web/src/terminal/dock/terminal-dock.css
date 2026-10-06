@@ -209,7 +209,7 @@
   color: var(--muted);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .term-dock {
     position: fixed;
     inset: 0;

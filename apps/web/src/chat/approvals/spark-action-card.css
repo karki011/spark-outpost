@@ -38,7 +38,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 560px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .sac-row {
     grid-template-columns: minmax(0, 1fr);
   }

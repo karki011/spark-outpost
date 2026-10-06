@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: 8px;
   width: min(380px, calc(100vw - 32px));
-  max-height: min(560px, calc(100vh - 120px));
+  max-height: min(560px, calc(100dvh - 120px));
   padding: 12px;
   border: 1px solid var(--line-strong);
   border-radius: var(--r);
@@ -226,7 +226,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .mchat {
     right: 16px;
     bottom: 16px;

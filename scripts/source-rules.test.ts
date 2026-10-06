@@ -37,6 +37,19 @@ describe('checkSource', () => {
     expect(checkSource('a.css', '/* why */\na {}\n')).toHaveLength(1);
   });
 
+  it('holds web styles to the one phone media query', () => {
+    const phone = '(max-width: 640px), (max-height: 500px) and (pointer: coarse)';
+    const css = (query: string) => `@media ${query} {\n  a {\n    color: red;\n  }\n}\n`;
+    expect(checkSource('apps/web/src/a.css', css(phone))).toEqual([]);
+    expect(checkSource('apps/web/src/a.css', css(`(hover: none), ${phone}`))).toEqual([]);
+    expect(checkSource('apps/web/src/a.css', css('(max-width: 1100px)'))).toEqual([]);
+    expect(checkSource('apps/web/src/a.css', css('(max-width: 640px)'))).toHaveLength(1);
+    expect(checkSource('apps/web/src/a.css', css('(max-width: 700px)'))[0]?.message).toContain(
+      'RESPONSIVE.md',
+    );
+    expect(checkSource('apps/server/a.css', css('(max-width: 640px)'))).toEqual([]);
+  });
+
   it('allows the shell shebang', () => {
     expect(checkSource('a.sh', '#!/usr/bin/env bash\nset -e\n')).toEqual([]);
   });

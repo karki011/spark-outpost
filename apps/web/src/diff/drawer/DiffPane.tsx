@@ -13,6 +13,7 @@ import { Segmented } from '../../ui/Segmented.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { diffApi, diffKeys } from '../diff-api.ts';
 import { CodeDiff } from './CodeDiff.tsx';
+import { usePhone } from '../../ui/breakpoints.ts';
 import type { DiffMode } from './code-view.ts';
 
 const MODES = [
@@ -117,6 +118,7 @@ interface DiffPaneProps {
 }
 
 export function DiffPane({ taskId, version, entry, mode, wrap, onMode, onWrap }: DiffPaneProps) {
+  const phone = usePhone();
   if (!entry) {
     return (
       <section className="dd-pane" aria-label="Diff">
@@ -140,12 +142,14 @@ export function DiffPane({ taskId, version, entry, mode, wrap, onMode, onWrap }:
         {tag && <span className={`chf-tag ${entry.oldPath ? '' : entry.change}`}>{tag}</span>}
         <Counts added={entry.added} removed={entry.removed} />
         <span className="dd-pane-tools">
-          <Segmented
-            ariaLabel="Diff layout"
-            options={MODES}
-            value={mode}
-            onChange={(id) => onMode(id === 'split' ? 'split' : 'unified')}
-          />
+          {!phone && (
+            <Segmented
+              ariaLabel="Diff layout"
+              options={MODES}
+              value={mode}
+              onChange={(id) => onMode(id === 'split' ? 'split' : 'unified')}
+            />
+          )}
           <button
             type="button"
             className="dd-tool"
@@ -161,7 +165,7 @@ export function DiffPane({ taskId, version, entry, mode, wrap, onMode, onWrap }:
         taskId={taskId}
         version={version}
         entry={entry}
-        mode={mode}
+        mode={phone ? 'unified' : mode}
         wrap={wrap}
       />
     </section>

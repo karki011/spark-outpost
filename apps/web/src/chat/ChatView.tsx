@@ -18,8 +18,6 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { DiffChip } from '../diff/DiffChip.tsx';
 import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
-import { ChatHeaderMenu } from '../audit/ChatHeaderMenu.tsx';
-import { AgentTvButton } from '../crew/AgentTvButton.tsx';
 import { useSteer } from '../crew/use-steer.ts';
 import {
   belongsTo,
@@ -29,15 +27,13 @@ import {
   tvCrew,
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
-import { BrowserButton } from '../browser/BrowserButton.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
 import { onBrowserPick } from '../browser/browser-store.ts';
 import { useBrowserPane } from '../browser/pane-open.ts';
 import { pickFiles, pickText } from '../browser/pick-files.ts';
-import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
-import { ThemePicker } from '../theme/ThemePicker.tsx';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { PanelOpenContext } from '../tasks/panel-open.ts';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
@@ -47,6 +43,7 @@ import { WorkPanelToggle } from '../tasks/WorkPanelToggle.tsx';
 import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
+import { ChatHeadTools } from './ChatHeadTools.tsx';
 import { Composer } from './Composer.tsx';
 import { ComposerStatus } from './status/ComposerStatus.tsx';
 import { StatusContext } from './status/status-context.ts';
@@ -137,6 +134,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
     repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
+  const { remote } = useRemoteClient();
   const browserPane = useBrowserPane(conversationId);
   const hasBrowser = browserPane !== null;
   const mainRef = useRef<HTMLElement>(null);
@@ -259,17 +257,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 />
                 <PrChip conversationId={conversationId} onOpen={task ? openLinks : null} />
                 <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
-                {openAudit && (
-                  <ChatHeaderMenu
-                    chatId={conversationId}
-                    onAudit={openAudit}
-                    onStartFresh={() => startFresh.mutate()}
-                  />
-                )}
-                <AgentTvButton conversationId={conversationId} agents={tvCrew(detail.data)} />
-                {hasBrowser && <BrowserButton open={browsing} onToggle={toggleBrowser} />}
-                <TerminalButton chatId={conversationId} />
-                <ThemePicker />
+                <ChatHeadTools
+                  conversationId={conversationId}
+                  agents={tvCrew(detail.data)}
+                  browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
+                  onAudit={openAudit}
+                  onStartFresh={() => startFresh.mutate()}
+                />
               </div>
             </header>
             <ChatTicketBar chat={tickets} />
@@ -373,7 +367,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 commands.data?.provider ?? detail.data?.settings.provider ?? '',
               )}
             />
-            <TerminalDock chatId={conversationId} />
+            {!remote && <TerminalDock chatId={conversationId} />}
             <DropOverlay visible={drop.dragging} />
           </main>
           {panel.available && (

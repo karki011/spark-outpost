@@ -303,7 +303,7 @@
   color: var(--faint);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .fdlg-scrim {
     padding: 0;
     align-items: flex-end;

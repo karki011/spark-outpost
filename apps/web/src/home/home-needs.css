@@ -286,7 +286,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .lr-main {
     grid-template-columns: 18px minmax(0, 1fr) 30px;
     grid-template-areas: 'g t age' '. why why';

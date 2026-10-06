@@ -390,7 +390,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .home-wrap {
     padding: 26px 16px 32px;
   }

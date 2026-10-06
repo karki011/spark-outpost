@@ -143,7 +143,7 @@ button.today-row:hover {
   gap: 8px;
 }
 
-@media (max-width: 640px), (max-height: 820px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse), (max-height: 820px) {
   .today {
     margin-top: 12px;
   }
