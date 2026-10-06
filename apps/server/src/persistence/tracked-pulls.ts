@@ -2,6 +2,7 @@ import type {
   PrChecks,
   PrFailingCheck,
   PrOpenedVia,
+  PrPollProblem,
   PrReview,
   PrWatchPhase,
 } from '@spark-outpost/contracts';
@@ -67,6 +68,7 @@ export interface TrackedPull extends PullAddress {
   intervalSeconds: number;
   nextPollAt: Date;
   lastPolledAt: Date | null;
+  pollProblem: PrPollProblem | null;
   lastError: string | null;
 }
 
@@ -106,6 +108,7 @@ export interface PullRow {
   interval_seconds: number;
   next_poll_at: Date;
   last_polled_at: Date | null;
+  poll_problem: PrPollProblem | null;
   last_error: string | null;
 }
 
@@ -146,6 +149,7 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     intervalSeconds: row.interval_seconds,
     nextPollAt: row.next_poll_at,
     lastPolledAt: row.last_polled_at,
+    pollProblem: row.poll_problem,
     lastError: row.last_error,
   };
 }
@@ -248,7 +252,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        head_sha = $7, rounds = $8, round_run_id = $9, approval_id = $10, requested = $11,
        interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
-       status_reason = $21, follow_up = $22, details = $23, updated_at = now()
+       status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, updated_at = now()
      WHERE id = $1`,
     [
       pull.id,
@@ -274,6 +278,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.statusReason,
       pull.followUp,
       JSON.stringify(pull.details),
+      pull.pollProblem,
     ],
   );
 }
@@ -301,7 +306,8 @@ export async function deferPulls(
   reason: string,
 ): Promise<void> {
   await db.query(
-    `UPDATE pr_watches SET next_poll_at = $3, last_error = $4, updated_at = now()
+    `UPDATE pr_watches SET next_poll_at = $3, last_error = $4, poll_problem = 'rate_limit',
+       updated_at = now()
      WHERE workspace_id = $1 AND host = $2 AND phase <> 'done' AND next_poll_at < $3`,
     [workspaceId, host, until, reason],
   );

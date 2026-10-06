@@ -8,12 +8,12 @@ summary: Have the chat fix failing checks and answer review comments on its pull
 
 You'll let Spark handle checks and reviews on a chat's pull requests. About 2 minutes.
 
-1. Read the PR row above the message box, such as "Checks failing · 2 need you".
-2. Click it for checks, reviews, comments and **items gathered**.
+1. Read the PR row above the message box: its eye says **Watching**, **Agent is on it**, **Paused** or **Follow-up off**.
+2. Click it for the reason, checks, reviews, comments and **items gathered**.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. Until the PR is merged or closed, when checks fail or feedback arrives, Spark messages the chat, starting with "Spark:". A busy chat finishes its turn first.
+3. When checks fail or feedback arrives, Spark messages the chat, starting with "Spark:". A busy chat finishes its turn first.
 4. The agent fixes what is right, pushes back on the rest, and pushes the fix. Spark replies on the threads.
 5. Read the agent's summary: fixed, pushed back, left for you.
 
