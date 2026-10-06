@@ -1,5 +1,7 @@
 import { turnCategory } from '../advisor/intake-recorder.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
+import { builtSinceApproval } from '../plans/plan-turn.ts';
+import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { liveRunBase } from '../projects/run-base.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
@@ -11,6 +13,7 @@ import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
 import { fixDiff } from './fix-rounds.ts';
 import type { ChangedLines } from './checkpoint.ts';
+import { asksAboutPrChecksByRule } from './risk-rules.ts';
 import type { Session } from './session.ts';
 import { publishBrief } from '../workflow/publish-context.ts';
 import type { Spawn } from './transitions.ts';
@@ -93,16 +96,36 @@ export function agreedPlanText(s: Session): Promise<string | null> {
   );
 }
 
+async function planBuiltEarlier(s: Session): Promise<boolean> {
+  const threadId = s.input.identity.threadId;
+  const plan = await latestApprovedPlan(s.deps.db, threadId).catch(() => null);
+  if (!plan) return false;
+  return builtSinceApproval(s.deps.db, threadId, plan, s.lease.runId).catch(() => false);
+}
+
 export const RESEARCH_BRIEF = [
   '## Research',
   'This is a research request. Use read-only tools, `spark_find` to locate the code (ranked files with declarations as name@startLine-endLine; a hint, not a limit) and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
   'Answer with your findings, each tied to the files and lines you read, then a short list of suggested next steps.',
 ].join('\n');
 
+const READ_ONLY_HONESTY =
+  'This turn only reads. When a command or edit is refused, say plainly that it did not run and why; never report it as done or running. Offer to do it once the user says to make the change.';
+
+const PR_CHECKS_BRIEF =
+  "The question is about a pull request's checks. Read them with `spark_pull_requests` and `spark_pr` (checks, reviews, comments) before answering; the local diff does not show why CI failed. If those tools are not offered, say that the PR's check data is not available here.";
+
 export async function readerPreamble(s: Session): Promise<string | null> {
   const plan = await agreedPlanText(s);
   const research = turnCategory(s.intake.outcome, s.intake.body.rules.intent) === 'research';
-  const parts = [plan, research ? RESEARCH_BRIEF : null, await codeContext(s)].filter(Boolean);
+  const inProject = s.input.projectRoots.length > 0;
+  const parts = [
+    plan,
+    research ? RESEARCH_BRIEF : null,
+    asksAboutPrChecksByRule(s.input.userRequest) ? PR_CHECKS_BRIEF : null,
+    inProject ? READ_ONLY_HONESTY : null,
+    await codeContext(s),
+  ].filter(Boolean);
   return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
@@ -131,6 +154,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       checks: s.checkLines,
       buildStyle: s.buildStyle,
       agreedPlan,
+      planBuilt: agreedPlan ? await planBuiltEarlier(s) : false,
       previousFindings: rechecking ? s.flow.review.fixable : [],
       earlierNotes: rechecking ? (s.reviewNotes ?? []) : [],
       fixPatch: s.fixPatch,

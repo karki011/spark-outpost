@@ -1,5 +1,6 @@
 import type { BuildStyle } from '@spark-outpost/contracts';
 import { REMOVAL_RULE } from '../laws/critic-text.ts';
+import { fitPatch, omittedNote } from './critic-diff.ts';
 import { builderStyle, criticStyle } from './lean.ts';
 import type { PublishBrief } from '../approvals/publish-policy.ts';
 
@@ -54,6 +55,7 @@ export interface CriticContext {
   checks: readonly string[];
   buildStyle?: BuildStyle;
   agreedPlan?: string | null;
+  planBuilt?: boolean;
   previousFindings?: readonly string[];
   earlierNotes?: readonly string[];
   fixPatch?: string | null;
@@ -241,6 +243,14 @@ export function fixFollowUp(note: string | null): string {
 export const PLAN_FOLLOW_RULE =
   'The user agreed the plan below. Add one finding that says whether the changes follow it, naming any step they skip or contradict.';
 
+export const LATEST_REQUEST_RULE =
+  "The plan below was agreed and built in an earlier turn. The request is the user's latest instruction: where it differs from the plan, the request wins, and a change the request asks for is never a deviation or a finding.";
+
+function planRule(context: CriticContext): string[] {
+  if (!context.agreedPlan) return [];
+  return [context.planBuilt ? LATEST_REQUEST_RULE : PLAN_FOLLOW_RULE];
+}
+
 const VERDICT_RULE =
   'List findings as "- " bullets under a "Findings:" line, then end with exactly one line: "Verdict: looks good" or "Verdict: concerns".';
 
@@ -257,7 +267,11 @@ export const IRREVERSIBLE_RULE =
   'Flag as a "[bug]" any irreversible data or schema change the user did not explicitly ask for: DELETE, DROP or TRUNCATE statements, destructive migrations, or code that removes stored data. Name the statement and what it would lose. A vague request such as "clean up" or a best guess the user never confirmed is not an explicit request.';
 
 function diffBlock(patch: string): string {
-  return patch.trim() ? `\`\`\`diff\n${cap(patch, PATCH_LIMIT)}\n\`\`\`` : 'No diff.';
+  if (!patch.trim()) return 'No diff.';
+  const fitted = fitPatch(patch, PATCH_LIMIT);
+  const note = omittedNote(fitted);
+  const block = `\`\`\`diff\n${fitted.shown}\n\`\`\``;
+  return note ? `${block}\n\n${note}` : block;
 }
 
 export const PIECE_REVIEW_RULE =
@@ -333,6 +347,7 @@ function recheckPrompt(context: CriticContext): string {
     RECHECK_RULE,
     IRREVERSIBLE_RULE,
     REMOVAL_RULE,
+    ...(context.planBuilt && context.agreedPlan ? [LATEST_REQUEST_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     ...optional(context.agreedPlan ?? null),
     ...recheckSections(context),
@@ -349,7 +364,7 @@ export function criticPrompt(context: CriticContext): string {
     IRREVERSIBLE_RULE,
     REMOVAL_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
-    ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
+    ...planRule(context),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     ...optional(context.agreedPlan ?? null),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),

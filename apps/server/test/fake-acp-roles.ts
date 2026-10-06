@@ -158,8 +158,22 @@ function blindFindings(text: string, rechecking: boolean) {
   return rechecking ? { findings: [BLIND_FINDING], concerns: true } : null;
 }
 
+function untilCancelled(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) resolve();
+    signal.addEventListener('abort', () => resolve(), { once: true });
+  });
+}
+
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#criticdown')) throw new Error('Codex encountered an internal error.');
+  const onCodex = process.env.FAKE_ACP_PROVIDER === 'codex';
+  if (onCodex && turn.text.includes('#codexcriticdown'))
+    throw new Error('Codex could not start the review.');
+  if ((onCodex || turn.text.includes('#everycritichangs')) && turn.text.includes('#critichangs')) {
+    await untilCancelled(turn.signal);
+    return 'cancelled';
+  }
   const rechecking = turn.text.includes(RECHECK);
   const text = rechecking ? [...sessionPrompts(turn), turn.text].join('\n') : turn.text;
   if (rechecking) {

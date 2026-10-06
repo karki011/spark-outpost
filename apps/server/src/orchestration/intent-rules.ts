@@ -4,7 +4,7 @@ import { planOnlyByRule, questionByRule, reviewsExistingByRule } from './risk-ru
 const LEAD = "^\\s*(?:(?:please|can you|could you|would you|let'?s)\\s+)?";
 
 const RESEARCH = new RegExp(
-  `${LEAD}(?:investigate|research|look into|dig into|trace|compare|find (?:out )?(?:where|why|how|which|what)|figure out (?:where|why|how|what)|find the (?:cause|root cause))\\b`,
+  `${LEAD}(?:investigate|research|look into|look at (?:why|how|where|what)|dig into|trace|compare|find (?:out )?(?:where|why|how|which|what)|figure out (?:where|why|how|what)|find the (?:cause|root cause))\\b`,
   'i',
 );
 const PLAN = new RegExp(

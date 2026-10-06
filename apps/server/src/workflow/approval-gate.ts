@@ -73,6 +73,8 @@ export interface ObservedDecision {
 
 export type EditObserver = (request: ApprovalRequest, decision: ObservedDecision) => void;
 
+export const PIECE_PLAN_REASON = 'a piece builds from the approved list, without its own plan card';
+
 export interface PlanModeHooks {
   proposed(request: ApprovalRequest & { plan: string }): Promise<string | null>;
   decided(planId: string, answer: GateAnswer): Promise<void>;
@@ -451,6 +453,9 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
 
   const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {
     const plan = request.plan;
+    if (plan && deps.piece && !signal.aborted) {
+      return allow(request, `Left plan mode: ${subject(request)} (${PIECE_PLAN_REASON})`);
+    }
     if (!plan || !deps.plans || signal.aborted) return decideRequest(request, signal);
     const planId = await deps.plans.proposed({ ...request, plan });
     const answer = await decideRequest(request, signal);

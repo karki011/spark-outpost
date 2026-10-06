@@ -1,5 +1,6 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
 import { findingKind } from '../advisor/finding-questions.ts';
+import { CRITIC_STALL_MS } from '../advisor/policy.ts';
 import { integratorRoute } from '../coordinator/integrator.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
@@ -24,6 +25,7 @@ import {
 import { promptFor, readerPreamble } from './member-prompts.ts';
 import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
+import { createStallWatch, stallText } from './stall-watch.ts';
 import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
@@ -301,13 +303,18 @@ async function runChild(
     s.deps.loopGuard === false ? null : { ...DEFAULT_LOOP_GUARD, ...s.deps.loopGuard };
   const guard = createLoopGuard(name, spawn.role === 'builder' ? settings : null, cancel);
   const { total, observe } = counter(s);
+  const stallMs = spawn.role === 'critic' ? (s.deps.criticStallMs ?? CRITIC_STALL_MS) : null;
+  const stall = createStallWatch(stallMs, cancel);
   try {
     const result = await executeChildRun(
       s.deps,
       lease,
       {
         onOutput: observe,
-        onProduced: guard.observe,
+        onProduced: (output) => {
+          stall.touch();
+          guard.observe(output);
+        },
         backupAlsoFor: s.lease.runId,
         stopNow: stopNow.signal,
         recordsPlan: spawn.role === 'builder' && (!seat || seat.role === 'integrator'),
@@ -315,12 +322,13 @@ async function runChild(
       },
       s.append,
     );
+    const hung = stall.stalled() && result.outcome !== 'succeeded' && !s.control.signal.aborted;
     return {
       role: spawn.role,
       runId: lease.runId,
       label,
-      outcome: result.outcome,
-      error: result.error,
+      outcome: hung ? 'failed' : result.outcome,
+      error: hung ? stallText(name, stallMs ?? 0) : result.error,
       text: result.text,
       toolCalls: total.value,
       inPlace: false,
@@ -330,6 +338,7 @@ async function runChild(
       ...(place?.reuse ? { copyRunId: place.reuse.runId } : {}),
     };
   } finally {
+    stall.stop();
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
     await mergeRoute(s.deps.db, lease.runId, { fileReads: total.reads.length }).catch(

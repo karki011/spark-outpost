@@ -24,7 +24,9 @@ import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { RunInput } from './run-input.ts';
 import {
+  CREW_STOPPED_NOTE,
   RESUME_REASONS,
+  STOPPED_NOTE,
   STOPPED_REPLY,
   SESSION_IDLE_MS,
   SESSION_OPEN_LIMIT,
@@ -110,6 +112,7 @@ export async function prepareTurnSession(
       ? stoppedFollowUp(
           input.followUp ?? input.prompt,
           await stoppedChanges(db, input, chatTurn ? null : resumeKey),
+          chatTurn || (await userStopped(db, input, resumeKey)) ? STOPPED_NOTE : CREW_STOPPED_NOTE,
         )
       : input.followUp;
   let rowId: string | null = null;
@@ -181,7 +184,7 @@ export async function prepareTurnSession(
     },
     async finished(result) {
       if (!rowId) return;
-      if (await resumableStop(db, input, result)) {
+      if (resumableStop(input, result)) {
         await finishProviderSession(db, rowId, {
           lastMessageId: chatTurn ? result.messageId : null,
           replyHash: STOPPED_REPLY,
@@ -205,10 +208,21 @@ export async function prepareTurnSession(
   };
 }
 
-async function resumableStop(db: Db, input: RunInput, result: TurnEnd): Promise<boolean> {
+function resumableStop(input: RunInput, result: TurnEnd): boolean {
   if (result.outcome !== 'cancelled' || result.stopReason !== 'cancelled') return false;
-  if (input.parentRunId === null) return result.messageId !== null;
-  return isCancelRequested(db, input.parentRunId);
+  return input.parentRunId !== null || result.messageId !== null;
+}
+
+async function userStopped(db: Db, input: RunInput, resumeKey: string | null): Promise<boolean> {
+  if (!resumeKey) return true;
+  const { rows } = await db.query<{ parent: string | null }>(
+    `SELECT parent_run_id AS parent FROM runs
+     WHERE conversation_id = $1 AND id <> $2 AND route->>'resumeKey' = $3
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [input.identity.threadId, input.identity.runId, resumeKey],
+  );
+  const parent = rows[0]?.parent ?? null;
+  return parent !== null && isCancelRequested(db, parent);
 }
 
 async function stoppedChanges(

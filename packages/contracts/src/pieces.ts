@@ -1,20 +1,37 @@
 import { z } from 'zod';
 
-export const PIECE_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,15}$/;
-
 export const pieceSizeSchema = z.enum(['S', 'M', 'L']);
 export type PieceSize = z.infer<typeof pieceSizeSchema>;
 
+export const PIECE_LIMITS = {
+  key: 16,
+  title: 120,
+  goal: 800,
+  path: 300,
+  paths: 60,
+  dependsOn: 8,
+  contract: 2_000,
+  item: 400,
+  acceptance: 12,
+  checks: 6,
+  integration: 2_000,
+} as const;
+
+export const PIECE_KEY_PATTERN = new RegExp(`^[A-Za-z][A-Za-z0-9_-]{0,${PIECE_LIMITS.key - 1}}$`);
+
+const pathList = z.array(z.string().trim().min(1).max(PIECE_LIMITS.path)).max(PIECE_LIMITS.paths);
+const itemText = z.string().trim().min(1).max(PIECE_LIMITS.item);
+
 export const pieceDraftSchema = z.object({
   key: z.string().regex(PIECE_KEY_PATTERN),
-  title: z.string().trim().min(1).max(120),
-  goal: z.string().trim().min(1).max(800),
-  owns: z.array(z.string().trim().min(1).max(300)).max(60).default([]),
-  reads: z.array(z.string().trim().min(1).max(300)).max(60).default([]),
-  dependsOn: z.array(z.string()).max(8).default([]),
-  contract: z.string().trim().max(2_000).nullable().default(null),
-  acceptance: z.array(z.string().trim().min(1).max(400)).max(12).default([]),
-  checks: z.array(z.string().trim().min(1).max(400)).max(6).default([]),
+  title: z.string().trim().min(1).max(PIECE_LIMITS.title),
+  goal: z.string().trim().min(1).max(PIECE_LIMITS.goal),
+  owns: pathList.default([]),
+  reads: pathList.default([]),
+  dependsOn: z.array(z.string()).max(PIECE_LIMITS.dependsOn).default([]),
+  contract: z.string().trim().max(PIECE_LIMITS.contract).nullable().default(null),
+  acceptance: z.array(itemText).max(PIECE_LIMITS.acceptance).default([]),
+  checks: z.array(itemText).max(PIECE_LIMITS.checks).default([]),
   size: pieceSizeSchema,
   research: z.boolean().default(false),
 });
@@ -22,9 +39,19 @@ export type PieceDraft = z.infer<typeof pieceDraftSchema>;
 
 export const piecesBlockSchema = z.object({
   pieces: z.array(pieceDraftSchema).min(1),
-  integration: z.string().trim().max(2_000).nullable().default(null),
+  integration: z.string().trim().max(PIECE_LIMITS.integration).nullable().default(null),
 });
 export type PiecesBlock = z.infer<typeof piecesBlockSchema>;
+
+export function pieceLimitLines(): string[] {
+  const limits = PIECE_LIMITS;
+  return [
+    `key: a letter, then letters, digits, _ or -, at most ${limits.key} characters.`,
+    `title at most ${limits.title} characters; goal at most ${limits.goal}; contract at most ${limits.contract}; integration at most ${limits.integration}.`,
+    `acceptance: at most ${limits.acceptance} items; checks: at most ${limits.checks} commands; each at most ${limits.item} characters.`,
+    `owns and reads: at most ${limits.paths} paths each, each at most ${limits.path} characters; dependsOn: at most ${limits.dependsOn} keys.`,
+  ];
+}
 
 export const PIECES_FENCE = 'pieces';
 

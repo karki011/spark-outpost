@@ -4,11 +4,15 @@ import {
   COORD_ENGAGE_PLAN_ITEMS,
   COORD_ENGAGE_SCAN_FILES,
   COORD_ENGAGE_SCAN_PACKAGES,
+  COORD_SOLO_FILES,
+  COORD_SOLO_WORDS,
   COORD_TOO_BIG_BAND,
 } from '../advisor/policy.ts';
+import type { Scope } from '@spark-outpost/contracts';
 import type { RankedFile } from '../codescan/rank.ts';
 import { areaOf } from '../orchestration/critic-rule.ts';
 import { namedFiles } from '../orchestration/context.ts';
+import { wordCount } from '../orchestration/risk-rules.ts';
 
 export type EngageReason = 'requested' | 'plan' | 'scan' | 'size';
 
@@ -18,6 +22,9 @@ export interface EngageFacts {
   likely: readonly Pick<RankedFile, 'path' | 'package'>[];
   sizeEstimate: number;
   budgetTokens: number;
+  followUp?: boolean;
+  followUpRound?: boolean;
+  scope?: Scope | null;
 }
 
 export interface Engagement {
@@ -25,6 +32,7 @@ export interface Engagement {
   reason: EngageReason | null;
   detail: string;
   tooBigUnsure: boolean;
+  solo: string | null;
 }
 
 const SPLIT = '(?:split|break) (?:this|it|the work|the task|the change|the request)';
@@ -51,16 +59,38 @@ export function planAreas(items: readonly string[]): number {
   return new Set(namedFiles(items).filter(inProject).map(areaOf)).size;
 }
 
+const SMALL_SCOPES: ReadonlySet<Scope> = new Set(['one_spot', 'one_module']);
+
+export function soloReason(facts: EngageFacts): string | null {
+  if (facts.followUpRound) return 'a PR follow-up round';
+  if (facts.planItems.length >= COORD_ENGAGE_PLAN_ITEMS) return null;
+  if (facts.scope && SMALL_SCOPES.has(facts.scope)) {
+    return `Jev sized the change as ${facts.scope === 'one_spot' ? 'one spot' : 'one module'}`;
+  }
+  if (!facts.followUp) return null;
+  const named = namedFiles([facts.request]).filter(inProject).length;
+  const words = wordCount(facts.request);
+  if (named > COORD_SOLO_FILES || words > COORD_SOLO_WORDS) return null;
+  return `a small follow-up (${words} words, ${named} ${named === 1 ? 'file' : 'files'} named)`;
+}
+
 export function engagement(facts: EngageFacts): Engagement {
   const tooBigUnsure =
     Math.abs(facts.sizeEstimate - facts.budgetTokens) <= facts.budgetTokens * COORD_TOO_BIG_BAND;
-  const result = (reason: EngageReason | null, detail: string): Engagement => ({
+  const result = (
+    reason: EngageReason | null,
+    detail: string,
+    solo: string | null = null,
+  ): Engagement => ({
     engage: reason !== null,
     reason,
     detail,
     tooBigUnsure,
+    solo,
   });
   if (REQUESTED.test(facts.request)) return result('requested', 'the request asks for pieces');
+  const solo = soloReason(facts);
+  if (solo) return result(null, solo, solo);
   const areas = planAreas(facts.planItems);
   if (facts.planItems.length >= COORD_ENGAGE_PLAN_ITEMS && areas >= COORD_ENGAGE_PLAN_AREAS) {
     return result(
