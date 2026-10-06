@@ -52,6 +52,7 @@ test.describe('plain chats', () => {
     const beside = (await page.locator('.col').boundingBox())!;
     const scroller = (await page.locator('.thread').boundingBox())!;
     expect(strip.x).toBeGreaterThan(scroller.x);
+    expect(strip.x - scroller.x).toBeLessThanOrEqual(24);
     expect(strip.x + strip.width).toBeLessThanOrEqual(beside.x - 12);
     expect(Math.abs(strip.y + strip.height / 2 - (scroller.y + scroller.height / 2))).toBeLessThan(
       8,
