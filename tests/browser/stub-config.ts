@@ -53,6 +53,11 @@ export const FAKE_GH_STATE = path.join(
   slot === 0 ? 'spark-outpost-fake-gh-login' : `spark-outpost-fake-gh-login-${slot}`,
 );
 
+export const FAKE_TAILSCALE_STATE = path.join(
+  os.tmpdir(),
+  slot === 0 ? 'spark-outpost-fake-tailscale.json' : `spark-outpost-fake-tailscale-${slot}.json`,
+);
+
 export const CREW_CATALOG = {
   claude: [
     { id: 'haiku', label: 'Haiku 4.5', description: 'Fastest for quick answers' },

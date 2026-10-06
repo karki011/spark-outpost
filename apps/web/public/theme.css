@@ -24,6 +24,8 @@
   --switch-on-ink: #fff;
   --code: #f5f6f8;
   --scout-eye: #0c0f12;
+  --qr-ink: #0c0f12;
+  --qr-paper: #ffffff;
   --r: 14px;
   --r-sm: 8px;
   --out: cubic-bezier(0.2, 0.8, 0.2, 1);

@@ -1,0 +1,59 @@
+import {
+  pairingStartSchema,
+  pendingPairingListSchema,
+  remoteAuditListSchema,
+  remoteDeviceListSchema,
+  remoteDeviceSchema,
+  remoteSessionSchema,
+  remoteSwitchesSchema,
+  tailscaleStateSchema,
+  type PairingStart,
+  type PendingPairing,
+  type RemoteAuditEntry,
+  type RemoteDevice,
+  type RemoteSession,
+  type RemoteSwitches,
+  type TailscaleState,
+} from '@spark-outpost/contracts';
+import { request } from '../api/client.ts';
+
+export const phoneKeys = {
+  all: ['phone'] as const,
+  session: ['phone', 'session'] as const,
+  tailscale: ['phone', 'tailscale'] as const,
+  devices: ['phone', 'devices'] as const,
+  pairings: ['phone', 'pairings'] as const,
+  audit: ['phone', 'audit'] as const,
+};
+
+const post = { method: 'POST', body: '{}' };
+
+export const phoneApi = {
+  session: (): Promise<RemoteSession> => request(remoteSessionSchema, '/remote/session'),
+  tailscale: (): Promise<TailscaleState> => request(tailscaleStateSchema, '/remote/tailscale'),
+  turn: (to: 'on' | 'off'): Promise<TailscaleState> =>
+    request(tailscaleStateSchema, `/remote/tailscale/${to}`, post),
+  devices: async (): Promise<RemoteDevice[]> =>
+    (await request(remoteDeviceListSchema, '/remote/devices')).devices,
+  rename: (id: string, name: string): Promise<RemoteDevice> =>
+    request(remoteDeviceSchema, `/remote/devices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+  revoke: async (id: string): Promise<RemoteDevice[]> =>
+    (await request(remoteDeviceListSchema, `/remote/devices/${id}`, { method: 'DELETE' })).devices,
+  disconnectAll: async (): Promise<RemoteDevice[]> =>
+    (await request(remoteDeviceListSchema, '/remote/devices/disconnect-all', post)).devices,
+  startPairing: (): Promise<PairingStart> => request(pairingStartSchema, '/remote/pairings', post),
+  pairings: async (): Promise<PendingPairing[]> =>
+    (await request(pendingPairingListSchema, '/remote/pairings')).pairings,
+  answerPairing: async (id: string, answer: 'confirm' | 'deny'): Promise<PendingPairing[]> =>
+    (await request(pendingPairingListSchema, `/remote/pairings/${id}/${answer}`, post)).pairings,
+  setSwitches: (change: Partial<RemoteSwitches>): Promise<RemoteSwitches> =>
+    request(remoteSwitchesSchema, '/remote/switches', {
+      method: 'PATCH',
+      body: JSON.stringify(change),
+    }),
+  audit: async (): Promise<RemoteAuditEntry[]> =>
+    (await request(remoteAuditListSchema, '/remote/audit')).entries,
+};
