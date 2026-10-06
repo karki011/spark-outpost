@@ -16,6 +16,7 @@ import {
   type NotifyCandidate,
   type NotifyChat,
 } from './notify-plan.ts';
+import { ClientFocus, DEFAULT_FOCUS_CLIENT } from './client-focus.ts';
 import { sendSlackMessage } from './post.ts';
 
 export const NOTIFY_BATCH_MS = 20_000;
@@ -32,7 +33,7 @@ export interface SlackNotifierOptions {
 
 export interface SlackNotifier {
   changed(event: AppEvent): void;
-  setFocused(focused: boolean): void;
+  setFocused(focused: boolean, clientId?: string): void;
   settled(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -103,7 +104,7 @@ export function startSlackNotifier(
 ): SlackNotifier {
   const now = options.now ?? Date.now;
   const since = options.since ?? new Date(now());
-  let focusedAt: number | null = null;
+  const focus = new ClientFocus(now, FOCUS_TTL_MS);
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
   const scanning = new Set<string>();
@@ -113,8 +114,6 @@ export function startSlackNotifier(
       console.error('Slack notification failed', (error as Error).message);
     });
   };
-
-  const focused = () => focusedAt !== null && now() - focusedAt < FOCUS_TTL_MS;
 
   async function deliver(conversationId: string, items: Claimed[]): Promise<void> {
     const ids = items.map((item) => item.deliveryId);
@@ -192,7 +191,7 @@ export function startSlackNotifier(
     if (!connection) return;
     const facts = {
       settings: connection.settings,
-      focused: focused(),
+      focused: focus.anyFocused(),
       target: slackNotifyTarget(connection),
     };
     for (const candidate of await candidates(deps, conversationId, since)) {
@@ -217,8 +216,8 @@ export function startSlackNotifier(
       scanning.add(conversationId);
       enqueue(() => scan(conversationId));
     },
-    setFocused(next) {
-      focusedAt = next ? now() : null;
+    setFocused(next, clientId = DEFAULT_FOCUS_CLIENT) {
+      focus.set(clientId, next);
     },
     async settled() {
       await work;

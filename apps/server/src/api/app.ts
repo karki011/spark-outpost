@@ -26,6 +26,7 @@ import { projectRoutes } from './project-routes.ts';
 import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
+import { remoteAccessParts } from '../remote/access.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
@@ -82,10 +83,17 @@ export function createApp(options: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   if (options.activeWork) app.use(trackRequests(options.activeWork));
-  app.use(localRequestGuard(options.port, options.allowedOrigins));
-  app.use(requireLaunchToken(options.apiToken));
+  const remote = remoteAccessParts(options);
+  app.use(
+    remote.guard([
+      localRequestGuard(options.port, options.allowedOrigins),
+      requireLaunchToken(options.apiToken),
+    ]),
+  );
   app.use('/api', attachmentRoutes(options));
   app.use(express.json({ limit: '256kb' }));
+  app.use(remote.bodyGuard);
+  app.use('/api', remote.routes);
   app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));
   app.use('/api', apiRoutes({ ...options, warmTicketMentions: ticketMentionWarmer(options) }));
   app.use('/api', setupRoutes(options));

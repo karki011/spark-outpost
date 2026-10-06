@@ -41,12 +41,83 @@ Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS c
 
 | #   | What                                                                                                     | Done when                                                                                                     |
 | --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| T1  | Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus flag  | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
+| T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
 | T2  | Tailscale: detect, turn Serve on and off, accept the Serve hostname, Settings → Phone access with the QR | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
 | T3  | Phone web app: manifest, service worker, layout pass, Mac-only parts hidden, asleep and offline states   | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
 | T4  | Notifications, keep-awake, guide pages, first real-phone test by the owner                               | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
 
 The relay version follows and replaces only the reach, sign-in transport and encryption parts.
+
+## Remote gateway (T1, built)
+
+Code: `apps/server/src/remote/`. Contracts: `packages/contracts/src/remote.ts`. Storage: migration `0136_remote_access.sql`. Nothing here opens a network port or runs Tailscale; with the hostname setting empty the server behaves exactly as before.
+
+### Which requests are remote
+
+- The setting is `remote_access_settings.hostname`: zero or one exact DNS name, empty by default. It is read and written with `GET` and `PUT /api/remote/access` (`{ "hostname": "mac.tailnet.ts.net" }` or `null`). T2 fills it from Tailscale Serve.
+- A request whose Host is `127.0.0.1:<port>` or `localhost:<port>` is local and runs the unchanged guards: allowed Origin, then the launch token.
+- Any other Host is looked up against the setting. No match, or an empty setting, gets the same `403` as before. A match makes the request remote.
+- A remote request must carry `Origin: https://<hostname>` when it sends one, and every write must send one. The launch token header is removed before anything else reads it, so it grants nothing.
+- The terminal socket keeps its own loopback Host check and never accepts a remote Host.
+
+### A spoofed Host on loopback
+
+Tailscale Serve connects to `127.0.0.1`, so the server cannot tell a proxied phone from a program on the Mac that sends the Serve hostname as its Host. It does not try to. The rule is that claiming to be remote can only take powers away:
+
+- A remote request never passes the launch-token check and never reaches a route outside the allowlist.
+- Without a device cookie it gets the pairing page, the theme stylesheet, and the two pairing calls. Pairing needs a code that only a launch-token request can create and a confirmation that only a launch-token request can give.
+- With a device cookie it gets what that phone gets. The cookie exists only on the phone; the Mac stores a SHA-256 hash.
+- Headers a proxy adds (forwarded addresses, Tailscale identity headers) are not read, because a local program can send them too.
+
+So a local program gains nothing it could not already do by pairing a device with the user's confirmation. It can use up the pairing rate limit for a minute, which blocks pairing and nothing else.
+
+### Pairing
+
+1. A local request starts it: `POST /api/remote/pairings` returns a 12-character code (60 bits, shown as `XXXX-XXXX-XXXX`) valid for two minutes. A new code replaces the last. Five starts a minute.
+2. The phone posts the code and a device name to `POST /api/remote/pair`. The code is burned on first use. The answer holds a one-time claim secret and a six-digit matching code. Five attempts a minute across all callers; wrong, expired and reused codes get the same `403`.
+3. The Mac lists waiting requests (`GET /api/remote/pairings`: device name, matching code) and answers with `POST /api/remote/pairings/:id/confirm` or `/deny`.
+4. The phone polls `POST /api/remote/pair/claim`: `202` while waiting, `403` once denied or expired, and after a confirm `200` once, with the session cookie.
+
+Decisions the plan left open:
+
+- The phone polls rather than holding one request open, so a dropped mobile connection does not lose the pairing.
+- Pairing state lives in memory, hashed. A restart ends any pairing in progress, which fails closed.
+- The pairing page is rendered by the server with a per-response nonce and a `default-src 'none'` policy. It links `/theme.css` and uses only theme tokens. It reads a code from `#code=` so a T2 QR link can prefill it.
+
+### Sessions and devices
+
+- Cookie `__Host-spark_device`: 32 random bytes, `HttpOnly; Secure; SameSite=Strict; Path=/`, no Domain. Table `remote_devices` holds id, name, token hash, created, last seen (written at most once a minute) and revoked.
+- A device not seen for 30 days is refused and must pair again. The server enforces this from `last_seen_at`; the cookie's own lifetime is longer.
+- Local endpoints: `GET /api/remote/devices`, `PATCH /api/remote/devices/:id` (rename), `DELETE /api/remote/devices/:id` (revoke), `POST /api/remote/devices/disconnect-all`. Revoking is checked on every request and closes that device's open event streams. Clearing or changing the hostname closes every device's streams.
+- `connected` in the device list is true while a device holds an event stream open. T2 uses it for the "phone connected" mark.
+
+### Policy
+
+`apps/server/src/remote/route-rules.ts` is the single list. Each `METHOD /path` is `always`, `never`, `pairing` (the two unauthenticated pairing calls) or the name of a switch. Matching mirrors the router (any case, trailing slash, `HEAD` as `GET`); when two patterns fit one path every one of them must allow it; a path with no rule is refused. `apps/server/test/remote-policy.db.test.ts` walks the routes the app registers and fails when one has no rule, or a rule has no route.
+
+Decisions the plan left open:
+
+- **Raise agent mode or autonomy** is enforced as "change": with the switch off, a phone request to chat settings or provider defaults that carries `agentMode`, `permission` or `level` is refused. Agent modes are provider-defined and have no order to compare.
+- **Answer high-risk cards** covers cards with git hooks or git config, force push, agent instruction files or a secret file in their paths, and rail flags. A card that approves a saved sign-in needs the sign-ins switch.
+- **Pair another device and manage devices** is stored but opens no route in this version: device, pairing-start, hostname and switch-write endpoints are never reachable from a phone.
+- Never from a phone, by choice rather than by the plan's list: trusting a folder's hooks and MCP servers, `POST /api/tasks/:id/ship`, reading an instructions file by absolute path, the diagnostics export, the git installer, and opening a folder in Finder. Preview reads are refused along with preview control.
+- Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**.
+
+Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH /api/remote/switches` (local only), stored as columns of `remote_access_settings` with the proposed defaults.
+
+### Audit
+
+The run audit log is a per-run hash chain of agent traffic, so phone activity has its own table, `remote_audit`, pruned on the same retention setting and listed by `GET /api/remote/audit` (local only). A row is written before a remote write runs and gets the response status when it ends. Pairing start, submit, failure, confirm and deny, device paired, renamed and revoked, disconnect all, hostname and switch changes, and every refusal of a known device are rows too. Rows hold the device id and name, method and path; never a body, query string, code, claim or token.
+
+### Focus
+
+`POST /api/slack/presence` takes an optional `clientId`. Local windows are `local:<id>` and a phone is always `device:<device id>`, whatever it sends. Slack stays quiet while any client is focused, and one client's blur no longer clears another's focus. T4 can read the focused clients to quiet a phone's own notifications.
+
+### What T2 needs
+
+- Set the hostname with `PUT /api/remote/access` when Serve is on and `null` when it is off.
+- Settings → Phone access reads `GET /api/remote/access`, `/devices`, `/pairings` and `/audit`, and writes the endpoints above.
+- The server must run with `WEB_ROOT` for a phone to get the app and the themed pairing page; under `pnpm dev` Vite serves the app and a phone would see an unstyled pairing page and no app.
 
 ## How the relay version fits together
 

@@ -42,6 +42,7 @@ import {
   SlackChannelNotAllowedError,
   SlackNotConnectedError,
 } from '../slack/web-api.ts';
+import { presenceClientOf } from '../remote/principal.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, parseBody } from './validation.ts';
 
@@ -213,8 +214,8 @@ export function slackRoutes(routeDeps: SlackRouteDeps): Router {
   });
 
   router.post('/slack/presence', (req, res) => {
-    const { focused } = parseBody(slackPresenceRequestSchema, req);
-    routeDeps.slackNotifier?.setFocused(focused);
+    const { focused, clientId } = parseBody(slackPresenceRequestSchema, req);
+    routeDeps.slackNotifier?.setFocused(focused, presenceClientOf(res, clientId));
     res.status(204).end();
   });
 
