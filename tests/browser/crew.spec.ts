@@ -228,7 +228,8 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
   );
   expect(roleOverNext.length).toBeGreaterThan(0);
   expect(Math.max(...roleOverNext)).toBeLessThanOrEqual(0);
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await page.getByRole('button', { name: 'Chat actions' }).click();
+  await page.getByRole('menuitem', { name: 'Agent TV' }).click();
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect
     .poll(async () => {
