@@ -56,8 +56,8 @@ export const installedClis: RunCommand = async (file, args) => {
   return notFound;
 };
 
-export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
-  return createApp({
+export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOptions {
+  return {
     db: t.db,
     hub: new RunEventHub(),
     workspaceId: t.workspaceId,
@@ -96,7 +96,11 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
     ...(options.webRoot ? { webRoot: options.webRoot } : {}),
-  });
+  };
+}
+
+export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
+  return createApp(testAppOptions(t, options));
 }
 
 export function localClient(app: ReturnType<typeof createTestApp>) {

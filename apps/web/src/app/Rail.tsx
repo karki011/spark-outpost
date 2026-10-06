@@ -8,7 +8,7 @@ import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
-export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map' | 'docs';
+export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
 
 interface RailProps {
   view: AppView;
@@ -96,6 +96,13 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
     ),
   },
 ];
+
+const PHONE_ICON = (
+  <svg {...ICON}>
+    <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+    <path d="M11 18.5h2" />
+  </svg>
+);
 
 const MOOD_EXPRESSIONS: Record<NonNullable<ScoutMood>, BlobExpression> = {
   working: 'thinking',
@@ -200,6 +207,18 @@ export function Rail({
       ))}
       <span className="rail-sp" />
       <UpdateBlob />
+      <button
+        type="button"
+        className="rail-btn"
+        data-view="phone"
+        aria-current={view === 'phone' ? 'page' : undefined}
+        onPointerEnter={() => onIntent('phone')}
+        onFocus={() => onIntent('phone')}
+        onClick={() => onView('phone')}
+      >
+        {PHONE_ICON}
+        Phone
+      </button>
       <button type="button" className="rail-btn" onClick={onSettings}>
         <svg {...ICON}>
           <circle cx="12" cy="12" r="3" />

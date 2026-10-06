@@ -1,0 +1,261 @@
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+import {
+  denyWaitingPhones,
+  PHONE_ADDRESS,
+  PHONE_PAGE,
+  pairFromPhone,
+  resetPhone,
+  servePhonePage,
+  setFakeTailscale,
+} from './phone-support.ts';
+
+const SHOTS = process.env.SPARK_SHOTS ?? '';
+const WIDE = { width: 1280, height: 900 };
+const NARROW = { width: 390, height: 844 };
+
+test.describe.configure({ timeout: 120_000 });
+
+test.beforeEach(async ({ page }) => {
+  await resetPhone();
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'system'));
+  await denyWaitingPhones(page);
+  await page.setViewportSize(WIDE);
+});
+
+test.afterAll(() => {
+  setFakeTailscale(null);
+});
+
+async function shoot(page: Page, name: string, sizes = [WIDE, NARROW]): Promise<void> {
+  if (!SHOTS) return;
+  mkdirSync(SHOTS, { recursive: true });
+  for (const size of sizes) {
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.setViewportSize(size);
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({
+        path: path.join(SHOTS, `${name}-${size.width}-${scheme}.png`),
+        animations: 'disabled',
+      });
+    }
+  }
+  await page.setViewportSize(WIDE);
+  await page.emulateMedia({ colorScheme: 'light' });
+}
+
+async function openPhone(page: Page) {
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Phone' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Phone', level: 1 })).toBeVisible();
+  return page.getByRole('main');
+}
+
+async function turnOn(page: Page) {
+  await page.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible();
+}
+
+async function startPairing(page: Page): Promise<string> {
+  await page.getByRole('button', { name: 'Pair a phone' }).click();
+  const code = page.locator('.ph-code-text');
+  await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  return (await code.textContent()) ?? '';
+}
+
+async function expectAccessible(page: Page) {
+  const axe = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.ph')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+}
+
+test('sits above Settings in the left bar and asks to turn phone access on', async ({ page }) => {
+  const main = await openPhone(page);
+  const labels = await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button')
+    .allTextContents();
+  expect(labels.slice(-2)).toEqual(['Phone', 'Settings']);
+  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
+  await expect(main.locator('.ph-scene .scout')).toHaveClass(/sleep/);
+  await expectAccessible(page);
+  await shoot(page, 'phone-1-off');
+
+  setFakeTailscale({ backendState: 'NeedsLogin' });
+  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(main.getByRole('heading', { name: 'Tailscale is not signed in' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Check again' })).toBeVisible();
+  await shoot(page, 'phone-1-signed-out', [WIDE]);
+
+  setFakeTailscale({ httpsEnabled: false });
+  await main.getByRole('button', { name: 'Check again' }).click();
+  await expect(main.getByRole('heading', { name: 'HTTPS certificates are off' })).toBeVisible();
+});
+
+test('turns on, pairs a phone through its pairing page, renames and revokes it', async ({
+  page,
+  browser,
+}) => {
+  const main = await openPhone(page);
+  await turnOn(page);
+  await expect(main.getByText(PHONE_ADDRESS)).toBeVisible();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
+  await expect(main.getByRole('button', { name: 'Pair a phone' })).toBeFocused();
+
+  const code = await startPairing(page);
+  await expect(main.getByRole('img', { name: /QR code/ })).toBeVisible();
+  await expect(main.locator('.ph-ring-text')).toHaveText(/[12]:\d\d$/);
+  await expect(main.getByRole('button', { name: 'Get a new code' })).toBeFocused();
+  await expect(main.getByRole('status').first()).toHaveText(/Scan this with your phone/);
+  const quiet = await main.locator('.ph-qr').evaluate((svg) => {
+    const paper = getComputedStyle(svg.querySelector('.ph-qr-paper')!).fill;
+    const ink = getComputedStyle(svg.querySelector('.ph-qr-ink')!).fill;
+    return { paper, ink, animations: svg.getAnimations({ subtree: true }).length };
+  });
+  expect(quiet).toEqual({ paper: 'rgb(255, 255, 255)', ink: 'rgb(12, 15, 18)', animations: 0 });
+  await expectAccessible(page);
+  await shoot(page, 'phone-2-code');
+
+  const phoneContext = await browser.newContext({ viewport: NARROW });
+  const phone = await phoneContext.newPage();
+  await servePhonePage(phone);
+  await phone.goto(`${PHONE_PAGE}/#code=${code}`);
+  await expect(phone.getByLabel('Pairing code')).toHaveValue(code);
+  await expect(phone.locator('main')).toHaveAttribute('data-stage', 'enter');
+  await shoot(phone, 'pairing-page-1-enter', [NARROW]);
+  await phone.getByLabel('Device name').fill('Kitchen phone');
+  await phone.getByRole('button', { name: 'Pair' }).click();
+  await expect(phone.locator('main')).toHaveAttribute('data-stage', 'waiting');
+  await expect(phone.getByText('Confirm on your Mac.')).toBeVisible();
+  const matchCode = (await phone.locator('#match').textContent()) ?? '';
+  expect(matchCode).toMatch(/^\d{3} \d{3}$/);
+  await shoot(phone, 'pairing-page-2-waiting', [NARROW]);
+
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'found');
+  await expect(main.getByText('Kitchen phone', { exact: true })).toBeVisible();
+  await expect(main.getByLabel(`Matching code ${matchCode}`)).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Confirm' })).toBeFocused();
+  await expectAccessible(page);
+  await shoot(page, 'phone-3-found');
+
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await main.getByRole('button', { name: 'Confirm' }).click();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'paired');
+  await expect(main.locator('.ph-scene .scout')).toHaveClass(/happy/);
+  await expect(main.getByRole('status').first()).toHaveText('Kitchen phone is paired.');
+  await shoot(page, 'phone-4-paired');
+
+  await expect(phone.getByText('This device is paired.')).toBeVisible({ timeout: 10_000 });
+  await shoot(phone, 'pairing-page-3-paired', [NARROW]);
+  await phoneContext.close();
+
+  await page.clock.resume();
+  const devices = main.getByRole('region', { name: 'Devices' });
+  const row = devices.getByRole('listitem').filter({ hasText: 'Kitchen phone' });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row).toHaveClass(/fresh/);
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
+  await shoot(page, 'phone-5-devices');
+  await expect(
+    main.getByRole('region', { name: 'Recent phone activity' }).getByText('Kitchen phone paired'),
+  ).toBeVisible({ timeout: 10_000 });
+
+  await row.getByRole('button', { name: 'Rename Kitchen phone' }).click();
+  await devices.getByLabel('New name for Kitchen phone').fill('Hall phone');
+  await devices.getByLabel('New name for Kitchen phone').press('Enter');
+  await expect(devices.getByText('Hall phone')).toBeVisible();
+  await devices.getByRole('button', { name: 'Revoke Hall phone' }).click();
+  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+
+  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
+});
+
+test('denies a phone, then lets a code run out', async ({ page, browser }) => {
+  const main = await openPhone(page);
+  await turnOn(page);
+  const code = await startPairing(page);
+
+  const phoneContext = await browser.newContext({ viewport: NARROW });
+  const phone = await phoneContext.newPage();
+  await servePhonePage(phone);
+  await phone.goto(`${PHONE_PAGE}/#code=${code}`);
+  await phone.getByLabel('Device name').fill('Stranger');
+  await phone.getByRole('button', { name: 'Pair' }).click();
+
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'found');
+  await main.getByRole('button', { name: 'Deny' }).click();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ended');
+  await expect(main.locator('.ph-scene .scout')).toHaveClass(/sad/);
+  await expect(main.getByRole('status').first()).toHaveText(/You said no/);
+  await expect(main.getByRole('button', { name: 'Try again' })).toBeFocused();
+  await shoot(page, 'phone-5-denied');
+  await expect(phone.locator('main')).toHaveAttribute('data-stage', 'ended', { timeout: 10_000 });
+  await expect(phone.getByRole('button', { name: 'Try again' })).toBeFocused();
+  await shoot(phone, 'pairing-page-4-denied', [NARROW]);
+  await phoneContext.close();
+
+  await page.clock.install();
+  await main.getByRole('button', { name: 'Try again' }).click();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'code');
+  await page.clock.fastForward(103_000);
+  await expect(main.locator('.ph-scene')).toHaveClass(/expiring/);
+  await expect(main.locator('.ph-scene .scout')).toHaveClass(/alert/);
+  await expect(main.getByRole('status').first()).toHaveText('This code is about to run out.');
+  await expect(main.getByRole('button', { name: 'Get a new code' })).toHaveClass(/primary/);
+  await shoot(page, 'phone-2-expiring');
+  await page.clock.fastForward(20_000);
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ended');
+  await expect(main.getByRole('status').first()).toHaveText(/That code ran out/);
+  await expect(main.getByRole('img', { name: /QR code/ })).toHaveCount(0);
+  await shoot(page, 'phone-5-expired');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const moving = await main.locator('.ph-scene').evaluate((scene) =>
+    scene
+      .getAnimations({ subtree: true })
+      .filter((item) => item.playState === 'running' && 'animationName' in item)
+      .map((item) => (item as CSSAnimation).animationName),
+  );
+  expect(moving).toEqual([]);
+});
+
+test('keeps what the phone can do across reloads', async ({ page }) => {
+  const main = await openPhone(page);
+  await turnOn(page);
+  const switches = main.getByRole('region', { name: 'What the phone can do' });
+  await expect(switches.getByRole('switch')).toHaveCount(7);
+  await expect(switches.getByText('stay on the Mac')).toBeVisible();
+  const reset = switches.getByRole('switch', { name: 'Reset or delete data' });
+  await expect(reset).toHaveAttribute('aria-checked', 'true');
+  await reset.click();
+  await expect(reset).toHaveAttribute('aria-checked', 'false');
+
+  const code = await startPairing(page);
+  await pairFromPhone(code, 'Policy phone');
+  await main.getByRole('button', { name: 'Confirm' }).click();
+
+  await page.reload();
+  await expect(page.getByRole('switch', { name: 'Reset or delete data' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await expect(
+    page.getByRole('switch', { name: 'Add, change and approve saved sign-ins' }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(
+    page
+      .getByRole('region', { name: 'Recent phone activity' })
+      .getByText('What the phone can do was changed'),
+  ).toBeVisible();
+});

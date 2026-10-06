@@ -11,11 +11,12 @@ import {
   type RemoteAuditList,
   type RemoteDevice,
   type RemoteDeviceList,
+  type RemoteSession,
 } from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { PairingRateLimitError, type Pairings } from './pairing.ts';
-import { isRemote } from './principal.ts';
+import { isRemote, remoteDeviceOf } from './principal.ts';
 import { deviceCookie, newSecret, secretHash } from './session.ts';
 import {
   addDevice,
@@ -32,12 +33,14 @@ import {
   type DeviceRow,
 } from './store.ts';
 import type { DeviceStreams } from './streams.ts';
+import type { TailscaleServe } from './tailscale.ts';
 
 export interface RemoteRouteDeps {
   db: Db;
   workspaceId: string;
   pairings: Pairings;
   streams: DeviceStreams;
+  tailscale: TailscaleServe;
 }
 
 const BAD_CODE = 'That code is not valid. Start pairing again on your Mac.';
@@ -46,7 +49,8 @@ const NO_PAIRING = 'That pairing request is no longer waiting.';
 const NO_DEVICE = 'Device not found.';
 const MAC_ONLY = 'This is only available on your Mac.';
 
-export function remoteRoutes({ db, workspaceId, pairings, streams }: RemoteRouteDeps): Router {
+export function remoteRoutes(deps: RemoteRouteDeps): Router {
+  const { db, workspaceId, pairings, streams, tailscale } = deps;
   const router = Router();
   const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
 
@@ -134,6 +138,17 @@ export function remoteRoutes({ db, workspaceId, pairings, streams }: RemoteRoute
     res.json((await remoteAccess(db, workspaceId)).switches);
   });
 
+  router.get('/remote/session', async (_req, res) => {
+    const access = await remoteAccess(db, workspaceId);
+    const session: RemoteSession = {
+      remote: isRemote(res),
+      device: remoteDeviceOf(res),
+      address: access.hostname ? `https://${access.hostname}` : null,
+      switches: access.switches,
+    };
+    res.json(session);
+  });
+
   router.use('/remote', (_req: Request, res: Response, next) => {
     if (isRemote(res)) {
       res.status(403).json({ error: MAC_ONLY });
@@ -155,6 +170,18 @@ export function remoteRoutes({ db, workspaceId, pairings, streams }: RemoteRoute
       await audit({ action: 'hostname_changed', detail: { on: saved.hostname !== null } });
     }
     res.json(saved);
+  });
+
+  router.get('/remote/tailscale', async (_req, res) => {
+    res.json(await tailscale.state());
+  });
+
+  router.post('/remote/tailscale/on', async (_req, res) => {
+    res.json(await tailscale.turnOn());
+  });
+
+  router.post('/remote/tailscale/off', async (_req, res) => {
+    res.json(await tailscale.turnOff());
   });
 
   router.patch('/remote/switches', async (req, res) => {

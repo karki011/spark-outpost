@@ -5,13 +5,17 @@ const loadAnalytics = () =>
   import('../analytics/Analytics.tsx').then((module) => ({ default: module.Analytics }));
 const loadTickets = () =>
   import('../tickets/Tickets.tsx').then((module) => ({ default: module.Tickets }));
+const loadPhone = () =>
+  import('../phone/PhonePage.tsx').then((module) => ({ default: module.PhonePage }));
 
 export const Analytics = lazy(loadAnalytics);
 export const Tickets = lazy(loadTickets);
+export const Phone = lazy(loadPhone);
 
 const VIEW_LOADERS: Partial<Record<AppView, () => Promise<unknown>>> = {
   analytics: loadAnalytics,
   tickets: loadTickets,
+  phone: loadPhone,
 };
 
 export function preloadView(view: AppView): void {

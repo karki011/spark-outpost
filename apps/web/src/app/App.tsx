@@ -54,7 +54,7 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, preloadView, Tickets } from './lazy-views.tsx';
+import { Analytics, Phone, preloadView, Tickets } from './lazy-views.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -294,6 +294,11 @@ function ChatShell({ entering }: { entering: boolean }) {
         {view === 'docs' && (
           <Suspense fallback={<DocsSkeleton />}>
             <DocsPage />
+          </Suspense>
+        )}
+        {view === 'phone' && (
+          <Suspense fallback={<main className="page" aria-label="Phone" aria-busy="true" />}>
+            <Phone />
           </Suspense>
         )}
         {view === 'chats' && (
