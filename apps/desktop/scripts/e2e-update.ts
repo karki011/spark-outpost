@@ -28,6 +28,8 @@ const BROKEN_MIGRATION = [
   'CREATE TABLE e2e_broken (id int REFERENCES nope);',
 ];
 
+const zipRanges: number[] = [];
+
 const results: { check: string; outcome: 'verified' | 'blocked' | 'failed'; detail: string }[] = [];
 
 function record(check: string, outcome: 'verified' | 'blocked' | 'failed', detail = ''): void {
@@ -43,14 +45,22 @@ function serveFeed(): Promise<Server> {
       response.writeHead(404).end();
       return;
     }
-    console.log(`[feed] ${request.method} ${name} ${request.headers.range ?? ''}`.trim());
-    const range = /^bytes=(\d+)-(\d+)$/.exec(request.headers.range ?? '');
+    const wanted = request.headers.range ?? '';
+    if (wanted.includes(',')) {
+      console.log(`[feed] ${request.method} ${name} refused ${wanted.split(',').length} ranges`);
+      response.writeHead(400, { 'Content-Type': 'text/html' }).end('<html>Bad Request</html>');
+      return;
+    }
+    const range = /^bytes=(\d+)-(\d+)$/.exec(wanted);
     if (range) {
       const [start, end] = [Number(range[1]), Number(range[2])];
+      if (name.endsWith('.zip')) zipRanges.push(end - start + 1);
+      else console.log(`[feed] ${request.method} ${name} ${wanted}`);
       response.writeHead(206, { 'Content-Length': end - start + 1 });
       createReadStream(file, { start, end }).pipe(response);
       return;
     }
+    console.log(`[feed] ${request.method} ${name}`);
     createReadStream(file).pipe(response);
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
@@ -99,6 +109,18 @@ async function publish(outputDir: string, previousDir: string): Promise<void> {
     if (name.endsWith('.zip.blockmap'))
       await cp(path.join(previousDir, name), path.join(feedDir, name));
   }
+}
+
+async function seedPreviousUpdate(outputDir: string, version: string): Promise<void> {
+  await mkdir(updaterCache, { recursive: true });
+  await cp(
+    path.join(outputDir, `Spark-Outpost-${version}-${arch}.zip`),
+    path.join(updaterCache, 'update.zip'),
+  );
+}
+
+function megabytes(bytes: number): string {
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
 
 async function install(outputDir: string): Promise<string> {
@@ -174,6 +196,7 @@ async function readJson(file: string): Promise<Record<string, unknown> | null> {
 
 async function updateCycle(v1: string): Promise<void> {
   const app = await install(v1);
+  await seedPreviousUpdate(v1, '0.0.1');
   const running = launch(app, signingName ? [`--remote-debugging-port=${DEBUG_PORT}`] : []);
   const ready = await waitForLine(running, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
   record(
@@ -193,13 +216,15 @@ async function updateCycle(v1: string): Promise<void> {
     zip && files.includes('update-info.json') ? 'verified' : 'failed',
     zip ? `${zip}, ${(await stat(path.join(pending, zip))).size} bytes` : files.join(', '),
   );
-  const fullDownload = running.lines.find((line) =>
-    /previous update\.zip|differential/i.test(line),
-  );
+  const plan = running.lines.find((line) => /Full: .*To download: /.test(line));
+  const fellBack = running.lines.find((line) => /Cannot download differentially/.test(line));
+  const fetched = zipRanges.reduce((sum, size) => sum + size, 0);
+  const size = zip ? (await stat(path.join(pending, zip))).size : 0;
   record(
-    'differential download from the blockmap',
-    'blocked',
-    `the first update after a fresh install has no cached update.zip, so it downloads in full. ${fullDownload ?? ''}`.trim(),
+    'differential download from the blockmaps with single-range requests (multi-range refused like R2)',
+    staged && plan && !fellBack && zipRanges.length > 0 && fetched < size ? 'verified' : 'failed',
+    fellBack?.slice(0, 200) ??
+      `${zipRanges.length} range requests, ${megabytes(fetched)} of ${megabytes(size)} fetched`,
   );
   if (signingName) {
     await restartToUpdate(app, running);

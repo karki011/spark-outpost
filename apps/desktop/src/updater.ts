@@ -25,6 +25,7 @@ import {
   CHECK_INTERVAL_MS,
   FIRST_CHECK_DELAY_MS,
   initialStatus,
+  isCheckFailure,
   parseChannel,
   updateErrorMessage,
 } from './update-state.ts';
@@ -72,9 +73,10 @@ function electronDriver(updater: AppUpdater, log: (line: string) => void, emit: 
     emit({ type: 'progress', percent: progress.percent }),
   );
   updater.on('update-downloaded', (info) => emit({ type: 'downloaded', version: info.version }));
-  updater.on('error', (error: Error) =>
-    emit({ type: 'error', message: updateErrorMessage(error.message) }),
-  );
+  updater.on('error', (error: Error, detail?: string) => {
+    if (isCheckFailure(detail)) return;
+    emit({ type: 'error', message: updateErrorMessage(error.message) });
+  });
   const driver: UpdateDriver = {
     configure(settings) {
       updater.channel = settings.channel;

@@ -9,6 +9,11 @@ describe('feedUrlFromConfig', () => {
     expect(feedUrlFromConfig("provider: generic\nurl: 'http://127.0.0.1:8080/feed'\n")).toBe(
       'http://127.0.0.1:8080/feed',
     );
+    expect(
+      feedUrlFromConfig(
+        'provider: generic\nurl: https://updates.example.com/spark\nuseMultipleRangeRequest: false\n',
+      ),
+    ).toBe('https://updates.example.com/spark');
   });
 
   it('has no feed when the build was made without one', () => {

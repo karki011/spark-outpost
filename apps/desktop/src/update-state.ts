@@ -10,6 +10,8 @@ export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_CHECK_DELAY_MS = 15_000;
 export const RUNS_RECHECK_MS = 15_000;
 export const INSTALL_STALL_TIMEOUT_MS = 90_000;
+export const RESTART_RECHECK_TIMEOUT_MS = 5_000;
+export const QUIT_RECHECK_TIMEOUT_MS = 2_000;
 export const INSTALL_STALLED_MESSAGE =
   "The update didn't start. Quit Spark and open it again, or try Restart to update once more.";
 
@@ -144,6 +146,10 @@ export function installDecision(status: UpdateStatus, activeRuns: number | null)
   if (status.phase !== 'ready') return { status: 'unavailable', reason: 'No update is ready yet.' };
   if (activeRuns === null || activeRuns > 0) return { status: 'waiting', reason: WAITING_FOR_RUNS };
   return { status: 'installing' };
+}
+
+export function isCheckFailure(detail: string | undefined): boolean {
+  return detail?.startsWith('Cannot check for updates') ?? false;
 }
 
 const MISSING_CHANNEL = /Cannot find channel "(latest|beta)-mac\.yml"/;
