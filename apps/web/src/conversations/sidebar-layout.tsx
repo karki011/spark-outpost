@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { usePhone } from '../ui/breakpoints.ts';
 import { keysText, SIDEBAR_KEYS as SIDEBAR_SHORTCUT } from '../ui/Keys.tsx';
 import { hasModifier, MAC } from '../ui/shortcuts.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
@@ -19,7 +20,6 @@ export const SIDEBAR_MAX_WIDTH = 420;
 export const SIDEBAR_DEFAULT_WIDTH = 300;
 export const SIDEBAR_HINT = keysText(SIDEBAR_SHORTCUT);
 const SIDEBAR_ARIA_KEYS = MAC ? 'Meta+B' : 'Control+B';
-const NARROW_QUERY = '(max-width: 640px)';
 const EDGE_SWIPE_START = 28;
 const SWIPE_DISTANCE = 60;
 
@@ -76,17 +76,6 @@ function saveWidth(width: number | null): void {
   }
 }
 
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => matchMedia(NARROW_QUERY).matches);
-  useEffect(() => {
-    const media = matchMedia(NARROW_QUERY);
-    const onChange = () => setNarrow(media.matches);
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, []);
-  return narrow;
-}
-
 function useEdgeSwipe(narrow: boolean, drawer: boolean, setDrawer: (open: boolean) => void) {
   useEffect(() => {
     if (!narrow) return;
@@ -131,7 +120,7 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
   const [width, setWidthState] = useState(readWidth);
-  const narrow = useNarrow();
+  const narrow = usePhone();
   useEdgeSwipe(narrow, drawer, setDrawer);
 
   useEffect(() => saveCollapsed(collapsed), [collapsed]);

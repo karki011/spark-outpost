@@ -1,5 +1,5 @@
 import './audit.css';
-import { useId, type KeyboardEvent } from 'react';
+import { useEffect, useId, type KeyboardEvent, type ReactNode } from 'react';
 import { useCopyChatLink } from '../conversations/use-copy-chat-link.tsx';
 import { CopyIcon, DotsIcon, RestoreIcon, ShieldIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
@@ -14,13 +14,25 @@ function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
   items[(index + step + items.length) % items.length]?.focus();
 }
 
-interface ChatHeaderMenuProps {
-  chatId: string;
-  onAudit(): void;
-  onStartFresh?: () => void;
+export interface ChatMenuExtra {
+  label: string;
+  icon: ReactNode;
+  onSelect: () => void;
 }
 
-export function ChatHeaderMenu({ chatId, onAudit, onStartFresh }: ChatHeaderMenuProps) {
+interface ChatHeaderMenuProps {
+  chatId: string;
+  onAudit?: (() => void) | undefined;
+  onStartFresh?: (() => void) | undefined;
+  extras?: readonly ChatMenuExtra[];
+}
+
+export function ChatHeaderMenu({
+  chatId,
+  onAudit,
+  onStartFresh,
+  extras = [],
+}: ChatHeaderMenuProps) {
   const link = useCopyChatLink(chatId);
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
@@ -28,6 +40,9 @@ export function ChatHeaderMenu({ chatId, onAudit, onStartFresh }: ChatHeaderMenu
   >();
   const menuId = useId();
   const tip = useTooltip('Chat actions');
+  useEffect(() => {
+    if (open) panelRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  }, [open, panelRef]);
   return (
     <div className="head-menu">
       {tip.tooltip}
@@ -47,19 +62,20 @@ export function ChatHeaderMenu({ chatId, onAudit, onStartFresh }: ChatHeaderMenu
       </button>
       {open && (
         <div ref={panelRef} id={menuId} className="head-menu-pop" role="menu" onKeyDown={moveFocus}>
-          <button
-            type="button"
-            role="menuitem"
-            autoFocus
-            onClick={() => {
-              setOpen(false);
-              anchorRef.current?.focus();
-              onAudit();
-            }}
-          >
-            <ShieldIcon />
-            Audit this chat
-          </button>
+          {onAudit && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                anchorRef.current?.focus();
+                onAudit();
+              }}
+            >
+              <ShieldIcon />
+              Audit this chat
+            </button>
+          )}
           {onStartFresh && (
             <button
               type="button"
@@ -87,6 +103,21 @@ export function ChatHeaderMenu({ chatId, onAudit, onStartFresh }: ChatHeaderMenu
             <CopyIcon />
             Copy chat link
           </button>
+          {extras.map((extra) => (
+            <button
+              key={extra.label}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                anchorRef.current?.focus();
+                extra.onSelect();
+              }}
+            >
+              {extra.icon}
+              {extra.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

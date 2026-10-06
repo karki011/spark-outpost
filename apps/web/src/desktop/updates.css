@@ -156,7 +156,7 @@
   animation: shimmer 1.4s linear infinite;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .upd-toasts {
     left: 16px;
     right: 16px;

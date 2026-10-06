@@ -7,7 +7,7 @@
   padding-block: 5px;
   font-size: 12.5px;
 }
-@media (max-width: 560px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .steer-target {
     width: 124px;
   }

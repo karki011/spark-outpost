@@ -12,6 +12,7 @@ import {
   verdictName,
   winnerName,
 } from './analytics-model.ts';
+import { useMediaQuery } from '../ui/breakpoints.ts';
 import { ChartCard, EmptyChart } from './charts/ChartCard.tsx';
 import { ConfidenceChart } from './charts/ConfidenceChart.tsx';
 import { HBars } from './charts/HBars.tsx';
@@ -107,6 +108,7 @@ function DisagreementTable({ rows }: { rows: readonly DisagreementRow[] }) {
 }
 
 export function HarnessTab({ data }: { data: AnalyticsHarness }) {
+  const touch = useMediaQuery('(hover: none)');
   return (
     <div className="an-grid">
       <ChartCard
@@ -134,7 +136,8 @@ export function HarnessTab({ data }: { data: AnalyticsHarness }) {
           <>
             <RoutingFlow paths={data.flow} />
             <p className="an-note">
-              Focus or hover a bar to trace its turns. Model bars use the provider colour.
+              {touch ? 'Tap' : 'Focus or hover'} a bar to trace its turns. Model bars use the
+              provider colour.
             </p>
           </>
         )}

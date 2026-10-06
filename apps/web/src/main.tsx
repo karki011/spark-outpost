@@ -6,12 +6,15 @@ import { App } from './app/App.tsx';
 import { markConnectionRestored, reportRequestError } from './app/connection/connection-store.ts';
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
+import { startTouchViewport } from './app/touch-viewport.ts';
+import { syncThemeColor } from './theme/theme.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
 import './brand/blob-motion.css';
 import './app/base.css';
 import './app/reduced-motion.css';
 import './app/idle-motion.css';
+import './ui/touch.css';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: reportRequestError, onSuccess: markConnectionRestored }),
@@ -24,6 +27,8 @@ const queryClient = new QueryClient({
 configureLiveQueries(queryClient);
 
 markScrollbarStyle();
+syncThemeColor();
+startTouchViewport();
 ignoreAnimationIterationListeners(EventTarget.prototype);
 
 const IslandApp = lazy(() =>

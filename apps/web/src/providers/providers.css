@@ -208,6 +208,10 @@
   padding: 3px 0;
   animation: rise 0.2s var(--out) both;
 }
+.vlog li > span:not(.ic) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .vlog li .ic {
   margin-top: 3px;
 }
@@ -350,7 +354,7 @@
   position: relative;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .cards3 {
     grid-template-columns: 1fr;
   }

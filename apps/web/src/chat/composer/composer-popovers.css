@@ -59,7 +59,7 @@
   z-index: 30;
   width: 300px;
   max-width: min(calc(100vw - 20px), 100cqw);
-  max-height: min(560px, calc(100vh - 160px));
+  max-height: min(560px, calc(100dvh - 160px));
   overflow-y: auto;
   padding: 6px;
   background: var(--panel);

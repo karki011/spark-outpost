@@ -8,7 +8,7 @@
 .es.fill {
   flex: 1;
   align-content: center;
-  padding-bottom: max(32px, 24vh);
+  padding-bottom: max(32px, 24dvh);
 }
 .es-stage {
   position: relative;

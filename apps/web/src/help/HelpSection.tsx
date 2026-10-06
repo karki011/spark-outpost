@@ -4,6 +4,7 @@ import { BetaBadge } from '../desktop/BetaBadge.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { FullDiskAccess } from '../settings/FullDiskAccess.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { exportDiagnostics, outcomeText } from './export-diagnostics.ts';
 import { FeedbackForm } from './FeedbackForm.tsx';
 import { HeartbeatSetting } from './HeartbeatSetting.tsx';
@@ -101,11 +102,14 @@ function useHelpInfo(): { desktop: boolean; info: DesktopHelpInfo | null } {
 
 export function HelpSection() {
   const { desktop, info } = useHelpInfo();
+  const { remote } = useRemoteClient();
   return (
     <>
       <p className="lede">
-        Tell the Spark Outpost team what went wrong or what you'd like. Diagnostics and feedback
-        leave your Mac only when you send them.
+        Tell the Spark Outpost team what went wrong or what you'd like.{' '}
+        {remote
+          ? 'Feedback leaves your Mac only when you send it.'
+          : 'Diagnostics and feedback leave your Mac only when you send them.'}
       </p>
       {desktop &&
         (info ? (
@@ -120,7 +124,7 @@ export function HelpSection() {
         ))}
       {desktop && <HeartbeatSetting />}
       <FullDiskAccess />
-      <DiagnosticsRow />
+      {!remote && <DiagnosticsRow />}
       <FeedbackForm version={info?.version ?? null} beta={info?.beta ?? false} />
     </>
   );

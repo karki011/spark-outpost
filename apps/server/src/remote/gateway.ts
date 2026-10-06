@@ -32,7 +32,13 @@ export interface GatewayDeps {
   streams: DeviceStreams;
 }
 
-const THEME_PATH = '/theme.css';
+const PUBLIC_FILES = new Set([
+  '/theme.css',
+  '/manifest.webmanifest',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
+]);
 const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';
 const NOT_PAIRED = 'Pair this device first.';
@@ -106,8 +112,8 @@ export function remoteGateway(deps: GatewayDeps) {
       refuse(res, 401, NOT_PAIRED);
       return;
     }
-    if (req.path === THEME_PATH && deps.webRoot) {
-      res.sendFile('theme.css', { root: deps.webRoot });
+    if (PUBLIC_FILES.has(req.path) && deps.webRoot) {
+      res.sendFile(req.path.slice(1), { root: deps.webRoot });
       return;
     }
     sendPairingPage(res);

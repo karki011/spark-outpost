@@ -218,7 +218,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .map-hello {
     padding: 20px 16px 28px;
   }

@@ -457,7 +457,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .tk .tk-detail {
     left: 0;
     width: auto;

@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { Project, ProjectTrust } from '@spark-outpost/contracts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { ProjectBrowser } from './ProjectBrowser.tsx';
 import { ProjectBuilders } from './ProjectBuilders.tsx';
@@ -33,6 +34,7 @@ export function ProjectRow({
   onRevoke,
 }: ProjectRowProps) {
   const bodyId = useId();
+  const { remote } = useRemoteClient();
   return (
     <li className={open ? 'set-project open' : 'set-project'}>
       <div className="set-project-head">
@@ -72,9 +74,9 @@ export function ProjectRow({
           <p className="set-project-root">{project.rootPath}</p>
           <ProjectBuilders project={project} available={parallelAvailable} />
           <ProjectChecks project={project} />
-          <ProjectBrowser project={project} />
+          {!remote && <ProjectBrowser project={project} />}
           <ProjectSignIns project={project} />
-          <ProjectPreview project={project} />
+          {!remote && <ProjectPreview project={project} />}
         </div>
       )}
     </li>

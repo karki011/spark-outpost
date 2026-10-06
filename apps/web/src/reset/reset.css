@@ -64,7 +64,7 @@
   margin: 0 0 18px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .reset-lists {
     grid-template-columns: 1fr;
   }

@@ -326,7 +326,7 @@
 .lmore {
   margin-top: 12px;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .wf-grid,
   .wf-axis {
     --wf-label: 96px;

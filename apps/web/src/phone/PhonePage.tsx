@@ -124,7 +124,10 @@ export function PhonePage() {
         <div className="ph-wrap">
           <header className="ph-head">
             <h1 id="ph-title">Phone</h1>
-            <p>Use Spark Outpost from your phone while the work stays on this Mac.</p>
+            <p>
+              Use Spark Outpost from your phone while the work stays on{' '}
+              {session.data?.remote ? 'your' : 'this'} Mac.
+            </p>
           </header>
           <QueryWait query={session} what="phone settings">
             <Skeleton label="Loading phone settings" shape="cards" rows={3} />

@@ -5,9 +5,12 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
+}
+
+#root {
+  height: var(--viewport-h, 100dvh);
 }
 
 body {
@@ -185,7 +188,13 @@ svg {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .app {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
   .main {
     margin: 0;
     border-radius: 0;

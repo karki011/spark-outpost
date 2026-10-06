@@ -6,6 +6,7 @@ import { shipApi, shipKeys } from '../../ship/ship-api.ts';
 import { BranchIcon, ChevronIcon, CopyIcon, FolderIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { branchTip } from './place-picker-model.ts';
 import { useBringChanges, useOpenWorktree } from './use-chat-workspace.ts';
@@ -43,6 +44,7 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
   >();
   const panelId = useId();
   const openFolder = useOpenWorktree(conversationId);
+  const { remote } = useRemoteClient();
   const bring = useBringChanges(conversationId);
   const copy = useCopyFeedback();
   const routeLabel = usePrRouteLabel(conversationId);
@@ -83,7 +85,7 @@ export function ChatBranch({ conversationId, branch, checkoutBranch }: ChatBranc
           <small title={branch.path}>{branch.path}</small>
           <p>{BRANCH_LOCK_HINT}</p>
         </div>
-        {branch.worktree && (
+        {branch.worktree && !remote && (
           <button
             type="button"
             className="mopt"

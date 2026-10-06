@@ -107,7 +107,7 @@
   gap: 8px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .mcp-form-row,
   .mcp-pair {
     grid-template-columns: minmax(0, 1fr);

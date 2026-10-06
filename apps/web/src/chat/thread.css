@@ -41,7 +41,7 @@
   align-items: center;
   gap: 6px;
   text-align: center;
-  padding: clamp(16px, 9vh, 120px) 12px 16px;
+  padding: clamp(16px, 9dvh, 120px) 12px 16px;
   animation: rise 0.25s var(--out);
 }
 
@@ -339,7 +339,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding-top: 22vh;
+  padding-top: 22dvh;
   color: var(--muted);
   font-size: 13px;
   animation: thread-loading-in 0.3s var(--out) 0.25s both;

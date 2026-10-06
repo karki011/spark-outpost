@@ -201,7 +201,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .ctx-unlinked {
     display: none;
   }
@@ -210,6 +210,12 @@
   }
   .ctx-branch-name {
     max-width: 110px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ctx-branch-name {
+    display: none;
   }
 }
 

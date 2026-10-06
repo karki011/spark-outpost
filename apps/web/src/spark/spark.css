@@ -29,7 +29,7 @@
 .inp.spark-name {
   width: 330px;
 }
-@media (max-width: 560px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .set-row:has(.spark-name) {
     grid-template-columns: minmax(0, 1fr);
   }

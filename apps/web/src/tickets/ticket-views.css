@@ -242,7 +242,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .tk .ib-nav {
     flex-wrap: nowrap;
     padding: 8px 14px;

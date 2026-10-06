@@ -33,7 +33,7 @@
   color: var(--panel);
 }
 
-@media (hover: none), (max-width: 640px) {
+@media (hover: none), (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .keys.key-hint {
     display: none;
   }

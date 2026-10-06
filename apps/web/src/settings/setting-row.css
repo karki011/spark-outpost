@@ -42,7 +42,7 @@ label.set-row-label {
 .set-row-control .seg button {
   padding-inline: 12px;
 }
-@media (max-width: 560px) {
+@media (max-width: 899px), (max-height: 500px) and (pointer: coarse) {
   .set-row:has(.seg) {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -50,6 +50,12 @@ label.set-row-label {
     grid-row: auto;
     grid-column: 1;
     margin-top: 8px;
+  }
+  .set-row-control .seg {
+    max-width: 100%;
+  }
+  .set-row-control .seg button {
+    padding-inline: 6px;
   }
 }
 .set-wait {

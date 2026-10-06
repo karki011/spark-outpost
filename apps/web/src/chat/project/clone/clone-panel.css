@@ -133,7 +133,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .clone-dest {
     grid-template-columns: minmax(0, 1fr);
   }

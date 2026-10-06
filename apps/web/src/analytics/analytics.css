@@ -414,7 +414,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .an-wrap {
     padding: 22px 16px 40px;
   }

@@ -227,7 +227,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .cmp {
     --cmp-size: 40px;
     --cmp-gap: 12px;
@@ -256,6 +256,13 @@
 
   .app:has(.cmp[data-corner^='bottom']) .home-wrap {
     padding-bottom: calc(32px + 56px);
+  }
+
+  .app:has(.cmp[data-corner^='bottom']) :is(.tk .ib-main, .an, .ph-scroll)::after {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    height: 56px;
   }
 
   .app:has(.cmp[data-corner^='top']) .home-wrap {

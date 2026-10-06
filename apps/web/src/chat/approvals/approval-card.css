@@ -262,7 +262,7 @@
     animation: none;
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .appr-acts .btn {
     flex: 1 1 calc(50% - 6px);
   }

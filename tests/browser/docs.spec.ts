@@ -14,6 +14,9 @@ const typeBadge = (page: Page) => article(page).locator('.docs-crumb .docs-type'
 
 async function openDocs(page: Page) {
   await page.goto('/');
+  const more = rail(page).getByRole('button', { name: /^More/ });
+  await expect(rail(page).getByRole('button', { name: 'Home' })).toBeVisible();
+  if (await more.isVisible()) await more.click();
   await rail(page).getByRole('button', { name: 'Docs' }).click();
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
 }

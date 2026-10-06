@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { useKeepInViewport } from './viewport-clamp.ts';
 
 export function usePopover<Anchor extends HTMLElement, Panel extends HTMLElement>() {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<Anchor>(null);
   const panelRef = useRef<Panel>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  useKeepInViewport(panelRef, open);
 
   useEffect(() => {
     if (!open) return;

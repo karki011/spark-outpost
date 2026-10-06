@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
+import { DOCK_QUERY, PHONE_QUERY, ROOMY_DOCK_QUERY, useMediaQuery } from '../ui/breakpoints.ts';
 import type { TaskOverview } from '@spark-outpost/contracts';
 import type { BrowserPaneChoice } from '../browser/pane-open.ts';
 
 const STORAGE_KEY = 'spark-wp';
 const WIDTH_KEY = 'spark-outpost.work-panel.width';
-const WIDE_QUERY = '(min-width: 1101px)';
 export const WORK_PANEL_MIN_WIDTH = 340;
 export const WORK_PANEL_MAX_WIDTH = 640;
 export const WORK_PANEL_DEFAULT_WIDTH = 432;
@@ -86,8 +87,12 @@ function saveWidth(width: number | null, limits = WORK_PANEL_LIMITS): void {
   }
 }
 
-function isWide(): boolean {
-  return typeof matchMedia === 'function' && matchMedia(WIDE_QUERY).matches;
+function usePanelDocks(): boolean {
+  const docks = useMediaQuery(DOCK_QUERY);
+  const roomy = useMediaQuery(ROOMY_DOCK_QUERY);
+  const phone = useMediaQuery(PHONE_QUERY);
+  const sidebar = useSidebarLayout();
+  return docks && !phone && (roomy || (sidebar?.collapsed ?? true));
 }
 
 export interface WorkPanelState {
@@ -101,20 +106,12 @@ export interface WorkPanelState {
 }
 
 export function useWorkPanelState(opensByDefault = true): WorkPanelState {
-  const [wide, setWide] = useState(isWide);
+  const wide = usePanelDocks();
   const [chosen, setChosen] = useState(readSaved);
   const docked = chosen ?? opensByDefault;
   const [sheet, setSheet] = useState(false);
   const [width, setWidthState] = useState(() => readWidth());
   const [browserWidth, setBrowserWidthState] = useState(() => readWidth(BROWSER_PANEL_LIMITS));
-
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return;
-    const media = matchMedia(WIDE_QUERY);
-    const onChange = () => setWide(media.matches);
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, []);
 
   useEffect(() => {
     const onCleared = () => setChosen(null);

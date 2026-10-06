@@ -237,7 +237,7 @@ button.as-row:focus-visible .as-open {
   color: var(--warn);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .mpop.setuppop {
     right: 0;
     left: 0;

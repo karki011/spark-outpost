@@ -329,7 +329,7 @@
   border-top-style: dotted;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .map-head {
     gap: 6px;
     padding: 8px 10px;

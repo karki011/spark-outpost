@@ -93,9 +93,22 @@ export function readTheme(): ThemeId {
   }
 }
 
+const SYSTEM_BAR_COLORS = ['#eaecf0', '#07090b'];
+
+export function syncThemeColor(): void {
+  const skinned = document.documentElement.dataset.skin !== undefined;
+  const rail = getComputedStyle(document.documentElement).getPropertyValue('--rail').trim();
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta, index) => {
+    const fallback = SYSTEM_BAR_COLORS[index];
+    const color = skinned && rail ? rail : fallback;
+    if (color) meta.content = color;
+  });
+}
+
 export function applyTheme(id: ThemeId): void {
   if (id === 'system') delete document.documentElement.dataset.skin;
   else document.documentElement.dataset.skin = id;
+  syncThemeColor();
   sparkDesktop()?.theme?.save(id);
   try {
     localStorage.setItem(STORAGE_KEY, id);

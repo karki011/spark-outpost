@@ -161,7 +161,7 @@
   margin: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .tm-scrim {
     align-items: flex-end;
   }

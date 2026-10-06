@@ -66,3 +66,12 @@ export function ListIcon() {
     </Icon>
   );
 }
+
+export function TvIcon() {
+  return (
+    <Icon>
+      <rect x="3" y="7" width="18" height="13" rx="3" />
+      <path d="m8 3 4 4 4-4" />
+    </Icon>
+  );
+}

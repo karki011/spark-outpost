@@ -16,8 +16,12 @@
   background: var(--bg);
 }
 
-@media (min-width: 1101px) {
-  .wp-in {
-    background: var(--bg);
+:where(.wp:not(.over)) > .wp-in {
+  background: var(--bg);
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .chat-head .crumb {
+    display: none;
   }
 }

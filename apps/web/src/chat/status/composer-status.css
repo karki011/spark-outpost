@@ -124,7 +124,7 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .cstatus {
     padding: 0 8px;
   }

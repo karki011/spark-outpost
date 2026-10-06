@@ -65,7 +65,10 @@ function usePrimaryFocus(kind: PairStage['kind'], primary: RefObject<HTMLButtonE
   useEffect(() => {
     if (shown.current === kind) return;
     shown.current = kind;
-    primary.current?.focus({ preventScroll: true });
+    const scene = primary.current?.closest('.ph-scene');
+    const focused = document.activeElement;
+    const elsewhere = focused !== null && focused !== document.body && !scene?.contains(focused);
+    if (!elsewhere) primary.current?.focus({ preventScroll: true });
   }, [kind, primary]);
 }
 

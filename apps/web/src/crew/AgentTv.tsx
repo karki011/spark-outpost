@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
+import { matchesMedia, PHONE_QUERY, usePhone } from '../ui/breakpoints.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
@@ -68,7 +69,7 @@ const VIEW_OPTIONS = [
 ];
 
 function isNarrow(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(max-width: 640px)').matches;
+  return matchesMedia(PHONE_QUERY);
 }
 
 function focusButton() {
@@ -118,7 +119,7 @@ export function AgentTv({
   const caption = tvCaption(members);
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
-  const narrow = viewport.width <= 640;
+  const narrow = usePhone();
   const baseMetrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
   const metrics = tags ? hubStage(baseMetrics) : baseMetrics;
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');

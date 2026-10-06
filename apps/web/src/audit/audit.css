@@ -206,13 +206,22 @@
   color: var(--muted);
   white-space: pre;
 }
-@media (max-width: 700px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .set-panel.aud {
     height: 100%;
     max-width: none;
   }
   .aud .set-head h3 {
     flex-basis: calc(100% - 48px);
+  }
+  .aud .set-head .icon-btn {
+    order: 1;
+  }
+  .aud .set-head .chain {
+    order: 2;
+  }
+  .aud .set-nav button {
+    padding-inline: 8px;
   }
   .astats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
