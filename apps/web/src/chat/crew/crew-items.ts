@@ -106,6 +106,18 @@ export function crewItems(
   return items;
 }
 
+export function itemStartedAt(item: CrewItem): string | null {
+  if (item.kind === 'agent') return item.member.startedAt;
+  if (item.kind === 'group') {
+    const starts = item.members
+      .map((entry) => entry.member.startedAt)
+      .filter((start): start is string => start !== null)
+      .sort();
+    return starts[0] ?? null;
+  }
+  return item.approval.createdAt;
+}
+
 export function lastAgentIndex(items: readonly CrewItem[]): number {
   return items.findLastIndex((item) => item.kind === 'agent');
 }

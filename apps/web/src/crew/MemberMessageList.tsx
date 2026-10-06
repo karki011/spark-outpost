@@ -5,18 +5,12 @@ interface MemberMessageListProps {
   name: string;
   live: boolean;
   messages: readonly MemberMessage[];
-  className?: string;
 }
 
-export function MemberMessageList({
-  name,
-  live,
-  messages,
-  className = 'mc-log',
-}: MemberMessageListProps) {
+export function MemberMessageList({ name, live, messages }: MemberMessageListProps) {
   if (messages.length === 0) return null;
   return (
-    <ol className={className} aria-label={`Your messages to ${name}`}>
+    <ol className="mc-log" aria-label={`Your messages to ${name}`}>
       {messages.map((message) => (
         <li key={message.id}>
           <span className="mc-you">You → {name}</span>
