@@ -37,6 +37,7 @@ How it works today (web milestone):
 - Without a launcher (`pnpm dev`), the API creates a random token and writes it to `.local/api-token` with mode 0600. The Vite dev proxy reads that file for each proxied `/api` request and socket upgrade and adds the header, so the browser's JavaScript never holds the token and `EventSource` needs no query string. Agents are denied reading any `api-token` file like other secret files.
 - In development the Vite server on 127.0.0.1 is the gate: a local program that calls Vite instead of the API still gets through. The Electron build has no dev proxy and closes this.
 - API keys stay in the system keychain, as today.
+- A second principal exists for phone access (`docs/architecture/PHONE_REMOTE.md`, "Remote gateway"): a paired device. A request is treated as remote only when its Host is the one hostname saved in the phone access setting, which is empty unless the user turns phone access on. A remote request cannot use the launch token, must present a device cookie issued by a pairing that was started and confirmed with the launch token, and reaches only routes on the remote allowlist; terminal, Browser pane, preview, updates and phone access management are never on it. The server still listens on 127.0.0.1 alone. A program on the Mac can send that Host itself, so the remote path is built to grant strictly less than the launch token and nothing without a paired device's cookie.
 
 ### Migrations at startup (F-24)
 

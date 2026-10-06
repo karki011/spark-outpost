@@ -12,7 +12,6 @@ import {
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { announcePlan, approvalCommit, planSaveFailed } from '../workflow/plan-recorder.ts';
-import { checkBudgetBeforeCall } from './budget-check.ts';
 import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts';
 import { runMember } from './members.ts';
 import { publish, save, type Session } from './session.ts';
@@ -101,8 +100,6 @@ export function originalPrompt(s: Session): string {
 }
 
 export async function draftPlan(s: Session, prompt: string, note: string | null): Promise<Drafted> {
-  const hit = await checkBudgetBeforeCall(s, 'scout');
-  if (hit) return { event: { type: 'budget_exceeded', limit: hit, unstarted: true } };
   s.input = { ...s.input, prompt, planning: true };
   const { result } = await runMember(s, {
     role: 'scout',
@@ -113,9 +110,6 @@ export async function draftPlan(s: Session, prompt: string, note: string | null)
   s.input = { ...s.input, planning: false };
   if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
   await publish(s);
-  if (s.budgetHit && s.control.reason() === null) {
-    return { event: { type: 'budget_exceeded', limit: s.budgetHit } };
-  }
   const captured = await proposedPlanFromRun(s.deps.db, s.lease.runId);
   const body = result.text.trim() || (captured?.body ?? '');
   if (result.outcome !== 'succeeded' || !body) {

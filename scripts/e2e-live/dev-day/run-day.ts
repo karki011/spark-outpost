@@ -167,8 +167,6 @@ async function armDays(
   const states = new Map<BaseArm, ArmState>();
   const fresh = (day: ArmDay): ArmState => ({ day, repos: new Map(), replies: new Map() });
   if (options.arms.includes('harness')) {
-    const maxCap = Math.max(...SESSIONS.map((session) => sessionCap(session, 'harness')));
-    process.env.E2E_RUN_CAP_USD ??= String(maxCap);
     const ghHome = join(options.dir, 'gh-empty');
     await mkdir(ghHome, { recursive: true });
     if ((await readdir(ghHome)).length > 0) throw new Error(`${ghHome} must be empty.`);

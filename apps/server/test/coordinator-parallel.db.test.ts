@@ -194,30 +194,4 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
       'cancelled',
     ]);
   });
-
-  it('resumes the cut pieces in their sessions after you continue past the budget', async () => {
-    await projectFlags(t, root, { parallel: true });
-    const { conversationId, runId } = await begin('#piecebudget', { costCapUsd: 0.1 });
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
-    expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.kind)).toContain('budget');
-    const list = await pieceListOf(t, runId);
-    expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
-      ['P1', 'landed'],
-      ['P2', 'landed'],
-      ['P3', 'landed'],
-    ]);
-    const runs = (await crewRuns(t, runId)).filter((run) => run.pieceKey);
-    const keysOf = (key: string) =>
-      runs.filter((run) => run.pieceKey === key).map((run) => [run.status, run.resumeKey]);
-    expect(keysOf('P1')).toEqual([
-      ['cancelled', expect.stringMatching(/:piece:P1$/)],
-      ['succeeded', expect.stringMatching(/:piece:P1$/)],
-    ]);
-    expect(keysOf('P2').map(([status]) => status)).toEqual(['cancelled', 'succeeded']);
-    expect(keysOf('P3').map(([status]) => status)).toEqual(['succeeded']);
-    expect(runs.find((run) => run.pieceKey === 'P3')!.prompt).not.toContain(
-      'Continue where you stopped',
-    );
-  });
 });

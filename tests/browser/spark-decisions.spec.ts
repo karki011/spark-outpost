@@ -40,32 +40,10 @@ test('new chats start at Full auto → PR, and one click in Settings puts the de
   expect(defaults.level).toBe('hands-off');
 });
 
-test('the spend cap turns on with an amount you can change', async ({ page }) => {
+test('Spark settings offer no spend cap or budget', async ({ page }) => {
   const spark = await openSpark(page);
-  const cap = spark.getByRole('switch', { name: 'Spend cap per task' });
-  const amount = spark.getByRole('textbox', { name: 'Spend cap in US dollars' });
-  await expect(cap).toHaveAttribute('aria-checked', 'false');
-  await expect(cap).toHaveAccessibleDescription('No spend limit per task.');
-  await expect(amount).toHaveCount(0);
-
-  await cap.click();
-  await expect(amount).toHaveValue('5.00');
-  await expect(cap).toHaveAccessibleDescription('Spark asks before a task spends more than $5.00.');
-  await amount.fill('0');
-  await expect(amount).toHaveAttribute('aria-invalid', 'true');
-  await expect(amount).toHaveAccessibleDescription('Enter an amount from $0.01 to $10,000.');
-  await amount.fill('2.5');
-  const saved = profileSaved(page);
-  await amount.press('Enter');
-  await saved;
-  await expect(amount).toHaveValue('2.50');
-  await expect.poll(async () => (await savedProfile(page)).spendCapUsd).toBe(2.5);
-
-  await cap.click();
-  await expect(amount).toHaveCount(0);
-  await expect.poll(async () => (await savedProfile(page)).spendCapUsd).toBeNull();
-  await cap.click();
-  await expect(amount).toHaveValue('2.50');
+  await expect(spark.getByRole('radiogroup', { name: 'How much Spark does alone' })).toBeVisible();
+  await expect(spark.getByText(/spend cap|budget/i)).toHaveCount(0);
 });
 
 test('the morning brief saves its time and can be turned off', async ({ page }) => {

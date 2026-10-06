@@ -6,7 +6,7 @@ The goal is an Analytics page that shows where time, money and quality go, and a
 
 - **Local only.** Outcomes, feedback, comments and every aggregate stay in this workspace's Postgres. Nothing is sent anywhere. The only model calls are the ones "Ask about this view" and anomaly explanations make, and those go to the user's own default provider with a snapshot the user can inspect.
 - **Optimizer proposals change only this user's local harness settings.** They never change code, never open a git pull request, and are never shared with other users or sent to any service. A proposal is a new version of a local settings record, nothing more.
-- **Never loosen safety.** No proposal can widen the allowlist, switch to a more permissive agent mode or harness autonomy, skip an approval, raise a budget, or enable Full access. Those stay user-only settings.
+- **Never loosen safety.** No proposal can widen the allowlist, switch to a more permissive agent mode or harness autonomy, skip an approval, or enable Full access. Those stay user-only settings.
 - **Keep evidence distinct.** Implicit signals, explicit feedback, and model opinions are stored and shown separately, as in the harness plan's "Evidence, kept distinct".
 - **Deterministic first.** Detection, scoring and estimates are pure functions over recorded data. A model only explains or answers questions about numbers the harness already computed.
 
@@ -122,7 +122,7 @@ Each signal is stored once with its time, its source and a small detail object. 
 - **Apply and measure.** Accepting creates a new profile version. Analytics then compares turns before and after that version on the same categories and projects, and shows the difference once each side has enough turns.
 - **Rollback.** One click restores any earlier version as a new version; history is never rewritten.
 - **Audit.** Every proposal, acceptance, rejection, apply and rollback is an entry in the audit log with the old and new values and the evidence shown.
-- **Safety.** Proposals never loosen safety settings (allowlist, agent mode, harness autonomy, approvals, budgets, Full access, secret-file rules). A proposal that would is dropped before it is shown.
+- **Safety.** Proposals never loosen safety settings (allowlist, agent mode, harness autonomy, approvals, Full access, secret-file rules). A proposal that would is dropped before it is shown.
 - **Scope.** Proposals change only this user's local harness settings: no code changes, no git pull requests, nothing shared with other users.
 
 ## Data given to the optimizer

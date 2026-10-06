@@ -96,7 +96,6 @@ export function beginPieces(
   tags: string,
   options: {
     level?: InvolvementLevel;
-    costCapUsd?: number;
     jev?: typeof fetch;
     agentMode?: string;
     routing?: 'auto' | 'pinned';
@@ -106,7 +105,6 @@ export function beginPieces(
   const harness = startOrchestrator(t, options.jev ?? jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'parallel',
     ...(options.agentEnv ? { agentEnv: options.agentEnv } : {}),
-    ...(options.costCapUsd === undefined ? {} : { budget: { costCapUsd: options.costCapUsd } }),
   });
   const scenario = withTag(NORMAL, `Split this up. #pieces #parallel ${tags}`);
   const started = startScenario(

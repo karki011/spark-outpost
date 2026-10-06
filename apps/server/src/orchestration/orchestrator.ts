@@ -20,8 +20,6 @@ import { linkTicketForBuild } from '../tickets/chat-link.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
-import { checkBudget, checkBudgetBeforeCall, fixRoundShort } from './budget-check.ts';
-import { checksFailing } from './check-results.ts';
 import {
   correctnessFindings,
   criticSkippedLine,
@@ -39,13 +37,7 @@ import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.
 import { mainAgentInstruction } from './instruction-turn.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
-import {
-  beginFixRound,
-  cutFacts,
-  notePassing,
-  restoreAfterCut,
-  startsFixRound,
-} from './fix-rounds.ts';
+import { beginFixRound, startsFixRound } from './fix-rounds.ts';
 import { finalText } from './final-message.ts';
 import {
   decideBuildStyle,
@@ -65,7 +57,7 @@ import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.
 import { autoKeep, publishWhenAsked, shipFullAuto } from './full-auto-ship.ts';
 import { keepWithoutPullRequest } from './no-pull-request.ts';
 import {
-  baseLimits,
+  saveActiveTime,
   builderKey,
   publish,
   save,
@@ -158,8 +150,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     case 'ask':
       return ask(s, action);
     case 'spawn': {
-      const hit = await checkBudgetBeforeCall(s, action.role);
-      if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true, ...cutFacts(s) };
+      await saveActiveTime(s);
       if (s.placeLater && action.role !== 'scout' && action.role !== 'critic') {
         const failed = await placeBeforeBuilding(s);
         if (failed) {
@@ -167,19 +158,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
           return null;
         }
       }
-      if (startsFixRound(s, action)) {
-        const short = action.auto && !checksFailing(s) ? await fixRoundShort(s) : null;
-        if (short) {
-          return {
-            type: 'budget_exceeded',
-            limit: short,
-            unstarted: true,
-            round: true,
-            passing: true,
-          };
-        }
-        await beginFixRound(s);
-      }
+      if (startsFixRound(s, action)) await beginFixRound(s);
       if (action.role === 'builder' && action.reason === 'first') {
         if (!s.flow.solo) await ensureEstimate(s);
         observeCoordination(s);
@@ -192,13 +171,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);
       if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
-      if (s.budgetHit && s.control.reason() === null) {
-        return { type: 'budget_exceeded', limit: s.budgetHit, ...cutFacts(s) };
-      }
-      if (action.role === 'builder') {
-        if (s.flow.review.fixing && !checksFailing(s)) await notePassing(s);
-        return afterBuilder(s, outcome);
-      }
+      if (action.role === 'builder') return afterBuilder(s, outcome);
       if (action.role === 'critic') s.fixRound = null;
       const fixable =
         outcome.verdict === 'concerns' ? await correctnessFindings(s, result, s.findings) : [];
@@ -228,8 +201,6 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       return { type: 'kept' };
     case 'ship':
       return (await keepWithoutPullRequest(s, action.keptNote ?? null)) ?? shipFullAuto(s);
-    case 'restore':
-      return restoreAfterCut(s);
     case 'revert':
       await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
       s.closeReason = 'reverted';
@@ -261,10 +232,7 @@ async function finish(
   const assumed = s.assumption ? assumptionLine(s.assumption) : null;
   const stopped = status === 'failed' && reason ? reason : null;
   const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
-  const fixed =
-    s.flow.review.fixRounds > 0 || s.flow.review.stop === 'budget' || s.flow.review.stop === 'limit'
-      ? sessionReviewLine(s)
-      : null;
+  const fixed = s.flow.review.fixRounds > 0 ? sessionReviewLine(s) : null;
   const suggested = verdict ? suggestionsLine(s.suggestions ?? []) : null;
   const shipped = s.shipLine ?? null;
   const pieces = coordinationReport(s.coordination);
@@ -294,8 +262,7 @@ async function finish(
     await s.append(runEvents.cancelled(identity), { transition: { status: 'cancelled' } });
   } else {
     const message = reason ?? 'The orchestration stopped.';
-    const code = s.budgetHit ? 'budget_exceeded' : 'orchestration_failed';
-    await s.append(runEvents.error(message, code), {
+    await s.append(runEvents.error(message, 'orchestration_failed'), {
       transition: { status: 'failed', error: message },
     });
   }
@@ -306,7 +273,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
   const append = runAppender(deps.db, lease);
   let input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
   const control = startControl(deps, lease);
-  let budgetTimer: NodeJS.Timeout | null = null;
+  let activeTimeTimer: NodeJS.Timeout | null = null;
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
@@ -360,7 +327,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const root = input.projectRoots[0];
     const inProject = doing && root !== undefined;
     const git = inProject && (await isGitWorkTree(root));
-    const limits = baseLimits(deps, input.provider, prefs.savedSpendCapUsd);
     const start = {
       depth: readOnlyStart(decisions.start) ? ('direct' as const) : ('execute' as const),
       depthSource: Object.values(decisions.calls).some((call) => call.source === 'jev')
@@ -369,7 +335,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       risk: decisions.risk,
       routing: intake.context.routing,
     };
-    await insertOrchestration(deps.db, { runId: lease.runId, ...start, ...limits });
+    await insertOrchestration(deps.db, { runId: lease.runId, ...start });
     if (input !== prepared) await updateOrchestration(deps.db, lease.runId, start);
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
@@ -406,12 +372,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       results: [],
       findings: [],
       toolCalls: 0,
-      limits,
-      baseLimits: limits,
       startedAt: Date.now(),
-      budgetHit: null,
       members: new Map(),
-      liveCost: new Map(),
       checkpoints: 0,
       git,
       checks: inProject && !solo ? await projectChecks(deps.db, lease.runId, root) : null,
@@ -443,15 +405,15 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       if (!solo) decideBuildStyle(s);
       await ensureTask(s, current);
     }
-    budgetTimer = setInterval(() => {
-      if (s.members.size > 0) void checkBudget(s).catch(() => undefined);
-    }, deps.budgetPollMs ?? 1000);
+    activeTimeTimer = setInterval(() => {
+      if (s.members.size > 0) void saveActiveTime(s).catch(() => undefined);
+    }, deps.activeTimePollMs ?? 1000);
     await drive(s, decisions);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
     await failSafely(append, error);
   } finally {
-    if (budgetTimer) clearInterval(budgetTimer);
+    if (activeTimeTimer) clearInterval(activeTimeTimer);
     if (session) await settleSession(session);
     control.dispose();
   }

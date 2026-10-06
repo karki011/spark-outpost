@@ -38,7 +38,6 @@ function crewLine(member: CrewMember) {
     status: member.status,
     pickedBy: member.routedBy,
     ...(member.routeNote ? { why: member.routeNote } : {}),
-    ...(member.budget ? { budget: member.budget } : {}),
     ...(member.autoWouldUse ? { autoWouldUse: pickLabel(member.autoWouldUse) } : {}),
     ...(member.verdict ? { verdict: member.verdict } : {}),
     ...(member.error ? { error: member.error } : {}),
@@ -80,7 +79,7 @@ function orchestrationView(orchestration: Orchestration) {
     planVersion: orchestration.planVersion,
     retries: orchestration.retries,
     waitingOn: pending ? { kind: pending.kind, title: pending.title } : null,
-    budget: orchestration.budget,
+    ...(orchestration.usage ? { usage: orchestration.usage } : {}),
     crew: orchestration.crew.map(crewLine),
     pieces: pieces
       ? {

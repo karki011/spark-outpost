@@ -297,46 +297,6 @@ describe('checkpoints', () => {
     });
   });
 
-  it('continues past a spent budget with the same agent, or stops with a report', () => {
-    const [, spent] = run(flow(), [
-      { type: 'start', start: 'build' },
-      { type: 'budget_exceeded', limit: 'tool_calls' },
-    ]);
-    expect(spent!.action).toMatchObject({ type: 'ask', kind: 'budget' });
-    const resumed = nextStep(spent!.state, {
-      type: 'answered',
-      kind: 'budget',
-      optionId: CHECKPOINT_OPTION.continueBudget,
-      note: null,
-    });
-    expect(resumed.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'resume' });
-    const stopped = nextStep(spent!.state, {
-      type: 'answered',
-      kind: 'budget',
-      optionId: CHECKPOINT_OPTION.stop,
-      note: null,
-    });
-    expect(stopped.action).toMatchObject({
-      type: 'finish',
-      status: 'failed',
-      reason: 'Stopped: the tool calls budget ran out.',
-    });
-  });
-
-  it('runs the planned step unchanged when the budget ran out before it started', () => {
-    const [planned, spent] = run(flow(), [
-      { type: 'start', start: 'build' },
-      { type: 'budget_exceeded', limit: 'cost', unstarted: true },
-    ]);
-    const resumed = nextStep(spent!.state, {
-      type: 'answered',
-      kind: 'budget',
-      optionId: CHECKPOINT_OPTION.continueBudget,
-      note: null,
-    });
-    expect(resumed.action).toEqual(planned!.action);
-  });
-
   it('stops on Stop', () => {
     const [, stopped] = run(flow(), [{ type: 'start', start: 'build' }, { type: 'stopped' }]);
     expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });

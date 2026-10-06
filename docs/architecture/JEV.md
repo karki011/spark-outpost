@@ -129,7 +129,7 @@ These follow the TypeSafe docs and our authority rules in [HARNESS_PLAN.md](HARN
 3. **Noul criteria use `true` and `false`**, and a high value means the thing we check for. Where several checks guard against a bad result, frame each as bad = true and act on the `max` (https://docs.typesafe.ai/cookbooks/sde_cascade). `noulQuestion` in `advisor/questions.ts` only accepts these keys.
 4. **No arithmetic for Jev.** Counts, times, token budgets and prices stay in code. Jev gets named buckets such as "checks failed" or "no retries left".
 5. **Gate every answer.** Use a Noul band per action, or a confidence line for a Choice. Below the line the existing rules decide. See [Reading confidence](#reading-confidence).
-6. **Jev never grants anything.** It never answers an approval, loosens a mode, extends a budget, skips a safety check, or marks work verified. It can make the harness do more (continue, review, ask), and less only where a rule already allows it.
+6. **Jev never grants anything.** It never answers an approval, loosens a mode, skips a safety check, or marks work verified. It can make the harness do more (continue, review, ask), and less only where a rule already allows it.
 7. **Observe first.** Each new decision first records Jev's answer next to the rule's as a `run_advice` row with its own `purpose`. It acts only after our own labelled rows support it (`pnpm jev:thresholds`; `pnpm jev:content-rank` for the content-based file ranking). A decision that can be promoted has one constant that turns acting on, off by default (`CONTENT_RANK.promote` in `routing/file-evidence.ts`).
 8. **Store `response.model`** on every row, so a change of Jev version shows up in the analytics.
 
@@ -172,9 +172,9 @@ Nothing requires Jev. Not connected, Spark off, a missing key, an error and a ti
 ## Where Jev is a poor fit
 
 - **Anything that writes:** plans, fix instructions, summaries, titles, commit and PR text, explanations. The docs say generation "will not work well and will be very slow".
-- **Arithmetic, counts, dates and budgets:** token counts, when to compact, cost caps, time windows, anomaly maths (the analytics detectors stay deterministic).
+- **Arithmetic, counts and dates:** token counts, when to compact, time windows, anomaly maths (the analytics detectors stay deterministic).
 - **Deep code judgment:** whether a diff is correct, finding bugs or vulnerabilities, resolving merge conflicts. The Critic and the checks do this.
-- **Permissions and safety:** approvals, allowlists, secret-file rules and budgets.
+- **Permissions and safety:** approvals, allowlists and secret-file rules.
 - **Decisions code already makes exactly:** `package.json` script detection, retry counts.
 - **Adversarial text as a boundary:** the `injection` Noul is recorded, never used to relax a check (the docs call such a check "a filter, not a security boundary").
 

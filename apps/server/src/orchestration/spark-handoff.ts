@@ -15,14 +15,13 @@ import {
   updateOrchestration,
 } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
-import { sparkPreferences } from '../persistence/setup.ts';
 import { mentionableSparks, type MentionableSpark } from '../persistence/spark-mentions.ts';
 import { taskOverviews } from '../persistence/task-views.ts';
 import type { Append, RunControl } from '../workflow/agent-turn.ts';
 import { closeMessage, executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import { baseLimits, type OrchestratorDeps } from './session.ts';
+import type { OrchestratorDeps } from './session.ts';
 import { handoffNote, sparkJobPrompt, type SparkResult } from './spark-job.ts';
 
 export const ALL_SPARKS_FAILED = 'The Spark could not finish this job.';
@@ -143,15 +142,12 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
   const mentions = findSparkMentions(input.userRequest, sparks);
   if (mentions.length === 0) return input;
   const continues = mainAgentContinues(input.userRequest, mentions);
-  const prefs = await sparkPreferences(deps.db, input.workspaceId);
-  const limits = baseLimits(deps, input.provider, prefs.savedSpendCapUsd);
   await insertOrchestration(deps.db, {
     runId: lease.runId,
     depth: 'direct',
     depthSource: 'user',
     risk: 'read-only',
     routing: 'pinned',
-    ...limits,
   });
   await updateOrchestration(deps.db, lease.runId, { phase: 'scouting' });
   const context = await jobContext(deps.db, input);

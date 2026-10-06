@@ -336,14 +336,11 @@ export function startOrchestrator(
   t: TestDb,
   fetcher: typeof fetch | null,
   options: {
-    budget?: { activeLimitMs?: number; toolCallLimit?: number; costCapUsd?: number };
     sessions?: string;
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];
-    budgetPollMs?: number;
     cancelPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
-    fixRound?: OrchestratorDeps['fixRound'];
     coordinator?: OrchestratorDeps['coordinator'];
     forcedPlacement?: OrchestratorDeps['forcedPlacement'];
     agentEnv?: Record<string, string>;
@@ -368,13 +365,11 @@ export function startOrchestrator(
     pollMs: 20,
     cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
-    budgetPollMs: options.budgetPollMs ?? 50,
+    activeTimePollMs: 50,
     ...(intake ? { intake } : {}),
-    ...(options.budget ? { budget: options.budget } : {}),
     ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
-    ...(options.fixRound ? { fixRound: options.fixRound } : {}),
     ...(options.checkTimeoutMs ? { checkTimeoutMs: options.checkTimeoutMs } : {}),
     ...(options.coordinator ? { coordinator: options.coordinator } : {}),
     ...(options.forcedPlacement ? { forcedPlacement: options.forcedPlacement } : {}),
@@ -440,7 +435,6 @@ export const answerEverything: Answerer = (approval) => {
   if (approval.kind === 'clarify') return { optionId: clarifyOptionId(0) };
   if (approval.kind === 'retry') return { optionId: CHECKPOINT_OPTION.retry };
   if (approval.kind === 'accept') return { optionId: CHECKPOINT_OPTION.keep };
-  if (approval.kind === 'budget') return { optionId: CHECKPOINT_OPTION.continueBudget };
   const allow = approval.options.find((option) => option.kind === 'allow_once');
   return allow ? { optionId: allow.optionId } : null;
 };

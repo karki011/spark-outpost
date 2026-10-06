@@ -29,9 +29,7 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-test('the kept card asks why code was removed, and Builders run without a budget', async ({
-  page,
-}) => {
+test('the kept card asks why code was removed', async ({ page }) => {
   test.setTimeout(90_000);
   repo.commit('totals.ts', TOTALS);
   await crewChat(page, repo, 'Auto-edit');
@@ -43,7 +41,6 @@ test('the kept card asks why code was removed, and Builders run without a budget
   await expect(laws).toContainText('Removed helperTotals from totals.ts — why?');
   await expect(laws.locator('code').first()).toHaveText('helperTotals');
   await expect(agentHead(page, 'Bolt').first()).toBeVisible();
-  await expect(page.locator('.crew-turn')).not.toContainText(/budget \d+ tool calls/);
   await expect(keep.getByRole('status').first()).toHaveText('Kept automatically.');
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

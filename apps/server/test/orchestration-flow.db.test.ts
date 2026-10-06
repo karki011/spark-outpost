@@ -44,13 +44,9 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function start(options: { jev?: boolean; activeLimitMs?: number } = {}) {
+async function start(options: { jev?: boolean } = {}) {
   await connectProviders(t, options.jev ?? true);
-  harness = startOrchestrator(
-    t,
-    options.jev === false ? null : jevFetch(script),
-    options.activeLimitMs ? { budget: { activeLimitMs: options.activeLimitMs } } : {},
-  );
+  harness = startOrchestrator(t, options.jev === false ? null : jevFetch(script));
 }
 
 async function pending(conversationId: string, kind: Approval['kind']): Promise<Approval> {
@@ -156,20 +152,15 @@ describe('checkpoints', () => {
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('fixed as asked');
   }, 60_000);
 
-  it('stops at the time budget and asks before continuing', async () => {
-    await start({ activeLimitMs: 1_500 });
-    const scenario = withTag(COMPLEX, '#slowbuild');
+  it('runs past 60 tool calls and rising cost without stopping to ask', async () => {
+    await start();
+    const scenario = withTag(COMPLEX, '#meter');
     script.scenario = COMPLEX;
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
-    const answers: Answerer = (approval) =>
-      approval.kind === 'budget'
-        ? { optionId: CHECKPOINT_OPTION.stop }
-        : answerEverything(approval);
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
-    expect(asked[0]!.payload.checkpoint?.budget).toMatchObject({ limit: 'time', allowed: 1_500 });
-    expect(orchestration).toMatchObject({ status: 'failed', budget: { exceeded: 'time' } });
-    expect(orchestration.crew.at(-1)?.status).toBe('cancelled');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(asked.map((approval) => approval.kind)).not.toContain('budget');
+    expect(orchestration.status).toBe('succeeded');
+    expect(orchestration.usage?.toolCalls).toBeGreaterThan(60);
   }, 60_000);
 });
 

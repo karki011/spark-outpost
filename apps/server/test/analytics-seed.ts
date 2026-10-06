@@ -250,9 +250,8 @@ export async function seedAnalyticsTurn(db: Queryable, turn: AnalyticsTurn): Pro
   );
   const runId = await insertRun(db, turn, messageId, null, null, 0);
   await db.query(
-    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing, retries,
-       active_limit_ms, tool_call_limit)
-     VALUES ($1, 'finished', $2, 'rules', 'edits', 'auto', $3, 900000, 60)`,
+    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing, retries)
+     VALUES ($1, 'finished', $2, 'rules', 'edits', 'auto', $3)`,
     [runId, turn.depth ?? 'execute', turn.retries ?? 0],
   );
   let offset = 1000;

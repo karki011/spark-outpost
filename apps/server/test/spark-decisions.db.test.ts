@@ -4,7 +4,7 @@ import { draftChatSettings, resolveChatSettings } from '../src/persistence/chat-
 import { createConversation, ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import type { Db } from '../src/persistence/db.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
-import { getSetupState, sparkPreferences, updateProfile } from '../src/persistence/setup.ts';
+import { getSetupState, updateProfile } from '../src/persistence/setup.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { migratedUpTo, oldConnection } from './migration-support.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
@@ -69,7 +69,6 @@ describe('the Spark decisions migration', () => {
     expect((await getSetupState(db, local)).profile).toMatchObject({
       displayName: 'Hazel',
       defaultLevel: 'full-auto',
-      spendCapUsd: null,
       morningBrief: true,
       morningBriefTime: '07:00',
     });
@@ -100,32 +99,19 @@ describe('Spark decision settings', () => {
     const { get, send } = localClient(createTestApp(t));
     const { body } = await send('patch', '/api/profile', {
       defaultLevel: 'full-auto',
-      spendCapUsd: 2.5,
       morningBrief: false,
       morningBriefTime: '08:30',
     }).expect(200);
     expect(body.profile).toMatchObject({
       defaultLevel: 'full-auto',
-      spendCapUsd: 2.5,
       morningBrief: false,
       morningBriefTime: '08:30',
     });
     await send('patch', '/api/profile', { morningBriefTime: '25:00' }).expect(400);
-    await send('patch', '/api/profile', { spendCapUsd: 0 }).expect(400);
     await send('patch', '/api/profile', { defaultLevel: 'reckless' }).expect(400);
     const { body: after } = await get('/api/setup').expect(200);
-    expect(after.profile).toMatchObject({ morningBriefTime: '08:30', spendCapUsd: 2.5 });
-  });
-
-  it('uses the server cap until you pick one, and Off beats the server cap', async () => {
-    const { get, send } = localClient(createTestApp(t, { serverSpendCapUsd: 5 }));
-    expect((await get('/api/setup').expect(200)).body.profile.spendCapUsd).toBe(5);
-    expect((await sparkPreferences(t.db, t.workspaceId)).savedSpendCapUsd).toBeNull();
-    await send('patch', '/api/profile', { spendCapUsd: null }).expect(200);
-    expect((await get('/api/setup').expect(200)).body.profile.spendCapUsd).toBeNull();
-    expect((await sparkPreferences(t.db, t.workspaceId)).savedSpendCapUsd).toBe(0);
-    await send('patch', '/api/profile', { spendCapUsd: 1.25 }).expect(200);
-    expect((await get('/api/setup').expect(200)).body.profile.spendCapUsd).toBe(1.25);
+    expect(after.profile).toMatchObject({ morningBriefTime: '08:30' });
+    expect(after.profile).not.toHaveProperty('spendCapUsd');
   });
 
   it('gives new chats the one default autonomy and keeps a chat’s own pick', async () => {

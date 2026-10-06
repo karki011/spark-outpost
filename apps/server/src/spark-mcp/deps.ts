@@ -21,7 +21,6 @@ export interface SparkToolDeps {
   slackApiUrl?: string | undefined;
   slackSignIn?: SlackSignInConfig | null | undefined;
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
-  serverSpendCapUsd: number | null;
   parallelBuilders?: boolean;
   codeScan?: Pick<CodeScanner, 'scan'>;
   branchPrefix?: string;

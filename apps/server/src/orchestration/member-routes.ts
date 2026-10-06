@@ -27,11 +27,9 @@ import {
 import { withAccessNote } from './access-note.ts';
 import type { BuiltShare } from './critic-provider.ts';
 import { builderKey, type Session } from './session.ts';
-import { openBudget } from '../laws/builder-start.ts';
 import { demotionsFor } from '../laws/demotion-history.ts';
 import { demotedRates, withDemotion } from '../laws/demotion-route.ts';
 import { taskKind } from '../laws/task-kind.ts';
-import { budgetWhy } from '../laws/member-budget.ts';
 import type { Spawn } from './transitions.ts';
 import { escalatedHighStakes, smallReviewDiff } from './critic-rule.ts';
 import { stakesFiles } from './critic-recheck.ts';
@@ -221,11 +219,6 @@ function appliedBy(route: MemberRoute): 'pinned' | 'jev' | 'rules' {
   return 'rules';
 }
 
-function budgetNote(s: Session, role: AgentRole): { budgetNote?: string } {
-  const budget = role === 'builder' ? openBudget(s) : null;
-  return budget ? { budgetNote: budgetWhy(budget) } : {};
-}
-
 export async function recordRoute(
   s: Session,
   role: AgentRole,
@@ -277,7 +270,6 @@ export async function recordRoute(
           ...route,
           ...(resolved.session ? { sessionNote: resolved.session.reason } : {}),
           ...(score ? { scoreNote: scoreText(score) } : {}),
-          ...budgetNote(s, role),
         }),
       },
     },

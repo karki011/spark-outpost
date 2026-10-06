@@ -14,7 +14,6 @@ beforeEach(async () => {
       runCommand: async () => ({ code: 1, stdout: '', stderr: '' }),
       locateGh: async () => null,
     },
-    serverSpendCapUsd: null,
   });
 });
 

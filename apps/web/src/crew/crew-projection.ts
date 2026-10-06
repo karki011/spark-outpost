@@ -88,7 +88,6 @@ export function runAgent(
     durationMs: member.durationMs,
     ...(member.sameProvider ? { sameProvider: true } : {}),
     ...(member.routeNote ? { routeNote: member.routeNote } : {}),
-    ...(member.budget ? { budget: member.budget } : {}),
     ...(member.spark ? { spark: { id: member.spark.id, role: member.spark.role } } : {}),
   };
 }

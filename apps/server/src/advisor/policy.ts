@@ -42,9 +42,6 @@ export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 1;
 export const CRITIC_FIX_ROUNDS = 3;
-export const FIX_ROUND_TOOL_SHARE = 0.25;
-export const FIX_ROUND_MIN_TOOL_CALLS = 20;
-export const FIX_ROUND_ACTIVE_MS = 4 * 60 * 1000;
 export const CRITIC_REREVIEW_EFFORT = 'medium';
 export const CRITIC_RECHECK_LINE_SLACK = 3;
 export const CRITIC_SAME_CONCERN = 0.5;
@@ -167,11 +164,6 @@ export const LAW_ROUGH_COST_PAD = 1.5;
 export const LAW_ROUGH_RANGE = [0.5, 2] as const;
 export const LAW_PAD_MIN_RUNS = 5;
 export const LAW_PAD_MAX = 3;
-
-export const LAW_BUDGET_ENFORCED = false;
-export const LAW_BUDGET_SHARE = [0.3, 0.5, 0.75, 1, 1] as const;
-export const LAW_BUDGET_MIN_TOOL_CALLS = 10;
-export const LAW_BUDGET_MIN_MS = 3 * 60_000;
 
 export const LAW_DEMOTE_WINDOW = 20;
 export const LAW_DEMOTE_MIN_RUNS = 10;

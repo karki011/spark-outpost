@@ -36,11 +36,7 @@ afterEach(async () => {
 });
 
 async function open(conversationId: string | null = null) {
-  tools = await startSparkTools(
-    t,
-    { conversationId },
-    { secrets, linearApiUrl: stubs.linearUrl, serverSpendCapUsd: 25 },
-  );
+  tools = await startSparkTools(t, { conversationId }, { secrets, linearApiUrl: stubs.linearUrl });
   return tools;
 }
 
@@ -147,11 +143,10 @@ describe('spark_connectors', () => {
 });
 
 describe('spark_settings', () => {
-  it('returns the autonomy level, personality, caps and brief time', async () => {
+  it('returns the autonomy level, personality and brief time, with no spend cap', async () => {
     await updateProfile(t.db, t.workspaceId, {
       defaultLevel: 'full-auto',
       personality: 'facts',
-      spendCapUsd: 5,
       morningBriefTime: '08:30',
     });
 
@@ -160,11 +155,10 @@ describe('spark_settings', () => {
     expect(body).toMatchObject({
       defaultAutonomy: 'Full auto → PR',
       personality: 'facts',
-      spendCapPerTaskUsd: 5,
-      serverSpendCapUsd: 25,
       morningBrief: { on: true, time: '08:30' },
     });
     expect(body.autonomyLevels).toHaveLength(2);
+    expect(body).not.toHaveProperty('spendCapPerTaskUsd');
   });
 
   it('returns the context compaction thresholds', async () => {

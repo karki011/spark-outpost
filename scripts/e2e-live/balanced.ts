@@ -24,7 +24,6 @@ const CHECKPOINT_CHOICES: Record<string, { optionId: string; label: string; why:
   },
   retry: { optionId: CHECKPOINT_OPTION.retry, label: 'Retry', why: 'take Jev’s suggestion' },
   accept: { optionId: CHECKPOINT_OPTION.keep, label: 'Keep', why: 'keep the finished work' },
-  budget: { optionId: CHECKPOINT_OPTION.stop, label: 'Stop', why: 'never pass the cost cap' },
   merge_conflict: {
     optionId: CHECKPOINT_OPTION.reconcile,
     label: 'Ask a Builder to reconcile',
@@ -46,8 +45,7 @@ export type UserIntent = 'answer' | 'change';
 
 function firstFixOffer(approval: Approval): boolean {
   const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
-  if (!option || option.name !== 'Fix these findings') return false;
-  return !/\b(?:Stopped fix round|Did not start fix round)\b/.test(approval.reason ?? '');
+  return option?.name === 'Fix these findings';
 }
 
 function offered(approval: Approval, optionId: string): boolean {

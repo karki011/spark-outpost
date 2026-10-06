@@ -32,7 +32,6 @@ export interface TestAppOptions {
   slackSignIn?: AppOptions['slackSignIn'];
   slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
-  serverSpendCapUsd?: number;
   parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
@@ -40,6 +39,7 @@ export interface TestAppOptions {
   diagnostics?: AppOptions['diagnostics'];
   deleteSettleMs?: number;
   cloneTest?: AppOptions['cloneTest'];
+  webRoot?: string;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -90,12 +90,12 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     slackSignIn: options.slackSignIn,
     ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
-    serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,
     ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
+    ...(options.webRoot ? { webRoot: options.webRoot } : {}),
   });
 }
 

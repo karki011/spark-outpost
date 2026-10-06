@@ -52,10 +52,7 @@ export interface LiveCell {
   routing: Routing | null;
 }
 
-export async function startBench(
-  perRunCapUsd: number,
-  runtime: AgentRuntime = 'acp',
-): Promise<BenchEnv> {
+export async function startBench(runtime: AgentRuntime = 'acp'): Promise<BenchEnv> {
   const t = await createTestDb();
   await seedConnections(t);
   const intake = createIntakeRecorder({
@@ -70,7 +67,6 @@ export async function startBench(
     leaseSeconds: 30,
     approvalPollMs: 200,
     ...(runtime === 'acp' ? { intake } : {}),
-    budget: { costCapUsd: perRunCapUsd },
   };
   return { t, deps };
 }
@@ -84,7 +80,6 @@ const CHECKPOINT_ANSWERS: Record<string, readonly string[]> = {
   plan: [CHECKPOINT_OPTION.approvePlan],
   retry: [CHECKPOINT_OPTION.finish],
   accept: [CHECKPOINT_OPTION.keep],
-  budget: [CHECKPOINT_OPTION.stop],
   merge_conflict: [CHECKPOINT_OPTION.reconcile, CHECKPOINT_OPTION.stop],
 };
 

@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { launchTokenCheck } from './launch-token.ts';
 
-const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+export const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const UPLOAD_PATH = '/api/attachments';
 export const UPLOAD_NAME_HEADER = 'x-file-name';
 
@@ -10,8 +10,12 @@ function isUpload(req: Request): boolean {
   return req.method === 'POST' && req.path === UPLOAD_PATH;
 }
 
+export function loopbackHosts(port: number): Set<string> {
+  return new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+}
+
 export function localRequestGuard(port: number, allowedOrigins: readonly string[]) {
-  const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+  const allowedHosts = loopbackHosts(port);
   const origins = new Set(allowedOrigins);
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -24,20 +28,22 @@ export function localRequestGuard(port: number, allowedOrigins: readonly string[
       res.status(403).json({ error: 'This origin is not allowed.' });
       return;
     }
-    if (isUpload(req)) {
-      if (req.headers[UPLOAD_NAME_HEADER] === undefined) {
-        res.status(400).json({ error: 'Send the file name in the X-File-Name header.' });
-        return;
-      }
-      next();
-      return;
-    }
-    if (MUTATING_METHODS.has(req.method) && req.is('application/json') === false) {
-      res.status(415).json({ error: 'Send JSON with Content-Type: application/json.' });
-      return;
-    }
+    if (refusedForShape(req, res)) return;
     next();
   };
+}
+
+export function refusedForShape(req: Request, res: Response): boolean {
+  if (isUpload(req)) {
+    if (req.headers[UPLOAD_NAME_HEADER] !== undefined) return false;
+    res.status(400).json({ error: 'Send the file name in the X-File-Name header.' });
+    return true;
+  }
+  if (MUTATING_METHODS.has(req.method) && req.is('application/json') === false) {
+    res.status(415).json({ error: 'Send JSON with Content-Type: application/json.' });
+    return true;
+  }
+  return false;
 }
 
 export function requireLaunchToken(token: string) {

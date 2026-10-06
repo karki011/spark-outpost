@@ -188,28 +188,19 @@ describe('Hofstadter estimates', { timeout: 240_000 }, () => {
   });
 });
 
-describe('Parkinson budgets', { timeout: 120_000 }, () => {
-  it('lets a simple Builder run past the old budget without stopping it', async () => {
+describe('no Builder budget', { timeout: 120_000 }, () => {
+  it('lets a simple Builder keep reading without stopping it', async () => {
     const scenario = tagged(TRIVIAL, '#manyreads 40');
     start(scenario);
     const sent = await startScenario(t, root, scenario, 'hands-off');
-    const { asked, orchestration } = await driveToEnd(
-      t,
-      sent.conversationId,
-      sent.runId,
-      answerEverything,
-    );
+    const { asked } = await driveToEnd(t, sent.conversationId, sent.runId, answerEverything);
     expect(asked.filter((approval) => approval.kind === 'budget')).toEqual([]);
-    const builder = orchestration.crew.find((member) => member.role === 'builder');
-    expect(builder?.budget ?? null).toBeNull();
-    expect(await lawRows(sent.runId, 'budget')).toEqual([]);
   });
 });
 
 interface SparkLaws {
   run: {
     estimate: { source: string } | null;
-    budget: { text: string } | null;
     findings: { items: unknown[] } | null;
   } | null;
   demotions: { text: string }[];
@@ -251,7 +242,6 @@ describe('Peter principle demotions', { timeout: 120_000 }, () => {
         'Sonnet 5 has passed 42% of recent bug fixes here (5/12; the 60% floor)',
       ]);
       expect(laws.run?.estimate?.source).toBe('rough');
-      expect(laws.run?.budget ?? null).toBeNull();
       expect(laws.run?.findings?.items).toEqual([]);
     } finally {
       await tools.close();

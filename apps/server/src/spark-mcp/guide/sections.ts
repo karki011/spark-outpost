@@ -92,13 +92,14 @@ The safety floor holds at every level.`,
       'hold',
       'permission',
       'gate',
+      'budget',
       'spend cap',
     ],
     text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: secret files (.env, keys) ask or are refused; agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 
-Budgets cap each task: active time, tool calls and cost (Settings → Spark → Spend cap per task). A spent budget stops and asks. "Always allow" becomes a scoped rule, never a bypass of the floor.`,
+No run budgets: Spark never caps time, tool calls or cost; usage is only measured. "Always allow" becomes a scoped rule, never a bypass of the floor.`,
   },
   {
     id: 'worktrees',
@@ -229,7 +230,7 @@ Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, sp
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
 Spend: spark_spend. Trends, outcomes: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates, budgets: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins.`,
+Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins.`,
   },
   {
     id: 'compaction',
@@ -251,7 +252,7 @@ Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: sp
       'switch',
       'toggle',
     ],
-    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Spend cap per task, Wait before going with best guesses: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
+    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Wait before going with best guesses: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
 
 The Spark switch on: Jev reads each request, routing picks models, a Critic reviews bigger changes and Jev checks finished work. Off: chats go straight to the agent you pick. Approvals and safety apply either way.`,
   },

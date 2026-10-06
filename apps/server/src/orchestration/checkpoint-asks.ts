@@ -3,12 +3,9 @@ import { chosenFollowUp, followUpCard } from './follow-up.ts';
 import { contextCard } from './missing-context.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import { runEvents } from '../workflow/run-events.ts';
-import { extendLimits, usedAndAllowed } from './budget.ts';
-import { budgetUsage } from './budget-check.ts';
 import {
   acceptCard,
   askCard,
-  budgetCard,
   CheckpointTimeout,
   clarifiedRequest,
   retryCard,
@@ -26,9 +23,8 @@ import {
 } from './clarify.ts';
 import { changedLines, checkCommands } from './member-prompts.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
-import { save, type Session } from './session.ts';
+import type { Session } from './session.ts';
 import { lawItems } from '../laws/review.ts';
-import { budgetStopLine, memberUsed } from '../laws/member-budget.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
 type Ask = Extract<FlowAction, { type: 'ask' }>;
@@ -45,26 +41,11 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
     const card = action.kind === 'retry' ? retryCard : verifyCard;
     return card(builderPick(s), escalatedBuilderPick(s), action.reason);
   }
-  if (action.kind === 'accept') {
-    const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
-    const line = sessionReviewLine(s);
-    const reason = line ? `${action.reason} ${line}` : action.reason;
-    const lines = await changedLines(s);
-    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review), lawItems(s), lines);
-  }
-  const usage = await budgetUsage(s);
-  const limit = s.budgetHit ?? 'time';
-  const member = s.memberBudget?.hit && !s.memberBudget.closed ? s.memberBudget : null;
-  if (member) {
-    const { used, allowed } = memberUsed(member, limit, usage);
-    return budgetCard(limit, used, allowed, budgetStopLine(member, builderName(s)));
-  }
-  const { used, allowed } = usedAndAllowed(limit, usage, s.limits);
-  return budgetCard(limit, used, allowed, action.reason);
-}
-
-function builderName(s: Session): string {
-  return s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';
+  const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
+  const line = sessionReviewLine(s);
+  const reason = line ? `${action.reason} ${line}` : action.reason;
+  const lines = await changedLines(s);
+  return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review), lawItems(s), lines);
 }
 
 export function destructiveWork(s: Pick<Session, 'facts' | 'risky'>): boolean {
@@ -135,18 +116,6 @@ export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   if (action.kind === 'verify' && answer.optionId === CHECKPOINT_OPTION.finishUnverified) {
     s.unverified = true;
-  }
-  if (action.kind === 'budget' && answer.optionId === CHECKPOINT_OPTION.continueBudget) {
-    s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
-    s.budgetHit = null;
-    s.capWaived = true;
-    if (s.memberBudget) s.memberBudget.closed = true;
-    await save(s, {
-      activeLimitMs: s.limits.activeLimitMs,
-      toolCallLimit: s.limits.toolCallLimit,
-      costCapUsd: s.limits.costCapUsd,
-      exceeded: null,
-    });
   }
   return { type: 'answered', kind: action.kind, optionId: answer.optionId, note: answer.note };
 }

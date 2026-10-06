@@ -113,9 +113,7 @@ describe('attentionLine', () => {
     expect(attentionLine(ask({ agentName: 'Jev', title: 'Which heading?' }))).toBe(
       'Jev has a question',
     );
-    expect(attentionLine(ask({ title: 'Continue past the budget?' }))).toBe(
-      'Continue past the budget?',
-    );
+    expect(attentionLine(ask({ title: 'Retry one tier up?' }))).toBe('Retry one tier up?');
     expect(attentionLine(ask({}))).toBe('Needs your input');
     expect(attentionLine(null)).toBe('Needs your input');
   });

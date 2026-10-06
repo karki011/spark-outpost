@@ -27,7 +27,6 @@ import { storySession, STORY_ALLOWED } from './story.ts';
 
 export const STORY_HARD_CAP_USD = 40;
 const RUN_CAP_USD = 5;
-const SERVER_CAP_USD = '4.5';
 const PROJECTION_FACTOR = 1.3;
 const PR_TABLE = /\|\s*Piece\s*\|\s*Builder\s*\||Pieces \(\d+/;
 
@@ -59,7 +58,6 @@ async function openHarness(options: StoryOptions, arm: StoryArm, run: StoryRun) 
       : null;
   const ghHome = join(options.dir, `gh-empty-${arm.key}`);
   await mkdir(ghHome, { recursive: true });
-  process.env.E2E_RUN_CAP_USD = SERVER_CAP_USD;
   const secrets = await stackSecrets(options.runtime);
   const stack = await startStack(options.runtime, 'current', ROOT, options.dir, false, {
     env: {
@@ -94,8 +92,7 @@ async function openHarness(options: StoryOptions, arm: StoryArm, run: StoryRun) 
 
 async function openArm(options: StoryOptions, arm: StoryArm, run: StoryRun): Promise<ArmContext> {
   if (arm.kind === 'harness') return openHarness(options, arm, run);
-  const env =
-    options.runtime === 'acp' ? await startBench(RUN_CAP_USD, 'acp') : await benchEnv('fake');
+  const env = options.runtime === 'acp' ? await startBench('acp') : await benchEnv('fake');
   return {
     day: new DirectClaudeDay(env, options.timeoutMs),
     stack: null,

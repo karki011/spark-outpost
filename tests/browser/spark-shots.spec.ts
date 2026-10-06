@@ -30,7 +30,6 @@ test('Spark screenshots', async ({ page }) => {
 
   const blobs = {
     spark: 'Spark',
-    'spend-cap': 'Spend cap per task',
     'morning-brief': 'Morning brief',
   };
   for (const [file, name] of Object.entries(blobs)) {

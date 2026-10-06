@@ -128,7 +128,6 @@ export function answer(approval: Approval): { optionId: string } {
   if (approval.kind === 'plan') return { optionId: CHECKPOINT_OPTION.approvePlan };
   if (approval.kind === 'retry') return { optionId: CHECKPOINT_OPTION.finish };
   if (approval.kind === 'accept') return { optionId: CHECKPOINT_OPTION.keep };
-  if (approval.kind === 'budget') return { optionId: CHECKPOINT_OPTION.stop };
   const command = approval.payload.command ?? '';
   const pick = /\bpush\b/.test(command) ? 'reject_once' : 'allow_once';
   return { optionId: approval.options.find((option) => option.kind === pick)!.optionId };

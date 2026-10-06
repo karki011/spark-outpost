@@ -56,7 +56,6 @@ const configSchema = z.object({
   SESSION_OPEN_LIMIT: z.coerce.number().int().min(1).max(64).default(16),
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
   OUTCOME_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
-  ORCHESTRATION_COST_CAP_USD: z.coerce.number().positive().optional(),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),
   COORDINATOR_MODE: z.enum(['off', 'shadow', 'in_order', 'parallel']).default('parallel'),
   COORDINATOR_PLACEMENT: z.enum(['shared', 'worktree']).optional(),

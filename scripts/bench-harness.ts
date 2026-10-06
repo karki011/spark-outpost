@@ -15,7 +15,6 @@ import { createDb } from '../apps/server/src/persistence/db.ts';
 import { precheck, verifyRepo } from './bench/verify.ts';
 
 const FALLBACK_COST_USD: Record<BenchMode, number> = { direct: 0.5, harness: 1 };
-const PER_RUN_CAP_USD = 1.5;
 const CELL_TIMEOUT_MS = 10 * 60 * 1000;
 
 const { values } = parseArgs({
@@ -155,7 +154,7 @@ async function main(): Promise<void> {
   });
   const queue = pending(run, tasks, modes, Number(values.repeats));
   const runtime = process.env.SPARK_BENCH_RUNTIME === 'fake' ? 'fake' : 'acp';
-  const env = await startBench(PER_RUN_CAP_USD, runtime);
+  const env = await startBench(runtime);
   try {
     for (const { task, mode, repeat } of queue) {
       const projected = projectedCostUsd(run.results, task.id, mode, FALLBACK_COST_USD[mode]);

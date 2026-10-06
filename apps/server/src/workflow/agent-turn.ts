@@ -32,7 +32,6 @@ import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis, withPublishNote } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
 import { joinSteering, openMemberInbox } from './member-inbox.ts';
-import { createSpendMeter } from './spend-meter.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
 import { runEvents } from './run-events.ts';
@@ -103,7 +102,7 @@ export interface TurnDeps {
   browserPane?: boolean;
 }
 
-export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout' | 'budget';
+export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';
 
 export interface RunControl {
   signal: AbortSignal;
@@ -155,7 +154,6 @@ export interface TurnOptions {
   backupAlsoFor?: string;
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
-  onLiveCost?: (usd: number, final: boolean) => void;
   stopNow?: AbortSignal;
 }
 
@@ -208,7 +206,6 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
-  const spend = createSpendMeter(live, options.onLiveCost);
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
   });
@@ -229,7 +226,6 @@ export async function runAgentTurn(
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
     const estimate = control.signal.aborted ? live.unreported() : 0;
-    options.onLiveCost?.(0, true);
     await recordRunMetrics(
       deps.db,
       lease.runId,
@@ -337,7 +333,6 @@ export async function runAgentTurn(
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
       const counted = session ? session.usage(output) : output;
-      spend.recording(counted);
       await recordUsage(deps.db, lease.runId, counted);
     };
     const userMcp = input.assistant
@@ -374,7 +369,6 @@ export async function runAgentTurn(
       signal: control.signal,
       observe: (output) => {
         if (output.kind === 'session') session?.noteSession(output);
-        spend.produced(output.kind === 'usage' && session ? session.usage(output) : output);
         options.onProduced?.(output);
       },
       audit: observer,
@@ -413,7 +407,7 @@ export async function runAgentTurn(
       },
     })) {
       if (control.signal.aborted) {
-        spend.read(output);
+        live.observe(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') await recordSpend(output);
         continue;
@@ -425,7 +419,7 @@ export async function runAgentTurn(
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
       if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
-      spend.read(output);
+      live.observe(output);
       await tasks.observe(output);
       if (output.kind === 'session') {
         await session?.started(output);
@@ -472,7 +466,7 @@ export async function runAgentTurn(
     );
     await settleAudit();
     const reason = control.reason();
-    if (reason === 'cancelled' || reason === 'budget') return ended(result('cancelled'));
+    if (reason === 'cancelled') return ended(result('cancelled'));
     await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
     return ended(result('failed', failureMessage(error, reason)));
   } finally {

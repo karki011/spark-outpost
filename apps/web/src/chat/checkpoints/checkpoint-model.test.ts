@@ -5,7 +5,6 @@ import { crewItems, mergeApprovals, mergeCheckpoints } from '../crew/crew-items.
 import { member } from '../../crew/test-orchestration.ts';
 import {
   autoLabel,
-  budgetLine,
   changesSummary,
   checkpointQuestion,
   clarifyAnswer,
@@ -173,12 +172,10 @@ describe('checkpoint wording', () => {
     expect(checkpointResult(guessed)).toBe('Went with the best guesses after 10s.');
   });
 
-  it('describes the budget that ran out', () => {
-    const payload = checkpoint({
-      kind: 'budget',
-      budget: { limit: 'time', used: 900_000, allowed: 900_000 },
-    }).payload.checkpoint!;
-    expect(budgetLine(payload)).toBe('Used 15m of 15m · active time');
+  it('reads an old budget card back as a plain answered record', () => {
+    const old = checkpoint({ kind: 'budget' }, { status: 'allowed', decisionOptionId: 'continue' });
+    expect(checkpointTitle(old.payload.checkpoint!)).toBe('Paused at a budget');
+    expect(checkpointResult(old)).toBe('Answered.');
   });
 
   it('reads back the decision', () => {

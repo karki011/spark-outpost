@@ -9,7 +9,6 @@ import type { ProviderOutput } from '../providers/provider.ts';
 import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
-import { meterSpend } from './budget-check.ts';
 import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
@@ -29,13 +28,11 @@ import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
 import { splitRemovals } from '../laws/critic-text.ts';
-import { crewBudget, startBuilderLaws } from '../laws/builder-start.ts';
 import { loadHandoff, type HandoffKind } from './handoff.ts';
 import {
   appendNewArtifact,
   builderKey,
   escalatedKey,
-  fitToolLimit,
   publish,
   type MemberResult,
   type Seat,
@@ -60,8 +57,6 @@ export interface MemberOutcome {
   verdict?: ReturnType<typeof reviewVerdict>;
 }
 
-const RESUME_FOLLOW_UP = 'Continue where you stopped, then reply with what you changed.';
-
 function modeFor(s: Session, role: AgentRole): RunMode {
   if (s.input.projectRoots.length === 0) return 'chat';
   return role === 'builder' || role === 'integrator' ? 'do' : 'ask';
@@ -75,13 +70,6 @@ function counter(s: Session) {
   return { total, observe };
 }
 
-function liveCostOf(s: Session, runId: string): (usd: number, final: boolean) => void {
-  return (usd, final) => {
-    s.liveCost.set(runId, usd);
-    if (!final) meterSpend(s);
-  };
-}
-
 function memberControl(s: Session): {
   control: Pick<RunControl, 'signal' | 'reason' | 'stop'>;
   abort: () => void;
@@ -91,7 +79,7 @@ function memberControl(s: Session): {
     abort: () => local.abort(),
     control: {
       signal: AbortSignal.any([s.control.signal, local.signal]),
-      reason: () => s.control.reason() ?? (local.signal.aborted ? 'budget' : null),
+      reason: () => s.control.reason() ?? (local.signal.aborted ? 'cancelled' : null),
       stop: (reason) => s.control.stop(reason),
     },
   };
@@ -175,11 +163,9 @@ async function runInPlace(
   const { total, observe } = counter(s);
   const member = memberControl(s);
   s.members.set(s.lease.runId, member.abort);
-  if (s.budgetHit) member.abort();
   try {
     const result = await runAgentTurn(s.deps, s.lease, input, s.append, member.control, {
       onOutput: observe,
-      onLiveCost: liveCostOf(s, s.lease.runId),
     });
     if (result.messageId) s.message = { id: result.messageId, text: result.text };
     return {
@@ -196,7 +182,6 @@ async function runInPlace(
     };
   } finally {
     s.members.delete(s.lease.runId);
-    s.liveCost.delete(s.lease.runId);
   }
 }
 
@@ -222,7 +207,6 @@ function followUpFor(
   if (spawn.followUp) return spawn.followUp;
   if (spawn.role !== 'builder') return null;
   if (spawn.reason === 'fix') return fixFollowUp(spawn.note);
-  if (spawn.reason === 'resume') return RESUME_FOLLOW_UP;
   if (spawn.reason === 'first' && opening.handoff) return opening.handoff;
   if (spawn.reason === 'first' && s.input.startAs === 'change') {
     return makeChangeFollowUp(previousReply(s.input));
@@ -303,7 +287,7 @@ async function runChild(
   };
   s.members.set(lease.runId, cancel);
   s.control.signal.addEventListener('abort', cancel, { once: true });
-  if (s.control.signal.aborted || s.budgetHit) {
+  if (s.control.signal.aborted) {
     stopNow.abort();
     await requestCancel(s.deps.db, lease.runId);
   }
@@ -311,10 +295,6 @@ async function runChild(
     await copy.prepare(lease.runId);
     s.copyRunId ??= lease.runId;
   }
-  fitToolLimit(s, route.pick.provider);
-  if (!seat) await startBuilderLaws(s, spawn, route, lease.runId);
-  const budget = seat ? null : crewBudget(s, spawn.role);
-  if (budget) await mergeRoute(s.deps.db, lease.runId, { budget });
   await recordRoute(s, role, resolved, lease.runId, name);
   await publish(s);
   const settings =
@@ -328,7 +308,6 @@ async function runChild(
       {
         onOutput: observe,
         onProduced: guard.observe,
-        onLiveCost: liveCostOf(s, lease.runId),
         backupAlsoFor: s.lease.runId,
         stopNow: stopNow.signal,
         recordsPlan: spawn.role === 'builder' && (!seat || seat.role === 'integrator'),
@@ -353,7 +332,6 @@ async function runChild(
   } finally {
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
-    s.liveCost.delete(lease.runId);
     await mergeRoute(s.deps.db, lease.runId, { fileReads: total.reads.length }).catch(
       () => undefined,
     );

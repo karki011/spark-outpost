@@ -317,7 +317,10 @@ export type SlackStatus = z.infer<typeof slackStatusSchema>;
 
 export const slackTestResponseSchema = z.object({ sentTo: z.string() });
 
-export const slackPresenceRequestSchema = z.object({ focused: z.boolean() });
+export const slackPresenceRequestSchema = z.object({
+  focused: z.boolean(),
+  clientId: z.string().min(1).max(64).optional(),
+});
 
 export const slackLinkRequestSchema = z.object({ url: z.string().trim().min(1).max(2000) });
 

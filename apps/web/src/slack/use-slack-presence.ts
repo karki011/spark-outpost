@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { slackApi, slackKeys } from './slack-api.ts';
 
 const HEARTBEAT_MS = 30_000;
+const CLIENT_ID = crypto.randomUUID();
 
 const focusedNow = () => document.visibilityState === 'visible' && document.hasFocus();
 
@@ -17,7 +18,7 @@ export function useSlackPresence(): void {
       const focused = focusedNow();
       if (!force && focused === last) return;
       last = focused;
-      void slackApi.presence(focused).catch(() => undefined);
+      void slackApi.presence(focused, CLIENT_ID).catch(() => undefined);
     };
     const changed = () => report(false);
     const beat = setInterval(() => {
