@@ -5,7 +5,9 @@ import {
   INSTALL_STALLED_MESSAGE,
   installDecision,
   updateErrorMessage,
+  QUIT_RECHECK_TIMEOUT_MS,
   reduceUpdate,
+  RESTART_RECHECK_TIMEOUT_MS,
   RUNS_RECHECK_MS,
   updaterChannel,
   type UpdateEvent,
@@ -114,6 +116,37 @@ export function createUpdateController(
     apply({ type: 'error', message: INSTALL_STALLED_MESSAGE });
   };
 
+  const within = <T>(work: Promise<T>, ms: number): Promise<T | null> =>
+    new Promise((resolve) => {
+      const cancel = later(() => resolve(null), ms);
+      const settle = (value: T | null) => {
+        cancel();
+        resolve(value);
+      };
+      work.then(settle, () => settle(null));
+    });
+
+  const versionToGetInstead = async (feed: UpdateDriver, timeoutMs: number) => {
+    const found = await within(feed.check(), timeoutMs);
+    if (!found || found === status.availableVersion || found === options.skippedVersion) {
+      return null;
+    }
+    return found;
+  };
+
+  const getInstead = (version: string): InstallResult => {
+    const staged = status.availableVersion;
+    apply({ type: 'available', version });
+    if (quitting) {
+      options.log(`Update ${staged} not installed: ${version} is on the feed. Quitting.`);
+      return { status: 'unavailable', reason: `Update ${version} replaces ${staged}.` };
+    }
+    options.log(`Update ${staged} not installed: ${version} is on the feed. Getting it first.`);
+    apply({ type: 'install-requested' });
+    void download();
+    return { status: 'downloading' };
+  };
+
   const tryInstall = async (relaunch: boolean): Promise<InstallResult> => {
     cancelRecheck?.();
     cancelRecheck = null;
@@ -125,6 +158,14 @@ export function createUpdateController(
     if (decision.status !== 'installing' || !driver) return decision;
     stopStallWatch();
     apply({ type: 'installing' });
+    const instead = await versionToGetInstead(
+      driver,
+      quitting ? QUIT_RECHECK_TIMEOUT_MS : RESTART_RECHECK_TIMEOUT_MS,
+    );
+    if (status.phase !== 'installing') {
+      return { status: 'unavailable', reason: status.error ?? 'No update is ready yet.' };
+    }
+    if (instead) return getInstead(instead);
     driver.install(relaunch);
     if (!quitting) cancelStallWatch = later(reportStall, INSTALL_STALL_TIMEOUT_MS);
     return decision;

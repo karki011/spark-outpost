@@ -64,10 +64,12 @@ export interface PreviewDriverOptions {
 }
 
 export function previewDriver(options: PreviewDriverOptions): UpdateDriver {
+  let found = false;
   return {
     configure: () => undefined,
     async check() {
-      await wait(previewCheckDelay(options.mode));
+      if (!found) await wait(previewCheckDelay(options.mode));
+      found = true;
       return options.version;
     },
     async download() {

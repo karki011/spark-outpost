@@ -3,6 +3,7 @@ import type { UpdateStatus } from '@spark-outpost/contracts';
 import {
   initialStatus,
   installDecision,
+  isCheckFailure,
   parseChannel,
   reduceUpdate,
   updaterChannel,
@@ -181,5 +182,13 @@ describe('updateErrorMessage', () => {
       'The update server had a problem. Try again later.',
     );
     expect(updateErrorMessage(`${'x'.repeat(400)}\nmore`)).toHaveLength(160);
+  });
+
+  it('tells a failed feed check from other updater errors', () => {
+    expect(
+      isCheckFailure('Cannot check for updates: Error: net::ERR_INTERNET_DISCONNECTED\n    at x'),
+    ).toBe(true);
+    expect(isCheckFailure('Error: Code signature did not pass validation')).toBe(false);
+    expect(isCheckFailure(undefined)).toBe(false);
   });
 });

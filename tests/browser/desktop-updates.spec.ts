@@ -164,6 +164,41 @@ test('a stalled install goes back to Restart to update and says why', async ({ p
   await expect(updates.getByRole('button', { name: 'Restart to update' })).toBeEnabled();
 });
 
+test('a newer version found at restart replaces the staged one on the blob and in Settings', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeUpdater(page, { phase: 'installing', availableVersion: '0.3.0', progress: 100 });
+  await page.goto('/');
+  await expect(
+    rail(page).getByRole('button', { name: 'Installing Spark Outpost 0.3.0 and restarting' }),
+  ).toBeDisabled();
+
+  await pushUpdate(page, {
+    phase: 'downloading',
+    availableVersion: '0.4.0',
+    progress: 0,
+    installRequested: true,
+  });
+  const downloading = rail(page).getByRole('button', { name: /Getting Spark Outpost 0\.4\.0/ });
+  await expect(downloading).toHaveText('0%');
+  await expect(rail(page).getByRole('button', { name: /0\.3\.0/ })).toHaveCount(0);
+  await pushUpdate(page, { progress: 40 });
+  await expect(downloading).toHaveAttribute('data-fill', '40');
+
+  await pushUpdate(page, { phase: 'installing', progress: 100 });
+  await expect(
+    rail(page).getByRole('button', { name: 'Installing Spark Outpost 0.4.0 and restarting' }),
+  ).toBeDisabled();
+
+  await pushUpdate(page, { phase: 'ready', installRequested: false });
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Updates' }).click();
+  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await expect(updates).toContainText('0.4.0 is ready.');
+  await expect(updates).not.toContainText('0.3.0');
+});
+
 test('the dev copy shows its version, says it never updates and has no blob', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeUpdater(page, {
