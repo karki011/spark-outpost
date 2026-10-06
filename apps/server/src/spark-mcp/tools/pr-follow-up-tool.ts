@@ -49,7 +49,10 @@ async function followUps(
   return {
     note: DATA_NOTE,
     pullRequests: await Promise.all(
-      watches.map((watch) => watchView(context.deps.db, watch, args.maxChars)),
+      watches.map(async (watch) => ({
+        ...(await watchView(context.deps.db, watch, args.maxChars)),
+        details: undefined,
+      })),
     ),
   };
 }

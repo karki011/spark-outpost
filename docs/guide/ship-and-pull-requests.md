@@ -29,7 +29,7 @@ Ask for a pull request in your message, or set **Full auto → PR**. After the c
 
 The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
 
-Every pull request opened in the chat, also from its terminal, is listed under **Links** with checks and review.
+Every pull request from the chat or its terminal shows above the message box and under **Links** with checks, reviews and comments.
 
 ## Ready for review or draft
 
