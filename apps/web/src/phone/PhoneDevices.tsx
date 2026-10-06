@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_DEVICE_NAME_MAX, type RemoteDevice } from '@spark-outpost/contracts';
+import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
@@ -92,7 +93,7 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
             </button>
             <button
               type="button"
-              className="btn line sm"
+              className="btn line sm danger"
               aria-label={`Revoke ${device.name}`}
               disabled={revoke.isPending}
               onClick={() => revoke.mutate()}
@@ -100,6 +101,11 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
               Revoke
             </button>
           </div>
+          {revoke.error && (
+            <p className="ph-error" role="alert">
+              {revoke.error.message}
+            </p>
+          )}
         </>
       )}
     </li>
@@ -107,20 +113,19 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
 }
 
 interface PhoneDevicesProps {
-  devices: RemoteDevice[];
+  devices: RemoteDevice[] | undefined;
   freshAfter: number | null;
+  wait: ReactNode;
 }
 
-export function PhoneDevices({ devices, freshAfter }: PhoneDevicesProps) {
+export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
   const queryClient = useQueryClient();
-  const [confirming, setConfirming] = useState(false);
-  const active = devices.filter((device) => !device.revokedAt);
+  const active = (devices ?? []).filter((device) => !device.revokedAt);
   const disconnect = useMutation({
     mutationFn: phoneApi.disconnectAll,
     onSuccess: (next) => {
       queryClient.setQueryData(phoneKeys.devices, next);
       void queryClient.invalidateQueries({ queryKey: phoneKeys.audit });
-      setConfirming(false);
     },
   });
   const isFresh = (device: RemoteDevice) =>
@@ -128,39 +133,32 @@ export function PhoneDevices({ devices, freshAfter }: PhoneDevicesProps) {
 
   return (
     <section className="ph-card" aria-labelledby="ph-devices-title">
-      <div className="ph-card-head">
-        <h2 id="ph-devices-title">Devices</h2>
-        {active.length > 0 &&
-          (confirming ? (
-            <span className="ph-confirm" role="group" aria-label="Disconnect all devices?">
-              Every device will need to pair again.
-              <button
-                type="button"
-                className="btn line sm"
-                autoFocus
-                disabled={disconnect.isPending}
-                onClick={() => disconnect.mutate()}
-              >
-                Disconnect all
-              </button>
-              <button type="button" className="btn ghost sm" onClick={() => setConfirming(false)}>
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button type="button" className="btn ghost sm" onClick={() => setConfirming(true)}>
-              Disconnect all…
-            </button>
-          ))}
-      </div>
-      {active.length === 0 ? (
+      <h2 id="ph-devices-title">Devices</h2>
+      {devices === undefined && wait}
+      {devices !== undefined && active.length === 0 && (
         <p className="ph-empty">No phone is paired yet.</p>
-      ) : (
-        <ul className="ph-devices">
-          {active.map((device) => (
-            <DeviceRow key={device.id} device={device} fresh={isFresh(device)} />
-          ))}
-        </ul>
+      )}
+      {active.length > 0 && (
+        <>
+          <ul className="ph-devices">
+            {active.map((device) => (
+              <DeviceRow key={device.id} device={device} fresh={isFresh(device)} />
+            ))}
+          </ul>
+          <HoldToConfirm
+            label="Hold to disconnect all"
+            hint="Every device will need to pair again."
+            holdingHint="Keep holding. Let go now to cancel."
+            releasedHint="Released early. Nothing happened."
+            disabled={disconnect.isPending}
+            onConfirm={() => disconnect.mutate()}
+          />
+          {disconnect.error && (
+            <p className="ph-error" role="alert">
+              {disconnect.error.message}
+            </p>
+          )}
+        </>
       )}
     </section>
   );
