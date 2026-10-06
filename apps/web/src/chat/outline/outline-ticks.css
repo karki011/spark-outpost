@@ -8,7 +8,7 @@
 .oticks {
   position: absolute;
   top: 50cqh;
-  left: -48px;
+  left: min(-48px, calc(16px - (100cqw - var(--crail-strip, 0px) - 100%) / 2));
   width: 32px;
   transform: translateY(-50%);
 }

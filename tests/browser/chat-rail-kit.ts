@@ -108,3 +108,11 @@ export async function pageScroll(page: Page): Promise<number> {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
 }
+
+export async function composerGap(page: Page): Promise<number> {
+  const [main, composer] = await Promise.all([
+    page.getByRole('main').boundingBox(),
+    page.locator('.composer').boundingBox(),
+  ]);
+  return main!.y + main!.height - (composer!.y + composer!.height);
+}
