@@ -168,7 +168,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
     protocols: [{ name: prod.appName, schemes: [prod.linkScheme] }],
     artifactName: 'Spark-Outpost-${version}-${arch}.${ext}',
     generateUpdatesFilesForAllChannels: true,
-    publish: feed ? [{ provider: 'generic', url: feed }] : null,
+    publish: feed ? [{ provider: 'generic', url: feed, useMultipleRangeRequest: false }] : null,
     mac: {
       category: 'public.app-category.developer-tools',
       icon: options.icon,

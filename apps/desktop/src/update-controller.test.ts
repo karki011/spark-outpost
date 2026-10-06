@@ -6,6 +6,8 @@ import {
   initialStatus,
   INSTALL_STALL_TIMEOUT_MS,
   INSTALL_STALLED_MESSAGE,
+  QUIT_RECHECK_TIMEOUT_MS,
+  RESTART_RECHECK_TIMEOUT_MS,
   RUNS_RECHECK_MS,
 } from './update-state.ts';
 
@@ -17,6 +19,8 @@ interface Timer {
 
 interface Harness {
   runs: number | null;
+  feed: () => Promise<string | null>;
+  checks: number;
   installs: boolean[];
   quits: number;
   saved: UpdatePrefs[];
@@ -30,6 +34,8 @@ interface Harness {
 function setup(prefs: Partial<UpdatePrefs> = {}, skippedVersion: string | null = null) {
   const harness: Harness = {
     runs: 0,
+    feed: async () => '0.2.0',
+    checks: 0,
     installs: [],
     quits: 0,
     saved: [],
@@ -47,15 +53,20 @@ function setup(prefs: Partial<UpdatePrefs> = {}, skippedVersion: string | null =
     harness.emit = emit;
     return {
       configure: () => undefined,
-      check: async () => '0.2.0',
-      download: () =>
-        new Promise<void>((resolve) => {
+      check: () => {
+        harness.checks += 1;
+        return harness.feed();
+      },
+      download: async () => {
+        const version = (await harness.feed()) ?? '0.2.0';
+        await new Promise<void>((resolve) => {
           harness.finishDownload = () => {
             emit({ type: 'progress', percent: 100 });
-            emit({ type: 'downloaded', version: '0.2.0' });
+            emit({ type: 'downloaded', version });
             resolve();
           };
-        }),
+        });
+      },
       install: (relaunch) => harness.installs.push(relaunch),
     };
   };
@@ -284,5 +295,154 @@ describe('update controller', () => {
       { channel: 'stable', autoDownload: true },
       { channel: 'beta', autoDownload: true },
     ]);
+  });
+
+  describe('a newer version on the feed than the staged one', () => {
+    it('downloads the newer one on Restart to update and installs only that', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = async () => '0.3.0';
+
+      expect(await controller.requestInstall()).toEqual({ status: 'downloading' });
+      await settle();
+      expect(harness.installs).toEqual([]);
+      expect(controller.status()).toMatchObject({
+        phase: 'downloading',
+        availableVersion: '0.3.0',
+        installRequested: true,
+        progress: 0,
+      });
+      expect(harness.logs).toContain(
+        'Update 0.2.0 not installed: 0.3.0 is on the feed. Getting it first.',
+      );
+
+      harness.finishDownload();
+      await settle();
+      expect(harness.installs).toEqual([true]);
+      expect(controller.status()).toMatchObject({ phase: 'installing', availableVersion: '0.3.0' });
+    });
+
+    it('ignores a second click while it asks the feed', async () => {
+      const { controller, harness } = await readyToInstall();
+      const first = controller.requestInstall();
+      await settle();
+      expect(await controller.requestInstall()).toEqual({ status: 'installing' });
+      expect(await first).toEqual({ status: 'installing' });
+      expect(harness.installs).toEqual([true]);
+    });
+
+    it('installs the staged one when the feed cannot be reached', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = async () => {
+        throw new Error('net::ERR_INTERNET_DISCONNECTED');
+      };
+
+      expect(await controller.requestInstall()).toEqual({ status: 'installing' });
+      expect(harness.installs).toEqual([true]);
+      expect(controller.status()).toMatchObject({
+        phase: 'installing',
+        availableVersion: '0.2.0',
+        error: null,
+      });
+    });
+
+    it('installs the staged one when the feed does not answer in time', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = () => new Promise<string | null>(() => undefined);
+
+      const asked = controller.requestInstall();
+      await settle();
+      expect(harness.installs).toEqual([]);
+      expect(phase(controller.status())).toBe('installing');
+      harness.fire(RESTART_RECHECK_TIMEOUT_MS);
+      expect(await asked).toEqual({ status: 'installing' });
+      expect(harness.installs).toEqual([true]);
+    });
+
+    it('installs the staged one when the feed has nothing newer or only a skipped version', async () => {
+      const nothing = await readyToInstall();
+      nothing.harness.feed = async () => null;
+      expect(await nothing.controller.requestInstall()).toEqual({ status: 'installing' });
+      expect(nothing.harness.installs).toEqual([true]);
+
+      const skipped = setup({}, '0.3.0');
+      const checking = skipped.controller.check();
+      await settle();
+      skipped.harness.finishDownload();
+      await checking;
+      skipped.harness.feed = async () => '0.3.0';
+      expect(await skipped.controller.requestInstall()).toEqual({ status: 'installing' });
+      expect(skipped.harness.installs).toEqual([true]);
+    });
+
+    it('does not install if an error arrives while it asks the feed', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = () => new Promise<string | null>(() => undefined);
+
+      const asked = controller.requestInstall();
+      await settle();
+      harness.emit({ type: 'error', message: 'Code signature did not pass validation' });
+      harness.fire(RESTART_RECHECK_TIMEOUT_MS);
+      expect(await asked).toEqual({
+        status: 'unavailable',
+        reason: 'Code signature did not pass validation',
+      });
+      expect(harness.installs).toEqual([]);
+      expect(phase(controller.status())).toBe('ready');
+    });
+
+    it('quits without installing the staged one, and without downloading', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = async () => '0.3.0';
+
+      expect(controller.takeOverQuit()).toBe(true);
+      await settle();
+      expect(harness.installs).toEqual([]);
+      expect(harness.quits).toBe(1);
+      expect(controller.status()).toMatchObject({ phase: 'available', availableVersion: '0.3.0' });
+      expect(harness.logs).toContain('Update 0.2.0 not installed: 0.3.0 is on the feed. Quitting.');
+    });
+
+    it('installs the staged one on quit after a short wait when the feed is silent', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = () => new Promise<string | null>(() => undefined);
+
+      expect(controller.takeOverQuit()).toBe(true);
+      await settle();
+      expect(harness.installs).toEqual([]);
+      harness.fire(QUIT_RECHECK_TIMEOUT_MS);
+      await settle();
+      expect(harness.installs).toEqual([false]);
+      expect(harness.quits).toBe(0);
+    });
+
+    it('replaces the staged one at the next periodic check', async () => {
+      const { controller, harness } = await readyToInstall();
+      harness.feed = async () => '0.3.0';
+
+      const checking = controller.check();
+      await settle();
+      expect(controller.status()).toMatchObject({
+        phase: 'downloading',
+        availableVersion: '0.3.0',
+      });
+      expect(controller.takeOverQuit()).toBe(false);
+      harness.finishDownload();
+      await checking;
+      expect(controller.status()).toMatchObject({ phase: 'ready', availableVersion: '0.3.0' });
+      expect(harness.installs).toEqual([]);
+    });
+
+    it('with automatic downloads off, the periodic check offers the newer one instead', async () => {
+      const staged = await readyToInstall();
+      await staged.controller.setAutoDownload(false);
+      staged.harness.feed = async () => '0.3.0';
+      await staged.controller.check();
+      expect(staged.controller.status()).toMatchObject({
+        phase: 'available',
+        availableVersion: '0.3.0',
+      });
+      expect(staged.controller.takeOverQuit()).toBe(false);
+      expect(staged.harness.installs).toEqual([]);
+    });
   });
 });

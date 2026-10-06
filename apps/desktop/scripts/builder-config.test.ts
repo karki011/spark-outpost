@@ -116,7 +116,9 @@ describe('builderConfig', () => {
       archs: ['x64'],
       env: { SPARK_UPDATE_FEED_URL: 'http://127.0.0.1:8080/feed' },
     });
-    expect(config.publish).toEqual([{ provider: 'generic', url: 'http://127.0.0.1:8080/feed' }]);
+    expect(config.publish).toEqual([
+      { provider: 'generic', url: 'http://127.0.0.1:8080/feed', useMultipleRangeRequest: false },
+    ]);
     expect(config.generateUpdatesFilesForAllChannels).toBe(true);
   });
 
