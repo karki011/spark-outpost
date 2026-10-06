@@ -12,6 +12,7 @@ import {
   PUBLISH_TURN_HEADING,
   publishTurnPrompt,
   PATCH_LIMIT,
+  LATEST_REQUEST_RULE,
   PLAN_FOLLOW_RULE,
   builderPrompt,
   checkFailureText,
@@ -147,18 +148,73 @@ describe('context assembly', () => {
     expect(fixFollowUp(null)).toContain('fix what is wrong');
   });
 
-  it('gives the Critic the request, plan, diff and check results, with the diff capped', () => {
+  const fileDiff = (path: string, lines: number) =>
+    [`diff --git a/${path} b/${path}`, `--- a/${path}`, `+++ b/${path}`, '@@ -1 +1 @@']
+      .concat(Array.from({ length: lines }, (_, index) => `+line ${index} of ${path}`))
+      .join('\n');
+
+  it('gives the Critic the request, plan, diff and check results', () => {
     const prompt = criticPrompt({
       request: 'r',
       plan,
       changes: [{ path: 'a.ts', additions: 1, deletions: 0 }],
-      patch: 'x'.repeat(PATCH_LIMIT + 10),
+      patch: fileDiff('a.ts', 2),
       checks: [],
     });
     expect(prompt).toContain('Verdict: looks good" or "Verdict: concerns"');
-    expect(prompt).toContain(`[cut at ${PATCH_LIMIT} characters]`);
+    expect(prompt).toContain('+line 1 of a.ts');
+    expect(prompt).not.toContain('left out');
     expect(prompt).toContain('## Check results\nNo checks ran.');
-    expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_200);
+  });
+
+  it('shows whole file diffs up to the limit and names the files it left out (session case)', () => {
+    const small = fileDiff('src/small.ts', 20);
+    const big = fileDiff('src/big.ts', 1_500);
+    const tail = fileDiff('src/tail.ts', 5);
+    const prompt = criticPrompt({
+      request: 'r',
+      plan,
+      changes: [],
+      patch: [small, big, tail].join('\n'),
+      checks: [],
+    });
+    expect(prompt).toContain('+line 19 of src/small.ts');
+    expect(prompt).toContain('+line 4 of src/tail.ts');
+    expect(prompt).not.toContain('of src/big.ts');
+    expect(prompt).not.toContain('[cut at');
+    expect(prompt).toContain(
+      'The diff of this file is left out to keep the prompt small: `src/big.ts`. Nothing else is missing. Open those files to review them; "Files changed" lists every file.',
+    );
+    expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_400);
+  });
+
+  it('shows the start of a single file too large for the prompt and says it is partial', () => {
+    const prompt = criticPrompt({
+      request: 'r',
+      plan,
+      changes: [],
+      patch: fileDiff('src/huge.ts', 3_000),
+      checks: [],
+    });
+    expect(prompt).toContain('+line 0 of src/huge.ts');
+    expect(prompt).toContain('`src/huge.ts` is shown only in part.');
+  });
+
+  it('tells the Critic the latest request wins over a plan built in an earlier turn (session case)', () => {
+    const context = {
+      request: 'Raise the cap from 3 to 8',
+      plan: [],
+      changes: [],
+      patch: 'diff',
+      checks: [],
+      agreedPlan: '## Agreed plan\n- Cap retries at 3',
+    };
+    const followUp = criticPrompt({ ...context, planBuilt: true });
+    expect(followUp).toContain(LATEST_REQUEST_RULE);
+    expect(followUp).not.toContain(PLAN_FOLLOW_RULE);
+    expect(criticPrompt(context)).toContain(PLAN_FOLLOW_RULE);
+    const recheck = criticPrompt({ ...context, planBuilt: true, previousFindings: ['[bug] x'] });
+    expect(recheck).toContain(LATEST_REQUEST_RULE);
   });
 
   it('tells the Critic which changes were already there before the task', () => {
