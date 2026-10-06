@@ -223,7 +223,7 @@ test.describe('plain chats', () => {
     await expect(ticks(page)).toHaveCount(5);
     await expect(ticks(page).nth(2)).toHaveAccessibleName('Also keep the week view as it is');
 
-    await page.setViewportSize({ width: 2000, height: 500 });
+    await page.setViewportSize({ width: 2000, height: 700 });
     await page.locator('.thread').evaluate((thread) => thread.scrollTo({ top: 0 }));
     await ticks(page).nth(2).click();
     await expect(ticks(page).nth(2)).toHaveAttribute('aria-current', 'location');
