@@ -39,7 +39,7 @@ async function buildInPieces(page: Page, tags: string) {
   });
 }
 
-test('one Coordinator row for a list with an over-long goal, and none for a small follow-up', async ({
+test('one Coordinator row for a list with an over-long goal, and a built plan stays out of the next turn', async ({
   page,
 }) => {
   test.setTimeout(240_000);

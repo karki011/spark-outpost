@@ -6,9 +6,9 @@ interface StallWatch {
 
 const IDLE: StallWatch = { touch: () => undefined, stalled: () => false, stop: () => undefined };
 
-export function stallText(name: string, ms: number): string {
+export function quietNotice(name: string, ms: number): string {
   const minutes = Math.max(1, Math.round(ms / 60_000));
-  return `${name} made no progress for ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  return `${name} has shown no progress for ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}; still waiting`;
 }
 
 export function createStallWatch(ms: number | null, onStall: () => void): StallWatch {

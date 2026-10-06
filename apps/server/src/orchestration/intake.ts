@@ -21,8 +21,6 @@ import {
   planOnlyByRule,
   questionByRule,
   reviewsExistingByRule,
-  actsByRule,
-  asksAboutPrChecksByRule,
   strongRemovalByRule,
   trivialByRule,
 } from './risk-rules.ts';
@@ -206,7 +204,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     risk,
   );
   const planOnly = flaggedByRuleOrJev(planOnlyCall);
-  const answers = answersFirst(question, facts.request) && !actsByRule(facts.request);
+  const answers = answersFirst(question, facts.request);
   const calls: Record<string, IntakeCall> = {
     question: { ...question, value: answers },
     ...(planOnly ? { plan_only: { ...planOnlyCall, value: planOnly } } : {}),
@@ -243,8 +241,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     };
   }
   const existing = reviewsExistingByRule(facts.request);
-  const reviewOnly =
-    (existing || (review.value && answers)) && !asksAboutPrChecksByRule(facts.request);
+  const reviewOnly = existing || (review.value && answers);
   const complex = bigByRule(facts.request) !== null || (continues !== true && complexByJev(jev));
   const planFirst = !facts.hasAgreedPlan && (planCall.value || complex);
   const start = planFirstIfDestructive(

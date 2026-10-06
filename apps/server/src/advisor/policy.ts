@@ -42,7 +42,7 @@ export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 1;
 export const CRITIC_FIX_ROUNDS = 3;
-export const CRITIC_STALL_MS = 10 * 60_000;
+export const CRITIC_QUIET_NOTICE_MS = 10 * 60_000;
 export const CRITIC_REREVIEW_EFFORT = 'medium';
 export const CRITIC_RECHECK_LINE_SLACK = 3;
 export const CRITIC_SAME_CONCERN = 0.5;
@@ -109,8 +109,6 @@ export const COORD_ENGAGE_PLAN_AREAS = 2;
 export const COORD_ENGAGE_SCAN_FILES = 12;
 export const COORD_ENGAGE_SCAN_PACKAGES = 3;
 export const COORD_TOO_BIG_BAND = 0.2;
-export const COORD_SOLO_FILES = 2;
-export const COORD_SOLO_WORDS = 60;
 export const COORD_BUILDER_BUDGET_SHARE = 0.5;
 export const COORD_BUILDER_BUDGET_CAP = 150_000;
 export const COORD_LARGE_PIECE_TOKENS = 40_000;

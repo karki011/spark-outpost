@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createStallWatch, stallText } from './stall-watch.ts';
+import { createStallWatch, quietNotice } from './stall-watch.ts';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -30,8 +30,10 @@ describe('stall watch', () => {
     expect(onStall).not.toHaveBeenCalled();
   });
 
-  it('says how long the member was quiet', () => {
-    expect(stallText('Hawk', 600_000)).toBe('Hawk made no progress for 10 minutes');
-    expect(stallText('Hawk', 50)).toBe('Hawk made no progress for 1 minute');
+  it('says how long the member was quiet, without saying it stopped', () => {
+    expect(quietNotice('Hawk', 600_000)).toBe(
+      'Hawk has shown no progress for 10 minutes; still waiting',
+    );
+    expect(quietNotice('Hawk', 50)).toBe('Hawk has shown no progress for 1 minute; still waiting');
   });
 });

@@ -1,6 +1,6 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
 import { findingKind } from '../advisor/finding-questions.ts';
-import { CRITIC_STALL_MS } from '../advisor/policy.ts';
+import { CRITIC_QUIET_NOTICE_MS } from '../advisor/policy.ts';
 import { integratorRoute } from '../coordinator/integrator.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
@@ -10,6 +10,7 @@ import type { ProviderOutput } from '../providers/provider.ts';
 import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
+import { runEvents } from '../workflow/run-events.ts';
 import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
@@ -25,7 +26,7 @@ import {
 import { promptFor, readerPreamble } from './member-prompts.ts';
 import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
-import { createStallWatch, stallText } from './stall-watch.ts';
+import { createStallWatch, quietNotice } from './stall-watch.ts';
 import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
@@ -227,6 +228,16 @@ function withFollowUp(prompt: string, followUp: string | null, message: string):
     : prompt;
 }
 
+async function noteQuiet(s: Session, note: string): Promise<void> {
+  console.warn(note);
+  try {
+    await s.append(runEvents.stepStarted(note));
+    await s.append(runEvents.stepFinished(note));
+  } catch {
+    return;
+  }
+}
+
 async function runChild(
   s: Session,
   spawn: Spawn,
@@ -303,8 +314,9 @@ async function runChild(
     s.deps.loopGuard === false ? null : { ...DEFAULT_LOOP_GUARD, ...s.deps.loopGuard };
   const guard = createLoopGuard(name, spawn.role === 'builder' ? settings : null, cancel);
   const { total, observe } = counter(s);
-  const stallMs = spawn.role === 'critic' ? (s.deps.criticStallMs ?? CRITIC_STALL_MS) : null;
-  const stall = createStallWatch(stallMs, cancel);
+  const quietMs =
+    spawn.role === 'critic' ? (s.deps.criticQuietNoticeMs ?? CRITIC_QUIET_NOTICE_MS) : null;
+  const stall = createStallWatch(quietMs, () => void noteQuiet(s, quietNotice(name, quietMs ?? 0)));
   try {
     const result = await executeChildRun(
       s.deps,
@@ -322,13 +334,12 @@ async function runChild(
       },
       s.append,
     );
-    const hung = stall.stalled() && result.outcome !== 'succeeded' && !s.control.signal.aborted;
     return {
       role: spawn.role,
       runId: lease.runId,
       label,
-      outcome: hung ? 'failed' : result.outcome,
-      error: hung ? stallText(name, stallMs ?? 0) : result.error,
+      outcome: result.outcome,
+      error: result.error,
       text: result.text,
       toolCalls: total.value,
       inPlace: false,

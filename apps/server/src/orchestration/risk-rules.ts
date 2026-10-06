@@ -177,23 +177,8 @@ const THEN_CHANGE =
 const LEADS_WITH_REVIEW =
   /^\s*(?:(?:please|can you|could you|would you|kindly)\s+)?(?:review|look (?:over|through|at)|check|go over|give (?:me )?a (?:review|second opinion) (?:of|on))\b/i;
 
-const PR_SUBJECT = /\b(?:prs?|pull requests?)\b|#\d+/i;
-const CHECKS_SUBJECT =
-  /\b(?:ci|checks?|pipelines?|github actions?|actions? runs?|workflow runs?|builds?|jobs?)\b/i;
-const CHECKS_FAILED =
-  /\b(?:fail(?:s|ed|ing|ures?)?|broke|broken|red|errors?|errored|flaky|timed out|cancell?ed|not passing|didn['’]?t pass)\b/i;
-
-export function asksAboutPrChecksByRule(request: string): boolean {
-  const first = request.trim().split(/[.!?\n]/, 1)[0] ?? '';
-  if (!PR_SUBJECT.test(first) || !CHECKS_SUBJECT.test(first) || !CHECKS_FAILED.test(first)) {
-    return false;
-  }
-  return !THEN_CHANGE.test(request) && !LEADS_WITH_BUILD.test(first);
-}
-
 export function reviewsExistingByRule(request: string): boolean {
   const first = request.trim().split(/[.!?\n]/, 1)[0] ?? '';
-  if (asksAboutPrChecksByRule(request)) return false;
   if (!LEADS_WITH_REVIEW.test(first) || !EXISTING_CHANGES.test(first)) return false;
   return !THEN_CHANGE.test(request);
 }
@@ -225,21 +210,7 @@ const LEADS_WITH_RUN =
   /^\s*(?:(?:please|now|can you|could you|would you|go ahead and|just)\s+)*(?:run|execute|fetch|curl)\b/i;
 const NAMED_COMMAND = /`[^`\n]+`|\bhttps?:\/\/\S+/g;
 
-const LEADS_WITH_ACTION =
-  /^\s*(?:(?:please|now|can you|could you|would you|go ahead and|just)\s+)*(?:(?:re)?start|stop|launch|boot|spin up|bring up|fire up|shut down|kill|serve|deploy|run|execute)\b/i;
-const RUNNABLE_THING =
-  /\b(?:servers?|the app|services?|backend|frontend|api|database|db|postgres|redis|docker|containers?|stack|emulator|simulator|workers?|daemon|watcher|preview|migrations?|seeds?|deploy(?:ment)?)\b/i;
-const COMMAND_ACTS =
-  /`[^`\n]*\b(?:start|dev|serve|up|down|deploy|migrate|install|restart|stop|kill)\b[^`\n]*`/i;
-
-export function actsByRule(request: string): boolean {
-  const first = request.trim().split('\n', 1)[0] ?? '';
-  if (!LEADS_WITH_ACTION.test(first) || looksAtPageByRule(request)) return false;
-  return RUNNABLE_THING.test(first.replace(NAMED_COMMAND, ' ')) || COMMAND_ACTS.test(first);
-}
-
 export function runsCommandsByRule(request: string): boolean {
-  if (actsByRule(request)) return false;
   if (!LEADS_WITH_RUN.test(request)) return false;
   const prose = request.replace(NAMED_COMMAND, ' ');
   return prose !== request && !BUILD_VERB.test(prose);
@@ -266,8 +237,7 @@ const ASKS_HOW_OR_WHY =
   /^\s*(?:how (?:do|does|did|should|to|is|are)\b|how (?:can|could|would)\b(?! you\b)|what(?:['’]s)?\b(?! if\b)|why\b(?! (?:not|don['’]?t|can['’]?t|won['’]?t)\b)|where\b|when\b|which\b|who\b|(?:is|are) there\b|(?:does|do|is|are|should) (?:spark|i|it|we|the|builders?)\b|(?:can|could) (?:spark|i|builders?)\b)/i;
 
 export function questionByRule(request: string): boolean {
-  if (THEN_CHANGE.test(request) || actsByRule(request)) return false;
-  if (asksAboutPrChecksByRule(request)) return true;
+  if (THEN_CHANGE.test(request)) return false;
   if (runsCommandsByRule(request)) return true;
   if (looksAtPageByRule(request)) return true;
   if (ASKS_FOR_ANSWER.test(request)) return true;

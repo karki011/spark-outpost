@@ -104,7 +104,7 @@ async function followUp(conversationId: string, content: string): Promise<string
 }
 
 describe('Coordinator overhead', { timeout: 180_000 }, () => {
-  it('accepts a list whose goal is over the limit on the first try, then skips the Coordinator for a small follow-up', async () => {
+  it('accepts a list whose goal is over the limit on the first try, and leaves a built plan out of the next turn', async () => {
     const first = await startPlanned(withTag(NORMAL, 'Split this up. #pieces #longgoal'));
     const built = await driveToEnd(t, first.conversationId, first.runId, undefined, 120_000);
     expect(built.orchestration.status).toBe('succeeded');
@@ -132,7 +132,7 @@ describe('Coordinator overhead', { timeout: 180_000 }, () => {
       engage: false,
       planBuilt: true,
       planItems: 0,
-      solo: expect.stringContaining('a small follow-up'),
+      solo: null,
     });
   });
 
@@ -161,10 +161,10 @@ describe('Coordinator overhead', { timeout: 180_000 }, () => {
   });
 });
 
-describe('Critic that fails or hangs', { timeout: 180_000 }, () => {
-  async function review(tag: string, criticStallMs?: number) {
+describe('Critic that fails or goes quiet', { timeout: 180_000 }, () => {
+  async function review(tag: string, criticQuietNoticeMs?: number) {
     harness = startOrchestrator(t, jevFetch({ calls: [], scenario: RISKY }), {
-      ...(criticStallMs ? { criticStallMs } : {}),
+      ...(criticQuietNoticeMs ? { criticQuietNoticeMs } : {}),
     });
     const { conversationId, runId } = await startScenario(
       t,
@@ -175,7 +175,7 @@ describe('Critic that fails or hangs', { timeout: 180_000 }, () => {
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 120_000);
     const critics = (await children(t, runId)).filter((child) => child.role === 'critic');
     const reply = (await assistantReplies(t, runId)).at(-1) ?? '';
-    return { orchestration, critics, reply };
+    return { orchestration, critics, reply, runId };
   }
 
   it('moves to the other provider at once when the first Critic prompt fails', async () => {
@@ -194,20 +194,20 @@ describe('Critic that fails or hangs', { timeout: 180_000 }, () => {
     expect(rows[0]!.note).toBe('reviewing instead of Codex, whose review did not finish');
   });
 
-  it('stops a Critic that makes no progress and lets the other provider review', async () => {
-    const { orchestration, critics, reply } = await review('#critichangs', 10_000);
+  it('notes a quiet Critic without stopping it, and the review still lands', async () => {
+    const { orchestration, critics, reply, runId } = await review('#criticquiet', 500);
     expect(orchestration.status).toBe('succeeded');
-    expect(critics.map((critic) => critic.provider)).toEqual(['codex', 'claude']);
-    expect(critics[1]!.status).toBe('succeeded');
+    expect(critics.map((critic) => [critic.provider, critic.status])).toEqual([
+      ['codex', 'succeeded'],
+    ]);
     expect(reply).not.toContain('Review skipped');
-  });
-
-  it('finishes the turn without the review, in one line, when every Critic hangs', async () => {
-    const { orchestration, critics, reply } = await review('#critichangs #everycritichangs', 1_500);
-    expect(orchestration.status).toBe('succeeded');
-    expect(critics).toHaveLength(2);
-    expect(reply).toMatch(
-      /Review skipped \(Critic unavailable: \w+ made no progress for 1 minute\)\./,
+    const { rows } = await t.db.query<{ name: string }>(
+      `SELECT payload->>'stepName' AS name FROM run_events
+       WHERE run_id = $1 AND type = 'STEP_STARTED' AND payload->>'stepName' LIKE '%no progress%'`,
+      [runId],
     );
+    expect(rows.map((row) => row.name)).toEqual([
+      expect.stringMatching(/^\w+ has shown no progress for 1 minute; still waiting$/),
+    ]);
   });
 });

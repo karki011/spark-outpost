@@ -1,5 +1,5 @@
 import { modeSkipsGate, type PlanDocument } from '@spark-outpost/contracts';
-import { COORD_JEV_ACT_AT, COORD_POLICY_VERSION } from '../advisor/policy.ts';
+import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { outlinePlan } from '../plans/agreed-block.ts';
@@ -72,13 +72,6 @@ async function awaitScan(s: Session) {
   return outcome?.report ?? null;
 }
 
-function confidentScope(s: Session) {
-  const jev = s.intake.body.jev;
-  if (!jev?.scope) return null;
-  const confidence = jev.confidences.scope ?? jev.confidence;
-  return confidence >= COORD_JEV_ACT_AT ? jev.scope : null;
-}
-
 export async function assess(s: Session): Promise<Assessment> {
   const root = s.input.projectRoots[0]!;
   const report = await awaitScan(s);
@@ -108,9 +101,7 @@ export async function assess(s: Session): Promise<Assessment> {
     likely,
     sizeEstimate: size,
     budgetTokens,
-    followUp: planBuilt || (plan === null && s.continuesTask),
     followUpRound: s.input.followUpRound === true,
-    scope: confidentScope(s),
   });
   const pieces = planPieces(planItems, lines);
   const placement = pieces.length > 1 ? placePieces(pieces, await placementFacts(s)) : null;

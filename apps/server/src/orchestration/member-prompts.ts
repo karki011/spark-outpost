@@ -13,7 +13,6 @@ import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
 import { fixDiff } from './fix-rounds.ts';
 import type { ChangedLines } from './checkpoint.ts';
-import { asksAboutPrChecksByRule } from './risk-rules.ts';
 import type { Session } from './session.ts';
 import { publishBrief } from '../workflow/publish-context.ts';
 import type { Spawn } from './transitions.ts';
@@ -109,23 +108,10 @@ export const RESEARCH_BRIEF = [
   'Answer with your findings, each tied to the files and lines you read, then a short list of suggested next steps.',
 ].join('\n');
 
-const READ_ONLY_HONESTY =
-  'This turn only reads. When a command or edit is refused, say plainly that it did not run and why; never report it as done or running. Offer to do it once the user says to make the change.';
-
-const PR_CHECKS_BRIEF =
-  "The question is about a pull request's checks. Read them with `spark_pull_requests` and `spark_pr` (checks, reviews, comments) before answering; the local diff does not show why CI failed. If those tools are not offered, say that the PR's check data is not available here.";
-
 export async function readerPreamble(s: Session): Promise<string | null> {
   const plan = await agreedPlanText(s);
   const research = turnCategory(s.intake.outcome, s.intake.body.rules.intent) === 'research';
-  const inProject = s.input.projectRoots.length > 0;
-  const parts = [
-    plan,
-    research ? RESEARCH_BRIEF : null,
-    asksAboutPrChecksByRule(s.input.userRequest) ? PR_CHECKS_BRIEF : null,
-    inProject ? READ_ONLY_HONESTY : null,
-    await codeContext(s),
-  ].filter(Boolean);
+  const parts = [plan, research ? RESEARCH_BRIEF : null, await codeContext(s)].filter(Boolean);
   return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
