@@ -263,7 +263,6 @@ describe('marking Spark tool results as private work data', () => {
 
     expect(recorded.map((observation) => observation.label)).toEqual([
       'private work data (spark_attention)',
-      'private work data (spark_run)',
       'private work data (spark_spend)',
       'private work data (spark_terminals)',
     ]);
