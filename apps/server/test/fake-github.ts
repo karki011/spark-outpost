@@ -1,6 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { APP_LOGIN, fakeGitHubApp, type FakeGitHubApp } from './fake-github-app.ts';
-import { listPullsAnswer, pullJson, pullReadAnswer } from './fake-github-reads.ts';
+import {
+  listPullsAnswer,
+  pullJson,
+  pullReadAnswer,
+  resolvedThreadsAnswer,
+} from './fake-github-reads.ts';
 
 export const FAKE_GH_HEADER = 'x-fake-gh';
 export const REJECTED_TOKEN_MARKER = 'rejected';
@@ -19,7 +24,12 @@ export interface FakePull {
   state: 'open' | 'closed';
   merged?: boolean;
   created_at?: string;
-  reviews?: { user: { login: string }; state: string }[];
+  reviews?: {
+    user: { login: string };
+    state: string;
+    submitted_at?: string;
+    html_url?: string;
+  }[];
   checkRuns?: { name?: string; status: string; conclusion: string | null }[];
   html_url: string;
   openedBy: string;
@@ -31,14 +41,31 @@ export interface FakePull {
   additions?: number;
   deletions?: number;
   files?: { filename: string; status: string; additions: number; deletions: number }[];
-  reviewComments?: { path: string; line: number | null; user: { login: string }; body: string }[];
-  issueComments?: { user: { login: string }; body: string }[];
+  reviewComments?: {
+    id?: number;
+    path: string;
+    line: number | null;
+    user: { login: string };
+    body: string;
+    in_reply_to_id?: number;
+    created_at?: string;
+    html_url?: string;
+  }[];
+  resolvedComments?: number[];
+  issueComments?: {
+    id?: number;
+    user: { login: string };
+    body: string;
+    created_at?: string;
+    html_url?: string;
+  }[];
   checks?: {
     id?: number;
     name: string;
     status: string;
     conclusion: string | null;
     html_url?: string;
+    output?: { title?: string | null; summary?: string | null };
   }[];
 }
 
@@ -190,6 +217,9 @@ export function fakeGitHub(): FakeGitHub {
       const read =
         req.method === 'GET' ? pullReadAnswer(pulls, url.pathname, url.searchParams) : null;
       if (read) return send(res, read.status, read.body);
+      if (req.method === 'POST' && url.pathname === '/graphql') {
+        return send(res, 200, resolvedThreadsAnswer(pulls, await readJson(req)));
+      }
       const match = REPO.exec(url.pathname);
       if (!match) return send(res, 404, { message: 'Not Found' });
       if (!match[3]) return repoAnswer(res, match[1]!, match[2]!);

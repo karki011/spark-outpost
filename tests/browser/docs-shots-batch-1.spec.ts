@@ -234,10 +234,12 @@ test('PR follow-up screenshots', async ({ page }) => {
     .filter({ hasText: 'Fix the cents parser' })
     .first()
     .click();
-  const strip = page.getByRole('region', { name: 'Pull request acme/widgets#7' });
-  await strip.getByText('3 items gathered').click();
-  await expect(strip.getByRole('listitem').filter({ hasText: 'F3' })).toBeVisible();
-  await shoot(page, IMAGES, 'pr-follow-up-strip', strip);
+  const row = page.getByRole('group', { name: 'Pull request acme/widgets#7', exact: true });
+  await row.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
+  await row.getByText('3 items gathered').click();
+  await expect(row.getByRole('listitem').filter({ hasText: 'F3' })).toBeVisible();
+  await shoot(page, IMAGES, 'pr-follow-up-strip', page.locator('.composer-wrap'));
+  await page.keyboard.press('Escape');
   const confirm = page.getByRole('group', { name: /Address PR feedback\?/ });
   await expect(confirm).toBeVisible();
   await shoot(page, IMAGES, 'pr-follow-up-card', confirm);

@@ -76,19 +76,23 @@ test('the chat shows what Spark is doing with its PR and one card confirms the p
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Fix the cents parser');
 
-  const strip = page.getByRole('region', { name: 'Pull request acme/widgets#7' });
-  await expect(strip.getByRole('link', { name: 'acme/widgets#7' })).toHaveAttribute(
+  const pull = page.getByRole('group', { name: 'Pull request acme/widgets#7', exact: true });
+  await expect(pull.getByRole('link', { name: '#7', exact: true })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/pull/7',
   );
-  await expect(strip).toContainText('Checks failing');
-  await expect(strip).toContainText('2 new comments');
-  await expect(strip).toContainText('Round 1 of 3');
-  await expect(strip.getByRole('status')).toContainText(SEED_DOING);
-  await strip.getByText('3 items gathered').click();
-  const held = strip.getByRole('listitem').filter({ hasText: 'F3' });
+  await expect(pull).toContainText('Checks failing');
+  await expect(pull).toContainText('2 new comments');
+  await expect(pull).toContainText('Round 1 of 3');
+  await expect(page.locator('header.chat-head')).not.toContainText('PR #7');
+  await pull.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
+  await expect(pull).toContainText(`Spark: ${SEED_DOING}`);
+  await expect(pull.getByRole('link', { name: 'Review the card' })).toBeVisible();
+  await pull.getByText('3 items gathered').click();
+  const held = pull.getByRole('listitem').filter({ hasText: 'F3' });
   await expect(held).toContainText('mallory · can’t write to the repo');
   await expect(held).toContainText('Shown only');
+  await page.keyboard.press('Escape');
 
   const row = page
     .getByRole('navigation', { name: 'Chats' })

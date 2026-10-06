@@ -402,9 +402,10 @@ test.describe('working chats', () => {
     await expect(rows).toContainText('Checks failing');
     const link = rows.getByRole('link', { name: /^Pull request acme\/widgets#7, Open/ });
     await expect(link).toHaveAttribute('href', /acme\/widgets\/pull\/7$/);
-    const card = (await page.locator('.prs-wrap').boundingBox())!;
-    const railBox = (await rail(page).boundingBox())!;
-    expect(railBox.y).toBeGreaterThan(card.y + card.height);
+    const card = (await page.locator('.prc').boundingBox())!;
+    const composer = (await page.locator('.composer').boundingBox())!;
+    expect(card.y + card.height).toBeLessThanOrEqual(composer.y);
+    expect(Math.abs(card.width - composer.width)).toBeLessThan(2);
     await shoot(page, 'pr-2000');
   });
 });

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { PrWatch } from '@spark-outpost/contracts';
 import {
   branchLine,
-  chipSummary,
   ciState,
   groupByRepo,
   openedIn,
@@ -11,40 +9,7 @@ import {
   reviewLabel,
   worstCi,
 } from './pull-request-model.ts';
-
-const RUN = '0190d7a0-0000-7000-8000-000000000001';
-
-function watch(fields: Partial<PrWatch> = {}): PrWatch {
-  return {
-    id: '0190d7a0-0000-7000-8000-0000000000aa',
-    conversationId: '0190d7a0-0000-7000-8000-0000000000bb',
-    repo: 'acme/widgets',
-    number: 7,
-    url: 'https://github.com/acme/widgets/pull/7',
-    title: 'Tidy the notes',
-    branch: 'spark/tidy',
-    base: 'main',
-    outside: false,
-    followUp: true,
-    opened: { via: 'agent', by: 'claude', runId: RUN, at: '2026-10-05T10:00:00.000Z' },
-    phase: 'watching',
-    doing: '',
-    prState: 'open',
-    draft: false,
-    checks: 'passing',
-    failingChecks: [],
-    review: 'none',
-    unknownReason: null,
-    rounds: 0,
-    maxRounds: 3,
-    newComments: 0,
-    approvalId: null,
-    lastPolledAt: null,
-    lastError: null,
-    items: [],
-    ...fields,
-  };
-}
+import { RUN, watch } from './watch-fixture.ts';
 
 describe('pull request state', () => {
   it('reads draft, open, merged and closed', () => {
@@ -75,24 +40,6 @@ describe('the worst check state of a chat', () => {
     const merged = watch({ prState: 'merged', checks: 'failing' });
     expect(worstCi([merged, watch({ number: 8 })])).toBe('passing');
     expect(worstCi([merged])).toBe('failing');
-  });
-});
-
-describe('the header chip', () => {
-  it('is absent without pull requests', () => {
-    expect(chipSummary([])).toBeNull();
-  });
-
-  it('names a single pull request and counts several', () => {
-    expect(chipSummary([watch()])).toMatchObject({
-      text: 'PR #7',
-      label: 'Pull request acme/widgets#7, checks passing',
-    });
-    expect(chipSummary([watch(), watch({ number: 8, checks: 'failing' })])).toMatchObject({
-      text: '2 PRs',
-      ci: 'failing',
-      label: '2 pull requests, checks failing',
-    });
   });
 });
 

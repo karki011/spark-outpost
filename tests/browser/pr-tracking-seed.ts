@@ -61,7 +61,9 @@ export const SEED_PULLS: readonly SeededPull[] = [
 export const pullUrl = (pull: Pick<SeededPull, 'owner' | 'repo' | 'number'>) =>
   `https://github.com/${pull.owner}/${pull.repo}/pull/${pull.number}`;
 
-export async function seedTrackedPulls(): Promise<{ conversationId: string }> {
+export async function seedTrackedPulls(
+  pulls: readonly SeededPull[] = SEED_PULLS,
+): Promise<{ conversationId: string }> {
   const db = openTestDb();
   try {
     const workspaceId = await ensureLocalWorkspace(db);
@@ -95,7 +97,7 @@ export async function seedTrackedPulls(): Promise<{ conversationId: string }> {
        VALUES ($1, $2, 'assistant', 'The notes are tidy and both pull requests are open.', $3)`,
       [randomUUID(), conversationId, runId],
     );
-    for (const [index, pull] of SEED_PULLS.entries()) {
+    for (const [index, pull] of pulls.entries()) {
       await db.query(
         `INSERT INTO pr_watches (id, workspace_id, conversation_id, task_id, host, owner, repo,
            number, url, branch, doing, opened_via, opened_by, opened_run_id, outside, follow_up,
@@ -117,7 +119,7 @@ export async function seedTrackedPulls(): Promise<{ conversationId: string }> {
           pull.by,
           pull.inTurn ? runId : null,
           pull.outside,
-          SEED_PULLS.length - index,
+          pulls.length - index,
         ],
       );
     }
@@ -132,6 +134,15 @@ export async function pollTrackedPullsNow(): Promise<void> {
   try {
     await db.query("UPDATE pr_watches SET next_poll_at = now() WHERE phase <> 'done'");
     await db.query("SELECT pg_notify('pr_poll', '')");
+  } finally {
+    await db.end();
+  }
+}
+
+export async function runSql(text: string, values: readonly unknown[] = []): Promise<void> {
+  const db = openTestDb();
+  try {
+    await db.query(text, [...values]);
   } finally {
     await db.end();
   }

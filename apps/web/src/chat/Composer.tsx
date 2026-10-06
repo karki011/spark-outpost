@@ -1,7 +1,15 @@
 import './composer.css';
 import './composer/composer-popovers.css';
 import './project/project.css';
-import { useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import {
   DEFAULT_BUSY_ENTER,
   MESSAGE_MAX_LENGTH,
@@ -91,6 +99,7 @@ interface ComposerProps {
   busyEnter?: BusyEnterAction;
   notice?: string | null;
   steer?: SteerControl | null;
+  above?: ReactNode;
   onAudit?: () => void;
   onStartFresh?: () => void;
   autonomy?: AutonomyControl | null;
@@ -124,6 +133,7 @@ export function Composer({
   busyEnter = DEFAULT_BUSY_ENTER,
   notice = null,
   steer = null,
+  above = null,
   onAudit,
   onStartFresh,
   autonomy = null,
@@ -313,6 +323,7 @@ export function Composer({
         onText={setDraft}
         onSendAnyway={() => void submit(lastChoice.current)}
       />
+      {above}
       <ContextBar
         conversationId={conversationId}
         repos={repos}

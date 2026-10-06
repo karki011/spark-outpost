@@ -67,6 +67,7 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
     state.reads.push(`${method} ${route}`);
     const page = Number(url.searchParams.get('page') ?? 1);
     const list = (items: unknown[]) => ok(page === 1 ? items : []);
+    if (route === '/graphql') return { status: 404, data: null, header: () => null };
     if (method === 'POST') {
       state.posted.push({ path: route, body: String(body?.body ?? '') });
       nextId += 1;

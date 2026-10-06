@@ -51,29 +51,6 @@ export function primaryPull(watches: readonly PrWatch[]): PrWatch | null {
   return pool.find((watch) => ciState(watch) === worst) ?? pool[0] ?? null;
 }
 
-export interface ChipSummary {
-  text: string;
-  ci: CiState;
-  label: string;
-  href: string;
-}
-
-export function chipSummary(watches: readonly PrWatch[]): ChipSummary | null {
-  const first = watches.find((watch) => watch.prState === 'open') ?? watches[0];
-  if (!first) return null;
-  const ci = worstCi(watches);
-  const single = watches.length === 1;
-  const name = single
-    ? `Pull request ${first.repo}#${first.number}`
-    : `${watches.length} pull requests`;
-  return {
-    text: single ? `PR #${first.number}` : `${watches.length} PRs`,
-    ci,
-    label: `${name}, ${CI_LABELS[ci].toLowerCase()}`,
-    href: first.url,
-  };
-}
-
 export interface RepoGroup {
   repo: string;
   outside: boolean;

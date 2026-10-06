@@ -41,6 +41,61 @@ export type PrOpenedVia = z.infer<typeof prOpenedViaSchema>;
 export const prFailingCheckSchema = z.object({ name: z.string(), url: z.string().nullable() });
 export type PrFailingCheck = z.infer<typeof prFailingCheckSchema>;
 
+export const prCheckStateSchema = z.enum([
+  'failing',
+  'running',
+  'passing',
+  'cancelled',
+  'skipped',
+  'neutral',
+]);
+export type PrCheckState = z.infer<typeof prCheckStateSchema>;
+
+export const prCheckRunSchema = z.object({
+  name: z.string(),
+  url: z.string().nullable(),
+  state: prCheckStateSchema,
+  summary: z.string().nullable(),
+});
+export type PrCheckRun = z.infer<typeof prCheckRunSchema>;
+
+export const prReviewerSchema = z.object({
+  user: z.string(),
+  state: z.enum(['approved', 'changes_requested', 'commented']),
+  at: z.string().nullable(),
+  url: z.string().nullable(),
+});
+export type PrReviewer = z.infer<typeof prReviewerSchema>;
+
+export const prThreadStatusSchema = z.enum([
+  'fixed',
+  'pushed_back',
+  'answered',
+  'needs_you',
+  'fixing',
+]);
+export type PrThreadStatus = z.infer<typeof prThreadStatusSchema>;
+
+export const prThreadSchema = z.object({
+  key: z.string(),
+  author: z.string(),
+  path: z.string().nullable(),
+  line: z.number().int().nullable(),
+  excerpt: z.string(),
+  url: z.string().nullable(),
+  at: z.string().nullable(),
+  status: prThreadStatusSchema.nullable(),
+});
+export type PrThread = z.infer<typeof prThreadSchema>;
+
+export const prDetailsSchema = z.object({
+  checkRuns: z.array(prCheckRunSchema),
+  reviewers: z.array(prReviewerSchema),
+  threads: z.array(prThreadSchema),
+  threadCount: z.number().int().nonnegative(),
+});
+export type PrDetails = z.infer<typeof prDetailsSchema>;
+
 export const feedbackItemSchema = z.object({
   id: z.uuid(),
   label: z.string(),
@@ -91,6 +146,7 @@ export const prWatchSchema = z.object({
   lastPolledAt: z.string().nullable(),
   lastError: z.string().nullable(),
   items: z.array(feedbackItemSchema),
+  details: prDetailsSchema,
 });
 export type PrWatch = z.infer<typeof prWatchSchema>;
 
