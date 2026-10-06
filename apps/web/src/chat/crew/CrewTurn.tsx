@@ -35,6 +35,7 @@ import {
   crewItems,
   groupParallel,
   handOffAt,
+  itemStartedAt,
   lastAgentIndex,
   memberTexts,
   mergeCheckpoints,
@@ -44,7 +45,8 @@ import {
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
-import { messagesFor } from '../../crew/member-model.ts';
+import { SteeredMessage } from '../steer/SteeredMessage.tsx';
+import { steerSlots, turnSteers } from '../steer/steer-model.ts';
 
 function footLabel(status: Orchestration['status']): string {
   if (status === 'cancelled') return 'Stopped';
@@ -97,6 +99,11 @@ function CrewTurnBody({
   const checkApprovals = approvals.filter(isCheckApproval);
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
+  const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
+  const steeredAfter = (index: number) =>
+    (steers.get(index) ?? []).map((message) => (
+      <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />
+    ));
   const finished = isTerminalRunStatus(orchestration.status);
   const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
   const leadId = `lead:${run.id}`;
@@ -158,10 +165,39 @@ function CrewTurnBody({
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}
-        messages={messagesFor(detail, member.runId)}
         after={item.checkpoints.map(checkpointCard)}
       />
     );
+  };
+
+  const itemBlock = (item: CrewItem, index: number) => {
+    if (item.kind === 'checkpoint') {
+      return checkpointCard(item.approval);
+    }
+    if (item.kind === 'group') {
+      const byRun = new Map(item.members.map((entry) => [entry.member.runId, entry]));
+      return (
+        <ParallelGroup
+          key={item.members[0]!.member.runId}
+          agents={item.members.map((entry) =>
+            runAgent(entry.member, orchestration, detail.activity[entry.member.runId] ?? []),
+          )}
+          labels={pieceLabels(orchestration)}
+          renderMember={(agent) => agentBlock(byRun.get(agent.id)!, false)}
+        />
+      );
+    }
+    if (item.kind === 'approval') {
+      return (
+        <ApprovalCard
+          key={item.approval.id}
+          approval={item.approval}
+          provider={run.provider}
+          repo={repo}
+        />
+      );
+    }
+    return agentBlock(item, index !== last);
   };
 
   return (
@@ -183,35 +219,8 @@ function CrewTurnBody({
           <PieceBoard list={orchestration.pieces} crew={orchestration.crew} />
         )}
       </div>
-      {items.map((item, index) => {
-        if (item.kind === 'checkpoint') {
-          return checkpointCard(item.approval);
-        }
-        if (item.kind === 'group') {
-          const byRun = new Map(item.members.map((entry) => [entry.member.runId, entry]));
-          return (
-            <ParallelGroup
-              key={item.members[0]!.member.runId}
-              agents={item.members.map((entry) =>
-                runAgent(entry.member, orchestration, detail.activity[entry.member.runId] ?? []),
-              )}
-              labels={pieceLabels(orchestration)}
-              renderMember={(agent) => agentBlock(byRun.get(agent.id)!, false)}
-            />
-          );
-        }
-        if (item.kind === 'approval') {
-          return (
-            <ApprovalCard
-              key={item.approval.id}
-              approval={item.approval}
-              provider={run.provider}
-              repo={repo}
-            />
-          );
-        }
-        return agentBlock(item, index !== last);
-      })}
+      {steeredAfter(-1)}
+      {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}
       {orchestration.crew.length === 0 && textByRun.get(run.id) && (
         <div className="msg ai crew-summary">
           <Markdown text={textByRun.get(run.id)!} />

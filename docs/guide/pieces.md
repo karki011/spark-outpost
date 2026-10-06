@@ -21,7 +21,7 @@ Agent TV keeps following its chat while you open another.
 1. Select **Message** on the agent's row in **Agent TV**, in the **Crew** tab of the **Work** panel, or in the chat.
 2. Type your message and select **Send to** _name_.
 
-The agent reads it at its next step. A finished Builder shows **Continue** _name_ and resumes in a new turn.
+The chat shows it; the agent reads it next. A finished Builder shows **Continue** _name_ and resumes in a new turn.
 
 ## Steer the pieces
 
