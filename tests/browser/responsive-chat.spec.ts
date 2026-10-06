@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { crewRepo, type CrewRepo } from './crew-engine.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { editedChat } from './edited-chat.ts';
+import { seedChats } from './sidebar-seed.ts';
 import {
   DESKTOP,
   expectInsideViewport,
@@ -40,10 +41,16 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-async function replyWithTable(): Promise<void> {
+async function chatWithTable(): Promise<void> {
+  const [chatId] = await seedChats([{ title: 'Build times', run: { status: 'succeeded' } }]);
   const db = openTestDb();
   try {
-    await db.query(`UPDATE messages SET content = $1 WHERE role = 'assistant'`, [WIDE_TABLE]);
+    await db.query(
+      `INSERT INTO messages (id, conversation_id, role, content, run_id)
+       SELECT gen_random_uuid(), conversation_id, 'assistant', $2, id
+       FROM runs WHERE conversation_id = $1`,
+      [chatId, WIDE_TABLE],
+    );
   } finally {
     await db.end();
   }
@@ -56,7 +63,7 @@ for (const size of [PHONE, PHONE_WIDE]) {
     const head = page.locator('.chat-head');
     await expect(head.locator('.crumb')).toBeHidden();
     await expect(head.getByRole('button', { name: 'Theme' })).toHaveCount(0);
-    for (const control of await head.locator('.head-r > *:visible').all()) {
+    for (const control of await head.locator('.head-r button:visible').all()) {
       await expectInsideViewport(page, control);
     }
     await expectInsideViewport(page, head.getByRole('button', { name: 'Chat actions' }));
@@ -74,7 +81,7 @@ for (const size of [PHONE, PHONE_WIDE]) {
 }
 
 test('a wide table scrolls inside its own box on a phone', async ({ browser }) => {
-  await replyWithTable();
+  await chatWithTable();
   const page = await openTouch(browser, PHONE, 'chats');
   const table = page.locator('.md-table').last();
   await expect(table).toBeVisible({ timeout: 20_000 });
@@ -107,9 +114,7 @@ test('the changes drawer is unified on a phone and keeps the desktop choice', as
   await changesChip(page).click();
   const drawer = page.locator('.dd');
   await expect(drawer).toBeVisible();
-  const file = drawer.getByRole('treeitem', { name: /notes\.txt/ });
-  if (!(await file.isVisible())) await drawer.getByRole('treeitem').first().click();
-  await file.click();
+  await drawer.getByRole('treeitem', { name: /notes\.txt/ }).click();
   await expect(drawer.locator('.cm-editor').first()).toBeVisible({ timeout: 20_000 });
   await expect(drawer.locator('.cm-editor')).toHaveCount(1);
   await expect(drawer.getByRole('radiogroup', { name: 'Diff layout' })).toHaveCount(0);

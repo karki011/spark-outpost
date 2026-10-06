@@ -19,6 +19,7 @@ import {
   smallTextInputs,
   TABLET,
   TOUCH_SIZES,
+  widerThanItsBox,
 } from './responsive-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 
@@ -82,6 +83,7 @@ for (const size of TOUCH_SIZES) {
     if (phone) expect(nav!.y + nav!.height).toBeGreaterThan(size.height - 2);
     else expect(nav!.width).toBeLessThan(100);
 
+    expect(await widerThanItsBox(page.locator('.home'))).toEqual([]);
     for (const name of PRIMARY) {
       await expectInsideViewport(page, navButton(page, name));
       await navButton(page, name).click();
@@ -237,7 +239,7 @@ test('the desktop rail keeps all eight entries', async ({ page }) => {
     /^Phone/,
     /^Settings/,
   ]);
-  await shot(page, 'home');
+  await shot(page, 'rail');
 });
 
 test('the web app manifest and phone icons are served', async ({ page }) => {

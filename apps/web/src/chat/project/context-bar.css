@@ -213,6 +213,12 @@
   }
 }
 
+@media (max-width: 480px) {
+  .ctx-branch-name {
+    display: none;
+  }
+}
+
 .ctx-place {
   border-radius: var(--r-sm);
   transition:

@@ -103,7 +103,10 @@ export function PhonePage() {
         <div className="ph-wrap">
           <header className="ph-head">
             <h1 id="ph-title">Phone</h1>
-            <p>Use Spark Outpost from your phone while the work stays on this Mac.</p>
+            <p>
+              Use Spark Outpost from your phone while the work stays on{' '}
+              {session.data?.remote ? 'your' : 'this'} Mac.
+            </p>
           </header>
           {session.error && (
             <p className="ph-error" role="alert">

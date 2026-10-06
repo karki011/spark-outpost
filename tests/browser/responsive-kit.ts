@@ -83,6 +83,17 @@ export async function expectNoSidewaysScroll(page: Page): Promise<void> {
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
+export function widerThanItsBox(scroller: Locator): Promise<string[]> {
+  return scroller.evaluate((node) => {
+    const edge = node.getBoundingClientRect().right;
+    if (node.scrollWidth <= node.clientWidth) return [];
+    return [...node.querySelectorAll<HTMLElement>('*')]
+      .filter((child) => child.getBoundingClientRect().right > edge + 1)
+      .map((child) => `${child.tagName}.${child.className}`)
+      .slice(0, 5);
+  });
+}
+
 export async function shot(page: Page, name: string): Promise<void> {
   if (!SHOTS) return;
   const size = page.viewportSize();

@@ -391,6 +391,10 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .home {
+    overflow-x: hidden;
+  }
+
   .home-wrap {
     padding: 26px 16px 32px;
   }

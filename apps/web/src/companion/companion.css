@@ -258,6 +258,13 @@
     padding-bottom: calc(32px + 56px);
   }
 
+  .app:has(.cmp[data-corner^='bottom']) :is(.tk .ib-main, .an, .ph-scroll)::after {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    height: 56px;
+  }
+
   .app:has(.cmp[data-corner^='top']) .home-wrap {
     padding-top: calc(26px + 48px);
   }

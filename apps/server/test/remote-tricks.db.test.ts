@@ -107,7 +107,10 @@ describe('the web app over the remote host', () => {
       const manifest = await stranger.get('/manifest.webmanifest').expect(200);
       expect(manifest.headers['content-type']).toContain('application/manifest+json');
       expect(manifest.body).toEqual({ name: 'Spark Outpost' });
-      await stranger.get('/icon-192.png').expect(200).expect('content-type', /image\/png/);
+      await stranger
+        .get('/icon-192.png')
+        .expect(200)
+        .expect('content-type', /image\/png/);
       expect((await stranger.get('/app.js').expect(200)).text).toContain('Pair this device');
       expect((await stranger.get('/secrets.png').expect(200)).text).toContain('Pair this device');
       expect((await stranger.get('/').expect(200)).text).toContain('Pair this device');

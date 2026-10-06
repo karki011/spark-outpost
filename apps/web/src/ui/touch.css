@@ -51,7 +51,7 @@
     textarea,
     select
   ),
-  [contenteditable='true'] {
+  [contenteditable='true']:not(.cm-content) {
     font-size: 16px !important;
   }
 }
