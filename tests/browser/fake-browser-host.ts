@@ -4,6 +4,7 @@ import {
   browserPlaceOf,
   type BrowserHostRequest,
 } from '../../packages/contracts/src/index.ts';
+import { stripedPng } from './striped-png.ts';
 
 type Listener = (event: { data: unknown }) => void;
 
@@ -66,7 +67,18 @@ function answer(request: BrowserHostRequest): unknown {
   }
   if (request.op === 'end_run') return { closed: 0 };
   if (request.op === 'page') return facts();
-  throw new Error('The fake browser takes no screenshots.');
+  if (request.op === 'screenshot') {
+    const height = request.fullPage ? 2400 : 800;
+    return {
+      ...facts(),
+      data: stripedPng(1280, height).toString('base64'),
+      mediaType: 'image/png',
+      width: 1280,
+      height,
+      masked: 0,
+    };
+  }
+  throw new Error('The fake browser does not support this request.');
 }
 
 function receive(raw: unknown): void {

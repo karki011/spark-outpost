@@ -1,9 +1,17 @@
+import { existsSync } from 'node:fs';
+import { setTimeout as pause } from 'node:timers/promises';
 import type * as acp from '@agentclientprotocol/sdk';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 const SPARK_TRIGGER = /#spark (\w+)(?: (\{.*?\}))?/g;
+const SCRIPT_TRIGGER = /#sparkscript (\[.*\])/;
+
+type ScriptStep =
+  { say: string } | { tool: string; args?: Record<string, unknown> } | { waitFor: string };
+
+type Update = (value: acp.SessionUpdate) => Promise<void>;
 
 interface SparkEndpoint {
   name: string;
@@ -35,29 +43,18 @@ function fromCodexConfig(raw: string | undefined): SparkEndpoint | null {
   return null;
 }
 
-export async function sparkTurn(
-  text: string,
-  servers: unknown,
-  update: (value: acp.SessionUpdate) => Promise<void>,
-  say: (chunk: string) => Promise<void>,
-): Promise<acp.StopReason | null> {
-  const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
-  if (!match) return null;
-  const endpoint = fromAcp(servers) ?? fromCodexConfig(process.env.CODEX_CONFIG);
-  if (!endpoint) {
-    await say('spark=missing');
-    return 'end_turn';
-  }
-  const tool = match[1]!;
-  const args = match[2] ? (JSON.parse(match[2]) as Record<string, unknown>) : {};
-  const toolCallId = `spark-${tool}`;
+async function callSpark(
+  endpoint: SparkEndpoint,
+  call: { id: string; tool: string; args: Record<string, unknown> },
+  update: Update,
+): Promise<string> {
   await update({
     sessionUpdate: 'tool_call',
-    toolCallId,
-    title: `mcp__${endpoint.name}__${tool}`,
+    toolCallId: call.id,
+    title: `mcp__${endpoint.name}__${call.tool}`,
     kind: 'other',
     status: 'in_progress',
-    rawInput: args,
+    rawInput: call.args,
   });
   const client = new Client({ name: 'fake-acp-agent', version: '1.0.0' });
   await client.connect(
@@ -66,19 +63,59 @@ export async function sparkTurn(
     }) as Transport,
   );
   try {
-    const result = (await client.callTool({ name: tool, arguments: args })) as {
+    const result = (await client.callTool({ name: call.tool, arguments: call.args })) as {
       content: { type: string; text?: string }[];
     };
     const output = result.content.map((block) => block.text ?? '').join('');
     await update({
       sessionUpdate: 'tool_call_update',
-      toolCallId,
+      toolCallId: call.id,
       status: 'completed',
       rawOutput: { text: output },
     });
-    await say(`spark ${tool}=${output}`);
+    return output;
   } finally {
     await client.close();
   }
+}
+
+async function scriptTurn(
+  steps: readonly ScriptStep[],
+  endpoint: SparkEndpoint,
+  update: Update,
+  say: (chunk: string) => Promise<void>,
+): Promise<void> {
+  for (const [index, step] of steps.entries()) {
+    if ('say' in step) await say(step.say);
+    else if ('waitFor' in step) while (!existsSync(step.waitFor)) await pause(25);
+    else {
+      const call = { id: `spark-script-${index}`, tool: step.tool, args: step.args ?? {} };
+      await callSpark(endpoint, call, update);
+    }
+  }
+}
+
+export async function sparkTurn(
+  text: string,
+  servers: unknown,
+  update: Update,
+  say: (chunk: string) => Promise<void>,
+): Promise<acp.StopReason | null> {
+  const script = SCRIPT_TRIGGER.exec(text)?.[1];
+  const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
+  if (!script && !match) return null;
+  const endpoint = fromAcp(servers) ?? fromCodexConfig(process.env.CODEX_CONFIG);
+  if (!endpoint) {
+    await say('spark=missing');
+    return 'end_turn';
+  }
+  if (script) {
+    await scriptTurn(JSON.parse(script) as ScriptStep[], endpoint, update, say);
+    return 'end_turn';
+  }
+  const tool = match![1]!;
+  const args = match![2] ? (JSON.parse(match![2]) as Record<string, unknown>) : {};
+  const output = await callSpark(endpoint, { id: `spark-${tool}`, tool, args }, update);
+  await say(`spark ${tool}=${output}`);
   return 'end_turn';
 }

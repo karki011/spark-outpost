@@ -13,7 +13,8 @@ import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
-import { BrowserShots } from './../browser/BrowserShots.tsx';
+import { ShotReply } from '../browser/ShotReply.tsx';
+import { turnShots } from '../browser/browser-check.ts';
 import { RailFlags } from './approvals/RailFlags.tsx';
 import { RevertRun } from './approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
@@ -197,9 +198,10 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       )}
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
-      <BrowserShots detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}
-      {text && <Markdown text={text} streaming={leads && active} />}
+      <ShotReply text={text} shots={turnShots(detail, run.id)}>
+        {(part, last) => <Markdown text={part} streaming={last && leads && active} />}
+      </ShotReply>
       {cards.pending.map(approvalCard)}
       <ReplyPlanAction
         detail={detail}

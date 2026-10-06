@@ -413,6 +413,24 @@ describe('spark_browser_screenshot', () => {
     ]);
   });
 
+  it('stores where in the reply each screenshot was taken, and nothing for a run without a reply', async () => {
+    await start();
+    await call('spark_browser_screenshot');
+    let said = { shown: 'Opening the form.\n\nIt ', held: 6 };
+    recorded.hooks.replySoFar = () => said;
+    await call('spark_browser_screenshot');
+    said = { shown: `${'x'.repeat(100)}\u{1F600}${'y'.repeat(79)}`, held: 0 };
+    await call('spark_browser_screenshot');
+    const detail = await getConversationDetail(t.db, chat.conversationId);
+    expect(
+      detail!.browserShots!.map((shot) => [shot.textOffset, shot.textBefore, shot.textHeld]),
+    ).toEqual([
+      [null, null, null],
+      [28, 'Opening the form.\n\nIt ', 6],
+      [181, 'y'.repeat(79), 0],
+    ]);
+  });
+
   it('writes one audit entry for a screenshot of an external page, with the card and the hash', async () => {
     await start({ mode: 'bypassPermissions' });
     fake.page = EXTERNAL;

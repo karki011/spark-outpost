@@ -209,6 +209,9 @@ export const browserShotSchema = z.object({
   title: z.string(),
   width: z.number().int(),
   height: z.number().int(),
+  textOffset: z.number().int().nonnegative().nullable(),
+  textBefore: z.string().nullable(),
+  textHeld: z.number().int().nonnegative().nullable(),
   createdAt: z.string(),
 });
 export type BrowserShot = z.infer<typeof browserShotSchema>;

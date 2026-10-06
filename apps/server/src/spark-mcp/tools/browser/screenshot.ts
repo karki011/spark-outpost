@@ -4,7 +4,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { BROWSER_SCREENSHOT_ACTIVITY, originAndPath } from '@spark-outpost/contracts';
 import { saveAttachment } from '../../../persistence/attachments.ts';
-import { insertBrowserShot } from '../../../persistence/browser-screenshots.ts';
+import { insertBrowserShot, shotAnchor } from '../../../persistence/browser-screenshots.ts';
 import { zaiModelFor } from '../../../agents/acp/zai.ts';
 import type { Queryable } from '../../../persistence/db.ts';
 import { LeaseLostError } from '../../../persistence/run-events.ts';
@@ -69,6 +69,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     data,
   });
   if (scope.runId) {
+    const said = scope.actions?.replySoFar?.();
     const shotId = await insertBrowserShot(deps.db, {
       runId: scope.runId,
       attachment,
@@ -77,6 +78,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
       width: shot.width,
       height: shot.height,
       sha256,
+      anchor: said ? shotAnchor(said.shown, said.held) : null,
     });
     await scope.actions
       ?.append(
