@@ -41,7 +41,7 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 Web: `suggestSpark` (`apps/web/src/teammates/spark-match.ts`) offers one chip, **Ask Pip (Code reviewer)?**, in the context bar when the draft matches a Spark's name (3 points), its role's concept group such as review, docs, bug, test (2), or a significant role word (1), at 2 points or more; ties go to the earliest matching word. A role with no known concept falls back to the first concept word of the instructions. One-word drafts, slash commands and drafts with a mention get no chip; a dismissed chip stays away until the draft is emptied. The `@` picker lists Sparks above project files. `TurnSection` shows **Handed to** tags on the user message and the Spark's block with its face, name and role; a turn only Sparks worked on shows no main agent block and hides the hand-off note.
 
-Not built yet: a `spark_ask_spark` tool for the main agent to delegate, parallel mentions, Sparks that change files, and the turn budget for Spark subagents.
+Not built yet: a `spark_ask_spark` tool for the main agent to delegate, parallel mentions, and Sparks that change files.
 
 ## API
 
