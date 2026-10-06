@@ -1,3 +1,5 @@
+import { isRemote } from '../remote/principal.ts';
+import { isGitInternalPath } from '../remote/redaction.ts';
 import { Router, type Request } from 'express';
 import {
   ATTACHMENT_TEXT_MAX_BYTES,
@@ -77,6 +79,8 @@ async function readForAttachment(policy: PathPolicy, requested: string) {
   }
 }
 
+const ONLY_ON_MAC = 'This file is only shown on your Mac.';
+
 export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): Router {
   const router = Router();
 
@@ -147,6 +151,10 @@ export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): R
   router.get('/projects/:id/file', async (req, res) => {
     const requested = queryText(req, 'path');
     if (!requested) throw new BadRequestError('Name a file to open.');
+    if (isRemote(res) && isGitInternalPath(requested)) {
+      res.status(403).json({ error: ONLY_ON_MAC });
+      return;
+    }
     const policy = await openProject(db, workspaceId, paramId(req));
     const file = await readForAttachment(policy, requested);
     if (file.data.includes(0)) {
@@ -162,6 +170,10 @@ export function projectRoutes({ db, workspaceId, secrets }: ProjectRouteDeps): R
 
   router.post('/projects/:id/attachments', async (req, res) => {
     const { path } = parseBody(attachProjectFileRequestSchema, req);
+    if (isRemote(res) && isGitInternalPath(path)) {
+      res.status(403).json({ error: ONLY_ON_MAC });
+      return;
+    }
     const policy = await openProject(db, workspaceId, paramId(req));
     const file = await readForAttachment(policy, path);
     if (file.data.length > ATTACHMENT_TEXT_MAX_BYTES) throw new BadRequestError(TOO_LARGE);

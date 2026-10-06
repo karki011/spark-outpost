@@ -1,3 +1,4 @@
+import { setupStateFor } from '../remote/redaction.ts';
 import { Router, type Request, type Response } from 'express';
 import { forgetRejectedModels } from '../model-access/store.ts';
 import {
@@ -77,7 +78,7 @@ export function setupRoutes(deps: SetupDeps): Router {
   });
 
   router.get('/setup', async (_req, res) => {
-    res.json(await setupState());
+    res.json(setupStateFor(res, await setupState()));
   });
 
   router.get('/setup/git', async (_req, res) => {

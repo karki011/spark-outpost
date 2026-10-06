@@ -94,6 +94,10 @@ describe('never from a phone', () => {
     await phone.send('delete', `/api/remote/devices/${device.id}`).expect(403);
     await phone.send('post', '/api/remote/devices/disconnect-all').expect(403);
     await phone.send('put', '/api/remote/access', { hostname: 'evil.example.com' }).expect(403);
+    await phone.get('/api/remote/tailscale').expect(403);
+    await phone.send('post', '/api/remote/tailscale/on').expect(403);
+    await phone.send('post', '/api/remote/tailscale/off').expect(403);
+    await phone.send('post', '/api/setup/git/install').expect(403);
     await phone.send('post', '/API/Terminal/Sessions/').expect(403);
   });
 
@@ -116,7 +120,20 @@ describe('never from a phone', () => {
 });
 
 describe('switches', () => {
-  it('start at the proposed defaults and can be read from a phone', async () => {
+  it('start with everything on except managing devices', () => {
+    expect(REMOTE_SWITCH_DEFAULTS).toEqual({
+      settings: true,
+      connections: true,
+      projects: true,
+      agentMode: true,
+      highRiskCards: true,
+      signIns: true,
+      reset: true,
+      devices: false,
+    });
+  });
+
+  it('start at the defaults and can be read from a phone', async () => {
     expect((await phone.get('/api/remote/switches').expect(200)).body).toEqual(
       REMOTE_SWITCH_DEFAULTS,
     );
@@ -126,18 +143,51 @@ describe('switches', () => {
   });
 
   it('cannot be written from a phone', async () => {
-    await phone.send('patch', '/api/remote/switches', { reset: true }).expect(403);
-    expect((await phone.get('/api/remote/switches')).body.reset).toBe(false);
-    await localClient(app).send('patch', '/api/remote/switches', { reset: true }).expect(200);
+    await phone.send('patch', '/api/remote/switches', { devices: true }).expect(403);
+    await phone.send('patch', '/api/remote/switches', { reset: false }).expect(403);
     expect((await phone.get('/api/remote/switches')).body.reset).toBe(true);
+    await localClient(app).send('patch', '/api/remote/switches', { reset: false }).expect(200);
+    expect((await phone.get('/api/remote/switches')).body.reset).toBe(false);
     await localClient(app).send('patch', '/api/remote/switches', {}).expect(400);
     await localClient(app).send('patch', '/api/remote/switches', { other: true }).expect(400);
   });
 
-  it('settings: profile changes', async () => {
+  it('settings: profile changes and trusting a folder', async () => {
+    const id = crypto.randomUUID();
     await phone.send('patch', '/api/profile', { name: 'Hari' }).expect(200);
+    const trust = await phone.send('put', `/api/projects/${id}/agent-config/trust`, {});
+    expect(trust.status).not.toBe(403);
+    const redirects = await phone.send(
+      'put',
+      `/api/projects/${id}/agent-config/trust/redirects`,
+      {},
+    );
+    expect(redirects.status).not.toBe(403);
     await setSwitches(app, { settings: false });
     await phone.send('patch', '/api/profile', { name: 'Other' }).expect(403);
+    await phone.send('put', `/api/projects/${id}/agent-config/trust`, {}).expect(403);
+    await phone.send('put', `/api/projects/${id}/agent-config/trust/redirects`, {}).expect(403);
+  });
+
+  it('opening a pull request is always allowed', async () => {
+    const shipped = await phone.send('post', `/api/tasks/${crypto.randomUUID()}/ship`, {});
+    expect(shipped.status).not.toBe(403);
+    await setSwitches(app, { settings: false, connections: false, reset: false });
+    const again = await phone.send('post', `/api/tasks/${crypto.randomUUID()}/ship`, {});
+    expect(again.status).not.toBe(403);
+  });
+
+  it('tells the web app it runs on a phone, and which one', async () => {
+    expect((await phone.get('/api/remote/session').expect(200)).body).toEqual({
+      remote: true,
+      device: { id: device.id, name: 'Test phone' },
+      address: 'https://mac.tail1234.ts.net',
+      switches: REMOTE_SWITCH_DEFAULTS,
+    });
+    expect((await localClient(app).get('/api/remote/session').expect(200)).body).toMatchObject({
+      remote: false,
+      device: null,
+    });
   });
 
   it('connections: provider and MCP changes', async () => {
@@ -146,7 +196,10 @@ describe('switches', () => {
     await setSwitches(app, { connections: false });
     await phone.send('delete', '/api/providers/claude/connection').expect(403);
     await phone.send('post', '/api/mcp/servers', {}).expect(403);
-    await phone.get('/api/mcp/servers').expect(200);
+    await phone.get('/api/mcp/servers').expect(403);
+    await phone.get('/api/github/app/sign-in').expect(403);
+    await phone.get('/api/slack/sign-in').expect(403);
+    await phone.get(`/api/conversations/${crypto.randomUUID()}/mcp`).expect(200);
   });
 
   it('projects: folder listing and linking', async () => {
@@ -206,24 +259,27 @@ describe('switches', () => {
     await localClient(app).send('post', `/api/approvals/${second.id}/decision`, allow).expect(200);
   });
 
-  it('sign-ins: off by default, reads stay open', async () => {
+  it('sign-ins: on by default, off blocks writes and reads stay open', async () => {
     const id = crypto.randomUUID();
-    await phone.send('post', `/api/projects/${id}/sign-ins`, {}).expect(403);
-    await phone.send('delete', `/api/projects/${id}/sign-ins/${id}`).expect(403);
-    await setSwitches(app, { signIns: true });
     const allowed = await phone.send('post', `/api/projects/${id}/sign-ins`, {});
     expect(allowed.status).not.toBe(403);
+    await setSwitches(app, { signIns: false });
+    await phone.send('post', `/api/projects/${id}/sign-ins`, {}).expect(403);
+    await phone.send('delete', `/api/projects/${id}/sign-ins/${id}`).expect(403);
+    expect((await phone.get(`/api/projects/${id}/sign-ins`)).status).not.toBe(403);
   });
 
-  it('reset: off by default for reset and deleting chats', async () => {
-    const id = crypto.randomUUID();
-    await phone.send('post', '/api/conversations', { id }).expect(201);
-    await phone.send('post', '/api/reset', { keepApiKeys: true }).expect(403);
-    await phone.send('delete', `/api/conversations/${id}`).expect(403);
-    await phone.get(`/api/conversations/${id}`).expect(200);
-    await setSwitches(app, { reset: true });
-    const deleted = await phone.send('delete', `/api/conversations/${id}`);
+  it('reset: on by default, off blocks reset and deleting chats', async () => {
+    const first = crypto.randomUUID();
+    const second = crypto.randomUUID();
+    await phone.send('post', '/api/conversations', { id: first }).expect(201);
+    await phone.send('post', '/api/conversations', { id: second }).expect(201);
+    const deleted = await phone.send('delete', `/api/conversations/${first}`);
     expect(deleted.status).not.toBe(403);
+    await setSwitches(app, { reset: false });
+    await phone.send('post', '/api/reset', { keepApiKeys: true }).expect(403);
+    await phone.send('delete', `/api/conversations/${second}`).expect(403);
+    await phone.get(`/api/conversations/${second}`).expect(200);
   });
 });
 

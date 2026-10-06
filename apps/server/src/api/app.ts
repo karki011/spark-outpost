@@ -79,7 +79,7 @@ function trackRequests(work: ActiveWork) {
   };
 }
 
-export function createApp(options: AppOptions) {
+export function createAppParts(options: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   if (options.activeWork) app.use(trackRequests(options.activeWork));
@@ -151,5 +151,9 @@ export function createApp(options: AppOptions) {
     }
     res.status(status).json({ error: message });
   });
-  return app;
+  return { app, reconcileRemote: remote.reconcile };
+}
+
+export function createApp(options: AppOptions) {
+  return createAppParts(options).app;
 }

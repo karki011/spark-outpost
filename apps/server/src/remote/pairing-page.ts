@@ -1,34 +1,44 @@
 import { randomBytes } from 'node:crypto';
 import type { Response } from 'express';
-import { REMOTE_DEVICE_NAME_MAX } from '@spark-outpost/contracts';
+import {
+  REMOTE_DEVICE_NAME_MAX,
+  SCOUT_ANTENNA,
+  SCOUT_BODY,
+  SCOUT_SPARK,
+} from '@spark-outpost/contracts';
+import { PAIRING_PAGE_STYLES } from './pairing-page-styles.ts';
 
 const POLL_MS = 2000;
+const PAIRED_MOMENT_MS = 1200;
 
-const STYLES = `
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-    background: var(--bg); color: var(--text);
-    font: 16px/1.5 system-ui, -apple-system, sans-serif; }
-  main { width: min(22rem, calc(100vw - 2rem)); padding: 1.5rem; box-sizing: border-box;
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
-  h1 { margin: 0 0 0.5rem; font-size: 1.25rem; }
-  p { margin: 0 0 1rem; color: var(--muted); }
-  label { display: block; margin: 0 0 0.25rem; font-weight: 600; }
-  input { width: 100%; box-sizing: border-box; margin: 0 0 1rem; padding: 0.625rem 0.75rem;
-    font: inherit; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line-strong); border-radius: var(--r-sm); }
-  button { width: 100%; padding: 0.75rem; font: inherit; font-weight: 600; cursor: pointer;
-    color: var(--accent-ink); background: var(--accent); border: 0; border-radius: var(--r-sm); }
-  button:disabled { opacity: 0.6; cursor: default; }
-  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
-  .match { font-size: 2rem; font-weight: 700; letter-spacing: 0.08em; text-align: center;
-    color: var(--text); }
-  #status { min-height: 1.5rem; margin: 1rem 0 0; }
-  #status[data-kind="error"] { color: var(--danger); }
-`;
+const BLOB = `
+<svg class="blob" viewBox="0 0 64 64" width="88" height="88" aria-hidden="true">
+<g class="hop"><g class="body">
+<path class="ant" d="${SCOUT_ANTENNA}" fill="none" stroke-width="3" stroke-linecap="round"/>
+<path class="spark" d="${SCOUT_SPARK}"/>
+<path class="skin" d="${SCOUT_BODY}"/>
+<circle class="cheek" cx="18.5" cy="46.5" r="2.7"/>
+<circle class="cheek" cx="45.5" cy="46.5" r="2.7"/>
+<g class="look">
+<rect class="eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/>
+<rect class="eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/>
+<path class="smile" d="M22.4 40.5Q25.3 34.5 28.2 40.5M35.8 40.5Q38.7 34.5 41.6 40.5"/>
+</g></g></g>
+</svg>`;
 
 const SCRIPT = `
+  const main = document.querySelector('main');
   const form = document.getElementById('pair');
   const wait = document.getElementById('wait');
+  const done = document.getElementById('done');
+  const retry = document.getElementById('retry');
+  const show = (stage) => {
+    main.dataset.stage = stage;
+    form.hidden = stage !== 'enter';
+    wait.hidden = stage !== 'waiting';
+    done.hidden = stage !== 'paired';
+    retry.hidden = stage !== 'ended';
+  };
   const status = document.getElementById('status');
   const code = document.getElementById('code');
   const fromLink = new URLSearchParams(location.hash.slice(1)).get('code');
@@ -48,17 +58,19 @@ const SCRIPT = `
     });
   const failed = async (response) => {
     const body = await response.json().catch(() => ({}));
-    form.hidden = false;
-    wait.hidden = true;
     form.querySelector('button').disabled = false;
+    show('ended');
     say(body.error || 'Pairing did not work. Try again.', 'error');
+    retry.focus();
   };
   const poll = async (claim) => {
     const response = await post('/api/remote/pair/claim', { claim }).catch(() => null);
     if (response && response.ok) {
       const body = await response.json();
       if (body.status === 'paired') {
-        location.replace('/');
+        show('paired');
+        say('Paired. Opening Spark Outpost…');
+        setTimeout(() => location.replace('/'), ${PAIRED_MOMENT_MS});
         return;
       }
     } else if (response) {
@@ -67,6 +79,12 @@ const SCRIPT = `
     }
     setTimeout(() => poll(claim), ${POLL_MS});
   };
+  retry.addEventListener('click', () => {
+    code.value = '';
+    show('enter');
+    say('');
+    code.focus();
+  });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     form.querySelector('button').disabled = true;
@@ -86,8 +104,7 @@ const SCRIPT = `
     }
     const body = await response.json();
     document.getElementById('match').textContent = body.matchCode;
-    form.hidden = true;
-    wait.hidden = false;
+    show('waiting');
     say('Waiting for you to confirm on your Mac…');
     poll(body.claim);
   });
@@ -102,10 +119,11 @@ function page(nonce: string): string {
 <meta name="robots" content="noindex">
 <title>Pair with Spark Outpost</title>
 <link rel="stylesheet" href="/theme.css">
-<style nonce="${nonce}">${STYLES}</style>
+<style nonce="${nonce}">${PAIRING_PAGE_STYLES}</style>
 </head>
 <body>
-<main>
+<main data-stage="enter">
+<div class="scene">${BLOB}<i class="shadow"></i></div>
 <h1>Pair this device</h1>
 <form id="pair">
 <p>Start pairing in Spark Outpost on your Mac, then type the code it shows.</p>
@@ -116,9 +134,13 @@ function page(nonce: string): string {
 <button type="submit">Pair</button>
 </form>
 <section id="wait" hidden>
-<p>Check that your Mac shows this code, then confirm there.</p>
+<p>Confirm on your Mac. It should show this code.</p>
 <p class="match" id="match"></p>
 </section>
+<section id="done" hidden>
+<p>This device is paired.</p>
+</section>
+<button type="button" id="retry" hidden>Try again</button>
 <p id="status" role="status" aria-live="polite"></p>
 </main>
 <script nonce="${nonce}">${SCRIPT}</script>

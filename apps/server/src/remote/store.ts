@@ -265,3 +265,23 @@ export async function approvalPayload(
   );
   return rows[0]?.payload ?? null;
 }
+
+export async function serveTarget(db: Queryable, workspaceId: string): Promise<string | null> {
+  const { rows } = await db.query<{ serve_target: string | null }>(
+    'SELECT serve_target FROM remote_access_settings WHERE workspace_id = $1',
+    [workspaceId],
+  );
+  return rows[0]?.serve_target ?? null;
+}
+
+export async function saveServeTarget(
+  db: Queryable,
+  workspaceId: string,
+  target: string | null,
+): Promise<void> {
+  await db.query(
+    `INSERT INTO remote_access_settings (workspace_id, serve_target) VALUES ($1, $2)
+     ON CONFLICT (workspace_id) DO UPDATE SET serve_target = $2, updated_at = now()`,
+    [workspaceId, target],
+  );
+}

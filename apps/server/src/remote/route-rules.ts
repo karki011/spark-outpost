@@ -7,8 +7,8 @@ GET /{*path}
 GET /api/health
 GET /api/events
 GET /api/remote/switches
+GET /api/remote/session
 GET /api/agent-config/trust
-GET /api/projects/:id/agent-config
 GET /api/analytics/harness
 GET /api/analytics/overview
 GET /api/analytics/rollups
@@ -47,7 +47,6 @@ PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
 POST /api/conversations/:id/read
 PUT /api/conversations/pinned-order
-GET /api/github/app/sign-in
 GET /api/home/digest
 GET /api/home/today
 GET /api/providers/health
@@ -63,7 +62,6 @@ GET /api/projects/:id/map/areas/:areaId
 GET /api/projects/:id/map/neighbors
 PUT /api/projects/:id/map/areas/:areaId/category
 GET /api/conversations/:id/mcp
-GET /api/mcp/servers
 GET /api/model-cards
 GET /api/runs/:id/outcome
 PUT /api/runs/:id/feedback
@@ -104,11 +102,11 @@ GET /api/conversations/:id/pr-route
 GET /api/conversations/:id/pushes
 GET /api/github/connection
 GET /api/tasks/:id/ship
+POST /api/tasks/:id/ship
 GET /api/projects/:id/sign-ins
 GET /api/slack
 GET /api/slack/channels
 GET /api/slack/direct-messages
-GET /api/slack/sign-in
 POST /api/slack/context
 POST /api/slack/presence
 POST /api/slack/start
@@ -156,6 +154,9 @@ POST /api/remote/pairings
 POST /api/remote/pairings/:id/confirm
 POST /api/remote/pairings/:id/deny
 GET /api/remote/audit
+GET /api/remote/tailscale
+POST /api/remote/tailscale/on
+POST /api/remote/tailscale/off
 DELETE /api/terminal/sessions/:id
 GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
@@ -170,9 +171,6 @@ POST /api/conversations/:id/workspace/open
 GET /api/diagnostics/export
 GET /api/instructions-file
 POST /api/setup/git/install
-PUT /api/projects/:id/agent-config/trust
-PUT /api/projects/:id/agent-config/trust/redirects
-POST /api/tasks/:id/ship
 `;
 
 const PAIRING = `
@@ -182,8 +180,11 @@ POST /api/remote/pair/claim
 
 const BEHIND_SWITCH: Record<RemoteSwitch, string> = {
   settings: `
+GET /api/projects/:id/agent-config
 PATCH /api/projects/:id/agent-config
 PUT /api/projects/:id/agent-config/mcp/:name
+PUT /api/projects/:id/agent-config/trust
+PUT /api/projects/:id/agent-config/trust/redirects
 PATCH /api/projects/:id
 PATCH /api/profile
 PATCH /api/providers/:provider/defaults
@@ -194,6 +195,9 @@ PATCH /api/teammates/:id
 DELETE /api/teammates/:id
 `,
   connections: `
+GET /api/github/app/sign-in
+GET /api/mcp/servers
+GET /api/slack/sign-in
 DELETE /api/github/app
 DELETE /api/github/app/sign-in
 POST /api/github/app/repos

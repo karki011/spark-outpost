@@ -29,7 +29,7 @@ import { probeCapabilities } from '../agents/acp/probe.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
-import { createApp } from './app.ts';
+import { createAppParts } from './app.ts';
 import { takeLaunchToken } from './launch-token.ts';
 import { gitHubDepsOf } from './ship-routes.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
@@ -118,7 +118,7 @@ const terminals = new TerminalSessions(
 );
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
-const app = createApp({
+const { app, reconcileRemote } = createAppParts({
   clones,
   cloneTest: cloneDeps.cloneTest,
   db,
@@ -182,6 +182,9 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
   void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
   void slackSocket.refresh();
+  reconcileRemote().catch((error: unknown) => {
+    console.error('Could not check Tailscale Serve', (error as Error).message);
+  });
 });
 attachTerminalSockets(server, terminals, {
   port: config.API_PORT,

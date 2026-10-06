@@ -36,10 +36,12 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   projects: true,
   agentMode: true,
   highRiskCards: true,
-  signIns: false,
-  reset: false,
+  signIns: true,
+  reset: true,
   devices: false,
 };
+
+export const REMOTE_MAC_ONLY_SWITCHES: readonly RemoteSwitch[] = ['devices'];
 
 export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   settings: 'Change settings',
@@ -130,6 +132,36 @@ export const pairingClaimRequestSchema = z.object({ claim: z.string().min(1).max
 
 export const pairingClaimResponseSchema = z.object({ status: z.enum(['waiting', 'paired']) });
 export type PairingClaimResponse = z.infer<typeof pairingClaimResponseSchema>;
+
+export const remoteSessionSchema = z.object({
+  remote: z.boolean(),
+  device: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+  address: z.string().nullable(),
+  switches: remoteSwitchesSchema,
+});
+export type RemoteSession = z.infer<typeof remoteSessionSchema>;
+
+export const tailscaleStatusSchema = z.enum([
+  'not_installed',
+  'signed_out',
+  'https_off',
+  'off',
+  'on',
+  'error',
+]);
+export type TailscaleStatus = z.infer<typeof tailscaleStatusSchema>;
+
+export const tailscaleStateSchema = z.object({
+  status: tailscaleStatusSchema,
+  hostname: z.string().nullable(),
+  address: z.string().nullable(),
+  message: z.string().nullable(),
+});
+export type TailscaleState = z.infer<typeof tailscaleStateSchema>;
+
+export function pairingLink(hostname: string, code: string): string {
+  return `https://${hostname}/#code=${code}`;
+}
 
 export const remoteAuditActionSchema = z.enum([
   'hostname_changed',

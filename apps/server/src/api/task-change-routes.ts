@@ -1,3 +1,5 @@
+import { isRemote } from '../remote/principal.ts';
+import { isSecretPath } from '../projects/path-policy.ts';
 import { Router } from 'express';
 import {
   changeDiffQuerySchema,
@@ -67,7 +69,8 @@ export function taskChangeRoutes({ db, workspaceId }: TaskChangeRouteDeps): Rout
       return;
     }
     const entry = toEntry(found);
-    const contents = canShowText(entry) ? await sets.fileContents(set, found) : null;
+    const hidden = isRemote(res) && isSecretPath(path);
+    const contents = canShowText(entry) && !hidden ? await sets.fileContents(set, found) : null;
     res.json(changeDiff(entry, contents, lines));
   });
 
