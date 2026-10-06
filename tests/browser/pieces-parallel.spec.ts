@@ -154,6 +154,7 @@ test('Full auto builds each piece in its own copy of the chat worktree', async (
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(page, `${REQUEST} #manifest`);
+  await buildThePlan(page);
 
   await expect(board(page)).toContainText('3 pieces, in worktrees · 3 landed', {
     timeout: 90_000,

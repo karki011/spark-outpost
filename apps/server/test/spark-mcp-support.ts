@@ -6,6 +6,7 @@ import {
   SPARK_ACTION_OPTION,
   sparkResultFinished,
   type Approval,
+  type InvolvementLevel,
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { decideApproval, getApproval, type UserDecision } from '../src/persistence/approvals.ts';
@@ -163,6 +164,14 @@ export async function confirmCard(
 }
 
 export async function fullAutoChat(t: TestDb, conversationId: string): Promise<void> {
+  await chatAtLevel(t, conversationId, 'full-auto');
+}
+
+export async function chatAtLevel(
+  t: TestDb,
+  conversationId: string,
+  level: InvolvementLevel,
+): Promise<void> {
   await t.db.query(
     `INSERT INTO provider_connections
        (workspace_id, provider, method, detail, models, model, permission, effort, verified_at)
@@ -170,5 +179,5 @@ export async function fullAutoChat(t: TestDb, conversationId: string): Promise<v
      ON CONFLICT DO NOTHING`,
     [t.workspaceId],
   );
-  await updateChatSettings(t.db, conversationId, { provider: 'claude', level: 'full-auto' });
+  await updateChatSettings(t.db, conversationId, { provider: 'claude', level });
 }

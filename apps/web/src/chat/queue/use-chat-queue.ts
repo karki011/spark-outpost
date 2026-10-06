@@ -4,6 +4,7 @@ import type { ConversationDetail, QueuedMessage, QueueResponse } from '@spark-ou
 import { ApiError, queryKeys } from '../../api/client.ts';
 import { inOrder, movedIds, queuedItem } from './queue-model.ts';
 import { queueApi } from './queue-api.ts';
+import { withSteer } from '../steer/steer-model.ts';
 
 const NO_QUEUE: QueuedMessage[] = [];
 
@@ -62,6 +63,22 @@ function applied(queue: readonly QueuedMessage[], change: Change): QueuedMessage
   }
 }
 
+function sentNow(
+  queue: readonly QueuedMessage[],
+  change: Change,
+): { id: string; content: string } | null {
+  if (change.kind === 'first') return change;
+  if (change.kind === 'send') return queue.find((item) => item.id === change.id) ?? null;
+  return null;
+}
+
+function afterChange(detail: ConversationDetail, change: Change, now: string): ConversationDetail {
+  const queue = detail.queue ?? NO_QUEUE;
+  const steer = sentNow(queue, change);
+  const next = { ...detail, queue: applied(queue, change) };
+  return steer ? withSteer(next, steer.id, steer.content, now) : next;
+}
+
 export function useChatQueue(
   conversationId: string,
   queue: readonly QueuedMessage[] | undefined,
@@ -78,7 +95,10 @@ export function useChatQueue(
     retry: (failures, error) => failures < 2 && error instanceof ApiError && error.status === 0,
     onMutate: async (change) => {
       await queryClient.cancelQueries({ queryKey: key });
-      setQueue((current) => applied(current, change));
+      const now = new Date().toISOString();
+      queryClient.setQueryData<ConversationDetail>(key, (detail) =>
+        detail ? afterChange(detail, change, now) : detail,
+      );
     },
     onSuccess: (response, change) => {
       setQueue(() => response.queue);

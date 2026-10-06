@@ -112,7 +112,9 @@ test('Automatic goes with the best guesses when the wait runs out, and says so',
   await expect(resolved.getByRole('button', { name: 'Send' })).toHaveCount(0);
 });
 
-test('Full auto counts down to the best guesses, then to building the plan', async ({ page }) => {
+test('Full auto counts down to the best guesses, then waits on the plan for Build', async ({
+  page,
+}) => {
   test.setTimeout(90_000);
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
@@ -126,12 +128,16 @@ test('Full auto counts down to the best guesses, then to building the plan', asy
   });
 
   const plan = card(page, /Build this plan\?/);
-  await expect(plan.getByRole('button', { name: /^Building this plan in \ds$/ })).toBeVisible({
+  await expect(plan.getByRole('button', { name: 'Build', exact: true })).toBeVisible({
     timeout: 30_000,
   });
   await expect(plan.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
   await expect(plan.getByRole('button', { name: 'Stop' })).toBeVisible();
-  await expect(plan).toContainText('Continued automatically after 3s.', { timeout: 10_000 });
+  await expect(plan.getByRole('button', { name: /Building this plan in/ })).toHaveCount(0);
+  await page.waitForTimeout(4_000);
+  await expect(plan).not.toContainText('Continued automatically');
+  expect(repo.notes()).toBe('start\n');
+  await plan.getByRole('button', { name: 'Build', exact: true }).click();
   await expect.poll(() => repo.notes(), { timeout: 30_000 }).toBe('start\nstep 1\n');
 });
 

@@ -41,7 +41,8 @@ function sedFiles(args: readonly string[]): string[] {
       index += 1;
       continue;
     }
-    if (!arg.startsWith('-')) words.push(arg);
+    const suffix = arg === '' && args[index - 1] === '-i';
+    if (!arg.startsWith('-') && !suffix) words.push(arg);
   }
   return scripted ? words : words.slice(1);
 }

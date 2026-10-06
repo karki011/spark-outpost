@@ -306,6 +306,11 @@ describe('the chat queue', { timeout: 150_000 }, () => {
     await post(`/api/conversations/${conversationId}/queue/${id}/send-now`, {});
     await eventually(async () => (await memberMessage(id))?.status === 'delivered', 30_000);
     expect(await memberMessage(id)).toMatchObject({ delivered_run_id: builder.id });
+    const steered = await getConversationDetail(t.db, conversationId);
+    expect(steered?.memberMessages?.find((message) => message.id === id)).toMatchObject({
+      runId,
+      deliveredRunId: builder.id,
+    });
     const { orchestration } = await driveToEnd(t, conversationId, runId, answerEverything, 90_000);
     expect(orchestration.status).toBe('succeeded');
   });

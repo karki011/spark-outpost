@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
+import { SPARK_ACTION_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { conversationObservations } from '../src/persistence/observations.ts';
 import { conversationHasSlackContext } from '../src/persistence/slack.ts';
@@ -13,7 +13,7 @@ import {
   answerCard,
   cardResult,
   confirmCard,
-  fullAutoChat,
+  chatAtLevel,
   pendingCard,
   recordedHooks,
   startSparkTools,
@@ -55,9 +55,13 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-async function chatIn(message: string, mode: string | null = null, fullAuto = false) {
+async function chatIn(
+  message: string,
+  mode: string | null = null,
+  level: InvolvementLevel | null = null,
+) {
   chat = await startChat(t, message);
-  if (fullAuto) await fullAutoChat(t, chat.conversationId);
+  if (level) await chatAtLevel(t, chat.conversationId, level);
   if (mode) {
     await t.db.query(`UPDATE runs SET provider = 'claude', used_mode = $2 WHERE id = $1`, [
       chat.runId,
@@ -247,16 +251,16 @@ describe('spark_slack_post', () => {
     expect(stub.slack.posted).toHaveLength(0);
   });
 
-  it('posts at once in Auto, in Full auto, and in Accept edits when the user asked', async () => {
+  it('posts at once in Auto and in Accept edits when the user asked, and asks at Full auto in Manual', async () => {
     await chatIn('Do the work', 'auto');
     expect((await post({ channel: 'eng', text: 'From auto' })).json()).toMatchObject({
       outcome: 'done',
     });
     await tools!.close();
 
-    await chatIn('Do the work', 'default', true);
+    await chatIn('Do the work', 'default', 'full-auto');
     expect((await post({ channel: 'eng', text: 'From full auto' })).json()).toMatchObject({
-      outcome: 'done',
+      outcome: 'waiting_for_user',
     });
     await tools!.close();
 
@@ -270,11 +274,7 @@ describe('spark_slack_post', () => {
     expect((await post({ channel: 'eng', text: 'Not asked' })).json()).toMatchObject({
       outcome: 'waiting_for_user',
     });
-    expect(stub.slack.posted.map((entry) => entry.text)).toEqual([
-      'From auto',
-      'From full auto',
-      'Asked for',
-    ]);
+    expect(stub.slack.posted.map((entry) => entry.text)).toEqual(['From auto', 'Asked for']);
   });
 
   it('asks first after the run read Slack, even in Auto', async () => {

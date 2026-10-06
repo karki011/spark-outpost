@@ -1,9 +1,9 @@
 import path from 'node:path';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { pickPermission } from './crew-engine.ts';
 import { openChats } from './navigation.ts';
 
-export async function editedChat(page: Page, root: string): Promise<void> {
+export async function askForEdit(page: Page, root: string): Promise<void> {
   const response = await page.request.post('/api/projects', { data: { rootPath: root } });
   expect(response.ok()).toBe(true);
   await openChats(page);
@@ -21,10 +21,18 @@ export async function editedChat(page: Page, root: string): Promise<void> {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
-  await page
+  await expect(allowEdit(page)).toBeVisible({ timeout: 15_000 });
+}
+
+export function allowEdit(page: Page): Locator {
+  return page
     .getByRole('group', { name: /Change a file\?/ })
-    .getByRole('button', { name: 'Allow', exact: true })
-    .click();
+    .getByRole('button', { name: 'Allow', exact: true });
+}
+
+export async function editedChat(page: Page, root: string): Promise<void> {
+  await askForEdit(page, root);
+  await allowEdit(page).click();
   await expect(page.locator('.md', { hasText: 'fake-edit=allowed' })).toBeVisible({
     timeout: 15_000,
   });

@@ -94,6 +94,28 @@ async function pendingCard(runId: string) {
 }
 
 describe('the gate for a piece that shares its folder with other pieces', () => {
+  it('shows no card in Bypass permissions for reads and edits through shell variables', async () => {
+    const run = await doRun(t, root);
+    const gate = gateFor(run.runId, { mode: 'bypassPermissions' });
+    const signal = new AbortController().signal;
+    const commands = [
+      `R=${root}; cd $R; sed -n 20,60p store.ts`,
+      `R=${root}; cd $R; grep -rn "<Store" .`,
+      `R=${root}; cd $R; ls .`,
+      `R=${root}; cd $R; cat store.test.ts`,
+      `R=${root}; cd $R; P=store.ts; sed -i '' 's/a/b/' $P`,
+      `R=${root}; cd $R; H=store.ts; T=store.test.ts; wc -l $H $T`,
+      `R=${root}; cd $R; P=store.test.ts; rm $P`,
+      `cd ${root} && ls`,
+      `python3 - <<'EOF'\np='store.ts'\ns=open(p).read()\nopen(p,'w').write(s.replace("fetch(url)", "load(url)"))\nEOF`,
+    ];
+    for (const [index, command] of commands.entries()) {
+      const answer = await gate.review(noted(command, `call-${index}`), signal);
+      expect(answer, command).toMatchObject({ outcome: 'selected', allowed: true });
+    }
+    expect(await recorded(run.runId)).toEqual(commands.map(() => ['allowed', 'level', null]));
+  });
+
   it('answers a targeted check itself in Auto, with or without Claude’s note', async () => {
     const run = await doRun(t, root);
     const gate = gateFor(run.runId);

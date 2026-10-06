@@ -10,7 +10,7 @@ You'll read what the agent changed and keep or undo it. About 2 minutes.
 
 ## Read the diff
 
-1. Select the changed-lines chip in the chat header, or press **⌘⇧D**.
+1. Select the changed-lines chip in the chat header, or press **⌘D**.
 2. Pick a file on the left, or type in **Filter files**.
 3. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** to search.
 4. Press **Esc** to close the **Changes** drawer.

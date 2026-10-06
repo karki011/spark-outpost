@@ -14,6 +14,7 @@ interface MemberMessageRow {
   message_id: string | null;
   created_at: Date;
   delivered_at: Date | null;
+  delivered_run_id: string | null;
 }
 
 export interface NewMemberMessage {
@@ -36,6 +37,7 @@ function toMemberMessage(row: MemberMessageRow): MemberMessage {
     messageId: row.message_id,
     createdAt: row.created_at.toISOString(),
     deliveredAt: row.delivered_at ? row.delivered_at.toISOString() : null,
+    deliveredRunId: row.delivered_run_id,
   };
 }
 

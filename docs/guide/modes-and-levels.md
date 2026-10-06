@@ -36,9 +36,9 @@ The agent's mode is the provider's own setting, shown with the provider's names.
 
 ## Autonomy levels
 
-| Level                   | Plans                   | Keeping changes | Shipping                                 | Where it works                |
-| ----------------------- | ----------------------- | --------------- | ---------------------------------------- | ----------------------------- |
-| **Automatic** (default) | Wait for **Build**      | Kept by itself  | You ship                                 | Risky work in a worktree copy |
-| **Full auto → PR**      | Build after a countdown | Kept by itself  | Spark opens a PR, a draft if checks fail | A worktree copy               |
+| Level                        | Plans              | Keeping changes | Shipping                                 | Where it works                |
+| ---------------------------- | ------------------ | --------------- | ---------------------------------------- | ----------------------------- |
+| **Automatic**                | Wait for **Build** | Kept by itself  | You ship                                 | Risky work in a worktree copy |
+| **Full auto → PR** (default) | Wait for **Build** | Kept by itself  | Spark opens a PR, a draft if checks fail | A worktree copy               |
 
 Both levels keep **Revert to before this run**, and neither ever merges.

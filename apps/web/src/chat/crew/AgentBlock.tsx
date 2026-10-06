@@ -2,13 +2,11 @@ import { useId, useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
   type Approval,
-  type MemberMessage,
   type ModelSwitch,
   type Project,
 } from '@spark-outpost/contracts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
-import { MemberMessageList } from '../../crew/MemberMessageList.tsx';
 import '../../crew/member-chat.css';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
@@ -28,8 +26,6 @@ import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
 import { MemberReplyText } from './MemberReplyText.tsx';
 import { SparkCrewFace } from '../../teammates/SparkCrewFace.tsx';
-
-const NO_MESSAGES: readonly MemberMessage[] = [];
 
 const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
   id,
@@ -226,7 +222,6 @@ interface AgentBlockProps {
   repo: Project | null;
   after?: ReactNode;
   changes?: ReactNode;
-  messages?: readonly MemberMessage[];
 }
 
 function firstLine(text: string): string {
@@ -247,7 +242,6 @@ export function AgentBlock({
   conversationId,
   after,
   changes,
-  messages = NO_MESSAGES,
   ...body
 }: AgentBlockProps) {
   const [choice, setChoice] = useState<boolean | null>(null);
@@ -291,12 +285,6 @@ export function AgentBlock({
       ) : (
         <StreamedBody live={live} {...block} {...body} />
       )}
-      <MemberMessageList
-        name={agent.name}
-        live={live}
-        messages={messages}
-        className="mc-log agent-notes"
-      />
       {choice === true && (
         <button type="button" className="agent-unfold" onClick={() => setChoice(false)}>
           Collapse

@@ -247,7 +247,7 @@ test('the changes chip opens the drawer by shortcut, resizes and hands focus bac
 
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
-  await expect(chip).toBeFocused();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toBeFocused();
   await expect(chip).toHaveAttribute('aria-expanded', 'false');
   await page.keyboard.press('ControlOrMeta+Shift+D');
   await expect(drawer).toBeVisible();

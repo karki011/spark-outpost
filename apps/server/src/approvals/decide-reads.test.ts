@@ -57,7 +57,7 @@ describe('decide() asks when a command reads files it computes', () => {
     'head -c 200 .e$(echo nv)',
     'ls -A | grep "^\\.e" | xargs cat',
     'ls -A | xargs -I{} head -c 100 {}',
-    'F=.e; cat ${F}nv',
+    'F=.e; cat ${F}n$V',
     'cat "$1"',
     'while read f; do cat "$f"; done < files.txt',
     'for f; do cat "$f"; done',
@@ -120,6 +120,7 @@ describe('decide() asks when a command reads files it computes', () => {
     'while read l; do echo "$l"; done < .e*',
     'grep -r --include="*" TOKEN .',
     'grep -r --include=*.{env,x} TOKEN .',
+    'F=.e; cat ${F}nv',
   ])('names a secret the glob or walk reaches: %s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
   });

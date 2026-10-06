@@ -7,6 +7,8 @@ import {
   type InvolvementLevel,
   type PieceList,
 } from '@spark-outpost/contracts';
+import { decideApproval } from '../src/persistence/approvals.ts';
+import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
@@ -95,6 +97,20 @@ async function begin(tags: string, level: InvolvementLevel = 'hands-off') {
   });
   const scenario = withTag(NORMAL, `Split this up. ${tags}`);
   return startScenario(t, root, scenario, level, 'auto', 'sonnet', 'acceptEdits');
+}
+
+async function buildThePlan(conversationId: string): Promise<void> {
+  await eventually(async () => {
+    const detail = await getConversationDetail(t.db, conversationId);
+    const plan = detail?.approvals.find(
+      (approval) => approval.kind === 'plan' && approval.status === 'pending',
+    );
+    if (!plan) return null;
+    return decideApproval(t.db, t.workspaceId, plan.id, {
+      scope: 'once',
+      optionId: CHECKPOINT_OPTION.makeChange,
+    });
+  }, 60_000);
 }
 
 async function pieceList(runId: string): Promise<PieceList> {
@@ -433,7 +449,8 @@ describe('pieces in order', { timeout: 120_000 }, () => {
 
   it('marks the running piece failed with an unknown outcome after a crash', async () => {
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 10 });
-    const { runId } = await begin('#pieces #slowpiece', 'full-auto');
+    const { conversationId, runId } = await begin('#pieces #slowpiece', 'full-auto');
+    await buildThePlan(conversationId);
     await eventually(async () => {
       const taskId = (await loadOrchestration(t.db, runId))?.taskId;
       const list = taskId ? await currentPieceList(t.db, taskId) : null;

@@ -19,6 +19,11 @@ interface Launcher {
 type Args = readonly string[];
 
 const PYTHON = /^python[\d.]*$/;
+
+export function isPython(name: string): boolean {
+  return PYTHON.test(name);
+}
+
 const SCRIPT_FILE = /[/\\]|\.[cm]?[jt]sx?$/;
 const NODE_VALUES = [
   ...['-r', '--require', '--import', '--loader', '--experimental-loader', '--input-type'],

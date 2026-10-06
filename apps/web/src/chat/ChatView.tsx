@@ -181,7 +181,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   );
   const toggleDiff = () => {
     if (diff.request) diff.close();
-    else if (task) diff.open(task.id);
+    else diff.open(taskId);
   };
   const openPanelTab = useStableCallback((tab: WorkTab) => {
     setPanelTab(tab);
@@ -415,7 +415,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               {...(openAudit ? { onAudit: openAudit } : {})}
             />
           )}
-          <DiffDrawerHost state={diff} />
+          <DiffDrawerHost state={diff} taskId={taskId} />
           <AnimatePresence>
             {auditOpen && (
               <AuditDialog

@@ -3,7 +3,6 @@ import { actionPath, explicitlyAsked, type ActionFacts } from './action-policy.t
 
 const facts = (overrides: Partial<ActionFacts>): ActionFacts => ({
   posture: 'asks',
-  level: 'hands-off',
   requested: false,
   observed: false,
   ...overrides,
@@ -22,19 +21,13 @@ describe('actionPath', () => {
     expect(actionPath(facts({ posture }))).toBe(path);
   });
 
-  it('performs at Full auto → PR in any mode', () => {
-    expect(actionPath(facts({ posture: 'read_only', level: 'full-auto' }))).toBe('perform');
-  });
-
   it('performs in Accept edits only when the user asked', () => {
     expect(actionPath(facts({ posture: 'edits', requested: true }))).toBe('perform');
     expect(actionPath(facts({ posture: 'asks', requested: true }))).toBe('confirm');
   });
 
   it('always confirms after the run read sensitive data', () => {
-    expect(actionPath(facts({ posture: 'full_access', level: 'full-auto', observed: true }))).toBe(
-      'confirm',
-    );
+    expect(actionPath(facts({ posture: 'full_access', observed: true }))).toBe('confirm');
   });
 });
 

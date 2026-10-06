@@ -6,7 +6,8 @@ import type { FileLister } from './file-lister.ts';
 import { gitSubcommand } from './git-commands.ts';
 import { heredocBodies, herestrings, withoutHereText } from './inline-code.ts';
 import { readArgs } from './read-args.ts';
-import { scriptRun } from './script-runs.ts';
+import { usesNetwork } from './script-network.ts';
+import { isPython, scriptRun } from './script-runs.ts';
 import {
   UNKNOWN_HOST,
   bareHost,
@@ -67,9 +68,6 @@ const SENDING_VERBS = new Map<string, ReadonlySet<string>>([
 ]);
 const GIT_SENDS = new Set(['push', 'send-email']);
 const GIT_FETCHES = new Set(['clone', 'fetch', 'pull', 'ls-remote', 'archive']);
-const NETWORK_CODE =
-  /\b(?:requests|httpx|aiohttp|urllib\d?|urlopen|http\.client|socket|smtplib|ftplib|telnetlib|paramiko|websockets?|XMLHttpRequest|WebSocket|axios|undici|node-fetch|EventSource|sendBeacon|dgram|Net::HTTP|open-uri|HTTParty|Faraday|LWP|IO::Socket|HTTP::Tiny|curl_exec|curl_init|fsockopen|stream_socket_client)\b|\bfetch\s*\(|\bhttps?\.(?:request|get)\s*\(|\bnet\.(?:connect|createConnection|Socket)\b|\btls\.connect\b|\b(?:Deno|Bun)\.connect\b|\/inet\/|\/dev\/(?:tcp|udp)\//;
-
 const quoted = (name: string) => `\`${name}\``;
 
 function hostArgs(args: readonly string[]): string[] {
@@ -125,8 +123,8 @@ function gitReach(args: readonly string[]): Reach | null {
   return host ? { via: quoted(`git ${sub.name}`), hosts: [host] } : null;
 }
 
-function codeReach(code: string, via: string): Reach | null {
-  if (!NETWORK_CODE.test(code)) return null;
+function codeReach(code: string, via: string, python: boolean): Reach | null {
+  if (!usesNetwork(code, python)) return null;
   const hosts = codeHosts(code);
   return { via, hosts: hosts.length > 0 ? hosts : [UNKNOWN_HOST] };
 }
@@ -144,7 +142,7 @@ function scriptReach(program: readonly string[], scan: Scan): Reach | null {
   const script = scan.place.files.script(file);
   if (!script || script.committed || script.text === null) return null;
   const via = quoted(path.basename(file));
-  if (run.language !== 'shell') return codeReach(script.text, via);
+  if (run.language !== 'shell') return codeReach(script.text, via, file.endsWith('.py'));
   if (scan.depth >= MAX_DEPTH) return { via, hosts: [UNKNOWN_HOST] };
   const body = script.text
     .split('\n')
@@ -159,8 +157,11 @@ function interpreterReach(program: readonly string[], scan: Scan): Reach | null 
   const stdin = args.stdinCode
     ? [...heredocBodies(scan.command), ...herestrings(scan.command)]
     : [];
-  const via = quoted(programName(program));
-  const reaches = [...args.code, ...stdin].flatMap((code) => codeReach(code, via) ?? []);
+  const name = programName(program);
+  const python = isPython(name);
+  const reaches = [...args.code, ...stdin].flatMap(
+    (code) => codeReach(code, quoted(name), python) ?? [],
+  );
   return merge(reaches);
 }
 

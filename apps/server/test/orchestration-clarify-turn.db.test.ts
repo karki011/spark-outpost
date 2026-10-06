@@ -205,9 +205,11 @@ describe('a vague request asks the agent to clarify first', () => {
 });
 
 describe('Full auto: best guesses, plan first, then build and ship', () => {
-  it('goes with the defaults, builds the plan when its countdown runs out, and lists both in the PR', async () => {
+  it('goes with the defaults, waits on the plan for Build, and lists both in the PR', async () => {
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
-    const done = await run(VAGUE, 'full-auto', () => null);
+    const done = await run(VAGUE, 'full-auto', (approval) =>
+      approval.title === 'Build this plan?' ? { optionId: CHECKPOINT_OPTION.makeChange } : null,
+    );
     expect(done.orchestration.status).toBe('succeeded');
     const cards = done.orchestration.checkpoints.map((approval) => [
       approval.title,
@@ -216,9 +218,13 @@ describe('Full auto: best guesses, plan first, then build and ship', () => {
     expect(cards).toEqual(
       expect.arrayContaining([
         ['A few questions first', 'auto'],
-        ['Build this plan?', 'auto'],
+        ['Build this plan?', 'user'],
       ]),
     );
+    const plan = done.orchestration.checkpoints.find(
+      (approval) => approval.title === 'Build this plan?',
+    )!;
+    expect(plan.autoContinueAt ?? null).toBeNull();
     expect(done.clarify[0]).toMatchObject({ reply: 'defaults', defaultsUsed: true });
     expect(done.builderPrompts[0]).toContain('No answer, so go with the defaults.');
     expect(stub.github.pulls).toHaveLength(1);

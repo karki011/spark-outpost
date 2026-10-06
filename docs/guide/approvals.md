@@ -22,8 +22,7 @@ The checks run in Spark, not in the model, so nothing an agent says can approve 
 ## What never goes on without you
 
 - Approval cards, and protected paths in every mode and at both levels.
-- The plan card at **Automatic**, even in **Auto** or **Bypass permissions**.
-- Destructive plans and **Continue past the budget?**, at both levels.
+- The plan card and **Continue past the budget?**, at both levels and in every mode.
 - **Address PR feedback?** at **Automatic**.
 - Merging. Nothing ever merges.
 
@@ -37,7 +36,7 @@ In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't 
 
 ## Sending data out after reading secrets
 
-If a run has read sensitive data, such as a secret file you allowed, Spark asks before anything in that run sends data off your computer.
+After a run reads a secret file, a web page or tickets, Spark asks before it sends data out. Local scripts and this chat's history don't count.
 
 ## If you don't answer
 

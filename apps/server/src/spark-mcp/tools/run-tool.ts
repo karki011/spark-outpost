@@ -217,7 +217,6 @@ async function runStatus(context: SparkToolContext, top: TopRun) {
 
 export const runTool = sparkTool({
   name: 'spark_run',
-  privateData: true,
   title: 'Run status',
   description:
     "Live status of a chat's latest run (or one run): phase, who is on the crew (Scout, Architect, Builders, Critic) with each agent's model, status, cost and why it was picked, the pieces of a big plan (status, Builder, Jev's per-piece pick and reason, files changed, checks), what it is waiting on, and every Jev decision (intake, routing, parallel with Jev's Builder count and task groups, piece_route, clarify, verify) with what was applied and why. Defaults to this chat.",

@@ -201,6 +201,25 @@ describe('chats with a teammate', () => {
     expect(plain?.settings.model).not.toBe('opus');
   });
 
+  it('follows the default autonomy for a Spark without its own, and keeps a Spark’s own level', async () => {
+    const inheriting = await create({ name: 'Wren' });
+    const explicit = await create({ name: 'Ada', level: 'hands-off' });
+    const follows = randomUUID();
+    const keeps = randomUUID();
+    await talkTo(follows, inheriting.id);
+    await talkTo(keeps, explicit.id);
+    const levelOf = async (id: string) => (await getConversationDetail(t.db, id))?.settings.level;
+
+    expect(inheriting.level).toBeNull();
+    expect(await levelOf(follows)).toBe('full-auto');
+    expect(await levelOf(keeps)).toBe('hands-off');
+
+    await client.send('patch', '/api/profile', { defaultLevel: 'hands-off' }).expect(200);
+    const later = randomUUID();
+    await talkTo(later, inheriting.id);
+    expect(await levelOf(later)).toBe('hands-off');
+  });
+
   it('only links a chat before its first message', async () => {
     const teammate = await create({ name: 'Pip' });
     const { conversationId } = await startChat(t, 'hello');

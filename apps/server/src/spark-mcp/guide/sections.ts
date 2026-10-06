@@ -64,11 +64,11 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
       'hands-off',
       'how much spark does alone',
     ],
-    text: `Alongside the agent's own mode, Spark has two autonomy levels. Default for new chats: Settings → Spark → How much Spark does alone; each chat can pick its own. To review each step, pick an agent mode that asks (Manual, Ask every time, Plan).
+    text: `Alongside the agent's own mode, Spark has two autonomy levels. Default for new chats: Settings → Spark → How much Spark does alone; each chat can pick its own. To review each step, pick an agent mode that asks (Manual, Plan).
 
-Automatic (default): approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept when checks pass, Critic findings are fixed in a loop, risky work runs in a worktree copy, Revert is always there. "Build this plan?" (Build, Edit, Stop) waits for the user in any agent mode, without auto-continue; after Build the rest runs alone.
+Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept, Critic findings fixed in a loop, risky work runs in a worktree copy, Revert is always there. "Build this plan?" (Build, Edit, Stop) waits for the user at both levels in any agent mode; after Build the rest runs alone.
 
-Full auto → PR: the same in a worktree copy, but a plan builds after a countdown (auto-continue seconds, else 30 s); then the agent pushes the branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask.
+Full auto → PR (default): the same in a worktree copy; then the agent pushes the branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask. The level never makes a Spark action skip its card.
 
 The safety floor holds at every level.`,
   },
@@ -76,7 +76,7 @@ The safety floor holds at every level.`,
     id: 'read-then-send',
     title: 'Read, then send',
     keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
-    text: `Once a chat has seen sensitive data — a secret file you allowed, secret values in a tool's output (env, printenv, config dumps) or private work data from spark_tickets, spark_chat, spark_audit, spark_pr and similar tools — anything that sends data off this computer asks first, at every level including Full auto and Bypass permissions: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
+    text: `Once a chat has seen sensitive data — a secret file you allowed, secret values in a tool's output (env, printenv, config dumps) a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools (not this chat's own task or history) — anything that sends data off this computer asks first, at every level and mode: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
   },
   {
     id: 'safety-floor',

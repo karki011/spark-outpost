@@ -9,7 +9,6 @@ import {
 } from '@spark-outpost/contracts';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { runAgent } from '../../crew/crew-projection.ts';
-import { messagesFor } from '../../crew/member-model.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock } from './AgentBlock.tsx';
 
@@ -56,7 +55,6 @@ export function SparkJobs({ run, detail, orchestration, repo }: SparkJobsProps) 
           error={member.error}
           approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
           repo={repo}
-          messages={messagesFor(detail, member.runId)}
         />
       ))}
     </div>

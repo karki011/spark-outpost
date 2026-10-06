@@ -110,7 +110,6 @@ async function currentRun(
 
 export const lawsTool = sparkTool({
   name: 'spark_laws',
-  privateData: true,
   title: 'Universal laws',
   description:
     "Spark's guardrails on Builders: a run's time and cost estimate (learned from this workspace's history, or a rough rule estimate), the Builder's turn budget scaled to the task's complexity, and the findings on its change (unexplained removals, checks Spark re-ran that contradict the Builder, weakened tests, config and out-of-scope edits); plus the estimate history by task kind, size and model, and models demoted for a task kind because their recent pass rate fell below their tier peers. Defaults to this chat's latest run.",

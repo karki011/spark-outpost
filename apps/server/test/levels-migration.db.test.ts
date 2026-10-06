@@ -47,7 +47,7 @@ describe('removing Hands-on', () => {
       'SELECT default_level FROM profiles WHERE workspace_id = $1',
       [workspaceId],
     );
-    expect(rows).toEqual([{ default_level: 'hands-off' }]);
+    expect(rows).toEqual([{ default_level: 'full-auto' }]);
     const overrides = await db.query<{ overrides: unknown }>(
       'SELECT overrides FROM conversations WHERE id = $1',
       [conversation.id],
@@ -55,6 +55,7 @@ describe('removing Hands-on', () => {
     expect(overrides.rows[0]!.overrides).toEqual({
       claude: { level: 'hands-off', model: 'sonnet', agentMode: 'default' },
       codex: { level: 'hands-off', agentMode: 'read-only' },
+      zai: { level: 'hands-off' },
     });
     expect((await getRun(db, runId))?.level).toBe('hands-off');
     expect(await resolveChatSettings(db, conversation.id)).toMatchObject({
@@ -62,7 +63,7 @@ describe('removing Hands-on', () => {
       level: 'hands-off',
     });
     const setup = await getSetupState(db, workspaceId);
-    expect(setup.profile.defaultLevel).toBe('hands-off');
+    expect(setup.profile.defaultLevel).toBe('full-auto');
     expect(setup.profile.shipFailingChecks).toBe(true);
     await expect(
       db.query(`UPDATE runs SET level = 'hands-on' WHERE id = $1`, [runId]),
@@ -109,7 +110,7 @@ describe('provider modes from the old permission levels (migration 0050)', () =>
       [conversation.id],
     );
     expect(overrides.rows[0]!.overrides).toEqual({
-      claude: { model: 'sonnet', agentMode: 'plan' },
+      claude: { model: 'sonnet', agentMode: 'plan', level: 'hands-off' },
       codex: { level: 'hands-off', agentMode: 'ask-every-action' },
       zai: { level: 'full-auto', agentMode: 'bypassPermissions' },
     });
@@ -166,7 +167,7 @@ describe('removing Review each step (migration 0098)', () => {
     );
     expect(levels.rows[0]).toEqual({
       runs: 'hands-off',
-      profiles: 'hands-off',
+      profiles: 'full-auto',
       teammates: 'hands-off',
     });
     const overrides = await db.query<{ overrides: unknown }>(
@@ -175,7 +176,8 @@ describe('removing Review each step (migration 0098)', () => {
     );
     expect(overrides.rows[0]!.overrides).toEqual({
       claude: { level: 'hands-off', model: 'sonnet' },
-      codex: {},
+      codex: { level: 'hands-off' },
+      zai: { level: 'hands-off' },
     });
     await expect(
       db.query(`UPDATE runs SET level = 'balanced' WHERE id = $1`, [runId]),
