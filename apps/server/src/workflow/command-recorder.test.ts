@@ -199,11 +199,14 @@ describe('command recorder', () => {
     await t.write('from two\n', 'c2');
     await t.end(false, 0, 'c1');
     await t.end(false, 0, 'c2');
-    const byId = Map.groupBy(t.chunks(), (event) => event.value.id);
-    expect([...byId.values()].map((list) => list.map((event) => event.value.chunk))).toEqual([
-      ['from one\n'],
-      ['from two\n'],
-    ]);
+    const chunksOf = (id: unknown) =>
+      t
+        .chunks()
+        .filter((event) => event.value.id === id)
+        .map((event) => event.value.chunk);
+    const [first, second] = t.events.filter((event) => event.name === COMMAND_STARTED);
+    expect(chunksOf(first!.value.id)).toEqual(['from one\n']);
+    expect(chunksOf(second!.value.id)).toEqual(['from two\n']);
   });
 
   it('ignores output and endings for commands it never saw start, and a repeated start', async () => {

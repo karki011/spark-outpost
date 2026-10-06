@@ -1,4 +1,5 @@
 import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { agentBlock, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
@@ -252,3 +253,28 @@ test('each crew member gets its own terminal', async ({ page }) => {
     repo.remove();
   }
 });
+
+for (const theme of ['light', 'graphite', 'contrast']) {
+  test(`open and folded terminals have no serious accessibility issues in the ${theme} theme`, async ({
+    page,
+  }) => {
+    await page.addInitScript((saved) => localStorage.setItem('spark-outpost.theme', saved), theme);
+    await askInChats(page, 'Check #terminal=fail,pass 20ms');
+    await expect(done(page)).toBeVisible({ timeout: 20_000 });
+    await expect(rows(terminal(page, FAIL))).toContainText('1 problem');
+    await expect(toggle(terminal(page, PASS))).toHaveAttribute('aria-expanded', 'false', {
+      timeout: 5_000,
+    });
+    const results = await new AxeBuilder({ page })
+      .include('.run-cmd')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    const blocking = results.violations
+      .filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
+      .map(
+        (violation) => `${violation.id}: ${violation.nodes.map((node) => node.target).join(' ')}`,
+      );
+    expect(blocking).toEqual([]);
+    await shot(page, `theme-${theme}`);
+  });
+}
