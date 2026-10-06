@@ -83,6 +83,24 @@ describe('memberReply for the Coordinator', () => {
     });
   });
 
+  it('keeps a restarted piece list out of the chat', () => {
+    const restarted = `Plan:\n\n${FENCE}pieces\n${BLOCK.slice(0, 120)}\n\n${fenced('pieces')}\n\nDone.`;
+    expect(memberReply('coordinator', restarted, false)).toEqual({
+      before: 'Plan:',
+      after: 'Done.',
+      notice: { state: 'ready', count: 3 },
+    });
+    for (const prefix of everyPrefix(restarted)) {
+      expect(memberReplyText('coordinator', prefix, true)).not.toContain('"key"');
+    }
+    const twice = `${fenced('pieces')}\n\nAgain:\n\n${fenced('pieces')}`;
+    expect(memberReply('coordinator', twice, false)).toEqual({
+      before: 'Again:',
+      after: '',
+      notice: { state: 'ready', count: 3 },
+    });
+  });
+
   it('says so when a settled block is not a piece list', () => {
     const cut = `${FENCE}pieces\n${BLOCK.slice(0, 80)}`;
     expect(memberReply('coordinator', cut, false).notice).toEqual({
