@@ -153,6 +153,10 @@ Each phase ends with something testable. Phases 1 and 2 need no deployment.
 - Deploy the Worker and the page to their Cloudflare account, from commands Spark's docs provide. Spark's agents do not sign in or deploy.
 - Say go before any release that turns this on.
 
+## Relay address
+
+The relay and phone page addresses are a setting, not a constant. A user can deploy the Worker and page to their own Cloudflare account and point Spark at them; the QR carries the addresses, so the phone needs no setup. Because frames are opaque and encrypted, the relay is replaceable: another transport that forwards frames between two parties (an MQTT broker, for example) could sit behind the same seam later. Only the WebSocket relay is planned.
+
 ## Cost
 
 At small scale the relay fits Cloudflare's free tier or the $5 a month plan; idle connections cost nothing with WebSocket hibernation. The exact free allowance was not confirmed in research and should be checked before launch. The relay is rate-limited per paired Mac so one install cannot run up the bill.
@@ -168,6 +172,6 @@ At small scale the relay fits Cloudflare's free tier or the $5 a month plan; idl
 
 1. Are the proposed switch defaults right?
 2. Which address hosts the phone page and relay?
-3. Should the relay be free for every Spark user on the owner's account, or should users be able to point at their own?
+3. Is there also a default relay on the owner's account, or does every user deploy their own? (Decided 2026-10-05: users can point Spark at their own relay.)
 4. Lowest iOS version to support (16.4 is the floor for notifications).
 5. Should a Slack notification link open the phone app once paired?
