@@ -10,6 +10,7 @@ import {
   stageLayout,
   STAGES,
   watchStage,
+  dockStage,
 } from './tv-layout.ts';
 
 describe('Agent TV stage layout', () => {
@@ -122,5 +123,25 @@ describe('Agent TV caption', () => {
   it('falls back to what Jev is doing', () => {
     const done = orchestration({ status: 'succeeded', phase: 'finished', crew: [member()] });
     expect(tvCaption(crewAgents(done))).toEqual({ lead: 'Jev', text: 'ready for you' });
+  });
+});
+
+describe('dockStage', () => {
+  it('keeps the base size when the rail is narrow or not measured yet', () => {
+    expect(dockStage(0)).toEqual(dockStage(200));
+    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, jevSize: 34, fontSize: 11 });
+  });
+
+  it('grows every part with the rail and stops at the cap', () => {
+    const wide = dockStage(300);
+    expect(wide).toEqual({
+      width: 300,
+      height: 192,
+      jevSize: 51,
+      crewSize: 39,
+      labelWidth: 93,
+      fontSize: 13,
+    });
+    expect(dockStage(900)).toEqual(dockStage(320));
   });
 });

@@ -421,3 +421,27 @@ export const COMPANION: Pair[] = [
     kind: 'text',
   },
 ];
+
+const TICKS = 'Chat tick rail';
+
+export const CHAT_TICKS: Pair[] = [
+  ...onEach(TICKS, 'tick.rest', 'var(--line-strong)', ['panel'], 'ui'),
+  ...onEach(TICKS, 'tick.current', 'var(--text)', ['panel'], 'ui'),
+  ...onEach(TICKS, 'tick.hover', 'var(--accent)', ['panel'], 'ui'),
+  ...onEach(
+    TICKS,
+    'tick.error',
+    'color-mix(in srgb, var(--danger) 70%, var(--line-strong))',
+    ['panel'],
+    'ui',
+  ),
+  ...onEach(
+    TICKS,
+    'tick.approval',
+    'color-mix(in srgb, var(--warn) 70%, var(--line-strong))',
+    ['panel'],
+    'ui',
+  ),
+  ...onEach(TICKS, 'context-rail.task-done', 'var(--accent)', ['canvas', 'rail'], 'ui'),
+  ...onEach(TICKS, 'context-rail.checks-pass', 'var(--success)', ['canvas', 'rail'], 'ui'),
+];

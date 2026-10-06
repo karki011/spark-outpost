@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { turnAnchor } from './outline-model.ts';
 
 const READING_BAND = '-12% 0px -68% 0px';
 const JUMP_FALLBACK_MS = 1500;
@@ -11,26 +10,30 @@ function landedOn(root: Element, section: HTMLElement): boolean {
   return atTop <= LANDED_PX || atEnd <= LANDED_PX;
 }
 
-export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: readonly string[]) {
+export function useActiveAnchor(
+  scroller: RefObject<HTMLElement | null>,
+  anchors: readonly string[],
+) {
   const [active, setActive] = useState<string | null>(null);
   const jumping = useRef(false);
   const inBand = useRef(new Set<string>());
-  const key = runIds.join(' ');
+  const key = anchors.join(' ');
 
   const followBand = useCallback(() => {
-    const first = key.split(' ').find((id) => inBand.current.has(id));
-    if (first) setActive(first);
+    const shown = key.split(' ').filter((id) => inBand.current.has(id));
+    const first = shown[0] ? document.getElementById(shown[0]) : null;
+    const within = shown.findLast((id) => first?.contains(document.getElementById(id)));
+    if (within) setActive(within);
   }, [key]);
 
   useEffect(() => {
-    const root = anchor.current?.closest('.thread');
+    const root = scroller.current;
     if (!root || key === '' || typeof IntersectionObserver !== 'function') return;
     const band = inBand.current;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const id = (entry.target as HTMLElement).dataset.turn;
-          if (!id) continue;
+          const id = entry.target.id;
           if (entry.isIntersecting) band.add(id);
           else band.delete(id);
         }
@@ -39,22 +42,22 @@ export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: rea
       { root, rootMargin: READING_BAND },
     );
     for (const id of key.split(' ')) {
-      const section = document.getElementById(turnAnchor(id));
+      const section = document.getElementById(id);
       if (section) observer.observe(section);
     }
     return () => {
       observer.disconnect();
       band.clear();
     };
-  }, [anchor, key, followBand]);
+  }, [scroller, key, followBand]);
 
   const jumped = useCallback(
-    (runId: string) => {
-      const root = anchor.current?.closest('.thread');
-      const section = document.getElementById(turnAnchor(runId));
+    (anchor: string) => {
+      const root = scroller.current;
+      const section = document.getElementById(anchor);
       if (!root || !section) return;
       jumping.current = true;
-      setActive(runId);
+      setActive(anchor);
       let fallback = 0;
       const settle = () => {
         window.clearTimeout(fallback);
@@ -65,7 +68,7 @@ export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: rea
       fallback = window.setTimeout(settle, JUMP_FALLBACK_MS);
       root.addEventListener('scrollend', settle);
     },
-    [anchor, followBand],
+    [scroller, followBand],
   );
 
   return { active, jumped };

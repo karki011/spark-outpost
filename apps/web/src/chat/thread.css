@@ -10,7 +10,7 @@
   inset: 0;
   overflow-y: auto;
   scrollbar-gutter: stable both-edges;
-  padding: 4px 16px 32px;
+  padding: 4px var(--chat-gutter, 16px) 32px;
 }
 
 .col {
@@ -25,6 +25,10 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 360px;
   scroll-margin-top: 8px;
+}
+
+.col .md > :is(p, ul, ol, blockquote, h1, h2, h3, h4) {
+  max-width: var(--chat-measure, 560px);
 }
 
 .col > section:not(:nth-last-child(-n + 2)) .msg {
@@ -81,7 +85,7 @@
 }
 
 .bubble {
-  max-width: 82%;
+  max-width: min(82%, var(--chat-measure, 560px));
   background: var(--user);
   color: var(--user-text);
   padding: 8px 14px;

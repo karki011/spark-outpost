@@ -1,0 +1,43 @@
+.chat-head {
+  position: relative;
+  z-index: 3;
+  background: var(--panel);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.main.crail-open .thread-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: -100vh;
+  width: var(--crail-strip);
+  border-left: 1px solid var(--line);
+  background: var(--bg);
+}
+
+@media (min-width: 1101px) {
+  .wp-in {
+    background: var(--bg);
+  }
+}
+
+:root[data-chat-surface='raised'] .main.crail-open .thread-wrap::before {
+  border-left-color: var(--line-strong);
+  background: var(--rail);
+  box-shadow: inset 14px 0 18px -12px rgba(0, 0, 0, 0.22);
+}
+
+@media (min-width: 641px) {
+  :root[data-chat-surface='raised'] .wp-in {
+    background: var(--rail);
+    border-color: transparent;
+  }
+
+  :root[data-chat-surface='raised'] .view > .main {
+    border-color: var(--line-strong);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.12),
+      0 14px 36px -10px rgba(0, 0, 0, 0.28);
+  }
+}

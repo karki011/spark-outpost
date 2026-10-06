@@ -46,6 +46,17 @@ These rules decide every open question in this document.
 
 The main panel is a raised card with rounded corners; on phones it goes edge to edge.
 
+Inside a chat's main panel:
+
+| Part | Rule |
+|---|---|
+| Top bar | The header row is its own surface (`--panel`) over the full panel width, above the thread and the context rail, with a `--line` hairline under it. Height and controls as in the mockup. |
+| Chat column | 680–1040 px by panel width, centred in the space left of the context rail, with 56 px gutters (narrowing to 16 px as the panel drops from 592 to 512 px). The composer shares the column. |
+| Prose | Paragraphs, lists, headings and the user bubble stop at 560 px (about 80 characters). Code, tables, diffs and cards use the full column and scroll sideways inside it. |
+| Tick rail | One tick per user message in the left gutter, 48 px left of the column, centred on the thread. The tick in view is longest, two neighbours taper. Hover, focus or tap shows a preview card. Shown from three messages, hidden when the thread is under 600 px wide and on phones. Replaces the "On this chat" list of the context rail. |
+| Context rail | With the work panel closed on wide windows: a strip anchored to the panel's right edge, 216–320 px of content by panel width, tinted `--bg` with a `--line` divider. The crew stage scales with it. |
+| Crew notes | Consecutive paragraphs in a crew member's block sit 0.55 em apart; replies elsewhere keep 0.8 em. |
+
 ### 3.2 Rail
 
 | Item | Behavior |

@@ -21,7 +21,7 @@ import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { MemberChatHost } from '../crew/MemberChatHost.tsx';
 import { JUMP_TRIES, scrollToAnchor, scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
-import { turnAnchor } from '../chat/rail/outline-model.ts';
+import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';

@@ -1,21 +1,10 @@
 .main.crail-open {
-  --rail-reserve: 216px;
+  --crail-w: clamp(216px, 18cqi, 320px);
+  --crail-strip: calc(var(--crail-w) + 32px);
 }
 
-.main.crail-collapsed {
-  --rail-reserve: 32px;
-}
-
-.main:is(.crail-open, .crail-collapsed) {
-  --rail-pad: clamp(
-    0px,
-    2 * var(--rail-reserve) - (100cqi - 64px - var(--chat-col)),
-    var(--rail-reserve)
-  );
-}
-
-.main:is(.crail-open, .crail-collapsed) :is(.thread, .composer-wrap, .cstatus, .qwrap) {
-  padding-right: calc(16px + var(--rail-pad));
+.main.crail-open :is(.thread, .composer-wrap, .cstatus, .qwrap) {
+  padding-right: calc(var(--chat-gutter) + var(--crail-strip));
 }
 
 .crail-slot {
@@ -28,13 +17,10 @@
 .crail {
   position: absolute;
   top: 6px;
-  right: max(
-    calc(-1 * var(--rail-pad, 0px)),
-    calc((100cqi - var(--chat-col)) / 2 - 248px - var(--rail-pad, 0px) * 100)
-  );
+  right: calc(16px - var(--chat-gutter) - var(--crail-strip));
   display: flex;
   flex-direction: column;
-  width: 200px;
+  width: var(--crail-w);
   max-height: var(--crail-room, 60vh);
   color: var(--muted);
   font-size: 12.5px;
@@ -84,18 +70,14 @@
 .crail-show {
   position: absolute;
   top: 6px;
-  right: calc(-1 * var(--rail-pad, 0px));
-}
-
-.crail-rows,
-.crail-outline ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  right: calc(12px - var(--chat-gutter));
 }
 
 .crail-rows {
   flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .crail-row {
@@ -175,82 +157,6 @@
   height: 11px;
 }
 
-.crail-outline {
-  display: flex;
-  flex: 0 1 auto;
-  flex-direction: column;
-  min-height: 72px;
-  margin-top: 14px;
-}
-
-.crail-outline .crail-title {
-  padding: 0 6px 4px;
-}
-
-.crail-outline ol {
-  min-height: 0;
-  margin-left: 6px;
-  overflow-y: auto;
-  border-left: 1px solid var(--line);
-  scrollbar-width: thin;
-}
-
-.crail-outline a {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 4px 3px 10px;
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-
-.crail-outline a::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: 3px;
-  bottom: 3px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.crail-outline a:hover {
-  color: var(--text);
-}
-
-.crail-outline a[aria-current] {
-  color: var(--text);
-}
-
-.crail-outline a[aria-current]::before {
-  opacity: 1;
-}
-
-.crail-o-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.crail-marks {
-  display: inline-flex;
-  flex-shrink: 0;
-  gap: 3px;
-  color: var(--faint);
-}
-
-.crail-mark.error {
-  color: var(--danger);
-}
-
 .crail-tv {
   position: relative;
   flex-shrink: 0;
@@ -272,7 +178,7 @@
   padding: 0 6px 2px;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -344,7 +250,8 @@
 }
 
 .crail-tasks ol {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   min-height: 0;
   max-height: 220px;
@@ -357,6 +264,7 @@
 
 .crail-tasks li {
   display: grid;
+  flex: none;
   grid-template-columns: 16px minmax(0, 1fr);
   column-gap: 8px;
   align-items: start;
