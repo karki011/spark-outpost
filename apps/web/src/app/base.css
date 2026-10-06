@@ -111,7 +111,7 @@ svg {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: calc(var(--r) + 4px);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .head {
