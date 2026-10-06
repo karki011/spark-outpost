@@ -12,6 +12,19 @@ Newest first. Each release adds a section before packaging; the release script t
 - Fewer command cards: reading Spark's own data about the chat, or running a local script that opens no connection, no longer asks.
 - ⌘D opens the Changes drawer.
 - Updates: Restart to update checks for a newer version first and installs only the newest. Updates download only what changed, starting with the update after this one.
+- Pull requests: agents push the chat's branch and open the pull request themselves in one publish turn. Spark tracks every pull request of a chat with its checks and reviews, and follow-up fixes go to the same branch.
+- Models: Spark knows which models each provider sign-in can use, hides the rest, and when a provider rejects a model it retries once on the nearest usable one and says so in the chat.
+- Chat: an interrupted turn offers Continue from here or Start fresh. Answering a question card no longer blanks the turn, and sending while a turn runs brings the thread back to the latest.
+- Projects: clone a repository into a new project from the sidebar or the empty Map. Project rows in Settings start closed.
+- Slack: Sign in with Slack is the first way to connect; your own Slack app is the advanced one.
+- Browser: saved sign-ins per project. Spark types them into the saved site after a card; the username and password stay in the keychain.
+- Checks judge the change, not the repository: a check that already failed before the change is one calm row. Choose a project's check commands in Settings, or turn checks off.
+- Changes view: word marks only for real line edits, calmer tints and old line numbers.
+- Tickets: failing checks are a notice under In review, not Needs you.
+- Approvals: pieces sharing a folder follow the agent's mode, and the system temp folders are scratch space.
+- Spark tools: a session is offered only the tools its chat can use. A confirmed Spark action shows what it is doing and how it ended.
+- Look: the Chats list sits on its own raised panel.
+- Updates: a stalled install returns to Restart to update with a reason.
 - Known: phone access has not been tried with a real Tailscale network or a real phone yet. Layouts were checked in a desktop browser at phone and tablet sizes only.
 
 ## 0.1.0-beta.5

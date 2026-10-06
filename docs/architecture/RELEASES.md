@@ -22,7 +22,7 @@ How the desktop app is packaged, signed, published and updated. The installed ap
 
 ## One-time setup (the user)
 
-1. **Developer ID certificate.** In the Apple Developer account, create a _Developer ID Application_ certificate and install it in the login keychain (`security find-identity -v -p codesigning` must list it). Builds then sign with it when `CSC_NAME="Developer ID Application: <Name> (<TEAMID>)"` is set; in CI use `CSC_LINK` (base64 .p12) and `CSC_KEY_PASSWORD`. Without either, builds are signed ad hoc and never notarized.
+1. **Developer ID certificate.** In the Apple Developer account, create a _Developer ID Application_ certificate and install it in the login keychain (`security find-identity -v -p codesigning` must list it). Builds then sign with it when `CSC_NAME="<Name> (<TEAMID>)"` is set (without the "Developer ID Application:" prefix, which electron-builder refuses); in CI use `CSC_LINK` (base64 .p12) and `CSC_KEY_PASSWORD`. Without either, builds are signed ad hoc and never notarized.
 2. **Notarization credentials.** electron-builder reads, by name only: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (or `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, the safer option for CI). `~/.zshrc` already exports the first three; `APPLE_PASSWORD` there is not used. Notarization runs only when a Developer ID is configured and one complete set is present.
 3. **Hosting: a Cloudflare R2 bucket.** See [Set up the R2 feed](#set-up-the-r2-feed). Every file of a release goes to one folder (see [Feed layout](#feed-layout)).
 4. **App icon.** Already in place: `pnpm --filter @spark-outpost/desktop icons` regenerates `build/icon.icns` (all sizes 16–1024 with @2x), `assets/icon.png`, `assets/icon-dev.png` (DEV corner badge, used for the dev app's Dock icon and About panel) and the menu-bar `assets/trayTemplate.png` / `@2x` from the Scout shape in `apps/web/src/brand/scout-shape.ts`. Rerun it after changing the logo and commit the output.
@@ -87,7 +87,7 @@ R2 answers a request for several byte ranges at once with `400 Bad Request` (che
 3. **Checks.** `pnpm check`, `pnpm test:db`, `pnpm test:browser`. If the release adds migrations, read them for anything that cannot run inside a transaction and confirm the backup path with `pnpm desktop:e2e-update`.
 4. **Build, sign, notarize.** With the certificate installed and the Apple variables set:
    ```sh
-   CSC_NAME="Developer ID Application: <Name> (<TEAMID>)" pnpm desktop:package --release
+   CSC_NAME="<Name> (<TEAMID>)" pnpm desktop:package --release
    ```
    `--release` stops before building, with one line per problem, when `CSC_NAME` (or `CSC_LINK`) is missing, the notarization variables are incomplete, no feed URL is set, or `--arch` would build only one architecture. Without `--release`, builds stay unsigned (ad hoc) for local testing. `--arch x64|arm64|current` builds one arch; the default builds both in one run, which matters: electron-builder merges both zips into one `beta-mac.yml` / `latest-mac.yml`, and electron-updater's MacUpdater picks the file whose name contains `arm64` on Apple silicon (including under Rosetta) and the other one on Intel. Two separate runs would overwrite each other's channel file. `--version` overrides the package version.
 5. **Verify the artifacts.**
