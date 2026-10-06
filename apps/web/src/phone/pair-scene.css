@@ -1,0 +1,222 @@
+.ph-scene {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+  text-align: center;
+}
+.ph-scene-stage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  height: 84px;
+}
+.ph-scene-blob {
+  display: grid;
+  justify-items: center;
+  transform-origin: 50% 100%;
+}
+.ph-scene-blob .scout {
+  cursor: default;
+}
+.ph-scene-shadow {
+  width: 70%;
+  height: 5px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.ph-scene-phone {
+  margin-bottom: 8px;
+  color: var(--muted);
+  animation: ph-phone-in 0.4s var(--out) both;
+}
+.ph-scene-line {
+  margin: 0;
+  max-width: min(34ch, 100%);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.ph-scene.setup .ph-scene-line {
+  color: var(--muted);
+}
+.ph-scene.setup .ph-scene-blob {
+  opacity: 0.85;
+}
+.ph-scene.found .ph-scene-blob {
+  animation: ph-perk 0.5s var(--spring) both;
+}
+.ph-scene.found .scout .sc-look {
+  transform: translate(2.6px, 0.4px);
+}
+.ph-scene.paired .ph-scene-phone {
+  color: var(--success);
+  animation: ph-cheer 0.55s var(--spring) 2;
+}
+.ph-scene.expiring .ph-scene-blob {
+  animation: ph-nudge 1.4s ease-in-out infinite;
+}
+.ph-scene.ended .ph-scene-blob {
+  transform: rotate(-7deg);
+  animation: ph-shrug 0.6s var(--out) both;
+}
+@keyframes ph-phone-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+@keyframes ph-perk {
+  40% {
+    transform: translateY(-7px) scale(0.96, 1.05);
+  }
+}
+@keyframes ph-cheer {
+  40% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes ph-nudge {
+  0%,
+  70%,
+  100% {
+    transform: translateX(0);
+  }
+  78% {
+    transform: translateX(5px) rotate(4deg);
+  }
+  86% {
+    transform: translateX(0);
+  }
+  93% {
+    transform: translateX(4px) rotate(3deg);
+  }
+}
+@keyframes ph-shrug {
+  from {
+    transform: rotate(0);
+  }
+  45% {
+    transform: rotate(-10deg) translateY(-3px);
+  }
+  to {
+    transform: rotate(-7deg);
+  }
+}
+:root:is([data-motion='rest'], [data-motion='paused']) .ph-scene.expiring .ph-scene-blob {
+  animation-play-state: paused;
+}
+
+.ph-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px 28px;
+}
+.ph-qr {
+  width: 208px;
+  height: 208px;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+}
+.ph-qr-paper {
+  fill: var(--qr-paper);
+}
+.ph-qr-ink {
+  fill: var(--qr-ink);
+}
+.ph-code-side {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.ph-code-label,
+.ph-found-name {
+  color: var(--muted);
+  font-size: 13px;
+}
+.ph-code-text {
+  font:
+    500 20px/1.2 'Geist Mono',
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  user-select: all;
+}
+.ph-ring {
+  --ph-ring: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ph-ring svg {
+  transform: rotate(-90deg);
+}
+.ph-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.ph-ring-track {
+  stroke: color-mix(in srgb, var(--ph-ring) 25%, var(--panel));
+}
+.ph-ring-left {
+  stroke: var(--ph-ring);
+  stroke-linecap: round;
+}
+.ph-ring.expiring {
+  --ph-ring: var(--warn);
+  color: var(--warn);
+}
+
+.ph-found {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.ph-found-name {
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.ph-match {
+  font:
+    500 40px/1.1 'Geist Mono',
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ph-found-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ph-found-actions .btn {
+  min-width: 108px;
+}
+
+@media (max-width: 640px) {
+  .ph-match {
+    font-size: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-scene .scout *,
+  .ph-scene-blob,
+  .ph-scene-phone {
+    animation: none !important;
+  }
+}

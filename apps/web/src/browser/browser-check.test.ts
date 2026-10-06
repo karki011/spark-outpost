@@ -13,6 +13,9 @@ const shot = (id: string): BrowserShot => ({
   title: 'Home',
   width: 800,
   height: 600,
+  textOffset: null,
+  textBefore: null,
+  textHeld: null,
   createdAt: '2026-10-04T10:00:00.000Z',
   attachment: { id, name: 'browser.png', mediaType: 'image/png', size: 10, kind: 'image' },
 });

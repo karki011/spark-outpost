@@ -1,3 +1,4 @@
+import './pair-scene.css';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { pairingLink, PAIRING_TTL_MS, type PendingPairing } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';

@@ -315,6 +315,7 @@
 .shot-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   margin: 8px 0;
 }
@@ -323,16 +324,21 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 320px;
+  min-width: 96px;
+  max-width: 100%;
   margin: 0;
   font-size: 12px;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 .shot button {
+  display: block;
+  align-self: flex-start;
+  max-width: 100%;
   padding: 0;
   border-radius: var(--r-sm);
-  border: 1px solid var(--line);
+  box-shadow: 0 0 0 1px var(--line);
+  background: var(--raise);
   overflow: hidden;
   cursor: zoom-in;
 }
@@ -340,7 +346,14 @@
 .shot img {
   display: block;
   max-width: 100%;
-  max-height: 220px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.shot figcaption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .browser-check {

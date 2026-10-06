@@ -2,6 +2,8 @@ import './phone.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteSession } from '@spark-outpost/contracts';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
@@ -42,7 +44,11 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
   }, [freshAfter]);
 
   if (!tailscale.data) {
-    return <div className="ph-card ph-loading" aria-busy="true" />;
+    return (
+      <QueryWait query={tailscale} what="phone access">
+        <Skeleton label="Loading phone access" shape="cards" rows={3} />
+      </QueryWait>
+    );
   }
   const list = devices.data ?? [];
   return (
@@ -61,9 +67,24 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
           void queryClient.invalidateQueries({ queryKey: phoneKeys.devices });
         }}
       />
-      <PhoneDevices devices={list} freshAfter={freshAfter} />
+      <PhoneDevices
+        devices={devices.data}
+        freshAfter={freshAfter}
+        wait={
+          <QueryWait query={devices} what="devices">
+            <Skeleton label="Loading devices" shape="list" rows={2} />
+          </QueryWait>
+        }
+      />
       <PhoneSwitches switches={session.switches} />
-      <PhoneActivity entries={audit.data ?? []} />
+      <PhoneActivity
+        entries={audit.data}
+        wait={
+          <QueryWait query={audit} what="phone activity">
+            <Skeleton label="Loading phone activity" shape="list" rows={3} />
+          </QueryWait>
+        }
+      />
     </>
   );
 }
@@ -108,18 +129,15 @@ export function PhonePage() {
               {session.data?.remote ? 'your' : 'this'} Mac.
             </p>
           </header>
-          {session.error && (
-            <p className="ph-error" role="alert">
-              {session.error.message}
-            </p>
-          )}
+          <QueryWait query={session} what="phone settings">
+            <Skeleton label="Loading phone settings" shape="cards" rows={3} />
+          </QueryWait>
           {session.data &&
             (session.data.remote ? (
               <RemotePhonePage session={session.data} />
             ) : (
               <MacPhonePage session={session.data} />
             ))}
-          {session.isPending && <div className="ph-card ph-loading" aria-busy="true" />}
         </div>
       </div>
     </main>

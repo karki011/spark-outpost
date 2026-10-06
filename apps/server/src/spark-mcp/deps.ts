@@ -31,6 +31,11 @@ export interface SparkToolDeps {
   shotDir?: string;
 }
 
+export interface ReplySoFar {
+  shown: string;
+  held: number;
+}
+
 export interface SparkActionHooks {
   append: Append;
   waiters: ApprovalWaiters;
@@ -38,6 +43,7 @@ export interface SparkActionHooks {
   timeoutMs: number;
   pollMs: number;
   audit?: ProtocolObserver | undefined;
+  replySoFar?: () => ReplySoFar;
 }
 
 export interface SparkScope {

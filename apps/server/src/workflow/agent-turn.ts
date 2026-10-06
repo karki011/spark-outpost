@@ -403,6 +403,10 @@ export async function runAgentTurn(
           timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
           pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
           audit,
+          replySoFar: () => ({
+            shown: text,
+            held: redaction.pending() + (titles?.pending() ?? 0),
+          }),
         },
       },
     })) {

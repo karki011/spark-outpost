@@ -71,6 +71,7 @@ function holdFrom(held: string, atLineStart: boolean): number {
 export interface TitleFilter {
   push(delta: string): string;
   finish(): SplitReply;
+  pending(): number;
 }
 
 export function createTitleFilter(): TitleFilter {
@@ -90,5 +91,6 @@ export function createTitleFilter(): TitleFilter {
       held = '';
       return splitTitle(rest);
     },
+    pending: () => held.length,
   };
 }

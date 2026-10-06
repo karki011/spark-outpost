@@ -45,6 +45,7 @@ describe('title filter', () => {
   it('releases held text as soon as the line cannot be a title', () => {
     const filter = createTitleFilter();
     expect(filter.push('First line\nTi')).toBe('First line');
+    expect(filter.pending()).toBe(3);
     expect(filter.push('ny change')).toBe('\nTiny change');
     expect(filter.finish()).toEqual({ text: '', title: null });
   });
