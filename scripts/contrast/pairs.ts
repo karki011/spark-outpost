@@ -2,6 +2,7 @@ import { ANALYTICS } from './analytics-pairs.ts';
 import { AGENT_TV, DIFF, OFFLINE } from './content-pairs.ts';
 import {
   ACCENT,
+  CHAT_TICKS,
   CHIPS,
   COMPANION,
   DROP_TARGET,
@@ -43,6 +44,7 @@ export const PAIRS: Pair[] = [
   ...STATUS,
   ...FORMS,
   ...CHIPS,
+  ...CHAT_TICKS,
   ...DROP_TARGET,
   ...PROVIDERS,
   ...HOME,

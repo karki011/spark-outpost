@@ -253,3 +253,7 @@
 .agent-head .agent-msg:focus-visible {
   opacity: 1;
 }
+
+.agent-block .md > p + p {
+  margin-top: -0.25em;
+}

@@ -1,0 +1,33 @@
+.chat-head {
+  position: relative;
+  z-index: 3;
+  background: var(--panel);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.main.crail-open .thread-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: -100vh;
+  width: var(--crail-strip);
+  border-left: 1px solid var(--line);
+  background: var(--bg);
+}
+
+:root[data-chat-surface='raised'] .main.crail-open .thread-wrap::before {
+  border-left: 0;
+  background: var(--rail);
+  box-shadow:
+    inset 1px 0 0 var(--line),
+    inset 10px 0 12px -10px color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+@media (min-width: 641px) {
+  :root[data-chat-surface='raised'] .view > .main {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+      0 8px 24px -12px color-mix(in srgb, var(--text) 16%, transparent);
+  }
+}

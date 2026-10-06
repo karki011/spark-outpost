@@ -1,6 +1,5 @@
 import { clipAtWord, type ConversationDetail, type Run } from '@spark-outpost/contracts';
 import { buildTurns } from '../turns.ts';
-import { OUTLINE_MIN_TURNS } from './wide-layout.ts';
 
 export type OutlineMark = 'plan' | 'approval' | 'files' | 'pr' | 'error';
 
@@ -15,6 +14,7 @@ export const OUTLINE_MARK_LABELS: Record<OutlineMark, string> = {
 export interface OutlineEntry {
   runId: string;
   label: string;
+  reply: string;
   marks: OutlineMark[];
 }
 
@@ -23,7 +23,9 @@ interface OutlineFacts {
   prUrls: readonly string[];
 }
 
+const OUTLINE_MIN_TURNS = 3;
 const LABEL_LENGTH = 60;
+const REPLY_LENGTH = 220;
 const NO_TEXT = 'Message without text';
 const FAILED: readonly Run['status'][] = ['failed', 'outcome_unknown'];
 
@@ -48,6 +50,14 @@ function turnOfRun(runs: readonly Run[]): Map<string, string> {
 function promptLabel(content: string | undefined): string {
   const firstLine = content?.trim().split('\n')[0] ?? '';
   return clipAtWord(firstLine, LABEL_LENGTH) || NO_TEXT;
+}
+
+function replyPreview(content: string | undefined): string {
+  const prose = (content ?? '')
+    .replace(/```[\s\S]*?(```|$)/g, ' ')
+    .replace(/[#*`>|]+/g, ' ')
+    .replace(/\s+/g, ' ');
+  return clipAtWord(prose, REPLY_LENGTH);
 }
 
 type OutlineSource = Pick<ConversationDetail, 'messages' | 'runs' | 'approvals' | 'plans'>;
@@ -79,9 +89,10 @@ export function chatOutline(detail: OutlineSource, facts: OutlineFacts): Outline
   for (const { run } of turns) if (FAILED.includes(run.status)) mark(run.id, 'error');
 
   const order: OutlineMark[] = ['plan', 'approval', 'files', 'pr', 'error'];
-  return turns.map(({ run, userMessage }) => ({
+  return turns.map(({ run, userMessage, assistantMessage }) => ({
     runId: run.id,
     label: promptLabel(userMessage?.content),
+    reply: replyPreview(assistantMessage?.content),
     marks: order.filter((kind) => marked.get(run.id)?.has(kind)),
   }));
 }

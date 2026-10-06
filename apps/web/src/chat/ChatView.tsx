@@ -1,3 +1,4 @@
+import './chat-surface.css';
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
   DEFAULT_BUSY_ENTER,
@@ -233,7 +234,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
             {...drop.handlers}
           >
-            <header className="head">
+            <header className="head chat-head">
               <SidebarToggle />
               {repos.length > 0 && (
                 <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
@@ -305,6 +306,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                         detail={detail.data}
                         repos={repos}
                         sends={sends}
+                        taskId={taskId}
                         onOpenTask={openTask}
                         onOpenChat={openChat}
                         quotes={quotes}

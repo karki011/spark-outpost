@@ -18,7 +18,7 @@ import { SparkJobs, isSparkLed, mainAgentRan, sparkMembers } from './crew/SparkJ
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
-import { turnAnchor } from './rail/outline-model.ts';
+import { turnAnchor } from './outline/outline-model.ts';
 import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';

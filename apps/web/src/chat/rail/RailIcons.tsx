@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { OutlineMark } from './outline-model.ts';
+import type { OutlineMark } from '../outline/outline-model.ts';
 
 function Glyph({ children, size = 12 }: { children: ReactNode; size?: number }) {
   return (

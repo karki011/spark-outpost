@@ -93,7 +93,8 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
     if (/\/api\/conversations\/[0-9a-f-]{36}$/.test(request.url())) detailFetches++;
   });
   await openHeavyChat(page, true);
-  await expect(page.getByRole('navigation', { name: 'On this chat' })).toHaveCount(rail ? 1 : 0);
+  await expect(page.locator('.oticks')).toHaveCount(1);
+  await expect(page.getByRole('region', { name: 'Chat context' })).toHaveCount(rail ? 1 : 0);
   await page.waitForTimeout(1_500);
   const before = await settledMetrics(page);
   await startProbe(page);
@@ -156,7 +157,7 @@ test('a heavy chat streams a long reply smoothly without leaking', async ({ page
   });
 });
 
-test('the context rail and its outline add no work while a heavy chat streams', async ({
+test('the context rail and the tick rail add no work while a heavy chat streams', async ({
   page,
 }) => {
   test.setTimeout(240_000 + SOAK_MS * 2);

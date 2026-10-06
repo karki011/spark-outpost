@@ -90,6 +90,22 @@ describe('chatOutline', () => {
     expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([['plan'], ['plan'], []]);
   });
 
+  it('previews the start of each reply as plain text', () => {
+    const long = `## Result\n\n**Done.** The \`divider\` now reads the locale.\n\`\`\`ts\nconst hidden = 1;\n\`\`\`\n${'More words follow here. '.repeat(20)}`;
+    const detail = chat();
+    const messages = detail.messages.map((message) =>
+      message.id === 'a-one' ? { ...message, content: long } : message,
+    );
+    const outline = chatOutline({ ...detail, messages }, NONE);
+    expect(outline[0]!.reply.startsWith('Result Done. The divider now reads the locale.')).toBe(
+      true,
+    );
+    expect(outline[0]!.reply).not.toContain('hidden');
+    expect(outline[0]!.reply.length).toBeLessThanOrEqual(220);
+    expect(outline[1]!.reply).toBe('Refactored.');
+    expect(outline[2]!.reply).toBe('');
+  });
+
   it('anchors a turn by its run', () => {
     expect(turnAnchor('abc')).toBe('turn-abc');
   });

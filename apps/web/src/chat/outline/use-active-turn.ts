@@ -11,7 +11,7 @@ function landedOn(root: Element, section: HTMLElement): boolean {
   return atTop <= LANDED_PX || atEnd <= LANDED_PX;
 }
 
-export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: readonly string[]) {
+export function useActiveTurn(scroller: RefObject<HTMLElement | null>, runIds: readonly string[]) {
   const [active, setActive] = useState<string | null>(null);
   const jumping = useRef(false);
   const inBand = useRef(new Set<string>());
@@ -23,7 +23,7 @@ export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: rea
   }, [key]);
 
   useEffect(() => {
-    const root = anchor.current?.closest('.thread');
+    const root = scroller.current;
     if (!root || key === '' || typeof IntersectionObserver !== 'function') return;
     const band = inBand.current;
     const observer = new IntersectionObserver(
@@ -46,11 +46,11 @@ export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: rea
       observer.disconnect();
       band.clear();
     };
-  }, [anchor, key, followBand]);
+  }, [scroller, key, followBand]);
 
   const jumped = useCallback(
     (runId: string) => {
-      const root = anchor.current?.closest('.thread');
+      const root = scroller.current;
       const section = document.getElementById(turnAnchor(runId));
       if (!root || !section) return;
       jumping.current = true;
@@ -65,7 +65,7 @@ export function useActiveTurn(anchor: RefObject<HTMLElement | null>, runIds: rea
       fallback = window.setTimeout(settle, JUMP_FALLBACK_MS);
       root.addEventListener('scrollend', settle);
     },
-    [anchor, followBand],
+    [scroller, followBand],
   );
 
   return { active, jumped };

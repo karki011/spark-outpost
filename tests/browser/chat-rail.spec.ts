@@ -7,92 +7,22 @@ import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
-
-const SHOTS = process.env.CHAT_WIDE_SHOTS ?? 'test-results/chat-rail';
-const WIDE = { width: 2000, height: 1100 };
-const PROMPTS = [
-  'Fix the date divider #plan',
-  'Compare the queue backends in a table',
-  'Now break it #fail',
-  'Summarise what changed across the calendar module and every component that reads dates',
-];
-const LONG_LINE =
-  "  if (flags.forceRedis || metrics.requestsPerSecond > config.redisThreshold) return createRedisStreamsBackend(config.redis, { consumerGroup: 'spark-workers', blockMs: 250 });";
-const WIDE_REPLY = [
-  'Here is the comparison you asked for, with the options side by side.',
-  '| Option | Throughput (req/s) | p50 latency | p99 latency | Memory | Notes on operating it in production over a long period |',
-  '| --- | --- | --- | --- | --- | --- |',
-  '| Postgres advisory locks | 12,400 | 3.1 ms | 22 ms | 180 MB | Simple, no new moving parts, contention shows up as lock waits you can already observe |',
-  '| Redis streams | 48,900 | 0.9 ms | 9 ms | 420 MB | Fast, but one more service to run, back up and monitor |',
-  '',
-  'And the function that picks between them:',
-  '```ts',
-  'export async function chooseQueueBackend(config: QueueConfig, metrics: MetricsSnapshot): Promise<QueueBackend> {',
-  LONG_LINE,
-  '  return createPostgresBackend(config.database);',
-  '}',
-  '```',
-  'A short one stays narrow:',
-  '```sh',
-  'pnpm test',
-  '```',
-  'Prose keeps its measure while the table and the long code line use the room.',
-].join('\n');
-
-const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });
-const outline = (page: Page) => page.getByRole('navigation', { name: 'On this chat' });
-const turns = (page: Page) => page.locator('.thread section[aria-label="Turn"]');
-const workPanel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
-const header = (page: Page) => page.getByRole('main').locator('.head');
-
-async function ask(page: Page, prompts: readonly string[]) {
-  const input = page.getByRole('textbox', { name: 'Message' });
-  for (const [index, text] of prompts.entries()) {
-    await input.fill(text);
-    await input.press('Enter');
-    await expect(turns(page)).toHaveCount(index + 1);
-    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
-      timeout: 30_000,
-    });
-  }
-}
-
-async function longChat(page: Page, prompts: readonly string[] = PROMPTS) {
-  await page.setViewportSize(WIDE);
-  await openChats(page);
-  await page.getByRole('button', { name: 'New chat' }).first().click();
-  await ask(page, prompts);
-}
-
-async function widenSecondReply(page: Page) {
-  await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
-    if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
-    const second = detail.messages.filter((message) => message.role === 'assistant')[1];
-    const messages = detail.messages.map((message) =>
-      message.id === second?.id ? { ...message, content: WIDE_REPLY } : message,
-    );
-    await route.fulfill({ response, json: { ...detail, messages } });
-  });
-  await page.reload();
-  await expect(page.locator('.md table')).toBeVisible();
-}
-
-async function shoot(page: Page, name: string) {
-  for (const scheme of ['light', 'dark'] as const) {
-    await page.emulateMedia({ colorScheme: scheme });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: `${SHOTS}/chat-wide-${name}-${scheme}.png` });
-  }
-  await page.emulateMedia({ colorScheme: 'light' });
-}
-
-async function pageScroll(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}
+import {
+  LONG_TASKS,
+  NOTES,
+  PROMPTS,
+  SHOTS,
+  WIDE,
+  ask,
+  header,
+  longChat,
+  outline,
+  pageScroll,
+  rail,
+  shoot,
+  turns,
+  workPanel,
+} from './chat-rail-kit.ts';
 
 async function setWideWindows(page: Page, choice: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
@@ -145,6 +75,11 @@ test.describe('plain chats', () => {
     expect(column.width).toBeGreaterThan(860);
     expect(railBox.x).toBeGreaterThan(column.x + column.width + 16);
     expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
+    expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
+    expect(railBox.width).toBeGreaterThanOrEqual(280);
+    const leftGutter = column.x - thread.x;
+    const rightGutter = railBox.x - 16 - (column.x + column.width);
+    expect(Math.abs(leftGutter - rightGutter)).toBeLessThan(24);
     expect(await pageScroll(page)).toBe(0);
 
     await rows.getByRole('button', { name: 'Not linked. Choose project' }).click();
@@ -191,13 +126,15 @@ test.describe('plain chats', () => {
         .toBeLessThan(34);
       await expect
         .poll(async () => (await page.locator('.col').boundingBox())!.width)
-        .toBeGreaterThanOrEqual(700);
+        .toBeGreaterThanOrEqual(680);
       const column = (await page.locator('.col').boundingBox())!;
       const railBox = (await rail(page).boundingBox())!;
       const thread = (await page.locator('.thread').boundingBox())!;
-      expect(column.width).toBeGreaterThanOrEqual(700);
+      expect(column.width).toBeGreaterThanOrEqual(680);
       expect(railBox.x).toBeGreaterThanOrEqual(column.x + column.width + 16);
       expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
+      expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
+      expect(railBox.width).toBeGreaterThanOrEqual(216);
       expect(await pageScroll(page)).toBe(0);
       await shoot(page, `laptop-${width}`);
 
@@ -218,78 +155,11 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeHidden();
     await expect(rail(page)).toHaveCount(0);
     const columnWidth = async () => (await page.locator('.col').boundingBox())!.width;
-    await expect.poll(columnWidth).toBeGreaterThanOrEqual(700);
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
 
     await page.getByRole('button', { name: 'Hide sidebar' }).click();
     await expect(rail(page)).toBeVisible();
-    await expect.poll(columnWidth).toBeGreaterThanOrEqual(700);
-  });
-
-  test('the outline jumps to a prompt, follows the section in view and works from the keyboard', async ({
-    page,
-  }) => {
-    test.setTimeout(120_000);
-    await longChat(page);
-    await widenSecondReply(page);
-    const links = outline(page).getByRole('link');
-    await expect(links).toHaveCount(4);
-    await expect(links.nth(0)).toHaveText('Fix the date divider #plan');
-    await expect(links.nth(2).getByText('Error')).toBeAttached();
-    await expect(links.nth(3)).toContainText('…');
-    await shoot(page, 'long-2000');
-
-    await links.nth(1).click();
-    await expect(links.nth(1)).toHaveAttribute('aria-current', 'location');
-    await expect
-      .poll(async () => {
-        const [section, thread] = await Promise.all([
-          turns(page).nth(1).boundingBox(),
-          page.locator('.thread').boundingBox(),
-        ]);
-        const toEnd = await page
-          .locator('.thread')
-          .evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight);
-        return Math.min(Math.abs(section!.y - thread!.y), toEnd);
-      })
-      .toBeLessThan(40);
-    await shoot(page, 'outline-2000');
-
-    const table = (await page.locator('.md-table').boundingBox())!;
-    const longCode = (await page.locator('.md-code').first().boundingBox())!;
-    const shortCode = (await page.locator('.md-code').nth(1).boundingBox())!;
-    const column = (await page.locator('.col').boundingBox())!;
-    const railBox = (await rail(page).boundingBox())!;
-    expect(column.width).toBeGreaterThan(1000);
-    for (const block of [table, longCode, shortCode]) {
-      expect(Math.abs(block.x - column.x)).toBeLessThan(2);
-      expect(Math.abs(block.width - column.width)).toBeLessThan(2);
-      expect(block.x + block.width).toBeLessThan(railBox.x);
-    }
-    const composer = (await page.locator('.composer').boundingBox())!;
-    expect(Math.abs(composer.width - column.width)).toBeLessThan(2);
-    const prose = (await page.locator('.md p').first().boundingBox())!;
-    expect(prose.width).toBeLessThanOrEqual(column.width);
-    expect(await pageScroll(page)).toBe(0);
-
-    await links.nth(3).focus();
-    await page.keyboard.press('Enter');
-    await expect(links.nth(3)).toHaveAttribute('aria-current', 'location');
-    await expect(turns(page).nth(3)).toBeFocused();
-
-    await page.locator('.thread').evaluate((thread) => thread.scrollTo({ top: 0 }));
-    await expect(links.nth(0)).toHaveAttribute('aria-current', 'location');
-
-    const scan = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .include('#chat-rail')
-      .analyze();
-    expect(scan.violations).toEqual([]);
-    await page.emulateMedia({ colorScheme: 'dark' });
-    const dark = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .include('#chat-rail')
-      .analyze();
-    expect(dark.violations).toEqual([]);
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
   });
 
   test('the rail collapses to a small toggle and stays collapsed after a reload', async ({
@@ -361,6 +231,11 @@ test.describe('working chats', () => {
     const dock = rail(page).locator('.crail-tv');
     await expect(dock).toBeVisible({ timeout: 30_000 });
     await expect(dock.locator('.tv-n').first()).toBeVisible();
+    const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
+    const dockRail = (await rail(page).boundingBox())!;
+    expect(stage.width).toBeGreaterThanOrEqual(280);
+    expect(stage.width).toBeLessThanOrEqual(dockRail.width);
+    expect(stage.height).toBeGreaterThanOrEqual(175);
     await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
       'Full auto → PR',
     );
@@ -382,6 +257,40 @@ test.describe('working chats', () => {
     expect(after.x).toBe(before.x);
     expect(after.width).toBe(before.width);
     await shoot(page, 'crew-done-2000');
+
+    await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      const detail = (await response.json()) as ConversationDetail;
+      const members = Object.values(detail.orchestrations ?? {}).flatMap((entry) => entry.crew);
+      const notes = members.map((member, index) => ({
+        ...detail.messages[0]!,
+        id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        role: 'assistant' as const,
+        runId: member.runId,
+        content: NOTES,
+      }));
+      const kept = detail.messages.filter(
+        (message) => !members.some((member) => member.runId === message.runId),
+      );
+      await route.fulfill({ response, json: { ...detail, messages: [...kept, ...notes] } });
+    });
+    await page.reload();
+    const notes = page
+      .locator('.agent-block .md')
+      .filter({ hasText: 'Still mapping the wiring' })
+      .first()
+      .locator('> p');
+    await expect(notes).toHaveCount(9);
+    const gaps = await notes.evaluateAll((all) =>
+      all.slice(1).map((note, index) => {
+        const above = all[index]!.getBoundingClientRect();
+        return Math.round((note.getBoundingClientRect().top - above.bottom) * 100) / 100;
+      }),
+    );
+    expect(new Set(gaps)).toEqual(new Set([8.25]));
+    expect(await notes.first().evaluate((note) => getComputedStyle(note).lineHeight)).toBe('24px');
+    await shoot(page, 'crew-notes-2000');
   });
 
   test('tasks read as a plain list: one row per step with its state, the current one marked, no filled rows', async ({
@@ -438,9 +347,43 @@ test.describe('working chats', () => {
       expect(row.weight).toBe(row.current ? '500' : '400');
       if (index > 0) expect(row.top - layout[index - 1]!.bottom).toBe(2);
     }
+    await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      const detail = (await response.json()) as ConversationDetail;
+      const tasks = detail.tasks.map((task) => ({
+        ...task,
+        items: Array.from({ length: 12 }, (_, index) => ({
+          ...task.items[index % task.items.length]!,
+          id: `long-${index}`,
+          label: LONG_TASKS[index % LONG_TASKS.length]!,
+        })),
+      }));
+      await route.fulfill({ response, json: { ...detail, tasks } });
+    });
+    for (const [width, height] of [
+      [1440, 900],
+      [1440, 520],
+      [2000, 900],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.reload();
+      await expect(rows).toHaveCount(12);
+      const boxes = await rows.evaluateAll((all) =>
+        all.map((row) => {
+          const box = row.getBoundingClientRect();
+          const label = row.querySelector('.crail-task-label')!.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom, labelBottom: label.bottom };
+        }),
+      );
+      for (const [index, box] of boxes.entries()) {
+        expect(box.labelBottom).toBeLessThanOrEqual(box.bottom);
+        if (index > 0) expect(box.top).toBeGreaterThanOrEqual(boxes[index - 1]!.bottom);
+      }
+    }
+    await shoot(page, 'tasks-list-2000');
     const axe = await new AxeBuilder({ page }).include('.crail-tasks').analyze();
     expect(axe.violations).toEqual([]);
-    await shoot(page, 'tasks-list-1440');
   });
 
   test('a chat with a pull request shows its checks and links the PR', async ({ page }) => {

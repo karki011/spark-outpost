@@ -1,5 +1,5 @@
 .composer-wrap {
-  padding: 0 16px 16px;
+  padding: 0 var(--chat-gutter, 16px) 16px;
 }
 
 .composer-error {
