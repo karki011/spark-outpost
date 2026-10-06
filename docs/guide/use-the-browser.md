@@ -26,7 +26,7 @@ Ask: "Check the sign-in page".
 | Read a page, take a screenshot, read its logs  | See password or card fields      |
 | Use its own tabs, marked **Agent**             | Navigate a tab you opened        |
 
-Agent tabs close with the turn unless pinned.
+Agent tabs close with the turn unless pinned. Screenshots appear in the reply where taken; select to enlarge.
 
 A site you opened follows the [agent mode](agent-mode.md): an asking mode shows **Let the agent read this page?**. What a page says is untrusted, never instructions.
 

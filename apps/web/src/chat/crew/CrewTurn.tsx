@@ -16,6 +16,8 @@ import { PieceBoard } from '../../crew/PieceBoard.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { BrowserCheckMeta } from '../../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
+import { turnShots } from '../../browser/browser-check.ts';
+import { ShotReply } from '../../browser/ShotReply.tsx';
 import { RailFlags } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
@@ -90,6 +92,10 @@ function CrewTurnBody({
   const agents = crewAgents(orchestration, detail.activity);
   const jev = agents[0]!;
   const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
+  const shots = turnShots(detail, run.id);
+  const memberRunIds = new Set(orchestration.crew.map((member) => member.runId));
+  const otherShots = shots.filter((shot) => !memberRunIds.has(shot.runId));
+  const summary = orchestration.crew.length === 0 ? (textByRun.get(run.id) ?? '') : '';
   const approvals = turnApprovals(crewRunIds, detail.approvals, liveApprovals);
   const checkpoints = mergeCheckpoints(
     orchestration.checkpoints,
@@ -159,6 +165,7 @@ function CrewTurnBody({
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
+        shots={shots.filter((shot) => shot.runId === member.runId)}
         error={member.error}
         errorDetails={member.errorDetails ?? null}
         modelSwitch={member.modelSwitch ?? null}
@@ -221,14 +228,16 @@ function CrewTurnBody({
       </div>
       {steeredAfter(-1)}
       {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}
-      {orchestration.crew.length === 0 && textByRun.get(run.id) && (
+      {summary && (
         <div className="msg ai crew-summary">
-          <Markdown text={textByRun.get(run.id)!} />
+          <ShotReply text={summary} shots={otherShots}>
+            {(part) => <Markdown text={part} />}
+          </ShotReply>
         </div>
       )}
       {orchestration.error && <p className="error-line">{orchestration.error}</p>}
       <RailFlags detail={detail} runId={run.id} />
-      <BrowserShots detail={detail} runId={run.id} />
+      {!summary && <BrowserShots shots={otherShots} />}
       <TurnPlanOffer detail={detail} runId={run.id} />
       <ReplyPlanAction
         detail={detail}

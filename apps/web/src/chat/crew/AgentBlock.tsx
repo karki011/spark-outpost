@@ -2,9 +2,12 @@ import { useId, useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
   type Approval,
+  type BrowserShot,
   type ModelSwitch,
   type Project,
 } from '@spark-outpost/contracts';
+import { BrowserShots } from '../../browser/BrowserShots.tsx';
+import { ShotReply } from '../../browser/ShotReply.tsx';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
 import '../../crew/member-chat.css';
@@ -119,6 +122,7 @@ interface BodyProps {
   conversationId: string;
   steps: readonly RunStep[];
   text: string;
+  shots: readonly BrowserShot[];
   error: string | null;
   errorDetails?: string | null;
   modelSwitch?: ModelSwitch | null;
@@ -134,6 +138,7 @@ function AgentBody({
   liveId = null,
   steps,
   text,
+  shots,
   error,
   errorDetails = null,
   modelSwitch = null,
@@ -173,7 +178,11 @@ function AgentBody({
       <div id={bodyId}>
         <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} />
         {cards.decided.map(approvalCard)}
-        {text && <MemberReplyText role={agent.role} text={text} streaming={busy} />}
+        <ShotReply text={text} shots={shots}>
+          {(part, last) => (
+            <MemberReplyText role={agent.role} text={part} streaming={last && busy} />
+          )}
+        </ShotReply>
         {cards.pending.map(approvalCard)}
         {agent.state === 'queued' && !agent.spark && (
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
@@ -215,6 +224,7 @@ interface AgentBlockProps {
   conversationId: string;
   steps: readonly RunStep[];
   text: string;
+  shots?: readonly BrowserShot[];
   error: string | null;
   errorDetails?: string | null;
   modelSwitch?: ModelSwitch | null;
@@ -223,6 +233,8 @@ interface AgentBlockProps {
   after?: ReactNode;
   changes?: ReactNode;
 }
+
+const NO_SHOTS: readonly BrowserShot[] = [];
 
 function firstLine(text: string): string {
   const line = text
@@ -242,12 +254,13 @@ export function AgentBlock({
   conversationId,
   after,
   changes,
+  shots = NO_SHOTS,
   ...body
 }: AgentBlockProps) {
   const [choice, setChoice] = useState<boolean | null>(null);
   const bodyId = useId();
   const open = choice ?? !collapsed;
-  const block = { agent, anchor, bodyId, conversationId };
+  const block = { agent, anchor, bodyId, conversationId, shots };
   const className = ['msg ai agent-block', open ? '' : 'folded', still ? 'still' : '']
     .filter(Boolean)
     .join(' ');
@@ -273,6 +286,7 @@ export function AgentBlock({
           <span className="fold-meta">{usageParts(agent).join(' · ')}</span>
           <ChevronIcon />
         </button>
+        <BrowserShots shots={shots} />
         {changes}
         {after}
       </div>

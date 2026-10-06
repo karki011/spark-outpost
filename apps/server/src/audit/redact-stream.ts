@@ -13,6 +13,7 @@ const KEY_END = '-----END ';
 export interface RedactionFilter {
   push(delta: string): string;
   finish(): string;
+  pending(): number;
 }
 
 function openKeyBlock(text: string): number {
@@ -75,5 +76,6 @@ export function createRedactionFilter(values: readonly string[]): RedactionFilte
       return release(safeEnd(held, atLineStart));
     },
     finish: () => release(held.length),
+    pending: () => held.length,
   };
 }

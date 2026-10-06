@@ -79,6 +79,15 @@ describe('createRedactionFilter', () => {
     expect(filter.finish()).toBe('next ');
   });
 
+  it('says how much text it is still holding', () => {
+    const filter = createRedactionFilter([]);
+    expect(filter.pending()).toBe(0);
+    expect(filter.push('Both views check out.')).toBe('Both views check ');
+    expect(filter.pending()).toBe(4);
+    filter.finish();
+    expect(filter.pending()).toBe(0);
+  });
+
   it('flushes held text when the reply ends', () => {
     const filter = createRedactionFilter([]);
     expect(filter.push('A_SECRET=value1234')).toBe('');
