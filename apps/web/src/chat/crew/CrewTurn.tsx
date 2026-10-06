@@ -18,6 +18,7 @@ import { BrowserCheckMeta } from '../../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { turnShots } from '../../browser/browser-check.ts';
 import { ShotReply } from '../../browser/ShotReply.tsx';
+import { runCommands } from '../commands/command-model.ts';
 import { RailFlags } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
@@ -166,6 +167,7 @@ function CrewTurnBody({
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
         shots={shots.filter((shot) => shot.runId === member.runId)}
+        commands={runCommands(detail.commands, [member.runId])}
         error={member.error}
         errorDetails={member.errorDetails ?? null}
         modelSwitch={member.modelSwitch ?? null}

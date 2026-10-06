@@ -11,6 +11,7 @@ import {
   PROVIDERS,
   STATUS,
 } from './interface-pairs.ts';
+import { COMMANDS } from './command-pairs.ts';
 import { ISLAND_PAIRS } from './island-pairs.ts';
 import { MAP } from './map-pairs.ts';
 import { PHONE } from './phone-pairs.ts';
@@ -60,6 +61,7 @@ export const PAIRS: Pair[] = [
   ...TICKETS,
   ...PHONE,
   ...PULL_REQUESTS,
+  ...COMMANDS,
 ];
 
 export const HUE_PAIRS: HuePair[] = [

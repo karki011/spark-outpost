@@ -274,7 +274,26 @@ Handled:
 - **Resource links** with an `http` or `https` URI are written as markdown links.
 - **Work without text.** `didWork()` is true after a tool call or a declined permission, so the provider can avoid the sign-in hint.
 
+- **Command output.** See "Command output in the chat" below.
+
 Still open: tracked surface by surface in [ACP_COVERAGE.md](ACP_COVERAGE.md#to-reach-full-support).
+
+## Command output in the chat (October 6, 2026)
+
+A command an agent runs (`tool_call` with `kind: execute`) shows its output in a small read-only terminal in the reply. Spark still advertises `terminal: false` and no `terminal_output` extension: neither pinned adapter calls `terminal/create`, so owning the terminal would change nothing, and commands keep running in the agent's own process, in the folder the session already uses.
+
+| Agent                                     | What the adapter sends                                                                                                                                                                                                                                                           | Shown                                                                                |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Codex (codex-acp 1.13.1)                  | `tool_call` with the command as title, `_meta.terminal_info.cwd` and `rawInput.cwd`; one `tool_call_update` per output delta with `_meta.terminal_output_delta.data`; a last update with `status`, `_meta.terminal_exit.exit_code` and `rawOutput.{formatted_output, exit_code}` | Live, with the real exit code. Codex caps what it forwards for a very noisy command. |
+| Claude and Z.ai (claude-agent-acp 0.81.2) | `tool_call` titled `Terminal` while the input streams, then updates with the command as title; `in_progress` heartbeats without output; a last update with `status` and the output as a fenced text block (a failed one starts with `Exit code N`) and as `rawOutput`            | When the command ends. The exit code is known only for a failed command.             |
+
+- **Mapping.** `agents/acp/command-output.ts` turns those updates into `command_started`, `command_output` and `command_finished` provider outputs. It waits for the command text before starting, so Claude's placeholder title is never shown. `streamsCommandOutput` on the agent definition says whether to expect live output.
+- **Recording.** `workflow/command-recorder.ts` strips every escape sequence except colours, line erase and simple cursor moves (`createOutputSanitizer` in `packages/contracts/src/command-runs.ts`: no OSC, so no title, clipboard or hyperlink; no queries; no mode changes), then runs the same redaction as reply text (`createRedactionFilter` with the project's secret values). Only that cleaned text is stored or sent anywhere. The command line is redacted too.
+- **Events.** `CUSTOM` run events `command_started`, `command_output` (`at` is the chunk's position in the cleaned stream, so a repeat or a gap is detectable; `reset` replaces what the browser has) and `command_finished`. Output is batched for 100 ms, at most 32 KB per event and 1 MB per command; past that the live stream pauses and the stored end is sent once when the command ends.
+- **Storage.** `run_commands` (migration 0140) keeps the command, folder, status, exit code, place in the reply and the last 64 KB of output, saved about once a second while it runs. A row still `running` when its run has ended reads as `interrupted`, which is how a command cut off by a restart shows what was captured. `GET /api/runs/:id/commands/:commandId/output` serves the stored output; a paired phone may read it like the run's events.
+- **Unchanged.** The approval gate, the audit log and its ran-without-review marks, the safety floor, the agent's environment, cancellation and the step list do not read or depend on any of this.
+
+Live check, October 6, 2026, in a throwaway repo under the temp folder with the locally signed-in CLIs: Codex streamed one delta per printed line (10 over 10 s) and reported exit codes 0, 3 and 1; Claude sent nothing until the command ended (11.8 s for the same script) and reported exit code 3 for the failing one; stopping a turn mid-command left an `interrupted` row with Codex's four captured lines and with no output for Claude; a value from the repo's `.env` printed by a script was stored and shown as `[redacted:secret_value]` for both. Codex in Read-only ran the command in its sandbox without a permission request, so the card-to-terminal handoff was seen live only with Claude in Manual.
 
 ## Extensibility and other agents
 

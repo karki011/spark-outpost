@@ -20,8 +20,8 @@ export function parseBody<T>(schema: z.ZodType<T>, req: Request): T {
 
 const idParam = z.uuid();
 
-export function paramId(req: Request): string {
-  const result = idParam.safeParse(req.params.id);
+export function paramId(req: Request, name = 'id'): string {
+  const result = idParam.safeParse(req.params[name]);
   if (!result.success) throw new BadRequestError('The id must be a UUID.');
   return result.data;
 }

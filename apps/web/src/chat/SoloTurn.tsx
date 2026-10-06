@@ -13,12 +13,13 @@ import { AiTurn, type TurnState } from './AiTurn.tsx';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
-import { ShotReply } from '../browser/ShotReply.tsx';
 import { turnShots } from '../browser/browser-check.ts';
 import { RailFlags } from './approvals/RailFlags.tsx';
 import { RevertRun } from './approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
+import { runCommands, shownCommands } from './commands/command-model.ts';
+import { TurnReply } from './commands/TurnReply.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints, shownApprovals } from './crew/crew-items.ts';
 import { MakeChange } from './make-change/MakeChange.tsx';
@@ -115,7 +116,8 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
   const finished = isTerminalRunStatus(run.status);
-  const stream = useRunStream(member?.runId ?? run.id, detail.conversation.id, !finished);
+  const streamRunId = member?.runId ?? run.id;
+  const stream = useRunStream(streamRunId, detail.conversation.id, !finished);
   const leads = streamLeads(stream, finished);
   const active = stream.status === 'connecting' || stream.status === 'running';
   const working = !finished && active;
@@ -144,6 +146,11 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
       ?.content;
   const text = shownText(stream, persistedText, finished);
+  const commands = shownCommands(
+    runCommands(detail.commands, [run.id, member?.runId]),
+    stream.commands,
+    streamRunId,
+  );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished ? (interrupted ? null : run.error) : stream.error;
@@ -199,9 +206,14 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}
-      <ShotReply text={text} shots={turnShots(detail, run.id)}>
+      <TurnReply
+        text={text}
+        shots={turnShots(detail, run.id)}
+        commands={commands}
+        waiting={waiting}
+      >
         {(part, last) => <Markdown text={part} streaming={last && leads && active} />}
-      </ShotReply>
+      </TurnReply>
       {cards.pending.map(approvalCard)}
       <ReplyPlanAction
         detail={detail}

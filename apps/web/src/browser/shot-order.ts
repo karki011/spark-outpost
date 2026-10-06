@@ -22,7 +22,9 @@ function nearestEnd(text: string, snippet: string, offset: number): number | nul
   return best;
 }
 
-export function anchorIndex(text: string, shot: BrowserShot): number | null {
+export type TextAnchor = Pick<BrowserShot, 'textOffset' | 'textBefore' | 'textHeld'>;
+
+export function anchorIndex(text: string, shot: TextAnchor): number | null {
   if (shot.textOffset === null) return null;
   const before = shot.textBefore ?? '';
   const held = shot.textHeld ?? 0;

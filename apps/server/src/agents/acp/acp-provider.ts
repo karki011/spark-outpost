@@ -40,6 +40,7 @@ import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
+import { createCommandTracker } from './command-output.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import {
@@ -301,6 +302,7 @@ async function converse(
   const { policy } = workspace;
   const report = (name: string) => push(mapper.clientAction(name));
   const annotate = (name: string) => push(mapper.note(name));
+  const commands = createCommandTracker(definition.streamsCommandOutput === true);
   const gated: DoWorkspace | null =
     policy && turn.approvals
       ? {
@@ -466,6 +468,7 @@ async function converse(
           live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
+        push(commands.see(message.update));
         const observed = await rails?.observe(message.update);
         for (const flag of doing ? (observed?.rails ?? []) : []) {
           push([{ kind: 'rail_flag', flag }]);

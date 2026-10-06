@@ -1,5 +1,4 @@
-import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-outpost/contracts';
-import { getCapabilities } from '../persistence/chat-settings.ts';
+import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { subagentBrief } from '../persistence/spark-mentions.ts';
@@ -37,6 +36,7 @@ import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
+  knownModes,
   recordCapabilities,
   recordFollowedInstructions,
   recordRunMetrics,
@@ -49,6 +49,7 @@ import { proposedPlan } from '../plans/codex-plan.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
+import { createCommandRecorder } from './command-recorder.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
@@ -174,13 +175,6 @@ function failureMessage(error: unknown, reason: StopReason | null): string {
   return GENERIC_PROVIDER_FAILURE;
 }
 
-async function knownModes(db: Db, input: RunInput): Promise<AgentModeOption[]> {
-  const provider = providerIdSchema.safeParse(input.provider);
-  if (!provider.success) return [];
-  const captured = await getCapabilities(db, input.workspaceId, provider.data).catch(() => null);
-  return captured?.modes ?? [];
-}
-
 export async function runAgentTurn(
   deps: TurnDeps,
   lease: Lease,
@@ -287,6 +281,12 @@ export async function runAgentTurn(
   const redaction = createRedactionFilter(secretValues);
   const observer = scannedObserver(audit, secretValues, observations.record);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
+  const replySoFar = () => ({
+    shown: text,
+    held: redaction.pending() + (titles?.pending() ?? 0),
+  });
+  const guard = { ...input, db: deps.db, runId: lease.runId, append };
+  const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {
@@ -362,7 +362,6 @@ export async function runAgentTurn(
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
     }
-    const guard = { ...input, db: deps.db, runId: lease.runId, append };
     for await (const output of guardedRun(guard, provider, {
       prompt: withBrowserCheck({
         prompt: input.prompt,
@@ -411,10 +410,7 @@ export async function runAgentTurn(
           timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
           pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
           audit,
-          replySoFar: () => ({
-            shown: text,
-            held: redaction.pending() + (titles?.pending() ?? 0),
-          }),
+          replySoFar,
         },
       },
     })) {
@@ -455,7 +451,9 @@ export async function runAgentTurn(
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }
       if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
+      await commands.observe(output);
     }
+    await commands.close();
     await rails?.finish();
     await sayText(redaction.finish());
     if (titles) {
@@ -479,6 +477,7 @@ export async function runAgentTurn(
     await sayText(redaction.finish()).catch((failure: unknown) =>
       console.error('Could not save the end of the reply', failure),
     );
+    await commands.close().catch(() => undefined);
     await settleAudit();
     const reason = control.reason();
     if (reason === 'cancelled') return ended(result('cancelled'));
