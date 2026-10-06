@@ -1,5 +1,5 @@
 import './chat-rail.css';
-import { memo, useCallback, useMemo, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import type {
@@ -24,11 +24,9 @@ import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailToggleIcon } from './RailIcons.tsx';
-import { RailOutline } from './RailOutline.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTasks } from './RailTasks.tsx';
 import { RailTv } from './RailTv.tsx';
-import { chatOutline } from './outline-model.ts';
 import { railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
@@ -119,23 +117,6 @@ function OpenRail({
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,
   });
-  const changedRuns = changes.data?.runs;
-  const { messages, runs, approvals, plans } = detail;
-  const outline = useMemo(
-    () =>
-      chatOutline(
-        { messages, runs, approvals, plans },
-        {
-          changedRunIds: new Set(
-            (changedRuns ?? [])
-              .filter((run) => run.files > 0 && !run.revertedAt)
-              .map((run) => run.runId),
-          ),
-          prUrls: (watches.data?.watches ?? []).map((entry) => entry.url),
-        },
-      ),
-    [messages, runs, approvals, plans, changedRuns, watches.data],
-  );
   const openTasks = useCallback(() => onTab('tasks'), [onTab]);
   const orchestration = running ? latestOrchestration(detail) : null;
   const agents = orchestration ? crewAgents(orchestration, detail.activity) : [];
@@ -155,7 +136,6 @@ function OpenRail({
       </div>
       <RailSummary rows={rows} provider={provider} onAction={act} />
       {task && <RailTasks task={task} onOpen={openTasks} />}
-      <RailOutline entries={outline} />
       <AnimatePresence>
         {agents.length > 0 && <RailTv key="tv" conversationId={conversationId} agents={agents} />}
       </AnimatePresence>

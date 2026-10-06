@@ -95,7 +95,9 @@ svg {
 }
 
 .main {
-  --chat-col: clamp(700px, max(min(100cqi - 360px, 900px), 100cqi - 496px), 1120px);
+  --chat-col: clamp(680px, max(min(100cqi - 360px, 860px), 100cqi - 496px), 1040px);
+  --chat-gutter: clamp(16px, (100cqi - 480px) / 2, 56px);
+  --chat-measure: 560px;
   position: relative;
   flex: 1;
   min-width: 0;

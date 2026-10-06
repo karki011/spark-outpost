@@ -35,7 +35,7 @@ function chat(extra: Partial<ConversationDetail> = {}): ConversationDetail {
 describe('chatOutline', () => {
   it('lists each prompt by its first line, clipped at a word near 60 characters', () => {
     const outline = chatOutline(chat(), NONE);
-    expect(outline.map((entry) => entry.runId)).toEqual(['one', 'two', 'three']);
+    expect(outline.map((entry) => entry.id)).toEqual(['one', 'two', 'three']);
     expect(outline[0]!.label).toBe('Fix the date divider');
     expect(outline[1]!.label.length).toBeLessThanOrEqual(60);
     expect(outline[1]!.label.endsWith('…')).toBe(true);
@@ -88,6 +88,62 @@ describe('chatOutline', () => {
       },
     });
     expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([['plan'], ['plan'], []]);
+  });
+
+  it('previews the start of each reply as plain text', () => {
+    const long = `## Result\n\n**Done.** The \`divider\` now reads the locale.\n\`\`\`ts\nconst hidden = 1;\n\`\`\`\n${'More words follow here. '.repeat(20)}`;
+    const detail = chat();
+    const messages = detail.messages.map((message) =>
+      message.id === 'a-one' ? { ...message, content: long } : message,
+    );
+    const outline = chatOutline({ ...detail, messages }, NONE);
+    expect(outline[0]!.reply.startsWith('Result Done. The divider now reads the locale.')).toBe(
+      true,
+    );
+    expect(outline[0]!.reply).not.toContain('hidden');
+    expect(outline[0]!.reply.length).toBeLessThanOrEqual(220);
+    expect(outline[1]!.reply).toBe('Refactored.');
+    expect(outline[2]!.reply).toBe('');
+  });
+
+  it('adds a tick for each message sent to a running turn, after its turn', () => {
+    const detail = chat({
+      memberMessages: [
+        {
+          id: 'steer-1',
+          runId: 'two-child',
+          body: 'Also keep the week view\nas it is',
+          urgency: 'now',
+          status: 'delivered',
+          messageId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          deliveredAt: null,
+        },
+        {
+          id: 'became-a-message',
+          runId: 'two',
+          body: 'Sent as the next message',
+          urgency: 'now',
+          status: 'sent',
+          messageId: null,
+          createdAt: '2026-01-01T00:00:01Z',
+          deliveredAt: null,
+        },
+      ],
+      orchestrations: { two: { crew: [{ runId: 'two-child' }] } },
+    } as unknown as Partial<ConversationDetail>);
+    const outline = chatOutline(detail, NONE);
+    expect(outline.map((entry) => entry.anchor)).toEqual([
+      'turn-one',
+      'turn-two',
+      'steer-steer-1',
+      'turn-three',
+    ]);
+    expect(outline[2]).toMatchObject({
+      id: 'steer-1',
+      label: 'Also keep the week view',
+      marks: [],
+    });
   });
 
   it('anchors a turn by its run', () => {

@@ -17,6 +17,7 @@ import { PendingSends } from './send/PendingSends.tsx';
 import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
 import { FollowContext } from './follow-requests.ts';
+import { OutlineTicks } from './outline/OutlineTicks.tsx';
 import { RailContext } from './rail/rail-context.ts';
 import { usePendingArrival } from './status/status-context.ts';
 
@@ -29,6 +30,7 @@ interface ThreadProps {
   detail: ConversationDetail;
   repos: Project[];
   sends: ChatSends;
+  taskId: string | null;
   onOpenTask?: (taskId: string) => void;
   onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
@@ -38,6 +40,7 @@ export const Thread = memo(function Thread({
   detail,
   repos,
   sends,
+  taskId,
   onOpenTask,
   onOpenChat,
   quotes,
@@ -102,6 +105,7 @@ export const Thread = memo(function Thread({
       <div className="thread" ref={scrollerRef}>
         <RailSlot />
         <div className="col">
+          <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           {turns.map(({ run, userMessage, assistantMessage }) => (
             <TurnSection
               key={run.id}

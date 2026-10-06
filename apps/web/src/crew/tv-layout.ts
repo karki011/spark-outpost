@@ -34,6 +34,30 @@ export const STAGES: Record<TvSize, StageMetrics> = {
   l: { width: 460, height: 360, jevSize: 76, crewSize: 50, labelWidth: 108, fontSize: 13 },
 };
 
+const DOCK: StageMetrics = {
+  width: 200,
+  height: 128,
+  jevSize: 34,
+  crewSize: 26,
+  labelWidth: 62,
+  fontSize: 11,
+};
+const DOCK_MAX_WIDTH = 320;
+const DOCK_MAX_FONT = 13;
+
+export function dockStage(room: number): StageMetrics {
+  const width = Math.round(Math.min(Math.max(room, DOCK.width), DOCK_MAX_WIDTH));
+  const scale = width / DOCK.width;
+  return {
+    width,
+    height: Math.round(DOCK.height * scale),
+    jevSize: Math.round(DOCK.jevSize * scale),
+    crewSize: Math.round(DOCK.crewSize * scale),
+    labelWidth: Math.round(DOCK.labelWidth * scale),
+    fontSize: Math.min(DOCK_MAX_FONT, Math.round(DOCK.fontSize * scale * 2) / 2),
+  };
+}
+
 const WATCH_MAX: Box = { width: 1100, height: 680 };
 const WATCH_CHROME = { x: 48, y: 150 };
 const MAX_SPAN = (200 * Math.PI) / 180;

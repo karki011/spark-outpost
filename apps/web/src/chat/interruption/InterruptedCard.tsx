@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Interruption } from '@spark-outpost/contracts';
 import { approvalKeys, approvalsApi } from '../../api/approvals.ts';
 import { api, queryKeys } from '../../api/client.ts';
-import { turnAnchor } from '../rail/outline-model.ts';
+import { turnAnchor } from '../outline/outline-model.ts';
 import {
   CONTINUE_LABEL,
   INTERRUPTED_TITLE,

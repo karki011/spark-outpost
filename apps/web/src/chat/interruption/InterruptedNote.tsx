@@ -1,5 +1,5 @@
 import type { ConversationDetail, Run } from '@spark-outpost/contracts';
-import { turnAnchor } from '../rail/outline-model.ts';
+import { turnAnchor } from '../outline/outline-model.ts';
 import { aftermath } from './interruption-model.ts';
 
 interface InterruptedNoteProps {

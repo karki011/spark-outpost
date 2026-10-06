@@ -1,6 +1,6 @@
 import { clipAtWord, type ConversationDetail, type Run } from '@spark-outpost/contracts';
+import { steerAnchor, turnSteers } from '../steer/steer-model.ts';
 import { buildTurns } from '../turns.ts';
-import { OUTLINE_MIN_TURNS } from './wide-layout.ts';
 
 export type OutlineMark = 'plan' | 'approval' | 'files' | 'pr' | 'error';
 
@@ -13,8 +13,10 @@ export const OUTLINE_MARK_LABELS: Record<OutlineMark, string> = {
 };
 
 export interface OutlineEntry {
-  runId: string;
+  id: string;
+  anchor: string;
   label: string;
+  reply: string;
   marks: OutlineMark[];
 }
 
@@ -23,7 +25,9 @@ interface OutlineFacts {
   prUrls: readonly string[];
 }
 
+const OUTLINE_MIN_TURNS = 3;
 const LABEL_LENGTH = 60;
+const REPLY_LENGTH = 220;
 const NO_TEXT = 'Message without text';
 const FAILED: readonly Run['status'][] = ['failed', 'outcome_unknown'];
 
@@ -50,7 +54,18 @@ function promptLabel(content: string | undefined): string {
   return clipAtWord(firstLine, LABEL_LENGTH) || NO_TEXT;
 }
 
-type OutlineSource = Pick<ConversationDetail, 'messages' | 'runs' | 'approvals' | 'plans'>;
+function replyPreview(content: string | undefined): string {
+  const prose = (content ?? '')
+    .replace(/```[\s\S]*?(```|$)/g, ' ')
+    .replace(/[#*`>|]+/g, ' ')
+    .replace(/\s+/g, ' ');
+  return clipAtWord(prose, REPLY_LENGTH);
+}
+
+export type OutlineSource = Pick<
+  ConversationDetail,
+  'messages' | 'runs' | 'approvals' | 'plans' | 'memberMessages' | 'orchestrations'
+>;
 
 export function chatOutline(detail: OutlineSource, facts: OutlineFacts): OutlineEntry[] {
   const turns = buildTurns(detail);
@@ -79,9 +94,20 @@ export function chatOutline(detail: OutlineSource, facts: OutlineFacts): Outline
   for (const { run } of turns) if (FAILED.includes(run.status)) mark(run.id, 'error');
 
   const order: OutlineMark[] = ['plan', 'approval', 'files', 'pr', 'error'];
-  return turns.map(({ run, userMessage }) => ({
-    runId: run.id,
-    label: promptLabel(userMessage?.content),
-    marks: order.filter((kind) => marked.get(run.id)?.has(kind)),
-  }));
+  return turns.flatMap(({ run, userMessage, assistantMessage }) => [
+    {
+      id: run.id,
+      anchor: turnAnchor(run.id),
+      label: promptLabel(userMessage?.content),
+      reply: replyPreview(assistantMessage?.content),
+      marks: order.filter((kind) => marked.get(run.id)?.has(kind)),
+    },
+    ...turnSteers(detail as ConversationDetail, run.id).map((message) => ({
+      id: message.id,
+      anchor: steerAnchor(message.id),
+      label: promptLabel(message.body),
+      reply: '',
+      marks: [],
+    })),
+  ]);
 }

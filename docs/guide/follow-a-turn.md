@@ -11,10 +11,10 @@ You'll follow a running turn, stop it, and line up more messages. About 2 minute
 ## See what's happening
 
 1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
-2. Select the step count to show the steps.
+2. Select the step count for the steps.
 3. Select **Show work panel** in the chat header for the plan, crew, files and cost.
 
-When the agent needs you, the line says **Waiting for you**. Select it, or press **⌘⇧Y**, to jump to the card.
+When the agent needs you, the line says **Waiting for you**. Select it, or press **⌘⇧Y**.
 
 ## Stop a turn
 
@@ -28,7 +28,7 @@ When the agent needs you, the line says **Waiting for you**. Select it, or press
 
 | When                           | Spark                                                                               |
 | ------------------------------ | ----------------------------------------------------------------------------------- |
-| The turn finishes              | Sends queued messages one at a time, in order.                                      |
+| The turn finishes              | Sends queued messages in order.                                                     |
 | You send one now               | Shows it in the chat with its status: read next step, or sent after the turn stops. |
 | You stop the turn, or it fails | Pauses the queue until you select **Send now**.                                     |
 | You reload or restart          | Keeps the queue.                                                                    |
@@ -38,7 +38,7 @@ Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 ## Delete a running chat
 
 1. Open the chat's **…** menu and select **Delete**, then **Confirm delete**.
-2. To take it back, select **Undo**.
+2. To restore it, select **Undo**.
 
 You can delete a chat that is running: Spark stops the work first.
 
@@ -51,5 +51,6 @@ You can delete a chat that is running: Spark stops the work first.
 | **Save as agreed plan**                        | Make the reply the chat's plan.                             |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart the agent without the old context.                  |
+| Ticks left of the thread                       | Jump to a message; hover previews it.                       |
 
 **Next:** [Answer an approval card](answer-approvals.md)

@@ -1,6 +1,6 @@
 .qwrap {
   flex-shrink: 0;
-  padding: 0 16px;
+  padding: 0 var(--chat-gutter, 16px);
 }
 
 .qstrip {
