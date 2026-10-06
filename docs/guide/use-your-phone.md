@@ -12,6 +12,6 @@ You'll open Spark Outpost on your phone while the work stays on the Mac. About 5
 2. Select **Pair a phone**, scan the code.
 3. Check both show the same code, then **Confirm**.
 
-**Devices** renames or revokes a phone. **What the phone can do** holds the switches. On the phone, **More** holds Docs, Phone and Settings; Mac-only tools are hidden.
+**Devices** renames or revokes a phone. **What the phone can do** holds the switches. On the phone, **More** holds Phone and Settings; Map and Mac-only tools are hidden.
 
 **Next:** [Answer an approval card](answer-approvals.md)

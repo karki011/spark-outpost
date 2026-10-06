@@ -57,17 +57,6 @@ test('with no projects the Map explains itself and Add a project opens the folde
   await expect(dialog).toHaveCount(0);
 });
 
-test('the empty Map fits a phone without sideways scrolling', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await openEmptyMap(page);
-  await expect(page.getByRole('button', { name: 'Add a project' })).toBeVisible();
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
-  await screenshot(page, 'map-empty-phone');
-});
-
 test('with reduced motion the empty sky holds still with the constellation drawn', async ({
   page,
 }) => {

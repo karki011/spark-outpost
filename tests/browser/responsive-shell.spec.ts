@@ -25,8 +25,8 @@ import { seedChats } from './sidebar-seed.ts';
 
 test.describe.configure({ timeout: 120_000 });
 
-const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Map'];
-const UNDER_MORE = ['Docs', 'Phone'];
+const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
+const UNDER_MORE = ['Phone'];
 const SECTIONS = [
   'Spark',
   'Crew',
@@ -84,7 +84,8 @@ for (const size of TOUCH_SIZES) {
     else expect(nav!.width).toBeLessThan(100);
 
     expect(await widerThanItsBox(page.locator('.home'))).toEqual([]);
-    for (const name of PRIMARY) {
+    if (phone) await expect(navButton(page, 'Map')).toHaveCount(0);
+    for (const name of phone ? PRIMARY : [...PRIMARY, 'Map']) {
       await expectInsideViewport(page, navButton(page, name));
       await navButton(page, name).click();
       await expect(navButton(page, name)).toHaveAttribute('aria-current', 'page');

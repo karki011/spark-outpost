@@ -99,7 +99,7 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   },
 ];
 
-const PRIMARY_ON_PHONE = 5;
+const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map');
 
 const PHONE_ICON = (
   <svg {...ICON}>
@@ -156,13 +156,8 @@ export function Rail({
   const phone = layout?.narrow ?? false;
   const { remote } = useRemoteClient();
   const reopens = layout?.collapsed && !phone;
-  const primary = phone ? VIEWS.slice(0, PRIMARY_ON_PHONE) : VIEWS;
+  const primary = phone ? PHONE_VIEWS : VIEWS;
   const more = [
-    ...VIEWS.slice(primary.length).map((item) => ({
-      ...item,
-      current: view === item.id,
-      onSelect: () => onView(item.id),
-    })),
     {
       id: 'phone',
       label: 'Phone',

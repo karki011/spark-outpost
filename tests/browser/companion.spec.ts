@@ -220,16 +220,14 @@ test('reduced motion keeps a static mood with no float or pulse', async ({ page 
   expect(ring).toBe('none');
 });
 
-test('on a phone the companion is smaller and sits above the bottom bar', async ({ page }) => {
+test('on a phone there is no floating companion', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 390, height: 760 });
   await page.goto('/');
   await goHome(page);
 
-  const box = (await companion(page).boundingBox())!;
-  const rail = (await page.getByRole('navigation', { name: 'Main' }).boundingBox())!;
-  expect(box.width).toBeLessThanOrEqual(40);
-  expect(box.y + box.height).toBeLessThanOrEqual(rail.y);
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(companion(page)).toHaveCount(0);
 });
 
 test('many things at once: the most urgent mood, a count badge and capped lists', async ({

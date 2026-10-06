@@ -91,7 +91,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   }, []);
   useSettingsRequests(setSettings);
   useEffect(() => onProviderRoute(() => setSettingsState('ai')), []);
-  const [view, setViewState] = useState<AppView>(() =>
+  const [storedView, setViewState] = useState<AppView>(() =>
     isDocLinkOpen() ? 'docs' : readSavedView(),
   );
   const setView = useCallback((next: AppView) => {
@@ -126,6 +126,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   ).length;
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
+  const view: AppView = layout.narrow && storedView === 'map' ? 'home' : storedView;
   useAttentionTitle(waiting);
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
@@ -312,7 +313,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         )}
         <StatusCompanion
           chats={chats}
-          visible={view !== 'map' && (view !== 'chats' || activeId === null)}
+          visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
           onOpenChat={openAtCard}
           onHome={() => setView('home')}
         />

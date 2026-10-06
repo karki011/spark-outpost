@@ -64,7 +64,12 @@ const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
 const spoke = (page: Page, key: string) => tvOf(page).locator(`.tv-n[data-piece="${key}"]`);
 
 async function openTv(page: Page, view: 'Stage' | 'List'): Promise<Locator> {
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  const direct = page.getByRole('button', { name: 'Agent TV' });
+  if (await direct.isVisible()) await direct.click();
+  else {
+    await page.getByRole('button', { name: 'Chat actions' }).click();
+    await page.getByRole('menuitem', { name: 'Agent TV' }).click();
+  }
   const tv = tvOf(page);
   await tv.getByRole('radio', { name: view }).click();
   return tv;

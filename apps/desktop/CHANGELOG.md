@@ -5,7 +5,7 @@ Newest first. Each release adds a section before packaging; the release script t
 ## 0.1.0-beta.6
 
 - Phone: a Phone page above Settings. Turn on phone access over Tailscale Serve, pair a phone with a QR code and a matching code, manage devices, choose what a phone may do and see recent phone activity. A paired phone does what the Mac app does, except the Browser pane, preview and terminal.
-- Phone and tablet layout: a phone on its side keeps the phone layout, the phone bar has More, menus stay on screen, tap targets are larger and Spark can be added to the home screen.
+- Phone and tablet layout: a phone on its side keeps the phone layout, the phone bar is Home, Chats, Analytics, Tickets, Docs and More, with no Map or floating blob, menus stay on screen, tap targets are larger and Spark can be added to the home screen.
 - Chat: "On this chat" moved to ticks left of the thread. Text keeps a narrower reading width, the chat has its own top bar, and the context rail sits at the right edge with a bigger crew stage. Below 1280px wide, the Work panel slides over the chat while the chat list is open.
 - Chat: a message sent to a running turn shows in the thread. Agent screenshots appear where they were taken, as small thumbnails that open full size. The Coordinator's piece list no longer shows as raw text.
 - New chats start at Full auto → PR. Run budgets are removed: time, tool calls, tokens and cost are shown, never capped.
