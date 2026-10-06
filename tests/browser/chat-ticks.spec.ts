@@ -9,6 +9,7 @@ import {
   PROMPTS,
   SHOTS,
   ask,
+  composerGap,
   header,
   longChat,
   outline,
@@ -76,6 +77,8 @@ test.describe('plain chats', () => {
         return Math.min(Math.abs(section!.y - thread!.y), toEnd);
       })
       .toBeLessThan(40);
+    expect(await composerGap(page)).toBeLessThanOrEqual(24);
+    await expect(header(page)).toBeInViewport({ ratio: 1 });
     await shoot(page, 'outline-2000');
 
     const table = (await page.locator('.md-table').boundingBox())!;
@@ -109,6 +112,8 @@ test.describe('plain chats', () => {
     await expect(ticks(page).nth(3)).toHaveAttribute('aria-current', 'location');
     await expect(turns(page).nth(3)).toBeFocused();
     await expect(preview(page)).toHaveCount(0);
+    await expect.poll(() => composerGap(page)).toBeLessThanOrEqual(24);
+    await expect(header(page)).toBeInViewport({ ratio: 1 });
 
     await page.locator('.thread').evaluate((thread) => thread.scrollTo({ top: 0 }));
     await expect(ticks(page).nth(0)).toHaveAttribute('aria-current', 'location');
