@@ -10,7 +10,7 @@ import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 import { startTicketStubs, type TicketStubs } from './ticket-support.ts';
 
 let t: TestDb;
@@ -74,6 +74,7 @@ async function folder(...parts: string[]) {
 describe('starting a ticket with extra context', () => {
   it('sends a short brief with the note and references and keeps them on the task', async () => {
     await connectJira();
+    await connectCliProvider(t, 'claude');
     const projectRoot = await folder('web');
     const project = (await send('post', '/api/projects', { rootPath: projectRoot }).expect(201))
       .body as { id: string };
@@ -92,6 +93,7 @@ describe('starting a ticket with extra context', () => {
     const started = startTicketResponseSchema.parse(response.body);
 
     const detail = (await get(`/api/conversations/${started.conversationId}`).expect(200)).body;
+    expect(detail.settings.level).toBe('full-auto');
     const message = detail.messages.find((m: { role: string }) => m.role === 'user');
     expect(message.content).toContain('## Ticket data from Jira');
     expect(message.content).toContain('untrusted third-party text');

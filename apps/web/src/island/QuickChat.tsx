@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   AUTONOMY_LEVELS,
+  DEFAULT_INVOLVEMENT_LEVEL,
   titleFromMessage,
   type ConversationSummary,
   type InvolvementLevel,
@@ -73,7 +74,7 @@ export function QuickChat(props: QuickChatProps) {
   const setMenu = (open: boolean) => setMenuAt(open ? (added?.signal ?? 0) : null);
   const secrets = useSecretGuard(draft.text);
   const defaults = useDefaults();
-  const level = draft.level ?? defaults.level ?? 'hands-off';
+  const level = draft.level ?? defaults.level ?? DEFAULT_INVOLVEMENT_LEVEL;
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[0]!;
   const project =
     projects.find((candidate) => candidate.id === draft.projectId) ??

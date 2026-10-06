@@ -63,6 +63,7 @@ import { refreshPlan } from './plan-progress.ts';
 import { escalatedHighStakes, wantsCritic } from './critic-rule.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
 import { autoKeep, publishWhenAsked, shipFullAuto } from './full-auto-ship.ts';
+import { keepWithoutPullRequest } from './no-pull-request.ts';
 import {
   baseLimits,
   builderKey,
@@ -226,7 +227,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       await publishWhenAsked(s);
       return { type: 'kept' };
     case 'ship':
-      return shipFullAuto(s);
+      return (await keepWithoutPullRequest(s, action.keptNote ?? null)) ?? shipFullAuto(s);
     case 'restore':
       return restoreAfterCut(s);
     case 'revert':

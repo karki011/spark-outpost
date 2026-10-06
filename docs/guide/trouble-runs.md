@@ -44,6 +44,6 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 
 ## A plan didn't build by itself
 
-- **You see:** **Build this plan?** waiting at **Automatic**.
-- **Why:** at **Automatic** a plan waits for you in every agent mode.
-- **Fix:** select **Build**, or set the chat to [**Full auto → PR**](spark-autonomy.md).
+- **You see:** **Build this plan?** waiting.
+- **Why:** a plan waits for you at both autonomy levels and in every agent mode.
+- **Fix:** select **Build**.

@@ -4,6 +4,7 @@ import {
   crewItems,
   groupParallel,
   handOffAt,
+  itemStartedAt,
   memberTexts,
   shownApprovals,
   turnApprovals,
@@ -177,5 +178,29 @@ describe('parallel piece Builders', () => {
     expect(parallelTitle([agent('Bolt', 'done'), agent('Rivet', 'done')])).toBe(
       'Worked in parallel: Bolt and Rivet',
     );
+  });
+});
+
+describe('itemStartedAt', () => {
+  const started = (runId: string, startedAt: string | null) =>
+    ({ kind: 'agent', member: { runId, startedAt }, checkpoints: [] }) as unknown as Extract<
+      ReturnType<typeof crewItems>[number],
+      { kind: 'agent' }
+    >;
+
+  it('uses when a member started, and the earliest start of members working side by side', () => {
+    const solo = started('a', '2026-09-27T00:00:05Z');
+    const group = {
+      kind: 'group' as const,
+      members: [started('b', null), started('c', '2026-09-27T00:00:09Z'), solo],
+    };
+    expect(itemStartedAt(solo)).toBe('2026-09-27T00:00:05Z');
+    expect(itemStartedAt(group)).toBe('2026-09-27T00:00:05Z');
+    expect(itemStartedAt(started('queued', null))).toBeNull();
+  });
+
+  it('uses when a card was raised', () => {
+    const raised = approval('p1', 'turn-1');
+    expect(itemStartedAt({ kind: 'approval', approval: raised })).toBe(raised.createdAt);
   });
 });

@@ -343,6 +343,14 @@
   margin: 0;
 }
 
+.dd-none {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
 @media (max-width: 760px) {
   .dd-body {
     grid-template-columns: 1fr;

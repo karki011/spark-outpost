@@ -101,7 +101,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
   await expect(dialog(page)).toContainText(
-    'Claude Sonnet 5, high effort, Accept edits · Automatic',
+    'Claude Sonnet 5, high effort, Accept edits · Full auto → PR',
   );
   await expect(dialog(page)).toContainText('Connect tools anytime in Settings');
   await expect(dialog(page)).not.toContainText('Tools coming soon');

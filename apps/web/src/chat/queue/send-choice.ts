@@ -61,8 +61,6 @@ export function sendNowStatus({ memberMessages = [], runs }: SendNowFacts): stri
   switch (message.status) {
     case 'queued':
       return steeredLive ? 'Sending to the running turn…' : null;
-    case 'delivered':
-      return steeredLive ? 'Sent to the running turn' : null;
     case 'interrupting':
       return 'Stopping the turn to send your message…';
     case 'sent': {

@@ -1,15 +1,8 @@
-import {
-  modePosture,
-  type InvolvementLevel,
-  type ModePosture,
-  type SparkActionName,
-} from '@spark-outpost/contracts';
-import { resolveChatSettings } from '../../persistence/chat-settings.ts';
+import { modePosture, type ModePosture, type SparkActionName } from '@spark-outpost/contracts';
 import type { Queryable } from '../../persistence/db.ts';
 
 export interface ActionFacts {
   posture: ModePosture;
-  level: InvolvementLevel | null;
   requested: boolean;
   observed: boolean;
 }
@@ -63,7 +56,6 @@ export function explicitlyAsked(action: SparkActionName, request: string): boole
 
 export function actionPath(facts: ActionFacts): ActionPath {
   if (facts.observed) return 'confirm';
-  if (facts.level === 'full-auto') return 'perform';
   if (PERFORMING_POSTURES.has(facts.posture)) return 'perform';
   if (facts.posture === 'edits' && facts.requested) return 'perform';
   return 'confirm';
@@ -85,24 +77,14 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
   return rows[0] ?? { provider: null, mode: null, request: null };
 }
 
-async function chatLevel(
-  db: Queryable,
-  conversationId: string | null,
-): Promise<InvolvementLevel | null> {
-  if (!conversationId) return null;
-  const settings = await resolveChatSettings(db, conversationId).catch(() => null);
-  return settings?.level ?? null;
-}
-
 export async function actionFacts(
   db: Queryable,
-  place: { runId: string; conversationId: string | null; observed: boolean },
+  place: { runId: string; observed: boolean },
   action: SparkActionName,
 ): Promise<ActionFacts> {
   const run = await runFacts(db, place.runId);
   return {
     posture: modePosture(run.provider, run.mode),
-    level: await chatLevel(db, place.conversationId),
     requested: explicitlyAsked(action, run.request ?? ''),
     observed: place.observed,
   };

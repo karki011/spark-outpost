@@ -42,6 +42,7 @@ interface ProfileRow {
   personality: Personality;
   spark_enabled: boolean;
   default_level: InvolvementLevel;
+  default_level_notice: boolean;
   spend_cap_usd: string | null;
   morning_brief: boolean;
   morning_brief_time: string;
@@ -93,6 +94,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, default_level,
+       default_level_notice,
        spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
@@ -191,6 +193,7 @@ export async function getSetupState(
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
     defaultLevel: profile.default_level,
+    defaultLevelNotice: profile.default_level_notice,
     spendCapUsd: effectiveSpendCap(savedSpendCap(profile), serverSpendCapUsd),
     morningBrief: profile.morning_brief,
     morningBriefTime: profile.morning_brief_time,
@@ -255,6 +258,7 @@ export async function updateProfile(
        wide_window = COALESCE($25, wide_window),
        busy_enter = COALESCE($26, busy_enter),
        pr_follow_up_ask = COALESCE($27, pr_follow_up_ask),
+       default_level_notice = default_level_notice AND $28,
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -285,6 +289,7 @@ export async function updateProfile(
       update.wideWindow ?? null,
       update.busyEnter ?? null,
       update.prFollowUpAsk ?? null,
+      update.defaultLevel === undefined && update.defaultLevelNotice === undefined,
     ],
   );
 }

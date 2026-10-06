@@ -193,4 +193,27 @@ describe('read-then-send guard', () => {
     );
     expect(rows).toEqual([{ source: 'private_data', label: 'private work data (spark_tickets)' }]);
   });
+
+  it("does not count this chat's own task and history, or labels stored for them", async () => {
+    const turn = await fullAutoTurn();
+    const { gate, observations } = gateFor(turn);
+    const tools = await startSparkTools(t, {
+      conversationId: turn.conversationId,
+      runId: turn.runId,
+      observations,
+    });
+    try {
+      for (const tool of ['spark_chat', 'spark_chat_history', 'spark_run']) {
+        expect((await tools.call(tool)).isError, tool).not.toBe(true);
+      }
+    } finally {
+      await tools.close();
+    }
+    observations.record({ source: 'private_data', label: 'private work data (spark_task)' });
+    await observations.settled();
+
+    expect(await observations.labels()).toEqual([]);
+    const answer = await gate.review(commandRequest(root, CURL), new AbortController().signal);
+    expect(answer).toMatchObject({ allowed: true });
+  });
 });

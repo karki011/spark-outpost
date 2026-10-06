@@ -21,6 +21,7 @@ import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './outline/outline-model.ts';
 import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
+import { TurnSteers } from './steer/SteeredMessage.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';
 import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
 import { PushNotices } from './pull-request/PushNotices.tsx';
@@ -148,6 +149,7 @@ export const TurnSection = memo(function TurnSection({
           {shownTask && !live && taskCard}
         </>
       )}
+      {!crew && <TurnSteers detail={detail} run={run} />}
       <OpenedPullRequests
         conversationId={detail.conversation.id}
         runIds={turnRunIds(detail, run.id)}

@@ -1,3 +1,7 @@
+.dchip-slot {
+  display: contents;
+}
+
 .dchip {
   display: inline-flex;
   align-items: center;

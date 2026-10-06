@@ -118,12 +118,9 @@ test('message the Builder from Agent TV while it waits, and it reads it at its n
   await expect(tv).toBeHidden();
 
   await allowEdit(page);
-  const block = agentBlock(page, name);
-  await expect(block.getByRole('list', { name: `Your messages to ${name}` })).toContainText(
-    `${name} has it`,
-    { timeout: 30_000 },
-  );
-  await expect(block).toContainText('Message from the user', { timeout: 30_000 });
+  const bubble = page.locator('.msg.me.steered', { hasText: 'Also log the date you parse.' });
+  await expect(bubble.getByRole('status')).toHaveText(`${name} has it`, { timeout: 30_000 });
+  await expect(agentBlock(page, name)).toContainText('Message from the user', { timeout: 30_000 });
   await shot(page, 'message-delivered');
 });
 

@@ -6,7 +6,6 @@ import { takesImageResults } from './screenshot.ts';
 
 const facts = (change: Partial<ActionFacts>): ActionFacts => ({
   posture: 'asks',
-  level: 'hands-off',
   requested: false,
   observed: false,
   ...change,
@@ -19,10 +18,9 @@ describe('reading a page on an external site the user opened', () => {
     expect(externalReadPath(facts({ posture: 'unknown' }))).toBe('ask');
   });
 
-  it('reads without a card in Auto, Bypass and at Full auto → PR', () => {
+  it('reads without a card in Auto and Bypass', () => {
     expect(externalReadPath(facts({ posture: 'auto' }))).toBe('read');
     expect(externalReadPath(facts({ posture: 'full_access' }))).toBe('read');
-    expect(externalReadPath(facts({ posture: 'asks', level: 'full-auto' }))).toBe('read');
   });
 
   it('reads in Accept edits only when the user asked for it', () => {

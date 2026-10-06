@@ -220,9 +220,9 @@ test('quick chat starts a real chat with the project and autonomy chips @package
     'aria-selected',
     'true',
   );
-  await island(page).getByRole('button', { name: 'Spark autonomy: Automatic' }).click();
+  await island(page).getByRole('button', { name: 'Spark autonomy: Full auto → PR' }).click();
   await expect(
-    island(page).getByRole('button', { name: 'Spark autonomy: Full auto → PR' }),
+    island(page).getByRole('button', { name: 'Spark autonomy: Automatic' }),
   ).toBeVisible();
   await message.fill('Where do we resize uploaded images?');
   await shot(page, 'quick');

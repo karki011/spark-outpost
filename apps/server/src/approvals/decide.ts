@@ -30,6 +30,7 @@ import { writeTargets } from './write-targets.ts';
 import { commandCwd, isSecretTarget, outsideRoots, place } from './request-place.ts';
 import { alwaysAsk } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
+import { withResolvedVariables } from './shell-variables.ts';
 import { partRequests, provenRead, shellView, type ShellView } from './shell-view.ts';
 
 export interface RequestRoot {
@@ -107,7 +108,8 @@ function writtenPaths(request: ApprovalRequest): string[] {
   return writeTargets(request.command, commandCwd(request), request.home) ?? [];
 }
 
-export function guardedTargets(request: ApprovalRequest): Guarded {
+export function guardedTargets(asked: ApprovalRequest): Guarded {
+  const request = withResolvedVariables(asked);
   const relatives = writtenPaths(request).flatMap((target) => {
     const { relative } = place(request.roots, target);
     return relative === null ? [] : [relative];
@@ -140,7 +142,8 @@ function secretLabel(roots: readonly RequestRoot[], target: string): string {
   return place(roots, target).relative ?? path.basename(target);
 }
 
-export function secretLabels(request: ApprovalRequest): string[] {
+export function secretLabels(asked: ApprovalRequest): string[] {
+  const request = withResolvedVariables(asked);
   const secret = (target: string) => isSecretTarget(request.roots, target);
   const cwd = commandCwd(request);
   const words = request.command ? treeWords(commandTree(request.command)) : [];
@@ -286,18 +289,19 @@ function modeAllows(posture: ModePosture, request: ApprovalRequest): boolean {
 
 export function decide(
   posture: ModePosture,
-  request: ApprovalRequest,
+  asked: ApprovalRequest,
   runRules: RunRules,
   allowlist: readonly string[],
   options: DecideOptions = {},
 ): Decision {
+  const request = withResolvedVariables(asked);
   const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
   const guarded = guardedTargets(request);
   const view = shellView(request, options.shell ?? null);
   const published = publishing(posture, request, options);
   const refused = refusal(request, options, forced, guarded, view, published);
   if (refused) return { verdict: 'reject', reason: refused };
-  if (runRules.reject.some((rule) => matchesRule(request, rule))) {
+  if (runRules.reject.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
   }
   if (forced?.kind === 'ask') {
@@ -316,7 +320,7 @@ export function decide(
   if (tainted) return tainted;
   const always = alwaysAsk(request, files, view);
   if (always) return { verdict: 'ask', reason: always.reason };
-  if (runRules.allow.some((rule) => matchesRule(request, rule))) {
+  if (runRules.allow.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
   if (published?.kind === 'allow') return publishAllowed(published.basis);
@@ -333,7 +337,7 @@ export function decide(
   if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {
     if (request.command && pushes) {
-      const listed = allowlistCovers(allowlist, request.command);
+      const listed = allowlistCovers(allowlist, asked.command ?? request.command);
       return listed
         ? { verdict: 'allow', by: 'allowlist' }
         : { verdict: 'ask', reason: PUSH_REASON };
@@ -344,7 +348,7 @@ export function decide(
     if (options.askRun && unreadable(request, view)) {
       return { verdict: 'ask', reason: UNREADABLE_REASON };
     }
-    const listed = request.command !== null && allowlistCovers(allowlist, request.command);
+    const listed = asked.command !== null && allowlistCovers(allowlist, asked.command);
     if (listed) return { verdict: 'allow', by: 'allowlist' };
     if (options.askRun && options.askAutoWhy) {
       return { verdict: 'allow', by: 'level', why: options.askAutoWhy };

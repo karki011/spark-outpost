@@ -16,25 +16,20 @@ import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import { prefersReducedMotion } from '../../ui/motion.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { MarkIcon } from '../rail/RailIcons.tsx';
-import {
-  OUTLINE_MARK_LABELS,
-  chatOutline,
-  turnAnchor,
-  type OutlineEntry,
-} from './outline-model.ts';
+import { OUTLINE_MARK_LABELS, chatOutline, type OutlineEntry } from './outline-model.ts';
 import { scrollToShow, tickAfterKey, tickReach } from './tick-model.ts';
-import { useActiveTurn } from './use-active-turn.ts';
+import { useActiveAnchor } from './use-active-turn.ts';
 
 interface Preview {
-  runId: string;
+  id: string;
   top: number;
 }
 
-function scrollToTurn(runId: string): boolean {
-  const section = document.getElementById(turnAnchor(runId));
-  if (!section) return false;
-  section.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-  section.focus({ preventScroll: true });
+function scrollToAnchor(anchor: string): boolean {
+  const target = document.getElementById(anchor);
+  if (!target) return false;
+  target.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  target.closest<HTMLElement>('section[data-turn]')?.focus({ preventScroll: true });
   return true;
 }
 
@@ -47,11 +42,11 @@ function useChatOutline(detail: ConversationDetail, taskId: string | null): Outl
   const watches = useQuery(prWatchesQuery(detail.conversation.id));
   const changedRuns = changes.data?.runs;
   const watched = watches.data?.watches;
-  const { messages, runs, approvals, plans } = detail;
+  const { messages, runs, approvals, plans, memberMessages, orchestrations } = detail;
   return useMemo(
     () =>
       chatOutline(
-        { messages, runs, approvals, plans },
+        { messages, runs, approvals, plans, memberMessages, orchestrations },
         {
           changedRunIds: new Set(
             (changedRuns ?? [])
@@ -61,7 +56,7 @@ function useChatOutline(detail: ConversationDetail, taskId: string | null): Outl
           prUrls: (watched ?? []).map((entry) => entry.url),
         },
       ),
-    [messages, runs, approvals, plans, changedRuns, watched],
+    [messages, runs, approvals, plans, memberMessages, orchestrations, changedRuns, watched],
   );
 }
 
@@ -86,13 +81,13 @@ function Ticks({ entries, scroller }: TicksProps) {
   const touching = useRef(false);
   const cardId = useId();
   const [preview, setPreview] = useState<Preview | null>(null);
-  const { active, jumped } = useActiveTurn(
+  const { active, jumped } = useActiveAnchor(
     scroller,
-    entries.map((entry) => entry.runId),
+    entries.map((entry) => entry.anchor),
   );
-  const activeIndex = entries.findIndex((entry) => entry.runId === active);
+  const activeIndex = entries.findIndex((entry) => entry.anchor === active);
   const tabStop = activeIndex < 0 ? 0 : activeIndex;
-  const shown = preview ? entries.find((entry) => entry.runId === preview.runId) : undefined;
+  const shown = preview ? entries.find((entry) => entry.id === preview.id) : undefined;
 
   useEffect(() => {
     const list = strip.current;
@@ -115,22 +110,22 @@ function Ticks({ entries, scroller }: TicksProps) {
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [previewing]);
 
-  const show = (runId: string, tick: HTMLElement) => {
+  const show = (id: string, tick: HTMLElement) => {
     const list = strip.current;
     const row = tick.parentElement;
     if (!list || !row) return;
     setPreview({
-      runId,
+      id,
       top: list.offsetTop + row.offsetTop - list.scrollTop + row.offsetHeight / 2,
     });
   };
-  const jump = (runId: string) => {
+  const jump = (entry: OutlineEntry) => {
     setPreview(null);
-    if (scrollToTurn(runId)) jumped(runId);
+    if (scrollToAnchor(entry.anchor)) jumped(entry.anchor);
   };
-  const press = (runId: string, tick: HTMLElement) => {
-    if (touching.current && preview?.runId !== runId) show(runId, tick);
-    else jump(runId);
+  const press = (entry: OutlineEntry, tick: HTMLElement) => {
+    if (touching.current && preview?.id !== entry.id) show(entry.id, tick);
+    else jump(entry);
   };
   const notePointer = (event: PointerEvent) => {
     touching.current = event.pointerType === 'touch';
@@ -158,25 +153,25 @@ function Ticks({ entries, scroller }: TicksProps) {
       >
         <ol ref={strip}>
           {entries.map((entry, index) => (
-            <li key={entry.runId}>
+            <li key={entry.id}>
               <button
                 type="button"
                 className="oticks-tick"
                 aria-label={tickName(entry)}
                 aria-current={index === activeIndex ? 'location' : undefined}
-                aria-describedby={preview?.runId === entry.runId ? cardId : undefined}
+                aria-describedby={preview?.id === entry.id ? cardId : undefined}
                 data-reach={tickReach(index, activeIndex) ?? undefined}
                 data-tone={tickTone(entry)}
                 tabIndex={index === tabStop ? 0 : -1}
                 onPointerDown={notePointer}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === 'mouse') show(entry.runId, event.currentTarget);
+                  if (event.pointerType === 'mouse') show(entry.id, event.currentTarget);
                 }}
                 onFocus={(event) => {
-                  if (!touching.current) show(entry.runId, event.currentTarget);
+                  if (!touching.current) show(entry.id, event.currentTarget);
                 }}
                 onKeyDown={(event) => moveFocus(event, index)}
-                onClick={(event) => press(entry.runId, event.currentTarget)}
+                onClick={(event) => press(entry, event.currentTarget)}
               />
             </li>
           ))}
@@ -188,7 +183,7 @@ function Ticks({ entries, scroller }: TicksProps) {
             className="oticks-card"
             style={{ top: preview.top }}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => jump(shown.runId)}
+            onClick={() => jump(shown)}
           >
             <p className="oticks-ask">{shown.label}</p>
             {shown.reply && <p className="oticks-reply">{shown.reply}</p>}

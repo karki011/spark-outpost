@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  DEFAULT_INVOLVEMENT_LEVEL,
+  UNSET_RUN_LEVEL,
   MAX_REPAIR_RETRIES,
   adviceSummarySchema,
   agentLabel,
@@ -340,7 +340,7 @@ export function buildOrchestration(
     depth: row.depth,
     depthSource: row.depth_source,
     risk: row.risk,
-    level: row.level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    level: row.level ?? UNSET_RUN_LEVEL,
     routing: row.routing,
     provider: row.provider,
     planVersion: row.plan_version,

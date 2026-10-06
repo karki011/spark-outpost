@@ -14,7 +14,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | ------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
 | **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                |
 | **Spark**                                              | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                     |
-| **How much Spark does alone**                          | **Automatic**          | [Spark autonomy](spark-autonomy.md)                                                     |
+| **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                     |
 | **Spend cap per task**                                 | No cap                 | [Task limits](guardrails.md#task-limits)                                                |
 | **Wait before going with best guesses**                | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
 | **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |

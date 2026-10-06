@@ -36,7 +36,8 @@ export function partPlace(request: ApprovalRequest): PartPlace {
   return {
     cwd: commandCwd(request),
     home: request.home,
-    inside: (target) => !outsideRoots(request, target),
+    inside: (target) =>
+      request.roots.some((root) => root.path === target) || !outsideRoots(request, target),
     isSecret: (target) => isSecretTarget(request.roots, target),
   };
 }

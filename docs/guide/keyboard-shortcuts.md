@@ -19,7 +19,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
 | **@** / **/**               | Add a file / run a command              |
 | **⌘⇧Y**                     | Jump to the card that waits for you     |
-| **⌘⇧D**                     | Open the **Changes** drawer             |
+| **⌘D**                      | Open the **Changes** drawer             |
 | **⌘⇧A**                     | Add the selected text to the chat       |
 | **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
 | **⌃\`**                     | Show or hide the terminal               |

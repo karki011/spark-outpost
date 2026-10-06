@@ -62,11 +62,11 @@ test("the picker lists the agent's own modes and says what each combination does
   await pickMode(page, 'Accept edits');
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Accept edits');
   await expect(pickerButton(page)).toHaveAccessibleName(/^Model and effort: [^·]+$/);
-  await expect(permissionChip(page)).not.toContainText('Automatic');
+  await expect(permissionChip(page)).not.toContainText('Full auto');
   await expect(panel.getByRole('radiogroup', { name: /autonomy/i })).toHaveCount(0);
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Accept edits$/);
   await expect(panel).toContainText(
-    'Edits go through, commands ask · kept automatically · Revert available',
+    'Edits go through, commands ask · kept and opened as a PR · in a worktree copy · Revert available',
   );
   await expect(panel.getByRole('note')).toHaveCount(0);
 
@@ -151,8 +151,8 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
 }) => {
   await linkedChat(page, repo);
   const chip = autonomyChip(page);
-  await expect(chip).toHaveAccessibleName('Spark autonomy: Automatic');
-  await expect(chip).toHaveText('Automatic');
+  await expect(chip).toHaveAccessibleName('Spark autonomy: Full auto → PR');
+  await expect(chip).toHaveText('Full auto → PR');
   await expect(workPanel(page)).not.toHaveClass(/\bon\b/);
 
   await chip.click();
@@ -163,20 +163,19 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
     /^Automatic.*Keeps changes without stopping/,
     /^Full auto → PR.*opens a PR/,
   ]);
-  const automatic = levels.getByRole('radio', { name: 'Automatic', exact: true });
-  await expect(automatic).toBeFocused();
+  const fullAuto = levels.getByRole('radio', { name: 'Full auto → PR', exact: true });
+  await expect(fullAuto).toBeFocused();
+  await expect(fullAuto).toHaveAttribute('aria-checked', 'true');
   await expect(panel).toContainText('Applies to this chat. New chats start with your defaults.');
 
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/settings') && response.request().method() === 'PATCH',
   );
-  await levels.getByRole('radio', { name: 'Full auto → PR', exact: true }).click();
-  expect((await saved).request().postDataJSON()).toEqual({ level: 'full-auto' });
-  await expect(chip).toHaveAccessibleName('Spark autonomy: Full auto → PR');
-  await expect(panel.getByRole('button', { name: /^Spark autonomy/ })).toContainText(
-    'Full auto → PR',
-  );
-  await expect(pickerButton(page)).not.toContainText('Full auto → PR');
+  await levels.getByRole('radio', { name: 'Automatic', exact: true }).click();
+  expect((await saved).request().postDataJSON()).toEqual({ level: 'hands-off' });
+  await expect(chip).toHaveAccessibleName('Spark autonomy: Automatic');
+  await expect(panel.getByRole('button', { name: /^Spark autonomy/ })).toContainText('Automatic');
+  await expect(pickerButton(page)).not.toContainText('Automatic');
 
   await panel.getByRole('button', { name: 'Hide work panel' }).click();
   await expect(panel).toBeHidden();
@@ -187,12 +186,12 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(sheet).toBeInViewport();
   const back = sheet
     .getByRole('radiogroup', { name: 'Spark autonomy' })
-    .getByRole('radio', { name: 'Automatic', exact: true });
+    .getByRole('radio', { name: 'Full auto → PR', exact: true });
   await back.click();
   await expect(back).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
-  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Automatic');
+  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
 });
 
 test('modes and options reported by a live run show up in the picker', async ({ page }) => {

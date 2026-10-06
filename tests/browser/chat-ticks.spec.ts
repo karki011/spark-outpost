@@ -195,6 +195,53 @@ test.describe('plain chats', () => {
     expect(await pageScroll(page)).toBe(0);
   });
 
+  test('a message sent to a running turn gets its own tick that jumps to its bubble', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await longChat(page);
+    await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      const detail = (await response.json()) as ConversationDetail;
+      const run = detail.runs.filter((candidate) => !candidate.parentRunId)[1]!;
+      const steer = {
+        id: '30000000-0000-4000-8000-000000000001',
+        runId: run.id,
+        body: 'Also keep the week view as it is',
+        urgency: 'now',
+        status: 'delivered',
+        messageId: null,
+        createdAt: run.createdAt,
+        deliveredAt: run.createdAt,
+      };
+      await route.fulfill({ response, json: { ...detail, memberMessages: [steer] } });
+    });
+    await page.reload();
+    const bubble = page.locator('.msg.me.steered');
+    await expect(bubble).toContainText('Also keep the week view as it is');
+    await expect(ticks(page)).toHaveCount(5);
+    await expect(ticks(page).nth(2)).toHaveAccessibleName('Also keep the week view as it is');
+
+    await page.setViewportSize({ width: 2000, height: 500 });
+    await page.locator('.thread').evaluate((thread) => thread.scrollTo({ top: 0 }));
+    await ticks(page).nth(2).click();
+    await expect(ticks(page).nth(2)).toHaveAttribute('aria-current', 'location');
+    await expect(turns(page).nth(1)).toBeFocused();
+    await expect
+      .poll(async () => {
+        const [target, thread] = await Promise.all([
+          bubble.boundingBox(),
+          page.locator('.thread').boundingBox(),
+        ]);
+        const toEnd = await page
+          .locator('.thread')
+          .evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight);
+        return Math.min(Math.abs(target!.y - thread!.y), toEnd);
+      })
+      .toBeLessThan(40);
+  });
+
   test('a long chat keeps every tick in a strip that never outgrows the thread', async ({
     page,
   }) => {

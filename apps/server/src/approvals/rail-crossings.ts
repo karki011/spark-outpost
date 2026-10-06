@@ -5,6 +5,7 @@ import { withPrefetchedFiles } from './prefetched-files.ts';
 import { forcePush } from './git-commands.ts';
 import { alwaysAsk, type RailAsk } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
+import { withResolvedVariables } from './shell-variables.ts';
 import { shellView, type ShellView } from './shell-view.ts';
 
 export interface RailCrossing {
@@ -38,9 +39,10 @@ async function reasonCrossing(
 }
 
 export async function railCrossings(
-  request: ApprovalRequest,
+  observed: ApprovalRequest,
   options: CrossingOptions = {},
 ): Promise<RailCrossing[]> {
+  const request = withResolvedVariables(observed);
   const crossings: RailCrossing[] = [];
   const reasoned = await reasonCrossing(request, options);
   if (reasoned) crossings.push(reasoned);

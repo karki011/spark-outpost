@@ -82,9 +82,7 @@ describe('what Send now did', () => {
     expect(sendNowStatus({ runs, memberMessages: [note('queued')] })).toBe(
       'Sending to the running turn…',
     );
-    expect(sendNowStatus({ runs, memberMessages: [note('delivered')] })).toBe(
-      'Sent to the running turn',
-    );
+    expect(sendNowStatus({ runs, memberMessages: [note('delivered')] })).toBeNull();
     expect(
       sendNowStatus({ runs: [run(TURN, 'succeeded')], memberMessages: [note('delivered')] }),
     ).toBeNull();

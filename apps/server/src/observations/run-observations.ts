@@ -29,6 +29,11 @@ export interface RunObservationsOptions {
 }
 
 const MAX_LABEL = 200;
+const CHAT_CONTEXT_TOOLS = [
+  ...['spark_task', 'spark_chat', 'spark_chat_history'],
+  ...['spark_run', 'spark_laws', 'spark_audit'],
+];
+const RETIRED_LABELS = new Set(CHAT_CONTEXT_TOOLS.map((tool) => `private work data (${tool})`));
 
 const keyOf = (observation: Observation) => `${observation.source}\u0000${observation.label}`;
 
@@ -68,7 +73,8 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
         },
       );
       const counted = [...stored, ...seen.values()].filter(
-        (observation) => !except.includes(observation.source),
+        (observation) =>
+          !except.includes(observation.source) && !RETIRED_LABELS.has(observation.label),
       );
       return [...new Set(counted.map((observation) => observation.label))];
     },

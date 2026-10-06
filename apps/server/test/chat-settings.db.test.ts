@@ -71,7 +71,7 @@ describe('chat settings', () => {
       effort: 'medium',
       permission: 'do',
       agentMode: 'auto',
-      level: 'hands-off',
+      level: 'full-auto',
       options: {},
       routing: 'pinned',
     });
@@ -86,7 +86,7 @@ describe('chat settings', () => {
       effort: 'medium',
       permission: 'do',
       agentMode: 'agent',
-      level: 'hands-off',
+      level: 'full-auto',
       options: {},
       routing: 'pinned',
     });
@@ -146,6 +146,7 @@ describe('chat settings', () => {
   it('remembers each provider’s choices when the chat switches back and forth', async () => {
     await connectCliProvider(t, 'claude');
     await connectCliProvider(t, 'codex');
+    await updateProfile(t.db, t.workspaceId, { defaultLevel: 'hands-off' });
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
     const path = `/api/conversations/${id}/settings`;

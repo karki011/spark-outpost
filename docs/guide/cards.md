@@ -28,7 +28,7 @@ These come from the agent's mode or a [protected path](protected-paths.md). They
 | Card                                | Means                                              | Buttons                                                          | By itself?                            |
 | ----------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------- |
 | **A few questions first**           | The request is vague.                              | Pick any answers or type one, go with its best guesses, **Stop** | Guesses after the wait time           |
-| **Build this plan?**                | A plan to review before anything changes.          | **Build**, **Edit**, **Stop**                                    | Only at **Full auto → PR**            |
+| **Build this plan?**                | A plan to review before anything changes.          | **Build**, **Edit**, **Stop**                                    | No                                    |
 | **Continue past the budget?**       | The task reached a time, tool-call or spend limit. | **Continue**, **Stop**                                           | No                                    |
 | **Jev could not verify the change** | Jev can't say what's missing, and checks pass.     | **Finish as it is**, **Retry one tier up**, **Stop**             | Finishes after the wait time          |
 | A step needs another try            | A step failed or looped.                           | **Retry**, **Stop**                                              | Stops and reports after the wait time |

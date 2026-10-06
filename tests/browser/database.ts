@@ -7,6 +7,8 @@ import {
   FAKE_GH_STATE,
   TEST_DATABASE_URL,
 } from './stub-config.ts';
+import { DEFAULT_INVOLVEMENT_LEVEL } from '../../packages/contracts/src/approvals.ts';
+import type { InvolvementLevel } from '../../packages/contracts/src/involvement-levels.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
@@ -40,6 +42,7 @@ interface ResetOptions {
   connected?: ('claude' | 'codex')[];
   jev?: boolean;
   catalog?: boolean;
+  defaultLevel?: InvolvementLevel;
 }
 
 const RESET_TABLES = [
@@ -100,6 +103,7 @@ export async function resetTestDatabase({
   connected = onboarded ? ['claude'] : [],
   jev = false,
   catalog = false,
+  defaultLevel = DEFAULT_INVOLVEMENT_LEVEL,
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
@@ -111,9 +115,10 @@ export async function resetTestDatabase({
     if (!onboarded && connected.length === 0) return;
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(
-      `INSERT INTO profiles (workspace_id, display_name, default_provider, onboarding_completed_at)
-       VALUES ($1, 'Test User', $2, $3)`,
-      [workspaceId, connected[0] ?? null, onboarded ? new Date() : null],
+      `INSERT INTO profiles
+         (workspace_id, display_name, default_provider, onboarding_completed_at, default_level)
+       VALUES ($1, 'Test User', $2, $3, $4)`,
+      [workspaceId, connected[0] ?? null, onboarded ? new Date() : null, defaultLevel],
     );
     for (const provider of connected) {
       await db.query(

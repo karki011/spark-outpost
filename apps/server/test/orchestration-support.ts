@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   CHECKPOINT_OPTION,
-  DEFAULT_INVOLVEMENT_LEVEL,
   clarifyOptionId,
   modeForLegacy,
   type Approval,
@@ -26,7 +25,7 @@ import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
-import { eventually, type TestDb } from './support.ts';
+import { eventually, pinChatLevel, type TestDb } from './support.ts';
 import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
@@ -411,6 +410,7 @@ export async function startScenario(
   prepare?: (conversationId: string) => Promise<void>,
 ) {
   const { conversationId } = await linkedConversation(t, root);
+  await pinChatLevel(t.db, conversationId, level ?? 'hands-off');
   await prepare?.(conversationId);
   await t.db.query('UPDATE conversations SET model_routing = $2 WHERE id = $1', [
     conversationId,
@@ -426,7 +426,7 @@ export async function startScenario(
       effort: 'medium',
       permission: scenario.mode,
       agentMode,
-      level: level ?? DEFAULT_INVOLVEMENT_LEVEL,
+      level: level ?? 'hands-off',
     },
   );
   return { conversationId, runId: sent.run.id };

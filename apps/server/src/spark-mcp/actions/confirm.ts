@@ -163,7 +163,7 @@ export async function proposeAction(
   const observed = (await run.scope.observations?.labels()) ?? [];
   const facts = await actionFacts(
     context.deps.db,
-    { runId: run.runId, conversationId: run.scope.conversationId, observed: observed.length > 0 },
+    { runId: run.runId, observed: observed.length > 0 },
     action.action,
   );
   const path = options.alwaysAsk ? 'confirm' : actionPath(facts);

@@ -26,12 +26,12 @@ When the agent needs you, the line says **Waiting for you**. Select it, or press
 2. **⌘Enter** sends it now. The send button's arrow offers both.
 3. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                           | Spark                                                                         |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| The turn finishes              | Sends queued messages in order.                                               |
-| You send a message now         | Hands it to the agent at its next step, or stops the turn and sends it first. |
-| You stop the turn, or it fails | Pauses the queue until you select **Send now**.                               |
-| You reload or restart          | Keeps the queue.                                                              |
+| When                           | Spark                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------- |
+| The turn finishes              | Sends queued messages in order.                                                     |
+| You send one now               | Shows it in the chat with its status: read next step, or sent after the turn stops. |
+| You stop the turn, or it fails | Pauses the queue until you select **Send now**.                                     |
+| You reload or restart          | Keeps the queue.                                                                    |
 
 Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 

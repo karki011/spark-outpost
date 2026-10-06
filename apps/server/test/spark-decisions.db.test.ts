@@ -58,8 +58,8 @@ describe('the Spark decisions migration', () => {
     await runMigrations(db);
 
     expect(await defaultLevel(db, local)).toBe('full-auto');
-    expect(await defaultLevel(db, tied)).toBe('hands-off');
-    expect(await defaultLevel(db, unprofiled)).toBe('hands-off');
+    expect(await defaultLevel(db, tied)).toBe('full-auto');
+    expect(await defaultLevel(db, unprofiled)).toBe('full-auto');
     const { rows } = await db.query(
       `SELECT 1 FROM information_schema.columns
        WHERE table_schema = $1 AND table_name = 'provider_connections' AND column_name = 'level'`,
@@ -75,11 +75,11 @@ describe('the Spark decisions migration', () => {
     });
   });
 
-  it('starts a workspace with no agents on Automatic', async () => {
+  it('starts a workspace with no agents on the built-in default', async () => {
     const { db } = state;
     const local = await ensureLocalWorkspace(db);
     await runMigrations(db);
-    expect((await getSetupState(db, local)).profile.defaultLevel).toBe('hands-off');
+    expect((await getSetupState(db, local)).profile.defaultLevel).toBe('full-auto');
   });
 });
 
@@ -129,26 +129,26 @@ describe('Spark decision settings', () => {
   });
 
   it('gives new chats the one default autonomy and keeps a chat’s own pick', async () => {
-    expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('hands-off');
-    await updateProfile(t.db, t.workspaceId, { defaultLevel: 'full-auto' });
     expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('full-auto');
+    await updateProfile(t.db, t.workspaceId, { defaultLevel: 'hands-off' });
+    expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('hands-off');
     const picked = await createConversation(t.db, t.workspaceId, randomUUID());
     await t.db.query('UPDATE conversations SET overrides = $2 WHERE id = $1', [
       picked.id,
-      JSON.stringify({ claude: { level: 'hands-off' } }),
+      JSON.stringify({ claude: { level: 'full-auto' } }),
     ]);
     const fresh = await createConversation(t.db, t.workspaceId, randomUUID());
     await t.db.query(`UPDATE conversations SET provider = 'codex' WHERE id = $1`, [fresh.id]);
-    expect((await resolveChatSettings(t.db, picked.id)).level).toBe('hands-off');
-    expect((await resolveChatSettings(t.db, fresh.id)).level).toBe('full-auto');
+    expect((await resolveChatSettings(t.db, picked.id)).level).toBe('full-auto');
+    expect((await resolveChatSettings(t.db, fresh.id)).level).toBe('hands-off');
   });
 
   it('no longer takes an autonomy level per agent', async () => {
     const { send } = localClient(createTestApp(t));
     const { body } = await send('patch', '/api/providers/claude/defaults', {
-      level: 'full-auto',
+      level: 'hands-off',
     }).expect(200);
     expect(body.providers[0].connection).not.toHaveProperty('level');
-    expect(body.profile.defaultLevel).toBe('hands-off');
+    expect(body.profile.defaultLevel).toBe('full-auto');
   });
 });

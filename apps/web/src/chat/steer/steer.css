@@ -1,0 +1,21 @@
+.steer-status {
+  max-width: 82%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.msg.me.steered.miss .bubble {
+  outline: 1px dashed var(--warn);
+  outline-offset: -1px;
+}
+
+.msg.me.steered.miss .steer-status {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.msg.me.steered {
+  scroll-margin-top: 8px;
+}

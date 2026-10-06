@@ -21,6 +21,8 @@ interface Candidate {
 }
 
 const OPEN_FENCE = /```([\w-]*)[^\n]*(?:\n([\s\S]*))?$/;
+const TAGGED_OPEN = new RegExp(`\`\`\`${PIECES_FENCE}\\b[^\\n]*(?:\\n|$)`, 'g');
+const CLOSE_FENCE = /(?:^|\n)```[ \t]*(?=\n|$)/;
 const PIECE_KEY = /"key"\s*:/g;
 const PIECES_ROLE = 'coordinator';
 
@@ -82,8 +84,38 @@ function noticeFor(candidate: Candidate, streaming: boolean): PiecesNotice {
   return { state: 'writing', count: candidate.body.match(PIECE_KEY)?.length ?? 0 };
 }
 
+function joined(parts: string[]): string {
+  return parts
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function taggedReply(text: string, streaming: boolean): MemberReply | null {
+  const opens = [...text.matchAll(TAGGED_OPEN)];
+  const first = opens[0];
+  if (!first) return null;
+  const before = [text.slice(0, first.index)];
+  let after = '';
+  let body = '';
+  opens.forEach((open, index) => {
+    const next = opens[index + 1];
+    const region = text.slice(open.index + open[0].length, next?.index ?? text.length);
+    const close = CLOSE_FENCE.exec(region);
+    const trailing = close ? region.slice(close.index + close[0].length) : '';
+    body = close ? region.slice(0, close.index) : region;
+    if (next) before.push(trailing);
+    else after = trailing;
+  });
+  const candidate = { start: 0, end: text.length, tagged: true, body, closed: false };
+  return { before: joined(before), after: after.trim(), notice: noticeFor(candidate, streaming) };
+}
+
 export function memberReply(role: string | null, text: string, streaming: boolean): MemberReply {
-  const candidate = role === PIECES_ROLE ? piecesCandidate(text) : null;
+  if (role !== PIECES_ROLE) return { before: text, after: '', notice: null };
+  const tagged = taggedReply(text, streaming);
+  if (tagged) return tagged;
+  const candidate = piecesCandidate(text);
   if (!candidate) return { before: text, after: '', notice: null };
   return {
     before: text.slice(0, candidate.start).trimEnd(),
