@@ -2,13 +2,15 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { saveAttachment } from '../src/persistence/attachments.ts';
+import { insertBrowserShot } from '../src/persistence/browser-screenshots.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { doRun, insertCommandApproval } from './approval-support.ts';
 import { pairDevice, remoteClient, turnRemoteOn } from './remote-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
 let worker: Worker | null;
@@ -114,6 +116,46 @@ describe('a paired phone on a chat started on the Mac', () => {
       `/api/conversations/${conversationId}/messages`,
       `/api/runs/${queued.body.run.id}/cancel`,
     ]);
+  });
+
+  it('sees a browser screenshot of the chat in place and can fetch its image', async () => {
+    const chat = await startChat(t, 'Check the settings page');
+    const data = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    const attachment = await saveAttachment(t.db, t.workspaceId, {
+      name: 'browser.png',
+      mediaType: 'image/png',
+      data,
+    });
+    await insertBrowserShot(t.db, {
+      runId: chat.runId,
+      attachment,
+      page: 'http://localhost:5173/settings',
+      title: 'Settings',
+      width: 1280,
+      height: 800,
+      sha256: 'a'.repeat(64),
+      anchor: { textOffset: 12, textBefore: 'Opening it.', textHeld: 0 },
+    });
+    const device = await pairDevice(app, 'Pocket phone');
+    const phone = remoteClient(app, device.cookie);
+
+    const detail = await phone.get(`/api/conversations/${chat.conversationId}`).expect(200);
+    expect(detail.body.browserShots).toEqual([
+      expect.objectContaining({
+        runId: chat.runId,
+        width: 1280,
+        height: 800,
+        textOffset: 12,
+        textBefore: 'Opening it.',
+      }),
+    ]);
+    const image = await phone.get(`/api/attachments/${attachment.id}/content`).expect(200);
+    expect(image.headers['content-type']).toBe('image/png');
+    expect(Buffer.from(image.body as Buffer).equals(data)).toBe(true);
+    await remoteClient(app).get(`/api/attachments/${attachment.id}/content`).expect(401);
   });
 
   it('answers a card, and the Mac then finds it answered', async () => {
