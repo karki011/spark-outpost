@@ -76,7 +76,7 @@ The safety floor holds at every level.`,
     id: 'read-then-send',
     title: 'Read, then send',
     keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
-    text: `Once a chat has seen sensitive data — a secret file you allowed, secret values in a tool's output (env, printenv, config dumps) a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools (not this chat's own task or history) — anything that sends data off this computer asks first, at every level and mode: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
+    text: `Once a chat has seen sensitive data — a secret file the agent read, secret values in a tool's output (env, printenv, config dumps) a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools (not this chat's own task or history) — anything that sends data off this computer asks first, at every level and mode: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
   },
   {
     id: 'safety-floor',
@@ -95,7 +95,7 @@ The safety floor holds at every level.`,
       'budget',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: secret files (.env, keys) ask or are refused; agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
+    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one in the project follows the mode, audited by path (.sparkignore and outside ones ask); agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 

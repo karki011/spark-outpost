@@ -55,29 +55,28 @@ describe('Claude session options', () => {
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {
     expect(project).not.toHaveProperty('additionalDirectories');
-    expect(project.disallowedTools).toContain('Read(//work/lib/**/.env)');
+    expect(project.disallowedTools).toContain('Edit(//work/lib/**/.env)');
     expect(project.settings.permissions.deny).toEqual(project.disallowedTools);
   });
 
-  it('denies reading and editing the same secret names as the path policy', () => {
+  it('denies editing the same secret names as the path policy, and leaves reading to the mode', () => {
     const rules = secretRules([]);
-    expect(rules).toContain('Edit(**/.env)');
     for (const rule of [
-      'Read(**/.env)',
-      'Read(**/.env.*)',
-      'Read(**/.pgpass)',
-      'Read(**/.pypirc)',
-      'Read(**/.git-credentials)',
-      'Read(**/credentials)',
-      'Read(**/credentials.*)',
-      'Read(**/*.p12)',
-      'Read(**/*.pfx)',
-      'Read(**/id_rsa)',
-      'Read(**/id_ed25519.pub)',
+      'Edit(**/.env)',
+      'Edit(**/.env.*)',
+      'Edit(**/.pgpass)',
+      'Edit(**/.pypirc)',
+      'Edit(**/.git-credentials)',
+      'Edit(**/credentials)',
+      'Edit(**/credentials.*)',
+      'Edit(**/*.p12)',
+      'Edit(**/*.pfx)',
+      'Edit(**/id_rsa)',
+      'Edit(**/id_ed25519.pub)',
     ]) {
       expect(rules).toContain(rule);
     }
-    expect(rules).not.toContain('Read(**/id_*)');
+    expect(rules.some((rule) => rule.startsWith('Read('))).toBe(false);
     expect(rules.every((rule) => !rule.includes('id_*'))).toBe(true);
   });
 

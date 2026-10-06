@@ -189,6 +189,7 @@ export type ProviderOutput =
   | { kind: 'commands'; commands: AgentCommand[] }
   | { kind: 'instructions'; files: string[] }
   | { kind: 'rail_flag'; flag: ObservedRail }
+  | { kind: 'secret_read'; paths: string[] }
   | { kind: 'account'; account: ProviderAccount };
 
 export interface Provider {

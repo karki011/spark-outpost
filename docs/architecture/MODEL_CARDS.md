@@ -67,15 +67,15 @@ Strengths and weak spots per model are in the JSON. They are short phrases from 
 
 ### Provider cards (from ACP_AGENTS.md)
 
-|                      | Claude (claude-agent-acp 0.81.2)                                                                                        | Codex (codex-acp 1.13.1, patched)                                                                         |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Do mode              | yes                                                                                                                     | yes, since September 26: the patched `ask-every-action` mode (see [CODEX_DO.md](CODEX_DO.md))             |
-| Asks before commands | every edit and command, read-only ones included                                                                         | only for actions outside its sandbox                                                                      |
-| Sandbox              | none at OS level; tools limited, secret files denied, Bash unsandboxed after approval, its tools bypass our path policy | true read-only sandbox, but it can read the whole disk; the chat file editor can still write under `/tmp` |
-| Resume               | yes, across processes                                                                                                   | yes (`thread/resume`)                                                                                     |
-| Review use           | yes                                                                                                                     | yes: the default Critic for a Claude chat; slow on R1 (over a minute)                                     |
-| Cold start           | 8–10 s                                                                                                                  | 4–9 s                                                                                                     |
-| Cost                 | reported                                                                                                                | estimated from tokens                                                                                     |
+|                      | Claude (claude-agent-acp 0.81.2)                                                                                             | Codex (codex-acp 1.13.1, patched)                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Do mode              | yes                                                                                                                          | yes, since September 26: the patched `ask-every-action` mode (see [CODEX_DO.md](CODEX_DO.md))             |
+| Asks before commands | every edit and command, read-only ones included                                                                              | only for actions outside its sandbox                                                                      |
+| Sandbox              | none at OS level; tools limited, secret file edits denied, Bash unsandboxed after approval, its tools bypass our path policy | true read-only sandbox, but it can read the whole disk; the chat file editor can still write under `/tmp` |
+| Resume               | yes, across processes                                                                                                        | yes (`thread/resume`)                                                                                     |
+| Review use           | yes                                                                                                                          | yes: the default Critic for a Claude chat; slow on R1 (over a minute)                                     |
+| Cold start           | 8–10 s                                                                                                                       | 4–9 s                                                                                                     |
+| Cost                 | reported                                                                                                                     | estimated from tokens                                                                                     |
 
 ## Design
 

@@ -24,7 +24,7 @@ Without Jev, nothing goes to TypeSafe.
 
 - Keys and tokens are in your Keychain, under **Spark Outpost**: provider, Jev, connector and MCP keys, saved sign-ins.
 - Spark's database keeps a masked hint. Logs never hold keys.
-- A **Local CLI** sign-in stays in that CLI. Spark never reads it.
+- A **Local CLI** sign-in stays in that CLI, unread by Spark.
 
 See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
@@ -32,11 +32,11 @@ See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
 Before storing or showing agent output, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, passwords in URLs, `KEY=value` lines and values from your secret files.
 
-This covers agent replies, the audit log, Spark tool results, provider errors and anything sent to Jev.
+This covers agent replies, the audit log, Spark tool results, provider errors and Jev requests.
 
 ## What agents can't reach
 
-- [Secret files](protected-paths.md#secret-files) and anything in `.sparkignore`. Ship leaves them out of commits too.
+- Anything in `.sparkignore`. Agents can read [secret files](protected-paths.md#secret-files), so your provider sees them. Ship commits neither.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 

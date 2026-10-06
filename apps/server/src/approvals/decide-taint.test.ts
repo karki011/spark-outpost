@@ -128,7 +128,7 @@ describe('decide() after the run read sensitive data', () => {
 
 describe('secretLabels', () => {
   it('names the secret files a request touches, relative to the project', () => {
-    expect(decide('auto', run('cat .env config/.npmrc'), NO_RUN_RULES, [], { files })).toEqual({
+    expect(decide('auto', run('rm .env config/.npmrc'), NO_RUN_RULES, [], { files })).toEqual({
       verdict: 'ask',
       reason: SECRET_REASON,
     });

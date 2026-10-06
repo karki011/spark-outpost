@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { projectSecretValues } from './secret-values.ts';
+import { projectSecretValues, withoutSecretValues } from './secret-values.ts';
 
 let root: string;
 
@@ -39,5 +39,24 @@ describe('projectSecretValues', () => {
   it('returns nothing for a folder without secret files or one that is missing', async () => {
     await writeFile(join(root, 'readme.md'), 'API_TOKEN=abcdefghijk');
     expect(await projectSecretValues([root, join(root, 'missing')])).toEqual([]);
+  });
+});
+
+describe('withoutSecretValues', () => {
+  it('hides known values anywhere inside a stored payload and leaves the rest alone', () => {
+    const payload = {
+      method: 'session/update',
+      params: { update: { content: { text: 'It says plainword.' } }, list: ['x', 'rk_live_short'] },
+      id: 3,
+    };
+    expect(withoutSecretValues(payload, ['plainword', 'rk_live_short'])).toEqual({
+      method: 'session/update',
+      params: {
+        update: { content: { text: 'It says [redacted:secret_value].' } },
+        list: ['x', '[redacted:secret_value]'],
+      },
+      id: 3,
+    });
+    expect(withoutSecretValues(payload, [])).toBe(payload);
   });
 });

@@ -138,7 +138,7 @@ export function secretRules(extraRoots: readonly string[]): string[] {
     SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
   );
   const patterns = [...SECRET_GLOBS, ...underExtraRoots];
-  return ['Read', 'Edit'].flatMap((tool) => patterns.map((pattern) => `${tool}(${pattern})`));
+  return patterns.map((pattern) => `Edit(${pattern})`);
 }
 
 function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {

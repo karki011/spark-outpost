@@ -59,8 +59,9 @@ export async function resolveInProject(
 export async function readProjectFile(
   policy: PathPolicy,
   requested: string,
+  access: PathAccess = 'read',
 ): Promise<ResolvedPath & { data: Buffer }> {
-  const resolved = await resolveInProject(policy, requested, 'read');
+  const resolved = await resolveInProject(policy, requested, access);
   const info = await stat(resolved.absolute);
   if (!info.isFile()) throw new PathRefusedError(requested, 'not a file');
   if (info.size > PROJECT_READ_MAX_BYTES) throw new PathRefusedError(requested, 'larger than 1 MB');
@@ -72,8 +73,9 @@ export async function readProjectText(
   requested: string,
   line?: number | null,
   limit?: number | null,
+  access: PathAccess = 'read',
 ): Promise<ProjectText> {
-  const file = await readProjectFile(policy, requested);
+  const file = await readProjectFile(policy, requested, access);
   const content = sliceLines(file.data.toString('utf8'), line, limit);
   return { root: file.root, absolute: file.absolute, relative: file.relative, content };
 }

@@ -5,6 +5,8 @@ const ROOT = '/work/app';
 const watch = () =>
   createRailWatch({ roots: [{ path: ROOT, ignore: [] }], cwd: ROOT, home: '/Users/me' });
 
+const NOTHING = { rails: [], secretReads: [] };
+
 const started = (toolCallId: string, fields: Record<string, unknown>) => ({
   sessionUpdate: 'tool_call',
   toolCallId,
@@ -25,8 +27,8 @@ describe('watching actions the agent took without asking', () => {
       title: 'Edit ~/x.txt',
       content: [{ type: 'diff', path: '/Users/me/x.txt', oldText: 'before', newText: 'after' }],
     });
-    expect(await rails.observe(edit)).toEqual([]);
-    expect(await rails.observe(done('e1'))).toEqual([
+    expect(await rails.observe(edit)).toEqual(NOTHING);
+    expect((await rails.observe(done('e1'))).rails).toEqual([
       {
         toolCallId: 'e1',
         rail: 'outside_write',
@@ -39,9 +41,12 @@ describe('watching actions the agent took without asking', () => {
 
   it('leaves actions the agent asked about to the approval gate', async () => {
     const rails = watch();
-    await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'cat .env' } }));
+    await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'rm .env' } }));
     rails.asked('c1');
-    expect(await rails.observe(done('c1'))).toEqual([]);
+    expect(await rails.observe(done('c1'))).toEqual(NOTHING);
+    await rails.observe(started('r1', { kind: 'read', locations: [{ path: `${ROOT}/.env` }] }));
+    rails.asked('r1');
+    expect(await rails.observe(done('r1'))).toEqual(NOTHING);
   });
 
   it('marks an unasked instruction file edit as revertible in the project', async () => {
@@ -49,8 +54,37 @@ describe('watching actions the agent took without asking', () => {
     await rails.observe(
       started('i1', { kind: 'edit', locations: [{ path: `${ROOT}/AGENTS.md` }] }),
     );
-    expect(await rails.observe(done('i1'))).toMatchObject([
+    expect((await rails.observe(done('i1'))).rails).toMatchObject([
       { rail: 'instructions', paths: ['AGENTS.md'], inside: true },
     ]);
+  });
+
+  it('notes an unasked read of a secret file without flagging it', async () => {
+    const rails = watch();
+    await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'cat .env' } }));
+    expect(await rails.observe(done('c1'))).toEqual({ rails: [], secretReads: ['.env'] });
+    await rails.observe(
+      started('r1', { kind: 'read', locations: [{ path: `${ROOT}/config/.env.local` }] }),
+    );
+    expect(await rails.observe(done('r1'))).toEqual({
+      rails: [],
+      secretReads: ['config/.env.local'],
+    });
+    await rails.observe(started('r2', { kind: 'read', locations: [{ path: `${ROOT}/a.ts` }] }));
+    expect(await rails.observe(done('r2'))).toEqual(NOTHING);
+  });
+
+  it('still flags an unasked change to a secret file', async () => {
+    const rails = watch();
+    await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'rm .env' } }));
+    expect(await rails.observe(done('c1'))).toMatchObject({
+      rails: [{ rail: 'secret', paths: ['.env'] }],
+      secretReads: [],
+    });
+    await rails.observe(started('e1', { kind: 'edit', locations: [{ path: `${ROOT}/.env` }] }));
+    expect(await rails.observe(done('e1'))).toMatchObject({
+      rails: [{ rail: 'secret', paths: ['.env'], inside: true }],
+      secretReads: [],
+    });
   });
 });

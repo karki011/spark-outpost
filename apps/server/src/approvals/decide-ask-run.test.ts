@@ -81,7 +81,11 @@ describe('decide() in an Ask run', () => {
   });
 
   it('keeps the safety floor', () => {
-    expect(asking('cat .env')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(asking('cat ~/.ssh/id_rsa')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+  });
+
+  it('reads a secret file in the project like any other file', () => {
+    expect(asking('cat .env')).toEqual({ verdict: 'allow', by: 'level', why: SAFE_READ_WHY });
   });
 });
 
@@ -113,7 +117,7 @@ describe('decide() in an Ask run at Automatic and Full auto', () => {
   });
 
   it('keeps the safety floor', () => {
-    expect(automatic('cat .env')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(automatic('cat ~/.ssh/id_rsa')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
   });
 
   it('still runs read-only commands as safe reads', () => {

@@ -30,7 +30,7 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 
 ## Spark blocked a step
 
-- **You see:** a step that says "Spark's policy blocked", or "Declined: … (Secret files always ask)".
+- **You see:** a step that says "Spark's policy blocked", or "Declined: … (Changing a secret file…)".
 - **Why:** the action crossed a [protected path](protected-paths.md), or a read-only mode was asked to change files.
 - **Fix:** in a read-only mode, select **Make the change**. For a protected path, answer the card.
 - **Still stuck:** do that step in a [terminal](terminals.md).

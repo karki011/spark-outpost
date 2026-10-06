@@ -16,6 +16,7 @@ import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
+import { secretReadLabels } from '../approvals/secret-reads.ts';
 import {
   FS_WRITE_TOOL_KIND,
   SECRET_REASON,
@@ -53,7 +54,12 @@ import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 
 const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-const UNDECIDED: Decision = { verdict: 'ask', reason: null };
+interface Weighed {
+  decision: Decision;
+  secretReads: string[];
+}
+
+const UNDECIDED: Weighed = { decision: { verdict: 'ask', reason: null }, secretReads: [] };
 
 export const APPROVAL_TIMEOUT_MS = 30 * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
@@ -356,11 +362,13 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       waiting -= 1;
     }
     const answer = await settle(pending, result, request);
-    if (answer.outcome === 'selected' && answer.allowed && reason === SECRET_REASON) {
-      for (const label of secretLabels(request)) {
-        deps.observations?.record({ source: 'secret_file', label });
-      }
-    }
+    const secretAllowed = reason === SECRET_REASON && answer.outcome === 'selected';
+    return secretAllowed ? readSecrets(answer, secretLabels(request)) : answer;
+  };
+
+  const readSecrets = (answer: GateAnswer, labels: readonly string[]): GateAnswer => {
+    if (answer.outcome !== 'selected' || !answer.allowed) return answer;
+    for (const label of labels) deps.observations?.record({ source: 'secret_file', label });
     return answer;
   };
 
@@ -402,13 +410,16 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       ...(deps.piece ? { piece: deps.piece } : {}),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
-    const decision = await withPrefetchedFiles(
+    const { decision, secretReads } = await withPrefetchedFiles(
       diskFiles,
-      (files) => decide(postureOf(request), request, runRules, allowlist, { ...options, files }),
+      (files): Weighed => ({
+        decision: decide(postureOf(request), request, runRules, allowlist, { ...options, files }),
+        secretReads: secretReadLabels(request, files, options.shell ?? null),
+      }),
       UNDECIDED,
     );
     if (decision.verdict === 'ask') {
-      return ask(request, decision.reason, signal, decision);
+      return readSecrets(await ask(request, decision.reason, signal, decision), secretReads);
     }
     if (decision.verdict === 'reject') {
       const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {
@@ -430,7 +441,12 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       by: decision.by,
       approvalId: recorded.id,
     });
-    return allow(request, `Allowed ${what} (${allowedWhy(decision, request)})`, recorded.id);
+    const allowed = await allow(
+      request,
+      `Allowed ${what} (${allowedWhy(decision, request)})`,
+      recorded.id,
+    );
+    return readSecrets(allowed, secretReads);
   };
 
   const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {

@@ -55,7 +55,6 @@ describe('decide() reads redirects with variable paths by their literal part', (
   });
 
   it.each([
-    'cat < .env',
     'cat < .env.$STAGE',
     'cat < config/.env.$STAGE',
     'cat < ~/.ssh/$KEY',
@@ -64,6 +63,14 @@ describe('decide() reads redirects with variable paths by their literal part', (
     'echo x > .env.$STAGE',
   ])('still asks when the literal part names a secret: %s', async (command) => {
     expect(await parsed('full_access', command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+  });
+
+  it('reads a secret file in the project through a redirect like any other file', async () => {
+    expect(await parsed('full_access', 'cat < .env')).toEqual({ verdict: 'allow', by: 'level' });
+    expect(await parsed('full_access', 'cat < ~/.npmrc')).toEqual({
+      verdict: 'ask',
+      reason: SECRET_REASON,
+    });
   });
 
   it.each([

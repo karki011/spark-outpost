@@ -160,7 +160,7 @@ Approval checks run in Spark, not in the model. Agents can't switch them off.
 
 - **Two dials.** The agent's permission mode decides what it may do without asking. Spark autonomy (**Review each step**, **Automatic**, **Full auto → PR**) decides what Spark keeps, checks and ships alone.
 - **Approval cards** for commands and edits, with per-project allowlists.
-- **Protected paths always ask**, in every mode: secret files, agent instruction files, `.git/hooks` and git config, force pushes, and sending data out after reading secrets.
+- **Protected paths always ask**, in every mode: changes to secret files (agents may read them), agent instruction files, `.git/hooks` and git config, force pushes, and sending data out after reading secrets.
 - **Hold to confirm, then Undo.** Force pushes and git hook changes have no plain Allow button: you press and hold. A force push from the island and a full reset of Spark both wait 10 seconds for **Undo**.
 - **Secrets stay secret.** Keys live in the macOS Keychain. Agent output is redacted before Spark stores or shows it. Paste a key into a message and Spark stops you first.
 - **Guardrails on every Builder.** No unexplained removals. Checks Spark runs itself. Estimates from your history. Budgets that fit the task. Models that keep failing a kind of task stop getting it.

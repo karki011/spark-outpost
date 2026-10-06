@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { TEST_RUNNER_ALLOWLIST } from './command-kinds.ts';
-import { NO_RUN_RULES, decide, type ApprovalRequest, type DecideOptions } from './decide.ts';
+import {
+  NO_RUN_RULES,
+  SECRET_REASON,
+  decide,
+  type ApprovalRequest,
+  type DecideOptions,
+} from './decide.ts';
 import {
   SHARED_INSTALL_REASON,
   WHOLE_TREE_REWRITE_REASON,
@@ -179,7 +185,7 @@ describe('decide() for a piece that shares its folder', () => {
   });
 
   it.each(POSTURES)('still asks for the safety floor in %s', async (posture) => {
-    expect(await verdict(posture, 'cat .env', SHARED, true)).toBe('ask (Secret files always ask)');
+    expect(await verdict(posture, 'cat ~/.npmrc', SHARED, true)).toBe(`ask (${SECRET_REASON})`);
     expect(await verdict(posture, 'echo x > ~/notes.txt', SHARED, true)).toBe(
       'ask (This changes ~/notes.txt, which is outside this project)',
     );

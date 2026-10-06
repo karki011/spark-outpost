@@ -66,13 +66,20 @@ describe('decide() reads shell commands it parses', () => {
 
   it.each([
     'cat "$(git rev-parse --show-toplevel)/.env"',
-    'git show HEAD:.env',
     'for f in a b; do echo "$f" > notes.txt; done',
     'sed -i "" s/a/b/ README.md',
     'rg --hidden TOKEN',
     'f() { ls; }; f',
   ])('does not call %s read-only', async (command) => {
     expect((await decideParsed('asks', command)).verdict).toBe('ask');
+  });
+
+  it('reads a committed secret file like any other file', async () => {
+    expect(await decideParsed('asks', 'git show HEAD:.env')).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: SAFE_READ_WHY,
+    });
   });
 
   it('asks before a redirect writes outside the project, but not into a temp folder', async () => {

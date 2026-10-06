@@ -9,6 +9,7 @@ export interface PartPlace {
   home: string;
   inside: (target: string) => boolean;
   isSecret: (target: string) => boolean;
+  readAsks: (target: string) => boolean;
 }
 
 const PLAIN_WORD = /^[\w@%+=:,./-]+$/;
@@ -101,7 +102,7 @@ function operandsSafe(
     if (word?.dynamic) return DYNAMIC_OK.has(program);
     if (word?.glob && !LISTERS.has(program)) return false;
     const target = resolvePart(operand, place);
-    return place.inside(target) && !place.isSecret(target);
+    return place.inside(target) && !place.readAsks(target);
   });
 }
 
@@ -138,7 +139,7 @@ function ripgrepReads(args: readonly ShellWord[], place: PartPlace): boolean {
   const positional = args.filter((word) => !word.text.startsWith('-'));
   return positional.slice(1).every((word) => {
     const target = resolvePart(word.text, place);
-    return place.inside(target) && !place.isSecret(target);
+    return place.inside(target) && !place.readAsks(target);
   });
 }
 
@@ -148,12 +149,30 @@ function secretWord(text: string, place: PartPlace): boolean {
     (candidate) =>
       candidate !== '' &&
       !candidate.startsWith('-') &&
-      place.isSecret(resolvePart(candidate, place)),
+      place.readAsks(resolvePart(candidate, place)),
   );
 }
 
 export function partReads(command: ShellCommand, place: PartPlace): boolean {
   return !command.assigns && readsOnly(command, place);
+}
+
+const GREPS = new Set(['grep', 'egrep', 'fgrep']);
+const RG_RUNS = /^--pre(?:-glob)?(?:=|$)/;
+
+function neverWrites(command: ShellCommand): boolean {
+  const [name, ...args] = command.words;
+  if (!name || command.words.some((word) => word.dynamic)) return false;
+  const program = name.text;
+  if (GREPS.has(program)) return true;
+  if (program === 'git') return gitReads(args);
+  const texts = args.map((word) => word.text);
+  if (program === 'rg') return !texts.some((text) => RG_RUNS.test(text));
+  return readOperands(program, texts, true) !== null;
+}
+
+export function partPassive(command: ShellCommand, place: PartPlace): boolean {
+  return !command.assigns && (readsOnly(command, place) || neverWrites(command));
 }
 
 const QUIET_TARGETS = new Set(['/dev/null', '/dev/stdout', '/dev/stderr']);
@@ -176,8 +195,10 @@ function unknownKind(operator: string): RedirectKind {
 }
 
 function placedKind(operator: string, resolved: string, place: PartPlace): RedirectKind {
+  if (operator === '<') {
+    return place.inside(resolved) && !place.readAsks(resolved) ? 'reads' : 'secret';
+  }
   if (place.isSecret(resolved)) return 'secret';
-  if (operator === '<') return place.inside(resolved) ? 'reads' : 'secret';
   if (place.inside(resolved)) return 'writes_inside';
   return inTempDir(resolved) ? 'writes_temp' : 'writes_outside';
 }

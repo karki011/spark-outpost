@@ -68,7 +68,7 @@ describe('Claude session meta from repo config', () => {
     expect(claudeCode.options.settings.disableSkillShellExecution).toBe(true);
     expect(claudeCode.options.settings.plansDirectory).toBe('.spark/plans');
     expect(claudeCode.options.settings.permissions).not.toHaveProperty('ask');
-    expect(claudeCode.options.settings.permissions.deny).toContain('Read(**/.env)');
+    expect(claudeCode.options.settings.permissions.deny).toContain('Edit(**/.env)');
     expect(JSON.stringify(claudeCode)).not.toContain('bypassPermissions');
     expect(JSON.stringify(claudeCode)).not.toContain('evil.example');
   });

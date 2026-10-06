@@ -30,7 +30,7 @@ export function TrustCard({ config, name, busy, onChange }: SetupCardsProps) {
       <SetupCard title="Trusted folder" status="Trusted">
         <p className="as-empty">
           Hooks, allow rules and MCP servers from {name} load as its developers set them. Spark
-          Outpost’s safety rules still apply: secret files stay blocked, nothing is pushed without
+          Outpost’s safety rules still apply: changes to secret files ask, nothing is pushed without
           your permission choice, and every change is recorded.
         </p>
         <div className="as-actions">

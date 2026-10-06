@@ -44,6 +44,9 @@ beforeAll(async () => {
   await mkdir(join(root, 'docs'), { recursive: true });
   await writeFile(join(root, 'README.md'), 'line one\nline two\nline three\n');
   await writeFile(join(root, '.env'), 'TOKEN=abc');
+  await writeFile(join(root, '.sparkignore'), 'private/\n');
+  await mkdir(join(root, 'private'));
+  await writeFile(join(root, 'private', 'notes.md'), 'kept away');
   await writeFile(join(base, 'outside.txt'), 'nope');
   await symlink(join(base, 'outside.txt'), join(root, 'docs', 'escape.txt'));
   lib = join(base, 'lib');
@@ -82,7 +85,10 @@ async function collectFrom(agent: Provider, prompt: string, projectRoots: string
   }
   const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
-  return { text, steps, error };
+  const secretReads = outputs.flatMap((output) =>
+    output.kind === 'secret_read' ? output.paths : [],
+  );
+  return { text, steps, error, secretReads };
 }
 
 describe('ACP provider in a project folder', { timeout: 20_000 }, () => {
@@ -109,27 +115,37 @@ describe('ACP provider in a project folder', { timeout: 20_000 }, () => {
     expect(steps.filter((step) => step === 'Read `README.md`')).toHaveLength(2);
   });
 
-  it('refuses reads outside the root, through symlinks, and of secret files', async () => {
+  it('refuses reads outside the root, through symlinks, and of .sparkignore files', async () => {
     const outside = join(root, '..', 'outside.txt');
     const escape = join(root, 'docs', 'escape.txt');
-    const secret = join(root, '.env');
-    const { text, steps } = await collect(
-      `#read ${outside} #read ${escape} #read ${secret} #read ${join(root, 'missing.md')}`,
+    const ignored = join(root, 'private', 'notes.md');
+    const { text, steps, secretReads } = await collect(
+      `#read ${outside} #read ${escape} #read ${ignored} #read ${join(root, 'missing.md')}`,
       root,
     );
     expect(text).toContain(`[${outside}=err:-32602]`);
     expect(text).toContain(`[${escape}=err:-32602]`);
-    expect(text).toContain(`[${secret}=err:-32602]`);
+    expect(text).toContain(`[${ignored}=err:-32602]`);
     expect(text).toContain(`[${join(root, 'missing.md')}=err:-32002]`);
     expect(steps).toEqual(
       expect.arrayContaining([
         `Refused \`${outside}\` (outside the project)`,
         `Refused \`${escape}\` (outside the project)`,
-        `Refused \`${secret}\` (secret file)`,
+        `Refused \`${ignored}\` (secret file)`,
       ]),
     );
     expect(text).not.toContain('nope');
-    expect(text).not.toContain('TOKEN');
+    expect(text).not.toContain('kept away');
+    expect(secretReads).toEqual([]);
+  });
+
+  it('serves a read of a secret file and notes it by path', async () => {
+    const secret = join(root, '.env');
+    const readme = join(root, 'README.md');
+    const { text, steps, secretReads } = await collect(`#read ${secret} #read ${readme}`, root);
+    expect(text).toContain(`[${secret}=ok:TOKEN=abc]`);
+    expect(steps).toContain('Read `.env`');
+    expect(secretReads).toEqual(['.env']);
   });
 
   it('declines writes with a hint to switch to Do', async () => {
@@ -179,15 +195,17 @@ describe('ACP provider with several linked repos', { timeout: 20_000 }, () => {
     expect(steps).toContain('Fake can only open one repo per chat; using app');
   });
 
-  it('serves reads in every linked repo and still refuses secrets there', async () => {
+  it('serves reads in every linked repo, secret files included', async () => {
     const readme = join(lib, 'README.md');
     const secret = join(lib, '.env');
-    const { text, steps } = await collect(`#read ${readme} #read ${secret}`, root, [lib]);
+    const { text, steps, secretReads } = await collect(`#read ${readme} #read ${secret}`, root, [
+      lib,
+    ]);
     expect(text).toContain(`[${readme}=ok:library readme]`);
-    expect(text).toContain(`[${secret}=err:-32602]`);
+    expect(text).toContain(`[${secret}=ok:LIB_TOKEN=abc]`);
     expect(steps).toContain('Read `lib/README.md`');
-    expect(steps).toContain(`Refused \`${secret}\` (secret file)`);
-    expect(text).not.toContain('LIB_TOKEN');
+    expect(steps).toContain('Read `lib/.env`');
+    expect(secretReads).toEqual(['.env']);
   });
 
   it('names the missing repo when one of several is gone', async () => {

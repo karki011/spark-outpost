@@ -314,7 +314,8 @@ async function converse(
         }
       : null;
   const doing = workspace.changing ? gated : null;
-  const rails = doing ? createRailWatch({ roots: doing.policy.roots, cwd: doing.cwd }) : null;
+  const rails = gated ? createRailWatch({ roots: gated.policy.roots, cwd: gated.cwd }) : null;
+  const secretRead = (label: string) => push([{ kind: 'secret_read', paths: [label] }]);
   const client = acp
     .client(CLIENT_INFO)
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
@@ -339,7 +340,7 @@ async function converse(
     });
   if (policy) {
     client.onRequest(acp.methods.client.fs.readTextFile, (ctx) =>
-      readTextFile(policy, ctx.params, report),
+      readTextFile(policy, ctx.params, report, secretRead),
     );
   }
   return client.connectWith(agent.stream, async (ctx) => {
@@ -465,8 +466,12 @@ async function converse(
           live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
-        for (const flag of (await rails?.observe(message.update)) ?? []) {
+        const observed = await rails?.observe(message.update);
+        for (const flag of doing ? (observed?.rails ?? []) : []) {
           push([{ kind: 'rail_flag', flag }]);
+        }
+        if (observed?.secretReads.length) {
+          push([{ kind: 'secret_read', paths: observed.secretReads }]);
         }
         const unsafe = mapper.unsafeModeChange();
         if (unsafe) {

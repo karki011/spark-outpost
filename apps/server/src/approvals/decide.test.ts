@@ -239,7 +239,9 @@ describe('decide() always asks, in every mode', () => {
       outsideDeleteReason(['/var/log'], home),
     ],
     ['rm at a path Spark cannot resolve', run('rm -rf "$OUT/x"'), OUTSIDE_DELETE_REASON],
-    ['reading .env in a command', run('cat .env'), SECRET_REASON],
+    ['moving .env in a command', run('mv .env .env.bak'), SECRET_REASON],
+    ['deleting .env in a command', run('rm .env'), SECRET_REASON],
+    ['reading a key outside the repo', run('cat ~/.ssh/id_rsa'), SECRET_REASON],
     ['redirecting into a key file', run('echo x > deploy.pem'), SECRET_REASON],
     ['editing .env', edit(`${ROOT}/.env`), SECRET_REASON],
     [
@@ -315,12 +317,18 @@ describe('decide() for read-only commands', () => {
     });
   });
 
-  it.each(LEVELS)('asks for reads of secret files and outside reads in %s', (level) => {
+  it.each(LEVELS)('reads a secret file like any other file in %s', (level) => {
     const options = { files: noFiles };
-    expect(decide(level, run('cat .env'), NO_RUN_RULES, [], options)).toEqual({
-      verdict: 'ask',
-      reason: SECRET_REASON,
+    expect(decide(level, run('cat .env'), NO_RUN_RULES, [], options).verdict).toBe('allow');
+    expect(decide('asks', run('cat .env'), NO_RUN_RULES, [], options)).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: SAFE_READ_WHY,
     });
+  });
+
+  it.each(LEVELS)('asks for outside reads in %s', (level) => {
+    const options = { files: noFiles };
     if (level !== 'full_access') {
       expect(decide(level, run('cat /etc/hosts'), NO_RUN_RULES, [], options).verdict).toBe('ask');
       expect(decide(level, run('grep -rn KEY .'), NO_RUN_RULES, [], options).verdict).toBe('ask');
@@ -356,6 +364,10 @@ describe('decide() for the other postures', () => {
     expect(decide('auto', run('pnpm test'), NO_RUN_RULES, []).verdict).toBe('allow');
     expect(decide('auto', edit(), NO_RUN_RULES, []).verdict).toBe('allow');
     expect(decide('auto', run('cat .env'), NO_RUN_RULES, [])).toEqual({
+      verdict: 'allow',
+      by: 'level',
+    });
+    expect(decide('auto', run('rm .env'), NO_RUN_RULES, [])).toEqual({
       verdict: 'ask',
       reason: SECRET_REASON,
     });
