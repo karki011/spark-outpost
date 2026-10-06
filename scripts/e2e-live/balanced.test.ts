@@ -25,15 +25,4 @@ describe('the Balanced user on the keep card', () => {
     const again = keepCard('Fix again', 'Still concerns after 1 round: …');
     expect(balancedChoice(again).optionId).toBe(CHECKPOINT_OPTION.keep);
   });
-
-  it('keeps after a fix round was cut short by a limit', () => {
-    for (const reason of [
-      "Stopped fix round 1: the run's tool-call budget ran out, so Spark Outpost kept the last state; checks pass.",
-      "Did not start fix round 1: too little of the run's time budget was left for one.",
-    ]) {
-      expect(balancedChoice(keepCard('Fix these findings', reason)).optionId).toBe(
-        CHECKPOINT_OPTION.keep,
-      );
-    }
-  });
 });

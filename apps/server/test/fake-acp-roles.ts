@@ -281,15 +281,15 @@ async function spend(turn: RoleTurn): Promise<void> {
   await stopped(turn.signal);
 }
 
-const METER_CALLS = 20;
-export const METER_CALL_USD = 0.03;
+const METER_CALLS = 65;
+const METER_CALL_USD = 0.03;
 
 async function meter(turn: RoleTurn): Promise<void> {
   for (let call = 1; call <= METER_CALLS; call += 1) {
     const cost = { amount: METER_CALL_USD * call, currency: 'USD' };
     await turn.update({ sessionUpdate: 'usage_update', used: call * 1_000, size: 200_000, cost });
     await readTool(turn, `src/meter-${call}.ts`, `meter-${call}`);
-    await sleep(100, turn.signal);
+    await sleep(20, turn.signal);
   }
 }
 

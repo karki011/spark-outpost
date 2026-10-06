@@ -40,7 +40,6 @@ export function toolDeps(t: TestDb, overrides: Partial<SparkToolDeps> = {}): Spa
       runCommand: async () => ({ code: 1, stdout: '', stderr: 'gh missing' }),
       locateGh: async () => null,
     },
-    serverSpendCapUsd: null,
     timeZone: 'UTC',
     ...overrides,
   };

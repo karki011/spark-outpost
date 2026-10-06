@@ -15,7 +15,6 @@ export const NEW_PROFILE = {
   sparkEnabled: true,
   defaultLevel: 'full-auto',
   defaultLevelNotice: false,
-  spendCapUsd: null,
   morningBrief: true,
   morningBriefTime: '07:00',
   compactWarnPercent: 60,

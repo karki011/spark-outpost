@@ -35,12 +35,8 @@ async function pieceSlots(s: Session): Promise<number> {
   return limited ? 1 : slots;
 }
 
-function cutByBudget(s: Session): boolean {
-  return s.budgetHit !== null && s.control.reason() === null;
-}
-
 function stopped(s: Session): boolean {
-  return s.control.signal.aborted || s.budgetHit !== null;
+  return s.control.signal.aborted;
 }
 
 function inOrderGroup(site: PieceSite): PieceGroup {
@@ -73,7 +69,7 @@ async function placedGroup(s: Session, coordination: Coordination): Promise<Piec
       attributed = attributed.then(() => attributeShared(s, coordination));
       await attributed;
     },
-    close: () => (!copies || cutByBudget(s) ? Promise.resolve() : cleanupCopies(s)),
+    close: () => (copies ? cleanupCopies(s) : Promise.resolve()),
   };
 }
 
@@ -112,10 +108,7 @@ export async function runPieces(
       run: async (piece, slot): Promise<PieceEnd> => {
         const current = coordination.list!.pieces.find((item) => item.key === piece.key)!;
         if (current.status === 'skipped') return 'skipped';
-        const next: Spawn =
-          current.attempts === 0 && spawn.reason === 'resume'
-            ? { ...spawn, reason: 'first' }
-            : spawn;
+        const next = spawn;
         spawn = { ...action, escalate: false };
         const site = current.research ? inOrder : await group.site(current, slot);
         const ran = await withAgentSlot(s, () => runPiece(s, next, current, coordination, site));

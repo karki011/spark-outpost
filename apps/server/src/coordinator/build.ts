@@ -22,7 +22,7 @@ const BUILDS_IN_PIECES = new Set(['first', 'retry']);
 const NO_GLUE = 'No glue was planned; act on the notes below.';
 
 function stopped(s: Session): boolean {
-  return s.control.signal.aborted || s.budgetHit !== null;
+  return s.control.signal.aborted;
 }
 
 function pieceSite(s: Session): PieceSite {
@@ -128,14 +128,6 @@ async function buildInPieces(
   };
 }
 
-function buildsInPieces(action: Spawn, coordination: Coordination): boolean {
-  if (BUILDS_IN_PIECES.has(action.reason)) return true;
-  const open = (coordination.list?.pieces ?? []).some(
-    (piece) => piece.status !== 'landed' && piece.status !== 'skipped',
-  );
-  return action.reason === 'resume' && open;
-}
-
 export async function coordinatedBuild(s: Session, action: Spawn): Promise<MemberOutcome | null> {
   const mode = coordinatorMode(s);
   if (action.role !== 'builder' || (mode !== 'in_order' && mode !== 'parallel')) return null;
@@ -143,6 +135,6 @@ export async function coordinatedBuild(s: Session, action: Spawn): Promise<Membe
     await engage(s);
   }
   const coordination = s.coordination;
-  if (!coordination?.list || !buildsInPieces(action, coordination)) return null;
+  if (!coordination?.list || !BUILDS_IN_PIECES.has(action.reason)) return null;
   return buildInPieces(s, action, coordination);
 }

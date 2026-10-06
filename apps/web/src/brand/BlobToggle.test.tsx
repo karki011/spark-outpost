@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 function Controlled({
-  kind = 'coin',
+  kind = 'sun',
   onChange,
 }: {
   kind?: BlobKind;
@@ -19,7 +19,7 @@ function Controlled({
   const [checked, setChecked] = useState(false);
   return (
     <BlobToggle
-      label="Spend cap per task"
+      label="Morning brief"
       kind={kind}
       checked={checked}
       onChange={(next) => {
@@ -50,7 +50,7 @@ describe('BlobToggle', () => {
   it('wakes on click, sleeps on the next click, and only animates after the user switches it', () => {
     const onChange = vi.fn();
     render(<Controlled onChange={onChange} />);
-    const toggle = screen.getByRole('switch', { name: 'Spend cap per task' });
+    const toggle = screen.getByRole('switch', { name: 'Morning brief' });
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     expect(toggle.className).not.toContain('btog-live');
     fireEvent.click(toggle);
@@ -65,7 +65,7 @@ describe('BlobToggle', () => {
   it('can be reached and pressed from the keyboard as a native button', () => {
     const onChange = vi.fn();
     render(<Controlled onChange={onChange} />);
-    const toggle = screen.getByRole('switch', { name: 'Spend cap per task' });
+    const toggle = screen.getByRole('switch', { name: 'Morning brief' });
     toggle.focus();
     expect(document.activeElement).toBe(toggle);
     expect(toggle.tagName).toBe('BUTTON');
@@ -76,7 +76,7 @@ describe('BlobToggle', () => {
     reduceMotion();
     const onChange = vi.fn();
     render(<Controlled onChange={onChange} />);
-    const toggle = screen.getByRole('switch', { name: 'Spend cap per task' });
+    const toggle = screen.getByRole('switch', { name: 'Morning brief' });
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     expect(toggle.className).not.toContain('btog-live');
@@ -90,12 +90,9 @@ describe('BlobToggle', () => {
       <BlobToggle label="Spark" kind="spark" checked onChange={() => undefined} />,
     );
     expect(container.querySelector('.btog-antenna')).not.toBeNull();
-    rerender(<BlobToggle label="Spend cap" kind="coin" checked onChange={() => undefined} />);
-    expect(container.querySelector('.btog-coin')).not.toBeNull();
-    expect(container.querySelector('.btog-antenna')).toBeNull();
     rerender(<BlobToggle label="Morning brief" kind="sun" checked onChange={() => undefined} />);
     expect(container.querySelector('.btog-sun')).not.toBeNull();
-    expect(container.querySelector('.btog-coin')).toBeNull();
+    expect(container.querySelector('.btog-antenna')).toBeNull();
   });
 
   it('ignores clicks while disabled', () => {

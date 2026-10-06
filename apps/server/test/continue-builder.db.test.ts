@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { REOPENED_INTERRUPTED } from '../src/agents/acp/session-open.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { resolveRunTarget } from '../src/api/run-target.ts';
-import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -139,7 +138,7 @@ describe('Continue from here for an interrupted Builder', { timeout: 120_000 }, 
     expect(intake?.summary).toContain('same task');
   });
 
-  it('runs under the same mode, autonomy and budgets as the interrupted run', async () => {
+  it('runs under the same mode and autonomy as the interrupted run', async () => {
     const first = await interruptedBuild();
     const client = localClient(createTestApp(t, { fixedRunProvider: null }));
     const clicked = await client.send('post', `/api/runs/${first.runId}/continue`, {
@@ -160,17 +159,6 @@ describe('Continue from here for an interrupted Builder', { timeout: 120_000 }, 
       [continuedId],
     );
     expect(rows[0]!.agent_mode).toBe(target.agentMode);
-    const limits = async (runId: string) => {
-      const { budget } = (await loadOrchestration(t.db, runId))!;
-      return {
-        toolCalls: budget.toolCallLimit,
-        activeMs: budget.activeLimitMs,
-        costCapUsd: budget.costCapUsd,
-      };
-    };
-    const allowed = await limits(continuedId);
-    expect(allowed).toEqual(await limits(first.runId));
-    expect(allowed.toolCalls).toBeGreaterThan(0);
   });
 
   it('answers 404 for an unknown run and 409 with the reason for a finished one', async () => {

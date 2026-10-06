@@ -14,7 +14,6 @@ import {
   DEFAULT_PERSONALITY,
   morningBriefTimeSchema,
   personalitySchema,
-  spendCapUsdSchema,
 } from './spark.ts';
 
 export { providerIdSchema, type ProviderId };
@@ -145,7 +144,6 @@ export const profileSchema = z.object({
   sparkEnabled: z.boolean().default(true),
   defaultLevel: involvementLevelSchema.default(DEFAULT_INVOLVEMENT_LEVEL),
   defaultLevelNotice: z.boolean().default(false),
-  spendCapUsd: spendCapUsdSchema.nullable().default(null),
   morningBrief: z.boolean().default(true),
   morningBriefTime: morningBriefTimeSchema.default(DEFAULT_MORNING_BRIEF_TIME),
   compactWarnPercent: compactWarnPercentSchema.default(COMPACT_WARN_DEFAULT),
@@ -186,7 +184,6 @@ export const updateProfileRequestSchema = z
     sparkEnabled: z.boolean(),
     defaultLevel: involvementLevelSchema,
     defaultLevelNotice: z.literal(false),
-    spendCapUsd: spendCapUsdSchema.nullable(),
     morningBrief: z.boolean(),
     morningBriefTime: morningBriefTimeSchema,
     compactWarnPercent: compactWarnPercentSchema,

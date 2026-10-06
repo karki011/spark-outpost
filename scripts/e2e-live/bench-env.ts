@@ -8,14 +8,13 @@ import { startBench, type BenchEnv } from '../bench/live.ts';
 import { STUB_URL } from './config.ts';
 import type { Runtime } from './stack.ts';
 
-const PER_RUN_CAP_USD = 1.5;
 const FAKE_AGENT = join(
   resolve(import.meta.dirname, '../..'),
   'apps/server/test/fake-acp-agent.ts',
 );
 
 export async function benchEnv(runtime: Runtime): Promise<BenchEnv> {
-  if (runtime === 'acp') return startBench(PER_RUN_CAP_USD, 'acp');
+  if (runtime === 'acp') return startBench('acp');
   const t = await createTestDb();
   await seedConnections(t);
   const intake = createIntakeRecorder({
@@ -32,7 +31,6 @@ export async function benchEnv(runtime: Runtime): Promise<BenchEnv> {
       leaseSeconds: 30,
       approvalPollMs: 200,
       intake,
-      budget: { costCapUsd: PER_RUN_CAP_USD },
     },
   };
 }

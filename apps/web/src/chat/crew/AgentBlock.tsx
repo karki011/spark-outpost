@@ -35,7 +35,7 @@ const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
 
 function HeadMeta({ agent }: { agent: CrewAgent }) {
   const model = modelLabel({ ...agent, effort: null });
-  const rest = [agent.routeNote, agent.budget, ...usageParts(agent)].filter(Boolean).join(' · ');
+  const rest = [agent.routeNote, ...usageParts(agent)].filter(Boolean).join(' · ');
   return (
     <span className="ah-meta">
       · {model}

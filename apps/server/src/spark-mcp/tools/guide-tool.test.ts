@@ -17,7 +17,6 @@ const SETTING_LABELS = [
   'What should Spark call you?',
   'Personality',
   'How much Spark does alone',
-  'Spend cap per task',
   'Wait before going with best guesses',
   'When checks still fail in Full auto',
   'Morning brief',

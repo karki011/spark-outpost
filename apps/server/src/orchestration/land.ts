@@ -1,7 +1,6 @@
 import type { CheckBody } from '@spark-outpost/contracts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { workingTree } from '../projects/snapshot.ts';
-import { checkBudget } from './budget-check.ts';
 import { changeFailureText, checkLines, startsCheckFix } from './check-results.ts';
 import { runChecks } from './checks.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
@@ -61,7 +60,7 @@ export async function checkAndFix(
   await awaitDepsPrep(s.deps.db, copyRunId);
   let checks = await runChecks(s, target(last));
   while (startsCheckFix(s, checks)) {
-    if (s.control.signal.aborted || (await checkBudget(s))) break;
+    if (s.control.signal.aborted) break;
     last = await fix(s, checks, site);
     if (last.outcome !== 'succeeded') break;
     checks = await runChecks(s, target(last));
@@ -79,7 +78,7 @@ export async function buildAndLand(
   const before = lands ? await treeOf(s, root) : null;
   if (action.role === 'critic' && s.flow.readOnly === 'review') await ensureParentSnapshot(s);
   const outcome = await runMember(s, action);
-  if (!lands || outcome.result.outcome !== 'succeeded' || s.budgetHit) return outcome;
+  if (!lands || outcome.result.outcome !== 'succeeded') return outcome;
   const landed = await checkAndFix(s, outcome.result, { cwd: root, before, place: null });
   return { ...outcome, result: landed.result };
 }

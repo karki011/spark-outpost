@@ -1,16 +1,8 @@
-import type { BudgetLimit, ReviewVerdict } from '@spark-outpost/contracts';
+import type { ReviewVerdict } from '@spark-outpost/contracts';
 import { CRITIC_FIX_ROUNDS } from '../advisor/policy.ts';
 
 export type ReviewAction = 'fix' | 'clean' | 'unclear' | 'repeated' | 'cap';
-export type ReviewStop =
-  'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing' | 'budget' | 'limit';
-
-export interface FixCut {
-  limit: BudgetLimit;
-  round: boolean;
-  unstarted: boolean;
-  restored: boolean;
-}
+export type ReviewStop = 'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing';
 
 export interface ReviewRound {
   review: number;
@@ -24,7 +16,6 @@ export interface ReviewLoop {
   fixing: boolean;
   fixable: string[];
   stop: ReviewStop | null;
-  cut?: FixCut | null;
 }
 
 export const IDLE_REVIEW: ReviewLoop = {
@@ -33,7 +24,6 @@ export const IDLE_REVIEW: ReviewLoop = {
   fixing: false,
   fixable: [],
   stop: null,
-  cut: null,
 };
 
 const LINE_REF = /:\d+(?::\d+)?\b|\bL\d+\b/g;
@@ -90,29 +80,11 @@ export function afterReview(
 }
 
 export function startFix(loop: ReviewLoop): ReviewLoop {
-  return { ...loop, fixRounds: loop.fixRounds + 1, fixing: true, stop: null, cut: null };
-}
-
-export function fixCut(loop: ReviewLoop, cut: Omit<FixCut, 'restored'>): ReviewLoop {
-  return {
-    ...loop,
-    fixRounds: cut.unstarted ? loop.fixRounds - 1 : loop.fixRounds,
-    fixing: false,
-    stop: 'limit',
-    cut: { ...cut, restored: false },
-  };
-}
-
-export function fixRestored(loop: ReviewLoop, restored: boolean): ReviewLoop {
-  return loop.cut ? { ...loop, cut: { ...loop.cut, restored } } : loop;
+  return { ...loop, fixRounds: loop.fixRounds + 1, fixing: true, stop: null };
 }
 
 export function checksFailedAfterFix(loop: ReviewLoop): ReviewLoop {
   return { ...loop, fixing: false, stop: 'checks_failing' };
-}
-
-export function fixRefused(loop: ReviewLoop): ReviewLoop {
-  return { ...loop, fixRounds: loop.fixRounds - 1, fixing: false, stop: 'budget' };
 }
 
 export function lastAction(loop: ReviewLoop): ReviewAction | null {
@@ -147,28 +119,6 @@ export function findingList(findings: readonly string[]): string {
   return `${shown.join('; ')}${more}`;
 }
 
-const LIMIT_NAMES: Record<BudgetLimit, string> = {
-  time: 'time',
-  tool_calls: 'tool-call',
-  cost: 'cost',
-};
-
-function cutLine(loop: ReviewLoop, checks: string): string {
-  const cut = loop.cut;
-  const limit = cut ? LIMIT_NAMES[cut.limit] : 'budget';
-  const remaining = loop.fixable.length > 0 ? ` Still open: ${findingList(loop.fixable)}.` : '';
-  if (!cut || cut.unstarted) {
-    return `Did not start fix round ${loop.fixRounds + 1}: too little of the run's ${limit} budget was left for one; kept the change that passed the checks.${remaining}`;
-  }
-  const which = cut.round
-    ? `fix round ${loop.fixRounds}'s own ${limit} budget`
-    : `the run's ${limit} budget`;
-  const kept = cut.restored
-    ? 'rolled its edits back to the last state that passed the checks'
-    : `kept the last state; ${checks}`;
-  return `Stopped fix round ${loop.fixRounds}: ${which} ran out, so Spark Outpost ${kept}.${remaining}`;
-}
-
 export function reviewLine(loop: ReviewLoop, checks: string): string | null {
   const rounds = counted(loop.fixRounds, 'round');
   if (loop.fixing) {
@@ -183,12 +133,8 @@ export function reviewLine(loop: ReviewLoop, checks: string): string | null {
       return `Still concerns after ${rounds}: the same findings came back after the fix: ${findingList(loop.fixable)}; ${checks}.`;
     case 'cap':
       return `Still concerns after ${rounds}: ${findingList(loop.fixable)}; ${checks}.`;
-    case 'budget':
-      return `The budget ran out before a fix turn for ${counted(loop.fixable.length, 'correctness finding')} from the AI review: ${findingList(loop.fixable)}.`;
     case 'checks_failing':
       return `Stopped after ${counted(loop.fixRounds, 'fix round')}: the checks failed after the fix and the check-fix turns could not fix them.`;
-    case 'limit':
-      return cutLine(loop, checks);
     case null:
       break;
   }

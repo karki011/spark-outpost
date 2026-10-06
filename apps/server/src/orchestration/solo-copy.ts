@@ -230,7 +230,7 @@ export async function buildInCopy(s: Session, action: BuilderSpawn): Promise<Mem
   const outcome = await runMember(s, action, place);
   const first = outcome.result;
   s.copyRunId ??= place.reuse?.runId ?? first.runId;
-  if (first.outcome !== 'succeeded' || s.budgetHit) return outcome;
+  if (first.outcome !== 'succeeded') return outcome;
   const record = await getWorktree(s.deps.db, s.copyRunId);
   if (!record) return outcome;
   const landed = await checkAndFix(s, first, {

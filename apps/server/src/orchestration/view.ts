@@ -41,7 +41,6 @@ export interface StoredRoute {
   sameProvider?: boolean;
   fileReads?: number;
   routeNote?: string;
-  budget?: string;
   spark?: CrewSpark;
 }
 
@@ -83,7 +82,6 @@ const routeFieldsSchema = z.object({
   copy: crew.copy.catch(undefined),
   sameProvider: crew.sameProvider.catch(undefined),
   routeNote: crew.routeNote.catch(undefined),
-  budget: crew.budget.catch(undefined),
   pieceKey: crew.pieceKey.catch(undefined),
   placement: crew.placement.catch(undefined),
   spark: crew.spark.catch(undefined),
@@ -145,7 +143,6 @@ export function toCrewMember(row: MemberRow): CrewMember {
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
     ...(route.routeNote ? { routeNote: route.routeNote } : {}),
-    ...(route.budget ? { budget: route.budget } : {}),
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
     ...(route.spark ? { spark: route.spark } : {}),
@@ -312,10 +309,6 @@ export interface OrchestrationRow {
   retries: number;
   active_ms: number;
   tool_calls: number;
-  active_limit_ms: number;
-  tool_call_limit: number;
-  cost_cap_usd: string | null;
-  exceeded: Orchestration['budget']['exceeded'];
   error: string | null;
   updated_at: Date;
 }
@@ -351,15 +344,7 @@ export function buildOrchestration(
     pendingCheckpoint: checkpoints.find((checkpoint) => checkpoint.status === 'pending') ?? null,
     decisions: [...decisions],
     ...(pieces ? { pieces } : {}),
-    budget: {
-      activeMs: row.active_ms,
-      activeLimitMs: row.active_limit_ms,
-      toolCalls: row.tool_calls,
-      toolCallLimit: row.tool_call_limit,
-      costUsd: totals.costUsd,
-      costCapUsd: row.cost_cap_usd === null ? null : Number(row.cost_cap_usd),
-      exceeded: row.exceeded,
-    },
+    usage: { activeMs: row.active_ms, toolCalls: row.tool_calls, costUsd: totals.costUsd },
     totals,
     error: row.error ?? (live ? null : row.run_error),
     updatedAt: row.updated_at.toISOString(),

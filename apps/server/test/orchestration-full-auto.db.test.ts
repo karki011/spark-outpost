@@ -86,7 +86,7 @@ async function newRepo(remote: 'github' | 'none' = 'github'): Promise<TestRepo> 
   return repo;
 }
 
-function start(script: Omit<JevScript, 'calls'> = {}, options: { costCapUsd?: number } = {}) {
+function start(script: Omit<JevScript, 'calls'> = {}) {
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL, ...script }), {
     shipAccess: {
       secrets: memorySecretStore(),
@@ -95,9 +95,6 @@ function start(script: Omit<JevScript, 'calls'> = {}, options: { costCapUsd?: nu
       apiUrl: stub.url,
       locateGh: async () => FAKE_GH,
     },
-    ...(options.costCapUsd === undefined
-      ? {}
-      : { budget: { costCapUsd: options.costCapUsd }, budgetPollMs: 600_000 }),
   });
 }
 
@@ -387,20 +384,6 @@ describe('Full auto runs to a draft PR', () => {
     const { orchestration, keep } = await runFullAuto(NORMAL.text, stop);
     expect(orchestration.status).toBe('cancelled');
     expect(keep).toEqual([]);
-    expect(stub.github.pulls).toEqual([]);
-  }, 120_000);
-
-  it('stops at the budget card and does not ship when the user stops there', async () => {
-    await newRepo();
-    await writeFile(ghState(), 'octo-cli');
-    start({}, { costCapUsd: 0.01 });
-    const stop: Answerer = (approval) =>
-      approval.kind === 'budget'
-        ? { optionId: CHECKPOINT_OPTION.stop }
-        : answerEverything(approval);
-    const { asked, orchestration } = await runFullAuto(`${NORMAL.text} #cost`, stop);
-    expect(asked.map((approval) => approval.kind)).toContain('budget');
-    expect(orchestration.status).toBe('failed');
     expect(stub.github.pulls).toEqual([]);
   }, 120_000);
 });

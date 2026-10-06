@@ -154,7 +154,6 @@ const app = createApp({
   slackSignIn,
   slackNotifier,
   slackSocket,
-  serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {

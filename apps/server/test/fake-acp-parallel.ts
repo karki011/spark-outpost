@@ -105,27 +105,12 @@ async function afterStore(turn: RoleTurn): Promise<void> {
   }
 }
 
-async function spendContext(turn: RoleTurn): Promise<void> {
-  await turn.update({ sessionUpdate: 'usage_update', used: 100_000, size: 200_000 });
-  await turn.update({
-    sessionUpdate: 'tool_call',
-    toolCallId: 'budget-read',
-    title: 'Read store.ts',
-    kind: 'read',
-    status: 'completed',
-  });
-}
-
 export async function pieceExtras(turn: RoleTurn, key: string): Promise<void> {
   const tagged = (tag: string) => turn.text.includes(tag);
   const firstTurn = !turn.text.includes(RESUMED) && !turn.text.includes('checks failed');
   if (tagged('#parallel') && key === 'P1' && firstTurn) await pause(HOLD_MS, turn.signal);
   if (tagged('#parallel') && key === 'P2' && firstTurn) await afterStore(turn);
   if (tagged('#slowpieces') && key !== 'P3') await untilStopped(turn.signal);
-  if (tagged('#piecebudget') && key !== 'P3' && firstTurn) {
-    if (key === 'P1') await spendContext(turn);
-    await untilStopped(turn.signal);
-  }
   if (tagged('#useredit') && key === 'P1') {
     await writeFile(join(mainOfCopy(turn.cwd), 'store.ts'), 'user edit\n');
   }

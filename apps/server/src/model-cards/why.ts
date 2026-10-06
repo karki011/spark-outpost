@@ -9,7 +9,6 @@ export interface WhyInput {
   note?: string;
   sessionNote?: string;
   scoreNote?: string;
-  budgetNote?: string;
 }
 
 function labelOf(pick: AgentPick): string {
@@ -39,9 +38,7 @@ export function whyLine(input: WhyInput): string {
       : input.routedBy === 'jev'
         ? `Why ${label}: ${input.rule}${tier}`
         : `Why ${label}: rule ${input.rule}${tier}`;
-  const parts = [base, input.note, input.sessionNote, input.scoreNote, input.budgetNote].filter(
-    Boolean,
-  );
+  const parts = [base, input.note, input.sessionNote, input.scoreNote].filter(Boolean);
   const jev = input.autoWouldUse;
   if (jev && !samePickModel(jev, input.pick)) {
     parts.push(`Jev would have used ${jevLabel(jev, input.pick)}`);

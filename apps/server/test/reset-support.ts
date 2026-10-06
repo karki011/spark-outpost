@@ -22,9 +22,6 @@ export async function seedRun(t: TestDb): Promise<string> {
     depthSource: 'rules',
     risk: 'read-only',
     routing: 'auto',
-    activeLimitMs: 60_000,
-    toolCallLimit: 10,
-    costCapUsd: null,
   });
   return sent.run.id;
 }

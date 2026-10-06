@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import { activeTime, exceededLimit, extendLimits } from './budget.ts';
+import { activeTime } from './active-time.ts';
 import { asksToKeep, autoContinueOption, shipsByItself } from './checkpoint-policy.ts';
 import {
   asksForReview,
@@ -275,30 +275,10 @@ describe('level checkpoints', () => {
   });
 });
 
-describe('budgets', () => {
-  const limits = { activeLimitMs: 1000, toolCallLimit: 3, costCapUsd: null };
-
-  it('excludes approval waits from active time', () => {
+describe('active time', () => {
+  it('excludes approval waits', () => {
     expect(activeTime(10_000, 9_500)).toBe(500);
     expect(activeTime(100, 500)).toBe(0);
-  });
-
-  it('names the first limit that ran out', () => {
-    expect(exceededLimit({ activeMs: 999, toolCalls: 2, costUsd: 5 }, limits)).toBeNull();
-    expect(exceededLimit({ activeMs: 1000, toolCalls: 0, costUsd: 0 }, limits)).toBe('time');
-    expect(exceededLimit({ activeMs: 0, toolCalls: 3, costUsd: 0 }, limits)).toBe('tool_calls');
-    expect(
-      exceededLimit({ activeMs: 0, toolCalls: 0, costUsd: 2 }, { ...limits, costCapUsd: 2 }),
-    ).toBe('cost');
-  });
-
-  it('continuing grants one more full allowance from where you are', () => {
-    const usage = { activeMs: 1200, toolCalls: 5, costUsd: 0 };
-    expect(extendLimits(limits, usage, limits)).toEqual({
-      activeLimitMs: 2200,
-      toolCallLimit: 8,
-      costCapUsd: null,
-    });
   });
 });
 
@@ -344,7 +324,6 @@ describe('auto-continue', () => {
   it('never auto-continues the user-owned cards', () => {
     expect(autoContinueOption('clarify', false)).toBeNull();
     expect(autoContinueOption('accept', false)).toBeNull();
-    expect(autoContinueOption('budget', false)).toBeNull();
     expect(autoContinueOption('merge_conflict', false)).toBeNull();
   });
 });

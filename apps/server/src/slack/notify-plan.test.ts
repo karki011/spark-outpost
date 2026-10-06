@@ -60,7 +60,7 @@ describe('notification wording', () => {
     expect(line('spark_action')).toBe('Needs your approval');
     expect(line('pieces')).toBe('Has a plan for you to review');
     expect(line('accept')).toBe('Has changes for you to review');
-    expect(line('budget')).toBe('Has a question for you');
+    expect(line('retry')).toBe('Has a question for you');
   });
 
   it('only prints pull request links that look like pull requests', () => {

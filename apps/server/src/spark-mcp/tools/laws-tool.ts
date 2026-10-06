@@ -1,5 +1,4 @@
 import {
-  LAW_BUDGET_SHARE,
   LAW_DEMOTE_FLOOR,
   LAW_DEMOTE_MARGIN,
   LAW_DEMOTE_MIN_RUNS,
@@ -29,7 +28,6 @@ async function runLaws(db: Queryable, runId: string) {
   );
   const latest = (law: string) => rows.findLast((row) => row.answer.law === law);
   const estimate = latest('estimate');
-  const budget = latest('budget');
   const findings = latest('findings');
   return {
     estimate: estimate
@@ -39,15 +37,6 @@ async function runLaws(db: Queryable, runId: string) {
           kind: estimate.answer.kind,
           size: estimate.answer.size,
           similarRuns: estimate.answer.runs,
-        }
-      : null,
-    budget: budget
-      ? {
-          text: budget.summary,
-          toolCalls: budget.answer.toolCalls,
-          activeMs: budget.answer.activeMs,
-          complexity: budget.answer.complexity,
-          ratedBy: budget.answer.source,
         }
       : null,
     findings: findings
@@ -112,7 +101,7 @@ export const lawsTool = sparkTool({
   name: 'spark_laws',
   title: 'Universal laws',
   description:
-    "Spark's guardrails on Builders: a run's time and cost estimate (learned from this workspace's history, or a rough rule estimate), the Builder's turn budget scaled to the task's complexity, and the findings on its change (unexplained removals, checks Spark re-ran that contradict the Builder, weakened tests, config and out-of-scope edits); plus the estimate history by task kind, size and model, and models demoted for a task kind because their recent pass rate fell below their tier peers. Defaults to this chat's latest run.",
+    "Spark's guardrails on Builders: a run's time and cost estimate (learned from this workspace's history, or a rough rule estimate) and the findings on its change (unexplained removals, checks Spark re-ran that contradict the Builder, weakened tests, config and out-of-scope edits); plus the estimate history by task kind, size and model, and models demoted for a task kind because their recent pass rate fell below their tier peers. Defaults to this chat's latest run.",
   input: runLookupInput,
   run: async (args, context) => {
     const { db } = context.deps;
@@ -129,7 +118,6 @@ export const lawsTool = sparkTool({
       thresholds: {
         estimateFromRuns: LAW_ESTIMATE_MIN_RUNS,
         paddingMax: LAW_PAD_MAX,
-        budgetShareByComplexity: LAW_BUDGET_SHARE,
         demoteWindow: LAW_DEMOTE_WINDOW,
         demoteMinRuns: LAW_DEMOTE_MIN_RUNS,
         demoteMargin: LAW_DEMOTE_MARGIN,

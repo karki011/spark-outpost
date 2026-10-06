@@ -54,7 +54,7 @@ interface Turn {
 }
 
 function stopped(s: Session): boolean {
-  return s.control.signal.aborted || s.budgetHit !== null;
+  return s.control.signal.aborted;
 }
 
 async function refresh(s: Session, work: TurnWork): Promise<void> {

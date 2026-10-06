@@ -1,6 +1,5 @@
 import type {
   AgentRole,
-  BudgetLimit,
   CheckpointKind,
   Depth,
   InvolvementLevel,
@@ -12,7 +11,7 @@ import type { Verdict } from '../advisor/verify-questions.ts';
 import { IDLE_REVIEW, type ReviewLoop } from './review-loop.ts';
 
 export type SpawnReason =
-  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'escalate' | 'recheck' | 'publish';
+  'first' | 'retry' | 'fix' | 'continue' | 'escalate' | 'recheck' | 'publish';
 
 export interface CascadeEvidence {
   checksPass: boolean;
@@ -26,7 +25,6 @@ export interface Spawn {
   escalate: boolean;
   note: string | null;
   followUp?: string;
-  auto?: boolean;
 }
 
 export type FlowAction =
@@ -47,7 +45,6 @@ export type FlowAction =
   | { type: 'keep'; note?: string }
   | { type: 'ship'; keptNote?: string }
   | { type: 'revert' }
-  | { type: 'restore' }
   | {
       type: 'finish';
       status: 'succeeded' | 'failed' | 'cancelled';
@@ -100,14 +97,6 @@ export type FlowEvent =
   | { type: 'shipped' }
   | { type: 'ship_held'; reason: string }
   | { type: 'reverted' }
-  | { type: 'restored'; restored: boolean }
-  | {
-      type: 'budget_exceeded';
-      limit: BudgetLimit;
-      unstarted?: boolean;
-      round?: boolean;
-      passing?: boolean;
-    }
   | { type: 'stopped' };
 
 export interface FlowState {
@@ -122,8 +111,6 @@ export interface FlowState {
   verdict: ReviewVerdict | null;
   last: Spawn | null;
   waitingFor: CheckpointKind | null;
-  exceeded: BudgetLimit | null;
-  resumeLast: boolean;
   open: string[];
   loop: string | null;
   verifier: boolean;
@@ -164,8 +151,6 @@ export function initialFlow(
     verdict: null,
     last: null,
     waitingFor: null,
-    exceeded: null,
-    resumeLast: false,
     open: [],
     loop: null,
     verifier,

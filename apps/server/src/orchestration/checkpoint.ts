@@ -3,7 +3,6 @@ import {
   checkpointPayloadSchema,
   type AgentPick,
   type ApprovalOption,
-  type BudgetLimit,
   type CheckpointKind,
   type CheckpointPayload,
   type MergeConflict,
@@ -128,25 +127,6 @@ export function acceptCard(
       reject(CHECKPOINT_OPTION.fix, 'Ask for a fix'),
       reject(CHECKPOINT_OPTION.revert, 'Revert'),
     ],
-  };
-}
-
-export function budgetCard(
-  limit: BudgetLimit,
-  used: number,
-  allowed: number,
-  reason: string,
-): CheckpointCard {
-  return {
-    kind: 'budget',
-    title: 'Continue past the budget?',
-    payload: payload({
-      kind: 'budget',
-      question: 'Continue past the budget?',
-      reason,
-      budget: { limit, used, allowed },
-    }),
-    options: [allow(CHECKPOINT_OPTION.continueBudget, 'Continue'), stopOption],
   };
 }
 

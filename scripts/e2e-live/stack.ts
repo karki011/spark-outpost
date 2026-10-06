@@ -91,7 +91,6 @@ function baseEnv(
     API_PORT: String(urls.ports.api),
     ALLOWED_ORIGINS: urls.web,
     AGENT_RUNTIME: runtime,
-    ORCHESTRATION_COST_CAP_USD: process.env.E2E_RUN_CAP_USD ?? '1.5',
   };
   delete env.TEST_DATABASE_URL;
   delete env.BACKUP_DIR;

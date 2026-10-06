@@ -25,7 +25,6 @@ import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx
 import { AskedList, ClarifyBody } from './ClarifyBody.tsx';
 import {
   asksQuestions,
-  budgetLine,
   checkpointQuestion,
   changesSummary,
   checkpointResult,
@@ -308,21 +307,7 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
         </div>
       );
     case 'budget':
-      return (
-        <div className="appr-acts">
-          <Action
-            id={CHECKPOINT_OPTION.continueBudget}
-            approval={approval}
-            decide={decide}
-            kind="primary"
-          >
-            Continue
-          </Action>
-          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-            Stop
-          </Action>
-        </div>
-      );
+      return null;
   }
 }
 
@@ -339,7 +324,6 @@ function CheckpointHeading({ payload, title }: { payload: CheckpointPayload; tit
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
-  if (checkpoint.kind === 'budget') return budgetLine(checkpoint);
   return null;
 }
 

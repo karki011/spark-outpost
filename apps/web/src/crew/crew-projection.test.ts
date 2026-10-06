@@ -47,13 +47,6 @@ describe('crew agents', () => {
     expect(headerMeta(raised)).toBe(
       "Sonnet 5 · medium · raised to Sonnet 5: Builders don't run on the fast tier · 12.4K tokens · $0.03 · 38s",
     );
-    const budgeted = runAgent(
-      member({ budget: 'budget 18 tool calls · 4.5 min' }),
-      orchestration(),
-    );
-    expect(headerMeta(budgeted)).toBe(
-      'Sonnet 5 · medium · budget 18 tool calls · 4.5 min · 12.4K tokens · $0.03 · 38s',
-    );
   });
 
   it('follows run status, tool calls, and the pending checkpoint for the state', () => {

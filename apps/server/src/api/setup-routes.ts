@@ -49,7 +49,6 @@ export interface SetupDeps {
   endpoints: ApiEndpoints;
   runCommand: RunCommand;
   loginShell: string | null;
-  serverSpendCapUsd?: number | undefined;
   parallelBuilders?: boolean | undefined;
 }
 
@@ -73,7 +72,7 @@ export function setupRoutes(deps: SetupDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const router = Router();
   const setupState = async () => ({
-    ...(await getSetupState(db, workspaceId, deps.serverSpendCapUsd ?? null)),
+    ...(await getSetupState(db, workspaceId)),
     parallelBuilders: deps.parallelBuilders ?? false,
   });
 
