@@ -1,12 +1,25 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { RemoteAuditEntry } from '@spark-outpost/contracts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { activityDetail, activityLine } from './phone-copy.ts';
 
 const PAGE = 12;
 
-export function PhoneActivity({ entries }: { entries: RemoteAuditEntry[] }) {
+interface PhoneActivityProps {
+  entries: RemoteAuditEntry[] | undefined;
+  wait: ReactNode;
+}
+
+export function PhoneActivity({ entries, wait }: PhoneActivityProps) {
   const [shown, setShown] = useState(PAGE);
+  if (entries === undefined) {
+    return (
+      <section className="ph-card" aria-labelledby="ph-activity-title">
+        <h2 id="ph-activity-title">Recent phone activity</h2>
+        {wait}
+      </section>
+    );
+  }
   return (
     <section className="ph-card" aria-labelledby="ph-activity-title">
       <h2 id="ph-activity-title">Recent phone activity</h2>

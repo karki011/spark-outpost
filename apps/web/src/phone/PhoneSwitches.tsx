@@ -18,7 +18,7 @@ export const MAC_ONLY_LINE = 'The Browser pane, preview and terminal stay on the
 
 function SwitchRow({ id, checked }: { id: RemoteSwitch; checked: boolean }) {
   const queryClient = useQueryClient();
-  const labelId = useId();
+  const switchId = useId();
   const change = useMutation({
     mutationFn: (next: boolean) => phoneApi.setSwitches({ [id]: next }),
     onSuccess: (switches) => {
@@ -30,8 +30,9 @@ function SwitchRow({ id, checked }: { id: RemoteSwitch; checked: boolean }) {
   });
   return (
     <li className="ph-switch">
-      <span id={labelId}>{REMOTE_SWITCH_LABELS[id]}</span>
+      <label htmlFor={switchId}>{REMOTE_SWITCH_LABELS[id]}</label>
       <BlobToggle
+        id={switchId}
         size="sm"
         label={REMOTE_SWITCH_LABELS[id]}
         checked={change.isPending ? change.variables : checked}
@@ -66,7 +67,7 @@ export function PhoneSwitches({ switches }: { switches: RemoteSwitches }) {
 
 export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }) {
   return (
-    <section className="ph-card" aria-labelledby="ph-switches-title">
+    <section className="ph-card ph-readonly" aria-labelledby="ph-switches-title">
       <h2 id="ph-switches-title">What this phone can do</h2>
       <p className="ph-note">{MAC_ONLY_LINE} Change these on your Mac.</p>
       <ul className="ph-switches">

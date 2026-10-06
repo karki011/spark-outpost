@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import {
   denyWaitingPhones,
   PHONE_ADDRESS,
@@ -15,6 +15,21 @@ import {
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const WIDE = { width: 1280, height: 900 };
 const NARROW = { width: 390, height: 844 };
+const LAYOUT_SIZES = [{ width: 1440, height: 900 }, WIDE, { width: 820, height: 900 }, NARROW];
+const THEMES = [
+  'light',
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'aurora',
+  'iris',
+  'contrast',
+];
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -68,12 +83,51 @@ async function startPairing(page: Page): Promise<string> {
   return (await code.textContent()) ?? '';
 }
 
-async function expectAccessible(page: Page) {
+async function expectAccessible(page: Page, scope = '.ph') {
   const axe = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .include('.ph')
+    .include(scope)
     .analyze();
   expect(axe.violations).toEqual([]);
+}
+
+async function openPairingPage(browser: Browser, hash = '', theme: string | null = 'system') {
+  const context = await browser.newContext({ viewport: NARROW });
+  const phone = await context.newPage();
+  if (theme) {
+    await phone.addInitScript((saved) => localStorage.setItem('spark-outpost.theme', saved), theme);
+  }
+  await servePhonePage(phone);
+  await phone.goto(`${PHONE_PAGE}/${hash}`);
+  return { context, phone };
+}
+
+async function expectEveryTheme(pages: [Page, string][], name: string) {
+  for (const theme of THEMES) {
+    for (const [page, scope] of pages) {
+      await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
+      await page.waitForFunction(() =>
+        document
+          .getAnimations()
+          .every(
+            (animation) =>
+              animation.playState !== 'running' ||
+              animation.effect?.getTiming().iterations === Infinity,
+          ),
+      );
+      await expectAccessible(page, scope);
+      if (SHOTS) {
+        const width = page.viewportSize()?.width ?? 0;
+        await page.screenshot({
+          path: path.join(SHOTS, `theme-${name}-${width}-${theme}.png`),
+          animations: 'disabled',
+        });
+      }
+    }
+  }
+  for (const [page] of pages) {
+    await page.evaluate(() => delete document.documentElement.dataset.skin);
+  }
 }
 
 test('sits above Settings in the left bar and asks to turn phone access on', async ({ page }) => {
@@ -122,12 +176,9 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   });
   expect(quiet).toEqual({ paper: 'rgb(255, 255, 255)', ink: 'rgb(12, 15, 18)', animations: 0 });
   await expectAccessible(page);
-  await shoot(page, 'phone-2-code');
+  await shoot(page, 'phone-2-code', LAYOUT_SIZES);
 
-  const phoneContext = await browser.newContext({ viewport: NARROW });
-  const phone = await phoneContext.newPage();
-  await servePhonePage(phone);
-  await phone.goto(`${PHONE_PAGE}/#code=${code}`);
+  const { context: phoneContext, phone } = await openPairingPage(browser, `#code=${code}`);
   await expect(phone.getByLabel('Pairing code')).toHaveValue(code);
   await expect(phone.locator('main')).toHaveAttribute('data-stage', 'enter');
   await shoot(phone, 'pairing-page-1-enter', [NARROW]);
@@ -164,7 +215,7 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await expect(row).toBeVisible({ timeout: 15_000 });
   await expect(row).toHaveClass(/fresh/);
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
-  await shoot(page, 'phone-5-devices');
+  await shoot(page, 'phone-5-devices', LAYOUT_SIZES);
   await expect(
     main.getByRole('region', { name: 'Recent phone activity' }).getByText('Kitchen phone paired'),
   ).toBeVisible({ timeout: 10_000 });
@@ -186,10 +237,7 @@ test('denies a phone, then lets a code run out', async ({ page, browser }) => {
   await turnOn(page);
   const code = await startPairing(page);
 
-  const phoneContext = await browser.newContext({ viewport: NARROW });
-  const phone = await phoneContext.newPage();
-  await servePhonePage(phone);
-  await phone.goto(`${PHONE_PAGE}/#code=${code}`);
+  const { context: phoneContext, phone } = await openPairingPage(browser, `#code=${code}`);
   await phone.getByLabel('Device name').fill('Stranger');
   await phone.getByRole('button', { name: 'Pair' }).click();
 
@@ -258,4 +306,100 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
       .getByRole('region', { name: 'Recent phone activity' })
       .getByText('What the phone can do was changed'),
   ).toBeVisible();
+});
+
+test('every theme passes colour and ARIA checks on the Phone page and the pairing page', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const main = await openPhone(page);
+  await turnOn(page);
+  const code = await startPairing(page);
+  const { context, phone } = await openPairingPage(browser, `#code=${code}`);
+  await phone.emulateMedia({ reducedMotion: 'reduce' });
+  await expectEveryTheme(
+    [
+      [page, '.ph'],
+      [phone, 'main'],
+    ],
+    'code',
+  );
+
+  await phone.getByLabel('Device name').fill('Theme phone');
+  await phone.getByRole('button', { name: 'Pair' }).click();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'found');
+  await expectEveryTheme(
+    [
+      [page, '.ph'],
+      [phone, 'main'],
+    ],
+    'found',
+  );
+
+  await main.getByRole('button', { name: 'Confirm' }).click();
+  const devices = main.getByRole('region', { name: 'Devices' });
+  await expect(devices.getByRole('listitem').filter({ hasText: 'Theme phone' })).toBeVisible();
+  await context.close();
+  await expectEveryTheme([[page, '.ph']], 'devices');
+});
+
+test('the pairing page follows the saved theme, groups a pasted code and keeps a refused one', async ({
+  page,
+  browser,
+}) => {
+  await openPhone(page);
+  await turnOn(page);
+  await startPairing(page);
+
+  const fresh = await openPairingPage(browser, '', null);
+  await expect(fresh.phone.locator('html')).toHaveAttribute('data-skin', 'graphite');
+  await fresh.context.close();
+  const saved = await openPairingPage(browser, '', 'apricot');
+  await expect(saved.phone.locator('html')).toHaveAttribute('data-skin', 'apricot');
+  await saved.context.close();
+
+  const { context, phone } = await openPairingPage(browser);
+  await expect(phone.locator('html')).not.toHaveAttribute('data-skin', /./);
+  const field = phone.getByLabel('Pairing code');
+  await expect(field).toHaveAttribute('autocapitalize', 'characters');
+  expect(await field.evaluate((input) => parseFloat(getComputedStyle(input).fontSize))).toBe(16);
+  await field.fill('abcd2345efgh');
+  await expect(field).toHaveValue('ABCD-2345-EFGH');
+  await field.fill('abcd-2345 efgh');
+  await expect(field).toHaveValue('ABCD-2345-EFGH');
+  await phone.getByLabel('Device name').fill('Typo phone');
+  await phone.getByRole('button', { name: 'Pair' }).click();
+  await expect(phone.getByRole('status')).toHaveText(/That code is not valid/);
+  await expect(phone.locator('main')).toHaveAttribute('data-stage', 'enter');
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  await expect(field).toBeFocused();
+  await expect(phone.getByLabel('Device name')).toHaveValue('Typo phone');
+  await shoot(phone, 'pairing-page-5-refused', [NARROW]);
+  await context.close();
+});
+
+test('disconnects every device after a hold', async ({ page, browser }) => {
+  const main = await openPhone(page);
+  await turnOn(page);
+  const code = await startPairing(page);
+  const { context, phone } = await openPairingPage(browser, `#code=${code}`);
+  await phone.getByLabel('Device name').fill('Hold phone');
+  await phone.getByRole('button', { name: 'Pair' }).click();
+  await main.getByRole('button', { name: 'Confirm' }).click();
+  const devices = main.getByRole('region', { name: 'Devices' });
+  await expect(devices.getByText('Hold phone')).toBeVisible({ timeout: 15_000 });
+  await context.close();
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
+
+  const hold = devices.getByRole('button', { name: 'Hold to disconnect all' });
+  await hold.click();
+  await expect(devices.getByText('Released early. Nothing happened.')).toBeVisible();
+  await expect(devices.getByText('Hold phone')).toBeVisible();
+  await hold.focus();
+  await page.keyboard.down('Space');
+  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+  await page.keyboard.up('Space');
+  await expect(hold).toHaveCount(0);
 });
