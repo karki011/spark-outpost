@@ -19,7 +19,7 @@ When the Critic runs, it decides: its prompt gets the rule, the Builder's reply 
 
 ## 2. Goodhart's law: checks run outside the agent
 
-Spark already ran the project's checks itself after every Builder turn (`orchestration/checks.ts`): the keep card, the Tasks panel and the reply report Spark's run, never the agent's words. `laws/claims.ts` now compares the two: when a Builder reply claims the tests, lint, typecheck or build pass and Spark's run of that turn failed, the finding names the failing command ("Bolt said the checks pass, but Spark's own run failed: `pnpm test` exited 1."). A claim Spark could not confirm (checks skipped because `package.json` scripts changed during the run) is flagged too.
+Spark already ran the project's checks itself after every Builder turn (`orchestration/checks.ts`): the keep card, the Tasks panel and the reply report Spark's run, never the agent's words. `laws/claims.ts` now compares the two: when a Builder reply claims the tests, lint, typecheck or build pass and Spark's run of that turn failed, the finding names the command, the failing names and what ties them to the change ("Bolt said the checks pass. Spark's own run differs: `pnpm test` failed in test a.test.ts (it passes without this change)."). A failure the change did not cause, or that nothing ties to it, is stated as not counted against the change instead of as a contradiction. A claim Spark could not confirm (the check's own `package.json` script changed during the run) is flagged too.
 
 `laws/goodhart.ts` adds, unless the request asks for it:
 

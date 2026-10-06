@@ -36,9 +36,11 @@ Not installed: `@ag-ui/client`, `@a2a-js/sdk`, CopilotKit.
 
 ## Events emitted today
 
-`RUN_STARTED`, `STEP_STARTED`, `STEP_FINISHED`, `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`, `CUSTOM` (`approval_requested`, `approval_decided`), `ACTIVITY_SNAPSHOT` (including `model_switch`), `RUN_FINISHED` (outcomes `success`, `cancelled`), `RUN_ERROR` (codes `provider_error`, `outcome_unknown`), built in `apps/server/src/workflow/run-events.ts`.
+`RUN_STARTED`, `STEP_STARTED`, `STEP_FINISHED`, `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`, `CUSTOM` (`approval_requested`, `approval_decided`, `command_started`, `command_output`, `command_finished`), `ACTIVITY_SNAPSHOT` (including `model_switch`), `RUN_FINISHED` (outcomes `success`, `cancelled`), `RUN_ERROR` (codes `provider_error`, `outcome_unknown`), built in `apps/server/src/workflow/run-events.ts`.
 
 The worker writes `TEXT_MESSAGE_CONTENT` events in batches: chunks wait at most 50 ms (or 8 KB) and are stored together, each still its own event with its own `seq`. Any other event first stores the waiting text in the same transaction, so the order is the order the agent produced (`apps/server/src/workflow/run-appender.ts`).
+
+Command output events are written by `apps/server/src/workflow/command-recorder.ts`, batched for 100 ms and capped per command; what each adapter provides is in [ACP_AGENTS.md](ACP_AGENTS.md#command-output-in-the-chat-october-6-2026). Evidence: `command-output.test.ts`, `command-recorder.test.ts`, `acp-terminal.test.ts`, `command-terminal.db.test.ts` (fake agent); the live check is reported there separately.
 
 Real providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGENTS.md)). The fake provider, which echoes the message, remains for tests; it is not evidence of any real provider capability.
 

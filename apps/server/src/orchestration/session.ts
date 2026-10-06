@@ -69,6 +69,7 @@ export interface CheckMemory {
   base?: string | null;
   unfinished: Set<string>;
   fixed: Set<string>;
+  earlier?: Set<string>;
   fixRounds: Map<string, number>;
 }
 

@@ -14,7 +14,7 @@ import { BrowserHostError } from '../src/browser/host-client.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { conversationObservations } from '../src/persistence/observations.ts';
+import { turnObservations } from '../src/persistence/observations.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import {
   connectClient,
@@ -278,7 +278,7 @@ describe('reading a local page', () => {
     expect(page).not.toContain('abcdefghijklmnopqrstuvwxyz0123456789');
     const { rows } = await t.db.query(`SELECT 1 FROM approvals WHERE run_id = $1`, [chat.runId]);
     expect(rows).toHaveLength(0);
-    expect(await conversationObservations(t.db, chat.conversationId)).toEqual([]);
+    expect(await turnObservations(t.db, chat.runId)).toEqual([]);
     expect(audits().at(-1)!.params).toMatchObject({ action: 'read', decision: 'local' });
   });
 
@@ -321,7 +321,7 @@ describe('reading an external page the user opened', () => {
     expect(read.facts).toMatchObject({ place: 'external', tab: 'tab1' });
     expect(read.texts[1]).toContain('<page_evidence url="https://news.example.com/story"');
     const observed = await eventually(async () => {
-      const found = await conversationObservations(t.db, chat.conversationId);
+      const found = await turnObservations(t.db, chat.runId);
       return found.length > 0 ? found : null;
     });
     expect(observed).toEqual([{ source: 'web_page', label: 'web page https://news.example.com' }]);
@@ -352,7 +352,7 @@ describe('reading an external page the user opened', () => {
     expect(read.facts).toMatchObject({ outcome: 'declined', site: 'https://news.example.com' });
     expect(read.texts).toHaveLength(1);
     expect(read.texts[0]).not.toContain('ref_1');
-    expect(await conversationObservations(t.db, chat.conversationId)).toEqual([]);
+    expect(await turnObservations(t.db, chat.runId)).toEqual([]);
     expect(audits().at(-1)!.params).toMatchObject({ decision: 'user_declined' });
   });
 
@@ -365,7 +365,7 @@ describe('reading an external page the user opened', () => {
     expect(rows).toHaveLength(0);
     expect(audits().at(-1)!.params).toMatchObject({ decision: 'mode' });
     const observed = await eventually(async () => {
-      const found = await conversationObservations(t.db, chat.conversationId);
+      const found = await turnObservations(t.db, chat.runId);
       return found.length > 0 ? found : null;
     });
     expect(observed![0]).toMatchObject({ source: 'web_page' });

@@ -167,6 +167,12 @@ export function EyeIcon() {
   );
 }
 
+export function EyeOffIcon() {
+  return (
+    <StrokeIcon path="M9.9 5.7A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.4 3.2M6.2 7.4A15.6 15.6 0 0 0 2.5 12S6 18.5 12 18.5a9.3 9.3 0 0 0 4.8-1.4M10 10.3a2.5 2.5 0 0 0 3.7 3.4M4 4l16 16" />
+  );
+}
+
 export function UnlockIcon() {
   return <StrokeIcon path="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 6.8-1.2" />;
 }

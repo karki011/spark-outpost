@@ -148,7 +148,7 @@ describe('Goodhart: checks run outside the agent', { timeout: 120_000 }, () => {
     const texts = await findingTexts(runId);
     expect(texts).toHaveLength(1);
     expect(texts[0]).toMatch(
-      /^\w+ said the checks pass, but Spark's own run failed: `node check\.mjs` exited 3\.$/,
+      /^\w+ said the checks pass\. Spark's own run differs: `node check\.mjs` exited 3 \(it passes without this change\)\.$/,
     );
     expect(await keepCardLaws(runId)).toEqual(texts);
   });

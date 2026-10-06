@@ -59,7 +59,10 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
     newComments: items.filter((item) => item.kind !== 'check' && OPEN_STATES.has(item.state))
       .length,
     approvalId: watch.approvalId,
+    roundRunId: watch.phase === 'fixing' ? watch.roundRunId : null,
     lastPolledAt: watch.lastPolledAt?.toISOString() ?? null,
+    nextPollAt: watch.phase === 'done' ? null : watch.nextPollAt.toISOString(),
+    pollProblem: watch.pollProblem,
     lastError: watch.lastError,
     items: items.map((item) => feedbackView(item, excerptChars)),
     details: {

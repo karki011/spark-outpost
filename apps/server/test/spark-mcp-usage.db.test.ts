@@ -248,6 +248,8 @@ describe('marking Spark tool results as private work data', () => {
       record: (observation) => void recorded.push(observation),
       labels: async () => recorded.map((observation) => observation.label),
       egressAsked: () => undefined,
+      sentOut: () => undefined,
+      later: () => undefined,
       settled: async () => undefined,
     };
     tools = await startSparkTools(t, {

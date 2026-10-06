@@ -1,4 +1,8 @@
-import { providerIdSchema, type CapabilityOption } from '@spark-outpost/contracts';
+import {
+  providerIdSchema,
+  type AgentModeOption,
+  type CapabilityOption,
+} from '@spark-outpost/contracts';
 import { getCapabilities, saveCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
@@ -142,4 +146,11 @@ export async function recordRunMetrics(
     `UPDATE runs SET cost_usd = $2, cost_source = 'estimated' WHERE id = $1 AND cost_usd IS NULL`,
     [runId, estimate],
   );
+}
+
+export async function knownModes(db: Db, input: RunInput): Promise<AgentModeOption[]> {
+  const provider = providerIdSchema.safeParse(input.provider);
+  if (!provider.success) return [];
+  const captured = await getCapabilities(db, input.workspaceId, provider.data).catch(() => null);
+  return captured?.modes ?? [];
 }

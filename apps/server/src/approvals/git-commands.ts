@@ -1,5 +1,6 @@
 import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
+import { withoutDataHeredocs } from './inline-code.ts';
 
 const GIT_PUBLISHES = ['push', 'send-email', 'request-pull'];
 const REMOTE_CHANGES = ['add', 'set-url', 'remove', 'rm', 'rename', 'set-head', 'set-branches'];
@@ -24,7 +25,7 @@ export function gitSubcommand(args: readonly string[]): { name: string; rest: st
 }
 
 export function gitSubcommands(command: string): { name: string; rest: string[] }[] {
-  return commandTree(command).commands.flatMap((program) => {
+  return commandTree(withoutDataHeredocs(command)).commands.flatMap((program) => {
     if (programName(program) !== 'git') return [];
     const sub = gitSubcommand(program.slice(1));
     return sub ? [sub] : [];
@@ -120,17 +121,19 @@ function widensPush(token: string): boolean {
   return /^-[a-zA-Z]+$/.test(token) && token.includes('d');
 }
 
+export function pushTargetOf(args: readonly string[]): PushTarget {
+  const shape = pushShape(args);
+  return {
+    remote: shape.remote,
+    branches: shape.refspecs.map((refspec) =>
+      refspec.replace(/^\+/, '').startsWith(':') ? null : destination(refspec),
+    ),
+    widens: shape.mirror || shape.everyRef || args.some(widensPush),
+  };
+}
+
 export function pushTargets(command: string): PushTarget[] {
-  return pushArgs(command).map((args) => {
-    const shape = pushShape(args);
-    return {
-      remote: shape.remote,
-      branches: shape.refspecs.map((refspec) =>
-        refspec.replace(/^\+/, '').startsWith(':') ? null : destination(refspec),
-      ),
-      widens: shape.mirror || shape.everyRef || args.some(widensPush),
-    };
-  });
+  return pushArgs(command).map(pushTargetOf);
 }
 
 function forcePushOf(shape: PushShape, protectedBranches: readonly string[]): ForcePush | null {
@@ -172,7 +175,7 @@ function gitPublishes(command: string, publishing: readonly string[]): boolean {
 }
 
 function publishes(command: string, publishing: readonly string[]): boolean {
-  const hosting = commandTree(command).commands.some((program) =>
+  const hosting = commandTree(withoutDataHeredocs(command)).commands.some((program) =>
     HOSTING_CLIS.includes(programName(program)),
   );
   return hosting || gitPublishes(command, publishing);

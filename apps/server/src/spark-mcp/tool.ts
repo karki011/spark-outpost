@@ -26,25 +26,43 @@ export interface SparkTool {
   title: string;
   description: string;
   acts?: boolean;
-  privateData?: boolean;
+  privateData?: boolean | PrivateData<unknown>;
   needs?: SparkToolNeed;
   input: z.ZodRawShape;
   run(args: unknown, context: SparkToolContext): Promise<unknown>;
 }
 
+export type PrivateData<Args> = (args: Args, context: SparkToolContext) => Promise<boolean>;
+
 export class SparkToolError extends Error {}
 
 export function sparkTool<Shape extends z.ZodRawShape>(
-  definition: Omit<SparkTool, 'input' | 'run'> & {
+  definition: Omit<SparkTool, 'input' | 'run' | 'privateData'> & {
     input: Shape;
+    privateData?: boolean | PrivateData<z.output<z.ZodObject<Shape>>>;
     run(args: z.output<z.ZodObject<Shape>>, context: SparkToolContext): Promise<unknown>;
   },
 ): SparkTool {
   const schema = z.object(definition.input);
+  const { privateData, ...rest } = definition;
+  const reads: boolean | PrivateData<unknown> | undefined =
+    typeof privateData === 'function'
+      ? (args, context) => privateData(schema.parse(args ?? {}), context)
+      : privateData;
   return {
-    ...definition,
+    ...rest,
+    ...(reads === undefined ? {} : { privateData: reads }),
     run: (args, context) => definition.run(schema.parse(args ?? {}), context),
   };
+}
+
+export async function returnsPrivateData(
+  tool: SparkTool,
+  args: unknown,
+  context: SparkToolContext,
+): Promise<boolean> {
+  if (typeof tool.privateData !== 'function') return tool.privateData === true;
+  return tool.privateData(args, context);
 }
 
 const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;

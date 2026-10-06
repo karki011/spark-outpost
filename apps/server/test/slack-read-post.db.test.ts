@@ -2,7 +2,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPARK_ACTION_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
-import { conversationObservations } from '../src/persistence/observations.ts';
+import { turnObservations } from '../src/persistence/observations.ts';
 import { conversationHasSlackContext } from '../src/persistence/slack.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
@@ -98,7 +98,7 @@ describe('spark_slack', () => {
     expect(read.messages[0]!.text).toContain('@Alex Example can Spark look? <see logs>');
     expect(result.text).not.toContain('leakedtokenvalue');
     await observations.settled();
-    expect(await conversationObservations(t.db, chat.conversationId)).toEqual([
+    expect(await turnObservations(t.db, chat.runId)).toEqual([
       { source: 'private_data', label: 'private work data (spark_slack)' },
     ]);
   });
@@ -277,15 +277,26 @@ describe('spark_slack_post', () => {
     expect(stub.slack.posted.map((entry) => entry.text)).toEqual(['From auto', 'Asked for']);
   });
 
-  it('asks first after the run read Slack, even in Auto', async () => {
+  it('posts at once in Auto after the run read Slack, and flags the send', async () => {
     const observations = await chatIn('Do the work', 'auto');
     await tools!.call('spark_slack', { action: 'thread', url: THREAD });
     await observations.settled();
     const result = await post({ channel: 'eng', text: 'Copied from the thread' });
+    await observations.settled();
 
-    expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
-    expect((await pendingCard(t)).payload.observed).toEqual(['private work data (spark_slack)']);
-    expect(stub.slack.posted).toHaveLength(0);
+    expect(result.json()).toMatchObject({ outcome: 'done' });
+    expect(stub.slack.posted).toHaveLength(1);
+    const flags = await t.db.query<{ rail: string; title: string }>(
+      'SELECT rail, title FROM rail_flags',
+    );
+    expect(flags.rows).toEqual([
+      {
+        rail: 'sent_out',
+        title: expect.stringMatching(
+          /sent data to Slack after reading private work data \(spark_slack\)$/,
+        ),
+      },
+    ]);
   });
 
   it('replies in a thread by link, and redacts secrets before the card and the post', async () => {

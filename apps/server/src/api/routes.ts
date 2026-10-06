@@ -18,6 +18,7 @@ import {
 } from '../persistence/conversations.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
+import { commandOutput } from '../persistence/run-commands.ts';
 import { stopRun } from '../workflow/stop-run.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
@@ -147,6 +148,15 @@ export function apiRoutes(deps: RouteDeps): Router {
       .status(stopped.outcome === 'stopping' ? 202 : 200)
       .set('Spark-Stop', stopped.outcome)
       .json(stopped.run);
+  });
+
+  router.get('/runs/:id/commands/:commandId/output', async (req, res) => {
+    const output = await commandOutput(db, paramId(req), paramId(req, 'commandId'));
+    if (!output) {
+      res.status(404).json({ error: 'Command not found.' });
+      return;
+    }
+    res.json(output);
   });
 
   router.get('/runs/:id/events', async (req, res) => {

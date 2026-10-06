@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { providerLabel, type RailKind } from '@spark-outpost/contracts';
+import type { RailKind } from '@spark-outpost/contracts';
 import { isSecretPath, protectedPath } from '../projects/path-policy.ts';
 import type { Db } from '../persistence/db.ts';
-import { insertRailFlag, type NewRailFlag } from '../persistence/rail-flags.ts';
+import { flagAgentName, insertRailFlag, type NewRailFlag } from '../persistence/rail-flags.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { runGit } from '../ship/git.ts';
 
@@ -25,7 +25,6 @@ interface RootState {
 export interface RailFlagsOptions {
   db: Db;
   runId: string;
-  provider: string;
   projectRoots: readonly string[];
   audit: ProtocolObserver;
 }
@@ -131,17 +130,9 @@ async function approvedPaths(db: Db, runId: string): Promise<Set<string>> {
   return new Set(rows.map((row) => row.target));
 }
 
-async function agentName(db: Db, runId: string, provider: string): Promise<string> {
-  const { rows } = await db.query<{ name: string | null }>(
-    `SELECT route->>'name' AS name FROM runs WHERE id = $1`,
-    [runId],
-  );
-  return rows[0]?.name ?? providerLabel(provider);
-}
-
 export async function startRailFlags(options: RailFlagsOptions): Promise<RailFlagRecorder> {
   const { db, runId, audit } = options;
-  const agent = await agentName(db, runId, options.provider);
+  const agent = await flagAgentName(db, runId);
   const roots = (await Promise.all(options.projectRoots.map(rootState))).filter(
     (state): state is RootState => state !== null,
   );

@@ -41,6 +41,15 @@ export async function watchesFor(
   );
 }
 
+async function anotherChatsPull(
+  context: SparkToolContext,
+  number: number | undefined,
+): Promise<boolean> {
+  if (number === undefined) return false;
+  const watch = await watchByNumber(context, number);
+  return watch !== null && watch.conversationId !== context.scope.conversationId;
+}
+
 async function followUps(
   context: SparkToolContext,
   args: { number?: number | undefined; maxChars: number },
@@ -59,7 +68,7 @@ async function followUps(
 
 export const prFollowUpTool = sparkTool({
   name: 'spark_pr_follow_up',
-  privateData: true,
+  privateData: (args, context) => anotherChatsPull(context, args.number),
   needs: 'pull_requests',
   title: 'PR follow-up',
   description:

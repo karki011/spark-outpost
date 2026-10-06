@@ -7,7 +7,6 @@ import { takesImageResults } from './screenshot.ts';
 const facts = (change: Partial<ActionFacts>): ActionFacts => ({
   posture: 'asks',
   requested: false,
-  observed: false,
   ...change,
 });
 
@@ -28,10 +27,6 @@ describe('reading a page on an external site the user opened', () => {
     expect(externalReadPath(facts({ posture: 'edits', requested: true }))).toBe('read');
     expect(explicitlyAsked('read_page', 'Can you check the page I have open?')).toBe(true);
     expect(explicitlyAsked('read_page', 'Refactor the parser')).toBe(false);
-  });
-
-  it('does not ask again just because the run already read something private', () => {
-    expect(externalReadPath(facts({ posture: 'auto', observed: true }))).toBe('read');
   });
 });
 

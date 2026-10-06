@@ -3,11 +3,11 @@ import {
   isCheckApproval,
   type Approval,
   type BrowserShot,
+  type CommandRun,
   type ModelSwitch,
   type Project,
 } from '@spark-outpost/contracts';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
-import { ShotReply } from '../../browser/ShotReply.tsx';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
 import '../../crew/member-chat.css';
@@ -19,6 +19,8 @@ import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
+import { shownCommands, type LiveCommand } from '../commands/command-model.ts';
+import { TurnReply } from '../commands/TurnReply.tsx';
 import { ErrorLine, ModelSwitchNote } from '../ModelSwitchNote.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
@@ -123,12 +125,16 @@ interface BodyProps {
   steps: readonly RunStep[];
   text: string;
   shots: readonly BrowserShot[];
+  commands?: readonly CommandRun[];
   error: string | null;
   errorDetails?: string | null;
   modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
 }
+
+const NO_COMMANDS: readonly CommandRun[] = [];
+const NO_STREAMED: readonly LiveCommand[] = [];
 
 function AgentBody({
   agent,
@@ -139,12 +145,14 @@ function AgentBody({
   steps,
   text,
   shots,
+  commands = NO_COMMANDS,
+  streamed = NO_STREAMED,
   error,
   errorDetails = null,
   modelSwitch = null,
   approvals,
   repo,
-}: BodyProps & { liveId?: string | null }) {
+}: BodyProps & { liveId?: string | null; streamed?: readonly LiveCommand[] }) {
   const busy = agent.state === 'working' || agent.state === 'thinking';
   const cards = decidedFirst(
     approvals.filter(
@@ -178,11 +186,16 @@ function AgentBody({
       <div id={bodyId}>
         <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} />
         {cards.decided.map(approvalCard)}
-        <ShotReply text={text} shots={shots}>
+        <TurnReply
+          text={text}
+          shots={shots}
+          commands={shownCommands(commands, streamed, agent.id)}
+          waiting={cards.pending.length > 0}
+        >
           {(part, last) => (
             <MemberReplyText role={agent.role} text={part} streaming={last && busy} />
           )}
-        </ShotReply>
+        </TurnReply>
         {cards.pending.map(approvalCard)}
         {agent.state === 'queued' && !agent.spark && (
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
@@ -206,6 +219,7 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
       {...stored}
       liveId={live && streaming ? id : null}
       steps={steps}
+      streamed={stream.commands}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
       modelSwitch={stored.modelSwitch ?? stream.modelSwitch}
@@ -225,6 +239,7 @@ interface AgentBlockProps {
   steps: readonly RunStep[];
   text: string;
   shots?: readonly BrowserShot[];
+  commands?: readonly CommandRun[];
   error: string | null;
   errorDetails?: string | null;
   modelSwitch?: ModelSwitch | null;

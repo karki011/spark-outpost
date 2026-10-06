@@ -14,9 +14,11 @@ import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
+import { ownRepoFor } from './send-context.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import { secretReadLabels } from '../approvals/secret-reads.ts';
+import { secretSend } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
   SECRET_REASON,
@@ -40,7 +42,6 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
-import { OWN_WORK_SOURCES } from '../persistence/observations.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
@@ -107,12 +108,18 @@ export interface GateDeps {
 
 export type Asking = Pick<
   Extract<Decision, { verdict: 'ask' }>,
-  'forcePush' | 'instructionFiles' | 'gitControl' | 'because' | 'observed'
+  | 'forcePush'
+  | 'instructionFiles'
+  | 'gitControl'
+  | 'because'
+  | 'observed'
+  | 'sendsTo'
+  | 'secretSend'
 >;
 
 function onceOnly(asking: Asking): boolean {
   return Boolean(
-    asking.forcePush || asking.observed || asking.gitControl || asking.instructionFiles,
+    asking.forcePush || asking.secretSend || asking.gitControl || asking.instructionFiles,
   );
 }
 
@@ -351,6 +358,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
         subject: subject(request),
         reason,
         observed: asking.observed,
+        sendsTo: asking.sendsTo,
       });
     }
     waiting += 1;
@@ -404,7 +412,8 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
-      ownRepoObserved: (await deps.observations?.labels(OWN_WORK_SOURCES)) ?? [],
+      own: await ownRepoFor(deps.db, deps.runId, request),
+      secretSend: await secretSend(request),
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
@@ -448,6 +457,14 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       `Allowed ${what} (${allowedWhy(decision, request)})`,
       recorded.id,
     );
+    if (decision.sent && allowed.outcome === 'selected') {
+      deps.observations?.sentOut({
+        toolCallId: request.toolCallId,
+        subject: what,
+        approvalId: recorded.id,
+        ...decision.sent,
+      });
+    }
     return readSecrets(allowed, secretReads);
   };
 

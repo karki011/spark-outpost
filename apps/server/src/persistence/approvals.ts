@@ -248,8 +248,8 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
       'Only changes to agent instruction files can be allowed for a chat.',
     );
   }
-  if (approval.payload.observed && allowing && decision.scope !== 'once') {
-    throw new ApprovalInputError('After reading sensitive data, sending data out is allowed once.');
+  if (approval.payload.secretSend && allowing && decision.scope !== 'once') {
+    throw new ApprovalInputError('Sending a value from a secret file is allowed one at a time.');
   }
   if (decision.scope === 'project' && (approval.kind !== 'execute' || !approval.payload.command)) {
     throw new ApprovalInputError('Only commands can be allowed for the whole project.');

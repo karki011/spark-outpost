@@ -42,27 +42,61 @@ describe('check claims', () => {
         law: 'goodhart',
         kind: 'claim',
         path: null,
-        text: "Bolt said the checks pass, but Spark's own run failed: `pnpm test` exited 1.",
+        text: "Bolt said the checks pass. Spark's own run differs: `pnpm test` exited 1 (in files this change touches).",
       },
     ]);
   });
 
   it('flags a claim Spark could not confirm because the checks were skipped', () => {
     const note =
-      'The package.json scripts changed during this run, so this check was not run automatically.';
+      'The package.json script this check runs changed during this run, so it was not run automatically.';
     const skipped = body('b1', [result({ outcome: 'skipped', exitCode: null, note })], 'skipped');
     expect(claimFindings([reply('All tests pass.')], [skipped])[0]?.text).toBe(
       `Bolt said the checks pass, but Spark could not confirm it: ${note}`,
     );
   });
 
-  it('says what Spark could not confirm when a check fails for another reason than the change', () => {
-    const old = result({ outcome: 'failed', exitCode: 1, cause: 'baseline' });
+  it('names the command and the failing tasks, and says what ties them to the change', () => {
+    const failures = ['task dates:test', 'test libs/a/src/a.test.ts'];
+    const mine = result({
+      outcome: 'failed',
+      exitCode: 1,
+      cause: 'change',
+      failures,
+      blamed: ['test libs/a/src/a.test.ts'],
+      baseline: {
+        base: 'abc',
+        outcome: 'passed',
+        cached: false,
+        trusted: true,
+        durationMs: 5,
+        shared: [],
+        added: [],
+      },
+    });
+    expect(claimFindings([reply('All tests pass.')], [body('b1', [mine], 'failed')])[0]?.text).toBe(
+      "Bolt said the checks pass. Spark's own run differs: `pnpm test` failed in test libs/a/src/a.test.ts (it passes without this change).",
+    );
+  });
+
+  it('does not say the Builder is wrong about failures the change did not cause', () => {
+    const failures = ['task dates:test', 'task node-compat:test'];
+    const old = result({ outcome: 'failed', exitCode: 1, cause: 'baseline', failures });
+    const unsure = result({
+      command: 'pnpm lint',
+      outcome: 'failed',
+      exitCode: 1,
+      cause: 'unknown',
+    });
     const slow = result({ command: 'pnpm run e2e', outcome: 'timed_out', exitCode: null });
-    const found = claimFindings([reply('All tests pass.')], [body('b1', [old, slow], 'skipped')]);
+    const found = claimFindings(
+      [reply('All tests pass.')],
+      [body('b1', [old, unsure, slow], 'skipped')],
+    );
     expect(found.map((finding) => finding.text)).toEqual([
-      'Bolt said the checks pass, but Spark could not confirm it: `pnpm test` fails, as it did before this change, `pnpm run e2e` could not finish in time.',
+      'Bolt said the checks pass. Spark could not confirm it, and none of this is counted against the change: `pnpm test` failed in task dates:test, task node-compat:test, as it does without this change; `pnpm lint` exited 1; nothing ties that to this change; `pnpm run e2e` could not finish in time.',
     ]);
+    expect(found[0]!.text).not.toContain('own run failed');
   });
 
   it('stays quiet when Spark agrees or there is no claim', () => {

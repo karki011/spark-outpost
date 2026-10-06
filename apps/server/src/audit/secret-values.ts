@@ -15,7 +15,7 @@ function worthHiding(key: string, value: string): boolean {
   return value.length >= MIN_OPAQUE_LENGTH && /\d/.test(value) && /[a-z]/i.test(value);
 }
 
-async function fileValues(file: string): Promise<string[]> {
+export async function secretFileValues(file: string): Promise<string[]> {
   const content = await readFile(file, 'utf8').catch(() => '');
   if (content === '' || content.length > MAX_FILE_BYTES) return [];
   return Object.entries(parseEnv(content)).flatMap(([key, value]) =>
@@ -26,7 +26,9 @@ async function fileValues(file: string): Promise<string[]> {
 async function rootValues(root: string): Promise<string[]> {
   const entries: Dirent[] = await readdir(root, { withFileTypes: true }).catch(() => []);
   const secrets = entries.filter((entry) => entry.isFile() && isSecretPath(entry.name));
-  const values = await Promise.all(secrets.map((entry) => fileValues(path.join(root, entry.name))));
+  const values = await Promise.all(
+    secrets.map((entry) => secretFileValues(path.join(root, entry.name))),
+  );
   return values.flat();
 }
 

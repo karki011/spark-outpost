@@ -128,7 +128,7 @@ async function pullRequest(
 export const githubTools = [
   sparkTool({
     name: 'spark_pull_requests',
-    privateData: true,
+    privateData: async (args) => args.project !== undefined,
     needs: 'pull_requests',
     title: 'Pull requests',
     description:
@@ -142,7 +142,7 @@ export const githubTools = [
   }),
   sparkTool({
     name: 'spark_pr',
-    privateData: true,
+    privateData: async (args) => args.project !== undefined,
     needs: 'pull_requests',
     title: 'Pull request',
     description:

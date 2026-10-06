@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { browserShotSchema } from './browser.ts';
+import { commandRunSchema } from './command-runs.ts';
 import { adviceSummarySchema } from './advice.ts';
 import { ANNOTATIONS_PER_MESSAGE, annotationInputSchema } from './annotations.ts';
 import { approvalSchema } from './approvals.ts';
@@ -136,6 +137,7 @@ export const conversationDetailSchema = z.object({
   memberMessages: z.array(memberMessageSchema).optional(),
   railFlags: z.array(railFlagSchema).optional(),
   browserShots: z.array(browserShotSchema).optional(),
+  commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
