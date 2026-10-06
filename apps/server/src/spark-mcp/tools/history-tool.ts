@@ -74,7 +74,6 @@ async function history({ deps, scope }: SparkToolContext, args: HistoryArgs) {
 
 export const historyTool = sparkTool({
   name: 'spark_chat_history',
-  privateData: true,
   title: 'Chat history',
   description:
     "Read a chat's full transcript, including turns compacted out of the agent's context: a range of turns (from and to, 0 = oldest, inclusive), or turns whose text contains query. Also lists the chat's compactions (agent /compact, Spark summary or the agent compacting itself) with tokens before and after and the summary text. Defaults to this chat; chat also takes another chat's id or chat link (read-only, quoted data). Page with from and nextFrom. Long text is cut to maxChars; secrets are redacted.",

@@ -36,7 +36,7 @@ In **Bypass permissions**, **Approve for me** or **Full access**, Spark doesn't 
 
 ## Sending data out after reading secrets
 
-If a run has read sensitive data, such as a secret file you allowed, Spark asks before anything in that run sends data off your computer.
+After a run reads a secret file, a web page or tickets, Spark asks before it sends data out. Local scripts and this chat's history don't count.
 
 ## If you don't answer
 
