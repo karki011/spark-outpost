@@ -103,12 +103,12 @@ describe('toAttention', () => {
     expect(
       toAttention(
         pending({
-          pending_kind: 'budget',
-          pending_title: 'Continue past the budget?',
+          pending_kind: 'retry',
+          pending_title: 'Retry one tier up?',
           pending_agent: 'Bolt',
         }),
       ),
-    ).toMatchObject({ kind: 'input', title: 'Continue past the budget?', agentName: null });
+    ).toMatchObject({ kind: 'input', title: 'Retry one tier up?', agentName: null });
   });
 
   it('marks a watchdog checkpoint as looks stuck, naming the member', () => {

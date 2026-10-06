@@ -43,7 +43,6 @@ interface ProfileRow {
   spark_enabled: boolean;
   default_level: InvolvementLevel;
   default_level_notice: boolean;
-  spend_cap_usd: string | null;
   morning_brief: boolean;
   morning_brief_time: string;
   compact_warn_percent: number;
@@ -95,7 +94,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, default_level,
        default_level_notice,
-       spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
+       morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -138,20 +137,7 @@ function connectedIds(rows: ConnectionRow[]): ProviderId[] {
   return rows.filter((row) => !row.disconnected_at).map((row) => row.provider);
 }
 
-function savedSpendCap(profile: ProfileRow): number | null {
-  return profile.spend_cap_usd === null ? null : Number(profile.spend_cap_usd);
-}
-
-export function effectiveSpendCap(saved: number | null, serverCap: number | null): number | null {
-  if (saved === null) return serverCap;
-  return saved > 0 ? saved : null;
-}
-
-export async function getSetupState(
-  db: Queryable,
-  workspaceId: string,
-  serverSpendCapUsd: number | null = null,
-): Promise<SetupState> {
+export async function getSetupState(db: Queryable, workspaceId: string): Promise<SetupState> {
   const [profile, rows, advisors] = await Promise.all([
     ensureProfile(db, workspaceId),
     connectionRows(db, workspaceId),
@@ -194,7 +180,6 @@ export async function getSetupState(
     sparkEnabled: profile.spark_enabled,
     defaultLevel: profile.default_level,
     defaultLevelNotice: profile.default_level_notice,
-    spendCapUsd: effectiveSpendCap(savedSpendCap(profile), serverSpendCapUsd),
     morningBrief: profile.morning_brief,
     morningBriefTime: profile.morning_brief_time,
     compactWarnPercent: profile.compact_warn_percent,
@@ -243,22 +228,21 @@ export async function updateProfile(
        personality = COALESCE($9, personality),
        spark_enabled = COALESCE($10, spark_enabled),
        default_level = COALESCE($11, default_level),
-       spend_cap_usd = CASE WHEN $12 THEN COALESCE($13::numeric, 0) ELSE spend_cap_usd END,
-       morning_brief = COALESCE($14, morning_brief),
-       morning_brief_time = COALESCE($15::time, morning_brief_time),
-       pr_ready_for_review = COALESCE($16, pr_ready_for_review),
-       pr_follow_up = COALESCE($17, pr_follow_up),
-       pr_follow_up_checks = COALESCE($18, pr_follow_up_checks),
-       pr_follow_up_reviews = COALESCE($19, pr_follow_up_reviews),
-       pr_follow_up_replies = COALESCE($20, pr_follow_up_replies),
-       compact_warn_percent = COALESCE($21, compact_warn_percent),
-       compact_at_percent = COALESCE($22, compact_at_percent),
-       auto_compact = COALESCE($23, auto_compact),
-       heartbeat = COALESCE($24, heartbeat),
-       wide_window = COALESCE($25, wide_window),
-       busy_enter = COALESCE($26, busy_enter),
-       pr_follow_up_ask = COALESCE($27, pr_follow_up_ask),
-       default_level_notice = default_level_notice AND $28,
+       morning_brief = COALESCE($12, morning_brief),
+       morning_brief_time = COALESCE($13::time, morning_brief_time),
+       pr_ready_for_review = COALESCE($14, pr_ready_for_review),
+       pr_follow_up = COALESCE($15, pr_follow_up),
+       pr_follow_up_checks = COALESCE($16, pr_follow_up_checks),
+       pr_follow_up_reviews = COALESCE($17, pr_follow_up_reviews),
+       pr_follow_up_replies = COALESCE($18, pr_follow_up_replies),
+       compact_warn_percent = COALESCE($19, compact_warn_percent),
+       compact_at_percent = COALESCE($20, compact_at_percent),
+       auto_compact = COALESCE($21, auto_compact),
+       heartbeat = COALESCE($22, heartbeat),
+       wide_window = COALESCE($23, wide_window),
+       busy_enter = COALESCE($24, busy_enter),
+       pr_follow_up_ask = COALESCE($25, pr_follow_up_ask),
+       default_level_notice = default_level_notice AND $26,
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -273,8 +257,6 @@ export async function updateProfile(
       update.personality ?? null,
       update.sparkEnabled ?? null,
       update.defaultLevel ?? null,
-      update.spendCapUsd !== undefined,
-      update.spendCapUsd ?? null,
       update.morningBrief ?? null,
       update.morningBriefTime ?? null,
       update.prReadyForReview ?? null,
@@ -300,7 +282,6 @@ export async function shipsFailingChecks(db: Queryable, workspaceId: string): Pr
 
 export interface SparkPreferences extends SparkSessionPrefs {
   sparkEnabled: boolean;
-  savedSpendCapUsd: number | null;
 }
 
 export async function sparkPreferences(
@@ -312,7 +293,6 @@ export async function sparkPreferences(
     displayName: profile.display_name,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
-    savedSpendCapUsd: savedSpendCap(profile),
   };
 }
 

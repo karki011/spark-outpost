@@ -11,7 +11,7 @@ import { involvementLevelSchema } from './involvement-levels.ts';
 import { modelSwitchSchema } from './model-access.ts';
 import { costSourceSchema, totalCostSourceSchema } from './audit.ts';
 import { runStatusSchema } from './runs.ts';
-import { agentPickSchema, budgetLimitSchema, routeSourceSchema } from './checkpoints.ts';
+import { agentPickSchema, routeSourceSchema } from './checkpoints.ts';
 import { pieceListSchema, piecePlacementSchema } from './pieces.ts';
 import { agentRoleSchema } from './roles.ts';
 
@@ -115,23 +115,17 @@ export const crewMemberSchema = z.object({
   placement: piecePlacementSchema.optional(),
   sameProvider: z.boolean().optional(),
   routeNote: z.string().optional(),
-  budget: z.string().optional(),
   spark: crewSparkSchema.optional(),
   modelSwitch: modelSwitchSchema.optional(),
   errorDetails: z.string().optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 
-export const orchestrationBudgetSchema = z.object({
+const orchestrationUsageSchema = z.object({
   activeMs: z.number().int().nonnegative(),
-  activeLimitMs: z.number().int().positive(),
   toolCalls: z.number().int().nonnegative(),
-  toolCallLimit: z.number().int().positive(),
   costUsd: z.number().nonnegative(),
-  costCapUsd: z.number().positive().nullable(),
-  exceeded: budgetLimitSchema.nullable(),
 });
-export type OrchestrationBudget = z.infer<typeof orchestrationBudgetSchema>;
 
 const totalsFields = {
   runs: z.number().int().nonnegative(),
@@ -155,8 +149,6 @@ export const orchestrationTotalsSchema = z.object({
 export type OrchestrationTotals = z.infer<typeof orchestrationTotalsSchema>;
 
 export const MAX_REPAIR_RETRIES = 2;
-export const ORCHESTRATION_ACTIVE_LIMIT_MS = 15 * 60 * 1000;
-export const ORCHESTRATION_TOOL_CALL_LIMIT = 60;
 
 export const orchestrationSchema = z.object({
   runId: z.uuid(),
@@ -178,7 +170,7 @@ export const orchestrationSchema = z.object({
   pendingCheckpoint: approvalSchema.nullable(),
   decisions: z.array(orchestrationDecisionSchema),
   pieces: pieceListSchema.optional(),
-  budget: orchestrationBudgetSchema,
+  usage: orchestrationUsageSchema.optional(),
   totals: orchestrationTotalsSchema,
   error: z.string().nullable(),
   updatedAt: z.string(),

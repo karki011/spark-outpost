@@ -31,9 +31,6 @@ import {
   afterReview,
   canFixAgain,
   checksFailedAfterFix,
-  fixCut,
-  fixRefused,
-  fixRestored,
   lastAction,
   startFix,
 } from './review-loop.ts';
@@ -210,16 +207,7 @@ function escalateOnce(state: FlowState, followUp: string): FlowResult {
   );
 }
 
-function refusedFix(state: FlowState, unstarted: boolean): boolean {
-  return (
-    unstarted &&
-    state.review.fixing &&
-    state.last?.role === 'builder' &&
-    state.last.reason === 'fix'
-  );
-}
-
-function fixFindings(state: FlowState, auto = false): FlowResult {
+function fixFindings(state: FlowState): FlowResult {
   return spawn(
     { ...state, review: startFix(state.review) },
     {
@@ -227,32 +215,8 @@ function fixFindings(state: FlowState, auto = false): FlowResult {
       reason: 'fix',
       escalate: false,
       followUp: criticFixFollowUp(state.review.fixable),
-      ...(auto ? { auto: true } : {}),
     },
   );
-}
-
-function cutFixRound(
-  state: FlowState,
-  event: Extract<FlowEvent, { type: 'budget_exceeded' }>,
-): FlowResult | null {
-  if (!state.review.fixing || event.passing !== true) return null;
-  const notStarted = refusedFix(state, event.unstarted === true);
-  if (notStarted && event.round !== true) return null;
-  const review = fixCut(state.review, {
-    limit: event.limit,
-    round: event.round === true,
-    unstarted: notStarted,
-  });
-  return {
-    state: {
-      ...state,
-      review,
-      exceeded: event.round === true ? null : event.limit,
-      waitingFor: null,
-    },
-    action: { type: 'restore' },
-  };
 }
 
 function askContext(state: FlowState): FlowResult {
@@ -310,7 +274,7 @@ function agentDone(
     const verdict = event.verdict ?? 'unclear';
     const review = afterReview(state.review, verdict, event.fixable ?? []);
     const next = { ...state, verdict, review };
-    return lastAction(review) === 'fix' ? fixFindings(next, true) : wrapUp(next);
+    return lastAction(review) === 'fix' ? fixFindings(next) : wrapUp(next);
   }
   return builderDone(state, event);
 }
@@ -322,25 +286,6 @@ function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>)
 
 function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered' }>): FlowResult {
   const option = event.optionId;
-  if (event.kind === 'budget') {
-    if (option === CHECKPOINT_OPTION.continueBudget && state.shipping) {
-      return ship({ ...state, exceeded: null, resumeLast: false });
-    }
-    if (option === CHECKPOINT_OPTION.continueBudget && state.review.stop === 'budget') {
-      return fixFindings({ ...state, exceeded: null, resumeLast: false });
-    }
-    if (option === CHECKPOINT_OPTION.continueBudget && state.last) {
-      const next = state.resumeLast
-        ? { ...state.last, escalate: false, reason: 'resume' as const }
-        : state.last;
-      return spawn({ ...state, exceeded: null, resumeLast: false }, next);
-    }
-    if (state.review.stop === 'budget') {
-      return wrapUp(state);
-    }
-    const limit = (state.exceeded ?? 'time').replace('_', ' ');
-    return stopReport(state, `Stopped: the ${limit} budget ran out.`);
-  }
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
   if (event.kind === 'retry') {
     if (option === CHECKPOINT_OPTION.retry) return retry(state, event.note);
@@ -444,24 +389,6 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return ask(state, 'accept', event.reason);
     case 'reverted':
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
-    case 'restored':
-      return wrapUp({ ...state, review: fixRestored(state.review, event.restored) });
-    case 'budget_exceeded': {
-      const cut = cutFixRound(state, event);
-      if (cut) return cut;
-      return ask(
-        {
-          ...state,
-          exceeded: event.limit,
-          resumeLast: event.unstarted !== true,
-          review: refusedFix(state, event.unstarted === true)
-            ? fixRefused(state.review)
-            : state.review,
-        },
-        'budget',
-        `The ${event.limit.replace('_', ' ')} budget ran out.`,
-      );
-    }
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }

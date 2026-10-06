@@ -61,7 +61,6 @@ const sparkDeps: SparkToolDeps = {
     loginPath: loginShellPath(runCommand, loginShell),
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
-  serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
   linkScheme: config.SPARK_LINK_SCHEME,
@@ -105,9 +104,6 @@ const worker = startWorker({
     loginPath: loginShellPath(runCommand, loginShell),
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
-  ...(config.ORCHESTRATION_COST_CAP_USD
-    ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
-    : {}),
 });
 const projectMap = startMapScheduler({
   db,

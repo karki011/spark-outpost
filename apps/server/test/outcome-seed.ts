@@ -64,9 +64,8 @@ export async function seedTurn(db: Db, conversationId: string, turn: SeedTurn = 
     ],
   );
   await db.query(
-    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing,
-       active_limit_ms, tool_call_limit)
-     VALUES ($1, 'finished', $2, 'rules', 'edits', 'pinned', 900000, 60)`,
+    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing)
+     VALUES ($1, 'finished', $2, 'rules', 'edits', 'pinned')`,
     [runId, turn.depth ?? 'execute'],
   );
   if (turn.intake) await seedIntake(db, runId);

@@ -48,13 +48,8 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function begin(tags: string, costCapUsd?: number) {
-  const begun = beginPieces(
-    t,
-    root,
-    `#manifest ${tags}`,
-    costCapUsd === undefined ? {} : { costCapUsd },
-  );
+async function begin(tags: string) {
+  const begun = beginPieces(t, root, `#manifest ${tags}`);
   harness = begun.harness;
   return begun.started;
 }
@@ -200,24 +195,6 @@ describe('worktree parallel pieces', { timeout: 120_000 }, () => {
       expect(reply).toContain(
         'Renumbered migrations: `migrations/0002_api.sql` → `migrations/0003_api.sql` (P2).',
       );
-    });
-
-    it('keeps a copy the budget cut so Continue resumes the piece in it', async () => {
-      const { conversationId, runId } = await begin('#piecebudget', 0.1);
-      const { asked, orchestration } = await driveToEnd(
-        t,
-        conversationId,
-        runId,
-        undefined,
-        90_000,
-      );
-      expect(orchestration.status).toBe('succeeded');
-      expect(asked.map((approval) => approval.kind)).toContain('budget');
-      expect(await copies(runId)).toHaveLength(3);
-      const p1 = (await crewRuns(t, runId)).filter((run) => run.pieceKey === 'P1');
-      expect(p1.map((run) => run.status)).toEqual(['cancelled', 'succeeded']);
-      expect(p1[1]!.worktreeRun).toBe(p1[0]!.id);
-      expect(await read('store.ts')).toContain('built by P1');
     });
 
     it('sweeps the copies a crashed run left behind', async () => {

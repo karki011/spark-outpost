@@ -3,14 +3,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  CHECKPOINT_OPTION,
-  type Approval,
-  type CheckBody,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
+import { type Approval, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
-import { nextCallUsd } from '../src/orchestration/budget-check.ts';
 import { CRITIC_FIX_LEAD, RECHECK_RULE } from '../src/orchestration/context.ts';
 import {
   BUG_FINDINGS,
@@ -43,7 +37,6 @@ import { createTestDb, type TestDb } from './support.ts';
 
 const REVIEWED: Scenario = { ...TRIVIAL, review: 0.95 };
 const JEV_SAYS_BUGS = { finding_1: 0.95, finding_2: 0.9 };
-const NO_BUDGET_POLL = 600_000;
 
 let t: TestDb;
 let root: string;
@@ -69,9 +62,6 @@ afterEach(async () => {
 interface StartOptions {
   jev?: boolean;
   policy?: JevScript['policy'];
-  costCapUsd?: number;
-  toolCallLimit?: number;
-  fixRound?: { toolCalls?: number; activeMs?: number };
 }
 
 async function start(options: StartOptions = {}) {
@@ -79,16 +69,7 @@ async function start(options: StartOptions = {}) {
   await connectProviders(t, jev);
   script.scenario = REVIEWED;
   if (options.policy) script.policy = options.policy;
-  harness = startOrchestrator(t, jev ? jevFetch(script) : null, {
-    sessions: store,
-    ...(options.costCapUsd === undefined
-      ? {}
-      : { budget: { costCapUsd: options.costCapUsd }, budgetPollMs: NO_BUDGET_POLL }),
-    ...(options.toolCallLimit === undefined
-      ? {}
-      : { budget: { toolCallLimit: options.toolCallLimit }, budgetPollMs: NO_BUDGET_POLL }),
-    ...(options.fixRound ? { fixRound: options.fixRound } : {}),
-  });
+  harness = startOrchestrator(t, jev ? jevFetch(script) : null, { sessions: store });
 }
 
 function begin(tag: string, level: InvolvementLevel) {
@@ -381,77 +362,5 @@ describe('Critic → fix rounds', () => {
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
     await drive(conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic']);
-  }, 120_000);
-});
-
-describe('the task budget', () => {
-  const stopAtBudget: Answerer = (approval) =>
-    approval.kind === 'budget' ? { optionId: CHECKPOINT_OPTION.stop } : answerEverything(approval);
-
-  it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop keeps with a note', async () => {
-    const builderAndCriticFloor = 0.2 + nextCallUsd('claude', 'sonnet');
-    await start({ policy: JEV_SAYS_BUGS, costCapUsd: builderAndCriticFloor + 0.0002 });
-    const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
-    const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
-    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
-    expect(keptCard(orchestration).reason).toContain(CONCERNS_NOTE);
-    expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
-    expect(await roles(runId)).toEqual(['builder', 'critic']);
-    expect((await findingAdvice(runId))[0]?.body.answer.fixable).toBe(2);
-    expect(await reply(runId)).toContain(
-      'The budget ran out before a fix turn for 2 correctness findings from the AI review',
-    );
-  }, 120_000);
-
-  it('rolls a fix round cut by the run cost cap back to the state that passed the checks and keeps with a note (N2)', async () => {
-    await configureCheck(PASSING_CHECK);
-    await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.1 });
-    const { conversationId, runId } = await begin('#bugrounds 2 #fixcost', 'hands-off');
-    const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
-    expect(asked.filter((approval) => approval.kind !== 'execute')).toEqual([]);
-    const kept = keptCard(orchestration);
-    expect(kept.reason).toContain(CONCERNS_NOTE);
-    expect(kept.reason).toContain(
-      "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
-    );
-    expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
-    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
-    expect(orchestration.budget.costUsd).toBeGreaterThanOrEqual(0.2);
-    expect(await notes()).not.toContain('fixed the review findings');
-    expect(await reply(runId)).toContain('Stopped fix round 1');
-  }, 120_000);
-
-  it('rolls a fix round cut by its own budget back to the last passing state and keeps with a note (N2)', async () => {
-    await configureCheck(PASSING_CHECK);
-    await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 1 } });
-    const { conversationId, runId } = await begin('#bugrounds 9 #slowfix', 'hands-off');
-    const { asked, orchestration } = await drive(conversationId, runId);
-    expect(orchestration.status).toBe('succeeded');
-    expect(orchestration.budget.exceeded).toBeNull();
-    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
-    expect(asked.filter((approval) => approval.kind !== 'execute')).toEqual([]);
-    const keep = keptCard(orchestration);
-    expect(keep.reason).toContain(CONCERNS_NOTE);
-    expect(keep.reason).toContain(
-      "Stopped fix round 1: fix round 1's own tool-call budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
-    );
-    expect(keep.reason).toContain(`Still open: ${ROUND_FINDINGS[0]}`);
-    expect(await notes()).not.toContain('fixed the review findings');
-    expect(await notes()).toContain('step 1');
-  }, 120_000);
-
-  it('does not start a fix round by itself when too little of the run budget is left for one', async () => {
-    await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 10_000 } });
-    const { conversationId, runId } = await begin('#bugreview', 'hands-off');
-    const { asked, orchestration } = await drive(conversationId, runId);
-    expect(orchestration.status).toBe('succeeded');
-    expect(await roles(runId)).toEqual(['builder', 'critic']);
-    expect(asked).toEqual([]);
-    const kept = keptCard(orchestration);
-    expect(kept.reason).toContain(CONCERNS_NOTE);
-    expect(kept.reason).toContain(
-      "Did not start fix round 1: too little of the run's tool-call budget was left for one",
-    );
-    expect(kept.reason).toContain(`Still open: ${BUG_FINDINGS[0]}`);
   }, 120_000);
 });

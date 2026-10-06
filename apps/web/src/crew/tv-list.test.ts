@@ -126,7 +126,7 @@ describe('Agent TV list rows', () => {
 
   it('marks the agent behind a pending checkpoint as needing you', () => {
     const builder = member({ status: 'awaiting_approval', finishedAt: null });
-    const pending = checkpoint({ kind: 'budget' }, { runId: builder.runId });
+    const pending = checkpoint({ kind: 'retry' }, { runId: builder.runId });
     const turn = orchestration({ crew: [builder], pendingCheckpoint: pending });
     const agents = crewAgents(turn);
     const ask = { approvalId: pending.id, text: 'Needs you: keep going?' };

@@ -40,12 +40,12 @@ Proposed starting providers are Claude and Codex. Implement one real provider fi
 ## 3. First user journey
 
 1. Open the app, connect an available provider, and choose a project or a standalone conversation.
-2. Enter a goal, desired outcome, and any budget or permission limits.
+2. Enter a goal, desired outcome, and any permission limits.
 3. The coordinator asks only necessary questions and creates a bounded plan for work that needs delegation. Simple questions take a direct path.
 4. Specialists execute permitted work. Independent steps can run concurrently within configured limits.
 5. The conversation streams useful text and activity summaries. The user can inspect details, steer the work, cancel, or respond to an approval request.
 6. Checks run against the resulting artifacts. A separate reviewer examines the work and evidence.
-7. The coordinator repairs actionable findings within the authorized scope and retry budget, or asks for a decision.
+7. The coordinator repairs actionable findings within the authorized scope and retry rounds, or asks for a decision.
 8. The user receives the result, changed artifacts, validation evidence, unresolved concerns, and any pending publication action.
 
 All conversations enter the same harness boundary for policy and persistence. Not every message invokes a planner, specialist team, or reviewer.
@@ -59,7 +59,7 @@ flowchart TD
   UI[React interface] --> API[Express API]
   API --> DB[(PostgreSQL)]
   Worker[Node workflow worker] <--> DB
-  Worker --> Policy[Permissions and budgets]
+  Worker --> Policy[Permissions]
   Worker --> ACP[ACP client]
   ACP --> Agents[Coding agents via ACP: claude-agent-acp, codex-acp, other ACP agents]
   Worker --> A2A[A2A client: remote agent services]
@@ -75,7 +75,7 @@ PostgreSQL is the source of truth for conversations, workflow progress, approval
 
 ### Protocol layers
 
-Each protocol has one job. None of them supplies our scheduler, permissions, durable queue, budget enforcement, or independent review policy.
+Each protocol has one job. None of them supplies our scheduler, permissions, durable queue, or independent review policy.
 
 | Layer                  | Protocol       | Role                                                                                                                                                            |
 | ---------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -246,7 +246,7 @@ Needs design before its phase (in this plan, missing from the mockup):
 - Context, Files, and Review actions near the title; branch picker with its unsafe-to-switch state.
 - More than one agent in a turn; the mockup assumes one provider mascot per chat (phase 3).
 - Agents connection screen and collaboration timeline for A2A (phase 3).
-- Goal, budget, and limits at intake; outcome-unknown and recovery states.
+- Goal and permission limits at intake; outcome-unknown and recovery states.
 
 Tickets and the Jira/Linear/GitHub connectors, shown deferred in the mockup, are now built (`apps/web/src/tickets/`). Home depends on the app-wide status stream.
 

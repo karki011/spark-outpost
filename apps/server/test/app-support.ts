@@ -32,7 +32,6 @@ export interface TestAppOptions {
   slackSignIn?: AppOptions['slackSignIn'];
   slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
-  serverSpendCapUsd?: number;
   parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
@@ -91,7 +90,6 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     slackSignIn: options.slackSignIn,
     ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
-    serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,
     ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),

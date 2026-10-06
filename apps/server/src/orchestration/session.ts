@@ -1,19 +1,11 @@
 import {
-  ORCHESTRATION_ACTIVE_LIMIT_MS,
   ORCHESTRATION_ACTIVITY,
-  ORCHESTRATION_TOOL_CALL_LIMIT,
   type AgentRole,
-  type BudgetLimit,
   type BuildStyle,
   type CheckBody,
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
-import {
-  FIX_ROUND_ACTIVE_MS,
-  FIX_ROUND_MIN_TOOL_CALLS,
-  FIX_ROUND_TOOL_SHARE,
-} from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { Ranking } from './observe-rank.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
@@ -21,17 +13,17 @@ import type { CodeScanner, ScanOutcome } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import { nextArtifactVersion, type ArtifactWrite } from '../persistence/artifacts.ts';
 import type { Lease } from '../persistence/jobs.ts';
-import { effectiveSpendCap } from '../persistence/setup.ts';
 import {
   loadOrchestration,
   updateOrchestration,
+  waitedMs,
   type OrchestrationPatch,
 } from '../persistence/orchestrations.ts';
 import type { Append, RunControl } from '../workflow/agent-turn.ts';
 import type { ExecuteRunDeps } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import type { BudgetLimits } from './budget.ts';
+import { activeTime } from './active-time.ts';
 import type { JevAccess } from './jev-calls.ts';
 import type { ProjectStyle } from './lean.ts';
 import type { LoopGuardSettings } from './loop-guard.ts';
@@ -41,13 +33,10 @@ import type { FlowState } from './transitions.ts';
 import type { Coordination } from '../coordinator/state.ts';
 import type { Slots } from './slots.ts';
 import type { LawReview } from '../laws/review.ts';
-import type { MemberBudget } from '../laws/member-budget.ts';
 import type { TaskEstimate } from '../laws/estimate.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
-  budget?: Partial<BudgetLimits>;
-  fixRound?: Partial<FixRoundLimits>;
-  budgetPollMs?: number;
+  activeTimePollMs?: number;
   checkpointTimeoutMs?: number;
   checkTimeoutMs?: number;
   jevTimeoutMs?: number;
@@ -66,18 +55,6 @@ export type ForcedPlacement = 'shared' | 'worktree';
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
-export interface FixRoundLimits {
-  toolCalls: number;
-  activeMs: number;
-}
-
-export interface FixRound {
-  round: number;
-  toolCallsAt: number;
-  activeMsAt: number;
-  hit: BudgetLimit | null;
-}
-
 export interface Seat {
   role: Extract<AgentRole, 'builder' | 'integrator' | 'coordinator' | 'scout'>;
   name: string;
@@ -87,22 +64,11 @@ export interface Seat {
   memberRoute?: MemberRoute;
 }
 
-export interface BudgetChecks {
-  running: Promise<BudgetLimit | null> | null;
-  queued: Promise<BudgetLimit | null> | null;
-}
-
 export interface CheckMemory {
   base?: string | null;
   unfinished: Set<string>;
   fixed: Set<string>;
   fixRounds: Map<string, number>;
-}
-
-export interface PassingState {
-  tree: string;
-  checkBodies: CheckBody[];
-  checkLines: string[];
 }
 
 export interface MemberResult {
@@ -139,15 +105,8 @@ export interface Session {
   results: MemberResult[];
   findings: string[];
   toolCalls: number;
-  limits: BudgetLimits;
-  baseLimits: BudgetLimits;
   startedAt: number;
-  budgetHit: BudgetLimit | null;
   members: Map<string, () => void>;
-  liveCost: Map<string, number>;
-  settledUsd?: number;
-  capWaived?: boolean;
-  budgetChecks?: BudgetChecks;
   checkpoints: number;
   git: boolean;
   checks: ProjectChecks | null;
@@ -174,60 +133,17 @@ export interface Session {
   risky?: string | null;
   shipLine?: string | null;
   prNotes?: string[];
-  fixRound?: FixRound | null;
+  fixRound?: number | null;
   fixTree?: string | null;
   fixPatch?: string | null;
   reviewNotes?: string[];
-  passing?: PassingState | null;
   suggestions?: string[];
   integrator?: Seat | null;
   coordination?: Coordination | null;
   handoff?: string | null;
   laws?: LawReview | null;
   criticRemovals?: string[] | null;
-  memberBudget?: MemberBudget | null;
   estimate?: TaskEstimate | null;
-}
-
-export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
-const COMMAND_READERS = new Set(['codex']);
-
-export function toolCallLimitFor(provider: string): number {
-  return COMMAND_READERS.has(provider)
-    ? COMMAND_READER_TOOL_CALL_LIMIT
-    : ORCHESTRATION_TOOL_CALL_LIMIT;
-}
-
-export function baseLimits(
-  deps: OrchestratorDeps,
-  provider: string,
-  savedSpendCapUsd: number | null,
-): BudgetLimits {
-  return {
-    activeLimitMs: deps.budget?.activeLimitMs ?? ORCHESTRATION_ACTIVE_LIMIT_MS,
-    toolCallLimit: deps.budget?.toolCallLimit ?? toolCallLimitFor(provider),
-    costCapUsd: effectiveSpendCap(savedSpendCapUsd, deps.budget?.costCapUsd ?? null),
-  };
-}
-
-export function fixRoundLimits(s: Pick<Session, 'deps' | 'baseLimits'>): FixRoundLimits {
-  return {
-    toolCalls:
-      s.deps.fixRound?.toolCalls ??
-      Math.max(
-        FIX_ROUND_MIN_TOOL_CALLS,
-        Math.ceil(s.baseLimits.toolCallLimit * FIX_ROUND_TOOL_SHARE),
-      ),
-    activeMs: s.deps.fixRound?.activeMs ?? FIX_ROUND_ACTIVE_MS,
-  };
-}
-
-export function fitToolLimit(s: Session, provider: string): void {
-  if (s.deps.budget?.toolCallLimit !== undefined) return;
-  const extra = toolCallLimitFor(provider) - s.baseLimits.toolCallLimit;
-  if (extra <= 0) return;
-  s.baseLimits = { ...s.baseLimits, toolCallLimit: s.baseLimits.toolCallLimit + extra };
-  s.limits = { ...s.limits, toolCallLimit: s.limits.toolCallLimit + extra };
 }
 
 export function builderKey(taskId: string): string {
@@ -244,9 +160,13 @@ export async function save(s: Session, patch: OrchestrationPatch = {}): Promise<
     depth: s.flow.depth,
     retries: s.flow.retries,
     toolCalls: s.toolCalls,
-    toolCallLimit: s.limits.toolCallLimit,
     ...patch,
   });
+}
+
+export async function saveActiveTime(s: Session): Promise<void> {
+  const waited = await waitedMs(s.deps.db, s.lease.runId);
+  await save(s, { activeMs: activeTime(Date.now() - s.startedAt, waited) });
 }
 
 export async function publish(s: Session, patch: OrchestrationPatch = {}): Promise<void> {

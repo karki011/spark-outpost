@@ -3,7 +3,6 @@ import { COORD_HANDOFF_SHARE, COORD_PIECE_FIX_TURNS } from '../advisor/policy.ts
 import { configuredChecks } from '../checks/detect.ts';
 import { movePiece } from '../persistence/pieces.ts';
 import { git, workingTree } from '../projects/snapshot.ts';
-import { checkBudget } from '../orchestration/budget-check.ts';
 import { runChecks } from '../orchestration/checks.ts';
 import { changeFailureText, startsCheckFix } from '../orchestration/check-results.ts';
 import { builderPrompt } from '../orchestration/context.ts';
@@ -242,7 +241,7 @@ async function guardTurn(s: Session, work: PieceWork): Promise<void> {
 }
 
 function stopped(s: Session): boolean {
-  return s.control.signal.aborted || s.budgetHit !== null;
+  return s.control.signal.aborted;
 }
 
 async function failPiece(
@@ -266,8 +265,8 @@ export const NOTHING_CHANGED_SECTION = [
   "Your last turn changed none of your files, so the piece can't land. Make the changes the piece needs now. If a tool call was refused, read the reason and use another way, such as the edit tool for each file.",
 ].join('\n');
 
-function expectsChanges(piece: TaskPiece, action: Spawn): boolean {
-  return !piece.research && piece.owns.length > 0 && action.reason !== 'resume';
+function expectsChanges(piece: TaskPiece): boolean {
+  return !piece.research && piece.owns.length > 0;
 }
 
 async function changedNothing(work: PieceWork): Promise<boolean> {
@@ -318,7 +317,7 @@ export async function runPiece(
   await guardTurn(s, work);
   if (piece.research) coordination.scoutNotes.push(`${piece.key}: ${turn.result.text.trim()}`);
   let fixes = 0;
-  if (expectsChanges(piece, action) && (await changedNothing(work)) && !stopped(s)) {
+  if (expectsChanges(piece) && (await changedNothing(work)) && !stopped(s)) {
     const nudged = await nudgeTurn(s, action, work, turn);
     if (!nudged) return { skipped: true, landed: false };
     turn = nudged;
@@ -338,7 +337,7 @@ export async function runPiece(
   }
   let checks = await scopedChecks(s, work, turn.result);
   while (fixes < COORD_PIECE_FIX_TURNS && startsCheckFix(s, checks)) {
-    if (stopped(s) || (await checkBudget(s))) break;
+    if (stopped(s)) break;
     const fixed = await fixTurn(s, action, work, turn, checks);
     if (!fixed) return { skipped: true, landed: false };
     turn = fixed;

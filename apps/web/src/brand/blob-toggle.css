@@ -67,8 +67,7 @@
 .btog[data-on='true'] .btog-body {
   transform: none;
 }
-.btog-skin,
-.btog-paw {
+.btog-skin {
   fill: var(--btog-body);
   transition: fill 0.25s var(--btog-delay);
 }
@@ -122,27 +121,12 @@
 .btog[data-on='true'] .btog-rays {
   opacity: 1;
 }
-.btog-coin {
-  transform: translateY(4px);
-  transition: transform 0.35s var(--spring) var(--btog-delay);
-}
-.btog[data-on='true'] .btog-coin {
-  transform: none;
-}
-.btog-coin-rim {
-  fill: none;
-  stroke: var(--warn-ink);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  opacity: 0.55;
-}
 .btog-line {
   fill: none;
   stroke: var(--btog-ink);
   stroke-width: 3.4;
   stroke-linecap: round;
 }
-.btog-eye,
 .btog-mouth {
   fill: var(--btog-ink);
 }

@@ -122,7 +122,7 @@ describe('Codex Do through the fake agent', { timeout: 20_000 }, () => {
     },
   );
 
-  it('counts each approved action once toward the tool-call budget', async () => {
+  it('counts each approved action once toward the tool-call count', async () => {
     const { stub, reviewed } = levelGate('asks');
     const result = await run(SCRIPT, stub);
     expect(reviewed).toHaveLength(6);

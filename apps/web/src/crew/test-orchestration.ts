@@ -64,7 +64,6 @@ export function checkpoint(
         from: null,
         to: null,
         files: [],
-        budget: null,
         conflict: null,
         agent: null,
         autoOption: null,
@@ -110,15 +109,6 @@ export function orchestration(overrides: Partial<Orchestration> = {}): Orchestra
     checkpoints: [],
     pendingCheckpoint: null,
     decisions: [],
-    budget: {
-      activeMs: 0,
-      activeLimitMs: 900_000,
-      toolCalls: 0,
-      toolCallLimit: 60,
-      costUsd: 0,
-      costCapUsd: null,
-      exceeded: null,
-    },
     totals: {
       runs: 0,
       tokens: 0,

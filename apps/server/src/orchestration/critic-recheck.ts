@@ -1,5 +1,4 @@
 import type { Coordination } from '../coordinator/state.ts';
-import { roomForCall } from './budget-check.ts';
 import { sourceFiles } from './critic-rule.ts';
 import { changesForReview } from './member-prompts.ts';
 import type { DiffFile } from './risk-rules.ts';
@@ -56,6 +55,5 @@ export async function blindReview(s: Session, result: MemberResult): Promise<str
     stakesFiles: stakesFiles(s.coordination),
     destructive: s.facts.destructive,
   });
-  if (!paths || !(await roomForCall(s, 'critic'))) return null;
-  return recheckFollowUp(paths);
+  return paths ? recheckFollowUp(paths) : null;
 }

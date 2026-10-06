@@ -28,7 +28,6 @@ const { values } = parseArgs({
     limit: { type: 'string', default: '10' },
     model: { type: 'string', default: 'sonnet' },
     port: { type: 'string', default: '4471' },
-    'run-cap': { type: 'string', default: '0.3' },
     'total-cap': { type: 'string', default: '2.6' },
     skip: { type: 'string', default: '0' },
     'timeout-min': { type: 'string', default: '8' },
@@ -126,7 +125,6 @@ async function main() {
     API_PORT: String(port),
     ALLOWED_ORIGINS: `http://127.0.0.1:${port + 1}`,
     AGENT_RUNTIME: 'acp',
-    ORCHESTRATION_COST_CAP_USD: values['run-cap'],
     [API_TOKEN_ENV]: token,
   };
   delete env.TEST_DATABASE_URL;

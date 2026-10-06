@@ -30,7 +30,6 @@ export const CHECKPOINT_OPTION = {
   fix: 'fix',
   fixFindings: 'fix_findings',
   revert: 'revert',
-  continueBudget: 'continue',
   keepFirst: 'keep_first',
   keepSecond: 'keep_second',
   reconcile: 'reconcile',
@@ -61,9 +60,6 @@ export const NOTE_OPTIONS: readonly string[] = [
   CHECKPOINT_OPTION.editPlan,
   CHECKPOINT_OPTION.fix,
 ];
-
-export const budgetLimitSchema = z.enum(['time', 'tool_calls', 'cost']);
-export type BudgetLimit = z.infer<typeof budgetLimitSchema>;
 
 export const routeSourceSchema = z.enum(['jev', 'rules', 'pinned', 'fixed']);
 export type RouteSource = z.infer<typeof routeSourceSchema>;
@@ -120,10 +116,6 @@ export const checkpointPayloadSchema = z.object({
   files: z
     .array(z.object({ path: z.string(), change: z.enum(['added', 'modified', 'deleted']) }))
     .default([]),
-  budget: z
-    .object({ limit: budgetLimitSchema, used: z.number(), allowed: z.number() })
-    .nullable()
-    .default(null),
   conflict: mergeConflictSchema.nullable().default(null),
   agent: z.string().nullable().default(null),
   autoOption: z.string().nullable().default(null),

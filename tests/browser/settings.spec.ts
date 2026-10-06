@@ -77,7 +77,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
   const switches = spark.getByRole('switch');
-  await expect(switches).toHaveCount(9);
+  await expect(switches).toHaveCount(8);
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }

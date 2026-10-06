@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useReducedMotion } from '../ui/motion.ts';
 import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
 
-export type BlobKind = 'spark' | 'coin' | 'sun' | 'plain';
+export type BlobKind = 'spark' | 'sun' | 'plain';
 
 interface BlobToggleProps {
   label: string;
@@ -39,29 +39,10 @@ function RisingSun() {
   );
 }
 
-function HeldCoin() {
-  return (
-    <g className="btog-coin">
-      <circle className="btog-extra" cx="50" cy="46" r="8.5" />
-      <circle className="btog-coin-rim" cx="50" cy="46" r="5.4" />
-      <path className="btog-coin-rim" d="M50 43.2V48.8" />
-      <circle className="btog-paw" cx="43.5" cy="50.5" r="4" />
-    </g>
-  );
-}
-
 function AwakeFace({ kind }: { kind: BlobKind }) {
   return (
     <g className="btog-awake">
-      {kind === 'coin' ? (
-        <>
-          <rect className="btog-eye" x="24.6" y="33.5" width="5.4" height="9" rx="2.7" />
-          <rect className="btog-eye" x="37.6" y="33.5" width="5.4" height="9" rx="2.7" />
-          <path className="btog-line" d="M28.5 48.5Q31.5 51.5 34.5 48.5" />
-        </>
-      ) : (
-        <path className="btog-line" d={HAPPY_EYES} />
-      )}
+      <path className="btog-line" d={HAPPY_EYES} />
       {kind === 'sun' && (
         <path className="btog-mouth" d="M27.5 46.5H36.5Q36.5 52 32 52Q27.5 52 27.5 46.5Z" />
       )}
@@ -82,7 +63,6 @@ function BlobPicture({ kind }: { kind: BlobKind }) {
           <AwakeFace kind={kind} />
           <path className="btog-line btog-asleep" d={SLEEPY_EYES} />
           <ellipse className="btog-yawn" cx="32" cy="48.5" rx="3.2" ry="4" />
-          {kind === 'coin' && <HeldCoin />}
         </g>
       </g>
       <path className="btog-z" d="M54 2.5H60L54 9H60" />

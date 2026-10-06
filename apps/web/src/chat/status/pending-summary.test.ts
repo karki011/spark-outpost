@@ -71,8 +71,8 @@ describe('what is waiting for you', () => {
 
   it('falls back to the card title for everything else', () => {
     expect(
-      summaryText(checkpointSummary(checkpoint({ kind: 'budget' }), 'Continue past the budget?')),
-    ).toBe('Continue past the budget?');
+      summaryText(checkpointSummary(checkpoint({ kind: 'retry' }), 'Retry one tier up?')),
+    ).toBe('Retry one tier up?');
     expect(summaryText(approvalSummary(approval({ kind: 'other' }), 'Allow this action?'))).toBe(
       'Allow this action?',
     );

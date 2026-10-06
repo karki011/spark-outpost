@@ -1,9 +1,9 @@
 ---
-title: Guardrails, estimates and limits
+title: Guardrails and estimates
 section: Understand Spark
 type: concept
 order: 520
-summary: The Worth a look list Spark adds to kept changes, the estimate on a plan card, the limit on each task, and model demotions.
+summary: The Worth a look list Spark adds to kept changes, the estimate on a plan card, and model demotions.
 ---
 
 A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guardrails never block you: they point out what's worth a look.
@@ -31,9 +31,7 @@ If a flag is expected, say so in your request, such as "update the snapshots".
 
 A plan card shows a **Rough estimate** of time and cost. After 5 similar finished runs it shows a **Learned estimate**, from your own history.
 
-## Task limits
-
-Each task has a limit on active time and tool calls, and on cost when you set **Spend cap per task** in **Settings → Spark**. At a limit, Spark stops and shows **Continue past the budget?**.
+An estimate is only information. Spark sets no budget on time, tool calls or cost: a task runs until it finishes or you stop it.
 
 ## Model demotions
 

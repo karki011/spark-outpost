@@ -22,7 +22,6 @@ import {
   publishAsked,
   publishByAgent,
 } from './agent-publish.ts';
-import { checkBudget } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
@@ -114,8 +113,6 @@ async function opensPullRequest(s: Session): Promise<boolean> {
 }
 
 export async function shipFullAuto(s: Session): Promise<FlowEvent> {
-  const hit = await checkBudget(s);
-  if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true };
   const failing = checksFailing(s);
   if (failing && !(await shipsFailingChecks(s.deps.db, s.input.workspaceId))) {
     return { type: 'ship_held', reason: CHECKS_HOLD_REASON };

@@ -10,7 +10,7 @@ import type {
   Risk,
   RunMode,
 } from '@spark-outpost/contracts';
-import { coveredMs } from '../orchestration/budget.ts';
+import { coveredMs } from '../orchestration/active-time.ts';
 import {
   buildOrchestration,
   toCrewMember,
@@ -32,27 +32,14 @@ export interface NewOrchestration {
   depthSource: 'jev' | 'rules' | 'user';
   risk: Risk;
   routing: ModelRouting;
-  activeLimitMs: number;
-  toolCallLimit: number;
-  costCapUsd: number | null;
 }
 
 export async function insertOrchestration(db: Queryable, row: NewOrchestration): Promise<void> {
   await db.query(
-    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing,
-       active_limit_ms, tool_call_limit, cost_cap_usd)
-     VALUES ($1, 'intake', $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO orchestrations (run_id, phase, depth, depth_source, risk, routing)
+     VALUES ($1, 'intake', $2, $3, $4, $5)
      ON CONFLICT (run_id) DO NOTHING`,
-    [
-      row.runId,
-      row.depth,
-      row.depthSource,
-      row.risk,
-      row.routing,
-      row.activeLimitMs,
-      row.toolCallLimit,
-      row.costCapUsd,
-    ],
+    [row.runId, row.depth, row.depthSource, row.risk, row.routing],
   );
 }
 
@@ -65,10 +52,6 @@ export interface OrchestrationPatch {
   retries?: number;
   activeMs?: number;
   toolCalls?: number;
-  activeLimitMs?: number;
-  toolCallLimit?: number;
-  costCapUsd?: number | null;
-  exceeded?: 'time' | 'tool_calls' | 'cost' | null;
   error?: string | null;
 }
 
@@ -81,10 +64,6 @@ const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
   retries: 'retries',
   activeMs: 'active_ms',
   toolCalls: 'tool_calls',
-  activeLimitMs: 'active_limit_ms',
-  toolCallLimit: 'tool_call_limit',
-  costCapUsd: 'cost_cap_usd',
-  exceeded: 'exceeded',
   error: 'error',
 };
 
@@ -266,14 +245,6 @@ export async function waitedMs(db: Queryable, runId: string): Promise<number> {
     [runId],
   );
   return coveredMs(rows.map((row) => [Number(row.started), Number(row.ended)] as const));
-}
-
-export async function spentUsd(db: Queryable, runId: string): Promise<number> {
-  const { rows } = await db.query<{ spent: string | null }>(
-    `SELECT COALESCE(SUM(cost_usd), 0) AS spent FROM runs WHERE id = $1 OR parent_run_id = $1`,
-    [runId],
-  );
-  return Number(rows[0]?.spent ?? 0);
 }
 
 const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;

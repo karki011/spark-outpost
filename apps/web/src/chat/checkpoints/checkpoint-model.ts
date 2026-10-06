@@ -3,13 +3,10 @@ import {
   isCheckpointKind,
   type AgentPick,
   type Approval,
-  type BudgetLimit,
   type CheckpointPayload,
   type CheckpointQuestion,
 } from '@spark-outpost/contracts';
-import { formatDuration } from '../../audit/audit-model.ts';
 import { filesLabel } from '../changes/change-rules.ts';
-import { formatCost } from '../../usage/format.ts';
 import { shortLabel } from '../composer/model-options.ts';
 
 export interface CheckpointApproval extends Approval {
@@ -33,7 +30,7 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   plan: 'Approve the plan?',
   retry: 'A step needs another try',
   accept: 'Keep these changes?',
-  budget: 'Continue past the budget?',
+  budget: 'Paused at a budget',
   merge_conflict: 'The Builder’s copy and your files collided',
   stuck: 'The Builder was repeating itself',
   verify: 'Jev could not verify the change',
@@ -151,7 +148,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   plan: 'Approve the plan',
   retry: 'Retry, or stop and report',
   accept: 'Keep, fix, or revert the changes',
-  budget: 'Continue past the budget',
+  budget: 'Continue, or stop',
   merge_conflict: 'Choose which version to keep',
   stuck: 'Continue, or stop and report',
   verify: 'Finish, retry one tier up, or stop',
@@ -194,26 +191,6 @@ export function escalateLabel(payload: CheckpointPayload): string {
   return to ? `Retry with ${to}` : 'Retry one tier up';
 }
 
-function budgetAmount(limit: BudgetLimit, value: number): string {
-  if (limit === 'time') return formatDuration(value);
-  if (limit === 'cost') return formatCost(value);
-  return `${value} tool ${value === 1 ? 'call' : 'calls'}`;
-}
-
-const BUDGET_NAMES: Record<BudgetLimit, string> = {
-  time: 'active time',
-  tool_calls: 'tool calls',
-  cost: 'the cost cap',
-};
-
-export function budgetLine(payload: CheckpointPayload): string | null {
-  const budget = payload.budget;
-  if (!budget) return null;
-  const used = budgetAmount(budget.limit, budget.used);
-  const allowed = budgetAmount(budget.limit, budget.allowed);
-  return `Used ${used} of ${allowed} · ${BUDGET_NAMES[budget.limit]}`;
-}
-
 const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.stop]: 'Stopped.',
   [CHECKPOINT_OPTION.clarifyRules]: 'Left it to the fixed rules.',
@@ -225,7 +202,6 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.fix]: 'Asked for a fix.',
   [CHECKPOINT_OPTION.fixFindings]: 'Sent the review findings back to the Builder.',
   [CHECKPOINT_OPTION.revert]: 'Reverted the changes.',
-  [CHECKPOINT_OPTION.continueBudget]: 'Continued past the budget.',
   [CHECKPOINT_OPTION.answer]: 'Answered.',
   [CHECKPOINT_OPTION.reconcile]: 'Asked a Builder to reconcile.',
   [CHECKPOINT_OPTION.nudge]: 'Nudged it; the note goes with its next turn.',

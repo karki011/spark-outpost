@@ -13,7 +13,6 @@ import { LevelSetting } from './LevelSetting.tsx';
 import { MorningBriefSetting } from './MorningBriefSetting.tsx';
 import { NameSetting, PersonalitySetting, SparkSwitch } from './SparkSettings.tsx';
 import { SparkPreview } from './SparkPreview.tsx';
-import { SpendCapSetting } from './SpendCapSetting.tsx';
 
 export function SparkSection({ setup }: { setup: SetupState }) {
   const { profile } = setup;
@@ -34,7 +33,6 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <h4 id="spark-work">How Spark works</h4>
         <SparkSwitch enabled={profile.sparkEnabled} />
         <LevelSetting level={profile.defaultLevel} />
-        <SpendCapSetting usd={profile.spendCapUsd} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
       </section>
       <CompactionSettings profile={profile} />
