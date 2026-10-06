@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  auditExportLineSchema,
+  auditFileLineSchema,
   auditLogPageSchema,
   auditSummarySchema,
   chainVerificationSchema,
@@ -206,10 +206,18 @@ describe('audit API', () => {
     const lines = response.text
       .trim()
       .split('\n')
-      .map((line) => auditExportLineSchema.parse(JSON.parse(line)));
+      .map((line) => auditFileLineSchema.parse(JSON.parse(line)));
+    const logged = lines.filter((line) => line.type === 'run' || line.type === 'log');
     expect(
-      lines.map((line) => (line.type === 'run' ? `run ${line.runId}` : `log ${line.seq}`)),
+      logged.map((line) => (line.type === 'run' ? `run ${line.runId}` : `log ${line.seq}`)),
     ).toEqual([`run ${claudeRun}`, 'log 1', 'log 2', 'log 3', `run ${codexRun}`, 'log 1', 'log 2']);
+    expect(lines.slice(logged.length).map((line) => line.type)).toEqual([
+      'meta',
+      'turn',
+      'turn',
+      'run_end',
+      'run_end',
+    ]);
   });
 
   it('exports a cost breakdown as CSV with the cost source per run', async () => {

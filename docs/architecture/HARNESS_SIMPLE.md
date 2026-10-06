@@ -249,6 +249,13 @@ The held `fix/crew-overhead` commits (`31e40853`, `1e637293`):
 | Regex intent rules (`intent-rules.ts`, `risk-rules.ts`)                 | Drop, except as the no-Jev fallback already on `main`                              |
 | 10-minute Critic silence watchdog (`stall-watch.ts`)                    | Drop as a stop rule: it is a cap. Keep the signal as a logged, non-blocking notice |
 
+### Slice 1 as built
+
+- **Setting.** `HARNESS` is an environment variable read per step (`harness/setting.ts`); tests pass it through the worker's dependencies. `current` is the default.
+- **Where each record lives.** Jev answers stay in `run_advice`; routing stays in `runs.route` (the `rule` and `tier` fields come from `fix/model-routing`, and the export's run line carries them once that branch lands; nothing here repeats them); cards stay in `approvals`; cost is split from the token columns on `runs` and the model-card prices. Session events are the one new table, `provider_session_events` (migration 0150): the per-run protocol log cannot hold a close that happens outside a run, and adding rows to it would change the row counts the audit view shows.
+- **Export.** The JSONL export appends `meta`, `turn`, `run_end`, `session`, `jev` and `card` lines after the existing `run` and `log` lines, which are unchanged; `export.csv?view=decisions` gives the same lines as one table ([ACP_AGENTS.md](ACP_AGENTS.md#audit-recording)).
+- **Replay.** `apps/server/test/replay/` runs the section 9 cases through the fake agents and the real orchestrator, checks that the export's run and session counts match the run rows and the protocol log, and prints the table (`REPLAY_HARNESS=simple` for the other setting, `REPLAY_TABLE=<file>` to save it). Costs in that table are modelled from the bytes actually sent to and received from the fake agents at card prices, because the fake agents report the same token counts every turn.
+
 ## 11. Open decisions for the owner
 
 The build proceeds on the recommended answer to each of these. Every one is **assumed, not yet confirmed by the owner**; a different answer changes the slice named beside it.

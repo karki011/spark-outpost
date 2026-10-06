@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { relative, isAbsolute } from 'node:path';
-import type { AgentCommand } from '@spark-outpost/contracts';
+import type { AgentCommand, HarnessSetting, SessionEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { runChanges } from '../projects/run-changes.ts';
@@ -23,6 +23,9 @@ import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { RunInput } from './run-input.ts';
+import { harnessSetting } from '../harness/setting.ts';
+import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
+import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
 import {
   RESUME_REASONS,
   STOPPED_REPLY,
@@ -39,11 +42,13 @@ import {
 
 export type SessionOutput = Extract<ProviderOutput, { kind: 'session' }>;
 type UsageOutput = Extract<ProviderOutput, { kind: 'usage' }>;
+type SettingsOutput = Extract<ProviderOutput, { kind: 'session_settings' }>;
 
 export interface TurnSession {
   target: SessionTarget;
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
+  settings(output: SettingsOutput): Promise<void>;
   noteSession(output: SessionOutput): void;
   usage(output: UsageOutput): UsageOutput;
   finished(result: TurnEnd): Promise<void>;
@@ -72,6 +77,7 @@ export async function prepareTurnSession(
   input: RunInput,
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
   now = new Date(),
+  harness: HarnessSetting = harnessSetting(),
 ): Promise<TurnSession | null> {
   const chatTurn = input.parentRunId === null;
   const resumeKey = input.resumeKey ?? null;
@@ -112,6 +118,26 @@ export async function prepareTurnSession(
           await stoppedChanges(db, input, chatTurn ? null : resumeKey),
         )
       : input.followUp;
+  const facts: SessionFacts = {
+    harness,
+    provider: input.provider,
+    agentKey: key,
+    model: input.settings.model,
+    previous: stored,
+    seedChars: seedChars(input),
+    handoff: false,
+    now,
+  };
+  const record = (event: SessionEvent | null) =>
+    event
+      ? insertSessionEvent(db, {
+          conversationId,
+          sessionRowId: rowId,
+          runId: input.identity.runId,
+          event,
+        }).catch((error: unknown) => console.error('Could not record a session event', error))
+      : Promise.resolve();
+  let sessionId: string | null = null;
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
@@ -151,6 +177,7 @@ export async function prepareTurnSession(
     noteSession,
     async started(output) {
       noteSession(output);
+      sessionId = output.sessionId;
       try {
         rowId = await startProviderSession(db, {
           conversationId,
@@ -168,7 +195,13 @@ export async function prepareTurnSession(
         return;
       }
       if (!rowId) return;
+      await record(sessionEvent(facts, output));
       await evictBeyondLimit(db, limits.openLimit);
+    },
+    async settings(output) {
+      if (!rowId || !sessionId) return;
+      await recordAppliedSettings(db, rowId, output);
+      if (continued) await record(modelChange(facts, sessionId, output));
     },
     async commands(commands) {
       if (rowId) await recordSessionCommands(db, rowId, commands);
@@ -203,6 +236,22 @@ export async function prepareTurnSession(
       });
     },
   };
+}
+
+export interface TurnSessionDeps {
+  db: Db;
+  sessionLimits?: SweepLimits;
+  harness?: HarnessSetting;
+}
+
+export function turnSessionFor(deps: TurnSessionDeps, input: RunInput) {
+  return prepareTurnSession(deps.db, input, deps.sessionLimits, undefined, deps.harness);
+}
+
+function seedChars(input: RunInput): number {
+  const history = input.seed ? input.history.slice(input.seed.historyFrom) : input.history;
+  const sent = history.reduce((chars, turn) => chars + turn.content.length, 0);
+  return sent + (input.seed?.text.length ?? 0) + input.prompt.length;
 }
 
 async function resumableStop(db: Db, input: RunInput, result: TurnEnd): Promise<boolean> {

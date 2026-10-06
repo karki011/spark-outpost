@@ -87,6 +87,46 @@ function withResultContentRedacted(message: Message): Message {
   return { ...message, result: { ...result, content: redacted('secret_file') } };
 }
 
+const AUTH_STATUS = '_auth/status_update';
+const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const AVAILABLE_COMMANDS = 'available_commands_update';
+
+function withoutEmails(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(EMAIL, redacted('account_email'));
+  if (Array.isArray(value)) return value.map(withoutEmails);
+  const fields = asRecord(value);
+  if (!fields) return value;
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, field]) => [
+      key,
+      /e-?mail/i.test(key) && typeof field === 'string'
+        ? redacted('account_email')
+        : withoutEmails(field),
+    ]),
+  );
+}
+
+function commandsUpdate(message: Message): Message | null {
+  if (message.method !== SESSION_UPDATE) return null;
+  const update = asRecord(asRecord(message.params)?.update);
+  return update?.sessionUpdate === AVAILABLE_COMMANDS ? update : null;
+}
+
+function repeatedCommands(message: Message, update: Message): Message {
+  const commands = update.availableCommands;
+  return {
+    ...message,
+    params: {
+      ...asRecord(message.params),
+      update: {
+        sessionUpdate: AVAILABLE_COMMANDS,
+        repeatsPrevious: true,
+        commandCount: Array.isArray(commands) ? commands.length : 0,
+      },
+    },
+  };
+}
+
 const SESSION_OPENERS = new Set(['session/new', 'session/load', 'session/resume']);
 
 function hiddenValues(list: unknown): unknown {
@@ -120,12 +160,23 @@ export function createProtocolRecorder(): ProtocolRecorder {
   const pendingMethods = new Map<string, string>();
   const secretReads = new Set<string>();
   const secretToolCalls = new Set<string>();
+  let lastCommands: string | null = null;
+
+  const coalesced = (message: Message): Message => {
+    const update = commandsUpdate(message);
+    if (!update) return message;
+    const listed = JSON.stringify(message.params);
+    if (listed === lastCommands) return repeatedCommands(message, update);
+    lastCommands = listed;
+    return message;
+  };
 
   const requestKey = (direction: ProtocolDirection, id: string) => `${direction}:${id}`;
   const replyKey = (direction: ProtocolDirection, id: string) =>
     `${direction === 'to_agent' ? 'from_agent' : 'to_agent'}:${id}`;
 
   const scrubSecrets = (direction: ProtocolDirection, message: Message, rpcId: string | null) => {
+    if (message.method === AUTH_STATUS) return withoutEmails(message) as Message;
     if (typeof message.method === 'string' && SESSION_OPENERS.has(message.method)) {
       return withMcpSecretsRedacted(message);
     }
@@ -185,7 +236,7 @@ export function createProtocolRecorder(): ProtocolRecorder {
       }
       const rpcId = rpcIdOf(message);
       const method = methodFor(direction, message, rpcId);
-      const capped = storedPayload(scrubSecrets(direction, message, rpcId));
+      const capped = storedPayload(scrubSecrets(direction, coalesced(message), rpcId));
       return { at, direction, kind: messageKind(message), method, rpcId, sizeBytes, ...capped };
     },
   };

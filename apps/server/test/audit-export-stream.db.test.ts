@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { auditExportLineSchema } from '@spark-outpost/contracts';
+import { auditFileLineSchema } from '@spark-outpost/contracts';
 import { createProtocolRecorder } from '../src/audit/protocol-entry.ts';
 import { insertProtocolEntries } from '../src/persistence/audit-log.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
@@ -93,7 +93,8 @@ describe('audit JSONL export of a large chat', () => {
     const lines = body.text
       .trimEnd()
       .split('\n')
-      .map((line) => auditExportLineSchema.parse(JSON.parse(line)));
+      .map((line) => auditFileLineSchema.parse(JSON.parse(line)))
+      .filter((line) => line.type === 'run' || line.type === 'log');
     expect(lines).toHaveLength(MESSAGES + 1);
     expect(lines[0]).toMatchObject({ type: 'run', runId });
     const seqs = lines.flatMap((line) => (line.type === 'log' ? [line.seq] : []));

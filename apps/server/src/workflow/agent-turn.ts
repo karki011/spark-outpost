@@ -1,4 +1,4 @@
-import type { RunEvent } from '@spark-outpost/contracts';
+import type { HarnessSetting, RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { subagentBrief } from '../persistence/spark-mentions.ts';
@@ -51,7 +51,7 @@ import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
-import { prepareTurnSession, type TurnSession } from './turn-session.ts';
+import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -65,7 +65,7 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
-import { auditContinuedSession } from './continue-note.ts';
+import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
@@ -102,6 +102,7 @@ export interface TurnDeps {
   sessionLimits?: SweepLimits;
   inboxPollMs?: number;
   browserPane?: boolean;
+  harness?: HarnessSetting;
 }
 
 export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';
@@ -338,7 +339,7 @@ export async function runAgentTurn(
       input.mode === 'do'
         ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
         : null;
-    turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
+    turnSession = await turnSessionFor(deps, input);
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
       const counted = session ? session.usage(output) : output;
@@ -430,11 +431,7 @@ export async function runAgentTurn(
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
       live.observe(output);
       await tasks.observe(output);
-      if (output.kind === 'session') {
-        await session?.started(output);
-        auditContinuedSession(audit, input, session?.target, output);
-      }
-      if (output.kind === 'commands') await session?.commands(output.commands);
+      await observeSession({ audit, input, session }, output);
       if (output.kind === 'plan_proposed') {
         await plans.propose(output.plan, output.source, output.toolCallId);
       }
