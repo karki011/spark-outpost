@@ -101,7 +101,7 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
           No links yet. Pull requests and the links, files and folders you add show up here.
         </p>
       )}
-      <PullRequestList watches={watches} />
+      <PullRequestList conversationId={conversationId} watches={watches} />
       {others.map((link) => (
         <LinkChip key={link.id} link={link} />
       ))}

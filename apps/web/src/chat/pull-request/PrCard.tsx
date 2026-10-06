@@ -24,6 +24,9 @@ import {
 import { PULL_STATE_LABELS, pullState } from './pull-request-model.ts';
 import { PullPanel } from './PullPanel.tsx';
 import { useDismissedPulls } from './use-dismissed-pulls.ts';
+import { useWatchContext, type WatchContext } from './use-watch-context.ts';
+import { watchIndicator, watchLabel } from './watch-indicator-model.ts';
+import { WatchMark } from './WatchIndicator.tsx';
 
 interface ExpandingProps {
   className: string;
@@ -100,12 +103,14 @@ function Expanding({ className, label, toggleLabel, row, panel, trailing }: Expa
 interface PrRowProps {
   watch: PrWatch;
   nested?: boolean;
+  context: WatchContext;
   onDismiss: (key: string) => void;
   onOpenLinks: (() => void) | null;
 }
 
-function PrRow({ watch, nested = false, onDismiss, onOpenLinks }: PrRowProps) {
+function PrRow({ watch, nested = false, context, onDismiss, onOpenLinks }: PrRowProps) {
   const state = pullState(watch);
+  const indicator = watchIndicator(watch, context.contextFor(watch.roundRunId));
   const name = `Pull request ${watch.repo}#${watch.number}`;
   return (
     <Expanding
@@ -125,6 +130,7 @@ function PrRow({ watch, nested = false, onDismiss, onOpenLinks }: PrRowProps) {
               </span>
             ))}
           </span>
+          {indicator && <WatchMark indicator={indicator} />}
           <span key={state} className={`prc-state ${state}`}>
             {PULL_STATE_LABELS[state]}
           </span>
@@ -142,9 +148,20 @@ function PrRow({ watch, nested = false, onDismiss, onOpenLinks }: PrRowProps) {
           </button>
         )
       }
-      panel={<PullPanel watch={watch} onOpenLinks={onOpenLinks} />}
+      panel={
+        <PullPanel
+          watch={watch}
+          indicator={indicator}
+          profile={context.profile}
+          onOpenLinks={onOpenLinks}
+        />
+      }
     />
   );
+}
+
+function announced(watch: PrWatch, mode: WatchContext['mode']): string {
+  return [rowSummary(watch), watchLabel(watch, mode)].filter(Boolean).join(', ');
 }
 
 interface PrCardProps {
@@ -157,13 +174,30 @@ export function PrCard({ conversationId, onOpenLinks }: PrCardProps) {
   const [dismissed, dismiss] = useDismissedPulls(conversationId);
   const shown = shownPulls(watches ?? [], dismissed);
   if (shown.length === 0) return null;
+  return (
+    <PrRows
+      conversationId={conversationId}
+      shown={shown}
+      onDismiss={dismiss}
+      onOpenLinks={onOpenLinks}
+    />
+  );
+}
+
+interface PrRowsProps extends PrCardProps {
+  shown: readonly PrWatch[];
+  onDismiss: (key: string) => void;
+}
+
+function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) {
+  const context = useWatchContext(conversationId);
   const grouped = shown.length > GROUP_OVER;
   const count = `${shown.length} pull requests`;
   const line = grouped ? groupLine(shown) : '';
   return (
     <section className="prc" aria-label="PR status">
       <p className="sr-only" role="status">
-        {grouped ? `${count}${line ? `: ${line}` : ''}` : rowSummary(shown[0]!)}
+        {grouped ? `${count}${line ? `: ${line}` : ''}` : announced(shown[0]!, context.mode)}
       </p>
       {grouped ? (
         <Expanding
@@ -185,14 +219,21 @@ export function PrCard({ conversationId, onOpenLinks }: PrCardProps) {
               key={watch.id}
               watch={watch}
               nested
-              onDismiss={dismiss}
+              context={context}
+              onDismiss={onDismiss}
               onOpenLinks={onOpenLinks}
             />
           ))}
         />
       ) : (
         shown.map((watch) => (
-          <PrRow key={watch.id} watch={watch} onDismiss={dismiss} onOpenLinks={onOpenLinks} />
+          <PrRow
+            key={watch.id}
+            watch={watch}
+            context={context}
+            onDismiss={onDismiss}
+            onOpenLinks={onOpenLinks}
+          />
         ))
       )}
     </section>
