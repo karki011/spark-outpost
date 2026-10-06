@@ -8,6 +8,7 @@ export interface WingProps {
   waiting: number;
   greeting: string | null;
   followUp: ConversationSummary | null;
+  hugsNotch: boolean;
   onTab: (panel: Panel) => void;
   onReview: (card: Card) => void;
 }
@@ -94,6 +95,17 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
           ) : (
             <Kbd>⌥ Space</Kbd>
           ),
+      };
+    case 'now':
+      return {
+        left: props.hugsNotch ? null : 'Spark',
+        right:
+          !props.hugsNotch && waiting > 1 ? (
+            <>
+              <span className="isl-badge">{waiting}</span>
+              <span>need you</span>
+            </>
+          ) : null,
       };
     default:
       return { left: null, right: null };

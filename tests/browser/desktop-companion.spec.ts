@@ -12,6 +12,7 @@ async function fakeDesktop(page: Page) {
       failed: [] as string[],
       sound: false,
       islandSize: 'medium',
+      autoExpand: true,
     };
     const publish = () => {
       const copy = structuredClone(status);
@@ -50,6 +51,11 @@ async function fakeDesktop(page: Page) {
           setIslandSize: async (size: string) => {
             calls.push(['size', size]);
             status.islandSize = size;
+            return publish();
+          },
+          setAutoExpand: async (on: boolean) => {
+            calls.push(['autoExpand', on]);
+            status.autoExpand = on;
             return publish();
           },
           onChange: (listener: (status: unknown) => void) => {
@@ -142,11 +148,23 @@ test('the island opens these settings, and its chimes stay off until switched on
   await chimes.click();
   await expect(chimes).toHaveAttribute('aria-checked', 'true');
   await expect(spark).toContainText('plays a soft chime');
+  const sizes = spark.getByRole('radiogroup', { name: 'Spark Island size' });
+  await expect(sizes.getByRole('radio')).toHaveText(['Full', 'Small', 'Medium', 'Large']);
+  await sizes.getByRole('radio', { name: 'Full' }).click();
+  await expect(sizes.getByRole('radio', { name: 'Full' })).toHaveAttribute('aria-checked', 'true');
+  const requests = spark.getByRole('switch', { name: 'Open requests by themselves' });
+  await expect(requests).toHaveAttribute('aria-checked', 'true');
+  await expect(spark).toContainText('It never takes the keyboard.');
+  await requests.click();
+  await expect(requests).toHaveAttribute('aria-checked', 'false');
+  await expect(spark).toContainText('shows Review');
   expect(
     await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
   ).toEqual([
     ['enabled', true],
     ['sound', true],
+    ['size', 'full'],
+    ['autoExpand', false],
   ]);
 
   await fromIsland('sparks');

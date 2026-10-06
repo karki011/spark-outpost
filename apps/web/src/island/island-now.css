@@ -1,0 +1,44 @@
+.isl-nowbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding-left: 52px;
+}
+
+.isl-nowbar-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.isl-nowbar-title,
+.isl-nowbar-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.isl-nowbar-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.isl-nowbar-line {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.isl-nowbar[data-state='waiting'] .isl-nowbar-line {
+  color: var(--warn);
+}
+
+.isl-nowbar[data-state='failed'] .isl-nowbar-line {
+  color: var(--danger);
+}
+
+.isl-nowbar .isl-btn {
+  flex: none;
+}

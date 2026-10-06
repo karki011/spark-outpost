@@ -22,16 +22,22 @@ export function scoutMoodFor(view: IslandView, context: MoodContext): ScoutMood 
     case 'card':
     case 'nudge':
       return 'alert';
+    case 'now':
+      return view.card ? 'alert' : restingMood(context);
     case 'note':
     case 'panel':
       return null;
     case 'peek':
-      if (context.waiting > 0) return 'alert';
-      if (context.moment) return context.moment.kind === 'done' ? 'happy' : 'sad';
-      if (context.running > 0) return 'working';
-      if (context.failed) return 'sad';
-      return isSleepyTime(context.hour, context.idleMinutes) ? 'sleep' : null;
+      return restingMood(context);
   }
+}
+
+function restingMood(context: MoodContext): ScoutMood {
+  if (context.waiting > 0) return 'alert';
+  if (context.moment) return context.moment.kind === 'done' ? 'happy' : 'sad';
+  if (context.running > 0) return 'working';
+  if (context.failed) return 'sad';
+  return isSleepyTime(context.hour, context.idleMinutes) ? 'sleep' : null;
 }
 
 export type Quirk =

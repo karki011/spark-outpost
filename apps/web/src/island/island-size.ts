@@ -2,12 +2,14 @@ import type { IslandSize } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 
 export const ISLAND_SIZES: readonly { id: IslandSize; label: string; blob: number }[] = [
+  { id: 'full', label: 'Full', blob: 58 },
   { id: 'small', label: 'Small', blob: 38 },
   { id: 'medium', label: 'Medium', blob: 48 },
   { id: 'large', label: 'Large', blob: 58 },
 ];
 
-export const DEFAULT_ISLAND_SIZE: IslandSize = 'large';
+export const DEFAULT_ISLAND_SIZE: IslandSize = 'full';
+const UNSET_ISLAND_SIZE: IslandSize = 'large';
 
 const SMALL_BLOB = 38;
 const SMALL_TUCK = 20;
@@ -45,6 +47,10 @@ export function restMetrics(size: IslandSize): RestMetrics {
   return METRICS.get(size) ?? measure(SMALL_BLOB);
 }
 
+export function useAutoExpandSetting(): boolean {
+  return useCompanionStatus()?.autoExpand === true;
+}
+
 export function useIslandSize(): IslandSize {
-  return useCompanionStatus()?.islandSize ?? DEFAULT_ISLAND_SIZE;
+  return useCompanionStatus()?.islandSize ?? UNSET_ISLAND_SIZE;
 }

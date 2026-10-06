@@ -109,6 +109,12 @@
   color: var(--muted);
 }
 
+.isl[data-view='nudge'] .isl-wing.l {
+  flex: none;
+  width: 0;
+  padding: 0;
+}
+
 .isl-nudge {
   max-width: 300px;
 }
