@@ -238,7 +238,7 @@ test('PR follow-up screenshots', async ({ page }) => {
   await row.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
   await row.getByText('3 items gathered').click();
   await expect(row.getByRole('listitem').filter({ hasText: 'F3' })).toBeVisible();
-  await shoot(page, IMAGES, 'pr-follow-up-strip', page.locator('.composer-wrap'));
+  await shoot(page, IMAGES, 'pr-follow-up-row', row.locator('.prc-panel'));
   await page.keyboard.press('Escape');
   const confirm = page.getByRole('group', { name: /Address PR feedback\?/ });
   await expect(confirm).toBeVisible();

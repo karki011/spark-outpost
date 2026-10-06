@@ -96,10 +96,7 @@ function Checks({ watch }: { watch: PrWatch }) {
         </>
       )}
       {others.length > 0 && (
-        <Fold
-          label={failing.length > 0 ? 'Other checks' : 'Checks'}
-          line={otherChecksLine(others)}
-        >
+        <Fold label={failing.length > 0 ? 'Other checks' : 'Checks'} line={otherChecksLine(others)}>
           <ul aria-label={`Other checks on #${watch.number}`}>
             {others.map((run) => (
               <CheckRow key={run.name} run={run} />
