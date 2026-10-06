@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -111,5 +112,74 @@ describe('Spark moderates Bypass permissions', { timeout: 120_000 }, () => {
     expect(flag).toMatchObject({ paths: ['AGENTS.md'], inside: true, status: 'open' });
     const reverted = await decideRailFlag(t.db, t.workspaceId, flag!.id, { action: 'revert' });
     expect(reverted.status).toBe('reverted');
+  });
+
+  const TOKEN = 'tok-9f8e7d6c5b4a39281706';
+
+  function commitEnvFile() {
+    writeFileSync(join(root, '.env'), `DEPLOY_TOKEN=${TOKEN}\n`);
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
+    git('add', '-f', '.env');
+    git('commit', '-qm', 'env');
+  }
+
+  async function stored(table: string, conversationId: string): Promise<string> {
+    const { rows } = await t.db.query<{ payload: unknown }>(
+      `SELECT l.payload FROM ${table} l JOIN runs r ON r.id = l.run_id
+       WHERE r.conversation_id = $1`,
+      [conversationId],
+    );
+    return JSON.stringify(rows);
+  }
+
+  it('lets a secret file be read without a card or a flag, notes it by path and keeps its values out of the logs', async () => {
+    commitEnvFile();
+    const { conversationId } = await bypassRun('#secretread');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail!.railFlags ?? []).toEqual([]);
+    expect(detail!.conversation.attention?.kind).not.toBe('flag');
+    const cards = await t.db.query(
+      `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.conversation_id = $1 AND a.decided_by NOT IN ('level', 'allowlist', 'run_rule')`,
+      [conversationId],
+    );
+    expect(cards.rows).toEqual([]);
+    expect(await unreviewedTitles(conversationId)).toContain('cat .env');
+
+    const noted = await t.db.query<{ params: unknown }>(
+      `SELECT l.payload -> 'params' AS params FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
+       WHERE r.conversation_id = $1 AND l.method = 'spark/observed'
+         AND l.payload #>> '{params,source}' = 'secret_file'`,
+      [conversationId],
+    );
+    expect(noted.rows).toEqual([{ params: { source: 'secret_file', label: '.env' } }]);
+    const observed = await t.db.query(
+      `SELECT source, label FROM run_observations
+       WHERE conversation_id = $1 AND source = 'secret_file'`,
+      [conversationId],
+    );
+    expect(observed.rows).toEqual([{ source: 'secret_file', label: '.env' }]);
+
+    const audit = await stored('run_protocol_log', conversationId);
+    expect(audit).toContain('[redacted:secret_file]');
+    expect(audit).not.toContain(TOKEN);
+    expect(await stored('run_events', conversationId)).not.toContain(TOKEN);
+    const replies = detail!.messages.filter((message) => message.role === 'assistant');
+    expect(replies.map((reply) => reply.content).join('\n')).toContain('The file says');
+    expect(JSON.stringify(detail)).not.toContain(TOKEN);
+  });
+
+  it('still flags a secret file changed without asking', async () => {
+    commitEnvFile();
+    const { conversationId } = await bypassRun('#secretwrite');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail!.railFlags ?? []).toEqual([
+      expect.objectContaining({
+        rail: 'secret',
+        title: expect.stringMatching(/touched a secret file: \.env$/),
+        status: 'open',
+      }),
+    ]);
   });
 });

@@ -44,7 +44,7 @@ interface Turn {
   level: InvolvementLevel;
 }
 
-function gateFor(turn: Turn) {
+function gateFor(turn: Turn, mode = MODE_FOR[turn.level]) {
   const audited: { method: string; params: Record<string, unknown> }[] = [];
   const audit: ProtocolObserver = {
     message: (_direction, message) => audited.push(message as (typeof audited)[number]),
@@ -61,7 +61,7 @@ function gateFor(turn: Turn) {
     db: t.db,
     runId: turn.runId,
     provider: 'claude',
-    mode: MODE_FOR[turn.level],
+    mode,
     append: recordingAppend().append,
     waiters,
     pollMs: 20,
@@ -83,6 +83,13 @@ async function pendingFor(runId: string) {
   return (await getApproval(t.db, id))!;
 }
 
+async function approvalsOf(runId: string) {
+  const { rows } = await t.db.query(`SELECT status, decided_by FROM approvals WHERE run_id = $1`, [
+    runId,
+  ]);
+  return rows;
+}
+
 const withAlways = (command: string) => ({
   ...commandRequest(root, command),
   options: [
@@ -98,17 +105,14 @@ async function fullAutoTurn(): Promise<Turn> {
 }
 
 describe('read-then-send guard', () => {
-  it('asks before curl at Full auto once the run read .env through an approved card', async () => {
+  it('asks before curl at Full auto once the run read .env, which itself ran without a card', async () => {
     const turn = await fullAutoTurn();
     const { gate, waiters, observations, audited } = gateFor(turn);
     const signal = new AbortController().signal;
 
-    const read = gate.review(commandRequest(root, 'cat .env', 'read-env'), signal);
-    const readCard = await pendingFor(turn.runId);
-    expect(readCard.reason).toBe(SECRET_REASON);
-    await decideApproval(t.db, t.workspaceId, readCard.id, { optionId: 'allow', scope: 'once' });
-    waiters.notify(readCard.id);
-    expect(await read).toMatchObject({ allowed: true });
+    const read = await gate.review(commandRequest(root, 'cat .env', 'read-env'), signal);
+    expect(read).toMatchObject({ allowed: true });
+    expect(await approvalsOf(turn.runId)).toEqual([{ status: 'allowed', decided_by: 'level' }]);
 
     const send = gate.review(withAlways(CURL), signal);
     const sendCard = await pendingFor(turn.runId);
@@ -126,11 +130,52 @@ describe('read-then-send guard', () => {
 
     await observations.settled();
     expect(audited.map((entry) => entry.method)).toEqual(['spark/observed', 'spark/egress']);
+    expect(audited[0]!.params).toEqual({ source: 'secret_file', label: '.env' });
     expect(audited[1]!.params).toMatchObject({ approvalId: sendCard.id, observed: ['.env'] });
+    const flags = await t.db.query(`SELECT 1 FROM rail_flags WHERE run_id = $1`, [turn.runId]);
+    expect(flags.rows).toEqual([]);
 
     const local = await gate.review(commandRequest(root, 'curl -s http://127.0.0.1:3000/'), signal);
     expect(local).toMatchObject({ allowed: true });
   });
+
+  it('runs cat .env as a safe read in a mode that asks, and still notes it', async () => {
+    const turn = await fullAutoTurn();
+    const { gate, observations, audited } = gateFor(turn, 'default');
+    const signal = new AbortController().signal;
+    const read = await gate.review(commandRequest(root, 'cat .env', 'read-env'), signal);
+    expect(read).toMatchObject({
+      allowed: true,
+      note: 'Allowed `cat .env` (a read-only command inside the project)',
+    });
+    await observations.settled();
+    expect(audited).toEqual([
+      { method: 'spark/observed', params: { source: 'secret_file', label: '.env' } },
+    ]);
+  });
+
+  it.each(['default', 'acceptEdits', 'auto', 'bypassPermissions'])(
+    'asks before a secret file changes in %s, then asks again before a later curl',
+    async (mode) => {
+      const turn = await fullAutoTurn();
+      const { gate, waiters } = gateFor(turn, mode);
+      const signal = new AbortController().signal;
+
+      const write = gate.review(commandRequest(root, 'echo TOKEN=x > .env', 'write-env'), signal);
+      const writeCard = await pendingFor(turn.runId);
+      expect(writeCard.reason).toBe(SECRET_REASON);
+      await decideApproval(t.db, t.workspaceId, writeCard.id, { optionId: 'allow', scope: 'once' });
+      waiters.notify(writeCard.id);
+      expect(await write).toMatchObject({ allowed: true });
+
+      const send = gate.review(commandRequest(root, CURL, 'send'), signal);
+      const sendCard = await pendingFor(turn.runId);
+      expect(sendCard.payload.observed).toEqual(['.env']);
+      await decideApproval(t.db, t.workspaceId, sendCard.id, { optionId: 'reject', scope: 'once' });
+      waiters.notify(sendCard.id);
+      expect(await send).toMatchObject({ allowed: false });
+    },
+  );
 
   it('keeps asking in a later turn of the same chat', async () => {
     const first = await fullAutoTurn();

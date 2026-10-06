@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { isSecretPath, relativeInside } from '../projects/path-policy.ts';
+import { isIgnoredPath, isSecretPath, relativeInside } from '../projects/path-policy.ts';
 import type { ApprovalRequest, RequestRoot } from './decide.ts';
 import type { PartPlace } from './shell-parts.ts';
 
@@ -24,6 +24,16 @@ export function isSecretTarget(roots: readonly RequestRoot[], target: string): b
   return isSecretPath(path.basename(target));
 }
 
+export function isReadableSecret(roots: readonly RequestRoot[], target: string): boolean {
+  const { relative, root } = place(roots, target);
+  if (relative === null || !root) return false;
+  return isSecretPath(relative) && !isIgnoredPath(relative, root.ignore);
+}
+
+export function secretReadAsks(roots: readonly RequestRoot[], target: string): boolean {
+  return isSecretTarget(roots, target) && !isReadableSecret(roots, target);
+}
+
 export function commandCwd(request: ApprovalRequest): string {
   return request.cwd ?? request.roots[0]?.path ?? request.home;
 }
@@ -39,5 +49,6 @@ export function partPlace(request: ApprovalRequest): PartPlace {
     inside: (target) =>
       request.roots.some((root) => root.path === target) || !outsideRoots(request, target),
     isSecret: (target) => isSecretTarget(request.roots, target),
+    readAsks: (target) => secretReadAsks(request.roots, target),
   };
 }

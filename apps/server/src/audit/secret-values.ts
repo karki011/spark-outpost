@@ -3,7 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { isSecretPath } from '../projects/path-policy.ts';
-import { isSensitiveEnvKey } from './redact.ts';
+import { isSensitiveEnvKey, redacted } from './redact.ts';
 
 const MAX_FILE_BYTES = 64 * 1024;
 const MIN_SENSITIVE_LENGTH = 6;
@@ -33,4 +33,18 @@ async function rootValues(root: string): Promise<string[]> {
 export async function projectSecretValues(roots: readonly string[]): Promise<string[]> {
   const values = (await Promise.all(roots.map(rootValues))).flat();
   return [...new Set(values)].sort((a, b) => b.length - a.length);
+}
+
+export function withoutSecretValues<Value>(value: Value, secrets: readonly string[]): Value {
+  if (secrets.length === 0) return value;
+  const hidden = redacted('secret_value');
+  const clean = (item: unknown): unknown => {
+    if (typeof item === 'string') {
+      return secrets.reduce((text, secret) => text.replaceAll(secret, hidden), item);
+    }
+    if (Array.isArray(item)) return item.map(clean);
+    if (item === null || typeof item !== 'object') return item;
+    return Object.fromEntries(Object.entries(item).map(([key, child]) => [key, clean(child)]));
+  };
+  return clean(value) as Value;
 }

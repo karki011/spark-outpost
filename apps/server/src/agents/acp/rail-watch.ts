@@ -4,6 +4,7 @@ import type * as acp from '@agentclientprotocol/sdk';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';
+import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
 import { parseShell } from '../../approvals/shell-parse.ts';
 import { createReviewTracker } from '../../audit/review-tracker.ts';
@@ -18,10 +19,18 @@ export interface ObservedRail {
   originals: RailOriginal[];
 }
 
+export interface Observed {
+  rails: ObservedRail[];
+  secretReads: string[];
+}
+
 export interface RailWatch {
   asked(toolCallId: string): void;
-  observe(update: unknown): Promise<ObservedRail[]>;
+  observe(update: unknown): Promise<Observed>;
 }
+
+const NOTHING: Observed = { rails: [], secretReads: [] };
+const READ_KINDS = new Set(['read', 'search']);
 
 export interface RailWatchContext {
   roots: readonly RequestRoot[];
@@ -67,8 +76,16 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
   const home = context.home ?? homedir();
   const review = createReviewTracker();
   const calls = new Map<string, acp.ToolCallUpdate>();
+  const asked = new Set<string>();
+  const finishedRead = (id: unknown, status: unknown): string | null => {
+    if (typeof id !== 'string' || status !== 'completed' || asked.has(id)) return null;
+    return READ_KINDS.has(calls.get(id)?.kind ?? '') ? id : null;
+  };
   return {
-    asked: (toolCallId) => review.asked(toolCallId),
+    asked(toolCallId) {
+      asked.add(toolCallId);
+      review.asked(toolCallId);
+    },
     async observe(raw) {
       const update = objectFields(raw);
       const id = update.toolCallId;
@@ -77,21 +94,25 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
         calls.set(id, merged(calls.get(id), update));
       }
       const ran = review.settle(raw);
-      const toolCall = ran ? calls.get(ran.toolCallId) : undefined;
-      if (!ran || !toolCall) return [];
-      calls.delete(ran.toolCallId);
+      const settledId = ran?.toolCallId ?? finishedRead(id, update.status);
+      const toolCall = settledId ? calls.get(settledId) : undefined;
+      if (!settledId || !toolCall) return NOTHING;
+      calls.delete(settledId);
       const request = approvalRequestFrom(
         { sessionId: '', toolCall, options: [] },
         { rpcId: null, roots: context.roots, cwd: context.cwd, home },
       );
       const shell = request.kind === 'execute' ? await parseShell(request.command) : null;
-      return (await railCrossings(request, { shell })).map((crossing) => ({
+      const secretReads = await observedSecretReads(request, shell);
+      if (!ran) return { rails: [], secretReads };
+      const rails = (await railCrossings(request, { shell })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
         paths: crossing.paths.map((target) => shown(target, home)),
         inside: changesInside(crossing, request),
         originals: originalsOf(crossing, request, home),
       }));
+      return { rails, secretReads };
     },
   };
 }

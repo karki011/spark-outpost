@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { NO_RUN_RULES, decide, type ApprovalRequest, type DecideOptions } from './decide.ts';
 import { BUILDER_GIT_REASON, type PieceGuard } from './piece-guard.ts';
-import { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON } from './rails.ts';
+import { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
 import { parseShell } from './shell-parse.ts';
 import { inTempDir, tempRoots } from './temp-dirs.ts';
 
@@ -105,8 +105,8 @@ describe('temp folders are scratch space', () => {
     ['git worktree add ../sibling 265e3aa17', changes('/work/sibling')],
     ['git worktree add "$SCRATCH" 265e3aa17', always(OUTSIDE_WRITE_REASON)],
     ['git worktree remove ~/elsewhere', deletes('~/elsewhere')],
-    ['cat /tmp/x/.env', always('Secret files always ask')],
-    ['echo x > /tmp/x/deploy.pem', always('Secret files always ask')],
+    ['cat /tmp/x/.env', always(SECRET_REASON)],
+    ['echo x > /tmp/x/deploy.pem', always(SECRET_REASON)],
   ])('still asks in every mode for %s', async (command, expected) => {
     expect(await verdicts(command)).toEqual(expected);
   });

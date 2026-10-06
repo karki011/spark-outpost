@@ -99,9 +99,9 @@ describe('Codex Do through the fake agent', { timeout: 20_000 }, () => {
   });
 
   it.each([
-    ['asks', ['allow', 'allow', 'ask', 'ask', 'ask', 'ask']],
-    ['edits', ['allow', 'allow', 'allow', 'ask', 'ask', 'ask']],
-    ['full_access', ['allow', 'allow', 'allow', 'allow', 'ask', 'allow']],
+    ['asks', ['allow', 'allow', 'ask', 'ask', 'allow', 'ask']],
+    ['edits', ['allow', 'allow', 'allow', 'ask', 'allow', 'ask']],
+    ['full_access', ['allow', 'allow', 'allow', 'allow', 'allow', 'allow']],
   ] as const)(
     'sends every action to the gate in a mode with the %s posture',
     async (level, verdicts) => {

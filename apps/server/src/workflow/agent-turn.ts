@@ -18,7 +18,7 @@ import {
 import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
 import { createTitleFilter } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
-import { projectSecretValues } from '../audit/secret-values.ts';
+import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
 import {
   APPROVAL_POLL_MS,
   APPROVAL_TIMEOUT_MESSAGE,
@@ -206,8 +206,17 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
+  const secretValues = await projectSecretValues(input.projectRoots);
   const audit = createAuditRecorder({
-    write: (entries) => insertProtocolEntries(deps.db, lease, entries),
+    write: (entries) =>
+      insertProtocolEntries(
+        deps.db,
+        lease,
+        entries.map((entry) => ({
+          ...entry,
+          payload: withoutSecretValues(entry.payload, secretValues),
+        })),
+      ),
   });
   const observations = createRunObservations({
     db: deps.db,
@@ -275,7 +284,6 @@ export async function runAgentTurn(
         append,
       });
   const steering = joinSteering([steerWatch, inbox]);
-  const secretValues = await projectSecretValues(input.projectRoots);
   const redaction = createRedactionFilter(secretValues);
   const observer = scannedObserver(audit, secretValues, observations.record);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -440,6 +448,9 @@ export async function runAgentTurn(
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
       if (output.kind === 'rail_flag') await rails?.record(output.flag);
+      if (output.kind === 'secret_read') {
+        for (const label of output.paths) observations.record({ source: 'secret_file', label });
+      }
       if (output.kind === 'account') {
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }

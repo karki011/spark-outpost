@@ -50,7 +50,11 @@ describe('rail crossings Spark flags after an unasked action', () => {
   });
 
   it('flags secret files, instruction files, git config and force pushes', async () => {
-    expect(await run('cat .env')).toEqual([{ rail: 'secret', paths: ['.env'] }]);
+    expect(await run('echo x > .env')).toEqual([{ rail: 'secret', paths: ['.env'] }]);
+    expect(await run('rm .env')).toEqual([{ rail: 'secret', paths: ['.env'] }]);
+    expect(await railCrossings(edit(`${ROOT}/.env`))).toEqual([
+      { rail: 'secret', paths: ['.env'] },
+    ]);
     expect(await railCrossings(edit(`${ROOT}/AGENTS.md`))).toEqual([
       { rail: 'instructions', paths: ['AGENTS.md'] },
     ]);
@@ -60,6 +64,12 @@ describe('rail crossings Spark flags after an unasked action', () => {
     expect((await run('git push --force origin spark/task')).map((found) => found.rail)).toEqual([
       'force_push',
     ]);
+  });
+
+  it('does not flag reading a secret file in the project', async () => {
+    expect(await run('cat .env')).toEqual([]);
+    expect(await run('grep -rn TOKEN .')).toEqual([]);
+    expect(await run('cat ~/.npmrc')).toEqual([{ rail: 'secret', paths: ['.npmrc'] }]);
   });
 
   it('flags nothing for an ordinary command in the project', async () => {

@@ -3,7 +3,7 @@ import { SECRET_FILE_EXCEPTIONS, SECRET_FILE_PATTERNS } from './secret-files.ts'
 
 export const PROJECT_READ_MAX_BYTES = 1024 * 1024;
 
-export type PathAccess = 'read' | 'write';
+export type PathAccess = 'read' | 'write' | 'agent_read';
 
 export type RefusalReason =
   | 'not absolute'
@@ -99,10 +99,13 @@ function isSecretName(name: string): boolean {
   return SECRET_NAME_PATTERNS.some((pattern) => pattern.test(lower));
 }
 
+export function isIgnoredPath(relative: string, ignore: readonly string[]): boolean {
+  return ignore.some((pattern) => matchesIgnore(relative, pattern));
+}
+
 export function isSecretPath(relative: string, ignore: readonly string[] = []): boolean {
   const name = relative.split('/').pop() ?? '';
-  if (isSecretName(name)) return true;
-  return ignore.some((pattern) => matchesIgnore(relative, pattern));
+  return isSecretName(name) || isIgnoredPath(relative, ignore);
 }
 
 export type ProtectedKind = 'instructions' | 'git_control';
@@ -136,7 +139,9 @@ export function refusalFor(
   ignore: readonly string[],
 ): RefusalReason | null {
   if (relative === null) return 'outside the project';
-  if (isSecretPath(relative, ignore)) return 'secret file';
+  const kept =
+    access === 'agent_read' ? isIgnoredPath(relative, ignore) : isSecretPath(relative, ignore);
+  if (kept) return 'secret file';
   const git = relative.split('/')[0] === '.git';
   if (access === 'write' && git && protectedPath(relative) === null) return 'inside .git';
   return null;
@@ -156,7 +161,7 @@ async function realTarget(policy: PathPolicy, target: string, access: PathAccess
   try {
     return await policy.realpath(target);
   } catch (error) {
-    if (access === 'read' || !isMissing(error)) throw error;
+    if (access !== 'write' || !isMissing(error)) throw error;
     const parent = path.dirname(target);
     if (parent === target) throw error;
     return path.join(await realTarget(policy, parent, access), path.basename(target));

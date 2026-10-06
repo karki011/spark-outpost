@@ -455,14 +455,12 @@ async function askChat(page: Page) {
   await expect(permissionChip(page)).toHaveText('Plan');
 }
 
-test('asks before curl at Automatic once the chat read .env', async ({ page }) => {
+test('reads .env without a card, then asks before curl at Automatic', async ({ page }) => {
   await askChat(page);
   await send(page, 'Check the site #readenv #curl');
-  const read = card(page, /Run a command\?/);
-  await expect(read.locator('pre')).toHaveText('$ cat .env', { timeout: 15_000 });
-  await read.getByRole('button', { name: 'Allow', exact: true }).click();
   const sending = page.locator('.appr', { hasText: '$ curl -sI https://example.com' });
   await expect(sending).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.appr', { hasText: '$ cat .env' })).toHaveCount(0);
   await expect(sending.locator('.appr-observed')).toHaveText('Read sensitive data earlier: .env');
   await expect(sending.locator('.appr-reason')).toContainText(
     'This run read .env earlier; sending data to example.com needs your OK',

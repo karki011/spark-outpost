@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk';
 
@@ -6,6 +6,7 @@ interface RailTurn {
   text: string;
   cwd: string;
   update(value: acp.SessionUpdate): Promise<void>;
+  say(chunk: string): Promise<void>;
 }
 
 export const OUTSIDE_FILE = '/spark-outside-test/notes.txt';
@@ -27,7 +28,48 @@ export async function railCrossings(turn: RailTurn): Promise<void> {
       status: 'completed',
     });
   }
+  if (turn.text.includes('#secretread')) await secretRead(turn);
+  if (turn.text.includes('#secretwrite')) {
+    await ranUnasked(turn, 'rail-secret-write', {
+      title: 'echo TOKEN=x > .env',
+      kind: 'execute',
+      rawInput: { command: 'echo TOKEN=x > .env' },
+    });
+  }
   if (turn.text.includes('#agentsedit')) {
     await writeFile(join(turn.cwd, 'AGENTS.md'), '# Changed by the agent\n');
   }
+}
+
+async function ranUnasked(
+  turn: RailTurn,
+  toolCallId: string,
+  call: Pick<acp.ToolCall, 'title' | 'kind' | 'rawInput' | 'locations'>,
+  output?: string,
+): Promise<void> {
+  await turn.update({ sessionUpdate: 'tool_call', toolCallId, status: 'in_progress', ...call });
+  await turn.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+    ...(output === undefined ? {} : { rawOutput: { stdout: output, exitCode: 0 } }),
+  });
+}
+
+async function secretRead(turn: RailTurn): Promise<void> {
+  const file = join(turn.cwd, '.env');
+  const content = await readFile(file, 'utf8');
+  await ranUnasked(
+    turn,
+    'rail-secret-cat',
+    { title: 'cat .env', kind: 'execute', rawInput: { command: 'cat .env' } },
+    content,
+  );
+  await ranUnasked(
+    turn,
+    'rail-secret-read',
+    { title: 'Read .env', kind: 'read', locations: [{ path: file }] },
+    content,
+  );
+  await turn.say(`The file says ${content.trim()}. `);
 }

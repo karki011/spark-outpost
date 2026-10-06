@@ -6,6 +6,7 @@ import { readProjectText, resolveInProject } from '../../projects/project-fs.ts'
 import {
   PROJECT_READ_MAX_BYTES,
   PathRefusedError,
+  isSecretPath,
   type PathPolicy,
   type ResolvedPath,
 } from '../../projects/path-policy.ts';
@@ -32,10 +33,13 @@ export async function readTextFile(
   policy: PathPolicy,
   params: acp.ReadTextFileRequest,
   report: Report,
+  secretRead: Report = () => undefined,
 ): Promise<acp.ReadTextFileResponse> {
   try {
-    const file = await readProjectText(policy, params.path, params.line, params.limit);
+    const { path: requested, line, limit } = params;
+    const file = await readProjectText(policy, requested, line, limit, 'agent_read');
     report(`Read \`${projectLabel(policy, file)}\``);
+    if (isSecretPath(file.relative)) secretRead(file.relative);
     return { content: file.content };
   } catch (error) {
     if (error instanceof PathRefusedError) throw refusedPath(params.path, error, report);

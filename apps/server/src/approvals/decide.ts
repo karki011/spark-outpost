@@ -13,7 +13,6 @@ import {
   type ForcePush,
 } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
-import { isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
 import { routedPieceDecision } from './piece-route.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
@@ -31,7 +30,7 @@ import { commandCwd, isSecretTarget, outsideRoots, place } from './request-place
 import { alwaysAsk } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { withResolvedVariables } from './shell-variables.ts';
-import { partRequests, provenRead, shellView, type ShellView } from './shell-view.ts';
+import { onlyReads, partRequests, shellView, type ShellView } from './shell-view.ts';
 
 export interface RequestRoot {
   path: string;
@@ -142,9 +141,10 @@ function secretLabel(roots: readonly RequestRoot[], target: string): string {
   return place(roots, target).relative ?? path.basename(target);
 }
 
-export function secretLabels(asked: ApprovalRequest): string[] {
-  const request = withResolvedVariables(asked);
-  const secret = (target: string) => isSecretTarget(request.roots, target);
+export function namedSecrets(
+  request: ApprovalRequest,
+  secret: (target: string) => boolean,
+): string[] {
   const cwd = commandCwd(request);
   const words = request.command ? treeWords(commandTree(request.command)) : [];
   const targets = [
@@ -153,8 +153,15 @@ export function secretLabels(asked: ApprovalRequest): string[] {
       .filter((word) => word !== '' && !word.startsWith('-'))
       .map((word) => resolveCommandPath(word, cwd, request.home)),
   ].filter(secret);
-  const labels = [...new Set(targets.map((target) => secretLabel(request.roots, target)))];
-  return labels.length > 0 ? labels : ['a secret file'];
+  return [...new Set(targets.map((target) => secretLabel(request.roots, target)))];
+}
+
+export const UNNAMED_SECRET = 'a secret file';
+
+export function secretLabels(asked: ApprovalRequest): string[] {
+  const request = withResolvedVariables(asked);
+  const labels = namedSecrets(request, (target) => isSecretTarget(request.roots, target));
+  return labels.length > 0 ? labels : [UNNAMED_SECRET];
 }
 
 function taintedEgress(
@@ -262,16 +269,6 @@ function unreadable(request: ApprovalRequest, view: ShellView | null): boolean {
   return request.command !== null && commandTree(request.command).opaque;
 }
 
-function isSafeReadRequest(request: ApprovalRequest): boolean {
-  if (!request.command) return false;
-  return isSafeRead(request.command, {
-    cwd: commandCwd(request),
-    home: request.home,
-    inside: (target) =>
-      request.roots.some((root) => root.path === target) || !outsideRoots(request, target),
-  });
-}
-
 export const RUN_REJECTED_REASON = 'You chose to always reject this in this run';
 export const DENIES_REASON = "The agent's mode skips anything that isn't pre-approved";
 
@@ -342,7 +339,7 @@ export function decide(
         ? { verdict: 'allow', by: 'allowlist' }
         : { verdict: 'ask', reason: PUSH_REASON };
     }
-    if (isSafeReadRequest(request) || provenRead(view)) {
+    if (onlyReads(request, view)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }
     if (options.askRun && unreadable(request, view)) {
@@ -366,7 +363,7 @@ function agentAsked(
   options: DecideOptions,
 ): Decision {
   if (request.kind !== 'execute' || !request.command) return ASK;
-  if (isSafeReadRequest(request) || provenRead(view)) {
+  if (onlyReads(request, view)) {
     return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
   }
   if (options.askRun && options.askAutoWhy && !unreadable(request, view)) {

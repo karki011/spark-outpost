@@ -31,9 +31,9 @@ You'll protect files that Spark doesn't already treat as secret, and keep keys o
 | Starts with `#` | A comment                                     |
 | Starts with `!` | Not supported                                 |
 
-Matching files are treated exactly like [secret files](protected-paths.md#secret-files):
+Matching files are closed, unlike [secret files](protected-paths.md#secret-files):
 
-- Agents can't read or change them, and commands that touch them ask you first.
+- Agents can't read or change them; commands that touch them ask first.
 - They're left out of the **@** file picker.
 - Their contents are never sent to Jev. Without Jev, nothing is sent for the Map at all.
 

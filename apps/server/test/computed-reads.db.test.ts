@@ -17,6 +17,7 @@ const claude = createAcpProvider({ definition: agentDefinitions.claude, launch }
 
 const DISGUISED = 'for f in $(ls -A | grep "^\\.e"); do head -c 200 "$f"; done';
 const GLOBBED = 'head -c 200 .e*';
+const CHANGED = 'echo TOKEN=other >> .env';
 
 let t: TestDb;
 let root: string;
@@ -52,7 +53,7 @@ async function pendingReasons(runId: string, count: number) {
 }
 
 describe('Claude at Bypass permissions reading files it computes', { timeout: 30_000 }, () => {
-  it('asks before a globbed secret read and leaves computed reads to the mode', async () => {
+  it('leaves secret and computed reads to the mode and asks before a secret file changes', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
     const waiters = new ApprovalWaiters();
     const gate = createApprovalGate({
@@ -66,7 +67,8 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
       onTimeout: () => undefined,
       backup: async () => undefined,
     });
-    const steps = ['cat package.json', DISGUISED, 'for f in src/*.ts; do cat "$f"; done', GLOBBED];
+    const loop = 'for f in src/*.ts; do cat "$f"; done';
+    const steps = ['cat package.json', DISGUISED, loop, GLOBBED, CHANGED];
     const outputs: ProviderOutput[] = [];
     const turn = (async () => {
       for await (const output of claude.run({
@@ -97,13 +99,15 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
     const text = replyText(outputs);
     expect(text).toContain('[cat package.json=allow_once]');
     expect(text).toContain(`[${DISGUISED}=allow_once]`);
-    expect(text).toContain('[for f in src/*.ts; do cat "$f"; done=allow_once]');
-    expect(text).toContain(`[${GLOBBED}=decline]`);
+    expect(text).toContain(`[${loop}=allow_once]`);
+    expect(text).toContain(`[${GLOBBED}=allow_once]`);
+    expect(text).toContain(`[${CHANGED}=decline]`);
     const { rows } = await t.db.query<{ title: string; status: string; decided_by: string }>(
       `SELECT title, status, decided_by FROM approvals WHERE run_id = $1 ORDER BY created_at`,
       [run.runId],
     );
     expect(rows.map((row) => [row.status, row.decided_by])).toEqual([
+      ['allowed', 'level'],
       ['allowed', 'level'],
       ['allowed', 'level'],
       ['allowed', 'level'],

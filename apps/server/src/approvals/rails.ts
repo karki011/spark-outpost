@@ -6,14 +6,15 @@ import type { ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { worktreeAdds, worktreeRemoves } from './git-worktrees.ts';
-import { commandCwd, isSecretTarget, outsideRoots } from './request-place.ts';
-import { partRequests, type ShellView } from './shell-view.ts';
+import { commandCwd, isSecretTarget, outsideRoots, secretReadAsks } from './request-place.ts';
+import { changesNothing, partRequests, type ShellView } from './shell-view.ts';
 import { inTempDir } from './temp-dirs.ts';
 import { writeTargets } from './write-targets.ts';
 
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
-export const SECRET_REASON = 'Secret files always ask';
+export const SECRET_REASON =
+  'Changing a secret file always asks, and so does reading one in .sparkignore or outside the project';
 
 export interface RailAsk {
   rail: 'outside_delete' | 'outside_write' | 'secret';
@@ -72,24 +73,45 @@ function outsideWrites(request: ApprovalRequest): string[] | null {
   return unique([...written, ...added]).filter((target) => leavesProject(request, target));
 }
 
-function touchesSecret(request: ApprovalRequest, tree: CommandTree | null): boolean {
-  if (request.paths.some((target) => isSecretTarget(request.roots, target))) return true;
+const READ_TOOL_KINDS = new Set(['read', 'search']);
+
+export function readsWithoutChanging(request: ApprovalRequest, view: ShellView | null): boolean {
+  if (request.command) return changesNothing(request, view);
+  return request.kind === 'other' && READ_TOOL_KINDS.has(request.toolKind ?? '');
+}
+
+type SecretTest = (target: string) => boolean;
+
+function secretAsks(request: ApprovalRequest, reading: boolean): SecretTest {
+  return reading
+    ? (target) => secretReadAsks(request.roots, target)
+    : (target) => isSecretTarget(request.roots, target);
+}
+
+function touchesSecret(request: ApprovalRequest, tree: CommandTree | null, reading: boolean) {
+  const asks = secretAsks(request, reading);
+  if (request.paths.some(asks)) return true;
   if (!tree) return false;
   const cwd = commandCwd(request);
   return treeWords(tree)
     .filter((word) => word !== '' && !word.startsWith('-'))
     .some((word) => {
-      if (isSecretPath(path.basename(word))) return true;
-      return isSecretTarget(request.roots, resolveCommandPath(word, cwd, request.home));
+      if (!reading && isSecretPath(path.basename(word))) return true;
+      return asks(resolveCommandPath(word, cwd, request.home));
     });
 }
 
-function readsSecret(request: ApprovalRequest, tree: CommandTree | null, files: FileLister) {
+function readsSecret(
+  request: ApprovalRequest,
+  tree: CommandTree | null,
+  files: FileLister,
+  reading: boolean,
+) {
   if (!request.command || !tree) return false;
   const concern = readConcern(request.command, tree, {
     cwd: commandCwd(request),
     home: request.home,
-    isSecret: (target) => isSecretTarget(request.roots, target),
+    isSecret: secretAsks(request, reading),
     files,
   });
   return concern === 'secret';
@@ -97,7 +119,11 @@ function readsSecret(request: ApprovalRequest, tree: CommandTree | null, files: 
 
 const SECRET_ASK: RailAsk = { rail: 'secret', reason: SECRET_REASON, paths: [] };
 
-function commandRail(request: ApprovalRequest, files: FileLister): RailAsk | null {
+function commandRail(
+  request: ApprovalRequest,
+  files: FileLister,
+  reading: boolean,
+): RailAsk | null {
   const tree = request.command ? commandTree(request.command) : null;
   const deleted = outsideDeletes(request, tree);
   if (deleted === null) return { rail: 'outside_delete', reason: OUTSIDE_DELETE_REASON, paths: [] };
@@ -105,7 +131,9 @@ function commandRail(request: ApprovalRequest, files: FileLister): RailAsk | nul
     const reason = outsideDeleteReason(deleted, request.home);
     return { rail: 'outside_delete', reason, paths: deleted };
   }
-  if (touchesSecret(request, tree) || readsSecret(request, tree, files)) return SECRET_ASK;
+  if (touchesSecret(request, tree, reading) || readsSecret(request, tree, files, reading)) {
+    return SECRET_ASK;
+  }
   const written = outsideWrites(request);
   if (written === null) return { rail: 'outside_write', reason: OUTSIDE_WRITE_REASON, paths: [] };
   if (written.length === 0) return null;
@@ -134,8 +162,9 @@ export function alwaysAsk(
   view: ShellView | null,
 ): RailAsk | null {
   const parts = view ? [request, ...partRequests(request, view)] : [request];
+  const reading = readsWithoutChanging(request, view);
   for (const part of parts) {
-    const asked = commandRail(part, files);
+    const asked = commandRail(part, files, reading);
     if (asked) return asked;
   }
   return redirectRail(view) ?? editRail(request);
