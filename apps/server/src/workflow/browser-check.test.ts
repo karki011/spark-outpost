@@ -15,6 +15,8 @@ describe('the browser check line in an agent brief', () => {
     expect(brief.endsWith(BROWSER_CHECK_LINE)).toBe(true);
     expect(brief.startsWith(turn().prompt)).toBe(true);
     expect(BROWSER_CHECK_LINE).toContain('suggestion, not a requirement');
+    expect(BROWSER_CHECK_LINE).toContain('Judge the screenshot yourself');
+    expect(BROWSER_CHECK_LINE).toContain('only when there is a real choice');
     expect(BROWSER_CHECK_LINE).toContain('spark_browser_open');
   });
 
