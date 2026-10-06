@@ -40,7 +40,7 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 
-After a run reads private data, Spark asks before [sending data out](approvals.md#sending-data-out-after-reading-secrets).
+After a run reads private data, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
 
 ## When you reset
 

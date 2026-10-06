@@ -84,7 +84,8 @@ describe('commandEgress', () => {
     ['docker push me/app:latest', '`docker push`'],
     ['git push origin main', '`git push`'],
     ['git -C . push', '`git push`'],
-    ['sh -c "$PAYLOAD"', "a command Spark can't see inside"],
+    ['curl -d "$(cat notes.txt)" "$URL"', '`curl`'],
+    ['sh -c "git push $(git remote | head -1) HEAD"', '`git push`'],
   ])('%s sends data out through %s', (command, via) => {
     const found = egress(command);
     expect(found?.via).toBe(via);
@@ -120,7 +121,46 @@ describe('commandEgress', () => {
     'docker ps',
     'npm run build',
     'echo https://example.com',
+    'sh -c "$PAYLOAD"',
+    'git log --oneline "$(git merge-base HEAD origin/main)"..HEAD',
   ])('%s stays on this computer', (command) => {
+    expect(egress(command)).toBeNull();
+  });
+
+  it.each([
+    `curl -s -H 'Content-Type: application/json' -d '{"a":1}' http://127.0.0.1:4318/api/x`,
+    'curl -s -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/x | jq .',
+    'curl -s -X POST http://localhost:3000/api -d "name=$NAME"',
+    'curl -sf -o /dev/null -w "%{http_code}" localhost:5173',
+    'curl -s -u admin:secret http://[::1]:8080/',
+  ])('a request to this computer stays here whatever its headers and data: %s', (command) => {
+    expect(egress(command)).toBeNull();
+  });
+
+  it('still finds the remote host next to headers and data', () => {
+    const command = `curl -H 'Content-Type: application/json' -d "$BODY" https://collect.example.net`;
+    expect(egress(command)?.hosts).toEqual(['collect.example.net']);
+    expect(egress('curl -x proxy.example.net:3128 http://localhost:3000')?.hosts).toEqual([
+      'proxy.example.net',
+    ]);
+  });
+
+  it.each([
+    `python3 - <<'EOF'\nimport re\nfrom pathlib import Path\np = Path('a.ts')\ns = re.compile(r'fetch\\(').sub('get(', p.read_text())\np.write_text(s)\nEOF`,
+    `python3 - <<'EOF'\nimport pathlib, subprocess\np = pathlib.Path('docs/x.md')\np.write_text(p.read_text().replace('curl https://a.example', 'x'))\nsubprocess.run(['git', 'diff', '--stat'])\nEOF`,
+    `python3 - <<'EOF'\nrequests = [line for line in open('log.txt')]\nsocket = getattr(object, '__name__')\nprint(len(requests), socket)\nEOF`,
+    `python3 -c "import json, pathlib; pathlib.Path('a.json').write_text(json.dumps({'url': 'https://a.example'}))"`,
+  ])('a python script that only edits files sends nothing: %s', (command) => {
+    expect(egress(command)).toBeNull();
+  });
+
+  it.each([
+    `sed -i '' 's/npm publish/pnpm publish/' docs/release.md`,
+    `sed -i '' "s|run \\\`npm publish\\\`|run \\\`pnpm publish\\\`|" docs/release.md`,
+    `grep -rl "npm publish" docs | xargs sed -i '' 's/npm publish/pnpm publish/g'`,
+    `sed -i '' -e 's/a/b/; s/docker push/pnpm publish/' docs/release.md`,
+    `echo "then run pnpm publish and gh release create" >> NOTES.md`,
+  ])('words inside the text a command edits are not commands: %s', (command) => {
     expect(egress(command)).toBeNull();
   });
 

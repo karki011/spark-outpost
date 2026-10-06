@@ -70,6 +70,8 @@ export function approvalPayload(request: ApprovalRequest, asking: Asking): Appro
     ...(asking.gitControl ? { gitControl: asking.gitControl } : {}),
     ...(asking.because ? { asksBecause: asking.because } : {}),
     ...(asking.observed ? { observed: asking.observed } : {}),
+    ...(asking.sendsTo ? { sendsTo: asking.sendsTo } : {}),
+    ...(asking.secretSend ? { secretSend: asking.secretSend } : {}),
     ...(request.agentReason ? { agentReason: request.agentReason } : {}),
   };
 }

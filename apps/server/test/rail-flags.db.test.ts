@@ -170,6 +170,46 @@ describe('Spark moderates Bypass permissions', { timeout: 120_000 }, () => {
     expect(JSON.stringify(detail)).not.toContain(TOKEN);
   });
 
+  it('flags a send after a secret read once, without a card, and lets the run finish', async () => {
+    commitEnvFile();
+    const { conversationId, runId } = await bypassRun('#secretread #sendout');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail!.railFlags ?? []).toEqual([
+      expect.objectContaining({
+        rail: 'sent_out',
+        title: expect.stringMatching(/sent data to collect\.example\.net after reading .*\.env$/),
+        paths: ['to collect.example.net'],
+        inside: false,
+        status: 'open',
+        turnRunId: runId,
+      }),
+    ]);
+    const cards = await t.db.query(
+      `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.conversation_id = $1 AND a.decided_by NOT IN ('level', 'allowlist', 'run_rule')`,
+      [conversationId],
+    );
+    expect(cards.rows).toEqual([]);
+    const sends = await t.db.query(
+      `SELECT 1 FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
+       WHERE r.conversation_id = $1 AND l.method = 'spark/egress'
+         AND l.payload #>> '{params,outcome}' = 'ran'`,
+      [conversationId],
+    );
+    expect(sends.rows).toHaveLength(2);
+    const run = await t.db.query<{ status: string }>('SELECT status FROM runs WHERE id = $1', [
+      runId,
+    ]);
+    expect(run.rows[0]!.status).toBe('succeeded');
+    expect(JSON.stringify(detail)).not.toContain(TOKEN);
+  });
+
+  it('flags no send when nothing sensitive was read', async () => {
+    const { conversationId } = await bypassRun('#sendout');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail!.railFlags ?? []).toEqual([]);
+  });
+
   it('still flags a secret file changed without asking', async () => {
     commitEnvFile();
     const { conversationId } = await bypassRun('#secretwrite');

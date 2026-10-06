@@ -4,9 +4,11 @@ import { commandTree } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';
 import type { FileLister } from './file-lister.ts';
 import { gitSubcommand } from './git-commands.ts';
+import { namesAnotherRepo, ownGhUse, ownGitUse, type OwnRepo } from './own-repo.ts';
 import { heredocBodies, herestrings, withoutHereText } from './inline-code.ts';
 import { readArgs } from './read-args.ts';
 import { usesNetwork } from './script-network.ts';
+import { peelSubstitutions } from './substitutions.ts';
 import { isPython, scriptRun } from './script-runs.ts';
 import {
   UNKNOWN_HOST,
@@ -16,6 +18,7 @@ import {
   remoteHost,
   remoteHosts,
   unresolved,
+  urlHost,
 } from './egress-hosts.ts';
 
 export interface Egress {
@@ -32,6 +35,7 @@ interface EgressPlace {
   cwd: string;
   home: string;
   files: FileLister;
+  own?: OwnRepo | null;
 }
 
 const MAX_DEPTH = 2;
@@ -67,6 +71,13 @@ const SENDING_VERBS = new Map<string, ReadonlySet<string>>([
   ['podman', new Set(['push', 'login', 'run', 'exec', 'build', 'compose', 'pull'])],
 ]);
 const GIT_SENDS = new Set(['push', 'send-email']);
+const UNSEEN_SENDERS = new Set([
+  ...['curl', 'wget', 'ssh', 'scp', 'sftp', 'rsync', 'nc', 'ncat', 'netcat', 'telnet'],
+  ...['gh', 'glab', 'hub', 'aws', 'gcloud', 'gsutil', 'az', 'kubectl'],
+]);
+const UNSEEN_WORD_BREAK = /[^A-Za-z0-9_./+-]+/;
+const UNSEEN_VIA = "a command Spark can't see inside";
+const SUBSTITUTED = '$SUBSTITUTED';
 const GIT_FETCHES = new Set(['clone', 'fetch', 'pull', 'ls-remote', 'archive']);
 const quoted = (name: string) => `\`${name}\``;
 
@@ -81,13 +92,10 @@ function hostArgs(args: readonly string[]): string[] {
     }
     const previous = args[index - 1];
     const afterFlag = previous !== undefined && previous.startsWith('-') && !previous.includes('=');
-    if (unresolved(word) || (previous === '-o' && /proxy/i.test(word))) {
-      hosts.push(UNKNOWN_HOST);
-      continue;
-    }
     const lenient = !afterFlag || HOST_VALUE_FLAGS.has(previous);
-    const host = lenient ? bareHost(word) : remoteHost(word);
-    if (host) hosts.push(host);
+    if (previous === '-o' && /proxy/i.test(word)) hosts.push(UNKNOWN_HOST);
+    else if (unresolved(word)) hosts.push(...(lenient ? [UNKNOWN_HOST] : []));
+    else hosts.push((lenient ? bareHost(word) : urlHost(word)) ?? '');
   }
   const found = hosts.filter((host) => host !== '');
   return found.length > 0 ? found : [UNKNOWN_HOST];
@@ -165,9 +173,17 @@ function interpreterReach(program: readonly string[], scan: Scan): Reach | null 
   return merge(reaches);
 }
 
+function ownRepoUse(name: string, args: readonly string[], scan: Scan): boolean {
+  const own = scan.place.own;
+  if (!own || namesAnotherRepo(scan.command)) return false;
+  if (name === 'gh') return ownGhUse(args, own);
+  return name === 'git' && ownGitUse(args, own);
+}
+
 function programReach(program: readonly string[], scan: Scan): Reach | null {
   const name = programName(program);
   const args = program.slice(1);
+  if (ownRepoUse(name, args, scan)) return null;
   if (HOST_CLIENTS.has(name)) return { via: quoted(name), hosts: hostArgs(args) };
   if (REMOTE_COPIES.has(name)) {
     const hosts = copyHosts(args);
@@ -195,9 +211,36 @@ function stillSends(reach: Reach): boolean {
   return reach.hosts === null || remoteHosts(reach.hosts).length > 0;
 }
 
+function wordReach(command: string): Reach | null {
+  const words = command.split(UNSEEN_WORD_BREAK).map((word) => path.basename(word));
+  const sender = words.find(
+    (word, index) =>
+      UNSEEN_SENDERS.has(word) || (word === 'git' && GIT_SENDS.has(words[index + 1] ?? '')),
+  );
+  const opens = sender !== undefined || devNetHosts(command).length > 0;
+  if (!opens && !usesNetwork(command, false)) return null;
+  const hosts = [...codeHosts(command), ...devNetHosts(command)];
+  return {
+    via: sender ? quoted(sender) : UNSEEN_VIA,
+    hosts: hosts.length > 0 ? hosts : [UNKNOWN_HOST],
+  };
+}
+
+function unseenReach(command: string, place: EgressPlace, depth: number): Reach | null {
+  const peeled = depth < MAX_DEPTH ? peelSubstitutions(command, SUBSTITUTED) : null;
+  if (!peeled || peeled.inner.length === 0 || commandTree(peeled.outer).opaque) {
+    return wordReach(command);
+  }
+  const reaches = [peeled.outer, ...peeled.inner].flatMap(
+    (part) => commandReach(part, place, depth + 1) ?? [],
+  );
+  return merge(reaches.filter(stillSends));
+}
+
 function commandReach(command: string, place: EgressPlace, depth: number): Reach | null {
-  const tree = commandTree(withoutHereText(command));
-  if (tree.opaque) return { via: "a command Spark can't see inside", hosts: [UNKNOWN_HOST] };
+  const seen = withoutHereText(command);
+  const tree = commandTree(seen);
+  if (tree.opaque) return unseenReach(seen, place, depth);
   const scan: Scan = { command, place, depth };
   const devNet = devNetHosts(command);
   const reaches = [
@@ -216,7 +259,11 @@ export function commandEgress(command: string, place: EgressPlace): Egress | nul
   return asEgress(commandReach(command, place, 0));
 }
 
-export function egressOf(request: ApprovalRequest, files: FileLister): Egress | null {
+export function egressOf(
+  request: ApprovalRequest,
+  files: FileLister,
+  own: OwnRepo | null = null,
+): Egress | null {
   if (request.mcpServer) return { via: `the ${request.mcpServer} MCP server`, hosts: [] };
   if (request.toolKind === 'fetch') {
     const hosts = codeHosts(request.title);
@@ -224,7 +271,7 @@ export function egressOf(request: ApprovalRequest, files: FileLister): Egress | 
   }
   if (request.kind !== 'execute' || !request.command) return null;
   const cwd = request.cwd ?? request.roots[0]?.path ?? request.home;
-  return commandEgress(request.command, { cwd, home: request.home, files });
+  return commandEgress(request.command, { cwd, home: request.home, files, own });
 }
 
 export function egressTarget(egress: Egress): string {

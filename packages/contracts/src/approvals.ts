@@ -113,6 +113,8 @@ export const approvalPayloadSchema = z.object({
   gitControl: z.array(z.string()).optional(),
   asksBecause: z.string().optional(),
   observed: z.array(z.string()).optional(),
+  sendsTo: z.string().optional(),
+  secretSend: z.array(z.string()).optional(),
   sparkAction: sparkActionSchema.optional(),
   sparkResult: sparkResultSchema.optional(),
   sparkRequested: z.boolean().optional(),

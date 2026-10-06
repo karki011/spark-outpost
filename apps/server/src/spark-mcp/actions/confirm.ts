@@ -29,6 +29,14 @@ const LAST_ATTEMPT_FAILED =
 export const IN_PROGRESS_MESSAGE =
   'Spark is still doing it; the result appears on the card in the chat. Do not call this again.';
 
+const SENDS_TO: Partial<Record<SparkAction['action'], string>> = {
+  create_ticket: 'to your ticket tracker',
+  comment_ticket: 'to your ticket tracker',
+  transition_ticket: 'to your ticket tracker',
+  assign_ticket: 'to your ticket tracker',
+  post_slack: 'to Slack',
+};
+
 export interface ActionRun {
   runId: string;
   hooks: SparkActionHooks;
@@ -161,11 +169,7 @@ export async function proposeAction(
 ) {
   const run = actionRun(context.scope);
   const observed = (await run.scope.observations?.labels()) ?? [];
-  const facts = await actionFacts(
-    context.deps.db,
-    { runId: run.runId, observed: observed.length > 0 },
-    action.action,
-  );
+  const facts = await actionFacts(context.deps.db, run.runId, action.action);
   const path = options.alwaysAsk ? 'confirm' : actionPath(facts);
   const failedBefore = await lastFailedAttempt(
     context.deps.db,
@@ -187,6 +191,16 @@ export async function proposeAction(
     };
   }
   auditAction(run, action, { outcome: 'performing', approvalId: card.id });
+  const target = SENDS_TO[action.action];
+  if (target && observed.length > 0) {
+    run.scope.observations?.sentOut({
+      toolCallId: null,
+      subject: card.title,
+      target,
+      observed,
+      approvalId: card.id,
+    });
+  }
   const settled = await awaitResult(context, run, card.id);
   if (!settled)
     return { outcome: 'in_progress', approvalId: card.id, message: IN_PROGRESS_MESSAGE };

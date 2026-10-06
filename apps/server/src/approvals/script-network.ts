@@ -6,7 +6,14 @@ const SPAWNS =
   /\b(?:subprocess|child_process|os\.(?:system|popen|exec\w*|spawn\w*|posix_spawn\w*)|pty\.spawn|execSync|spawnSync|execFileSync|execFile|spawn|popen|system|shell_exec|passthru|proc_open|Open3|qx|Deno\.Command|Bun\.spawn)\b/;
 const NETWORK_PROGRAM = /\b(?:curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|telnet)\b/;
 const PYTHON_DYNAMIC =
-  /\b(?:exec|eval|compile|__import__|importlib|getattr|globals|locals|vars|builtins|__builtins__)\b/;
+  /\b(?:exec|eval|__import__|importlib|builtins|__builtins__)\b|(?<![.\w])compile\s*\(/;
+const PYTHON_NETWORK_MODULES =
+  'requests|httpx|aiohttp|urllib\\d?|http|socket|smtplib|ftplib|telnetlib|imaplib|poplib|xmlrpc|pycurl|paramiko|websockets?';
+const PYTHON_NETWORK = new RegExp(
+  `^\\s*(?:import|from)\\s[^\\n]*\\b(?:${PYTHON_NETWORK_MODULES})\\b|\\b(?:${PYTHON_NETWORK_MODULES}|urlopen)(?:\\.\\w+)*\\s*\\(`,
+  'm',
+);
+const CALL_CHARS = 2_000;
 const FORMATTED_PREFIX = /(?<!\w)[rRbBuU]?[fF][rR]?$/;
 
 function stringEnd(code: string, from: number, quote: string): number | null {
@@ -43,14 +50,29 @@ export function pythonLogic(code: string): string | null {
   return logic;
 }
 
-function runnable(code: string, python: boolean): string {
-  const logic = python ? pythonLogic(code) : null;
-  return logic !== null && !PYTHON_DYNAMIC.test(logic) ? logic : code;
+function spawnCalls(code: string): string {
+  const calls = [...code.matchAll(new RegExp(SPAWNS.source, 'g'))].map((match) => {
+    const open = code.indexOf('(', match.index);
+    const close = open === -1 ? -1 : code.indexOf(')', open);
+    return close === -1 ? code : code.slice(match.index, Math.min(close, open + CALL_CHARS));
+  });
+  return calls.join('\n');
+}
+
+function spawnsNetwork(code: string): boolean {
+  const spawned = spawnCalls(code);
+  return NETWORK_PROGRAM.test(spawned) || remoteHosts(codeHosts(spawned)).length > 0;
+}
+
+function pythonUsesNetwork(code: string): boolean | null {
+  const logic = pythonLogic(code);
+  if (logic === null || PYTHON_DYNAMIC.test(logic)) return null;
+  return PYTHON_NETWORK.test(logic) || (SPAWNS.test(logic) && spawnsNetwork(code));
 }
 
 export function usesNetwork(code: string, python: boolean): boolean {
-  const seen = runnable(code, python);
-  if (NETWORK_CODE.test(seen)) return true;
-  if (!SPAWNS.test(seen)) return false;
-  return NETWORK_PROGRAM.test(code) || remoteHosts(codeHosts(code)).length > 0;
+  const known = python ? pythonUsesNetwork(code) : null;
+  if (known !== null) return known;
+  if (NETWORK_CODE.test(code)) return true;
+  return SPAWNS.test(code) && spawnsNetwork(code);
 }

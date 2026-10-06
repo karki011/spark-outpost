@@ -1,6 +1,8 @@
 import {
+  providerLabel,
   railFlagSchema,
   railFlagTitle,
+  sentOutTitle,
   type RailFlag,
   type RailFlagDecision,
   type RailKind,
@@ -15,6 +17,7 @@ export interface NewRailFlag {
   paths: string[];
   inside: boolean;
   originals: RailOriginal[];
+  read?: readonly string[];
 }
 
 interface RailFlagRow {
@@ -54,6 +57,19 @@ export class RailFlagNotFoundError extends Error {
   }
 }
 
+export async function flagAgentName(db: Queryable, runId: string): Promise<string> {
+  const { rows } = await db.query<{ name: string | null; provider: string | null }>(
+    `SELECT route->>'name' AS name, provider FROM runs WHERE id = $1`,
+    [runId],
+  );
+  return rows[0]?.name ?? providerLabel(rows[0]?.provider ?? '');
+}
+
+function titleOf(agent: string, flag: NewRailFlag): string {
+  if (flag.rail !== 'sent_out') return railFlagTitle(agent, flag.rail, flag.paths);
+  return sentOutTitle(agent, flag.paths[0] ?? 'out', flag.read ?? []);
+}
+
 export async function insertRailFlag(
   db: Queryable,
   runId: string,
@@ -67,8 +83,11 @@ export async function insertRailFlag(
        SELECT $1, r.id, r.conversation_id, $3, $4, $5, $6::jsonb, $7, $8::jsonb
        FROM runs r
        WHERE r.id = $2 AND NOT EXISTS (
-         SELECT 1 FROM rail_flags f
-         WHERE f.run_id = r.id AND f.rail = $4 AND f.paths = $6::jsonb
+         SELECT 1 FROM rail_flags f JOIN runs flagged ON flagged.id = f.run_id
+         WHERE f.rail = $4 AND f.paths = $6::jsonb AND (
+           f.run_id = r.id OR ($4 = 'sent_out'
+             AND COALESCE(flagged.parent_run_id, flagged.id) = COALESCE(r.parent_run_id, r.id))
+         )
        )
        RETURNING *
      )
@@ -78,7 +97,7 @@ export async function insertRailFlag(
       runId,
       flag.toolCallId,
       flag.rail,
-      railFlagTitle(agent, flag.rail, flag.paths),
+      titleOf(agent, flag),
       JSON.stringify(flag.paths),
       flag.inside,
       JSON.stringify(flag.originals),

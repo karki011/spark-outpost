@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRunObservations } from '../src/observations/run-observations.ts';
-import { conversationObservations } from '../src/persistence/observations.ts';
+import { turnObservations } from '../src/persistence/observations.ts';
 import { conversationReadSlackDms, slackChatThread } from '../src/persistence/slack.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { changeSlackSettings } from '../src/slack/connection.ts';
@@ -92,7 +92,7 @@ describe('spark_slack with direct messages', () => {
     expect(read.messages).toHaveLength(2);
     expect(result.text).not.toContain('dmleakedtokenvalue');
     await observations.settled();
-    expect(await conversationObservations(t.db, chat.conversationId)).toEqual([
+    expect(await turnObservations(t.db, chat.runId)).toEqual([
       { source: 'private_data', label: 'private work data (spark_slack)' },
     ]);
     expect(await conversationReadSlackDms(t.db, chat.conversationId)).toBe(true);

@@ -1,10 +1,10 @@
 import type { Db } from '../persistence/db.ts';
 import {
-  conversationObservations,
   recordObservation,
+  turnObservations,
   type Observation,
-  type ObservationSource,
 } from '../persistence/observations.ts';
+import { flagAgentName, insertRailFlag } from '../persistence/rail-flags.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
 export interface EgressAsk {
@@ -12,19 +12,29 @@ export interface EgressAsk {
   subject: string;
   reason: string | null;
   observed: readonly string[];
+  sendsTo?: string | undefined;
+}
+
+export interface SentOutNote {
+  toolCallId: string | null;
+  subject: string;
+  target: string;
+  observed: readonly string[];
+  approvalId?: string | undefined;
 }
 
 export interface RunObservations {
   record(observation: Observation): void;
-  labels(except?: readonly ObservationSource[]): Promise<string[]>;
+  labels(): Promise<string[]>;
   egressAsked(ask: EgressAsk): void;
+  sentOut(note: SentOutNote): void;
+  later(work: () => Promise<void>): void;
   settled(): Promise<void>;
 }
 
 export interface RunObservationsOptions {
   db: Db;
   runId: string;
-  conversationId: string;
   audit?: ProtocolObserver | undefined;
 }
 
@@ -39,6 +49,7 @@ const keyOf = (observation: Observation) => `${observation.source}\u0000${observ
 
 export function createRunObservations(options: RunObservationsOptions): RunObservations {
   const seen = new Map<string, Observation>();
+  const flagged = new Set<string>();
   let writes: Promise<void> = Promise.resolve();
 
   const audit = (method: string, params: Record<string, unknown>) => {
@@ -49,10 +60,33 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
     }
   };
 
-  const save = (observation: Observation) => {
+  const flag = async (note: SentOutNote) => {
+    const agent = await flagAgentName(options.db, options.runId);
+    const saved = await insertRailFlag(options.db, options.runId, agent, {
+      toolCallId: note.toolCallId,
+      rail: 'sent_out',
+      paths: [note.target],
+      inside: false,
+      originals: [],
+      read: note.observed,
+    });
+    if (!saved) return;
+    audit('spark/rail_crossed', {
+      flagId: saved.id,
+      rail: saved.rail,
+      title: saved.title,
+      paths: saved.paths,
+    });
+  };
+
+  const later = (work: () => Promise<void>) => {
     writes = writes
-      .then(() => recordObservation(options.db, options.runId, observation))
+      .then(work)
       .catch((error: unknown) => console.error('Could not record an observation', error));
+  };
+
+  const save = (observation: Observation) => {
+    later(() => recordObservation(options.db, options.runId, observation));
   };
 
   return {
@@ -65,16 +99,13 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       audit('spark/observed', { source: kept.source, label: kept.label });
       save(kept);
     },
-    async labels(except = []) {
-      const stored = await conversationObservations(options.db, options.conversationId).catch(
-        (error: unknown) => {
-          console.error('Could not read observations', error);
-          return [];
-        },
-      );
+    async labels() {
+      const stored = await turnObservations(options.db, options.runId).catch((error: unknown) => {
+        console.error('Could not read observations', error);
+        return [];
+      });
       const counted = [...stored, ...seen.values()].filter(
-        (observation) =>
-          !except.includes(observation.source) && !RETIRED_LABELS.has(observation.label),
+        (observation) => !RETIRED_LABELS.has(observation.label),
       );
       return [...new Set(counted.map((observation) => observation.label))];
     },
@@ -84,8 +115,28 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
         subject: ask.subject,
         reason: ask.reason,
         observed: ask.observed,
+        ...(ask.sendsTo ? { sendsTo: ask.sendsTo } : {}),
       });
     },
-    settled: () => writes,
+    sentOut(note) {
+      audit('spark/egress', {
+        outcome: 'ran',
+        subject: note.subject,
+        sendsTo: note.target,
+        observed: note.observed,
+        ...(note.approvalId ? { approvalId: note.approvalId } : {}),
+      });
+      if (flagged.has(note.target)) return;
+      flagged.add(note.target);
+      later(() => flag(note));
+    },
+    later,
+    async settled() {
+      let awaited: Promise<void> | null = null;
+      while (awaited !== writes) {
+        awaited = writes;
+        await awaited;
+      }
+    },
   };
 }

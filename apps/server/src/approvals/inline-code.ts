@@ -45,6 +45,17 @@ export function withoutHereText(command: string): string {
     .replace(HERESTRING, ' ');
 }
 
+const RUNS_HERE_TEXT =
+  /(?:^|[\s;&|(])(?:sh|bash|zsh|dash|ksh|fish|python[\d.]*|node|ruby|perl|php|ssh|eval|xargs|sudo|env)\b/;
+
+export function withoutDataHeredocs(command: string): string {
+  return command.replace(HEREDOC, (match: string, ...groups: unknown[]) => {
+    const offset = groups.at(-2) as number;
+    const line = command.slice(command.lastIndexOf('\n', offset) + 1, offset);
+    return RUNS_HERE_TEXT.test(line) ? match : ` ${String(groups[2])}\n`;
+  });
+}
+
 export function herestrings(command: string): string[] {
   return [...command.matchAll(HERESTRING)].map(
     (match) => match[1] ?? match[2]?.replace(/\\(.)/g, '$1') ?? match[3]!,

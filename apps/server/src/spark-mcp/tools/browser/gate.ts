@@ -10,7 +10,7 @@ import type { BrowserDecision } from './context.ts';
 export type ReadPath = 'read' | 'ask';
 
 export function externalReadPath(facts: ActionFacts): ReadPath {
-  return actionPath({ ...facts, observed: false }) === 'perform' ? 'read' : 'ask';
+  return actionPath(facts) === 'perform' ? 'read' : 'ask';
 }
 
 export async function allowedEarlier(
@@ -70,7 +70,7 @@ export async function clearExternalRead(
   if (await allowedEarlier(deps.db, scope.conversationId, action.origin)) {
     return { cleared: true, decision: 'allowed_earlier' };
   }
-  const facts = await actionFacts(deps.db, { runId: scope.runId, observed: false }, 'read_page');
+  const facts = await actionFacts(deps.db, scope.runId, 'read_page');
   if (externalReadPath(facts) === 'read') return { cleared: true, decision: 'mode' };
   const card = await postCard(deps.db, actionRun(scope), action, {
     path: 'confirm',

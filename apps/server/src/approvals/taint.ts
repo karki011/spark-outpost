@@ -1,6 +1,21 @@
-import { egressTarget, type Egress } from './egress.ts';
+import type { ApprovalRequest } from './decide.ts';
+import { egressOf, egressTarget } from './egress.ts';
+import type { FileLister } from './file-lister.ts';
+import type { OwnRepo } from './own-repo.ts';
+import type { SecretSend } from './secret-send.ts';
 
 const SHOWN = 3;
+
+export interface SentOut {
+  observed: string[];
+  target: string;
+}
+
+export interface TaintFacts {
+  observed?: readonly string[];
+  own?: OwnRepo | null;
+  secretSend?: SecretSend;
+}
 
 export function observedList(observed: readonly string[]): string {
   const shown = observed.slice(0, SHOWN);
@@ -10,6 +25,18 @@ export function observedList(observed: readonly string[]): string {
   return rest > 0 ? `${shown.join(', ')} and ${rest} more` : joined;
 }
 
-export function taintReason(observed: readonly string[], egress: Egress): string {
-  return `This run read ${observedList(observed)} earlier; sending data ${egressTarget(egress)} needs your OK`;
+export function sentOut(
+  request: ApprovalRequest,
+  files: FileLister,
+  facts: TaintFacts,
+): SentOut | null {
+  const observed = facts.observed ?? [];
+  if (observed.length === 0) return null;
+  const own = facts.secretSend?.kind === 'unreadable' ? null : (facts.own ?? null);
+  const egress = egressOf(request, files, own);
+  return egress ? { observed: [...observed], target: egressTarget(egress) } : null;
+}
+
+export function secretSendReason(files: readonly string[]): string {
+  return `This sends a value from ${observedList(files)} off this computer`;
 }
