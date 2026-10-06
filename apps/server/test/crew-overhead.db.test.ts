@@ -195,7 +195,7 @@ describe('Critic that fails or hangs', { timeout: 180_000 }, () => {
   });
 
   it('stops a Critic that makes no progress and lets the other provider review', async () => {
-    const { orchestration, critics, reply } = await review('#critichangs', 1_500);
+    const { orchestration, critics, reply } = await review('#critichangs', 10_000);
     expect(orchestration.status).toBe('succeeded');
     expect(critics.map((critic) => critic.provider)).toEqual(['codex', 'claude']);
     expect(critics[1]!.status).toBe('succeeded');
