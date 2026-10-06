@@ -11,6 +11,7 @@ import './island-motion.css';
 import './island-bar.css';
 import './island-home.css';
 import './island-code.css';
+import './island-now.css';
 import '../chat/project/project.css';
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +47,8 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
-import { useIslandSize } from './island-size.ts';
+import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
+import { useAutoExpand } from './auto-expand.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -138,7 +140,9 @@ export function IslandApp() {
     [data.chats, data.approvalsByChat],
   );
   const row = useMemo(() => peekRow(data.chats, NO_HIDDEN, now), [data.chats, now]);
+  const size = useIslandSize();
   const view = islandView({
+    full: size === 'full',
     note: note !== null,
     panel,
     cards: allCards,
@@ -162,7 +166,8 @@ export function IslandApp() {
   }, [note]);
 
   const momentRun = moment?.runId ?? null;
-  const cardChat = view.kind === 'card' || view.kind === 'nudge' ? view.card.chat : null;
+  const resting = view.kind === 'peek' || view.kind === 'now';
+  const cardChat = 'card' in view ? (view.card?.chat ?? null) : null;
   const momentTitle = data.chats.find((candidate) => candidate.id === moment?.chatId)?.title;
 
   useEffect(() => {
@@ -223,15 +228,14 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
-  const size = useIslandSize();
   const geometry = useIslandBridge({
     islandRef,
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
     coreRects: () => coreRects(islandRef.current),
     blobRects: () => flatRowRects(rowRef.current),
-    peek: view.kind === 'peek',
+    peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -362,6 +366,17 @@ export function IslandApp() {
     onNote: setDropNote,
   });
 
+  useAutoExpand({
+    enabled: useAutoExpandSetting(),
+    idle: grab.phase === 'idle' && !sparkFocused && (resting || view.kind === 'nudge'),
+    cards,
+    pending: allCards,
+    onExpand: (card) => {
+      setFocusSignal(0);
+      setReview(card.chat.id);
+    },
+  });
+
   useEffect(() => {
     settleHover.current = (inside: boolean) => {
       if (inside) {
@@ -434,7 +449,7 @@ export function IslandApp() {
         onReview={openCard}
         onScout={() => {
           if (panel) closePanel();
-          else if (view.kind === 'nudge') openCard(view.card);
+          else if ((view.kind === 'nudge' || view.kind === 'now') && view.card) openCard(view.card);
           else openPanel('home');
         }}
         onPeekOpen={(id) => {

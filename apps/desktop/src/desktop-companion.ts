@@ -181,6 +181,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.companionSetIslandSize, (event, size: unknown) =>
     fromSpark(event) && isIslandSize(size) ? companion.setIslandSize(size) : companion.status(),
   );
+  ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
+    fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
+  );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
@@ -249,6 +252,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetShortcut,
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
+        IPC.companionSetAutoExpand,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
         IPC.islandPickFolder,

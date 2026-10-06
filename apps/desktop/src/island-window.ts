@@ -13,6 +13,7 @@ import {
   type Point,
   type Size,
 } from './island-geometry.ts';
+import { emulatedNotch, readNotches, type Notches } from './notch-probe.ts';
 import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
@@ -42,20 +43,18 @@ interface IslandWindowOptions {
   onGone: () => void;
 }
 
-function info(display: Display): DisplayInfo {
-  return {
+export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
+  const emulated = app.isPackaged ? null : emulatedNotch(process.env.SPARK_ISLAND_NOTCH);
+  let notches: Notches = new Map();
+  const info = (display: Display): DisplayInfo => ({
     id: display.id,
     bounds: display.bounds,
     workArea: display.workArea,
     internal: display.internal,
-  };
-}
-
-function currentPlacement(saved: IslandPosition) {
-  return placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id);
-}
-
-export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
+    notch: emulated ?? notches.get(display.id),
+  });
+  const currentPlacement = (saved: IslandPosition) =>
+    placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id);
   let placed = currentPlacement(options.position());
   const start = placed?.position ?? { x: 0, y: 0 };
   const window = new BrowserWindow(islandWindowOptions(options.preload, start));
@@ -74,7 +73,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const geometry = (): IslandGeometry =>
     placed
       ? islandGeometry(placed.display, placed.docked)
-      : { notch: false, top: 32, notchWidth: 0, docked: true, menuBar: 0 };
+      : { notch: false, top: 32, notchWidth: 0, notchHeight: 0, docked: true, menuBar: 0 };
 
   const send = (channel: string, payload: unknown) => {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
@@ -109,9 +108,22 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     send(IPC.islandGeometryChanged, geometry());
   };
 
-  screen.on('display-added', place);
-  screen.on('display-removed', place);
-  screen.on('display-metrics-changed', place);
+  const measure = () => {
+    if (emulated) return;
+    void readNotches().then((next) => {
+      if (window.isDestroyed()) return;
+      notches = next;
+      place();
+    });
+  };
+  const onDisplays = () => {
+    place();
+    measure();
+  };
+  screen.on('display-added', onDisplays);
+  screen.on('display-removed', onDisplays);
+  screen.on('display-metrics-changed', onDisplays);
+  measure();
   const showNow = (reason: string) => {
     if (window.isDestroyed()) return;
     if (placed) moveTo(placed.position);
@@ -137,9 +149,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     reveal.cancel();
     visibility.cancel();
     escape.arm(false);
-    screen.off('display-added', place);
-    screen.off('display-removed', place);
-    screen.off('display-metrics-changed', place);
+    screen.off('display-added', onDisplays);
+    screen.off('display-removed', onDisplays);
+    screen.off('display-metrics-changed', onDisplays);
     options.onGone();
   });
   void window.loadURL(`${options.origin}${ISLAND_PATH}`);

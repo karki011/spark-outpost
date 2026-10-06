@@ -24,7 +24,7 @@ export function IslandSizeSetting({
     <SettingRow
       label={LABEL}
       doc={{ page: 'desktop-companion' }}
-      hint="How big Spark Island is while it rests at the top of your screen."
+      hint="Full shows the current chat and what it is doing. Small, Medium and Large show only Scout."
       hintId={hintId}
     >
       <Segmented

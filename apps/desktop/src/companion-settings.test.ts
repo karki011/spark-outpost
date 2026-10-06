@@ -60,19 +60,34 @@ describe('companion settings file', () => {
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
       sound: false,
-      islandSize: 'large',
-      islandSizeChosen: false,
+      islandSize: 'full',
+      islandSizePicked: false,
+      autoExpand: true,
     });
   });
 
-  it('is large unless the user chose a size', () => {
+  it('is the full island unless the user chose a size', () => {
     const size = (saved: object) => parseSettings(JSON.stringify(saved)).islandSize;
-    expect(size({})).toBe('large');
-    expect(size({ islandSize: 'huge' })).toBe('large');
-    expect(size({ islandSize: 'medium' })).toBe('large');
+    expect(size({})).toBe('full');
+    expect(size({ islandSize: 'huge' })).toBe('full');
+    expect(size({ islandSize: 'medium' })).toBe('full');
     expect(size({ islandSize: 'medium', islandSizeChosen: true })).toBe('medium');
     expect(size({ islandSize: 'small' })).toBe('small');
-    expect(parseSettings(JSON.stringify({ islandSize: 'small' })).islandSizeChosen).toBe(true);
+    expect(parseSettings(JSON.stringify({ islandSize: 'small' })).islandSizePicked).toBe(true);
+  });
+
+  it('moves a saved large island to full once, then keeps a size picked afterwards', () => {
+    const size = (saved: object) => parseSettings(JSON.stringify(saved)).islandSize;
+    expect(size({ islandSize: 'large' })).toBe('full');
+    expect(size({ islandSize: 'large', islandSizeChosen: true })).toBe('full');
+    expect(size({ islandSize: 'large', islandSizePicked: true })).toBe('large');
+    expect(size({ islandSize: 'full', islandSizePicked: true })).toBe('full');
+  });
+
+  it('opens requests by itself unless that was turned off', () => {
+    expect(parseSettings('{}').autoExpand).toBe(true);
+    expect(parseSettings(JSON.stringify({ autoExpand: false })).autoExpand).toBe(false);
+    expect(parseSettings(JSON.stringify({ autoExpand: 'no' })).autoExpand).toBe(true);
   });
 
   it('falls back to the defaults when both shortcuts collide', () => {
@@ -92,7 +107,8 @@ describe('companion settings file', () => {
       position: { docked: false as const, x: 40, y: 200 },
       sound: true,
       islandSize: 'small' as const,
-      islandSizeChosen: true,
+      islandSizePicked: true,
+      autoExpand: false,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

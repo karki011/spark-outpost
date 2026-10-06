@@ -24,6 +24,7 @@ export interface IslandInputs {
   cards: readonly Card[];
   review: string | null;
   nudge: boolean;
+  full?: boolean;
 }
 
 export type IslandView =
@@ -31,6 +32,7 @@ export type IslandView =
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
   | { kind: 'nudge'; card: Card; total: number }
+  | { kind: 'now'; card: Card | null }
   | { kind: 'peek' };
 
 export function islandView(inputs: IslandInputs): IslandView {
@@ -41,8 +43,9 @@ export function islandView(inputs: IslandInputs): IslandView {
   if (reviewed >= 0) {
     return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
   }
-  const first = inputs.cards[0];
-  if (first && inputs.nudge) return { kind: 'nudge', card: first, total };
+  const first = (inputs.nudge && inputs.cards[0]) || null;
+  if (inputs.full) return { kind: 'now', card: first };
+  if (first) return { kind: 'nudge', card: first, total };
   return { kind: 'peek' };
 }
 
@@ -51,8 +54,9 @@ export type QuickShortcutTarget =
 
 export function quickShortcutTarget(panel: Panel | null, view: IslandView): QuickShortcutTarget {
   if (panel) return { kind: 'close' };
-  if (view.kind !== 'card' && view.kind !== 'nudge') return { kind: 'quick' };
-  const { card } = view;
+  const card =
+    view.kind === 'card' || view.kind === 'nudge' || view.kind === 'now' ? view.card : null;
+  if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {
     return { kind: 'review', chatId: card.chat.id };
   }
@@ -64,6 +68,7 @@ export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
 export function hoverOpens(view: IslandView): HoverOpen {
   if (view.kind === 'peek') return { kind: 'home' };
   if (view.kind === 'nudge') return { kind: 'card', card: view.card };
+  if (view.kind === 'now') return view.card ? { kind: 'card', card: view.card } : { kind: 'home' };
   return null;
 }
 
@@ -75,6 +80,8 @@ const CARD_WIDTHS = {
 } as const;
 const NOTE_WIDTH = 420;
 const NUDGE_WIDTH = 364;
+const NOW_WIDTH = 400;
+const NOW_WING = 104;
 const HOME_WIDTH = { share: 0.5, min: 720, max: 920 } as const;
 const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
 const CHAT_MIN_WIDTH = 690;
@@ -103,6 +110,8 @@ export function viewWidth(view: IslandView, notchWidth: number, screenWidth: num
       return NOTE_WIDTH;
     case 'nudge':
       return NUDGE_WIDTH;
+    case 'now':
+      return Math.max(NOW_WIDTH, notchWidth + 2 * NOW_WING);
   }
 }
 

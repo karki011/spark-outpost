@@ -8,6 +8,7 @@ import { AskSpark } from './AskSpark.tsx';
 import { CardView, type Decided } from './CardView.tsx';
 import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
+import { NowBar } from './NowBar.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
 import { Sessions } from './Sessions.tsx';
@@ -161,6 +162,16 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
             onDecided={props.onDecided}
             onOpenChat={props.onOpenChat}
             onLater={props.onLater}
+          />
+        </div>
+      );
+    case 'now':
+      return (
+        <div className="isl-body">
+          <NowBar
+            chat={props.home.sessions[0] ?? null}
+            card={view.card}
+            onReview={props.onReview}
           />
         </div>
       );

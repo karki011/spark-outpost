@@ -51,6 +51,12 @@
   border-radius: max(var(--island-r), 16px);
 }
 
+.isl.under {
+  top: var(--drop);
+  border-top: 1px solid var(--island-line);
+  border-radius: max(var(--island-r), 16px);
+}
+
 .isl.peek {
   border-color: transparent;
 }
@@ -96,6 +102,7 @@
 }
 
 .isl.floating .isl-ear,
+.isl.under .isl-ear,
 .isl.peek .isl-ear {
   opacity: 0;
 }
@@ -119,6 +126,7 @@
 .isl-wing {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   height: 100%;
   display: flex;
   align-items: center;
@@ -126,6 +134,7 @@
 
 .isl-wing.l {
   padding-left: var(--wl, 40px);
+  padding-right: 6px;
   transition: padding-left 0.3s var(--out);
 }
 
@@ -330,7 +339,7 @@
   outline-offset: 0;
 }
 
-.isl:not(.peek) .isl-scout-btn {
+.isl:not(.peek, [data-view='now']) .isl-scout-btn {
   pointer-events: none;
 }
 

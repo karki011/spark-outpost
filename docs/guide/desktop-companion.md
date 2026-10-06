@@ -12,7 +12,7 @@ You'll set up Spark Island and answer agents from it. About 2 minutes.
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off (on by default).
-3. Pick **Spark Island size**: **Small**, **Medium** or **Large** (default).
+3. Pick **Spark Island size**: **Full** (default) shows the current chat; others show only Scout.
 4. **Island chimes** play when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
@@ -34,10 +34,10 @@ Select an edit to see the change; **Open chat** jumps to that turn. A finished c
 
 ## Answer a card
 
-The island never opens by itself. A chat that needs you drops a pill, such as **Deploy the site needs you · Review**.
+A chat that needs you opens its card once, never taking the keyboard, unless **Open requests by themselves** is off.
 
-1. Select the pill, or press **⌥Space**.
-2. With the card focused, press **Y** to allow once or **N** to deny.
+1. Press **⌥Space** to focus it.
+2. Press **Y** to allow once or **N** to deny.
 
 Edit cards show the first changed lines, never secret files.
 
@@ -54,6 +54,6 @@ Question cards count down to a default; point to pause.
 
 ## Inside the app
 
-The island hides while Spark is focused; Scout floats in a corner of the app instead. Select it for **Needs you**, **Failed**, **Running** and **Just finished**; **Status companion** hides it.
+The island hides while Spark is focused; Scout floats in a corner instead. Select it for **Needs you**, **Failed**, **Running** and **Just finished**; **Status companion** hides it.
 
 **Next:** [Start and check chats from anywhere](companion-quick-chat.md)

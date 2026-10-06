@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clampToDisplay,
+  displayNotch,
   dockedPosition,
   draggedPosition,
   islandBounds,
@@ -7,6 +9,7 @@ import {
   islandGeometry,
   isSize,
   nearDock,
+  notchRect,
   placement,
   ISLAND_HEIGHT,
   ISLAND_WIDTH,
@@ -39,6 +42,7 @@ describe('island placement', () => {
       notch: true,
       top: 38,
       notchWidth: 190,
+      notchHeight: 38,
       docked: true,
       menuBar: 38,
     });
@@ -46,6 +50,7 @@ describe('island placement', () => {
       notch: false,
       top: 25,
       notchWidth: 0,
+      notchHeight: 0,
       docked: false,
       menuBar: 25,
     });
@@ -63,6 +68,7 @@ describe('island placement', () => {
         notch: false,
         top: Math.max(24, menuBar),
         notchWidth: 0,
+        notchHeight: 0,
         docked: true,
         menuBar,
       });
@@ -147,5 +153,54 @@ describe('island placement', () => {
       1512 - ISLAND_WIDTH + 160,
     );
     expect(nearDock({ x: origin.x + 24, y: 40 }, builtIn)).toBe(true);
+  });
+
+  it('uses the measured notch over the menu bar guess', () => {
+    const measured = { ...builtIn, notch: { width: 185, height: 32 } };
+    expect(islandGeometry(measured, true)).toMatchObject({
+      notch: true,
+      top: 38,
+      notchWidth: 186,
+      notchHeight: 32,
+    });
+    expect(notchRect(measured)).toEqual({ x: 663.5, y: 0, width: 185, height: 32 });
+    const none = { ...builtIn, notch: null };
+    expect(islandGeometry(none, true)).toMatchObject({ notch: false, notchWidth: 0 });
+    expect(notchRect(none)).toBeNull();
+    expect(notchRect(external)).toBeNull();
+  });
+
+  it('finds a notch the menu bar guess would miss, and keeps the island below it', () => {
+    const largerText = {
+      ...builtIn,
+      bounds: { x: 0, y: 0, width: 1024, height: 665 },
+      workArea: { x: 0, y: 25, width: 1024, height: 640 },
+    };
+    expect(displayNotch(largerText)).toBeNull();
+    const measured = { ...largerText, notch: { width: 126, height: 25 } };
+    expect(islandGeometry(measured, true)).toMatchObject({ notch: true, top: 25, notchWidth: 126 });
+    const tall = { ...builtIn, notch: { width: 222, height: 46.5 } };
+    expect(islandGeometry(tall, true)).toMatchObject({ top: 47, notchHeight: 47, notchWidth: 222 });
+  });
+
+  it('scales the guessed notch with the menu bar when the display is scaled', () => {
+    const moreSpace = {
+      ...builtIn,
+      bounds: { x: 0, y: 0, width: 1800, height: 1169 },
+      workArea: { x: 0, y: 44, width: 1800, height: 1125 },
+    };
+    expect(displayNotch(moreSpace)).toEqual({ width: 220, height: 44 });
+    expect(displayNotch(external)).toBeNull();
+    expect(displayNotch({ ...external, notch: { width: 180, height: 30 } })).toEqual({
+      width: 180,
+      height: 30,
+    });
+  });
+
+  it('keeps a floating island below the notch and leaves other displays alone', () => {
+    expect(clampToDisplay({ x: 100, y: 0 }, builtIn)).toEqual({ x: 100, y: 38 });
+    expect(clampToDisplay({ x: 100, y: 200 }, builtIn)).toEqual({ x: 100, y: 200 });
+    expect(clampToDisplay({ x: 1600, y: -200 }, external)).toEqual({ x: 1600, y: -200 });
+    expect(clampToDisplay({ x: 100, y: 0 }, { ...builtIn, notch: null })).toEqual({ x: 100, y: 0 });
   });
 });

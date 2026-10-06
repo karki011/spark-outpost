@@ -5,9 +5,9 @@ export type ShortcutAction = 'quick' | 'sessions';
 
 export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = ['quick', 'sessions'];
 
-export type IslandSize = 'small' | 'medium' | 'large';
+export type IslandSize = 'full' | 'small' | 'medium' | 'large';
 
-export const ISLAND_SIZES: readonly IslandSize[] = ['small', 'medium', 'large'];
+export const ISLAND_SIZES: readonly IslandSize[] = ['full', 'small', 'medium', 'large'];
 
 export type IslandPosition = { docked: true } | { docked: false; x: number; y: number };
 
@@ -17,7 +17,8 @@ export interface CompanionSettings {
   position: IslandPosition;
   sound: boolean;
   islandSize: IslandSize;
-  islandSizeChosen: boolean;
+  islandSizePicked: boolean;
+  autoExpand: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
@@ -30,11 +31,10 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
   position: { docked: true },
   sound: false,
-  islandSize: 'large',
-  islandSizeChosen: false,
+  islandSize: 'full',
+  islandSizePicked: false,
+  autoExpand: true,
 };
-
-const FORMER_DEFAULT_SIZE: IslandSize = 'medium';
 
 const MODIFIERS = new Set([
   'Command',
@@ -121,8 +121,8 @@ function savedFlag(value: unknown, fallback: boolean): boolean {
 function savedSize(record: Record<string, unknown>): IslandSize | null {
   const size = record.islandSize;
   if (!isIslandSize(size)) return null;
-  const chosen = record.islandSizeChosen === true || size !== FORMER_DEFAULT_SIZE;
-  return chosen ? size : null;
+  if (record.islandSizePicked === true || size === 'small') return size;
+  return size === 'medium' && record.islandSizeChosen === true ? size : null;
 }
 
 export function parseSettings(raw: string | null): CompanionSettings {
@@ -141,7 +141,8 @@ export function parseSettings(raw: string | null): CompanionSettings {
     position: parsePosition(record.position),
     sound: savedFlag(record.sound, DEFAULT_SETTINGS.sound),
     islandSize: size ?? DEFAULT_SETTINGS.islandSize,
-    islandSizeChosen: size !== null,
+    islandSizePicked: size !== null,
+    autoExpand: savedFlag(record.autoExpand, DEFAULT_SETTINGS.autoExpand),
   };
 }
 

@@ -13,6 +13,7 @@ import {
   peekRow,
   pendingCards,
   quickShortcutTarget,
+  viewWidth,
   runStatuses,
   sessionState,
   type Card,
@@ -58,6 +59,8 @@ const quiet: IslandInputs = {
   nudge: false,
 };
 
+const resting = { waiting: 0, hour: 14, idleMinutes: 0, running: 0, moment: null, failed: false };
+
 describe('island state machine', () => {
   it('rests whatever is running or waiting, and hovering opens the full panel', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
@@ -71,6 +74,30 @@ describe('island state machine', () => {
     expect(hoverOpens(islandView({ ...quiet, panel: 'quick' }))).toBeNull();
     expect(hoverOpens(islandView({ ...quiet, note: true }))).toBeNull();
     expect(hoverOpens(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBeNull();
+  });
+
+  it('rests as the full bar at Full size, carrying the request instead of a pill', () => {
+    const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
+    const full = { ...quiet, full: true };
+    expect(islandView(full)).toEqual({ kind: 'now', card: null });
+    expect(islandView({ ...full, cards: [card] })).toEqual({ kind: 'now', card: null });
+    const asking = islandView({ ...full, cards: [card], nudge: true });
+    expect(asking).toEqual({ kind: 'now', card });
+    expect(hoverOpens(asking)).toEqual({ kind: 'card', card });
+    expect(hoverOpens(islandView(full))).toEqual({ kind: 'home' });
+    expect(quickShortcutTarget(null, asking)).toEqual({ kind: 'review', chatId: 'a' });
+    expect(quickShortcutTarget(null, islandView(full))).toEqual({ kind: 'quick' });
+    expect(islandView({ ...full, cards: [card], review: 'a' }).kind).toBe('card');
+    expect(islandView({ ...full, panel: 'home' }).kind).toBe('panel');
+    expect(scoutMoodFor(asking, { ...resting, running: 2 })).toBe('alert');
+    expect(scoutMoodFor(islandView(full), { ...resting, running: 2 })).toBe('working');
+  });
+
+  it('keeps the full bar clear of the notch and the resting strip as wide as the notch', () => {
+    expect(viewWidth({ kind: 'now', card: null }, 0, 1512)).toBe(400);
+    expect(viewWidth({ kind: 'now', card: null }, 238, 1512)).toBe(446);
+    expect(viewWidth({ kind: 'peek' }, 186, 1512)).toBe(186);
+    expect(viewWidth({ kind: 'peek' }, 0, 1512)).toBe(72);
   });
 
   it('nudges for a waiting card only when allowed, and opens it on review', () => {
