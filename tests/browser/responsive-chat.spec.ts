@@ -148,8 +148,9 @@ test('the Work panel docks only when the chat keeps room', async ({ browser, pag
   await workPanel(page).getByRole('button', { name: 'Hide work panel' }).click();
   await page.getByRole('button', { name: 'Hide sidebar' }).click();
   expect(await docked(page)).toBe(true);
-  const collapsed = await page.locator('main.main').boundingBox();
-  expect(collapsed!.width).toBeGreaterThan(460);
+  await expect
+    .poll(async () => (await page.locator('main.main').boundingBox())?.width ?? 0)
+    .toBeGreaterThan(460);
 
   const tablet = await openTouch(browser, TABLET, 'chats');
   await expect(changesChip(tablet)).toBeVisible({ timeout: 20_000 });

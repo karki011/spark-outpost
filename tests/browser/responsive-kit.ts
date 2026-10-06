@@ -86,7 +86,8 @@ export async function expectNoSidewaysScroll(page: Page): Promise<void> {
 export function widerThanItsBox(scroller: Locator): Promise<string[]> {
   return scroller.evaluate((node) => {
     const edge = node.getBoundingClientRect().right;
-    if (node.scrollWidth <= node.clientWidth) return [];
+    const pans = !['hidden', 'clip'].includes(getComputedStyle(node).overflowX);
+    if (!pans || node.scrollWidth <= node.clientWidth) return [];
     return [...node.querySelectorAll<HTMLElement>('*')]
       .filter((child) => child.getBoundingClientRect().right > edge + 1)
       .map((child) => `${child.tagName}.${child.className}`)
