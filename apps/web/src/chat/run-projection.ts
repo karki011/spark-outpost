@@ -10,6 +10,7 @@ import {
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { applyApprovalEvent } from './approvals/approval-events.ts';
+import { applyCommandEvent, type LiveCommand } from './commands/command-model.ts';
 
 export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
@@ -55,6 +56,7 @@ export interface RunProjection {
   approvals: readonly Approval[];
   orchestration: Orchestration | null;
   modelSwitch: ModelSwitch | null;
+  commands: readonly LiveCommand[];
 }
 
 export const initialRunProjection: RunProjection = {
@@ -66,6 +68,7 @@ export const initialRunProjection: RunProjection = {
   approvals: [],
   orchestration: null,
   modelSwitch: null,
+  commands: [],
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
@@ -99,7 +102,11 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       return parsed.success ? { ...next, orchestration: parsed.data } : next;
     }
     case EventType.CUSTOM:
-      return { ...next, approvals: applyApprovalEvent(state.approvals, event) };
+      return {
+        ...next,
+        approvals: applyApprovalEvent(state.approvals, event),
+        commands: applyCommandEvent(state.commands, event),
+      };
     default:
       return next;
   }

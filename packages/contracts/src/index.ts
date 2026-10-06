@@ -22,6 +22,7 @@ export * from './chat-workspace.ts';
 export * from './checks.ts';
 export * from './checkpoints.ts';
 export * from './compaction.ts';
+export * from './command-runs.ts';
 export * from './conversations.ts';
 export * from './file-view.ts';
 export * from './orchestration.ts';

@@ -49,6 +49,7 @@ export interface AgentDefinition {
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
   longContext?: boolean;
+  streamsCommandOutput?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
   conversationMode: string;
@@ -325,6 +326,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     conversationEnv: codexEnv,
     doMode: CODEX_DO_MODE,
     doPrimaryRootOnly: true,
+    streamsCommandOutput: true,
     inputExcludesCache: true,
     reportsModelAccess: true,
     unlistedModels: codexUnlistedModels,

@@ -1,7 +1,7 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-outpost/contracts';
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
@@ -30,7 +30,7 @@ export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
   return addon;
 }
 
-function createTerminal(): Terminal {
+export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   return new Terminal({
     fontFamily: '"Geist Mono", ui-monospace, Menlo, monospace',
     fontSize: 12.5,
@@ -41,7 +41,19 @@ function createTerminal(): Terminal {
     screenReaderMode: true,
     theme: themeFromTokens(),
     linkHandler: { activate: (event, uri) => openTerminalLink(event, uri) },
+    ...overrides,
   });
+}
+
+export function followTheme(terminal: Terminal): () => void {
+  const observer = new MutationObserver(() => {
+    terminal.options.theme = themeFromTokens();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-skin'],
+  });
+  return () => observer.disconnect();
 }
 
 export function openXterm<T extends TerminalTicket>(
@@ -91,13 +103,7 @@ export function openXterm<T extends TerminalTicket>(
 
   const resizeObserver = new ResizeObserver(sendResize);
   resizeObserver.observe(element);
-  const themeObserver = new MutationObserver(() => {
-    terminal.options.theme = themeFromTokens();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-skin'],
-  });
+  const unfollowTheme = followTheme(terminal);
   const inputSubscription = terminal.onData(sendInput);
   terminal.attachCustomKeyEventHandler((event) => {
     const sequence = lineEditingSequence(event);
@@ -177,7 +183,7 @@ export function openXterm<T extends TerminalTicket>(
       disposed = true;
       abort.abort();
       resizeObserver.disconnect();
-      themeObserver.disconnect();
+      unfollowTheme();
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session) void deleteTerminalSession(session.id);

@@ -76,7 +76,7 @@
   },
   "client-method:terminal/create": {
     "status": "missing",
-    "note": "terminal is advertised false. Agents run commands with their own tools, behind request_permission."
+    "note": "terminal is advertised false. Agents run commands with their own tools, behind request_permission. The chat shows their output from tool_call updates instead."
   },
   "client-method:terminal/output": {
     "status": "missing",
@@ -215,8 +215,8 @@
   },
   "tool-call-content:content": {
     "status": "partial",
-    "note": "Text is scanned for pull request links and used as the plan text of Claude's ExitPlanMode request; otherwise not shown.",
-    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/plans/plan-mode.ts"
+    "note": "Text is scanned for pull request links and used as the plan text of Claude's ExitPlanMode request. The text of a finished execute tool is shown as that command's output. Otherwise not shown.",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/plans/plan-mode.ts, apps/server/src/agents/acp/command-output.ts"
   },
   "tool-call-content:diff": {
     "status": "partial",
@@ -224,8 +224,9 @@
     "where": "apps/server/src/agents/acp/permission-request.ts"
   },
   "tool-call-content:terminal": {
-    "status": "missing",
-    "note": "Dropped. No terminal support. Codex sends terminal content without checking the capability, with its output in _meta.terminal_output_delta; Claude only when _meta.terminal_output is advertised."
+    "status": "partial",
+    "note": "The terminal content block itself is ignored (no terminal capability, so nothing to embed). The output codex-acp sends beside it in _meta.terminal_output_delta, with _meta.terminal_info.cwd and _meta.terminal_exit, is shown live in the chat's command terminal. Claude sends it only when _meta.terminal_output is advertised, which we don't.",
+    "where": "apps/server/src/agents/acp/command-output.ts"
   },
   "agent-capability:loadSession": {
     "status": "supported",

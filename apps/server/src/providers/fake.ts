@@ -13,6 +13,7 @@ import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
+import { commandPlan, fakeCommandTurn } from './fake-commands.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 import {
   fakeCompactOutputs,
@@ -303,6 +304,11 @@ async function* fakeTurn(
   if (wantsApproval(turn.prompt)) {
     await delay(timing.stepMs, undefined, { signal: turn.signal });
     yield* fakeApprovalTurn(turn);
+    return;
+  }
+  const commands = commandPlan(turn.prompt);
+  if (commands) {
+    yield* fakeCommandTurn(turn, commands);
     return;
   }
   const editStream = editStreamPlan(turn.prompt);

@@ -90,6 +90,7 @@ GET /api/conversations/:id
 GET /api/conversations/:id/annotations
 GET /api/runs/:id
 GET /api/runs/:id/events
+GET /api/runs/:id/commands/:commandId/output
 GET /api/runs/:id/orchestration
 GET /api/runs/active
 POST /api/conversations

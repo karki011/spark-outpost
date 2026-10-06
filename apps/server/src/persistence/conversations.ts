@@ -24,6 +24,7 @@ import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
 import { listBrowserShots } from './browser-screenshots.ts';
+import { listCommands } from './run-commands.ts';
 import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
@@ -219,6 +220,7 @@ export async function getConversationDetail(
     memberMessages,
     railFlags,
     browserShots,
+    commands,
     interruption,
   ] = await Promise.all([
     db.query<MessageRow>(
@@ -245,6 +247,7 @@ export async function getConversationDetail(
     listMemberMessages(db, id),
     listRailFlags(db, id),
     listBrowserShots(db, id),
+    listCommands(db, id),
     findInterruption(db, id),
   ]);
   const attachments = await attachmentsForMessages(
@@ -271,6 +274,7 @@ export async function getConversationDetail(
     memberMessages,
     railFlags,
     ...(browserShots.length > 0 ? { browserShots } : {}),
+    ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
   };
 }
