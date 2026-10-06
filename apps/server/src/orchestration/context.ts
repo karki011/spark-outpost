@@ -162,7 +162,11 @@ export interface PublishTurn {
   titlePrefix: string | null;
   notes: readonly string[];
   followUp?: boolean;
+  unrelatedFailures?: boolean;
 }
+
+export const UNRELATED_FAILURES_RULE =
+  'Some checks fail for reasons other than this change. Do not put that in the pull request title, and do not make the pull request a draft or change an open one because of it.';
 
 function followUpPublishPrompt(branch: string): string {
   return [
@@ -181,6 +185,7 @@ export function publishTurnPrompt(turn: PublishTurn): string {
   ];
   if (turn.draft) lines.push('Open it as a draft (`gh pr create --draft`, or `draft: true`).');
   if (turn.titlePrefix) lines.push(`Start the pull request title with "${turn.titlePrefix}".`);
+  if (turn.unrelatedFailures && !turn.titlePrefix) lines.push(UNRELATED_FAILURES_RULE);
   if (turn.notes.length > 0) {
     lines.push(
       'Include these notes in the pull request description, word for word:',

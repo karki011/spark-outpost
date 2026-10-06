@@ -147,9 +147,13 @@ describe('checks judge the change in a large workspace', { timeout: 120_000 }, (
     });
     expect(members[1]!.follow_up).toContain('## Failing checks');
     expect(members[1]!.follow_up).toContain(
-      'These already failed before your change; leave them alone: test libs/dashboards/api/src/dashboards-api.test.ts.',
+      'leave them alone: test libs/dashboards/api/src/dashboards-api.test.ts.',
+    );
+    expect(members[1]!.follow_up).toContain(
+      'Spark ties these to your change: test libs/a/src/a.test.ts.',
     );
     expect(bodies[1]!.results.find((result) => result.kind === 'test')!.cause).toBe('change');
+    expect(bodies.map((body) => body.leftForUser ?? false)).toEqual([false, true]);
   });
 
   it('falls back to the project’s own script when the narrowed form is not usable', async () => {

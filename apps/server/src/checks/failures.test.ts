@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   FailureScanner,
-  compareWithBase,
   environmentAdvice,
   environmentProblem,
   failureIds,
@@ -57,29 +56,11 @@ describe('reading failures out of tool output', () => {
 });
 
 describe('comparing with the base', () => {
-  const named = (failures: string[]) => ({ failures, shape: 'any' });
-
-  it('blames the change only for failures the base does not have', () => {
-    const base = { passed: false, failures: ['test a.test.ts'], shape: 'base' };
-    expect(compareWithBase(named(['test a.test.ts']), base).fromChange).toBe(false);
-    expect(compareWithBase(named(['test a.test.ts', 'test b.test.ts']), base)).toEqual({
-      shared: ['test a.test.ts'],
-      added: ['test b.test.ts'],
-      fromChange: true,
-    });
-    expect(compareWithBase(named([]), { passed: true, failures: [], shape: '' }).fromChange).toBe(
-      true,
-    );
-  });
-
-  it('compares the output itself when it names no failures, ignoring paths and numbers', () => {
-    const roots = ['/repo/copy'];
+  it('gives the same output one shape whatever the paths and numbers', () => {
     const before = outputShape('boom at /repo/base/src/a.ts after 1.2 s\n', ['/repo/base']);
-    const same = outputShape('boom at /repo/copy/src/a.ts  after 31 s\n', roots);
-    const other = outputShape('api.ts is broken\n', roots);
-    const base = { passed: false, failures: [], shape: before };
-    expect(compareWithBase({ failures: [], shape: same }, base).fromChange).toBe(false);
-    expect(compareWithBase({ failures: [], shape: other }, base).fromChange).toBe(true);
+    const same = outputShape('boom at /repo/copy/src/a.ts  after 31 s\n', ['/repo/copy']);
+    expect(same).toBe(before);
+    expect(outputShape('api.ts is broken\n', ['/repo/copy'])).not.toBe(before);
   });
 
   it('gives the same signature to the same failures in any order', () => {
@@ -109,6 +90,45 @@ describe('telling setup problems from failures', () => {
     expect(environmentProblem(finished('spawn nope ENOENT', null, ['nope']))).toBe(
       'command_missing',
     );
+  });
+
+  it('recognises a refused registry request, a lockfile that does not match and the wrong Node version', () => {
+    expect(environmentProblem(finished('npm error code E403\nnpm error 403 Forbidden - GET'))).toBe(
+      'registry_login',
+    );
+    expect(
+      environmentProblem(
+        finished('ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile"'),
+      ),
+    ).toBe('lockfile');
+    expect(
+      environmentProblem(finished('ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment')),
+    ).toBe('node_version');
+    expect(environmentProblem(finished('Vite requires Node.js version 20.19+ or 22.12+.'))).toBe(
+      'node_version',
+    );
+    expect(environmentProblem(finished('npm warn EBADENGINE Unsupported engine'))).toBeNull();
+    expect(environmentAdvice('node_version', finished(''))).toContain('Node.js version');
+  });
+
+  it('finds a setup problem anywhere in long output, not only in the kept tail', () => {
+    const scanner = new FailureScanner();
+    scanner.push(
+      '> tool@1.0.0 prepare\nnpm error code E401\nnpm error Incorrect or missing password.\n',
+    );
+    scanner.push(`${'src/a.ts(1,1): error TS2307: Cannot find module tool\n'.repeat(400)}`);
+    expect(scanner.environment()).toBe('registry_login');
+    expect(environmentProblem({ ...finished('error TS2307'), setup: scanner.environment() })).toBe(
+      'registry_login',
+    );
+  });
+
+  it('does not join a network word and a package word that are far apart', () => {
+    const scanner = new FailureScanner();
+    scanner.push('GET /registry 200\n');
+    scanner.push('ok\n'.repeat(5));
+    scanner.push('Error: connect ECONNREFUSED 127.0.0.1:5432\n');
+    expect(scanner.environment()).toBeNull();
   });
 
   it('leaves ordinary failures alone, even ones that mention a missing file or module', () => {
