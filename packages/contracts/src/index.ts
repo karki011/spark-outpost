@@ -77,3 +77,4 @@ export * from './sign-ins.ts';
 export * from './preview.ts';
 export * from './ui-touch.ts';
 export * from './remote.ts';
+export * from './scout-shape.ts';

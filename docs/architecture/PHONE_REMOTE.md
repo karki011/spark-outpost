@@ -1,6 +1,6 @@
 # Phone remote: plan
 
-Status: plan. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
+Status: T1 and T2 built. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
 
 ## Goal
 
@@ -26,7 +26,7 @@ The phone reaches the Mac over the user's own tailnet. No relay, no hosted page,
 Phone (browser, on the tailnet)  ⇄  Tailscale Serve on the Mac  ⇄  Spark server on 127.0.0.1
 ```
 
-- **Reach.** Settings → Phone access detects Tailscale and, when the user turns it on, runs Tailscale Serve so `https://<mac>.<tailnet>.ts.net` proxies to Spark's local port. Serve only, never Funnel: the address works only for devices on the user's tailnet. The server still listens on `127.0.0.1` alone.
+- **Reach.** The Phone page (left bar, above Settings) detects Tailscale and, when the user turns it on, runs Tailscale Serve so `https://<mac>.<tailnet>.ts.net` proxies to Spark's local port. Serve only, never Funnel: the address works only for devices on the user's tailnet. The server still listens on `127.0.0.1` alone.
 - **Guards.** The Host and Origin checks accept exactly the Serve hostname Spark configured, in addition to loopback. Requests arriving that way are remote requests: the launch token is neither needed nor accepted from them, and they pass through the remote gateway below.
 - **Sign-in.** Pairing as described under Design, with one difference: the device credential is a random token in a cookie (`HttpOnly`, `Secure`, `SameSite=Strict`), stored hashed on the Mac. Tailnet membership alone grants nothing; an unpaired device sees only the pairing page.
 - **UI.** The Mac serves its own web build, so the phone always runs the version the Mac runs. No loader and no transport seam; `fetch` and `EventSource` work as they are.
@@ -42,7 +42,7 @@ Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS c
 | #   | What                                                                                                     | Done when                                                                                                     |
 | --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
-| T2  | Tailscale: detect, turn Serve on and off, accept the Serve hostname, Settings → Phone access with the QR | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
+| T2  | Done. Tailscale: detect, turn Serve on and off, accept the Serve hostname, the Phone page with the QR    | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
 | T3  | Phone web app: manifest, service worker, layout pass, Mac-only parts hidden, asleep and offline states   | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
 | T4  | Notifications, keep-awake, guide pages, first real-phone test by the owner                               | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
 
@@ -99,11 +99,26 @@ Decisions the plan left open:
 
 - **Raise agent mode or autonomy** is enforced as "change": with the switch off, a phone request to chat settings or provider defaults that carries `agentMode`, `permission` or `level` is refused. Agent modes are provider-defined and have no order to compare.
 - **Answer high-risk cards** covers cards with git hooks or git config, force push, agent instruction files or a secret file in their paths, and rail flags. A card that approves a saved sign-in needs the sign-ins switch.
-- **Pair another device and manage devices** is stored but opens no route in this version: device, pairing-start, hostname and switch-write endpoints are never reachable from a phone.
-- Never from a phone, by choice rather than by the plan's list: trusting a folder's hooks and MCP servers, `POST /api/tasks/:id/ship`, reading an instructions file by absolute path, the diagnostics export, the git installer, and opening a folder in Finder. Preview reads are refused along with preview control.
+- **Pair another device and manage devices** is stored but opens no route: changing switches, starting or confirming pairing, device management, the hostname, Tailscale Serve and the phone audit are Mac-only, so a lost phone cannot widen its own access. It stays off and the Phone page does not show it.
 - Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**.
 
-Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH /api/remote/switches` (local only), stored as columns of `remote_access_settings` with the proposed defaults.
+Decided by the owner on 2026-10-06: a phone does everything the Mac app does except the Browser pane, preview and terminal.
+
+- Always allowed, added: `POST /api/tasks/:id/ship`.
+- Behind **Change settings**, added: trusting a folder's hooks and MCP servers (`PUT /api/projects/:id/agent-config/trust` and `/trust/redirects`) and reading that folder's agent setup.
+- Behind **Add or change providers and connections**, added: the saved MCP server list and the pending GitHub and Slack sign-in state.
+- Never from a phone: terminal, preview routes, opening a folder in Finder, the diagnostics export, the git installer, updates and native dialogs, and `GET /api/instructions-file`. That last one reads any `.md`, `.markdown`, `.mdc` or `.txt` file on the Mac by absolute path with no project confinement, so it stays on the Mac.
+- Every switch but the Mac-only one defaults on, saved sign-ins and reset included (migration `0137_phone_defaults.sql`).
+
+What a phone is shown differently (`apps/server/src/remote/redaction.ts`):
+
+- `GET /api/setup` shortens a saved key's mask to its last four characters.
+- `GET /api/projects/:id/file` and attaching a project file refuse paths inside `.git`.
+- `GET /api/tasks/:id/changes/diff` sends no text for a secret-named file.
+
+Known and left as it is: a phone with the settings or connections switch on sees what the Mac sees in agent setup and MCP server lists, including a credential someone typed into a command argument or URL. Project files outside the secret-name list (`.mcp.json`, `*.tfvars`) are readable as on the Mac.
+
+Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH /api/remote/switches` (local only), stored as columns of `remote_access_settings`. `GET /api/remote/session` tells the web app whether it runs on a phone, which device it is, the address and the switches.
 
 ### Audit
 
@@ -113,11 +128,62 @@ The run audit log is a per-run hash chain of agent traffic, so phone activity ha
 
 `POST /api/slack/presence` takes an optional `clientId`. Local windows are `local:<id>` and a phone is always `device:<device id>`, whatever it sends. Slack stays quiet while any client is focused, and one client's blur no longer clears another's focus. T4 can read the focused clients to quiet a phone's own notifications.
 
-### What T2 needs
+## Tailscale and the Phone page (T2, built)
 
-- Set the hostname with `PUT /api/remote/access` when Serve is on and `null` when it is off.
-- Settings → Phone access reads `GET /api/remote/access`, `/devices`, `/pairings` and `/audit`, and writes the endpoints above.
-- The server must run with `WEB_ROOT` for a phone to get the app and the themed pairing page; under `pnpm dev` Vite serves the app and a phone would see an unstyled pairing page and no app.
+Code: `apps/server/src/remote/tailscale-cli.ts` and `tailscale.ts`, `apps/web/src/phone/`. Storage: `remote_access_settings.serve_target` (migration `0137_phone_defaults.sql`).
+
+### Tailscale Serve
+
+- The CLI is found on the PATH, through the login shell, or at `/Applications/Tailscale.app/Contents/MacOS/Tailscale`. Every call goes through the injected command runner; tests use a fake.
+- State comes from `tailscale status --json` (`BackendState`, `Self.DNSName`, `CertDomains`) and `tailscale serve status --json` (the handler for `/` on `<name>:443`, and `AllowFunnel`).
+- States: not installed, not signed in, HTTPS certificates off, off, on (with the address), error (with the reason).
+- On runs `tailscale serve --bg --https=443 http://127.0.0.1:<port>`, reads the config back, then saves the hostname and the target. Off clears the hostname first, then runs `tailscale serve --https=443 off`, and only when the `/` handler is the one Spark added. `funnel` is never run.
+- Spark refuses to turn on when another handler already serves `/` at that address, or when Funnel is on for it.
+- A CLI failure turning on changes nothing. A CLI failure turning off still clears the hostname, so the gateway is closed even if the handler stays.
+- Endpoints, local only: `GET /api/remote/tailscale`, `POST /api/remote/tailscale/on`, `POST /api/remote/tailscale/off`.
+
+At server start, with a hostname saved:
+
+| Serve shows                                    | Spark does                                                  |
+| ---------------------------------------------- | ----------------------------------------------------------- |
+| Its handler on this launch's port              | Nothing                                                     |
+| Its handler on the last launch's port          | Points Serve at the new port                                |
+| No handler, another handler, or Funnel on      | Clears the hostname and says why on the Phone page          |
+| Nothing readable (Tailscale stopped, CLI gone) | Leaves the setting; the Phone page shows the state it is in |
+
+While running, a saved hostname whose handler no longer points at Spark shows as an error with one step: turn phone access off, then on.
+
+### The app on a phone
+
+The packaged app starts the server with `WEB_ROOT`, so a paired phone gets the app shell and its assets from the same server, and an unpaired one gets the pairing page and `theme.css`. Under `pnpm dev` the API has no `WEB_ROOT`: Serve would reach the API port, the pairing page would be unstyled and there would be no app after pairing. Use `pnpm desktop:dev` or a production build to try it.
+
+### Phone page
+
+A left-bar entry named Phone, directly above Settings, opening a full page (`apps/web/src/phone/PhonePage.tsx`, its own chunk).
+
+- **Status**: the Tailscale state with one next step, the switch, the address, and "Phone connected".
+- **Pair a phone**: a staged scene carried by Blob Scout. Asleep until phone access is on; ready; the QR (`https://<hostname>/#code=<code>`), the code and a two-minute ring, nudging in the last twenty seconds; the waiting phone with its name and matching code and Confirm and Deny; a short paired moment, after which the new device is highlighted once in the list; denied, expired and failed with one retry. Each stage is announced in a live region and focus moves to its main button. With reduced motion the poses are static.
+- **Devices**: name, added, last seen, connected; rename, revoke, disconnect all.
+- **What the phone can do**: the switches, and the line that the Browser pane, preview and terminal stay on the Mac.
+- **Recent phone activity**: from `GET /api/remote/audit`.
+- Opened on a paired phone, the page is read-only: connected, this device, what it can do, "Change these on your Mac".
+
+The server-rendered pairing page mirrors the stages (enter, waiting, paired, ended) with the same blob as inline SVG under its nonce.
+
+Decisions the plan left open:
+
+- QR codes come from `qrcode-generator` (MIT, no dependencies), drawn as one SVG path with a four-module quiet zone in fixed ink and paper colours (`--qr-ink`, `--qr-paper`).
+- The Phone page polls: pairing requests every 1.5 seconds while on, devices and activity every 5, Tailscale every 10, none while the window is hidden.
+- Browser tests use a fake `tailscale` on the test server's PATH (`tests/browser/bin/tailscale`), with its state in a file.
+
+Not verified: a real Tailscale CLI. The flags follow Tailscale's Serve documentation as read on 2026-10-06; that `serve --https=443 off` removes only the `/` handler is from reading, not from a run.
+
+### What T3 needs
+
+- A local HTTPS proxy standing in for Serve, so a phone-sized browser runs the whole flow with the real cookie.
+- Use `GET /api/remote/session` to hide the Browser pane, preview and terminal entry points on a phone; they are still shown and their requests are refused.
+- Manifest, service worker, the layout pass (the bottom bar now holds eight entries at 390px), asleep and offline states.
+- Show more than one waiting pairing request at a time; the scene shows the oldest.
 
 ## How the relay version fits together
 
@@ -156,7 +222,7 @@ Missing:
 
 ### Pairing
 
-1. On the Mac: Settings → Phone access → Pair a phone. Spark shows a QR code for two minutes.
+1. On the Mac: Phone → Pair a phone. Spark shows a QR code for two minutes.
 2. The QR holds the phone page address, the Mac's public key, a room id and a one-time pairing secret.
 3. The phone opens the page, creates its own key pair, and connects through the relay.
 4. The Mac shows "Pair <device name>?" with a short matching code. The user confirms on the Mac.
@@ -188,24 +254,24 @@ Rules:
 
 Default deny. A route is reachable from a phone only if it is on the remote allowlist, and some groups are behind switches.
 
-Always allowed: read chats, plans, diffs, Work panel, Links, tickets, Docs; answer ordinary cards; send, queue and stop; Continue from here; start a chat in a linked project.
+Always allowed: read chats, plans, diffs, Work panel, Links, tickets, Docs; answer ordinary cards; send, queue and stop; Continue from here; start a chat in a linked project; open a pull request.
 
-Never from a phone: terminal, Browser pane, preview, updates, island settings, native dialogs, Finder actions, and changing the phone switches themselves.
+Never from a phone: terminal, Browser pane, preview, updates, island settings, native dialogs, Finder actions, the diagnostics export, the git installer, reading an instructions file by absolute path, and everything that manages phone access: Tailscale Serve, pairing, devices, the phone audit and the switches themselves.
 
-Switches in Settings → Phone access, changeable only on the Mac:
+Switches on the Phone page, changeable only on the Mac:
 
-| Phone can…                                                   | Proposed default |
-| ------------------------------------------------------------ | ---------------- |
-| Change settings                                              | On               |
-| Add or change providers and connections                      | On               |
-| Link a new folder or clone a repo                            | On               |
-| Raise agent mode or autonomy                                 | On               |
-| Answer high-risk cards (git hooks, git config, secret files) | On               |
-| Add, change and approve saved sign-ins                       | Off              |
-| Reset or delete data                                         | Off              |
-| Pair another device and manage devices                       | Off              |
+| Phone can…                                                   | Default             |
+| ------------------------------------------------------------ | ------------------- |
+| Change settings (and trust a folder's hooks and MCP servers) | On                  |
+| Add or change providers and connections                      | On                  |
+| Link a new folder or clone a repo                            | On                  |
+| Raise agent mode or autonomy                                 | On                  |
+| Answer high-risk cards (git hooks, git config, secret files) | On                  |
+| Add, change and approve saved sign-ins                       | On                  |
+| Reset or delete data                                         | On                  |
+| Pair another device and manage devices                       | Mac only, not shown |
 
-The defaults are proposed, not yet confirmed by the owner.
+The defaults were decided by the owner on 2026-10-06.
 
 Every remote request is audited with the device id. The Mac shows a "phone connected" mark while a device is online.
 
@@ -271,7 +337,7 @@ At small scale the relay fits Cloudflare's free tier or the $5 a month plan; idl
 
 ## Open decisions
 
-1. Are the proposed switch defaults right?
+1. Are the proposed switch defaults right? (Decided 2026-10-06: all on; managing devices stays on the Mac.)
 2. Which address hosts the phone page and relay?
 3. Is there also a default relay on the owner's account, or does every user deploy their own? (Decided 2026-10-05: users can point Spark at their own relay.)
 4. Lowest iOS version to support (16.4 is the floor for notifications).

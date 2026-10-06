@@ -43,6 +43,7 @@
     "d3-force": "^3.0.0",
     "diff": "^9.0.0",
     "motion": "^13.4.3",
+    "qrcode-generator": "^2.0.4",
     "react": "^19.3.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.3.0",

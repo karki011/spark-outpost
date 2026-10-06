@@ -51,7 +51,7 @@ describe('remote policy', () => {
     }
   });
 
-  it('keeps terminal, preview, reset, devices and pairing start away from phones', () => {
+  it('keeps terminal, preview, Tailscale, devices and pairing start away from phones', () => {
     const refused: [string, string][] = [
       ['POST', '/api/terminal/sessions'],
       ['POST', '/api/terminal/shells'],
@@ -63,11 +63,28 @@ describe('remote policy', () => {
       ['PATCH', '/api/remote/switches'],
       ['PUT', '/api/remote/access'],
       ['GET', '/api/diagnostics/export'],
+      ['GET', '/api/remote/tailscale'],
+      ['POST', '/api/remote/tailscale/on'],
+      ['POST', '/api/remote/tailscale/off'],
+      ['GET', '/api/instructions-file'],
+      ['POST', '/api/setup/git/install'],
+      ['POST', `/api/conversations/${ID}/workspace/open`],
     ];
     for (const [method, path] of refused) {
       expect([path, remoteDecision(method, path, ALL_ON).kind]).toEqual([path, 'refuse']);
     }
-    expect(remoteDecision('POST', '/api/reset', REMOTE_SWITCH_DEFAULTS).kind).toBe('refuse');
+    expect(remoteDecision('POST', '/api/reset', ALL_OFF).kind).toBe('refuse');
+  });
+
+  it('allows everything else by default, and opening a pull request always', () => {
+    expect(remoteDecision('POST', '/api/reset', REMOTE_SWITCH_DEFAULTS).kind).toBe('allow');
+    expect(
+      remoteDecision('POST', `/api/projects/${ID}/sign-ins`, REMOTE_SWITCH_DEFAULTS).kind,
+    ).toBe('allow');
+    expect(remoteDecision('POST', `/api/tasks/${ID}/ship`, ALL_OFF).kind).toBe('allow');
+    const trust = `/api/projects/${ID}/agent-config/trust`;
+    expect(remoteDecision('PUT', trust, REMOTE_SWITCH_DEFAULTS).kind).toBe('allow');
+    expect(remoteDecision('PUT', trust, { ...ALL_ON, settings: false }).kind).toBe('refuse');
   });
 
   it('matches the way the router does: any case, trailing slash, HEAD as GET', () => {
