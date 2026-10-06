@@ -97,23 +97,6 @@
   overflow-wrap: anywhere;
 }
 
-.prl-failing {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
-}
-
-.prl .prl-failing ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-}
-
-.prl-failing a {
-  color: var(--text);
-}
-
 .prl-note {
   margin: 0;
   font-size: 12px;
@@ -121,35 +104,10 @@
 }
 
 .prl-title:focus-visible,
-.prl-failing a:focus-visible,
 .pr-opened a:focus-visible {
   outline: 2px solid var(--accent-text);
   outline-offset: 1px;
   border-radius: 4px;
-}
-
-.prchip-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--faint);
-}
-
-.prchip-dot.ok {
-  background: var(--success);
-}
-
-.prchip-dot.prog {
-  background: var(--accent);
-}
-
-.prchip-dot.bad {
-  background: var(--danger);
-}
-
-.prchip {
-  color: var(--text);
-  text-decoration: none;
 }
 
 .pr-opened {

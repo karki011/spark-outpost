@@ -74,6 +74,19 @@ async function shoot(page: Page, name: string, target: Locator) {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
 }
 
+const group = (page: Page) => page.getByRole('group', { name: '4 pull requests', exact: true });
+
+async function showInLinks(page: Page) {
+  await group(page).getByRole('button', { name: '4 pull requests, details' }).focus();
+  await page.keyboard.press('Enter');
+  const rows = group(page).getByRole('group', { name: /^Pull request acme\// });
+  await expect(rows).toHaveCount(4);
+  await expect(rows.first()).toHaveAccessibleName('Pull request acme/vault#12');
+  await group(page).getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
+  await group(page).getByRole('button', { name: 'Show in Links' }).click();
+  await page.keyboard.press('Escape');
+}
+
 const links = (page: Page) => page.getByRole('region', { name: 'Pull requests' });
 const row = (page: Page, number: number) =>
   links(page)
@@ -87,11 +100,10 @@ test('a chat lists every pull request it opened, by repo, with checks and review
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText(SEED_TITLE);
 
-  const chip = page.getByRole('button', { name: /^4 pull requests, checks failing/ });
-  await expect(chip).toBeVisible(POLLED);
-  await expect(chip).toHaveText('4 PRs');
-  await chip.focus();
-  await page.keyboard.press('Enter');
+  await expect(group(page)).toContainText('4 open · 1 failing', POLLED);
+  await expect(page.locator('header.chat-head')).not.toContainText('4 PRs');
+  await shoot(page, 'composer-card', page.locator('.composer-wrap'));
+  await showInLinks(page);
   await expect(page.getByRole('tab', { name: 'Links' })).toHaveAttribute('aria-selected', 'true');
 
   const groups = links(page).getByRole('heading', { level: 3 });
@@ -115,7 +127,7 @@ test('a chat lists every pull request it opened, by repo, with checks and review
   await expect(tidy).toContainText('spark/tidy-the-notes-0a1b2c3d → main');
   await expect(tidy).toContainText('Opened by Claude');
   const failing = tidy.getByRole('list', { name: 'Failing checks on #7' });
-  await expect(failing.getByRole('listitem')).toHaveText(['test']);
+  await expect(failing.getByRole('listitem')).toHaveText(['testFailed']);
   await expect(failing.getByRole('link', { name: 'test' })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/actions/runs/72',
@@ -125,7 +137,9 @@ test('a chat lists every pull request it opened, by repo, with checks and review
   await expect(changelog).toContainText('Draft');
   await expect(changelog).toContainText('Checks running');
   await expect(changelog).toContainText('Opened from the terminal');
-  await expect(changelog.getByRole('list', { name: /Failing checks/ })).toHaveCount(0);
+  await expect(
+    changelog.getByRole('list', { name: 'Failing checks on #8' }).getByRole('listitem'),
+  ).toHaveText(['lintFailed']);
 
   const docs = row(page, 3);
   await expect(docs).toContainText('Checks passing');
@@ -142,7 +156,6 @@ test('a chat lists every pull request it opened, by repo, with checks and review
   await expect(vault).toContainText('Found on this chat’s branch');
 
   await shoot(page, 'links-tab', page.getByRole('complementary', { name: 'Work panel' }));
-  await shoot(page, 'header-chip', page.locator('header.head'));
 
   const turn = page.getByRole('region', { name: 'Turn' });
   const opened = turn.locator('.pr-opened');
@@ -163,9 +176,7 @@ test('checks move from failing to passing without reopening the chat', async ({
 }) => {
   await seedTrackedPulls();
   await openChats(page);
-  await expect(page.getByRole('button', { name: /^4 pull requests, checks failing/ })).toBeVisible(
-    POLLED,
-  );
+  await expect(group(page)).toContainText('4 open · 1 failing', POLLED);
 
   await request.post(`${STUB_URL}/github-test/pulls/7`, {
     data: {
@@ -176,8 +187,8 @@ test('checks move from failing to passing without reopening the chat', async ({
     },
   });
   await pollTrackedPullsNow();
-  const chip = page.getByRole('button', { name: /^4 pull requests, checks running/ });
-  await expect(chip).toBeVisible(POLLED);
-  await chip.click();
+  await expect(group(page)).not.toContainText('failing', POLLED);
+  await expect(group(page)).toContainText('4 open');
+  await showInLinks(page);
   await expect(row(page, 7)).toContainText('Checks passing');
 });

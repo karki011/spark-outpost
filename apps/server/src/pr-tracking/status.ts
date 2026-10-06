@@ -1,11 +1,8 @@
 import type { TrackedPull } from '../persistence/tracked-pulls.ts';
 import { TRACKING_LINE } from '../persistence/tracked-pulls.ts';
-import {
-  readCheckSummary,
-  readPullFacts,
-  readReview,
-  type PullFacts,
-} from '../pr-follow-up/gather.ts';
+import { readCheckSummary, readPullFacts, type PullFacts } from '../pr-follow-up/gather.ts';
+import { reviewVerdict } from '../tickets/pull-status.ts';
+import { discussionDetails, readDiscussion } from './details.ts';
 import { GitHubApiError, type GitHubConnection } from '../ship/github/connection.ts';
 
 export class PullAccessError extends Error {}
@@ -75,14 +72,21 @@ export async function trackOpenPull(
   connection: GitHubConnection,
   seen: TrackedPull,
 ): Promise<TrackedPull> {
-  const [checks, review] = await Promise.all([
+  const [checks, discussion] = await Promise.all([
     readCheckSummary(connection, repoOf(seen), seen.headSha!),
-    readReview(connection, repoOf(seen), seen.number),
+    readDiscussion(connection, repoOf(seen), seen.number),
   ]);
+  const review = reviewVerdict(
+    discussion.reviews.map((entry) => ({ user: entry.user?.login ?? 'ghost', state: entry.state })),
+  );
   return {
     ...seen,
     checks: checks.state,
     failingChecks: checks.failingChecks,
+    details: {
+      checkRuns: checks.checkRuns,
+      ...(await discussionDetails(connection, repoOf(seen), seen.number, discussion)),
+    },
     review,
     phase: 'watching',
     doing: TRACKING_LINE,

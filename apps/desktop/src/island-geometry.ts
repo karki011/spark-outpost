@@ -17,6 +17,7 @@ export interface DisplayInfo {
   bounds: Rect;
   workArea: Rect;
   internal: boolean;
+  notch?: Size | null | undefined;
 }
 
 export interface Size {
@@ -28,6 +29,7 @@ export interface IslandGeometry {
   notch: boolean;
   top: number;
   notchWidth: number;
+  notchHeight: number;
   docked: boolean;
   menuBar: number;
 }
@@ -36,7 +38,7 @@ export const ISLAND_WIDTH = 1040;
 export const ISLAND_HEIGHT = 600;
 
 const NOTCH_MENU_BAR_MIN = 30;
-const NOTCH_WIDTH = 190;
+const NOTCH_ASPECT = 5;
 const DEFAULT_TOP = 32;
 const MIN_TOP = 24;
 const MAX_TOP = 44;
@@ -58,11 +60,38 @@ export function islandDisplay(
   );
 }
 
+export function displayNotch(display: DisplayInfo): Size | null {
+  if (display.notch !== undefined) return display.notch;
+  const menuBar = display.workArea.y - display.bounds.y;
+  if (!display.internal || menuBar <= NOTCH_MENU_BAR_MIN) return null;
+  return { width: Math.round(menuBar * NOTCH_ASPECT), height: menuBar };
+}
+
+export function notchRect(display: DisplayInfo): Rect | null {
+  const notch = displayNotch(display);
+  if (!notch) return null;
+  const { bounds } = display;
+  return {
+    x: bounds.x + (bounds.width - notch.width) / 2,
+    y: bounds.y,
+    width: notch.width,
+    height: notch.height,
+  };
+}
+
 export function islandGeometry(display: DisplayInfo, docked: boolean): IslandGeometry {
   const menuBar = display.workArea.y - display.bounds.y;
-  const notch = display.internal && menuBar > NOTCH_MENU_BAR_MIN;
-  const top = menuBar > 0 ? Math.min(MAX_TOP, Math.max(MIN_TOP, menuBar)) : DEFAULT_TOP;
-  return { notch, top, notchWidth: notch ? NOTCH_WIDTH : 0, docked, menuBar: Math.max(0, menuBar) };
+  const notch = displayNotch(display);
+  const notchHeight = notch ? Math.ceil(notch.height) : 0;
+  const bar = menuBar > 0 ? Math.min(MAX_TOP, Math.max(MIN_TOP, menuBar)) : DEFAULT_TOP;
+  return {
+    notch: notch !== null,
+    top: Math.max(bar, notchHeight),
+    notchWidth: notch ? 2 * Math.ceil(notch.width / 2) : 0,
+    notchHeight,
+    docked,
+    menuBar: Math.max(0, menuBar),
+  };
 }
 
 export function dockedPosition(display: DisplayInfo): Point {
@@ -100,7 +129,11 @@ export function clampToDisplay(position: Point, display: DisplayInfo): Point {
       bounds.x - SIDE_SLACK,
       bounds.x + bounds.width - ISLAND_WIDTH + SIDE_SLACK,
     ),
-    y: clamp(position.y, bounds.y, bounds.y + bounds.height - ISLAND_HEIGHT),
+    y: clamp(
+      position.y,
+      bounds.y + Math.ceil(displayNotch(display)?.height ?? 0),
+      bounds.y + bounds.height - ISLAND_HEIGHT,
+    ),
   };
 }
 

@@ -51,8 +51,7 @@ import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
-import { PrChip } from './pull-request/PrChip.tsx';
-import { PrStatusCard } from './pull-request/PrStatusCard.tsx';
+import { PrCard } from './pull-request/PrCard.tsx';
 import { usePullRequestRefresh } from './pull-request/use-pull-request-refresh.ts';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
@@ -255,7 +254,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   open={diff.request !== null}
                   onToggle={toggleDiff}
                 />
-                <PrChip conversationId={conversationId} onOpen={task ? openLinks : null} />
                 <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
                 <ChatHeadTools
                   conversationId={conversationId}
@@ -267,7 +265,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </div>
             </header>
             <ChatTicketBar chat={tickets} />
-            <PrStatusCard conversationId={conversationId} />
             {detail.isError && !isConnectionLoss(detail.error) && (
               <p className="error-line" role="alert">
                 {detail.error.message}
@@ -359,6 +356,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               }}
               busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
               steer={steer}
+              above={
+                <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
+              }
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}
               autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}

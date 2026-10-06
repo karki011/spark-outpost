@@ -1,12 +1,13 @@
 import { z } from 'zod';
-import type { PrChecks, PrFailingCheck, PrReview } from '@spark-outpost/contracts';
+import type { PrCheckRun, PrChecks, PrFailingCheck, PrReview } from '@spark-outpost/contracts';
 import type { NewFeedback } from '../persistence/pr-watches.ts';
 import { repoPath, type GitHubConnection, type RepoRef } from '../ship/github/connection.ts';
 import { checkRunsState, failedCheckRuns } from '../ship/github/check-runs.ts';
 import { GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
+import { checkRunsView, SPARK_REPLY_MARKER, type Discussion } from '../pr-tracking/details.ts';
 import { reviewVerdict } from '../tickets/pull-status.ts';
 
-export const SPARK_REPLY_MARKER = '<!-- spark-outpost:follow-up -->';
+export { SPARK_REPLY_MARKER };
 export const MAX_BODY_CHARS = 4_000;
 const MAX_PAGES = 5;
 const MAX_FAILING_CHECKS = 5;
@@ -54,6 +55,8 @@ const reviewCommentSchema = z.object({
   path: z.string(),
   line: z.number().int().nullable().optional(),
   original_line: z.number().int().nullable().optional(),
+  in_reply_to_id: z.number().int().nullable().optional(),
+  created_at: z.string().nullable().optional(),
   html_url: z.string().nullable().optional(),
 });
 
@@ -62,6 +65,7 @@ const reviewSchema = z.object({
   user: loginSchema,
   body: z.string().nullable().optional(),
   state: z.string(),
+  submitted_at: z.string().nullable().optional(),
   html_url: z.string().nullable().optional(),
 });
 
@@ -69,6 +73,7 @@ const issueCommentSchema = z.object({
   id: z.number().int(),
   user: loginSchema,
   body: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
   html_url: z.string().nullable().optional(),
 });
 
@@ -164,6 +169,7 @@ type CheckRun = z.infer<typeof checkRunSchema>;
 export interface CheckSummary {
   state: PrChecks;
   failingChecks: PrFailingCheck[];
+  checkRuns: PrCheckRun[];
 }
 
 export const MAX_FAILING_NAMES = 20;
@@ -188,7 +194,7 @@ async function failedRuns(
   );
   const state = checkRunsState(runs);
   const failed = state === 'failing' ? failedCheckRuns(runs) : [];
-  return { state, failingChecks: failingNames(failed), failed };
+  return { state, failingChecks: failingNames(failed), checkRuns: checkRunsView(runs), failed };
 }
 
 export async function readCheckSummary(
@@ -196,8 +202,8 @@ export async function readCheckSummary(
   repo: RepoRef,
   headSha: string,
 ): Promise<CheckSummary> {
-  const { state, failingChecks } = await failedRuns(connection, repo, headSha);
-  return { state, failingChecks };
+  const { state, failingChecks, checkRuns } = await failedRuns(connection, repo, headSha);
+  return { state, failingChecks, checkRuns };
 }
 
 export async function readChecks(
@@ -205,7 +211,7 @@ export async function readChecks(
   repo: RepoRef,
   headSha: string,
 ): Promise<CheckSummary & { failing: Gathered[] }> {
-  const { state, failingChecks, failed } = await failedRuns(connection, repo, headSha);
+  const { state, failingChecks, checkRuns, failed } = await failedRuns(connection, repo, headSha);
   const failing: Gathered[] = [];
   for (const run of failed.slice(0, MAX_FAILING_CHECKS)) {
     failing.push({
@@ -219,27 +225,12 @@ export async function readChecks(
       url: run.html_url ?? null,
     });
   }
-  return { state, failingChecks, failing };
+  return { state, failingChecks, checkRuns, failing };
 }
-
-const verdictSchema = z.object({ user: loginSchema, state: z.string() });
 
 const fromSpark = (body: string) => body.includes(SPARK_REPLY_MARKER);
 
-export async function readReview(
-  connection: GitHubConnection,
-  repo: RepoRef,
-  number: number,
-): Promise<PrReview> {
-  const reviews = await connection.get(
-    `${repoPath(repo)}/pulls/${number}/reviews?per_page=${GITHUB_PAGE_SIZE}`,
-    z.array(verdictSchema),
-    'reading reviews',
-  );
-  return verdictOf(reviews);
-}
-
-function verdictOf(reviews: readonly z.infer<typeof verdictSchema>[]): PrReview {
+function verdictOf(reviews: readonly z.infer<typeof reviewSchema>[]): PrReview {
   return reviewVerdict(
     reviews.map((review) => ({ user: login(review.user), state: review.state })),
   );
@@ -249,7 +240,7 @@ export async function readComments(
   connection: GitHubConnection,
   repo: RepoRef,
   number: number,
-): Promise<{ gathered: Gathered[]; review: PrReview }> {
+): Promise<{ gathered: Gathered[]; review: PrReview; discussion: Discussion }> {
   const pull = `${repoPath(repo)}/pulls/${number}`;
   const [inline, reviews, issue] = await Promise.all([
     pages(connection, `${pull}/comments`, reviewCommentSchema, 'reading review comments'),
@@ -304,5 +295,5 @@ export async function readComments(
       url: comment.html_url ?? null,
     });
   }
-  return { gathered, review: verdictOf(reviews) };
+  return { gathered, review: verdictOf(reviews), discussion: { reviews, inline, issue } };
 }

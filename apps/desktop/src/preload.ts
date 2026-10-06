@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       ipcRenderer.invoke(IPC.companionSetShortcut, action, accelerator),
     setSound: (on: boolean) => ipcRenderer.invoke(IPC.companionSetSound, on),
     setIslandSize: (size: string) => ipcRenderer.invoke(IPC.companionSetIslandSize, size),
+    setAutoExpand: (on: boolean) => ipcRenderer.invoke(IPC.companionSetAutoExpand, on),
     onChange: (callback: (status: unknown) => void) => listen(IPC.companionChanged, callback),
   },
   island: {

@@ -25,8 +25,8 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | **While the agent is working, Enter**                  | **Queues the message** | [Queue or send now](follow-a-turn.md#queue-messages)                                    |
 | **On wide windows**                                    | **Context rail**       | With the work panel closed: a rail with project, agent and tasks, the panel, or nothing |
 | **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                     |
-| **Show Spark Island**, **Spark Island size**           | On, **Large**          | [Spark Island](desktop-companion.md)                                                    |
-| **Island chimes**                                      | Off                    | [Spark Island](desktop-companion.md)                                                    |
+| **Show Spark Island**, **Spark Island size**           | On, **Full**           | [Spark Island](desktop-companion.md)                                                    |
+| **Open requests by themselves**, **Island chimes**     | On, off                | [Spark Island](desktop-companion.md#answer-a-card)                                      |
 | **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                          |
 
 The Spark Island rows show in the Mac app only.

@@ -15,6 +15,7 @@ import {
   reviewLabel,
   type Tone,
 } from './pull-request-model.ts';
+import { PullDetails } from './PullDetails.tsx';
 
 const PILLS: Record<Tone, string> = {
   ok: 'spill ok',
@@ -22,28 +23,6 @@ const PILLS: Record<Tone, string> = {
   bad: 'spill bad',
   plain: 'spill',
 };
-
-function FailingChecks({ watch }: { watch: PrWatch }) {
-  if (ciState(watch) !== 'failing' || watch.failingChecks.length === 0) return null;
-  return (
-    <div className="prl-failing">
-      <span>Failing:</span>
-      <ul aria-label={`Failing checks on #${watch.number}`}>
-        {watch.failingChecks.map((check) => (
-          <li key={check.name}>
-            {check.url ? (
-              <a href={check.url} target="_blank" rel="noopener noreferrer">
-                {check.name}
-              </a>
-            ) : (
-              check.name
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 function PullRequestRow({ watch }: { watch: PrWatch }) {
   const ci = ciState(watch);
@@ -64,7 +43,7 @@ function PullRequestRow({ watch }: { watch: PrWatch }) {
         <span className={PILLS[CI_TONES[ci]]}>{CI_LABELS[ci]}</span>
         {review && <span>{review}</span>}
       </p>
-      <FailingChecks watch={watch} />
+      <PullDetails watch={watch} />
       {watch.unknownReason && <p className="prl-note">{watch.unknownReason}</p>}
       <p className="prl-meta">
         {branch && (

@@ -80,9 +80,9 @@ async function openIsland(page: Page) {
   await expect(island(page)).toBeVisible();
 }
 
-async function hoverIsland(page: Page) {
+async function hoverIsland(page: Page, y = 8) {
   await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await page.mouse.move(640, y, { steps: 4 });
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 }
 
@@ -132,7 +132,8 @@ test('stays at rest while work runs and finishes, nudges for approvals, and open
   await expect(island(page)).toHaveAttribute('data-view', 'nudge');
   await expect(island(page)).toContainText('Approve: run npm install sharp');
   await shot(page, 'nudge');
-  await hoverIsland(page);
+  expect((await island(page).boundingBox())!.y).toBeGreaterThanOrEqual(32);
+  await hoverIsland(page, 56);
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',
     'true',

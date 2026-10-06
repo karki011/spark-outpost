@@ -21,6 +21,7 @@ import {
   trackOpenPull,
   withFacts,
 } from '../pr-tracking/status.ts';
+import { discussionDetails } from '../pr-tracking/details.ts';
 import type { JevAccess } from '../orchestration/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
@@ -70,6 +71,10 @@ async function ingest(
   watch.failingChecks = checks.failingChecks;
   const comments = await readComments(connection, repo, watch.number);
   watch.review = comments.review;
+  watch.details = {
+    checkRuns: checks.checkRuns,
+    ...(await discussionDetails(connection, repo, watch.number, comments.discussion)),
+  };
   const fresh = newSourceKeys(
     [...checks.failing, ...comments.gathered],
     await knownSourceKeys(deps.db, watch.id),

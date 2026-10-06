@@ -16,7 +16,7 @@ export type IslandAction = 'quick' | 'sessions';
 export type IslandSettingsTarget =
   'island' | 'sparks' | 'spark-new' | 'connectors' | `spark-edit:${string}`;
 
-export type IslandSize = 'small' | 'medium' | 'large';
+export type IslandSize = 'full' | 'small' | 'medium' | 'large';
 
 export interface CompanionStatus {
   supported: boolean;
@@ -25,6 +25,7 @@ export interface CompanionStatus {
   failed: IslandAction[];
   sound?: boolean;
   islandSize?: IslandSize;
+  autoExpand?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -33,6 +34,7 @@ export interface IslandGeometry {
   notch: boolean;
   top: number;
   notchWidth: number;
+  notchHeight?: number;
   docked: boolean;
   menuBar: number;
 }
@@ -69,6 +71,7 @@ export interface SparkDesktop {
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
     setSound?(on: boolean): Promise<CompanionStatus>;
     setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
+    setAutoExpand?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   island: {

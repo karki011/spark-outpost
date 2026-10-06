@@ -1,12 +1,34 @@
-import { PR_FOLLOW_UP_MAX_ROUNDS, type PrWatch } from '@spark-outpost/contracts';
+import {
+  PR_FOLLOW_UP_MAX_ROUNDS,
+  type PrThreadStatus,
+  type PrWatch,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
-import { feedbackFor, feedbackView } from '../persistence/pr-watches.ts';
+import { feedbackFor, feedbackView, type StoredFeedback } from '../persistence/pr-watches.ts';
 import { trackedPullsOf, type TrackedPull } from '../persistence/tracked-pulls.ts';
+
+import { noteKind, type NoteKind } from './prompt.ts';
 
 const OPEN_STATES = new Set(['queued', 'held', 'needs_user', 'in_round', 'planned']);
 
+const DONE_STATUS: Record<NoteKind, PrThreadStatus> = {
+  fixed: 'fixed',
+  pushed_back: 'pushed_back',
+  answer: 'answered',
+  left: 'needs_you',
+};
+
+function threadStatus(item: StoredFeedback | undefined): PrThreadStatus | null {
+  if (!item) return null;
+  if (item.state === 'needs_user' || item.state === 'held') return 'needs_you';
+  if (item.state === 'in_round' || item.state === 'planned') return 'fixing';
+  if (item.state !== 'done') return null;
+  return DONE_STATUS[noteKind(item.reply, item.triage === 'question')];
+}
+
 export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?: number) {
   const items = await feedbackFor(db, watch.id);
+  const bySource = new Map(items.map((item) => [item.sourceKey, item]));
   const view: PrWatch = {
     id: watch.id,
     conversationId: watch.conversationId,
@@ -40,6 +62,13 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
     lastPolledAt: watch.lastPolledAt?.toISOString() ?? null,
     lastError: watch.lastError,
     items: items.map((item) => feedbackView(item, excerptChars)),
+    details: {
+      ...watch.details,
+      threads: watch.details.threads.map((thread) => ({
+        ...thread,
+        status: threadStatus(bySource.get(thread.key)),
+      })),
+    },
   };
   return view;
 }

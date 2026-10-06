@@ -129,12 +129,22 @@ describe('desktop companion lifecycle', () => {
     expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ sound: true }));
   });
 
-  it('starts at the large island size, then saves a chosen size and announces it', () => {
+  it('opens requests by itself until turned off, then saves and announces the choice', () => {
     const { companion, effects } = setup();
-    expect(companion.status().islandSize).toBe('large');
+    expect(companion.status().autoExpand).toBe(true);
+    expect(companion.setAutoExpand(false)).toMatchObject({ autoExpand: false });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ autoExpand: false }));
+    expect(effects.changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ autoExpand: false }),
+    );
+  });
+
+  it('starts at the full island, then saves a chosen size and announces it', () => {
+    const { companion, effects } = setup();
+    expect(companion.status().islandSize).toBe('full');
     expect(companion.setIslandSize('medium')).toMatchObject({ islandSize: 'medium' });
     expect(effects.save).toHaveBeenLastCalledWith(
-      expect.objectContaining({ islandSize: 'medium', islandSizeChosen: true }),
+      expect.objectContaining({ islandSize: 'medium', islandSizePicked: true }),
     );
     expect(effects.changed).toHaveBeenLastCalledWith(
       expect.objectContaining({ islandSize: 'medium' }),

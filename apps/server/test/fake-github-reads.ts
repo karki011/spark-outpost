@@ -78,3 +78,28 @@ export function pullReadAnswer(
   if (kind === 'files') return { status: 200, body: paged(pull.files ?? [], query) };
   return { status: 200, body: paged(pull.reviewComments ?? [], query) };
 }
+
+const THREADS_QUERY = /owner: "([^"]+)", name: "([^"]+)"\) \{ pullRequest\(number: (\d+)\)/;
+
+export function resolvedThreadsAnswer(pulls: readonly FakePull[], body: Record<string, unknown>) {
+  const [, owner, repo, number] = THREADS_QUERY.exec(String(body.query ?? '')) ?? [];
+  const pull = pulls.find(
+    (entry) => entry.owner === owner && entry.repo === repo && entry.number === Number(number),
+  );
+  const resolved = new Set(pull?.resolvedComments ?? []);
+  const roots = (pull?.reviewComments ?? []).filter((comment) => !comment.in_reply_to_id);
+  return {
+    data: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            nodes: roots.map((comment) => ({
+              isResolved: comment.id !== undefined && resolved.has(comment.id),
+              comments: { nodes: [{ databaseId: comment.id ?? null }] },
+            })),
+          },
+        },
+      },
+    },
+  };
+}

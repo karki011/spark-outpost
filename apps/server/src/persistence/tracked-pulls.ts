@@ -5,6 +5,7 @@ import type {
   PrReview,
   PrWatchPhase,
 } from '@spark-outpost/contracts';
+import { parseDetails, type StoredDetails } from '../pr-tracking/details.ts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
@@ -56,6 +57,7 @@ export interface TrackedPull extends PullAddress {
   checks: PrChecks;
   failingChecks: PrFailingCheck[];
   review: PrReview;
+  details: StoredDetails;
   statusReason: string | null;
   headSha: string | null;
   rounds: number;
@@ -94,6 +96,7 @@ export interface PullRow {
   checks: PrChecks;
   failing_checks: PrFailingCheck[];
   review: PrReview;
+  details: unknown;
   status_reason: string | null;
   head_sha: string | null;
   rounds: number;
@@ -133,6 +136,7 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     checks: row.checks,
     failingChecks: row.failing_checks,
     review: row.review,
+    details: parseDetails(row.details),
     statusReason: row.status_reason,
     headSha: row.head_sha,
     rounds: row.rounds,
@@ -244,7 +248,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        head_sha = $7, rounds = $8, round_run_id = $9, approval_id = $10, requested = $11,
        interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
-       status_reason = $21, follow_up = $22, updated_at = now()
+       status_reason = $21, follow_up = $22, details = $23, updated_at = now()
      WHERE id = $1`,
     [
       pull.id,
@@ -269,6 +273,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.review,
       pull.statusReason,
       pull.followUp,
+      JSON.stringify(pull.details),
     ],
   );
 }
