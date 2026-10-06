@@ -97,6 +97,10 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
     pieces: PIECES.map((piece) => pieceJson(piece, cyclic, turn.text.includes('#docspiece'))),
     integration: turn.text.includes('#glue') ? 'Wire the view into glue.ts' : null,
   };
+  if (turn.text.includes('#longgoal') && 'pieces' in block) {
+    const first = block.pieces[0] as Record<string, unknown>;
+    first.goal = `${String(first.goal)} ${'and keep every existing caller working '.repeat(30)}`;
+  }
   const split = `Here is the split.\n\n\`\`\`pieces\n${JSON.stringify(block, null, 2)}\n\`\`\``;
   if (turn.text.includes('#planfile') && !repairing(turn.text)) {
     await proposeInPlanMode(turn, split);
@@ -240,6 +244,9 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   if (changesNothing(turn, key)) {
     await turn.say(`The write to ${file} was refused, so I changed nothing.`);
     return 'end_turn';
+  }
+  if (turn.text.includes('#pieceplans') && key === 'P1' && !fixing) {
+    await proposeInPlanMode(turn, `Plan for ${key}: write ${file}`);
   }
   if (turn.text.includes('#slowpiece') && key === 'P2') await untilStopped(turn.signal);
   await pieceExtras(turn, key);

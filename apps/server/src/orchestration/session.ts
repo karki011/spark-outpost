@@ -39,6 +39,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   activeTimePollMs?: number;
   checkpointTimeoutMs?: number;
   checkTimeoutMs?: number;
+  criticQuietNoticeMs?: number;
   jevTimeoutMs?: number;
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;

@@ -24,6 +24,10 @@ export const STOPPED_NOTE =
   'You were stopped by the user before your last turn finished; continue where you left off. ' +
   'Your edits so far are still in place: check them instead of redoing that work.';
 
+export const CREW_STOPPED_NOTE =
+  'Your last turn was stopped before it finished; continue where you left off. ' +
+  'Your edits so far are still in place: check them instead of redoing that work.';
+
 export interface SessionSettings {
   provider: string;
   model: string | null;
@@ -150,8 +154,12 @@ export function shownFiles(changed: readonly string[]): string[] {
   return shown;
 }
 
-export function stoppedFollowUp(message: string, changed: readonly string[]): string {
+export function stoppedFollowUp(
+  message: string,
+  changed: readonly string[],
+  note: string = STOPPED_NOTE,
+): string {
   const shown = shownFiles(changed);
   const files = shown.length > 0 ? `\nFiles changed before the stop: ${shown.join(', ')}.` : '';
-  return `${STOPPED_NOTE}${files}\n\n${message}`;
+  return `${note}${files}\n\n${message}`;
 }

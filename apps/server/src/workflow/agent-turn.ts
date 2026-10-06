@@ -46,7 +46,7 @@ import {
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
-import { plansThisTurn } from '../plans/plan-mode.ts';
+import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
@@ -199,6 +199,7 @@ export async function runAgentTurn(
     root: input.projectRoots[0] ?? null,
     taskId: () => tasks.taskId(),
     append,
+    notesOnly: crewPlansStayNotes(input),
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);

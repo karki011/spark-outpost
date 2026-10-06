@@ -3,6 +3,7 @@ import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { outlinePlan } from '../plans/agreed-block.ts';
+import { builtSinceApproval } from '../plans/plan-turn.ts';
 import { namedFiles } from '../orchestration/context.ts';
 import { builderFacts } from '../orchestration/member-routes.ts';
 import { routeBuilder } from '../orchestration/routing.ts';
@@ -27,6 +28,7 @@ export interface Assessment {
   plan: Pick<PlanDocument, 'id' | 'version'> | null;
   planItems: string[];
   planSteps: PlanStep[];
+  planBuilt: boolean;
   likelyFiles: number;
   sizeEstimate: number;
   budgetTokens: number;
@@ -73,9 +75,14 @@ async function awaitScan(s: Session) {
 export async function assess(s: Session): Promise<Assessment> {
   const root = s.input.projectRoots[0]!;
   const report = await awaitScan(s);
-  const plan = await latestApprovedPlan(s.deps.db, s.input.identity.threadId);
-  const planItems = plan ? outlinePlan(plan.body).open : [];
-  const steps = plan ? planSteps(plan.body) : [];
+  const threadId = s.input.identity.threadId;
+  const plan = await latestApprovedPlan(s.deps.db, threadId);
+  const planBuilt = plan
+    ? await builtSinceApproval(s.deps.db, threadId, plan, s.lease.runId)
+    : false;
+  const building = plan !== null && !planBuilt;
+  const planItems = building ? outlinePlan(plan.body).open : [];
+  const steps = building ? planSteps(plan.body) : [];
   const likely = likelyFiles(report?.candidates ?? []);
   const known = new Map(
     (report?.candidates ?? []).flatMap((file) =>
@@ -94,6 +101,7 @@ export async function assess(s: Session): Promise<Assessment> {
     likely,
     sizeEstimate: size,
     budgetTokens,
+    followUpRound: s.input.followUpRound === true,
   });
   const pieces = planPieces(planItems, lines);
   const placement = pieces.length > 1 ? placePieces(pieces, await placementFacts(s)) : null;
@@ -103,6 +111,7 @@ export async function assess(s: Session): Promise<Assessment> {
     plan: plan ? { id: plan.id, version: plan.version } : null,
     planItems,
     planSteps: steps,
+    planBuilt,
     likelyFiles: likely.length,
     sizeEstimate: size,
     budgetTokens,
@@ -172,6 +181,8 @@ export async function recordAssessment(
         placementReason: placement?.reason ?? null,
         saving: placement ? Math.round(placement.saving * 100) / 100 : null,
         planVersion: assessment.plan?.version ?? null,
+        planBuilt: assessment.planBuilt,
+        solo: engaged.solo,
         planItems: assessment.planItems.length,
         likelyFiles: assessment.likelyFiles,
         sizeEstimate: assessment.sizeEstimate,

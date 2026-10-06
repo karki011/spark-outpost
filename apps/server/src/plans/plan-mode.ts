@@ -67,11 +67,26 @@ export interface PlanningFacts {
   provider: string;
   mode: RunMode | null;
   userRequest: string;
+  parentRunId?: string | null;
+  role?: string | null;
+}
+
+interface CrewFacts {
+  parentRunId?: string | null;
+  role?: string | null;
+  piece?: unknown;
+}
+
+const READS_FOR_THE_CREW = new Set(['scout', 'critic']);
+
+export function crewPlansStayNotes(facts: CrewFacts): boolean {
+  if (!facts.parentRunId) return false;
+  return Boolean(facts.piece) || READS_FOR_THE_CREW.has(facts.role ?? '');
 }
 
 export function plansThisTurn(facts: PlanningFacts): boolean {
   if (facts.planning !== undefined) return facts.planning;
-  if (facts.mode !== 'ask') return false;
+  if (facts.mode !== 'ask' || crewPlansStayNotes(facts)) return false;
   const planModeChat = modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
   return planModeChat || planOnlyByRule(facts.userRequest);
 }

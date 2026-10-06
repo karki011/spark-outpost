@@ -18,6 +18,7 @@ export interface EngageFacts {
   likely: readonly Pick<RankedFile, 'path' | 'package'>[];
   sizeEstimate: number;
   budgetTokens: number;
+  followUpRound?: boolean;
 }
 
 export interface Engagement {
@@ -25,6 +26,7 @@ export interface Engagement {
   reason: EngageReason | null;
   detail: string;
   tooBigUnsure: boolean;
+  solo: string | null;
 }
 
 const SPLIT = '(?:split|break) (?:this|it|the work|the task|the change|the request)';
@@ -51,16 +53,27 @@ export function planAreas(items: readonly string[]): number {
   return new Set(namedFiles(items).filter(inProject).map(areaOf)).size;
 }
 
+export function soloReason(facts: EngageFacts): string | null {
+  return facts.followUpRound ? 'a PR follow-up round' : null;
+}
+
 export function engagement(facts: EngageFacts): Engagement {
   const tooBigUnsure =
     Math.abs(facts.sizeEstimate - facts.budgetTokens) <= facts.budgetTokens * COORD_TOO_BIG_BAND;
-  const result = (reason: EngageReason | null, detail: string): Engagement => ({
+  const result = (
+    reason: EngageReason | null,
+    detail: string,
+    solo: string | null = null,
+  ): Engagement => ({
     engage: reason !== null,
     reason,
     detail,
     tooBigUnsure,
+    solo,
   });
   if (REQUESTED.test(facts.request)) return result('requested', 'the request asks for pieces');
+  const solo = soloReason(facts);
+  if (solo) return result(null, solo, solo);
   const areas = planAreas(facts.planItems);
   if (facts.planItems.length >= COORD_ENGAGE_PLAN_ITEMS && areas >= COORD_ENGAGE_PLAN_AREAS) {
     return result(

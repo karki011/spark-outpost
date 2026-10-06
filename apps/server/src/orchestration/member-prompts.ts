@@ -1,5 +1,7 @@
 import { turnCategory } from '../advisor/intake-recorder.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
+import { builtSinceApproval } from '../plans/plan-turn.ts';
+import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { liveRunBase } from '../projects/run-base.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
@@ -93,6 +95,13 @@ export function agreedPlanText(s: Session): Promise<string | null> {
   );
 }
 
+async function planBuiltEarlier(s: Session): Promise<boolean> {
+  const threadId = s.input.identity.threadId;
+  const plan = await latestApprovedPlan(s.deps.db, threadId).catch(() => null);
+  if (!plan) return false;
+  return builtSinceApproval(s.deps.db, threadId, plan, s.lease.runId).catch(() => false);
+}
+
 export const RESEARCH_BRIEF = [
   '## Research',
   'This is a research request. Use read-only tools, `spark_find` to locate the code (ranked files with declarations as name@startLine-endLine; a hint, not a limit) and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
@@ -131,6 +140,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       checks: s.checkLines,
       buildStyle: s.buildStyle,
       agreedPlan,
+      planBuilt: agreedPlan ? await planBuiltEarlier(s) : false,
       previousFindings: rechecking ? s.flow.review.fixable : [],
       earlierNotes: rechecking ? (s.reviewNotes ?? []) : [],
       fixPatch: s.fixPatch,

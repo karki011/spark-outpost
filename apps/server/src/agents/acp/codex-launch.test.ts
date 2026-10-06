@@ -10,8 +10,11 @@ import {
   codexVersion,
   isCodexConfigFailure,
   prepareCodexLaunch,
+  startupOverrides,
   supportsPermissionProfiles,
+  tomlInline,
 } from './codex-launch.ts';
+import { codexPermissionProfiles } from './codex-permissions.ts';
 
 let dir: string;
 
@@ -120,11 +123,44 @@ describe('Codex startup wrapper', () => {
       const wrapper = launch.cli.CODEX_PATH!;
       expect(wrapper).toBe(join(dir, 'codex-spark'));
       expect((await stat(wrapper)).mode & 0o111).not.toBe(0);
-      expect(await readFile(wrapper, 'utf8')).toBe(
-        `#!/bin/sh\nexec '/Users/o'\\''brien/bin/codex' -c 'default_permissions=":read-only"' "$@"\n`,
+      const script = await readFile(wrapper, 'utf8');
+      expect(
+        script.startsWith(`#!/bin/sh\nexec '/Users/o'\\''brien/bin/codex' -c 'permissions={ `),
+      ).toBe(true);
+      expect(script).toContain(`"read-only" = { "extends" = ":read-only"`);
+      expect(script.endsWith(` -c 'default_permissions="read-only"' "$@"\n`)).toBe(true);
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'starts the plain sandbox with the built-in read-only default and no table',
+    async () => {
+      const launch = await prepareCodexLaunch(
+        { CODEX_PATH: '/usr/local/bin/codex' },
+        dir,
+        true,
+        reporting('codex-cli 0.157.0\n'),
+      );
+      expect(await readFile(launch.cli.CODEX_PATH!, 'utf8')).toBe(
+        `#!/bin/sh\nexec '/usr/local/bin/codex' -c 'default_permissions=":read-only"' "$@"\n`,
       );
     },
   );
+
+  it('names every mode profile in the startup table, so no thread can lack one', () => {
+    const [table, fallback] = startupOverrides(true);
+    for (const mode of Object.keys(codexPermissionProfiles())) {
+      expect(table).toContain(`${JSON.stringify(mode)} = {`);
+    }
+    expect(fallback).toBe('default_permissions="read-only"');
+    expect(startupOverrides(false)).toEqual(['default_permissions=":read-only"']);
+  });
+
+  it('writes inline TOML with quoted keys', () => {
+    expect(tomlInline({ ':root': 'write', network: { enabled: true }, list: [1, 'a'] })).toBe(
+      '{ ":root" = "write", "network" = { "enabled" = true }, "list" = [1, "a"] }',
+    );
+  });
 
   it('leaves a Codex too old for profiles alone', async () => {
     const launch = await prepareCodexLaunch(
