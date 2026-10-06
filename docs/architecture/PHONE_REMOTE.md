@@ -1,6 +1,6 @@
 # Phone remote: plan
 
-Status: plan, not built. Direction chosen by the owner on 2026-10-05: a Cloudflare relay with end-to-end encryption, the same web UI on the phone.
+Status: plan. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
 
 ## Goal
 
@@ -18,7 +18,37 @@ Use Spark Outpost from a phone while the work stays on the Mac.
 - Sharing a Mac with another person. One owner, their own devices.
 - A native iPhone or Android app. It is a later step (phase 6) and reuses everything before it.
 
-## How it fits together
+## First version: Tailscale
+
+The phone reaches the Mac over the user's own tailnet. No relay, no hosted page, nothing for the owner to run.
+
+```
+Phone (browser, on the tailnet)  ⇄  Tailscale Serve on the Mac  ⇄  Spark server on 127.0.0.1
+```
+
+- **Reach.** Settings → Phone access detects Tailscale and, when the user turns it on, runs Tailscale Serve so `https://<mac>.<tailnet>.ts.net` proxies to Spark's local port. Serve only, never Funnel: the address works only for devices on the user's tailnet. The server still listens on `127.0.0.1` alone.
+- **Guards.** The Host and Origin checks accept exactly the Serve hostname Spark configured, in addition to loopback. Requests arriving that way are remote requests: the launch token is neither needed nor accepted from them, and they pass through the remote gateway below.
+- **Sign-in.** Pairing as described under Design, with one difference: the device credential is a random token in a cookie (`HttpOnly`, `Secure`, `SameSite=Strict`), stored hashed on the Mac. Tailnet membership alone grants nothing; an unpaired device sees only the pairing page.
+- **UI.** The Mac serves its own web build, so the phone always runs the version the Mac runs. No loader and no transport seam; `fetch` and `EventSource` work as they are.
+- **Encryption.** Tailscale's WireGuard tunnel and the Serve certificate. Spark adds none of its own in this version.
+- **Notifications.** Web Push from the Mac, as under Design. The Serve address is a real HTTPS origin, so home-screen install and push work.
+
+Shared with the relay version and built once: pairing, the device list, the remote gateway and allowlist, the switches, audit, the per-client focus flag, the phone layout pass, notifications and keep-awake.
+
+Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS certificates in their tailnet. The machine name appears in the certificate.
+
+### Phases for the Tailscale version
+
+| #   | What                                                                                                     | Done when                                                                                                     |
+| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| T1  | Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus flag  | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
+| T2  | Tailscale: detect, turn Serve on and off, accept the Serve hostname, Settings → Phone access with the QR | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
+| T3  | Phone web app: manifest, service worker, layout pass, Mac-only parts hidden, asleep and offline states   | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
+| T4  | Notifications, keep-awake, guide pages, first real-phone test by the owner                               | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
+
+The relay version follows and replaces only the reach, sign-in transport and encryption parts.
+
+## How the relay version fits together
 
 ```
 Phone (web app)  ⇄  Relay (Cloudflare Worker)  ⇄  Mac (Spark server)
@@ -124,7 +154,7 @@ Every remote request is audited with the device id. The Mac shows a "phone conne
 
 While phone access is on and a run is active or a phone is connected, Spark holds a power assertion. A closed lid on battery still sleeps the Mac; the phone then shows "Your Mac is asleep or offline" with the last-seen time.
 
-## Phases
+## Phases for the relay version
 
 Each phase ends with something testable. Phases 1 and 2 need no deployment.
 
