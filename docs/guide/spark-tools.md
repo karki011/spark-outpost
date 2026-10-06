@@ -75,4 +75,4 @@ Agents open pull requests themselves.
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |
 
-After a tool reads private data, such as your chats or spend, Spark asks before that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).
+After a tool reads tickets, Slack, pull requests or spend, Spark asks before that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).

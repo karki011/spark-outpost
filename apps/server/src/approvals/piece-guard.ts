@@ -12,6 +12,7 @@ import type { ApprovalRequest } from './decide.ts';
 import { changesGitState } from './git-commands.ts';
 import { scratchWorktree } from './git-worktrees.ts';
 import { commandCwd } from './request-place.ts';
+import { withResolvedVariables } from './shell-variables.ts';
 import { harmlessOutput, toolWriteTargets } from './tool-writes.ts';
 import { writeTargets } from './write-targets.ts';
 
@@ -85,10 +86,11 @@ export const WHOLE_TREE_REWRITE_REASON =
   "This rewrites files across the whole folder; name this piece's own files instead";
 
 export function pieceRefusal(
-  request: ApprovalRequest,
+  asked: ApprovalRequest,
   guard: PieceGuard,
   relativeOf: RelativeOf,
 ): string | null {
+  const request = withResolvedVariables(asked);
   const command = request.command;
   const scratch = scratchWorktree(commandCwd(request), request.home);
   if (guard.coordinated && command && changesGitState(command, scratch)) return BUILDER_GIT_REASON;

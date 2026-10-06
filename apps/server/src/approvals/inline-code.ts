@@ -32,6 +32,13 @@ export function heredocBodies(command: string): string[] {
   return [...command.matchAll(HEREDOC)].map((match) => match[4]!);
 }
 
+export function heredocBodySpans(command: string): [number, number][] {
+  return [...command.matchAll(HEREDOC)].map((match) => {
+    const start = match.index + match[0].indexOf('\n') + 1;
+    return [start, start + match[4]!.length];
+  });
+}
+
 export function withoutHereText(command: string): string {
   return command
     .replace(HEREDOC, (_match, _quote, _word, rest: string) => ` ${rest}\n`)

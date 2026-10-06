@@ -113,7 +113,6 @@ async function taskView(
 
 export const taskTool = sparkTool({
   name: 'spark_task',
-  privateData: true,
   title: 'Task, plan and changes',
   description:
     "The task behind a chat (default: this chat's latest): its current plan version and steps, the agreed plan document (version, who approved it, files changed since), the checklist, every file changed per run (path, added/modified/deleted, lines added and removed, whether the run was reverted; never file contents) and linked PRs.",

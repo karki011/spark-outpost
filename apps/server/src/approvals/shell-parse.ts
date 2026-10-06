@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { Language, Parser, type Node } from 'web-tree-sitter';
+import { resolveVariables } from './shell-variables.ts';
 
 export const DYNAMIC = '\u0001';
 
@@ -232,7 +233,7 @@ function shellParser(): Promise<ShellParse> {
 export async function parseShell(command: string | null): Promise<ShellScript | null> {
   if (!command) return null;
   try {
-    return (await shellParser())(command);
+    return (await shellParser())(resolveVariables(command));
   } catch (error) {
     console.error('Could not parse a shell command', error);
     return null;
