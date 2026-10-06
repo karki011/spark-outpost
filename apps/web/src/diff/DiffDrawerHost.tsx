@@ -9,20 +9,20 @@ const DiffDrawer = lazy(() =>
 );
 
 export interface DiffRequest {
-  taskId: string;
+  taskId: string | null;
   target: ChangeEntry | null;
 }
 
 export interface DiffDrawerState {
   request: DiffRequest | null;
-  open(taskId: string, target?: ChangeEntry): void;
+  open(taskId: string | null, target?: ChangeEntry): void;
   close(): void;
 }
 
 export function useDiffDrawer(): DiffDrawerState {
   const [request, setRequest] = useState<DiffRequest | null>(null);
   const opener = useRef<HTMLElement | null>(null);
-  const open = useCallback((taskId: string, target?: ChangeEntry) => {
+  const open = useCallback((taskId: string | null, target?: ChangeEntry) => {
     const active = document.activeElement;
     if (active instanceof HTMLElement && !active.closest('.dd')) opener.current = active;
     setRequest({ taskId, target: target ?? null });
@@ -47,12 +47,17 @@ function DrawerShell() {
   );
 }
 
-export function DiffDrawerHost({ state }: { state: DiffDrawerState }) {
+interface DiffDrawerHostProps {
+  state: DiffDrawerState;
+  taskId: string | null;
+}
+
+export function DiffDrawerHost({ state, taskId }: DiffDrawerHostProps) {
   const { request, close } = state;
   if (!request) return null;
   return createPortal(
     <Suspense fallback={<DrawerShell />}>
-      <DiffDrawer taskId={request.taskId} target={request.target} onClose={close} />
+      <DiffDrawer taskId={request.taskId ?? taskId} target={request.target} onClose={close} />
     </Suspense>,
     document.body,
   );
