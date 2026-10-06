@@ -23,6 +23,14 @@ const OLD_TYPE_ERROR = `console.log('src/old.ts(3,1): error TS2322: an old probl
 process.exit(1);
 `;
 
+const UNTOUCHED_TEST_FAILS = `if (process.cwd().includes('spark-baseline-')) {
+  console.log('Nx read the output from the cache instead of running the command for 2 out of 2 tasks.');
+  process.exit(0);
+}
+console.log(' FAIL  libs/dates/src/holidays.test.ts > today is a working day');
+process.exit(1);
+`;
+
 let repo: CrewRepo;
 
 test.beforeEach(async ({ page }) => {
@@ -107,6 +115,34 @@ test('a check that already failed before the change is one calm row, with no fix
   const output = work.getByLabel('Check output');
   await expect(output).toContainText('also fails before this change');
   await expect(output).toContainText('same failures: type src/old.ts TS2322');
+});
+
+test('a failure nothing ties to the change is one calm row, with no fix turn', async ({ page }) => {
+  test.setTimeout(120_000);
+  repo.commit('tests.mjs', UNTOUCHED_TEST_FAILS);
+  await crewChat(page, repo, 'Full auto');
+  await useChecks(page, [`${process.execPath} tests.mjs`]);
+  await send(page, `${CREW_REQUEST} #build #crew`);
+
+  const turn = page.locator('.crew-turn');
+  await expect(turn.locator('.crew-foot')).toContainText('Done', { timeout: 60_000 });
+  expect(() => repo.file('fixed.txt')).toThrow();
+  await expect(page.locator('.thread')).not.toContainText('Failing checks');
+
+  const work = panel(page);
+  await work.getByRole('tab', { name: 'Tasks' }).click();
+  await expect(work.getByRole('list', { name: 'Remaining' })).toHaveCount(0);
+  const row = work
+    .getByRole('list', { name: 'Done' })
+    .getByRole('button', { name: /Checks for Bolt/ });
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText("tests.mjs failed before this change or can't tell");
+  await expect(row.locator('xpath=..')).not.toHaveClass(/failed/);
+  await row.focus();
+  await page.keyboard.press('Enter');
+  const output = work.getByLabel('Check output');
+  await expect(output).toContainText('not relied on');
+  await expect(output).toContainText('nothing ties this to the change');
 });
 
 test('Accept edits: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({

@@ -145,6 +145,7 @@ function updateSummary(payload: Record<string, unknown>): string | null {
 
 const CHECK_CAUSES: Record<string, string> = {
   baseline: 'already failing before this change',
+  unknown: "failed before this change or can't tell",
   timeout: 'could not finish in time',
   environment: 'could not run',
 };

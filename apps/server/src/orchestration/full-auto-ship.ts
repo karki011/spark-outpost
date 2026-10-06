@@ -22,7 +22,7 @@ import {
   publishAsked,
   publishByAgent,
 } from './agent-publish.ts';
-import { checksFailing } from './check-results.ts';
+import { checksFailing, unrelatedCheckNotes } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { assumptionPrNote } from './clarify.ts';
@@ -30,6 +30,7 @@ import { criticSkippedLine, sessionReviewLine } from './critic-fix.ts';
 import { changedLines } from './member-prompts.ts';
 import { choosePrSplit, ownWorktreePieces } from './pr-split.ts';
 import { publish, type Session } from './session.ts';
+import { code } from '../laws/finding.ts';
 import { lawItems, lawsNote } from '../laws/review.ts';
 import type { FlowEvent } from './transitions.ts';
 
@@ -136,7 +137,10 @@ export async function publishWhenAsked(s: Session): Promise<void> {
   }
   const failing = checksFailing(s);
   const titlePrefix = failing ? `[${CHECKS_FAILING_NOTE}]` : null;
-  const facts = { failing, titlePrefix, notes: [], ...(followUp ? { followUp } : {}) };
+  const notes = unrelatedCheckNotes(s).map((note) => note.text);
+  const unrelatedFailures = notes.length > 0;
+  const told = { failing, titlePrefix, notes, unrelatedFailures };
+  const facts = { ...told, ...(followUp ? { followUp } : {}) };
   s.shipLine = await publishByAgent(s, shipDeps(s), plan, facts);
 }
 
@@ -166,20 +170,24 @@ async function shipPieces(
 
 async function ship(s: Session, failing: boolean, separate: readonly TaskPiece[]): Promise<string> {
   if (!s.taskId) return 'Full auto → PR kept the change, but it has no task to ship.';
+  const laws = lawsNote(s);
+  const unrelated = unrelatedCheckNotes(s);
   const notes = [
     failing ? CHECKS_FAILING_NOTE : null,
     s.unverified ? UNVERIFIED_NOTE : null,
     s.risky ? RISKY_PR_NOTE : null,
     s.assumption ? assumptionPrNote(s.assumption) : null,
     criticSkippedLine(s),
-    lawsNote(s),
+    laws,
+    ...unrelated.filter((note) => !laws?.includes(code(note.command))).map((note) => note.text),
     ...(s.prNotes ?? []),
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);
   const plan = separate.length === 0 ? await agentPublishPlan(s) : null;
   if (plan) {
     const titlePrefix = failing ? `[${CHECKS_FAILING_NOTE}]` : null;
-    return publishByAgent(s, deps, plan, { failing, titlePrefix, notes });
+    const unrelatedFailures = unrelated.length > 0;
+    return publishByAgent(s, deps, plan, { failing, titlePrefix, notes, unrelatedFailures });
   }
   const pieceLines = await shipPieces(s, deps, separate, { duringRun: true, notes });
   const exclude = separate.flatMap((piece) => piece.filesChanged);

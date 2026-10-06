@@ -97,6 +97,47 @@ export async function projectChecks(
   };
 }
 
-export function runsPackageScript(check: CheckCommand): boolean {
-  return PACKAGE_RUNNERS.has(path.basename(check.argv[0] ?? ''));
+function scriptOf(argv: readonly string[], known: ReadonlySet<string>): string | null {
+  const [, verb, name] = argv;
+  if (verb === 'run' || verb === 'run-script') return name ?? null;
+  if (verb === 'test' || verb === 't') return 'test';
+  return verb !== undefined && known.has(verb) ? verb : null;
+}
+
+const RUNS_SCRIPT = /\b(?:npm|pnpm|yarn|bun)(?:\s+run(?:-script)?)?\s+([\w:.-]+)/g;
+
+function scriptsRunBy(name: string, scripts: Readonly<Record<string, string>>): string[][] {
+  const seen = new Map<string, string>();
+  const queue = [name];
+  while (queue.length > 0) {
+    const next = queue.pop()!;
+    for (const key of [`pre${next}`, next, `post${next}`]) {
+      const body = scripts[key];
+      if (body === undefined || seen.has(key)) continue;
+      seen.set(key, body);
+      for (const match of body.matchAll(RUNS_SCRIPT)) queue.push(match[1]!);
+    }
+  }
+  return [...seen.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+function fingerprintScripts(fingerprint: string): Record<string, string> {
+  try {
+    return Object.fromEntries(JSON.parse(fingerprint) as [string, string][]);
+  } catch {
+    return {};
+  }
+}
+
+export async function checkScriptChanged(
+  check: CheckCommand,
+  before: string,
+  root: string,
+): Promise<boolean> {
+  if (!PACKAGE_RUNNERS.has(path.basename(check.argv[0] ?? ''))) return false;
+  const was = fingerprintScripts(before);
+  const now = packageScripts(await optionalText(path.join(root, 'package.json')));
+  const name = scriptOf(check.argv, new Set([...Object.keys(was), ...Object.keys(now)]));
+  if (name === null) return false;
+  return JSON.stringify(scriptsRunBy(name, was)) !== JSON.stringify(scriptsRunBy(name, now));
 }
