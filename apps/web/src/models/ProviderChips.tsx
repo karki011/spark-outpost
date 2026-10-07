@@ -23,6 +23,10 @@ const NEXT_KEYS: Record<string, number> = {
   ArrowUp: -1,
 };
 
+function rowCount(view: ProviderCardsView): number {
+  return view.models.length + view.uncardedModels.length;
+}
+
 function AllMark() {
   return (
     <svg className="mc-all" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,13 +44,13 @@ export function ProviderChips({ providers, value, onChange }: ProviderChipsProps
     {
       id: ALL_PROVIDERS,
       label: 'All',
-      count: providers.reduce((sum, view) => sum + view.models.length, 0),
+      count: providers.reduce((sum, view) => sum + rowCount(view), 0),
       view: null,
     },
     ...providers.map((view) => ({
       id: view.provider.provider,
       label: view.provider.label,
-      count: view.models.length,
+      count: rowCount(view),
       view,
     })),
   ];

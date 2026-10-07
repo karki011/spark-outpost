@@ -33,10 +33,11 @@ Changes apply to new chats. A fixed **Effort** also applies to every Builder; **
 
 ![Settings → Models with one row per model](images/providers-model-cards-light.png)
 
-| Group                      | Spark uses it for          |
-| -------------------------- | -------------------------- |
-| **Spark picks from these** | The job named on each row  |
-| **Only when you pick it**  | Nothing, unless you pin it |
+| Group                      | Spark uses it for            |
+| -------------------------- | ---------------------------- |
+| **Spark picks from these** | The job named on each row    |
+| **Only when you pick it**  | Nothing, unless you pin it   |
+| **No card yet**            | Its tier comes from its name |
 
 ## Connect Jev
 
