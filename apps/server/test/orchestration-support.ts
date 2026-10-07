@@ -344,7 +344,7 @@ export function startOrchestrator(
     coordinator?: OrchestratorDeps['coordinator'];
     forcedPlacement?: OrchestratorDeps['forcedPlacement'];
     agentEnv?: Record<string, string>;
-  } & Pick<OrchestratorDeps, 'checkTimeoutMs'> = {},
+  } & Pick<OrchestratorDeps, 'checkTimeoutMs' | 'criticQuietNoticeMs'> = {},
 ): Harness {
   const intake = fetcher
     ? createIntakeRecorder({
@@ -371,6 +371,7 @@ export function startOrchestrator(
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
     ...(options.checkTimeoutMs ? { checkTimeoutMs: options.checkTimeoutMs } : {}),
+    ...(options.criticQuietNoticeMs ? { criticQuietNoticeMs: options.criticQuietNoticeMs } : {}),
     ...(options.coordinator ? { coordinator: options.coordinator } : {}),
     ...(options.forcedPlacement ? { forcedPlacement: options.forcedPlacement } : {}),
   });

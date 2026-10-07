@@ -164,9 +164,29 @@ export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
   return { route: routeBuilder(s.route, builderFacts(s), jevTier(s)) };
 }
 
+export function retryCriticProvider(
+  failed: string,
+  own: string,
+  candidates: readonly string[],
+): string {
+  if (failed !== own) return own;
+  return candidates.find((provider) => provider !== failed) ?? failed;
+}
+
 function retryCriticRoute(s: Session, previous: MemberRoute): MemberRoute {
-  const own = s.route.chat.provider;
-  return previous.pick.provider === own ? previous : routeCritic(s.route, [], own);
+  const failed = previous.pick.provider;
+  const next = retryCriticProvider(
+    failed,
+    s.route.chat.provider,
+    s.route.candidates.map((candidate) => candidate.provider),
+  );
+  if (next === failed) return previous;
+  const name = s.route.candidates.find((candidate) => candidate.provider === failed)?.name;
+  return { ...routeCritic(s.route, [], next), note: criticFallbackNote(name ?? failed) };
+}
+
+function criticFallbackNote(failedName: string): string {
+  return `reviewing instead of ${failedName}, whose review did not finish`;
 }
 
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {

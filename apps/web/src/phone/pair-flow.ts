@@ -2,6 +2,8 @@ import type { PairingStart, PendingPairing, TailscaleStatus } from '@spark-outpo
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 
 export const EXPIRING_MS = 20_000;
+export const ALERT_MS = 30_000;
+export const URGENT_MS = 10_000;
 
 export type PairEnding = 'denied' | 'expired' | 'failed';
 
@@ -12,6 +14,21 @@ export type PairStage =
   | { kind: 'found'; request: PendingPairing }
   | { kind: 'paired'; deviceName: string }
   | { kind: 'ended'; ending: PairEnding; reason: string };
+
+export type Activation =
+  { kind: 'pending'; to: 'on' | 'off' } | { kind: 'failed'; reason: string } | null;
+
+export type PairMotion =
+  | 'asleep'
+  | 'working'
+  | 'unsure'
+  | 'ready'
+  | 'idle'
+  | 'alert'
+  | 'urgent'
+  | 'expectant'
+  | 'happy'
+  | 'shrug';
 
 export interface PairFlowInput {
   status: TailscaleStatus | undefined;
@@ -47,18 +64,77 @@ export function pairStage(input: PairFlowInput): PairStage {
   };
 }
 
-export function stageMood(stage: PairStage): ScoutMood {
-  if (stage.kind === 'setup') return 'sleep';
-  if (stage.kind === 'paired') return 'happy';
-  if (stage.kind === 'ended') return 'sad';
-  if (stage.kind === 'code' && stage.expiring) return 'alert';
+export interface TurnRequest {
+  pending: 'on' | 'off' | null;
+  failed: 'on' | 'off' | null;
+}
+
+export function turnFailure(
+  error: unknown,
+  answer: { status: TailscaleStatus; message: string | null } | undefined,
+): string | null {
+  if (error instanceof Error) return error.message;
+  if (answer?.status === 'error') return answer.message ?? 'Phone access needs a look.';
   return null;
 }
 
-export function stageLine(stage: PairStage): string {
+export function activationOf(
+  turn: TurnRequest,
+  state: { status: TailscaleStatus; message: string | null },
+): Activation {
+  if (turn.pending) return { kind: 'pending', to: turn.pending };
+  if (turn.failed) return { kind: 'failed', reason: `Phone access did not turn ${turn.failed}.` };
+  if (state.status === 'error') {
+    return { kind: 'failed', reason: state.message ?? 'Phone access needs a look.' };
+  }
+  return null;
+}
+
+export function stageMotion(stage: PairStage, activation: Activation): PairMotion {
+  if (activation?.kind === 'pending') return 'working';
   switch (stage.kind) {
     case 'setup':
-      return 'Turn phone access on to pair a phone.';
+      return activation?.kind === 'failed' ? 'unsure' : 'asleep';
+    case 'ready':
+      return 'ready';
+    case 'code':
+      if (stage.remainingMs <= URGENT_MS) return 'urgent';
+      return stage.remainingMs <= ALERT_MS ? 'alert' : 'idle';
+    case 'found':
+      return 'expectant';
+    case 'paired':
+      return 'happy';
+    case 'ended':
+      return 'shrug';
+  }
+}
+
+const MOTION_MOODS: Record<PairMotion, ScoutMood> = {
+  asleep: 'sleep',
+  working: 'working',
+  unsure: 'sad',
+  ready: null,
+  idle: null,
+  alert: 'alert',
+  urgent: 'alert',
+  expectant: null,
+  happy: 'happy',
+  shrug: 'sad',
+};
+
+export function motionMood(motion: PairMotion): ScoutMood {
+  return MOTION_MOODS[motion];
+}
+
+export function stageLine(stage: PairStage, activation: Activation = null): string {
+  if (activation?.kind === 'pending') {
+    return activation.to === 'on' ? 'Turning phone access on…' : 'Turning phone access off…';
+  }
+  switch (stage.kind) {
+    case 'setup':
+      return activation?.kind === 'failed'
+        ? activation.reason
+        : 'Turn phone access on to pair a phone.';
     case 'ready':
       return 'Ready when you are.';
     case 'code':

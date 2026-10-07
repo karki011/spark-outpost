@@ -1,4 +1,9 @@
-import { fencedPiecesBlock, PIECES_FENCE, type TaskPiece } from '@spark-outpost/contracts';
+import {
+  fencedPiecesBlock,
+  pieceLimitLines,
+  PIECES_FENCE,
+  type TaskPiece,
+} from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
 import { pieceKey } from './builder-count.ts';
 import type { PlanStep } from './plan-coverage.ts';
@@ -20,6 +25,7 @@ export interface CoordinatorContext {
   checks: readonly string[];
   budgetTokens: number;
   groups?: readonly (readonly PlanStep[])[] | null;
+  followUp?: boolean;
 }
 
 function clip(text: string, limit: number): string {
@@ -61,6 +67,9 @@ function groupsSection(groups: readonly (readonly PlanStep[])[]): string {
   return `## Builders\nSpark chose ${groups.length} Builders for the agreed plan. Write exactly ${groups.length} pieces that build, with the keys ${keys.join(', ')}, one per group below, and cover every plan item of its group in that piece. Research pieces may use other keys.\n${bullets(lines)}`;
 }
 
+export const FOLLOW_UP_RULE =
+  'The agreed plan was built in an earlier turn. Plan only what this request asks for; the plan is background, and its steps need no pieces.';
+
 export function coordinatorPrompt(context: CoordinatorContext): string {
   const files = context.likelyFiles.map((file) => {
     const size = file.lines === null ? file.path : `${file.path} (${file.lines} lines)`;
@@ -92,8 +101,11 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
       'A piece that only changes docs or text files (README.md, *.md, *.txt) needs no check: leave its checks empty.',
       'Mark a piece that only reads and reports with "research": true; it owns no files.',
       'integration says what glue is left once every piece has landed, or null.',
-      'Every step of the agreed plan needs a piece: a step is covered when a piece owns or reads a file the step names, or when its title, goal or acceptance says what the step does.',
+      context.followUp
+        ? FOLLOW_UP_RULE
+        : 'Every open step of the agreed plan needs a piece that builds it: a step is covered when a piece owns or reads a file the step names, or when its title, goal or acceptance says what the step does. Never add a piece only to cover a step.',
     ])}`,
+    `## Limits\nA block over any limit is rejected:\n${bullets(pieceLimitLines())}`,
   ].join('\n\n');
 }
 

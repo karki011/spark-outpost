@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskPiece } from '@spark-outpost/contracts';
-import { coordinatorPrompt, pieceSection } from './prompts.ts';
+import { PIECE_LIMITS } from '@spark-outpost/contracts';
+import { coordinatorPrompt, FOLLOW_UP_RULE, pieceSection } from './prompts.ts';
 
 function piece(extra: Partial<TaskPiece>): TaskPiece {
   return {
@@ -90,5 +91,30 @@ describe('piece prompts', () => {
     expect(brief({ checks: ['pnpm markdownlint README.md'] })).toContain(
       'Scoped checks (the harness runs them after your turn):\n- pnpm markdownlint README.md',
     );
+  });
+
+  const base = {
+    request: 'cap 3 → 8',
+    agreedPlan: '## Agreed plan\n- old step',
+    likelyFiles: [],
+    planFiles: [],
+    checks: [],
+    budgetTokens: 100_000,
+  };
+
+  it('states every hard limit the validator enforces, from the same constants', () => {
+    const prompt = coordinatorPrompt(base);
+    expect(prompt).toContain('## Limits');
+    for (const limit of Object.values(PIECE_LIMITS)) {
+      expect(prompt).toMatch(new RegExp(`at most ${limit}\\b`));
+    }
+    expect(prompt).toContain(`goal at most ${PIECE_LIMITS.goal};`);
+  });
+
+  it('asks for plan coverage only when the turn builds the agreed plan', () => {
+    expect(coordinatorPrompt(base)).toContain('Every open step of the agreed plan needs a piece');
+    const followUp = coordinatorPrompt({ ...base, followUp: true });
+    expect(followUp).toContain(FOLLOW_UP_RULE);
+    expect(followUp).not.toContain('Every open step of the agreed plan needs a piece');
   });
 });

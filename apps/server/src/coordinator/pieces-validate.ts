@@ -5,6 +5,7 @@ import { COORD_MAX_PIECES } from '../advisor/policy.ts';
 import { findCycle, reaches, type Graph } from './graph.ts';
 import { isGlob, normalizeOwned, owns, sharedFiles, type OwnedSet } from './owned.ts';
 import { pieceKey } from './builder-count.ts';
+import { trimPiecesBlock } from './pieces-trim.ts';
 import { uncoveredSteps, type PlanStep } from './plan-coverage.ts';
 import { docsOnly, scopedCheckProblem } from './scoped-checks.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
@@ -27,6 +28,7 @@ export interface CheckedPiece extends PieceDraft {
 export interface CheckedPieces {
   pieces: CheckedPiece[];
   integration: string | null;
+  trimmed: string[];
 }
 
 export type Validation = { ok: true; value: CheckedPieces } | { ok: false; errors: string[] };
@@ -187,7 +189,8 @@ function docsChecks(draft: PieceDraft, facts: ValidationFacts): string[] {
 }
 
 export function validatePieces(block: unknown, facts: ValidationFacts): Validation {
-  const parsed = piecesBlockSchema.safeParse(block);
+  const fitted = trimPiecesBlock(block);
+  const parsed = piecesBlockSchema.safeParse(fitted.block);
   if (!parsed.success) {
     return {
       ok: false,
@@ -219,7 +222,10 @@ export function validatePieces(block: unknown, facts: ValidationFacts): Validati
   }
   if (facts.groups) groupErrors(pieces, facts.groups, errors);
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, value: { pieces, integration: parsed.data.integration } };
+  return {
+    ok: true,
+    value: { pieces, integration: parsed.data.integration, trimmed: fitted.trimmed },
+  };
 }
 
 export function piecesHash(pieces: readonly PieceDraft[]): string {
