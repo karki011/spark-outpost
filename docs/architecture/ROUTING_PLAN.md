@@ -263,6 +263,8 @@ Where a turn can change model or provider, and what that costs:
 | Coordinator, pieces, integrator                           | their own keys                                 | pieces may run on another provider; each starts fresh                                                                              | none across pieces                                                                                                           |
 | Spark off Do (`soloRoute`)                                | `key:<task>:builder`                           | always the chat's pick                                                                                                             | resumed                                                                                                                      |
 
+Since October 7, 2026 this table is history. Chat turns, in-place answers and the solo Builder share one conversation session keyed `chat:<provider>`; a new task, a mode change or a model change no longer starts a fresh session; a rerun one tier up stays on that session with a priced model change; and there is no clarify turn ([HARNESS_SIMPLE.md](HARNESS_SIMPLE.md#sessions)).
+
 Measured costs of switching and of resuming:
 
 - **M6** (HARNESS_PLAN.md, Sessions): Claude turn 2 resumed $0.0013 and 4.8 s against $0.0155 and 7.9 s fresh; Codex uncached input fell 76–91% on resume.
