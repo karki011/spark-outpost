@@ -1,5 +1,6 @@
 import {
   buildVerdictQuestions,
+  diffIsCut,
   readVerdict,
   requirementLines,
   type VerdictReading,
@@ -28,7 +29,8 @@ function verdictSummary(reading: VerdictReading, action: CascadeAction, to: stri
     reading.verdict === null
       ? 'no valid answer'
       : `${reading.verdict} (${(reading.confidence ?? 0).toFixed(2)})`;
-  const accepted = reading.accepted ? '' : ', not verified';
+  const unread = reading.cut ? ', Jev read only the start of the diff' : '';
+  const accepted = reading.accepted ? '' : `${unread}, not verified`;
   const next = action === 'escalate' && to ? `rerun one tier up with ${to}` : ACTION_TEXT[action];
   return `Jev verdict: ${answer}${accepted} → ${next}`;
 }
@@ -64,7 +66,11 @@ export async function verifyChange(s: Session): Promise<FlowEvent> {
       }),
     s.control.signal,
   );
-  const reading = readVerdict(requirements, call.status === 'answered' ? call.response : null);
+  const reading = readVerdict(
+    requirements,
+    call.status === 'answered' ? call.response : null,
+    diffIsCut(patch),
+  );
   const evidence: CascadeEvidence = {
     checksPass: checksPhrase(s.checkBodies) === 'checks pass',
     criticConcerns: s.flow.review.fixable.length > 0,

@@ -53,7 +53,7 @@ const pieces = [piece('P1', ['a.ts']), piece('P2', ['b.ts', 'c.ts'])];
 
 function rules(extra: Partial<RouteRules> = {}): RouteRules {
   return {
-    route: context('pinned'),
+    route: context('auto'),
     picks: new Map([
       ['P1', SONNET],
       ['P2', SONNET],
@@ -115,6 +115,30 @@ describe('routePieceList', () => {
       'reasoning 4.3, coding 4, context 3 → top tier → Claude Opus 5.5 (only top-tier route)',
     );
     expect(result.pieces[0]!.answer).toEqual(answer());
+  });
+
+  it('holds every piece of a pinned chat to the pin and keeps what Jev would have used', () => {
+    const result = routed(
+      [
+        ['P1', answer()],
+        ['P2', HARD],
+      ],
+      { route: context('pinned') },
+    );
+    expect(result.pieces.map((entry) => entry.model)).toMatchObject([
+      {
+        pick: SONNET,
+        decidedBy: 'rules',
+        reason: 'pinned in this chat',
+        jevPick: { provider: 'codex', model: 'gpt-6-sol' },
+      },
+      { pick: SONNET, decidedBy: 'rules', jevPick: { provider: 'claude', model: 'opus[1m]' } },
+    ]);
+    const destructive = routed([['P1', answer()]], {
+      route: context('pinned'),
+      requestDestructive: true,
+    });
+    expect(destructive.pieces.map((entry) => entry.model.pick)).toEqual([SONNET, SONNET]);
   });
 
   it('prints the demand tier and the route tier when they differ', () => {
@@ -257,7 +281,7 @@ describe('routePieceList', () => {
 });
 
 describe('routing below the chat model (C2)', () => {
-  const opusChat = { ...context('pinned'), chat: { ...context('pinned').chat, model: 'opus[1m]' } };
+  const opusChat = { ...context('auto'), chat: { ...context('auto').chat, model: 'opus[1m]' } };
   const opusRules = (extra: Partial<RouteRules> = {}) => ({ route: opusChat, ...extra });
   const DOCS = answer({
     kind: { choice: 'docs', confidence: 1, probabilities: { docs: 1 } },

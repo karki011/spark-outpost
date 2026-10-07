@@ -16,7 +16,7 @@ import { candidates, context, plainFacts } from './route-fixtures.ts';
 import { escalatedEffort } from './tiers.ts';
 
 describe('rule routes', () => {
-  it('keeps a pinned model without Jev ratings, except for destructive work', () => {
+  it('keeps a pinned model for trivial and destructive work and records the tier Jev would have used', () => {
     expect(
       routeBuilder(context('pinned'), { trivial: true, destructive: false }, 'small'),
     ).toMatchObject({
@@ -24,10 +24,19 @@ describe('rule routes', () => {
       pick: { model: 'sonnet' },
       autoWouldUse: { model: 'sonnet' },
     });
-    expect(routeBuilder(context('pinned'), { trivial: false, destructive: true })).toMatchObject({
-      rule: 'destructive → top tier',
-      pick: { model: 'opus[1m]' },
+    expect(
+      routeBuilder(context('pinned'), { trivial: false, destructive: true }, 'top'),
+    ).toMatchObject({
+      routedBy: 'pinned',
+      rule: 'pinned',
+      pick: { model: 'sonnet' },
+      autoWouldUse: { model: 'opus[1m]' },
     });
+  });
+
+  it('keeps an escalated retry of a pinned Builder on the pin', () => {
+    const pinned = routeBuilder(context('pinned'), plainFacts);
+    expect(escalate(context('pinned'), pinned)).toEqual(pinned);
   });
 
   it('uses the chat model on Auto, the middle tier for trivial work and the top tier for destructive', () => {

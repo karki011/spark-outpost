@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SystemOneResponse } from './intake-questions.ts';
 import {
   buildVerdictQuestions,
+  diffIsCut,
   MAX_REQUIREMENTS,
   readVerdict,
   requirementLines,
@@ -99,6 +100,21 @@ describe('three-way diff verdict', () => {
     expect(
       readVerdict(requirements, answered('declined', 0.8, { unmet_1: 0, unmet_2: 0 })).accepted,
     ).toBe('declined');
+  });
+
+  it('never accepts a change as done from a diff that was cut, and still acts on what is missing', () => {
+    const long = `+${'x'.repeat(24_001)}`;
+    expect(diffIsCut(long)).toBe(true);
+    expect(diffIsCut('+ok')).toBe(false);
+    const supported = readVerdict(requirements, answered('supported', 0.95), true);
+    expect(supported).toMatchObject({ cut: true, verdict: 'supported', accepted: null });
+    const unsupported = readVerdict(
+      requirements,
+      answered('unsupported', 0.9, { unmet_1: 0.9 }),
+      true,
+    );
+    expect(unsupported.accepted).toBe('unsupported');
+    expect(readVerdict(requirements, answered('supported', 0.95)).accepted).toBe('supported');
   });
 
   it('counts an answer below 0.8 as not verified', () => {

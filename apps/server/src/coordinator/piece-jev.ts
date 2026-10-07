@@ -103,7 +103,7 @@ function pickNote(s: Session, route: PieceRoute, asked: boolean): string | null 
   if (!asked || route.place.placement === 'read_only') return null;
   const { model } = route;
   if (model.decidedBy === 'jev') return `Jev: ${model.reason}`;
-  const overrode = model.jevPick ? ` (Jev picked ${pickLabel(s, model.jevPick)})` : '';
+  const overrode = model.jevPick ? ` (Jev would have used ${pickLabel(s, model.jevPick)})` : '';
   return `Rules: ${pickLabel(s, model.pick)} · ${model.reason}${overrode}`;
 }
 

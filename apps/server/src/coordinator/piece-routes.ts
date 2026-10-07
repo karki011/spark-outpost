@@ -141,6 +141,19 @@ function jevModel<T extends RoutablePiece>(
   };
 }
 
+export const PINNED_REASON = 'pinned in this chat';
+
+function heldToPin<T extends RoutablePiece>(
+  rules: RouteRules<T>,
+  piece: T,
+  jev: ModelChoice,
+): ModelChoice {
+  const pinned = rulesChoice(rules, piece, PINNED_REASON, jev.demand);
+  const wouldUse = jev.jevPick;
+  const same = wouldUse?.provider === pinned.pick.provider && wouldUse.model === pinned.pick.model;
+  return wouldUse && !same ? { ...pinned, jevPick: wouldUse } : pinned;
+}
+
 function chooseModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
   jev: JevOutcome,
@@ -161,6 +174,16 @@ function chooseModel<T extends RoutablePiece>(
     return rulesChoice(rules, piece, `no healthy ${demand.tier}-tier route or higher`, demand);
   }
   return jevModel(rules, destructive, demand, chosen);
+}
+
+function pieceModel<T extends RoutablePiece>(
+  rules: RouteRules<T>,
+  jev: JevOutcome,
+  piece: T,
+  destructive: boolean,
+): ModelChoice {
+  const chosen = chooseModel(rules, jev, piece, destructive);
+  return rules.route.routing === 'pinned' ? heldToPin(rules, piece, chosen) : chosen;
 }
 
 function chatRoute<T extends RoutablePiece>(rules: RouteRules<T>): RouteOption | null {
@@ -214,7 +237,7 @@ export function routePieceList<T extends RoutablePiece>(
       key: piece.key,
       model: piece.research
         ? rulesChoice(rules, piece, 'reads only')
-        : chooseModel(rules, jev, piece, destructive.has(piece.key)),
+        : pieceModel(rules, jev, piece, destructive.has(piece.key)),
       place: choosePlace(rules, piece),
       answer: answer ?? null,
       files: fileCount(piece),

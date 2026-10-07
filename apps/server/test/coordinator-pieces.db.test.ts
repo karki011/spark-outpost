@@ -297,7 +297,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
       coordinator: 'in_order',
     });
     const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');
-    const started = await startScenario(t, root, scenario, 'hands-off', 'pinned', 'opus[1m]');
+    const started = await startScenario(t, root, scenario, 'hands-off', 'auto', 'opus[1m]');
     const { orchestration } = await driveToEnd(t, started.conversationId, started.runId);
     expect(orchestration.status).toBe('succeeded');
     const { rows } = await t.db.query<{ role: string; model: string; summary: string }>(

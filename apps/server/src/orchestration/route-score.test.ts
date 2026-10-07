@@ -87,27 +87,13 @@ describe('quality minus cost', () => {
     expect(route.score?.ranked.map((model) => model.id)).not.toContain('haiku');
   });
 
-  it("routes a pinned chat's Builder by Jev from the pin: below only when clearly simple", () => {
+  it("keeps a pinned chat's Builder on the pin whatever Jev rates the work", () => {
     const hard = routeBuilder(chat('sonnet', 'pinned'), withRatings(ratings(5, 5)));
-    expect(hard).toMatchObject({
-      routedBy: 'jev',
-      rule: 'Jev: hard work, above your pinned Sonnet 5',
-      pick: { model: 'opus[1m]' },
-    });
+    expect(hard).toMatchObject({ routedBy: 'pinned', rule: 'pinned', pick: { model: 'sonnet' } });
+    expect(hard.score).toBeUndefined();
     const simple = routeBuilder(chat('opus[1m]', 'pinned'), withRatings(ratings(1, 1)));
-    expect(simple).toMatchObject({
-      routedBy: 'jev',
-      rule: 'Jev: clearly simple, below your pinned Opus 5.5',
-      pick: { model: 'sonnet' },
-    });
-    const everyday = routeBuilder(chat('opus[1m]', 'pinned'), withRatings(ratings(1, 3)));
-    expect(everyday).toMatchObject({ routedBy: 'pinned', pick: { model: 'opus[1m]' } });
-    expect(everyday.score).toBeUndefined();
-    const unsure = { ...ratings(1, 1), complexity: { value: 1, confidence: 0.3 } };
-    expect(routeBuilder(chat('opus[1m]', 'pinned'), withRatings(unsure))).toMatchObject({
-      routedBy: 'pinned',
-      pick: { model: 'opus[1m]' },
-    });
+    expect(simple).toMatchObject({ routedBy: 'pinned', pick: { model: 'opus[1m]' } });
+    expect(simple.score).toBeUndefined();
   });
 
   it('leaves destructive work to the rules', () => {
