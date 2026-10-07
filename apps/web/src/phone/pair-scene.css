@@ -56,9 +56,6 @@
   color: var(--success);
   animation: ph-cheer 0.55s var(--spring) 2;
 }
-.ph-scene.expiring .ph-scene-blob {
-  animation: ph-nudge 1.4s ease-in-out infinite;
-}
 .ph-scene.ended .ph-scene-blob {
   transform: rotate(-7deg);
   animation: ph-shrug 0.6s var(--out) both;
@@ -106,9 +103,6 @@
     transform: rotate(-7deg);
   }
 }
-:root:is([data-motion='rest'], [data-motion='paused']) .ph-scene.expiring .ph-scene-blob {
-  animation-play-state: paused;
-}
 
 .ph-code {
   display: flex;
@@ -148,6 +142,9 @@
   letter-spacing: 0.06em;
   color: var(--text);
   user-select: all;
+}
+.ph-code-side .btn.primary {
+  border: 1px solid transparent;
 }
 .ph-ring {
   --ph-ring: var(--accent);
