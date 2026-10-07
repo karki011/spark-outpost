@@ -122,6 +122,23 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
     },
   );
 
+  it('routes a Builder’s Needs lines to the piece that owns the file, or to the follow-up run', async () => {
+    const { orchestration, runId, list } = await build('#needs', 'hands-off');
+    expect(orchestration.status).toBe('succeeded');
+    expect(list.pieces.every((piece) => piece.status === 'landed')).toBe(true);
+    expect(await refusals(runId)).toEqual([]);
+    const prompts = await t.db.query<{ role: string; key: string | null; prompt: string }>(
+      `SELECT role, route->>'pieceKey' AS key, prompt FROM runs WHERE parent_run_id = $1
+       ORDER BY created_at`,
+      [runId],
+    );
+    const owner = prompts.rows.find((row) => row.key === 'P3')!;
+    expect(owner.prompt).toContain('Rivet (P2) needs `view.ts` changed: show the tag count');
+    const followUp = prompts.rows.find((row) => row.role === 'integrator')!;
+    expect(followUp.prompt).toContain('Rivet (P2) needs `store.ts` changed: export listTags');
+    expect(followUp.prompt).not.toContain('show the tag count');
+  });
+
   it('lets a piece install packages when it has the tree to itself', async () => {
     const { orchestration, runId } = await build('#addpkg', 'hands-off');
     expect(orchestration.status).toBe('succeeded');

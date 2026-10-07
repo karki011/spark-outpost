@@ -134,7 +134,7 @@ export async function urgentLeftovers(
     `SELECT m.* FROM member_messages m JOIN runs r ON r.id = m.run_id
      WHERE m.conversation_id = $1 AND m.message_id IS NULL
        AND (m.status = 'interrupting'
-         OR (m.status = 'queued' AND m.urgency = 'now'
+         OR (m.status = 'queued' AND (m.urgency = 'now' OR r.parent_run_id IS NULL)
            AND r.status NOT IN ('queued', 'running', 'awaiting_approval')))
      ORDER BY m.created_at, m.id
      FOR UPDATE OF m`,

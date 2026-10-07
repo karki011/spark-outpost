@@ -262,7 +262,11 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   if (handoff) {
     await turn.update({ sessionUpdate: 'usage_update', used: 160_000, size: 200_000 });
   }
-  await turn.say(`Built ${key} in ${file}${fixing ? ' and fixed the check' : ''}.`);
+  const needs =
+    turn.text.includes('#needs') && key === 'P2'
+      ? '\nNeeds: view.ts — show the tag count\nNeeds: `store.ts` — export listTags'
+      : '';
+  await turn.say(`Built ${key} in ${file}${fixing ? ' and fixed the check' : ''}.${needs}`);
   return 'end_turn';
 }
 

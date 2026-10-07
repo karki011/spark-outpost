@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { PieceList } from '@spark-outpost/contracts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
-import { getMemberMessage } from '../src/persistence/member-messages.ts';
+import { getMemberMessage, insertMemberMessage } from '../src/persistence/member-messages.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { pendingPieceNotes } from '../src/persistence/piece-notes.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
-import { chatTarget, sendNow } from '../src/workflow/queue-drain.ts';
+import { chatTarget, drainQueue, sendNow, waitingQueues } from '../src/workflow/queue-drain.ts';
 import { pieceRepo, projectFlags } from './coordinator-parallel-support.ts';
 import {
   connectProviders,
@@ -131,6 +131,29 @@ describe(
         'requirement_added',
       ]);
       expect(await statuses()).toMatchObject({ P1: 'running', P2: 'running', P3: 'pending' });
+    });
+
+    it('sends a message stored as the last piece lands as the next chat message', async () => {
+      await requestCancel(t.db, runId);
+      await eventually(async () => (await getRun(t.db, runId))?.finishedAt, 45_000);
+      const id = randomUUID();
+      await insertMemberMessage(t.db, {
+        id,
+        conversationId,
+        runId,
+        body: 'What changed in store.ts?',
+        urgency: 'next',
+      });
+      expect(await waitingQueues(t.db)).toContain(conversationId);
+      await eventually(async () => {
+        await drainQueue(t.db, conversationId, chatTarget(t.db));
+        return (await getMemberMessage(t.db, id))?.status === 'sent';
+      }, 30_000);
+      const { rows } = await t.db.query<{ content: string }>(
+        'SELECT content FROM messages WHERE id = $1',
+        [id],
+      );
+      expect(rows).toEqual([{ content: 'What changed in store.ts?' }]);
     });
 
     it('queues unrelated work as the next message', async () => {
