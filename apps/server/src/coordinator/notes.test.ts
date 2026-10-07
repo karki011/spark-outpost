@@ -45,9 +45,9 @@ function piece(key: string, extra: Partial<TaskPiece> = {}): TaskPiece {
 }
 
 const PATCH = [
-  'diff --git a/tags.ts b/tags.ts',
-  '--- a/tags.ts',
-  '+++ b/tags.ts',
+  'diff --git a/src/tags.ts b/src/tags.ts',
+  '--- a/src/tags.ts',
+  '+++ b/src/tags.ts',
   '-export function listTags(db) {',
   '+export function listTags(db, projectId) {',
 ].join('\n');
@@ -107,8 +107,36 @@ describe('piece notes', () => {
     expect(notices.map((notice) => [notice.pieceKey, notice.kind, notice.urgent])).toEqual([
       ['P2', 'contract_changed', false],
       ['P3', 'contract_changed', true],
-      ['P4', 'contract_changed', false],
     ]);
     expect(notices[0]!.body).toContain('changed `listTags`');
+  });
+
+  it('ignores a contract word that appears in a file the running piece does not use', () => {
+    const patch = [
+      'diff --git a/test/slugify.test.ts b/test/slugify.test.ts',
+      '--- a/test/slugify.test.ts',
+      '+++ b/test/slugify.test.ts',
+      "+test('keeps a range of dashes', () => {",
+      'diff --git a/src/slugify.ts b/src/slugify.ts',
+      '--- a/src/slugify.ts',
+      '+++ b/src/slugify.ts',
+      '+export function slugify(text: string) {',
+    ].join('\n');
+    const slug = {
+      piece: {
+        key: 'P1',
+        title: 'Slugify',
+        filesChanged: ['src/slugify.ts', 'test/slugify.test.ts'],
+        contract: 'slugify(text: string): string',
+      },
+      builder: 'Bolt',
+      patch,
+    };
+    const range = { contract: 'range(start: number, end: number): number[]' };
+    expect(landingNotices(slug, [{ piece: piece('P2', range), sources: [] }])).toEqual([]);
+    const reads = piece('P3', { ...range, reads: ['src/slugify.ts'] });
+    expect(landingNotices(slug, [{ piece: reads, sources: [] }]).map((n) => n.body)).toEqual([
+      "Bolt's Slugify changed `slugify`, which your piece uses; check your code against the new version.",
+    ]);
   });
 });
