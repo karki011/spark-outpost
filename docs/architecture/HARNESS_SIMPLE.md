@@ -657,13 +657,40 @@ None of the code below reads the setting, and none of it is called only from cur
 | No plan turn, so no agreed plan, so Jev is not asked about Builders or pieces                                                                                                 | `coordinator-builders.db` (3), `coordinator-jev-routes.db` (4), `coordinator-pieces.db` "runs the integrator on the model the pieces shared", `crew-overhead.db`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | See 13.6, item 2; then port                                                                                                                                                                                                    |
 | A failed small change gets one more Builder (the upgrade to a build), and no Scout plans first                                                                                | `orchestration-smart-checks.db`, `orchestration-critic-fix.db`, `orchestration-flow.db` "retries a failed Builder one tier up twice …", `orchestration-worktrees.db`, `orchestration.db` (level matrix, "runs destructive work on the top tier …"), `escalation-routes.db` "switches the session directly …"                                                                                                                                                                                                                                                                                                                                                                                             | Port to the new run lists                                                                                                                                                                                                      |
 
-**Simple-only tests that become the ordinary tests.** `conversation-session.db` (6), `simple-intake.db` (5), `simple-plan-turn.db` (2), `mid-build.db` (5), `orchestration/simple-intake.test.ts`, and the replay under `REPLAY_HARNESS=simple`; they drop their `harness: 'simple'` option. `test/support.ts` loses `underCurrent` and `BUILDER_SESSION_KEYS` becomes `chat:%`.
+**Simple-only tests that become the ordinary tests.** `conversation-session.db` (6), `simple-intake.db` (5), `simple-plan-turn.db` (2), `mid-build.db` (4), `orchestration/simple-intake.test.ts`, and the replay under `REPLAY_HARNESS=simple`; they drop their `harness: 'simple'` option. `test/support.ts` loses `underCurrent` and `BUILDER_SESSION_KEYS` becomes `chat:%`.
 
 **Browser specs that show a removed card** (not run): `crew-checkpoints.spec.ts` (7 of 8), `crew-clarify.spec.ts` (4), `crew-cascade.spec.ts` 43, `plans.spec.ts` 99, `pieces.spec.ts` 25, `crew-overhead.spec.ts` 58, `universal-laws.spec.ts` 48, `chat-questions.spec.ts` 69 to 331, `ask-card.spec.ts` and `ask-card-shots.spec.ts`, `chat-rail.spec.ts` 296, `composer-status.spec.ts` 118 and 211, `sidebar-attention.spec.ts` 30, and the seeded plan cards in `docs-shots-batch-1.spec.ts` and `tickets-flow.spec.ts`. Specs that seed a decided card stay as tests of old rows.
 
 ### 13.4 Source that becomes dead
 
-PLACEHOLDER_13_4
+From the experiment's report (a throwaway copy of this branch in which the setting was inlined as `simple`, unreachable flow cases were deleted, and knip and the server and web typechecks were iterated until clean; no tests were run there). These are measured lower bounds: only what was provably dead was removed.
+
+| Area   | Files deleted whole                                                                                                                                      | Lines |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| Source | `harness/setting.ts`, `orchestration/clarify-turn.ts`, `orchestration/clarify-questions.ts`, `orchestration/plan-only.ts`, `orchestration/plan-first.ts` | 591   |
+| Tests  | 7 test files that only test those modules                                                                                                                | 791   |
+
+| Staying file                                                                                                              | Lines removed inside it |
+| ------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `orchestration/clarify.ts`                                                                                                | 173                     |
+| `orchestration/checkpoint-asks.ts`                                                                                        | 95                      |
+| `orchestration/session-keep.ts`                                                                                           | 77                      |
+| `orchestration/checkpoint.ts`, `orchestration/follow-up.ts`                                                               | 58 each                 |
+| `orchestration/transitions.ts`                                                                                            | 49                      |
+| `orchestration/simple-intake.ts`                                                                                          | 28                      |
+| `orchestration/builder-complexity.ts`                                                                                     | 18                      |
+| `orchestration/missing-context.ts`, `orchestration/orchestrator.ts`                                                       | 15 each                 |
+| `orchestration/read-only-flow.ts`, `orchestration/member-routes.ts`                                                       | 14 each                 |
+| `orchestration/checkpoint-policy.ts`                                                                                      | 10                      |
+| `orchestration/flow-types.ts`, `full-auto-ship.ts`, `session.ts`                                                          | 6, 4, 2                 |
+| `coordinator/build.ts`, `workflow/queue-drain.ts`, `turn-session.ts`, `agent-turn.ts`, `api/audit-routes.ts`, `config.ts` | about 10 together       |
+| Test files that stay, including the 14 marked cases                                                                       | 913                     |
+
+Totals: about 1,240 source lines (591 in whole files, 648 inside staying files) and about 1,700 test lines. That is far below the 10,800 lines section 6 estimated, because `simple` reuses the routing stack, the review loop, the Coordinator and the observation code; deleting those is the rebuild listed under "Not built" in the fifth session, not slice 7.
+
+After the deletion the server no longer produces checkpoint kinds `clarify`, `plan`, `retry` and `verify`; their schemas and web renderers stay for old rows (13.5).
+
+**Believed dead, not removed because it could not be proven.** The `then` field of the intake decisions (written, never read); asks that carry only a reason; Jev's `speed` question (removing it changes what Jev is sent); `closeTaskSessions`; `fallbackSeconds` on `askCard`; the `userModeOnly` argument of `plansThisTurn`. Also still exercising current-only behaviour and to be rewritten or deleted by hand: the db tests in 13.3, the browser specs in 13.3 plus `pieces-parallel.spec.ts`, and the fake-agent script `crew-engine.ts`. Already unreachable from earlier sessions and to delete with them: `orchestration/pr-split.ts`, `shipPiece`, `sharesTree` on `ProviderTurn` and `PieceGuard`, `conflictTurn` and the copy tags in the fake agents, `COORDINATOR_PLACEMENT` in `scripts/e2e-live/story/arms.ts`.
 
 ### 13.5 Stored data that must keep parsing and rendering
 
