@@ -7,11 +7,13 @@ import path, { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LEFT_FOR_USER, type CheckBody } from '@spark-outpost/contracts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
+import { UPGRADED_NOTE } from '../src/orchestration/simple-intake.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import {
   TRIVIAL,
   artifactBodies,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -24,7 +26,7 @@ import {
   type JevScript,
 } from './orchestration-support.ts';
 import { FAKE_GH, repoWithRemote, startGitHubStub, type GitHubStub } from './ship-support.ts';
-import { createTestDb, type TestDb, underCurrent } from './support.ts';
+import { createTestDb, type TestDb } from './support.ts';
 
 const OLD_FAILURE = `console.log(' FAIL  libs/dates/src/holidays.test.ts > today is a working day');
 console.log(' FAIL  libs/compat/src/node-version.test.ts > reads the flag');
@@ -176,38 +178,36 @@ describe('a check that already fails on the base commit', { timeout: 120_000 }, 
 });
 
 describe('a check the change broke', { timeout: 180_000 }, () => {
-  it.runIf(underCurrent)(
-    'gets one fix round, stops when the failing set is unchanged, and is not sent again next turn',
-    async () => {
-      const { conversationId, runId } = await begin({ 'check.mjs': BROKEN_BY_THE_CHANGE }, [
-        'node check.mjs',
-      ]);
-      const first = await members(runId);
-      expect(first.map((member) => member.role)).toEqual(['builder', 'builder']);
-      expect(first[1]!.follow_up).toContain('## Failing checks');
-      const rounds = await bodies();
-      expect(rounds.map((body) => [body.status, body.leftForUser ?? false])).toEqual([
-        ['failed', false],
-        ['failed', true],
-      ]);
-      expect(rounds[0]!.results[0]).toMatchObject({
-        cause: 'change',
-        blamed: ['test notes.test.ts'],
-        baseline: { outcome: 'passed', trusted: true },
-      });
-      const rows = await checkRows(conversationId);
-      expect(rows.at(-1)!.label).toBe(`Checks for Bolt: node check.mjs failed · ${LEFT_FOR_USER}`);
+  it('gets one fix round, then one upgrade to a build when the failing set is unchanged, and is not sent again next turn', async () => {
+    const { conversationId, runId } = await begin({ 'check.mjs': BROKEN_BY_THE_CHANGE }, [
+      'node check.mjs',
+    ]);
+    const first = await members(runId);
+    expect(first.map((member) => member.role)).toEqual(['builder', 'builder', 'builder']);
+    expect(first[1]!.follow_up).toContain('## Failing checks');
+    expect(first[2]!.follow_up).toContain('## Failing checks');
+    expect((await assistantReplies(t, runId)).join('\n')).toContain(UPGRADED_NOTE);
+    const rounds = await bodies();
+    expect(rounds.map((body) => [body.status, body.leftForUser ?? false])).toEqual([
+      ['failed', false],
+      ['failed', true],
+      ['failed', true],
+    ]);
+    expect(rounds[0]!.results[0]).toMatchObject({
+      cause: 'change',
+      blamed: ['test notes.test.ts'],
+      baseline: { outcome: 'passed', trusted: true },
+    });
+    const rows = await checkRows(conversationId);
+    expect(rows.at(-1)!.label).toBe(`Checks for Bolt: node check.mjs failed · ${LEFT_FOR_USER}`);
 
-      const second = await nextTurn(conversationId);
-      const later = await members(second);
-      expect(later.filter((member) => member.follow_up?.includes('## Failing checks'))).toEqual([]);
-      const after = (await bodies()).slice(rounds.length);
-      expect(after.length).toBeGreaterThan(0);
-      expect(after.every((body) => body.status === 'failed' && body.leftForUser === true)).toBe(
-        true,
-      );
-    },
-  );
+    const second = await nextTurn(conversationId);
+    const later = await members(second);
+    expect(later.filter((member) => member.follow_up?.includes('## Failing checks'))).toEqual([]);
+    const after = (await bodies()).slice(rounds.length);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.every((body) => body.status === 'failed' && body.leftForUser === true)).toBe(true);
+  });
 });
 
 describe('publishing with a failure the change did not cause', { timeout: 180_000 }, () => {

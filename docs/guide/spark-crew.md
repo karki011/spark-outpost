@@ -17,14 +17,12 @@ Spark gives each request the smallest crew that fits.
 
 ## How Spark decides what to do
 
-| Line above the crew          | When                                                           |
-| ---------------------------- | -------------------------------------------------------------- |
-| **Answer directly**          | A question or research                                         |
-| **Build it**                 | A clear change                                                 |
-| **Plan, then build**         | A [plan](plan-card.md) request, or a big or destructive change |
-| **Plan, build, then review** | The same, when review is warranted                             |
+| Line above the crew | When                   |
+| ------------------- | ---------------------- |
+| **Answer directly** | A question or research |
+| **Build it**        | A clear change         |
 
-A vague request first gets 1 to 3 questions. [Jev](jev.md) or rules decide.
+A vague request gets 1 to 3 questions as the reply. [Jev](jev.md) or rules decide. A build's plan is [saved](plan-card.md), not asked about.
 
 ## When the Critic reviews
 
@@ -34,7 +32,7 @@ A Builder fixes findings, up to 3 rounds. If the Critic fails, the other provide
 
 ## Pieces
 
-A Coordinator splits a big plan into pieces such as **P1**, one Builder each. Jev or rules pick 1 to 4 Builders. A piece never raises a plan card. See [Watch and steer the crew](pieces.md).
+A Coordinator splits a big plan into pieces such as **P1**, one Builder each. Jev or rules pick 1 to 4 Builders. Jev picks each piece's model. See [Watch and steer the crew](pieces.md).
 
 | Where pieces run | Means                                    | Used for           |
 | ---------------- | ---------------------------------------- | ------------------ |

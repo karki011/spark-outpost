@@ -55,6 +55,14 @@ describe('toAttention', () => {
     );
   });
 
+  it("reads the agent's own plan approval as a plan to review", () => {
+    expect(
+      toAttention(
+        pending({ pending_kind: 'other', pending_title: 'Approve Plan', pending_plan: true }),
+      ),
+    ).toMatchObject({ kind: 'plan', title: 'Approve Plan', approvalId: ID });
+  });
+
   it('credits the plan to the Architect and the changes to the Builder', () => {
     expect(
       toAttention(

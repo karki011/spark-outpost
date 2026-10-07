@@ -1,12 +1,9 @@
 import { writeFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
-import type { HarnessSetting } from '@spark-outpost/contracts';
 import { REPLAY_CASES } from './replay-cases.ts';
 import { replayTable, type ReplayRow } from './replay-metrics.ts';
 import { runReplay } from './replay-support.ts';
 
-const SETTINGS: readonly HarnessSetting[] =
-  process.env.REPLAY_HARNESS === 'simple' ? ['simple'] : ['current'];
 const ONLY = process.env.REPLAY_CASE ?? null;
 const rows: ReplayRow[] = [];
 
@@ -17,13 +14,13 @@ afterAll(() => {
   if (process.env.REPLAY_TABLE) writeFileSync(process.env.REPLAY_TABLE, `${table}\n`);
 });
 
-describe.each(SETTINGS)('replay under HARNESS=%s', (harness) => {
+describe('replay', () => {
   const cases = REPLAY_CASES.filter((replay) => ONLY === null || replay.id === ONLY);
 
   it.each(cases)(
     '$title: the export reproduces the run and session counts',
     async (replay) => {
-      const result = await runReplay(replay, harness);
+      const result = await runReplay(replay);
       try {
         const { row, ledger } = result;
         rows.push(row);

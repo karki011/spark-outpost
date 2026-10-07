@@ -26,7 +26,7 @@ import {
 } from './risk-rules.ts';
 import { bigByRule } from './builder-complexity.ts';
 import { intentByRule, planByRule, researchByRule } from './intent-rules.ts';
-import type { ClarifiedStart, StartMode } from './transitions.ts';
+import type { StartMode } from './transitions.ts';
 
 export interface CurrentTask {
   taskId: string;
@@ -53,7 +53,6 @@ export interface IntakeFacts {
 export interface IntakeDecisions {
   intent: Category;
   start: StartMode;
-  then: ClarifiedStart;
   review: boolean;
   destructive: boolean;
   trivial: boolean;
@@ -124,11 +123,6 @@ export function turnIntent(jev: JevIntake | null, facts: Pick<IntakeFacts, 'requ
   return intentByRule(facts.request, facts.mode);
 }
 
-function afterClarifying(facts: IntakeFacts, answers: boolean, planFirst: boolean): ClarifiedStart {
-  if (facts.level === 'full-auto' || planFirst) return 'plan_first';
-  return answers ? 'answer' : 'build';
-}
-
 function planFirstIfDestructive<T extends StartMode>(
   start: T,
   destructive: boolean,
@@ -172,7 +166,6 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     return {
       intent,
       start: 'answer',
-      then: 'answer',
       review: false,
       destructive: false,
       trivial: false,
@@ -231,7 +224,6 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     return {
       intent,
       start: planFirstIfDestructive('build', destructive),
-      then: planFirstIfDestructive('build', destructive),
       review: review.value,
       destructive,
       trivial,
@@ -251,7 +243,6 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   return {
     intent,
     start,
-    then: planFirstIfDestructive(afterClarifying(facts, answers, planFirst), destructive),
     review: review.value || start === 'review',
     destructive,
     trivial,

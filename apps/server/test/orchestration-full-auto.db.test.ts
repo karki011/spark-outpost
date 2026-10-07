@@ -7,8 +7,8 @@ import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { NO_TASK_BRANCH_REASON } from '../src/approvals/publish-policy.ts';
-import { DESTRUCTIVE_WAIT, RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
-import { assumptionPrNote } from '../src/orchestration/clarify.ts';
+import { RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
+import { DECLINED_REASON } from '../src/orchestration/cascade.ts';
 import { NO_PULL_REQUEST } from '../src/orchestration/no-pull-request.ts';
 import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { runCommand } from '../src/setup/command.ts';
@@ -226,38 +226,31 @@ describe('Full auto runs to a draft PR', () => {
     expect(authors.some((line) => line.includes(HARNESS_COMMIT_EMAIL))).toBe(false);
   }, 120_000);
 
-  it('waits on the plan card for destructive work at Full auto, then flags it in the PR body', async () => {
+  it('builds destructive work at Full auto without a card of its own, and flags it in the PR body', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
-    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
     start();
-    const { orchestration, asked } = await runFullAuto(
+    const { orchestration, asked, keep } = await runFullAuto(
       'Rename the runs table column and migrate old rows. #build',
     );
     expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.title)).toEqual(['Build this plan?']);
-    expect(asked[0]!.payload.checkpoint).toMatchObject({
-      autoOption: null,
-      waitsFor: DESTRUCTIVE_WAIT,
-    });
-    expect(orchestration.checkpoints[0]).toMatchObject({ decidedBy: 'user', autoContinueAt: null });
+    expect(asked).toEqual([]);
+    expect(orchestration.checkpoints.map((checkpoint) => checkpoint.kind)).toEqual(['accept']);
+    expectAutoKept(keep);
     expect(stub.github.pulls).toHaveLength(1);
     expect(stub.github.pulls[0]!.body).toContain(`**${RISKY_PR_NOTE}**`);
   }, 120_000);
 
-  it('assumes the likeliest reading of a vague request when the agent asks nothing, plans first, and states both in the PR body', async () => {
+  it('asks its questions in the reply for a vague request, and ships nothing', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
     const text = 'Make it faster. #build';
     start({ scenario: { ...NORMAL, text, vague: 0.94, intent: 'refactor' } });
     const { orchestration, asked, reply } = await runFullAuto(text);
     expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.title)).toEqual(['Build this plan?']);
-    expect(reply).toMatch(/Assumed you meant: .+\. Say so if you meant something else\./);
-    const assumed = /Assumed you meant: (.+?)\. Say so/.exec(reply)![1]!;
-    expect(stub.github.pulls).toHaveLength(1);
-    expect(stub.github.pulls[0]!.body).toContain(`**${assumptionPrNote(assumed)}**`);
-    expect(stub.github.pulls[0]!.body).toContain('Plan it followed:');
+    expect(asked).toEqual([]);
+    expect(reply).not.toContain('Assumed you meant');
+    expect(stub.github.pulls).toEqual([]);
   }, 120_000);
 
   it('pushes the branch and links Create PR when GitHub is not connected', async () => {
@@ -296,7 +289,7 @@ describe('Full auto runs to a draft PR', () => {
     async (_name, scenario) => {
       await newRepo();
       await writeFile(ghState(), 'octo-cli');
-      start();
+      start({ scenario });
       const { conversationId, runId } = await startScenario(t, repo.root, scenario, 'full-auto');
       const { orchestration } = await driveToEnd(
         t,
@@ -363,27 +356,15 @@ describe('Full auto runs to a draft PR', () => {
     expect(remoteBranches().some((branch) => branch.startsWith('spark/'))).toBe(false);
   }, 120_000);
 
-  it('asks when Jev could not verify, and notes it on the PR after Finish', async () => {
+  it('says so in the reply when Jev could not verify, ships, and notes it on the PR', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
     start({ verdicts: [{ choice: 'declined', confidence: 0.9 }] });
-    const { asked } = await runFullAuto();
-    expect(asked.map((approval) => approval.kind)).toEqual(['verify']);
+    const { asked, reply, orchestration } = await runFullAuto();
+    expect(orchestration.status).toBe('succeeded');
+    expect(asked).toEqual([]);
+    expect(reply).toContain(`Needs you: ${DECLINED_REASON}`);
     expect(stub.github.pulls).toHaveLength(1);
     expect(stub.github.pulls[0]!.body).toContain(`**${UNVERIFIED_NOTE}**`);
-  }, 120_000);
-
-  it('does not ship when Jev could not verify and the user stops', async () => {
-    await newRepo();
-    await writeFile(ghState(), 'octo-cli');
-    start({ verdicts: [{ choice: 'declined', confidence: 0.9 }] });
-    const stop: Answerer = (approval) =>
-      approval.kind === 'verify'
-        ? { optionId: CHECKPOINT_OPTION.stop }
-        : answerEverything(approval);
-    const { orchestration, keep } = await runFullAuto(NORMAL.text, stop);
-    expect(orchestration.status).toBe('cancelled');
-    expect(keep).toEqual([]);
-    expect(stub.github.pulls).toEqual([]);
   }, 120_000);
 });

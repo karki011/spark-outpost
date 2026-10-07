@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { activeTime } from './active-time.ts';
-import { asksToKeep, autoContinueOption, shipsByItself } from './checkpoint-policy.ts';
+import { asksToKeep, shipsByItself } from './checkpoint-policy.ts';
 import {
   asksForReview,
   buildsByRule,
@@ -312,18 +311,5 @@ describe('model tiers', () => {
   it('raises effort when the model is already at the top, never to max', () => {
     expect(strongerEffort(['low', 'medium', 'high', 'max'], 'medium')).toBe('high');
     expect(strongerEffort(['low', 'medium', 'high', 'max'], 'high')).toBe('high');
-  });
-});
-
-describe('auto-continue', () => {
-  it('stops and reports on the retry card, and takes the likely reading when vague', () => {
-    expect(autoContinueOption('retry', false)).toBe(CHECKPOINT_OPTION.stopReport);
-    expect(autoContinueOption('clarify', true)).toBe(CHECKPOINT_OPTION.clarifyRules);
-  });
-
-  it('never auto-continues the user-owned cards', () => {
-    expect(autoContinueOption('clarify', false)).toBeNull();
-    expect(autoContinueOption('accept', false)).toBeNull();
-    expect(autoContinueOption('merge_conflict', false)).toBeNull();
   });
 });

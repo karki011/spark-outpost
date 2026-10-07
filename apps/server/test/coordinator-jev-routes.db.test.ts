@@ -125,22 +125,22 @@ async function runInOrder(jev: typeof fetch | null) {
 }
 
 describe('Jev routes each piece', { timeout: 150_000 }, () => {
-  it('asks once about every plan item and composes a different pick per piece', async () => {
+  it('asks once about every piece of the list and composes a different pick per piece', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { builders: '3' },
-      scores: { T1_reasoning: 3.5, T1_coding: 2.5, T2_reasoning: 4.5 },
+      scores: { P1_reasoning: 3.5, P1_coding: 2.5, P2_reasoning: 4.5 },
     };
     const { runId, orchestration } = await runInOrder(jevFetch(script));
     expect(orchestration.status).toBe('succeeded');
-    const batches = script.calls.filter((call) => call.questions.includes('T1_reasoning'));
+    const batches = script.calls.filter((call) => call.questions.includes('P1_reasoning'));
     expect(batches).toHaveLength(1);
-    expect(script.calls.some((call) => call.questions.includes('P1_reasoning'))).toBe(false);
+    expect(script.calls.some((call) => call.questions.includes('T1_reasoning'))).toBe(false);
     expect(batches[0]!.questions).toEqual(
-      expect.arrayContaining(['builders', 'T1_kind', 'T1_coding', 'T2_context', 'T3_reliability']),
+      expect.arrayContaining(['P1_kind', 'P1_coding', 'P2_context', 'P3_reliability']),
     );
-    expect(String(batches[0]!.state.pieces)).toContain('Piece T2: API: build it in `api.ts`');
+    expect(batches[0]!.questions).not.toContain('builders');
+    expect(String(batches[0]!.state.pieces)).toContain('Piece P2: API\n  Goal: Build the api');
     expect(String(batches[0]!.state.pieces)).toContain('  - store.ts');
 
     const list = await pieceList(t, runId);
@@ -150,7 +150,7 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       ['P3', 'claude', 'sonnet'],
     ]);
     expect(list.placementReason).toContain(
-      'Jev: 3 Builders (0.73) · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
+      'Jev: 3 pieces · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
     );
     expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
       'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
@@ -253,8 +253,7 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { builders: '3' },
-      scores: { T3_reasoning: 3.5, T3_coding: 2.5 },
+      scores: { P3_reasoning: 3.5, P3_coding: 2.5 },
     };
     const { runId, orchestration } = await runParallel('#migrations', script);
     expect(orchestration.status).toBe('succeeded');

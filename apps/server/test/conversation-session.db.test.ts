@@ -60,7 +60,6 @@ beforeEach(async () => {
   script = { calls: [] };
   harness = startOrchestrator(t, jevFetch(script), {
     sessions: store,
-    harness: 'simple',
     agentEnv: { ...LISTS_SESSIONS, FAKE_ACP_STICKY_CONFIG: '1' },
   });
   conversationId = (await linkedConversation(t, root)).conversationId;
@@ -247,7 +246,6 @@ describe(
       await harness.stop();
       harness = startOrchestrator(t, jevFetch(script), {
         sessions: store,
-        harness: 'simple',
         agentEnv: { ...LISTS_SESSIONS, FAKE_ACP_RESUME_FAILS: '1' },
       });
       const question = await turn(QUESTION);

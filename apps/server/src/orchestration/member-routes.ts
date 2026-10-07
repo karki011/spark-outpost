@@ -9,14 +9,7 @@ import { ESCALATED_KINDS, type EscalationKind, type PriorEscalation } from './es
 import { handbackNote } from './handoff.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
 import { SCORED_MODELS, scoreText } from './route-score.ts';
-import {
-  keepSession,
-  resumableChat,
-  resumableConversation,
-  resumableTask,
-  type KeptRoute,
-} from './session-keep.ts';
-import { harnessOf } from '../harness/setting.ts';
+import { keepSession, resumableConversation, type KeptRoute } from './session-keep.ts';
 import {
   builderComplexity,
   DESTRUCTIVE_RULE,
@@ -33,7 +26,7 @@ import {
 } from './routing.ts';
 import { withAccessNote } from './access-note.ts';
 import type { BuiltShare } from './critic-provider.ts';
-import { builderKey, type Session } from './session.ts';
+import { type Session } from './session.ts';
 import { demotionsFor } from '../laws/demotion-history.ts';
 import { demotedRates, withDemotion } from '../laws/demotion-route.ts';
 import { taskKind } from '../laws/task-kind.ts';
@@ -124,18 +117,10 @@ function withHandback(
   return { ...route, handback: handbackNote(prior.modelLabel ?? prior.model, s.input.history) };
 }
 
-function sharesConversation(s: Session): boolean {
-  return harnessOf(s.deps) === 'simple';
-}
-
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
   const facts = builderFacts(s);
   if (s.flow.solo) return { route: soloRoute(s.route) };
-  const session = sharesConversation(s)
-    ? await resumableConversation(s.deps.db, s.input)
-    : s.taskId
-      ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
-      : null;
+  const session = await resumableConversation(s.deps.db, s.input);
   const prior = s.taskId ? await priorEscalation(s.deps.db, s.taskId) : null;
   const demotions = await demotionsFor(s.deps.db, s.input.workspaceId, taskKind(s)).catch(() => []);
   const demoted = demotedRates(demotions, s.route.chat.provider);
@@ -148,10 +133,7 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
 
 async function scoutRoute(s: Session): Promise<ResolvedRoute> {
   const route = mainSessionRoute(s.route, jevTier(s));
-  const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
-  const session = sharesConversation(s)
-    ? await resumableConversation(s.deps.db, s.input)
-    : await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
+  const session = await resumableConversation(s.deps.db, s.input);
   const kept = keepScoutSession(route, session);
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }

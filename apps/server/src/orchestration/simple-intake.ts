@@ -1,10 +1,10 @@
-import { CHECKPOINT_OPTION, type CheckBody } from '@spark-outpost/contracts';
+import type { CheckBody } from '@spark-outpost/contracts';
 import { NEED_ACT_AT } from '../advisor/need-question.ts';
 import { POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { changeFailureText } from './check-results.ts';
-import type { ClarifiedStart, FlowAction, FlowEvent, StartMode } from './flow-types.ts';
+import type { FlowEvent, FlowStart, StartMode } from './flow-types.ts';
 import type { IntakeDecisions } from './intake.ts';
 import { runMember, type Place } from './members.ts';
 import { publish, type MemberResult, type Session } from './session.ts';
@@ -20,9 +20,7 @@ export const NEEDS_YOU_NOTE = [
 export const UPGRADED_NOTE =
   'This started as a small change. Its checks failed twice, so it is now handled as a build.';
 
-const NEEDS_YOU_PREFIX = 'Needs you';
-
-function startWithoutPlans<T extends StartMode | ClarifiedStart>(start: T): T | 'answer' | 'build' {
+function startWithoutPlans(start: StartMode): FlowStart {
   if (start === 'plan') return 'answer';
   return start === 'plan_first' ? 'build' : start;
 }
@@ -61,13 +59,11 @@ const START_FOR: Record<Exclude<Need, 'review'>, StartMode> = {
   build: 'build',
 };
 
-export function simpleDecisions(decisions: IntakeDecisions, read: NeedRead): IntakeDecisions {
+export type FlowDecisions = IntakeDecisions & { start: FlowStart };
+
+export function simpleDecisions(decisions: IntakeDecisions, read: NeedRead): FlowDecisions {
   const start = read.need === 'review' ? decisions.start : START_FOR[read.need];
-  return {
-    ...decisions,
-    start: startWithoutPlans(start),
-    then: startWithoutPlans(decisions.then),
-  };
+  return { ...decisions, start: startWithoutPlans(start) };
 }
 
 export async function recordNeed(s: Session, read: NeedRead, why: string): Promise<void> {
@@ -85,7 +81,7 @@ export async function recordNeed(s: Session, read: NeedRead, why: string): Promi
   }).catch((error: unknown) => console.error('Could not record the intake need', error));
 }
 
-async function needsYouTurn(s: Session): Promise<FlowEvent> {
+export async function needsYouTurn(s: Session): Promise<FlowEvent> {
   const request = s.input.prompt;
   s.input = { ...s.input, prompt: `${request}\n\n${NEEDS_YOU_NOTE}` };
   const { result } = await runMember(s, {
@@ -98,38 +94,6 @@ async function needsYouTurn(s: Session): Promise<FlowEvent> {
   if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
   await publish(s);
   return { type: 'agent_done', role: 'scout', outcome: result.outcome, error: result.error };
-}
-
-export type SimpleStep = { event: FlowEvent } | { action: FlowAction } | null;
-
-export async function simpleStep(s: Session, action: FlowAction): Promise<SimpleStep> {
-  if (action.type === 'ask_agent') return { event: await needsYouTurn(s) };
-  if (action.type === 'plan_first') {
-    return {
-      event: {
-        type: 'answered',
-        kind: 'plan',
-        optionId: CHECKPOINT_OPTION.makeChange,
-        note: action.note,
-      },
-    };
-  }
-  if (action.type === 'plan') {
-    return {
-      action: { type: 'spawn', role: 'scout', reason: 'first', escalate: false, note: null },
-    };
-  }
-  if (action.type === 'ask' && action.kind !== 'accept') {
-    return {
-      action: {
-        type: 'finish',
-        status: 'succeeded',
-        reason: null,
-        incomplete: `${NEEDS_YOU_PREFIX}: ${action.reason}`,
-      },
-    };
-  }
-  return null;
 }
 
 export async function upgradeToBuild(

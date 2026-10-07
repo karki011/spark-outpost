@@ -1,5 +1,11 @@
-import { modePosture, isReadOnlyPosture, type Category } from '@spark-outpost/contracts';
-import { turnIntent } from '../orchestration/intake.ts';
+import {
+  CATEGORY_CONFIDENCE_FLOOR,
+  modePosture,
+  isReadOnlyPosture,
+  type Category,
+} from '@spark-outpost/contracts';
+import type { turnIntent } from '../orchestration/intake.ts';
+import { buildsByRule, planOnlyByRule, questionByRule } from '../orchestration/risk-rules.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { PLAN_MODE_ID } from './plan-mode.ts';
@@ -37,7 +43,9 @@ const BUILD_INTENTS: ReadonlySet<Category> = new Set([
 ]);
 
 export function asksToBuild(request: string, jev: Parameters<typeof turnIntent>[0]): boolean {
-  return BUILD_INTENTS.has(turnIntent(jev, { request, mode: 'do' }));
+  const confidence = jev ? (jev.confidences.intent ?? jev.confidence) : 0;
+  if (jev?.intent && confidence >= CATEGORY_CONFIDENCE_FLOOR) return BUILD_INTENTS.has(jev.intent);
+  return buildsByRule(request) && !questionByRule(request) && !planOnlyByRule(request);
 }
 
 function buildingMode(input: RunInput): string | null {

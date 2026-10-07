@@ -57,7 +57,6 @@ const configSchema = z.object({
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
   OUTCOME_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),
-  HARNESS: z.enum(['current', 'simple']).default('current'),
   COORDINATOR_MODE: z.enum(['off', 'shadow', 'in_order', 'parallel']).default('parallel'),
   PARALLEL_AGENT_LIMIT: z.coerce.number().int().min(1).max(32).default(6),
   FAKE_ACP_AGENT: z.string().min(1).optional(),

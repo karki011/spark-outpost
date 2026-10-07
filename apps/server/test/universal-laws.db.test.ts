@@ -168,21 +168,20 @@ describe('Goodhart: checks run outside the agent', { timeout: 120_000 }, () => {
 describe('Hofstadter estimates', { timeout: 240_000 }, () => {
   const planText = 'Improve the report page:\n- add a filter\n- add sorting\n- add paging #build';
 
-  async function planCardEstimate(): Promise<string | null> {
-    const scenario = { ...NORMAL, text: planText };
-    start(scenario);
-    const sent = await startScenario(t, root, scenario, 'hands-off');
-    const { asked } = await driveToEnd(t, sent.conversationId, sent.runId);
-    await harness?.stop();
-    harness = null;
-    const plan = asked.find((approval) => approval.title === 'Build this plan?');
-    return plan?.payload.checkpoint?.estimate ?? null;
+  async function recordedEstimate(): Promise<string[]> {
+    const { runId, asked } = await run({ ...NORMAL, text: planText });
+    expect(asked.filter((approval) => approval.title === 'Build this plan?')).toEqual([]);
+    return (await lawRows(runId, 'estimate')).map((row) => row.summary);
   }
 
-  it('shows a rough estimate on the plan card, then a learned one after five similar runs', async () => {
-    expect(await planCardEstimate()).toMatch(/^Rough estimate: ~\d+ min, ~\$\d+\.\d+ \(/);
+  it('records a rough estimate with no plan card, then a learned one after five similar runs', async () => {
+    const rough = await recordedEstimate();
+    expect(rough).toHaveLength(1);
+    expect(rough[0]).toMatch(/^Rough estimate: ~\d+ min, ~\$\d+\.\d+ \(/);
     for (let index = 0; index < 4; index += 1) await run(NORMAL);
-    expect(await planCardEstimate()).toMatch(
+    const learned = await recordedEstimate();
+    expect(learned).toHaveLength(1);
+    expect(learned[0]).toMatch(
       /^Usually ~<1 min, ~\$\d+\.\d+ for a task like this \(<1 min, .+ over 5 similar runs\)$/,
     );
   });

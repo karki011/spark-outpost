@@ -1,4 +1,4 @@
-import type { HarnessSetting, RunEvent } from '@spark-outpost/contracts';
+import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { subagentBrief } from '../persistence/spark-mentions.ts';
@@ -103,7 +103,6 @@ export interface TurnDeps {
   sessionLimits?: SweepLimits;
   inboxPollMs?: number;
   browserPane?: boolean;
-  harness?: HarnessSetting;
 }
 
 export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';

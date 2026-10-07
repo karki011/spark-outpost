@@ -2,12 +2,10 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, clarifyOptionId } from '@spark-outpost/contracts';
 import { conversationPlans, planDocuments } from '../src/persistence/plan-documents.ts';
 import { BUG_FINDINGS } from './fake-acp-roles.ts';
 import { FAKE_PLAN, PLAN_REPLY_TRIGGER } from './fake-acp-plans.ts';
 import {
-  answerEverything,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -15,7 +13,6 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
-  type Answerer,
   type Harness,
   type Scenario,
 } from './orchestration-support.ts';
@@ -41,18 +38,6 @@ const PLAN_S03: Scenario = {
   intent: 'feature',
 };
 
-const FASTER_S08: Scenario = {
-  id: 'faster',
-  text: 'Make it faster. #build',
-  mode: 'do',
-  question: 0.02,
-  vague: 0.96,
-  destructive: 0.02,
-  intent: 'refactor',
-  intentProbabilities: { refactor: 0.6, feature: 0.3, bug_fix: 0.1 },
-  speed: { page_load: 0.6, tests: 0.25, startup: 0.1, build: 0.05 },
-};
-
 let t: TestDb;
 let root: string;
 let harness: Harness | null = null;
@@ -70,10 +55,10 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function run(scenario: Scenario, answer: Answerer = answerEverything) {
+async function run(scenario: Scenario) {
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
   const { conversationId, runId } = await startScenario(t, root, scenario, null);
-  const done = await driveToEnd(t, conversationId, runId, answer);
+  const done = await driveToEnd(t, conversationId, runId);
   const replies = await t.db.query<{ id: string; content: string }>(
     `SELECT id, content FROM messages WHERE run_id = $1 AND role = 'assistant' ORDER BY created_at`,
     [runId],
@@ -131,74 +116,19 @@ describe('a review of uncommitted changes (dev-day s07)', () => {
 });
 
 describe('a plan-only request (dev-day s03)', () => {
-  it('writes a plan without an answer-or-build card, saves it as proposed, and approves it from the plan card', async () => {
-    const { orchestration, asked, children, replies, conversationId, runId } = await run(PLAN_S03);
+  it('writes the plan as a read-only reply, with no card and no saved plan', async () => {
+    const { orchestration, asked, children, replies, conversationId, inPlace } =
+      await run(PLAN_S03);
 
     expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.kind)).toEqual(['plan']);
-    expect(asked[0]!.title).toBe('Approve the plan?');
-    expect(asked[0]!.options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.approvePlan,
-      CHECKPOINT_OPTION.editPlan,
-      CHECKPOINT_OPTION.stop,
-    ]);
+    expect(asked).toEqual([]);
+    expect(inPlace).toBe('scout');
     expect(children).toEqual([]);
     expect(replies).toHaveLength(1);
     expect(replies[0]!.content).toContain(FAKE_PLAN.split('\n')[0]!);
 
-    const plans = await planDocuments(t.db, conversationId);
-    expect(plans).toHaveLength(1);
-    expect(plans[0]).toMatchObject({
-      status: 'approved',
-      approvedBy: 'user',
-      approvedOption: CHECKPOINT_OPTION.approvePlan,
-      sourceRunId: runId,
-      sourceMessageId: replies[0]!.id,
-    });
-    expect((await conversationPlans(t.db, conversationId)).saved).toEqual([
-      { messageId: replies[0]!.id, version: 1 },
-    ]);
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    expect((await conversationPlans(t.db, conversationId)).saved).toEqual([]);
     expect(git('status', '--porcelain')).toBe('');
-  }, 60_000);
-
-  it('revises the plan with the user’s note and keeps only the approved version', async () => {
-    let cards = 0;
-    const revise: Answerer = (approval) => {
-      if (approval.kind !== 'plan') return answerEverything(approval);
-      cards += 1;
-      return cards === 1
-        ? { optionId: CHECKPOINT_OPTION.editPlan, note: 'Also cover an empty table' }
-        : { optionId: CHECKPOINT_OPTION.approvePlan };
-    };
-    const { orchestration, asked, replies, conversationId } = await run(PLAN_S03, revise);
-
-    expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.kind)).toEqual(['plan', 'plan']);
-    expect(replies).toHaveLength(2);
-    const plans = await planDocuments(t.db, conversationId);
-    expect(plans.map((plan) => [plan.version, plan.status])).toEqual([
-      [1, 'rejected'],
-      [2, 'approved'],
-    ]);
-  }, 60_000);
-});
-
-describe('a vague "make it faster" (dev-day s08)', () => {
-  it('asks about kinds of speed, ordered by Jev, with a free-text answer', async () => {
-    const stop: Answerer = (approval) =>
-      approval.kind === 'clarify' ? { optionId: CHECKPOINT_OPTION.stop } : null;
-    const { asked, children } = await run(FASTER_S08, stop);
-
-    expect(asked.map((approval) => approval.kind)).toEqual(['clarify']);
-    expect(asked[0]!.options.map((option) => option.name)).toEqual([
-      'Page load: make pages load and render faster',
-      'Tests: make the test suite run faster',
-      'Startup: make the app and dev server start faster',
-      'Answer in your own words',
-      'Go with the most likely',
-      'Stop',
-    ]);
-    expect(asked[0]!.options.map((option) => option.optionId)[0]).toBe(clarifyOptionId(0));
-    expect(children).toEqual([]);
   }, 60_000);
 });

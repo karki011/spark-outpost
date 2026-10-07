@@ -116,7 +116,6 @@ export interface Session {
   checkMemory?: CheckMemory;
   projectStyle: ProjectStyle;
   buildStyle: BuildStyle;
-  assumption: string | null;
   needsCopy: boolean;
   placeLater?: boolean;
   copyRunId: string | null;
@@ -129,10 +128,8 @@ export interface Session {
   scanRoot?: string | null;
   scanReport?: ScanReport | null;
   ranking?: Promise<Ranking | null>;
-  unverified?: boolean;
   risky?: string | null;
   shipLine?: string | null;
-  prNotes?: string[];
   fixRound?: number | null;
   fixTree?: string | null;
   fixPatch?: string | null;

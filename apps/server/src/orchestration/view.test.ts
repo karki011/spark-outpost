@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CrewMember, OrchestrationDecision } from '@spark-outpost/contracts';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import { clarifiedRequest, mergeConflictCard, retryCard } from './checkpoint.ts';
+import { mergeConflictCard } from './checkpoint.ts';
 import { finalText } from './final-message.ts';
 import { buildOrchestration, orchestrationTotals, type OrchestrationRow } from './view.ts';
 
@@ -131,15 +130,6 @@ describe('the run that answers a question during a build', () => {
 });
 
 describe('checkpoint cards', () => {
-  it('offers Retry or Stop and report, and stops and reports by default', () => {
-    const card = retryCard(null, null, 'Stopped after 2 retries.');
-    expect(card.options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.retry,
-      CHECKPOINT_OPTION.stopReport,
-    ]);
-    expect(card.payload.autoOption).toBe(CHECKPOINT_OPTION.stopReport);
-  });
-
   it('offers no reconciling Builder for a copy that collides with your files', () => {
     const card = mergeConflictCard({ first: 'your version', second: 'Bolt', files: [] }, 'x');
     expect(card.options.map((option) => option.name)).toEqual([
@@ -147,12 +137,6 @@ describe('checkpoint cards', () => {
       "Keep Bolt's",
       'Stop',
     ]);
-  });
-
-  it('adds a free-text answer to the request', () => {
-    expect(clarifiedRequest('Fix the divider', 'Use local time')).toBe(
-      'Fix the divider\n\nThe user clarified: Use local time',
-    );
   });
 });
 

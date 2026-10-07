@@ -17,7 +17,6 @@ import {
   pendingListNotes,
   strandedPieceNotes,
 } from '../persistence/piece-notes.ts';
-import { harnessOf } from '../harness/setting.ts';
 import { watchMidBuild } from './mid-build.ts';
 import { coordinatorMode, mayCoordinate } from './shadow.ts';
 import type { Coordination } from './state.ts';
@@ -97,7 +96,7 @@ async function runWatched(
   site: PieceSite,
 ): Promise<PiecesRun> {
   const listId = coordination.list?.id;
-  const watch = listId && harnessOf(s.deps) === 'simple' ? watchMidBuild(s, listId) : null;
+  const watch = listId ? watchMidBuild(s, listId) : null;
   try {
     return await runPieces(s, action, coordination, site);
   } finally {

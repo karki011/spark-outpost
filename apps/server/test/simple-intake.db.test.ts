@@ -63,7 +63,6 @@ beforeEach(async () => {
   script = { calls: [] };
   harness = startOrchestrator(t, jevFetch(script), {
     sessions: store,
-    harness: 'simple',
     coordinator: 'in_order',
   });
   conversationId = (await linkedConversation(t, root)).conversationId;
@@ -197,7 +196,7 @@ describe('intake under HARNESS=simple', { timeout: 240_000 }, () => {
       }
       return new Response(JSON.stringify(body), { status: 200 });
     };
-    harness = startOrchestrator(t, withNeed, { sessions: store, harness: 'simple' });
+    harness = startOrchestrator(t, withNeed, { sessions: store });
 
     const { runId } = await turn(NORMAL);
 

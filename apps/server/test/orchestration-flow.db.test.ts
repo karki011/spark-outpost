@@ -12,6 +12,7 @@ import {
   NORMAL,
   TRIVIAL,
   answerEverything,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -73,23 +74,19 @@ describe('repair and escalation', () => {
     script.scenario = TRIVIAL;
     const failing = withTag(TRIVIAL, '#failstep 1');
     const { conversationId, runId } = await startScenario(t, root, failing, 'hands-off');
-    const answers: Answerer = (approval) =>
-      approval.kind === 'retry'
-        ? { optionId: CHECKPOINT_OPTION.stopReport }
-        : answerEverything(approval);
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
       ['builder', 'sonnet'],
       ['builder', 'opus[1m]'],
       ['builder', 'opus[1m]'],
     ]);
     expect(orchestration.retries).toBe(2);
-    expect(asked.map((approval) => approval.kind)).toEqual(['retry']);
-    expect(asked[0]!.payload.checkpoint).toMatchObject({
-      reason: 'Stopped after 2 retries.',
-      autoOption: CHECKPOINT_OPTION.stopReport,
-    });
-    expect(orchestration.status).toBe('failed');
+    expect(asked).toEqual([]);
+    expect(orchestration.checkpoints.map((checkpoint) => checkpoint.kind)).not.toContain('retry');
+    expect((await assistantReplies(t, runId)).at(-1)).toMatch(
+      /Needs you: Stopped after 2 retries\.$/,
+    );
+    expect(orchestration.status).toBe('succeeded');
   }, 60_000);
 
   it('recovers from one failure by retrying one tier up without asking', async () => {
@@ -177,7 +174,9 @@ describe('routing', () => {
         autoWouldUse: expect.objectContaining({ model: 'opus[1m]' }),
       }),
     ]);
-    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    const route = orchestration.decisions.find(
+      (decision) => decision.kind === 'route' && decision.childRunId !== null,
+    );
     expect(route?.summary).toContain('Jev would have used Opus 5.5');
   }, 60_000);
 
@@ -199,10 +198,18 @@ describe('routing', () => {
     expect(orchestration).toMatchObject({ depth: 'execute', depthSource: 'rules' });
     expect(orchestration.crew.map((member) => member.role)).toEqual(['builder']);
     expect(orchestration.totals.jevCalls).toBe(0);
-    expect(orchestration.decisions.map((decision) => [decision.kind, decision.applied])).toEqual([
-      ['intake', 'rules'],
-      ['route', 'rules'],
+    expect(
+      orchestration.decisions.map((decision) => [
+        decision.kind,
+        decision.applied,
+        decision.childRunId,
+      ]),
+    ).toEqual([
+      ['intake', 'rules', null],
+      ['route', 'rules', null],
+      ['route', 'rules', orchestration.crew[0]!.runId],
     ]);
+    expect(orchestration.decisions[1]!.summary).toBe('intake read this as build');
   }, 60_000);
 });
 
@@ -245,10 +252,9 @@ describe('stop and recovery', () => {
 
   it('expires a pending checkpoint when the worker crashes while waiting', async () => {
     await start();
-    const vague = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
-    script.scenario = vague;
-    const { conversationId, runId } = await startScenario(t, root, vague, null);
-    const keep = await pending(conversationId, 'clarify');
+    const risky = withTag(TRIVIAL, '#dropmigration');
+    const { conversationId, runId } = await startScenario(t, root, risky, 'hands-off');
+    const keep = await pending(conversationId, 'accept');
     await t.db.query(`UPDATE jobs SET lease_expires_at = now() - interval '1 second'`);
     await recoverExpiredLeases(t.db);
     const view = await loadOrchestration(t.db, runId);

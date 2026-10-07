@@ -9,7 +9,6 @@ import {
   modeForLegacy,
   type Approval,
   type ApprovalScope,
-  type HarnessSetting,
   type InvolvementLevel,
   type Orchestration,
 } from '@spark-outpost/contracts';
@@ -335,7 +334,6 @@ export function startOrchestrator(
   fetcher: typeof fetch | null,
   options: {
     sessions?: string;
-    harness?: HarnessSetting;
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];
     cancelPollMs?: number;
@@ -364,7 +362,6 @@ export function startOrchestrator(
     cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
     activeTimePollMs: 50,
-    ...(options.harness ? { harness: options.harness } : {}),
     ...(intake ? { intake } : {}),
     ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),

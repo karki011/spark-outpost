@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { modeForLegacy, type HarnessSetting } from '@spark-outpost/contracts';
+import { modeForLegacy } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../../src/persistence/conversations.ts';
 import { runCommand } from '../../src/setup/command.ts';
 import { memorySecretStore } from '../../src/setup/secrets.ts';
@@ -87,10 +87,7 @@ async function send(t: TestDb, conversationId: string, turn: ReplayTurn) {
   );
 }
 
-export async function runReplay(
-  replay: ReplayCase,
-  harness: HarnessSetting,
-): Promise<ReplayResult> {
+export async function runReplay(replay: ReplayCase): Promise<ReplayResult> {
   const t = await createTestDb({ workPlace: replay.repo === 'remote' ? 'worktree' : 'checkout' });
   const place = await placeFor(replay);
   const store = mkdtempSync(path.join(tmpdir(), 'fake-acp-store-'));
@@ -99,7 +96,6 @@ export async function runReplay(
   const script: JevScript = { calls: [] };
   const orchestrator = startOrchestrator(t, jevFetch(script), {
     sessions: store,
-    harness,
     ...(replay.coordinator ? { coordinator: replay.coordinator } : {}),
     ...(place.stub
       ? {
@@ -142,7 +138,7 @@ export async function runReplay(
     }
     return {
       row: {
-        ...(await replayRow(t, conversationId, replay.title, harness, replies)),
+        ...(await replayRow(t, conversationId, replay.title, replies)),
         seconds: Math.round((Date.now() - startedAt) / 1000),
       },
       ledger: await ledgerCounts(t, conversationId),

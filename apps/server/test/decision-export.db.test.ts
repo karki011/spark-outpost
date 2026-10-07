@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { auditFileLineSchema, type AuditFileLine } from '@spark-outpost/contracts';
 import { sweepProviderSessions } from '../src/persistence/provider-sessions.ts';
 import { verifyRunLog } from '../src/persistence/audit-log.ts';
-import { harnessSetting } from '../src/harness/setting.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { REPLAY_CASES } from './replay/replay-cases.ts';
 import { runReplay, type ReplayResult } from './replay/replay-support.ts';
@@ -44,11 +43,11 @@ function ofType<T extends AuditFileLine['type']>(lines: readonly AuditFileLine[]
 
 describe('decision audit in the export', { timeout: 300_000 }, () => {
   it('answers what happened in each turn: runs, sessions, Jev calls, end reasons and the app version', async () => {
-    replay = await runReplay(caseOf('status'), 'current');
+    replay = await runReplay(caseOf('status'));
     const lines = await exported(replay);
 
     expect(ofType(lines, 'meta')).toMatchObject([
-      { appVersion: '9.8.7', harness: harnessSetting(), messageText: 'redacted', exportVersion: 2 },
+      { appVersion: '9.8.7', harness: 'simple', messageText: 'redacted', exportVersion: 2 },
     ]);
     const turns = ofType(lines, 'turn');
     expect(turns.map((turn) => turn.messageText)).toEqual(
@@ -58,15 +57,15 @@ describe('decision audit in the export', { timeout: 300_000 }, () => {
     expect(turns.map((turn) => turn.sessions)).toEqual([
       { opened: 1, resumed: 0, replaced: 0, modelChanges: 0 },
       { opened: 0, resumed: 1, replaced: 0, modelChanges: 0 },
-      { opened: 1, resumed: 0, replaced: 0, modelChanges: 0 },
+      { opened: 0, resumed: 1, replaced: 0, modelChanges: 0 },
     ]);
     expect(turns.every((turn) => turn.jevCalls > 0 && turn.status === 'succeeded')).toBe(true);
 
     const sessions = ofType(lines, 'session');
     expect(sessions.map((session) => [session.event, session.reason, session.agentKey])).toEqual([
-      ['open', 'first session', expect.stringMatching(/^key:.+:builder$/)],
-      ['resume', 'continued', expect.stringMatching(/^key:.+:builder$/)],
-      ['open', 'first session', 'chat:ask'],
+      ['open', 'first session', 'chat:claude'],
+      ['resume', 'continued', 'chat:claude'],
+      ['resume', 'continued', 'chat:claude'],
     ]);
     const opens = sessions.filter((session) => session.event === 'open');
     expect(opens.every((session) => (session.carriedTokens ?? 0) > 0)).toBe(true);
@@ -91,7 +90,7 @@ describe('decision audit in the export', { timeout: 300_000 }, () => {
   });
 
   it('lists the same decisions as CSV', async () => {
-    replay = await runReplay(caseOf('plan'), 'current');
+    replay = await runReplay(caseOf('follow-up'));
     const app = createTestApp(replay.db);
     const response = await request(app)
       .get(`/api/conversations/${replay.conversationId}/audit/export.csv?view=decisions`)
@@ -104,11 +103,17 @@ describe('decision audit in the export', { timeout: 300_000 }, () => {
     expect(types).toEqual(
       expect.arrayContaining(['meta', 'turn', 'run_end', 'session', 'jev', 'card']),
     );
-    expect(rows.find((row) => row.startsWith('card'))).toContain('Approve the plan?');
+    const cards = rows.filter((row) => row.startsWith('card'));
+    expect(cards.map((row) => row.split(',')[4])).toEqual([
+      'edit: Write notes.txt',
+      'accept: Changes kept',
+      'edit: Write notes.txt',
+      'accept: Changes kept',
+    ]);
   });
 
   it('records a close with its reason when a session is swept outside any run', async () => {
-    replay = await runReplay(caseOf('plan'), 'current');
+    replay = await runReplay(caseOf('plan'));
     await replay.db.db.query(
       `UPDATE provider_sessions SET last_used_at = now() - interval '2 days' WHERE closed_at IS NULL`,
     );

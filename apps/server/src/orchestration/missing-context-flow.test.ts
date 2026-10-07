@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
+import type { InvolvementLevel } from '@spark-outpost/contracts';
 import {
   initialFlow,
   nextStep,
@@ -39,13 +39,13 @@ const flow = (level: InvolvementLevel = 'hands-off', verifier = false) =>
   initialFlow('edits', level, false, verifier);
 
 describe('no tier-up when the Builder is missing context', () => {
-  it('asks where to look instead of retrying one tier up at Automatic', () => {
+  it('says what it needs in the reply instead of retrying one tier up at Automatic', () => {
     const [, failed] = run(flow(), [start, failedMissing]);
     expect(failed!.action).toEqual({
-      type: 'ask',
-      kind: 'clarify',
-      reason: MISSING,
-      context: true,
+      type: 'finish',
+      status: 'succeeded',
+      reason: null,
+      incomplete: `Needs you: ${MISSING}`,
     });
   });
 
@@ -63,37 +63,17 @@ describe('no tier-up when the Builder is missing context', () => {
     expect(failed!.action).toMatchObject({ type: 'spawn', reason: 'retry', escalate: true });
   });
 
-  it('asks instead of escalating when Jev cannot confirm a change made without context', () => {
+  it('says what it needs instead of escalating when Jev cannot confirm a change made without context', () => {
     const [, built, verified] = run(flow('hands-off', true), [
       start,
       greenMissing,
       { type: 'verified', accepted: 'unsupported', reasons: [] },
     ]);
     expect(built!.action).toEqual({ type: 'verify' });
-    expect(verified!.action).toMatchObject({ type: 'ask', kind: 'clarify', context: true });
-  });
-
-  it('reruns the Builder at the same tier with the user’s answer, or stops', () => {
-    const [, asked] = run(flow(), [start, failedMissing]);
-    const answered = nextStep(asked!.state, {
-      type: 'answered',
-      kind: 'clarify',
-      optionId: CHECKPOINT_OPTION.answer,
-      note: 'the formatter is in packages/dates',
+    expect(verified!.action).toMatchObject({
+      type: 'finish',
+      status: 'succeeded',
+      incomplete: expect.stringMatching(/^Needs you: /),
     });
-    expect(answered.action).toMatchObject({
-      type: 'spawn',
-      role: 'builder',
-      escalate: false,
-      note: 'the formatter is in packages/dates',
-    });
-    expect(answered.state.missingContext).toBeNull();
-    const stopped = nextStep(asked!.state, {
-      type: 'answered',
-      kind: 'clarify',
-      optionId: CHECKPOINT_OPTION.stop,
-      note: null,
-    });
-    expect(stopped.action).toMatchObject({ type: 'finish', status: 'cancelled' });
   });
 });

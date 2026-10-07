@@ -1,4 +1,4 @@
-import type { HarnessSetting, SessionEvent } from '@spark-outpost/contracts';
+import type { SessionEvent } from '@spark-outpost/contracts';
 import { PROMPT_CACHE_TTL_MS } from '../advisor/policy.ts';
 import { HISTORY_BUDGET_BYTES } from '../agents/acp/conversation-prompt.ts';
 import { switchCostUsd } from '../orchestration/cache-switch.ts';
@@ -17,7 +17,6 @@ export interface PreviousSession {
 }
 
 export interface SessionFacts {
-  harness: HarnessSetting;
   provider: string;
   agentKey: string;
   model: string | null;
@@ -52,7 +51,7 @@ export function sessionEvent(facts: SessionFacts, opened: OpenedFacts): SessionE
   const { previous } = facts;
   const base = {
     kept: true,
-    harness: facts.harness,
+    harness: 'simple' as const,
     provider: facts.provider,
     agentKey: facts.agentKey,
     sessionId: opened.sessionId,
@@ -104,7 +103,7 @@ export function modelChange(
     event: 'model_change',
     reason: 'model changed on the same session',
     kept: true,
-    harness: facts.harness,
+    harness: 'simple' as const,
     provider: facts.provider,
     agentKey: facts.agentKey,
     sessionId,

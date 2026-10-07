@@ -7,7 +7,6 @@ import { conversationAuditRuns, summarizeAudit } from '../persistence/audit-summ
 import { costCsv } from '../audit/cost-csv.ts';
 import { decisionsCsv } from '../audit/decisions-csv.ts';
 import { decisionLines } from '../persistence/decision-audit.ts';
-import { harnessSetting } from '../harness/setting.ts';
 import { BadRequestError, paramId } from './validation.ts';
 
 const EXPORT_BATCH_ROWS = 100;
@@ -46,7 +45,7 @@ export function auditRoutes({ db, diagnostics }: AuditDeps): Router {
   const decisions = (conversationId: string) =>
     decisionLines(db, conversationId, {
       appVersion: diagnostics?.appVersion ?? null,
-      harness: harnessSetting(),
+      harness: 'simple',
     });
 
   router.get('/runs/:id/audit/log', async (req, res) => {

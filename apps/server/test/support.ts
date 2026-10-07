@@ -13,7 +13,6 @@ import { runMigrations } from '../src/persistence/migrate.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { truncateTables } from '../src/persistence/truncate.ts';
-import { harnessSetting } from '../src/harness/setting.ts';
 
 export interface TestDb {
   db: Db;
@@ -224,5 +223,4 @@ export async function pinChatLevel(
   ]);
 }
 
-export const underCurrent = harnessSetting() === 'current';
-export const BUILDER_SESSION_KEYS = underCurrent ? 'key:%builder%' : 'chat:%';
+export const BUILDER_SESSION_KEYS = 'chat:%';

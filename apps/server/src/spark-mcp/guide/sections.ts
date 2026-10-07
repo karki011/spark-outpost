@@ -66,7 +66,7 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
     ],
     text: `Alongside the agent's own mode, Spark has two autonomy levels. Default for new chats: Settings → Spark → How much Spark does alone; each chat can pick its own. To review each step, pick an agent mode that asks (Manual, Plan).
 
-Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept, Critic findings fixed in a loop, risky work runs in a worktree copy, Revert is always there. "Build this plan?" (Build, Edit, Stop) waits for the user at both levels in any agent mode; after Build the rest runs alone.
+Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept, Critic findings fixed in a loop, risky work runs in a worktree copy, Revert is always there. No Spark plan card: a build's plan is saved as the agreed plan and shown as one line ("Plan saved · 4 pieces"); nothing waits. To approve a plan first, use /plan or Plan mode.
 
 Full auto → PR (default): the same in a worktree copy; then the agent pushes the branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask. The level never makes a Spark action skip its card.
 
@@ -125,9 +125,9 @@ In my files, new chats edit the folder directly. Spark still uses a private work
     id: 'coordinator',
     title: 'The coordinator and pieces',
     keywords: ['coordinator', 'pieces', 'integrator', 'shared tree', 'piece list', 'split'],
-    text: `Small and medium work takes the lean path: one Builder, checks with fix turns, and a Critic by rule. For a story too big for one Builder, or one you ask to split, the coordinator plans it into Builder-sized pieces with declared file ownership. Independent pieces run at the same time (up to the project's Builders at once), dependents wait. Pieces run in a shared tree (the chat's worktree, each Builder limited to its own files by the approval gate) or in their own worktree copies for long, destructive or isolated work; each copy lands once its scoped checks pass.
+    text: `Small and medium work takes the lean path: one Builder, checks with fix turns, and a Critic by rule. For a story too big for one Builder, or one you ask to split, the coordinator plans it into Builder-sized pieces with declared file ownership. Independent pieces run at the same time (up to the project's Builders at once), dependents wait. Pieces of a git project run in one shared tree, the chat's worktree; outside git, in order. A change to another piece's file is kept, flagged and sent to its owner. Jev picks each piece's model.
 
-Builders never stash, checkout, reset, commit, merge or rebase; the integrator resolves conflicts, renumbers colliding migrations and runs the full checks once before the Critic.`,
+Builders never stash, checkout, reset, commit, merge or rebase; the full checks run once after every piece has landed, before the Critic.`,
   },
   {
     id: 'builders-at-once',
@@ -252,7 +252,7 @@ Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: sp
       'switch',
       'toggle',
     ],
-    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Wait before going with best guesses: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
+    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Wait before going on without your answer: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
 
 The Spark switch on: Jev reads each request, routing picks models, a Critic reviews bigger changes and Jev checks finished work. Off: chats go straight to the agent you pick. Approvals and safety apply either way.`,
   },

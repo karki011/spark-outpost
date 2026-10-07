@@ -1,14 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  CHECKPOINT_OPTION,
-  type CheckBody,
-  type InvolvementLevel,
-  type PieceList,
-} from '@spark-outpost/contracts';
-import { decideApproval } from '../src/persistence/approvals.ts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { type CheckBody, type InvolvementLevel, type PieceList } from '@spark-outpost/contracts';
+import { insertPlanDocument } from '../src/persistence/plan-documents.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
@@ -17,11 +11,10 @@ import {
   PIECE_OUTCOME_UNKNOWN,
   recoverExpiredLeases,
 } from '../src/workflow/recovery.ts';
-import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
+import { FAKE_PIECES_PLAN, PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { BLIND_FINDING } from './fake-acp-roles.ts';
 import {
   NORMAL,
-  answerEverything,
   artifactBodies,
   assistantReplies,
   connectProviders,
@@ -33,7 +26,6 @@ import {
   startOrchestrator,
   startScenario,
   withTag,
-  type Answerer,
   type Harness,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -91,26 +83,27 @@ async function children(runId: string): Promise<Child[]> {
   }));
 }
 
-async function begin(tags: string, level: InvolvementLevel = 'hands-off') {
+async function begin(
+  tags: string,
+  level: InvolvementLevel = 'hands-off',
+  prepare?: (conversationId: string) => Promise<void>,
+) {
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'in_order',
   });
   const scenario = withTag(NORMAL, `Split this up. ${tags}`);
-  return startScenario(t, root, scenario, level, 'auto', 'sonnet', 'acceptEdits');
+  return startScenario(t, root, scenario, level, 'auto', 'sonnet', 'acceptEdits', prepare);
 }
 
-async function buildThePlan(conversationId: string): Promise<void> {
-  await eventually(async () => {
-    const detail = await getConversationDetail(t.db, conversationId);
-    const plan = detail?.approvals.find(
-      (approval) => approval.kind === 'plan' && approval.status === 'pending',
-    );
-    if (!plan) return null;
-    return decideApproval(t.db, t.workspaceId, plan.id, {
-      scope: 'once',
-      optionId: CHECKPOINT_OPTION.makeChange,
-    });
-  }, 60_000);
+async function agreedPlan(conversationId: string): Promise<void> {
+  await insertPlanDocument(t.db, {
+    conversationId,
+    taskId: null,
+    source: 'chat',
+    body: `# Plan\n\n${FAKE_PIECES_PLAN}`,
+    sourceRunId: null,
+    approval: { by: 'user', option: null, runId: null, commit: null },
+  });
 }
 
 async function pieceList(runId: string): Promise<PieceList> {
@@ -151,11 +144,11 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(rows.filter((row) => row.body.answer.law === 'estimate')).toHaveLength(1);
   });
 
-  it('plans first, then splits the agreed plan into pieces and lands them in dependency order', async () => {
-    const { conversationId, runId } = await begin('#pieces');
+  it('splits the agreed plan into pieces without a plan card and lands them in dependency order', async () => {
+    const { conversationId, runId } = await begin('#pieces', 'hands-off', agreedPlan);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.title)).toContain('Build this plan?');
+    expect(asked.filter((approval) => approval.kind === 'plan')).toEqual([]);
     const crew = await children(runId);
     const pieces = crew.filter((child) => child.pieceKey);
     expect(crew[0]).toMatchObject({ role: 'coordinator', name: 'Atlas' });
@@ -231,11 +224,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
 
   it('never lands a piece that changes none of its files', async () => {
     const { conversationId, runId } = await begin('#pieces #nochangeever');
-    const stopAtRetry: Answerer = (approval) =>
-      approval.kind === 'retry'
-        ? { optionId: CHECKPOINT_OPTION.stopReport }
-        : answerEverything(approval);
-    await driveToEnd(t, conversationId, runId, stopAtRetry, 90_000);
+    await driveToEnd(t, conversationId, runId, undefined, 90_000);
     const list = await pieceList(runId);
     expect(list.pieces[0]).toMatchObject({
       status: 'failed',
@@ -287,12 +276,12 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await setCheckCommands(t, root, ['node check.mjs']);
     const easy = Object.fromEntries(
-      ['T1', 'T2', 'T3'].flatMap((key) => [
+      ['P1', 'P2', 'P3'].flatMap((key) => [
         [`${key}_reasoning`, 1],
         [`${key}_coding`, 1],
       ]),
     );
-    const script = { calls: [], scenario: NORMAL, scores: easy, choices: { builders: '3' } };
+    const script = { calls: [], scenario: NORMAL, scores: easy };
     harness = startOrchestrator(t, jevFetch(script), {
       coordinator: 'in_order',
     });
@@ -448,9 +437,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
   });
 
   it('marks the running piece failed with an unknown outcome after a crash', async () => {
-    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 10 });
-    const { conversationId, runId } = await begin('#pieces #slowpiece', 'full-auto');
-    await buildThePlan(conversationId);
+    const { runId } = await begin('#pieces #slowpiece', 'full-auto');
     await eventually(async () => {
       const taskId = (await loadOrchestration(t.db, runId))?.taskId;
       const list = taskId ? await currentPieceList(t.db, taskId) : null;

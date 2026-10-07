@@ -194,7 +194,8 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const list = await pieceListOf(t, runId);
     expect(list).toMatchObject({
       placement: 'in_order',
-      placementReason: 'this project runs one Builder at a time',
+      placementReason:
+        'Jev: 3 pieces · P1 Claude Sonnet 5 · P2 Claude Sonnet 5 · P3 Claude Sonnet 5; this project runs one Builder at a time',
     });
     const runs = await crewRuns(t, runId);
     const first = (key: string) => runs.find((run) => run.pieceKey === key)!;

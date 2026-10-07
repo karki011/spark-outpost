@@ -4,6 +4,7 @@ import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CheckBody } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { UPGRADED_NOTE } from '../src/orchestration/simple-intake.ts';
 import { rememberDeps } from '../src/projects/deps-install.ts';
 import {
   OLD_TEST_FAILURE,
@@ -16,6 +17,7 @@ import {
 import {
   TRIVIAL,
   artifactBodies,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   jevFetch,
@@ -131,11 +133,11 @@ describe('checks judge the change in a large workspace', { timeout: 120_000 }, (
     ]);
   });
 
-  it('gives a failure the change caused exactly one Builder round, then stops', async () => {
-    const { orchestration, bodies, members } = await run({ 'test.mjs': STILL_RED });
+  it('gives a failure the change caused exactly one fix round, then one upgrade to a build, then stops', async () => {
+    const { orchestration, bodies, members, runId } = await run({ 'test.mjs': STILL_RED });
     expect(orchestration.status).toBe('succeeded');
-    expect(members.map((member) => member.role)).toEqual(['builder', 'builder']);
-    expect(bodies.map((body) => body.status)).toEqual(['failed', 'failed']);
+    expect(members.map((member) => member.role)).toEqual(['builder', 'builder', 'builder']);
+    expect(bodies.map((body) => body.status)).toEqual(['failed', 'failed', 'failed']);
     const tests = bodies[0]!.results.find((result) => result.kind === 'test')!;
     expect(tests).toMatchObject({
       cause: 'change',
@@ -153,7 +155,10 @@ describe('checks judge the change in a large workspace', { timeout: 120_000 }, (
       'Spark ties these to your change: test libs/a/src/a.test.ts.',
     );
     expect(bodies[1]!.results.find((result) => result.kind === 'test')!.cause).toBe('change');
-    expect(bodies.map((body) => body.leftForUser ?? false)).toEqual([false, true]);
+    expect(members[2]!.follow_up).toContain('## Failing checks');
+    expect(bodies[2]!.results.find((result) => result.kind === 'test')!.cause).toBe('change');
+    expect(bodies.map((body) => body.leftForUser ?? false)).toEqual([false, true, true]);
+    expect((await assistantReplies(t, runId)).join('\n')).toContain(UPGRADED_NOTE);
   });
 
   it('falls back to the project’s own script when the narrowed form is not usable', async () => {

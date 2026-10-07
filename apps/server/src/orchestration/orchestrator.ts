@@ -32,8 +32,7 @@ import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
-import { assumptionLine } from './clarify.ts';
-import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.ts';
+import { readOnlyStart, type CurrentTask } from './intake.ts';
 import { mainAgentInstruction } from './instruction-turn.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
@@ -46,9 +45,6 @@ import {
   recordShortcuts,
 } from './build-style.ts';
 import { agreedPlanText, changesSoFar } from './member-prompts.ts';
-import { writePlanOnly } from './plan-only.ts';
-import { writePlanFirst } from './plan-first.ts';
-import { clarifyTurn } from './clarify-turn.ts';
 import { handToSparks } from './spark-handoff.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
@@ -68,13 +64,13 @@ import { ESCALATED_NOTE } from './cascade.ts';
 import { asksToBuild, isPlanCommand, isPlanModeChat } from '../plans/simple-plan-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { runPlanTurn } from './plan-turn-run.ts';
-import { harnessOf } from '../harness/setting.ts';
 import {
   UPGRADED_NOTE,
+  needsYouTurn,
   readNeed,
   recordNeed,
   simpleDecisions,
-  simpleStep,
+  type FlowDecisions,
 } from './simple-intake.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
@@ -157,9 +153,6 @@ async function placeBeforeBuilding(s: Session): Promise<string | null> {
 }
 
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
-  const replaced = harnessOf(s.deps) === 'simple' ? await simpleStep(s, action) : null;
-  if (replaced && 'event' in replaced) return replaced.event;
-  if (replaced) return perform(s, replaced.action);
   switch (action.type) {
     case 'ask':
       return ask(s, action);
@@ -198,12 +191,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         ...(fixable.length > 0 ? { fixable } : {}),
       };
     }
-    case 'plan':
-      return writePlanOnly(s, action.note);
-    case 'plan_first':
-      return writePlanFirst(s, action.note);
     case 'ask_agent':
-      return clarifyTurn(s, action.then);
+      return needsYouTurn(s);
     case 'verify':
       return verifyChange(s);
     case 'wrap_up':
@@ -243,7 +232,6 @@ async function finish(
   await settleObservations(s);
   await skipUnstarted(s.deps.db, s.coordination ?? null, status === 'cancelled');
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
-  const assumed = s.assumption ? assumptionLine(s.assumption) : null;
   const stopped = status === 'failed' && reason ? reason : null;
   const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
   const fixed = s.flow.review.fixRounds > 0 ? sessionReviewLine(s) : null;
@@ -253,18 +241,7 @@ async function finish(
   const laws = lawsNote(s);
   const skipped = criticSkippedLine(s);
   const upgraded = s.upgraded ? UPGRADED_NOTE : null;
-  const notes = [
-    pieces,
-    assumed,
-    escalated,
-    upgraded,
-    fixed,
-    suggested,
-    skipped,
-    laws,
-    stopped,
-    incomplete,
-  ];
+  const notes = [pieces, escalated, upgraded, fixed, suggested, skipped, laws, stopped, incomplete];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
@@ -312,11 +289,11 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     input = handed;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
-    const planChat = harnessOf(deps) === 'simple' && isPlanModeChat(input);
-    if (harnessOf(deps) === 'simple' && (isPlanCommand(input) || (planChat && solo))) {
+    const planChat = isPlanModeChat(input);
+    if (isPlanCommand(input) || (planChat && solo)) {
       return await runPlanTurn(deps, lease, input, append, control);
     }
-    if (harnessOf(deps) === 'simple') input = { ...input, planning: plansThisTurn(input, true) };
+    input = { ...input, planning: plansThisTurn(input, true) };
     const mode = input.mode ?? 'chat';
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
@@ -329,15 +306,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const scanning =
       doing && !solo && repoRoot ? startScan({ deps, input }, repoRoot, taskStartedAt) : null;
     const taken = await runIntake(deps, input, append, input.projectMove ? null : current, solo);
-    const simple = harnessOf(deps) === 'simple';
     const { intake } = taken;
     const answered = intake.outcome.status === 'answered' ? intake.outcome.intake : null;
     if (planChat && asksToBuild(input.userRequest, answered)) {
       return await runPlanTurn(deps, lease, input, append, control);
     }
     const jevNeed = answered?.need ?? null;
-    const need = simple ? readNeed(taken.decisions, jevNeed) : null;
-    const decisions = need ? simpleDecisions(taken.decisions, need) : taken.decisions;
+    const need = readNeed(taken.decisions, jevNeed);
+    const decisions = simpleDecisions(taken.decisions, need);
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
@@ -348,7 +324,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         request: input.userRequest,
-        builds: decisions.start === 'build' || decisions.start === 'plan_first',
+        builds: decisions.start === 'build',
       }).catch((error: unknown) =>
         console.error('Could not link the ticket for this build', error),
       );
@@ -416,7 +392,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       checkLines: [],
       projectStyle: doing ? await projectBuildStyle(deps.db, lease.runId) : NO_PROJECT_STYLE,
       buildStyle: 'off',
-      assumption: null,
       needsCopy:
         git &&
         !input.chatWorktree &&
@@ -434,10 +409,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       jevDiffs: !solo && (await jevDiffsAllowed(deps.db, input.workspaceId)),
     };
     session = s;
-    if (need) {
-      s.need = need.need;
-      await recordNeed(s, need, `intake read this as ${need.need.replace('_', ' ')}`);
-    }
+    s.need = need.need;
+    await recordNeed(s, need, `intake read this as ${need.need.replace('_', ' ')}`);
     observeScan(s, scanning, repoRoot);
     if (doing && !answers) {
       if (!solo) decideBuildStyle(s);
@@ -464,8 +437,8 @@ async function settleSession(s: Session): Promise<void> {
   if (s.input.mode === 'do') await recordKeptChanges(s.deps.db, s.input.workspaceId, s.lease.runId);
 }
 
-async function drive(s: Session, decisions: IntakeDecisions): Promise<void> {
-  let result = nextStep(s.flow, { type: 'start', start: decisions.start, then: decisions.then });
+async function drive(s: Session, decisions: FlowDecisions): Promise<void> {
+  let result = nextStep(s.flow, { type: 'start', start: decisions.start });
   for (;;) {
     s.flow = result.state;
     if (result.action.type === 'finish') {

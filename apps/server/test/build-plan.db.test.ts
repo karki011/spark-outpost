@@ -43,7 +43,6 @@ beforeEach(async () => {
   script = { calls: [] };
   harness = startOrchestrator(t, jevFetch(script), {
     sessions: store,
-    harness: 'simple',
     coordinator: 'in_order',
   });
   conversationId = (await linkedConversation(t, root)).conversationId;

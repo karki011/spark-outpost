@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import { CONTEXT_QUESTION, contextCard, missingContext } from './missing-context.ts';
+import { missingContext } from './missing-context.ts';
 
 describe('missing context', () => {
   it('finds the sentence where the Builder says it could not find what was meant', () => {
@@ -28,16 +27,5 @@ describe('missing context', () => {
   it('clips a long sentence', () => {
     const long = `I could not find ${'the thing '.repeat(60)}anywhere.`;
     expect(missingContext(long, null)!.length).toBeLessThanOrEqual(240);
-  });
-
-  it('asks the user where to look instead of offering a stronger model', () => {
-    const card = contextCard('There is no src/dates.ts in this repo.');
-    expect(card).toMatchObject({ kind: 'clarify', title: CONTEXT_QUESTION });
-    expect(card.payload.reason).toBe('There is no src/dates.ts in this repo.');
-    expect(card.options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.answer,
-      CHECKPOINT_OPTION.stop,
-    ]);
-    expect(card.payload.autoOption).toBeNull();
   });
 });

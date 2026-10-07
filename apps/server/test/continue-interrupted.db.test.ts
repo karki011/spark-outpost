@@ -37,7 +37,7 @@ import {
   untilStatus,
 } from './interruption-support.ts';
 import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
-import { createTestDb, eventually, type TestDb, underCurrent } from './support.ts';
+import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const TARGET = {
   provider: 'claude',
@@ -232,7 +232,7 @@ describe('Continue from here after a lease expired mid-turn', { timeout: 90_000 
     await untilFinished(t, clicks[0]!.run.id);
   });
 
-  it.runIf(underCurrent)('refuses once a newer message started a turn', async () => {
+  it('refuses once a newer message started a turn', async () => {
     start();
     const turn = await interrupted();
     await rewriteRequest(turn.runId, 'Tell me a long story about herons');
@@ -249,7 +249,9 @@ describe('Continue from here after a lease expired mid-turn', { timeout: 90_000 
     expect(await continuations(turn.runId)).toBe(0);
     worker.wake();
     await untilFinished(t, next.run.id);
-    expect(await stepNames(t, next.run.id)).toContain('Fresh session (last turn did not finish)');
+    const steps = await stepNames(t, next.run.id);
+    expect(steps).toContain('Continued session');
+    expect(steps.filter((name) => name.startsWith('Fresh session'))).toEqual([]);
   });
 
   it('falls back to a fresh session with the note and the chat so far when the load fails', async () => {

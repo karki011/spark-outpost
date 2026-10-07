@@ -66,7 +66,8 @@ describe('a failed Builder retried one tier up', { timeout: 90_000 }, () => {
     expect(runs.every((run) => run.switched === null)).toBe(true);
     expect(runs[0]?.note).toContain('Opus 5.5 not usable with this sign-in → Sonnet 5');
     const { rows } = await t.db.query<{ summary: string }>(
-      `SELECT body->>'summary' AS summary FROM run_advice WHERE run_id = $1 AND purpose = 'route'`,
+      `SELECT body->>'summary' AS summary FROM run_advice
+       WHERE run_id = $1 AND purpose = 'route' AND child_run_id IS NOT NULL ORDER BY created_at`,
       [runId],
     );
     expect(rows[0]?.summary).toContain('Opus 5.5 not usable with this sign-in → Sonnet 5');

@@ -91,8 +91,7 @@ describe('typed commands', () => {
   });
 
   it('turns /plan and /review into plain requests, never raw commands', () => {
-    expect(planPrompt('add search')).toMatch(/^Make a plan first/);
-    expect(planPrompt('add search')).toContain('add search');
+    expect(planPrompt('add search')).toBe('/plan add search');
     expect(reviewPrompt('')).toBe('Review the changes in this chat and give me a second opinion.');
     expect(reviewPrompt('the parser').startsWith('/')).toBe(false);
   });

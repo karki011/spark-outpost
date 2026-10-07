@@ -76,9 +76,10 @@ describe('lean flow', () => {
         { type: 'start', start: 'build' },
         built(),
         { type: 'wrapped', filesChanged: 1, riskyMigration: 'DROP TABLE notes', outsideWorktree },
-      ]).at(-1)!.action;
-    expect(wrappedAt(false)).toMatchObject({ type: 'keep' });
-    expect(wrappedAt(true)).toMatchObject({ type: 'ask', kind: 'accept' });
+      ]).at(-1)!;
+    expect(wrappedAt(false).action).toMatchObject({ type: 'keep' });
+    expect(wrappedAt(true).action).toMatchObject({ type: 'ask' });
+    expect(wrappedAt(true).state.waitingFor).toBe('accept');
   });
 
   it('retries a failed Critic once, then skips the review quietly and keeps', () => {
@@ -224,18 +225,12 @@ describe('failures and retries', () => {
     for (let index = 0; index <= MAX_REPAIR_RETRIES; index += 1) events.push(failed);
     const results = run(flow(), events);
     expect(results[1]!.action).toMatchObject({ reason: 'retry', escalate: true });
-    expect(results.at(-1)!.action).toMatchObject({ type: 'ask', kind: 'retry' });
-  });
-
-  it('stops and reports from the retry card instead of finishing', () => {
-    const state = { ...flow(), retries: MAX_REPAIR_RETRIES };
-    const result = nextStep(state, {
-      type: 'answered',
-      kind: 'retry',
-      optionId: CHECKPOINT_OPTION.stopReport,
-      note: null,
+    expect(results.at(-1)!.action).toEqual({
+      type: 'finish',
+      status: 'succeeded',
+      reason: null,
+      incomplete: `Needs you: Stopped after ${MAX_REPAIR_RETRIES} retries.`,
     });
-    expect(result.action).toMatchObject({ type: 'finish', status: 'failed' });
   });
 
   it('stops with a report when the Builder loops', () => {
@@ -255,30 +250,6 @@ describe('failures and retries', () => {
 });
 
 describe('checkpoints', () => {
-  it('asks one question for a vague follow-up, and answers, plans or builds from the reply', () => {
-    const [ask] = run(flow(), [{ type: 'unclear', followUp: true }]);
-    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', followUp: true });
-    expect(nextStep(ask!.state, { type: 'clarified', start: 'answer' }).action).toMatchObject({
-      role: 'scout',
-    });
-    expect(nextStep(ask!.state, { type: 'clarified', start: 'plan' }).action).toEqual({
-      type: 'plan',
-      note: null,
-    });
-    expect(nextStep(ask!.state, { type: 'clarified', start: 'build' }).action).toMatchObject({
-      role: 'builder',
-    });
-    expect(nextStep(ask!.state, { type: 'clarified', start: null }).action).toMatchObject({
-      type: 'finish',
-      status: 'cancelled',
-    });
-  });
-
-  it('asks for a reading of a vague request, then builds', () => {
-    const [ask] = run(flow(), [{ type: 'unclear', followUp: false }]);
-    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', interpret: true });
-  });
-
   it('keeps, fixes or reverts from the keep card', () => {
     const [, , wrapped] = run(flow(), [
       { type: 'start', start: 'build' },
@@ -286,7 +257,7 @@ describe('checkpoints', () => {
       { type: 'wrapped', filesChanged: 1 },
     ]);
     const answer = (optionId: string, note: string | null = null) =>
-      nextStep(wrapped!.state, { type: 'answered', kind: 'accept', optionId, note }).action;
+      nextStep(wrapped!.state, { type: 'answered', optionId, note }).action;
     expect(answer(CHECKPOINT_OPTION.keep)).toMatchObject({ type: 'finish', status: 'succeeded' });
     expect(answer(CHECKPOINT_OPTION.revert)).toEqual({ type: 'revert' });
     expect(answer(CHECKPOINT_OPTION.fix, 'Use UTC')).toMatchObject({
@@ -303,35 +274,7 @@ describe('checkpoints', () => {
   });
 });
 
-describe('read-only work: a plan, or a review of existing changes', () => {
-  it('writes a plan, asks to approve it, and finishes without building (dev-day s03)', () => {
-    const [start, approved] = run(flow(), [
-      { type: 'start', start: 'plan' },
-      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.approvePlan, note: null },
-    ]);
-    expect(start!.action).toEqual({ type: 'plan', note: null });
-    expect(start!.state).toMatchObject({ depth: 'direct', readOnly: 'plan', phase: 'planning' });
-    expect(approved!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
-  });
-
-  it('revises the plan with the user’s note, and stops when asked', () => {
-    const [, revised, stopped] = run(flow(), [
-      { type: 'start', start: 'plan' },
-      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.editPlan, note: ' add tests ' },
-      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.stop, note: null },
-    ]);
-    expect(revised!.action).toEqual({ type: 'plan', note: 'add tests' });
-    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
-  });
-
-  it('finishes when the planner fails or writes nothing', () => {
-    const [, failed] = run(flow(), [
-      { type: 'start', start: 'plan' },
-      { type: 'agent_done', role: 'scout', outcome: 'failed', error: 'no plan' },
-    ]);
-    expect(failed!.action).toMatchObject({ type: 'finish', status: 'failed', reason: 'no plan' });
-  });
-
+describe('read-only work: a review of existing changes', () => {
   it('reviews existing changes with the Critic alone and never sends findings to a Builder (dev-day s07)', () => {
     const [start, reviewed] = run(flow(), [
       { type: 'start', start: 'review' },

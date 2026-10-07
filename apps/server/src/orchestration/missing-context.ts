@@ -1,8 +1,3 @@
-import { CHECKPOINT_OPTION, checkpointPayloadSchema } from '@spark-outpost/contracts';
-import type { CheckpointCard } from './checkpoint.ts';
-
-export const CONTEXT_QUESTION = 'What should the Builder look at?';
-
 const SENTENCE_LIMIT = 240;
 
 const MISSING =
@@ -24,16 +19,4 @@ function missingSentence(text: string): string | null {
 
 export function missingContext(text: string, error: string | null): string | null {
   return missingSentence(text) ?? (error ? missingSentence(error) : null);
-}
-
-export function contextCard(reason: string): CheckpointCard {
-  return {
-    kind: 'clarify',
-    title: CONTEXT_QUESTION,
-    payload: checkpointPayloadSchema.parse({ kind: 'clarify', question: CONTEXT_QUESTION, reason }),
-    options: [
-      { optionId: CHECKPOINT_OPTION.answer, name: 'Answer in your own words', kind: 'allow_once' },
-      { optionId: CHECKPOINT_OPTION.stop, name: 'Stop', kind: 'reject_once' },
-    ],
-  };
 }

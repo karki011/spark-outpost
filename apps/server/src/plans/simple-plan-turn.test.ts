@@ -52,6 +52,7 @@ describe('what starts a plan turn', () => {
     expect(asksToBuild('Fix the crash when the file is empty', null)).toBe(true);
     expect(asksToBuild('What does parseDate do?', null)).toBe(false);
     expect(asksToBuild('Write a plan for CSV export', null)).toBe(false);
+    expect(asksToBuild('Check the site', null)).toBe(false);
   });
 });
 

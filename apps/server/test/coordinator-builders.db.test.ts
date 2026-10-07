@@ -3,8 +3,9 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
-import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
-import { children, startPieces } from './coordinator-support.ts';
+import { insertPlanDocument } from '../src/persistence/plan-documents.ts';
+import { FAKE_PIECES_PLAN, PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
+import { children } from './coordinator-support.ts';
 import {
   NORMAL,
   connectProviders,
@@ -12,6 +13,9 @@ import {
   gitRepo,
   jevFetch,
   removeRepo,
+  startOrchestrator,
+  startScenario,
+  withTag,
   type Harness,
   type JevScript,
 } from './orchestration-support.ts';
@@ -66,9 +70,29 @@ async function countDecision(runId: string): Promise<CountDecision> {
   return rows[0]!;
 }
 
-async function run(jev: typeof fetch | null, text?: string) {
-  const started = await startPieces(t, root, '#pieces', { jev, ...(text ? { text } : {}) });
-  harness = started.harness;
+async function agreedPlan(conversationId: string): Promise<void> {
+  await insertPlanDocument(t.db, {
+    conversationId,
+    taskId: null,
+    source: 'chat',
+    body: `# Plan\n\n${FAKE_PIECES_PLAN}`,
+    sourceRunId: null,
+    approval: { by: 'user', option: null, runId: null, commit: null },
+  });
+}
+
+async function run(jev: typeof fetch | null, text = 'Split this up.') {
+  harness = startOrchestrator(t, jev, { coordinator: 'in_order' });
+  const started = await startScenario(
+    t,
+    root,
+    withTag(NORMAL, `${text} #pieces`),
+    'hands-off',
+    'auto',
+    'sonnet',
+    undefined,
+    agreedPlan,
+  );
   const { orchestration } = await driveToEnd(
     t,
     started.conversationId,

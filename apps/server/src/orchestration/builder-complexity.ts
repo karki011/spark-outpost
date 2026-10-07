@@ -114,24 +114,6 @@ export function bigByRule(request: string): string | null {
   return null;
 }
 
-const LIST_LINE = /^\s*(?:[-*•]|\d+[.)])\s+\S/;
-const INLINE_CODE = /`[^`\n]+`/;
-const SPEC_ITEM_SHARE = 2 / 3;
-
-function namesCode(item: string): boolean {
-  return INLINE_CODE.test(item) || namedFiles([item]).length > 0;
-}
-
-export function specByRule(request: string): string | null {
-  const items = request.split('\n').filter((line) => LIST_LINE.test(line));
-  if (items.length < MULTI_PART_ITEMS) return null;
-  if (request.replace(CODE, ' ').includes('?')) return null;
-  const concrete = items.filter(namesCode).length;
-  const needed = items.length < BIG_ITEMS ? items.length : items.length * SPEC_ITEM_SHARE;
-  if (concrete < needed) return null;
-  return `${concrete} of ${items.length} listed parts name files or code`;
-}
-
 export function broadRequest(
   request: string | undefined,
   jev: JevSize | null | undefined,

@@ -1,4 +1,4 @@
-import type { DecisionLine, HarnessSetting, TurnLine } from '@spark-outpost/contracts';
+import type { DecisionLine, TurnLine } from '@spark-outpost/contracts';
 import { cardPriceFor } from '../../src/usage/prices.ts';
 import { decisionLines } from '../../src/persistence/decision-audit.ts';
 import type { TestDb } from '../support.ts';
@@ -13,7 +13,6 @@ export interface ModelledCost {
 
 export interface ReplayRow {
   case: string;
-  harness: HarnessSetting;
   turns: number;
   runs: number;
   runsLastTurn: number;
@@ -108,28 +107,22 @@ export async function ledgerCounts(t: TestDb, conversationId: string): Promise<L
 const sum = (turns: readonly TurnLine[], read: (turn: TurnLine) => number) =>
   turns.reduce((total, turn) => total + read(turn), 0);
 
-export async function exportOf(
-  t: TestDb,
-  conversationId: string,
-  harness: HarnessSetting,
-): Promise<DecisionLine[]> {
-  return decisionLines(t.db, conversationId, { appVersion: 'replay', harness });
+export async function exportOf(t: TestDb, conversationId: string): Promise<DecisionLine[]> {
+  return decisionLines(t.db, conversationId, { appVersion: 'replay', harness: 'simple' });
 }
 
 export async function replayRow(
   t: TestDb,
   conversationId: string,
   name: string,
-  harness: HarnessSetting,
   replies: string[],
 ): Promise<ReplayRow> {
-  const lines = await exportOf(t, conversationId, harness);
+  const lines = await exportOf(t, conversationId);
   const turns = lines.filter((line): line is TurnLine => line.type === 'turn');
   const last = turns.at(-1)!;
   const modelled = modelledCost(await promptRows(t, conversationId));
   return {
     case: name,
-    harness,
     turns: turns.length,
     runs: sum(turns, (turn) => turn.runs),
     runsLastTurn: last.runs,
@@ -153,12 +146,11 @@ const cents = (value: number) => (value * 100).toFixed(3);
 
 export function replayTable(rows: readonly ReplayRow[]): string {
   const header =
-    '| Case | Harness | Turns | Runs | Runs, last turn | Sessions opened | resumed | replaced | New sessions, last turn | Model changes | Repeat runs of a role | Escalations | Jev calls | Cards | Tiers | Prompt tokens sent | Cache write ¢ | Cache read ¢ | Output ¢ | Seconds |';
-  const rule = `|${' --- |'.repeat(20)}`;
+    '| Case | Turns | Runs | Runs, last turn | Sessions opened | resumed | replaced | New sessions, last turn | Model changes | Repeat runs of a role | Escalations | Jev calls | Cards | Tiers | Prompt tokens sent | Cache write ¢ | Cache read ¢ | Output ¢ | Seconds |';
+  const rule = `|${' --- |'.repeat(19)}`;
   const body = rows.map((row) =>
     [
       row.case,
-      row.harness,
       row.turns,
       row.runs,
       row.runsLastTurn,

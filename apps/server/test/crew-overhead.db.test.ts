@@ -21,6 +21,7 @@ import {
   startScenario,
   withTag,
   type Harness,
+  type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -28,6 +29,7 @@ import { createTestDb, type TestDb } from './support.ts';
 let t: TestDb;
 let root: string;
 let harness: Harness | null = null;
+let script: JevScript;
 
 beforeEach(async () => {
   t = await createTestDb();
@@ -71,7 +73,8 @@ async function approvedPlan(conversationId: string): Promise<void> {
 }
 
 async function startPlanned(scenario: Scenario) {
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+  script = { calls: [], scenario: NORMAL };
+  harness = startOrchestrator(t, jevFetch(script), {
     coordinator: 'in_order',
   });
   return startScenario(
@@ -122,6 +125,7 @@ describe('Coordinator overhead', { timeout: 180_000 }, () => {
       solo: null,
     });
 
+    script.scenario = { ...NORMAL, continuesTask: 0.02 };
     const secondRun = await followUp(first.conversationId, 'cap 3 → 8 #build');
     const second = await driveToEnd(t, first.conversationId, secondRun, undefined, 120_000);
     expect(second.orchestration.status).toBe('succeeded');

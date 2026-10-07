@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { relative, isAbsolute } from 'node:path';
-import type { AgentCommand, HarnessSetting, SessionEvent } from '@spark-outpost/contracts';
+import type { AgentCommand, SessionEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { runChanges } from '../projects/run-changes.ts';
@@ -23,7 +23,6 @@ import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { RunInput } from './run-input.ts';
-import { harnessSetting } from '../harness/setting.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
@@ -105,13 +104,12 @@ export async function prepareTurnSession(
   input: RunInput,
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
   now = new Date(),
-  harness: HarnessSetting = harnessSetting(),
 ): Promise<TurnSession | null> {
   const chatTurn = input.parentRunId === null;
   const resumeKey = input.resumeKey ?? null;
   if (!chatTurn && !resumeKey) return null;
   const conversationId = input.identity.threadId;
-  const conversation = harness === 'simple' && usesConversationSession(input);
+  const conversation = usesConversationSession(input);
   const key = conversation
     ? conversationKey(input.provider)
     : agentKey(input.mode, chatTurn ? null : resumeKey);
@@ -177,7 +175,6 @@ export async function prepareTurnSession(
         )
       : input.followUp;
   const facts: SessionFacts = {
-    harness,
     provider: input.provider,
     agentKey: key,
     model: input.settings.model,
@@ -301,11 +298,10 @@ export async function prepareTurnSession(
 export interface TurnSessionDeps {
   db: Db;
   sessionLimits?: SweepLimits;
-  harness?: HarnessSetting;
 }
 
 export function turnSessionFor(deps: TurnSessionDeps, input: RunInput) {
-  return prepareTurnSession(deps.db, input, deps.sessionLimits, undefined, deps.harness);
+  return prepareTurnSession(deps.db, input, deps.sessionLimits);
 }
 
 function seedChars(input: RunInput): number {

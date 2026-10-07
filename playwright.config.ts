@@ -63,7 +63,6 @@ const serverEnv = {
     }),
   }),
   AGENT_RUNTIME: 'fake',
-  ...(process.env.HARNESS ? { HARNESS: process.env.HARNESS } : {}),
   COORDINATOR_MODE: 'parallel',
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',

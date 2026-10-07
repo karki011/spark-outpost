@@ -48,10 +48,10 @@ function clientCommands(context: SlashContext): ClientItem[] {
     },
     {
       name: 'plan',
-      description: 'Ask for a plan first, before anything changes',
+      description: "Start in the agent's plan mode",
       hint: 'what to plan',
       detail:
-        'Example: /plan add a dark mode toggle. Sends a message asking for a plan and to wait for your go-ahead.',
+        'Example: /plan add a dark mode toggle. The agent plans first and asks before it builds, as its mode allows.',
     },
     {
       name: 'review',
@@ -191,7 +191,7 @@ export function typedCommandNote(
 }
 
 export function planPrompt(args: string): string {
-  return `Make a plan first, and wait for my go-ahead before changing anything.\n\n${args}`;
+  return `/plan ${args}`;
 }
 
 export function reviewPrompt(args: string): string {

@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import type { IntakeDecisions } from './intake.ts';
-import type { Session } from './session.ts';
-import { readNeed, simpleDecisions, simpleStep } from './simple-intake.ts';
+import { readNeed, simpleDecisions } from './simple-intake.ts';
 
 const decided = (start: IntakeDecisions['start'], extra: Partial<IntakeDecisions> = {}) =>
-  ({ start, then: 'build', trivial: false, continues: null, ...extra }) as IntakeDecisions;
-const none = {} as Session;
+  ({ start, trivial: false, continues: null, ...extra }) as IntakeDecisions;
 
 describe('readNeed', () => {
   const need = (start: IntakeDecisions['start'], extra: Partial<IntakeDecisions> = {}) =>
@@ -57,55 +54,7 @@ describe('simpleDecisions', () => {
   });
 
   it('never starts with a plan Spark asked for', () => {
-    expect(
-      simpleDecisions(decided('plan_first', { then: 'plan_first' }), rules('build')),
-    ).toMatchObject({ start: 'build', then: 'build' });
-    expect(simpleDecisions(decided('plan', { then: 'plan' }), rules('question'))).toMatchObject({
-      start: 'answer',
-      then: 'answer',
-    });
-  });
-});
-
-describe('simpleStep', () => {
-  it('builds straight away where today a plan card would wait', async () => {
-    expect(await simpleStep(none, { type: 'plan_first', note: null })).toEqual({
-      event: { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null },
-    });
-  });
-
-  it('answers a plan-only request in the mode the user chose', async () => {
-    expect(await simpleStep(none, { type: 'plan', note: null })).toEqual({
-      action: { type: 'spawn', role: 'scout', reason: 'first', escalate: false, note: null },
-    });
-  });
-
-  it('turns a card Spark would raise into the end of the reply', async () => {
-    for (const kind of ['clarify', 'retry', 'verify'] as const) {
-      expect(
-        await simpleStep(none, { type: 'ask', kind, reason: 'Stopped after 2 retries.' }),
-      ).toEqual({
-        action: {
-          type: 'finish',
-          status: 'succeeded',
-          reason: null,
-          incomplete: 'Needs you: Stopped after 2 retries.',
-        },
-      });
-    }
-  });
-
-  it('leaves keeping the changes and every ordinary step alone', async () => {
-    expect(await simpleStep(none, { type: 'ask', kind: 'accept', reason: 'Keep?' })).toBeNull();
-    expect(await simpleStep(none, { type: 'wrap_up' })).toBeNull();
-    expect(
-      await simpleStep(none, {
-        type: 'spawn',
-        role: 'builder',
-        reason: 'first',
-        escalate: false,
-        note: null,
-      }),
-    ).toBeNull();
+    expect(simpleDecisions(decided('plan_first'), rules('build')).start).toBe('build');
+    expect(simpleDecisions(decided('plan'), rules('question')).start).toBe('answer');
   });
 });

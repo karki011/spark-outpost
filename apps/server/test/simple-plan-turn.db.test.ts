@@ -23,7 +23,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectProviders(t, false);
-  harness = startOrchestrator(t, null, { harness: 'simple' });
+  harness = startOrchestrator(t, null);
   conversationId = (await linkedConversation(t, root)).conversationId;
   await pinChatLevel(t.db, conversationId, 'full-auto');
 });
@@ -98,7 +98,7 @@ function planModeSetBeforePrompt(requests: Awaited<ReturnType<typeof turn>>['req
   return set >= 0 && set < prompt;
 }
 
-describe('a plan turn under HARNESS=simple', { timeout: 120_000 }, () => {
+describe('a plan turn', { timeout: 120_000 }, () => {
   it('/plan starts the agent in its plan mode, the agent asks to leave it, and the same turn builds', async () => {
     const { asked, run, requests, reply, runId, lines } = await turn(
       '/plan Add CSV export #nativeplan',

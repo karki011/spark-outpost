@@ -10,6 +10,7 @@ export interface PendingApprovalRow {
   pending_member: string | null;
   pending_asker: string | null;
   pending_questions?: boolean | null;
+  pending_plan?: boolean | null;
   pending_provider: string | null;
   pending_pr_feedback?: boolean | null;
   flag_title?: string | null;
@@ -80,7 +81,7 @@ function flagAttention(row: PendingApprovalRow): ConversationAttention | null {
 export function toAttention(row: PendingApprovalRow): ConversationAttention | null {
   const kind = row.pending_kind;
   if (!row.pending_id || !kind) return flagAttention(row);
-  const attention = ATTENTION_BY_APPROVAL_KIND[kind];
+  const attention = row.pending_plan ? 'plan' : ATTENTION_BY_APPROVAL_KIND[kind];
   return {
     kind: attention,
     title: attention === 'permission' ? permissionTitle(row, kind) : (row.pending_title ?? ''),

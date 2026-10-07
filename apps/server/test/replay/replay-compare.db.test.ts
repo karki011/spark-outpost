@@ -4,8 +4,8 @@ import { runReplay } from './replay-support.ts';
 
 const caseOf = (id: string) => REPLAY_CASES.find((candidate) => candidate.id === id)!;
 
-async function rowOf(id: string, harness: 'current' | 'simple') {
-  const result = await runReplay(caseOf(id), harness);
+async function rowOf(id: string) {
+  const result = await runReplay(caseOf(id));
   try {
     return result.row;
   } finally {
@@ -14,31 +14,18 @@ async function rowOf(id: string, harness: 'current' | 'simple') {
 }
 
 describe('one conversation session per chat and provider', { timeout: 300_000 }, () => {
-  it('a one-line follow-up opens no new session and gets the same answers under both settings', async () => {
-    const [current, simple] = await Promise.all([
-      rowOf('follow-up', 'current'),
-      rowOf('follow-up', 'simple'),
-    ]);
-    expect(simple.replies).toEqual(current.replies);
-    expect(simple.newSessionsLastTurn).toBe(0);
-    expect(simple.opened + simple.replaced).toBe(current.opened + current.replaced);
-    expect(simple.runs).toBe(current.runs);
+  it('a one-line follow-up opens no new session', async () => {
+    const row = await rowOf('follow-up');
+    expect(row.newSessionsLastTurn).toBe(0);
   });
 
-  it('a status question after build turns opens a session today and none under simple', async () => {
-    const [current, simple] = await Promise.all([
-      rowOf('status', 'current'),
-      rowOf('status', 'simple'),
-    ]);
-    expect(current.newSessionsLastTurn).toBe(1);
-    expect(simple.newSessionsLastTurn).toBe(0);
-    expect(simple.opened + simple.replaced).toBe(1);
-    expect(simple.modelChanges).toBe(0);
-    expect(simple.runs).toBe(current.runs);
-    expect(simple.replies.slice(0, 2)).toEqual(current.replies.slice(0, 2));
+  it('a status question after build turns opens no session and reads the same one', async () => {
+    const row = await rowOf('status');
+    expect(row.newSessionsLastTurn).toBe(0);
+    expect(row.opened + row.replaced).toBe(1);
+    expect(row.modelChanges).toBe(0);
     const asked = caseOf('status').turns.at(-1)!.scenario.text;
-    expect(simple.replies.at(-1)).toContain('mode=read-only');
-    expect(simple.replies.at(-1)).toContain(`prompt=${asked}`);
-    expect(simple.promptTokens).toBeLessThan(current.promptTokens);
+    expect(row.replies.at(-1)).toContain('mode=read-only');
+    expect(row.replies.at(-1)).toContain(`prompt=${asked}`);
   });
 });
