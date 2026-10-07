@@ -8,8 +8,6 @@ import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
 import {
   beginPieces,
-  crewRuns,
-  overlap,
   pieceListOf,
   pieceRepo,
   projectFlags,
@@ -142,7 +140,6 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
     expect(batches[0]!.questions).toEqual(
       expect.arrayContaining(['builders', 'T1_kind', 'T1_coding', 'T2_context', 'T3_reliability']),
     );
-    expect(batches[0]!.questions.some((key) => key.endsWith('_wide'))).toBe(false);
     expect(String(batches[0]!.state.pieces)).toContain('Piece T2: API: build it in `api.ts`');
     expect(String(batches[0]!.state.pieces)).toContain('  - store.ts');
 
@@ -273,48 +270,6 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
       pick: { model: 'opus[1m]' },
       demand: { tier: 'top', raisedBy: 'destructive' },
     });
-  });
-
-  it('moves one piece to its own worktree and lands the mixed list', async () => {
-    const script: JevScript = {
-      calls: [],
-      scenario: NORMAL,
-      choices: { builders: '3' },
-      policy: { T1_wide: 0.05, T2_wide: 0.9, T3_wide: 0.05 },
-    };
-    const { runId, orchestration } = await runParallel('', script);
-    expect(orchestration.status).toBe('succeeded');
-    const list = await pieceListOf(t, runId);
-    expect(list.placement).toBe('shared');
-    expect(list.placementReason).toMatch(
-      /^Jev: 3 Builders \(0\.73\) · P1 [^·]+, shared tree · P2 [^·]+, worktree · P3 [^·]+, shared tree; /,
-    );
-    expect(list.pieces.map((piece) => [piece.key, piece.placement, piece.status])).toEqual([
-      ['P1', 'shared', 'landed'],
-      ['P2', 'worktree', 'landed'],
-      ['P3', 'shared', 'landed'],
-    ]);
-    expect(list.pieces[1]!.filesChanged).toEqual(['api.ts']);
-    const { rows: copies } = await t.db.query<{ key: string; copy: string | null }>(
-      `SELECT route->>'pieceKey' AS key, route->>'copy' AS copy FROM runs
-       WHERE parent_run_id = $1 AND route ? 'pieceKey' ORDER BY created_at`,
-      [runId],
-    );
-    expect(copies.map((row) => [row.key, row.copy !== null])).toEqual([
-      ['P1', false],
-      ['P2', true],
-      ['P3', false],
-    ]);
-    const runs = await crewRuns(t, runId);
-    const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
-    expect(overlap(first('P1'), first('P2'))).toBe(true);
-    expect(overlap(first('P1'), first('P3'))).toBe(false);
-    const recorded = await decision(runId);
-    expect(recorded.body.answer.pieces.map((piece) => piece.placement.decidedBy)).toEqual([
-      'jev',
-      'jev',
-      'jev',
-    ]);
   });
 });
 

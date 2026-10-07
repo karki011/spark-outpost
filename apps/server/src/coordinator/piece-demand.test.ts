@@ -40,7 +40,6 @@ function answer(extra: Partial<PieceAnswer> = {}): PieceAnswer {
     coding: score(2.5),
     context: score(1.5),
     reliability: 0.1,
-    wide: null,
     ...extra,
   };
 }

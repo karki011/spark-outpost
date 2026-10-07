@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentPick } from '@spark-outpost/contracts';
 import { context } from '../orchestration/route-fixtures.ts';
-import { OWN_WORKTREE, type PieceAnswer, type RouteOption } from './piece-questions.ts';
+import type { PieceAnswer, RouteOption } from './piece-questions.ts';
 import { MEASURED_BELOW_CHAT, NOT_CLEARLY_SIMPLE } from './piece-demand.ts';
 import { routePieceList, type RoutablePiece, type RouteRules } from './piece-routes.ts';
 
@@ -62,12 +62,9 @@ function rules(extra: Partial<RouteRules> = {}): RouteRules {
     ]),
     routes,
     placement: 'shared',
-    askPlacement: true,
     requestDestructive: false,
     destructive: () => false,
     core: () => false,
-    listIsolation: null,
-    pieceIsolation: () => null,
     ...extra,
   };
 }
@@ -81,7 +78,6 @@ function answer(extra: Partial<PieceAnswer> = {}): PieceAnswer {
     coding: score(3),
     context: score(2),
     reliability: 0.1,
-    wide: null,
     ...extra,
   };
 }
@@ -232,46 +228,16 @@ describe('routePieceList', () => {
     expect(result.pieces[1]!.model.demand).toMatchObject({ tier: 'top', raisedBy: 'destructive' });
   });
 
-  it('places a wide or risky piece in its own worktree, leaving the list mixed', () => {
+  it('places every building piece where the list is placed, whatever Jev rated', () => {
     const result = routed([
-      ['P1', answer({ wide: 0.1 })],
-      ['P2', answer({ wide: 0.7 })],
+      ['P1', answer()],
+      ['P2', HARD],
     ]);
-    expect(
-      result.pieces.map((entry) => [entry.place.placement, entry.place.decidedBy, entry.place.jev]),
-    ).toEqual([
-      ['shared', 'jev', 'shared_tree'],
-      ['worktree', 'jev', OWN_WORKTREE],
+    expect(result.pieces.map((entry) => entry.place)).toEqual([
+      { placement: 'shared', decidedBy: 'rules', reason: 'follows the list' },
+      { placement: 'shared', decidedBy: 'rules', reason: 'follows the list' },
     ]);
-    expect(result.pieces[1]!.place.reason).toBe('own worktree (wide or risky 0.70)');
     expect(result.placement).toBe('shared');
-  });
-
-  it('keeps the rules placement when Jev is in between', () => {
-    const result = routed([['P1', answer({ wide: 0.35 })]], { placement: 'worktree' });
-    expect(result.pieces[0]!.place).toEqual({
-      placement: 'worktree',
-      jev: null,
-      decidedBy: 'rules',
-      reason: 'Jev was unsure (wide or risky 0.35)',
-    });
-  });
-
-  it('keeps hard isolation rules over Jev placement', () => {
-    const result = routed(
-      [
-        ['P1', answer({ wide: 0.1 })],
-        ['P2', answer({ wide: 0.1 })],
-      ],
-      {
-        placement: 'worktree',
-        pieceIsolation: (entry) => (entry.key === 'P1' ? 'owns a lockfile' : null),
-      },
-    );
-    expect(result.pieces.map((entry) => [entry.place.placement, entry.place.reason])).toEqual([
-      ['worktree', 'owns a lockfile'],
-      ['shared', 'shared tree (wide or risky 0.10)'],
-    ]);
   });
 
   it('never leaves two unordered pieces with the same files in the shared tree', () => {
@@ -297,7 +263,7 @@ describe('routePieceList', () => {
   it('leaves in-order lists and read-only pieces alone', () => {
     const result = routePieceList(
       [...pieces, piece('R1', [], { research: true })],
-      rules({ placement: 'in_order', askPlacement: false }),
+      rules({ placement: 'in_order' }),
       { answers: null, failure: null },
       fileCount,
     );

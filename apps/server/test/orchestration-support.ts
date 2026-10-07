@@ -280,11 +280,8 @@ function verdictAnswer(script: JevScript): Answers[string] {
   return choice(next.choice, next.confidence);
 }
 
-const UNSURE_WIDE = 0.35;
-
 function defaultNoul(key: string, script: JevScript): number {
   if (key.startsWith('unmet_')) return script.verify ?? 0.05;
-  if (key.endsWith('_wide')) return UNSURE_WIDE;
   return 0.05;
 }
 

@@ -41,16 +41,6 @@ export async function chooseListPlace(
   const inOrder = inOrderReason(s, settings);
   if (inOrder) return { placement: 'in_order', reason: inOrder };
   if (s.deps.forcedPlacement) return forcedPlace(s.deps.forcedPlacement);
-  const placed = placePieces(
-    pieces.map((piece) => ({
-      key: piece.key,
-      owned: piece.owned,
-      dependsOn: piece.dependsOn,
-      sizeEstimate: piece.sizeEstimate,
-      size: piece.size,
-      research: piece.research,
-    })),
-    await placementFacts(s),
-  );
+  const placed = placePieces(pieces, placementFacts(s));
   return { placement: placed.placement, reason: placed.reason };
 }

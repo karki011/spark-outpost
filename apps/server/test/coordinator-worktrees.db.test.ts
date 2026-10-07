@@ -8,6 +8,7 @@ import { liveChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { taskChanges } from '../src/projects/task-changes.ts';
+import { OWN_COPIES_REASON } from '../src/coordinator/placement.ts';
 import { cleanOrphanedCopies } from '../src/orchestration/solo-copy.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import {
@@ -49,7 +50,7 @@ afterEach(async () => {
 });
 
 async function begin(tags: string) {
-  const begun = beginPieces(t, root, `#manifest ${tags}`);
+  const begun = beginPieces(t, root, `#manifest ${tags}`, { agentMode: 'bypassPermissions' });
   harness = begun.harness;
   return begun.started;
 }
@@ -107,7 +108,7 @@ describe('worktree parallel pieces', { timeout: 120_000 }, () => {
       const list = await pieceListOf(t, runId);
       expect(list).toMatchObject({
         placement: 'worktree',
-        placementReason: 'P2 owns package.json, a manifest',
+        placementReason: OWN_COPIES_REASON,
       });
       expect(list.pieces.map((piece) => [piece.key, piece.status, piece.filesChanged])).toEqual([
         ['P1', 'landed', ['store.ts']],

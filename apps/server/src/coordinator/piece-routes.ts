@@ -1,6 +1,5 @@
 import type { AgentPick, ListPlacement, PiecePlacement } from '@spark-outpost/contracts';
 import { selectableModels } from '../advisor/intake-questions.ts';
-import { PIECE_SHARED_AT, PIECE_WIDE_WORKTREE_AT } from '../advisor/policy.ts';
 import { FLOOR_REASON, floorPick } from '../orchestration/model-floor.ts';
 import { builderEffort, DESTRUCTIVE_RULE, type RouteContext } from '../orchestration/routing.ts';
 import { pickOf } from '../routing/candidates.ts';
@@ -18,13 +17,7 @@ import {
   type PieceFacts,
   type RoutePick,
 } from './piece-demand.ts';
-import {
-  OWN_WORKTREE,
-  SHARED_TREE,
-  type PieceAnswer,
-  type RouteOption,
-  type TaskKind,
-} from './piece-questions.ts';
+import type { PieceAnswer, RouteOption, TaskKind } from './piece-questions.ts';
 
 export type Decider = 'jev' | 'rules' | 'floor';
 
@@ -40,12 +33,9 @@ export interface RouteRules<T extends RoutablePiece = RoutablePiece> {
   picks: ReadonlyMap<string, AgentPick>;
   routes: readonly RouteOption[];
   placement: ListPlacement;
-  askPlacement: boolean;
   requestDestructive: boolean;
   destructive(piece: T): boolean;
   core(piece: T): boolean | null;
-  listIsolation: string | null;
-  pieceIsolation(piece: T): string | null;
   kindPassRates?(
     kind: TaskKind | null,
     below: RouteOption,
@@ -68,7 +58,6 @@ export interface ModelChoice {
 
 export interface PlaceChoice {
   placement: PiecePlacement;
-  jev: string | null;
   decidedBy: Decider;
   reason: string;
 }
@@ -208,38 +197,9 @@ function destructivePieces<T extends RoutablePiece>(
   return new Set((whole ? building : own).map((piece) => piece.key));
 }
 
-function rulesPlace<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  reason: string,
-  jev: string | null = null,
-): PlaceChoice {
-  return { placement: rules.placement, jev, decidedBy: 'rules', reason };
-}
-
-function choosePlace<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  answer: PieceAnswer | undefined,
-  piece: T,
-): PlaceChoice {
-  if (piece.research) {
-    return { placement: 'read_only', jev: null, decidedBy: 'rules', reason: 'reads only' };
-  }
-  if (!rules.askPlacement) return rulesPlace(rules, 'placement was not asked');
-  const wide = answer?.wide ?? null;
-  const own = wide !== null && wide >= PIECE_WIDE_WORKTREE_AT;
-  const shared = wide !== null && wide <= PIECE_SHARED_AT;
-  const jev = own ? OWN_WORKTREE : shared ? SHARED_TREE : null;
-  const hard = rules.listIsolation ?? rules.pieceIsolation(piece);
-  if (hard) return { placement: 'worktree', jev, decidedBy: 'rules', reason: hard };
-  if (wide === null) return rulesPlace(rules, 'Jev gave no placement');
-  const odds = `wide or risky ${wide.toFixed(2)}`;
-  if (!own && !shared) return rulesPlace(rules, `Jev was unsure (${odds})`);
-  return {
-    placement: own ? 'worktree' : 'shared',
-    jev,
-    decidedBy: 'jev',
-    reason: own ? `own worktree (${odds})` : `shared tree (${odds})`,
-  };
+function choosePlace<T extends RoutablePiece>(rules: RouteRules<T>, piece: T): PlaceChoice {
+  if (piece.research) return { placement: 'read_only', decidedBy: 'rules', reason: 'reads only' };
+  return { placement: rules.placement, decidedBy: 'rules', reason: 'follows the list' };
 }
 
 function ordered(
@@ -297,7 +257,7 @@ export function routePieceList<T extends RoutablePiece>(
       model: piece.research
         ? rulesChoice(rules, piece, 'reads only')
         : chooseModel(rules, jev, piece, destructive.has(piece.key)),
-      place: choosePlace(rules, answer, piece),
+      place: choosePlace(rules, piece),
       answer: answer ?? null,
       files: fileCount(piece),
     };

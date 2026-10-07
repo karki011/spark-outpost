@@ -87,7 +87,7 @@ describe('coordinator shadow', () => {
         engage: true,
         reason: 'plan',
         detail: 'the agreed plan has 4 open items in 2 areas',
-        placement: 'in_order',
+        placement: 'shared',
         planItems: 4,
         policy: 'coord-6',
       }),

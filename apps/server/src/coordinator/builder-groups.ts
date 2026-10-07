@@ -134,7 +134,6 @@ export function foldAnswer(a: PieceAnswer, b: PieceAnswer): PieceAnswer {
     coding: stronger(a.coding, b.coding),
     context: stronger(a.context, b.context),
     reliability: higher(a.reliability, b.reliability),
-    wide: higher(a.wide, b.wide),
   };
 }
 
