@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { MUTATING_METHODS, loopbackHosts, refusedForShape } from '../api/security.ts';
 import type { Db } from '../persistence/db.ts';
+import { entryTarget, isEntryReturn, mayHaveLostCookie, sendEntryBounce } from './entry-bounce.ts';
 import { sendPairingPage } from './pairing-page.ts';
 import { blockedFieldIn, cardSwitch, remoteDecision, switchRefusal } from './policy.ts';
 import {
@@ -43,6 +44,8 @@ const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';
 const NOT_PAIRED = 'Pair this device first.';
 const PAIR_AGAIN = 'This device needs to pair again.';
+const PAIRING_PAGE_AUDIT_EVERY_MS = 60_000;
+const ASSET_PATH = /\.[a-z0-9]+$/i;
 
 const uuid = z.uuid();
 
@@ -107,7 +110,26 @@ export function remoteGateway(deps: GatewayDeps) {
     refuse(res, status, error);
   };
 
-  const answerUnpaired = (req: Request, res: Response) => {
+  const pairingPageAudited = new Map<string, number>();
+
+  const auditPairingPage = async (reason: string, device: RemoteDevicePrincipal | null) => {
+    const key = `${device?.id ?? ''}:${reason}`;
+    const now = Date.now();
+    if (now - (pairingPageAudited.get(key) ?? -Infinity) < PAIRING_PAGE_AUDIT_EVERY_MS) return;
+    pairingPageAudited.set(key, now);
+    await recordRemoteAudit(db, workspaceId, {
+      action: 'pairing_page_shown',
+      device,
+      detail: { reason },
+    });
+  };
+
+  const answerUnpaired = async (
+    req: Request,
+    res: Response,
+    reason: string,
+    device: RemoteDevicePrincipal | null = null,
+  ) => {
     if (!isPageRequest(req)) {
       refuse(res, 401, NOT_PAIRED);
       return;
@@ -116,6 +138,11 @@ export function remoteGateway(deps: GatewayDeps) {
       res.sendFile(req.path.slice(1), { root: deps.webRoot });
       return;
     }
+    if (reason === 'missing' && mayHaveLostCookie(req)) {
+      sendEntryBounce(res);
+      return;
+    }
+    await auditPairingPage(reason, device);
     sendPairingPage(res);
   };
 
@@ -167,13 +194,13 @@ export function remoteGateway(deps: GatewayDeps) {
     const token = deviceTokenOf(req.headers.cookie);
     const row = token ? await deviceByTokenHash(db, workspaceId, secretHash(token)) : null;
     if (!row) {
-      answerUnpaired(req, res);
+      await answerUnpaired(req, res, token ? 'unknown' : 'missing');
       return;
     }
     const device = { id: row.id, name: row.name };
     const stale = staleReason(row);
     if (stale) {
-      if (isPageRequest(req)) answerUnpaired(req, res);
+      if (isPageRequest(req)) await answerUnpaired(req, res, stale, device);
       else await refuseDevice(req, res, device, 401, stale, PAIR_AGAIN);
       return;
     }
@@ -188,6 +215,11 @@ export function remoteGateway(deps: GatewayDeps) {
     }
     admitDevice(res, device, decision.blockedFields);
     await touchDevice(db, device.id);
+    if (isPageRequest(req) && isEntryReturn(req)) {
+      res.set('Cache-Control', 'no-store').redirect(302, entryTarget(req));
+      return;
+    }
+    if (isPageRequest(req) && !ASSET_PATH.test(req.path)) res.set('Cache-Control', 'no-store');
     if (mutating) await auditRequest(req, res, device);
     if (wantsStream(req)) streams.track(device.id, res);
     next();

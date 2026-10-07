@@ -78,6 +78,13 @@ So a local program gains nothing it could not already do by pairing a device wit
 3. The Mac lists waiting requests (`GET /api/remote/pairings`: device name, matching code) and answers with `POST /api/remote/pairings/:id/confirm` or `/deny`.
 4. The phone polls `POST /api/remote/pair/claim`: `202` while waiting, `403` once denied or expired, and after a confirm `200` once, with the session cookie.
 
+Pairing again (the claim reads the device cookie the phone still carries; every case still needs the code, the matching code and a confirm on the Mac):
+
+- A valid cookie (known, not revoked, seen within 30 days): the same `remote_devices` row gets the new token hash, the typed name and `last_seen_at = now()`. The old token stops working. Audit `device_paired_again`.
+- A known cookie that is revoked or ran out: nothing is revived. A new row is inserted and the old one gets `replaced_by` (migration `0149_remote_device_replaced.sql`) and, if it had none, `revoked_at`. Audit `device_paired` with `replaced`.
+- No cookie, or one this Mac does not know: a new row. Names are never merged, because two phones can share one. The device list marks an older row as `duplicateOf` the newest row with the same name (trimmed, any case) while the older one holds no open stream; the Phone page labels it "Not seen since" and offers **Remove old entry**, which is a revoke.
+- The Devices card lists rows that can connect. Revoked and replaced rows sit behind an "N removed" toggle.
+
 Decisions the plan left open:
 
 - The phone polls rather than holding one request open, so a dropped mobile connection does not lose the pairing.
@@ -87,7 +94,27 @@ Decisions the plan left open:
 ### Sessions and devices
 
 - Cookie `__Host-spark_device`: 32 random bytes, `HttpOnly; Secure; SameSite=Strict; Path=/`, no Domain. Table `remote_devices` holds id, name, token hash, created, last seen (written at most once a minute) and revoked.
-- A device not seen for 30 days is refused and must pair again. The server enforces this from `last_seen_at`; the cookie's own lifetime is longer.
+- A device not seen for 30 days is refused and must pair again. The server enforces this from `last_seen_at`; the cookie's own lifetime is longer (`Max-Age` of 400 days, the most browsers keep), so closing the browser does not end the session.
+- The cookie belongs to the exact Serve hostname (`__Host-`). If the Mac's tailnet name changes, the phone has no cookie for the new address, sees the pairing page and pairs as a new device; the old row stays until removed. Turning Phone access off and on, restarting or updating the app, a port change and the Serve check at start revoke nothing. Only Revoke, Disconnect all and pairing again over a revoked or run-out cookie set `revoked_at`.
+
+### Arriving from another site or app
+
+A browser leaves a `SameSite=Strict` cookie off a top-level navigation that another site started: a tapped link in a chat or mail app's web view, a QR scanner's page, a link on any web page, `window.open`, and a reload of a page reached that way. Measured in Chromium 153 with the cookie above: typed address, bookmark-style navigation and a redirect from a typed address carry it; a cross-site link, `target=_blank`, `window.open`, a navigation from `about:blank` or a `data:` page, a meta refresh on another site, and a cross-site link followed by a same-origin `302` do not. The gateway then saw an unpaired request and answered with the pairing page, which is how a paired phone was asked to pair again.
+
+The cookie stays `Strict`. For a `GET` that is not under `/api`, carries no device cookie, is not marked `Sec-Fetch-Site: same-origin`, and is a document (or sends no `Sec-Fetch-Dest`), the gateway answers with a bounce page (`entry-bounce.ts`): no data, `Cache-Control: no-store`, `default-src 'none'` with one nonce'd script that calls `location.replace` on the same address plus `spark_entry=1`. That second navigation starts on our own origin, so the browser attaches the cookie. With the flag present the gateway never bounces: a paired device gets a `302` to the address without the flag (path checked so it cannot leave the origin), anything else gets the pairing page, which removes the flag from the address bar.
+
+Why this and not `SameSite=Lax`:
+
+- With `Lax` any site could make the phone send a cookie-bearing `GET` to any allowed `/api` route by navigating to it. With the bounce, the only thing a cross-site navigation can reach with the cookie is the web app's own HTML.
+- Two allowed reads write derived rows (`GET /api/home/digest` creates the profile row, `GET /api/tickets/inbox` stores an attention snapshot). `remote-get-safety.db.test.ts` walks every allowed `GET` and fails when another one writes. They are harmless, and under `Strict` no other site can trigger them.
+- Writes are unchanged: every one needs `Origin: https://<hostname>`, and a cross-site `POST` navigation carries no cookie under either setting.
+- The bounce reveals nothing: it is the same for every caller and is only sent when no cookie arrived. An API call, a write or a sub-resource is never bounced.
+- A phone with scripts off follows the `noscript` meta refresh to the same flag.
+
+The app's HTML is sent to a phone with `Cache-Control: no-store`, like the pairing page, so a restored tab cannot show one in place of the other. Hashed assets keep their caching.
+
+When the pairing page is shown, a `pairing_page_shown` audit row records why: `missing` (no cookie even after the bounce), `unknown` (a cookie this Mac has no row for), `revoked` or `unused` (with the device). At most one row a minute per reason and device; never the token.
+
 - Local endpoints: `GET /api/remote/devices`, `PATCH /api/remote/devices/:id` (rename), `DELETE /api/remote/devices/:id` (revoke), `POST /api/remote/devices/disconnect-all`. Revoking is checked on every request and closes that device's open event streams. Clearing or changing the hostname closes every device's streams.
 - `connected` in the device list is true while a device holds an event stream open. T2 uses it for the "phone connected" mark.
 
@@ -122,7 +149,7 @@ Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH 
 
 ### Audit
 
-The run audit log is a per-run hash chain of agent traffic, so phone activity has its own table, `remote_audit`, pruned on the same retention setting and listed by `GET /api/remote/audit` (local only). A row is written before a remote write runs and gets the response status when it ends. Pairing start, submit, failure, confirm and deny, device paired, renamed and revoked, disconnect all, hostname and switch changes, and every refusal of a known device are rows too. Rows hold the device id and name, method and path; never a body, query string, code, claim or token.
+The run audit log is a per-run hash chain of agent traffic, so phone activity has its own table, `remote_audit`, pruned on the same retention setting and listed by `GET /api/remote/audit` (local only). A row is written before a remote write runs and gets the response status when it ends. Pairing start, submit, failure, confirm and deny, device paired, paired again, renamed and revoked, the pairing page shown (with the reason), disconnect all, hostname and switch changes, and every refusal of a known device are rows too. Rows hold the device id and name, method and path; never a body, query string, code, claim or token.
 
 ### Focus
 

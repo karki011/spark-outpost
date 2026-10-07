@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp } from './app-support.ts';
 import {
+  ENTERED,
   REMOTE_HOST,
   REMOTE_ORIGIN,
   pairDevice,
@@ -111,9 +112,13 @@ describe('the web app over the remote host', () => {
         .get('/icon-192.png')
         .expect(200)
         .expect('content-type', /image\/png/);
-      expect((await stranger.get('/app.js').expect(200)).text).toContain('Pair this device');
-      expect((await stranger.get('/secrets.png').expect(200)).text).toContain('Pair this device');
-      expect((await stranger.get('/').expect(200)).text).toContain('Pair this device');
+      expect((await stranger.get(`/app.js${ENTERED}`).expect(200)).text).toContain(
+        'Pair this device',
+      );
+      expect((await stranger.get(`/secrets.png${ENTERED}`).expect(200)).text).toContain(
+        'Pair this device',
+      );
+      expect((await stranger.get(`/${ENTERED}`).expect(200)).text).toContain('Pair this device');
 
       const device = await pairDevice(app);
       const phone = remoteClient(app, device.cookie);
