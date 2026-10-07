@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { autoContinueAfter, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
 
 const SHOTS = process.env.ASK_CARD_SHOTS ?? '';
-const VARIANT = process.env.ASK_CARD_VARIANT ?? '';
 const SIZES = {
   desktop: { width: 1280, height: 800 },
   phone: { width: 375, height: 812 },
@@ -37,7 +36,6 @@ async function shots(page: Page, name: string) {
 
 async function answer(page: Page, name: string) {
   const card = askCard(page);
-  const next = card.getByRole('button', { name: 'Next', exact: true });
   await card.locator('.ask-opt').nth(1).click();
   await card.getByRole('textbox').first().fill('and keep the export button');
   if (await card.locator('.ask-line[aria-expanded]').count()) {
@@ -45,11 +43,6 @@ async function answer(page: Page, name: string) {
     await expect(card.getByRole('group', { name: 'Question 2 of 3' })).toBeVisible();
     await shots(page, `${name}-second`);
   }
-  if (await next.count()) {
-    await next.click();
-    await shots(page, `${name}-second`);
-  }
-  while (await next.count()) await next.click();
   await card.getByRole('button', { name: 'Send' }).click();
 }
 
@@ -62,10 +55,7 @@ test.describe('ask card screenshots', () => {
       await resetCrew();
       const repo = crewRepo();
       try {
-        await page.addInitScript((variant) => {
-          localStorage.setItem('spark-outpost.theme', 'system');
-          if (variant) localStorage.setItem('spark-outpost.ask-card', variant);
-        }, VARIANT);
+        await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'system'));
         await page.setViewportSize(SIZES.desktop);
         await autoContinueAfter(page, null);
         await crewChat(page, repo, 'Auto-edit');

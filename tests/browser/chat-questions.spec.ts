@@ -14,7 +14,7 @@ import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.CHAT_QUESTIONS_SHOTS ?? '';
 const THREE = 'Tell me anything about this repo #build #vague #questions #three';
-const QUESTIONS = /Spark has a few questions/;
+const QUESTIONS = /Spark has a (few questions|question)/;
 const BOXED =
   '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .ai-head > *, .md pre, .cs-wrap';
 

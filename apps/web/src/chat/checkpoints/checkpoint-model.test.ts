@@ -45,7 +45,11 @@ describe('checkpoint wording', () => {
       question: 'A few questions first',
       questions: [{ question: 'Which report?', options: [], default: 'Spend' }],
     }).payload.checkpoint!;
-    expect(checkpointTitle(payload)).toBe('Spark has a few questions');
+    const second = { question: 'Which period?', options: [], default: 'This month' };
+    expect(checkpointTitle(payload)).toBe('Spark has a question');
+    expect(checkpointTitle({ ...payload, questions: [...payload.questions, second] })).toBe(
+      'Spark has a few questions',
+    );
     expect(checkpointQuestion(payload)).toBeNull();
     expect(waitingLabel(payload)).toBe('Answer Spark’s questions');
   });

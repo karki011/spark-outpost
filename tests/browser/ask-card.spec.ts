@@ -10,7 +10,7 @@ import {
 
 const THREE = 'Tell me anything about this repo #build #vague #questions #three';
 const LONG = 'Split the reports page #build #vague #questions #longoptions';
-const QUESTIONS = /Spark has a few questions/;
+const QUESTIONS = /Spark has a (few questions|question)/;
 
 const thread = (page: Page) => page.locator('.thread');
 const card = (page: Page) => thread(page).getByRole('group', { name: QUESTIONS });
@@ -24,10 +24,6 @@ async function ask(page: Page, repo: CrewRepo, request: string) {
   await crewChat(page, repo, 'Auto-edit');
   await send(page, request);
   await expect(card(page)).toBeVisible({ timeout: 30_000 });
-}
-
-async function useSteps(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('spark-outpost.ask-card', 'steps'));
 }
 
 test.describe('ask card', () => {
@@ -101,87 +97,35 @@ test.describe('ask card', () => {
     await expect(answered.getByRole('status')).toHaveText('Answered.');
   });
 
-  test('one question at a time: Next and Back keep the answers and only the last step sends', async ({
-    page,
-  }) => {
+  test('long answers fit a 375px phone', async ({ page }) => {
     test.setTimeout(120_000);
-    await useSteps(page);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await ask(page, repo, THREE);
+    await ask(page, repo, LONG);
+    await page.setViewportSize({ width: 375, height: 812 });
 
-    const next = card(page).getByRole('button', { name: 'Next', exact: true });
-    const back = card(page).getByRole('button', { name: 'Back' });
-    await expect(card(page).getByText('1 of 3', { exact: true })).toBeVisible();
-    await expect(card(page).getByRole('group', { name: /^Quick answers/ })).toHaveCount(1);
-    await expect(sendButton(page)).toHaveCount(0);
-    await expect(back).toHaveCount(0);
-
-    await option(page, 'Open work / tech debt').click();
-    await next.click();
-    await expect(card(page).getByText('2 of 3', { exact: true })).toBeVisible();
-    await expect(option(page, /^Pulse/)).toBeFocused();
-    await expect(thread(page).getByRole('group', { name: QUESTIONS })).toHaveCount(1);
-    await expect(sendButton(page)).toHaveCount(0);
-
-    await back.click();
-    await expect(option(page, 'Open work / tech debt')).toHaveAttribute('aria-pressed', 'true');
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('3');
-    await expect(option(page, 'Views')).toHaveAttribute('aria-pressed', 'true');
-    await page.keyboard.press('Escape');
-    await expect(card(page).getByText('2 of 3', { exact: true })).toBeVisible();
-    await page.keyboard.press('Enter');
-
-    await expect(card(page).getByText('3 of 3', { exact: true })).toBeVisible();
-    await expect(next).toHaveCount(0);
-    await expect(sendButton(page)).toBeEnabled();
-    await card(page).getByRole('button', { name: 'Answer in your own words' }).click();
-    const own = card(page).getByRole('textbox', { name: 'Answer in your own words' });
-    await expect(own).toBeFocused();
-    await own.fill('keep it short');
-    await own.press('Enter');
-
-    const answered = thread(page).getByRole('group', { name: QUESTIONS });
-    await expect(answered.getByRole('listitem')).toHaveText([
-      'What would you like next? → Open work / tech debt',
-      'Which area should I focus on? → Views',
-      'How deep should it go? Best guess: Walkthrough + gotchas',
-    ]);
-    await expect(answered.getByRole('status')).toHaveText('Answered.“keep it short”');
-  });
-
-  for (const layout of ['list', 'steps'] as const) {
-    test(`long answers fit a 375px phone in the ${layout} layout`, async ({ page }) => {
-      test.setTimeout(120_000);
-      if (layout === 'steps') await useSteps(page);
-      await page.setViewportSize({ width: 1280, height: 800 });
-      await ask(page, repo, LONG);
-      await page.setViewportSize({ width: 375, height: 812 });
-
-      await expect(card(page)).toBeInViewport();
-      await expect(sendButton(page)).toBeInViewport();
-      await expect(card(page).getByRole('button', { name: 'Stop' })).toBeInViewport();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        ),
-      ).toBe(0);
-      const spill = await card(page).evaluate((element) => {
-        const outer = element.getBoundingClientRect();
-        return [...element.querySelectorAll('button, textarea, p')].filter((node) => {
-          const box = node.getBoundingClientRect();
-          return box.left < outer.left || box.right > outer.right;
-        }).length;
-      });
-      expect(spill).toBe(0);
-
-      const toggle = option(page, /^One table with a toggle/);
-      await toggle.scrollIntoViewIfNeeded();
-      await toggle.click();
-      await sendButton(page).click();
-      const answered = thread(page).getByRole('group', { name: QUESTIONS });
-      await expect(answered.getByRole('listitem')).toHaveText([/→ One table with a toggle/]);
-      await expect(answered.getByRole('status')).toHaveText('Answered.');
+    await expect(card(page)).toBeInViewport();
+    await expect(sendButton(page)).toBeInViewport();
+    await expect(card(page).getByRole('button', { name: 'Stop' })).toBeInViewport();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBe(0);
+    const spill = await card(page).evaluate((element) => {
+      const outer = element.getBoundingClientRect();
+      return [...element.querySelectorAll('button, textarea, p')].filter((node) => {
+        const box = node.getBoundingClientRect();
+        return box.left < outer.left || box.right > outer.right;
+      }).length;
     });
-  }
+    expect(spill).toBe(0);
+
+    const toggle = option(page, /^One table with a toggle/);
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.click();
+    await sendButton(page).click();
+    const answered = thread(page).getByRole('group', { name: QUESTIONS });
+    await expect(answered.getByRole('listitem')).toHaveText([/→ One table with a toggle/]);
+    await expect(answered.getByRole('status')).toHaveText('Answered.');
+  });
 });

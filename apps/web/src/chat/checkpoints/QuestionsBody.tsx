@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import type { Decide } from './card-parts.tsx';
 import { askKeyAction, type AskTarget } from './ask-keys.ts';
-import { askLayout } from './ask-layout.ts';
 import { ClarifyFoot, holdOnField } from './clarify-parts.tsx';
 import {
   clarifyAnswer,
@@ -98,7 +97,6 @@ export function QuestionsBody({
   decide: Decide;
 }) {
   const questions = approval.payload.checkpoint.questions;
-  const [layout] = useState(askLayout);
   const [answers, setAnswers] = useState<QuestionAnswer[]>(() => questions.map(() => NO_ANSWER));
   const [active, setActive] = useState(0);
   const [ownWords, setOwnWords] = useState('');
@@ -106,7 +104,6 @@ export function QuestionsBody({
   const focusActive = useRef(false);
   const total = questions.length;
   const last = total - 1;
-  const steps = layout === 'steps';
   const reply = clarifyAnswer(questions, answers, ownWords);
 
   useEffect(() => {
@@ -156,16 +153,6 @@ export function QuestionsBody({
     else send();
   };
 
-  const panel = (index: number) => (
-    <QuestionPanel
-      question={questions[index]!}
-      number={index + 1}
-      total={total}
-      answer={answers[index] ?? NO_ANSWER}
-      onAnswer={(value) => answer(index, value)}
-    />
-  );
-
   return (
     <form
       ref={form}
@@ -178,63 +165,37 @@ export function QuestionsBody({
       }}
     >
       <div className="ask-scroll">
-        {steps ? (
-          <>
-            {total > 1 && (
-              <p className="ask-count" aria-live="polite">
-                {active + 1} of {total}
-              </p>
-            )}
-            {panel(active)}
-          </>
-        ) : (
-          <ol className="ask-list">
-            {questions.map((question, index) => (
-              <li key={question.question}>
-                {index === active ? (
-                  panel(index)
-                ) : (
-                  <QuestionLine
-                    question={question}
-                    number={index + 1}
-                    total={total}
-                    answer={answers[index] ?? NO_ANSWER}
-                    onOpen={() => open(index)}
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
+        <ol className="ask-list">
+          {questions.map((question, index) => (
+            <li key={question.question}>
+              {index === active ? (
+                <QuestionPanel
+                  question={question}
+                  number={index + 1}
+                  total={total}
+                  answer={answers[index] ?? NO_ANSWER}
+                  onAnswer={(value) => answer(index, value)}
+                />
+              ) : (
+                <QuestionLine
+                  question={question}
+                  number={index + 1}
+                  total={total}
+                  answer={answers[index] ?? NO_ANSWER}
+                  onOpen={() => open(index)}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
       </div>
       {offers(approval, CHECKPOINT_OPTION.answer) && (
         <OwnWords value={ownWords} onChange={setOwnWords} hold={decide.hold} />
       )}
       <div className="appr-acts ck-foot">
-        {steps && active < last ? (
-          <button
-            key="next"
-            type="button"
-            className="btn primary sm"
-            onClick={() => open(active + 1)}
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            key="send"
-            type="submit"
-            className="btn primary sm"
-            disabled={decide.busy || !reply}
-          >
-            Send
-          </button>
-        )}
-        {steps && active > 0 && (
-          <button type="button" className="btn ghost sm" onClick={() => open(active - 1)}>
-            Back
-          </button>
-        )}
+        <button type="submit" className="btn primary sm" disabled={decide.busy || !reply}>
+          Send
+        </button>
         <ClarifyFoot approval={approval} decide={decide} />
       </div>
     </form>

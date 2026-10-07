@@ -13,7 +13,7 @@ import {
 } from './crew-engine.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
-const QUESTIONS = /Spark has a few questions/;
+const QUESTIONS = /Spark has a (few questions|question)/;
 const HELD = 'Waiting for your answer — this would change data permanently';
 
 let repo: CrewRepo;

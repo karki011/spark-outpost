@@ -41,13 +41,16 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
 };
 
 export const SPARK_QUESTIONS_TITLE = 'Spark has a few questions';
+const SPARK_QUESTION_TITLE = 'Spark has a question';
 
 export function asksQuestions(payload: CheckpointPayload): boolean {
   return payload.kind === 'clarify' && payload.questions.length > 0;
 }
 
 export function checkpointTitle(payload: CheckpointPayload): string {
-  if (asksQuestions(payload)) return SPARK_QUESTIONS_TITLE;
+  if (asksQuestions(payload)) {
+    return payload.questions.length === 1 ? SPARK_QUESTION_TITLE : SPARK_QUESTIONS_TITLE;
+  }
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.kind === 'ownership') {
