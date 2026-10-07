@@ -72,7 +72,9 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
           <div className="ph-device-text">
             <b>{device.name}</b>
             <span>
-              Added {addedOn(device.createdAt)} · Last seen {relativeTime(device.lastSeenAt)}
+              Added {addedOn(device.createdAt)} ·{' '}
+              {device.duplicateOf ? 'Not seen since' : 'Last seen'}{' '}
+              {relativeTime(device.lastSeenAt)}
               {device.expired && ' · Needs to pair again'}
             </span>
           </div>
@@ -94,11 +96,11 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
             <button
               type="button"
               className="btn line sm danger"
-              aria-label={`Revoke ${device.name}`}
+              aria-label={`${device.duplicateOf ? 'Remove old entry' : 'Revoke'} ${device.name}`}
               disabled={revoke.isPending}
               onClick={() => revoke.mutate()}
             >
-              Revoke
+              {device.duplicateOf ? 'Remove old entry' : 'Revoke'}
             </button>
           </div>
           {revoke.error && (
@@ -112,6 +114,39 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
   );
 }
 
+function RemovedDevices({ removed }: { removed: RemoteDevice[] }) {
+  const [open, setOpen] = useState(false);
+  if (removed.length === 0) return null;
+  return (
+    <div className="ph-removed">
+      <button
+        type="button"
+        className="btn ghost sm"
+        aria-expanded={open}
+        aria-controls="ph-removed-list"
+        onClick={() => setOpen(!open)}
+      >
+        {removed.length} removed
+      </button>
+      {open && (
+        <ul id="ph-removed-list" className="ph-devices" aria-label="Removed devices">
+          {removed.map((device) => (
+            <li key={device.id} className="ph-device">
+              <div className="ph-device-text">
+                <b>{device.name}</b>
+                <span>
+                  {device.replacedBy ? 'Replaced when it paired again' : 'Removed'}
+                  {device.revokedAt && ` ${addedOn(device.revokedAt)}`} · Cannot connect
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 interface PhoneDevicesProps {
   devices: RemoteDevice[] | undefined;
   freshAfter: number | null;
@@ -121,6 +156,7 @@ interface PhoneDevicesProps {
 export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
   const queryClient = useQueryClient();
   const active = (devices ?? []).filter((device) => !device.revokedAt);
+  const removed = (devices ?? []).filter((device) => device.revokedAt).reverse();
   const disconnect = useMutation({
     mutationFn: phoneApi.disconnectAll,
     onSuccess: (next) => {
@@ -160,6 +196,7 @@ export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
           )}
         </>
       )}
+      <RemovedDevices removed={removed} />
     </section>
   );
 }

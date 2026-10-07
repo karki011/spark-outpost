@@ -63,7 +63,7 @@ const SCRIPT = `
     code.value = grouped(fromLink);
     history.replaceState(null, '', location.pathname);
     name.focus();
-  }
+  } else if (location.search) history.replaceState(null, '', location.pathname);
   code.addEventListener('input', () => {
     code.removeAttribute('aria-invalid');
     if (code.selectionStart === code.value.length) code.value = grouped(code.value);

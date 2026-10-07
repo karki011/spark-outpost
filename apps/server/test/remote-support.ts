@@ -1,11 +1,16 @@
 import request from 'supertest';
-import { REMOTE_DEVICE_COOKIE, type RemoteSwitches } from '@spark-outpost/contracts';
+import {
+  REMOTE_DEVICE_COOKIE,
+  REMOTE_ENTRY_PARAM,
+  type RemoteSwitches,
+} from '@spark-outpost/contracts';
 import { localClient, type createTestApp } from './app-support.ts';
 
 type TestApp = ReturnType<typeof createTestApp>;
 
 export const REMOTE_HOST = 'mac.tail1234.ts.net';
 export const REMOTE_ORIGIN = `https://${REMOTE_HOST}`;
+export const ENTERED = `?${REMOTE_ENTRY_PARAM}=1`;
 
 export async function turnRemoteOn(app: TestApp, hostname: string | null = REMOTE_HOST) {
   await localClient(app).send('put', '/api/remote/access', { hostname }).expect(200);
@@ -59,18 +64,17 @@ export async function pairDevice(
   app: TestApp,
   deviceName = 'Test phone',
   host: string = REMOTE_HOST,
+  carried: string | null = null,
 ): Promise<PairedDevice> {
   const pairing = await submitPairing(app, deviceName, host);
   await localClient(app)
     .send('post', `/api/remote/pairings/${pairing.pairingId}/confirm`)
     .expect(200);
-  const claimed = await remoteClient(app, null, host)
+  const claimed = await remoteClient(app, carried, host)
     .send('post', '/api/remote/pair/claim', { claim: pairing.claim })
     .expect(200);
   const setCookie = (claimed.headers['set-cookie'] as unknown as string[])[0]!;
-  const devices = await localClient(app).get('/api/remote/devices').expect(200);
-  const device = (devices.body.devices as { id: string; name: string }[]).find(
-    (candidate) => candidate.name === deviceName,
-  )!;
-  return { id: device.id, cookie: sessionCookieOf(setCookie), setCookie };
+  const cookie = sessionCookieOf(setCookie);
+  const session = await remoteClient(app, cookie, host).get('/api/remote/session').expect(200);
+  return { id: (session.body as { device: { id: string } }).device.id, cookie, setCookie };
 }

@@ -81,10 +81,11 @@ export interface DeviceRow {
   created_at: Date;
   last_seen_at: Date;
   revoked_at: Date | null;
+  replaced_by: string | null;
   expired: boolean;
 }
 
-const DEVICE_COLUMNS = `id, name, created_at, last_seen_at, revoked_at,
+const DEVICE_COLUMNS = `id, name, created_at, last_seen_at, revoked_at, replaced_by,
   last_seen_at < now() - interval '${REMOTE_DEVICE_IDLE_DAYS} days' AS expired`;
 
 export async function listDevices(db: Queryable, workspaceId: string): Promise<DeviceRow[]> {
@@ -118,6 +119,35 @@ export async function addDevice(
     [newId(), workspaceId, device.name, device.tokenHash],
   );
   return rows[0]!;
+}
+
+export async function repairDevice(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+  device: { name: string; tokenHash: string },
+): Promise<DeviceRow | null> {
+  const { rows } = await db.query<DeviceRow>(
+    `UPDATE remote_devices SET name = $3, token_hash = $4, last_seen_at = now()
+     WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL
+       AND last_seen_at >= now() - interval '${REMOTE_DEVICE_IDLE_DAYS} days'
+     RETURNING ${DEVICE_COLUMNS}`,
+    [workspaceId, id, device.name, device.tokenHash],
+  );
+  return rows[0] ?? null;
+}
+
+export async function markDeviceReplaced(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+  replacedBy: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE remote_devices SET replaced_by = $3, revoked_at = COALESCE(revoked_at, now())
+     WHERE workspace_id = $1 AND id = $2`,
+    [workspaceId, id, replacedBy],
+  );
 }
 
 const SEEN_EVERY_SECONDS = 60;

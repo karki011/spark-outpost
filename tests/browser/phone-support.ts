@@ -86,7 +86,7 @@ export async function servePhonePage(page: Page): Promise<void> {
       return;
     }
     const sent = request.method() === 'GET' ? undefined : (request.postData() ?? '{}');
-    const response = await asPhone(request.method(), url.pathname, sent);
+    const response = await asPhone(request.method(), url.pathname + url.search, sent);
     await route.fulfill(response);
   });
 }
