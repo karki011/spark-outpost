@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { runModeSchema, type RunMode } from './approvals.ts';
 import { categorySchema } from './categories.ts';
-import { agentPickSchema, routeSourceSchema } from './checkpoints.ts';
+import { routeSourceSchema } from './checkpoints.ts';
 import { modelTierSchema } from './model-cards.ts';
 
 export const protocolDirectionSchema = z.enum(['to_agent', 'from_agent', 'harness']);
@@ -109,10 +109,6 @@ export const auditRunRouteSchema = z.object({
   routedBy: routeSourceSchema,
   rule: z.string().nullable(),
   tier: modelTierSchema.nullable(),
-  autoWouldUse: agentPickSchema.nullable(),
-  escalation: z
-    .object({ kind: z.string(), model: z.string(), modelLabel: z.string().nullable() })
-    .optional(),
 });
 export type AuditRunRoute = z.infer<typeof auditRunRouteSchema>;
 

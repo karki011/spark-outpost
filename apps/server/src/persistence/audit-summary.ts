@@ -63,15 +63,10 @@ const storedAuditRouteSchema = z.object({
   routedBy: auditRunRouteSchema.shape.routedBy,
   rule: z.string().nullable().catch(null).default(null),
   tier: auditRunRouteSchema.shape.tier.catch(null).default(null),
-  autoWouldUse: auditRunRouteSchema.shape.autoWouldUse.catch(null).default(null),
-  escalation: auditRunRouteSchema.shape.escalation.catch(undefined),
 });
 
 function auditRoute(stored: unknown): AuditRunRoute | null {
-  const parsed = storedAuditRouteSchema.safeParse(stored);
-  if (!parsed.success) return null;
-  const { escalation, ...route } = parsed.data;
-  return escalation ? { ...route, escalation } : route;
+  return storedAuditRouteSchema.safeParse(stored).data ?? null;
 }
 
 function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRunSummary {

@@ -437,7 +437,7 @@ export function ruleCriticPick(
     if (!stronger) return { ...chatPick(context), effort };
     return { provider, model: stronger.id, modelLabel: stronger.label, effort };
   }
-  const ladder = tierLadder(usable, provider, 'listed');
+  const ladder = tierLadder(usable, provider);
   const middle =
     ladder.find((model) => modelTier(model, provider) === 1) ?? ladder.at(-1) ?? usable[0];
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };

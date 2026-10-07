@@ -1,5 +1,5 @@
-import { MODEL_TIERS, type ModelCard, type ModelTier } from '@spark-outpost/contracts';
-import { cardFor, FRONTIER_RANK, TIER_RANK, VENDOR_CARDS } from '../model-cards/cards.ts';
+import { MODEL_TIERS, type ModelTier } from '@spark-outpost/contracts';
+import { cardFor, FRONTIER_RANK, TIER_RANK } from '../model-cards/cards.ts';
 
 export interface TierModel {
   id: string;
@@ -14,47 +14,11 @@ const TIER_PATTERNS: readonly (readonly [RegExp, number])[] = [
   [/opus|astra/i, 2],
 ];
 
-function familyOf(model: TierModel): readonly [RegExp, number] | null {
-  return (
-    TIER_PATTERNS.find(([pattern]) => pattern.test(model.id) || pattern.test(model.label)) ?? null
-  );
-}
-
 function patternTier(model: TierModel): number | null {
-  return familyOf(model)?.[1] ?? null;
-}
-
-function versionOf(text: string): number | null {
-  const found = /\d+(?:\.\d+)?/.exec(text);
-  return found ? Number(found[0]) : null;
-}
-
-function versionGap(card: ModelCard, version: number | null): number {
-  const own = versionOf(card.label);
-  return version === null || own === null ? Number.MAX_VALUE : Math.abs(own - version);
-}
-
-export function familyCard(model: TierModel, provider: string): ModelCard | null {
-  const family = familyOf(model);
-  if (!family) return null;
-  const [pattern, tier] = family;
-  const version = versionOf(model.label) ?? versionOf(model.id);
-  const kin = VENDOR_CARDS.cards.filter(
-    (card) =>
-      card.provider === provider &&
-      TIER_RANK[card.tier] === tier &&
-      (pattern.test(card.id) || pattern.test(card.label)),
-  );
-  return kin.sort((a, b) => versionGap(a, version) - versionGap(b, version))[0] ?? null;
-}
-
-export function scoringCard(model: TierModel, provider: string): ModelCard | null {
-  return cardFor(model, provider) ?? familyCard(model, provider);
-}
-
-export function tierName(model: TierModel, provider: string | null = null): ModelTier | null {
-  const tier = modelTier(model, provider);
-  return tier === null ? null : (MODEL_TIERS[tier] ?? null);
+  for (const [pattern, tier] of TIER_PATTERNS) {
+    if (pattern.test(model.id) || pattern.test(model.label)) return tier;
+  }
+  return null;
 }
 
 export function tierInfo(
@@ -71,23 +35,21 @@ export function modelTier(model: TierModel, provider: string | null = null): num
   return tierInfo(model, provider).tier;
 }
 
-export type LadderOrder = 'carded' | 'listed';
+export function tierName(model: TierModel, provider: string | null = null): ModelTier | null {
+  const tier = modelTier(model, provider);
+  return tier === null ? null : (MODEL_TIERS[tier] ?? null);
+}
 
 export function tierLadder<T extends TierModel>(
   models: readonly T[],
   provider: string | null = null,
-  order: LadderOrder = 'carded',
 ): T[] {
-  const byTier = new Map<number, { model: T; carded: boolean }>();
+  const byTier = new Map<number, T>();
   for (const model of models) {
-    const { tier, source } = tierInfo(model, provider);
-    if (tier === null || tier >= FRONTIER_RANK) continue;
-    const carded = source === 'card';
-    const held = byTier.get(tier);
-    if (!held || (order === 'carded' && carded && !held.carded))
-      byTier.set(tier, { model, carded });
+    const tier = modelTier(model, provider);
+    if (tier !== null && tier < FRONTIER_RANK && !byTier.has(tier)) byTier.set(tier, model);
   }
-  return [...byTier.entries()].sort(([a], [b]) => a - b).map(([, held]) => held.model);
+  return [...byTier.entries()].sort(([a], [b]) => a - b).map(([, model]) => model);
 }
 
 export function topTier<T extends TierModel>(

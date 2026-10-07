@@ -7,7 +7,11 @@ import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { loadAccess, markModelRejected, recordAccount } from '../src/model-access/store.ts';
 import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
-import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
+import {
+  createConversation,
+  getConversationDetail,
+  sendUserMessage,
+} from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -73,6 +77,10 @@ function startCodex(rejects: string[] = [SOL_61]) {
 }
 
 async function send(content: string, model: string | null = SOL_61, conversationId = randomUUID()) {
+  await createConversation(t.db, t.workspaceId, conversationId);
+  await t.db.query(`UPDATE conversations SET model_routing = 'pinned' WHERE id = $1`, [
+    conversationId,
+  ]);
   const sent = await sendUserMessage(
     t.db,
     conversationId,

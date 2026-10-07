@@ -25,8 +25,6 @@ const COLUMNS: readonly [string, (run: AuditRunSummary) => Cell][] = [
   ['routed_by', (run) => run.route?.routedBy ?? null],
   ['route_rule', (run) => run.route?.rule ?? null],
   ['model_tier', (run) => run.route?.tier ?? null],
-  ['auto_would_use', (run) => run.route?.autoWouldUse?.model ?? null],
-  ['escalation', (run) => run.route?.escalation?.kind ?? null],
 ];
 
 const FORMULA_START = /^[=+\-@\t\r]/;
