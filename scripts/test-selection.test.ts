@@ -55,7 +55,7 @@ describe('browser spec map', () => {
   it('has a rule or a run-everything entry for every source folder', () => {
     const uncovered = ['apps/web/src', 'apps/server/src'].flatMap((parent) =>
       readdirSync(path.join(ROOT, parent), { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
+        .filter((entry) => entry.isDirectory() && entry.name !== 'node_modules')
         .map((entry) => `${parent}/${entry.name}/`)
         .filter(
           (folder) =>
