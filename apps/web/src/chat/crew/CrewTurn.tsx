@@ -50,9 +50,10 @@ import {
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
-import { SteerAnswer, steerAnswers, withoutAnswers } from '../steer/SteerAnswer.tsx';
+import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
 import { steerSlots, turnSteers } from '../steer/steer-model.ts';
+import { turnRunIds } from '../turn-props.ts';
 
 function footLabel(status: Orchestration['status']): string {
   if (status === 'cancelled') return 'Stopped';
@@ -95,7 +96,7 @@ function CrewTurnBody({
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
   const agents = crewAgents(orchestration, detail.activity);
   const jev = agents[0]!;
-  const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
+  const crewRunIds = turnRunIds(detail, run.id);
   const shots = turnShots(detail, run.id);
   const memberRunIds = new Set(orchestration.crew.map((member) => member.runId));
   const otherShots = shots.filter((shot) => !memberRunIds.has(shot.runId));
@@ -107,15 +108,13 @@ function CrewTurnBody({
     approvals,
   );
   const checkApprovals = approvals.filter(isCheckApproval);
-  const items = groupParallel(
-    crewItems(withoutAnswers(orchestration.crew), checkpoints, checkApprovals, run.id),
-  );
+  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
   const steeredAfter = (index: number) =>
     (steers.get(index) ?? []).flatMap((message) => [
       <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />,
-      ...steerAnswers(orchestration.crew, message.id).map((member) => (
+      ...steerAnswers(orchestration.answers, message.id).map((member) => (
         <SteerAnswer key={member.runId} member={member} conversationId={detail.conversation.id} />
       )),
     ]);

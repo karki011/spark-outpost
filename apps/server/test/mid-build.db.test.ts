@@ -128,8 +128,11 @@ describe(
       ]);
       expect(inChat[0]).toMatchObject({ name: 'conversation', parentMessageId: id });
       expect(inChat.length).toBeGreaterThan(4);
-      const crew = (await loadOrchestration(t.db, runId))?.crew ?? [];
-      expect(crew.find((member) => member.runId === answered.id)?.answers).toBe(id);
+      const view = await loadOrchestration(t.db, runId);
+      expect(view?.answers?.map((member) => [member.runId, member.answers])).toEqual([
+        [answered.id, id],
+      ]);
+      expect(view?.crew.some((member) => member.runId === answered.id)).toBe(false);
       await requestCancel(t.db, runId);
       await eventually(async () => (await getRun(t.db, runId))?.finishedAt, 45_000);
       await expectConformantRun(t.db, runId);

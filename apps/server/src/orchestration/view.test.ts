@@ -3,7 +3,7 @@ import type { CrewMember, OrchestrationDecision } from '@spark-outpost/contracts
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { clarifiedRequest, mergeConflictCard, retryCard } from './checkpoint.ts';
 import { finalText } from './final-message.ts';
-import { orchestrationTotals } from './view.ts';
+import { buildOrchestration, orchestrationTotals, type OrchestrationRow } from './view.ts';
 
 const member = (
   role: CrewMember['role'],
@@ -80,6 +80,53 @@ describe('orchestration totals', () => {
       ['claude', 'sonnet', 2],
       ['codex', 'gpt-6-sol', 1],
     ]);
+  });
+});
+
+describe('the run that answers a question during a build', () => {
+  const row: OrchestrationRow = {
+    run_id: crypto.randomUUID(),
+    conversation_id: crypto.randomUUID(),
+    task_id: null,
+    status: 'running',
+    run_error: null,
+    level: null,
+    provider: 'claude',
+    plan_version: null,
+    phase: 'building',
+    depth: 'execute',
+    depth_source: 'rules',
+    risk: 'edits',
+    routing: 'auto',
+    retries: 0,
+    active_ms: 0,
+    tool_calls: 0,
+    error: null,
+    updated_at: new Date(0),
+  };
+  const builder = member('builder', 'claude', 'sonnet', 50, 0.1);
+  const answer = { ...member('scout', 'claude', 'sonnet', 40, 0.3), answers: crypto.randomUUID() };
+
+  it('is left out of the crew list and the crew counts', () => {
+    const view = buildOrchestration(row, [builder, answer], [], []);
+    expect(view.crew.map((entry) => entry.runId)).toEqual([builder.runId]);
+    expect(view.answers?.map((entry) => entry.runId)).toEqual([answer.runId]);
+    expect(view.totals.runs).toBe(1);
+    expect(view.totals.byRole.map((group) => [group.role, group.runs])).toEqual([['builder', 1]]);
+  });
+
+  it('still counts in the tokens and cost of the turn', () => {
+    const view = buildOrchestration(row, [builder, answer], [], []);
+    expect(view.totals.tokens).toBe(90);
+    expect(view.totals.costUsd).toBeCloseTo(0.4);
+    expect(view.usage?.costUsd).toBeCloseTo(0.4);
+    expect(view.totals.byModel.map((group) => [group.model, group.runs, group.tokens])).toEqual([
+      ['sonnet', 1, 90],
+    ]);
+  });
+
+  it('adds no answers list to a turn without one', () => {
+    expect(buildOrchestration(row, [builder], [], [])).not.toHaveProperty('answers');
   });
 });
 

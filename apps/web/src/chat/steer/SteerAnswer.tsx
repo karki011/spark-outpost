@@ -9,12 +9,11 @@ interface SteerAnswerProps {
   conversationId: string;
 }
 
-export function steerAnswers(crew: readonly CrewMember[], messageId: string): CrewMember[] {
-  return crew.filter((member) => member.answers === messageId);
-}
-
-export function withoutAnswers(crew: readonly CrewMember[]): CrewMember[] {
-  return crew.filter((member) => member.answers === undefined);
+export function steerAnswers(
+  answers: readonly CrewMember[] | undefined,
+  messageId: string,
+): CrewMember[] {
+  return (answers ?? []).filter((member) => member.answers === messageId);
 }
 
 export function SteerAnswer({ member, conversationId }: SteerAnswerProps) {

@@ -167,6 +167,7 @@ export const orchestrationSchema = z.object({
   retries: z.number().int().nonnegative(),
   maxRetries: z.number().int().nonnegative(),
   crew: z.array(crewMemberSchema),
+  answers: z.array(crewMemberSchema).optional(),
   checkpoints: z.array(approvalSchema),
   pendingCheckpoint: approvalSchema.nullable(),
   decisions: z.array(orchestrationDecisionSchema),
