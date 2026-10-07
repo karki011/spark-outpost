@@ -2,6 +2,7 @@ import type { FlowEvent, FlowResult, FlowState, Spawn } from './flow-types.ts';
 import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
+  needsYouLine,
   type AgentRole,
   type OrchestrationPhase,
 } from '@spark-outpost/contracts';
@@ -136,10 +137,6 @@ function afterBuilder(state: FlowState, large: boolean): FlowResult {
 
 function stopReport(state: FlowState, reason: string): FlowResult {
   return finish(state, 'failed', reason);
-}
-
-export function needsYouLine(reason: string): string {
-  return `Needs you: ${reason}`;
 }
 
 function needsYou(state: FlowState, reason: string): FlowResult {

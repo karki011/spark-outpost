@@ -2,15 +2,7 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
-import {
-  autoContinueAfter,
-  buildThePlan,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
 
 let repo: CrewRepo;
 
@@ -27,13 +19,11 @@ test('steering a running piece from the chat queues a note it reads at its next 
   page,
 }) => {
   test.setTimeout(150_000);
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(
     page,
     'Split this up: build a store, add an API and add a view. #build #pieces #holdpiece',
   );
-  await buildThePlan(page);
 
   const board = page.getByRole('region', { name: 'Pieces' });
   const api = board
@@ -71,24 +61,30 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await tv.getByRole('radio', { name: 'Stage' }).click();
   await expect(tv.locator('.tv-n.jev')).toContainText('Coordinator');
   const spoke = (key: string) => tv.locator(`.tv-n[data-piece="${key}"]`);
-  await expect(spoke('P1')).toHaveAttribute('aria-label', /P1 Store, in order, landed, Jev: .+\./);
+  await expect(spoke('P1')).toHaveAttribute(
+    'aria-label',
+    /P1 Store, shared tree, landed, Jev: .+\./,
+  );
   await expect(spoke('P2')).toHaveAttribute(
     'aria-label',
-    /^Rivet, P2 API, in order, running, 1 note queued, Jev: .+\./,
+    /^Rivet, P2 API, shared tree, running, 1 note queued, Jev: .+\./,
   );
   await expect(spoke('P2').locator('.tv-notes')).toHaveText('1');
-  await expect(spoke('P3')).toHaveAttribute('aria-label', /P3 View, in order, waiting, Jev: .+\./);
+  await expect(spoke('P3')).toHaveAttribute(
+    'aria-label',
+    /P3 View, shared tree, waiting, Jev: .+\./,
+  );
   await expect(spoke('P3').locator('.piece-state')).toHaveText('waiting');
-  await expect(spoke('P3')).toContainText('in order');
+  await expect(spoke('P3')).toContainText('shared tree');
   await tv.getByRole('radio', { name: 'List' }).click();
   const rivet = tv.getByRole('listitem', { name: /^Rivet/ });
-  await expect(rivet).toContainText('P2 · API · in order');
+  await expect(rivet).toContainText('P2 · API · shared tree');
   await expect(rivet.locator('.piece-state')).toHaveText('running');
   await expect(rivet).toContainText('1 note queued');
   await tv.getByRole('button', { name: 'Close Agent TV' }).click();
 
   writeFileSync(path.join(repo.root, '.git', 'release-P2'), 'go');
-  await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 60_000 });
+  await expect(board).toContainText('3 pieces, in the shared tree · 3 landed', { timeout: 60_000 });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
   await expect(target).toBeHidden();
   expect(repo.file('api.ts')).toContain('noted');

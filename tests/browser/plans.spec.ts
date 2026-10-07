@@ -96,7 +96,7 @@ test('an unsure agreement offers to save the plan, and older plans fold away in 
   await expect(agreed.locator('.pv')).toContainText('agreed in chat');
 });
 
-test('a plan-only request writes the plan, changes nothing, and saves it from the plan card', async ({
+test('a plan-only request writes the plan, changes nothing, and raises no card; the reply saves as the agreed plan', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -106,18 +106,17 @@ test('a plan-only request writes the plan, changes nothing, and saves it from th
     "Plan adding CSV export to the reports. Plan only for now: don't change any files. #planreply #build",
   );
 
-  const approval = card(page, /Approve the plan\?/);
-  await expect(approval).toContainText('Saved as proposed plan v1; nothing was changed.', {
+  const turn = page.getByRole('region', { name: 'Turn' });
+  await expect(turn.getByRole('heading', { name: 'Add CSV export' })).toBeVisible({
     timeout: 30_000,
   });
+  await expect(turn.getByText('Answered without changing files.')).toBeVisible();
+  await expect(card(page, /Approve the plan\?/)).toHaveCount(0);
   await expect(card(page, /Jev has a question/)).toHaveCount(0);
-  await expect(
-    page.getByRole('region', { name: 'Turn' }).getByRole('heading', { name: 'Add CSV export' }),
-  ).toBeVisible();
-  await expect(approval.getByRole('button', { name: 'Revise' })).toBeVisible();
-  await approval.getByRole('button', { name: 'Approve plan' }).click();
-  await expect(approval.getByRole('status')).toContainText('Plan approved.');
+  await turn.getByRole('button', { name: 'Save as agreed plan' }).click();
+  await expect(turn.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible();
 
+  await page.locator('.head').getByRole('button', { name: 'Show work panel' }).click();
   const work = panel(page);
   await work.getByRole('tab', { name: 'Plan' }).click();
   const agreed = work.getByRole('region', { name: 'Agreed plan' });

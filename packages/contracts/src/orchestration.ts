@@ -180,3 +180,16 @@ export const orchestrationSchema = z.object({
 export type Orchestration = z.infer<typeof orchestrationSchema>;
 
 export const ORCHESTRATION_ACTIVITY = 'orchestration';
+
+export const NEEDS_YOU_PREFIX = 'Needs you: ';
+
+export function needsYouLine(reason: string): string {
+  return `${NEEDS_YOU_PREFIX}${reason}`;
+}
+
+export function needsYouLines(reply: string): string[] {
+  return reply
+    .split('\n\n')
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(NEEDS_YOU_PREFIX));
+}

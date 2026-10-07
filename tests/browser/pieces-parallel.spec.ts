@@ -1,14 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
-import {
-  autoContinueAfter,
-  card,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { card, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
 
 const REQUEST = 'Split this up: build a store, add an API and add a view. #build #pieces #parallel';
 
@@ -22,16 +14,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.afterEach(() => repo.remove());
-
-async function buildThePlan(page: Page, waitMs = 0): Promise<void> {
-  const plan = card(page, /Build this plan\?/);
-  await expect(plan).toContainText('Build it, edit it, or stop.', { timeout: 30_000 });
-  await expect(plan.getByRole('button', { name: /^Building this plan in/ })).toHaveCount(0);
-  await expect(page.locator('.cstatus')).toContainText('Waiting for you · plan to review');
-  await page.waitForTimeout(waitMs);
-  await expect(plan).not.toContainText('Continued automatically');
-  await plan.getByRole('button', { name: 'Build', exact: true }).click();
-}
 
 async function allowChecksWhile(page: Page, settled: () => Promise<void>): Promise<void> {
   await expect(async () => {
@@ -73,10 +55,8 @@ const parallelGroup = (page: Page) =>
 
 test('Automatic builds independent pieces side by side in the shared tree', async ({ page }) => {
   test.setTimeout(150_000);
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, REQUEST);
-  await buildThePlan(page, 4_000);
 
   await allowChecksUntil(page, board(page), '3 pieces, in the shared tree · 3 landed');
   await expect(board(page).getByRole('button')).toHaveCount(0);
@@ -105,8 +85,9 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
     await expect(pieceRow(page, key)).toContainText('scoped check passed');
   }
   await expect(board(page).locator('.piece-board-why')).toContainText(
-    /^Jev: 3 Builders \(0\.90\) · P1 [^·]+, shared tree · P2 [^·]+, shared tree · P3 [^·]+, shared tree; /,
+    /^Jev: 3 pieces · P1 [^·]+, shared tree · P2 [^·]+, shared tree · P3 [^·]+, shared tree; /,
   );
+  await expect(card(page, /Build this plan\?/)).toHaveCount(0);
 
   const work = page.getByRole('complementary', { name: 'Work panel' });
   const tasksTab = work.getByRole('tab', { name: 'Tasks' });

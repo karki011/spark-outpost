@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
+  needsYouLines,
   type Approval,
   type ConversationDetail,
   type Orchestration,
@@ -102,6 +103,9 @@ function CrewTurnBody({
   const memberRunIds = new Set(orchestration.crew.map((member) => member.runId));
   const otherShots = shots.filter((shot) => !memberRunIds.has(shot.runId));
   const summary = orchestration.crew.length === 0 ? (textByRun.get(run.id) ?? '') : '';
+  const lastReply = detail.messages.findLast(
+    (message) => message.role === 'assistant' && message.runId === run.id,
+  );
   const approvals = turnApprovals(crewRunIds, detail.approvals, liveApprovals);
   const checkpoints = mergeCheckpoints(
     orchestration.checkpoints,
@@ -241,6 +245,12 @@ function CrewTurnBody({
           </ShotReply>
         </div>
       )}
+      {!summary &&
+        needsYouLines(lastReply?.content ?? '').map((line) => (
+          <p className="ai-note needs-you" role="status" key={line}>
+            {line}
+          </p>
+        ))}
       {timedOut(orchestration.error)
         ? !crewTimedOut && (
             <TimedOutNote

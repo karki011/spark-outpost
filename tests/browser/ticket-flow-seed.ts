@@ -133,8 +133,13 @@ export async function askForPlanApproval(chat: LinkedChat): Promise<void> {
     await db.query(
       `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
          status)
-       VALUES ($1, $2, $3, 'plan', 'Approve the plan', '{}', 'sha256:seed', '[]', 'pending')`,
-      [randomUUID(), chat.runId, `seed:${randomUUID()}`],
+       VALUES ($1, $2, $3, 'other', 'Plan', $4, 'sha256:seed', '[]', 'pending')`,
+      [
+        randomUUID(),
+        chat.runId,
+        `seed:${randomUUID()}`,
+        JSON.stringify({ plan: '# Add CSV export' }),
+      ],
     );
   } finally {
     await db.end();

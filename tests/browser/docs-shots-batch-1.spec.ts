@@ -29,7 +29,11 @@ import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
-const PLAN_APPROVAL = { kind: 'plan', title: 'Approve the plan' };
+const PLAN_APPROVAL = {
+  kind: 'other',
+  title: 'Plan',
+  plan: '# Add CSV export\n\n1. Write `src/export.ts`',
+};
 
 const IMAGES = path.resolve('docs/guide/images');
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
@@ -166,20 +170,11 @@ export function helperTotals(rows: number[]): number {
 }
 `;
 
-test('Crew, plan and guardrail screenshots', async ({ page }) => {
+test('Crew and guardrail screenshots', async ({ page }) => {
   test.setTimeout(150_000);
   crewFiles('src/totals.ts', TOTALS);
   await seedDemo(page, repo);
   await page.setViewportSize({ width: 1400, height: 900 });
-
-  await projectChat(page, 'Auto-edit');
-  await send(page, 'Rename the invoices table column and migrate old rows #build');
-  const plan = card(page, /Build this plan\?/);
-  await expect(plan.locator('.ck-estimate')).toBeVisible({ timeout: 30_000 });
-  await shoot(page, IMAGES, 'spark-crew-plan', plan);
-  await shoot(page, IMAGES, 'guardrails-estimate', plan);
-  await plan.getByRole('button', { name: 'Stop' }).click();
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 
   await projectChat(page, 'Auto-edit');
   await failingCheck(page, repo.root);

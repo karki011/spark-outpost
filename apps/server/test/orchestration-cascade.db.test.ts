@@ -1,3 +1,4 @@
+import { needsYouLine } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { writeFile } from 'node:fs/promises';
@@ -7,7 +8,6 @@ import {
   ESCALATED_NOTE,
   UNCONFIRMED_REASON,
 } from '../src/orchestration/cascade.ts';
-import { needsYouLine } from '../src/orchestration/transitions.ts';
 import {
   NORMAL,
   assistantReplies,

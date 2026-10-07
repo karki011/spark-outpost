@@ -111,7 +111,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
     .toMatchObject({ sparkEnabled: false, personality: 'facts' });
 
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
-  const wait = spark.getByRole('radiogroup', { name: 'Wait before going with best guesses' });
+  const wait = spark.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
   await expect(wait.getByRole('radio')).toHaveText([
     '30s',
     '60s',
@@ -121,9 +121,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
     'Custom',
   ]);
   await expect(wait.getByRole('radio', { name: '60s' })).toBeChecked();
-  await expect(wait).toHaveAccessibleDescription(
-    'After 60s, Spark goes with its best guess or the safe option.',
-  );
+  await expect(wait).toHaveAccessibleDescription('After 60s, Spark goes with the safe option.');
   const savedWait = async () =>
     (await (await page.request.get('/api/setup')).json()).profile.autoContinueSeconds;
   await wait.getByRole('radio', { name: 'Never' }).click();
@@ -138,9 +136,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   expect(await savedWait()).toBeNull();
   await custom.fill('45');
   await custom.press('Enter');
-  await expect(wait).toHaveAccessibleDescription(
-    'After 45s, Spark goes with its best guess or the safe option.',
-  );
+  await expect(wait).toHaveAccessibleDescription('After 45s, Spark goes with the safe option.');
   await expect.poll(savedWait).toBe(45);
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
@@ -272,7 +268,7 @@ test('the Jev screen keeps only its own switch and explains it in an info tip', 
   await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
   await expect(advisor).toContainText('Connect Jev to use this.');
   await expect(
-    advisor.getByRole('radiogroup', { name: 'Wait before going with best guesses' }),
+    advisor.getByRole('radiogroup', { name: 'Wait before going on without your answer' }),
   ).toHaveCount(0);
 
   const info = advisor.getByRole('button', { name: 'More about Check changes with Jev' });
