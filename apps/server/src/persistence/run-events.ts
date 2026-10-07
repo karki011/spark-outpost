@@ -1,7 +1,7 @@
-import type { RunEvent, RunStatus } from '@spark-outpost/contracts';
+import type { ReasoningText, RunEvent, RunStatus } from '@spark-outpost/contracts';
 import { writeArtifact, type ArtifactWrite } from './artifacts.ts';
 import { applyAutoTitle } from './auto-title.ts';
-import { withTransaction, type Db, type DbClient } from './db.ts';
+import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import type { Lease } from './jobs.ts';
 
 export class LeaseLostError extends Error {
@@ -150,4 +150,21 @@ export async function isCancelRequested(db: Db, runId: string): Promise<boolean>
     [runId],
   );
   return rows[0]?.requested ?? false;
+}
+
+export async function reasoningText(
+  db: Queryable,
+  runId: string,
+  messageId: string,
+): Promise<ReasoningText | null> {
+  const { rows } = await db.query<{ text: string | null; started: boolean }>(
+    `SELECT string_agg(payload->>'delta', '' ORDER BY seq)
+         FILTER (WHERE type = 'REASONING_MESSAGE_CONTENT') AS text,
+       bool_or(type = 'REASONING_START') AS started
+     FROM run_events
+     WHERE run_id = $1 AND payload->>'messageId' = $2
+       AND type IN ('REASONING_START', 'REASONING_MESSAGE_CONTENT')`,
+    [runId, messageId],
+  );
+  return rows[0]?.started ? { text: rows[0].text ?? '' } : null;
 }

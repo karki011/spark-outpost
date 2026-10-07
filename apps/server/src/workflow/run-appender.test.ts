@@ -183,3 +183,35 @@ describe('closing what is still open', () => {
     expect(store.writes.slice(-2).map((entry) => entry.events.length)).toEqual([2, 1]);
   });
 });
+
+describe('reasoning text', () => {
+  const identity = { runId: 'run-1', threadId: 'thread-1' };
+  const thought = (delta: string) => runEvents.reasoningContent('thought-1', delta);
+
+  it('batches reasoning chunks like reply text and keeps them in order with other events', async () => {
+    const store = recorder();
+    const append = bufferingText(store.write);
+    for (const event of runEvents.reasoningStart('thought-1')) await append(event);
+    await append(thought('a'));
+    await append(thought('b'));
+    await append(thought('c'));
+    expect(store.writes).toHaveLength(2);
+    await append(runEvents.reasoningMessageEnd('thought-1'));
+    expect(store.deltas().at(-1)).toEqual(['a', 'b', 'c', 'REASONING_MESSAGE_END']);
+  });
+
+  it('closes open reasoning and tool calls before the terminal event', async () => {
+    const store = recorder();
+    const append = bufferingText(store.write);
+    for (const event of runEvents.reasoningStart('thought-1')) await append(event);
+    await append(thought('held back'));
+    await append(runEvents.toolCallStart('call-1', 'Read notes'));
+    await append(runEvents.cancelled(identity));
+    expect(store.writes.at(-1)?.events.map((event) => event.type)).toEqual([
+      'REASONING_MESSAGE_END',
+      'REASONING_END',
+      'TOOL_CALL_END',
+      'RUN_FINISHED',
+    ]);
+  });
+});

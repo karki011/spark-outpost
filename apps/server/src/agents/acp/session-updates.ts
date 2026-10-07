@@ -336,9 +336,11 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
       progressed(update);
       switch (update.sessionUpdate) {
         case 'agent_thought_chunk': {
-          if (thinking) return [];
+          const text = update.content.type === 'text' ? update.content.text : '';
+          const thought: ProviderOutput[] = text ? [{ kind: 'thought_delta', delta: text }] : [];
+          if (thinking) return thought;
           thinking = true;
-          return [{ kind: 'step_started', name: THINKING_STEP }];
+          return [{ kind: 'step_started', name: THINKING_STEP }, ...thought];
         }
         case 'agent_message_chunk': {
           const linked =

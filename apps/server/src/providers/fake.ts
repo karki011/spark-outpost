@@ -105,6 +105,17 @@ function planSteps(prompt: string): ProviderOutput[] {
   ];
 }
 
+export const FAKE_THOUGHT = ['First I read the message.\n', 'Then I plan a short reply.'];
+
+function thinkingSteps(prompt: string): ProviderOutput[] {
+  if (!prompt.includes('#think')) return [];
+  return [
+    { kind: 'step_started', name: 'Thinking' },
+    ...FAKE_THOUGHT.map((delta): ProviderOutput => ({ kind: 'thought_delta', delta })),
+    { kind: 'step_finished', name: 'Thinking' },
+  ];
+}
+
 function planReply(prompt: string): string {
   return prompt.includes(FAKE_PLAN_TRIGGER) ? ` Opened a draft pull request: ${FAKE_PR_URL}` : '';
 }
@@ -119,6 +130,7 @@ export function fakeProviderPlan(
     { kind: 'step_started', name: 'Reading your message' },
     { kind: 'step_finished', name: 'Reading your message' },
     ...attachmentSteps(attachments),
+    ...thinkingSteps(prompt),
     ...planSteps(prompt),
     { kind: 'step_started', name: 'Writing a reply' },
     { kind: 'step_finished', name: 'Writing a reply' },

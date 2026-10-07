@@ -70,6 +70,38 @@ export const runEvents = {
     delta,
   }),
   textEnd: (messageId: string): RunEvent => ({ type: EventType.TEXT_MESSAGE_END, messageId }),
+  reasoningStart: (messageId: string): RunEvent[] => [
+    { type: EventType.REASONING_START, messageId },
+    { type: EventType.REASONING_MESSAGE_START, messageId, role: 'reasoning' },
+  ],
+  reasoningContent: (messageId: string, delta: string): RunEvent => ({
+    type: EventType.REASONING_MESSAGE_CONTENT,
+    messageId,
+    delta,
+  }),
+  reasoningMessageEnd: (messageId: string): RunEvent => ({
+    type: EventType.REASONING_MESSAGE_END,
+    messageId,
+  }),
+  reasoningEnd: (messageId: string): RunEvent => ({ type: EventType.REASONING_END, messageId }),
+  toolCallStart: (toolCallId: string, toolCallName: string): RunEvent => ({
+    type: EventType.TOOL_CALL_START,
+    toolCallId,
+    toolCallName,
+  }),
+  toolCallArgs: (toolCallId: string, delta: string): RunEvent => ({
+    type: EventType.TOOL_CALL_ARGS,
+    toolCallId,
+    delta,
+  }),
+  toolCallEnd: (toolCallId: string): RunEvent => ({ type: EventType.TOOL_CALL_END, toolCallId }),
+  toolCallResult: (messageId: string, toolCallId: string, content: string): RunEvent => ({
+    type: EventType.TOOL_CALL_RESULT,
+    messageId,
+    toolCallId,
+    content,
+    role: 'tool',
+  }),
   approvalRequested: (approval: Approval): RunEvent => ({
     type: EventType.CUSTOM,
     name: APPROVAL_REQUESTED,

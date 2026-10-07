@@ -29,6 +29,9 @@ export function stepMark(event: { metadata?: Record<string, unknown> | undefined
   return parsed.success ? parsed.data : {};
 }
 
+export const reasoningTextSchema = z.object({ text: z.string() });
+export type ReasoningText = z.infer<typeof reasoningTextSchema>;
+
 export function isTerminalRunEvent(event: RunEvent): boolean {
   return event.type === EventType.RUN_FINISHED || event.type === EventType.RUN_ERROR;
 }

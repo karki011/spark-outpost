@@ -21,8 +21,11 @@ describe('ACP session update mapping', () => {
       sessionUpdate: 'agent_thought_chunk',
       content: { type: 'text', text: 'a' },
     } as const;
-    expect(mapper.map(thought)).toEqual([{ kind: 'step_started', name: THINKING_STEP }]);
-    expect(mapper.map(thought)).toEqual([]);
+    expect(mapper.map(thought)).toEqual([
+      { kind: 'step_started', name: THINKING_STEP },
+      { kind: 'thought_delta', delta: 'a' },
+    ]);
+    expect(mapper.map(thought)).toEqual([{ kind: 'thought_delta', delta: 'a' }]);
     expect(mapper.map(text('Hi'))).toEqual([
       expect.objectContaining({ kind: 'step_finished', name: THINKING_STEP }),
       { kind: 'text_delta', delta: 'Hi' },

@@ -23,6 +23,20 @@ describe('activityFromEvents', () => {
     });
   });
 
+  it('links the thinking text to the Thinking step it was stored under', () => {
+    const activity = activityFromEvents([
+      { run_id: 'a', type: 'STEP_STARTED', name: 'Thinking' },
+      { run_id: 'a', type: 'REASONING_START', name: 'thought-1' },
+      { run_id: 'a', type: 'STEP_FINISHED', name: 'Thinking' },
+      { run_id: 'a', type: 'REASONING_START', name: 'orphan' },
+      { run_id: 'b', type: 'REASONING_START', name: 'no-step' },
+    ]);
+    expect(activity).toEqual({
+      a: [{ name: 'Thinking', done: true, reasoningId: 'thought-1' }],
+      b: [],
+    });
+  });
+
   it('pairs thousands of interleaved steps oldest first', () => {
     const rows = [];
     for (let index = 0; index < 5000; index += 1) {

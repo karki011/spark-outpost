@@ -23,11 +23,19 @@ export async function flushBufferedText(): Promise<void> {
   await Promise.all([...unflushed].map((flush) => flush()));
 }
 
+type StreamedText = Extract<
+  RunEvent,
+  { type: typeof EventType.TEXT_MESSAGE_CONTENT | typeof EventType.REASONING_MESSAGE_CONTENT }
+>;
+
 function isStreamedText(
   event: RunEvent,
   options: AppendOptions | undefined,
-): event is Extract<RunEvent, { type: typeof EventType.TEXT_MESSAGE_CONTENT }> {
-  return event.type === EventType.TEXT_MESSAGE_CONTENT && options === undefined;
+): event is StreamedText {
+  const streamed =
+    event.type === EventType.TEXT_MESSAGE_CONTENT ||
+    event.type === EventType.REASONING_MESSAGE_CONTENT;
+  return streamed && options === undefined;
 }
 
 export function bufferingText(write: Write, options: TextBufferOptions = {}): Append {
