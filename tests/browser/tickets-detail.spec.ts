@@ -66,7 +66,7 @@ test('a ticket shows its status badge, reporter, created date and pull requests'
     'title',
     /\b20\d\d\b/,
   );
-  const pulls = detail.getByRole('region', { name: 'Pull requests' });
+  const pulls = detail.getByRole('region', { name: 'Development' });
   const pull = pulls.getByRole('link', { name: /#341/ });
   await expect(pull).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/341');
   await expect(pull).toHaveAttribute('target', '_blank');
@@ -79,7 +79,7 @@ test('a ticket shows its status badge, reporter, created date and pull requests'
   await expect(field(page, 'ENG-1215', 'Reporter')).toHaveText('Not known');
   await expect(field(page, 'ENG-1215', 'Created')).toHaveText('5 days ago');
   await expect(
-    detailOf(page, 'ENG-1215').getByRole('region', { name: 'Pull requests' }),
+    detailOf(page, 'ENG-1215').getByRole('region', { name: 'Development' }),
   ).toContainText('No pull request is linked');
 
   await row(page, 'API-81').locator('.tk-key').hover();
@@ -166,7 +166,7 @@ test('a searched ticket is assigned from the detail pane, and Start work moves a
   const detail = detailOf(page, 'API-95');
   await expect(detail.getByRole('button', { name: 'Assign to me' })).toBeVisible();
   await expect(
-    detail.getByRole('region', { name: 'Pull requests' }).getByRole('link', { name: /#52/ }),
+    detail.getByRole('region', { name: 'Development' }).getByRole('link', { name: /#52/ }),
   ).toHaveAttribute('href', 'https://github.com/acme/api/pull/52');
   await detail.getByRole('button', { name: 'Start work' }).click();
   const dialog = page.getByRole('dialog', { name: 'Start work on API-95' });

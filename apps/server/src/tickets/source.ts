@@ -1,4 +1,8 @@
 import type {
+  ReportedPullState,
+  TicketBranch,
+  TicketBuilds,
+  TicketCommits,
   TicketPriorityName,
   TicketAssigneeFilter,
   TicketDetail,
@@ -52,6 +56,31 @@ export interface CreatedTicket {
   skippedLabels: string[];
 }
 
+export interface SourcePull {
+  url: string;
+  title: string | null;
+  state: ReportedPullState;
+  branch: string | null;
+  author: string | null;
+  updatedAt: string | null;
+  repo: string | null;
+  number: number | null;
+}
+
+export interface SourceDevelopment {
+  pullRequests: SourcePull[];
+  branches: TicketBranch[];
+  commits: TicketCommits | null;
+  builds: TicketBuilds | null;
+}
+
+export const NO_DEVELOPMENT: SourceDevelopment = {
+  pullRequests: [],
+  branches: [],
+  commits: null,
+  builds: null,
+};
+
 export interface TicketSource {
   id: TicketSourceId;
   whoami(): Promise<TicketAccount>;
@@ -64,6 +93,7 @@ export interface TicketSource {
   comment(key: string, body: string): Promise<void>;
   linkPullRequest(key: string, pull: TicketRef): Promise<void>;
   create(ticket: NewTicket): Promise<CreatedTicket>;
+  development?(key: string): Promise<SourceDevelopment>;
 }
 
 export class TicketApiError extends Error {

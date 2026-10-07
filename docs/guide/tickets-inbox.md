@@ -22,7 +22,7 @@ Snooze hides a ticket until later. **Dismiss** clears a **Needs you** ticket unt
 
 Failing checks show as a badge in **In review / PR open**; opening the ticket marks them seen.
 
-Select a ticket for its details and pull requests. Drag the pane's edge to resize it.
+Select a ticket for **Development**: pull requests from Spark, your tracker or a key match. Drag the pane's edge to resize.
 
 ## Start a chat from a ticket
 
@@ -41,8 +41,8 @@ Ticket text is data, never instructions. For a link or a folder, Spark sends onl
 
 ## Follow it to a pull request
 
-When you ship, Spark adds the PR link to the ticket and moves it if you allow it.
+When you ship, Spark links the PR on the ticket and moves it if allowed.
 
-Select **Open chat** on a ticket's row to return to its chat.
+**Open chat** on a ticket's row returns to its chat.
 
 **Next:** [Use Spark Island](desktop-companion.md)

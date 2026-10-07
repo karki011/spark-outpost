@@ -20,20 +20,16 @@ import {
   ticketTimes,
   ticketWork,
 } from '../persistence/tickets.ts';
-import type { GitHubDeps } from '../ship/github/access.ts';
 import { settledDismissals, type Thresholds, type TicketFacts } from './attention.ts';
-import { connectedSources, type OpenSource, type TicketDeps } from './connections.ts';
-import { readPullStatuses } from './pull-status.ts';
+import { connectedSources, type OpenSource } from './connections.ts';
+import { inboxDevelopment, type DevelopmentDeps } from './development.ts';
 import { placeTicket, sortInbox } from './sections.ts';
 import { TicketApiError } from './source.ts';
 import { moveTicket } from './sync.ts';
 
 export const DONE_RECENTLY_DAYS = 7;
 
-export interface InboxDeps extends TicketDeps {
-  github: GitHubDeps;
-  now?: () => Date;
-}
+export type InboxDeps = DevelopmentDeps;
 
 export function problemOf(source: OpenSource, error: unknown): TicketSourceProblem {
   const status = error instanceof TicketApiError ? error.status : -1;
@@ -116,13 +112,13 @@ async function factsFor(
     work: work.get(ticketRef(ticket.source, ticket.key)) ?? [],
   }));
   const pullUrls = listed.flatMap((t) => latestPull(t) ?? []);
-  const pulls = await readPullStatuses(deps.github, pullUrls);
+  const developmentOf = await inboxDevelopment(deps, sources, listed);
   const feedback = await prFeedbackWaiting(deps.db, deps.workspaceId, pullUrls);
   return Promise.all(
     listed.map(async (item): Promise<TicketFacts> => {
       const ref = ticketRef(item.source, item.key);
       const pullUrl = latestPull(item);
-      const pull = pullUrl ? (pulls.get(pullUrl) ?? null) : null;
+      const { pull, mine, development } = developmentOf(item);
       const lastWork = item.work.at(-1) ?? null;
       const ticket =
         pull?.state === 'merged'
@@ -145,6 +141,8 @@ async function factsFor(
             }
           : null,
         pullRequest: pull,
+        pullRequestMine: mine,
+        development,
         lastSync: syncs.get(ref) ?? null,
         statusSince: times.get(ref)?.statusSince?.toISOString() ?? null,
         assignedSince: times.get(ref)?.firstSeenAssignedAt?.toISOString() ?? null,

@@ -9,6 +9,7 @@ export interface JsonCall {
   url: string;
   authorization: string;
   body?: unknown;
+  timeoutMs?: number;
 }
 
 export interface JsonAnswer {
@@ -41,7 +42,7 @@ export async function callJson(
         ...(call.body === undefined ? {} : { 'content-type': 'application/json' }),
       },
       ...(call.body === undefined ? {} : { body: JSON.stringify(call.body) }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(call.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new TicketApiError(

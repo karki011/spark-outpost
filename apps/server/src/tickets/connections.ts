@@ -15,6 +15,7 @@ import {
   updateTicketSettings,
   type TicketConnectionRow,
 } from '../persistence/ticket-connections.ts';
+import { forgetDevelopment } from '../persistence/ticket-development.ts';
 import { recordTicketEvent } from '../persistence/ticket-events.ts';
 import type { SecretStore, TicketSecretId } from '../setup/secrets.ts';
 import { jiraSource } from './jira.ts';
@@ -110,6 +111,7 @@ export async function saveConnection(
     throw error;
   }
   await deps.secrets.set(secretIdFor(row.source), secret);
+  await forgetDevelopment(deps.db, deps.workspaceId, row.source);
   await saveTicketConnection(deps.db, deps.workspaceId, {
     ...row,
     account: who.name,
@@ -129,6 +131,7 @@ export async function removeConnection(
   source: TicketSourceId,
 ): Promise<TicketConnections> {
   await deleteTicketConnection(deps.db, deps.workspaceId, source);
+  await forgetDevelopment(deps.db, deps.workspaceId, source);
   await deps.secrets.delete(secretIdFor(source)).catch(() => undefined);
   await recordTicketEvent(deps.db, deps.workspaceId, {
     source,

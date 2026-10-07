@@ -57,6 +57,7 @@ async function readOne(
       checks: pull.checks,
       headSha: pull.headSha,
       failedChecks: pull.failedChecks,
+      author: pull.author ?? null,
     };
   } catch {
     return null;

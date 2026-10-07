@@ -133,7 +133,8 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   });
 
   router.get('/tickets/:source/:key', async (req, res) => {
-    res.json(await ticketView(deps, sourceParam(req), keyParam(req)));
+    const github = gitHubDepsOf(routeDeps);
+    res.json(await ticketView({ ...deps, github }, sourceParam(req), keyParam(req)));
   });
 
   router.post('/tickets/:source/:key/start', async (req, res) => {
