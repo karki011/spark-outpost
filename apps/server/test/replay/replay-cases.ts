@@ -12,7 +12,8 @@ export interface ReplayCase {
   id: string;
   title: string;
   repo?: 'remote';
-  coordinator?: 'in_order';
+  coordinator?: 'in_order' | 'parallel';
+  placement?: 'shared' | 'worktree';
   pieceCheck?: boolean;
   failingCheck?: boolean;
   turns: readonly ReplayTurn[];
@@ -110,6 +111,14 @@ export const REPLAY_CASES: readonly ReplayCase[] = [
     id: 'build-3',
     title: 'Build, 3 subtasks',
     coordinator: 'in_order',
+    pieceCheck: true,
+    turns: [{ scenario: SPLIT }],
+  },
+  {
+    id: 'parallel',
+    title: 'Parallel build, shared tree',
+    coordinator: 'parallel',
+    placement: 'shared',
     pieceCheck: true,
     turns: [{ scenario: SPLIT }],
   },

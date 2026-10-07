@@ -101,6 +101,7 @@ export async function runReplay(
     sessions: store,
     harness,
     ...(replay.coordinator ? { coordinator: replay.coordinator } : {}),
+    ...(replay.placement ? { forcedPlacement: replay.placement } : {}),
     ...(place.stub
       ? {
           shipAccess: {
@@ -127,6 +128,7 @@ export async function runReplay(
       conversationId,
     ]);
     const replies: string[] = [];
+    const startedAt = Date.now();
     for (const turn of replay.turns) {
       await pinChatLevel(t.db, conversationId, turn.level ?? 'hands-off');
       script.scenario = turn.scenario;
@@ -140,7 +142,10 @@ export async function runReplay(
       replies.push((await assistantReplies(t, sent.run.id)).join('\n'));
     }
     return {
-      row: await replayRow(t, conversationId, replay.title, harness, replies),
+      row: {
+        ...(await replayRow(t, conversationId, replay.title, harness, replies)),
+        seconds: Math.round((Date.now() - startedAt) / 1000),
+      },
       ledger: await ledgerCounts(t, conversationId),
       conversationId,
       db: t,

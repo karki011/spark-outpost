@@ -30,6 +30,7 @@ export interface ReplayRow {
   promptTokens: number;
   cost: ModelledCost;
   replies: string[];
+  seconds?: number;
 }
 
 export interface LedgerCounts {
@@ -152,8 +153,8 @@ const cents = (value: number) => (value * 100).toFixed(3);
 
 export function replayTable(rows: readonly ReplayRow[]): string {
   const header =
-    '| Case | Harness | Turns | Runs | Runs, last turn | Sessions opened | resumed | replaced | New sessions, last turn | Model changes | Repeat runs of a role | Escalations | Jev calls | Cards | Tiers | Prompt tokens sent | Cache write ¢ | Cache read ¢ | Output ¢ |';
-  const rule = `|${' --- |'.repeat(19)}`;
+    '| Case | Harness | Turns | Runs | Runs, last turn | Sessions opened | resumed | replaced | New sessions, last turn | Model changes | Repeat runs of a role | Escalations | Jev calls | Cards | Tiers | Prompt tokens sent | Cache write ¢ | Cache read ¢ | Output ¢ | Seconds |';
+  const rule = `|${' --- |'.repeat(20)}`;
   const body = rows.map((row) =>
     [
       row.case,
@@ -175,6 +176,7 @@ export function replayTable(rows: readonly ReplayRow[]): string {
       cents(row.cost.cacheWriteUsd),
       cents(row.cost.cacheReadUsd),
       cents(row.cost.outputUsd),
+      row.seconds ?? '',
     ].join(' | '),
   );
   return [header, rule, ...body.map((line) => `| ${line} |`)].join('\n');
