@@ -96,6 +96,7 @@ export async function missedMessages(
   input: RunInput,
   since: Date,
   ownReply: string | null,
+  agentKey: string,
 ): Promise<MissedMessage[]> {
   const { rows } = await db.query<MissedMessage & { reply_hash: string }>(
     `SELECT m.role, m.content, encode(sha256(convert_to(m.content, 'UTF8')), 'hex') AS reply_hash
@@ -103,8 +104,12 @@ export async function missedMessages(
      WHERE m.conversation_id = $1 AND m.created_at > $2
        AND m.id <> (SELECT user_message_id FROM runs WHERE id = $3)
        AND m.created_at < (SELECT created_at FROM runs WHERE id = $3)
+       AND (m.run_id IS NULL OR m.run_id NOT IN (
+         SELECT e.run_id FROM provider_session_events e
+         JOIN provider_sessions s ON s.id = e.session_row_id
+         WHERE s.conversation_id = $1 AND s.agent_key = $4 AND e.run_id IS NOT NULL))
      ORDER BY m.created_at, m.id`,
-    [input.identity.threadId, since, input.identity.runId],
+    [input.identity.threadId, since, input.identity.runId, agentKey],
   );
   return rows
     .filter((row) => !(row.role === 'assistant' && row.reply_hash === ownReply))

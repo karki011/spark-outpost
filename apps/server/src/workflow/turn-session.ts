@@ -148,7 +148,9 @@ export async function prepareTurnSession(
       : null;
   const missed =
     conversation && stored && decision.resume
-      ? await missedMessages(db, input, stored.lastUsedAt, stored.lastReplyHash).catch(() => [])
+      ? await missedMessages(db, input, stored.lastUsedAt, stored.lastReplyHash, key).catch(
+          () => [],
+        )
       : [];
   const interrupted = input.continuesRunId != null && stored?.lastReplyHash === null;
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
