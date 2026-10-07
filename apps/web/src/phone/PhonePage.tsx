@@ -1,10 +1,11 @@
 import './phone.css';
 import { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteSession } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
+import { activationOf, turnFailure } from './pair-flow.ts';
 import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
@@ -36,6 +37,14 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
     queryFn: phoneApi.audit,
     refetchInterval: hidden ? false : LIST_POLL_MS,
   });
+  const turn = useMutation({
+    mutationFn: phoneApi.turn,
+    onSuccess: (next) => {
+      if (next.status !== 'error') queryClient.setQueryData(phoneKeys.tailscale, next);
+      void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
+    },
+  });
+  const failure = turnFailure(turn.error, turn.data);
 
   useEffect(() => {
     if (freshAfter === null) return;
@@ -58,10 +67,20 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
         wanted={session.address !== null}
         connected={list.some((device) => device.connected && !device.revokedAt)}
         checking={tailscale.isFetching}
+        turning={turn.isPending}
+        failure={failure}
         onCheck={() => void tailscale.refetch()}
+        onTurn={(to) => turn.mutate(to)}
       />
       <PairPhone
         tailscale={tailscale.data}
+        activation={activationOf(
+          {
+            pending: turn.isPending ? (turn.variables ?? null) : null,
+            failed: failure === null ? null : (turn.variables ?? null),
+          },
+          tailscale.data,
+        )}
         onPaired={() => {
           setFreshAfter(Date.now());
           void queryClient.invalidateQueries({ queryKey: phoneKeys.devices });

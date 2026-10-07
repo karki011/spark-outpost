@@ -1,7 +1,7 @@
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import type { Page } from '@playwright/test';
+import { expect, type Browser, type Page } from '@playwright/test';
 import {
   FAKE_TAILSCALE_HOST,
   type FakeTailscaleState,
@@ -11,6 +11,9 @@ import { API_PORT, FAKE_TAILSCALE_STATE } from './stub-config.ts';
 
 export const PHONE_ADDRESS = `https://${FAKE_TAILSCALE_HOST}`;
 export const PHONE_PAGE = 'http://phone.test';
+const LIMIT_RETRY_MS = 5_000;
+export const WIDE = { width: 1280, height: 900 };
+export const NARROW = { width: 390, height: 844 };
 const THEME = path.resolve(import.meta.dirname, '../../apps/web/public/theme.css');
 
 export function setFakeTailscale(change: Partial<FakeTailscaleState> | null): void {
@@ -86,7 +89,7 @@ export async function servePhonePage(page: Page): Promise<void> {
       return;
     }
     const sent = request.method() === 'GET' ? undefined : (request.postData() ?? '{}');
-    const response = await asPhone(request.method(), url.pathname, sent);
+    const response = await asPhone(request.method(), url.pathname + url.search, sent);
     await route.fulfill(response);
   });
 }
@@ -97,4 +100,51 @@ export async function denyWaitingPhones(page: Page): Promise<void> {
   for (const pairing of pairings) {
     await page.request.post(`/api/remote/pairings/${pairing.id}/deny`, { data: {} });
   }
+}
+
+export async function openPhone(page: Page) {
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Phone' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Phone', level: 1 })).toBeVisible();
+  return page.getByRole('main');
+}
+
+export async function turnOn(page: Page) {
+  await page.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible();
+}
+
+export async function startPairing(
+  page: Page,
+  button: string | RegExp = 'Pair a phone',
+): Promise<string> {
+  const code = page.locator('.ph-code-text');
+  const limited = page.locator('.ph-scene-line', { hasText: 'Too many pairing attempts' });
+  await page.getByRole('button', { name: button }).click();
+  await expect(code.or(limited)).toBeVisible();
+  while (await limited.isVisible()) {
+    await page.waitForTimeout(LIMIT_RETRY_MS);
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(code.or(limited)).toBeVisible();
+  }
+  await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  return (await code.textContent()) ?? '';
+}
+
+export async function openPairingPage(
+  browser: Browser,
+  hash = '',
+  theme: string | null = 'system',
+) {
+  const context = await browser.newContext({ viewport: NARROW });
+  const phone = await context.newPage();
+  if (theme) {
+    await phone.addInitScript((saved) => localStorage.setItem('spark-outpost.theme', saved), theme);
+  }
+  await servePhonePage(phone);
+  await phone.goto(`${PHONE_PAGE}/${hash}`);
+  return { context, phone };
 }
