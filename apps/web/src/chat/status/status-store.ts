@@ -13,6 +13,7 @@ export interface Worker {
   name: string;
   provider: string;
   kind: WorkerKind;
+  doing?: string;
 }
 
 export interface LiveInput extends Worker {
@@ -58,6 +59,7 @@ function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
     a.name === b.name &&
     a.kind === b.kind &&
     a.provider === b.provider &&
+    a.doing === b.doing &&
     a.working === b.working &&
     a.step === b.step
   );

@@ -12,6 +12,7 @@ import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
 import '../../crew/member-chat.css';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
+import { COORDINATOR_DOING } from '../../crew/jev-doing.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
@@ -214,8 +215,9 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
   const leads = streamLeads(stream, !live);
   const steps = shownSteps(stream, stored.steps, leads);
   const streaming = stream.status === 'connecting' || stream.status === 'running';
-  const { id, name, provider } = stored.agent;
-  useLiveReport({ id, name, provider, kind: 'crew' }, live && streaming, steps);
+  const { id, name, provider, role } = stored.agent;
+  const doing = role === 'coordinator' ? { doing: COORDINATOR_DOING } : {};
+  useLiveReport({ id, name, provider, kind: 'crew', ...doing }, live && streaming, steps);
   return (
     <AgentBody
       {...stored}
