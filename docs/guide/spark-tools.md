@@ -57,7 +57,6 @@ An MCP server card shows the exact command. Agents pass only names of variables 
 | **Auto**, **Bypass permissions**, **Approve for me** or **Full access** | Does it at once, with a link.                            |
 | **Accept edits**                                                        | Does it when your message asked. Otherwise shows a card. |
 | **Manual**, **Plan** and read-only modes                                | Always shows a card.                                     |
-| Any, after the agent read secrets or private data that turn             | Always shows a card.                                     |
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
@@ -75,4 +74,4 @@ Agents open pull requests themselves.
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |
 
-After a tool reads tickets, Slack, pull requests or spend, Spark asks before that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).
+After a tool reads tickets, Slack, other chats or spend, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).

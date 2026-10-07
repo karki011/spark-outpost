@@ -1,27 +1,6 @@
 import type { PieceList, TaskPiece } from '@spark-outpost/contracts';
 import { PATCH_LIMIT, type PieceReview } from '../orchestration/context.ts';
-
-const FILE_HEADER = /^diff --git a\/(.+?) b\/(.+)$/;
-
-export function patchByFile(patch: string): Map<string, string> {
-  const files = new Map<string, string>();
-  let current: string | null = null;
-  let lines: string[] = [];
-  const flush = () => {
-    if (current !== null) files.set(current, lines.join('\n'));
-  };
-  for (const line of patch.split('\n')) {
-    const header = FILE_HEADER.exec(line);
-    if (header) {
-      flush();
-      current = header[2]!;
-      lines = [];
-    }
-    if (current !== null) lines.push(line);
-  }
-  flush();
-  return files;
-}
+import { patchByFile } from '../orchestration/critic-diff.ts';
 
 function contractText(piece: TaskPiece): string {
   const parts = [

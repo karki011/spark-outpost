@@ -1,6 +1,7 @@
 import type { InvolvementLevel, ModePosture } from '@spark-outpost/contracts';
 import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
+import { withoutDataHeredocs } from './inline-code.ts';
 import {
   HOSTING_CLIS,
   gitPublishesBesidesPush,
@@ -23,6 +24,7 @@ export interface PublishGrant {
 export interface TaskBranch {
   branch: string;
   protectedBranches: readonly string[];
+  pull?: number | null;
 }
 
 export interface PublishContext {
@@ -103,23 +105,25 @@ function positionals(args: readonly string[]): string[] {
   });
 }
 
-function ghRefusal(args: readonly string[], branch: string): string | null {
+function ghRefusal(args: readonly string[], task: TaskBranch): string | null {
   const [group, verb, ...rest] = args;
   if (group !== 'pr' || !verb || !GH_PR_VERBS.has(verb)) return GH_RAIL_REASON;
   if (rest.some((token) => flagName(token) === '--repo' || token.startsWith('-R'))) {
     return GH_RAIL_REASON;
   }
-  if (flagValue(rest, ['-H', '--head']).some((head) => head !== branch)) return GH_RAIL_REASON;
-  if (rest.some((token) => PR_SELECTOR.test(token))) return GH_RAIL_REASON;
-  if (positionals(rest).some((token) => token !== branch)) return GH_RAIL_REASON;
+  const own = (token: string) =>
+    token === task.branch || (Boolean(task.pull) && token.replace(/^#/, '') === String(task.pull));
+  if (flagValue(rest, ['-H', '--head']).some((head) => head !== task.branch)) return GH_RAIL_REASON;
+  if (rest.some((token) => PR_SELECTOR.test(token) && !own(token))) return GH_RAIL_REASON;
+  if (positionals(rest).some((token) => !own(token))) return GH_RAIL_REASON;
   return null;
 }
 
-function hostingRefusal(command: string, branch: string): string | null {
-  for (const program of commandTree(command).commands) {
+function hostingRefusal(command: string, task: TaskBranch): string | null {
+  for (const program of commandTree(withoutDataHeredocs(command)).commands) {
     const name = programName(program);
     if (!HOSTING_CLIS.includes(name)) continue;
-    const refused = name === 'gh' ? ghRefusal(program.slice(1), branch) : REMOTE_RAIL_REASON;
+    const refused = name === 'gh' ? ghRefusal(program.slice(1), task) : REMOTE_RAIL_REASON;
     if (refused) return refused;
   }
   return null;
@@ -138,7 +142,7 @@ function pushRefusal(push: PushTarget, task: TaskBranch): string | null {
 export function publishRefusal(command: string, task: TaskBranch | null): string | null {
   if (gitPublishesBesidesPush(command)) return REMOTE_RAIL_REASON;
   if (!task) return NO_TASK_BRANCH_REASON;
-  const hosting = hostingRefusal(command, task.branch);
+  const hosting = hostingRefusal(command, task);
   if (hosting) return hosting;
   for (const push of pushTargets(command)) {
     const refused = pushRefusal(push, task);

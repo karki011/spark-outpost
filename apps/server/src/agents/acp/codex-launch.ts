@@ -1,6 +1,7 @@
 import { chmod, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runCommand, type RunCommand } from '../../setup/command.ts';
+import { CODEX_READ_ONLY_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 
 export const CODEX_PROFILES_FROM = '0.149.1';
 const STARTUP_PROFILE = ':read-only';
@@ -55,13 +56,33 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
-async function startupWrapper(codexPath: string, dir: string): Promise<string> {
+export function tomlInline(value: unknown): string {
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return `[${value.map(tomlInline).join(', ')}]`;
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value).map(
+      ([key, entry]) => `${JSON.stringify(key)} = ${tomlInline(entry)}`,
+    );
+    return `{ ${entries.join(', ')} }`;
+  }
+  throw new Error('A Codex override holds a value TOML cannot express.');
+}
+
+export function startupOverrides(profiles: boolean): string[] {
+  if (!profiles) return [`default_permissions=${tomlInline(STARTUP_PROFILE)}`];
+  return [
+    `permissions=${tomlInline(codexPermissionProfiles())}`,
+    `default_permissions=${tomlInline(CODEX_READ_ONLY_MODE)}`,
+  ];
+}
+
+async function startupWrapper(codexPath: string, dir: string, profiles: boolean): Promise<string> {
   const wrapper = join(dir, 'codex-spark');
-  const override = `default_permissions=${JSON.stringify(STARTUP_PROFILE)}`;
-  await writeFile(
-    wrapper,
-    `#!/bin/sh\nexec ${shellQuote(codexPath)} -c ${shellQuote(override)} "$@"\n`,
-  );
+  const flags = startupOverrides(profiles)
+    .map((override) => `-c ${shellQuote(override)}`)
+    .join(' ');
+  await writeFile(wrapper, `#!/bin/sh\nexec ${shellQuote(codexPath)} ${flags} "$@"\n`);
   await chmod(wrapper, 0o755);
   return wrapper;
 }
@@ -82,7 +103,10 @@ export async function prepareCodexLaunch(
   if (!path) return { cli, profiles: !legacy, version: null };
   const version = await codexVersion(path, run);
   const capable = supportsPermissionProfiles(version);
+  const profiles = capable && !legacy;
   const wrapped =
-    capable && process.platform !== 'win32' ? { CODEX_PATH: await startupWrapper(path, dir) } : {};
-  return { cli: { ...cli, ...wrapped }, profiles: capable && !legacy, version };
+    capable && process.platform !== 'win32'
+      ? { CODEX_PATH: await startupWrapper(path, dir, profiles) }
+      : {};
+  return { cli: { ...cli, ...wrapped }, profiles, version };
 }

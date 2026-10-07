@@ -52,6 +52,9 @@ const SCRIPT = `
     done.hidden = stage !== 'paired';
     retry.hidden = stage !== 'ended';
   };
+  document.addEventListener('visibilitychange', () => {
+    main.toggleAttribute('data-paused', document.hidden);
+  });
   const status = document.getElementById('status');
   const code = document.getElementById('code');
   const name = document.getElementById('name');
@@ -63,7 +66,7 @@ const SCRIPT = `
     code.value = grouped(fromLink);
     history.replaceState(null, '', location.pathname);
     name.focus();
-  }
+  } else if (location.search) history.replaceState(null, '', location.pathname);
   code.addEventListener('input', () => {
     code.removeAttribute('aria-invalid');
     if (code.selectionStart === code.value.length) code.value = grouped(code.value);

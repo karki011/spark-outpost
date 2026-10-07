@@ -1,7 +1,7 @@
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { CheckBaseline } from '@spark-outpost/contracts';
+import { createHash } from 'node:crypto';
 import {
   saveBaseline,
   savedBaseline,
@@ -12,11 +12,16 @@ import type { Queryable } from '../persistence/db.ts';
 import { git } from '../projects/snapshot.ts';
 import { prepareDependencies } from '../projects/worktree-deps.ts';
 import type { CheckCommand } from './detect.ts';
-import { compareWithBase, environmentProblem, outputShape } from './failures.ts';
+import type { BaseEvidence } from './attribution.ts';
+import { environmentProblem, outputShape } from './failures.ts';
 import { runCheck, type CheckRun } from './run-check.ts';
 
 const BASELINE_MIN_MS = 60_000;
 const BASELINE_FACTOR = 3;
+const BASELINE_FRESH_MS = 3_600_000;
+const REAL_RUN_ENV = { NX_SKIP_NX_CACHE: 'true', TURBO_FORCE: 'true' };
+const REPLAYED =
+  /read the output from the cache|\[(?:local|remote) cache\]|cache hit, replaying|FULL TURBO|FROM-CACHE|\(cached\) PASSED/i;
 
 export interface BaselineSite {
   db: Queryable;
@@ -24,22 +29,22 @@ export interface BaselineSite {
   base: string;
   signal: AbortSignal;
   limitMs: number;
+  env?: Readonly<Record<string, string>>;
 }
 
 export interface FailedRun {
   check: CheckCommand;
-  failures: readonly string[];
-  shape: string;
   durationMs: number;
 }
 
-export interface Attribution {
-  fromChange: boolean;
-  baseline: CheckBaseline;
+export interface BaseResult extends BaseEvidence {
+  base: string;
+  cached: boolean;
+  durationMs: number;
 }
 
 interface Place {
-  key: Omit<BaselineKey, 'command'>;
+  key: Omit<BaselineKey, 'command' | 'environment'>;
   relative: string;
 }
 
@@ -53,10 +58,23 @@ export function baselineLimit(durationMs: number, limitMs: number): number {
   return Math.min(limitMs, Math.max(BASELINE_MIN_MS, durationMs * BASELINE_FACTOR));
 }
 
-function usable(run: CheckRun, check: CheckCommand, prepared: boolean): boolean {
-  if (run.exitCode === 0 || run.timedOut) return true;
-  if (environmentProblem({ argv: check.argv, ...run }) !== null) return false;
-  return prepared || run.failures.length > 0;
+function environmentOf(
+  builderEnv: Readonly<Record<string, string>> = {},
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const own = Object.entries(builderEnv).sort(([a], [b]) => a.localeCompare(b));
+  const facts = [process.version, process.platform, process.arch, env.PATH ?? '', ...own.flat()];
+  return createHash('sha256').update(facts.join('\0')).digest('hex');
+}
+
+function ranToEnd(run: CheckRun, prepared: boolean): boolean {
+  if (run.timedOut || run.exitCode === null) return false;
+  return prepared && !REPLAYED.test(run.outputTail);
+}
+
+function outcomeOf(record: BaselineRecord): BaseResult['outcome'] {
+  if (record.timedOut) return 'timed_out';
+  return record.exitCode === 0 ? 'passed' : 'failed';
 }
 
 export class Baselines {
@@ -65,45 +83,30 @@ export class Baselines {
 
   constructor(private readonly site: BaselineSite) {}
 
-  async attribute(failed: FailedRun): Promise<Attribution | null> {
+  async evidence(failed: FailedRun): Promise<BaseResult | null> {
     const found = await this.result(failed).catch(() => undefined);
     if (found === null) return null;
     const base = this.site.base;
     if (!found) {
       return {
-        fromChange: true,
-        baseline: {
-          base,
-          outcome: 'unavailable',
-          cached: false,
-          durationMs: 0,
-          shared: [],
-          added: [],
-        },
+        base,
+        outcome: 'unavailable',
+        trusted: false,
+        cached: false,
+        durationMs: 0,
+        failures: [],
+        shape: '',
       };
     }
-    const { record, cached } = found;
-    const shown = { base, cached, durationMs: record.durationMs };
-    if (record.timedOut) {
-      return {
-        fromChange: true,
-        baseline: { ...shown, outcome: 'timed_out', shared: [], added: [] },
-      };
-    }
-    const passed = record.exitCode === 0;
-    const compared = compareWithBase(failed, {
-      passed,
+    const { record, cached, trusted } = found;
+    return {
+      base,
+      outcome: outcomeOf(record),
+      trusted,
+      cached,
+      durationMs: record.durationMs,
       failures: record.failures,
       shape: record.shape,
-    });
-    return {
-      fromChange: compared.fromChange,
-      baseline: {
-        ...shown,
-        outcome: passed ? 'passed' : 'failed',
-        shared: compared.shared,
-        added: passed ? [] : compared.added,
-      },
     };
   }
 
@@ -118,20 +121,29 @@ export class Baselines {
 
   private async result(
     failed: FailedRun,
-  ): Promise<{ record: BaselineRecord; cached: boolean } | null | undefined> {
+  ): Promise<{ record: BaselineRecord; cached: boolean; trusted: boolean } | null | undefined> {
     const place = await (this.place ??= this.locate());
-    const key = { ...place.key, command: failed.check.command };
+    const key = {
+      ...place.key,
+      command: failed.check.command,
+      environment: environmentOf(this.site.env),
+    };
     const saved = await savedBaseline(this.site.db, key);
-    if (saved) return { record: saved, cached: true };
+    if (saved && saved.ageMs <= BASELINE_FRESH_MS) {
+      return { record: saved, cached: true, trusted: !saved.timedOut };
+    }
     const copy = await (this.copy ??= this.checkOut(place));
     const run = await runCheck(failed.check, {
       root: copy.dir,
       cwd: copy.cwd,
       timeoutMs: baselineLimit(failed.durationMs, this.site.limitMs),
       signal: this.site.signal,
+      builderEnv: { ...this.site.env, ...REAL_RUN_ENV },
     });
     if (run.cancelled) return null;
-    if (!usable(run, failed.check, copy.prepared)) return undefined;
+    if (!run.timedOut && environmentProblem({ argv: failed.check.argv, ...run }) !== null) {
+      return undefined;
+    }
     const record = {
       exitCode: run.exitCode,
       timedOut: run.timedOut,
@@ -139,8 +151,9 @@ export class Baselines {
       shape: outputShape(run.outputTail, [copy.cwd, copy.dir]),
       durationMs: run.durationMs,
     };
-    await saveBaseline(this.site.db, key, record);
-    return { record, cached: false };
+    const trusted = ranToEnd(run, copy.prepared);
+    if (trusted || run.timedOut) await saveBaseline(this.site.db, key, record);
+    return { record, cached: false, trusted };
   }
 
   private async locate(): Promise<Place> {

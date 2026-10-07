@@ -29,7 +29,23 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
   const named = [...ALWAYS_PROTECTED, record.baseBranch, fallback].filter(
     (branch): branch is string => Boolean(branch),
   );
-  return { branch: record.branch, protectedBranches: [...new Set(named)] };
+  const pull = await openPullNumber(db, record.conversationId, record.branch).catch(() => null);
+  return { branch: record.branch, protectedBranches: [...new Set(named)], pull };
+}
+
+async function openPullNumber(
+  db: Queryable,
+  conversationId: string | null,
+  branch: string,
+): Promise<number | null> {
+  if (!conversationId) return null;
+  const { rows } = await db.query<{ number: number }>(
+    `SELECT number FROM pr_watches
+     WHERE conversation_id = $1 AND branch = $2 AND pr_state = 'open'
+     ORDER BY created_at DESC LIMIT 1`,
+    [conversationId, branch],
+  );
+  return rows[0]?.number ?? null;
 }
 
 async function followsOwnPull(

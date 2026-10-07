@@ -39,6 +39,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   activeTimePollMs?: number;
   checkpointTimeoutMs?: number;
   checkTimeoutMs?: number;
+  criticQuietNoticeMs?: number;
   jevTimeoutMs?: number;
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
@@ -68,6 +69,7 @@ export interface CheckMemory {
   base?: string | null;
   unfinished: Set<string>;
   fixed: Set<string>;
+  earlier?: Set<string>;
   fixRounds: Map<string, number>;
 }
 

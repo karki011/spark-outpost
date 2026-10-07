@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { getApproval } from '../src/persistence/approvals.ts';
-import type { RunObservations } from '../src/observations/run-observations.ts';
+import type { RunObservations, SentOutNote } from '../src/observations/run-observations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { saveConnection as saveTicketConnection } from '../src/tickets/connections.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
@@ -41,10 +41,13 @@ afterEach(async () => {
   await t.cleanup();
 });
 
+const sentNotes: SentOutNote[] = [];
 const secretRead: RunObservations = {
   record: () => undefined,
   labels: async () => ['a secret file'],
   egressAsked: () => undefined,
+  sentOut: (note) => void sentNotes.push(note),
+  later: () => undefined,
   settled: async () => undefined,
 };
 
@@ -124,14 +127,29 @@ describe('whether a Spark action asks first', () => {
     expect(settled.payload.sparkResult).toMatchObject({ state: 'done' });
   });
 
-  it('asks first after the agent read a secret, even in Bypass permissions', async () => {
-    await chatIn('Please create a ticket for the crash', 'bypassPermissions', {
-      observations: secretRead,
+  it('acts at once in Bypass permissions after the agent read a secret, and notes the send', async () => {
+    sentNotes.length = 0;
+    await chatIn('Look into the crash', 'bypassPermissions', { observations: secretRead });
+    expect(await createTicket()).toMatchObject({ outcome: 'done' });
+    expect(sentNotes).toHaveLength(1);
+    const card = await cardOf({ approvalId: sentNotes[0]!.approvalId! });
+    expect(card).toMatchObject({ status: 'allowed', payload: { observed: ['a secret file'] } });
+    expect(sentNotes[0]).toEqual({
+      toolCallId: null,
+      subject: card.title,
+      target: 'to your ticket tracker',
+      observed: ['a secret file'],
+      approvalId: card.id,
     });
+  });
+
+  it('shows the ordinary confirm card with the note in a mode that asks', async () => {
+    sentNotes.length = 0;
+    await chatIn('Look into the crash', 'default', { observations: secretRead });
     const result = await createTicket();
-    const card = await cardOf(result);
     expect(result).toMatchObject({ outcome: 'waiting_for_user' });
-    expect(card.payload.observed).toEqual(['a secret file']);
+    expect((await cardOf(result)).payload.observed).toEqual(['a secret file']);
+    expect(sentNotes).toEqual([]);
   });
 
   it('reports a failure on the card and to the agent', async () => {

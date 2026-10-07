@@ -17,14 +17,15 @@ import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts
 import { routedPieceDecision } from './piece-route.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
-import { egressOf } from './egress.ts';
 import {
   publishVerdict,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
 } from './publish-policy.ts';
-import { taintReason } from './taint.ts';
+import type { OwnRepo } from './own-repo.ts';
+import type { SecretSend } from './secret-send.ts';
+import { secretSendReason, sentOut, type SentOut } from './taint.ts';
 import { writeTargets } from './write-targets.ts';
 import { commandCwd, isSecretTarget, outsideRoots, place } from './request-place.ts';
 import { alwaysAsk } from './rails.ts';
@@ -60,7 +61,7 @@ export type RunRule =
   { kind: 'execute'; command: string } | { kind: 'edit' } | { kind: 'other'; title: string };
 
 export type Decision =
-  | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string }
+  | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string; sent?: SentOut }
   | { verdict: 'reject'; reason: string }
   | {
       verdict: 'ask';
@@ -70,6 +71,8 @@ export type Decision =
       gitControl?: string[];
       because?: string;
       observed?: string[];
+      sendsTo?: string;
+      secretSend?: string[];
     };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
@@ -129,7 +132,8 @@ export interface DecideOptions {
   askAutoWhy?: string | null;
   defaultBranch?: string | null;
   observed?: readonly string[];
-  ownRepoObserved?: readonly string[];
+  own?: OwnRepo | null;
+  secretSend?: SecretSend;
   instructionGrants?: ReadonlySet<string>;
   shell?: ShellScript | null;
   agentAsks?: boolean;
@@ -164,18 +168,10 @@ export function secretLabels(asked: ApprovalRequest): string[] {
   return labels.length > 0 ? labels : [UNNAMED_SECRET];
 }
 
-function taintedEgress(
-  request: ApprovalRequest,
-  options: DecideOptions,
-  files: FileLister,
-  published: PublishVerdict | null,
-): Decision | null {
-  const toOwnRepo = published?.kind === 'allow' && options.ownRepoObserved !== undefined;
-  const observed = (toOwnRepo ? options.ownRepoObserved : options.observed) ?? [];
-  if (observed.length === 0) return null;
-  const egress = egressOf(request, files);
-  if (!egress) return null;
-  return { verdict: 'ask', reason: taintReason(observed, egress), observed: [...observed] };
+function noted(decision: Decision, sent: SentOut | null): Decision {
+  if (!sent || decision.verdict === 'reject') return decision;
+  if (decision.verdict === 'allow') return { ...decision, sent };
+  return { ...decision, observed: sent.observed, sendsTo: sent.target };
 }
 
 export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
@@ -301,8 +297,14 @@ export function decide(
   if (runRules.reject.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
   }
+  const found = options.secretSend?.kind === 'found' ? options.secretSend.files : null;
   if (forced?.kind === 'ask') {
-    return { verdict: 'ask', reason: forcePushReason(forced.branches), forcePush: forced.branches };
+    return {
+      verdict: 'ask',
+      reason: forcePushReason(forced.branches),
+      forcePush: forced.branches,
+      ...(found ? { secretSend: found } : {}),
+    };
   }
   if (guarded.gitControl.length > 0) {
     return { verdict: 'ask', reason: GIT_CONTROL_REASON, gitControl: guarded.gitControl };
@@ -312,9 +314,27 @@ export function decide(
   if (ungranted.length > 0) {
     return { verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: guarded.instructions };
   }
+  if (found) return { verdict: 'ask', reason: secretSendReason(found), secretSend: found };
   const files = options.files ?? NO_FILES;
-  const tainted = taintedEgress(request, options, files, published);
-  if (tainted) return tainted;
+  const weighed: Weighing = { posture, asked, request, view, published, files };
+  return noted(byMode(weighed, runRules, allowlist, options), sentOut(request, files, options));
+}
+
+interface Weighing {
+  posture: ModePosture;
+  asked: ApprovalRequest;
+  request: ApprovalRequest;
+  view: ShellView | null;
+  published: PublishVerdict | null;
+  files: FileLister;
+}
+
+function byMode(
+  { posture, asked, request, view, published, files }: Weighing,
+  runRules: RunRules,
+  allowlist: readonly string[],
+  options: DecideOptions,
+): Decision {
   const always = alwaysAsk(request, files, view);
   if (always) return { verdict: 'ask', reason: always.reason };
   if (runRules.allow.some((rule) => matchesRule(asked, rule))) {

@@ -125,6 +125,7 @@ async function askForPieces(
     checks: checkCommands(s),
     budgetTokens,
     groups: plan.steps,
+    followUp: assessment.planBuilt,
   });
   let errors: string[] = [];
   for (let attempt = 0; attempt < 2; attempt += 1) {

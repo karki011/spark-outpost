@@ -40,6 +40,10 @@ function pieceSite(s: Session): PieceSite {
 
 async function engage(s: Session): Promise<void> {
   const assessment = await assess(s);
+  if (assessment.engagement.solo) {
+    await recordAssessment(s, assessment, false);
+    return;
+  }
   const plan = await askBuilders(s, assessment);
   await recordAssessment(s, assessment, false, plan);
   const engaged = plan.builders === null ? assessment.engagement.engage : plan.builders > 1;

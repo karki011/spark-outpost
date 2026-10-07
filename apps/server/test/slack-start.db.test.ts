@@ -5,7 +5,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SLACK_START_CALLBACK } from '@spark-outpost/contracts';
 import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
-import { conversationObservations } from '../src/persistence/observations.ts';
+import { turnObservations } from '../src/persistence/observations.ts';
 import { conversationHasSlackContext, slackChatThread } from '../src/persistence/slack.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { createProject } from '../src/projects/projects.ts';
@@ -159,7 +159,7 @@ describe('Start work from a Slack link', () => {
       const started = await request(app()).post('/api/slack/start').set(LOCAL_HEADERS).send(sent);
       await eventually(async () => (await getRun(t.db, started.body.runId))?.finishedAt, 15_000);
 
-      expect(await conversationObservations(t.db, sent.conversationId)).toEqual([
+      expect(await turnObservations(t.db, started.body.runId)).toEqual([
         { source: 'private_data', label: 'Slack messages (a shared thread)' },
       ]);
     } finally {

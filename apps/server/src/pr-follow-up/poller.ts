@@ -16,6 +16,7 @@ import {
   accessReason,
   endedPull,
   isRateLimited,
+  pollProblemOf,
   readFacts,
   statusChanged,
   trackOpenPull,
@@ -200,6 +201,7 @@ function failed(pull: TrackedPull, error: unknown): TrackedPull {
   return {
     ...pull,
     lastError: message.slice(0, MAX_ERROR_CHARS),
+    pollProblem: pollProblemOf(error),
     statusReason: reason ?? pull.statusReason,
     intervalSeconds: reason ? MAX_INTERVAL_SECONDS : nextInterval(pull.intervalSeconds, false),
   };
@@ -215,7 +217,7 @@ async function poll(deps: FollowUpDeps, pull: TrackedPull): Promise<Polled> {
   let next: TrackedPull;
   let rateLimited = false;
   try {
-    next = { ...(await advance(deps, pull, settings)), lastError: null };
+    next = { ...(await advance(deps, pull, settings)), lastError: null, pollProblem: null };
   } catch (error) {
     rateLimited = isRateLimited(error);
     next = failed(pull, error);

@@ -8,7 +8,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
 import { KEPT_FOR_SESSION } from '../src/orchestration/session-keep.ts';
-import { STOPPED_NOTE, STOPPED_REPLY } from '../src/workflow/session-decision.ts';
+import {
+  CREW_STOPPED_NOTE,
+  STOPPED_NOTE,
+  STOPPED_REPLY,
+} from '../src/workflow/session-decision.ts';
 import {
   TRIVIAL,
   connectProviders,
@@ -227,6 +231,36 @@ describe('continuing after Stop', () => {
     expect(prompts[1]).toContain('continue #build');
     const notes = await readFile(join(root, 'notes.txt'), 'utf8');
     expect(notes).toContain('step 1');
+  }, 60_000);
+
+  it('resumes a Builder session that Spark itself stopped, without blaming the user (session case)', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+    const first = await startScenario(t, root, withTag(TRIVIAL, '#slowbuild'), 'hands-off');
+    const builderRunId = await eventually(async () => {
+      const { rows } = await t.db.query<{ id: string }>(
+        `SELECT id FROM runs WHERE parent_run_id = $1 AND role = 'builder'`,
+        [first.runId],
+      );
+      const notes = await readFile(join(root, 'notes.txt'), 'utf8').catch(() => '');
+      return rows[0] && notes.includes('step 1') ? rows[0].id : null;
+    }, 30_000);
+    await requestCancel(t.db, builderRunId);
+    await driveToEnd(t, first.conversationId, first.runId);
+    const [stopped] = await builderSessions(first.conversationId);
+    expect(stopped).toMatchObject({ last_reply_hash: STOPPED_REPLY, close_reason: null });
+
+    script.scenario = { ...TRIVIAL, continuesTask: 0.95 };
+    const second = await secondTurn(first.conversationId, 'continue #build');
+    expect(second.orchestration.status).toBe('succeeded');
+    expect(await sessionSteps(second.runId)).toContain('Continued session');
+    const rows = await builderSessions(first.conversationId);
+    expect(rows.map((row) => row.session_id)).toEqual([stopped!.session_id]);
+    const prompts = fakePrompts(stopped!.session_id);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain(CREW_STOPPED_NOTE);
+    expect(prompts[1]).not.toContain(STOPPED_NOTE);
+    expect(prompts[1]).toContain('`notes.txt`');
   }, 60_000);
 
   it('starts a fresh Builder session when the last turn crashed instead', async () => {

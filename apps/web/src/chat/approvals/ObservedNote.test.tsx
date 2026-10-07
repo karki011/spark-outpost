@@ -22,6 +22,7 @@ const approval: Approval = {
     diffs: [],
     truncated: false,
     observed: ['.env', 'private work data (spark_tickets)'],
+    sendsTo: 'to collect.example.net',
   },
   payloadHash: 'sha256:def',
   options: [
@@ -29,8 +30,7 @@ const approval: Approval = {
     { optionId: 'no', name: 'No', kind: 'reject_once' },
   ],
   status: 'pending',
-  reason:
-    'This run read .env and private work data (spark_tickets) earlier; sending data to collect.example.net needs your OK',
+  reason: null,
   decisionOptionId: null,
   scope: null,
   decidedBy: null,
@@ -39,7 +39,7 @@ const approval: Approval = {
 };
 
 describe('ObservedNote on an approval card', () => {
-  it('lists what the run read earlier and offers no project allow', () => {
+  it("adds what the run read and where this sends to the mode's ordinary card", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ApprovalCard approval={approval} provider="claude" agent="Bolt" repo={null} />
@@ -48,15 +48,17 @@ describe('ObservedNote on an approval card', () => {
     const card = screen.getByRole('group', { name: /Run a command\?/ });
     expect(
       within(card)
-        .getByText(/Read sensitive data earlier/)
+        .getByText(/Read sensitive data this turn/)
         .closest('p')?.textContent,
-    ).toBe('Read sensitive data earlier: .env, private work data (spark_tickets)');
-    expect(card.textContent).toContain('needs your OK, whatever your permissions.');
+    ).toBe(
+      'Read sensitive data this turn: .env, private work data (spark_tickets). This sends data to collect.example.net.',
+    );
+    expect(card.textContent).not.toContain('whatever your permissions');
     expect(
       within(card)
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Yes', 'No']);
+    ).toEqual(['Yes', 'Always allow in this project', 'No']);
   });
 
   it('shows nothing when the run read nothing sensitive', () => {
@@ -65,8 +67,7 @@ describe('ObservedNote on an approval card', () => {
         <ApprovalCard
           approval={{
             ...approval,
-            reason: null,
-            payload: { ...approval.payload, observed: undefined },
+            payload: { ...approval.payload, observed: undefined, sendsTo: undefined },
           }}
           provider="claude"
           agent="Bolt"
@@ -74,6 +75,6 @@ describe('ObservedNote on an approval card', () => {
         />
       </QueryClientProvider>,
     );
-    expect(screen.queryByText(/Read sensitive data earlier/)).toBeNull();
+    expect(screen.queryByText(/Read sensitive data this turn/)).toBeNull();
   });
 });

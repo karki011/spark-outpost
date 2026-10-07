@@ -46,7 +46,7 @@ import {
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
-import { plansThisTurn } from '../plans/plan-mode.ts';
+import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
@@ -66,6 +66,7 @@ import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
 import { auditContinuedSession } from './continue-note.ts';
+import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
@@ -197,6 +198,7 @@ export async function runAgentTurn(
     root: input.projectRoots[0] ?? null,
     taskId: () => tasks.taskId(),
     append,
+    notesOnly: crewPlansStayNotes(input),
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
@@ -215,7 +217,6 @@ export async function runAgentTurn(
   const observations = createRunObservations({
     db: deps.db,
     runId: lease.runId,
-    conversationId: input.identity.threadId,
     audit,
   });
   if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
@@ -279,7 +280,8 @@ export async function runAgentTurn(
       });
   const steering = joinSteering([steerWatch, inbox]);
   const redaction = createRedactionFilter(secretValues);
-  const observer = scannedObserver(audit, secretValues, observations.record);
+  const watch = { ...input, db: deps.db, runId: lease.runId, observations };
+  const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   const replySoFar = () => ({
     shown: text,

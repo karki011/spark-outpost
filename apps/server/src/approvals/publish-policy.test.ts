@@ -95,6 +95,47 @@ describe('publishVerdict() allows the own branch when publishing is permitted', 
   });
 });
 
+describe("publishVerdict() for the chat's own pull request number and text written to a file", () => {
+  const own = (command: string) =>
+    publishVerdict(command, 'full_access', {
+      grant: MANUAL,
+      task: { branch: BRANCH, protectedBranches: ['main'], pull: 2202 },
+    });
+  const BODY = `cat > /tmp/pr-body.md <<'EOF'\n## Test plan\ngh pr merge 12\ngit push origin main\nglab mr create\nEOF`;
+
+  it.each([
+    'gh pr view 2202 --json body -q .body',
+    'gh pr view 2202 --json statusCheckRollup --jq .statusCheckRollup',
+    'gh pr view #2202',
+    'gh pr edit 2202 --body-file /tmp/pr-body.md',
+    `${BODY}\ngh pr edit 2202 --body-file /tmp/pr-body.md`,
+    `${BODY}\ngh pr create --title "Fix dates" --body-file /tmp/pr-body.md`,
+  ])('allows %s', (command) => {
+    expect(own(command)).toEqual({ kind: 'allow', basis: 'mode' });
+  });
+
+  it('does not treat a file of text as publishing', () => {
+    expect(own(BODY)).toBeNull();
+  });
+
+  it.each([
+    ['gh pr view 77 --json body', GH_RAIL_REASON],
+    ['gh pr edit 77 --title x', GH_RAIL_REASON],
+    ['gh pr merge 2202', GH_RAIL_REASON],
+    [`bash <<'EOF'\ngh pr merge 2202\nEOF`, GH_RAIL_REASON],
+    [`sh -s <<'EOF'\ngit push origin main\nEOF`, otherBranchReason(BRANCH)],
+  ])('still refuses %s', (command, reason) => {
+    expect(own(command)).toEqual({ kind: 'refuse', reason });
+  });
+
+  it('accepts no number when the chat has no open pull request', () => {
+    expect(publishVerdict('gh pr view 2202', 'full_access', context(MANUAL))).toEqual({
+      kind: 'refuse',
+      reason: GH_RAIL_REASON,
+    });
+  });
+});
+
 describe('publishVerdict() leaves Manual runs without a request to the old rules', () => {
   it.each([`git push origin ${BRANCH}`, 'gh pr create --fill', 'git push origin main'])(
     '%s',

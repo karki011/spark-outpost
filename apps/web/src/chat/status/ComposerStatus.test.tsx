@@ -312,13 +312,14 @@ describe('clarify questions', () => {
   it('lists each question with its best guess and quick answers', () => {
     show({ approvals: [questions] });
     const card = within(thread()).getByRole('group', { name: /Spark has a few questions/ });
-    expect(card.textContent).toContain('Best guess: Spend');
+    expect(card.textContent).toContain('Spendbest guess');
+    expect(card.textContent).toContain('Which period?Best guess: This month');
     const send = within(card).getByRole('button', { name: 'Send' }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
     const usage = within(card).getByRole('button', { name: 'Usage' });
     fireEvent.click(usage);
     expect(usage.getAttribute('aria-pressed')).toBe('true');
-    const spend = within(card).getByRole('button', { name: 'Spend' });
+    const spend = within(card).getByRole('button', { name: /^Spend/ });
     fireEvent.click(spend);
     expect(usage.getAttribute('aria-pressed')).toBe('true');
     expect(spend.getAttribute('aria-pressed')).toBe('true');

@@ -5,6 +5,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, openIsland } from './island-home-desktop.ts';
 import { openChats } from './navigation.ts';
 import { frameWork, PRODUCTION, writeReport, type FrameWork } from './perf-probe.ts';
+import { openPhone, resetPhone, setFakeTailscale, startPairing, turnOn } from './phone-support.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 test.use({ trace: 'off' });
@@ -200,5 +201,21 @@ test('Agent TV crew blobs do no work on each frame', async ({ page }) => {
     await measure(page, 'agent tv');
   } finally {
     repo.remove();
+  }
+});
+
+test('the Phone pairing blob does no work on each frame while a code waits', async ({ page }) => {
+  await resetPhone();
+  try {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openPhone(page);
+    await turnOn(page);
+    await startPairing(page);
+    await expect(page.locator('.ph-scene')).toHaveAttribute('data-blob', 'idle');
+    await page.mouse.move(700, 300);
+    await stayLive(page);
+    await measure(page, 'phone pairing');
+  } finally {
+    setFakeTailscale(null);
   }
 });

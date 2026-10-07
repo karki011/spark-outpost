@@ -44,6 +44,19 @@ function named(entry: RemoteAuditEntry): string {
   return entry.deviceName ?? (typeof fromDetail === 'string' ? fromDetail : 'A phone');
 }
 
+function pairingPageLine(entry: RemoteAuditEntry): string {
+  switch (entry.detail.reason) {
+    case 'revoked':
+      return `${named(entry)} asked to pair again (it was removed on this Mac)`;
+    case 'unused':
+      return `${named(entry)} asked to pair again (not used for 30 days)`;
+    case 'unknown':
+      return 'A phone that was paired before asked to pair again (this Mac does not know its sign-in)';
+    default:
+      return 'A phone with no sign-in opened the pairing page';
+  }
+}
+
 export function activityLine(entry: RemoteAuditEntry): string {
   const device = named(entry);
   switch (entry.action) {
@@ -63,6 +76,10 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return `Pairing denied for ${device}`;
     case 'device_paired':
       return `${device} paired`;
+    case 'device_paired_again':
+      return `${device} paired again`;
+    case 'pairing_page_shown':
+      return pairingPageLine(entry);
     case 'device_renamed':
       return `Device renamed to ${device}`;
     case 'device_revoked':

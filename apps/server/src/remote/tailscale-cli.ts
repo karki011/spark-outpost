@@ -1,10 +1,12 @@
 import { z } from 'zod';
-import type { RunCommand } from '../setup/command.ts';
+import type { CommandResult, RunCommand } from '../setup/command.ts';
 import { locateCli } from '../setup/verify.ts';
 
 export const TAILSCALE_APP_CLI = '/Applications/Tailscale.app/Contents/MacOS/Tailscale';
 export const SERVE_HTTPS_PORT = 443;
 const COMMAND_TIMEOUT_MS = 10_000;
+const ENV = '/usr/bin/env';
+const CLI_MODE = 'TAILSCALE_BE_CLI=1';
 
 const statusSchema = z.object({
   BackendState: z.string(),
@@ -40,6 +42,8 @@ export interface TailscaleCli {
 const NOT_ANSWERING =
   'Tailscale is not running or did not answer. Open Tailscale on this Mac, then try again.';
 const NOT_INSTALLED = 'Tailscale is not installed on this Mac.';
+const TIMED_OUT = 'Tailscale took too long to answer. Open Tailscale on this Mac, then try again.';
+const SERVE_UNREADABLE = 'Tailscale is running, but Spark could not read its Serve settings.';
 
 function parsed<T>(schema: z.ZodType<T>, stdout: string): T | null {
   try {
@@ -48,6 +52,12 @@ function parsed<T>(schema: z.ZodType<T>, stdout: string): T | null {
   } catch {
     return null;
   }
+}
+
+function unanswered(result: CommandResult, fallback: string): string {
+  if (result.timedOut) return TIMED_OUT;
+  const said = firstLine(result.stderr) || (result.code === 0 ? '' : firstLine(result.stdout));
+  return said ? `${fallback} Tailscale said: ${said}` : fallback;
 }
 
 function firstLine(text: string): string {
@@ -60,12 +70,14 @@ function firstLine(text: string): string {
   );
 }
 
-export function tailscaleCli(run: RunCommand, shell: string | null): TailscaleCli {
+export function tailscaleCli(launch: RunCommand, shell: string | null): TailscaleCli {
   let found: string | null = null;
+  const run: RunCommand = (file, args, timeoutMs) =>
+    launch(ENV, [CLI_MODE, file, ...args], timeoutMs);
 
   const locate = async (): Promise<string | null> => {
     if (found) return found;
-    const candidates = [await locateCli('tailscale', run, shell), TAILSCALE_APP_CLI];
+    const candidates = [await locateCli('tailscale', launch, shell), TAILSCALE_APP_CLI];
     for (const candidate of candidates) {
       if (!candidate) continue;
       const version = await run(candidate, ['version'], COMMAND_TIMEOUT_MS);
@@ -92,14 +104,14 @@ export function tailscaleCli(run: RunCommand, shell: string | null): TailscaleCl
       if (!cli) return { kind: 'not_installed' };
       const status = await run(cli, ['status', '--json'], COMMAND_TIMEOUT_MS);
       const state = status.code === 0 ? parsed(statusSchema, status.stdout) : null;
-      if (!state) return { kind: 'error', message: NOT_ANSWERING };
+      if (!state) return { kind: 'error', message: unanswered(status, NOT_ANSWERING) };
       if (state.BackendState !== 'Running') return { kind: 'signed_out' };
       const hostname = (state.Self?.DNSName ?? '').replace(/\.$/, '').toLowerCase();
       if (!hostname) return { kind: 'signed_out' };
       if (!state.CertDomains?.length) return { kind: 'https_off', hostname };
       const serving = await run(cli, ['serve', 'status', '--json'], COMMAND_TIMEOUT_MS);
       const config = serving.code === 0 ? parsed(serveSchema, serving.stdout) : null;
-      if (!config) return { kind: 'error', message: NOT_ANSWERING };
+      if (!config) return { kind: 'error', message: unanswered(serving, SERVE_UNREADABLE) };
       const site = `${hostname}:${SERVE_HTTPS_PORT}`;
       return {
         kind: 'ready',

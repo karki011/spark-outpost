@@ -14,7 +14,7 @@ import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.CHAT_QUESTIONS_SHOTS ?? '';
 const THREE = 'Tell me anything about this repo #build #vague #questions #three';
-const QUESTIONS = /Spark has a few questions/;
+const QUESTIONS = /Spark has a (few questions|question)/;
 const BOXED =
   '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .ai-head > *, .md pre, .cs-wrap';
 
@@ -24,6 +24,8 @@ const message = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 const workPanel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });
 const statusLine = (page: Page) => page.locator('.cstatus .cs-wrap');
+const secondQuestion = (page: Page) =>
+  questions(page).getByRole('button', { name: /^Question 2 of 3: Which area should I focus on\?/ });
 
 async function shot(page: Page, name: string) {
   if (!SHOTS) return;
@@ -109,6 +111,7 @@ test.describe('question cards', () => {
     await shot(page, 'card-1280x720');
 
     await thread(page).evaluate((element) => element.scrollTo({ top: 0 }));
+    await secondQuestion(page).click();
     await questions(page).getByRole('button', { name: 'Explorer' }).click();
     await questions(page).getByRole('button', { name: 'Send' }).click();
     const answered = thread(page).getByRole('group', { name: QUESTIONS });
@@ -172,6 +175,7 @@ test.describe('question cards', () => {
     await expect(jump).toBeVisible();
     expect(await gap()).toBeGreaterThan(80);
 
+    await secondQuestion(page).dispatchEvent('click');
     await questions(page).getByRole('button', { name: 'Explorer' }).dispatchEvent('click');
     await questions(page).getByRole('button', { name: 'Send' }).dispatchEvent('click');
     await expect(jump).toBeHidden();
@@ -192,6 +196,7 @@ test.describe('question cards', () => {
     const sendButton = questions(page).getByRole('button', { name: 'Send' });
     await expect(sendButton).toBeDisabled();
 
+    await secondQuestion(page).click();
     const picks = questions(page).getByRole('group', {
       name: 'Quick answers to question 2, choose any',
     });
@@ -201,7 +206,7 @@ test.describe('question cards', () => {
     await picks.getByRole('button', { name: 'Views' }).click();
     await expect(pressed).toHaveCount(3);
     await picks.getByRole('button', { name: 'Views' }).click();
-    await expect(pressed).toHaveText(['Pulse', 'Explorer']);
+    await expect(pressed).toHaveText([/^Pulse/, 'Explorer']);
     await expect(sendButton).toBeEnabled();
 
     const area = questions(page).getByRole('textbox', { name: 'Which area should I focus on?' });
@@ -215,9 +220,9 @@ test.describe('question cards', () => {
     await expect(sendButton).toBeVisible();
 
     const edges = await questions(page).evaluate((card) => {
-      const boxes = [...card.querySelectorAll('textarea, .ck-foot, .ck-picks, .ck-q-text')].map(
-        (element) => element.getBoundingClientRect(),
-      );
+      const boxes = [
+        ...card.querySelectorAll('textarea, .ck-foot, .ask-opt, .ask-line, .ask-q-text'),
+      ].map((element) => element.getBoundingClientRect());
       const fields = [...card.querySelectorAll('textarea')].map((element) =>
         element.getBoundingClientRect(),
       );
@@ -229,12 +234,14 @@ test.describe('question cards', () => {
         below: Math.round(outer.bottom - foot.bottom),
       };
     });
-    expect(edges.lefts).toEqual([16]);
-    expect(edges.rights).toEqual([16]);
-    expect(edges.below).toBe(16);
+    expect(edges.lefts).toEqual([40]);
+    expect(edges.rights).toEqual([14]);
+    expect(edges.below).toBe(12);
     await shot(page, 'picked');
 
+    await questions(page).getByRole('button', { name: 'Answer in your own words' }).click();
     const own = questions(page).getByRole('textbox', { name: 'Answer in your own words' });
+    await expect(own).toBeFocused();
     await own.fill('keep it short');
     await own.press('Enter');
     const answered = thread(page).getByRole('group', { name: QUESTIONS });

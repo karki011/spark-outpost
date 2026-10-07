@@ -66,6 +66,7 @@ function heading(approval: Approval): string {
   if (action) return sparkActionQuestion(action);
   if (approval.payload.plan) return 'Approve the plan?';
   if (approval.payload.forcePush) return 'Force push?';
+  if (approval.payload.secretSend) return 'Send a secret value?';
   if (approval.payload.gitControl) return 'Change git hooks or config?';
   if (approval.payload.instructionFiles) return 'Change agent instructions?';
   if (isCheckApproval(approval)) return 'Run a check?';
@@ -80,6 +81,9 @@ function request(approval: Approval, agent: string) {
   if (approval.payload.plan) return `${agent} wrote a plan and wants to start building.`;
   if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
   if (approval.payload.forcePush) return `${agent} wants to rewrite history on the remote.`;
+  if (approval.payload.secretSend) {
+    return `${agent} wants to send something that holds a value from ${listed(approval.payload.secretSend)}.`;
+  }
   if (approval.payload.gitControl)
     return `${agent} wants to change ${listed(approval.payload.gitControl)}.`;
   if (approval.payload.instructionFiles) {
@@ -93,6 +97,12 @@ function request(approval: Approval, agent: string) {
   const mcp = parseMcpTool(approval.title);
   if (mcp) return `${agent} wants to use ${humanizeToolName(mcp.tool)} (${mcp.server}).`;
   return `${agent} wants to: ${approval.title}`;
+}
+
+function releasedHint(approval: Approval): string {
+  if (approval.payload.gitControl) return 'Released early. Nothing was changed.';
+  if (approval.payload.forcePush) return 'Released early. Nothing was pushed.';
+  return 'Released early. Nothing was sent.';
 }
 
 function listed(files: readonly string[]): string {
@@ -229,11 +239,9 @@ function PendingApproval({
   const forced = approval.payload.forcePush !== undefined;
   const gitControl = approval.payload.gitControl !== undefined;
   const instructions = approval.payload.instructionFiles !== undefined;
-  const holdOption =
-    forced || gitControl ? approval.options.find((option) => option.kind === 'allow_once') : null;
-  const options = shownOptions(approval).filter(
-    (option) => !(forced || gitControl) || !isAllow(option),
-  );
+  const held = forced || gitControl || approval.payload.secretSend !== undefined;
+  const holdOption = held ? approval.options.find((option) => option.kind === 'allow_once') : null;
+  const options = shownOptions(approval).filter((option) => !held || !isAllow(option));
   const chatAllow = instructions
     ? approval.options.find((option) => option.kind === 'allow_once')
     : undefined;
@@ -270,14 +278,10 @@ function PendingApproval({
           </div>
           {holdOption && (
             <HoldToConfirm
-              label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
+              label={forced ? 'Hold to force push' : 'Hold to allow once'}
               hint="Press and hold for 1.5 seconds, with the mouse or Space."
               holdingHint="Keep holding. Let go now to cancel."
-              releasedHint={
-                gitControl
-                  ? 'Released early. Nothing was changed.'
-                  : 'Released early. Nothing was pushed.'
-              }
+              releasedHint={releasedHint(approval)}
               disabled={decide.isPending}
               onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
             />
@@ -374,7 +378,7 @@ function PendingApproval({
           <p>The change lands in your working tree. You can revert this run afterwards.</p>
         )}
         {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
-        <ObservedNote observed={approval.payload.observed} />
+        <ObservedNote observed={approval.payload.observed} sendsTo={approval.payload.sendsTo} />
         {gitControl && (
           <p className="appr-reason">
             Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and

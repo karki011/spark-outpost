@@ -5,6 +5,7 @@ import {
   checkLine,
   checkStatusOf,
   failingChecks,
+  unrelatedFailures,
   unsettledChecks,
   type CheckBody,
   type CheckResult,
@@ -75,6 +76,49 @@ describe('check lines', () => {
     expect(checkLine(body('skipped', results))).toBe(
       'Checks for Rivet: tests could not finish in time · lint could not run · typecheck already failing before this change',
     );
+  });
+
+  it('shows a failure nothing ties to the change as one calm phrase, not as failed', () => {
+    const unsure = result({
+      outcome: 'failed',
+      exitCode: 1,
+      cause: 'unknown',
+      failures: ['task dates:test'],
+      blamed: [],
+      baseline: {
+        base: '0123456789abcdef',
+        outcome: 'passed',
+        cached: true,
+        trusted: false,
+        durationMs: 17600,
+        shared: [],
+        added: [],
+      },
+    });
+    const round = body('skipped', [unsure]);
+    expect(checkStatusOf(round.results)).toBe('skipped');
+    expect(failingChecks(round)).toEqual([]);
+    expect(checkLine(round)).toBe(
+      "Checks for Rivet: tests failed before this change or can't tell",
+    );
+    expect(checkDetails(round)[0]).toBe(
+      '`npm test` · exit 1 in 1.2 s · passes before this change (01234567, remembered result, not relied on) · nothing ties this to the change: it fails in files the change does not touch, and no comparable run on the base commit passed',
+    );
+    expect(unrelatedFailures(unsure)).toEqual(['task dates:test']);
+  });
+
+  it('says in one phrase when a fix turn left the same failure for the user', () => {
+    const mine = result({
+      outcome: 'failed',
+      exitCode: 1,
+      cause: 'change',
+      blamed: ['test a.test.ts'],
+    });
+    const round = { ...body('failed', [mine]), leftForUser: true };
+    expect(checkLine(round)).toBe(
+      'Checks for Rivet: tests failed · left for you: a fix turn did not change what fails',
+    );
+    expect(checkDetails(round)[0]).toContain('from this change: test a.test.ts');
   });
 
   it('reads a failure recorded before causes existed as caused by the change', () => {

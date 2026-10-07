@@ -28,13 +28,13 @@ const approval: Approval = {
   createdAt: '2026-09-26T10:00:00.000Z',
 };
 
-function show(shown: Approval) {
+function show(shown: Approval, name = /Run a command\?/) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ApprovalCard approval={shown} provider="claude" agent="Bolt" repo={null} />
     </QueryClientProvider>,
   );
-  return screen.getByRole('group', { name: /Run a command\?/ });
+  return screen.getByRole('group', { name });
 }
 
 describe('ApprovalCard', () => {
@@ -77,6 +77,28 @@ describe('ApprovalCard', () => {
     expect(card.textContent).toContain(
       'This rewrites history on feature on the remote, whatever your permissions.',
     );
+  });
+
+  it('asks to hold before a send that holds a secret value, naming only the file', () => {
+    const push = 'git push origin spark/fix';
+    const card = show(
+      {
+        ...approval,
+        title: push,
+        payload: { ...approval.payload, command: push, secretSend: ['.env'] },
+        reason: 'This sends a value from .env off this computer',
+      },
+      /Send a secret value\?/,
+    );
+    expect(card.textContent).toContain('wants to send something that holds a value from .env.');
+    expect(card.textContent).toContain(
+      'This sends a value from .env off this computer, whatever your permissions.',
+    );
+    expect(
+      within(card)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Hold to allow once', 'No']);
   });
 
   it('folds an answered approval into one resolved line with the command and the choice', () => {
