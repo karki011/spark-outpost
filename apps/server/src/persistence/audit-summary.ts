@@ -1,10 +1,13 @@
+import { z } from 'zod';
 import {
   agentRoleSchema,
+  auditRunRouteSchema,
   categorySchema,
   agentRoleLabel,
   mergeCostSource,
   runRole,
   type ApprovalWait,
+  type AuditRunRoute,
   type AuditRunSummary,
   type AuditSummary,
   type AuditTotals,
@@ -46,6 +49,7 @@ interface RunAuditRow {
   methods: string[];
   category: string | null;
   file_reads: number | null;
+  route: unknown;
 }
 
 interface WaitRow {
@@ -55,7 +59,18 @@ interface WaitRow {
   decided_by: string | null;
 }
 
+const storedAuditRouteSchema = z.object({
+  routedBy: auditRunRouteSchema.shape.routedBy,
+  rule: z.string().nullable().catch(null).default(null),
+  tier: auditRunRouteSchema.shape.tier.catch(null).default(null),
+});
+
+function auditRoute(stored: unknown): AuditRunRoute | null {
+  return storedAuditRouteSchema.safeParse(stored).data ?? null;
+}
+
 function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRunSummary {
+  const route = auditRoute(row.route);
   return {
     runId: row.id,
     userMessageId: row.user_message_id,
@@ -88,6 +103,7 @@ function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRun
     category: categorySchema.safeParse(row.category).data ?? null,
     ...(row.file_reads === null ? {} : { fileReads: row.file_reads }),
     ...(row.unreviewed_count > 0 ? { unreviewedCount: row.unreviewed_count } : {}),
+    ...(route ? { route } : {}),
   };
 }
 
@@ -139,7 +155,7 @@ export async function conversationAuditRuns(
        r.cached_write_tokens, r.thought_tokens,
        COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS total_tokens,
        r.cost_usd::float8 AS cost_usd, r.cost_source,
-       (r.route->>'fileReads')::int AS file_reads,
+       (r.route->>'fileReads')::int AS file_reads, r.route,
        r.protocol_log_pruned_at IS NOT NULL AS log_pruned,
        (SELECT count(*)::int FROM run_protocol_log l WHERE l.run_id = r.id) AS log_entries,
        (SELECT count(*)::int FROM run_protocol_log l

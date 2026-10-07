@@ -1,3 +1,4 @@
+import { MODEL_TIERS, type ModelTier } from '@spark-outpost/contracts';
 import { cardFor, FRONTIER_RANK, TIER_RANK } from '../model-cards/cards.ts';
 
 export interface TierModel {
@@ -32,6 +33,11 @@ export function tierInfo(
 
 export function modelTier(model: TierModel, provider: string | null = null): number | null {
   return tierInfo(model, provider).tier;
+}
+
+export function tierName(model: TierModel, provider: string | null = null): ModelTier | null {
+  const tier = modelTier(model, provider);
+  return tier === null ? null : (MODEL_TIERS[tier] ?? null);
 }
 
 export function tierLadder<T extends TierModel>(

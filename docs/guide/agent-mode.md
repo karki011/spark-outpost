@@ -18,7 +18,7 @@ You'll choose the model, effort and permissions for one chat. About 1 minute.
 
 Models your sign-in can't use are left out; a pinned one shows **Unavailable** and **Switch to …**.
 
-A new chat starts pinned to your default model. See [How Spark picks a model](model-routing.md).
+A new chat starts on **Auto**; earlier chats keep their setting. See [How Spark picks a model](model-routing.md).
 
 ## Set the effort
 

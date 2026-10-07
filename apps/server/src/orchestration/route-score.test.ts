@@ -246,3 +246,32 @@ describe('the warm session', () => {
     expect(route.sessionChoice).toBeUndefined();
   });
 });
+
+describe('Sonnet 5.5 as the mid tier', () => {
+  const listed: RouteContext = {
+    ...chat('opus[1m]'),
+    candidates: candidates.map((candidate) =>
+      candidate.provider === 'claude'
+        ? {
+            ...candidate,
+            models: candidate.models.map((model) =>
+              model.id === 'sonnet' ? { ...model, label: 'Sonnet 5.5' } : model,
+            ),
+          }
+        : candidate,
+    ),
+  };
+
+  it('is scored from its own card, so Auto sends easy work to it', () => {
+    const route = routeBuilder(listed, withRatings(ratings(1, 1)));
+    expect(route.pick).toMatchObject({ model: 'sonnet', modelLabel: 'Sonnet 5.5' });
+    expect(route.routedBy).not.toBe('pinned');
+    expect(route.score?.ranked.map((model) => model.id)).toEqual(['sonnet', 'opus[1m]']);
+  });
+
+  it('stays out of the way of a pinned chat', () => {
+    const route = routeBuilder({ ...listed, routing: 'pinned' }, plainFacts);
+    expect(route.pick.model).toBe('opus[1m]');
+    expect(route).toMatchObject({ routedBy: 'pinned', rule: 'pinned' });
+  });
+});
