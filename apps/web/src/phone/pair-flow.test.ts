@@ -7,6 +7,7 @@ import {
   pairStage,
   stageLine,
   stageMotion,
+  turnFailure,
   type PairFlowInput,
 } from './pair-flow.ts';
 
@@ -182,6 +183,22 @@ describe('pairing scene motion', () => {
     expect(activationOf(idle, { status: 'error', message: null })).toEqual({
       kind: 'failed',
       reason: 'Phone access needs a look.',
+    });
+  });
+
+  it('keeps a refused turn as a failure after the state reads off again', () => {
+    const refused = { status: 'error', message: 'serve config denied' } as const;
+    expect(turnFailure(null, undefined)).toBeNull();
+    expect(turnFailure(null, { status: 'on', message: null })).toBeNull();
+    expect(turnFailure(null, refused)).toBe('serve config denied');
+    expect(turnFailure(null, { status: 'error', message: null })).toBe(
+      'Phone access needs a look.',
+    );
+    expect(turnFailure(new Error('Mac did not answer'), undefined)).toBe('Mac did not answer');
+    const failed = turnFailure(null, refused) === null ? null : ('on' as const);
+    expect(activationOf({ pending: null, failed }, { status: 'off', message: null })).toEqual({
+      kind: 'failed',
+      reason: 'Phone access did not turn on.',
     });
   });
 });

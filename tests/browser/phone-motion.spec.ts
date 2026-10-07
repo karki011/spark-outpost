@@ -162,12 +162,26 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   await expect(scene.locator('.scout')).toHaveClass(/sleep/);
 
   setFakeTailscale({ failServe: true });
+  const refused = page.waitForResponse('**/api/remote/tailscale/on');
   await main.getByRole('switch', { name: 'Phone access' }).click();
+  expect(await (await refused).json()).toMatchObject({ status: 'error' });
+  const reread = await page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' && response.url().endsWith('/api/remote/tailscale'),
+  );
+  expect(await reread.json()).toMatchObject({ status: 'off' });
+  await page.waitForTimeout(500);
   await expect(scene).toHaveAttribute('data-blob', 'unsure');
   await expect(scene.locator('.scout')).toHaveClass(/sad/);
-  await expect(main.getByRole('status').first()).not.toHaveText(/Turn phone access on/);
-  await expect(main.getByRole('status').first()).toHaveText(/\S/);
+  await expect(main.getByRole('status').first()).toHaveText('Phone access did not turn on.');
+  await expect(main.getByRole('alert')).toHaveText(/serve config denied/);
+  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
   await frames(page, scene, 'activation-failed');
+
+  setFakeTailscale(null);
+  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(scene).toHaveAttribute('data-blob', 'ready');
+  await expect(main.getByRole('alert')).toHaveCount(0);
 });
 
 async function placedAtEachSize(page: Page, scene: Locator) {

@@ -69,6 +69,15 @@ export interface TurnRequest {
   failed: 'on' | 'off' | null;
 }
 
+export function turnFailure(
+  error: unknown,
+  answer: { status: TailscaleStatus; message: string | null } | undefined,
+): string | null {
+  if (error instanceof Error) return error.message;
+  if (answer?.status === 'error') return answer.message ?? 'Phone access needs a look.';
+  return null;
+}
+
 export function activationOf(
   turn: TurnRequest,
   state: { status: TailscaleStatus; message: string | null },
