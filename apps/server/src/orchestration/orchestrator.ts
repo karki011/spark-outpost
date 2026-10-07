@@ -61,9 +61,21 @@ import {
   type Session,
 } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
-import { asksToBuild, isPlanCommand, isPlanModeChat } from '../plans/simple-plan-turn.ts';
+import {
+  asPlanTurn,
+  asksToBuild,
+  isPlanCommand,
+  isPlanModeChat,
+  markPlanTurn,
+} from '../plans/simple-plan-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
-import { runPlanTurn } from './plan-turn-run.ts';
+import {
+  PLAN_TURN_NEED,
+  PLAN_TURN_WHY,
+  buildFromPlan,
+  planTurnEnd,
+  startsPlanBuild,
+} from './plan-turn-run.ts';
 import {
   UPGRADED_NOTE,
   needsYouTurn,
@@ -171,14 +183,22 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         observeCoordination(s);
       }
       const copied = action.role === 'builder' && s.needsCopy;
-      const outcome =
-        (await coordinatedBuild(s, action)) ??
-        (copied ? await buildInCopy(s, action) : await buildAndLand(s, action));
+      const planned = startsPlanBuild(s, action);
+      const outcome = planned
+        ? await buildFromPlan(s)
+        : ((await coordinatedBuild(s, action)) ??
+          (copied ? await buildInCopy(s, action) : await buildAndLand(s, action)));
       const { result } = outcome;
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);
       if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
-      if (action.role === 'builder') return afterBuilder(s, outcome);
+      if (action.role === 'builder') {
+        const event = await afterBuilder(s, outcome);
+        const ended = planned ? planTurnEnd(outcome, event) : null;
+        if (!ended) return event;
+        await finish(s, ended.status, ended.reason);
+        return null;
+      }
       if (action.role === 'critic') s.fixRound = null;
       const fixable =
         outcome.verdict === 'concerns' ? await correctnessFindings(s, result, s.findings) : [];
@@ -290,15 +310,12 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
     const planChat = isPlanModeChat(input);
-    if (isPlanCommand(input) || (planChat && solo)) {
-      return await runPlanTurn(deps, lease, input, append, control);
-    }
-    input = { ...input, planning: plansThisTurn(input, true) };
-    const mode = input.mode ?? 'chat';
+    let planTurn = isPlanCommand(input) || (planChat && solo);
+    input = planTurn ? asPlanTurn(input) : { ...input, planning: plansThisTurn(input, true) };
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
-    const doing = mode === 'do' && input.projectRoots[0] !== undefined;
+    let doing = input.mode === 'do' && input.projectRoots[0] !== undefined;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
-    if ((solo && !doing) || mainAgentInstruction(input.userRequest, current)) {
+    if (!planTurn && ((solo && !doing) || mainAgentInstruction(input.userRequest, current))) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
       return;
@@ -308,11 +325,13 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const taken = await runIntake(deps, input, append, input.projectMove ? null : current, solo);
     const { intake } = taken;
     const answered = intake.outcome.status === 'answered' ? intake.outcome.intake : null;
-    if (planChat && asksToBuild(input.userRequest, answered)) {
-      return await runPlanTurn(deps, lease, input, append, control);
+    if (!planTurn && planChat && asksToBuild(input.userRequest, answered)) {
+      planTurn = true;
+      input = asPlanTurn(input);
+      doing = true;
     }
-    const jevNeed = answered?.need ?? null;
-    const need = readNeed(taken.decisions, jevNeed);
+    if (planTurn) await markPlanTurn(deps.db, lease.runId);
+    const need = planTurn ? PLAN_TURN_NEED : readNeed(taken.decisions, answered?.need ?? null);
     const decisions = simpleDecisions(taken.decisions, need);
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
@@ -394,6 +413,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       buildStyle: 'off',
       needsCopy:
         git &&
+        !planTurn &&
         !input.chatWorktree &&
         needsCopyFor({
           level: input.level,
@@ -410,7 +430,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     };
     session = s;
     s.need = need.need;
-    await recordNeed(s, need, `intake read this as ${need.need.replace('_', ' ')}`);
+    if (planTurn) s.planTurn = true;
+    const read = planTurn ? PLAN_TURN_WHY : `intake read this as ${need.need.replace('_', ' ')}`;
+    await recordNeed(s, need, read);
     observeScan(s, scanning, repoRoot);
     if (doing && !answers) {
       if (!solo) decideBuildStyle(s);

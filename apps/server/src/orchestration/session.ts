@@ -142,6 +142,7 @@ export interface Session {
   criticRemovals?: string[] | null;
   estimate?: TaskEstimate | null;
   need?: Need;
+  planTurn?: boolean;
   upgraded?: boolean;
 }
 
