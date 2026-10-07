@@ -1,12 +1,22 @@
 import './pair-scene.css';
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import './pair-motion.css';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { pairingLink, PAIRING_TTL_MS, type PendingPairing } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
-import { countdownText, stageLine, stageMood, type PairStage } from './pair-flow.ts';
+import {
+  countdownText,
+  motionMood,
+  stageLine,
+  stageMotion,
+  type Activation,
+  type PairStage,
+} from './pair-flow.ts';
 import { QrCode } from './QrCode.tsx';
 
 interface PairSceneProps {
   stage: PairStage;
+  activation: Activation;
+  hidden: boolean;
   hostname: string | null;
   busy: boolean;
   error: string | null;
@@ -72,15 +82,41 @@ function usePrimaryFocus(kind: PairStage['kind'], primary: RefObject<HTMLButtonE
   }, [kind, primary]);
 }
 
+function useOnScreen(target: RefObject<HTMLElement | null>): boolean {
+  const [onScreen, setOnScreen] = useState(true);
+  useEffect(() => {
+    const element = target.current;
+    if (!element || typeof IntersectionObserver !== 'function') return;
+    const observer = new IntersectionObserver((entries) => {
+      setOnScreen(entries[entries.length - 1]?.isIntersecting ?? true);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [target]);
+  return onScreen;
+}
+
 function sceneClass(stage: PairStage): string {
   const expiring = stage.kind === 'code' && stage.expiring;
   return ['ph-scene', stage.kind, expiring ? 'expiring' : ''].filter(Boolean).join(' ');
 }
 
-export function PairScene({ stage, hostname, busy, error, onStart, onAnswer }: PairSceneProps) {
+export function PairScene({
+  stage,
+  activation,
+  hidden,
+  hostname,
+  busy,
+  error,
+  onStart,
+  onAnswer,
+}: PairSceneProps) {
+  const scene = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
   usePrimaryFocus(stage.kind, primary);
-  const line = stageLine(stage);
+  const onScreen = useOnScreen(scene);
+  const motion = stageMotion(stage, activation);
+  const line = stageLine(stage, activation);
   const meetsPhone = stage.kind === 'found' || stage.kind === 'paired';
 
   const startButton = (label: string): ReactNode => (
@@ -90,13 +126,19 @@ export function PairScene({ stage, hostname, busy, error, onStart, onAnswer }: P
   );
 
   return (
-    <div className={sceneClass(stage)} data-stage={stage.kind}>
+    <div
+      ref={scene}
+      className={sceneClass(stage)}
+      data-stage={stage.kind}
+      data-blob={motion}
+      data-paused={hidden || !onScreen || undefined}
+    >
       <p className="sr-only" role="status" aria-live="polite">
         {line}
       </p>
       <div className="ph-scene-stage" aria-hidden="true">
         <span className="ph-scene-blob">
-          <BlobScout size={72} mood={stageMood(stage)} />
+          <BlobScout size={72} mood={motionMood(motion)} />
           <i className="ph-scene-shadow" />
         </span>
         {meetsPhone && <PhoneGlyph />}

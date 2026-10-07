@@ -29,6 +29,15 @@ export type FeedbackState = z.infer<typeof feedbackStateSchema>;
 export const prWatchPhaseSchema = z.enum(['watching', 'fixing', 'confirming', 'needs_you', 'done']);
 export type PrWatchPhase = z.infer<typeof prWatchPhaseSchema>;
 
+export const prPollProblemSchema = z.enum([
+  'not_connected',
+  'no_access',
+  'rate_limit',
+  'offline',
+  'error',
+]);
+export type PrPollProblem = z.infer<typeof prPollProblemSchema>;
+
 export const prChecksSchema = z.enum(['none', 'pending', 'passing', 'failing']);
 export type PrChecks = z.infer<typeof prChecksSchema>;
 
@@ -143,7 +152,10 @@ export const prWatchSchema = z.object({
   maxRounds: z.number().int().positive(),
   newComments: z.number().int().nonnegative(),
   approvalId: z.uuid().nullable(),
+  roundRunId: z.uuid().nullable(),
   lastPolledAt: z.string().nullable(),
+  nextPollAt: z.string().nullable(),
+  pollProblem: prPollProblemSchema.nullable(),
   lastError: z.string().nullable(),
   items: z.array(feedbackItemSchema),
   details: prDetailsSchema,

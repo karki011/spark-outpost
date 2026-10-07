@@ -9,7 +9,7 @@ import {
 } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import type { CheckCommand } from '../checks/detect.ts';
-import { runsPackageScript, scriptsFingerprint } from '../checks/project-checks.ts';
+import { checkScriptChanged } from '../checks/project-checks.ts';
 import { CHECK_TIMEOUT_MS, runCheck } from '../checks/run-check.ts';
 import { refreshDependencies, type DepsRefresh } from '../projects/deps-refresh.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
@@ -25,12 +25,12 @@ import {
   type PlannedCheck,
   type Round,
 } from './check-attribution.ts';
-import { checkMemory } from './check-results.ts';
+import { checkMemory, fixAlreadyTried } from './check-results.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { appendNewArtifact, publish, type Session } from './session.ts';
 
 const SCRIPTS_CHANGED_NOTE =
-  'The package.json scripts changed during this run, so this check was not run automatically.';
+  'The package.json script this check runs changed during this run, so it was not run automatically.';
 
 export interface CheckTarget {
   runId: string;
@@ -191,7 +191,7 @@ async function runOne(
   const { check } = planned;
   const scripts = s.checks?.scripts ?? '';
   const own = planned.whole ?? check;
-  if (runsPackageScript(own) && (await scriptsFingerprint(target.cwd)) !== scripts) {
+  if (await checkScriptChanged(own, scripts, target.cwd)) {
     return notRun(check, 'skipped', SCRIPTS_CHANGED_NOTE);
   }
   const whole = planned.scope?.whole ?? check.command;
@@ -253,6 +253,7 @@ export async function runChecks(
     scope: scoped === null && s.checks?.source === 'detected',
     stale: deps.stale,
     limitMs: s.deps.checkTimeoutMs ?? CHECK_TIMEOUT_MS,
+    ...(target.env ? { env: target.env } : {}),
   });
   const results: CheckResult[] = [];
   try {
@@ -273,6 +274,7 @@ export async function runChecks(
     status: checkStatusOf(results),
     results,
   };
+  if (await fixAlreadyTried(s, body)) body.leftForUser = true;
   s.checkBodies.push(body);
   await record(s, body);
   await publish(s);

@@ -1,3 +1,4 @@
+import type { PrPollProblem } from '@spark-outpost/contracts';
 import type { TrackedPull } from '../persistence/tracked-pulls.ts';
 import { TRACKING_LINE } from '../persistence/tracked-pulls.ts';
 import { readCheckSummary, readPullFacts, type PullFacts } from '../pr-follow-up/gather.ts';
@@ -24,6 +25,15 @@ export function accessReason(pull: Pick<TrackedPull, 'owner' | 'repo'>, error: u
 
 export const isRateLimited = (error: unknown) =>
   error instanceof GitHubApiError && error.status === RATE_LIMITED;
+
+const isUnreachable = (error: unknown) => error instanceof TypeError && error.cause !== undefined;
+
+export function pollProblemOf(error: unknown): PrPollProblem {
+  if (error instanceof PullAccessError) return 'not_connected';
+  if (isRateLimited(error)) return 'rate_limit';
+  if (error instanceof GitHubApiError && NO_ACCESS_STATUSES.has(error.status)) return 'no_access';
+  return isUnreachable(error) ? 'offline' : 'error';
+}
 
 export function endedPull<T extends TrackedPull>(pull: T, state: 'merged' | 'closed'): T {
   const verb = pull.followUp ? 'watching' : 'tracking';

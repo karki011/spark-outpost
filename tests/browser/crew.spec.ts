@@ -134,7 +134,7 @@ test('a crew block has one status, and a finished agent stops saying it works', 
   await autoContinueAfter(page, null);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Make the reports better #build #vague #questions #slowbuild');
-  const questions = card(page, /Spark has a few questions/);
+  const questions = card(page, /Spark has a (few questions|question)/);
   await questions.getByRole('button', { name: 'Usage' }).click({ timeout: 30_000 });
   await questions.getByRole('button', { name: 'Send' }).click();
 

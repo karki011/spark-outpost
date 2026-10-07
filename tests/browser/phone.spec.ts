@@ -1,20 +1,22 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   denyWaitingPhones,
+  NARROW,
+  openPairingPage,
+  openPhone,
   PHONE_ADDRESS,
-  PHONE_PAGE,
   pairFromPhone,
   resetPhone,
-  servePhonePage,
   setFakeTailscale,
+  startPairing,
+  turnOn,
+  WIDE,
 } from './phone-support.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
-const WIDE = { width: 1280, height: 900 };
-const NARROW = { width: 390, height: 844 };
 const LAYOUT_SIZES = [{ width: 1440, height: 900 }, WIDE, { width: 820, height: 900 }, NARROW];
 const THEMES = [
   'light',
@@ -61,45 +63,12 @@ async function shoot(page: Page, name: string, sizes = [WIDE, NARROW]): Promise<
   await page.emulateMedia({ colorScheme: 'light' });
 }
 
-async function openPhone(page: Page) {
-  await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Phone' })
-    .click();
-  await expect(page.getByRole('heading', { name: 'Phone', level: 1 })).toBeVisible();
-  return page.getByRole('main');
-}
-
-async function turnOn(page: Page) {
-  await page.getByRole('switch', { name: 'Phone access' }).click();
-  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible();
-}
-
-async function startPairing(page: Page): Promise<string> {
-  await page.getByRole('button', { name: 'Pair a phone' }).click();
-  const code = page.locator('.ph-code-text');
-  await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-  return (await code.textContent()) ?? '';
-}
-
 async function expectAccessible(page: Page, scope = '.ph') {
   const axe = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include(scope)
     .analyze();
   expect(axe.violations).toEqual([]);
-}
-
-async function openPairingPage(browser: Browser, hash = '', theme: string | null = 'system') {
-  const context = await browser.newContext({ viewport: NARROW });
-  const phone = await context.newPage();
-  if (theme) {
-    await phone.addInitScript((saved) => localStorage.setItem('spark-outpost.theme', saved), theme);
-  }
-  await servePhonePage(phone);
-  await phone.goto(`${PHONE_PAGE}/${hash}`);
-  return { context, phone };
 }
 
 async function expectEveryTheme(pages: [Page, string][], name: string) {
@@ -202,10 +171,14 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await main.getByRole('button', { name: 'Confirm' }).click();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'paired');
   await expect(main.locator('.ph-scene .scout')).toHaveClass(/happy/);
+  await expect(main.locator('.ph-scene')).toHaveAttribute('data-blob', 'happy');
   await expect(main.getByRole('status').first()).toHaveText('Kitchen phone is paired.');
   await shoot(page, 'phone-4-paired');
 
   await expect(phone.getByText('This device is paired.')).toBeVisible({ timeout: 10_000 });
+  expect(await phone.locator('.hop').evaluate((part) => getComputedStyle(part).animationName)).toBe(
+    'hop',
+  );
   await shoot(phone, 'pairing-page-3-paired', [NARROW]);
   await phoneContext.close();
 
@@ -253,8 +226,8 @@ test('denies a phone, then lets a code run out', async ({ page, browser }) => {
   await shoot(phone, 'pairing-page-4-denied', [NARROW]);
   await phoneContext.close();
 
+  await startPairing(page, 'Try again');
   await page.clock.install();
-  await main.getByRole('button', { name: 'Try again' }).click();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'code');
   await page.clock.fastForward(103_000);
   await expect(main.locator('.ph-scene')).toHaveClass(/expiring/);

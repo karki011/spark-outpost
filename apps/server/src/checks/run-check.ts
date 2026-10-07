@@ -6,7 +6,7 @@ import { isSensitiveEnvKey, redactText, storableText } from '../audit/redact.ts'
 import { relativeInside } from '../projects/path-policy.ts';
 import { isSecretEnvName } from '../setup/environment.ts';
 import type { CheckCommand } from './detect.ts';
-import { FailureScanner } from './failures.ts';
+import { FailureScanner, type EnvironmentProblem } from './failures.ts';
 
 export const CHECK_TIMEOUT_MS = 600_000;
 const KILL_GRACE_MS = 2_000;
@@ -20,6 +20,7 @@ export interface CheckRun {
   outputTail: string;
   truncated: boolean;
   failures: string[];
+  setup?: EnvironmentProblem | null;
 }
 
 export class OutsideProjectError extends Error {
@@ -141,6 +142,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
         outputTail: output.text,
         truncated: output.truncated,
         failures: exitCode === 0 ? [] : scanner.ids(),
+        setup: exitCode === 0 ? null : scanner.environment(),
       });
     };
     child.on('error', (error) => finish(null, `\n${error.message}\n`));

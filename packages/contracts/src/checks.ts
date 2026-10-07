@@ -11,7 +11,7 @@ export const checkCommandsSchema = z
 export const checkKindSchema = z.enum(['typecheck', 'lint', 'test', 'custom']);
 export type CheckKind = z.infer<typeof checkKindSchema>;
 
-export const checkCauseSchema = z.enum(['change', 'baseline', 'timeout', 'environment']);
+export const checkCauseSchema = z.enum(['change', 'baseline', 'unknown', 'timeout', 'environment']);
 export type CheckCause = z.infer<typeof checkCauseSchema>;
 
 export const checkScopeSchema = z.object({ whole: z.string(), label: z.string() });
@@ -21,6 +21,7 @@ export const checkBaselineSchema = z.object({
   base: z.string(),
   outcome: z.enum(['passed', 'failed', 'timed_out', 'unavailable']),
   cached: z.boolean(),
+  trusted: z.boolean().optional(),
   durationMs: z.number().int().nonnegative(),
   shared: z.array(z.string()),
   added: z.array(z.string()),
@@ -41,6 +42,7 @@ export const checkResultSchema = z.object({
   scope: checkScopeSchema.nullable().optional(),
   baseline: checkBaselineSchema.nullable().optional(),
   failures: z.array(z.string()).optional(),
+  blamed: z.array(z.string()).optional(),
 });
 export type CheckResult = z.infer<typeof checkResultSchema>;
 
@@ -54,6 +56,7 @@ export const checkBodySchema = z.object({
   round: z.number().int().positive(),
   status: checkStatusSchema,
   results: z.array(checkResultSchema),
+  leftForUser: z.boolean().optional(),
 });
 export type CheckBody = z.infer<typeof checkBodySchema>;
 
@@ -86,6 +89,7 @@ function resultPhrase(result: CheckResult, results: readonly CheckResult[]): str
   const cause = checkCause(result);
   if (cause === 'change') return `${name} failed`;
   if (cause === 'baseline') return `${name} already failing before this change`;
+  if (cause === 'unknown') return `${name} failed before this change or can't tell`;
   if (cause === 'timeout') return `${name} could not finish in time`;
   if (cause === 'environment') return `${name} could not run`;
   if (result.outcome === 'denied') return `${name} not allowed`;
@@ -94,10 +98,13 @@ function resultPhrase(result: CheckResult, results: readonly CheckResult[]): str
   return `${name} for ${result.scope.label} passed (whole-repo run skipped)`;
 }
 
+export const LEFT_FOR_USER = 'left for you: a fix turn did not change what fails';
+
 export function checkLine(body: CheckBody): string {
   const who = body.copy ? `${body.name}'s copy` : body.name;
   const phrases = body.results.map((result) => resultPhrase(result, body.results));
-  return `Checks for ${who}: ${phrases.join(' · ')}`;
+  const left = body.leftForUser ? ` · ${LEFT_FOR_USER}` : '';
+  return `Checks for ${who}: ${phrases.join(' · ')}${left}`;
 }
 
 export function failingChecks(body: CheckBody): CheckResult[] {
@@ -111,12 +118,21 @@ export function unsettledChecks(body: CheckBody): CheckResult[] {
   });
 }
 
+export function unrelatedFailures(result: CheckResult): string[] {
+  const blamed = new Set(result.blamed ?? []);
+  return (result.failures ?? []).filter((id) => !blamed.has(id));
+}
+
+const UNKNOWN_DETAIL =
+  'nothing ties this to the change: it fails in files the change does not touch, and no comparable run on the base commit passed';
+
 function seconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
 function baselineLine(baseline: CheckBaseline): string {
-  const how = baseline.cached ? 'remembered result' : `ran in ${seconds(baseline.durationMs)}`;
+  const ran = baseline.cached ? 'remembered result' : `ran in ${seconds(baseline.durationMs)}`;
+  const how = baseline.trusted === false ? `${ran}, not relied on` : ran;
   const base = baseline.base.slice(0, 8);
   if (baseline.outcome === 'unavailable') return `could not compare with ${base}`;
   if (baseline.outcome === 'passed') return `passes before this change (${base}, ${how})`;
@@ -137,6 +153,10 @@ export function checkDetails(body: CheckBody): string[] {
     if (result.outcome === 'timed_out') parts.push(`stopped after ${seconds(result.durationMs)}`);
     if (result.scope) parts.push(`instead of \`${result.scope.whole}\``);
     if (result.baseline) parts.push(baselineLine(result.baseline));
+    if (checkCause(result) === 'change' && (result.blamed ?? []).length > 0) {
+      parts.push(`from this change: ${result.blamed!.join(', ')}`);
+    }
+    if (checkCause(result) === 'unknown') parts.push(UNKNOWN_DETAIL);
     if (result.note) parts.push(result.note);
     return parts.join(' · ');
   });

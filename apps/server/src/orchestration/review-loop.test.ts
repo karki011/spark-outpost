@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { retryCriticProvider } from './member-routes.ts';
 import { CHECKPOINT_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
 import { acceptCard } from './checkpoint.ts';
 import { CRITIC_FIX_LEAD, criticFixFollowUp } from './context.ts';
@@ -259,5 +260,19 @@ describe('Full auto runs on to ship', () => {
     const shipping = nextStep(initialFlow('edits', 'full-auto'), wrapped);
     const held = nextStep(shipping.state, { type: 'ship_held', reason: 'Checks still fail.' });
     expect(held.action).toEqual({ type: 'ask', kind: 'accept', reason: 'Checks still fail.' });
+  });
+});
+
+describe('Critic retry provider', () => {
+  it('goes back to the chat provider when another provider failed the review', () => {
+    expect(retryCriticProvider('codex', 'claude', ['claude', 'codex'])).toBe('claude');
+  });
+
+  it('moves to the other connected provider when the chat provider failed the review', () => {
+    expect(retryCriticProvider('claude', 'claude', ['claude', 'codex'])).toBe('codex');
+  });
+
+  it('stays when no other provider is connected', () => {
+    expect(retryCriticProvider('claude', 'claude', ['claude'])).toBe('claude');
   });
 });

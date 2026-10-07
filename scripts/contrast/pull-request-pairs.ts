@@ -37,4 +37,27 @@ const focus: Pair[] = Object.entries(ROWS).map(([row, bg]) => ({
   kind: 'focus' as const,
 }));
 
-export const PULL_REQUESTS: Pair[] = [...rowText, ...focus];
+const WATCH_INKS = {
+  quiet: 'var(--muted)',
+  live: 'var(--accent-text)',
+  warn: 'var(--warn)',
+  label: 'var(--text)',
+  problem: 'var(--danger)',
+};
+
+const WATCH_SURFACES = { row: ROWS.row, panel: ROWS.panel };
+
+const watching: Pair[] = Object.entries(WATCH_SURFACES).flatMap(([surface, bg]) =>
+  Object.entries(WATCH_INKS).flatMap(([ink, fg]) =>
+    (['text', 'ui'] as const).map((kind) => ({
+      id: `pull-request.watch-${ink}-${kind}-on-${surface}`,
+      group: 'Pull request card',
+      label: `Watching indicator, ${ink} ${kind === 'ui' ? 'icon' : 'text'} on the ${surface} surface`,
+      fg,
+      bg: [bg],
+      kind,
+    })),
+  ),
+);
+
+export const PULL_REQUESTS: Pair[] = [...rowText, ...focus, ...watching];

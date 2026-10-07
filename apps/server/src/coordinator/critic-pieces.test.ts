@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PieceList, TaskPiece } from '@spark-outpost/contracts';
 import { PATCH_LIMIT } from '../orchestration/context.ts';
-import { patchByFile, pieceReviews } from './critic-pieces.ts';
+import { patchByFile } from '../orchestration/critic-diff.ts';
+import { pieceReviews } from './critic-pieces.ts';
 
 function fileDiff(path: string, size: number): string {
   return [`diff --git a/${path} b/${path}`, `+++ b/${path}`, `+${'x'.repeat(size)}`].join('\n');

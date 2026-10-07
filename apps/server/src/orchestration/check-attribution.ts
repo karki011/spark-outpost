@@ -1,13 +1,16 @@
 import { realpath } from 'node:fs/promises';
-import type { CheckResult, CheckScope } from '@spark-outpost/contracts';
-import { Baselines } from '../checks/baseline.ts';
+import type { CheckBaseline, CheckResult, CheckScope } from '@spark-outpost/contracts';
+import { attributeFailure } from '../checks/attribution.ts';
+import { Baselines, type BaseResult } from '../checks/baseline.ts';
 import { changeFacts } from '../checks/change-facts.ts';
 import type { CheckCommand, ProjectFiles } from '../checks/detect.ts';
 import {
+  SAME_SETUP_PROBLEM,
   environmentAdvice,
   environmentProblem,
   outputShape,
   unusableScopedForm,
+  type EnvironmentProblem,
 } from '../checks/failures.ts';
 import { readProjectFiles } from '../checks/project-checks.ts';
 import type { CheckRun } from '../checks/run-check.ts';
@@ -30,6 +33,8 @@ export interface Round {
   planned: PlannedCheck[];
   baselines: Baselines | null;
   files: ProjectFiles | null;
+  changed: readonly string[];
+  advised: Set<EnvironmentProblem>;
   roots: string[];
   stale: string | null;
   limitMs: number;
@@ -40,6 +45,7 @@ interface RoundOptions {
   scope: boolean;
   stale: string | null;
   limitMs: number;
+  env?: Readonly<Record<string, string>>;
 }
 
 type Attributed = Omit<CheckResult, 'approvalId'>;
@@ -63,10 +69,10 @@ const whole = (check: CheckCommand): PlannedCheck => ({ check, scope: null, whol
 
 export async function openRound(s: Session, cwd: string, options: RoundOptions): Promise<Round> {
   const base = await checkBase(s);
-  const files = options.scope ? await readProjectFiles(cwd).catch(() => null) : null;
+  const files = await readProjectFiles(cwd).catch(() => null);
   const facts = base && files ? await changeFacts(cwd, base, files).catch(() => null) : null;
   const planned = options.commands.map((check) => {
-    const scoped = facts ? scopedCheck(check, facts) : null;
+    const scoped = facts && options.scope ? scopedCheck(check, facts) : null;
     return scoped ? { ...scoped, whole: check } : whole(check);
   });
   const baselines = base
@@ -76,10 +82,20 @@ export async function openRound(s: Session, cwd: string, options: RoundOptions):
         base,
         signal: s.control.signal,
         limitMs: options.limitMs,
+        ...(options.env ? { env: options.env } : {}),
       })
     : null;
   const roots = [cwd, await realpath(cwd).catch(() => cwd)];
-  return { planned, baselines, files, roots, stale: options.stale, limitMs: options.limitMs };
+  return {
+    planned,
+    baselines,
+    files: options.scope ? files : null,
+    changed: facts?.changed ?? [],
+    advised: new Set(),
+    roots,
+    stale: options.stale,
+    limitMs: options.limitMs,
+  };
 }
 
 export async function closeRound(round: Round): Promise<void> {
@@ -116,6 +132,21 @@ function timeoutNote(planned: PlannedCheck, round: Round): string {
   return `${lead} A narrower check command can be set in Settings > Projects.`;
 }
 
+function baselineShown(
+  base: BaseResult,
+  verdict: { shared: string[]; added: string[] },
+): CheckBaseline {
+  return {
+    base: base.base,
+    outcome: base.outcome,
+    cached: base.cached,
+    trusted: base.trusted,
+    durationMs: base.durationMs,
+    shared: verdict.shared,
+    added: base.outcome === 'failed' ? verdict.added : [],
+  };
+}
+
 export async function attributed(
   planned: PlannedCheck,
   run: CheckRun,
@@ -137,24 +168,36 @@ export async function attributed(
     return { ...shown, outcome: 'timed_out', cause: 'timeout', note: timeoutNote(planned, round) };
   }
   if (run.exitCode === 0) return { ...shown, outcome: 'passed' };
-  const finished = { argv: check.argv, exitCode: run.exitCode, outputTail: run.outputTail };
+  const finished = {
+    argv: check.argv,
+    exitCode: run.exitCode,
+    outputTail: run.outputTail,
+    setup: run.setup ?? null,
+  };
   if (scope && unusableScopedForm(finished)) return 'retry_whole';
   const problem = environmentProblem(finished);
   if (problem) {
-    return { ...shown, cause: 'environment', note: environmentAdvice(problem, finished) };
+    const note = round.advised.has(problem)
+      ? SAME_SETUP_PROBLEM
+      : environmentAdvice(problem, finished);
+    round.advised.add(problem);
+    return { ...shown, cause: 'environment', note };
   }
-  const failed = { ...shown, failures: run.failures };
-  if (!round.baselines) return { ...failed, cause: 'change' };
-  const attribution = await round.baselines.attribute({
-    check,
+  const output = {
     failures: run.failures,
     shape: outputShape(run.outputTail, round.roots),
-    durationMs: run.durationMs,
-  });
-  if (!attribution) return null;
+    output: run.outputTail,
+  };
+  const base = round.baselines
+    ? await round.baselines.evidence({ check, durationMs: run.durationMs })
+    : null;
+  if (round.baselines && !base) return null;
+  const verdict = attributeFailure(output, round.changed, base);
   return {
-    ...failed,
-    cause: attribution.fromChange ? 'change' : 'baseline',
-    baseline: attribution.baseline,
+    ...shown,
+    failures: run.failures,
+    cause: verdict.cause,
+    blamed: verdict.blamed,
+    ...(base ? { baseline: baselineShown(base, verdict) } : {}),
   };
 }

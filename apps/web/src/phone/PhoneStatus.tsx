@@ -1,10 +1,8 @@
 import { useId } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TailscaleState } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { CopyIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
-import { phoneApi, phoneKeys } from './phone-api.ts';
 import { statusCopy } from './phone-copy.ts';
 
 interface PhoneStatusProps {
@@ -12,25 +10,28 @@ interface PhoneStatusProps {
   wanted: boolean;
   connected: boolean;
   checking: boolean;
+  turning: boolean;
+  failure: string | null;
   onCheck: () => void;
+  onTurn: (to: 'on' | 'off') => void;
 }
 
 const CAN_SWITCH = new Set<TailscaleState['status']>(['off', 'on', 'error']);
 
-export function PhoneStatus({ state, wanted, connected, checking, onCheck }: PhoneStatusProps) {
-  const queryClient = useQueryClient();
+export function PhoneStatus({
+  state,
+  wanted,
+  connected,
+  checking,
+  turning,
+  failure,
+  onCheck,
+  onTurn,
+}: PhoneStatusProps) {
   const stepId = useId();
   const { state: copied, copy } = useCopyFeedback();
-  const turn = useMutation({
-    mutationFn: phoneApi.turn,
-    onSuccess: (next) => {
-      queryClient.setQueryData(phoneKeys.tailscale, next);
-      void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
-    },
-  });
   const text = statusCopy(state);
   const on = state.status === 'on' || (state.status === 'error' && wanted);
-  const failure = turn.error instanceof Error ? turn.error.message : null;
 
   return (
     <section className="ph-card" aria-labelledby="ph-status-title">
@@ -50,9 +51,9 @@ export function PhoneStatus({ state, wanted, connected, checking, onCheck }: Pho
           <BlobToggle
             label="Phone access"
             checked={on}
-            disabled={turn.isPending}
+            disabled={turning}
             {...(text.step ? { describedBy: stepId } : {})}
-            onChange={(next) => turn.mutate(next ? 'on' : 'off')}
+            onChange={(next) => onTurn(next ? 'on' : 'off')}
           />
         ) : (
           <button type="button" className="btn line sm" disabled={checking} onClick={onCheck}>

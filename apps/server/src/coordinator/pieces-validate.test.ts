@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PIECE_LIMITS } from '@spark-outpost/contracts';
 import { piecesHash, validatePieces, type ValidationFacts } from './pieces-validate.ts';
 
 const FILES = [
@@ -222,6 +223,59 @@ describe('validatePieces', () => {
       'P1 owns no files; only research pieces may own none',
     ]);
     expect(errorsOf({ pieces: [piece('R1', { owns: [], research: true })] })).toEqual([]);
+  });
+
+  it('trims a goal, title, contract or acceptance item over its limit instead of rejecting the list (session case)', () => {
+    const long = (length: number) => 'a'.repeat(length);
+    const result = validatePieces(
+      {
+        pieces: [
+          piece('P1', {
+            goal: long(PIECE_LIMITS.goal + 150),
+            title: long(PIECE_LIMITS.title + 20),
+            contract: long(PIECE_LIMITS.contract + 5),
+            acceptance: ['short', long(PIECE_LIMITS.item + 40)],
+          }),
+        ],
+        integration: long(PIECE_LIMITS.integration + 1),
+      },
+      facts(),
+    );
+    if (!result.ok) throw new Error(result.errors.join('; '));
+    const [first] = result.value.pieces;
+    expect(first!.goal.length).toBeLessThanOrEqual(PIECE_LIMITS.goal);
+    expect(first!.goal.endsWith('…')).toBe(true);
+    expect(first!.title.length).toBeLessThanOrEqual(PIECE_LIMITS.title);
+    expect(first!.acceptance[0]).toBe('short');
+    expect(first!.acceptance[1]!.length).toBeLessThanOrEqual(PIECE_LIMITS.item);
+    expect(result.value.integration!.length).toBeLessThanOrEqual(PIECE_LIMITS.integration);
+    expect(result.value.trimmed).toEqual([
+      `P1 title cut from ${PIECE_LIMITS.title + 20} to ${PIECE_LIMITS.title} characters`,
+      `P1 goal cut from ${PIECE_LIMITS.goal + 150} to ${PIECE_LIMITS.goal} characters`,
+      `P1 contract cut from ${PIECE_LIMITS.contract + 5} to ${PIECE_LIMITS.contract} characters`,
+      `P1 acceptance 2 cut from ${PIECE_LIMITS.item + 40} to ${PIECE_LIMITS.item} characters`,
+      `integration cut from ${PIECE_LIMITS.integration + 1} to ${PIECE_LIMITS.integration} characters`,
+    ]);
+  });
+
+  it('never trims a command, a path or a key', () => {
+    const command = `pnpm vitest run ${'a'.repeat(PIECE_LIMITS.item)}`;
+    expect(errorsOf({ pieces: [piece('P1', { checks: [command] })] })[0]).toMatch(
+      /^pieces\.0\.checks\.0/,
+    );
+    const path = `apps/server/src/${'a'.repeat(PIECE_LIMITS.path)}.ts`;
+    expect(errorsOf({ pieces: [piece('P1', { owns: [path] })] })[0]).toMatch(/^pieces\.0\.owns\.0/);
+    const key = `P${'1'.repeat(PIECE_LIMITS.key)}`;
+    expect(errorsOf({ pieces: [piece(key)] })[0]).toMatch(/^pieces\.0\.key/);
+  });
+
+  it('asks for no plan coverage when the turn is a follow-up, so no filler piece is needed (session case)', () => {
+    const block = { pieces: [piece('P1', { title: 'Raise the cap', goal: 'cap 3 → 8' })] };
+    const stale = [{ text: 'Confirm which plan items are already on the branch', files: [] }];
+    expect(errorsOf(block, { planSteps: stale })).toEqual([
+      'no piece covers the plan item "Confirm which plan items are already on the branch"',
+    ]);
+    expect(errorsOf(block, { planSteps: [] })).toEqual([]);
   });
 
   it('reports schema problems with their path', () => {

@@ -54,6 +54,9 @@ export const PAIRING_PAGE_STYLES = `
   .blob .smile { fill: none; stroke: var(--scout-eye); stroke-width: 2.8; stroke-linecap: round;
     opacity: 0; transition: opacity 0.2s; }
   .blob .cheek { fill: var(--warn); opacity: 0; transition: opacity 0.2s; }
+  [data-stage="enter"] .blob { animation: bob 5s ease-in-out infinite; }
+  [data-stage="enter"] .look { animation: glance 12s ease-in-out infinite; }
+  [data-stage="waiting"] .blob { animation: lean 3.2s ease-in-out infinite; }
   [data-stage="waiting"] .look { animation: scan 2.2s ease-in-out infinite; }
   [data-stage="paired"] .eye { opacity: 0; }
   [data-stage="paired"] .smile { opacity: 1; }
@@ -62,12 +65,18 @@ export const PAIRING_PAGE_STYLES = `
   [data-stage="ended"] .eye { animation: none; transform: translateY(2px) scaleY(0.62); }
   [data-stage="ended"] .spark { animation: none; opacity: 0.35; }
   [data-stage="ended"] .ant { transform: rotate(18deg); }
-  [data-stage="ended"] .blob { transform: rotate(-7deg); }
+  [data-stage="ended"] .blob { transform: rotate(-7deg); animation: shrug 0.6s var(--out) both; }
+  [data-paused] .blob, [data-paused] .blob * { animation-play-state: paused; }
   @keyframes breathe { 50% { transform: scale(1.03, 0.97); } }
   @keyframes twinkle { 50% { transform: rotate(45deg) scale(0.78); opacity: 0.8; } }
   @keyframes blink { 0%, 91%, 97%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.1); } }
   @keyframes scan { 0%, 100% { transform: translate(-1.8px, -1px); } 50% { transform: translate(1.8px, -1px); } }
   @keyframes hop { 40% { transform: translateY(-6px); } }
+  @keyframes bob { 50% { transform: translateY(-2px); } }
+  @keyframes glance { 0%, 60%, 84%, 100% { transform: none; } 66%, 78% { transform: translateY(1.8px); } }
+  @keyframes lean { 50% { transform: translateY(-2px) rotate(3deg); } }
+  @keyframes shrug { from { transform: rotate(0); } 45% { transform: rotate(-10deg) translateY(-3px); }
+    to { transform: rotate(-7deg); } }
   @media (prefers-reduced-motion: reduce) {
     .blob *, .blob { animation: none !important; }
     input, button { transition: none; }

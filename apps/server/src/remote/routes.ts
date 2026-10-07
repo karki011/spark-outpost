@@ -17,14 +17,17 @@ import { paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { PairingRateLimitError, type Pairings } from './pairing.ts';
 import { isRemote, remoteDeviceOf } from './principal.ts';
-import { deviceCookie, newSecret, secretHash } from './session.ts';
+import { deviceCookie, deviceTokenOf, newSecret, secretHash } from './session.ts';
 import {
   addDevice,
+  deviceByTokenHash,
   listDevices,
   listRemoteAudit,
+  markDeviceReplaced,
   recordRemoteAudit,
   remoteAccess,
   renameDevice,
+  repairDevice,
   revokeAllDevices,
   revokeDevice,
   saveRemoteHostname,
@@ -49,24 +52,64 @@ const NO_PAIRING = 'That pairing request is no longer waiting.';
 const NO_DEVICE = 'Device not found.';
 const MAC_ONLY = 'This is only available on your Mac.';
 
+function sameNameKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export function remoteRoutes(deps: RemoteRouteDeps): Router {
   const { db, workspaceId, pairings, streams, tailscale } = deps;
   const router = Router();
   const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
 
-  const toDevice = (row: DeviceRow): RemoteDevice => ({
+  const toDevice = (row: DeviceRow, newerSameName: DeviceRow | null = null): RemoteDevice => ({
     id: row.id,
     name: row.name,
     createdAt: row.created_at.toISOString(),
     lastSeenAt: row.last_seen_at.toISOString(),
     revokedAt: row.revoked_at?.toISOString() ?? null,
+    replacedBy: row.replaced_by,
+    duplicateOf: newerSameName && !streams.connected(row.id) ? newerSameName.id : null,
     expired: row.expired,
     connected: streams.connected(row.id),
   });
 
-  const deviceList = async (): Promise<RemoteDeviceList> => ({
-    devices: (await listDevices(db, workspaceId)).map(toDevice),
-  });
+  const deviceList = async (): Promise<RemoteDeviceList> => {
+    const rows = await listDevices(db, workspaceId);
+    const newestByName = new Map<string, DeviceRow>();
+    for (const row of rows) {
+      if (!row.revoked_at) newestByName.set(sameNameKey(row.name), row);
+    }
+    return {
+      devices: rows.map((row) => {
+        const newest = row.revoked_at ? null : newestByName.get(sameNameKey(row.name));
+        return toDevice(row, newest && newest.id !== row.id ? newest : null);
+      }),
+    };
+  };
+
+  const pairClaimed = async (req: Request, pairingId: string, name: string, tokenHash: string) => {
+    const carried = deviceTokenOf(req.headers.cookie);
+    const known = carried ? await deviceByTokenHash(db, workspaceId, secretHash(carried)) : null;
+    const same = known ? await repairDevice(db, workspaceId, known.id, { name, tokenHash }) : null;
+    if (same) {
+      await audit({
+        action: 'device_paired_again',
+        device: { id: same.id, name: same.name },
+        detail: { pairingId },
+      });
+      return;
+    }
+    const device = await addDevice(db, workspaceId, { name, tokenHash });
+    if (known) {
+      await markDeviceReplaced(db, workspaceId, known.id, device.id);
+      streams.close(known.id);
+    }
+    await audit({
+      action: 'device_paired',
+      device: { id: device.id, name: device.name },
+      detail: { pairingId, replaced: known?.id },
+    });
+  };
 
   const limited = async (res: Response, work: () => Promise<void>) => {
     try {
@@ -120,15 +163,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       return;
     }
     const token = newSecret();
-    const device = await addDevice(db, workspaceId, {
-      name: result.deviceName,
-      tokenHash: secretHash(token),
-    });
-    await audit({
-      action: 'device_paired',
-      device: { id: device.id, name: device.name },
-      detail: { pairingId: result.id },
-    });
+    await pairClaimed(req, result.id, result.deviceName, secretHash(token));
     res
       .set('Set-Cookie', deviceCookie(token))
       .json({ status: 'paired' } satisfies PairingClaimResponse);

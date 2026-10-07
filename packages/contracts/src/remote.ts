@@ -5,6 +5,7 @@ export const REMOTE_DEVICE_IDLE_DAYS = 30;
 export const REMOTE_DEVICE_NAME_MAX = 60;
 export const PAIRING_TTL_MS = 2 * 60 * 1000;
 export const PAIRING_CODE_LENGTH = 12;
+export const REMOTE_ENTRY_PARAM = 'spark_entry';
 
 export const remoteSwitchSchema = z.enum([
   'settings',
@@ -88,6 +89,8 @@ export const remoteDeviceSchema = z.object({
   createdAt: z.string(),
   lastSeenAt: z.string(),
   revokedAt: z.string().nullable(),
+  replacedBy: z.uuid().nullable(),
+  duplicateOf: z.uuid().nullable(),
   expired: z.boolean(),
   connected: z.boolean(),
 });
@@ -172,6 +175,8 @@ export const remoteAuditActionSchema = z.enum([
   'pairing_confirmed',
   'pairing_denied',
   'device_paired',
+  'device_paired_again',
+  'pairing_page_shown',
   'device_renamed',
   'device_revoked',
   'devices_disconnected',

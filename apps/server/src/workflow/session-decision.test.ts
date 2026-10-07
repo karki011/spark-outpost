@@ -5,6 +5,7 @@ import {
   replyHash,
   sessionWorkdir,
   settingsHash,
+  CREW_STOPPED_NOTE,
   STOPPED_NOTE,
   STOPPED_REPLY,
   stoppedFollowUp,
@@ -187,6 +188,10 @@ describe('stoppedFollowUp', () => {
       `${STOPPED_NOTE}\nFiles changed before the stop: \`src/export.ts\`, \`test/export.test.ts\`.\n\ncontinue`,
     );
     expect(stoppedFollowUp('continue', [])).toBe(`${STOPPED_NOTE}\n\ncontinue`);
+    expect(stoppedFollowUp('continue', [], CREW_STOPPED_NOTE)).toBe(
+      `${CREW_STOPPED_NOTE}\n\ncontinue`,
+    );
+    expect(CREW_STOPPED_NOTE).not.toContain('by the user');
   });
 
   it('shortens a long file list', () => {
