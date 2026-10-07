@@ -1,4 +1,5 @@
 import type { Db } from '../persistence/db.ts';
+import { STEP_NOT_INTERRUPTED } from '../persistence/run-events.ts';
 import type { ProtocolObserver, ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import type { RunInput } from './run-input.ts';
@@ -80,6 +81,7 @@ async function lastStep(db: Db, runId: string): Promise<LastStep | null> {
     `SELECT e.type, e.payload->>'stepName' AS name FROM run_events e
      JOIN runs r ON r.id = e.run_id
      WHERE (r.id = $1 OR r.parent_run_id = $1) AND e.type IN ('STEP_STARTED', 'STEP_FINISHED')
+       AND ${STEP_NOT_INTERRUPTED}
      ORDER BY e.created_at DESC, e.seq DESC LIMIT 1`,
     [runId],
   );

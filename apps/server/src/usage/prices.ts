@@ -15,6 +15,10 @@ const ESTIMATED_PROVIDERS = new Set(['codex', 'zai']);
 const CACHE_OUTSIDE_INPUT = new Set(['claude', 'zai']);
 const BILLED_CACHE_WRITES = new Set(['claude']);
 
+export function countsCacheOutsideInput(provider: string): boolean {
+  return CACHE_OUTSIDE_INPUT.has(provider);
+}
+
 function cardPrice(card: ModelCard): ModelPrice | null {
   if (!card.price) return null;
   return {

@@ -22,7 +22,7 @@ import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { shownCommands, type LiveCommand } from '../commands/command-model.ts';
 import { TurnReply } from '../commands/TurnReply.tsx';
 import { ErrorLine, ModelSwitchNote, type TimedOutFacts } from '../ModelSwitchNote.tsx';
-import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
+import { shownSteps, shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
@@ -186,7 +186,7 @@ function AgentBody({
         conversationId={conversationId}
       />
       <div id={bodyId}>
-        <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} />
+        <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} runId={agent.id} />
         {cards.decided.map(approvalCard)}
         <TurnReply
           text={text}
@@ -212,7 +212,7 @@ function AgentBody({
 function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
   const stream = useRunStream(stored.agent.id, stored.conversationId, live || !stored.text);
   const leads = streamLeads(stream, !live);
-  const steps = leads || stored.steps.length === 0 ? stream.steps : stored.steps;
+  const steps = shownSteps(stream, stored.steps, leads);
   const streaming = stream.status === 'connecting' || stream.status === 'running';
   const { id, name, provider } = stored.agent;
   useLiveReport({ id, name, provider, kind: 'crew' }, live && streaming, steps);

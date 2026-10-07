@@ -6,6 +6,7 @@ import { LeaseLostError, appendRunEvent } from '../src/persistence/run-events.ts
 import { getRun } from '../src/persistence/runs.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { runEvents } from '../src/workflow/run-events.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { createTestDb, eventTypes, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -69,9 +70,25 @@ describe('job queue', () => {
 
     expect((await getRun(t.db, runId!))?.status).toBe('outcome_unknown');
     expect(await eventTypes(t.db, runId!)).toEqual(['RUN_STARTED', 'RUN_ERROR']);
+    await expectConformantRun(t.db, runId!);
     expect(await claimNextJob(t.db, 30)).toBeNull();
     await expect(appendRunEvent(t.db, lease, runEvents.stepStarted('late'))).rejects.toBeInstanceOf(
       LeaseLostError,
     );
+  });
+
+  it('ends a run that crashed mid-step with one error the stream check accepts', async () => {
+    const [runId] = await queueRuns(1);
+    const lease = (await claimNextJob(t.db, 30))!;
+    await appendRunEvent(t.db, lease, runEvents.started({ runId: runId!, threadId: 'thread' }));
+    await appendRunEvent(t.db, lease, runEvents.stepStarted('Running tests'));
+    await appendRunEvent(t.db, lease, runEvents.toolCallStart('call-1', 'Running tests'));
+    await expireLease(lease.jobId);
+
+    expect(await recoverExpiredLeases(t.db)).toBe(1);
+    expect(await recoverExpiredLeases(t.db)).toBe(0);
+
+    expect((await eventTypes(t.db, runId!)).slice(-2)).toEqual(['TOOL_CALL_START', 'RUN_ERROR']);
+    await expectConformantRun(t.db, runId!);
   });
 });
