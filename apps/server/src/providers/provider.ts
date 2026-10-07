@@ -168,6 +168,10 @@ export type ProviderOutput =
     }
   | ({ kind: 'file_focus' } & FileFocus)
   | { kind: 'text_delta'; delta: string }
+  | { kind: 'thought_delta'; delta: string }
+  | { kind: 'tool_started'; id: string; name: string }
+  | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
+  | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
   | {
       kind: 'usage';

@@ -97,6 +97,10 @@
   border-style: dashed;
 }
 
+.tk .irl-pr .irl-more {
+  color: var(--muted);
+}
+
 @container tk-list (max-width: 760px) {
   .tk .irow > .ir-links {
     grid-column: 2;

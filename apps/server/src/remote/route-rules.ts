@@ -30,6 +30,7 @@ GET /api/chat-settings/defaults
 GET /api/conversations/:id/share
 GET /api/conversations/:id/tickets
 GET /api/conversations/:id/workspace
+GET /api/conversations/:id/workspace/bring
 GET /api/projects/:id/branches
 GET /api/providers/:provider/capabilities
 PATCH /api/conversations/:id/settings
@@ -90,6 +91,7 @@ GET /api/conversations/:id
 GET /api/conversations/:id/annotations
 GET /api/runs/:id
 GET /api/runs/:id/events
+GET /api/runs/:id/reasoning/:messageId
 GET /api/runs/:id/commands/:commandId/output
 GET /api/runs/:id/orchestration
 GET /api/runs/active

@@ -22,6 +22,7 @@ export interface PullRequestDetail extends PullRequest {
   checks: PullRequestChecks | null;
   headSha: string | null;
   failedChecks: string[];
+  author?: string | null;
 }
 
 export interface NewPullRequest {
@@ -91,6 +92,7 @@ const pullDetailSchema = pullSchema.extend({
   merged: z.boolean().optional(),
   merged_at: z.string().nullable().optional(),
   created_at: z.string(),
+  user: z.object({ login: z.string() }).nullable().optional().catch(undefined),
   head: z
     .object({ sha: z.string().min(1) })
     .optional()
@@ -204,6 +206,7 @@ export function restConnection(
           state: review.state,
         })),
         headSha: pull.head?.sha ?? null,
+        author: pull.user?.login ?? null,
         ...(await readChecks(repo, pull.head?.sha)),
       };
     },

@@ -53,6 +53,7 @@ export * from './ship.ts';
 export * from './pr-follow-up.ts';
 export * from './push-activity.ts';
 export * from './tickets.ts';
+export * from './ticket-development.ts';
 export * from './ticket-inbox.ts';
 export * from './chat-tickets.ts';
 export * from './reset.ts';

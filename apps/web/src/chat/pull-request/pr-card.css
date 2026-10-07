@@ -4,6 +4,7 @@
   gap: 4px;
   max-width: var(--chat-col, 700px);
   margin: 0 auto 6px;
+  padding: 0 12px;
 }
 
 .prc-item {

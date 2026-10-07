@@ -405,7 +405,9 @@ test.describe('working chats', () => {
     const card = (await page.locator('.prc').boundingBox())!;
     const composer = (await page.locator('.composer').boundingBox())!;
     expect(card.y + card.height).toBeLessThanOrEqual(composer.y);
-    expect(Math.abs(card.width - composer.width)).toBeLessThan(2);
+    const item = (await page.locator('.prc-item').boundingBox())!;
+    const context = (await page.locator('.ctxbar').boundingBox())!;
+    expect(Math.abs(item.width - context.width)).toBeLessThan(2);
     await shoot(page, 'pr-2000');
   });
 });

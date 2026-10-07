@@ -61,6 +61,8 @@ const NO_CHAT_SETTINGS: ChatSettings = {
   options: {},
 };
 
+const NEW_CHAT_ROUTING: ModelRouting = 'auto';
+
 export class ConversationMissingError extends Error {}
 
 async function settingsRow(db: Queryable, conversationId: string): Promise<SettingsRow> {
@@ -152,6 +154,7 @@ export async function draftChatSettings(db: Queryable, workspaceId: string): Pro
     {
       provider: null,
       overrides: {},
+      model_routing: NEW_CHAT_ROUTING,
       default_provider: rows[0]?.default_provider ?? null,
       default_level: rows[0]?.default_level ?? null,
     },

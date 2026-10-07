@@ -114,6 +114,13 @@ test.describe('plain chats', () => {
     await expect(preview(page)).toHaveCount(0);
     await expect.poll(() => composerGap(page)).toBeLessThanOrEqual(24);
     await expect(header(page)).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(() =>
+        page
+          .locator('.thread')
+          .evaluate((thread) => thread.scrollHeight - thread.scrollTop - thread.clientHeight),
+      )
+      .toBeLessThan(1);
 
     await page.locator('.thread').evaluate((thread) => thread.scrollTo({ top: 0 }));
     await expect(ticks(page).nth(0)).toHaveAttribute('aria-current', 'location');

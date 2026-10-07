@@ -160,7 +160,7 @@ describe('Goodhart: checks run outside the agent', { timeout: 120_000 }, () => {
     expect(await findingTexts(runId)).toEqual([
       'Weakened `src/notes.test.ts`: adds skip or only, 1 fewer assertion — why?',
       "Changed typecheck config `tsconfig.json`, which the task didn't ask for — why?",
-      "Changed `notes.txt`, which the request and plan didn't name — check it.",
+      'Changed `notes.txt`, outside the request and plan.',
     ]);
   });
 });

@@ -15,7 +15,7 @@ const sourceNames: Record<TaskLink['source'], string> = {
   resource_link: 'Shared by the agent',
   agent_text: 'Mentioned by the agent',
   user: 'Added by you',
-  ship: 'Opened by Ship',
+  ship: 'Opened in this chat',
   ticket: 'The ticket this task started from',
 };
 
@@ -44,7 +44,7 @@ function FolderChip({ link }: { link: ChipLink }) {
   );
 }
 
-export function LinkChip({ link }: { link: ChipLink }) {
+function LinkChip({ link }: { link: ChipLink }) {
   if (link.kind === 'folder') return <FolderChip link={link} />;
   const href = link.kind === 'file' ? `/api${link.url}` : link.url;
   return (

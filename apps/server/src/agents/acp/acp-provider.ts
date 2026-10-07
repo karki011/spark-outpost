@@ -72,6 +72,7 @@ import {
   type ReplayFilter,
 } from './session-open.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
+import { withToolCalls } from './tool-call-outputs.ts';
 import { promptTokens } from './prompt-usage.ts';
 import { slashPrompt } from './slash-commands.ts';
 
@@ -124,7 +125,9 @@ async function runSession(
   legacyPermissions: boolean,
 ): Promise<void> {
   const { definition } = options;
-  const mapper = createUpdateMapper(definition.name, definition.longContext === true);
+  const mapper = withToolCalls(
+    createUpdateMapper(definition.name, definition.longContext === true),
+  );
   const push = (outputs: ProviderOutput[]) =>
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;

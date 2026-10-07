@@ -17,6 +17,7 @@ import { createFakeProvider } from '../src/providers/fake.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../src/workflow/approval-gate.ts';
 import { WAITING_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { doRun, insertCommandApproval, linkedConversation } from './approval-support.ts';
 import { connectCliProvider, createTestDb, eventually, type TestDb } from './support.ts';
@@ -137,7 +138,20 @@ describe('Do runs with approvals', () => {
       status: 'cancelled',
       decidedBy: 'stop',
     });
-    expect((await getConversationDetail(t.db, conversationId))?.approvals).toEqual([]);
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.approvals).toEqual([]);
+    await expectConformantRun(t.db, runId);
+    const builder = await builderRunId(runId);
+    const { rows } = await t.db.query<{ type: string; interrupted: string | null }>(
+      `SELECT type, payload #>> '{metadata,spark,interrupted}' AS interrupted FROM run_events
+       WHERE run_id = $1 ORDER BY seq DESC LIMIT 2`,
+      [builder],
+    );
+    expect(rows).toEqual([
+      { type: 'RUN_FINISHED', interrupted: null },
+      { type: 'STEP_FINISHED', interrupted: 'true' },
+    ]);
+    expect(detail?.activity[builder]?.at(-1)?.done).toBe(false);
   });
 
   it('fails the run when nobody answers in time', async () => {
@@ -149,6 +163,7 @@ describe('Do runs with approvals', () => {
       await builderRunId(runId),
     ]);
     expect(rows).toEqual([{ status: 'expired' }]);
+    await expectConformantRun(t.db, runId);
   });
 
   it('expires pending approvals when a crashed run is recovered', async () => {
@@ -166,6 +181,7 @@ describe('Do runs with approvals', () => {
       status: 'expired',
       decidedBy: 'recovery',
     });
+    await expectConformantRun(t.db, runId);
   });
 });
 

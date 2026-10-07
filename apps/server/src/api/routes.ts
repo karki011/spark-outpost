@@ -17,6 +17,7 @@ import {
   sendUserMessage,
 } from '../persistence/conversations.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
+import { reasoningText } from '../persistence/run-events.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
 import { commandOutput } from '../persistence/run-commands.ts';
 import { stopRun } from '../workflow/stop-run.ts';
@@ -157,6 +158,15 @@ export function apiRoutes(deps: RouteDeps): Router {
       return;
     }
     res.json(output);
+  });
+
+  router.get('/runs/:id/reasoning/:messageId', async (req, res) => {
+    const thought = await reasoningText(db, paramId(req), paramId(req, 'messageId'));
+    if (!thought) {
+      res.status(404).json({ error: 'Thinking not found.' });
+      return;
+    }
+    res.json(thought);
   });
 
   router.get('/runs/:id/events', async (req, res) => {

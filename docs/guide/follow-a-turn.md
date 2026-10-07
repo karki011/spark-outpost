@@ -11,12 +11,12 @@ You'll follow a running turn, stop it and queue more messages. About 2 minutes.
 ## See what's happening
 
 1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
-2. Select the step count.
+2. Select the step count, then **Thinking** to read it.
 3. Select **Show work panel** in the chat header for the plan, crew, files and cost.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
-Commands the agent runs show output in a terminal in the reply. Passing ones fold to a line; failed ones stay open. Codex output is live; Claude's appears when the command ends.
+Commands show output in a terminal in the reply. Passing ones fold to a line; failed ones stay open. Codex output is live; Claude's appears when the command ends.
 
 ## Stop a turn
 

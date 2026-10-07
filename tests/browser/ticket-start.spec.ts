@@ -98,7 +98,7 @@ test('Add context takes a note, links, files and folders, and the chat gets a sh
   const brief = page.locator('.msg.me').first();
   await expect(brief).toContainText('Ticket data from Linear');
   await expect(brief).toContainText('untrusted third-party text');
-  await expect(brief).toContainText('spark_tickets');
+  await expect(brief).not.toContainText('spark_tickets');
   await expect(brief).toContainText('Keep the copy short and friendly.');
   await expect(brief).toContainText('https://docs.example.com/settings-copy');
   await expect(brief).toContainText(path.join(base, 'web', 'reports'));

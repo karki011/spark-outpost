@@ -29,6 +29,7 @@ import { moveTicket } from './sync.ts';
 
 export interface StartDeps extends TicketDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
+  offersSparkTools(provider: string): boolean;
 }
 
 async function hasMessages(db: Queryable, conversationId: string): Promise<boolean> {
@@ -98,7 +99,10 @@ export async function startTicket(
     request.conversationId,
     {
       id: request.messageId,
-      content: ticketBrief(ticket, request.mode, context),
+      content: ticketBrief(ticket, request.mode, {
+        context,
+        canReadTicket: deps.offersSparkTools(target.provider),
+      }),
       attachmentIds: context.attachments.map((file) => file.id),
       source: 'ticket',
     },

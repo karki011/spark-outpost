@@ -2,7 +2,7 @@ import type * as acp from '@agentclientprotocol/sdk';
 import type { SparkScope } from '../../spark-mcp/deps.ts';
 import type { SparkGrant, SparkMcpHost } from '../../spark-mcp/host.ts';
 import { SPARK_MCP_NAME } from '../../spark-mcp/server.ts';
-import type { AgentDefinition } from './agents.ts';
+import { agentDefinitions, type AgentDefinition } from './agents.ts';
 import { supportsTransport, type NamedMcpServer } from './repo-session.ts';
 
 export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> & Partial<Pick<SparkMcpHost, 'browser'>>;
@@ -11,6 +11,12 @@ export interface SparkTools {
   name: string;
   grant: SparkGrant;
   browser: boolean;
+}
+
+export type AgentRuntime = 'acp' | 'fake';
+
+export function sparkToolsOffered(runtime: AgentRuntime, provider: string): boolean {
+  return runtime === 'acp' && Object.hasOwn(agentDefinitions, provider);
 }
 
 const FALLBACK_NAME = 'spark_outpost';

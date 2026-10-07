@@ -31,7 +31,7 @@ export function useRoomInThread(rail: RefObject<HTMLElement | null>): void {
     const thread = element?.closest('.thread');
     if (!element || !thread || typeof ResizeObserver !== 'function') return;
     const fit = () =>
-      element.style.setProperty('--crail-room', `${thread.clientHeight - RAIL_GUTTER}px`);
+      element.style.setProperty('max-height', `${thread.clientHeight - RAIL_GUTTER}px`);
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(thread);

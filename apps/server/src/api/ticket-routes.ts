@@ -36,12 +36,14 @@ import { dismissFlags, markNoticeSeen, snoozeProblem, snoozeTicket } from '../ti
 import { TicketApiError, TicketConflictError, TicketNotConnectedError } from '../tickets/source.ts';
 import { startTicket } from '../tickets/start.ts';
 import { moveTicket } from '../tickets/sync.ts';
+import { sparkToolsOffered, type AgentRuntime } from '../agents/acp/spark-tools.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { gitHubDepsOf, type GitHubRouteDeps } from './ship-routes.ts';
 import { BadRequestError, parseBody } from './validation.ts';
 
 export interface TicketRouteDeps extends GitHubRouteDeps {
   fixedRunProvider?: string;
+  agentRuntime?: AgentRuntime;
   linearApiUrl?: string | undefined;
 }
 
@@ -75,6 +77,8 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
     linearApiUrl: routeDeps.linearApiUrl,
   };
   const runTarget = (conversationId: string) => resolveRunTarget(routeDeps, conversationId);
+  const offersSparkTools = (provider: string) =>
+    sparkToolsOffered(routeDeps.agentRuntime ?? 'fake', provider);
   const router = Router();
 
   router.get('/tickets/connections', async (_req, res) => {
@@ -133,13 +137,14 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   });
 
   router.get('/tickets/:source/:key', async (req, res) => {
-    res.json(await ticketView(deps, sourceParam(req), keyParam(req)));
+    const github = gitHubDepsOf(routeDeps);
+    res.json(await ticketView({ ...deps, github }, sourceParam(req), keyParam(req)));
   });
 
   router.post('/tickets/:source/:key/start', async (req, res) => {
     const request = parseBody(startTicketRequestSchema, req);
     const started = await startTicket(
-      { ...deps, runTarget },
+      { ...deps, runTarget, offersSparkTools },
       sourceParam(req),
       keyParam(req),
       request,

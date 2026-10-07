@@ -132,7 +132,7 @@ function FeedbackRow({
       ref={rowRef}
     >
       <div className="fb-line">
-        <span id={labelId} className={quiet || variant === 'turn' ? 'sr-only' : 'fb-q'}>
+        <span id={labelId} className={quiet || !reverted ? 'sr-only' : 'fb-q'}>
           {reverted ? 'What went wrong?' : 'How did it go?'}
         </span>
         {!reverted && (

@@ -1,0 +1,16 @@
+.timed-out {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.timed-out-err {
+  color: var(--danger);
+}

@@ -84,6 +84,17 @@ function isFileContentField(key: string): boolean {
   return FILE_CONTENT_FIELDS.has(key.toLowerCase().replace(/[^a-z0-9]/g, ''));
 }
 
+export function withoutFileContent(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutFileContent);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      isFileContentField(key) ? redacted('secret_file') : withoutFileContent(child),
+    ]),
+  );
+}
+
 export function mentionsSecretFile(value: unknown): boolean {
   if (typeof value === 'string') return value.split(/[\s=<>|&]+/).some(looksLikeSecretPath);
   if (Array.isArray(value)) return value.some(mentionsSecretFile);

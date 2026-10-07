@@ -13,6 +13,7 @@ import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
+import { eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   createFakeSession,
@@ -168,51 +169,6 @@ async function fileRequests(
   }
 }
 
-const FAKE_SECRETS = {
-  apiKey: 'sk-proj-abcdefghijklmnopqrstuvwx',
-  github: 'ghp_abcdefghijklmnopqrstuvwxyz0123',
-  envFile: 'PLAIN_VALUE=hello-from-dotenv',
-  stderr: 'Bearer abc123def456ghi789',
-};
-
-async function leakSecrets(
-  update: (value: acp.SessionUpdate) => Promise<void>,
-  say: (chunk: string) => Promise<void>,
-): Promise<acp.StopReason> {
-  process.stderr.write(`auth header ${FAKE_SECRETS.stderr}\n`);
-  await update({
-    sessionUpdate: 'tool_call',
-    toolCallId: 's1',
-    title: 'Run printenv',
-    kind: 'execute',
-    status: 'in_progress',
-    rawInput: { command: ['printenv'] },
-  });
-  await update({
-    sessionUpdate: 'tool_call_update',
-    toolCallId: 's1',
-    status: 'completed',
-    rawOutput: { stdout: `OPENAI_API_KEY=${FAKE_SECRETS.apiKey}\nHOME=/home/x`, exitCode: 0 },
-    content: [{ type: 'content', content: { type: 'text', text: `token ${FAKE_SECRETS.github}` } }],
-  });
-  await update({
-    sessionUpdate: 'tool_call',
-    toolCallId: 's2',
-    title: 'Read .env',
-    kind: 'read',
-    status: 'in_progress',
-    rawInput: { file_path: '/work/app/.env' },
-  });
-  await update({
-    sessionUpdate: 'tool_call_update',
-    toolCallId: 's2',
-    status: 'completed',
-    rawOutput: FAKE_SECRETS.envFile,
-  });
-  await say('done');
-  return 'end_turn';
-}
-
 const FAKE_USAGE = { totalTokens: 180, inputTokens: 120, outputTokens: 60, cachedReadTokens: 100 };
 
 const CREDENTIAL_NAMES = /ANTHROPIC|CLAUDE|OPENAI|AWS|_KEY$|TOKEN|SECRET/;
@@ -321,6 +277,8 @@ async function turn(
   if (text.includes('#auth')) throw acp.RequestError.authRequired();
   if (text.includes('#refuse')) return 'refusal';
   if (text.includes('#secret')) return leakSecrets(update, say);
+  if (text.includes('#twins') || text.includes('#hang'))
+    return eventsTurn(text, update, say, signal);
   if (text.includes('#failure')) {
     const failure = (severity: string, title: string) =>
       update({

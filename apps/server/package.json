@@ -30,11 +30,13 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@ag-ui/client": "1.0.2",
     "@types/express": "^5.0.6",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.1",
     "concurrently": "^10.0.5",
+    "rxjs": "7.8.1",
     "supertest": "^7.3.0",
     "tsx": "^4.23.15"
   }

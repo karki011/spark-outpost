@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   bringChangesResultSchema,
+  bringReadinessSchema,
   chatWorkspaceSchema,
   projectBranchesSchema,
   type BringChangesResult,
+  type BringReadiness,
   type ChatWorkspace,
   type ProjectBranches,
   type UpdateChatWorkspaceRequest,
@@ -15,6 +17,8 @@ import { projectKeys } from '../../api/projects.ts';
 export const workspaceKeys = {
   chat: (conversationId: string) => ['conversations', conversationId, 'workspace'] as const,
   branches: (projectId: string) => ['project-branches', projectId] as const,
+  bring: (conversationId: string) =>
+    ['conversations', conversationId, 'workspace', 'bring'] as const,
 };
 
 export const workspaceApi = {
@@ -30,6 +34,8 @@ export const workspaceApi = {
       method: 'POST',
       body: '{}',
     }),
+  bringReadiness: (conversationId: string): Promise<BringReadiness> =>
+    request(bringReadinessSchema, `/conversations/${conversationId}/workspace/bring`),
   bring: (conversationId: string): Promise<BringChangesResult> =>
     request(bringChangesResultSchema, `/conversations/${conversationId}/workspace/bring`, {
       method: 'POST',
@@ -78,6 +84,14 @@ export function useUpdateWorkspace(conversationId: string) {
 
 export function useOpenWorktree(conversationId: string) {
   return useMutation({ mutationFn: () => workspaceApi.open(conversationId) });
+}
+
+export function useBringReadiness(conversationId: string) {
+  return useQuery({
+    queryKey: workspaceKeys.bring(conversationId),
+    queryFn: () => workspaceApi.bringReadiness(conversationId),
+    staleTime: 0,
+  });
 }
 
 export function useBringChanges(conversationId: string) {

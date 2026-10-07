@@ -5,6 +5,7 @@ import {
   jiraPeople,
   type FakeJiraIssue,
 } from '../../apps/server/test/fake-jira.ts';
+import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import {
   fakeLinear,
   LINEAR_ME,
@@ -266,8 +267,18 @@ export function ticketFakes() {
     denyAssign(project: string) {
       jira.denyAssign.add(project);
     },
+    development(key: string, development: FakeDevelopment) {
+      jira.development[key] = development;
+    },
+    devStatusMode(mode: DevStatusMode) {
+      jira.devStatus.mode = mode;
+    },
     handles(path: string): boolean {
-      return path.startsWith('/linear/') || path.startsWith('/rest/api/3/');
+      return (
+        path.startsWith('/linear/') ||
+        path.startsWith('/rest/api/3/') ||
+        path.startsWith('/rest/dev-status/')
+      );
     },
     handle(req: IncomingMessage, res: ServerResponse, path: string) {
       return path.startsWith('/linear/') ? linear.handle(req, res) : jira.handle(req, res);

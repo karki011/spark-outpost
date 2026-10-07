@@ -136,6 +136,7 @@ const { app, reconcileRemote } = createAppParts({
           locateCli: loginShellLocator(loginShell),
         })),
   }),
+  agentRuntime: config.AGENT_RUNTIME,
   loginShell,
   terminals,
   previews,

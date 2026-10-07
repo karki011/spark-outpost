@@ -413,7 +413,7 @@ export async function shownApprovalsForConversation(
   const { rows } = await db.query<ApprovalRow>(
     `SELECT a.* FROM approvals a JOIN runs r ON r.id = a.run_id
      WHERE r.conversation_id = $1
-       AND (a.status = 'pending' OR a.decided_by = 'user'
+       AND (a.status = 'pending' OR a.decided_by IN ('user', 'timeout')
          OR (a.kind = $2 AND a.payload ? 'sparkResult'))
      ORDER BY a.created_at`,
     [conversationId, SPARK_ACTION_KIND],

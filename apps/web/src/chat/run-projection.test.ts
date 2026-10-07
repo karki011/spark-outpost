@@ -3,6 +3,7 @@ import { EventType, modelSwitchText, type RunEvent } from '@spark-outpost/contra
 import {
   applyRunEvent,
   initialRunProjection,
+  shownSteps,
   shownText,
   streamLeads,
   viewSteps,
@@ -36,6 +37,93 @@ describe('applyRunEvent', () => {
       text: 'Hello world',
       lastSeq: 8,
     });
+  });
+
+  it('keeps a step open when it was only closed because the run stopped', () => {
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Running tests' }],
+      [
+        2,
+        {
+          type: EventType.STEP_FINISHED,
+          stepName: 'Running tests',
+          metadata: { spark: { interrupted: true } },
+        },
+      ],
+      [
+        3,
+        { type: EventType.RUN_FINISHED, runId: 'r', threadId: 't', outcome: { type: 'cancelled' } },
+      ],
+    ]);
+    expect(state.steps).toEqual([{ name: 'Running tests', done: false }]);
+    expect(state.status).toBe('cancelled');
+  });
+
+  it('finishes the step of the tool call that ended, not every step with that name', () => {
+    const started = (toolCallId: string): RunEvent => ({
+      type: EventType.STEP_STARTED,
+      stepName: 'Search',
+      metadata: { spark: { toolCallId } },
+    });
+    const state = replay([
+      [1, started('a')],
+      [2, started('b')],
+      [
+        3,
+        {
+          type: EventType.STEP_FINISHED,
+          stepName: 'Search',
+          metadata: { spark: { toolCallId: 'b' } },
+        },
+      ],
+    ]);
+    expect(state.steps.map((step) => step.done)).toEqual([false, true]);
+  });
+
+  it('finishes the oldest open step by name when a run has no tool call ids', () => {
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Search' }],
+      [2, { type: EventType.STEP_STARTED, stepName: 'Search' }],
+      [3, { type: EventType.STEP_FINISHED, stepName: 'Search' }],
+    ]);
+    expect(state.steps).toEqual([
+      { name: 'Search', done: true },
+      { name: 'Search', done: false },
+    ]);
+  });
+
+  it('keeps thinking text with its Thinking step and ignores tool call events', () => {
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Thinking' }],
+      [2, { type: EventType.REASONING_START, messageId: 'th' }],
+      [3, { type: EventType.REASONING_MESSAGE_START, messageId: 'th', role: 'reasoning' }],
+      [4, { type: EventType.REASONING_MESSAGE_CONTENT, messageId: 'th', delta: 'Check ' }],
+      [5, { type: EventType.REASONING_MESSAGE_CONTENT, messageId: 'th', delta: 'the tests' }],
+      [6, { type: EventType.REASONING_MESSAGE_END, messageId: 'th' }],
+      [7, { type: EventType.REASONING_END, messageId: 'th' }],
+      [8, { type: EventType.STEP_FINISHED, stepName: 'Thinking' }],
+      [9, { type: EventType.TOOL_CALL_START, toolCallId: 'a', toolCallName: 'Read' }],
+      [10, { type: EventType.TOOL_CALL_ARGS, toolCallId: 'a', delta: '{}' }],
+      [11, { type: EventType.TOOL_CALL_END, toolCallId: 'a' }],
+      [12, { type: EventType.TOOL_CALL_RESULT, toolCallId: 'a', messageId: 'm', content: 'ok' }],
+    ]);
+    expect(state.steps).toEqual([
+      { name: 'Thinking', done: true, reasoningId: 'th', thought: 'Check the tests' },
+    ]);
+    expect(viewSteps(state.steps)).toEqual([
+      { name: 'Thinking', status: 'done', reasoningId: 'th', thought: 'Check the tests' },
+    ]);
+    expect(state.lastSeq).toBe(12);
+  });
+
+  it('does not attach thinking to a step that already finished', () => {
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Reading' }],
+      [2, { type: EventType.STEP_FINISHED, stepName: 'Reading' }],
+      [3, { type: EventType.REASONING_START, messageId: 'th' }],
+      [4, { type: EventType.REASONING_MESSAGE_CONTENT, messageId: 'th', delta: 'lost' }],
+    ]);
+    expect(state.steps).toEqual([{ name: 'Reading', done: true }]);
   });
 
   it('ignores replayed events it has already applied', () => {
@@ -132,5 +220,20 @@ describe('shownText', () => {
   it('uses the persisted text for a finished run that never streamed', () => {
     expect(streamLeads(initialRunProjection, true)).toBe(false);
     expect(shownText(initialRunProjection, 'Stored reply', true)).toBe('Stored reply');
+  });
+});
+
+describe('shownSteps', () => {
+  const saved = [{ name: 'Thinking', done: true, reasoningId: 'th' }];
+  const stream = { steps: [{ name: 'Thinking', done: true, reasoningId: 'th', thought: 'live' }] };
+
+  it('shows the stream while it leads or nothing is saved yet', () => {
+    expect(shownSteps(stream, saved, true)).toBe(stream.steps);
+    expect(shownSteps(stream, [], false)).toBe(stream.steps);
+  });
+
+  it('keeps thinking text already streamed once the saved steps take over', () => {
+    expect(shownSteps(stream, saved, false)).toEqual(stream.steps);
+    expect(shownSteps({ steps: [] }, saved, false)).toBe(saved);
   });
 });

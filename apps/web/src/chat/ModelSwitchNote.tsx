@@ -1,5 +1,7 @@
 import { modelSwitchText, type ModelSwitch } from '@spark-outpost/contracts';
 import { requestSettings } from '../settings/settings-request.ts';
+import { timedOut } from './approvals/timed-out.ts';
+import { TimedOutNote } from './approvals/TimedOutNote.tsx';
 import './composer/unusable-model.css';
 
 function ModelsLink() {
@@ -19,14 +21,23 @@ export function ModelSwitchNote({ change }: { change: ModelSwitch | null | undef
   );
 }
 
+export interface TimedOutFacts {
+  asked: string | null;
+  retryIn: string | null;
+}
+
 interface ErrorLineProps {
   error: string | null;
   details?: string | null | undefined;
   change?: ModelSwitch | null | undefined;
+  waited?: TimedOutFacts | undefined;
 }
 
-export function ErrorLine({ error, details, change }: ErrorLineProps) {
+export function ErrorLine({ error, details, change, waited }: ErrorLineProps) {
   if (!error) return null;
+  if (timedOut(error)) {
+    return <TimedOutNote asked={waited?.asked ?? null} conversationId={waited?.retryIn ?? null} />;
+  }
   return (
     <>
       <p className="error-line">

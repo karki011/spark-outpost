@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { friendlyStep } from '@spark-outpost/contracts';
 import type { TurnState } from './AiTurn.tsx';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
+import { StepThought, ThoughtToggle } from './StepThought.tsx';
 
 function StepName({ name }: { name: string }) {
   return friendlyStep(name)
@@ -31,19 +32,31 @@ export function turnHeading(
 
 export interface StepLog {
   open: boolean;
+  runId: string | null;
   listId: string;
   views: StepView[];
   working: boolean;
   toggle(): void;
 }
 
-export function useStepLog(steps: readonly RunStep[], state: TurnState): StepLog | null {
+export function useStepLog(
+  steps: readonly RunStep[],
+  state: TurnState,
+  runId: string | null = null,
+): StepLog | null {
   const working = state === 'working' || state === 'waiting';
   const [choice, setChoice] = useState<boolean | null>(null);
   const listId = useId();
   if (steps.length === 0) return null;
   const open = choice ?? false;
-  return { open, listId, views: viewSteps(steps), working, toggle: () => setChoice(!open) };
+  return {
+    open,
+    runId,
+    listId,
+    views: viewSteps(steps),
+    working,
+    toggle: () => setChoice(!open),
+  };
 }
 
 export function StepToggle({ log, label }: { log: StepLog; label: string }) {
@@ -82,6 +95,35 @@ function StepIcon({ step, working }: { step: StepView; working: boolean }) {
   return <span className="step-open" role="img" aria-label="Not finished" />;
 }
 
+function StepRow({ step, log }: { step: StepView; log: StepLog }) {
+  const [reading, setReading] = useState(false);
+  const thoughtId = useId();
+  const thinking = step.reasoningId && log.runId ? step.reasoningId : null;
+  return (
+    <li className={thinking && reading ? 'reading' : undefined}>
+      <StepIcon step={step} working={log.working} />
+      {thinking ? (
+        <ThoughtToggle open={reading} controls={thoughtId} onToggle={() => setReading(!reading)}>
+          <StepName name={step.name} />
+        </ThoughtToggle>
+      ) : (
+        <span>
+          <StepName name={step.name} />
+        </span>
+      )}
+      {thinking && reading && (
+        <StepThought
+          id={thoughtId}
+          runId={log.runId!}
+          reasoningId={thinking}
+          live={step.thought}
+          streaming={log.working && step.status === 'open'}
+        />
+      )}
+    </li>
+  );
+}
+
 export function StepList({ log }: { log: StepLog }) {
   const [wasOpen, setWasOpen] = useState(log.open);
   const [closing, setClosing] = useState(false);
@@ -101,12 +143,7 @@ export function StepList({ log }: { log: StepLog }) {
       {(log.open || closing) && (
         <ul>
           {log.views.map((step, index) => (
-            <li key={`${step.name}-${index}`}>
-              <StepIcon step={step} working={log.working} />
-              <span>
-                <StepName name={step.name} />
-              </span>
-            </li>
+            <StepRow key={`${step.name}-${index}`} step={step} log={log} />
           ))}
         </ul>
       )}
@@ -117,10 +154,11 @@ export function StepList({ log }: { log: StepLog }) {
 interface WorkLogProps {
   steps: RunStep[];
   state: TurnState;
+  runId?: string;
 }
 
-export function WorkLog({ steps, state }: WorkLogProps) {
-  const log = useStepLog(steps, state);
+export function WorkLog({ steps, state, runId }: WorkLogProps) {
+  const log = useStepLog(steps, state, runId);
   if (!log) return null;
   return (
     <div className={log.open ? 'steps open' : 'steps'}>

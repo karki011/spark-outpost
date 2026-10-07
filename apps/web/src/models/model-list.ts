@@ -63,8 +63,47 @@ export interface ModelGroup {
   models: ModelCardView[];
 }
 
-export function groupModels(models: readonly ModelCardView[]): ModelGroup[] {
-  const ordered = orderModels(models);
+export const SORT_KEYS = ['tier', 'input', 'cached', 'output'] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export type SortDirection = 'ascending' | 'descending';
+
+export interface ModelSort {
+  key: SortKey;
+  direction: SortDirection;
+}
+
+export function nextSort(current: ModelSort | null, key: SortKey): ModelSort | null {
+  if (current?.key !== key) return { key, direction: 'ascending' };
+  return current.direction === 'ascending' ? { key, direction: 'descending' } : null;
+}
+
+function sortValue(card: ModelCard, key: SortKey): number | null {
+  if (key === 'tier') return TIER_ORDER[card.tier];
+  if (!card.price) return null;
+  if (key === 'input') return card.price.inputPerMillion;
+  if (key === 'cached') return card.price.cachedInputPerMillion;
+  return card.price.outputPerMillion;
+}
+
+export function sortModels(
+  models: readonly ModelCardView[],
+  sort: ModelSort | null,
+): ModelCardView[] {
+  if (!sort) return [...models];
+  const sign = sort.direction === 'ascending' ? 1 : -1;
+  return models.toSorted((a, b) => {
+    const left = sortValue(a.card, sort.key);
+    const right = sortValue(b.card, sort.key);
+    if (left === null || right === null) return Number(left === null) - Number(right === null);
+    return sign * (left - right);
+  });
+}
+
+export function groupModels(
+  models: readonly ModelCardView[],
+  sort: ModelSort | null = null,
+): ModelGroup[] {
+  const ordered = sortModels(orderModels(models), sort);
   const groups: ModelGroup[] = [
     { id: 'spark', title: 'Spark picks from these', models: ordered.filter(usedBySpark) },
     {
@@ -108,6 +147,26 @@ export function retirementDetail(card: ModelCard, now: number = Date.now()): str
   return date ? `Retires ${date}` : null;
 }
 
+export const MISSING = '—';
+
+export function knowledgeMonth(card: ModelCard): string {
+  return /^\d{4}-\d{2}/.test(card.knowledgeCutoff) ? card.knowledgeCutoff.slice(0, 7) : MISSING;
+}
+
+export function contextLine(card: ModelCard): string {
+  return `${formatTokenCount(card.contextTokens)} / ${formatTokenCount(card.maxOutputTokens)}`;
+}
+
+export function priceCells(card: ModelCard): [string, string, string] {
+  if (!card.price) return [MISSING, MISSING, MISSING];
+  const { inputPerMillion, cachedInputPerMillion, outputPerMillion } = card.price;
+  return [
+    formatPrice(inputPerMillion),
+    formatPrice(cachedInputPerMillion),
+    formatPrice(outputPerMillion),
+  ];
+}
+
 export function fullPrice(card: ModelCard): string {
   if (!card.price) return 'No price listed';
   const { inputPerMillion, cachedInputPerMillion, outputPerMillion } = card.price;
@@ -133,6 +192,7 @@ export function modelFacts(card: ModelCard, now: number = Date.now()): [string, 
     ],
     ['Speed', card.speed],
     ['Effort', `${effortRange(card)}${defaultEffort ? ` (default ${defaultEffort})` : ''}`],
+    ['Knowledge', card.knowledgeCutoff || MISSING],
   ];
   if (retirement) facts.push(['Retirement', retirement]);
   return facts;
@@ -157,6 +217,7 @@ export function staleNote(view: ModelCardView): StaleNote | null {
 }
 
 export interface BenchmarkBadge {
+  ratio: string;
   text: string;
   detail: string;
   anecdotal: boolean;
@@ -168,8 +229,10 @@ export function benchmarkBadge(view: ModelCardView): BenchmarkBadge | null {
   )[0];
   if (!best) return null;
   const cost = `${best.estimated ? '~' : ''}$${best.meanCostUsd.toFixed(3)}`;
+  const ratio = `${best.passed}/${best.n}`;
   return {
-    text: `${best.passed}/${best.n} passed`,
+    ratio,
+    text: `${ratio} passed`,
     detail: `Best at ${best.label}, ${cost} mean`,
     anecdotal: best.anecdotal,
   };

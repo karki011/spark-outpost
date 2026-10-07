@@ -77,6 +77,11 @@ describe('crew agents', () => {
     const failed = runAgent(member({ status: 'failed' }), orchestration());
     expect(failed).toMatchObject({ state: 'failed', line: 'hit a problem' });
     expect(crewStateWord(failed.state)).toBe('Failed');
+    const waited = runAgent(
+      member({ status: 'failed', error: 'Approval timed out' }),
+      orchestration(),
+    );
+    expect(waited).toMatchObject({ state: 'stopped', line: 'waited for you' });
   });
 
   it('puts Jev first and merges retries of the same agent', () => {

@@ -6,6 +6,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { cacheTickets, ticketRef, ticketWork } from '../persistence/tickets.ts';
 import { connectedSources, requireSource, type TicketDeps } from './connections.ts';
+import { viewDevelopment, type DevelopmentDeps } from './development.ts';
 import { summaryOf } from './source.ts';
 
 export async function listTickets(deps: TicketDeps, query: TicketListQuery): Promise<TicketList> {
@@ -39,7 +40,7 @@ export async function listTickets(deps: TicketDeps, query: TicketListQuery): Pro
 }
 
 export async function ticketView(
-  deps: TicketDeps,
+  deps: DevelopmentDeps,
   source: TicketSourceId,
   key: string,
 ): Promise<TicketView> {
@@ -47,5 +48,7 @@ export async function ticketView(
   const ticket = await open.source.getTicket(key);
   await cacheTickets(deps.db, deps.workspaceId, [summaryOf(ticket)]);
   const work = await ticketWork(deps.db, deps.workspaceId, [ticket]);
-  return { ticket, work: work.get(ticketRef(ticket.source, ticket.key)) ?? [] };
+  const linked = work.get(ticketRef(ticket.source, ticket.key)) ?? [];
+  const development = await viewDevelopment(deps, open, ticket, linked);
+  return { ticket, work: linked, ...(development ? { development } : {}) };
 }

@@ -4,6 +4,7 @@ import { Router, type Response } from 'express';
 import {
   updateChatWorkspaceRequestSchema,
   type BringChangesResult,
+  type BringReadiness,
   type ChatWorkspace,
   type ProjectBranches,
 } from '@spark-outpost/contracts';
@@ -15,7 +16,12 @@ import {
   type ChatWorktree,
 } from '../persistence/chat-worktrees.ts';
 import type { Db } from '../persistence/db.ts';
-import { bringChanges, currentBranch, listBranches } from '../projects/chat-worktrees.ts';
+import {
+  bringChanges,
+  bringReady,
+  currentBranch,
+  listBranches,
+} from '../projects/chat-worktrees.ts';
 import { getProject } from '../projects/projects.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
 import { paramId, parseBody } from './validation.ts';
@@ -141,6 +147,20 @@ export function chatWorkspaceRoutes({ db, workspaceId, openFolder }: ChatWorkspa
     }
     await open(current.path);
     res.status(204).end();
+  });
+
+  router.get('/conversations/:id/workspace/bring', async (req, res) => {
+    const current = await primaryChatWorktree(db, paramId(req));
+    if (!current || current.inPlace) {
+      res.json({ into: null, ready: false } satisfies BringReadiness);
+      return;
+    }
+    const from = current.landedCommit ?? current.baseCommit;
+    const [into, ready] = await Promise.all([
+      currentBranch(current.repoRoot),
+      bringReady(current.repoRoot, from),
+    ]);
+    res.json({ into, ready } satisfies BringReadiness);
   });
 
   router.post('/conversations/:id/workspace/bring', async (req, res) => {

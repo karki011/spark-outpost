@@ -223,7 +223,7 @@ test('settings cards have no outer border and the last provider row follows the 
 
   await dialog.getByRole('tab', { name: 'Models' }).click();
   const models = page.getByRole('dialog', { name: 'Models' });
-  await models.getByRole('button', { name: /^Sonnet 5/ }).click();
+  await models.getByRole('button', { name: /^Sonnet 5 / }).click();
   await page.mouse.move(0, 0);
   await inEveryTheme(page, 'models');
 

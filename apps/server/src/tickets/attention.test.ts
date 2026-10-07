@@ -322,3 +322,51 @@ describe('inbox sections', () => {
     ]);
   });
 });
+
+describe("a teammate's pull request on my ticket", () => {
+  const theirs = (state: PullRequestStatus['state'], fields: Partial<PullRequestStatus> = {}) =>
+    facts({ pullRequest: { ...pull(state), ...fields }, pullRequestMine: false });
+
+  it('never raises approved, changes requested or slow review', () => {
+    for (const state of ['approved', 'changes_requested', 'review'] as const) {
+      expect(attentionFlags(theirs(state), DEFAULT_ATTENTION_SETTINGS, now)).toEqual([]);
+    }
+  });
+
+  it('shows the ticket as in review without a failing checks notice', () => {
+    const placed = placeTicket(
+      theirs('review', { checks: 'failing', headSha: 'abc' }),
+      DEFAULT_ATTENTION_SETTINGS,
+      now,
+    );
+    expect(placed).toMatchObject({ section: 'review', reason: 'PR #88 · checks failing' });
+    expect(placed.notice).toBeUndefined();
+  });
+
+  it('still flags a slow review when the ticket itself is in review', () => {
+    const slow = { ...theirs('review'), statusSince: daysAgo(5) };
+    const flags = attentionFlags(
+      { ...slow, ticket: { ...slow.ticket, status: 'in_review' } },
+      DEFAULT_ATTENTION_SETTINGS,
+      now,
+    );
+    expect(flags.map((entry) => entry.rule)).toEqual(['review-slow']);
+  });
+
+  it('counts a slow review from the pull request when the ticket never moved', () => {
+    const idle = { statusSince: daysAgo(9) };
+    const fresh = facts({ ...idle, pullRequest: { ...pull('review'), openedAt: daysAgo(0) } });
+    expect(attentionFlags(fresh, DEFAULT_ATTENTION_SETTINGS, now)).toEqual([]);
+    const old = facts({ ...idle, pullRequest: pull('review') });
+    expect(attentionFlags(old, DEFAULT_ATTENTION_SETTINGS, now)).toMatchObject([
+      { rule: 'review-slow', since: daysAgo(4) },
+    ]);
+  });
+
+  it('flags my own linked pull request as before', () => {
+    const mine = facts({ pullRequest: pull('approved'), pullRequestMine: true });
+    expect(
+      attentionFlags(mine, DEFAULT_ATTENTION_SETTINGS, now).map((entry) => entry.rule),
+    ).toEqual(['pr-approved']);
+  });
+});

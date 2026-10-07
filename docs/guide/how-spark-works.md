@@ -22,7 +22,7 @@ Most requests skip most steps. A question stops after step 1.
 | 6. Keep   | Spark keeps the change and lists concerns under [**Worth a look**](guardrails.md#worth-a-look). You can revert.                              | Same                    |
 | 7. Ship   | You [ship](ship-and-pull-requests.md), or **Full auto → PR** opens the PR. Spark then [handles PR feedback](pr-follow-up.md).                | Rules sort comments.    |
 
-![A crew turn: the dispatch line, the Builder and the kept card](images/prompt-flow-crew-turn-light.png)
+![A crew turn: the dispatch line, the Builder and the result line](images/prompt-flow-crew-turn-light.png)
 
 Hover the line above the crew to see how Spark handled each step. For where a card can stop a request, see [Cards](cards.md).
 

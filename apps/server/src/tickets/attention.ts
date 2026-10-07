@@ -5,6 +5,7 @@ import {
   type AttentionSettings,
   type PlanProgress,
   type PullRequestStatus,
+  type TicketDevelopment,
   type TicketChatState,
   type TicketLastSync,
   type TicketListItem,
@@ -25,6 +26,8 @@ export interface TicketFacts {
     agent?: string | null;
   } | null;
   pullRequest: PullRequestStatus | null;
+  pullRequestMine?: boolean;
+  development?: TicketDevelopment | undefined;
   lastSync: TicketLastSync | null;
   statusSince: string | null;
   assignedSince: string | null;
@@ -151,7 +154,9 @@ function feedbackFlags({ prFeedback }: TicketFacts): AttentionFlag[] {
   ];
 }
 
-export function checksNotice({ pullRequest: pull, chat }: TicketFacts): Notice | null {
+export function checksNotice(facts: TicketFacts): Notice | null {
+  const { pullRequest: pull, chat } = facts;
+  if (facts.pullRequestMine === false) return null;
   const open = pull && pull.state !== 'merged' && pull.state !== 'closed';
   if (!open || pull.checks !== 'failing' || chat?.state === 'running') return null;
   return {
@@ -208,10 +213,16 @@ function workFlags(facts: TicketFacts, limits: Thresholds, now: Date): Attention
   return flags;
 }
 
+function laterOf(a: string | null, b: string | null): string | null {
+  if (!a || !b) return a ?? b;
+  return Date.parse(b) > Date.parse(a) ? b : a;
+}
+
 function pullFlags(facts: TicketFacts, limits: Thresholds, now: Date): AttentionFlag[] {
   const pull = facts.pullRequest;
+  const mine = facts.pullRequestMine !== false;
   const flags: AttentionFlag[] = [];
-  if (pull?.state === 'changes_requested') {
+  if (mine && pull?.state === 'changes_requested') {
     flags.push(
       flag(
         'pr-changes',
@@ -221,7 +232,7 @@ function pullFlags(facts: TicketFacts, limits: Thresholds, now: Date): Attention
       ),
     );
   }
-  if (pull?.state === 'approved') {
+  if (mine && pull?.state === 'approved') {
     flags.push(
       flag(
         'pr-approved',
@@ -231,8 +242,11 @@ function pullFlags(facts: TicketFacts, limits: Thresholds, now: Date): Attention
       ),
     );
   }
-  const inReview = facts.ticket.status === 'in_review' || pull?.state === 'review';
-  const since = facts.statusSince ?? pull?.openedAt ?? null;
+  const inReview = facts.ticket.status === 'in_review' || (mine && pull?.state === 'review');
+  const since =
+    facts.ticket.status === 'in_review'
+      ? (facts.statusSince ?? pull?.openedAt ?? null)
+      : laterOf(facts.statusSince, pull?.openedAt ?? null);
   if (inReview && olderThan(since, limits.reviewDays, now)) {
     flags.push(
       flag(

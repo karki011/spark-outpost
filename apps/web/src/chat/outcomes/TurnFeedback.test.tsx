@@ -69,8 +69,12 @@ describe('TurnFeedback under a turn', () => {
     expect(screen.getByText('How did it go?').className).toBe('sr-only');
   });
 
-  it('still asks out loud on the keep card when nudged', () => {
+  it('stays a pair of thumbs on the result line, and asks out loud after a revert', () => {
     show({ prompt: 'mixed', feedback: null }, 'kept');
-    expect(screen.getByText('How did it go?').className).toBe('fb-q');
+    expect(screen.getByText('How did it go?').className).toBe('sr-only');
+    cleanup();
+
+    show({ prompt: 'mixed', feedback: null }, 'reverted');
+    expect(screen.getByText('What went wrong?').className).toBe('fb-q');
   });
 });
