@@ -97,10 +97,10 @@ test('Ship from the Changes tab commits the task file and opens a PR', async ({ 
   await expect(page.getByRole('status').filter({ hasText: 'Opened PR #1.' })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Opened PR #1.' })).toBeFocused();
   await expect(page.locator('.ship .lchip')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Update PR' })).toHaveCount(0);
-  await expect(open).toHaveCount(0);
+  await expect(open).toHaveText('Update PR');
+  await expect(open).toBeFocused();
+  await expect(page.locator('.col').getByRole('button', { name: 'Update PR' })).toHaveCount(0);
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
     title: string;
@@ -122,17 +122,14 @@ test('Ship from the Changes tab commits the task file and opens a PR', async ({ 
 
   await page.reload();
   const reopened = await changesTab(page);
-  await expect(reopened.locator('.ship')).toContainText(
-    'Pull request #1 is open. To push an update, ask in the message box.',
-  );
-  await expect(reopened.locator('.ship-btn')).toHaveCount(0);
+  await expect(reopened.locator('.ship-btn')).toHaveText('Update PR');
   await reopened.getByRole('tab', { name: 'Links' }).click();
   await expect(reopened.getByRole('list', { name: 'Pull requests in acme/widgets' })).toContainText(
     '#1',
   );
   await expect(reopened).not.toContainText('Opened by Ship');
   const kept = page.getByRole('region', { name: /^Kept · / });
-  await expect(kept.getByRole('link', { name: 'Pull request #1' })).toHaveAttribute(
+  await expect(kept.getByRole('link', { name: 'Pull request #1, Open' })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/pull/1',
   );
@@ -162,9 +159,7 @@ test('Ship pushes and links Create PR when GitHub is not connected', async ({ pa
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));
 });
 
-test('Full auto runs to a PR: the reply and the result line show the PR link', async ({
-  page,
-}) => {
+test('Full auto runs to a PR: the reply and the result line show the PR link', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'fullauto');
   writeFileSync(path.join(repo.root, 'mine.txt'), 'my own edit\n');
@@ -194,7 +189,7 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
   const kept = page.getByRole('region', { name: /^Kept · / });
   await expect(kept.locator('.result-note')).toHaveCount(0);
-  await expect(kept.getByRole('link', { name: 'Pull request #1' })).toHaveAttribute(
+  await expect(kept.getByRole('link', { name: 'Pull request #1, Open' })).toHaveAttribute(
     'href',
     'https://github.com/acme/widgets/pull/1',
   );

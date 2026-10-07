@@ -143,9 +143,9 @@ test('a turn lists changed files and opens each one in the diff drawer', async (
   await page.setViewportSize({ width: 1400, height: 900 });
   await editedChat(page, appRoot);
   const kept = page.getByRole('region', { name: /^Kept · / });
-  await expect(kept).toHaveAccessibleName('Kept · 1 file · +1 −0', { timeout: 20_000 });
+  await expect(kept).toHaveAccessibleName('Kept · 1 file', { timeout: 20_000 });
   await expect(page.getByRole('region', { name: /^Files changed/ })).toHaveCount(0);
-  await kept.getByRole('button', { name: 'Kept · 1 file · +1 −0' }).click();
+  await kept.getByRole('button', { name: 'Kept · 1 file' }).click();
   const block = kept.getByRole('region', { name: 'Files changed: 1 file changed' });
   await expect(block).toContainText('+1 −0');
   await expect(block.locator('.dstat i.a')).toHaveCount(1);
@@ -180,6 +180,7 @@ test('generated, huge, binary and renamed files stay compact until asked', async
   await page.route('**/api/tasks/*/changes/files?*', addToPage);
   await page.route('**/api/tasks/*/changes/diff?*', extraDiff);
   await editedChat(page, appRoot);
+  await page.getByRole('button', { name: /^Kept · / }).click({ timeout: 20_000 });
   const block = page.getByRole('region', { name: 'Files changed: 6 files changed' });
   await expect(block.locator('.fchg-h')).toContainText('+32.4k −353');
   const lock = block.locator('.chf').filter({ hasText: 'pnpm-lock.yaml' });

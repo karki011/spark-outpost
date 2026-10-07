@@ -23,6 +23,7 @@ import {
 } from './clarify.ts';
 import { changedLines, checkCommands } from './member-prompts.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
+import { checkTally } from './result-facts.ts';
 import type { Session } from './session.ts';
 import { lawItems, outsidePlanFiles } from '../laws/review.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
@@ -45,7 +46,7 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   const line = sessionReviewLine(s);
   const reason = line ? `${action.reason} ${line}` : action.reason;
   const lines = await changedLines(s);
-  return acceptCard(
+  const card = acceptCard(
     changes.files,
     reason,
     fixOptionLabel(s.flow.review),
@@ -53,6 +54,7 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
     lines,
     outsidePlanFiles(s),
   );
+  return { ...card, payload: { ...card.payload, checks: checkTally(s.checkBodies) } };
 }
 
 export function destructiveWork(s: Pick<Session, 'facts' | 'risky'>): boolean {

@@ -21,15 +21,15 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 ## Keep or revert
 
-Spark keeps changes by itself. The **Keep these changes?** card shows "Kept automatically", with a [**Worth a look**](guardrails.md#worth-a-look) list when something needs your eye.
+Spark keeps changes by itself. The turn ends in one result line that needs no answer: **Kept**, files, checks, commit and pull request, plus a [**Worth a look**](guardrails.md#worth-a-look) list. Expand it for files and branch.
 
 | To                                   | Select                                         |
 | ------------------------------------ | ---------------------------------------------- |
 | Undo a run                           | **Revert to before this run** on the turn      |
-| Copy kept changes into your checkout | **Bring changes into** _branch_                |
+| Copy kept changes into your checkout | **Bring changes into** _branch_, expanded      |
 | Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md) |
 
-The card waits for you, with **Keep**, **Fix** and **Revert**, only when Spark won't decide alone:
+A **Keep these changes?** card waits, with **Keep**, **Fix** and **Revert**, only when Spark won't decide alone:
 
 | Autonomy           | The card waits when                                             |
 | ------------------ | --------------------------------------------------------------- |

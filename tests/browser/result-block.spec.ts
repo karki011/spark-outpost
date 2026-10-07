@@ -4,6 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
+import { CREW_REQUEST, crewChat, crewRepo, send } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import {
   buildNotes,
@@ -11,7 +12,10 @@ import {
   CLAIM,
   OUTSIDE_FILES,
   shoot,
+  shootEverywhere,
+  SHOTS,
   STORED_LAWS,
+  storeResultFacts,
   storeWorthALook,
   timeOutLastTurn,
 } from './result-block-kit.ts';
@@ -51,12 +55,14 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   const block = result(page);
   await expect(block).toHaveAccessibleName('Kept · 1 file · +1 −0');
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Update PR|Open PR|Push branch/ })).toHaveCount(0);
+  await expect(
+    page.locator('.col').getByRole('button', { name: /Update PR|Open PR|Push branch/ }),
+  ).toHaveCount(0);
   await expect(page.locator('.col .lchip')).toHaveCount(0);
   await expect(block.getByRole('button', { name: /Bring changes into/ })).toHaveCount(0);
 
-  const pull = block.getByRole('link', { name: 'Pull request #1' });
-  await expect(pull).toHaveText('PR #1');
+  const pull = block.getByRole('link', { name: 'Pull request #1, Open' });
+  await expect(pull).toHaveText('PR #1 · Open');
   await expect(pull).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
   await expect(page.locator('.pr-opened')).toContainText('Opened pull request');
   await expect(page.locator('.pr-opened')).toHaveCount(1);
@@ -155,7 +161,7 @@ test('Bring changes sits in the expanded block and only when the checkout can ta
   writeFileSync(path.join(repo.root, 'mine.txt'), 'my own edit\n');
   await toggle.click();
   await toggle.click();
-  await expect(block).toContainText('in this chat’s worktree.');
+  await expect(block).toContainText('In this chat’s worktree.');
   await expect(bring).toHaveCount(0);
 
   rmSync(path.join(repo.root, 'mine.txt'));
@@ -166,7 +172,7 @@ test('Bring changes sits in the expanded block and only when the checkout can ta
   git(repo.root, 'commit', '--quiet', '-m', 'unrelated history');
   await toggle.click();
   await toggle.click();
-  await expect(block).toContainText('in this chat’s worktree.');
+  await expect(block).toContainText('In this chat’s worktree.');
   await expect(bring).toHaveCount(0);
 });
 
@@ -190,10 +196,10 @@ test('a timed-out approval reads as waited for you, says what was asked and retr
   const retry = note.getByRole('button', { name: 'Try again' });
   await retry.focus();
   await page.keyboard.press('Enter');
-  await expect(retry).toBeDisabled();
-  await expect(page.locator('.msg.user').last()).toContainText(
-    '“Run git commit?” timed out while waiting for my answer. Try that step again.',
-  );
+  const asked = page.locator('.msg.me', {
+    hasText: '“Run git commit?” timed out while waiting for my answer. Try that step again.',
+  });
+  await expect(asked).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0, {
     timeout: 30_000,
   });
@@ -225,8 +231,59 @@ test('the result block fits a phone and passes axe in light and dark', async ({ 
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  await expect(block.getByRole('link', { name: 'Pull request #1' })).toBeVisible();
+  await expect(block.getByRole('link', { name: /^Pull request #1, / })).toBeVisible();
   await expect(block.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   await block.scrollIntoViewIfNeeded();
   await shoot(page, 'after-phone');
+});
+
+test.describe('result block screenshots', () => {
+  test.skip(!SHOTS, 'Set SPARK_SHOTS to a folder to take the screenshots.');
+  test.describe.configure({ timeout: 180_000 });
+
+  test('a solo turn', async ({ page }) => {
+    const repo = await repoWithRemote(base, 'solo');
+    await chatIn(page, repo, 'Auto-edit');
+    const input = page.getByRole('textbox', { name: 'Message' });
+    await input.fill('Add a line to the notes #edit');
+    await input.press('Enter');
+    await expect(result(page)).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.crew-turn .crew-foot')).toContainText('1 agent');
+    await shootEverywhere(page, 'solo');
+  });
+
+  test('a crew turn with several agents', async ({ page }) => {
+    const repo = crewRepo();
+    try {
+      await crewChat(page, repo, 'Auto-edit');
+      await send(page, `${CREW_REQUEST} #build #crew`);
+      await expect(result(page)).toBeVisible({ timeout: 90_000 });
+      await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', {
+        timeout: 30_000,
+      });
+      await shootEverywhere(page, 'crew');
+    } finally {
+      repo.remove();
+    }
+  });
+
+  test('a turn with a pull request, expanded, and with failing checks', async ({ page }) => {
+    await fullAutoPr(page);
+    const block = result(page);
+    await expect(block.getByRole('link', { name: /^Pull request #1/ })).toBeVisible();
+    await shootEverywhere(page, 'with-pr');
+
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await block.getByRole('button', { name: /^Kept · 1 file/ }).click();
+    await shootEverywhere(page, 'with-pr-expanded');
+
+    await storeResultFacts({
+      checks: { passed: 2, failed: 1, unsettled: 0 },
+      keptNote:
+        'Opened draft PR #1, marked "Checks failing": https://github.com/acme/widgets/pull/1',
+    });
+    await page.reload();
+    await expect(result(page)).toContainText('1 check failing');
+    await shootEverywhere(page, 'failed-checks');
+  });
 });

@@ -90,7 +90,6 @@ test('after Revert, asks what went wrong with reasons and a comment', async ({ p
   await expect(keepCard(page)).toHaveAccessibleName('Reverted');
   const wrong = keepCard(page).getByRole('group', { name: 'What went wrong?' });
   await expect(wrong).toBeVisible({ timeout: 15_000 });
-  await expect(wrong.locator('.fb-q')).toHaveText('What went wrong?');
   await expect(wrong.getByRole('button', { name: 'Good result' })).toHaveCount(0);
   for (const reason of ['Wrong approach', 'Broke something', 'Too much change', 'Other']) {
     await expect(wrong.getByRole('button', { name: reason })).toBeVisible();

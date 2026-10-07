@@ -31,7 +31,7 @@ export function BringChanges({ conversationId }: { conversationId: string }) {
   return (
     <div className="bring">
       <p className="bring-where">
-        On <code>{current.branch}</code> in this chat&rsquo;s worktree.
+        In this chat&rsquo;s worktree.
         {offered && (
           <>
             {' '}

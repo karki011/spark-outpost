@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { crewChat, crewRepo, keptResult, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import {
+  card,
+  crewChat,
+  crewRepo,
+  keptResult,
+  resetCrew,
+  send,
+  type CrewRepo,
+} from './crew-engine.ts';
 
 let repo: CrewRepo;
 

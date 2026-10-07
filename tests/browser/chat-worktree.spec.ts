@@ -89,7 +89,8 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await expect(kept.locator('.ship-btn')).toHaveCount(0);
   await expect(kept.getByRole('button', { name: 'Bring changes into main' })).toHaveCount(0);
   await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
-  await expect(kept).toContainText(`On ${branch} in this chat’s worktree.`);
+  await expect(kept.locator('.result-where')).toHaveText(`${branch} · not committed`);
+  await expect(kept).toContainText('In this chat’s worktree.');
   await kept.getByRole('button', { name: 'Bring changes into main' }).click();
   const done = page.getByRole('status').filter({ hasText: 'Brought 1 file into main.' });
   await expect(done).toBeVisible();

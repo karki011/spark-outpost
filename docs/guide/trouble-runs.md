@@ -23,9 +23,9 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 
 ## A card expired
 
-- **You see:** **Expired** on an approval card.
+- **You see:** **Expired** on an approval card and "waited for you" on the turn.
 - **Why:** nobody answered within 30 minutes, so it was declined.
-- **Fix:** ask the agent to try again.
+- **Fix:** select **Try again** under the turn.
 - **Still stuck:** [allow the command](answer-approvals.md#let-a-command-run-without-asking) for the project.
 
 ## Spark blocked a step

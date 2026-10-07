@@ -195,9 +195,11 @@ test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own
   const turn = page.locator('.crew-turn');
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file|Run a command/ })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: /Keep these/ })).toContainText(
-    'Kept by Full auto → PR.',
-  );
+  await expect(page.getByRole('group', { name: /Keep these/ })).toHaveCount(0);
+  await keptResult(page)
+    .getByRole('button', { name: /^Kept · / })
+    .click();
+  await expect(keptResult(page).locator('.result-why')).toContainText('Full auto → PR');
   await agentHead(page, 'Bolt').first().click();
   const build = agentBlock(page, 'Bolt').first();
   await build.getByRole('button', { name: /^\d+ steps$/ }).click();

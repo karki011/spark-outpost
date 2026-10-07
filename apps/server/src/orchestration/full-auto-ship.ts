@@ -32,6 +32,7 @@ import { choosePrSplit, ownWorktreePieces } from './pr-split.ts';
 import { publish, type Session } from './session.ts';
 import { code } from '../laws/finding.ts';
 import { lawItems, lawsNote, outsidePlanFiles } from '../laws/review.ts';
+import { checkTally, keptAt } from './result-facts.ts';
 import type { FlowEvent } from './transitions.ts';
 
 export const CHECKS_FAILING_NOTE = 'Checks failing';
@@ -79,7 +80,13 @@ export async function autoKeep(
   const card = {
     ...plain,
     title: KEPT_TITLE,
-    payload: { ...plain.payload, keptBy, keptNote: keptNote(lines) },
+    payload: {
+      ...plain.payload,
+      keptBy,
+      keptNote: keptNote(lines),
+      checks: checkTally(s.checkBodies),
+      keptAt: await keptAt(s),
+    },
   };
   s.checkpoints += 1;
   const kept = await insertApproval(

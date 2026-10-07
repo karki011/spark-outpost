@@ -72,6 +72,8 @@ export function checkpoint(
         laws: [],
         outsidePlan: [],
         keptNote: null,
+        checks: null,
+        keptAt: null,
         lines: null,
         estimate: null,
         askAgainAt: null,

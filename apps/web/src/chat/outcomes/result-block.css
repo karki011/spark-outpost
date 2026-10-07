@@ -40,6 +40,15 @@
 .result-toggle[aria-expanded='true'] svg:first-child {
   transform: rotate(90deg);
 }
+.result-fact {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.result-fact.bad {
+  color: var(--danger);
+}
 .result-pr {
   padding: 2px 6px;
   border-radius: 6px;
@@ -88,6 +97,17 @@
   margin: 0 0 6px;
   color: var(--muted);
   line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.result-said {
+  margin: 0 0 6px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.result-where {
+  margin: 0 0 6px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .result-more .fchg {

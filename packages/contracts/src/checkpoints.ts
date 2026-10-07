@@ -128,6 +128,18 @@ export const checkpointPayloadSchema = z.object({
     .object({ added: z.number().int().nonnegative(), removed: z.number().int().nonnegative() })
     .nullable()
     .default(null),
+  checks: z
+    .object({
+      passed: z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+      unsettled: z.number().int().nonnegative(),
+    })
+    .nullable()
+    .default(null),
+  keptAt: z
+    .object({ branch: z.string().nullable(), commit: z.string().nullable() })
+    .nullable()
+    .default(null),
   estimate: z.string().nullable().default(null),
   askAgainAt: z.number().int().nullable().default(null),
 });

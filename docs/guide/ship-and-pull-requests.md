@@ -8,7 +8,7 @@ summary: Commit, push or open a pull request from a chat, and choose whether pul
 
 You'll ship a finished change as a commit, a pushed branch or a pull request. About 2 minutes.
 
-1. Select the ship button on the chat's outcome card or in the **Changes** tab of the **Work** panel. It reads **Open PR**, **Push branch** or **Commit**.
+1. Select the ship button in the **Changes** tab of the **Work** panel. It reads **Open PR**, **Push branch** or **Commit**.
 2. In **Ship this task**, pick **Commit**, **Push** or **PR** under **How to ship**.
 3. Check the branch, the files and the **Pull request title**.
 4. Select **Open PR**, **Push branch** or **Commit**.

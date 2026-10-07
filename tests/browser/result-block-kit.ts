@@ -71,6 +71,39 @@ export async function shoot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
 }
 
+export async function storeResultFacts(facts: Record<string, unknown>): Promise<void> {
+  const db = openTestDb();
+  try {
+    await db.query(
+      `UPDATE approvals
+          SET payload = jsonb_set(payload, '{checkpoint}', payload->'checkpoint' || $1::jsonb)
+        WHERE kind = 'accept'`,
+      [JSON.stringify(facts)],
+    );
+  } finally {
+    await db.end();
+  }
+}
+
+const SIZES = { desktop: { width: 1400, height: 900 }, phone: { width: 375, height: 812 } };
+
+export async function shootEverywhere(page: Page, name: string): Promise<void> {
+  if (!SHOTS) return;
+  const block = page.locator('section.result').last();
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate((skin) => {
+      document.documentElement.dataset.skin = skin === 'light' ? 'light' : 'graphite';
+    }, scheme);
+    for (const [size, viewport] of Object.entries(SIZES)) {
+      await page.setViewportSize(viewport);
+      await block.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(250);
+      await shoot(page, `${name}-${scheme}-${size}`);
+    }
+  }
+}
+
 export async function timeOutLastTurn(asked: string): Promise<void> {
   const db = openTestDb();
   try {
@@ -92,7 +125,13 @@ export async function timeOutLastTurn(asked: string): Promise<void> {
       [
         rows[0]!.id,
         asked,
-        JSON.stringify({ command: 'git commit -m notes', cwd: null, paths: [], diffs: [] }),
+        JSON.stringify({
+          command: 'git commit -m notes',
+          cwd: null,
+          paths: [],
+          diffs: [],
+          truncated: false,
+        }),
       ],
     );
   } finally {

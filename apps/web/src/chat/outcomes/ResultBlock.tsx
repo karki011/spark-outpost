@@ -5,11 +5,15 @@ import type { Run } from '@spark-outpost/contracts';
 import { CheckIcon, ChevronIcon, RestoreIcon } from '../../ui/icons.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged } from '../changes/FilesChanged.tsx';
-import { checkpointResult, type CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
+import {
+  checkpointResult,
+  saidNote,
+  type CheckpointApproval,
+} from '../checkpoints/checkpoint-model.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { BringChanges } from './BringChanges.tsx';
 import type { KeepCardHost } from './feedback-host.ts';
-import { keptLine, pullReferences } from './result-model.ts';
+import { checksFact, keptAtLine, keptLine, pullReferences } from './result-model.ts';
 import { TurnFeedback } from './TurnFeedback.tsx';
 import { WorthALook } from './WorthALook.tsx';
 
@@ -38,9 +42,9 @@ function PullReferences({ conversationId }: { conversationId: string }) {
           href={pull.url}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Pull request #${pull.number}`}
+          aria-label={`Pull request #${pull.number}, ${pull.state}`}
         >
-          PR #{pull.number}
+          PR #{pull.number} · {pull.state}
         </a>
       ))}
     </>
@@ -74,6 +78,10 @@ export function ResultBlock({
   const kept = variant === 'kept';
   const line = keptLine(checkpoint);
   const who = checkpointResult(approval);
+  const checks = checksFact(checkpoint.checks);
+  const where = keptAtLine(checkpoint.keptAt);
+  const commit = checkpoint.keptAt?.commit ?? null;
+  const said = saidNote(approval);
   return (
     <section className={kept ? 'result' : 'result reverted'} aria-label={kept ? line : 'Reverted'}>
       <div className="result-line">
@@ -90,6 +98,8 @@ export function ResultBlock({
             <span>{line}</span>
           </button>
         )}
+        {kept && checks && <span className={`result-fact ${checks.tone}`}>{checks.text}</span>}
+        {kept && commit && <code className="result-fact">{commit}</code>}
         {kept && <PullReferences conversationId={conversationId} />}
         <TurnFeedback key={variant} runId={runId} variant={variant} />
         {revertible ? (
@@ -109,6 +119,12 @@ export function ResultBlock({
           <p className="result-why">
             {checkpoint.keptBy ? checkpoint.reason || who : `${who} ${checkpoint.reason}`.trim()}
           </p>
+          {said && <p className="result-said">“{said}”</p>}
+          {where && (
+            <p className="result-where">
+              <code>{where}</code>
+            </p>
+          )}
           {taskId ? (
             <FilesChanged taskId={taskId} runIds={runIds} />
           ) : (
