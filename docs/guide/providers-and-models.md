@@ -16,9 +16,9 @@ You'll change a provider's defaults, reconnect it, read the model cards and conn
 
 ![Defaults for new chats on the Claude screen](images/providers-defaults-light.png)
 
-**How to connect** shows the **Account** and its usable **Models**. If the default isn't usable, select **Switch to …**.
+**How to connect** shows the **Account** and usable **Models**. If the default isn't usable, select **Switch to …**.
 
-Changes apply to new chats. A fixed **Effort** also applies to every Builder; **Per chat** lets each chat keep its own.
+Changes apply to new chats; **Model** only to chats off **Auto**. Fixed **Effort** covers every Builder; **Per chat** keeps each chat's own.
 
 ## Sign in again, switch or disconnect
 

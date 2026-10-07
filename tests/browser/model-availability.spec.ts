@@ -60,6 +60,15 @@ async function capture(page: Page, name: string, target?: Locator): Promise<void
 async function ask(page: Page, text: string): Promise<void> {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
+  const picker = page.getByRole('button', { name: /^Model and effort/ });
+  await expect(picker).toHaveAccessibleName('Model and effort: Auto');
+  await picker.click();
+  await page
+    .getByRole('dialog', { name: 'Model, effort, and permissions' })
+    .getByRole('radio', { name: /GPT-6\.1 Sol/ })
+    .click();
+  await expect(picker).toHaveAccessibleName('Model and effort: GPT-6.1 Sol');
+  await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
   await input.press('Enter');
@@ -133,9 +142,12 @@ test('a default the sign-in cannot use is flagged on the provider screen with a 
   await expect(codex).toContainText('2 usable, 1 unavailable (GPT-6.1 Sol)');
 
   await expandSection(codex, 'Defaults for new chats');
+  await expect(codex.getByRole('region', { name: 'Defaults for new chats' })).toContainText(
+    "New chats start on Auto, which picks the model. Chats that aren't on Auto and have no model of their own use this one.",
+  );
   const notice = codex.getByRole('status').filter({ hasText: 'default model' });
   await expect(notice).toContainText(
-    "Your ChatGPT sign-in can't use GPT-6.1 Sol. It is the default model for new chats.",
+    "Your ChatGPT sign-in can't use GPT-6.1 Sol. It is your default model.",
   );
   const scan = await new AxeBuilder({ page })
     .include('.pconf[data-prov="codex"]')
