@@ -14,7 +14,7 @@ import {
 } from './crew-engine.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
-const QUESTIONS = /Spark has a few questions/;
+const QUESTIONS = /Spark has a (few questions|question)/;
 const HELD = 'Waiting for your answer — this would change data permanently';
 
 let repo: CrewRepo;
@@ -44,7 +44,7 @@ test('the questions dock above the composer, wait without a countdown when auto-
   const questions = thread(page).getByRole('group', { name: QUESTIONS });
   await expect(questions).toBeVisible({ timeout: 30_000 });
   await expect(questions).toContainText('Which report?');
-  await expect(questions).toContainText('Best guess: Spend');
+  await expect(questions).toContainText('Spendbest guess');
   await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);
   await expect(questions.getByRole('button', { name: 'Go with my best guesses' })).toBeVisible();
   await expect(thread(page).getByText('Which report do you mean: Spend or Usage?')).toBeVisible();

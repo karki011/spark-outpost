@@ -76,6 +76,13 @@ export function NoteForm({
   );
 }
 
+const ACTION_CLASS = {
+  primary: 'btn primary sm',
+  line: 'btn line sm',
+  quiet: 'btn ghost sm',
+  stop: 'btn ghost sm deny',
+} as const;
+
 export function Action({
   id,
   approval,
@@ -86,11 +93,11 @@ export function Action({
   id: string;
   approval: CheckpointApproval;
   decide: Decide;
-  kind?: 'primary' | 'line' | 'stop';
+  kind?: keyof typeof ACTION_CLASS;
   children: ReactNode;
 }) {
   if (!offers(approval, id)) return null;
-  const className = kind === 'stop' ? 'btn ghost sm deny' : `btn ${kind} sm`;
+  const className = ACTION_CLASS[kind];
   const counting = decide.countdown?.optionId === id ? decide.countdown : null;
   return (
     <button type="button" className={className} disabled={decide.busy} onClick={() => decide(id)}>

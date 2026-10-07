@@ -16,6 +16,7 @@ import {
   localClient,
 } from './app-support.ts';
 import {
+  ENTERED,
   REMOTE_HOST,
   REMOTE_ORIGIN,
   pairDevice,
@@ -159,12 +160,12 @@ describe('remote host', () => {
 
   it('shows an unpaired device only the pairing page', async () => {
     await turnRemoteOn(app);
-    const page = await remoteClient(app).get('/').expect(200);
+    const page = await remoteClient(app).get(`/${ENTERED}`).expect(200);
     expect(page.headers['content-type']).toContain('text/html');
     expect(page.headers['content-security-policy']).toContain("default-src 'none'");
     expect(page.headers['cache-control']).toBe('no-store');
     expect(page.text).toContain('Pair this device');
-    expect((await remoteClient(app).get('/chats/anything').expect(200)).text).toContain(
+    expect((await remoteClient(app).get(`/chats/anything${ENTERED}`).expect(200)).text).toContain(
       'Pair this device',
     );
     for (const path of [
@@ -203,6 +204,11 @@ describe('device sessions', () => {
     );
     const rows = await auditRows();
     expect(rows.at(-1)).toMatchObject({
+      action: 'pairing_page_shown',
+      device_id: device.id,
+      detail: { reason: 'revoked' },
+    });
+    expect(rows.at(-2)).toMatchObject({
       action: 'refused',
       device_id: device.id,
       status: 401,

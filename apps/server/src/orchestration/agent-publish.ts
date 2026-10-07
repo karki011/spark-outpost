@@ -42,6 +42,7 @@ export interface PublishFacts {
   titlePrefix: string | null;
   notes: readonly string[];
   followUp?: boolean;
+  unrelatedFailures?: boolean;
 }
 
 function followUpLine(published: Published): string {
@@ -91,6 +92,7 @@ export async function publishByAgent(
     titlePrefix: facts.titlePrefix,
     notes: facts.notes,
     ...(facts.followUp ? { followUp: true } : {}),
+    ...(facts.unrelatedFailures ? { unrelatedFailures: true } : {}),
   });
   const spawn = {
     role: 'builder',

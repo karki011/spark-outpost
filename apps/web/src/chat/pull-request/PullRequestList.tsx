@@ -16,6 +16,9 @@ import {
   type Tone,
 } from './pull-request-model.ts';
 import { PullDetails } from './PullDetails.tsx';
+import { useWatchContext, type WatchContext } from './use-watch-context.ts';
+import { watchIndicator } from './watch-indicator-model.ts';
+import { WatchDetail } from './WatchIndicator.tsx';
 
 const PILLS: Record<Tone, string> = {
   ok: 'spill ok',
@@ -24,7 +27,13 @@ const PILLS: Record<Tone, string> = {
   plain: 'spill',
 };
 
-function PullRequestRow({ watch }: { watch: PrWatch }) {
+interface PullRequestRowProps {
+  watch: PrWatch;
+  context: WatchContext;
+}
+
+function PullRequestRow({ watch, context }: PullRequestRowProps) {
+  const indicator = watchIndicator(watch, context.contextFor(watch.roundRunId));
   const ci = ciState(watch);
   const state = pullState(watch);
   const review = reviewLabel(watch);
@@ -43,8 +52,11 @@ function PullRequestRow({ watch }: { watch: PrWatch }) {
         <span className={PILLS[CI_TONES[ci]]}>{CI_LABELS[ci]}</span>
         {review && <span>{review}</span>}
       </p>
+      {indicator && <WatchDetail indicator={indicator} profile={context.profile} />}
       <PullDetails watch={watch} />
-      {watch.unknownReason && <p className="prl-note">{watch.unknownReason}</p>}
+      {watch.unknownReason && indicator?.state !== 'no_access' && (
+        <p className="prl-note">{watch.unknownReason}</p>
+      )}
       <p className="prl-meta">
         {branch && (
           <span className="prl-branch">
@@ -58,8 +70,18 @@ function PullRequestRow({ watch }: { watch: PrWatch }) {
   );
 }
 
-export function PullRequestList({ watches }: { watches: readonly PrWatch[] }) {
+interface PullRequestListProps {
+  conversationId: string;
+  watches: readonly PrWatch[];
+}
+
+export function PullRequestList({ conversationId, watches }: PullRequestListProps) {
   if (watches.length === 0) return null;
+  return <PullRequestGroups conversationId={conversationId} watches={watches} />;
+}
+
+function PullRequestGroups({ conversationId, watches }: PullRequestListProps) {
+  const context = useWatchContext(conversationId);
   return (
     <section className="prl" aria-label="Pull requests">
       {groupByRepo(watches).map((group) => (
@@ -70,7 +92,7 @@ export function PullRequestList({ watches }: { watches: readonly PrWatch[] }) {
           </h3>
           <ul aria-label={`Pull requests in ${group.repo}`}>
             {group.pulls.map((watch) => (
-              <PullRequestRow key={watch.id} watch={watch} />
+              <PullRequestRow key={watch.id} watch={watch} context={context} />
             ))}
           </ul>
         </div>

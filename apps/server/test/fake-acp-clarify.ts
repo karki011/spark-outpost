@@ -35,6 +35,26 @@ const THREE_QUESTIONS = {
   ],
 };
 
+const LONG_OPTION_QUESTIONS = {
+  questions: [
+    {
+      question:
+        'The reports page mixes spend and usage in one table. How should the new version split them, given finance reads spend weekly and engineers read usage daily?',
+      options: [
+        'Two tabs on the same page, spend first, each with its own date range and export button so neither team scrolls past the other',
+        'One table with a toggle that swaps the columns, keeping the current address and saved filters working for everyone who bookmarked it',
+        'Separate pages linked from the sidebar, with the old address redirecting to spend because that is what most visitors open today',
+      ],
+      default: 'Two tabs on the same page, spend first, keeping the current filters for both',
+    },
+  ],
+};
+
+function oneQuestion(text: string) {
+  if (text.includes('#longoptions')) return LONG_OPTION_QUESTIONS;
+  return text.includes('#oldrows') ? OLD_ROWS_QUESTIONS : FAKE_QUESTIONS;
+}
+
 const THREE_QUESTIONS_REPLY = [
   '"Anything" can go a few ways, so here is some extra context first, then three questions.',
   'From what I found:',
@@ -55,7 +75,7 @@ export async function askQuestions(turn: RoleTurn): Promise<acp.StopReason> {
     await turn.say(`${THREE_QUESTIONS_REPLY}\n\n${block}`);
     return 'end_turn';
   }
-  const asked = turn.text.includes('#oldrows') ? OLD_ROWS_QUESTIONS : FAKE_QUESTIONS;
+  const asked = oneQuestion(turn.text);
   const block = ['```clarify', JSON.stringify(asked), '```'].join('\n');
   await turn.say(`1. Which report do you mean: Spend or Usage?\n\n${block}`);
   return 'end_turn';

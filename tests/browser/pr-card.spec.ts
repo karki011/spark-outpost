@@ -224,7 +224,7 @@ test('a check that finishes updates the row without moving the message box or ta
   const row = card(page).locator('.prc-row');
   await expect(row).toContainText('Checks failing', POLLED);
   const status = page.getByRole('region', { name: 'PR status' }).getByRole('status');
-  await expect(status).toHaveText('Pull request #7: Open, Checks failing');
+  await expect(status).toHaveText('Pull request #7: Open, Checks failing, Spark is tracking');
 
   const input = page.getByRole('textbox', { name: /message/i });
   await input.fill('Still typing while the checks run');
@@ -235,10 +235,10 @@ test('a check that finishes updates the row without moving the message box or ta
     checks: [check(75, 'review-gate', 'completed', 'success'), check(76, 'e2e', 'queued', null)],
   });
   await expect(row).toContainText('Checks running', POLLED);
-  await expect(status).toHaveText('Pull request #7: Open, Checks running');
+  await expect(status).toHaveText('Pull request #7: Open, Checks running, Waiting for checks');
   await changePull(request, { checks: [check(77, 'e2e', 'completed', 'success')] });
   await expect(row).not.toContainText('Checks', POLLED);
-  await expect(status).toHaveText('Pull request #7: Open');
+  await expect(status).toHaveText('Pull request #7: Open, Spark is tracking');
 
   expect(await box(page.locator('.composer'))).toEqual(composer);
   expect(await box(row)).toEqual(collapsed);
@@ -263,7 +263,7 @@ test('two pull requests get a row each, newest first, and a draft says so', asyn
   await expect(rows.first()).toContainText('Draft', POLLED);
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText('#8Add a changelogChecks runningDraft');
-  await expect(rows.nth(1)).toContainText('#7Tidy the notesOpen');
+  await expect(rows.nth(1)).toContainText('#7Tidy the notesWaiting for reviewOpen');
   const [first, second] = [await box(rows.nth(0)), await box(rows.nth(1))];
   expect(second.y).toBeGreaterThan(first.y);
 });
@@ -341,7 +341,7 @@ test('a follow-up round shows its round, new comments and what is left for you',
   ]);
   await openChats(page);
   const row = card(page).locator('.prc-row');
-  await expect(row).toContainText('Checks failing2 new commentsRound 1 of 3Open');
+  await expect(row).toContainText('Checks failing2 new commentsRound 1 of 3Needs youOpen');
 
   await runSql("UPDATE pr_feedback_items SET state = 'needs_user' WHERE id = $1", [
     seeded.items.held,

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PairingStart, PendingPairing, TailscaleState } from '@spark-outpost/contracts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
-import { ENDING_REASONS, pairStage, type PairEnding } from './pair-flow.ts';
+import { ENDING_REASONS, pairStage, type Activation, type PairEnding } from './pair-flow.ts';
 import { PairScene } from './PairScene.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
@@ -28,10 +28,11 @@ function messageOf(error: unknown): string {
 
 interface PairPhoneProps {
   tailscale: TailscaleState;
+  activation: Activation;
   onPaired: () => void;
 }
 
-export function PairPhone({ tailscale, onPaired }: PairPhoneProps) {
+export function PairPhone({ tailscale, activation, onPaired }: PairPhoneProps) {
   const queryClient = useQueryClient();
   const hidden = usePageHidden();
   const on = tailscale.status === 'on';
@@ -100,8 +101,10 @@ export function PairPhone({ tailscale, onPaired }: PairPhoneProps) {
       <h2 id="ph-pair-title">Pair a phone</h2>
       <PairScene
         stage={stage}
+        activation={activation}
+        hidden={hidden}
         hostname={tailscale.hostname}
-        busy={start.isPending || answer.isPending}
+        busy={start.isPending || answer.isPending || activation?.kind === 'pending'}
         error={error}
         onStart={() => start.mutate()}
         onAnswer={(request, to) => answer.mutate({ request, to })}

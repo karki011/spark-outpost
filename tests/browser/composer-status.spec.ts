@@ -222,7 +222,7 @@ test('a question from Spark is one line that names the question', async ({ page 
     });
     await shots(page, 'waiting-question');
     await waiting(page).click();
-    const questions = card(page, /Spark has a few questions/);
+    const questions = card(page, /Spark has a (few questions|question)/);
     await expect(questions).toBeInViewport();
     await expect(questions.locator(':focus')).toHaveCount(1);
   } finally {

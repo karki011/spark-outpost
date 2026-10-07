@@ -1,0 +1,100 @@
+.prw-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.prw-eye {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+}
+
+.prw-mark.live,
+.prw-detail.live .prw-head {
+  color: var(--accent-text);
+}
+
+.prw-mark.warn,
+.prw-detail.warn .prw-head {
+  color: var(--warn);
+}
+
+.prw-mark.pulse .prw-eye,
+.prw-detail.pulse .prw-eye {
+  animation: prw-pulse 1.8s ease-in-out infinite;
+}
+
+.prw-detail {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prw-detail p {
+  margin: 0;
+}
+
+.prw-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.prw-detail.quiet .prw-eye {
+  color: var(--muted);
+}
+
+.prw-lines {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.prw-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  color: var(--text);
+}
+
+.prw-locked {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
+.prw-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+
+@keyframes prw-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prw-mark.pulse .prw-eye,
+  .prw-detail.pulse .prw-eye {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .prw-mark .prw-short {
+    display: none;
+  }
+
+  .prw-control .btog {
+    width: 44px;
+    height: 44px;
+  }
+}

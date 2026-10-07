@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { engagement, type EngageFacts } from './engage.ts';
+import { engagement, soloReason, type EngageFacts } from './engage.ts';
 
 const FACTS: EngageFacts = {
   request: 'Add a budget bar to the project page',
@@ -94,5 +94,19 @@ describe('engagement', () => {
       engage: false,
       tooBigUnsure: true,
     });
+  });
+
+  it('keeps a PR follow-up round on one Builder and adds no other one-Builder rule', () => {
+    expect(soloReason({ ...FACTS, followUpRound: true })).toBe('a PR follow-up round');
+    expect(engagement({ ...FACTS, followUpRound: true })).toMatchObject({
+      engage: false,
+      solo: 'a PR follow-up round',
+    });
+    expect(soloReason({ ...FACTS, request: 'cap 3 → 8' })).toBeNull();
+  });
+
+  it('lets an explicit ask for pieces win in a PR follow-up round', () => {
+    const facts: EngageFacts = { ...FACTS, request: 'Do it in pieces.', followUpRound: true };
+    expect(engagement(facts).reason).toBe('requested');
   });
 });

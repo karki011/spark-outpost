@@ -73,7 +73,10 @@ export function fakeTailscaleRunner(state: FakeTailscaleState): RunCommand {
         ? ok(`${FAKE_TAILSCALE_PATH}\n`)
         : failure('');
     }
-    if (file !== FAKE_TAILSCALE_PATH || !state.installed) return { ...failure(''), code: -1 };
-    return fakeTailscaleCommand(state, args);
+    if (file !== '/usr/bin/env') return { ...failure(''), code: -1 };
+    const [mode, cli, ...rest] = args;
+    if (cli !== FAKE_TAILSCALE_PATH || !state.installed) return { ...failure(''), code: -1 };
+    if (mode !== 'TAILSCALE_BE_CLI=1') return failure('The Tailscale GUI failed to start\n');
+    return fakeTailscaleCommand(state, rest);
   };
 }

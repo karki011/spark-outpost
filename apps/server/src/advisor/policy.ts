@@ -42,6 +42,7 @@ export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 1;
 export const CRITIC_FIX_ROUNDS = 3;
+export const CRITIC_QUIET_NOTICE_MS = 10 * 60_000;
 export const CRITIC_REREVIEW_EFFORT = 'medium';
 export const CRITIC_RECHECK_LINE_SLACK = 3;
 export const CRITIC_SAME_CONCERN = 0.5;
@@ -101,7 +102,7 @@ export const ROUTER_TIER_OF_CARD: Readonly<Record<ModelTier, RouterTier | null>>
   frontier: null,
 };
 
-export const COORD_POLICY_VERSION = 'coord-5';
+export const COORD_POLICY_VERSION = 'coord-6';
 export const COORD_MAX_PIECES = 8;
 export const COORD_ENGAGE_PLAN_ITEMS = 4;
 export const COORD_ENGAGE_PLAN_AREAS = 2;

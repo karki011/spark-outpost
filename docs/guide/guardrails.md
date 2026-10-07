@@ -17,7 +17,7 @@ The kept card and the final reply list flags under **Worth a look**. At **Full a
 | Flag                                                 | Means                                                                              |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | "Removed `helperTotals` … — why?"                    | A file, function, export, test or safety check was removed without a reason.       |
-| "… said the checks pass, but Spark's own run failed" | Spark's own check run counts, not the Builder's word.                              |
+| "… said the checks pass. Spark's own run differs: …" | Names the command and what failed. Spark's own run counts.                         |
 | Weakened tests                                       | A test gained `skip` or `only`, lost assertions or got a looser matcher.           |
 | Updated snapshots                                    | Check that they match the behaviour you want.                                      |
 | Check config                                         | Lint, typecheck, test or CI config, or a `test`, `lint` or `build` script changed. |

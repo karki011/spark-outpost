@@ -1,4 +1,9 @@
-import { feedbackTriageLabels, type FeedbackItem, type PrWatch } from '@spark-outpost/contracts';
+import {
+  feedbackTriageLabels,
+  type FeedbackItem,
+  type Profile,
+  type PrWatch,
+} from '@spark-outpost/contracts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { BranchIcon } from '../../ui/icons.tsx';
 import { providerName } from '../provider-name.ts';
@@ -11,6 +16,8 @@ import {
   PULL_STATE_LABELS,
   pullState,
 } from './pull-request-model.ts';
+import type { WatchIndicator } from './watch-indicator-model.ts';
+import { WatchDetail } from './WatchIndicator.tsx';
 
 const STATE_LABELS: Record<FeedbackItem['state'], string> = {
   queued: 'Up next',
@@ -66,11 +73,14 @@ function factsLine(watch: PrWatch): string {
 
 interface PullPanelProps {
   watch: PrWatch;
+  indicator: WatchIndicator | null;
+  profile: Profile | null;
   onOpenLinks: (() => void) | null;
 }
 
-export function PullPanel({ watch, onOpenLinks }: PullPanelProps) {
+export function PullPanel({ watch, indicator, profile, onOpenLinks }: PullPanelProps) {
   const branch = branchLine(watch);
+  const covered = indicator?.state === 'no_access' || indicator?.state === 'paused';
   return (
     <>
       <p className="prc-full">
@@ -80,19 +90,21 @@ export function PullPanel({ watch, onOpenLinks }: PullPanelProps) {
         {watch.title && <span>{watch.title}</span>}
       </p>
       <p className="prc-all">{factsLine(watch)}</p>
-      <p className="prc-doing">
-        <span className="prc-who">Spark:</span> {watch.doing}
-        {watch.approvalId && (
-          <>
-            {' '}
-            <a href={`#${approvalAnchor(watch.approvalId)}`}>Review the card</a>
-          </>
-        )}
-      </p>
-      {watch.unknownReason ? (
-        <p className="prc-note">{watch.unknownReason}</p>
-      ) : (
-        watch.lastError && <p className="prc-note bad">Last check failed: {watch.lastError}</p>
+      {indicator && <WatchDetail indicator={indicator} profile={profile} />}
+      {!(covered || indicator?.state === 'off') && (
+        <p className="prc-doing">
+          <span className="prc-who">Spark:</span> {watch.doing}
+          {watch.approvalId && (
+            <>
+              {' '}
+              <a href={`#${approvalAnchor(watch.approvalId)}`}>Review the card</a>
+            </>
+          )}
+        </p>
+      )}
+      {!covered && watch.unknownReason && <p className="prc-note">{watch.unknownReason}</p>}
+      {!covered && !watch.unknownReason && watch.lastError && (
+        <p className="prc-note bad">Last check failed: {watch.lastError}</p>
       )}
       {watch.items.length > 0 && <Items items={watch.items} />}
       <PullDetails watch={watch} />
