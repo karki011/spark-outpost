@@ -14,6 +14,7 @@ import {
   fakeReply,
 } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { createTestDb, eventTypes, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -83,6 +84,7 @@ describe('worker', () => {
       tokens: FAKE_TOKENS,
     });
     expect(detail?.usageTotals).toMatchObject({ costUsd: FAKE_COST_USD, totalTokens: 1200 });
+    await expectConformantRun(t.db, runId);
   });
 
   it('redacts secrets in the reply before they reach the chat or its events', async () => {
@@ -114,6 +116,7 @@ describe('worker', () => {
       [runId],
     );
     expect(rows[0]?.payload.outcome?.type).toBe('cancelled');
+    await expectConformantRun(t.db, runId);
   });
 
   it('reports a provider failure as a run error', async () => {
@@ -124,6 +127,7 @@ describe('worker', () => {
     expect(run.status).toBe('failed');
     expect(run.error).toContain('#fail');
     expect((await eventTypes(t.db, runId)).at(-1)).toBe('RUN_ERROR');
+    await expectConformantRun(t.db, runId);
   });
 
   it('retries a full database with backoff instead of failing the run', async () => {

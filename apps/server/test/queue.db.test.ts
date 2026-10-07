@@ -6,6 +6,7 @@ import { LeaseLostError, appendRunEvent } from '../src/persistence/run-events.ts
 import { getRun } from '../src/persistence/runs.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { runEvents } from '../src/workflow/run-events.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { createTestDb, eventTypes, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -69,6 +70,7 @@ describe('job queue', () => {
 
     expect((await getRun(t.db, runId!))?.status).toBe('outcome_unknown');
     expect(await eventTypes(t.db, runId!)).toEqual(['RUN_STARTED', 'RUN_ERROR']);
+    await expectConformantRun(t.db, runId!);
     expect(await claimNextJob(t.db, 30)).toBeNull();
     await expect(appendRunEvent(t.db, lease, runEvents.stepStarted('late'))).rejects.toBeInstanceOf(
       LeaseLostError,
