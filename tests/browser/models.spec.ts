@@ -25,7 +25,7 @@ async function openModels(page: Page) {
   return dialog;
 }
 
-const modelRow = (scope: Locator, name: string) =>
+const modelRow = (scope: Locator, name: string | RegExp) =>
   scope.getByRole('row').filter({ has: scope.page().getByRole('rowheader', { name }) });
 
 const detailsOf = async (scope: Locator, button: Locator) =>
@@ -64,14 +64,15 @@ test('Models is one table per provider and a row opens for the details', async (
   ]);
   await expect(table.getByRole('rowheader')).toHaveText([
     'Spark picks from these',
-    /^Sonnet 5/,
+    /^Sonnet 5(?!\.)/,
+    /^Sonnet 5\.5/,
     /^Opus 5\.5/,
     'Only when you pick it',
     /^Haiku 4\.5/,
     /^Fable 5\.1/,
   ]);
 
-  const sonnet = modelRow(table, 'Sonnet 5');
+  const sonnet = modelRow(table, /^Sonnet 5 /);
   await expect(sonnet.getByRole('cell')).toHaveText([
     'mid',
     '$2',
@@ -83,7 +84,7 @@ test('Models is one table per provider and a row opens for the details', async (
     '2026-01',
     /^\d+\/\d+/,
   ]);
-  const details = sonnet.getByRole('button', { name: /^Sonnet 5/ });
+  const details = sonnet.getByRole('button', { name: /^Sonnet 5 / });
   await expect(details).toHaveText('Sonnet 5Everyday Builder, Critic, answers');
   await expect(details).toHaveAttribute('aria-expanded', 'false');
   const measured = table.getByRole('table', { name: 'Measured on our benchmark' });
@@ -143,17 +144,35 @@ test('price and tier headers sort every table inside its groups', async ({ page 
   const out = claude.getByRole('columnheader', { name: 'Out', exact: true });
   const sortOut = out.getByRole('button', { name: 'Out', exact: true });
   await expect(out).not.toHaveAttribute('aria-sort');
-  expect(await rowNames(claude)).toEqual(['Sonnet 5', 'Opus 5.5', 'Haiku 4.5', 'Fable 5.1']);
+  expect(await rowNames(claude)).toEqual([
+    'Sonnet 5',
+    'Sonnet 5.5',
+    'Opus 5.5',
+    'Haiku 4.5',
+    'Fable 5.1',
+  ]);
 
   await sortOut.focus();
   await page.keyboard.press('Enter');
   await expect(out).toHaveAttribute('aria-sort', 'ascending');
   await expect(sortOut).toBeFocused();
-  expect(await rowNames(claude)).toEqual(['Sonnet 5', 'Opus 5.5', 'Haiku 4.5', 'Fable 5.1']);
+  expect(await rowNames(claude)).toEqual([
+    'Sonnet 5',
+    'Sonnet 5.5',
+    'Opus 5.5',
+    'Haiku 4.5',
+    'Fable 5.1',
+  ]);
 
   await page.keyboard.press('Enter');
   await expect(out).toHaveAttribute('aria-sort', 'descending');
-  expect(await rowNames(claude)).toEqual(['Opus 5.5', 'Sonnet 5', 'Fable 5.1', 'Haiku 4.5']);
+  expect(await rowNames(claude)).toEqual([
+    'Opus 5.5',
+    'Sonnet 5',
+    'Sonnet 5.5',
+    'Fable 5.1',
+    'Haiku 4.5',
+  ]);
   await expect(codex.getByRole('columnheader', { name: 'Out', exact: true })).toHaveAttribute(
     'aria-sort',
     'descending',
@@ -171,7 +190,13 @@ test('price and tier headers sort every table inside its groups', async ({ page 
   await tier.getByRole('button').click();
   await tier.getByRole('button').click();
   await expect(tier).not.toHaveAttribute('aria-sort');
-  expect(await rowNames(claude)).toEqual(['Sonnet 5', 'Opus 5.5', 'Haiku 4.5', 'Fable 5.1']);
+  expect(await rowNames(claude)).toEqual([
+    'Sonnet 5',
+    'Sonnet 5.5',
+    'Opus 5.5',
+    'Haiku 4.5',
+    'Fable 5.1',
+  ]);
 });
 
 test('a model the agent offers without a card is a row marked No details yet', async ({ page }) => {
@@ -208,7 +233,7 @@ test('at 375px the table scrolls inside its own box and the page does not', asyn
   await expectNoSidewaysScroll(page);
   expect(await scroller.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
 
-  const sonnet = claude.getByRole('button', { name: /^Sonnet 5/ });
+  const sonnet = claude.getByRole('button', { name: /^Sonnet 5 / });
   await sonnet.click();
   const facts = (await detailsOf(claude, sonnet)).locator('.mc-facts');
   await expect(facts).toBeVisible();
@@ -229,7 +254,7 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   const chips = dialog.getByRole('radiogroup', { name: 'Show models from' });
   const regions = dialog.getByRole('region');
   await expect(regions).toHaveCount(3);
-  await expect(chips.getByRole('radio', { name: /^Claude\s*4 models$/ })).toBeVisible();
+  await expect(chips.getByRole('radio', { name: /^Claude\s*5 models$/ })).toBeVisible();
 
   await chips.getByRole('radio', { name: /^Codex/ }).click();
   await expect(chips.getByRole('radio', { name: /^Codex/ })).toBeChecked();
