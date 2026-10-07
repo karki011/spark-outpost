@@ -1,4 +1,5 @@
-import type { AgentRole, RunMode } from '@spark-outpost/contracts';
+import type { AgentPick, AgentRole, ModelTier, RunMode } from '@spark-outpost/contracts';
+import { tierName } from './tiers.ts';
 import { findingKind } from '../advisor/finding-questions.ts';
 import { integratorRoute } from '../coordinator/integrator.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
@@ -92,10 +93,17 @@ function escalationOf(route: MemberRoute) {
   return { escalation: { kind, model: to.model, modelLabel: to.modelLabel } };
 }
 
+function pickTierName(pick: AgentPick): ModelTier | null {
+  if (pick.model === null) return null;
+  return tierName({ id: pick.model, label: pick.modelLabel ?? '' }, pick.provider);
+}
+
 function storedRoute(route: MemberRoute, name: string, extra: Record<string, unknown> = {}) {
   return {
     name,
     routedBy: route.routedBy,
+    rule: route.rule,
+    tier: pickTierName(route.pick),
     autoWouldUse: route.autoWouldUse,
     modelLabel: route.pick.modelLabel,
     ...(route.note ? { routeNote: route.note } : {}),

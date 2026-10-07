@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { runModeSchema, type RunMode } from './approvals.ts';
 import { categorySchema } from './categories.ts';
+import { agentPickSchema, routeSourceSchema } from './checkpoints.ts';
+import { modelTierSchema } from './model-cards.ts';
 
 export const protocolDirectionSchema = z.enum(['to_agent', 'from_agent', 'harness']);
 export type ProtocolDirection = z.infer<typeof protocolDirectionSchema>;
@@ -103,6 +105,17 @@ export const approvalWaitSchema = z.object({
 });
 export type ApprovalWait = z.infer<typeof approvalWaitSchema>;
 
+export const auditRunRouteSchema = z.object({
+  routedBy: routeSourceSchema,
+  rule: z.string().nullable(),
+  tier: modelTierSchema.nullable(),
+  autoWouldUse: agentPickSchema.nullable(),
+  escalation: z
+    .object({ kind: z.string(), model: z.string(), modelLabel: z.string().nullable() })
+    .optional(),
+});
+export type AuditRunRoute = z.infer<typeof auditRunRouteSchema>;
+
 export const auditRunSummarySchema = z.object({
   runId: z.uuid(),
   userMessageId: z.uuid(),
@@ -135,6 +148,7 @@ export const auditRunSummarySchema = z.object({
   category: categorySchema.nullable().optional(),
   fileReads: z.number().int().nullable().optional(),
   unreviewedCount: count.optional(),
+  route: auditRunRouteSchema.optional(),
 });
 export type AuditRunSummary = z.infer<typeof auditRunSummarySchema>;
 

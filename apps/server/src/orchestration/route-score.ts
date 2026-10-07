@@ -14,7 +14,7 @@ import { usableStats } from '../model-cards/card-text.ts';
 import { cardFor, TIER_RANK } from '../model-cards/cards.ts';
 import { switchCostUsd, usd, type ResumableSession } from './cache-switch.ts';
 import { signalText, type TaskSignals } from './task-signals.ts';
-import type { TierModel } from './tiers.ts';
+import { familyCard, type TierModel } from './tiers.ts';
 
 export interface ScoredModel {
   id: string;
@@ -108,12 +108,13 @@ function switchFor(input: ScoreInput, model: TierModel): number | null {
 }
 
 function scoreModel(model: TierModel, input: ScoreInput, repair: number): ScoredModel | null {
-  const card = cardFor(model, input.provider);
+  const own = cardFor(model, input.provider);
+  const card = own ?? familyCard(model, input.provider);
   const cost = card ? trajectoryUsd(card, input.signals) : null;
   if (!card || cost === null) return null;
   const switchUsd = switchFor(input, model);
   if (switchUsd === null) return null;
-  const rated = 1 - failureRate(card, input.signals, input.stats, input.now);
+  const rated = 1 - failureRate(card, input.signals, own ? input.stats : [], input.now);
   const quality = Math.min(rated, input.demoted?.get(model.id) ?? 1);
   const costUsd = cost + switchUsd;
   const expectedUsd = costUsd + (1 - quality) * repair;

@@ -4,8 +4,7 @@ import {
   LOST_REASONING_CAP_TOKENS,
   PROMPT_CACHE_TTL_MS,
 } from '../advisor/policy.ts';
-import { cardFor } from '../model-cards/cards.ts';
-import type { TierModel } from './tiers.ts';
+import { scoringCard, type TierModel } from './tiers.ts';
 
 export interface ResumableSession {
   pick: AgentPick;
@@ -24,7 +23,7 @@ type Price = NonNullable<ModelCard['price']>;
 
 function sessionCard(session: ResumableSession): ModelCard | null {
   const { model, modelLabel, provider } = session.pick;
-  return cardFor({ id: model ?? '', label: modelLabel ?? '' }, provider);
+  return scoringCard({ id: model ?? '', label: modelLabel ?? '' }, provider);
 }
 
 export function sessionWarm(session: ResumableSession, now: Date): boolean {
@@ -46,7 +45,7 @@ function lostReasoningUsd(session: ResumableSession, target: Price): number {
 export function switchCostUsd(session: ResumableSession, to: TierModel, now: Date): number | null {
   if (to.id === session.pick.model) return 0;
   const from = sessionCard(session)?.price;
-  const target = cardFor(to, session.pick.provider)?.price;
+  const target = scoringCard(to, session.pick.provider)?.price;
   if (!from || !target) return null;
   const millions = session.contextTokens / 1_000_000;
   const stay =
@@ -56,7 +55,7 @@ export function switchCostUsd(session: ResumableSession, to: TierModel, now: Dat
 
 export function handoffCostUsd(session: ResumableSession, to: TierModel): number | null {
   if (to.id === session.pick.model) return 0;
-  const target = cardFor(to, session.pick.provider)?.price;
+  const target = scoringCard(to, session.pick.provider)?.price;
   if (!target) return null;
   return (HANDOFF_TOKENS / 1_000_000) * writePrice(target) + lostReasoningUsd(session, target);
 }
