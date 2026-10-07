@@ -1,3 +1,4 @@
+import { expectConformantRun } from './agui-conformance.ts';
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -222,6 +223,7 @@ describe('the project changes mid-chat', () => {
       true,
     );
     expect(names).toContain('Continued session');
+    await expectConformantRun(t.db, second.runId);
     expect(names.filter((name) => name.startsWith('Fresh session'))).toEqual([]);
     const sessions = await t.db.query<{ agent_key: string; session_id: string }>(
       'SELECT DISTINCT agent_key, session_id FROM provider_sessions WHERE conversation_id = $1',

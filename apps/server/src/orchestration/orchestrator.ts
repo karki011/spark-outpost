@@ -294,12 +294,13 @@ async function finish(
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const taskStartedAt = Date.now();
   const append = runAppender(deps.db, lease);
-  let input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
+  let input = await loadRunInput(deps.db, lease.runId);
   const control = startControl(deps, lease);
   let activeTimeTimer: NodeJS.Timeout | null = null;
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    input = await noteProjectMove(deps.db, input, append);
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
     const prepared = await prepareTurn(deps, lease, placed.input, append, control);
