@@ -13,6 +13,7 @@ import {
   type SendMessageResponse,
 } from '@spark-outpost/contracts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
+import { STEP_NOT_INTERRUPTED } from './run-events.ts';
 import { conversationAdvice } from './advice.ts';
 import { insertAnnotations } from './annotations.ts';
 import { conversationPlans } from './plan-documents.ts';
@@ -232,6 +233,7 @@ export async function getConversationDetail(
       `SELECT e.run_id, e.type, e.payload->>'stepName' AS name FROM run_events e
        JOIN runs r ON r.id = e.run_id
        WHERE r.conversation_id = $1 AND e.type IN ('STEP_STARTED', 'STEP_FINISHED')
+         AND ${STEP_NOT_INTERRUPTED}
        ORDER BY e.run_id, e.seq`,
       [id],
     ),

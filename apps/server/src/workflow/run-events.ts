@@ -3,14 +3,20 @@ import {
   APPROVAL_REQUESTED,
   EventType,
   FILE_FOCUS_ACTIVITY,
+  SPARK_METADATA,
   type Approval,
   type FileFocus,
   type RunEvent,
+  type StepMark,
 } from '@spark-outpost/contracts';
 
 export interface RunIdentity {
   runId: string;
   threadId: string;
+}
+
+function marked(mark: StepMark | undefined): { metadata?: Record<string, StepMark> } {
+  return mark && Object.keys(mark).length > 0 ? { metadata: { [SPARK_METADATA]: mark } } : {};
 }
 
 export const runEvents = {
@@ -36,8 +42,16 @@ export const runEvents = {
     message,
     code,
   }),
-  stepStarted: (stepName: string): RunEvent => ({ type: EventType.STEP_STARTED, stepName }),
-  stepFinished: (stepName: string): RunEvent => ({ type: EventType.STEP_FINISHED, stepName }),
+  stepStarted: (stepName: string, mark?: StepMark): RunEvent => ({
+    type: EventType.STEP_STARTED,
+    stepName,
+    ...marked(mark),
+  }),
+  stepFinished: (stepName: string, mark?: StepMark): RunEvent => ({
+    type: EventType.STEP_FINISHED,
+    stepName,
+    ...marked(mark),
+  }),
   fileFocus: ({ path, line, limit, action }: FileFocus): RunEvent => ({
     type: EventType.ACTIVITY_SNAPSHOT,
     messageId: FILE_FOCUS_ACTIVITY,

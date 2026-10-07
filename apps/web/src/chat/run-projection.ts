@@ -4,6 +4,7 @@ import {
   ORCHESTRATION_ACTIVITY,
   modelSwitchSchema,
   orchestrationSchema,
+  stepMark,
   type Approval,
   type ModelSwitch,
   type Orchestration,
@@ -80,6 +81,7 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
     case EventType.STEP_STARTED:
       return { ...next, steps: [...state.steps, { name: event.stepName, done: false }] };
     case EventType.STEP_FINISHED:
+      if (stepMark(event).interrupted) return next;
       return {
         ...next,
         steps: state.steps.map((step) =>

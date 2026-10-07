@@ -10,6 +10,8 @@ export class LeaseLostError extends Error {
   }
 }
 
+export const STEP_NOT_INTERRUPTED = `e.payload #>> '{metadata,spark,interrupted}' IS DISTINCT FROM 'true'`;
+
 export interface RunTransition {
   status: RunStatus;
   error?: string;

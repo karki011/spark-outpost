@@ -1,8 +1,9 @@
-import { EventType, type RunEvent } from '@spark-outpost/contracts';
+import { EventType, isTerminalRunEvent, type RunEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { appendRunEvents, type AppendOptions } from '../persistence/run-events.ts';
 import type { Append } from './agent-turn.ts';
+import { trackOpenSpans } from './open-spans.ts';
 
 export const TEXT_FLUSH_MS = 50;
 export const TEXT_FLUSH_CHARS = 8_192;
@@ -38,6 +39,7 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
   let flushedAt = -Infinity;
   let lastWrite: Promise<unknown> = Promise.resolve();
   let failure: { error: unknown } | null = null;
+  const spans = trackOpenSpans();
 
   const take = (): RunEvent[] => {
     const taken = waiting;
@@ -74,7 +76,9 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
   return async (event, appendOptions) => {
     raiseFailure();
     if (!isStreamedText(event, appendOptions)) {
-      return inOrder([...take(), event], appendOptions);
+      const closing = isTerminalRunEvent(event) ? spans.closers() : [];
+      spans.observe(event);
+      return inOrder([...take(), ...closing, event], appendOptions);
     }
     waiting.push(event);
     waitingChars += event.delta.length;

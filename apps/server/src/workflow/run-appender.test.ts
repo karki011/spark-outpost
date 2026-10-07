@@ -157,3 +157,29 @@ describe('buffering streamed text', () => {
     expect(store.writes).toHaveLength(2);
   });
 });
+
+describe('closing what is still open', () => {
+  const identity = { runId: 'run-1', threadId: 'thread-1' };
+
+  it('finishes open steps as interrupted in the same write as the terminal event', async () => {
+    const store = recorder();
+    const append = bufferingText(store.write);
+    await append(runEvents.stepStarted('Reading'));
+    await append(runEvents.stepFinished('Reading'));
+    await append(runEvents.stepStarted('Running tests'));
+    await append(runEvents.cancelled(identity));
+    expect(store.writes.at(-1)?.events).toEqual([
+      runEvents.stepFinished('Running tests', { interrupted: true }),
+      runEvents.cancelled(identity),
+    ]);
+  });
+
+  it('adds nothing when every step finished, or when the terminal event is written twice', async () => {
+    const store = recorder();
+    const append = bufferingText(store.write);
+    await append(runEvents.stepStarted('Reading'));
+    await append(runEvents.error('Failed', 'provider_error'));
+    await append(runEvents.error('Failed', 'provider_error'));
+    expect(store.writes.slice(-2).map((entry) => entry.events.length)).toEqual([2, 1]);
+  });
+});

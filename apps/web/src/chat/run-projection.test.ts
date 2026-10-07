@@ -38,6 +38,26 @@ describe('applyRunEvent', () => {
     });
   });
 
+  it('keeps a step open when it was only closed because the run stopped', () => {
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Running tests' }],
+      [
+        2,
+        {
+          type: EventType.STEP_FINISHED,
+          stepName: 'Running tests',
+          metadata: { spark: { interrupted: true } },
+        },
+      ],
+      [
+        3,
+        { type: EventType.RUN_FINISHED, runId: 'r', threadId: 't', outcome: { type: 'cancelled' } },
+      ],
+    ]);
+    expect(state.steps).toEqual([{ name: 'Running tests', done: false }]);
+    expect(state.status).toBe('cancelled');
+  });
+
   it('ignores replayed events it has already applied', () => {
     const numbered = events.map((event, index): [number, RunEvent] => [index + 1, event]);
     const withReplay = [...numbered.slice(0, 6), ...numbered.slice(3)];

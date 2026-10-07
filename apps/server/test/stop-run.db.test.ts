@@ -23,6 +23,7 @@ import {
   type Harness,
   type JevScript,
 } from './orchestration-support.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { createTestDb, eventually, eventTypes, type TestDb } from './support.ts';
 
@@ -108,6 +109,7 @@ describe('Stop on a top-level run', () => {
       cancelRequested: true,
     });
     expect(await cancelsReceived()).toBeGreaterThan(0);
+    await expectConformantRun(t.db, runId);
   }, 60_000);
 
   it('stops a Builder that ignores the cancel by ending its agent process', async () => {
@@ -154,6 +156,7 @@ describe('Stop on a top-level run', () => {
     const third = await stopRun(t.db, runId);
     expect(third?.outcome).toBe('already_finished');
     expect(await terminalEvents(runId)).toBe(1);
+    await expectConformantRun(t.db, runId);
   }, 60_000);
 
   it('answers a Stop after the run finished without changing it', async () => {
@@ -172,7 +175,8 @@ describe('Stop on a top-level run', () => {
     const stopped = await stopRun(t.db, runId);
     expect(stopped?.outcome).toBe('stopped');
     expect(stopped?.run).toMatchObject({ status: 'cancelled', cancelRequested: true });
-    expect(await eventTypes(t.db, runId)).toEqual(['RUN_FINISHED']);
+    expect(await eventTypes(t.db, runId)).toEqual(['RUN_STARTED', 'RUN_FINISHED']);
+    expect((await stopRun(t.db, runId))?.outcome).toBe('already_finished');
     start();
     await new Promise((resolve) => setTimeout(resolve, 300));
     const { rows } = await t.db.query<{ status: string }>(
@@ -181,6 +185,8 @@ describe('Stop on a top-level run', () => {
     );
     expect(rows).toEqual([{ status: 'done' }]);
     expect((await getRun(t.db, runId))?.status).toBe('cancelled');
+    expect(await eventTypes(t.db, runId)).toEqual(['RUN_STARTED', 'RUN_FINISHED']);
+    await expectConformantRun(t.db, runId);
   }, 60_000);
 });
 
@@ -200,5 +206,6 @@ describe('POST /runs/:id/cancel', () => {
     const again = await cancel(runId).expect(200);
     expect(again.headers['spark-stop']).toBe('already_finished');
     await cancel('00000000-0000-4000-8000-000000000000').expect(404);
+    await expectConformantRun(t.db, runId);
   });
 });

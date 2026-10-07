@@ -38,6 +38,7 @@ async function cancelUnclaimed(db: Db, runId: string): Promise<void> {
       [runId],
     );
     const threadId = rows[0]!.conversation_id;
+    await insertRunEvent(client, runId, runEvents.started({ runId, threadId }));
     await insertRunEvent(client, runId, runEvents.cancelled({ runId, threadId }));
     await client.query('UPDATE conversations SET updated_at = now() WHERE id = $1', [threadId]);
     await client.query(`SELECT pg_notify('run_events', $1)`, [runId]);
