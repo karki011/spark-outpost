@@ -180,3 +180,27 @@ export async function askBuilders(s: Session, assessment: Assessment): Promise<B
     reason: headLine(verdict, groups.length),
   };
 }
+
+export async function askPieces(s: Session, pieces: readonly JevPiece[]): Promise<BuilderPlan> {
+  const skipped = skipReason(s, pieces.length);
+  if (skipped) return rulesPlan(s, pieces, skipped);
+  const paths = pieces.flatMap((piece) => [...piece.owns, ...piece.reads]);
+  const root = s.input.projectRoots[0]!;
+  const facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
+  const ask: PieceAsk = { request: s.input.userRequest, pieces, facts };
+  const call = await callJev(s.jev, () => pieceQuestions(ask), s.control.signal);
+  if (call.status !== 'answered' || !call.response) {
+    return rulesPlan(s, pieces, jevFailure(call), call);
+  }
+  return {
+    call,
+    status: call.status,
+    tasks: pieces,
+    verdict: null,
+    builders: null,
+    groups: null,
+    steps: null,
+    answers: readPieceAnswers(call.response, ask),
+    reason: `Jev: ${pieces.length} pieces`,
+  };
+}

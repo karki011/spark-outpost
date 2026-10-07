@@ -85,6 +85,7 @@ export function chatOutline(detail: OutlineSource, facts: OutlineFacts): Outline
       mark(approval.runId, 'approval');
   }
   for (const offer of detail.plans?.offers ?? []) mark(offer.runId, 'plan');
+  for (const line of detail.plans?.lines ?? []) mark(line.runId, 'plan');
   for (const saved of detail.plans?.saved ?? []) mark(messageRun.get(saved.messageId), 'plan');
   for (const runId of facts.changedRunIds) mark(runId, 'files');
   for (const message of detail.messages) {

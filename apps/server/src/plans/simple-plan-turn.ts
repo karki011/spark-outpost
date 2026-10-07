@@ -1,4 +1,5 @@
-import { modePosture, isReadOnlyPosture } from '@spark-outpost/contracts';
+import { modePosture, isReadOnlyPosture, type Category } from '@spark-outpost/contracts';
+import { turnIntent } from '../orchestration/intake.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { PLAN_MODE_ID } from './plan-mode.ts';
@@ -14,10 +15,29 @@ function pickedPlanMode(input: RunInput): boolean {
   return input.agentMode === PLAN_MODE_ID || input.settings.mode === PLAN_MODE_ID;
 }
 
-export function isPlanTurn(input: RunInput): boolean {
-  if (input.parentRunId !== null || input.assistant || input.projectRoots.length === 0)
-    return false;
-  return planCommandText(input.userRequest) !== null || pickedPlanMode(input);
+function mayPlan(input: RunInput): boolean {
+  return input.parentRunId === null && !input.assistant && input.projectRoots.length > 0;
+}
+
+export function isPlanCommand(input: RunInput): boolean {
+  return mayPlan(input) && planCommandText(input.userRequest) !== null;
+}
+
+export function isPlanModeChat(input: RunInput): boolean {
+  return mayPlan(input) && pickedPlanMode(input);
+}
+
+const BUILD_INTENTS: ReadonlySet<Category> = new Set([
+  'bug_fix',
+  'feature',
+  'refactor',
+  'tests',
+  'docs',
+  'config',
+]);
+
+export function asksToBuild(request: string, jev: Parameters<typeof turnIntent>[0]): boolean {
+  return BUILD_INTENTS.has(turnIntent(jev, { request, mode: 'do' }));
 }
 
 function buildingMode(input: RunInput): string | null {

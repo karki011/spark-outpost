@@ -37,6 +37,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { PanelOpenContext } from '../tasks/panel-open.ts';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
+import { OpenPlanContext } from './plans/PlanSavedLine.tsx';
 import type { WorkTab } from '../tasks/TaskDetails.tsx';
 import { WorkPanel } from '../tasks/WorkPanel.tsx';
 import { WorkPanelToggle } from '../tasks/WorkPanelToggle.tsx';
@@ -185,6 +186,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     setPanelTab(tab);
     panel.setView('work');
   });
+  const openPlan = useStableCallback(() => {
+    setPanelTab('plan');
+    panel.setView('work');
+  });
   const openLinks = useStableCallback(() => {
     setPanelTab('links');
     panel.setView('work');
@@ -224,205 +229,209 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
 
   return (
     <ViewChangesContext value={viewChanges}>
-      <StatusContext value={status}>
-        <FileSheetProvider>
-          <main
-            ref={mainRef}
-            className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
-            {...drop.handlers}
-          >
-            <header className="head chat-head">
-              <SidebarToggle />
-              {repos.length > 0 && (
-                <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
-                  {repoSummary(repos.map((repo) => repo.name))} /
-                </span>
-              )}
-              {detail.data && <ChatTeammate chat={detail.data.conversation} />}
-              <h1
-                className="chat-title"
-                title={
-                  detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
-                }
-              >
-                {title}
-              </h1>
-              <ChatTicketChips chat={tickets} />
-              <div className="head-r">
-                <DiffChip
-                  taskId={task?.id ?? null}
-                  open={diff.request !== null}
-                  onToggle={toggleDiff}
-                />
-                <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
-                <ChatHeadTools
-                  conversationId={conversationId}
-                  agents={tvCrew(detail.data)}
-                  browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
-                  onAudit={openAudit}
-                  onStartFresh={() => startFresh.mutate()}
-                />
-              </div>
-            </header>
-            <ChatTicketBar chat={tickets} />
-            {detail.isError && !isConnectionLoss(detail.error) && (
-              <p className="error-line" role="alert">
-                {detail.error.message}
-              </p>
-            )}
-            {detail.data ? (
-              <PanelOpenContext value={panel.open}>
-                <RailContext
-                  value={
-                    rail === 'hidden' ? null : (
-                      <ChatRail
-                        detail={detail.data}
-                        repos={repos}
-                        taskId={taskId}
-                        task={railTask}
-                        autonomy={autonomyLevel}
-                        running={running !== null}
-                        collapsed={rail === 'collapsed'}
-                        onCollapse={collapseRail}
-                        onTab={openPanelTab}
-                        onAutonomy={openAutonomyPanel}
-                        onChanges={reviewChanges}
-                      />
-                    )
+      <OpenPlanContext value={task ? openPlan : null}>
+        <StatusContext value={status}>
+          <FileSheetProvider>
+            <main
+              ref={mainRef}
+              className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
+              {...drop.handlers}
+            >
+              <header className="head chat-head">
+                <SidebarToggle />
+                {repos.length > 0 && (
+                  <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
+                    {repoSummary(repos.map((repo) => repo.name))} /
+                  </span>
+                )}
+                {detail.data && <ChatTeammate chat={detail.data.conversation} />}
+                <h1
+                  className="chat-title"
+                  title={
+                    detail.data?.conversation.titleSource === 'auto'
+                      ? 'Renamed by Spark'
+                      : undefined
                   }
                 >
-                  <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
-                    <FollowContext value={followRequests}>
-                      <Thread
-                        detail={detail.data}
-                        repos={repos}
-                        sends={sends}
-                        taskId={taskId}
-                        onOpenTask={openTask}
-                        onOpenChat={openChat}
-                        quotes={quotes}
-                      />
-                    </FollowContext>
-                  </RailTaskContext>
-                </RailContext>
-              </PanelOpenContext>
-            ) : (
-              <div className="thread-wrap" aria-busy={detail.isPending}>
-                {detail.isPending && (
-                  <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
-                )}
-              </div>
-            )}
-            <ComposerStatus
-              store={status}
-              runs={detail.data?.runs ?? NO_RUNS}
-              activeRunId={running?.id ?? null}
-              provider={detail.data?.settings.provider ?? ''}
-              queued={queue.items.length}
-            />
-            <QueueStrip
-              queue={queue}
-              mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
-            />
-            <Composer
-              conversationId={conversationId}
-              repos={repos}
-              settings={settings}
-              providers={connected}
-              runs={detail.data?.runs ?? []}
-              orchestration={orchestration}
-              usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-              busy={running !== null}
-              sending={sends.sending}
-              error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
-              notice={sendNowStatus({
-                memberMessages: detail.data?.memberMessages,
-                runs: detail.data?.runs ?? NO_RUNS,
-              })}
-              stopping={stop.stopping}
-              attachments={attachments}
-              quotes={quotes}
-              onSend={async (content, files, annotations) => {
-                sends.send({ content, attachments: files, annotations });
-              }}
-              onStop={stop.stop}
-              onQueue={(content) => {
-                followRequests.request();
-                return queue.add(content);
-              }}
-              onSendNow={(content) => {
-                followRequests.request();
-                return queue.sendFirst(content);
-              }}
-              busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
-              steer={steer}
-              above={
-                <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
-              }
-              {...(openAudit ? { onAudit: openAudit } : {})}
-              onStartFresh={() => startFresh.mutate()}
-              autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
-              agentCommands={commands.data?.commands ?? NO_COMMANDS}
-              agentName={providerName(
-                commands.data?.provider ?? detail.data?.settings.provider ?? '',
+                  {title}
+                </h1>
+                <ChatTicketChips chat={tickets} />
+                <div className="head-r">
+                  <DiffChip
+                    taskId={task?.id ?? null}
+                    open={diff.request !== null}
+                    onToggle={toggleDiff}
+                  />
+                  <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
+                  <ChatHeadTools
+                    conversationId={conversationId}
+                    agents={tvCrew(detail.data)}
+                    browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
+                    onAudit={openAudit}
+                    onStartFresh={() => startFresh.mutate()}
+                  />
+                </div>
+              </header>
+              <ChatTicketBar chat={tickets} />
+              {detail.isError && !isConnectionLoss(detail.error) && (
+                <p className="error-line" role="alert">
+                  {detail.error.message}
+                </p>
               )}
-            />
-            {!remote && <TerminalDock chatId={conversationId} />}
-            <DropOverlay visible={drop.dragging} />
-          </main>
-          {panel.available && (
-            <WorkPanel
-              conversationId={conversationId}
-              task={task}
-              autonomy={
-                autonomyLevel ? { level: autonomyLevel, focusRequest: autonomyRequest } : null
-              }
-              open={panel.open}
-              wide={panel.wide}
-              tab={panelTab}
-              onTab={setPanelTab}
-              onClose={() => panel.setOpen(false)}
-              orchestration={taskCrew}
-              agents={taskCrew ? crew : []}
-              roots={panelRoots}
-              runs={detail.data?.runs ?? []}
-              width={panel.width}
-              onWidth={panel.setWidth}
-              limits={panel.limits}
-              view={panel.view}
-              onView={panel.setView}
-              browser={
-                hasBrowser
-                  ? ({ views, close }) => (
-                      <BrowserPane
-                        home={{
-                          chatId: conversationId,
-                          projectId: firstRepo?.id ?? null,
-                          keepSignIns: firstRepo?.browserKeepSignIns ?? true,
-                          roots: panelRoots,
-                        }}
-                        shown={browsing}
-                        lead={views}
-                        trail={close}
-                      />
-                    )
-                  : null
-              }
-              {...(openAudit ? { onAudit: openAudit } : {})}
-            />
-          )}
-          <DiffDrawerHost state={diff} taskId={taskId} />
-          <AnimatePresence>
-            {auditOpen && (
-              <AuditDialog
+              {detail.data ? (
+                <PanelOpenContext value={panel.open}>
+                  <RailContext
+                    value={
+                      rail === 'hidden' ? null : (
+                        <ChatRail
+                          detail={detail.data}
+                          repos={repos}
+                          taskId={taskId}
+                          task={railTask}
+                          autonomy={autonomyLevel}
+                          running={running !== null}
+                          collapsed={rail === 'collapsed'}
+                          onCollapse={collapseRail}
+                          onTab={openPanelTab}
+                          onAutonomy={openAutonomyPanel}
+                          onChanges={reviewChanges}
+                        />
+                      )
+                    }
+                  >
+                    <RailTaskContext value={rail === 'open' ? (railTask?.id ?? null) : null}>
+                      <FollowContext value={followRequests}>
+                        <Thread
+                          detail={detail.data}
+                          repos={repos}
+                          sends={sends}
+                          taskId={taskId}
+                          onOpenTask={openTask}
+                          onOpenChat={openChat}
+                          quotes={quotes}
+                        />
+                      </FollowContext>
+                    </RailTaskContext>
+                  </RailContext>
+                </PanelOpenContext>
+              ) : (
+                <div className="thread-wrap" aria-busy={detail.isPending}>
+                  {detail.isPending && (
+                    <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
+                  )}
+                </div>
+              )}
+              <ComposerStatus
+                store={status}
+                runs={detail.data?.runs ?? NO_RUNS}
+                activeRunId={running?.id ?? null}
+                provider={detail.data?.settings.provider ?? ''}
+                queued={queue.items.length}
+              />
+              <QueueStrip
+                queue={queue}
+                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
+              />
+              <Composer
                 conversationId={conversationId}
-                title={title}
-                onClose={() => setAuditOpen(false)}
+                repos={repos}
+                settings={settings}
+                providers={connected}
+                runs={detail.data?.runs ?? []}
+                orchestration={orchestration}
+                usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+                busy={running !== null}
+                sending={sends.sending}
+                error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
+                notice={sendNowStatus({
+                  memberMessages: detail.data?.memberMessages,
+                  runs: detail.data?.runs ?? NO_RUNS,
+                })}
+                stopping={stop.stopping}
+                attachments={attachments}
+                quotes={quotes}
+                onSend={async (content, files, annotations) => {
+                  sends.send({ content, attachments: files, annotations });
+                }}
+                onStop={stop.stop}
+                onQueue={(content) => {
+                  followRequests.request();
+                  return queue.add(content);
+                }}
+                onSendNow={(content) => {
+                  followRequests.request();
+                  return queue.sendFirst(content);
+                }}
+                busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
+                steer={steer}
+                above={
+                  <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
+                }
+                {...(openAudit ? { onAudit: openAudit } : {})}
+                onStartFresh={() => startFresh.mutate()}
+                autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
+                agentCommands={commands.data?.commands ?? NO_COMMANDS}
+                agentName={providerName(
+                  commands.data?.provider ?? detail.data?.settings.provider ?? '',
+                )}
+              />
+              {!remote && <TerminalDock chatId={conversationId} />}
+              <DropOverlay visible={drop.dragging} />
+            </main>
+            {panel.available && (
+              <WorkPanel
+                conversationId={conversationId}
+                task={task}
+                autonomy={
+                  autonomyLevel ? { level: autonomyLevel, focusRequest: autonomyRequest } : null
+                }
+                open={panel.open}
+                wide={panel.wide}
+                tab={panelTab}
+                onTab={setPanelTab}
+                onClose={() => panel.setOpen(false)}
+                orchestration={taskCrew}
+                agents={taskCrew ? crew : []}
+                roots={panelRoots}
+                runs={detail.data?.runs ?? []}
+                width={panel.width}
+                onWidth={panel.setWidth}
+                limits={panel.limits}
+                view={panel.view}
+                onView={panel.setView}
+                browser={
+                  hasBrowser
+                    ? ({ views, close }) => (
+                        <BrowserPane
+                          home={{
+                            chatId: conversationId,
+                            projectId: firstRepo?.id ?? null,
+                            keepSignIns: firstRepo?.browserKeepSignIns ?? true,
+                            roots: panelRoots,
+                          }}
+                          shown={browsing}
+                          lead={views}
+                          trail={close}
+                        />
+                      )
+                    : null
+                }
+                {...(openAudit ? { onAudit: openAudit } : {})}
               />
             )}
-          </AnimatePresence>
-        </FileSheetProvider>
-      </StatusContext>
+            <DiffDrawerHost state={diff} taskId={taskId} />
+            <AnimatePresence>
+              {auditOpen && (
+                <AuditDialog
+                  conversationId={conversationId}
+                  title={title}
+                  onClose={() => setAuditOpen(false)}
+                />
+              )}
+            </AnimatePresence>
+          </FileSheetProvider>
+        </StatusContext>
+      </OpenPlanContext>
     </ViewChangesContext>
   );
 }

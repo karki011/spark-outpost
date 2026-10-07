@@ -79,6 +79,8 @@ async function turn(content: string, permission: 'ask' | 'do', agentMode: string
   );
   const detail = await getConversationDetail(t.db, conversationId);
   return {
+    runId: sent.run.id,
+    lines: detail?.plans?.lines ?? [],
     asked,
     done,
     run: run.rows[0]!,
@@ -98,7 +100,7 @@ function planModeSetBeforePrompt(requests: Awaited<ReturnType<typeof turn>>['req
 
 describe('a plan turn under HARNESS=simple', { timeout: 120_000 }, () => {
   it('/plan starts the agent in its plan mode, the agent asks to leave it, and the same turn builds', async () => {
-    const { asked, run, requests, reply } = await turn(
+    const { asked, run, requests, reply, runId, lines } = await turn(
       '/plan Add CSV export #nativeplan',
       'do',
       'auto',
@@ -113,9 +115,27 @@ describe('a plan turn under HARNESS=simple', { timeout: 120_000 }, () => {
     expect(await planDocuments(t.db, conversationId)).toEqual([
       expect.objectContaining({ source: 'claude_plan_mode', body: FAKE_PLAN, status: 'approved' }),
     ]);
+    expect(lines).toEqual([{ runId, version: 1, items: 3, unit: 'steps' }]);
   });
 
-  it("a chat in Plan mode gets the same turn, with no card of Spark's own", async () => {
+  it('a question in a Plan-mode chat stays a read-only turn with an orchestration record', async () => {
+    const { asked, run, done, lines, runId } = await turn('What does parseDate do?', 'ask', 'plan');
+
+    expect(run).toEqual({ mode: 'ask', status: 'succeeded' });
+    expect(asked).toEqual([]);
+    expect(done?.orchestration).toMatchObject({ status: 'succeeded', risk: 'read-only' });
+    const recorded = await t.db.query<{ purpose: string }>(
+      `SELECT purpose FROM run_advice WHERE run_id = $1 AND purpose IN ('intake', 'route')`,
+      [runId],
+    );
+    expect(recorded.rows.map((row) => row.purpose)).toEqual(
+      expect.arrayContaining(['intake', 'route']),
+    );
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    expect(lines).toEqual([]);
+  });
+
+  it("a build request in a Plan-mode chat gets the same turn, with no card of Spark's own", async () => {
     const { asked, run, requests, reply } = await turn('Add CSV export #nativeplan', 'ask', 'plan');
 
     expect(run).toEqual({ mode: 'do', status: 'succeeded' });

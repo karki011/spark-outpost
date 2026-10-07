@@ -65,7 +65,7 @@ import {
   type Session,
 } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
-import { isPlanTurn } from '../plans/simple-plan-turn.ts';
+import { asksToBuild, isPlanCommand, isPlanModeChat } from '../plans/simple-plan-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { runPlanTurn } from './plan-turn-run.ts';
 import { harnessOf } from '../harness/setting.ts';
@@ -310,15 +310,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const handed = await handToSparks({ deps, lease, input: prepared, append, control });
     if (handed === 'finished') return;
     input = handed;
-    if (harnessOf(deps) === 'simple' && isPlanTurn(input)) {
+    const prefs = await sparkPreferences(deps.db, input.workspaceId);
+    const solo = !prefs.sparkEnabled;
+    const planChat = harnessOf(deps) === 'simple' && isPlanModeChat(input);
+    if (harnessOf(deps) === 'simple' && (isPlanCommand(input) || (planChat && solo))) {
       return await runPlanTurn(deps, lease, input, append, control);
     }
     if (harnessOf(deps) === 'simple') input = { ...input, planning: plansThisTurn(input, true) };
     const mode = input.mode ?? 'chat';
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
-    const prefs = await sparkPreferences(deps.db, input.workspaceId);
-    const solo = !prefs.sparkEnabled;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     if ((solo && !doing) || mainAgentInstruction(input.userRequest, current)) {
       const result = await runAgentTurn(deps, lease, input, append, control);
@@ -330,7 +331,11 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const taken = await runIntake(deps, input, append, input.projectMove ? null : current, solo);
     const simple = harnessOf(deps) === 'simple';
     const { intake } = taken;
-    const jevNeed = intake.outcome.status === 'answered' ? intake.outcome.intake.need : null;
+    const answered = intake.outcome.status === 'answered' ? intake.outcome.intake : null;
+    if (planChat && asksToBuild(input.userRequest, answered)) {
+      return await runPlanTurn(deps, lease, input, append, control);
+    }
+    const jevNeed = answered?.need ?? null;
     const need = simple ? readNeed(taken.decisions, jevNeed) : null;
     const decisions = need ? simpleDecisions(taken.decisions, need) : taken.decisions;
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(

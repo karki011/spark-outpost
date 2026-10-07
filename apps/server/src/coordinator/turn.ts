@@ -4,6 +4,7 @@ import { insertPieceList } from '../persistence/pieces.ts';
 import { proposedPlanFromRun, rejectPlanDocument } from '../persistence/plan-documents.ts';
 import { usedNames } from '../persistence/orchestrations.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
+import { piecesPlanBody, saveBuildPlan } from '../plans/build-plan.ts';
 import { declarationLeads } from '../orchestration/code-context.ts';
 import { agreedPlanText, checkCommands } from '../orchestration/member-prompts.ts';
 import { runMember } from '../orchestration/members.ts';
@@ -13,11 +14,16 @@ import type { Assessment } from './assess.ts';
 import { assignPieces } from './assign.ts';
 import { blastRadius } from './blast-radius.ts';
 import { likelyFiles } from './engage.ts';
-import type { BuilderPlan } from './builder-jev.ts';
+import { askPieces, type BuilderPlan } from './builder-jev.ts';
 import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
 import { routePieces } from './piece-jev.ts';
-import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
+import {
+  piecesHash,
+  validatePieces,
+  type CheckedPiece,
+  type CheckedPieces,
+} from './pieces-validate.ts';
 import type { PlanStep } from './plan-coverage.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
 import { chooseListPlace } from './place-list.ts';
@@ -153,6 +159,10 @@ async function askForPieces(
   };
 }
 
+function building(pieces: readonly CheckedPiece[]): CheckedPiece[] {
+  return pieces.filter((piece) => !piece.research);
+}
+
 async function builderNames(s: Session, keys: readonly string[]): Promise<Map<string, string>> {
   const used = await usedNames(s.deps.db, s.taskId!, 'builder');
   const names = new Map<string, string>();
@@ -171,16 +181,19 @@ export async function writePieceList(
   const asked = await askForPieces(s, assessment, plan);
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
+  const planned = assessment.planSteps.length > 0;
+  const saved = planned ? null : await saveBuildPlan(s, piecesPlanBody(pieces), 'pieces');
+  const routing = planned ? plan : await askPieces(s, building(pieces));
   const place = await chooseListPlace(s, pieces);
   const facts = await assignFacts(s, place.placement !== 'in_order');
   const assigned = new Map(assignPieces(pieces, facts).map((entry) => [entry.key, entry.pick]));
-  const routed = await routePieces(s, pieces, place, assigned, facts, plan);
+  const routed = await routePieces(s, pieces, place, assigned, facts, routing);
   const routes = new Map(routed.pieces.map((route) => [route.key, route]));
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,
     orchestrationRunId: s.lease.runId,
-    planDocumentId: assessment.plan?.id ?? null,
-    planVersion: assessment.plan?.version ?? null,
+    planDocumentId: saved?.id ?? assessment.plan?.id ?? null,
+    planVersion: saved?.version ?? assessment.plan?.version ?? null,
     piecesHash: piecesHash(pieces),
     placement: routed.placement,
     placementReason: routed.reason,

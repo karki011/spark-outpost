@@ -31,6 +31,7 @@ import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
 import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
+import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
 import type { RunStep } from '../run-projection.ts';
 import { useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -250,6 +251,7 @@ function CrewTurnBody({
         : orchestration.error && <p className="error-line">{orchestration.error}</p>}
       <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
+      <PlanSavedLine detail={detail} runId={run.id} />
       <TurnPlanOffer detail={detail} runId={run.id} />
       <ReplyPlanAction
         detail={detail}

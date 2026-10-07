@@ -33,6 +33,7 @@ import { createStallWatch, quietNotice } from './stall-watch.ts';
 import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
+import { watchBuilderPlan } from '../plans/build-plan.ts';
 import { splitRemovals } from '../laws/critic-text.ts';
 import { loadHandoff, type HandoffKind } from './handoff.ts';
 import {
@@ -249,6 +250,10 @@ async function noteQuiet(s: Session, note: string): Promise<void> {
   }
 }
 
+function plansTheBuild(s: Session, spawn: Spawn, seat: Seat | null): boolean {
+  return spawn.role === 'builder' && !seat && s.need === 'build' && !s.coordination?.list;
+}
+
 async function runChild(
   s: Session,
   spawn: Spawn,
@@ -328,12 +333,16 @@ async function runChild(
   const quietMs =
     spawn.role === 'critic' ? (s.deps.criticQuietNoticeMs ?? CRITIC_QUIET_NOTICE_MS) : null;
   const stall = createStallWatch(quietMs, () => void noteQuiet(s, quietNotice(name, quietMs ?? 0)));
+  const plans = plansTheBuild(s, spawn, seat) ? watchBuilderPlan(s) : null;
   try {
     const result = await executeChildRun(
       s.deps,
       lease,
       {
-        onOutput: observe,
+        onOutput: (output) => {
+          observe(output);
+          plans?.observe(output);
+        },
         onProduced: (output) => {
           stall.touch();
           guard.observe(output);
@@ -362,6 +371,7 @@ async function runChild(
     };
   } finally {
     stall.stop();
+    await plans?.settled();
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
     await mergeRoute(s.deps.db, lease.runId, { fileReads: total.reads.length }).catch(

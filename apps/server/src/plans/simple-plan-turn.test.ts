@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { RunInput } from '../workflow/run-input.ts';
 import { isExitPlanAllow, plansThisTurn } from './plan-mode.ts';
-import { asPlanTurn, isPlanTurn, planCommandText } from './simple-plan-turn.ts';
+import {
+  asPlanTurn,
+  asksToBuild,
+  isPlanCommand,
+  isPlanModeChat,
+  planCommandText,
+} from './simple-plan-turn.ts';
 
 const input = (extra: Partial<RunInput> = {}): RunInput =>
   ({
@@ -26,15 +32,26 @@ describe('planCommandText', () => {
   });
 });
 
-describe('isPlanTurn', () => {
-  it('is a /plan message or a chat the user put in Plan mode, in a project', () => {
-    expect(isPlanTurn(input())).toBe(true);
-    expect(
-      isPlanTurn(input({ userRequest: 'Add CSV export', agentMode: 'plan', mode: 'ask' })),
-    ).toBe(true);
-    expect(isPlanTurn(input({ userRequest: 'Add CSV export' }))).toBe(false);
-    expect(isPlanTurn(input({ projectRoots: [] }))).toBe(false);
-    expect(isPlanTurn(input({ parentRunId: 'parent' }))).toBe(false);
+describe('what starts a plan turn', () => {
+  it('is a /plan message in a project, whatever the mode', () => {
+    expect(isPlanCommand(input())).toBe(true);
+    expect(isPlanCommand(input({ userRequest: 'Add CSV export' }))).toBe(false);
+    expect(isPlanCommand(input({ projectRoots: [] }))).toBe(false);
+    expect(isPlanCommand(input({ parentRunId: 'parent' }))).toBe(false);
+  });
+
+  it('knows a chat the user put in Plan mode', () => {
+    const planChat = input({ userRequest: 'Add CSV export', agentMode: 'plan', mode: 'ask' });
+    expect(isPlanModeChat(planChat)).toBe(true);
+    expect(isPlanModeChat(input({ userRequest: 'Add CSV export' }))).toBe(false);
+    expect(isPlanModeChat({ ...planChat, projectRoots: [] })).toBe(false);
+  });
+
+  it('reads a build request by rule, and leaves a question a question', () => {
+    expect(asksToBuild('Add CSV export to the reports page', null)).toBe(true);
+    expect(asksToBuild('Fix the crash when the file is empty', null)).toBe(true);
+    expect(asksToBuild('What does parseDate do?', null)).toBe(false);
+    expect(asksToBuild('Write a plan for CSV export', null)).toBe(false);
   });
 });
 

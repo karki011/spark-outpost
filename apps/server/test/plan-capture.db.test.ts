@@ -328,7 +328,11 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
     expect(planCall?.questions).toContain('previous_is_plan');
     expect(String(planCall?.state.previous_reply)).toContain('Shall I go ahead?');
     const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.plans).toEqual({ saved: [{ messageId: reply!.id, version: 1 }], offers: [] });
+    expect(detail?.plans).toEqual({
+      saved: [{ messageId: reply!.id, version: 1 }],
+      offers: [],
+      lines: [],
+    });
   });
 
   it('offers a "Save as agreed plan" card when Jev is unsure', async () => {
