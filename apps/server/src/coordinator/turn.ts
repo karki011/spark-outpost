@@ -11,6 +11,7 @@ import { seatRoute } from '../orchestration/member-routes.ts';
 import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
 import { assignPieces } from './assign.ts';
+import { blastRadius } from './blast-radius.ts';
 import { likelyFiles } from './engage.ts';
 import type { BuilderPlan } from './builder-jev.ts';
 import { assignFacts } from './provider-state.ts';
@@ -110,6 +111,11 @@ async function askForPieces(
     s,
     likely.map((file) => file.path),
   );
+  const planFiles = [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
+    0,
+    PLAN_FILES_SHOWN,
+  );
+  const shown = [...planFiles, ...likely.map((file) => file.path)];
   let prompt = coordinatorPrompt({
     request: s.input.userRequest,
     agreedPlan: await agreedPlanText(s),
@@ -118,10 +124,8 @@ async function askForPieces(
       lines: file.lines,
       leads: leads.get(file.path) ?? [],
     })),
-    planFiles: [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
-      0,
-      PLAN_FILES_SHOWN,
-    ),
+    planFiles,
+    dependents: await blastRadius(s.deps.db, root, shown).catch(() => []),
     checks: checkCommands(s),
     budgetTokens,
     groups: plan.steps,
