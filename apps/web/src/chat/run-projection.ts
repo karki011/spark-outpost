@@ -18,6 +18,9 @@ export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 
 export interface RunStep {
   name: string;
   done: boolean;
+  toolCallId?: string | undefined;
+  reasoningId?: string | undefined;
+  thought?: string | undefined;
 }
 
 export type StepStatus = 'done' | 'failed' | 'open';
@@ -25,6 +28,64 @@ export type StepStatus = 'done' | 'failed' | 'open';
 export interface StepView {
   name: string;
   status: StepStatus;
+  reasoningId?: string | undefined;
+  thought?: string | undefined;
+}
+
+function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
+  return {
+    ...(step.reasoningId ? { reasoningId: step.reasoningId } : {}),
+    ...(step.thought === undefined ? {} : { thought: step.thought }),
+  };
+}
+
+function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
+  const { toolCallId } = stepMark(event);
+  return { name: event.stepName, done: false, ...(toolCallId ? { toolCallId } : {}) };
+}
+
+function finishStep(
+  steps: readonly RunStep[],
+  event: Extract<RunEvent, { type: typeof EventType.STEP_FINISHED }>,
+): RunStep[] {
+  const { toolCallId, interrupted } = stepMark(event);
+  if (interrupted) return [...steps];
+  const called = toolCallId
+    ? steps.findIndex((step) => !step.done && step.toolCallId === toolCallId)
+    : -1;
+  const index =
+    called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
+  return steps.map((step, position) => (position === index ? { ...step, done: true } : step));
+}
+
+function withThought(steps: readonly RunStep[], reasoningId: string, delta: string): RunStep[] {
+  return steps.map((step) =>
+    step.reasoningId === reasoningId ? { ...step, thought: (step.thought ?? '') + delta } : step,
+  );
+}
+
+function startThought(steps: readonly RunStep[], reasoningId: string): RunStep[] {
+  const last = steps.at(-1);
+  if (!last || last.done) return [...steps];
+  return [...steps.slice(0, -1), { ...last, reasoningId, thought: '' }];
+}
+
+export function shownSteps(
+  stream: Pick<RunProjection, 'steps'>,
+  persisted: readonly RunStep[],
+  leads: boolean,
+): readonly RunStep[] {
+  if (leads || persisted.length === 0) return stream.steps;
+  const live = new Map(
+    stream.steps.flatMap((step) =>
+      step.reasoningId && step.thought !== undefined ? [[step.reasoningId, step.thought]] : [],
+    ),
+  );
+  if (live.size === 0) return persisted;
+  return persisted.map((step) => {
+    const thought = step.reasoningId ? live.get(step.reasoningId) : undefined;
+    return thought === undefined ? step : { ...step, thought };
+  });
 }
 
 const FAILED_PREFIX = 'Failed: ';
@@ -43,7 +104,7 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
       failedStep.status = 'failed';
       continue;
     }
-    views.push({ name: step.name, status: step.done ? 'done' : 'open' });
+    views.push({ name: step.name, status: step.done ? 'done' : 'open', ...thinkingOf(step) });
   }
   return views;
 }
@@ -79,15 +140,13 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
     case EventType.RUN_STARTED:
       return { ...next, status: 'running' };
     case EventType.STEP_STARTED:
-      return { ...next, steps: [...state.steps, { name: event.stepName, done: false }] };
+      return { ...next, steps: [...state.steps, startedStep(event)] };
     case EventType.STEP_FINISHED:
-      if (stepMark(event).interrupted) return next;
-      return {
-        ...next,
-        steps: state.steps.map((step) =>
-          step.name === event.stepName && !step.done ? { ...step, done: true } : step,
-        ),
-      };
+      return { ...next, steps: finishStep(state.steps, event) };
+    case EventType.REASONING_START:
+      return { ...next, steps: startThought(state.steps, event.messageId) };
+    case EventType.REASONING_MESSAGE_CONTENT:
+      return { ...next, steps: withThought(state.steps, event.messageId, event.delta) };
     case EventType.TEXT_MESSAGE_CONTENT:
       return { ...next, text: state.text + event.delta };
     case EventType.RUN_FINISHED:

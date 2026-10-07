@@ -31,6 +31,7 @@ import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import { ResultBlock } from './outcomes/ResultBlock.tsx';
 import {
+  shownSteps,
   shownText,
   streamLeads,
   type LiveRunStatus,
@@ -137,7 +138,8 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
   const persistedSteps = detail.activity[run.id]?.length
     ? detail.activity[run.id]!
     : (detail.activity[member?.runId ?? ''] ?? []);
-  const steps = leads || persistedSteps.length === 0 ? stream.steps : persistedSteps;
+  const steps = shownSteps(stream, persistedSteps, leads);
+  const stepsRunId = !leads && detail.activity[run.id]?.length ? run.id : streamRunId;
   useLiveReport(
     { id: run.id, name: providerName(provider), provider, kind: 'agent' },
     working,
@@ -170,7 +172,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
   const seconds = finished ? runSeconds(run) : null;
-  const log = useStepLog(steps, state);
+  const log = useStepLog(steps, state, stepsRunId);
   const changeTask =
     finished && turnRuns.some((candidate) => candidate.mode === 'do')
       ? taskForRuns(detail.tasks, changeRunIds)
