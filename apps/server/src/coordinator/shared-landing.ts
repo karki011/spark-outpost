@@ -33,12 +33,13 @@ export function sharedSite(
   );
   const ownedByOther = (file: string) =>
     others.some((other) => owns(ownedSet(coordination, other.key), file));
+  const ownedHere = (file: string) => owns(ownedSet(coordination, piece.key), file);
   return {
     cwd: async () => root,
     place: async () => null,
     slot,
     changed: async (before) =>
-      (await changedFiles(root, before)).filter((file) => !ownedByOther(file)),
+      (await changedFiles(root, before)).filter((file) => ownedHere(file) || !ownedByOther(file)),
   };
 }
 

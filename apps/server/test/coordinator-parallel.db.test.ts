@@ -105,6 +105,21 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     }
   });
 
+  it('lands two ordered pieces that own the same file', async () => {
+    await projectFlags(t, root, { parallel: true });
+    const { conversationId, runId } = await begin('#samefile');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const list = await pieceListOf(t, runId);
+    expect(list.placement).toBe('shared');
+    expect(list.pieces.map((piece) => [piece.key, piece.status, piece.filesChanged])).toEqual([
+      ['P1', 'landed', ['strings.ts']],
+      ['P2', 'landed', ['strings.ts']],
+    ]);
+    expect(list.pieces.flatMap((piece) => piece.violations)).toEqual([]);
+    expect(await readFile(join(root, 'strings.ts'), 'utf8')).toBe('built by P1\nbuilt by P2\n');
+  });
+
   it('flags a change to the file of a piece running at the same moment and names who made it', async () => {
     await projectFlags(t, root, { parallel: true });
     const { conversationId, runId } = await begin('#crossedit');

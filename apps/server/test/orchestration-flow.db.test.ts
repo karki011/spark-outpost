@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { getConversationDetail, getSummary } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { runChanges, revertRun } from '../src/projects/run-changes.ts';
@@ -87,6 +87,10 @@ describe('repair and escalation', () => {
       /Needs you: Stopped after 2 retries\.$/,
     );
     expect(orchestration.status).toBe('succeeded');
+    expect((await getSummary(t.db, conversationId))?.latestRun).toMatchObject({
+      status: 'succeeded',
+      needsYou: 'Needs you: Stopped after 2 retries.',
+    });
   }, 60_000);
 
   it('recovers from one failure by retrying one tier up without asking', async () => {

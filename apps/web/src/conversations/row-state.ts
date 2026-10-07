@@ -80,9 +80,10 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
         ? IDLE
         : { tone: 'error', label: 'Interrupted', sub: 'Interrupted: continue or start fresh' };
     case 'succeeded':
-      return chat.unread && !open
-        ? { tone: 'done', label: 'Finished, not opened yet', sub: 'Finished · open to review' }
-        : IDLE;
+      if (!chat.unread || open) return IDLE;
+      return run.needsYou
+        ? { tone: 'done', label: 'Finished, needs you', sub: run.needsYou }
+        : { tone: 'done', label: 'Finished, not opened yet', sub: 'Finished · open to review' };
     default:
       return IDLE;
   }

@@ -15,7 +15,13 @@ const RESUMED = 'Continue where you stopped';
 const HOLD_MS = 700;
 const STORE_WAIT_MS = 30_000;
 
+const SAME_FILE_PIECES: ParallelPiece[] = [
+  { key: 'P1', title: 'Truncate', owns: ['strings.ts'], dependsOn: [], size: 'S' },
+  { key: 'P2', title: 'Pad', owns: ['strings.ts'], dependsOn: ['P1'], size: 'S' },
+];
+
 function parallelPieces(text: string): ParallelPiece[] {
+  if (text.includes('#samefile')) return SAME_FILE_PIECES;
   const migrations = text.includes('#migrations');
   const manifest = text.includes('#manifest');
   return [
@@ -44,7 +50,7 @@ function parallelPieces(text: string): ParallelPiece[] {
 }
 
 export function parallelBlock(text: string) {
-  if (!text.includes('#parallel')) return null;
+  if (!text.includes('#parallel') && !text.includes('#samefile')) return null;
   return {
     pieces: parallelPieces(text).map((piece) => ({
       key: piece.key,
