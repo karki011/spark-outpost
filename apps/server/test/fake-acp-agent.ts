@@ -4,7 +4,7 @@ import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
 import { withTurnFailure } from './fake-acp-limits.ts';
-import { pushAuthStatus, rejectedTurn } from './fake-acp-access.ts';
+import { pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -244,6 +244,7 @@ async function turn(
   if (planned) return planned;
   if (await planReplies(asked, say)) return 'end_turn';
   if (text.includes(FOUR_KINDS_TRIGGER)) return fourKindsTurn(sessionId, sessionCwd, client, say);
+  if (text.includes('#signedout')) return signedOut(update, !text.includes('#signedoutquiet'));
   const role = coordinatorRoleFor(text) ?? roleFor(text);
   if (role) return role(roleTurn);
   if (text.includes('#blocks')) {

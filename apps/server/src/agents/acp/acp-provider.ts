@@ -34,7 +34,7 @@ import {
   promptText,
 } from './conversation-prompt.ts';
 import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
-import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
+import { assertProtocolVersion, failureError, namesCause, toProviderError } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
@@ -235,7 +235,9 @@ async function runSession(
       codexConfigFailed(cause, tail);
     if (!retryWithoutProfiles) {
       push(mapper.finish(true));
+      const reported = cause instanceof ProviderError ? null : mapper.failure();
       if (signal.aborted) channel.close();
+      else if (reported) channel.close(failureError(definition.name, reported));
       else channel.close(toProviderError(definition.name, cause, tail));
     }
   } finally {
@@ -250,7 +252,7 @@ async function runSession(
 }
 
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
-  if (error instanceof ProviderError) return error;
+  if (namesCause(error)) return error;
   const exit = await Promise.race([
     agent.exited.catch((reason: unknown) => reason),
     delay(EXIT_WAIT_MS).then(() => null),

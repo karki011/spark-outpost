@@ -3,6 +3,7 @@ import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
   needsYouLine,
+  providerIssueKind,
   type AgentRole,
   type OrchestrationPhase,
 } from '@spark-outpost/contracts';
@@ -143,6 +144,10 @@ function needsYou(state: FlowState, reason: string): FlowResult {
   return finish({ ...state, needsYou: needsYouLine(reason) }, 'succeeded');
 }
 
+function signedOut(error: string | null | undefined): boolean {
+  return typeof error === 'string' && providerIssueKind(error) === 'auth';
+}
+
 function builderDone(
   state: FlowState,
   event: Extract<FlowEvent, { type: 'agent_done' }>,
@@ -153,7 +158,7 @@ function builderDone(
     missingContext: event.missingContext ?? null,
     unchanged: event.unchanged === true,
   };
-  if (event.outcome === 'failed' && state.solo) {
+  if (event.outcome === 'failed' && (state.solo || signedOut(event.error))) {
     return finish(next, 'failed', event.error ?? 'The agent hit a problem.');
   }
   if (event.outcome === 'failed' && next.missingContext) return askContext(next);
