@@ -5,6 +5,8 @@ import { locateCli } from '../setup/verify.ts';
 export const TAILSCALE_APP_CLI = '/Applications/Tailscale.app/Contents/MacOS/Tailscale';
 export const SERVE_HTTPS_PORT = 443;
 const COMMAND_TIMEOUT_MS = 10_000;
+const ENV = '/usr/bin/env';
+const CLI_MODE = 'TAILSCALE_BE_CLI=1';
 
 const statusSchema = z.object({
   BackendState: z.string(),
@@ -68,12 +70,14 @@ function firstLine(text: string): string {
   );
 }
 
-export function tailscaleCli(run: RunCommand, shell: string | null): TailscaleCli {
+export function tailscaleCli(launch: RunCommand, shell: string | null): TailscaleCli {
   let found: string | null = null;
+  const run: RunCommand = (file, args, timeoutMs) =>
+    launch(ENV, [CLI_MODE, file, ...args], timeoutMs);
 
   const locate = async (): Promise<string | null> => {
     if (found) return found;
-    const candidates = [await locateCli('tailscale', run, shell), TAILSCALE_APP_CLI];
+    const candidates = [await locateCli('tailscale', launch, shell), TAILSCALE_APP_CLI];
     for (const candidate of candidates) {
       if (!candidate) continue;
       const version = await run(candidate, ['version'], COMMAND_TIMEOUT_MS);

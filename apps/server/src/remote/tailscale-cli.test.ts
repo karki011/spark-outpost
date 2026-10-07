@@ -9,12 +9,29 @@ const STATUS = JSON.stringify({
 });
 
 function cliWith(answers: Record<string, CommandResult>) {
-  const run: RunCommand = async (_file, args) =>
-    answers[args.join(' ')] ?? { code: 0, stdout: '1.80.0\n', stderr: '' };
+  const run: RunCommand = async (file, args) => {
+    if (file !== '/usr/bin/env') return { code: 1, stdout: '', stderr: '' };
+    if (args[0] !== 'TAILSCALE_BE_CLI=1')
+      return { code: 1, stdout: '', stderr: 'The Tailscale GUI failed to start\n' };
+    return answers[args.slice(2).join(' ')] ?? { code: 0, stdout: '1.80.0\n', stderr: '' };
+  };
   return tailscaleCli(run, null);
 }
 
 describe('reading Tailscale', () => {
+  it('asks the Tailscale app to answer as a command, since Spark has no terminal', async () => {
+    const reading = await cliWith({
+      'status --json': { code: 0, stdout: STATUS, stderr: '' },
+      'serve status --json': { code: 0, stdout: '{}', stderr: '' },
+    }).read();
+    expect(reading).toEqual({
+      kind: 'ready',
+      hostname: 'mac.tail1234.ts.net',
+      handler: null,
+      funnel: false,
+    });
+  });
+
   it('passes on what Tailscale said when status fails', async () => {
     const reading = await cliWith({
       'status --json': {
