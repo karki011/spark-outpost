@@ -186,6 +186,11 @@ describe('Stop on a top-level run', () => {
     expect(rows).toEqual([{ status: 'done' }]);
     expect((await getRun(t.db, runId))?.status).toBe('cancelled');
     expect(await eventTypes(t.db, runId)).toEqual(['RUN_STARTED', 'RUN_FINISHED']);
+    const { rows: usage } = await t.db.query(
+      `SELECT 1 FROM run_events WHERE run_id = $1 AND payload ? 'usage'`,
+      [runId],
+    );
+    expect(usage).toEqual([]);
     await expectConformantRun(t.db, runId);
   }, 60_000);
 });

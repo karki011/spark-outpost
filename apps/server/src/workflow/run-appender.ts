@@ -4,6 +4,7 @@ import type { Lease } from '../persistence/jobs.ts';
 import { appendRunEvents, type AppendOptions } from '../persistence/run-events.ts';
 import type { Append } from './agent-turn.ts';
 import { trackOpenSpans } from './open-spans.ts';
+import { withRunUsage } from './run-usage.ts';
 
 export const TEXT_FLUSH_MS = 50;
 export const TEXT_FLUSH_CHARS = 8_192;
@@ -95,7 +96,8 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
 
 export function runAppender(db: Db, lease: Lease, options: TextBufferOptions = {}): Append {
   return bufferingText(
-    (events, appendOptions) => appendRunEvents(db, lease, events, appendOptions),
+    async (events, appendOptions) =>
+      appendRunEvents(db, lease, await withRunUsage(db, lease.runId, events), appendOptions),
     options,
   );
 }

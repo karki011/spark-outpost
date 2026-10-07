@@ -84,6 +84,24 @@ describe('worker', () => {
       tokens: FAKE_TOKENS,
     });
     expect(detail?.usageTotals).toMatchObject({ costUsd: FAKE_COST_USD, totalTokens: 1200 });
+    const { rows } = await t.db.query<{ usage: unknown }>(
+      `SELECT payload->'usage' AS usage FROM run_events WHERE run_id = $1 AND type = 'RUN_FINISHED'`,
+      [runId],
+    );
+    expect(rows).toEqual([
+      {
+        usage: [
+          {
+            provider: 'fake',
+            inputTokens: 900,
+            outputTokens: 300,
+            totalTokens: 1200,
+            reasoningTokens: 80,
+            cachedInputTokens: 600,
+          },
+        ],
+      },
+    ]);
     await expectConformantRun(t.db, runId);
   });
 
