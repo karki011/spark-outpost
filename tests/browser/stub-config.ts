@@ -17,24 +17,32 @@ function portSlot(): number {
 }
 
 export const slot = portSlot();
-const base = slot === 0 ? null : 20_000 + slot * 10;
 
-function slotDatabaseUrl(): string | null {
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url || slot === 0) return url ?? null;
+export function slotPorts(forSlot: number): { stub: number; api: number; web: number } {
+  if (forSlot === 0) return { stub: 4399, api: 4319, web: 5174 };
+  const base = 20_000 + forSlot * 10;
+  return { stub: base, api: base + 1, web: base + 2 };
+}
+
+export function slotDatabaseUrl(url: string, forSlot: number): string {
+  if (forSlot === 0) return url;
   const parsed = new URL(url);
   if (parsed.pathname.slice(1) !== 'spark_outpost_test') return url;
-  parsed.pathname = `/spark_outpost_test_slot${slot}`;
+  parsed.pathname = `/spark_outpost_test_slot${forSlot}`;
   return parsed.toString();
 }
 
-export const TEST_DATABASE_URL = slotDatabaseUrl();
+export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
+  ? slotDatabaseUrl(process.env.TEST_DATABASE_URL, slot)
+  : null;
 
 export const SERVER_LOG_DIR = path.join(os.tmpdir(), `spark-outpost-server-logs-${slot}`);
 
-export const STUB_PORT = base ?? 4399;
-export const API_PORT = base === null ? 4319 : base + 1;
-export const WEB_PORT = base === null ? 5174 : base + 2;
+const ports = slotPorts(slot);
+export const STUB_PORT = ports.stub;
+export const API_PORT = ports.api;
+export const WEB_PORT = ports.web;
+export const WEB_BUILD_ENV = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test' };
 export const PACKAGED = process.env.SPARK_PACKAGED === '1';
 export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
