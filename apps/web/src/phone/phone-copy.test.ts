@@ -53,6 +53,20 @@ describe('activity', () => {
     expect(activityLine(entry({ action: 'refused' }))).toBe('A phone was refused');
   });
 
+  it('says a phone paired again and why one was shown the pairing page', () => {
+    expect(
+      activityLine(entry({ action: 'device_paired_again', deviceName: 'Kitchen phone' })),
+    ).toBe('Kitchen phone paired again');
+    const shown = (reason: string, deviceName: string | null = null) =>
+      activityLine(entry({ action: 'pairing_page_shown', deviceName, detail: { reason } }));
+    expect(shown('missing')).toBe('A phone with no sign-in opened the pairing page');
+    expect(shown('unknown')).toContain('paired before asked to pair again');
+    expect(shown('revoked', 'Pixel')).toBe(
+      'Pixel asked to pair again (it was removed on this Mac)',
+    );
+    expect(shown('unused', 'Pixel')).toBe('Pixel asked to pair again (not used for 30 days)');
+  });
+
   it('shows the request and its result when there is one', () => {
     expect(activityDetail(entry({ method: 'POST', path: '/api/reset', status: 403 }))).toBe(
       'POST /api/reset · 403',

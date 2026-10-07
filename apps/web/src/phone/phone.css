@@ -278,3 +278,12 @@ h2[data-status='https_off'] .ph-dot {
     animation: none;
   }
 }
+
+.ph-removed {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.ph-removed .ph-devices {
+  justify-self: stretch;
+}
