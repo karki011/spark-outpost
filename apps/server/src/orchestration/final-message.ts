@@ -52,6 +52,15 @@ function leadText(children: readonly MemberResult[], summary: string | null): st
   return [main.text.trim(), ...continued, later].filter(Boolean).join('\n\n');
 }
 
+export function replySoFar(
+  results: readonly MemberResult[],
+  message: string | null,
+): string | null {
+  const children = results.filter((result) => !result.inPlace && result.outcome === 'succeeded');
+  const parts = [message?.trim(), leadText(children, null)].filter(Boolean);
+  return parts.length > 0 ? parts.join('\n\n') : null;
+}
+
 export function finalText(
   results: readonly MemberResult[],
   verdict: ReviewVerdict | null,
