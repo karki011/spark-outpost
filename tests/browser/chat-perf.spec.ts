@@ -1,16 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openHeavyChat } from './heavy-chat.ts';
-import {
-  beginTrace,
-  clickCost,
-  endTrace,
-  expectWithin,
-  needsQuietMachine,
-  type Cost,
-  type TaskSummary,
-} from './perf-trace.ts';
 
 test.use({ trace: 'off' });
 
@@ -21,22 +12,71 @@ const DRAG_STYLE_ELEMENTS = 200;
 const IDLE_LAYERS = 80;
 const REPORT = process.env.SPARK_PERF_REPORT ?? '';
 
-async function dragCost(page: Page, handle: Locator, distance: number): Promise<TaskSummary> {
+interface TraceEvent {
+  name: string;
+  ph: string;
+  dur?: number;
+  args?: { elementCount?: number };
+}
+
+interface DragCost {
+  longTasks: number[];
+  styleElements: number[];
+}
+
+async function watchLongTasks(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const scope = window as unknown as { longTasks: number[] };
+    scope.longTasks = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) scope.longTasks.push(Math.round(entry.duration));
+    }).observe({ type: 'longtask' });
+  });
+}
+
+async function takeLongTasks(page: Page): Promise<number[]> {
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
+  return page.evaluate(() => (window as unknown as { longTasks: number[] }).longTasks.splice(0));
+}
+
+async function dragCost(
+  page: Page,
+  browser: Browser,
+  handle: Locator,
+  distance: number,
+): Promise<DragCost> {
   const box = (await handle.boundingBox())!;
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x + Math.sign(distance), y);
-  await page.waitForTimeout(300);
-  await beginTrace(page);
+  await takeLongTasks(page);
+  await browser.startTracing(page, { categories: ['devtools.timeline'] });
   for (let step = 1; step <= 30; step += 1) {
     await page.mouse.move(x + Math.sin((step / 30) * Math.PI) * distance, y);
   }
-  await page.waitForTimeout(300);
-  const cost = await endTrace(page);
+  const trace = JSON.parse((await browser.stopTracing()).toString()) as {
+    traceEvents: TraceEvent[];
+  };
+  const longTasks = await takeLongTasks(page);
   await page.mouse.up();
-  return cost;
+  const styleElements = trace.traceEvents
+    .filter((event) => event.name === 'UpdateLayoutTree' && event.ph === 'X')
+    .map((event) => event.args?.elementCount ?? 0);
+  return { longTasks, styleElements };
+}
+
+async function clickLatency(button: Locator): Promise<number> {
+  const ms = await button.evaluate(
+    (element: HTMLElement) =>
+      new Promise<number>((resolve) => {
+        const started = performance.now();
+        element.click();
+        requestAnimationFrame(() => setTimeout(() => resolve(performance.now() - started), 0));
+      }),
+  );
+  return Math.round(ms);
 }
 
 async function compositedLayers(page: Page): Promise<number> {
@@ -56,8 +96,10 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-test('a heavy chat resizes and switches panels without long main-thread work', async ({ page }) => {
-  needsQuietMachine();
+test('a heavy chat resizes and switches panels without long main-thread work', async ({
+  page,
+  browser,
+}) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1400, height: 900 });
   await openHeavyChat(page);
@@ -65,33 +107,37 @@ test('a heavy chat resizes and switches panels without long main-thread work', a
   await expect(work.getByRole('tab', { name: 'Tasks' })).toBeVisible();
   await page.waitForTimeout(1500);
   const layers = await compositedLayers(page);
+  await watchLongTasks(page);
 
   const panelDrag = await dragCost(
     page,
+    browser,
     page.getByRole('separator', { name: 'Resize work panel' }),
     -160,
   );
   const sidebarDrag = await dragCost(
     page,
+    browser,
     page.getByRole('separator', { name: 'Resize sidebar' }),
     100,
   );
 
-  const clicks: Record<string, Cost> = {};
+  const clicks: Record<string, number> = {};
   for (const name of ['Plan', 'Crew', 'Links', 'Cost', 'Tasks']) {
     const tab = work.getByRole('tab', { name });
     if ((await tab.count()) === 0) continue;
-    clicks[name] = await clickCost(tab);
+    clicks[name] = await clickLatency(tab);
     await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 });
   }
   const header = page.getByRole('main').locator('.head');
-  clicks.hide = await clickCost(header.getByRole('button', { name: 'Hide work panel' }));
+  clicks.hide = await clickLatency(header.getByRole('button', { name: 'Hide work panel' }));
   await expect(work).toBeHidden({ timeout: 20_000 });
   await page.waitForTimeout(600);
-  clicks.show = await clickCost(header.getByRole('button', { name: 'Show work panel' }));
+  clicks.show = await clickLatency(header.getByRole('button', { name: 'Show work panel' }));
   await expect(work).toBeVisible({ timeout: 20_000 });
+  const clickTasks = await takeLongTasks(page);
 
-  const summary = { layers, panelDrag, sidebarDrag, clicks };
+  const summary = { layers, panelDrag, sidebarDrag, clicks, clickTasks };
   test.info().annotations.push({ type: 'perf', description: JSON.stringify(summary) });
   if (REPORT) {
     mkdirSync(REPORT, { recursive: true });
@@ -100,11 +146,9 @@ test('a heavy chat resizes and switches panels without long main-thread work', a
   }
 
   expect(layers).toBeLessThan(IDLE_LAYERS);
-  for (const [name, drag] of Object.entries({ panelDrag, sidebarDrag })) {
-    expect.soft(drag.styleElements, `${name} restyled elements`).toBeLessThan(DRAG_STYLE_ELEMENTS);
-    expectWithin(drag.longest, DRAG_TASK_MS, `${name} longest task`);
+  for (const drag of [panelDrag, sidebarDrag]) {
+    expect(Math.max(0, ...drag.styleElements)).toBeLessThan(DRAG_STYLE_ELEMENTS);
+    expect(Math.max(0, ...drag.longTasks)).toBeLessThan(DRAG_TASK_MS);
   }
-  for (const [name, click] of Object.entries(clicks)) {
-    expectWithin(click, CLICK_MS, `${name} click to next paint`);
-  }
+  expect(Math.max(...Object.values(clicks))).toBeLessThan(CLICK_MS);
 });

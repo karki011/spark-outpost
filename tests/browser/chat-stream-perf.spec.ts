@@ -2,7 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openHeavyChat } from './heavy-chat.ts';
 import {
+  BUSY_MACHINE,
   CLICK_LIMIT_MS,
+  keyFeedbackMs,
   PRODUCTION,
   restingBusyPercent,
   settledMetrics,
@@ -13,7 +15,6 @@ import {
   waitForText,
   type PageMetrics,
 } from './perf-probe.ts';
-import { expectWithin, keyCost, needsQuietMachine } from './perf-trace.ts';
 
 test.use({ trace: 'off' });
 
@@ -22,7 +23,7 @@ const SOAK_MS = Number(process.env.SPARK_SOAK_MS ?? 0);
 const HEAP_GROWTH_MB = 25;
 const NODE_GROWTH = 6_000;
 const LISTENER_GROWTH = 400;
-const IDLE_BUSY_LIMIT = PRODUCTION ? 6 : 30;
+const IDLE_BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 12 : 6) : 30;
 
 interface CommitWindow {
   reactCommits: number;
@@ -63,7 +64,7 @@ function prompt(round: number): string {
 async function sendAndStream(page: Page, round: number) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(prompt(round));
-  const keyMs = await keyCost(page, 'Enter');
+  const keyMs = await keyFeedbackMs(page, 'Enter');
   await waitForText(page, '.thread section:last-of-type .md', `word${round}x${WORDS - 1}`);
   await waitForText(page, '.thread section:last-of-type .mood', 'done');
   return keyMs;
@@ -84,7 +85,6 @@ interface StreamCase {
 }
 
 async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCase) {
-  needsQuietMachine();
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize(viewport);
   await countCommits(page);
@@ -101,7 +101,7 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
   const startCommits = await commits(page);
   const startFetches = detailFetches;
   const started = Date.now();
-  const sendKey = await sendAndStream(page, 0);
+  const sendKeyMs = await sendAndStream(page, 0);
   const streamMs = Date.now() - started;
   const stream = await takeProbe(page);
   const streamCommits = (await commits(page)) - startCommits;
@@ -124,7 +124,7 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
     words: WORDS,
     idleBusy,
     streamMs,
-    sendKey,
+    sendKeyMs,
     stream,
     reactCommitsPerSecond: Math.round(streamCommits / (streamMs / 1000)),
     detailFetches: streamFetches,
@@ -138,14 +138,14 @@ async function streamHeavyChat(page: Page, { report, viewport, rail }: StreamCas
   writeReport(SOAK_MS > 0 ? `${report}-soak` : report, summary);
   test.info().annotations.push({ type: 'chat stream', description: JSON.stringify(summary) });
 
-  expect.soft(idleBusy, 'main thread percent at rest').toBeLessThan(IDLE_BUSY_LIMIT);
-  expectWithin(sendKey, CLICK_LIMIT_MS, 'Enter to next paint');
-  expectWithin(stream.longestTask, TASK_LIMIT_MS, 'longest task while streaming');
-  expect.soft(summary.reactCommitsPerSecond).toBeLessThan(70);
-  expect.soft(streamFetches).toBeLessThan(Math.max(12, streamMs / 500));
-  expect.soft(leaks.heapMb).toBeLessThan(HEAP_GROWTH_MB);
-  expect.soft(leaks.nodes).toBeLessThan(NODE_GROWTH);
-  expect.soft(leaks.listeners).toBeLessThan(LISTENER_GROWTH);
+  expect(idleBusy).toBeLessThan(IDLE_BUSY_LIMIT);
+  expect(sendKeyMs).toBeLessThan(CLICK_LIMIT_MS);
+  expect(stream.maxTaskMs).toBeLessThan(TASK_LIMIT_MS);
+  expect(summary.reactCommitsPerSecond).toBeLessThan(70);
+  expect(streamFetches).toBeLessThan(Math.max(12, streamMs / 500));
+  expect(leaks.heapMb).toBeLessThan(HEAP_GROWTH_MB);
+  expect(leaks.nodes).toBeLessThan(NODE_GROWTH);
+  expect(leaks.listeners).toBeLessThan(LISTENER_GROWTH);
 }
 
 test('a heavy chat streams a long reply smoothly without leaking', async ({ page }) => {

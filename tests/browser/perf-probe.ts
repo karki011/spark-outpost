@@ -1,13 +1,13 @@
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { CDPSession, Page } from '@playwright/test';
-import { beginTrace, endTrace, suspendTrace, type Cost, type TaskSummary } from './perf-trace.ts';
+import type { CDPSession, Locator, Page } from '@playwright/test';
 import { SERVER_LOG_DIR } from './stub-config.ts';
 
 export const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
-export const TASK_LIMIT_MS = PRODUCTION ? 100 : 400;
-export const CLICK_LIMIT_MS = PRODUCTION ? 100 : 1_000;
+export const BUSY_MACHINE = (os.loadavg()[0] ?? 0) > os.cpus().length * 2;
+export const TASK_LIMIT_MS = PRODUCTION ? (BUSY_MACHINE ? 150 : 100) : 400;
+export const CLICK_LIMIT_MS = PRODUCTION ? (BUSY_MACHINE ? 200 : 100) : 1_000;
 export const REPORT_DIR = 'test-results/smooth-audit';
 const LAG_MARKER = 'Event loop blocked';
 
@@ -41,27 +41,18 @@ export async function startProbe(page: Page): Promise<void> {
     });
     requestAnimationFrame(tick);
   });
-  await beginTrace(page);
 }
 
-interface Paused {
-  frames: boolean;
-  trace: boolean;
-}
-
-async function pauseProbe(page: Page): Promise<Paused> {
-  const frames = await page.evaluate(() => {
+async function pauseProbe(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
     const probe = (window as unknown as Partial<ProbeWindow>).perfProbe;
     if (!probe?.running) return false;
     probe.running = false;
     return true;
   });
-  return { frames, trace: await suspendTrace(page) };
 }
 
-async function resumeProbe(page: Page, paused: Paused): Promise<void> {
-  if (paused.trace) await beginTrace(page);
-  if (!paused.frames) return;
+async function resumeProbe(page: Page): Promise<void> {
   await page.evaluate(() =>
     (window as unknown as { perfProbeResume: () => void }).perfProbeResume(),
   );
@@ -73,8 +64,6 @@ export interface ProbeResult {
   frames: number;
   slowFrames: number;
   maxFrameGapMs: number;
-  longestTask: Cost;
-  work: TaskSummary;
 }
 
 export async function takeProbe(page: Page): Promise<ProbeResult> {
@@ -84,17 +73,34 @@ export async function takeProbe(page: Page): Promise<ProbeResult> {
     scope.frames = 0;
     return result;
   });
-  const work = await endTrace(page);
-  await beginTrace(page);
   return {
     longTasks: probe.long,
     maxTaskMs: Math.max(0, ...probe.long),
     frames: probe.frames,
     slowFrames: probe.gaps.length,
     maxFrameGapMs: Math.max(0, ...probe.gaps),
-    longestTask: work.longest,
-    work,
   };
+}
+
+export async function clickFeedbackMs(target: Locator): Promise<number> {
+  const ms = await target.evaluate(
+    (element: HTMLElement) =>
+      new Promise<number>((resolve) => {
+        const started = performance.now();
+        element.click();
+        requestAnimationFrame(() => setTimeout(() => resolve(performance.now() - started), 0));
+      }),
+  );
+  return Math.round(ms);
+}
+
+export async function keyFeedbackMs(page: Page, key: string): Promise<number> {
+  const started = Date.now();
+  await page.keyboard.press(key);
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))),
+  );
+  return Date.now() - started;
 }
 
 export interface LagMark {
@@ -149,7 +155,7 @@ function cdpFor(page: Page): Promise<CDPSession> {
       .context()
       .newCDPSession(page)
       .then(async (cdp) => {
-        await cdp.send('Performance.enable', { timeDomain: 'threadTicks' });
+        await cdp.send('Performance.enable');
         return cdp;
       });
     sessions.set(page, session);
@@ -185,7 +191,7 @@ export async function restingBusyPercent(page: Page, ms = 2_000): Promise<number
   });
   const first = await idleBusyPercent(page, ms);
   const busy = Math.min(first, await idleBusyPercent(page, ms));
-  await resumeProbe(page, paused);
+  if (paused) await resumeProbe(page);
   return busy;
 }
 

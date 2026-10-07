@@ -4,6 +4,7 @@ import { resetTestDatabase } from './database.ts';
 import { REPO_ROOT, serveMap, syntheticFixture } from './map-fixture.ts';
 import {
   CLICK_LIMIT_MS,
+  clickFeedbackMs,
   restingBusyPercent,
   PRODUCTION,
   startProbe,
@@ -11,7 +12,6 @@ import {
   TASK_LIMIT_MS,
   writeReport,
 } from './perf-probe.ts';
-import { clickCost, expectWithin, type Cost } from './perf-trace.ts';
 import { seedLongAudit, seedSparks, seedTourChats, serveBigInbox } from './tour-seed.ts';
 
 test.use({ trace: 'off' });
@@ -19,9 +19,9 @@ test.use({ trace: 'off' });
 const IDLE_BUSY_LIMIT = 5;
 
 interface Step {
-  click: Cost;
-  openTask: Cost;
-  steadyTask: Cost;
+  clickMs: number;
+  openMaxTaskMs: number;
+  steadyMaxTaskMs: number;
   slowFrames: number;
   idleBusyPercent: number;
 }
@@ -61,16 +61,16 @@ async function measure(
   steady: () => Promise<void>,
 ): Promise<Step> {
   await takeProbe(page);
-  const click = await clickCost(open);
+  const clickMs = await clickFeedbackMs(open);
   await expect(ready).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(800);
   const opened = await takeProbe(page);
   await steady();
   const steadyProbe = await takeProbe(page);
   return {
-    click,
-    openTask: opened.longestTask,
-    steadyTask: steadyProbe.longestTask,
+    clickMs,
+    openMaxTaskMs: opened.maxTaskMs,
+    steadyMaxTaskMs: steadyProbe.maxTaskMs,
     slowFrames: steadyProbe.slowFrames,
     idleBusyPercent: await restingBusyPercent(page),
   };
@@ -209,8 +209,8 @@ test('every screen opens and stays smooth with heavy data', async ({ page }) => 
   test.info().annotations.push({ type: 'screen tour', description: JSON.stringify(steps) });
 
   for (const [name, step] of Object.entries(steps)) {
-    expectWithin(step.click, CLICK_LIMIT_MS, `${name} click to next paint`);
-    expectWithin(step.steadyTask, TASK_LIMIT_MS, `${name} steady longest task`);
+    expect.soft(step.clickMs, `${name} click feedback`).toBeLessThan(CLICK_LIMIT_MS);
+    expect.soft(step.steadyMaxTaskMs, `${name} steady long task`).toBeLessThan(TASK_LIMIT_MS);
     if (PRODUCTION) {
       expect.soft(step.idleBusyPercent, `${name} idle main thread`).toBeLessThan(IDLE_BUSY_LIMIT);
     }

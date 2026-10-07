@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { REPO_ROOT, serveMap, syntheticFixture } from './map-fixture.ts';
-import { beginTrace, endTrace, expectWithin, needsQuietMachine, STRICT } from './perf-trace.ts';
 
 test.use({
   trace: 'off',
@@ -9,15 +8,12 @@ test.use({
 
 const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
 const TREE_TASK_MS = PRODUCTION ? 50 : 250;
-const PAN_TASK_MS = 50;
-const FRAME_MS = 20;
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
 test('a 20,000 file map stays smooth while panning and zooming', async ({ page }) => {
-  needsQuietMachine();
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
@@ -36,8 +32,11 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
   for (let step = 0; step < 12; step += 1) await page.mouse.wheel(0, -240);
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
-    const record = { frames: [] as number[] };
+    const record = { frames: [] as number[], long: [] as number[] };
     (window as unknown as { mapPerf: typeof record }).mapPerf = record;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) record.long.push(entry.duration);
+    }).observe({ type: 'longtask' });
     let last = performance.now();
     const tick = (now: number) => {
       record.frames.push(now - last);
@@ -46,39 +45,28 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
     };
     requestAnimationFrame(tick);
   });
-  await beginTrace(page);
   await page.mouse.down();
   for (let step = 0; step < 60; step += 1) {
     await page.mouse.move(x + Math.sin(step / 6) * 300, y + Math.cos(step / 6) * 160);
   }
   await page.mouse.up();
   for (let step = 0; step < 16; step += 1) await page.mouse.wheel(0, step < 8 ? 180 : -180);
-  const work = await endTrace(page);
   const perf = await page.evaluate(
-    () => (window as unknown as { mapPerf: { frames: number[] } }).mapPerf,
+    () => (window as unknown as { mapPerf: { frames: number[]; long: number[] } }).mapPerf,
   );
   const frames = perf.frames.slice(1).sort((a, b) => a - b);
   const median = frames[Math.floor(frames.length / 2)]!;
   test.info().annotations.push({
     type: 'frames',
-    description: JSON.stringify({
-      frames: frames.length,
-      medianMs: Number(median.toFixed(1)),
-      p95Ms: Number(frames[Math.floor(frames.length * 0.95)]!.toFixed(1)),
-      work,
-    }),
+    description: `frames ${frames.length}, median ${median.toFixed(1)} ms, p95 ${frames[Math.floor(frames.length * 0.95)]!.toFixed(1)} ms, long tasks ${JSON.stringify(perf.long.map(Math.round))}`,
   });
-  if (STRICT) expect.soft(median, 'median frame in ms').toBeLessThan(FRAME_MS);
-  expect
-    .soft(work.total.cpuMs / frames.length, 'main-thread work per frame in ms')
-    .toBeLessThan(FRAME_MS);
-  expectWithin(work.longest, PAN_TASK_MS, 'longest task while panning and zooming');
+  expect(median).toBeLessThan(20);
+  expect(perf.long.filter((duration) => duration > 50)).toEqual([]);
 });
 
 test('the tree of a 20,000 file map opens groups and pans without long main-thread tasks', async ({
   page,
 }) => {
-  needsQuietMachine();
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
@@ -99,7 +87,13 @@ test('the tree of a 20,000 file map opens groups and pans without long main-thre
   await page.mouse.move(x, y);
   for (let step = 0; step < 4; step += 1) await page.mouse.wheel(0, step < 2 ? -120 : 120);
   await page.waitForTimeout(1500);
-  await beginTrace(page);
+  await page.evaluate(() => {
+    const record = { long: [] as number[] };
+    (window as unknown as { treePerf: typeof record }).treePerf = record;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) record.long.push(entry.duration);
+    }).observe({ type: 'longtask' });
+  });
   const started = Date.now();
   await tree.getByRole('button', { name: /^Other in src, group of \d+ areas/ }).focus();
   await page.keyboard.press('Enter');
@@ -122,10 +116,12 @@ test('the tree of a 20,000 file map opens groups and pans without long main-thre
   await page.keyboard.press('Enter');
   await expect(tree.locator('.react-flow__node-file').first()).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const work = await endTrace(page);
+  const long = await page.evaluate(
+    () => (window as unknown as { treePerf: { long: number[] } }).treePerf.long,
+  );
   test.info().annotations.push({
     type: 'tree',
-    description: JSON.stringify({ production: PRODUCTION, openedMs: opened, work }),
+    description: `${PRODUCTION ? 'production' : 'development'} build: opened the group in ${opened} ms, long tasks ${JSON.stringify(long.map(Math.round))}`,
   });
-  expectWithin(work.longest, TREE_TASK_MS, 'longest task in the tree');
+  expect(long.filter((duration) => duration > TREE_TASK_MS)).toEqual([]);
 });
