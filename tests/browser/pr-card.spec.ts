@@ -138,7 +138,9 @@ test('an open pull request is one quiet row above the message box that expands u
   expect(collapsed.height).toBe(32);
   expect(collapsed.y + collapsed.height).toBeLessThanOrEqual(composer.y);
   const context = await box(page.locator('.ctxbar'));
-  expect(Math.abs((await box(page.locator('.prc-item'))).width - context.width)).toBeLessThan(2);
+  const item = await box(page.locator('.prc-item'));
+  expect(Math.abs(item.x - context.x)).toBeLessThan(2);
+  expect(Math.abs(item.width - context.width)).toBeLessThan(2);
   const before = await page.evaluate(() => {
     const first = document.querySelector('.prc-toggle')!;
     const input = document.querySelector('.composer textarea')!;

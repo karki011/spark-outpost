@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import { combinedFixture, monoFixture, REPO_ROOT } from './map-fixture.ts';
+import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { addProject, openMap, outline, screenshot, sky } from './map-page.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { MAP_ROOT_PREFIX } from './stub-config.ts';
@@ -238,27 +238,22 @@ test('two projects show separate skies joined by labelled bridges and a likely p
   );
 });
 
-test('on a phone the map opens as an outline, with the other views one tap away', async ({
-  page,
-}) => {
+test('on a phone a saved Map view opens Home and the Map is not offered', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const projectId = await addProject(page, REPO_ROOT);
-  await openMap(page, monoFixture(projectId), 'graphite', undefined, { view: null });
-  const list = outline(page);
-  await expect(list).toBeVisible();
-  await expect(sky(page)).toHaveCount(0);
-  await list.getByRole('treeitem', { name: /^apps, Feature, \d+ areas/ }).click();
-  const tickets = list.getByRole('treeitem', { name: /^Tickets,/ });
-  await tickets.click();
-  await expect(tickets).toHaveAttribute('aria-expanded', 'true');
-  const file = list.getByRole('treeitem', { name: /^apps\/web\/src\/tickets\// }).first();
-  await expect(file).toBeVisible();
-  await screenshot(page, 'map-view-outline-phone-dark');
-  await file.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Close file details' }).click();
-  await page.getByRole('radio', { name: 'Sky' }).click();
-  await expect(sky(page)).toBeVisible();
+  await serveMap(page, monoFixture(projectId));
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await expect(nav.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('region', { name: 'Start a new chat' })).toBeVisible();
+  await expect(nav.getByRole('button', { name: 'Map' })).toHaveCount(0);
+  await nav.getByRole('button', { name: 'More' }).click();
+  const more = page.getByRole('group', { name: 'More destinations' });
+  await expect(more.getByRole('button', { name: 'Phone' })).toBeVisible();
+  await expect(more.getByRole('button', { name: 'Map' })).toHaveCount(0);
+  await expect(page.locator('.map-stage')).toHaveCount(0);
+  await expect(outline(page)).toHaveCount(0);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
