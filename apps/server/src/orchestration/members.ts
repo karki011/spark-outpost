@@ -4,6 +4,7 @@ import { CRITIC_QUIET_NOTICE_MS } from '../advisor/policy.ts';
 import { integratorRoute } from '../coordinator/integrator.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
+import { harnessOf } from '../harness/setting.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
@@ -148,7 +149,7 @@ async function runInPlace(
   if (mode !== s.input.mode) await setRunMode(s, mode);
   const preamble = await readerPreamble(s);
   const { planning: drafting, ...facts } = s.input;
-  const planning = drafting === true || plansThisTurn(facts);
+  const planning = drafting === true || plansThisTurn(facts, harnessOf(s.deps) === 'simple');
   const input = {
     ...s.input,
     mode,

@@ -5,6 +5,7 @@ import {
   type CheckBody,
   type PlanEntry,
 } from '@spark-outpost/contracts';
+import type { Need } from './simple-intake.ts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { Ranking } from './observe-rank.ts';
@@ -146,6 +147,8 @@ export interface Session {
   laws?: LawReview | null;
   criticRemovals?: string[] | null;
   estimate?: TaskEstimate | null;
+  need?: Need;
+  upgraded?: boolean;
 }
 
 export function builderKey(taskId: string): string {

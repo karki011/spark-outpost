@@ -65,6 +65,14 @@ import {
   type Session,
 } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
+import { harnessOf } from '../harness/setting.ts';
+import {
+  UPGRADED_NOTE,
+  needOf,
+  recordNeed,
+  simpleStep,
+  withoutSparkPlans,
+} from './simple-intake.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, settleObservations } from './observe.ts';
@@ -146,6 +154,9 @@ async function placeBeforeBuilding(s: Session): Promise<string | null> {
 }
 
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
+  const replaced = harnessOf(s.deps) === 'simple' ? await simpleStep(s, action) : null;
+  if (replaced && 'event' in replaced) return replaced.event;
+  if (replaced) return perform(s, replaced.action);
   switch (action.type) {
     case 'ask':
       return ask(s, action);
@@ -238,7 +249,19 @@ async function finish(
   const pieces = coordinationReport(s.coordination);
   const laws = lawsNote(s);
   const skipped = criticSkippedLine(s);
-  const notes = [pieces, assumed, escalated, fixed, suggested, skipped, laws, stopped, incomplete];
+  const upgraded = s.upgraded ? UPGRADED_NOTE : null;
+  const notes = [
+    pieces,
+    assumed,
+    escalated,
+    upgraded,
+    fixed,
+    suggested,
+    skipped,
+    laws,
+    stopped,
+    incomplete,
+  ];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
@@ -297,13 +320,10 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     }
     const scanning =
       doing && !solo && repoRoot ? startScan({ deps, input }, repoRoot, taskStartedAt) : null;
-    const { intake, decisions } = await runIntake(
-      deps,
-      input,
-      append,
-      input.projectMove ? null : current,
-      solo,
-    );
+    const taken = await runIntake(deps, input, append, input.projectMove ? null : current, solo);
+    const simple = harnessOf(deps) === 'simple';
+    const { intake } = taken;
+    const decisions = simple ? withoutSparkPlans(taken.decisions) : taken.decisions;
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
@@ -400,6 +420,10 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       jevDiffs: !solo && (await jevDiffsAllowed(deps.db, input.workspaceId)),
     };
     session = s;
+    if (simple) {
+      s.need = needOf(taken.decisions);
+      await recordNeed(s, s.need, `intake read this as ${s.need.replace('_', ' ')}`);
+    }
     observeScan(s, scanning, repoRoot);
     if (doing && !answers) {
       if (!solo) decideBuildStyle(s);

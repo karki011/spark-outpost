@@ -322,6 +322,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     cli: 'codex',
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
     repoStyle: 'codex',
+    resumesAcrossFolders: true,
     conversationMode: CODEX_READ_ONLY_MODE,
     askMode: CODEX_READ_ONLY_MODE,
     readsProjectFolders: true,

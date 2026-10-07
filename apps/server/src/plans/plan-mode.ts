@@ -84,9 +84,9 @@ export function crewPlansStayNotes(facts: CrewFacts): boolean {
   return Boolean(facts.piece) || READS_FOR_THE_CREW.has(facts.role ?? '');
 }
 
-export function plansThisTurn(facts: PlanningFacts): boolean {
+export function plansThisTurn(facts: PlanningFacts, userModeOnly = false): boolean {
   if (facts.planning !== undefined) return facts.planning;
   if (facts.mode !== 'ask' || crewPlansStayNotes(facts)) return false;
   const planModeChat = modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
-  return planModeChat || planOnlyByRule(facts.userRequest);
+  return planModeChat || (!userModeOnly && planOnlyByRule(facts.userRequest));
 }
