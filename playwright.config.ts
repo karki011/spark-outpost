@@ -24,6 +24,7 @@ import {
   slot,
   STUB_PORT,
   TEST_DATABASE_URL,
+  WEB_BUILD_ENV,
   WEB_PORT,
 } from './tests/browser/stub-config.ts';
 
@@ -92,17 +93,19 @@ const logged = (command: string, name: string) =>
   `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
 const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 const buildsWeb = PACKAGED || Boolean(process.env.SPARK_WEB_BUILD);
-const buildEnv = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test' };
 const viteBuild = `${node} node_modules/vite/bin/vite.js build`;
 const packagedBuild = PACKAGED ? `(cd ../web && ${viteBuild}) && ` : '';
 
+const vitePreview = `${node} node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${WEB_PORT} --strictPort`;
+const builtWebCommand = process.env.SPARK_WEB_PREBUILT
+  ? vitePreview
+  : `${viteBuild} && ${vitePreview}`;
+
 const viteServer = {
-  command: process.env.SPARK_WEB_BUILD
-    ? `${viteBuild} && ${node} node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${WEB_PORT} --strictPort`
-    : `${node} node_modules/vite/bin/vite.js`,
+  command: process.env.SPARK_WEB_BUILD ? builtWebCommand : `${node} node_modules/vite/bin/vite.js`,
   cwd: 'apps/web',
   env: {
-    ...buildEnv,
+    ...WEB_BUILD_ENV,
     SPARK_WEB_PORT: String(WEB_PORT),
     SPARK_API_PORT: String(API_PORT),
     [API_TOKEN_ENV]: apiToken,
@@ -139,7 +142,7 @@ export default defineConfig({
       cwd: 'apps/server',
       env: {
         ...serverEnv,
-        ...(PACKAGED ? { ...buildEnv, WEB_ROOT: path.resolve('apps/web/dist') } : {}),
+        ...(PACKAGED ? { ...WEB_BUILD_ENV, WEB_ROOT: path.resolve('apps/web/dist') } : {}),
         [API_TOKEN_ENV]: apiToken,
         SPARK_TEST_PORT_SLOT: String(slot),
         TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
