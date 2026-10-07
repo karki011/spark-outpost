@@ -78,7 +78,7 @@ export function togglePick(answer: QuestionAnswer, pick: string): QuestionAnswer
   return { ...answer, picks };
 }
 
-function answerText(question: CheckpointQuestion, answer: QuestionAnswer): string {
+export function answerText(question: CheckpointQuestion, answer: QuestionAnswer): string {
   const picked = quickPicks(question)
     .filter((pick) => answer.picks.includes(pick))
     .join(', ');
