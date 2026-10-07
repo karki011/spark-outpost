@@ -39,11 +39,11 @@ export function requirementTarget(
   return null;
 }
 
-export async function routeRequirement(
+async function routeNote(
   db: Queryable,
   list: PieceList,
   requirement: Requirement,
-): Promise<RequirementRoute> {
+): Promise<TaskPiece | null> {
   const note = {
     kind: 'requirement_added' as const,
     body: requirement.body,
@@ -51,11 +51,29 @@ export async function routeRequirement(
     urgent: false,
   };
   const target = requirementTarget(list.pieces, requirement);
-  if (!target) {
-    await insertPieceNote(db, { listId: list.id }, note);
-    return { to: 'follow_up' };
-  }
-  await addRequirement(db, target.id, requirement.body);
-  await insertPieceNote(db, { pieceId: target.id }, note);
+  await insertPieceNote(db, target ? { pieceId: target.id } : { listId: list.id }, note);
+  return target;
+}
+
+function routeTo(target: TaskPiece | null): RequirementRoute {
+  if (!target) return { to: 'follow_up' };
   return { to: 'worker', key: target.key, running: target.status === 'running' };
+}
+
+export async function routeNotice(
+  db: Queryable,
+  list: PieceList,
+  requirement: Requirement,
+): Promise<RequirementRoute> {
+  return routeTo(await routeNote(db, list, requirement));
+}
+
+export async function routeRequirement(
+  db: Queryable,
+  list: PieceList,
+  requirement: Requirement,
+): Promise<RequirementRoute> {
+  const target = await routeNote(db, list, requirement);
+  if (target) await addRequirement(db, target.id, requirement.body);
+  return routeTo(target);
 }

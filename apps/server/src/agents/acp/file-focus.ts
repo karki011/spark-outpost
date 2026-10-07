@@ -7,6 +7,7 @@ const PATH_FIELDS = ['file_path', 'path', 'notebook_path'] as const;
 const ACTIONS: Readonly<Record<string, FileFocus['action']>> = { read: 'read', edit: 'edit' };
 
 type Location = { path: string; line?: number | null };
+type Content = { type: string; path?: string };
 
 function fileName(path: string): string {
   return path.split(/[\\/]/).at(-1) ?? path;
@@ -42,12 +43,34 @@ export function fileFocus(
   };
 }
 
+function shown(path: string): boolean {
+  return path !== '' && path.length <= PATH_CHARS && !isSecretFileName(fileName(path));
+}
+
+export function editedFiles(
+  kind: string | null | undefined,
+  locations: readonly Location[] | null | undefined,
+  rawInput: unknown,
+  content: readonly Content[] | null | undefined,
+): FileFocus[] {
+  const first = fileFocus(kind, locations, rawInput);
+  if (kind !== 'edit') return first ? [first] : [];
+  const paths = (content ?? []).flatMap((item) =>
+    item.type === 'diff' && typeof item.path === 'string' ? [item.path] : [],
+  );
+  const rest = [...new Set(paths)]
+    .filter((path) => path !== first?.path && shown(path))
+    .map((path): FileFocus => ({ path, line: null, limit: null, action: 'edit' }));
+  return first ? [first, ...rest] : rest;
+}
+
 export interface FocusTracker {
   see(
     toolCallId: string,
     kind: string | null | undefined,
     locations: readonly Location[] | null | undefined,
     rawInput: unknown,
+    content?: readonly Content[] | null,
   ): ProviderOutput[];
   done(toolCallId: string): void;
 }
@@ -55,13 +78,13 @@ export interface FocusTracker {
 export function createFocusTracker(): FocusTracker {
   const seen = new Map<string, string>();
   return {
-    see(toolCallId, kind, locations, rawInput) {
-      const focus = fileFocus(kind, locations, rawInput);
-      if (!focus) return [];
-      const key = JSON.stringify(focus);
+    see(toolCallId, kind, locations, rawInput, content) {
+      const focuses = editedFiles(kind, locations, rawInput, content);
+      if (focuses.length === 0) return [];
+      const key = JSON.stringify(focuses);
       if (seen.get(toolCallId) === key) return [];
       seen.set(toolCallId, key);
-      return [{ kind: 'file_focus', ...focus }];
+      return focuses.map((focus) => ({ kind: 'file_focus', ...focus }));
     },
     done(toolCallId) {
       seen.delete(toolCallId);

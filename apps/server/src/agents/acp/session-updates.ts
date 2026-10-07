@@ -372,7 +372,13 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
             linked: false,
           });
           outputs.push(
-            ...focus.see(update.toolCallId, update.kind, update.locations, update.rawInput),
+            ...focus.see(
+              update.toolCallId,
+              update.kind,
+              update.locations,
+              update.rawInput,
+              update.content,
+            ),
           );
           outputs.push({
             kind: 'step_started',
@@ -404,6 +410,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
                   update.kind ?? open.kind,
                   update.locations,
                   update.rawInput,
+                  update.content,
                 )
               : []),
             ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),

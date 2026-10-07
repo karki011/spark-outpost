@@ -3,7 +3,7 @@ import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { insertRailFlag } from '../persistence/rail-flags.ts';
 import { git } from '../projects/snapshot.ts';
-import { routeRequirement } from './follow-up.ts';
+import { routeNotice } from './follow-up.ts';
 import { crossedText } from './needs.ts';
 
 export const PIECE_CROSSED_METHOD = 'spark/rail_crossed';
@@ -75,7 +75,7 @@ export async function reportCrossings(
   if (paths.length === 0) return;
   await flag(db, crossing, paths);
   for (const path of paths) {
-    await routeRequirement(db, list, {
+    await routeNotice(db, list, {
       body: crossedText(crossing.workerLabel, path, await patchOf(crossing, path)),
       files: [path],
       source: 'coordinator',
