@@ -20,6 +20,15 @@ describe('digestModel', () => {
     });
   });
 
+  it('keeps the digest off Haiku 5.5, which is the fast tier', () => {
+    const offered = [
+      { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
+      { id: 'sonnet', label: 'Sonnet 5' },
+    ];
+    expect(digestModel('claude', offered, ['low']).model).toBe('sonnet');
+    expect(digestModel('claude', [offered[0]!], ['low']).model).toBeNull();
+  });
+
   it('skips a retiring model', () => {
     const offered = [{ id: 'gpt-5.5' }, { id: 'gpt-5.6-sol' }];
     const today = new Date('2026-09-28T00:00:00Z');

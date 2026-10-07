@@ -68,6 +68,7 @@ test('Models is one table per provider and a row opens for the details', async (
     /^Sonnet 5\.5/,
     /^Opus 5\.5/,
     'Only when you pick it',
+    /^Haiku 5\.5/,
     /^Haiku 4\.5/,
     /^Fable 5\.1/,
   ]);
@@ -148,6 +149,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);
@@ -160,6 +162,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);
@@ -172,6 +175,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5.5',
     'Fable 5.1',
     'Haiku 4.5',
+    'Haiku 5.5',
   ]);
   await expect(codex.getByRole('columnheader', { name: 'Out', exact: true })).toHaveAttribute(
     'aria-sort',
@@ -194,6 +198,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);

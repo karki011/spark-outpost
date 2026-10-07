@@ -111,6 +111,68 @@
   "cards": [
     {
       "provider": "claude",
+      "id": "claude-haiku-5-5",
+      "label": "Haiku 5.5",
+      "match": {
+        "ids": ["claude-haiku-5-5"],
+        "labels": ["Haiku 5.5"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 0.1,
+        "cachedInputPerMillion": 0.01,
+        "cacheWritePerMillion": 0.125,
+        "outputPerMillion": 0.5,
+        "note": "Prompts up to 100K tokens. Over 100K tokens: $0.50 input, $0.05 cache read, $0.625 cache write, $2.50 output. Cache write is the 5-minute rate; the 1-hour write is $0.20 ($1 over 100K)."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fastest",
+      "reasoning": {
+        "mode": "adaptive",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "The vendor suggests medium for most work, low for chat, short tool tasks and simple high-volume requests, and high for longer agent tasks and strict instruction following."
+      },
+      "strengths": [
+        "High-volume, latency-sensitive tasks such as classification, extraction and routing",
+        "Sub-agent tasks",
+        "Fastest and lowest-priced model in the Claude lineup"
+      ],
+      "weakSpots": [
+        "Sonnet 5.5 is the better choice for complex agentic coding, per the vendor",
+        "Prompts over 100K tokens cost five times as much",
+        "At low effort it may skip a search, stop early or skip a check in long agent prompts",
+        "New tokenizer: about 30% more tokens than Haiku 4.5 for the same text"
+      ],
+      "blurb": "classification, routing, sub-agent work; 5x over 100K",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-10-07",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/haiku-5-5/overview",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://www.anthropic.com/claude-haiku-5-5",
+          "checkedAt": "2026-10-07"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
       "id": "claude-haiku-4-5",
       "label": "Haiku 4.5",
       "match": {
