@@ -21,7 +21,7 @@ import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { shownCommands, type LiveCommand } from '../commands/command-model.ts';
 import { TurnReply } from '../commands/TurnReply.tsx';
-import { ErrorLine, ModelSwitchNote } from '../ModelSwitchNote.tsx';
+import { ErrorLine, ModelSwitchNote, type TimedOutFacts } from '../ModelSwitchNote.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useLiveHead, useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -131,6 +131,7 @@ interface BodyProps {
   modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
+  waited?: TimedOutFacts;
 }
 
 const NO_COMMANDS: readonly CommandRun[] = [];
@@ -152,6 +153,7 @@ function AgentBody({
   modelSwitch = null,
   approvals,
   repo,
+  waited,
 }: BodyProps & { liveId?: string | null; streamed?: readonly LiveCommand[] }) {
   const busy = agent.state === 'working' || agent.state === 'thinking';
   const cards = decidedFirst(
@@ -169,11 +171,11 @@ function AgentBody({
       repo={repo}
     />
   );
-  const status = blockStatus(agent, {
-    steps,
-    waiting: cards.pending.length > 0,
-    started: Boolean(text),
-  });
+  const status = blockStatus(
+    agent,
+    { steps, waiting: cards.pending.length > 0, started: Boolean(text) },
+    error,
+  );
   return (
     <>
       <AgentHead
@@ -201,7 +203,7 @@ function AgentBody({
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
         )}
         <ModelSwitchNote change={modelSwitch} />
-        <ErrorLine error={error} details={errorDetails} change={modelSwitch} />
+        <ErrorLine error={error} details={errorDetails} change={modelSwitch} waited={waited} />
       </div>
     </>
   );
@@ -245,6 +247,7 @@ interface AgentBlockProps {
   modelSwitch?: ModelSwitch | null;
   approvals: readonly Approval[];
   repo: Project | null;
+  waited?: TimedOutFacts;
   after?: ReactNode;
   changes?: ReactNode;
 }

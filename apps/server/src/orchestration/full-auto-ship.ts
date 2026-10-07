@@ -24,17 +24,18 @@ import {
 } from './agent-publish.ts';
 import { checksFailing } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
-import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
+import { KEPT_BY_AUTO_EDIT, RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { assumptionPrNote } from './clarify.ts';
 import { criticSkippedLine, sessionReviewLine } from './critic-fix.ts';
 import { changedLines } from './member-prompts.ts';
 import { choosePrSplit, ownWorktreePieces } from './pr-split.ts';
 import { publish, type Session } from './session.ts';
-import { lawItems, lawsNote } from '../laws/review.ts';
+import { lawItems, lawsNote, outsidePlanFiles } from '../laws/review.ts';
 import type { FlowEvent } from './transitions.ts';
 
 export const CHECKS_FAILING_NOTE = 'Checks failing';
 export const UNVERIFIED_NOTE = 'Jev could not verify this change';
+export const KEPT_TITLE = 'Changes kept';
 export const KEPT_BY_FULL_AUTO = 'Full auto → PR kept the changes and went on to ship them.';
 export const CHECKS_HOLD_REASON =
   'The checks still fail after the fix turns, and Full auto → PR is set to stop before opening a PR when they do. Keep the change and ship it yourself, ask for a fix, or revert.';
@@ -54,6 +55,17 @@ function shipDeps(s: Session): ShipDeps {
   };
 }
 
+const ROUTINE_LEADS: ReadonlySet<string> = new Set([KEPT_BY_FULL_AUTO, KEPT_BY_AUTO_EDIT]);
+const PUBLISHED_PLAINLY = /^(?:Opened|Updated) (?:draft )?(?:PR|pull request) #\d+: /;
+
+export function keptNote(lines: readonly (string | null)[]): string | null {
+  const notable = lines.filter(
+    (line): line is string =>
+      Boolean(line) && !ROUTINE_LEADS.has(line!) && !PUBLISHED_PLAINLY.test(line!),
+  );
+  return notable.length > 0 ? notable.join(' ') : null;
+}
+
 export async function autoKeep(
   s: Session,
   keptBy: InvolvementLevel,
@@ -61,8 +73,13 @@ export async function autoKeep(
 ): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
   const reason = lines.filter((line): line is string => Boolean(line)).join(' ');
-  const plain = acceptCard(changes.files, reason, null, lawItems(s), await changedLines(s));
-  const card = { ...plain, payload: { ...plain.payload, keptBy } };
+  const changed = await changedLines(s);
+  const plain = acceptCard(changes.files, reason, null, lawItems(s), changed, outsidePlanFiles(s));
+  const card = {
+    ...plain,
+    title: KEPT_TITLE,
+    payload: { ...plain.payload, keptBy, keptNote: keptNote(lines) },
+  };
   s.checkpoints += 1;
   const kept = await insertApproval(
     s.deps.db,

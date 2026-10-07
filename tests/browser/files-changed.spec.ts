@@ -142,11 +142,11 @@ test('a turn lists changed files and opens each one in the diff drawer', async (
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1400, height: 900 });
   await editedChat(page, appRoot);
-  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept automatically.',
-    { timeout: 20_000 },
-  );
-  const block = page.getByRole('region', { name: 'Files changed: 1 file changed' });
+  const kept = page.getByRole('region', { name: /^Kept · / });
+  await expect(kept).toHaveAccessibleName('Kept · 1 file · +1 −0', { timeout: 20_000 });
+  await expect(page.getByRole('region', { name: /^Files changed/ })).toHaveCount(0);
+  await kept.getByRole('button', { name: 'Kept · 1 file · +1 −0' }).click();
+  const block = kept.getByRole('region', { name: 'Files changed: 1 file changed' });
   await expect(block).toContainText('+1 −0');
   await expect(block.locator('.dstat i.a')).toHaveCount(1);
   await block.getByRole('button', { name: 'Open the diff of notes.txt' }).click();

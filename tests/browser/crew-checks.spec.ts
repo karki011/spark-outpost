@@ -139,8 +139,7 @@ test('Accept edits: the check approval shows in the thread, Review jumps to it, 
     has: page.getByRole('button', { name: 'Deny' }),
   });
   await again.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 60_000 });
-  const keep = page.getByRole('group', { name: 'Keep these changes?', exact: true });
-  await expect(keep).toContainText('Kept automatically.', { timeout: 60_000 });
+  await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 60_000 });
   expect(repo.file('fixed.txt')).toBe('fixed\n');
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

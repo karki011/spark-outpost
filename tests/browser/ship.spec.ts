@@ -47,21 +47,28 @@ async function keptChange(page: Page, root: string) {
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept automatically.',
-    { timeout: 20_000 },
-  );
+  await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+  await expect(page.locator('.col .ship-btn')).toHaveCount(0);
 }
 
-test('Ship from the keep card commits the task file and opens a PR', async ({ page }) => {
+async function changesTab(page: Page) {
+  const showPanel = page.getByRole('button', { name: 'Show work panel' });
+  if (await showPanel.isVisible()) await showPanel.click();
+  const workPanel = page.getByRole('complementary', { name: 'Work panel' });
+  await workPanel.getByRole('tab', { name: 'Changes' }).click();
+  return workPanel;
+}
+
+test('Ship from the Changes tab commits the task file and opens a PR', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'widgets');
   writeFileSync(path.join(repo.root, 'mine.txt'), 'my own edit\n');
   writeFileSync(FAKE_GH_STATE, 'octo-cli');
   await keptChange(page, repo.root);
 
-  const open = page.locator('.ship-btn');
+  const workPanel = await changesTab(page);
+  const open = workPanel.locator('.ship-btn');
   await expect(open).toHaveText('Open PR');
   await expect(open).not.toHaveAttribute('aria-controls');
   await open.click();
@@ -90,11 +97,10 @@ test('Ship from the keep card commits the task file and opens a PR', async ({ pa
   await expect(page.getByRole('status').filter({ hasText: 'Opened PR #1.' })).toBeVisible({
     timeout: 15_000,
   });
-  const chip = page.locator('.ship .lchip');
-  await expect(chip).toContainText('acme/widgets#1');
-  await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
-  await expect(open).toHaveText('Update PR');
-  await expect(open).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Opened PR #1.' })).toBeFocused();
+  await expect(page.locator('.ship .lchip')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Update PR' })).toHaveCount(0);
+  await expect(open).toHaveCount(0);
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
     title: string;
@@ -114,18 +120,29 @@ test('Ship from the keep card commits the task file and opens a PR', async ({ pa
     git(repo.root, 'rev-parse', pulls[0]!.head),
   );
 
-  const showPanel = page.getByRole('button', { name: 'Show work panel' });
-  if (await showPanel.isVisible()) await showPanel.click();
-  const workPanel = page.getByRole('complementary', { name: 'Work panel' });
-  await workPanel.getByRole('tab', { name: 'Changes' }).click();
-  await expect(workPanel.locator('.ship .lchip')).toContainText('acme/widgets#1');
+  await page.reload();
+  const reopened = await changesTab(page);
+  await expect(reopened.locator('.ship')).toContainText(
+    'Pull request #1 is open. To push an update, ask in the message box.',
+  );
+  await expect(reopened.locator('.ship-btn')).toHaveCount(0);
+  await reopened.getByRole('tab', { name: 'Links' }).click();
+  await expect(reopened.getByRole('list', { name: 'Pull requests in acme/widgets' })).toContainText(
+    '#1',
+  );
+  await expect(reopened).not.toContainText('Opened by Ship');
+  const kept = page.getByRole('region', { name: /^Kept · / });
+  await expect(kept.getByRole('link', { name: 'Pull request #1' })).toHaveAttribute(
+    'href',
+    'https://github.com/acme/widgets/pull/1',
+  );
 });
 
 test('Ship pushes and links Create PR when GitHub is not connected', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'pushonly');
   await keptChange(page, repo.root);
-  const open = page.locator('.ship-btn');
+  const open = (await changesTab(page)).locator('.ship-btn');
   await expect(open).toHaveText('Open PR');
   await open.click();
   const panel = page.getByRole('group', { name: 'Ship this task' });
@@ -145,7 +162,7 @@ test('Ship pushes and links Create PR when GitHub is not connected', async ({ pa
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));
 });
 
-test('Full auto runs to a PR: the reply and the auto-kept card show the PR link', async ({
+test('Full auto runs to a PR: the reply and the result line show the PR link', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
@@ -174,15 +191,19 @@ test('Full auto runs to a PR: the reply and the auto-kept card show the PR link'
 
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
-  const keep = page.getByRole('group', { name: /Keep these changes\?/ });
-  await expect(keep).toContainText('Kept by Full auto → PR.');
-  await expect(keep).toContainText(
+  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
+  const kept = page.getByRole('region', { name: /^Kept · / });
+  await expect(kept.locator('.result-note')).toHaveCount(0);
+  await expect(kept.getByRole('link', { name: 'Pull request #1' })).toHaveAttribute(
+    'href',
+    'https://github.com/acme/widgets/pull/1',
+  );
+  await expect(page.locator('.col .lchip')).toHaveCount(0);
+  await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
+  await expect(kept).toContainText(
     'Opened pull request #1: https://github.com/acme/widgets/pull/1',
   );
-  await expect(keep).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
-  const chip = keep.locator('.ship .lchip');
-  await expect(chip).toContainText('acme/widgets#1');
-  await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
+  await expect(kept).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
     draft: boolean;

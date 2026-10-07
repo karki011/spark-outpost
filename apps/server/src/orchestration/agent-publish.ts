@@ -15,7 +15,7 @@ import { runMember } from './members.ts';
 import type { Session } from './session.ts';
 
 export const NO_OWN_BRANCH_LINE =
-  'Not published: this chat has no branch of its own with a remote to push to (it works in your checkout, or the folder has no remote). Use Ship instead.';
+  'Not published: this chat has no branch of its own with a remote to push to (it works in your checkout, or the folder has no remote). Use Ship in the Work panel’s Changes tab instead.';
 
 const AGENT_REPLY_CHARS = 1_200;
 

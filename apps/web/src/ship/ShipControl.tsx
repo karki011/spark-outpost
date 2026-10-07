@@ -11,7 +11,6 @@ import {
   type ShipResult,
 } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
-import { LinkChip } from '../tasks/LinksPane.tsx';
 import { taskKeys } from '../tasks/task-api.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -24,11 +23,6 @@ const MODE_SHORT: Record<ShipMode, string> = {
   draft_pr: 'PR',
 };
 
-function modeLabel(mode: ShipMode, hasPullRequest: boolean): string {
-  if (mode === 'draft_pr' && hasPullRequest) return 'Update PR';
-  return shipModeLabels[mode];
-}
-
 function resultLine(result: ShipResult): string {
   if (result.pullRequest) {
     const verb = result.pullRequest.created ? 'Opened' : 'Updated';
@@ -37,10 +31,6 @@ function resultLine(result: ShipResult): string {
   }
   if (result.pushed) return `Pushed ${result.branch}.`;
   return `Committed ${result.commit?.slice(0, 7) ?? ''} on ${result.branch}.`;
-}
-
-function pullTitle(repo: string | null | undefined, number: number): string {
-  return repo ? `${repo}#${number}` : `Pull request #${number}`;
 }
 
 function withShipResult(preview: ShipPreview, result: ShipResult): ShipPreview {
@@ -63,14 +53,13 @@ function withShipResult(preview: ShipPreview, result: ShipResult): ShipPreview {
 interface ShipPanelProps {
   id: string;
   preview: ShipPreview;
-  hasPullRequest: boolean;
   busy: boolean;
   error: string | null;
   onShip: (mode: ShipMode, title: string) => void;
   onClose: () => void;
 }
 
-function ShipPanel({ id, preview, hasPullRequest, busy, error, onShip, onClose }: ShipPanelProps) {
+function ShipPanel({ id, preview, busy, error, onShip, onClose }: ShipPanelProps) {
   const [mode, setMode] = useState<ShipMode>(preferredShipMode(preview.modes) ?? 'commit');
   const [title, setTitle] = useState(preview.title);
   const titleId = useId();
@@ -149,7 +138,7 @@ function ShipPanel({ id, preview, hasPullRequest, busy, error, onShip, onClose }
           disabled={busy || !trimmed}
           onClick={() => onShip(mode, trimmed)}
         >
-          {busy ? 'Shipping…' : modeLabel(mode, hasPullRequest)}
+          {busy ? 'Shipping…' : shipModeLabels[mode]}
         </button>
         <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>
           Cancel
@@ -210,23 +199,18 @@ export function ShipControl({
 
   const data = preview.data;
   if (!data) return null;
-  const mode = preferredShipMode(data.modes);
   const pull = result?.pullRequest ?? data.shipped?.pullRequest ?? null;
+  const mode = pull ? null : preferredShipMode(data.modes);
   return (
     <div className="ship">
-      {pull && (
-        <LinkChip
-          link={{
-            kind: 'pr',
-            url: pull.url,
-            title: result?.link?.title ?? pullTitle(data.remote?.repo, pull.number),
-            source: 'ship',
-          }}
-        />
-      )}
       {result && (
         <p ref={doneRef} className="ship-done" role="status" tabIndex={-1}>
           {resultLine(result)}
+        </p>
+      )}
+      {pull && !result && (
+        <p className="ship-note">
+          Pull request #{pull.number} is open. To push an update, ask in the message box.
         </p>
       )}
       {result?.prLink && !pull && (
@@ -247,14 +231,13 @@ export function ShipControl({
           onClick={() => (open ? close() : setOpen(true))}
         >
           <BranchIcon />
-          {modeLabel(mode, pull !== null)}
+          {shipModeLabels[mode]}
         </button>
       )}
       {open && (
         <ShipPanel
           id={panelId}
           preview={data}
-          hasPullRequest={pull !== null}
           busy={ship.isPending}
           error={ship.error?.message ?? null}
           onShip={(chosen, title) => ship.mutate({ mode: chosen, title })}

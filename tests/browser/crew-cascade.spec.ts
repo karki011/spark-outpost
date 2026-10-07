@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { card, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import { crewChat, crewRepo, keptResult, resetCrew, send, type CrewRepo } from './crew-engine.ts';
 
 let repo: CrewRepo;
 
@@ -21,8 +21,7 @@ test('Jev finds the change incomplete, so the Builder reruns once one tier up', 
   test.setTimeout(90_000);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Fix the divider after midnight and add a test #build #unsupported');
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.', { timeout: 60_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('button', { name: /^Done Bolt · Builder · Sonnet 5/ })).toBeVisible({
     timeout: 30_000,
   });
@@ -48,7 +47,6 @@ test('Jev declines to judge the change, so a card asks you before finishing', as
   ).toBeVisible();
   await verify.getByRole('button', { name: 'Finish as it is' }).click();
   await expect(verify).toContainText('Finished without verification.');
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
 });

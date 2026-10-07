@@ -1,0 +1,123 @@
+.result {
+  margin: 12px 0 0;
+  padding: 2px 12px;
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--raise) 60%, transparent);
+  font-size: 12.5px;
+}
+.result-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  min-height: 34px;
+}
+.result-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: left;
+}
+.result-toggle:hover {
+  background: var(--raise);
+}
+.result-toggle svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.result-toggle svg:first-child {
+  color: var(--faint);
+  transition: transform 0.15s var(--out);
+}
+.result-toggle[aria-expanded='true'] svg:first-child {
+  transform: rotate(90deg);
+}
+.result-pr {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+.result-pr:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.result-pr:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+.result-line > .fb {
+  margin: 0 0 0 auto;
+}
+.result-line > .fb.open,
+.result.reverted .result-line > .fb {
+  order: 5;
+  flex-basis: 100%;
+  margin: 0 0 8px;
+}
+.result-line > .revert-btn {
+  margin-top: 0;
+}
+.result-line > .revert-done {
+  margin: 0;
+}
+.result-line > .revert-confirm {
+  order: 6;
+  flex-basis: 100%;
+  margin: 0 0 8px;
+}
+.result-note {
+  margin: 0;
+  padding: 0 0 6px;
+  color: var(--muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.result-more {
+  padding: 2px 0 8px;
+}
+.result-why {
+  margin: 0 0 6px;
+  color: var(--muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.result-more .fchg {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+.result-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.result-files small {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-toggle svg:first-child {
+    transition: none;
+  }
+}
+@media (pointer: coarse) {
+  .result-toggle,
+  .result-pr {
+    min-height: 44px;
+  }
+  .result-pr {
+    display: inline-flex;
+    align-items: center;
+  }
+}

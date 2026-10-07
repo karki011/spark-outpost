@@ -20,8 +20,7 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-const keepCard = (page: Page) =>
-  page.getByRole('group', { name: 'Keep these changes?', exact: true });
+const keepCard = (page: Page) => page.locator('section.result');
 
 async function ask(page: Page, text: string, turns: number): Promise<void> {
   await send(page, text);
@@ -39,7 +38,7 @@ async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> 
   await failingCheck(page, repo.root);
   if (choice === 'Keep') await twoEarlierTurns(page);
   await send(page, 'Fix the divider #build');
-  await expect(keepCard(page)).toContainText('Kept automatically.', { timeout: 60_000 });
+  await expect(keepCard(page)).toHaveAccessibleName(/^Kept · /, { timeout: 60_000 });
   await expect(keepCard(page).getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
   if (choice === 'Revert') {
@@ -57,7 +56,10 @@ test('asks how it went after Keep, and the answer can be changed later', async (
   await keptChange(page, 'Keep');
   const feedback = keepCard(page).getByRole('group', { name: 'How did it go?' });
   await expect(feedback).toBeVisible({ timeout: 15_000 });
-  await expect(feedback.locator('.fb-q')).toHaveText('How did it go?');
+  await expect(feedback.locator('.fb-q')).toHaveCount(0);
+  const line = (await keepCard(page).locator('.result-line').boundingBox())!;
+  const thumbs = (await feedback.boundingBox())!;
+  expect(thumbs.y + thumbs.height).toBeLessThanOrEqual(line.y + line.height + 1);
   const good = feedback.getByRole('button', { name: 'Good result' });
   await good.focus();
   await page.keyboard.press('Enter');
@@ -85,8 +87,10 @@ test('asks how it went after Keep, and the answer can be changed later', async (
 test('after Revert, asks what went wrong with reasons and a comment', async ({ page }) => {
   test.setTimeout(60_000);
   await keptChange(page, 'Revert');
+  await expect(keepCard(page)).toHaveAccessibleName('Reverted');
   const wrong = keepCard(page).getByRole('group', { name: 'What went wrong?' });
   await expect(wrong).toBeVisible({ timeout: 15_000 });
+  await expect(wrong.locator('.fb-q')).toHaveText('What went wrong?');
   await expect(wrong.getByRole('button', { name: 'Good result' })).toHaveCount(0);
   for (const reason of ['Wrong approach', 'Broke something', 'Too much change', 'Other']) {
     await expect(wrong.getByRole('button', { name: reason })).toBeVisible();

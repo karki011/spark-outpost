@@ -77,8 +77,31 @@ describe('Goodhart guards', () => {
       fileDiff('apps/billing/invoice.ts', ['a'], ['b']),
     ].join('');
     expect(texts(patch)).toEqual([
-      "Changed `apps/billing/invoice.ts`, which the request and plan didn't name — check it.",
+      'Changed `apps/billing/invoice.ts`, outside the request and plan.',
     ]);
     expect(texts(patch, { request: 'Fix the rounding bug.', replies: [] })).toEqual([]);
+  });
+
+  it('leaves out tests that sit next to changed code', () => {
+    const patch = [
+      fileDiff('src/money.ts', ['a'], ['b']),
+      fileDiff('apps/billing/invoice.ts', ['a'], ['b']),
+      fileDiff('apps/billing/invoice.test.ts', ['a'], ['b']),
+      fileDiff('apps/billing/__tests__/totals.spec.ts', ['a'], ['b']),
+      fileDiff('apps/reports/export.test.ts', ['a'], ['b']),
+    ].join('');
+    expect(guardFindings(patch, facts()).map((finding) => finding.path)).toEqual([
+      'apps/billing/invoice.ts',
+      'apps/reports/export.test.ts',
+    ]);
+  });
+
+  it('says nothing about scope in a PR follow-up round or after the Critic reviewed', () => {
+    const patch = [
+      fileDiff('src/money.ts', ['a'], ['b']),
+      fileDiff('apps/billing/invoice.ts', ['a'], ['b']),
+    ].join('');
+    expect(texts(patch, { followUp: true })).toEqual([]);
+    expect(texts(patch, { reviewed: true })).toEqual([]);
   });
 });

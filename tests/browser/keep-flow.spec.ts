@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   agentHead,
   card,
+  keptResult,
   crewChat,
   crewRepo,
   resetCrew,
@@ -28,12 +29,12 @@ test('Automatic keeps without a blocking card and notes the Critic’s concerns'
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Fix the divider #build #crew #stuckreview');
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 200_000 });
-  const kept = card(page, /Keep these changes\?/);
+  await expect(card(page, /Keep these changes\?/)).toHaveCount(0);
+  const kept = keptResult(page);
   await expect(kept).toHaveCount(1);
-  await expect(kept).toContainText(
+  await expect(kept.locator('.result-note')).toContainText(
     'Kept automatically; worth a look: the Critic still has concerns.',
   );
-  await expect(kept).toContainText('Kept automatically.');
   await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Needs your input/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
@@ -47,8 +48,10 @@ test('a failing Critic is retried once, then skipped with a quiet note', async (
   await send(page, 'Fix the divider #build #crew #criticdown');
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 200_000 });
   await expect(agentHead(page, 'Hawk')).toHaveCount(2);
-  const kept = card(page, /Keep these changes\?/);
-  await expect(kept).toContainText('the Critic was unavailable, so no AI review ran');
+  const kept = keptResult(page);
+  await expect(kept.locator('.result-note')).toContainText(
+    'the Critic was unavailable, so no AI review ran',
+  );
   await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await page.screenshot({ path: `${SHOTS}/critic-skipped.png` });
 });

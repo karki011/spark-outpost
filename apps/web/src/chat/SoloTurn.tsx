@@ -16,6 +16,7 @@ import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
 import { RailFlags } from './approvals/RailFlags.tsx';
 import { RevertRun } from './approvals/RevertRun.tsx';
+import { askedBeforeTimeout, isLatestTurn, timedOut, WAITED_LABEL } from './approvals/timed-out.ts';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
@@ -28,7 +29,7 @@ import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
 import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
-import { KeepCardFooter } from './outcomes/KeepCardFooter.tsx';
+import { ResultBlock } from './outcomes/ResultBlock.tsx';
 import {
   shownText,
   streamLeads,
@@ -105,6 +106,7 @@ function turnApprovals(
 }
 
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
+  if (timedOut(run.error)) return { state: 'stopped' as const, label: WAITED_LABEL };
   if (isTerminalRunStatus(run.status)) {
     return { state: finishedStates[run.status], label: finishedMoods[run.status] };
   }
@@ -163,6 +165,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       )
     : undefined;
   const host = finished ? keepCardHost(checkpoints, Boolean(revertible?.revertedAt)) : null;
+  const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
 
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
@@ -228,6 +231,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
         error={error}
         details={finished ? shown.errorDetails : null}
         change={finished ? shown.modelSwitch : null}
+        waited={{
+          asked: askedBeforeTimeout(
+            detail.approvals.filter((approval) => changeRunIds.includes(approval.runId)),
+          ),
+          retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
+        }}
       />
       {finished && (
         <div className="turn-foot">
@@ -249,24 +258,24 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
           {!host && <TurnFeedback runId={run.id} variant="turn" />}
         </div>
       )}
-      {changeTask && <FilesChanged taskId={changeTask.id} runIds={changeRunIds} />}
-      {checkpoints.map((approval) => (
-        <CheckpointCard
-          key={approval.id}
-          approval={approval}
-          footer={
-            host?.approvalId === approval.id ? (
-              <KeepCardFooter
-                runId={run.id}
-                host={host}
-                taskId={changeTask?.id ?? null}
-                conversationId={detail.conversation.id}
-              />
-            ) : undefined
-          }
+      {changeTask && !kept && <FilesChanged taskId={changeTask.id} runIds={changeRunIds} />}
+      {checkpoints
+        .filter((approval) => approval !== kept)
+        .map((approval) => (
+          <CheckpointCard key={approval.id} approval={approval} />
+        ))}
+      {host && kept && (
+        <ResultBlock
+          approval={kept}
+          variant={host.variant}
+          runId={run.id}
+          runIds={changeRunIds}
+          revertible={revertible ?? null}
+          taskId={changeTask?.id ?? null}
+          conversationId={detail.conversation.id}
         />
-      ))}
-      {revertible && <RevertRun run={revertible} />}
+      )}
+      {revertible && !kept && <RevertRun run={revertible} />}
     </AiTurn>
   );
 }

@@ -164,7 +164,7 @@ A Critic review — from a different provider when one is connected — runs for
     keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
     text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a Full auto PR whose checks still fail is always a draft marked "Checks failing". Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
 
-In a chat worktree, the keep card offers "Bring changes into <your branch>", "Open PR" (Ship), or leaving the work on the chat's own branch. At Full auto → PR, or when you ask for a PR, the agent publishes in one publish turn after the checks: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark checks GitHub and gives the link, or says no PR was opened.`,
+In a chat worktree, kept work stays on the chat's own branch. The result line under the turn ("Kept · N files") expands to the files and "Bring changes into <your branch>", offered when your checkout is clean and holds the commit the chat started from; the branch menu has it too. Ship (Commit, Push branch, Open PR) is in the Work panel's Changes tab until a pull request exists; after that, updates are asked for in the message box. At Full auto → PR, or when you ask for a PR, the agent publishes in one publish turn after the checks: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark checks GitHub and gives the link, or says no PR was opened.`,
   },
   {
     id: 'pr-follow-up',

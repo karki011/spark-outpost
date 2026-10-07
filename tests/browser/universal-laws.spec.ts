@@ -5,6 +5,7 @@ import {
   crewChat,
   crewRepo,
   failingCheck,
+  keptResult,
   resetCrew,
   send,
   type CrewRepo,
@@ -35,13 +36,12 @@ test('the kept card asks why code was removed', async ({ page }) => {
   await crewChat(page, repo, 'Auto-edit');
   await failingCheck(page, repo.root);
   await send(page, 'Fix the divider #build #removehelper #criticremoval');
-  const keep = card(page, /Keep these changes\?/);
+  const keep = keptResult(page);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   const laws = keep.getByRole('list', { name: 'Worth a look' });
   await expect(laws).toContainText('Removed helperTotals from totals.ts — why?');
   await expect(laws.locator('code').first()).toHaveText('helperTotals');
   await expect(agentHead(page, 'Bolt').first()).toBeVisible();
-  await expect(keep.getByRole('status').first()).toHaveText('Kept automatically.');
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 });
 

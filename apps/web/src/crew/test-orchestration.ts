@@ -70,6 +70,8 @@ export function checkpoint(
         waitsFor: null,
         keptBy: null,
         laws: [],
+        outsidePlan: [],
+        keptNote: null,
         lines: null,
         estimate: null,
         askAgainAt: null,

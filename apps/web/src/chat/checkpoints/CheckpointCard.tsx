@@ -1,6 +1,6 @@
 import '../approvals/approval-card.css';
 import './checkpoint-card.css';
-import { use, useId, useState, type ReactNode } from 'react';
+import { use, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CHECKPOINT_OPTION,
@@ -327,13 +327,7 @@ function lead(approval: CheckpointApproval): string | null {
   return null;
 }
 
-export function CheckpointCard({
-  approval: incoming,
-  footer,
-}: {
-  approval: CheckpointApproval;
-  footer?: ReactNode;
-}) {
+export function CheckpointCard({ approval: incoming }: { approval: CheckpointApproval }) {
   const queryClient = useQueryClient();
   const headingId = useId();
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
@@ -403,7 +397,7 @@ export function CheckpointCard({
           </p>
         )}
         {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
-        <CheckpointNotes payload={checkpoint} />
+        <CheckpointNotes payload={checkpoint} pending={pending} />
         {questions && !pending && <AskedList approval={approval} />}
         {pending ? (
           <PendingBody approval={approval} decide={decide} />
@@ -414,7 +408,6 @@ export function CheckpointCard({
             {said && <span className="ck-said">“{said}”</span>}
           </div>
         )}
-        {!pending && footer}
         {mutation.isError && (
           <p className="appr-err" role="alert">
             {mutation.error.message}

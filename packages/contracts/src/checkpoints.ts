@@ -121,7 +121,9 @@ export const checkpointPayloadSchema = z.object({
   autoOption: z.string().nullable().default(null),
   waitsFor: z.string().nullable().default(null),
   keptBy: involvementLevelSchema.nullable().default(null),
+  keptNote: z.string().nullable().default(null),
   laws: z.array(z.string()).default([]),
+  outsidePlan: z.array(z.string()).default([]),
   lines: z
     .object({ added: z.number().int().nonnegative(), removed: z.number().int().nonnegative() })
     .nullable()

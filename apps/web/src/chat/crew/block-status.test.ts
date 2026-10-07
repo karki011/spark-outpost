@@ -56,6 +56,13 @@ describe('blockStatus', () => {
       });
     expect(ended('succeeded')).toEqual({ state: 'done', label: 'done' });
     expect(ended('failed')).toEqual({ state: 'failed', label: 'hit a problem' });
+    expect(
+      blockStatus(
+        { state: 'failed' },
+        { steps: [], waiting: false, started: true },
+        'Approval timed out',
+      ),
+    ).toEqual({ state: 'stopped', label: 'waited for you' });
     expect(ended('cancelled')).toEqual({ state: 'stopped', label: 'stopped' });
   });
 

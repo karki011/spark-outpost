@@ -1,17 +1,18 @@
 import { expect, test } from '@playwright/test';
 import {
-  CREW_REQUEST,
   agentBlock,
   agentHead,
   allowEdit,
+  autoContinueAfter,
   card,
+  CREW_REQUEST,
   crewChat,
   crewRepo,
   failingCheck,
+  keptResult,
   resetCrew,
   send,
   type CrewRepo,
-  autoContinueAfter,
 } from './crew-engine.ts';
 
 let repo: CrewRepo;
@@ -39,8 +40,7 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
   await expect(clarify).toContainText('Answered.');
   await expect(clarify).toContainText('Only the top heading');
 
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
   await expect(
     page.locator('.md', { hasText: 'Clarified: Only the top heading' }).first(),
   ).toBeVisible({ timeout: 30_000 });
@@ -56,8 +56,7 @@ test('a vague request gets one short question with likely readings', async ({ pa
   await expect(clarify.getByRole('button', { name: 'Improve its documentation' })).toBeVisible();
   await clarify.getByRole('button', { name: 'Add new behaviour or features' }).click();
   await expect(clarify).toContainText('You chose: Add new behaviour or features');
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
   await expect(
     page.locator('.md', { hasText: 'Clarified: Add new behaviour or features' }).first(),
   ).toBeVisible({ timeout: 30_000 });
@@ -80,7 +79,7 @@ test('an unsure request is answered first, and Make the change builds the same r
     timeout: 30_000,
   });
   await allowEdit(page);
-  await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
   await expect(makeChange).toHaveCount(0);
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
@@ -122,8 +121,7 @@ test('risky work shows a plan card that waits before the Builder starts, and Bui
   await expect(risky).toContainText('Waiting for your answer — this would change data permanently');
   expect(repo.notes()).toBe('start\n');
   await risky.getByRole('button', { name: 'Build', exact: true }).click();
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
   expect(repo.notes()).toContain('step 1');
 });
@@ -174,10 +172,8 @@ test('Auto-edit: Critic concerns get a fix round and a second review, then it ke
   await expect(page.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.locator('.crew-turn')).toContainText('has concerns');
   await expect(agentBlock(page, 'Hawk').last()).toContainText('Verdict: looks good');
-  const kept = card(page, /Keep these changes\?/);
-  await expect(kept).toHaveCount(1);
-  await expect(kept).toContainText('Kept automatically.');
-  await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
+  await expect(card(page, /Keep these changes\?/)).toHaveCount(0);
+  await expect(keptResult(page)).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
@@ -193,7 +189,7 @@ test('an unanswered Jev question counts down and continues with the rules', asyn
   });
   await expect(clarify).toContainText('Continued automatically after 3s.', { timeout: 10_000 });
   await allowEdit(page);
-  await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
 });
 
 test('typing an answer holds the countdown', async ({ page }) => {
