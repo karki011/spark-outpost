@@ -29,7 +29,7 @@ Because the endpoint is internal:
 - A failure never fails the ticket. The ticket carries `development.availability = 'unavailable'`, the detail says "Development info unavailable from Jira", and there is no toast and no source error.
 - Results are cached per ticket in `ticket_development`: 10 minutes when read, 5 minutes when unavailable; the detail view refreshes after 1 minute. Disconnecting or reconnecting the source clears the cache.
 - One inbox refresh reads at most 25 stale tickets, four at a time, oldest first, and never tickets that are done. After three failures in one refresh the rest are marked unavailable without a request.
-- Requests time out after 8 seconds.
+- One ticket's development read (summary plus details) has 8 seconds in total; the ticket detail waits for it at most that long.
 
 Contract tests run against the fake in `apps/server/test/fake-jira-dev.ts`. Nothing is verified against a real Jira site; Jira Data Center and scoped API tokens are untested.
 

@@ -207,12 +207,12 @@ export function jiraSource(
     return issue.id;
   }
 
-  async function devStatus(path: string): Promise<unknown> {
+  async function devStatus(path: string, deadline: number): Promise<unknown> {
     const answer = await callJson(fetchImpl, NAME, {
       method: 'GET',
       url: `${access.siteUrl}${path}`,
       authorization,
-      timeoutMs: DEV_STATUS_TIMEOUT_MS,
+      timeoutMs: Math.max(1, deadline - Date.now()),
     });
     if (!isOk(answer)) throw failure(NAME, 'reading development information', answer);
     return answer.data;
@@ -389,7 +389,9 @@ export function jiraSource(
       };
     },
     async development(key) {
-      return readJiraDevelopment(devStatus, await issueIdOf(key));
+      const deadline = Date.now() + DEV_STATUS_TIMEOUT_MS;
+      const issueId = await issueIdOf(key);
+      return readJiraDevelopment((path) => devStatus(path, deadline), issueId);
     },
     async linkPullRequest(key, pull) {
       await call(

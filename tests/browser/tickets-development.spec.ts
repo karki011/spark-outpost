@@ -128,7 +128,6 @@ test('a pull request linked in Jira shows on the row and in Development, with Ji
   await expect(pulls.nth(1)).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(branch).toBeFocused();
-  await shoot(detailOf(page, 'API-84'), 'detail-linked');
 
   const found: string[] = [];
   for (const scheme of ['light', 'dark'] as const) {
@@ -138,6 +137,7 @@ test('a pull request linked in Jira shows on the row and in Development, with Ji
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
       .analyze();
     found.push(...results.violations.map((violation) => `${scheme}: ${violation.id}`));
+    await shoot(detailOf(page, 'API-84'), `detail-linked-${scheme}`);
   }
   expect(found).toEqual([]);
 });
@@ -255,7 +255,7 @@ test('the Development section fits a phone', async ({ page }) => {
   await open(page, 'API-84');
   await row(page, 'API-84').locator('.ir-main').click();
   await expect(development(page, 'API-84')).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 375, height: 812 });
   const section = development(page, 'API-84');
   await section.scrollIntoViewIfNeeded();
   await expect(section.getByRole('link', { name: /#52/ })).toBeVisible();
@@ -265,6 +265,9 @@ test('the Development section fits a phone', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
   const box = (await section.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
-  await shoot(detailOf(page, 'API-84'), 'detail-phone');
+  expect(box.x + box.width).toBeLessThanOrEqual(375);
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await shoot(detailOf(page, 'API-84'), `detail-phone-${scheme}`);
+  }
 });

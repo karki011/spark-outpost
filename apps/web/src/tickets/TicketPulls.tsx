@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { InboxTicket, TicketDevelopment, TicketRef } from '@spark-outpost/contracts';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { buildsText, commitsText, developmentPulls } from './development-model.ts';
 import { ticketPulls, type PullEntry } from './row-links.ts';
@@ -180,11 +181,7 @@ export function Development({
       {unavailable && (
         <p className="tk-quiet dev-note">Development info unavailable from {sourceName}.</p>
       )}
-      {empty && !unavailable && loading && (
-        <p className="tk-quiet" aria-busy="true">
-          Loading development info…
-        </p>
-      )}
+      {empty && !unavailable && loading && <Skeleton label="Loading development info" rows={1} />}
       {empty && !unavailable && !loading && (
         <p className="tk-quiet">No pull request is linked to this ticket yet.</p>
       )}

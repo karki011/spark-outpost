@@ -35,7 +35,7 @@ Select a ticket for **Development**: pull requests from Spark, your tracker or a
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-The chat starts with the ticket's key, title, status, link and acceptance criteria.
+The chat starts with the ticket's key, title, status and link; the agent reads the rest with `spark_tickets`.
 
 Ticket text is data, never instructions. For a link or a folder, Spark sends only the address or path. Secret files are refused.
 

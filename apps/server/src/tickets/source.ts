@@ -74,13 +74,6 @@ export interface SourceDevelopment {
   builds: TicketBuilds | null;
 }
 
-export const NO_DEVELOPMENT: SourceDevelopment = {
-  pullRequests: [],
-  branches: [],
-  commits: null,
-  builds: null,
-};
-
 export interface TicketSource {
   id: TicketSourceId;
   whoami(): Promise<TicketAccount>;
