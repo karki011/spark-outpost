@@ -41,6 +41,13 @@ describe('model routing default', () => {
     expect(detail.body.settings.routing).toBe('auto');
   });
 
+  it('reports Auto for a chat that has no message yet', async () => {
+    await connectCliProvider(t, 'claude');
+    const client = localClient(createTestApp(t, { fixedRunProvider: null }));
+    const defaults = await client.get('/api/chat-settings/defaults').expect(200);
+    expect(defaults.body.routing).toBe('auto');
+  });
+
   it('leaves chats made before the change pinned, and a pick still pins a new chat', async () => {
     await connectCliProvider(t, 'claude');
     await t.db.query(`ALTER TABLE conversations ALTER COLUMN model_routing SET DEFAULT 'pinned'`);

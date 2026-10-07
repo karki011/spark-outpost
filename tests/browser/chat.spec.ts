@@ -145,7 +145,7 @@ test('replies render Markdown safely', async ({ page }) => {
 test('the composer picks a model and effort per chat and shows context use', async ({ page }) => {
   const input = await newChat(page);
   const picker = page.getByRole('button', { name: /^Model and effort/ });
-  await expect(picker).toHaveAccessibleName('Model and effort: Fake Fast');
+  await expect(picker).toHaveAccessibleName('Model and effort: Auto');
   await picker.click();
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await panel.getByRole('radio', { name: /Fake Deep/ }).click();
