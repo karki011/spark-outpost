@@ -5,7 +5,7 @@ import type { RemoteSession } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
-import { activationOf } from './pair-flow.ts';
+import { activationOf, turnFailure } from './pair-flow.ts';
 import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
@@ -40,10 +40,11 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
   const turn = useMutation({
     mutationFn: phoneApi.turn,
     onSuccess: (next) => {
-      queryClient.setQueryData(phoneKeys.tailscale, next);
+      if (next.status !== 'error') queryClient.setQueryData(phoneKeys.tailscale, next);
       void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
     },
   });
+  const failure = turnFailure(turn.error, turn.data);
 
   useEffect(() => {
     if (freshAfter === null) return;
@@ -67,7 +68,7 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
         connected={list.some((device) => device.connected && !device.revokedAt)}
         checking={tailscale.isFetching}
         turning={turn.isPending}
-        failure={turn.error instanceof Error ? turn.error.message : null}
+        failure={failure}
         onCheck={() => void tailscale.refetch()}
         onTurn={(to) => turn.mutate(to)}
       />
@@ -76,7 +77,7 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
         activation={activationOf(
           {
             pending: turn.isPending ? (turn.variables ?? null) : null,
-            failed: turn.isError ? (turn.variables ?? null) : null,
+            failed: failure === null ? null : (turn.variables ?? null),
           },
           tailscale.data,
         )}
