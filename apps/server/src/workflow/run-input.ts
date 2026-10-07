@@ -47,6 +47,7 @@ export interface RunInput {
   builderEnv?: Record<string, string> | null;
   startAs?: StartAs | null;
   planning?: boolean;
+  plansFirst?: boolean;
   projectMove?: ProjectMove | null;
   chatWorktree?: boolean;
   assistant?: boolean;

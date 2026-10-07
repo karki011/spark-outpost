@@ -93,6 +93,7 @@ export interface ProviderTurn {
   publishes?: boolean;
   env?: Readonly<Record<string, string>>;
   planning?: boolean;
+  plansFirst?: boolean;
   modeRequests?: ModeRequests;
   steering?: SteerRequests;
   inbox?: TurnInbox;

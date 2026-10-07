@@ -94,6 +94,12 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   planAgreed: noul.optional(),
   previousIsPlan: noul.optional(),
   tier: routeTierSchema.nullable().optional(),
+  need: z
+    .object({
+      value: z.enum(['question', 'small_change', 'build', 'needs_you']),
+      confidence: z.number().min(0).max(1),
+    })
+    .optional(),
   ratings: ratingsSchema.optional(),
   invalid: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1),

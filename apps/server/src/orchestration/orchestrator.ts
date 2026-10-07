@@ -65,13 +65,16 @@ import {
   type Session,
 } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
+import { isPlanTurn } from '../plans/simple-plan-turn.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
+import { runPlanTurn } from './plan-turn-run.ts';
 import { harnessOf } from '../harness/setting.ts';
 import {
   UPGRADED_NOTE,
-  needOf,
+  readNeed,
   recordNeed,
+  simpleDecisions,
   simpleStep,
-  withoutSparkPlans,
 } from './simple-intake.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
@@ -307,6 +310,10 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const handed = await handToSparks({ deps, lease, input: prepared, append, control });
     if (handed === 'finished') return;
     input = handed;
+    if (harnessOf(deps) === 'simple' && isPlanTurn(input)) {
+      return await runPlanTurn(deps, lease, input, append, control);
+    }
+    if (harnessOf(deps) === 'simple') input = { ...input, planning: plansThisTurn(input, true) };
     const mode = input.mode ?? 'chat';
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
@@ -323,7 +330,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const taken = await runIntake(deps, input, append, input.projectMove ? null : current, solo);
     const simple = harnessOf(deps) === 'simple';
     const { intake } = taken;
-    const decisions = simple ? withoutSparkPlans(taken.decisions) : taken.decisions;
+    const jevNeed = intake.outcome.status === 'answered' ? intake.outcome.intake.need : null;
+    const need = simple ? readNeed(taken.decisions, jevNeed) : null;
+    const decisions = need ? simpleDecisions(taken.decisions, need) : taken.decisions;
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
@@ -420,9 +429,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       jevDiffs: !solo && (await jevDiffsAllowed(deps.db, input.workspaceId)),
     };
     session = s;
-    if (simple) {
-      s.need = needOf(taken.decisions);
-      await recordNeed(s, s.need, `intake read this as ${s.need.replace('_', ' ')}`);
+    if (need) {
+      s.need = need.need;
+      await recordNeed(s, need, `intake read this as ${need.need.replace('_', ' ')}`);
     }
     observeScan(s, scanning, repoRoot);
     if (doing && !answers) {

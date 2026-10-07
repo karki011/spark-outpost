@@ -1,4 +1,5 @@
 import { ruleAdvisor } from '../advisor/advice.ts';
+import { harnessOf } from '../harness/setting.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import {
   askIntake,
@@ -64,6 +65,7 @@ export async function runIntake(
     currentTask: current
       ? { previousRequest: current.previousRequest, summary: current.summary }
       : null,
+    fourWay: harnessOf(deps) === 'simple',
   };
   const asked = await askIntake(
     deps.db,

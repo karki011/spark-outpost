@@ -1,4 +1,5 @@
 import { CHECKPOINT_OPTION, type CheckBody } from '@spark-outpost/contracts';
+import { NEED_ACT_AT } from '../advisor/need-question.ts';
 import { POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
@@ -26,22 +27,50 @@ function startWithoutPlans<T extends StartMode | ClarifiedStart>(start: T): T | 
   return start === 'plan_first' ? 'build' : start;
 }
 
-export function withoutSparkPlans(decisions: IntakeDecisions): IntakeDecisions {
-  return {
-    ...decisions,
-    start: startWithoutPlans(decisions.start),
-    then: startWithoutPlans(decisions.then),
-  };
+export type JevNeed = { value: Exclude<Need, 'review'>; confidence: number } | null | undefined;
+
+export interface NeedRead {
+  need: Need;
+  source: 'jev' | 'rules';
+  confidence: number | null;
 }
 
-export function needOf(decisions: Pick<IntakeDecisions, 'start' | 'trivial' | 'continues'>): Need {
+function needByRule(decisions: Pick<IntakeDecisions, 'start' | 'trivial' | 'continues'>): Need {
   if (decisions.start === 'ask_agent') return 'needs_you';
   if (decisions.start === 'answer' || decisions.start === 'plan') return 'question';
   if (decisions.start === 'review') return 'review';
   return decisions.trivial || decisions.continues === true ? 'small_change' : 'build';
 }
 
-export async function recordNeed(s: Session, need: Need, why: string): Promise<void> {
+export function readNeed(
+  decisions: Pick<IntakeDecisions, 'start' | 'trivial' | 'continues'>,
+  jev: JevNeed = null,
+): NeedRead {
+  const byRule = needByRule(decisions);
+  const confidence = jev?.confidence ?? null;
+  if (!jev || jev.confidence < NEED_ACT_AT || byRule === 'review') {
+    return { need: byRule, source: 'rules', confidence };
+  }
+  return { need: jev.value, source: 'jev', confidence };
+}
+
+const START_FOR: Record<Exclude<Need, 'review'>, StartMode> = {
+  question: 'answer',
+  needs_you: 'ask_agent',
+  small_change: 'build',
+  build: 'build',
+};
+
+export function simpleDecisions(decisions: IntakeDecisions, read: NeedRead): IntakeDecisions {
+  const start = read.need === 'review' ? decisions.start : START_FOR[read.need];
+  return {
+    ...decisions,
+    start: startWithoutPlans(start),
+    then: startWithoutPlans(decisions.then),
+  };
+}
+
+export async function recordNeed(s: Session, read: NeedRead, why: string): Promise<void> {
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'route',
@@ -52,7 +81,7 @@ export async function recordNeed(s: Session, need: Need, why: string): Promise<v
     inputTokens: null,
     costUsd: null,
     policyVersion: POLICY_VERSION,
-    body: { need, source: 'rules', summary: why },
+    body: { need: read.need, source: read.source, confidence: read.confidence, summary: why },
   }).catch((error: unknown) => console.error('Could not record the intake need', error));
 }
 
@@ -111,7 +140,7 @@ export async function upgradeToBuild(
 ): Promise<MemberResult | null> {
   if (s.need !== 'small_change' || checks.status !== 'failed' || !retried) return null;
   s.need = 'build';
-  await recordNeed(s, 'build', UPGRADED_NOTE);
+  await recordNeed(s, { need: 'build', source: 'rules', confidence: null }, UPGRADED_NOTE);
   s.upgraded = true;
   const outcome = await runMember(
     s,

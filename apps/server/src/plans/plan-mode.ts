@@ -18,8 +18,11 @@ interface PlanToolContent {
   content?: { type: string; text?: string };
 }
 
+const CODEX_IMPLEMENT_PLAN = 'implement_plan';
+
 export function isExitPlanAllow(optionId: string | null | undefined): boolean {
-  return typeof optionId === 'string' && optionId.startsWith(EXIT_PLAN_PREFIX);
+  if (typeof optionId !== 'string') return false;
+  return optionId.startsWith(EXIT_PLAN_PREFIX) || optionId === CODEX_IMPLEMENT_PLAN;
 }
 
 export function exitPlanText(

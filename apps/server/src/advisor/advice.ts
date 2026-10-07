@@ -42,6 +42,7 @@ export interface IntakeRequest {
   firstMessage: boolean;
   currentTask: { previousRequest: string; summary: string } | null;
   previousReply?: string | null;
+  fourWay?: boolean;
 }
 
 export class AdvisorError extends Error {}

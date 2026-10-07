@@ -180,6 +180,36 @@ describe('intake under HARNESS=simple', { timeout: 240_000 }, () => {
     expect(crew.map((member) => [member.role, member.used_mode])).toEqual([['scout', 'read-only']]);
   });
 
+  it("routes the turn by Jev's single answer about what the message needs", async () => {
+    await harness.stop();
+    const answered = jevFetch(script);
+    const withNeed: typeof fetch = async (input, init) => {
+      const response = await answered(input, init);
+      const body = (await response.json()) as { answers: Record<string, unknown> };
+      const asked = JSON.parse(String(init?.body)) as { questions: Record<string, unknown> };
+      if (asked.questions.need) {
+        body.answers.need = {
+          type: 'choice',
+          choice: 'question',
+          probabilities: { question: 0.93, build: 0.07 },
+          confidence: 0.91,
+        };
+      }
+      return new Response(JSON.stringify(body), { status: 200 });
+    };
+    harness = startOrchestrator(t, withNeed, { sessions: store, harness: 'simple' });
+
+    const { runId } = await turn(NORMAL);
+
+    expect(script.calls[0]!.questions).toContain('need');
+    expect((await children(runId)).map((member) => member.role)).toEqual(['scout']);
+    const { rows } = await t.db.query<{ body: Record<string, unknown> }>(
+      `SELECT body FROM run_advice WHERE run_id = $1 AND purpose = 'route' AND body ? 'need'`,
+      [runId],
+    );
+    expect(rows[0]!.body).toMatchObject({ need: 'question', source: 'jev', confidence: 0.91 });
+  });
+
   it('builds a destructive request straight away at Full auto, with no plan card', async () => {
     const { runId, asked, orchestration } = await turn(RISKY);
     expect(orchestration.status).toBe('succeeded');

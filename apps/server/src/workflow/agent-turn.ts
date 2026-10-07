@@ -389,6 +389,7 @@ export async function runAgentTurn(
       ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
+      ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(steering ? { steering } : {}),
