@@ -13,8 +13,7 @@ import {
   type ForcePush,
 } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
-import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
-import { routedPieceDecision } from './piece-route.ts';
+import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
@@ -137,7 +136,6 @@ export interface DecideOptions {
   instructionGrants?: ReadonlySet<string>;
   shell?: ShellScript | null;
   agentAsks?: boolean;
-  routedPiece?: boolean;
   publish?: PublishContext;
 }
 
@@ -172,10 +170,6 @@ function noted(decision: Decision, sent: SentOut | null): Decision {
   if (!sent || decision.verdict === 'reject') return decision;
   if (decision.verdict === 'allow') return { ...decision, sent };
   return { ...decision, observed: sent.observed, sendsTo: sent.target };
-}
-
-export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
-  return (target) => place(roots, target).relative;
 }
 
 function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
@@ -221,9 +215,7 @@ function refusal(
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
   if (pieceProtected(guarded, options)) return PIECE_PROTECTED_REASON;
-  const piece = options.piece
-    ? pieceRefusal(request, options.piece, relativeTo(request.roots))
-    : null;
+  const piece = options.piece ? pieceRefusal(request, options.piece) : null;
   if (piece) return piece;
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
@@ -345,9 +337,7 @@ function byMode(
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
   if (options.agentAsks && posture !== 'full_access' && request.kind !== 'other') {
-    const own = agentAsked(request, view, allowlist, options);
-    if (own.verdict !== 'ask' || !options.routedPiece) return own;
-    return routedPieceDecision(posture, request, view, options.piece?.owned ?? null) ?? own;
+    return agentAsked(request, view, allowlist, options);
   }
   const pushes = request.command !== null && isGitPush(request.command);
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };

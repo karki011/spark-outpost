@@ -115,6 +115,7 @@ export const crewMemberSchema = z.object({
   placement: piecePlacementSchema.optional(),
   sameProvider: z.boolean().optional(),
   routeNote: z.string().optional(),
+  answers: z.uuid().optional(),
   spark: crewSparkSchema.optional(),
   modelSwitch: modelSwitchSchema.optional(),
   errorDetails: z.string().optional(),
@@ -166,6 +167,7 @@ export const orchestrationSchema = z.object({
   retries: z.number().int().nonnegative(),
   maxRetries: z.number().int().nonnegative(),
   crew: z.array(crewMemberSchema),
+  answers: z.array(crewMemberSchema).optional(),
   checkpoints: z.array(approvalSchema),
   pendingCheckpoint: approvalSchema.nullable(),
   decisions: z.array(orchestrationDecisionSchema),
@@ -178,3 +180,16 @@ export const orchestrationSchema = z.object({
 export type Orchestration = z.infer<typeof orchestrationSchema>;
 
 export const ORCHESTRATION_ACTIVITY = 'orchestration';
+
+export const NEEDS_YOU_PREFIX = 'Needs you: ';
+
+export function needsYouLine(reason: string): string {
+  return `${NEEDS_YOU_PREFIX}${reason}`;
+}
+
+export function needsYouLines(reply: string): string[] {
+  return reply
+    .split('\n\n')
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(NEEDS_YOU_PREFIX));
+}

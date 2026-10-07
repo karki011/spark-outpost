@@ -39,9 +39,37 @@ export const planOfferSchema = z.object({
 });
 export type PlanOffer = z.infer<typeof planOfferSchema>;
 
+export const planLineUnitSchema = z.enum(['pieces', 'steps']);
+export type PlanLineUnit = z.infer<typeof planLineUnitSchema>;
+
+export const planLineSchema = z.object({
+  runId: z.uuid(),
+  version: z.number().int().positive(),
+  items: z.number().int().nonnegative(),
+  unit: planLineUnitSchema,
+});
+export type PlanLine = z.infer<typeof planLineSchema>;
+
+export const PLAN_SAVED_OPTION: Record<PlanLineUnit, string> = {
+  pieces: 'build_pieces',
+  steps: 'build_steps',
+};
+
+const UNIT_WORDS: Record<PlanLineUnit, [string, string]> = {
+  pieces: ['piece', 'pieces'],
+  steps: ['step', 'steps'],
+};
+
+export function planSavedText(line: Pick<PlanLine, 'items' | 'unit'>): string {
+  if (line.items === 0) return 'Plan saved';
+  const [one, many] = UNIT_WORDS[line.unit];
+  return `Plan saved · ${line.items} ${line.items === 1 ? one : many}`;
+}
+
 export const conversationPlansSchema = z.object({
   saved: z.array(z.object({ messageId: z.uuid(), version: z.number().int().positive() })),
   offers: z.array(planOfferSchema),
+  lines: z.array(planLineSchema).default([]),
 });
 export type ConversationPlans = z.infer<typeof conversationPlansSchema>;
 

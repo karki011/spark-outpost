@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, clarifyOptionId } from '@spark-outpost/contracts';
-import {
-  FOLLOW_UP_QUESTION,
-  chosenFollowUp,
-  followUpCard,
-  offersNextStep,
-  vagueFollowUpByRule,
-} from './follow-up.ts';
+import { offersNextStep, vagueFollowUpByRule } from './follow-up.ts';
 
 const facts = (
   request: string,
@@ -52,33 +45,5 @@ describe('vague follow-ups', () => {
     expect(offersNextStep('Should I also update the docs?')).toBe(true);
     expect(offersNextStep('Done. The tests pass.')).toBe(false);
     expect(offersNextStep(null)).toBe(false);
-  });
-});
-
-describe('the follow-up question', () => {
-  it('asks once whether to answer, plan or change, and waits for the user', () => {
-    const card = followUpCard('why');
-    expect(card).toMatchObject({ kind: 'clarify', title: FOLLOW_UP_QUESTION });
-    expect(FOLLOW_UP_QUESTION).toBe('Want me to answer, plan it, or make the change?');
-    expect(card.options.map((option) => option.name)).toEqual([
-      'Answer it; change nothing',
-      'Plan it first',
-      'Make the change',
-      'Answer in your own words',
-      'Stop',
-    ]);
-    expect(card.payload.autoOption).toBeNull();
-  });
-
-  it('maps each choice to how the turn starts', () => {
-    const card = followUpCard('why');
-    expect(chosenFollowUp(card, clarifyOptionId(0), null)).toEqual({ start: 'answer', note: null });
-    expect(chosenFollowUp(card, clarifyOptionId(1), null)).toEqual({ start: 'plan', note: null });
-    expect(chosenFollowUp(card, clarifyOptionId(2), null)).toEqual({ start: 'build', note: null });
-    expect(chosenFollowUp(card, CHECKPOINT_OPTION.answer, ' the date tests ')).toEqual({
-      start: 'build',
-      note: 'the date tests',
-    });
-    expect(chosenFollowUp(card, CHECKPOINT_OPTION.stop, null)).toBeNull();
   });
 });

@@ -13,6 +13,7 @@ export * from './involvement-levels.ts';
 export * from './artifacts.ts';
 export * from './attachments.ts';
 export * from './audit.ts';
+export * from './decision-audit.ts';
 export * from './rail-flags.ts';
 export * from './categories.ts';
 export * from './changes.ts';

@@ -7,11 +7,13 @@ import path, { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LEFT_FOR_USER, type CheckBody } from '@spark-outpost/contracts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
+import { UPGRADED_NOTE } from '../src/orchestration/simple-intake.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import {
   TRIVIAL,
   artifactBodies,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -176,16 +178,19 @@ describe('a check that already fails on the base commit', { timeout: 120_000 }, 
 });
 
 describe('a check the change broke', { timeout: 180_000 }, () => {
-  it('gets one fix round, stops when the failing set is unchanged, and is not sent again next turn', async () => {
+  it('gets one fix round, then one upgrade to a build when the failing set is unchanged, and is not sent again next turn', async () => {
     const { conversationId, runId } = await begin({ 'check.mjs': BROKEN_BY_THE_CHANGE }, [
       'node check.mjs',
     ]);
     const first = await members(runId);
-    expect(first.map((member) => member.role)).toEqual(['builder', 'builder']);
+    expect(first.map((member) => member.role)).toEqual(['builder', 'builder', 'builder']);
     expect(first[1]!.follow_up).toContain('## Failing checks');
+    expect(first[2]!.follow_up).toContain('## Failing checks');
+    expect((await assistantReplies(t, runId)).join('\n')).toContain(UPGRADED_NOTE);
     const rounds = await bodies();
     expect(rounds.map((body) => [body.status, body.leftForUser ?? false])).toEqual([
       ['failed', false],
+      ['failed', true],
       ['failed', true],
     ]);
     expect(rounds[0]!.results[0]).toMatchObject({

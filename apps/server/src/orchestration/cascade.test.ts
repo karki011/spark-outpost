@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { cascadeAction, DECLINED_REASON, UNCONFIRMED_REASON } from './cascade.ts';
 import {
   escalateFollowUp,
@@ -62,38 +61,19 @@ describe('verified cascade', () => {
     expect(results[4]!.state).toMatchObject({ escalated: true, verdicts: 2 });
   });
 
-  it('asks the user when Jev declines, and finishing keeps today’s path', () => {
-    const [, , declined, finished] = run(withJev(), [
-      start,
-      green,
-      verdict('declined'),
-      {
-        type: 'answered',
-        kind: 'verify',
-        optionId: CHECKPOINT_OPTION.finishUnverified,
-        note: null,
-      },
-    ]);
-    expect(declined!.action).toEqual({ type: 'ask', kind: 'verify', reason: DECLINED_REASON });
-    expect(finished!.action).toEqual({ type: 'wrap_up' });
-  });
-
-  it('lets the user retry one tier up from the declined card, or stop', () => {
-    const [, , , retried] = run(withJev(), [
-      start,
-      green,
-      verdict('declined'),
-      { type: 'answered', kind: 'verify', optionId: CHECKPOINT_OPTION.retry, note: 'Use cents' },
-    ]);
-    expect(retried!.action).toMatchObject({ type: 'spawn', reason: 'escalate', escalate: true });
-    expect(retried!.state.escalated).toBe(true);
-    const [, , , stopped] = run(withJev(), [
-      start,
-      green,
-      verdict('declined'),
-      { type: 'answered', kind: 'verify', optionId: CHECKPOINT_OPTION.stop, note: null },
-    ]);
-    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
+  it('says it needs you when Jev declines, marks the change unverified and carries on', () => {
+    const [, , declined] = run(withJev(), [start, green, verdict('declined')]);
+    expect(declined!.action).toEqual({ type: 'wrap_up' });
+    expect(declined!.state).toMatchObject({
+      unverified: true,
+      needsYou: `Needs you: ${DECLINED_REASON}`,
+    });
+    const finished = nextStep(declined!.state, { type: 'kept' });
+    expect(finished.action).toMatchObject({
+      type: 'finish',
+      status: 'succeeded',
+      incomplete: `Needs you: ${DECLINED_REASON}`,
+    });
   });
 
   it('finishes as today when the verdict is below the line', () => {
@@ -131,7 +111,7 @@ describe('verified cascade', () => {
     expect(cascadeAction('declined', true)).toBe('finish');
   });
 
-  it("asks instead of rerunning when Jev names nothing missing for sure and Spark's checks pass (H)", () => {
+  it("says it needs you instead of rerunning when Jev names nothing missing for sure and Spark's checks pass (H)", () => {
     const settled = { checksPass: true, criticConcerns: false, confidentUnmet: false };
     expect(cascadeAction('unsupported', false, settled)).toBe('ask');
     expect(cascadeAction('unsupported', false, { ...settled, checksPass: false })).toBe('escalate');
@@ -149,7 +129,11 @@ describe('verified cascade', () => {
       evidence: settled,
     };
     const [, , asked] = run(withJev(), [start, green, unconfirmed]);
-    expect(asked!.action).toEqual({ type: 'ask', kind: 'verify', reason: UNCONFIRMED_REASON });
-    expect(asked!.state.escalated).toBe(false);
+    expect(asked!.action).toEqual({ type: 'wrap_up' });
+    expect(asked!.state).toMatchObject({
+      escalated: false,
+      unverified: true,
+      needsYou: `Needs you: ${UNCONFIRMED_REASON}`,
+    });
   });
 });

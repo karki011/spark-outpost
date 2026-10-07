@@ -18,6 +18,8 @@ export interface ProviderSessionRecord {
   contextUsed: number | null;
   contextSize: number | null;
   compactSnoozed: boolean;
+  model: string | null;
+  agentMode: string | null;
   createdAt: Date;
   lastUsedAt: Date;
   closedAt: Date | null;
@@ -41,6 +43,8 @@ interface SessionRow {
   context_used: number | null;
   context_size: number | null;
   compact_snoozed: boolean;
+  model: string | null;
+  agent_mode: string | null;
   created_at: Date;
   last_used_at: Date;
   closed_at: Date | null;
@@ -65,6 +69,8 @@ function toRecord(row: SessionRow): ProviderSessionRecord {
     contextUsed: row.context_used,
     contextSize: row.context_size,
     compactSnoozed: row.compact_snoozed,
+    model: row.model,
+    agentMode: row.agent_mode,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     closedAt: row.closed_at,

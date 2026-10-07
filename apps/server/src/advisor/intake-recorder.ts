@@ -98,6 +98,7 @@ async function announce(append: Append, body: AdviceBody): Promise<void> {
 export interface IntakeExtra {
   firstMessage: boolean;
   currentTask: IntakeRequest['currentTask'];
+  fourWay?: boolean;
 }
 
 export function previousReply(input: RunInput): string | null {
@@ -127,6 +128,7 @@ export function intakeRequest(
     firstMessage: extra.firstMessage,
     currentTask: extra.currentTask,
     previousReply: previousReply(input),
+    ...(extra.fourWay ? { fourWay: true } : {}),
   };
 }
 

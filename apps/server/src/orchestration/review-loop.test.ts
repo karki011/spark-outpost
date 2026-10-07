@@ -259,7 +259,8 @@ describe('Full auto runs on to ship', () => {
   it('raises the keep card when shipping is held', () => {
     const shipping = nextStep(initialFlow('edits', 'full-auto'), wrapped);
     const held = nextStep(shipping.state, { type: 'ship_held', reason: 'Checks still fail.' });
-    expect(held.action).toEqual({ type: 'ask', kind: 'accept', reason: 'Checks still fail.' });
+    expect(held.action).toEqual({ type: 'ask', reason: 'Checks still fail.' });
+    expect(held.state.waitingFor).toBe('accept');
   });
 });
 

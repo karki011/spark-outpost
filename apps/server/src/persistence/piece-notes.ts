@@ -130,3 +130,26 @@ export async function runningPieceRuns(db: Queryable, pieceId: string): Promise<
   );
   return rows.map((row) => row.id);
 }
+
+export async function strandedPieceNotes(db: Queryable, listId: string): Promise<StoredNote[]> {
+  const { rows } = await db.query<NoteRow>(
+    `SELECT n.* FROM piece_notes n JOIN task_pieces p ON p.id = n.piece_id
+     WHERE p.piece_list_id = $1 AND p.status = 'landed' AND n.delivered_at IS NULL
+       AND n.kind IN ('requirement_added', 'steer')
+     ORDER BY n.created_at, n.id`,
+    [listId],
+  );
+  return rows.map(toNote);
+}
+
+export async function buildingInPieces(
+  db: Queryable,
+  orchestrationRunId: string,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM piece_lists l JOIN task_pieces p ON p.piece_list_id = l.id
+     WHERE l.orchestration_run_id = $1 AND p.status IN ('pending', 'ready', 'running') LIMIT 1`,
+    [orchestrationRunId],
+  );
+  return (rowCount ?? 0) > 0;
+}

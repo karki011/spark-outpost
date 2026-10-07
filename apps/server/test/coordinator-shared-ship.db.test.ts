@@ -43,7 +43,6 @@ beforeEach(async () => {
   await connectProviders(t);
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'parallel',
-    forcedPlacement: 'shared',
     shipAccess: {
       secrets: memorySecretStore(),
       runCommand,

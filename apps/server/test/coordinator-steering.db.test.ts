@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel, PieceList, SteerTarget } from '@spark-outpost/contracts';
 import { applySteer } from '../src/coordinator/steer.ts';
 import { classifySteer } from '../src/coordinator/steer-rules.ts';
-import { insertPieceNote } from '../src/persistence/piece-notes.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
@@ -155,33 +154,6 @@ describe('steering running pieces', { timeout: 120_000 }, () => {
     const list = await pieceList(t, started.runId);
     expect(list.pieces[1]).toMatchObject({ status: 'landed', contractVersion: 2, notesQueued: 0 });
     expect(await readFile(join(root, 'api.ts'), 'utf8')).toMatch(/noted\n$/);
-  });
-
-  it('merges main into the piece copy before it delivers the merge-main notice', async () => {
-    const started = await untilP2Started('#pieces #holdpiece', { level: 'full-auto' });
-    await writeFile(join(root, 'main-change.txt'), 'landed on main\n');
-    const p2 = started.list.pieces[1]!;
-    await insertPieceNote(
-      t.db,
-      { pieceId: p2.id },
-      {
-        kind: 'merge_main',
-        body: 'main merged: Bolt landed',
-        source: 'coordinator',
-        urgent: false,
-      },
-    );
-    await release();
-    const { orchestration } = await finish(started);
-    expect(orchestration.status).toBe('succeeded');
-    const runs = (await children(t, started.runId)).filter((child) => child.pieceKey === 'P2');
-    expect(runs).toHaveLength(2);
-    expect(runs[1]!.prompt).toContain('- Main merged into your copy: main merged: Bolt landed');
-    expect(await notesOf(started.runId)).toEqual([
-      { kind: 'merge_main', delivered_run_id: runs[1]!.id },
-    ]);
-    const api = await readFile(join(root, 'api.ts'), 'utf8');
-    expect(api).toMatch(/noted\nsaw main\n$/);
   });
 
   it('steers a running turn through the adapter when it supports steering', async () => {

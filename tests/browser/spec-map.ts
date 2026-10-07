@@ -20,7 +20,6 @@ export const PERF_SPECS = [
 ] as const;
 
 export const SHOTS_SPECS = [
-  'ask-card-shots',
   'docs-shots',
   'docs-shots-batch-1',
   'docs-shots-batch-2',
@@ -66,9 +65,9 @@ export const SPEC_GROUPS = {
     'agent-asks',
     'agent-setup',
     'approvals',
-    'ask-card',
     'permission-modes',
     'plans',
+    'plan-line',
     'rail-flags',
     'read-then-send',
   ],
@@ -80,7 +79,6 @@ export const SPEC_GROUPS = {
     'crew-cascade',
     'crew-checkpoints',
     'crew-checks',
-    'crew-clarify',
     'crew-lean',
     'crew-overhead',
     'keep-flow',

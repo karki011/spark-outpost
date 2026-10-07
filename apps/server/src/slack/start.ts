@@ -18,7 +18,7 @@ import {
   saveSlackChatThread,
   settleSlackDeliveries,
 } from '../persistence/slack.ts';
-import { PLAN_FIRST_LINE } from '../tickets/request.ts';
+import { PLAN_COMMAND, PLAN_FIRST_LINE } from '../tickets/request.ts';
 import { requireSlackPlace } from './access.ts';
 import { saveSlackThreadAttachment } from './context.ts';
 import { NEEDS_OWN_APP, requireSlack, type OpenSlack, type SlackDeps } from './connection.ts';
@@ -65,7 +65,8 @@ export function slackStartBrief(thread: SlackThread, mode: TicketStartMode, note
     ...(note ? [`## Note from me\n\n${note}`] : []),
     ...(mode === 'plan' ? [PLAN_FIRST_LINE] : []),
   ];
-  return parts.join('\n\n').slice(0, MESSAGE_MAX_LENGTH);
+  const command = mode === 'plan' ? PLAN_COMMAND : '';
+  return `${command}${parts.join('\n\n')}`.slice(0, MESSAGE_MAX_LENGTH);
 }
 
 function mayStart(open: OpenSlack, userId: string | null): boolean {

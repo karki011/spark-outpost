@@ -105,6 +105,7 @@ const summaryQuery = `
       CASE WHEN ar.parent_run_id IS NOT NULL THEN ar.route->>'name' END AS pending_agent,
       m.name AS pending_member, a.payload->'checkpoint'->>'agent' AS pending_asker,
       a.payload->'checkpoint'->'questions'->0 IS NOT NULL AS pending_questions,
+      a.payload->>'plan' IS NOT NULL AS pending_plan,
       COALESCE(m.provider, ar.provider) AS pending_provider,
       a.payload->'sparkAction'->>'action' = 'pr_follow_up' AS pending_pr_feedback
     FROM approvals a

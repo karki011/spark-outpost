@@ -40,21 +40,16 @@ test('Jev finds the change incomplete, so the Builder reruns once one tier up', 
   expect(repo.notes()).toBe('start\nstep 1\nfinished what was missing\n');
 });
 
-test('Jev declines to judge the change, so a card asks you before finishing', async ({ page }) => {
+test('Jev declines to judge the change, so the change is kept with no card and the reply says it needs you', async ({
+  page,
+}) => {
   test.setTimeout(60_000);
-  const off = await page.request.patch('/api/profile', { data: { autoContinueSeconds: null } });
-  expect(off.ok()).toBe(true);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Fix the divider after midnight #build #declined');
-  const verify = card(page, /Jev could not verify the change/);
-  await expect(verify).toBeVisible({ timeout: 30_000 });
-  await expect(verify).toContainText('Jev could not confirm the change does what you asked');
-  await expect(verify.getByRole('button', { name: /^Retry with Opus/ })).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: /^Needs your input Fix the divider after midnight/ }),
-  ).toBeVisible();
-  await verify.getByRole('button', { name: 'Finish as it is' }).click();
-  await expect(verify).toContainText('Finished without verification.');
   await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /Jev could not verify the change/)).toHaveCount(0);
+  await expect(page.locator('.thread')).toContainText(
+    'Needs you: Jev could not confirm the change does what you asked',
+  );
   expect(repo.notes()).toBe('start\nstep 1\n');
 });

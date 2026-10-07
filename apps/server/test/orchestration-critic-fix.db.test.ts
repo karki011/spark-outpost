@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type Approval, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { CRITIC_FIX_LEAD, RECHECK_RULE } from '../src/orchestration/context.ts';
+import { UPGRADED_NOTE } from '../src/orchestration/simple-intake.ts';
 import {
   BUG_FINDINGS,
   EDGE_FINDINGS,
@@ -292,11 +293,13 @@ describe('Critic → fix rounds', () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugreview', 'full-auto');
     await drive(conversationId, runId);
-    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'builder']);
-    expect(await checkStatuses()).toEqual(['passed', 'failed', 'failed']);
-    expect(await reply(runId)).toContain(
+    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'builder', 'builder']);
+    expect(await checkStatuses()).toEqual(['passed', 'failed', 'failed', 'failed']);
+    const text = await reply(runId);
+    expect(text).toContain(
       'Stopped after 1 fix round: the checks failed after the fix and the check-fix turns could not fix them.',
     );
+    expect(text).toContain(UPGRADED_NOTE);
   }, 120_000);
 
   it('runs no fix turn for style-only concerns or a looks-good review', async () => {

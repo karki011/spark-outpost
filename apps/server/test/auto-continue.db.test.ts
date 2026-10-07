@@ -13,7 +13,11 @@ import {
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { migrationsDir } from '../src/persistence/migrate.ts';
 import { autoContinueSeconds, updateProfile } from '../src/persistence/setup.ts';
-import { askCheckpoint, retryCard, type CheckpointCard } from '../src/orchestration/checkpoint.ts';
+import {
+  askCheckpoint,
+  compactCard,
+  type CheckpointCard,
+} from '../src/orchestration/checkpoint.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { doRun, recordingAppend } from './approval-support.ts';
 import {
@@ -26,7 +30,6 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
-  type Answerer,
   type Harness,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -50,15 +53,15 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-function jevRetry(): CheckpointCard {
-  return retryCard(null, null, 'Stopped after 2 retries.');
+function countdownCard(): CheckpointCard {
+  return compactCard('This chat is almost full.', 90);
 }
 
 async function pendingCheckpoint(runId: string, autoContinueMs: number | null) {
-  const card = jevRetry();
+  const card = countdownCard();
   return insertApproval(t.db, {
     runId,
-    toolCallId: `checkpoint:retry:${Math.random()}`,
+    toolCallId: `checkpoint:compact:${Math.random()}`,
     rpcId: null,
     kind: card.kind,
     title: card.title,
@@ -98,35 +101,35 @@ function ask(runId: string, card: CheckpointCard, autoContinueMs: number | null)
 async function checkpointOf(runId: string): Promise<Approval> {
   return eventually(async () => {
     const { rows } = await t.db.query<{ id: string }>(
-      `SELECT id FROM approvals WHERE run_id = $1 AND kind = 'retry'`,
+      `SELECT id FROM approvals WHERE run_id = $1 AND kind = 'compact'`,
       [runId],
     );
     return rows[0] ? getApproval(t.db, rows[0].id) : null;
   });
 }
 
-describe('auto-continue on Jev questions', () => {
+describe('auto-continue on a card with a safe default', () => {
   it('takes the safe default once the deadline passes, decided by auto', async () => {
     const { runId } = await doRun(t, root);
-    const { answer } = ask(runId, jevRetry(), 200);
+    const { answer } = ask(runId, countdownCard(), 200);
     expect(await answer).toEqual({
       type: 'answered',
-      optionId: CHECKPOINT_OPTION.stopReport,
+      optionId: CHECKPOINT_OPTION.keepGoing,
       note: null,
     });
     const settled = await checkpointOf(runId);
     expect(settled).toMatchObject({
       status: 'denied',
       decidedBy: 'auto',
-      decisionOptionId: CHECKPOINT_OPTION.stopReport,
+      decisionOptionId: CHECKPOINT_OPTION.keepGoing,
     });
     expect(Date.parse(settled.autoContinueAt!) - Date.parse(settled.createdAt)).toBe(200);
   });
 
   it('never sets a deadline on a card without a safe default, or when turned off', async () => {
     const { runId } = await doRun(t, root);
-    const retry = retryCard(null, null, 'Stopped after 2 retries.');
-    const plain = { ...retry, payload: { ...retry.payload, autoOption: null } };
+    const card = countdownCard();
+    const plain = { ...card, payload: { ...card.payload, autoOption: null } };
     const first = ask(runId, plain, 200);
     const pending = await checkpointOf(runId);
     expect(pending.autoContinueAt).toBeNull();
@@ -136,23 +139,23 @@ describe('auto-continue on Jev questions', () => {
     await first.answer;
     const off = await pendingCheckpoint(runId, null);
     expect(off.autoContinueAt).toBeNull();
-    expect(await settleIfDue(t.db, off.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
+    expect(await settleIfDue(t.db, off.id, CHECKPOINT_OPTION.keepGoing)).toBeNull();
   });
 
   it('resolves only items that are still pending and due', async () => {
     const { runId } = await doRun(t, root);
     const later = await pendingCheckpoint(runId, 60_000);
-    expect(await settleIfDue(t.db, later.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
+    expect(await settleIfDue(t.db, later.id, CHECKPOINT_OPTION.keepGoing)).toBeNull();
     const due = await pendingCheckpoint(runId, 0);
     await decideApproval(t.db, t.workspaceId, due.id, {
-      optionId: CHECKPOINT_OPTION.retry,
+      optionId: CHECKPOINT_OPTION.compactNow,
       scope: 'once',
     });
-    expect(await settleIfDue(t.db, due.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
+    expect(await settleIfDue(t.db, due.id, CHECKPOINT_OPTION.keepGoing)).toBeNull();
     expect(await getApproval(t.db, due.id)).toMatchObject({
       status: 'allowed',
       decidedBy: 'user',
-      decisionOptionId: CHECKPOINT_OPTION.retry,
+      decisionOptionId: CHECKPOINT_OPTION.compactNow,
     });
   });
 
@@ -162,10 +165,10 @@ describe('auto-continue on Jev questions', () => {
       const due = await pendingCheckpoint(runId, 0);
       const [user, auto] = await Promise.allSettled([
         decideApproval(t.db, t.workspaceId, due.id, {
-          optionId: CHECKPOINT_OPTION.retry,
+          optionId: CHECKPOINT_OPTION.compactNow,
           scope: 'once',
         }),
-        settleIfDue(t.db, due.id, CHECKPOINT_OPTION.stopReport),
+        settleIfDue(t.db, due.id, CHECKPOINT_OPTION.keepGoing),
       ]);
       const userWon = user.status === 'fulfilled';
       const autoWon = auto.status === 'fulfilled' && auto.value !== null;
@@ -177,17 +180,20 @@ describe('auto-continue on Jev questions', () => {
 
   it('holds the countdown when you start answering, then waits for you', async () => {
     const { runId } = await doRun(t, root);
-    const { answer } = ask(runId, jevRetry(), 300);
+    const { answer } = ask(runId, countdownCard(), 300);
     const pending = await checkpointOf(runId);
     const held = await holdApproval(t.db, t.workspaceId, pending.id);
     expect(held).toMatchObject({ status: 'pending', autoContinueAt: null });
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect((await getApproval(t.db, pending.id))?.status).toBe('pending');
     await decideApproval(t.db, t.workspaceId, pending.id, {
-      optionId: CHECKPOINT_OPTION.retry,
+      optionId: CHECKPOINT_OPTION.compactNow,
       scope: 'once',
     });
-    expect(await answer).toMatchObject({ type: 'answered', optionId: CHECKPOINT_OPTION.retry });
+    expect(await answer).toMatchObject({
+      type: 'answered',
+      optionId: CHECKPOINT_OPTION.compactNow,
+    });
     expect((await getApproval(t.db, pending.id))?.decidedBy).toBe('user');
   });
 
@@ -239,29 +245,19 @@ describe('auto-continue in a crew run', () => {
     await removeRepo(repo);
   });
 
-  it('lets the rules decide an unanswered clarify, but waits for edits and keep', async () => {
+  it('never puts a countdown on an edit or keep card', async () => {
     repo = await gitRepo();
     await connectProviders(t);
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
-    const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
-    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: unsure }));
-    const { conversationId, runId } = await startScenario(t, repo, unsure, null);
-    const answers: Answerer = (approval) =>
-      approval.kind === 'clarify' ? null : answerEverything(approval);
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual([]);
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: TRIVIAL }));
+    const { conversationId, runId } = await startScenario(t, repo, TRIVIAL, null);
+    const { orchestration } = await driveToEnd(t, conversationId, runId, answerEverything);
     expect(orchestration).toMatchObject({ status: 'succeeded' });
-    expect(orchestration.checkpoints[0]).toMatchObject({
-      kind: 'clarify',
-      decidedBy: 'auto',
-      decisionOptionId: CHECKPOINT_OPTION.clarifyRules,
-    });
     const detail = await eventually(async () => {
       const view = await getConversationDetail(t.db, conversationId);
       return view?.messages.some((message) => message.role === 'assistant') ? view : null;
     });
-    expect(
-      detail.approvals.every((approval) => approval.kind === 'clarify' || !approval.autoContinueAt),
-    ).toBe(true);
+    expect(detail.approvals.length).toBeGreaterThan(0);
+    expect(detail.approvals.every((approval) => !approval.autoContinueAt)).toBe(true);
   }, 60_000);
 });

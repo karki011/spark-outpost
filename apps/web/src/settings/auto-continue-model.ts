@@ -42,5 +42,5 @@ export function parsedWait(text: string): number | null {
 
 export function waitHint(seconds: number | null): string {
   if (seconds === null) return 'Spark waits for your answer.';
-  return `After ${waitLabel(seconds)}, Spark goes with its best guess or the safe option.`;
+  return `After ${waitLabel(seconds)}, Spark goes with the safe option.`;
 }

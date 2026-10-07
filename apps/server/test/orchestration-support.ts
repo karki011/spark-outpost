@@ -94,10 +94,10 @@ function fakeAgent(
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
-      ...extraEnv,
       FAKE_ACP_PROVIDER: id,
       FAKE_ACP_MODELS: JSON.stringify(models.map((model) => [model.id, model.label])),
       ...sessionEnv(store),
+      ...extraEnv,
     },
   });
 }
@@ -279,11 +279,8 @@ function verdictAnswer(script: JevScript): Answers[string] {
   return choice(next.choice, next.confidence);
 }
 
-const UNSURE_WIDE = 0.35;
-
 function defaultNoul(key: string, script: JevScript): number {
   if (key.startsWith('unmet_')) return script.verify ?? 0.05;
-  if (key.endsWith('_wide')) return UNSURE_WIDE;
   return 0.05;
 }
 
@@ -342,7 +339,6 @@ export function startOrchestrator(
     cancelPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
     coordinator?: OrchestratorDeps['coordinator'];
-    forcedPlacement?: OrchestratorDeps['forcedPlacement'];
     agentEnv?: Record<string, string>;
   } & Pick<OrchestratorDeps, 'checkTimeoutMs' | 'criticQuietNoticeMs'> = {},
 ): Harness {
@@ -373,7 +369,6 @@ export function startOrchestrator(
     ...(options.checkTimeoutMs ? { checkTimeoutMs: options.checkTimeoutMs } : {}),
     ...(options.criticQuietNoticeMs ? { criticQuietNoticeMs: options.criticQuietNoticeMs } : {}),
     ...(options.coordinator ? { coordinator: options.coordinator } : {}),
-    ...(options.forcedPlacement ? { forcedPlacement: options.forcedPlacement } : {}),
   });
   return {
     worker,

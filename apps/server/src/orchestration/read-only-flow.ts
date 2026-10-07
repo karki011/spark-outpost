@@ -1,23 +1,9 @@
-import type { ClarifiedStart, FlowResult, FlowState, Spawn } from './transitions.ts';
+import type { FlowResult, FlowState, Spawn } from './transitions.ts';
 
-export function askAgent(state: FlowState, then: ClarifiedStart): FlowResult {
+export function askAgent(state: FlowState): FlowResult {
   return {
-    state: { ...state, depth: 'direct', phase: 'scouting', then, waitingFor: null },
-    action: { type: 'ask_agent', then },
-  };
-}
-
-export function planFirst(state: FlowState, note: string | null): FlowResult {
-  return {
-    state: { ...state, phase: 'planning', waitingFor: null },
-    action: { type: 'plan_first', note },
-  };
-}
-
-export function writePlan(state: FlowState, note: string | null): FlowResult {
-  return {
-    state: { ...state, depth: 'direct', readOnly: 'plan', phase: 'planning', waitingFor: null },
-    action: { type: 'plan', note },
+    state: { ...state, depth: 'direct', phase: 'scouting', waitingFor: null },
+    action: { type: 'ask_agent' },
   };
 }
 

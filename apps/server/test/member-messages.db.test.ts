@@ -19,7 +19,7 @@ import {
   startScenario,
   type Harness,
 } from './orchestration-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb, BUILDER_SESSION_KEYS } from './support.ts';
 
 let t: TestDb;
 let root: string;
@@ -206,8 +206,8 @@ describe('messaging a crew member', { timeout: 150_000 }, () => {
     expect(again.name).toBe(builder.name);
     const { rows } = await t.db.query<{ session_id: string }>(
       `SELECT DISTINCT session_id FROM provider_sessions
-       WHERE conversation_id = $1 AND agent_key LIKE 'key:%builder%'`,
-      [conversationId],
+       WHERE conversation_id = $1 AND agent_key LIKE $2`,
+      [conversationId, BUILDER_SESSION_KEYS],
     );
     expect(rows).toHaveLength(1);
   });

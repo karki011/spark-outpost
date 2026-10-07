@@ -1,16 +1,9 @@
-import type {
-  ClarifiedStart,
-  FlowAction,
-  FlowEvent,
-  FlowResult,
-  FlowState,
-  Spawn,
-} from './flow-types.ts';
+import type { FlowEvent, FlowResult, FlowState, Spawn } from './flow-types.ts';
 import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
+  needsYouLine,
   type AgentRole,
-  type CheckpointKind,
   type OrchestrationPhase,
 } from '@spark-outpost/contracts';
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
@@ -25,8 +18,7 @@ import {
 } from './checkpoint-policy.ts';
 import { cascadeAction, DECLINED_REASON, UNCONFIRMED_REASON } from './cascade.ts';
 import { criticFixFollowUp } from './context.ts';
-import { FOLLOW_UP_REASON } from './follow-up.ts';
-import { askAgent, planFirst, reviewExisting, writePlan } from './read-only-flow.ts';
+import { askAgent, reviewExisting } from './read-only-flow.ts';
 import {
   afterReview,
   canFixAgain,
@@ -37,12 +29,10 @@ import {
 
 export type {
   AgentOutcome,
-  ClarifiedStart,
   FlowAction,
   FlowEvent,
   FlowResult,
   FlowState,
-  ReadOnlyWork,
   Spawn,
   SpawnReason,
   StartMode,
@@ -67,15 +57,10 @@ function spawn(state: FlowState, next: Omit<Spawn, 'note'> & { note?: string | n
   };
 }
 
-function ask(
-  state: FlowState,
-  kind: CheckpointKind,
-  reason: string,
-  extra: Partial<Extract<FlowAction, { type: 'ask' }>> = {},
-): FlowResult {
+function askToKeep(state: FlowState, reason: string): FlowResult {
   return {
-    state: { ...state, phase: 'waiting', waitingFor: kind },
-    action: { type: 'ask', kind, reason, ...extra },
+    state: { ...state, phase: 'waiting', waitingFor: 'accept' },
+    action: { type: 'ask', reason },
   };
 }
 
@@ -97,7 +82,8 @@ export function finish(
   status: 'succeeded' | 'failed' | 'cancelled',
   reason: string | null = null,
 ): FlowResult {
-  const incomplete = status === 'cancelled' ? null : incompleteLine(state.open);
+  const lines = status === 'cancelled' ? [] : [incompleteLine(state.open), state.needsYou ?? null];
+  const incomplete = lines.filter((line) => line !== null).join('\n\n') || null;
   return {
     state: { ...state, phase: 'finished', waitingFor: null },
     action: { type: 'finish', status, reason, ...(incomplete ? { incomplete } : {}) },
@@ -153,6 +139,10 @@ function stopReport(state: FlowState, reason: string): FlowResult {
   return finish(state, 'failed', reason);
 }
 
+function needsYou(state: FlowState, reason: string): FlowResult {
+  return finish({ ...state, needsYou: needsYouLine(reason) }, 'succeeded');
+}
+
 function builderDone(
   state: FlowState,
   event: Extract<FlowEvent, { type: 'agent_done' }>,
@@ -169,7 +159,7 @@ function builderDone(
   if (event.outcome === 'failed' && next.missingContext) return askContext(next);
   if (event.outcome === 'failed') {
     if (next.retries < MAX_REPAIR_RETRIES) return retry(next);
-    return ask(next, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
+    return needsYou(next, `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
   }
   if (!state.solo && next.open.length > 0 && next.continues < PLAN_CONTINUES) {
     return spawn(
@@ -224,7 +214,7 @@ function askContext(state: FlowState): FlowResult {
   if (state.level === 'full-auto') {
     return stopReport(state, `Stopped: the Builder is missing context. ${missing}`);
   }
-  return ask(state, 'clarify', missing, { context: true });
+  return needsYou(state, missing);
 }
 
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
@@ -234,7 +224,7 @@ function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified'
   if (action === 'escalate') return escalateOnce(next, escalateFollowUp(event.reasons));
   if (action === 'ask') {
     const reason = event.accepted === 'unsupported' ? UNCONFIRMED_REASON : DECLINED_REASON;
-    return ask(next, 'verify', reason);
+    return afterBuilder({ ...next, needsYou: needsYouLine(reason), unverified: true }, state.large);
   }
   return afterBuilder(next, state.large);
 }
@@ -287,75 +277,25 @@ function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>)
 function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered' }>): FlowResult {
   const option = event.optionId;
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
-  if (event.kind === 'retry') {
-    if (option === CHECKPOINT_OPTION.retry) return retry(state, event.note);
-    return stopReport(
-      state,
-      `Stopped after ${MAX_REPAIR_RETRIES} retries; the step did not succeed.`,
-    );
+  if (option === CHECKPOINT_OPTION.revert) {
+    return { state: { ...state, waitingFor: null }, action: { type: 'revert' } };
   }
-  if (event.kind === 'clarify') {
-    return spawn(
-      { ...state, retries: state.retries + 1, missingContext: null },
-      { role: 'builder', reason: 'retry', escalate: false, note: event.note },
-    );
+  if (option === CHECKPOINT_OPTION.fix) {
+    return spawn(state, { role: 'builder', reason: 'fix', escalate: false, note: event.note });
   }
-  if (event.kind === 'plan' && state.readOnly !== 'plan') {
-    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
-    if (note) return planFirst(state, note);
-    if (option !== CHECKPOINT_OPTION.makeChange)
-      return finish(state, 'cancelled', 'You stopped it.');
-    return build(state);
-  }
-  if (event.kind === 'plan') {
-    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
-    return note ? writePlan(state, note) : finish(state, 'succeeded');
-  }
-  if (event.kind === 'verify') {
-    if (option === CHECKPOINT_OPTION.retry) {
-      return escalateOnce(state, escalateFollowUp(event.note ? [event.note] : []));
-    }
-    return afterBuilder(state, state.large);
-  }
-  if (event.kind === 'accept') {
-    if (option === CHECKPOINT_OPTION.revert) {
-      return { state: { ...state, waitingFor: null }, action: { type: 'revert' } };
-    }
-    if (option === CHECKPOINT_OPTION.fix) {
-      return spawn(state, { role: 'builder', reason: 'fix', escalate: false, note: event.note });
-    }
-    if (option === CHECKPOINT_OPTION.fixFindings && canFixAgain(state.review)) {
-      return fixFindings(state);
-    }
-    return finish(state, 'succeeded');
+  if (option === CHECKPOINT_OPTION.fixFindings && canFixAgain(state.review)) {
+    return fixFindings(state);
   }
   return finish(state, 'succeeded');
-}
-
-function clarified(state: FlowState, start: ClarifiedStart | null): FlowResult {
-  if (start === null) return finish(state, 'cancelled', 'You stopped it.');
-  if (start === 'answer') return answer(state);
-  if (start === 'plan') return writePlan(state, null);
-  if (start === 'plan_first' || state.then === 'plan_first') return planFirst(state, null);
-  return build(state);
 }
 
 export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
       if (event.start === 'answer') return answer(state);
-      if (event.start === 'plan') return writePlan(state, null);
       if (event.start === 'review') return reviewExisting(state);
-      if (event.start === 'ask_agent') return askAgent(state, event.then ?? 'build');
-      if (event.start === 'plan_first') return planFirst(state, null);
+      if (event.start === 'ask_agent') return askAgent(state);
       return build(state);
-    case 'unclear':
-      if (event.followUp) return ask(state, 'clarify', FOLLOW_UP_REASON, { followUp: true });
-      return ask(state, 'clarify', 'The request does not say what to change.', {
-        interpret: true,
-      });
-    case 'clarified':
-      return clarified(state, event.start);
     case 'agent_done':
       return agentDone(state, event);
     case 'looped':
@@ -372,7 +312,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       if (asksToKeep(state.level, event.filesChanged, facts)) {
         const why = keepReason(state.level, facts);
         const line = filesChangedLine(event.filesChanged);
-        return ask(state, 'accept', why ? `${line} ${why}` : line);
+        return askToKeep(state, why ? `${line} ${why}` : line);
       }
       if (shipsByItself(state.level, event.filesChanged)) return ship(state, keptLine(facts));
       if (keepsByItself(state.level, event.filesChanged)) {
@@ -386,7 +326,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'shipped':
       return finish(state, 'succeeded');
     case 'ship_held':
-      return ask(state, 'accept', event.reason);
+      return askToKeep(state, event.reason);
     case 'reverted':
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
     case 'stopped':

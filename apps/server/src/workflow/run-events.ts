@@ -13,6 +13,7 @@ import {
 export interface RunIdentity {
   runId: string;
   threadId: string;
+  parentRunId?: string;
 }
 
 function marked(mark: StepMark | undefined): { metadata?: Record<string, StepMark> } {
@@ -20,10 +21,11 @@ function marked(mark: StepMark | undefined): { metadata?: Record<string, StepMar
 }
 
 export const runEvents = {
-  started: ({ runId, threadId }: RunIdentity): RunEvent => ({
+  started: ({ runId, threadId, parentRunId }: RunIdentity): RunEvent => ({
     type: EventType.RUN_STARTED,
     runId,
     threadId,
+    ...(parentRunId ? { parentRunId } : {}),
   }),
   finished: ({ runId, threadId }: RunIdentity): RunEvent => ({
     type: EventType.RUN_FINISHED,

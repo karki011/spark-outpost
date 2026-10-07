@@ -5,7 +5,6 @@ import {
   SHIP_TITLE_MAX_LENGTH,
   type InvolvementLevel,
   type ShipResult,
-  type TaskPiece,
 } from '@spark-outpost/contracts';
 import { insertApproval } from '../persistence/approvals.ts';
 import { shipsFailingChecks } from '../persistence/setup.ts';
@@ -14,7 +13,7 @@ import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
 import { runCommand } from '../setup/command.ts';
 import { memorySecretStore } from '../setup/secrets.ts';
 import { planShip, type ShipDeps, type ShipOptions, type ShipPlan } from '../ship/prepare.ts';
-import { shipPiece, shipTask } from '../ship/service.ts';
+import { shipTask } from '../ship/service.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import {
   agentPublishPlan,
@@ -25,10 +24,8 @@ import {
 import { checksFailing, unrelatedCheckNotes } from './check-results.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { KEPT_BY_AUTO_EDIT, RISKY_PR_NOTE } from './checkpoint-policy.ts';
-import { assumptionPrNote } from './clarify.ts';
 import { criticSkippedLine, sessionReviewLine } from './critic-fix.ts';
 import { changedLines } from './member-prompts.ts';
-import { choosePrSplit, ownWorktreePieces } from './pr-split.ts';
 import { publish, type Session } from './session.ts';
 import { code } from '../laws/finding.ts';
 import { lawItems, lawsNote, outsidePlanFiles } from '../laws/review.ts';
@@ -129,24 +126,12 @@ function shippedLine(result: ShipResult, plan: ShipPlan, failing: boolean): stri
   return `Committed${commit} on ${result.branch}, not pushed.${why}`;
 }
 
-async function opensPullRequest(s: Session): Promise<boolean> {
-  if (!s.taskId) return false;
-  const plan = await planShip(shipDeps(s), s.taskId, { keepCheckout: true, duringRun: true }).catch(
-    () => null,
-  );
-  return plan !== null && !plan.blocked && plan.modes.includes('draft_pr');
-}
-
 export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   const failing = checksFailing(s);
   if (failing && !(await shipsFailingChecks(s.deps.db, s.input.workspaceId))) {
     return { type: 'ship_held', reason: CHECKS_HOLD_REASON };
   }
-  const pieces = ownWorktreePieces(s);
-  const split =
-    pieces.length > 1 && (await opensPullRequest(s)) ? await choosePrSplit(s, pieces) : 'one';
-  if (!split) return { type: 'stopped' };
-  s.shipLine = await ship(s, failing, split === 'separate' ? pieces : []);
+  s.shipLine = await ship(s, failing);
   await autoKeep(s, 'full-auto', [KEPT_BY_FULL_AUTO, sessionReviewLine(s), s.shipLine]);
   return { type: 'shipped' };
 }
@@ -173,57 +158,32 @@ export function shipFailureLine(error: unknown): string {
   return `Full auto → PR kept the change but could not ship it: ${reason}`;
 }
 
-async function shipPieces(
-  s: Session,
-  deps: ShipDeps,
-  pieces: readonly TaskPiece[],
-  options: ShipOptions,
-): Promise<string[]> {
-  const lines: string[] = [];
-  for (const piece of pieces) {
-    const files = piece.filesChanged;
-    try {
-      const result = await shipPiece(deps, s.taskId!, { ...piece, files }, options);
-      lines.push(`${piece.key}: ${pullRequestLine(result, false)}`);
-    } catch (error) {
-      lines.push(`${piece.key}: ${shipFailureLine(error)}`);
-    }
-  }
-  return lines;
-}
-
-async function ship(s: Session, failing: boolean, separate: readonly TaskPiece[]): Promise<string> {
+async function ship(s: Session, failing: boolean): Promise<string> {
   if (!s.taskId) return 'Full auto → PR kept the change, but it has no task to ship.';
   const laws = lawsNote(s);
   const unrelated = unrelatedCheckNotes(s);
   const notes = [
     failing ? CHECKS_FAILING_NOTE : null,
-    s.unverified ? UNVERIFIED_NOTE : null,
+    s.flow.unverified ? UNVERIFIED_NOTE : null,
     s.risky ? RISKY_PR_NOTE : null,
-    s.assumption ? assumptionPrNote(s.assumption) : null,
     criticSkippedLine(s),
     laws,
     ...unrelated.filter((note) => !laws?.includes(code(note.command))).map((note) => note.text),
-    ...(s.prNotes ?? []),
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);
-  const plan = separate.length === 0 ? await agentPublishPlan(s) : null;
+  const plan = await agentPublishPlan(s);
   if (plan) {
     const titlePrefix = failing ? `[${CHECKS_FAILING_NOTE}]` : null;
     const unrelatedFailures = unrelated.length > 0;
     return publishByAgent(s, deps, plan, { failing, titlePrefix, notes, unrelatedFailures });
   }
-  const pieceLines = await shipPieces(s, deps, separate, { duringRun: true, notes });
-  const exclude = separate.flatMap((piece) => piece.filesChanged);
   const options = {
     keepCheckout: true,
     duringRun: true,
     notes,
-    exclude,
     ...(failing ? { draft: true } : {}),
   };
-  const main = await shipMain(s, deps, failing, options, separate.length > 0);
-  return [...pieceLines, ...(main ? [main] : [])].join('\n\n');
+  return shipMain(s, deps, failing, options);
 }
 
 async function shipMain(
@@ -231,13 +191,9 @@ async function shipMain(
   deps: ShipDeps,
   failing: boolean,
   options: ShipOptions,
-  piecesShipped: boolean,
-): Promise<string | null> {
+): Promise<string> {
   try {
     const plan = await planShip(deps, s.taskId!, options);
-    if (piecesShipped && (plan.files.length === 0 || plan.blocked?.reason === 'nothing_new')) {
-      return null;
-    }
     const mode = plan.blocked ? null : preferredShipMode(plan.modes);
     if (!mode) {
       return `Full auto → PR kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;

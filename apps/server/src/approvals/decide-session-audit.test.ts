@@ -10,7 +10,6 @@ import {
   type DecideOptions,
 } from './decide.ts';
 import type { PieceGuard } from './piece-guard.ts';
-import { PIECE_CHECKED_WHY } from './piece-route.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
@@ -46,8 +45,7 @@ const OWNED: NonNullable<PieceGuard['owned']> = {
 const SOLO_BUILDER: DecideOptions = { builder: true };
 const SHARED_PIECE: DecideOptions = {
   builder: true,
-  piece: { coordinated: true, owned: OWNED, sharesTree: true },
-  routedPiece: true,
+  piece: { coordinated: true, owned: OWNED },
 };
 
 function request(command: string, noted: boolean): ApprovalRequest {
@@ -129,13 +127,11 @@ describe('the Builder commands from the reported session', () => {
     },
   );
 
-  it.each(BUILDER_CARDS)('runs in a shared folder without a card in Auto: %s', async (command) => {
+  it.each(BUILDER_CARDS)('follows the mode in a shared folder in Auto: %s', async (command) => {
     expect(await decided('auto', command, SHARED_PIECE)).toEqual({ verdict: 'allow', by: 'level' });
-    expect(await decided('auto', command, SHARED_PIECE, true)).toEqual({
-      verdict: 'allow',
-      by: 'level',
-      why: PIECE_CHECKED_WHY,
-    });
+    expect(await decided('auto', command, SHARED_PIECE, true)).toEqual(
+      await decided('auto', command, SOLO_BUILDER, true),
+    );
   });
 
   it('refuses the whole-workspace nx run inside a piece, in every mode', async () => {

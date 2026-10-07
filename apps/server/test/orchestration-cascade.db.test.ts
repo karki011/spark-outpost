@@ -1,5 +1,5 @@
+import { needsYouLine } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,7 +10,6 @@ import {
 } from '../src/orchestration/cascade.ts';
 import {
   NORMAL,
-  answerEverything,
   assistantReplies,
   connectProviders,
   driveToEnd,
@@ -20,7 +19,6 @@ import {
   setCheckCommands,
   startOrchestrator,
   startScenario,
-  type Answerer,
   type Harness,
   type JevScript,
 } from './orchestration-support.ts';
@@ -124,8 +122,9 @@ describe('verified cascade', () => {
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await builders(runId)).toHaveLength(1);
-    const card = asked.find((approval) => approval.kind === 'verify')!;
-    expect(card.payload.checkpoint).toMatchObject({ reason: UNCONFIRMED_REASON });
+    expect(asked).toEqual([]);
+    expect(orchestration.checkpoints.map((checkpoint) => checkpoint.kind)).toEqual(['accept']);
+    expect(await reply(runId)).toContain(needsYouLine(UNCONFIRMED_REASON));
     expect((await verdicts(runId))[0]!.body.answer).toMatchObject({
       action: 'ask',
       evidence: { checksPass: true, criticConcerns: false, confidentUnmet: false },
@@ -133,39 +132,23 @@ describe('verified cascade', () => {
     expect(await reply(runId)).not.toContain(ESCALATED_NOTE);
   }, 60_000);
 
-  it('asks the user with a clear card when Jev declines, and finishing keeps the change', async () => {
+  it('says what needs you when Jev declines, with no card, and keeps the change', async () => {
     const { conversationId, runId } = await runWith(
       { verdicts: [{ choice: 'declined', confidence: 0.9 }] },
       'full-auto',
     );
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
-    const card = asked.find((approval) => approval.kind === 'verify')!;
-    expect(card.title).toBe('Jev could not verify the change');
-    expect(card.payload.checkpoint).toMatchObject({
-      reason: DECLINED_REASON,
-      to: { model: 'opus[1m]' },
-      autoOption: CHECKPOINT_OPTION.finishUnverified,
-    });
-    expect(card.options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.finishUnverified,
-      CHECKPOINT_OPTION.retry,
-      CHECKPOINT_OPTION.stop,
-    ]);
+    expect(asked).toEqual([]);
+    expect(
+      orchestration.checkpoints.map((checkpoint) => [
+        checkpoint.kind,
+        checkpoint.payload.checkpoint?.keptBy,
+      ]),
+    ).toEqual([['accept', 'full-auto']]);
+    expect(await reply(runId)).toContain(needsYouLine(DECLINED_REASON));
     expect(await builders(runId)).toHaveLength(1);
     expect((await verdicts(runId))[0]!.body.answer).toMatchObject({ action: 'ask' });
-  }, 60_000);
-
-  it('retries one tier up when the user picks Retry on the declined card', async () => {
-    const { conversationId, runId } = await runWith({
-      verdicts: [{ choice: 'declined', confidence: 0.9 }],
-    });
-    const retry: Answerer = (approval) =>
-      approval.kind === 'verify'
-        ? { optionId: CHECKPOINT_OPTION.retry }
-        : answerEverything(approval);
-    await driveToEnd(t, conversationId, runId, retry);
-    expect((await builders(runId)).map((run) => run.model)).toEqual(['sonnet', 'opus[1m]']);
   }, 60_000);
 
   it('finishes as today when the verdict is below 0.8', async () => {

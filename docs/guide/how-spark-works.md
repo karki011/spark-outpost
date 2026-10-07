@@ -15,7 +15,7 @@ Most requests skip most steps. A question stops after step 1.
 | Step      | What happens                                                                                                                                 | Without Jev             |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | 1. Read   | Spark names the kind of request, shown as a chip such as **Bug fix**. Questions get an answer.                                               | Rules read the wording. |
-| 2. Plan   | Big, destructive or `/plan` requests get [**Build this plan?**](plan-card.md).                                                               | Same                    |
+| 2. Plan   | A build's plan is saved and shown as [one line](plan-card.md). Nothing waits; `/plan` has the agent ask first.                               | Same                    |
 | 3. Build  | A [Builder](spark-crew.md) changes code in the chat's [worktree](where-spark-works.md), on your model or one [Auto picks](model-routing.md). | Rules rate the request. |
 | 4. Check  | Spark runs your tests and lint itself. The Builder gets up to 2 turns to fix failures.                                                       | Same                    |
 | 5. Review | [Jev](jev.md) checks the diff. A Critic reviews bigger or riskier changes.                                                                   | No Jev check            |

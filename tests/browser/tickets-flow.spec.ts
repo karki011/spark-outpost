@@ -27,7 +27,11 @@ const GROUPS = [
   'Done recently',
 ];
 
-const PLAN_APPROVAL = { kind: 'plan', title: 'Approve the plan' };
+const PLAN_APPROVAL = {
+  kind: 'other',
+  title: 'Plan',
+  plan: '# Add CSV export\n\n1. Write `src/export.ts`',
+};
 
 test.describe.configure({ timeout: 90_000 });
 

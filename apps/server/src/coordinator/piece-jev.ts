@@ -7,12 +7,10 @@ import { insertDecision } from '../persistence/orchestrations.ts';
 import { builderModels } from '../orchestration/model-floor.ts';
 import type { Session } from '../orchestration/session.ts';
 import { routeCandidates } from '../routing/candidates.ts';
-import { placementFacts } from './assess.ts';
 import { measuredRate, measuredStrength, type AssignFacts } from './assign.ts';
 import { destructivePath, JEV_NOT_CONNECTED, type BuilderPlan } from './builder-jev.ts';
 import type { KindPassRates } from './piece-demand.ts';
 import type { ListPlace } from './place-list.ts';
-import { listIsolation, pieceIsolation } from './placement.ts';
 import { factPaths, loadFileFacts, type FileFacts } from './piece-facts.ts';
 import { touchesCore, type RouteOption, type TaskKind } from './piece-questions.ts';
 import {
@@ -103,11 +101,10 @@ function pickLabel(s: Session, pick: AgentPick): string {
 
 function pickNote(s: Session, route: PieceRoute, asked: boolean): string | null {
   if (!asked || route.place.placement === 'read_only') return null;
-  const { model, place } = route;
-  const placed = place.decidedBy === 'jev' ? ` · ${place.reason}` : '';
-  if (model.decidedBy === 'jev') return `Jev: ${model.reason}${placed}`;
-  const overrode = model.jevPick ? ` (Jev picked ${pickLabel(s, model.jevPick)})` : '';
-  return `Rules: ${pickLabel(s, model.pick)} · ${model.reason}${overrode}${placed}`;
+  const { model } = route;
+  if (model.decidedBy === 'jev') return `Jev: ${model.reason}`;
+  const overrode = model.jevPick ? ` (Jev would have used ${pickLabel(s, model.jevPick)})` : '';
+  return `Rules: ${pickLabel(s, model.pick)} · ${model.reason}${overrode}`;
 }
 
 function summaryOf(routed: RoutedPieces, outcome: JevOutcome): string {
@@ -218,7 +215,6 @@ export async function routePieces(
   facts: AssignFacts,
   plan: BuilderPlan,
 ): Promise<PiecePicks> {
-  const placeFacts = await placementFacts(s);
   const building = pieces.filter((piece) => !piece.research);
   const fileFacts: ReadonlyMap<string, FileFacts> = plan.answers
     ? await loadFileFacts(
@@ -233,12 +229,9 @@ export async function routePieces(
     picks: rulesPicks,
     routes: offeredRoutes(s, facts),
     placement: place.placement,
-    askPlacement: place.placement !== 'in_order' && !s.deps.forcedPlacement,
     requestDestructive: s.facts.destructive,
     destructive: destructive(s),
     core: (piece) => touchesCore(piece, fileFacts),
-    listIsolation: listIsolation(pieces, placeFacts),
-    pieceIsolation: (piece) => pieceIsolation(piece, placeFacts),
     kindPassRates: kindPassRates(s),
   };
   const outcome = outcomeOf(plan);

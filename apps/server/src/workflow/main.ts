@@ -92,7 +92,6 @@ const worker = startWorker({
   codeScan,
   branchPrefix: config.BRANCH_PREFIX,
   coordinator: config.COORDINATOR_MODE,
-  forcedPlacement: config.COORDINATOR_PLACEMENT,
   agentSlots: new Slots(config.PARALLEL_AGENT_LIMIT),
   shipAccess: {
     secrets,

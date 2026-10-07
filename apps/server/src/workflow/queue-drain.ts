@@ -4,6 +4,7 @@ import { BadRequestError } from '../api/validation.ts';
 import { alreadySent, takeQueued } from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
+import { buildingInPieces } from '../persistence/piece-notes.ts';
 import {
   getMemberMessage,
   insertMemberMessage,
@@ -129,12 +130,13 @@ export async function sendNow(
       );
       return 'sent';
     }
+    const toIntake = await buildingInPieces(client, running);
     await insertMemberMessage(client, {
       id: request.id,
       conversationId,
       runId: running,
       body: content,
-      urgency: 'now',
+      urgency: toIntake ? 'next' : 'now',
     });
     return 'steering';
   });
@@ -145,9 +147,10 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
     `SELECT DISTINCT c.conversation_id FROM (
        SELECT conversation_id FROM chat_queue
        UNION
-       SELECT conversation_id FROM member_messages
-       WHERE message_id IS NULL
-         AND (status = 'interrupting' OR (status = 'queued' AND urgency = 'now'))
+       SELECT m.conversation_id FROM member_messages m JOIN runs target ON target.id = m.run_id
+       WHERE m.message_id IS NULL
+         AND (m.status = 'interrupting'
+           OR (m.status = 'queued' AND (m.urgency = 'now' OR target.parent_run_id IS NULL)))
      ) c
      WHERE NOT EXISTS (
        SELECT 1 FROM runs r WHERE r.conversation_id = c.conversation_id

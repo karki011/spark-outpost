@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   APPROVAL_DECIDED,
@@ -20,6 +22,7 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  withTag,
   type Answerer,
   type Harness,
   type JevScript,
@@ -62,32 +65,34 @@ async function approvalEvents(runId: string) {
   return rows;
 }
 
-describe('clarify in your own words', () => {
-  it('needs a note, then works on the request with the answer added', async () => {
-    const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
-    script.scenario = unsure;
-    const { conversationId, runId } = await startScenario(t, root, unsure, null);
-    const clarify = await pendingApproval(conversationId, 'clarify');
-    expect(clarify.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.answer);
+describe('a fix request in your own words', () => {
+  it('needs a note, then sends the Builder back with the note added', async () => {
+    const risky = withTag(TRIVIAL, '#dropmigration');
+    const { conversationId, runId } = await startScenario(t, root, risky, 'hands-off');
+    const keep = await pendingApproval(conversationId, 'accept');
+    expect(keep.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.fix);
     await expect(
-      decideApproval(t.db, t.workspaceId, clarify.id, {
-        optionId: CHECKPOINT_OPTION.answer,
+      decideApproval(t.db, t.workspaceId, keep.id, {
+        optionId: CHECKPOINT_OPTION.fix,
         scope: 'once',
       }),
     ).rejects.toThrow('This answer needs a note.');
 
-    const answers: Answerer = (approval) =>
-      approval.kind === 'clarify'
-        ? { optionId: CHECKPOINT_OPTION.answer, note: 'Only the heading #build' }
-        : answerEverything(approval);
+    let fixed = false;
+    const answers: Answerer = (approval) => {
+      if (approval.kind !== 'accept') return answerEverything(approval);
+      if (fixed) return { optionId: CHECKPOINT_OPTION.keep };
+      fixed = true;
+      return { optionId: CHECKPOINT_OPTION.fix, note: 'Use UTC' };
+    };
     const { orchestration } = await driveToEnd(t, conversationId, runId, answers);
     expect(orchestration).toMatchObject({ status: 'succeeded', depth: 'execute' });
     expect(orchestration.checkpoints[0]).toMatchObject({
-      decisionOptionId: CHECKPOINT_OPTION.answer,
-      note: 'Only the heading #build',
+      id: keep.id,
+      decisionOptionId: CHECKPOINT_OPTION.fix,
+      note: 'Use UTC',
     });
-    const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.messages.at(-1)?.content).toContain('Clarified: Only the heading');
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('fixed as asked');
   }, 60_000);
 });
 

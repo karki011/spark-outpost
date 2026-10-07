@@ -249,7 +249,9 @@ describe('Continue from here after a lease expired mid-turn', { timeout: 90_000 
     expect(await continuations(turn.runId)).toBe(0);
     worker.wake();
     await untilFinished(t, next.run.id);
-    expect(await stepNames(t, next.run.id)).toContain('Fresh session (last turn did not finish)');
+    const steps = await stepNames(t, next.run.id);
+    expect(steps).toContain('Continued session');
+    expect(steps.filter((name) => name.startsWith('Fresh session'))).toEqual([]);
   });
 
   it('falls back to a fresh session with the note and the chat so far when the load fails', async () => {

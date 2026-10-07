@@ -94,7 +94,7 @@ describe('piece notes', () => {
     expect(importsAny(["import { x } from './tagsList';"], ['src/tags.ts'])).toBe(false);
   });
 
-  it('asks to merge main into copies that use the landed piece and flags changed contracts', () => {
+  it('flags changed contracts to the running pieces that use the landed piece', () => {
     const notices = landingNotices(landed, [
       { piece: piece('P2', { dependsOn: ['P1'] }), sources: [] },
       {
@@ -105,14 +105,10 @@ describe('piece notes', () => {
       { piece: piece('P5'), sources: [] },
     ]);
     expect(notices.map((notice) => [notice.pieceKey, notice.kind, notice.urgent])).toEqual([
-      ['P2', 'merge_main', false],
       ['P2', 'contract_changed', false],
       ['P3', 'contract_changed', true],
       ['P4', 'contract_changed', false],
     ]);
-    expect(notices[0]!.body).toBe(
-      "main merged: Bolt's Tags API landed (src/tags.ts); re-run your scoped checks.",
-    );
-    expect(notices[1]!.body).toContain('changed `listTags`');
+    expect(notices[0]!.body).toContain('changed `listTags`');
   });
 });

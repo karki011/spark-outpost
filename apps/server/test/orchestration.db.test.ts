@@ -1,7 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { agentRoleLabel, type AgentRole, type InvolvementLevel } from '@spark-outpost/contracts';
+import {
+  agentRoleLabel,
+  type AgentRole,
+  type InvolvementLevel,
+  type Orchestration,
+} from '@spark-outpost/contracts';
 import { conversationAuditRuns, summarizeAudit } from '../src/persistence/audit-summary.ts';
 import { getTaskDetail } from '../src/persistence/task-views.ts';
 import {
@@ -29,26 +34,26 @@ const CRITIC: AgentRole = 'critic';
 interface Expectation {
   crew: AgentRole[];
   asked: string[];
+  need: string;
 }
 
-const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => ({
-  'hands-off': { crew, asked: [] },
-  'full-auto': { crew, asked: [] },
+const atEveryLevel = (crew: AgentRole[], need: string): Record<InvolvementLevel, Expectation> => ({
+  'hands-off': { crew, asked: [], need },
+  'full-auto': { crew, asked: [], need },
 });
 
 const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
-  question: {
-    'hands-off': { crew: ['scout'], asked: [] },
-    'full-auto': { crew: ['scout'], asked: [] },
-  },
-  trivial: asksEdits([BUILDER]),
-  normal: asksEdits([BUILDER]),
-  complex: asksEdits([BUILDER]),
-  risky: {
-    'hands-off': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
-    'full-auto': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
-  },
+  question: atEveryLevel([SCOUT], 'question'),
+  trivial: atEveryLevel([BUILDER], 'small change'),
+  normal: atEveryLevel([BUILDER], 'build'),
+  complex: atEveryLevel([BUILDER], 'build'),
+  risky: atEveryLevel([BUILDER, CRITIC], 'build'),
 };
+
+const memberRoute = (orchestration: Orchestration) =>
+  orchestration.decisions.find(
+    (decision) => decision.kind === 'route' && decision.childRunId !== null,
+  );
 
 let t: TestDb;
 let harness: Harness;
@@ -131,10 +136,15 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         kinds.filter((kind) => kind === 'intake'),
         context,
       ).toHaveLength(1);
+      const routes = orchestration.decisions.filter((decision) => decision.kind === 'route');
       expect(
-        kinds.filter((kind) => kind === 'route'),
+        routes.filter((decision) => decision.childRunId === null).map((route) => route.summary),
         context,
-      ).toHaveLength(expected.crew.length);
+      ).toEqual([`intake read this as ${expected.need}`]);
+      expect(
+        routes.filter((decision) => decision.childRunId !== null).map((route) => route.childRunId),
+        context,
+      ).toEqual(orchestration.crew.map((member) => member.runId));
       expect(
         kinds.filter((kind) => !['intake', 'route', 'policy', 'verify'].includes(kind)),
         context,
@@ -157,8 +167,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         const [audited] = audit.orchestrations ?? [];
         expect(audited?.totals.totalTokens, context).toBe(orchestration.totals.tokens);
         expect(audited?.byRole.map((group) => group.role).sort(), context).toEqual(labels);
-        const rootRole = expected.crew[0] === SCOUT ? 'Reader' : 'Orchestration';
-        expect(audit.runs.find((run) => run.runId === runId)?.role, context).toBe(rootRole);
+        expect(audit.runs.find((run) => run.runId === runId)?.role, context).toBe('Orchestration');
       } else {
         expect(
           audit.runs.map((run) => run.role),
@@ -193,7 +202,7 @@ describe('rule routing on Auto', () => {
       }),
     ]);
     expect(orchestration.crew[0]?.routeNote).toBeUndefined();
-    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    const route = memberRoute(orchestration);
     expect(route?.summary).toContain('trivial → middle tier');
     expect(route?.answer).toMatchObject({ rule: 'trivial → middle tier', jevTier: 'small' });
   }, 60_000);
@@ -203,7 +212,7 @@ describe('rule routing on Auto', () => {
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'opus[1m]' }),
     ]);
-    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    const route = memberRoute(orchestration);
     expect(route?.summary).toContain("the chat's own model, kept for the whole chat");
   }, 60_000);
 
@@ -213,7 +222,7 @@ describe('rule routing on Auto', () => {
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'haiku', routeNote: note }),
     ]);
-    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    const route = memberRoute(orchestration);
     expect(route?.answer).toMatchObject({ routedBy: 'pinned', note });
   }, 60_000);
 
@@ -221,7 +230,6 @@ describe('rule routing on Auto', () => {
     const { orchestration } = await runLevel(RISKY, 'full-auto');
     expect(orchestration.risk).toBe('destructive');
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['scout', 'opus[1m]'],
       ['builder', 'opus[1m]'],
       ['critic', 'gpt-6-sol'],
     ]);

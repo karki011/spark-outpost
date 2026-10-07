@@ -8,7 +8,7 @@ const KEY_FILES_SHOWN = 5;
 
 const NO_IMPACT: CoreImpact = { areas: [], keyFiles: [] };
 
-async function mapRootFor(db: Queryable, root: string): Promise<string> {
+export async function mapRootFor(db: Queryable, root: string): Promise<string> {
   const { rows } = await db.query<{ root_path: string }>(
     `SELECT p.root_path FROM chat_worktrees cw JOIN projects p ON p.id = cw.project_id
      WHERE cw.path = $1 LIMIT 1`,

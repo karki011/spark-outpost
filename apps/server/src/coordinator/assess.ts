@@ -1,4 +1,4 @@
-import { modeSkipsGate, type PlanDocument } from '@spark-outpost/contracts';
+import type { PlanDocument } from '@spark-outpost/contracts';
 import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
@@ -7,20 +7,18 @@ import { builtSinceApproval } from '../plans/plan-turn.ts';
 import { namedFiles } from '../orchestration/context.ts';
 import { builderFacts } from '../orchestration/member-routes.ts';
 import { routeBuilder } from '../orchestration/routing.ts';
-import { repoBusy } from '../orchestration/solo-copy.ts';
 import type { Session } from '../orchestration/session.ts';
 import type { BuilderPlan } from './builder-jev.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
 import { planSteps, type PlanStep } from './plan-coverage.ts';
 import {
-  asksForInstall,
   placePieces,
   type PlaceablePiece,
   type Placement,
   type PlacementFacts,
 } from './placement.ts';
 import { budgetFor, lineCounter } from './project-facts.ts';
-import { sizeEstimate, type LineCount } from './size.ts';
+import { sizeEstimate } from './size.ts';
 
 export interface Assessment {
   engagement: Engagement;
@@ -34,37 +32,15 @@ export interface Assessment {
   budgetTokens: number;
 }
 
-function planPieces(items: readonly string[], lines: LineCount): PlaceablePiece[] {
-  const pieces: PlaceablePiece[] = [];
-  items.forEach((item, index) => {
-    const owns = namedFiles([item]);
-    const dependsOn = pieces
-      .filter((earlier) => earlier.owned.paths.some((file) => owns.includes(file)))
-      .map((earlier) => earlier.key);
-    pieces.push({
-      key: `I${index + 1}`,
-      owned: { paths: owns, globs: [] },
-      dependsOn,
-      sizeEstimate: sizeEstimate({ owns, reads: [] }, lines),
-      size: 'M',
-      research: owns.length === 0,
-    });
-  });
-  return pieces;
+function planPieces(items: readonly string[]): PlaceablePiece[] {
+  return items.map((item, index) => ({
+    key: `I${index + 1}`,
+    research: namedFiles([item]).length === 0,
+  }));
 }
 
-export async function placementFacts(s: Session): Promise<PlacementFacts> {
-  const root = s.input.projectRoots[0]!;
-  return {
-    git: s.git,
-    repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
-    destructive: s.facts.destructive,
-    skipsGate: modeSkipsGate(s.input.provider, s.input.agentMode),
-    installs: asksForInstall(s.input.userRequest),
-    wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
-    splitWorthIt: null,
-    sameFolder: null,
-  };
+export function placementFacts(s: Session): PlacementFacts {
+  return { git: s.git };
 }
 
 async function awaitScan(s: Session) {
@@ -103,8 +79,8 @@ export async function assess(s: Session): Promise<Assessment> {
     budgetTokens,
     followUpRound: s.input.followUpRound === true,
   });
-  const pieces = planPieces(planItems, lines);
-  const placement = pieces.length > 1 ? placePieces(pieces, await placementFacts(s)) : null;
+  const pieces = planPieces(planItems);
+  const placement = pieces.length > 1 ? placePieces(pieces, placementFacts(s)) : null;
   return {
     engagement: engaged,
     placement,
@@ -141,7 +117,6 @@ function buildersAnswer(plan: BuilderPlan) {
     builders: plan.builders,
     tasks: plan.tasks.map((task) => ({ key: task.key, text: task.title, files: task.owns })),
     groups: plan.groups,
-    placementAsked: plan.placementAsked,
   };
 }
 
@@ -177,9 +152,7 @@ export async function recordAssessment(
         detail: engaged.detail,
         tooBigUnsure: engaged.tooBigUnsure,
         placement: placement?.placement ?? null,
-        row: placement?.row ?? null,
         placementReason: placement?.reason ?? null,
-        saving: placement ? Math.round(placement.saving * 100) / 100 : null,
         planVersion: assessment.plan?.version ?? null,
         planBuilt: assessment.planBuilt,
         solo: engaged.solo,

@@ -1,8 +1,4 @@
-import {
-  CHECKPOINT_OPTION,
-  type CheckpointKind,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
+import { type InvolvementLevel } from '@spark-outpost/contracts';
 import type { FlowState } from './flow-types.ts';
 import { destructiveMigrationWording } from './risk-rules.ts';
 
@@ -10,7 +6,6 @@ export const DESTRUCTIVE_CARD_REASON =
   'This change looks destructive: it can delete or rewrite data, files or history. The Builder works in a worktree copy on the top-tier model, and the Critic reviews the change before it lands.';
 export const MIGRATION_CARD_REASON =
   'This migration can rename, drop or rewrite what existing data depends on. The Critic reviews the change when the Builder is done.';
-export const DESTRUCTIVE_WAIT = 'Waiting for your answer — this would change data permanently';
 export const RISKY_PR_NOTE =
   'Risky change: destructive or a schema migration. Review it carefully before merging.';
 
@@ -74,13 +69,6 @@ export function keptLine(facts: KeepFacts): string | null {
 
 export function shipsByItself(level: InvolvementLevel, filesChanged: number): boolean {
   return level === 'full-auto' && filesChanged > 0;
-}
-
-export function autoContinueOption(kind: CheckpointKind, interpret: boolean): string | null {
-  if (kind === 'clarify' && interpret) return CHECKPOINT_OPTION.clarifyRules;
-  if (kind === 'retry') return CHECKPOINT_OPTION.stopReport;
-  if (kind === 'verify') return CHECKPOINT_OPTION.finishUnverified;
-  return null;
 }
 
 export function keepFacts(

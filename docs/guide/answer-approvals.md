@@ -54,4 +54,4 @@ Cards wait in the chat, on **Home** under **What needs you today**, in the chat 
 
 To see what was allowed, open the chat's **…** menu and select **Audit this chat**.
 
-**Next:** [Answer a plan](plan-card.md)
+**Next:** [Plan before building](plan-card.md)

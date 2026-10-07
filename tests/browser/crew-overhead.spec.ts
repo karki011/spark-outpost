@@ -3,8 +3,6 @@ import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.
 import {
   CREW_REQUEST,
   agentHead,
-  autoContinueAfter,
-  buildThePlan,
   card,
   crewChat,
   crewRepo,
@@ -27,13 +25,10 @@ test.afterEach(() => repo.remove());
 const SPLIT = 'Split this up: build a store, add an API and add a view. #build #pieces';
 
 async function buildInPieces(page: Page, tags: string) {
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(page, `${SPLIT} ${tags}`);
-  await expect(card(page, /Build this plan\?/)).toBeVisible({ timeout: 30_000 });
-  await buildThePlan(page);
   const board = page.getByRole('region', { name: 'Pieces' });
-  await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 90_000 });
+  await expect(board).toContainText('3 pieces, in the shared tree · 3 landed', { timeout: 90_000 });
   await expect(page.locator('.crew-turn .crew-foot').first()).toContainText('Done', {
     timeout: 60_000,
   });
@@ -59,7 +54,7 @@ test('a piece Builder that plans first raises no plan card of its own', async ({
   test.setTimeout(240_000);
   await buildInPieces(page, '#pieceplans');
   await expect(card(page, /Approve Plan/)).toHaveCount(0);
-  await expect(card(page, /Build this plan\?/)).toHaveCount(1);
+  await expect(card(page, /Build this plan\?/)).toHaveCount(0);
   expect(repo.file('store.ts')).toContain('built by P1');
 });
 

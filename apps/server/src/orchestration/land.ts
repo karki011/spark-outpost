@@ -5,6 +5,7 @@ import { changeFailureText, checkLines, startsCheckFix } from './check-results.t
 import { runChecks } from './checks.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import type { MemberResult, Session } from './session.ts';
+import { upgradeToBuild } from './simple-intake.ts';
 import type { FlowAction } from './transitions.ts';
 
 export interface LandingSite {
@@ -64,6 +65,11 @@ export async function checkAndFix(
     last = await fix(s, checks, site);
     if (last.outcome !== 'succeeded') break;
     checks = await runChecks(s, target(last));
+  }
+  const rebuilt = checks ? await upgradeToBuild(s, checks, site.place, last !== first) : null;
+  if (rebuilt) {
+    last = rebuilt;
+    if (last.outcome === 'succeeded') checks = await runChecks(s, target(last));
   }
   s.checkLines = checkLines(checks);
   return { result: last, checks, changed: true };

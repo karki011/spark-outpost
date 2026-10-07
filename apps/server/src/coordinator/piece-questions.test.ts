@@ -48,7 +48,6 @@ function ask(extra: Partial<PieceAsk> = {}): PieceAsk {
       },
     ],
     facts: new Map([['src/tags.ts', facts]]),
-    placement: true,
     ...extra,
   };
 }
@@ -62,13 +61,11 @@ describe('pieceQuestions', () => {
       'P1_coding',
       'P1_context',
       'P1_reliability',
-      'P1_wide',
       'P2_kind',
       'P2_reasoning',
       'P2_coding',
       'P2_context',
       'P2_reliability',
-      'P2_wide',
     ]);
     expect(Object.keys(built.questions.P1_kind!.criteria as object)).toEqual(
       Object.keys(TASK_KINDS),
@@ -81,11 +78,6 @@ describe('pieceQuestions', () => {
     const asked = JSON.stringify(built.questions);
     expect(asked).not.toContain('claude/');
     expect(asked).not.toContain('uncertain');
-  });
-
-  it('leaves the placement question out when the list runs in order', () => {
-    const built = pieceQuestions(ask({ placement: false }));
-    expect(Object.keys(built.questions).some((key) => key.endsWith('_wide'))).toBe(false);
   });
 
   it('gives Jev each piece as untrusted evidence without secret files', () => {
@@ -145,7 +137,6 @@ describe('readPieceAnswers', () => {
         P1_coding: { type: 'score', score: 1.75, confidence: 0.91 },
         P1_context: { type: 'score', score: 0.4, confidence: 0.95 },
         P1_reliability: { type: 'noul', noul: 0.12 },
-        P1_wide: { type: 'noul', noul: 0.04 },
       },
     };
     const read = readPieceAnswers(response, ask());
@@ -159,7 +150,6 @@ describe('readPieceAnswers', () => {
       coding: { mean: 2.75, confidence: 0.91 },
       context: { mean: 1.4, confidence: 0.95 },
       reliability: 0.12,
-      wide: 0.04,
     });
     expect(read.get('P2')).toEqual({
       kind: 'missing-answer',
@@ -167,20 +157,18 @@ describe('readPieceAnswers', () => {
       coding: null,
       context: null,
       reliability: null,
-      wide: null,
     });
   });
 
-  it('rejects out-of-range scores and skips placement when it was not asked', () => {
+  it('rejects out-of-range scores and answers of the wrong type', () => {
     const response: SystemOneResponse = {
       model: 'jev-test',
       answers: {
         P1_reasoning: { type: 'score', score: 7, confidence: 0.9 },
         P1_coding: { type: 'noul', noul: 0.4 },
-        P1_wide: { type: 'noul', noul: 0.9 },
       },
     };
-    const read = readPieceAnswers(response, ask({ placement: false }));
-    expect(read.get('P1')).toMatchObject({ reasoning: null, coding: null, wide: null });
+    const read = readPieceAnswers(response, ask());
+    expect(read.get('P1')).toMatchObject({ reasoning: null, coding: null });
   });
 });

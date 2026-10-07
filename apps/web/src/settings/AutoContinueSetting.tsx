@@ -13,10 +13,10 @@ import {
 } from './auto-continue-model.ts';
 import { useProfileSetting } from './use-profile-setting.ts';
 
-const LABEL = 'Wait before going with best guesses';
+const LABEL = 'Wait before going on without your answer';
 
 const WAIT_INFO =
-  'Covers questions such as an unclear request, a stuck step or a change Jev could not verify. Typing in the card stops the countdown. Approvals always wait for you.';
+  'Covers the "This chat is almost full" question: if you do not answer, Spark keeps going without compacting. Typing in the card stops the countdown. Approvals always wait for you.';
 
 export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
   const hintId = useId();

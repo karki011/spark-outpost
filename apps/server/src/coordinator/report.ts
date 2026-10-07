@@ -1,13 +1,11 @@
 import { placementLabel, type PieceList, type TaskPiece } from '@spark-outpost/contracts';
 import { noCheckLabel } from './scoped-checks.ts';
-import type { Conflict, Coordination, Renumbered } from './state.ts';
+import type { Coordination } from './state.ts';
 
 export interface ReportFacts {
   list: PieceList | null;
   fallback: string | null;
   integrator: string | null;
-  renumbered?: readonly Renumbered[];
-  conflicts?: readonly Conflict[];
 }
 
 function cell(text: string): string {
@@ -85,26 +83,6 @@ const PLACED: Record<PieceList['placement'], string> = {
   worktree: 'in worktrees',
 };
 
-function renumberedLine(renumbered: readonly Renumbered[]): string | null {
-  if (renumbered.length === 0) return null;
-  const named = renumbered.map((item) => `\`${item.from}\` → \`${item.to}\` (${item.piece})`);
-  return `Renumbered migrations: ${named.join('; ')}.`;
-}
-
-const RESOLVED_BY: Record<NonNullable<Conflict['resolvedBy']>, string> = {
-  integrator: 'resolved by the integrator',
-  you: 'settled by you',
-};
-
-function conflictsLine(conflicts: readonly Conflict[]): string | null {
-  if (conflicts.length === 0) return null;
-  const named = conflicts.map((conflict) => {
-    const how = conflict.resolvedBy ? RESOLVED_BY[conflict.resolvedBy] : 'not resolved';
-    return `${conflict.piece} (${conflict.files.map((file) => `\`${file}\``).join(', ')}) ${how}`;
-  });
-  return `Merge conflicts: ${named.join('; ')}.`;
-}
-
 export function pieceReport(facts: ReportFacts): string | null {
   if (!facts.list) {
     return facts.fallback
@@ -125,8 +103,6 @@ export function pieceReport(facts: ReportFacts): string | null {
   return [
     lines.join('\n'),
     integration,
-    conflictsLine(facts.conflicts ?? []),
-    renumberedLine(facts.renumbered ?? []),
     ownership(list),
     landedNotes(list),
     skipped(list),
@@ -142,7 +118,5 @@ export function coordinationReport(coordination: Coordination | null | undefined
     list: coordination.list,
     fallback: coordination.fallback,
     integrator: coordination.integrated ? coordination.integrator : null,
-    renumbered: coordination.renumbered ?? [],
-    conflicts: coordination.conflicts ?? [],
   });
 }

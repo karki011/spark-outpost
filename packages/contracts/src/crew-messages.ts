@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { STEER_TEXT_LIMIT } from './steer.ts';
 
 export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
+export const CONVERSATION_SUBAGENT = 'conversation';
 
 export const memberMessageStatusSchema = z.enum([
   'queued',

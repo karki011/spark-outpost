@@ -28,18 +28,9 @@ export interface Spawn {
 }
 
 export type FlowAction =
-  | {
-      type: 'ask';
-      kind: CheckpointKind;
-      reason: string;
-      interpret?: boolean;
-      followUp?: boolean;
-      context?: boolean;
-    }
+  | { type: 'ask'; reason: string }
   | ({ type: 'spawn' } & Spawn)
-  | { type: 'plan'; note: string | null }
-  | { type: 'plan_first'; note: string | null }
-  | { type: 'ask_agent'; then: ClarifiedStart }
+  | { type: 'ask_agent' }
   | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'keep'; note?: string }
@@ -56,14 +47,10 @@ export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
 export type StartMode = 'answer' | 'build' | 'ask_agent' | 'plan_first' | 'plan' | 'review';
 
-export type ClarifiedStart = 'answer' | 'plan' | 'build' | 'plan_first';
-
-export type ReadOnlyWork = 'plan' | 'review';
+export type FlowStart = Exclude<StartMode, 'plan' | 'plan_first'>;
 
 export type FlowEvent =
-  | { type: 'start'; start: StartMode; then?: ClarifiedStart }
-  | { type: 'clarified'; start: ClarifiedStart | null }
-  | { type: 'unclear'; followUp: boolean }
+  | { type: 'start'; start: FlowStart }
   | {
       type: 'agent_done';
       role: AgentRole;
@@ -85,7 +72,7 @@ export type FlowEvent =
       evidence?: CascadeEvidence;
     }
   | { type: 'looped'; summary: string; open?: readonly string[] }
-  | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
+  | { type: 'answered'; optionId: string; note: string | null }
   | {
       type: 'wrapped';
       filesChanged: number;
@@ -120,10 +107,11 @@ export interface FlowState {
   unchanged?: boolean;
   review: ReviewLoop;
   shipping?: boolean;
-  readOnly?: ReadOnlyWork;
+  readOnly?: 'review';
   solo?: boolean;
   missingContext?: string | null;
-  then?: ClarifiedStart;
+  needsYou?: string;
+  unverified?: boolean;
   criticRetried?: boolean;
   criticSkipped?: string | null;
 }

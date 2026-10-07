@@ -156,6 +156,7 @@ export async function applySessionSettings(
     );
   }
   await live.setMode(chosenMode);
+  assertModeInForce(live.options(), chosenMode, definition.name);
   notes.push(
     ...(await applyPlanning(live, mode.plan === true, settings.options ?? {}, definition.name)),
   );
@@ -199,6 +200,18 @@ export async function applySessionSettings(
     using: usingLabel(options, definition.name),
     live,
   };
+}
+
+function assertModeInForce(
+  options: readonly acp.SessionConfigOption[],
+  wanted: string,
+  agentName: string,
+): void {
+  const inForce = currentValue(options, 'mode');
+  if (inForce === wanted) return;
+  throw new ProviderError(
+    `${agentName} stayed in ${modeName(options, inForce ?? 'an unknown')} mode instead of ${modeName(options, wanted)}, so the run was stopped before it started.`,
+  );
 }
 
 function collaborationOption(

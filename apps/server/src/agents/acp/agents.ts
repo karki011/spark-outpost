@@ -74,12 +74,12 @@ export interface AgentDefinition {
     builder?: boolean,
     coordinated?: boolean,
     publishes?: boolean,
-    sharesTree?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
+  resumesAcrossFolders?: boolean;
 }
 
 const CLAUDE_DO_TOOLS = [
@@ -97,11 +97,9 @@ const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
 const CLAUDE_COMMAND_TOOLS = ['Bash'];
 const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
-export const PIECE_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
-function askRules(builder: boolean, coordinated: boolean, sharesTree: boolean): string[] {
-  if (sharesTree) return [...PIECE_ASK_RULES];
+function askRules(builder: boolean, coordinated: boolean): string[] {
   return builder && !coordinated ? [...PUBLISH_ASK_RULES] : [];
 }
 
@@ -156,9 +154,8 @@ export function claudeSessionMeta(
   allowBypass = false,
   coordinated = false,
   publishes = false,
-  sharesTree = false,
 ): Record<string, unknown> {
-  const ask = askRules(builder, coordinated, sharesTree);
+  const ask = askRules(builder, coordinated);
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
@@ -243,6 +240,7 @@ function packageBin(packageName: string): AgentLaunch {
 
 const claudeSessions = {
   repoStyle: 'claude',
+  resumesAcrossFolders: true,
   conversationMode: 'default',
   askMode: 'default',
   doMode: CLAUDE_DO_MODE,
@@ -272,7 +270,6 @@ const claudeSessions = {
     builder = false,
     coordinated = false,
     publishes = false,
-    sharesTree = false,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -282,7 +279,6 @@ const claudeSessions = {
       true,
       coordinated,
       publishes,
-      sharesTree,
     ),
 } satisfies Partial<AgentDefinition>;
 
@@ -292,12 +288,6 @@ export const HIDE_CLAUDE_AUTH = '--hide-claude-auth';
 function zaiLaunch(): AgentLaunch {
   const launch = packageBin(CLAUDE_ACP);
   return { ...launch, args: [...launch.args, HIDE_CLAUDE_AUTH] };
-}
-
-export function routesSharedPieces(provider: string): boolean {
-  return Object.values(agentDefinitions).some(
-    (definition) => definition.id === provider && definition.doSessionMeta !== undefined,
-  );
 }
 
 export function supportsDo(definition: AgentDefinition): boolean {
@@ -320,6 +310,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     cli: 'codex',
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
     repoStyle: 'codex',
+    resumesAcrossFolders: true,
     conversationMode: CODEX_READ_ONLY_MODE,
     askMode: CODEX_READ_ONLY_MODE,
     readsProjectFolders: true,

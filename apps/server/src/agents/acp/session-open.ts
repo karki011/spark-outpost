@@ -1,8 +1,10 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import type {
+  MissedMessage,
   ProtocolObserver,
   ProviderOutput,
+  ProviderTurn,
   SessionTarget,
   StoredSession,
 } from '../../providers/provider.ts';
@@ -13,6 +15,8 @@ export const FRESH_REASONS = {
   unsupported: "agent can't resume",
   repos: 'repos changed',
   failed: "couldn't resume",
+  gone: 'the agent no longer has the earlier session',
+  listed: "the agent still has the earlier session but couldn't reopen it",
 } as const;
 
 const CLOSE_WAIT_MS = 3_000;
@@ -122,13 +126,42 @@ export async function openSession(
   if (!stored) return fresh(null);
   const method = resumeMethod(init);
   if (!method) return fresh(FRESH_REASONS.unsupported);
-  if (!sameWorkspace(stored, request)) return fresh(FRESH_REASONS.repos);
+  if (!stored.anyFolder && !sameWorkspace(stored, request)) return fresh(FRESH_REASONS.repos);
   try {
     const session = await reopen(ctx, method, request, stored.sessionId, replay);
     return { session, continued: true, freshReason: null };
   } catch (error) {
     if (signal.aborted) throw error;
-    return fresh(FRESH_REASONS.failed);
+    return fresh(await whyResumeFailed(ctx, init, stored));
+  }
+}
+
+export function listsSessions(init: acp.InitializeResponse): boolean {
+  const list = init.agentCapabilities?.sessionCapabilities?.list;
+  return list !== undefined && list !== null;
+}
+
+export async function whyResumeFailed(
+  ctx: Pick<acp.ClientContext, 'request'>,
+  init: acp.InitializeResponse,
+  stored: StoredSession,
+): Promise<string> {
+  if (!listsSessions(init)) return FRESH_REASONS.failed;
+  try {
+    let cursor: string | null = null;
+    do {
+      const page: acp.ListSessionsResponse = await ctx.request(acp.methods.agent.session.list, {
+        cwd: stored.cwd,
+        ...(cursor ? { cursor } : {}),
+      });
+      if (page.sessions.some((session) => session.sessionId === stored.sessionId)) {
+        return FRESH_REASONS.listed;
+      }
+      cursor = page.nextCursor ?? null;
+    } while (cursor);
+    return FRESH_REASONS.gone;
+  } catch {
+    return FRESH_REASONS.failed;
   }
 }
 
@@ -171,13 +204,53 @@ export function freshAfterInterruption(reason: string | null): string {
   return `Couldn't reopen the interrupted session${why}, so this continues in a fresh one with the chat so far`;
 }
 
+export function handoffNote(reason: string | null): string {
+  const why = reason ?? "the agent couldn't reopen the earlier one";
+  return `Started a fresh agent session (${why}). It has a handoff of the goal, plan, changes and last three exchanges`;
+}
+
 export function sessionNote(
   opened: OpenedSession,
-  target: Pick<SessionTarget, 'freshReason' | 'interrupted'>,
+  target: Pick<SessionTarget, 'freshReason' | 'interrupted' | 'handoff'>,
 ): string | null {
   if (opened.continued) return target.interrupted ? REOPENED_INTERRUPTED : 'Continued session';
   const reason = opened.freshReason ?? target.freshReason;
   if (target.interrupted) return freshAfterInterruption(reason);
+  if (target.handoff) return handoffNote(reason);
   if (opened.freshReason === FRESH_REASONS.unsupported) return null;
   return reason ? `Fresh session (${reason})` : null;
+}
+
+const MISSED_SHOWN = 6;
+const MISSED_LIMIT = 1_500;
+
+export const CATCH_UP_HEADING = 'Since your last turn in this chat (you did not see these):';
+
+function clipped(text: string): string {
+  return text.length > MISSED_LIMIT ? `${text.slice(0, MISSED_LIMIT)}…` : text;
+}
+
+export function catchUp(missed: readonly MissedMessage[], request: string): string {
+  if (missed.length === 0) return request;
+  const shown = missed.slice(-MISSED_SHOWN);
+  const earlier = missed.length - shown.length;
+  const lines = shown.map(
+    (message) =>
+      `${message.role === 'user' ? 'User' : 'Reply shown to the user'}: ${clipped(message.content)}`,
+  );
+  const head = earlier > 0 ? [`(${earlier} earlier messages left out)`] : [];
+  return [CATCH_UP_HEADING, ...head, ...lines, 'Now:', request].join('\n\n');
+}
+
+export function afterOpening(turn: ProviderTurn, continued: boolean): ProviderTurn {
+  const target = turn.session;
+  if (continued) {
+    const missed = target?.missed ?? [];
+    if (!target || missed.length === 0) return { ...turn, history: [] };
+    const followUp = catchUp(missed, target.followUp ?? turn.prompt);
+    return { ...turn, history: [], session: { ...target, followUp } };
+  }
+  if (!target?.handoff) return turn;
+  const preamble = [target.handoff, turn.preamble].filter(Boolean).join('\n\n');
+  return { ...turn, history: [], preamble };
 }

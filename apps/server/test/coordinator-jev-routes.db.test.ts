@@ -8,8 +8,6 @@ import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
 import {
   beginPieces,
-  crewRuns,
-  overlap,
   pieceListOf,
   pieceRepo,
   projectFlags,
@@ -127,23 +125,22 @@ async function runInOrder(jev: typeof fetch | null) {
 }
 
 describe('Jev routes each piece', { timeout: 150_000 }, () => {
-  it('asks once about every plan item and composes a different pick per piece', async () => {
+  it('asks once about every piece of the list and composes a different pick per piece', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { builders: '3' },
-      scores: { T1_reasoning: 3.5, T1_coding: 2.5, T2_reasoning: 4.5 },
+      scores: { P1_reasoning: 3.5, P1_coding: 2.5, P2_reasoning: 4.5 },
     };
     const { runId, orchestration } = await runInOrder(jevFetch(script));
     expect(orchestration.status).toBe('succeeded');
-    const batches = script.calls.filter((call) => call.questions.includes('T1_reasoning'));
+    const batches = script.calls.filter((call) => call.questions.includes('P1_reasoning'));
     expect(batches).toHaveLength(1);
-    expect(script.calls.some((call) => call.questions.includes('P1_reasoning'))).toBe(false);
+    expect(script.calls.some((call) => call.questions.includes('T1_reasoning'))).toBe(false);
     expect(batches[0]!.questions).toEqual(
-      expect.arrayContaining(['builders', 'T1_kind', 'T1_coding', 'T2_context', 'T3_reliability']),
+      expect.arrayContaining(['P1_kind', 'P1_coding', 'P2_context', 'P3_reliability']),
     );
-    expect(batches[0]!.questions.some((key) => key.endsWith('_wide'))).toBe(false);
-    expect(String(batches[0]!.state.pieces)).toContain('Piece T2: API: build it in `api.ts`');
+    expect(batches[0]!.questions).not.toContain('builders');
+    expect(String(batches[0]!.state.pieces)).toContain('Piece P2: API\n  Goal: Build the api');
     expect(String(batches[0]!.state.pieces)).toContain('  - store.ts');
 
     const list = await pieceList(t, runId);
@@ -153,7 +150,7 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       ['P3', 'claude', 'sonnet'],
     ]);
     expect(list.placementReason).toContain(
-      'Jev: 3 Builders (0.73) · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
+      'Jev: 3 pieces · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
     );
     expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
       'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
@@ -256,8 +253,7 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { builders: '3' },
-      scores: { T3_reasoning: 3.5, T3_coding: 2.5 },
+      scores: { P3_reasoning: 3.5, P3_coding: 2.5 },
     };
     const { runId, orchestration } = await runParallel('#migrations', script);
     expect(orchestration.status).toBe('succeeded');
@@ -273,48 +269,6 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
       pick: { model: 'opus[1m]' },
       demand: { tier: 'top', raisedBy: 'destructive' },
     });
-  });
-
-  it('moves one piece to its own worktree and lands the mixed list', async () => {
-    const script: JevScript = {
-      calls: [],
-      scenario: NORMAL,
-      choices: { builders: '3' },
-      policy: { T1_wide: 0.05, T2_wide: 0.9, T3_wide: 0.05 },
-    };
-    const { runId, orchestration } = await runParallel('', script);
-    expect(orchestration.status).toBe('succeeded');
-    const list = await pieceListOf(t, runId);
-    expect(list.placement).toBe('shared');
-    expect(list.placementReason).toMatch(
-      /^Jev: 3 Builders \(0\.73\) · P1 [^·]+, shared tree · P2 [^·]+, worktree · P3 [^·]+, shared tree; /,
-    );
-    expect(list.pieces.map((piece) => [piece.key, piece.placement, piece.status])).toEqual([
-      ['P1', 'shared', 'landed'],
-      ['P2', 'worktree', 'landed'],
-      ['P3', 'shared', 'landed'],
-    ]);
-    expect(list.pieces[1]!.filesChanged).toEqual(['api.ts']);
-    const { rows: copies } = await t.db.query<{ key: string; copy: string | null }>(
-      `SELECT route->>'pieceKey' AS key, route->>'copy' AS copy FROM runs
-       WHERE parent_run_id = $1 AND route ? 'pieceKey' ORDER BY created_at`,
-      [runId],
-    );
-    expect(copies.map((row) => [row.key, row.copy !== null])).toEqual([
-      ['P1', false],
-      ['P2', true],
-      ['P3', false],
-    ]);
-    const runs = await crewRuns(t, runId);
-    const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
-    expect(overlap(first('P1'), first('P2'))).toBe(true);
-    expect(overlap(first('P1'), first('P3'))).toBe(false);
-    const recorded = await decision(runId);
-    expect(recorded.body.answer.pieces.map((piece) => piece.placement.decidedBy)).toEqual([
-      'jev',
-      'jev',
-      'jev',
-    ]);
   });
 });
 

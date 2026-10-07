@@ -98,7 +98,12 @@ export function buildVerdictQuestions(facts: VerdictFacts): IntakeQuestions {
   };
 }
 
+export function diffIsCut(diff: string): boolean {
+  return redactText(diff).length > MAX_DIFF_CHARACTERS;
+}
+
 export interface VerdictReading {
+  cut: boolean;
   verdict: Verdict | null;
   confidence: number | null;
   probabilities: Record<string, number> | null;
@@ -111,6 +116,7 @@ export interface VerdictReading {
 export function readVerdict(
   requirements: readonly string[],
   response: SystemOneResponse | null,
+  cut = false,
 ): VerdictReading {
   const invalid: string[] = [];
   const choice = validChoice(response, 'verdict', VERDICTS);
@@ -120,8 +126,10 @@ export function readVerdict(
     if (noul === null) invalid.push(unmetKey(index));
     return { requirement, noul };
   });
-  const accepted = choice && choice.confidence >= ACT_AT.verify ? choice.value : null;
+  const sure = choice && choice.confidence >= ACT_AT.verify ? choice.value : null;
+  const accepted = cut && sure === 'supported' ? null : sure;
   return {
+    cut,
     verdict: choice?.value ?? null,
     confidence: choice?.confidence ?? null,
     probabilities: choice?.probabilities ?? null,

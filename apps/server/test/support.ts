@@ -222,3 +222,5 @@ export async function pinChatLevel(
     JSON.stringify(pinned),
   ]);
 }
+
+export const BUILDER_SESSION_KEYS = 'chat:%';

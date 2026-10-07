@@ -13,7 +13,6 @@ function answer(extra: Partial<PieceAnswer> = {}): PieceAnswer {
     coding: { mean: 2, confidence: 0.9 },
     context: { mean: 2, confidence: 0.9 },
     reliability: 0.1,
-    wide: 0.1,
     ...extra,
   };
 }
@@ -62,17 +61,16 @@ describe('groupTasks', () => {
 });
 
 describe('groupAnswer', () => {
-  it('takes the highest demand of its tasks and worktree odds if any task is wide', () => {
+  it('takes the highest demand of its tasks', () => {
     const answers = new Map([
-      ['T1', answer({ reasoning: { mean: 4.5, confidence: 0.8 }, wide: 0.1 })],
-      ['T2', answer({ coding: { mean: 3.5, confidence: 0.7 }, wide: 0.9, reliability: 0.7 })],
+      ['T1', answer({ reasoning: { mean: 4.5, confidence: 0.8 } })],
+      ['T2', answer({ coding: { mean: 3.5, confidence: 0.7 }, reliability: 0.7 })],
     ]);
     expect(groupAnswer(['T1', 'T2'], answers)).toMatchObject({
       reasoning: { mean: 4.5, confidence: 0.8 },
       coding: { mean: 3.5, confidence: 0.7 },
       context: { mean: 2, confidence: 0.9 },
       reliability: 0.7,
-      wide: 0.9,
     });
     expect(groupAnswer(['T9'], answers)).toBeNull();
   });

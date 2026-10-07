@@ -15,7 +15,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                |
 | **Spark**                                              | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                     |
 | **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                     |
-| **Wait before going with best guesses**                | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
+| **Wait before going on without your answer**           | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
 | **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
 | **Compact automatically at**                           | 80%, on                | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
 | **Open pull requests as**                              | **Ready for review**   | [Ship a change](ship-and-pull-requests.md#ready-for-review-or-draft)                    |

@@ -3,7 +3,7 @@ import type { ClientCapabilities, Implementation } from '@agentclientprotocol/sd
 export const CLIENT_INFO: Implementation = {
   name: 'spark-outpost',
   title: 'Spark Outpost',
-  version: '0.0.0',
+  version: process.env.SPARK_APP_VERSION?.trim() || '0.0.0',
 };
 
 export function clientCapabilities(readFiles: boolean, writeFiles = false): ClientCapabilities {

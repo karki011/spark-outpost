@@ -223,3 +223,59 @@ export function handbackNote(label: string, history: readonly HistoryTurn[]): st
     .filter(Boolean)
     .join('\n\n');
 }
+
+export const SESSION_HANDOFF_HEADING = '# Handoff from the earlier session';
+
+const SESSION_HANDOFF_EXCHANGES = 3;
+const SESSION_HANDOFF_TURN_LIMIT = 2_000;
+
+export interface SessionHandoffContext {
+  reason: string;
+  goal: string;
+  history: readonly HistoryTurn[];
+  agreedPlan: string | null;
+  subtasks: readonly string[];
+  changes: readonly ChangedFile[];
+  openIssues: readonly string[];
+  totals: string | null;
+}
+
+function lastExchanges(history: readonly HistoryTurn[]): string {
+  const recent = history.slice(-SESSION_HANDOFF_EXCHANGES * 2);
+  if (recent.length === 0) return 'No earlier messages.';
+  return recent
+    .map(
+      (turn) =>
+        `${turn.role === 'user' ? 'User' : 'Assistant'}: ${cap(turn.content, SESSION_HANDOFF_TURN_LIMIT)}`,
+    )
+    .join('\n\n');
+}
+
+export function sessionHandoffPrompt(context: SessionHandoffContext): string {
+  const files = context.changes.map(
+    (file) => `${file.path} (+${file.additions} -${file.deletions})`,
+  );
+  const parts = [
+    SESSION_HANDOFF_HEADING,
+    `The agent session this chat was using was replaced (${context.reason}). This is what Spark recorded from it. The edits listed are in the working tree: read the files before changing them again.`,
+    HISTORY_TOOL_NOTE,
+    section(
+      'Goal',
+      context.goal.trim() ? cap(context.goal, REQUEST_LIMIT) : 'No request recorded.',
+    ),
+  ];
+  if (context.agreedPlan) parts.push(context.agreedPlan);
+  if (context.subtasks.length > 0) parts.push(section('Open subtasks', bullets(context.subtasks)));
+  parts.push(section('Files changed', files.length > 0 ? bullets(files) : 'None.'));
+  parts.push(
+    section(
+      'Last check output',
+      context.openIssues.length > 0
+        ? context.openIssues.join('\n\n')
+        : 'No failing checks or open review findings recorded.',
+    ),
+  );
+  parts.push(section('Last three exchanges, verbatim', lastExchanges(context.history)));
+  if (context.totals) parts.push(section('Chat totals', context.totals));
+  return parts.join('\n\n');
+}

@@ -1,11 +1,9 @@
 import type { AgentPick, ListPlacement, PiecePlacement } from '@spark-outpost/contracts';
 import { selectableModels } from '../advisor/intake-questions.ts';
-import { PIECE_SHARED_AT, PIECE_WIDE_WORKTREE_AT } from '../advisor/policy.ts';
 import { FLOOR_REASON, floorPick } from '../orchestration/model-floor.ts';
 import { builderEffort, DESTRUCTIVE_RULE, type RouteContext } from '../orchestration/routing.ts';
 import { pickOf } from '../routing/candidates.ts';
-import { reaches } from './graph.ts';
-import { sharedFiles, type OwnedSet } from './owned.ts';
+import type { OwnedSet } from './owned.ts';
 import {
   atChatTier,
   belowChatBlock,
@@ -18,13 +16,7 @@ import {
   type PieceFacts,
   type RoutePick,
 } from './piece-demand.ts';
-import {
-  OWN_WORKTREE,
-  SHARED_TREE,
-  type PieceAnswer,
-  type RouteOption,
-  type TaskKind,
-} from './piece-questions.ts';
+import type { PieceAnswer, RouteOption, TaskKind } from './piece-questions.ts';
 
 export type Decider = 'jev' | 'rules' | 'floor';
 
@@ -40,12 +32,9 @@ export interface RouteRules<T extends RoutablePiece = RoutablePiece> {
   picks: ReadonlyMap<string, AgentPick>;
   routes: readonly RouteOption[];
   placement: ListPlacement;
-  askPlacement: boolean;
   requestDestructive: boolean;
   destructive(piece: T): boolean;
   core(piece: T): boolean | null;
-  listIsolation: string | null;
-  pieceIsolation(piece: T): string | null;
   kindPassRates?(
     kind: TaskKind | null,
     below: RouteOption,
@@ -68,7 +57,6 @@ export interface ModelChoice {
 
 export interface PlaceChoice {
   placement: PiecePlacement;
-  jev: string | null;
   decidedBy: Decider;
   reason: string;
 }
@@ -153,6 +141,19 @@ function jevModel<T extends RoutablePiece>(
   };
 }
 
+export const PINNED_REASON = 'pinned in this chat';
+
+function heldToPin<T extends RoutablePiece>(
+  rules: RouteRules<T>,
+  piece: T,
+  jev: ModelChoice,
+): ModelChoice {
+  const pinned = rulesChoice(rules, piece, PINNED_REASON, jev.demand);
+  const wouldUse = jev.jevPick;
+  const same = wouldUse?.provider === pinned.pick.provider && wouldUse.model === pinned.pick.model;
+  return wouldUse && !same ? { ...pinned, jevPick: wouldUse } : pinned;
+}
+
 function chooseModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
   jev: JevOutcome,
@@ -173,6 +174,16 @@ function chooseModel<T extends RoutablePiece>(
     return rulesChoice(rules, piece, `no healthy ${demand.tier}-tier route or higher`, demand);
   }
   return jevModel(rules, destructive, demand, chosen);
+}
+
+function pieceModel<T extends RoutablePiece>(
+  rules: RouteRules<T>,
+  jev: JevOutcome,
+  piece: T,
+  destructive: boolean,
+): ModelChoice {
+  const chosen = chooseModel(rules, jev, piece, destructive);
+  return rules.route.routing === 'pinned' ? heldToPin(rules, piece, chosen) : chosen;
 }
 
 function chatRoute<T extends RoutablePiece>(rules: RouteRules<T>): RouteOption | null {
@@ -208,79 +219,9 @@ function destructivePieces<T extends RoutablePiece>(
   return new Set((whole ? building : own).map((piece) => piece.key));
 }
 
-function rulesPlace<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  reason: string,
-  jev: string | null = null,
-): PlaceChoice {
-  return { placement: rules.placement, jev, decidedBy: 'rules', reason };
-}
-
-function choosePlace<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  answer: PieceAnswer | undefined,
-  piece: T,
-): PlaceChoice {
-  if (piece.research) {
-    return { placement: 'read_only', jev: null, decidedBy: 'rules', reason: 'reads only' };
-  }
-  if (!rules.askPlacement) return rulesPlace(rules, 'placement was not asked');
-  const wide = answer?.wide ?? null;
-  const own = wide !== null && wide >= PIECE_WIDE_WORKTREE_AT;
-  const shared = wide !== null && wide <= PIECE_SHARED_AT;
-  const jev = own ? OWN_WORKTREE : shared ? SHARED_TREE : null;
-  const hard = rules.listIsolation ?? rules.pieceIsolation(piece);
-  if (hard) return { placement: 'worktree', jev, decidedBy: 'rules', reason: hard };
-  if (wide === null) return rulesPlace(rules, 'Jev gave no placement');
-  const odds = `wide or risky ${wide.toFixed(2)}`;
-  if (!own && !shared) return rulesPlace(rules, `Jev was unsure (${odds})`);
-  return {
-    placement: own ? 'worktree' : 'shared',
-    jev,
-    decidedBy: 'jev',
-    reason: own ? `own worktree (${odds})` : `shared tree (${odds})`,
-  };
-}
-
-function ordered(
-  graph: ReadonlyMap<string, readonly string[]>,
-  a: RoutablePiece,
-  b: RoutablePiece,
-): boolean {
-  return reaches(graph, a.key, b.key) || reaches(graph, b.key, a.key);
-}
-
-function separateShared(pieces: readonly RoutablePiece[], routes: PieceRoute[]): void {
-  const graph = new Map(pieces.map((piece) => [piece.key, piece.dependsOn]));
-  const placed = new Map(routes.map((route) => [route.key, route]));
-  const shared: RoutablePiece[] = [];
-  for (const piece of pieces) {
-    const route = placed.get(piece.key)!;
-    if (route.place.placement !== 'shared') continue;
-    const clash = shared.find(
-      (other) => !ordered(graph, piece, other) && sharedFiles(piece.owned, other.owned).length > 0,
-    );
-    if (!clash) {
-      shared.push(piece);
-      continue;
-    }
-    route.place = {
-      ...route.place,
-      placement: 'worktree',
-      decidedBy: 'rules',
-      reason: `shares files with ${clash.key}`,
-    };
-  }
-}
-
-function listPlacement<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  routes: readonly PieceRoute[],
-): ListPlacement {
-  if (rules.placement === 'in_order') return 'in_order';
-  const building = routes.filter((route) => route.place.placement !== 'read_only');
-  if (building.length === 0) return rules.placement;
-  return building.some((route) => route.place.placement === 'shared') ? 'shared' : 'worktree';
+function choosePlace<T extends RoutablePiece>(rules: RouteRules<T>, piece: T): PlaceChoice {
+  if (piece.research) return { placement: 'read_only', decidedBy: 'rules', reason: 'reads only' };
+  return { placement: rules.placement, decidedBy: 'rules', reason: 'follows the list' };
 }
 
 export function routePieceList<T extends RoutablePiece>(
@@ -296,12 +237,11 @@ export function routePieceList<T extends RoutablePiece>(
       key: piece.key,
       model: piece.research
         ? rulesChoice(rules, piece, 'reads only')
-        : chooseModel(rules, jev, piece, destructive.has(piece.key)),
-      place: choosePlace(rules, answer, piece),
+        : pieceModel(rules, jev, piece, destructive.has(piece.key)),
+      place: choosePlace(rules, piece),
       answer: answer ?? null,
       files: fileCount(piece),
     };
   });
-  if (rules.placement !== 'in_order') separateShared(pieces, routes);
-  return { pieces: routes, placement: listPlacement(rules, routes) };
+  return { pieces: routes, placement: rules.placement };
 }

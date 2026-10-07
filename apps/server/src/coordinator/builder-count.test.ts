@@ -54,19 +54,12 @@ describe('builderQuestions', () => {
       request: 'Build it',
       pieces: tasks,
       facts: new Map(),
-      placement: true,
     });
     const keys = Object.keys(built.questions);
     expect(keys[0]).toBe(BUILDERS_KEY);
     expect(keys.filter((key) => key === BUILDERS_KEY)).toHaveLength(1);
     expect(keys).toEqual(
-      expect.arrayContaining([
-        'T1_kind',
-        'T1_reasoning',
-        'T2_context',
-        'T2_reliability',
-        'T2_wide',
-      ]),
+      expect.arrayContaining(['T1_kind', 'T1_reasoning', 'T2_context', 'T2_reliability']),
     );
     expect(Object.keys(built.questions[BUILDERS_KEY]!.criteria as object)).toEqual([
       '1',

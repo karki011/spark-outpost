@@ -3,7 +3,7 @@ title: Guardrails and estimates
 section: Understand Spark
 type: concept
 order: 520
-summary: The Worth a look list Spark adds to kept changes, the estimate on a plan card, and model demotions.
+summary: The Worth a look list Spark adds to kept changes, the estimate for a build, and model demotions.
 ---
 
 A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guardrails never block you: they point out what's worth a look.
@@ -27,9 +27,7 @@ If a flag is expected, say so in your request, such as "update the snapshots".
 
 ## Estimates
 
-![A Build this plan? card with a rough estimate](images/guardrails-estimate-light.png)
-
-A plan card shows a **Rough estimate** of time and cost. After 5 similar finished runs it shows a **Learned estimate**, from your own history.
+A build records a **Rough estimate** of time and cost with the turn's decisions. After 5 similar finished runs it shows a **Learned estimate**, from your own history.
 
 An estimate is only information. Spark sets no budget on time, tool calls or cost: a task runs until it finishes or you stop it.
 

@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
+  needsYouLines,
   type Approval,
   type ConversationDetail,
   type Orchestration,
@@ -31,6 +32,7 @@ import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
 import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
+import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
 import type { RunStep } from '../run-projection.ts';
 import { useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -50,8 +52,10 @@ import {
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
+import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
 import { steerSlots, turnSteers } from '../steer/steer-model.ts';
+import { turnRunIds } from '../turn-props.ts';
 
 function footLabel(status: Orchestration['status']): string {
   if (status === 'cancelled') return 'Stopped';
@@ -94,11 +98,14 @@ function CrewTurnBody({
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
   const agents = crewAgents(orchestration, detail.activity);
   const jev = agents[0]!;
-  const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
+  const crewRunIds = turnRunIds(detail, run.id);
   const shots = turnShots(detail, run.id);
   const memberRunIds = new Set(orchestration.crew.map((member) => member.runId));
   const otherShots = shots.filter((shot) => !memberRunIds.has(shot.runId));
   const summary = orchestration.crew.length === 0 ? (textByRun.get(run.id) ?? '') : '';
+  const lastReply = detail.messages.findLast(
+    (message) => message.role === 'assistant' && message.runId === run.id,
+  );
   const approvals = turnApprovals(crewRunIds, detail.approvals, liveApprovals);
   const checkpoints = mergeCheckpoints(
     orchestration.checkpoints,
@@ -110,9 +117,12 @@ function CrewTurnBody({
   const last = lastAgentIndex(items);
   const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
   const steeredAfter = (index: number) =>
-    (steers.get(index) ?? []).map((message) => (
-      <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />
-    ));
+    (steers.get(index) ?? []).flatMap((message) => [
+      <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />,
+      ...steerAnswers(orchestration.answers, message.id).map((member) => (
+        <SteerAnswer key={member.runId} member={member} conversationId={detail.conversation.id} />
+      )),
+    ]);
   const finished = isTerminalRunStatus(orchestration.status);
   const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
   const leadId = `lead:${run.id}`;
@@ -235,6 +245,12 @@ function CrewTurnBody({
           </ShotReply>
         </div>
       )}
+      {!summary &&
+        needsYouLines(lastReply?.content ?? '').map((line) => (
+          <p className="ai-note needs-you" role="status" key={line}>
+            {line}
+          </p>
+        ))}
       {timedOut(orchestration.error)
         ? !crewTimedOut && (
             <TimedOutNote
@@ -245,6 +261,7 @@ function CrewTurnBody({
         : orchestration.error && <p className="error-line">{orchestration.error}</p>}
       <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
+      <PlanSavedLine detail={detail} runId={run.id} />
       <TurnPlanOffer detail={detail} runId={run.id} />
       <ReplyPlanAction
         detail={detail}

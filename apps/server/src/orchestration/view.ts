@@ -44,6 +44,7 @@ export interface StoredRoute {
   sameProvider?: boolean;
   fileReads?: number;
   routeNote?: string;
+  answers?: string;
   spark?: CrewSpark;
 }
 
@@ -85,6 +86,7 @@ const routeFieldsSchema = z.object({
   copy: crew.copy.catch(undefined),
   sameProvider: crew.sameProvider.catch(undefined),
   routeNote: crew.routeNote.catch(undefined),
+  answers: crew.answers.catch(undefined),
   pieceKey: crew.pieceKey.catch(undefined),
   placement: crew.placement.catch(undefined),
   spark: crew.spark.catch(undefined),
@@ -146,6 +148,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
     ...(route.routeNote ? { routeNote: route.routeNote } : {}),
+    ...(route.answers ? { answers: route.answers } : {}),
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
     ...(route.spark ? { spark: route.spark } : {}),
@@ -179,15 +182,24 @@ const emptyTotals = (): Totals => ({
   toolCalls: 0,
 });
 
-function add(totals: Totals, member: CrewMember): Totals {
+function addSpend(totals: Totals, member: CrewMember): Totals {
   return {
-    runs: totals.runs + 1,
+    runs: totals.runs,
     tokens: totals.tokens + (member.tokens ?? 0),
     costUsd: totals.costUsd + (member.costUsd ?? 0),
     costSource: mergeCostSource(totals.costSource, member.costSource),
     durationMs: totals.durationMs + (member.durationMs ?? 0),
     toolCalls: totals.toolCalls + (member.toolCalls ?? 0),
   };
+}
+
+function add(totals: Totals, member: CrewMember): Totals {
+  const spent = addSpend(totals, member);
+  return { ...spent, runs: spent.runs + 1 };
+}
+
+function addMember(totals: Totals, member: CrewMember): Totals {
+  return member.answers === undefined ? add(totals, member) : addSpend(totals, member);
 }
 
 function grouped<K extends string>(crew: readonly CrewMember[], key: (member: CrewMember) => K) {
@@ -197,21 +209,22 @@ function grouped<K extends string>(crew: readonly CrewMember[], key: (member: Cr
     const current = groups.get(id);
     groups.set(id, {
       member: current?.member ?? member,
-      totals: add(current?.totals ?? emptyTotals(), member),
+      totals: addMember(current?.totals ?? emptyTotals(), member),
     });
   }
   return [...groups.values()];
 }
 
 export function orchestrationTotals(
-  crew: readonly CrewMember[],
+  members: readonly CrewMember[],
   decisions: readonly OrchestrationDecision[],
 ): OrchestrationTotals {
+  const crew = members.filter((member) => member.answers === undefined);
   const jev = decisions.filter(
     (decision) => decision.jevStatus !== 'not_connected' && decision.jevStatus !== 'not_asked',
   );
   return {
-    ...crew.reduce(add, emptyTotals()),
+    ...members.reduce(addMember, emptyTotals()),
     jevCalls: jev.length,
     jevTokens: jev.reduce((total, decision) => total + (decision.tokens ?? 0), 0),
     jevCostUsd: jev.reduce((total, decision) => total + (decision.costUsd ?? 0), 0),
@@ -219,7 +232,7 @@ export function orchestrationTotals(
       role: member.role,
       ...totals,
     })),
-    byModel: grouped(crew, (member) => `${member.provider}\u0000${member.model ?? ''}`).map(
+    byModel: grouped(members, (member) => `${member.provider}\u0000${member.model ?? ''}`).map(
       ({ member, totals }) => ({ provider: member.provider, model: member.model, ...totals }),
     ),
   };
@@ -320,12 +333,13 @@ const LIVE: ReadonlySet<RunStatus> = new Set(['queued', 'running', 'awaiting_app
 
 export function buildOrchestration(
   row: OrchestrationRow,
-  crew: readonly CrewMember[],
+  members: readonly CrewMember[],
   checkpoints: readonly Approval[],
   decisions: readonly OrchestrationDecision[],
   pieces: PieceList | null = null,
 ): Orchestration {
-  const totals = orchestrationTotals(crew, decisions);
+  const totals = orchestrationTotals(members, decisions);
+  const answers = members.filter((member) => member.answers !== undefined);
   const live = LIVE.has(row.status);
   return {
     runId: row.run_id,
@@ -342,7 +356,8 @@ export function buildOrchestration(
     planVersion: row.plan_version,
     retries: row.retries,
     maxRetries: MAX_REPAIR_RETRIES,
-    crew: [...crew],
+    crew: members.filter((member) => member.answers === undefined),
+    ...(answers.length > 0 ? { answers } : {}),
     checkpoints: [...checkpoints],
     pendingCheckpoint: checkpoints.find((checkpoint) => checkpoint.status === 'pending') ?? null,
     decisions: [...decisions],

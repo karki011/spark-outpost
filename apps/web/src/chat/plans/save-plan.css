@@ -23,3 +23,17 @@
 .saveplan-err {
   color: var(--danger);
 }
+
+.plan-line-open {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.plan-line-open:hover {
+  color: var(--text);
+}

@@ -1,28 +1,32 @@
 ---
-title: Answer a plan
+title: Plan before building
 section: Chats
 type: how-to
 order: 220
-summary: Read the Build this plan? card, then build it, edit it or stop - and know when it builds by itself.
+summary: Have the agent plan first with /plan or Plan mode, approve its plan, and open the plan Spark saved for a build.
 ---
 
-You'll review a plan before anything changes. About 1 minute.
+You'll have the agent plan before it changes anything. About 1 minute.
 
-Spark plans first when you type `/plan`, or when the work is big or destructive.
+1. Type `/plan` and what you want, or set the chat's mode to **Plan** and ask for the change.
+2. Read the agent's plan on its **Approve the plan?** card.
+3. Approve it to build, or keep planning.
 
-1. Read the plan on the **Build this plan?** card. It shows a time and cost [estimate](guardrails.md#estimates).
+The card is the agent's own. A mode that never asks, such as **Full access**, approves it at once.
 
-   ![The Build this plan? card with Build, Edit and Stop](images/spark-crew-plan-light.png)
+In a **Plan** chat a question is answered as usual. Only `/plan` or a request to build starts a plan.
 
-2. Select **Build** to start the work, **Edit** to change the plan, or **Stop**.
+## The plan line
 
-After **Build**, the work runs by itself.
+Spark has no plan card of its own. When your message is a build, Spark saves the plan it already has as the chat's agreed plan and keeps building. Nothing waits.
 
-## When the card waits
+| Build             | Plan saved             |
+| ----------------- | ---------------------- |
+| Split into pieces | The Coordinator's list |
+| One Builder       | The steps it lists     |
+| After `/plan`     | The plan you approved  |
 
-The card waits for you at both autonomy levels and in every agent mode. Nothing counts down.
-
-A destructive plan deletes, drops or truncates data. Its card says "this would change data permanently".
+The thread shows one line, such as **Plan saved · 4 pieces**. Select it to open the plan in the **Work** panel. A revised plan is saved as a new version, and the line updates.
 
 > **Tip:** **Save as agreed plan** under a reply makes that reply the chat's plan.
 

@@ -10,11 +10,11 @@ The model you pin is the chat's own model: it reads, plans and coordinates, and 
 
 ![The model picker with Auto selected](images/auto-routing-picker-light.png)
 
-| Chat is       | The chat's own model         | Builders, pieces, Critic                                              |
-| ------------- | ---------------------------- | --------------------------------------------------------------------- |
-| Pinned        | Your pick                    | Start from your pick; move only when the request clearly calls for it |
-| **Auto**      | The provider's default model | Picked per request by rules and a score                               |
-| **Spark** off | Your pick                    | None. There's no routing.                                             |
+| Chat is       | The chat's own model         | Builders, pieces, Critic                                         |
+| ------------- | ---------------------------- | ---------------------------------------------------------------- |
+| Pinned        | Your pick                    | Your pick for Builders and pieces; the Critic is picked by rules |
+| **Auto**      | The provider's default model | Picked per request by rules and a score                          |
+| **Spark** off | Your pick                    | None. There's no routing.                                        |
 
 To set it, see [Pick the model, effort and mode](agent-mode.md).
 
@@ -41,9 +41,9 @@ Either way, code picks the model; Jev never does.
 
 ## Builders in a pinned chat
 
-A Builder can run one model down for clearly simple work when Jev is sure, and step up a model for hard work.
+Every Builder and every piece runs on your pinned model, for simple, hard and destructive work alike, and a retry stays on it.
 
-Without Jev, or when Jev isn't sure, the Builder keeps your pinned model.
+When Jev would have picked another model, the why-line says "Jev would have used" and names it. Nothing moves until you choose **Auto**.
 
 ## Read the why-line
 

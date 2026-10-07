@@ -2,16 +2,7 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT, SPLIT_RELEASE } from '../../apps/server/test/fake-acp-coordinator.ts';
-import {
-  agentHead,
-  autoContinueAfter,
-  buildThePlan,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { agentHead, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
 import { fakeHomeDesktop, island, openIsland } from './island-home-desktop.ts';
 
 const SHOTS = process.env.PIECES_SHOTS ?? '';
@@ -93,10 +84,8 @@ test('the Coordinator splitting the work shows one calm line and never the piece
 }) => {
   test.setTimeout(180_000);
   await watchForPieceJson(context);
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(page, REQUEST);
-  await buildThePlan(page);
 
   const atlas = page.locator('.agent-block', {
     has: page.locator('.agent-name', { hasText: /^Atlas$/ }),
@@ -131,7 +120,7 @@ test('the Coordinator splitting the work shows one calm line and never the piece
   await showSession(session);
   await expect(sessionLog(session).locator('.md-code')).toHaveCount(0);
   writeFileSync(path.join(repo.root, '.git', 'release-P2'), 'go');
-  await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 90_000 });
+  await expect(board).toContainText('3 pieces, in the shared tree · 3 landed', { timeout: 90_000 });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
 
   await agentHead(page, 'Atlas').click();
@@ -148,16 +137,16 @@ test('a piece list the Coordinator proposes as a plan stays out of the chat too'
 }) => {
   test.setTimeout(180_000);
   await watchForPieceJson(context);
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(
     page,
     'Split this up: build a store, add an API and add a view. #build #pieces #planfile',
   );
-  await buildThePlan(page);
 
   const board = page.getByRole('region', { name: 'Pieces' });
-  await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 120_000 });
+  await expect(board).toContainText('3 pieces, in the shared tree · 3 landed', {
+    timeout: 120_000,
+  });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
   await agentHead(page, 'Atlas').click();
   expect(await leaks(page)).toEqual([]);

@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   agentHead,
-  card,
   crewChat,
   crewRepo,
   failingCheck,
@@ -43,17 +42,4 @@ test('the kept card asks why code was removed', async ({ page }) => {
   await expect(laws.locator('code').first()).toHaveText('helperTotals');
   await expect(agentHead(page, 'Bolt').first()).toBeVisible();
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
-});
-
-test('a plan card shows a rough estimate before Spark has history', async ({ page }) => {
-  test.setTimeout(60_000);
-  await crewChat(page, repo, 'Auto-edit');
-  await send(page, 'Rename the runs table column and migrate old rows #build');
-  const plan = card(page, /Build this plan\?/);
-  await expect(plan).toBeVisible({ timeout: 30_000 });
-  await expect(plan.locator('.ck-estimate')).toHaveText(
-    /^Rough estimate: ~\d+ min, ~\$\d+\.\d+ \(.+\); fewer than 5 similar runs to learn from yet$/,
-  );
-  await plan.getByRole('button', { name: 'Stop' }).click();
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 });

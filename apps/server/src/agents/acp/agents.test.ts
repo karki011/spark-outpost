@@ -9,7 +9,6 @@ import {
   agentDefinitions,
   claudeSessionMeta,
   FORCE_PUSH_DENY_RULES,
-  PIECE_ASK_RULES,
   PUBLISH_ASK_RULES,
   secretRules,
 } from './agents.ts';
@@ -146,11 +145,7 @@ describe('Claude session options', () => {
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
-  it('routes a piece through the gate only while it shares one tree with other pieces', () => {
-    const shared = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, true, false, true),
-    );
-    expect(shared.settings.permissions.ask).toEqual([...PIECE_ASK_RULES]);
+  it('adds no ask rules for a piece, whether or not it shares its tree', () => {
     const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
     expect(alone.settings.permissions).not.toHaveProperty('ask');
     const publishing = optionsOf(

@@ -28,6 +28,7 @@ import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
 import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
+import { PlanSavedLine } from './plans/PlanSavedLine.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import { ResultBlock } from './outcomes/ResultBlock.tsx';
 import {
@@ -208,6 +209,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
           <StepList log={log} />
         </div>
       )}
+      <PlanSavedLine detail={detail} runId={run.id} />
       <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}

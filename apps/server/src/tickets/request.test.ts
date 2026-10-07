@@ -74,7 +74,7 @@ describe('ticket brief', () => {
     expect(text).not.toContain('A Download CSV button');
     expect(text).not.toContain('People want a spreadsheet.');
     const plan = ticketBrief(ticket, 'plan', { canReadTicket: true });
-    expect(plan).toBe(`${text}\n\n${PLAN_FIRST_LINE}`);
+    expect(plan).toBe(`/plan ${text}\n\n${PLAN_FIRST_LINE}`);
   });
 
   it('falls back to the trimmed brief when the agent has no spark_tickets', () => {

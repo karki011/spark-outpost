@@ -59,6 +59,12 @@ export interface StoredSession {
   cwd: string;
   additionalDirectories: readonly string[];
   commands?: readonly string[];
+  anyFolder?: boolean;
+}
+
+export interface MissedMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export interface SessionTarget {
@@ -67,6 +73,8 @@ export interface SessionTarget {
   freshReason: string | null;
   followUp?: string;
   interrupted?: boolean;
+  handoff?: string;
+  missed?: readonly MissedMessage[];
 }
 
 export interface ProviderTurn {
@@ -85,6 +93,7 @@ export interface ProviderTurn {
   publishes?: boolean;
   env?: Readonly<Record<string, string>>;
   planning?: boolean;
+  plansFirst?: boolean;
   modeRequests?: ModeRequests;
   steering?: SteerRequests;
   inbox?: TurnInbox;

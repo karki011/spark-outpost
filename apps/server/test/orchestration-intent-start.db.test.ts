@@ -3,7 +3,6 @@ import { RESEARCH_BRIEF } from '../src/orchestration/member-prompts.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { PLAN_REPLY_TRIGGER } from './fake-acp-plans.ts';
 import {
-  answerEverything,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -11,7 +10,6 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
-  type Answerer,
   type Harness,
   type JevScript,
   type Scenario,
@@ -35,11 +33,11 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function run(scenario: Scenario, answer: Answerer = answerEverything) {
+async function run(scenario: Scenario) {
   const script: JevScript = { calls: [], scenario };
   harness = startOrchestrator(t, jevFetch(script));
   const { conversationId, runId } = await startScenario(t, root, scenario, null);
-  const done = await driveToEnd(t, conversationId, runId, answer);
+  const done = await driveToEnd(t, conversationId, runId);
   const children = await t.db.query<{ role: string }>(
     'SELECT role FROM runs WHERE parent_run_id = $1 ORDER BY created_at',
     [runId],
@@ -77,7 +75,7 @@ describe('the intent decides how the work starts', { timeout: 120_000 }, () => {
     expect(intake.questions).not.toContain('question');
   });
 
-  it('plans first for a plan or design request, then builds after the plan card', async () => {
+  it('builds a plan or design request at once, with no plan card and no plan turn', async () => {
     const plan: Scenario = {
       id: 'design',
       text: `Design the CSV export for Analytics. ${PLAN_REPLY_TRIGGER} #build`,
@@ -88,8 +86,8 @@ describe('the intent decides how the work starts', { timeout: 120_000 }, () => {
     };
     const { orchestration, asked, runId, children } = await run(plan);
     expect(orchestration.status).toBe('succeeded');
-    expect(asked.map((approval) => approval.kind)).toContain('plan');
-    expect(children).toContain('builder');
+    expect(asked).toEqual([]);
+    expect(children).toEqual(['builder']);
     expect(await getRun(t.db, runId)).toMatchObject({ category: 'plan' });
   });
 

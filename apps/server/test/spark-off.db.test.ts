@@ -114,7 +114,9 @@ describe('Spark off', () => {
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
       ['builder', 'sonnet'],
     ]);
-    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    const route = orchestration.decisions.find(
+      (decision) => decision.kind === 'route' && decision.childRunId !== null,
+    );
     expect(route?.summary).toContain('Spark off → your pick');
     const advice = (await conversationAdvice(t.db, conversationId)).byRun[runId];
     expect(advice).toMatchObject({ jevStatus: 'not_asked', jevError: 'Spark is off', jev: null });

@@ -148,7 +148,7 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
     case EventType.REASONING_MESSAGE_CONTENT:
       return { ...next, steps: withThought(state.steps, event.messageId, event.delta) };
     case EventType.TEXT_MESSAGE_CONTENT:
-      return { ...next, text: state.text + event.delta };
+      return event.subagentRunId ? next : { ...next, text: state.text + event.delta };
     case EventType.RUN_FINISHED:
       return { ...next, status: event.outcome?.type === 'cancelled' ? 'cancelled' : 'succeeded' };
     case EventType.RUN_ERROR:

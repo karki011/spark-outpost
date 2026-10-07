@@ -302,13 +302,9 @@ test.describe('working chats', () => {
     await page.emulateMedia({ colorScheme: 'light' });
     repo = crewRepo();
     await page.setViewportSize({ width: 1440, height: 900 });
-    const profile = await page.request.patch('/api/profile', {
-      data: { autoContinueSeconds: null },
-    });
-    expect(profile.ok()).toBe(true);
-    await crewChat(page, repo, 'Auto-edit');
-    await send(page, 'Tell me anything about this repo #build #vague #questions #three');
-    await expect(page.getByRole('group', { name: /Spark has a few questions/ })).toBeVisible({
+    await crewChat(page, repo, 'Ask before edits');
+    await send(page, 'Fix the divider #build');
+    await expect(page.getByRole('group', { name: /Change a file\?/ })).toBeVisible({
       timeout: 30_000,
     });
 

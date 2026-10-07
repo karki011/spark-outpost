@@ -85,9 +85,14 @@ describe('chatOutline', () => {
       plans: {
         saved: [{ messageId: 'a-one', version: 1 }],
         offers: [{ runId: 'two', messageId: 'a-two' }],
+        lines: [{ runId: 'three', version: 2, items: 4, unit: 'pieces' }],
       },
     });
-    expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([['plan'], ['plan'], []]);
+    expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([
+      ['plan'],
+      ['plan'],
+      ['plan'],
+    ]);
   });
 
   it('previews the start of each reply as plain text', () => {

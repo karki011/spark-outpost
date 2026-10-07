@@ -39,6 +39,21 @@ describe('applyRunEvent', () => {
     });
   });
 
+  it("keeps a worker's reply in the chat run out of the chat's own text", () => {
+    const worker = { subagentRunId: 'w' };
+    const withWorker: RunEvent[] = [
+      events[0]!,
+      { type: EventType.SUBAGENT_STARTED, name: 'conversation', ...worker },
+      { type: EventType.TEXT_MESSAGE_START, messageId: 'a', role: 'assistant', ...worker },
+      { type: EventType.TEXT_MESSAGE_CONTENT, messageId: 'a', delta: 'Still building.', ...worker },
+      { type: EventType.TEXT_MESSAGE_END, messageId: 'a', ...worker },
+      { type: EventType.SUBAGENT_FINISHED, ...worker },
+      ...events.slice(3),
+    ];
+    const state = replay(withWorker.map((event, index) => [index + 1, event]));
+    expect(state).toMatchObject({ status: 'succeeded', text: 'Hello world' });
+  });
+
   it('keeps a step open when it was only closed because the run stopped', () => {
     const state = replay([
       [1, { type: EventType.STEP_STARTED, stepName: 'Running tests' }],

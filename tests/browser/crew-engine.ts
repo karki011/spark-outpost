@@ -68,13 +68,6 @@ export async function resetCrew(): Promise<void> {
   });
 }
 
-export async function autoContinueAfter(page: Page, seconds: number | null): Promise<void> {
-  const response = await page.request.patch('/api/profile', {
-    data: { autoContinueSeconds: seconds },
-  });
-  expect(response.ok()).toBe(true);
-}
-
 export async function linkedChat(page: Page, repo: CrewRepo): Promise<void> {
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
   expect(response.ok()).toBe(true);
@@ -196,11 +189,6 @@ export async function send(page: Page, text: string): Promise<void> {
 export const card = (page: Page, name: RegExp) => page.getByRole('group', { name });
 
 export const keptResult = (page: Page) => page.getByRole('region', { name: /^Kept · / });
-
-export async function buildThePlan(page: Page): Promise<void> {
-  const build = card(page, /Build this plan\?/).getByRole('button', { name: 'Build', exact: true });
-  await build.click({ timeout: 60_000 });
-}
 
 export function agentHead(page: Page, name: string) {
   return page

@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { relative, isAbsolute } from 'node:path';
-import type { AgentCommand } from '@spark-outpost/contracts';
+import type { AgentCommand, SessionEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { runChanges } from '../projects/run-changes.ts';
@@ -23,6 +23,15 @@ import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { RunInput } from './run-input.ts';
+import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
+import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
+import { agentDefinitions } from '../agents/acp/agents.ts';
+import {
+  conversationKey,
+  decideConversationResume,
+  usesConversationSession,
+} from './conversation-session.ts';
+import { loadSessionHandoff, missedMessages } from './session-handoff.ts';
 import {
   CREW_STOPPED_NOTE,
   RESUME_REASONS,
@@ -41,11 +50,13 @@ import {
 
 export type SessionOutput = Extract<ProviderOutput, { kind: 'session' }>;
 type UsageOutput = Extract<ProviderOutput, { kind: 'usage' }>;
+type SettingsOutput = Extract<ProviderOutput, { kind: 'session_settings' }>;
 
 export interface TurnSession {
   target: SessionTarget;
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
+  settings(output: SettingsOutput): Promise<void>;
   noteSession(output: SessionOutput): void;
   usage(output: UsageOutput): UsageOutput;
   finished(result: TurnEnd): Promise<void>;
@@ -63,6 +74,25 @@ export const DEFAULT_SWEEP_LIMITS: SweepLimits = {
   openLimit: SESSION_OPEN_LIMIT,
 };
 
+const COULD_NOT_REOPEN = "the agent couldn't reopen it";
+const PROVIDER_CHANGED = 'the agent changed';
+
+async function usedAnotherProvider(db: Db, conversationId: string, provider: string) {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM provider_sessions
+     WHERE conversation_id = $1 AND provider <> $2 AND starts_with(agent_key, 'chat:') LIMIT 1`,
+    [conversationId, provider],
+  );
+  return rowCount === 1;
+}
+const UNKEYED_SETTINGS = { model: null, effort: null, mode: null, planning: false, roots: [] };
+
+function acrossFolders(provider: string): boolean {
+  const definitions: Record<string, { resumesAcrossFolders?: boolean } | undefined> =
+    agentDefinitions;
+  return definitions[provider]?.resumesAcrossFolders === true;
+}
+
 const UNIQUE_VIOLATION = '23505';
 
 function isUniqueViolation(error: unknown): boolean {
@@ -79,34 +109,63 @@ export async function prepareTurnSession(
   const resumeKey = input.resumeKey ?? null;
   if (!chatTurn && !resumeKey) return null;
   const conversationId = input.identity.threadId;
-  const key = agentKey(input.mode, chatTurn ? null : resumeKey);
-  const hash = settingsHash({
-    provider: input.provider,
-    model: input.settings.model,
-    effort: input.settings.effort,
-    mode: input.mode,
-    planning: plansThisTurn(input),
-    roots: input.projectRoots,
-    keyed: !chatTurn,
-  });
+  const conversation = usesConversationSession(input);
+  const key = conversation
+    ? conversationKey(input.provider)
+    : agentKey(input.mode, chatTurn ? null : resumeKey);
+  const hash = settingsHash(
+    conversation
+      ? { provider: input.provider, ...UNKEYED_SETTINGS }
+      : {
+          provider: input.provider,
+          model: input.settings.model,
+          effort: input.settings.effort,
+          mode: input.mode,
+          planning: plansThisTurn(input),
+          roots: input.projectRoots,
+          keyed: !chatTurn,
+        },
+  );
   const stored = await latestProviderSession(db, conversationId, key);
-  const decision = decideResume({
-    stored,
-    hash,
-    previousMessageId: input.previousMessageId ?? null,
-    checksMessages: chatTurn,
-    now,
-    idleMs: limits.idleMs,
-    cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
-    continuing: input.continuesRunId != null,
-  });
+  const decision = conversation
+    ? decideConversationResume({ stored, continuing: input.continuesRunId != null })
+    : decideResume({
+        stored,
+        hash,
+        previousMessageId: input.previousMessageId ?? null,
+        checksMessages: chatTurn,
+        now,
+        idleMs: limits.idleMs,
+        cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
+        continuing: input.continuesRunId != null,
+      });
+  const handoffReason = !(conversation && chatTurn)
+    ? null
+    : decision.resume
+      ? COULD_NOT_REOPEN
+      : !stored && (await usedAnotherProvider(db, conversationId, input.provider))
+        ? PROVIDER_CHANGED
+        : null;
+  const handoff = handoffReason
+    ? await loadSessionHandoff(db, input, handoffReason).catch((error: unknown) => {
+        console.error('Could not build the session handoff', error);
+        return null;
+      })
+    : null;
+  const missed =
+    conversation && stored && decision.resume
+      ? await missedMessages(db, input, stored.lastUsedAt, stored.lastReplyHash, key).catch(
+          () => [],
+        )
+      : [];
   const interrupted = input.continuesRunId != null && stored?.lastReplyHash === null;
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
   const commands = decision.resume && stored ? await sessionCommands(db, stored.id) : [];
-  const resume =
-    decision.resume && commands.length > 0
-      ? { ...decision.resume, commands: commands.map((command) => command.name) }
-      : decision.resume;
+  const resume = decision.resume && {
+    ...decision.resume,
+    ...(commands.length > 0 ? { commands: commands.map((command) => command.name) } : {}),
+    ...(conversation && acrossFolders(input.provider) ? { anyFolder: true } : {}),
+  };
   const followUp =
     decision.resume && decision.stopped
       ? stoppedFollowUp(
@@ -115,6 +174,25 @@ export async function prepareTurnSession(
           chatTurn || (await userStopped(db, input, resumeKey)) ? STOPPED_NOTE : CREW_STOPPED_NOTE,
         )
       : input.followUp;
+  const facts: SessionFacts = {
+    provider: input.provider,
+    agentKey: key,
+    model: input.settings.model,
+    previous: stored,
+    seedChars: handoff ? handoff.length + input.prompt.length : seedChars(input),
+    handoff: handoff !== null,
+    now,
+  };
+  const record = (event: SessionEvent | null) =>
+    event
+      ? insertSessionEvent(db, {
+          conversationId,
+          sessionRowId: rowId,
+          runId: input.identity.runId,
+          event,
+        }).catch((error: unknown) => console.error('Could not record a session event', error))
+      : Promise.resolve();
+  let sessionId: string | null = null;
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
@@ -147,13 +225,16 @@ export async function prepareTurnSession(
     target: {
       workdir,
       resume,
-      freshReason: decision.freshReason,
+      freshReason: decision.freshReason ?? (decision.resume ? null : handoffReason),
       ...(followUp ? { followUp } : {}),
       ...(interrupted ? { interrupted } : {}),
+      ...(handoff ? { handoff } : {}),
+      ...(missed.length > 0 ? { missed } : {}),
     },
     noteSession,
     async started(output) {
       noteSession(output);
+      sessionId = output.sessionId;
       try {
         rowId = await startProviderSession(db, {
           conversationId,
@@ -171,7 +252,13 @@ export async function prepareTurnSession(
         return;
       }
       if (!rowId) return;
+      await record(sessionEvent(facts, output));
       await evictBeyondLimit(db, limits.openLimit);
+    },
+    async settings(output) {
+      if (!rowId || !sessionId) return;
+      await recordAppliedSettings(db, rowId, output);
+      if (continued) await record(modelChange(facts, sessionId, output));
     },
     async commands(commands) {
       if (rowId) await recordSessionCommands(db, rowId, commands);
@@ -206,6 +293,21 @@ export async function prepareTurnSession(
       });
     },
   };
+}
+
+export interface TurnSessionDeps {
+  db: Db;
+  sessionLimits?: SweepLimits;
+}
+
+export function turnSessionFor(deps: TurnSessionDeps, input: RunInput) {
+  return prepareTurnSession(deps.db, input, deps.sessionLimits);
+}
+
+function seedChars(input: RunInput): number {
+  const history = input.seed ? input.history.slice(input.seed.historyFrom) : input.history;
+  const sent = history.reduce((chars, turn) => chars + turn.content.length, 0);
+  return sent + (input.seed?.text.length ?? 0) + input.prompt.length;
 }
 
 function resumableStop(input: RunInput, result: TurnEnd): boolean {

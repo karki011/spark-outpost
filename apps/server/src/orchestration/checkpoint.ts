@@ -1,7 +1,6 @@
 import {
   CHECKPOINT_OPTION,
   checkpointPayloadSchema,
-  type AgentPick,
   type ApprovalOption,
   type CheckpointKind,
   type CheckpointPayload,
@@ -48,59 +47,6 @@ function payload(
   return checkpointPayloadSchema.parse(partial);
 }
 
-function retryTarget(to: AgentPick | null): string {
-  return to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up';
-}
-
-export function retryCard(
-  from: AgentPick | null,
-  to: AgentPick | null,
-  reason: string,
-): CheckpointCard {
-  const question = `Retry${retryTarget(to)}?`;
-  return {
-    kind: 'retry',
-    title: question,
-    payload: payload({
-      kind: 'retry',
-      question,
-      reason,
-      from,
-      to,
-      autoOption: CHECKPOINT_OPTION.stopReport,
-    }),
-    options: [
-      allow(CHECKPOINT_OPTION.retry, 'Retry'),
-      reject(CHECKPOINT_OPTION.stopReport, 'Stop and report'),
-    ],
-  };
-}
-
-export function verifyCard(
-  from: AgentPick | null,
-  to: AgentPick | null,
-  reason: string,
-): CheckpointCard {
-  const title = 'Jev could not verify the change';
-  return {
-    kind: 'verify',
-    title,
-    payload: payload({
-      kind: 'verify',
-      question: `Finish as it is, or retry${retryTarget(to)}?`,
-      reason,
-      from,
-      to,
-      autoOption: CHECKPOINT_OPTION.finishUnverified,
-    }),
-    options: [
-      allow(CHECKPOINT_OPTION.finishUnverified, 'Finish as it is'),
-      allow(CHECKPOINT_OPTION.retry, 'Retry one tier up'),
-      stopOption,
-    ],
-  };
-}
-
 export type ChangedLines = CheckpointPayload['lines'];
 
 export function acceptCard(
@@ -128,27 +74,6 @@ export function acceptCard(
       ...(fixLabel ? [reject(CHECKPOINT_OPTION.fixFindings, fixLabel)] : []),
       reject(CHECKPOINT_OPTION.fix, 'Ask for a fix'),
       reject(CHECKPOINT_OPTION.revert, 'Revert'),
-    ],
-  };
-}
-
-const PR_SPLIT_TITLE = 'One PR or separate PRs?';
-
-export function prSplitCard(pieces: readonly string[]): CheckpointCard {
-  return {
-    kind: 'pr_split',
-    title: PR_SPLIT_TITLE,
-    payload: payload({
-      kind: 'pr_split',
-      question: `${pieces.join(', ')} were built in their own worktrees. Ship them in one PR, or one PR each?`,
-      reason: 'Pieces built in the shared tree always go in the main PR.',
-      autoOption: CHECKPOINT_OPTION.onePr,
-    }),
-    options: [
-      allow(CHECKPOINT_OPTION.onePr, 'One PR'),
-      allow(CHECKPOINT_OPTION.separatePrs, 'Separate PRs'),
-      allow(CHECKPOINT_OPTION.alwaysOnePr, 'Always one PR here'),
-      allow(CHECKPOINT_OPTION.alwaysSeparatePrs, 'Always separate PRs here'),
     ],
   };
 }
@@ -298,8 +223,4 @@ export async function askCard(
     card,
     s.checkpoints,
   );
-}
-
-export function clarifiedRequest(request: string, answer: string): string {
-  return `${request}\n\nThe user clarified: ${answer}`;
 }

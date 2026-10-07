@@ -43,13 +43,17 @@ export function routeContext(input: RunInput, context: IntakeContext): RouteCont
 }
 
 function soloDecisions(decisions: IntakeDecisions): IntakeDecisions {
-  return { ...decisions, start: 'build', then: 'build', review: false };
+  return { ...decisions, start: 'build', review: false };
 }
 
 async function hasAgreedPlan(deps: OrchestratorDeps, input: RunInput): Promise<boolean> {
   const root = input.projectRoots[0] ?? null;
   const plan = await agreedPlanFor(deps.db, input.identity.threadId, root).catch(() => null);
   return plan !== null;
+}
+
+function recordedCalls(calls: IntakeDecisions['calls']): IntakeDecisions['calls'] {
+  return Object.fromEntries(Object.entries(calls).filter(([key]) => key !== 'plan'));
 }
 
 export async function runIntake(
@@ -64,6 +68,7 @@ export async function runIntake(
     currentTask: current
       ? { previousRequest: current.previousRequest, summary: current.summary }
       : null,
+    fourWay: true,
   };
   const asked = await askIntake(
     deps.db,
@@ -91,7 +96,7 @@ export async function runIntake(
   const rules = rulesAnswer(ruleAdvisor(asked.request), decisions, pick);
   const intake = await saveIntake(deps.db, input, append, asked, {
     rules,
-    calls: decisions.calls,
+    calls: recordedCalls(decisions.calls),
   });
   return { intake, decisions };
 }

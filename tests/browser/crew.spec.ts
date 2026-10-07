@@ -4,7 +4,6 @@ import {
   agentBlock,
   agentHead,
   allowEdit,
-  autoContinueAfter,
   card,
   CREW_REQUEST,
   crewChat,
@@ -130,27 +129,25 @@ test('a crew block has one status, and a finished agent stops saying it works', 
   page,
 }) => {
   test.setTimeout(90_000);
-  await autoContinueAfter(page, null);
   await crewChat(page, repo, 'Auto-edit');
-  await send(page, 'Make the reports better #build #vague #questions #slowbuild');
-  const questions = card(page, /Spark has a (few questions|question)/);
-  await questions.getByRole('button', { name: 'Usage' }).click({ timeout: 30_000 });
-  await questions.getByRole('button', { name: 'Send' }).click();
+  await send(page, 'Fix the divider #build #crew #bugreview #slowfix');
+  await expect(agentHead(page, 'Hawk')).toBeVisible({ timeout: 30_000 });
+  await expect(agentBlock(page, 'Bolt')).toHaveCount(2, { timeout: 30_000 });
 
-  const bolt = agentBlock(page, 'Bolt');
+  const bolt = agentBlock(page, 'Bolt').last();
   await expect(bolt.locator('.agent-state')).toHaveText('working', { timeout: 30_000 });
   await expect(bolt.locator('.steps-head')).toHaveText(/^\d+ steps?$/);
   await expect(bolt.getByText(WORK_WORD)).toHaveCount(1);
   await expect(bolt.locator('.dots')).toHaveCount(0);
   await shot(page, 'status-running');
 
-  const pip = agentBlock(page, 'Pip');
-  await expect(pip).toBeVisible();
-  await expect(pip.getByText(WORK_WORD)).toHaveCount(0);
-  await agentHead(page, 'Pip').click();
-  await expect(pip.locator('.agent-state')).toHaveText('done');
-  await expect(pip.locator('.steps-head')).toHaveText(/^\d+ steps?$/);
-  await expect(pip.getByText(WORK_WORD)).toHaveCount(0);
+  const finished = agentBlock(page, 'Bolt').first();
+  await expect(finished).toBeVisible();
+  await expect(finished.getByText(WORK_WORD)).toHaveCount(0);
+  await agentHead(page, 'Bolt').first().click();
+  await expect(finished.locator('.agent-state')).toHaveText('done');
+  await expect(finished.locator('.steps-head')).toHaveText(/^\d+ steps?$/);
+  await expect(finished.getByText(WORK_WORD)).toHaveCount(0);
   await shot(page, 'status-finished-sibling');
 
   await page.getByRole('button', { name: 'Stop' }).click();

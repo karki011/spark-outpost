@@ -12,6 +12,7 @@ import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import type { SubagentAnnounce } from '../workflow/subagent-events.ts';
 import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
@@ -31,6 +32,7 @@ import { createStallWatch, quietNotice } from './stall-watch.ts';
 import { openFindings, reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
+import { watchBuilderPlan } from '../plans/build-plan.ts';
 import { splitRemovals } from '../laws/critic-text.ts';
 import { loadHandoff, type HandoffKind } from './handoff.ts';
 import {
@@ -54,6 +56,7 @@ export interface MemberOptions {
   seat?: Seat;
   resumeKey?: string;
   publishes?: boolean;
+  announce?: SubagentAnnounce;
 }
 
 export interface MemberOutcome {
@@ -156,7 +159,7 @@ async function runInPlace(
   if (mode !== s.input.mode) await setRunMode(s, mode);
   const preamble = await readerPreamble(s);
   const { planning: drafting, ...facts } = s.input;
-  const planning = drafting === true || plansThisTurn(facts);
+  const planning = drafting === true || plansThisTurn(facts, true);
   const input = {
     ...s.input,
     mode,
@@ -246,6 +249,10 @@ async function noteQuiet(s: Session, note: string): Promise<void> {
   }
 }
 
+function plansTheBuild(s: Session, spawn: Spawn, seat: Seat | null): boolean {
+  return spawn.role === 'builder' && !seat && s.need === 'build' && !s.coordination?.list;
+}
+
 async function runChild(
   s: Session,
   spawn: Spawn,
@@ -325,12 +332,16 @@ async function runChild(
   const quietMs =
     spawn.role === 'critic' ? (s.deps.criticQuietNoticeMs ?? CRITIC_QUIET_NOTICE_MS) : null;
   const stall = createStallWatch(quietMs, () => void noteQuiet(s, quietNotice(name, quietMs ?? 0)));
+  const plans = plansTheBuild(s, spawn, seat) ? watchBuilderPlan(s) : null;
   try {
     const result = await executeChildRun(
       s.deps,
       lease,
       {
-        onOutput: observe,
+        onOutput: (output) => {
+          observe(output);
+          plans?.observe(output);
+        },
         onProduced: (output) => {
           stall.touch();
           guard.observe(output);
@@ -339,6 +350,7 @@ async function runChild(
         stopNow: stopNow.signal,
         recordsPlan: spawn.role === 'builder' && (!seat || seat.role === 'integrator'),
         ...(spawn.role === 'builder' ? { observeEdits: editObserver(s, lease.runId) } : {}),
+        ...(options.announce ? { announce: options.announce } : {}),
       },
       s.append,
     );
@@ -358,6 +370,7 @@ async function runChild(
     };
   } finally {
     stall.stop();
+    await plans?.settled();
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
     await mergeRoute(s.deps.db, lease.runId, { fileReads: total.reads.length }).catch(

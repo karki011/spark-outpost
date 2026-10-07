@@ -22,7 +22,8 @@ export function modeWish(
     return turn.planning
       ? { wanted: definition.askMode, plan: true }
       : { wanted: definition.askMode };
-  return doModeWish(definition, turn);
+  const wish = doModeWish(definition, turn);
+  return turn.plansFirst ? { ...wish, plan: true } : wish;
 }
 
 export function modeAllowed(

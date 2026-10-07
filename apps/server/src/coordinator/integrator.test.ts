@@ -49,13 +49,6 @@ describe('integratorModel', () => {
     });
   });
 
-  it('keeps the seat model to reconcile a merge conflict', () => {
-    expect(integratorModel({ ...C2, work: 'conflict' })).toEqual({
-      follow: null,
-      reason: 'a merge conflict across pieces',
-    });
-  });
-
   it('keeps the seat model when findings touch a high-stakes piece', () => {
     const stakes = { ...C2, topTier: new Set(['P2']) };
     expect(integratorModel(stakes)).toEqual({

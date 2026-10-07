@@ -22,7 +22,6 @@ The checks run in Spark, not in the model, so nothing an agent says can approve 
 ## What never goes on without you
 
 - Approval cards, and protected paths in every mode and at both levels.
-- The plan card, at both levels and in every mode.
 - **Address PR feedback?** at **Automatic**.
 - Merging. Nothing ever merges.
 
@@ -44,4 +43,4 @@ Sending a secret file's value [always asks](protected-paths.md#what-always-asks)
 
 Approval cards wait up to 30 minutes, then the request is declined.
 
-Spark's own questions follow **Wait before going with best guesses** in **Settings → Spark**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark picks the safe option listed in [Cards](cards.md).
+**This chat is almost full** follows **Wait before going on without your answer** in **Settings → Spark**: **30s**, **60s** (default), **2 min**, **5 min**, **Never** or **Custom**. Then Spark keeps going.

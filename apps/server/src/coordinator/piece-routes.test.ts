@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentPick } from '@spark-outpost/contracts';
 import { context } from '../orchestration/route-fixtures.ts';
-import { OWN_WORKTREE, type PieceAnswer, type RouteOption } from './piece-questions.ts';
+import type { PieceAnswer, RouteOption } from './piece-questions.ts';
 import { MEASURED_BELOW_CHAT, NOT_CLEARLY_SIMPLE } from './piece-demand.ts';
 import { routePieceList, type RoutablePiece, type RouteRules } from './piece-routes.ts';
 
@@ -53,7 +53,7 @@ const pieces = [piece('P1', ['a.ts']), piece('P2', ['b.ts', 'c.ts'])];
 
 function rules(extra: Partial<RouteRules> = {}): RouteRules {
   return {
-    route: context('pinned'),
+    route: context('auto'),
     picks: new Map([
       ['P1', SONNET],
       ['P2', SONNET],
@@ -62,12 +62,9 @@ function rules(extra: Partial<RouteRules> = {}): RouteRules {
     ]),
     routes,
     placement: 'shared',
-    askPlacement: true,
     requestDestructive: false,
     destructive: () => false,
     core: () => false,
-    listIsolation: null,
-    pieceIsolation: () => null,
     ...extra,
   };
 }
@@ -81,7 +78,6 @@ function answer(extra: Partial<PieceAnswer> = {}): PieceAnswer {
     coding: score(3),
     context: score(2),
     reliability: 0.1,
-    wide: null,
     ...extra,
   };
 }
@@ -119,6 +115,30 @@ describe('routePieceList', () => {
       'reasoning 4.3, coding 4, context 3 → top tier → Claude Opus 5.5 (only top-tier route)',
     );
     expect(result.pieces[0]!.answer).toEqual(answer());
+  });
+
+  it('holds every piece of a pinned chat to the pin and keeps what Jev would have used', () => {
+    const result = routed(
+      [
+        ['P1', answer()],
+        ['P2', HARD],
+      ],
+      { route: context('pinned') },
+    );
+    expect(result.pieces.map((entry) => entry.model)).toMatchObject([
+      {
+        pick: SONNET,
+        decidedBy: 'rules',
+        reason: 'pinned in this chat',
+        jevPick: { provider: 'codex', model: 'gpt-6-sol' },
+      },
+      { pick: SONNET, decidedBy: 'rules', jevPick: { provider: 'claude', model: 'opus[1m]' } },
+    ]);
+    const destructive = routed([['P1', answer()]], {
+      route: context('pinned'),
+      requestDestructive: true,
+    });
+    expect(destructive.pieces.map((entry) => entry.model.pick)).toEqual([SONNET, SONNET]);
   });
 
   it('prints the demand tier and the route tier when they differ', () => {
@@ -232,72 +252,22 @@ describe('routePieceList', () => {
     expect(result.pieces[1]!.model.demand).toMatchObject({ tier: 'top', raisedBy: 'destructive' });
   });
 
-  it('places a wide or risky piece in its own worktree, leaving the list mixed', () => {
+  it('places every building piece where the list is placed, whatever Jev rated', () => {
     const result = routed([
-      ['P1', answer({ wide: 0.1 })],
-      ['P2', answer({ wide: 0.7 })],
+      ['P1', answer()],
+      ['P2', HARD],
     ]);
-    expect(
-      result.pieces.map((entry) => [entry.place.placement, entry.place.decidedBy, entry.place.jev]),
-    ).toEqual([
-      ['shared', 'jev', 'shared_tree'],
-      ['worktree', 'jev', OWN_WORKTREE],
+    expect(result.pieces.map((entry) => entry.place)).toEqual([
+      { placement: 'shared', decidedBy: 'rules', reason: 'follows the list' },
+      { placement: 'shared', decidedBy: 'rules', reason: 'follows the list' },
     ]);
-    expect(result.pieces[1]!.place.reason).toBe('own worktree (wide or risky 0.70)');
     expect(result.placement).toBe('shared');
-  });
-
-  it('keeps the rules placement when Jev is in between', () => {
-    const result = routed([['P1', answer({ wide: 0.35 })]], { placement: 'worktree' });
-    expect(result.pieces[0]!.place).toEqual({
-      placement: 'worktree',
-      jev: null,
-      decidedBy: 'rules',
-      reason: 'Jev was unsure (wide or risky 0.35)',
-    });
-  });
-
-  it('keeps hard isolation rules over Jev placement', () => {
-    const result = routed(
-      [
-        ['P1', answer({ wide: 0.1 })],
-        ['P2', answer({ wide: 0.1 })],
-      ],
-      {
-        placement: 'worktree',
-        pieceIsolation: (entry) => (entry.key === 'P1' ? 'owns a lockfile' : null),
-      },
-    );
-    expect(result.pieces.map((entry) => [entry.place.placement, entry.place.reason])).toEqual([
-      ['worktree', 'owns a lockfile'],
-      ['shared', 'shared tree (wide or risky 0.10)'],
-    ]);
-  });
-
-  it('never leaves two unordered pieces with the same files in the shared tree', () => {
-    const overlapping = [
-      piece('P1', ['a.ts']),
-      piece('P2', ['a.ts', 'b.ts']),
-      piece('P3', ['a.ts'], { dependsOn: ['P1'] }),
-    ];
-    const result = routePieceList(
-      overlapping,
-      rules(),
-      { answers: null, failure: null },
-      fileCount,
-    );
-    expect(result.pieces.map((entry) => [entry.key, entry.place.placement])).toEqual([
-      ['P1', 'shared'],
-      ['P2', 'worktree'],
-      ['P3', 'shared'],
-    ]);
-    expect(result.pieces[1]!.place.reason).toBe('shares files with P1');
   });
 
   it('leaves in-order lists and read-only pieces alone', () => {
     const result = routePieceList(
       [...pieces, piece('R1', [], { research: true })],
-      rules({ placement: 'in_order', askPlacement: false }),
+      rules({ placement: 'in_order' }),
       { answers: null, failure: null },
       fileCount,
     );
@@ -311,7 +281,7 @@ describe('routePieceList', () => {
 });
 
 describe('routing below the chat model (C2)', () => {
-  const opusChat = { ...context('pinned'), chat: { ...context('pinned').chat, model: 'opus[1m]' } };
+  const opusChat = { ...context('auto'), chat: { ...context('auto').chat, model: 'opus[1m]' } };
   const opusRules = (extra: Partial<RouteRules> = {}) => ({ route: opusChat, ...extra });
   const DOCS = answer({
     kind: { choice: 'docs', confidence: 1, probabilities: { docs: 1 } },

@@ -5,8 +5,9 @@ type DetailKey = keyof ConversationDetail;
 const PER_RUN_KEYS = new Set<DetailKey>(['activity', 'orchestrations', 'advice', 'runs']);
 
 export function turnRunIds(detail: ConversationDetail, runId: string): string[] {
-  const crew = detail.orchestrations?.[runId]?.crew ?? [];
-  return [runId, ...crew.map((member) => member.runId)];
+  const orchestration = detail.orchestrations?.[runId];
+  const members = [...(orchestration?.crew ?? []), ...(orchestration?.answers ?? [])];
+  return [runId, ...members.map((member) => member.runId)];
 }
 
 function latestTopLevelId(detail: ConversationDetail): string | undefined {

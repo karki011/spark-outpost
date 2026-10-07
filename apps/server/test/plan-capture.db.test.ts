@@ -208,19 +208,20 @@ describe('native plan mode in Ask (B5)', { timeout: 60_000 }, () => {
     expect(await switchedToPlan(runId)).toBe(true);
   });
 
-  it('drafts a plan-only request from a Do chat in plan mode and approves it from the plan card', async () => {
+  it('answers a plan-only request from a Do chat in the mode the user chose, with no card', async () => {
     harness = startOrchestrator(t, null);
     const { conversationId } = await linkedConversation(t, root);
     const runId = await say(
       conversationId,
       "Plan adding CSV export. Plan only for now: don't change any files. #nativeplan",
     );
-    const { asked } = await driveToEnd(t, conversationId, runId);
-    expect(asked.map((approval) => approval.title)).toEqual(['Approve the plan?']);
-    expect(await planDocuments(t.db, conversationId)).toEqual([
-      expect.objectContaining({ source: 'claude_plan_mode', body: FAKE_PLAN, status: 'approved' }),
-    ]);
-    expect(await switchedToPlan(runId)).toBe(true);
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(asked).toEqual([]);
+    expect(orchestration).toMatchObject({ status: 'succeeded', error: null });
+    expect(orchestration.crew.map((member) => member.role)).toEqual(['scout']);
+    expect((await assistantReplies(conversationId)).at(-1)?.content).toContain(FAKE_PLAN);
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    expect(await switchedToPlan(runId)).toBe(false);
     expect(execFileSync('git', ['-C', root, 'status', '--porcelain']).toString()).toBe('');
   });
 });
@@ -238,12 +239,13 @@ describe('a plan that arrives only in the ExitPlanMode call (D-noJev)', { timeou
       );
       const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
       expect(orchestration.error).toBeNull();
-      expect(asked.map((approval) => approval.title)).toEqual(['Approve the plan?']);
+      expect(asked).toEqual([]);
       expect(await planDocuments(t.db, conversationId)).toEqual([
         expect.objectContaining({
           source: 'claude_plan_mode',
           body: FAKE_PLAN,
-          status: 'approved',
+          status: 'proposed',
+          sourceRunId: runId,
         }),
       ]);
       const { rows } = await t.db.query<{ payload: string }>(
@@ -328,7 +330,11 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
     expect(planCall?.questions).toContain('previous_is_plan');
     expect(String(planCall?.state.previous_reply)).toContain('Shall I go ahead?');
     const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.plans).toEqual({ saved: [{ messageId: reply!.id, version: 1 }], offers: [] });
+    expect(detail?.plans).toEqual({
+      saved: [{ messageId: reply!.id, version: 1 }],
+      offers: [],
+      lines: [],
+    });
   });
 
   it('offers a "Save as agreed plan" card when Jev is unsure', async () => {

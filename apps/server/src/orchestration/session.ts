@@ -5,6 +5,7 @@ import {
   type CheckBody,
   type PlanEntry,
 } from '@spark-outpost/contracts';
+import type { Need } from './simple-intake.ts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { Ranking } from './observe-rank.ts';
@@ -46,13 +47,10 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   branchPrefix?: string;
   shipAccess?: ShipAccess;
   coordinator?: CoordinatorMode;
-  forcedPlacement?: ForcedPlacement | undefined;
   agentSlots?: Slots;
 }
 
 export type CoordinatorMode = 'off' | 'shadow' | 'in_order' | 'parallel';
-
-export type ForcedPlacement = 'shared' | 'worktree';
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
@@ -118,7 +116,6 @@ export interface Session {
   checkMemory?: CheckMemory;
   projectStyle: ProjectStyle;
   buildStyle: BuildStyle;
-  assumption: string | null;
   needsCopy: boolean;
   placeLater?: boolean;
   copyRunId: string | null;
@@ -131,10 +128,8 @@ export interface Session {
   scanRoot?: string | null;
   scanReport?: ScanReport | null;
   ranking?: Promise<Ranking | null>;
-  unverified?: boolean;
   risky?: string | null;
   shipLine?: string | null;
-  prNotes?: string[];
   fixRound?: number | null;
   fixTree?: string | null;
   fixPatch?: string | null;
@@ -146,6 +141,8 @@ export interface Session {
   laws?: LawReview | null;
   criticRemovals?: string[] | null;
   estimate?: TaskEstimate | null;
+  need?: Need;
+  upgraded?: boolean;
 }
 
 export function builderKey(taskId: string): string {

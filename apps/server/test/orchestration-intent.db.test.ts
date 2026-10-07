@@ -4,13 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CHECKPOINT_OPTION,
-  clarifyOptionId,
   modeForLegacy,
   type AdviceBody,
   type InvolvementLevel,
+  needsYouLine,
 } from '@spark-outpost/contracts';
 import { MAKE_CHANGE_RULE } from '../src/orchestration/context.ts';
+import { NEEDS_YOU_NOTE } from '../src/orchestration/simple-intake.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -18,7 +18,7 @@ import { createProject } from '../src/projects/projects.ts';
 import { linkedConversation } from './approval-support.ts';
 import {
   TRIVIAL,
-  answerEverything,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -26,7 +26,6 @@ import {
   removeRepo,
   startOrchestrator,
   withTag,
-  type Answerer,
   type Harness,
   type JevScript,
   type Scenario,
@@ -85,13 +84,29 @@ async function send(
 async function turn(
   conversationId: string,
   scenario: Scenario,
-  answer: Answerer = answerEverything,
-  level: InvolvementLevel | null = null,
   extra: { startAs?: 'change' } = {},
 ) {
-  const runId = await send(conversationId, scenario, level, extra);
-  const done = await driveToEnd(t, conversationId, runId, answer);
+  const runId = await send(conversationId, scenario, null, extra);
+  const done = await driveToEnd(t, conversationId, runId);
   return { ...done, runId };
+}
+
+async function approvalKinds(runId: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ kind: string }>(
+    `SELECT a.kind FROM approvals a JOIN runs r ON r.id = a.run_id
+     WHERE r.id = $1 OR r.parent_run_id = $1`,
+    [runId],
+  );
+  return rows.map((row) => row.kind);
+}
+
+async function intakeRead(runId: string): Promise<string | undefined> {
+  const { rows } = await t.db.query<{ summary: string }>(
+    `SELECT body->>'summary' AS summary FROM run_advice
+     WHERE run_id = $1 AND purpose = 'route' AND child_run_id IS NULL`,
+    [runId],
+  );
+  return rows[0]?.summary;
 }
 
 async function adviceOf(runId: string): Promise<AdviceBody> {
@@ -124,9 +139,7 @@ describe('answer first, with "Make the change" one click away', () => {
     expect(advice.calls?.question).toMatchObject({ jev: 0.38, value: true, source: 'rules' });
     expect(advice.notAsked).toMatchObject({ continues_task: 'no current task' });
 
-    const built = await turn(conversationId, withTag(PLAN_TALK, '#build'), answerEverything, null, {
-      startAs: 'change',
-    });
+    const built = await turn(conversationId, withTag(PLAN_TALK, '#build'), { startAs: 'change' });
     expect(built.orchestration.crew.map((member) => member.role)).toContain('builder');
     expect(await getRun(t.db, built.runId)).toMatchObject({ pickedMode: 'do', startAs: 'change' });
     expect((await adviceOf(built.runId)).calls?.change).toMatchObject({ source: 'user' });
@@ -148,54 +161,44 @@ describe('answer first, with "Make the change" one click away', () => {
 describe('a vague follow-up', () => {
   const WRAP_UP: Scenario = { id: 'wrap', text: 'wrap up', mode: 'do', destructive: 0.02 };
 
-  it('asks one question instead of building, and answers when the user picks that', async () => {
+  it('asks its questions in a read-only reply instead of building, with no card', async () => {
     const { conversationId } = await linkedConversation(t, root);
     await turn(conversationId, PLAN_TALK);
-    const pick: Answerer = (approval) =>
-      approval.kind === 'clarify' ? { optionId: clarifyOptionId(0) } : answerEverything(approval);
-    const { asked, orchestration, runId } = await turn(conversationId, WRAP_UP, pick);
-    const clarify = asked.find((approval) => approval.kind === 'clarify')!;
-    expect(clarify.title).toBe('Want me to answer, plan it, or make the change?');
+    const { asked, orchestration, runId } = await turn(conversationId, WRAP_UP);
+    expect(asked).toEqual([]);
+    expect(await approvalKinds(runId)).toEqual([]);
+    expect(orchestration.status).toBe('succeeded');
     expect(orchestration.crew.map((member) => member.role)).toEqual(['scout']);
     expect((await adviceOf(runId)).calls?.vague).toMatchObject({ rule: true, value: true });
-    const { rows } = await t.db.query<{ default_option_id: string }>(
-      'SELECT default_option_id FROM approvals WHERE id = $1',
-      [clarify.id],
+    expect(await intakeRead(runId)).toBe('intake read this as needs you');
+    const { rows } = await t.db.query<{ text: string }>(
+      `SELECT payload->'params'->'prompt'->0->>'text' AS text FROM run_protocol_log
+       WHERE run_id = $1 AND method = 'session/prompt' AND kind = 'request'`,
+      [runId],
     );
-    expect(rows[0]?.default_option_id).toBe(clarifyOptionId(0));
+    expect(rows.map((row) => row.text).join('\n')).toContain(NEEDS_YOU_NOTE);
   }, 90_000);
 });
 
 describe('missing context', () => {
-  it('asks where to look instead of retrying one tier up, then reruns at the same tier', async () => {
+  it('says what it needs in the reply instead of retrying one tier up, with no card', async () => {
     const { conversationId } = await linkedConversation(t, root);
     const failing = withTag(TRIVIAL, '#build #nofile');
-    const answer: Answerer = (approval) =>
-      approval.kind === 'clarify'
-        ? { optionId: CHECKPOINT_OPTION.answer, note: 'the formatter is in notes.txt' }
-        : answerEverything(approval);
-    const { asked, orchestration } = await turn(conversationId, failing, answer);
-    const kinds = asked.map((approval) => approval.kind);
-    expect(kinds).toContain('clarify');
-    expect(kinds).not.toContain('retry');
-    const clarify = asked.find((approval) => approval.kind === 'clarify')!;
-    expect(clarify.title).toBe('What should the Builder look at?');
-    const { rows } = await t.db.query<{ default_option_id: string }>(
-      'SELECT default_option_id FROM approvals WHERE id = $1',
-      [clarify.id],
-    );
-    expect(rows[0]?.default_option_id).toBe(CHECKPOINT_OPTION.answer);
-    expect(clarify.payload.checkpoint?.reason).toBe('There is no src/dates.ts in this repo.');
+    const { asked, orchestration, runId } = await turn(conversationId, failing);
+    expect(asked).toEqual([]);
+    expect(await approvalKinds(runId)).toEqual([]);
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['builder', 'sonnet'],
       ['builder', 'sonnet'],
     ]);
     expect(orchestration.status).toBe('succeeded');
+    const replies = await assistantReplies(t, runId);
+    expect(replies).toHaveLength(1);
+    expect(replies[0]!.endsWith(needsYouLine('There is no src/dates.ts in this repo.'))).toBe(true);
   }, 90_000);
 });
 
 describe('the project changes mid-chat', () => {
-  it('records the roots per run, notes the move and starts a fresh session', async () => {
+  it('records the roots per run, notes the move and resumes the chat session in the new folder', async () => {
     const { conversationId } = await linkedConversation(t, root);
     const first = await turn(conversationId, PLAN_TALK);
     expect(first.orchestration.status).toBe('succeeded');
@@ -218,6 +221,12 @@ describe('the project changes mid-chat', () => {
     expect(names.some((name) => name.startsWith('Project changed since the last turn:'))).toBe(
       true,
     );
-    expect(names).toContain('Fresh session (project changed)');
+    expect(names).toContain('Continued session');
+    expect(names.filter((name) => name.startsWith('Fresh session'))).toEqual([]);
+    const sessions = await t.db.query<{ agent_key: string; session_id: string }>(
+      'SELECT DISTINCT agent_key, session_id FROM provider_sessions WHERE conversation_id = $1',
+      [conversationId],
+    );
+    expect(sessions.rows.map((row) => row.agent_key)).toEqual(['chat:claude']);
   }, 90_000);
 });

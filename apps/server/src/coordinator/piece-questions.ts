@@ -13,8 +13,6 @@ import { isGlob } from './owned.ts';
 import { factPaths, type FileFacts } from './piece-facts.ts';
 import { noCheckLabel } from './scoped-checks.ts';
 
-export const SHARED_TREE = 'shared_tree';
-export const OWN_WORKTREE = 'own_worktree';
 const GOAL_CHARACTERS = 400;
 const TITLE_CHARACTERS = 120;
 const ACCEPTANCE_CHARACTERS = 300;
@@ -57,7 +55,6 @@ export interface PieceAsk {
   request: string;
   pieces: readonly JevPiece[];
   facts: ReadonlyMap<string, FileFacts>;
-  placement: boolean;
   budget?: number;
 }
 
@@ -72,7 +69,6 @@ export interface PieceAnswer {
   coding: ScoreSignal | null;
   context: ScoreSignal | null;
   reliability: number | null;
-  wide: number | null;
 }
 
 export function pieceKeys(key: string) {
@@ -82,7 +78,6 @@ export function pieceKeys(key: string) {
     coding: `${key}_coding`,
     context: `${key}_context`,
     reliability: `${key}_reliability`,
-    wide: `${key}_wide`,
   };
 }
 
@@ -254,20 +249,6 @@ function reliabilityQuestion(key: string) {
   );
 }
 
-function wideQuestion(key: string) {
-  return noulQuestion(
-    `Could piece ${key} get in the way of other pieces built at the same time in the same folder? ${SCOPE}`,
-    {
-      true: {
-        what: 'It is long or wide, or can break the build or tests for the others: many files, shared config, generated files, lockfiles or a shared contract',
-      },
-      false: {
-        what: 'A small change in its own one or two files that the other pieces do not touch',
-      },
-    },
-  );
-}
-
 export function pieceQuestions(ask: PieceAsk): IntakeQuestions {
   const questions: Record<string, Record<string, unknown>> = {};
   for (const piece of ask.pieces) {
@@ -277,7 +258,6 @@ export function pieceQuestions(ask: PieceAsk): IntakeQuestions {
     questions[keys.coding] = scoreQuestion('coding', piece.key);
     questions[keys.context] = scoreQuestion('context', piece.key);
     questions[keys.reliability] = reliabilityQuestion(piece.key);
-    if (ask.placement) questions[keys.wide] = wideQuestion(piece.key);
   }
   return {
     state: {
@@ -299,7 +279,7 @@ function scoreSignal(response: SystemOneResponse, key: string): ScoreSignal | nu
 
 export function readPieceAnswers(
   response: SystemOneResponse,
-  ask: Pick<PieceAsk, 'pieces' | 'placement'>,
+  ask: Pick<PieceAsk, 'pieces'>,
 ): Map<string, PieceAnswer> {
   const kinds = Object.keys(TASK_KINDS);
   return new Map(
@@ -313,7 +293,6 @@ export function readPieceAnswers(
           coding: scoreSignal(response, keys.coding),
           context: scoreSignal(response, keys.context),
           reliability: validNoul(response, keys.reliability),
-          wide: ask.placement ? validNoul(response, keys.wide) : null,
         },
       ];
     }),

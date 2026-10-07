@@ -1,14 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  agentHead,
-  autoContinueAfter,
-  CREW_REQUEST,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-} from './crew-engine.ts';
+import { agentHead, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { shoot } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
@@ -206,28 +198,6 @@ test('while the agent works the line says what it is doing, then Done', async ({
   await expect(shown(page)).toHaveText('Done · 2m 14s');
   await shots(page, 'done');
   await expect(line(page).locator('.cs-line')).toHaveCount(0, { timeout: 15_000 });
-});
-
-test('a question from Spark is one line that names the question', async ({ page }) => {
-  test.setTimeout(90_000);
-  await resetCrew();
-  const repo = crewRepo();
-  try {
-    await page.setViewportSize({ width: 1400, height: 900 });
-    await autoContinueAfter(page, 60);
-    await crewChat(page, repo, 'Ask before edits');
-    await send(page, 'Make the reports better #build #vague #questions');
-    await expect(waiting(page)).toContainText('Waiting for you · question: Which report?', {
-      timeout: 30_000,
-    });
-    await shots(page, 'waiting-question');
-    await waiting(page).click();
-    const questions = card(page, /Spark has a (few questions|question)/);
-    await expect(questions).toBeInViewport();
-    await expect(questions.locator(':focus')).toHaveCount(1);
-  } finally {
-    repo.remove();
-  }
 });
 
 test("the line stays away while a short turn's header is in view, and shows under a long one", async ({

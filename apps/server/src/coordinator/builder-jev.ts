@@ -26,7 +26,6 @@ import {
   type PieceAnswer,
   type PieceAsk,
 } from './piece-questions.ts';
-import { inOrderReason } from './place-list.ts';
 import type { PlanStep } from './plan-coverage.ts';
 import { inMigrationsFolder } from './placement.ts';
 
@@ -41,7 +40,6 @@ export interface BuilderPlan {
   groups: string[][] | null;
   steps: PlanStep[][] | null;
   answers: ReadonlyMap<string, PieceAnswer> | null;
-  placementAsked: boolean;
   reason: string;
 }
 
@@ -75,7 +73,6 @@ function rulesPlan(
     groups: null,
     steps: null,
     answers: null,
-    placementAsked: false,
     reason,
   };
 }
@@ -142,7 +139,6 @@ export async function askBuilders(s: Session, assessment: Assessment): Promise<B
   const skipped = skipReason(s, tasks.length);
   if (skipped) return rulesPlan(s, tasks, skipped);
   const settings = await projectSettings(s.deps.db, s.lease.runId);
-  const placementAsked = inOrderReason(s, settings) === null && !s.deps.forcedPlacement;
   const root = s.input.projectRoots[0]!;
   const paths = tasks.flatMap((task) => task.owns);
   const facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
@@ -150,7 +146,6 @@ export async function askBuilders(s: Session, assessment: Assessment): Promise<B
     request: s.input.userRequest,
     pieces: tasks,
     facts,
-    placement: placementAsked,
   };
   const call = await callJev(s.jev, () => builderQuestions(ask), s.control.signal);
   if (call.status !== 'answered' || !call.response) {
@@ -182,7 +177,30 @@ export async function askBuilders(s: Session, assessment: Assessment): Promise<B
     groups,
     steps: groups.map((keys) => keys.map((key) => steps[index.get(key)!]!)),
     answers,
-    placementAsked,
     reason: headLine(verdict, groups.length),
+  };
+}
+
+export async function askPieces(s: Session, pieces: readonly JevPiece[]): Promise<BuilderPlan> {
+  const skipped = skipReason(s, pieces.length);
+  if (skipped) return rulesPlan(s, pieces, skipped);
+  const paths = pieces.flatMap((piece) => [...piece.owns, ...piece.reads]);
+  const root = s.input.projectRoots[0]!;
+  const facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
+  const ask: PieceAsk = { request: s.input.userRequest, pieces, facts };
+  const call = await callJev(s.jev, () => pieceQuestions(ask), s.control.signal);
+  if (call.status !== 'answered' || !call.response) {
+    return rulesPlan(s, pieces, jevFailure(call), call);
+  }
+  return {
+    call,
+    status: call.status,
+    tasks: pieces,
+    verdict: null,
+    builders: null,
+    groups: null,
+    steps: null,
+    answers: readPieceAnswers(call.response, ask),
+    reason: `Jev: ${pieces.length} pieces`,
   };
 }

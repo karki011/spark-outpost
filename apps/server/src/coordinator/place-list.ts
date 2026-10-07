@@ -1,5 +1,5 @@
 import type { ListPlacement } from '@spark-outpost/contracts';
-import type { ForcedPlacement, Session } from '../orchestration/session.ts';
+import type { Session } from '../orchestration/session.ts';
 import { placementFacts } from './assess.ts';
 import { projectSettings, type ProjectSettings } from './builder-env.ts';
 import type { CheckedPiece } from './pieces-validate.ts';
@@ -12,18 +12,6 @@ export interface ListPlace {
 }
 
 const IN_ORDER_REASON = 'pieces run in order, one Builder at a time';
-
-const FORCED_LABEL: Record<ForcedPlacement, string> = {
-  shared: 'the shared tree',
-  worktree: 'worktrees',
-};
-
-export function forcedPlace(placement: ForcedPlacement): ListPlace {
-  return {
-    placement,
-    reason: `placement forced to ${FORCED_LABEL[placement]} by COORDINATOR_PLACEMENT`,
-  };
-}
 
 export function inOrderReason(s: Session, settings: ProjectSettings): string | null {
   if (coordinatorMode(s) !== 'parallel') return IN_ORDER_REASON;
@@ -40,17 +28,6 @@ export async function chooseListPlace(
   const settings = await projectSettings(s.deps.db, s.lease.runId);
   const inOrder = inOrderReason(s, settings);
   if (inOrder) return { placement: 'in_order', reason: inOrder };
-  if (s.deps.forcedPlacement) return forcedPlace(s.deps.forcedPlacement);
-  const placed = placePieces(
-    pieces.map((piece) => ({
-      key: piece.key,
-      owned: piece.owned,
-      dependsOn: piece.dependsOn,
-      sizeEstimate: piece.sizeEstimate,
-      size: piece.size,
-      research: piece.research,
-    })),
-    await placementFacts(s),
-  );
+  const placed = placePieces(pieces, placementFacts(s));
   return { placement: placed.placement, reason: placed.reason };
 }

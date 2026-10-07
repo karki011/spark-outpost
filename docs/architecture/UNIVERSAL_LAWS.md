@@ -6,7 +6,7 @@ Four guardrails Spark applies around every Builder, approved October 1, 2026 (po
 | ------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
 | Chesterton's fence | Flags code the Builder removed without being asked and without saying why                              | Keep card ("Worth a look before you keep this"), the final reply |
 | Goodhart's law     | Trusts its own check run over the Builder's claim; flags weakened tests, config and out-of-scope edits | Keep card, the final reply                                       |
-| Hofstadter's law   | Estimates time and cost from the user's own runs, padded by how long tasks really took                 | Plan cards (Build this plan?)                                    |
+| Hofstadter's law   | Estimates time and cost from the user's own runs, padded by how long tasks really took                 | Recorded before a build; not shown on a card                     |
 | Peter principle    | Stops routing a task kind to a model whose recent pass rate fell below its tier peers                  | Builder route note and why line                                  |
 
 ## 1. Chesterton's fence: no unexplained deletions
@@ -38,7 +38,7 @@ Every Do run records its estimate (`laws/estimate-history.ts`) under a key: the 
 - Otherwise a rule estimate labelled rough: 3, 6, 12, 20 or 35 minutes by complexity (`LAW_ROUGH_MINUTES`) and the route score's trajectory cost for the chat model × 1.5, with a ×0.5–×2 range.
 - **Padding:** each record keeps its unpadded estimate, so the median ratio of actual to estimated over the last 20 runs (at least 5) becomes a factor between 1 and 3 (`LAW_PAD_MAX`) applied to the next estimate, separately for time and cost; the text says "padded ×1.4".
 
-The estimate shows on the Build this plan? card (plan first and risky work) before anything is built. A Do run with no plan card records it before its first Builder starts, including a split run whose Builders work in pieces.
+A Do run records the estimate as a `law` decision before its first Builder starts, including a split run whose Builders work in pieces. It is no longer shown before the build: the Build this plan? card it lived on is gone ([HARNESS_SIMPLE.md](HARNESS_SIMPLE.md#8-cards)).
 
 Parkinson's law (a per-Builder tool-call and time budget scaled to complexity) was removed on October 5, 2026 with every other run budget: Spark measures time, tool calls and cost and never caps them.
 
@@ -55,5 +55,5 @@ On Auto, the route score caps a demoted model's expected quality at its measured
 ## Not built yet
 
 - Demotions in piece routing (`kindPassRates` reads benchmark rates, not this workspace's outcomes) are open.
-- Estimates are not yet shown before a build that skips the plan card, and pieces have no per-piece estimate.
+- Estimates are not shown before a build (there is no plan card), and pieces have no per-piece estimate.
 - The thresholds are first guesses. Before tightening them, compare stop-and-ask rates and pass rates per complexity level on the dev history.

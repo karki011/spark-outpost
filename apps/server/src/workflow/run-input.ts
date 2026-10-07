@@ -47,6 +47,7 @@ export interface RunInput {
   builderEnv?: Record<string, string> | null;
   startAs?: StartAs | null;
   planning?: boolean;
+  plansFirst?: boolean;
   projectMove?: ProjectMove | null;
   chatWorktree?: boolean;
   assistant?: boolean;
@@ -278,7 +279,11 @@ function settingsOf(row: RunRow): AgentSettings {
 
 function childInput(runId: string, row: RunRow): RunInput {
   return {
-    identity: { runId, threadId: row.conversation_id },
+    identity: {
+      runId,
+      threadId: row.conversation_id,
+      ...(row.parent_run_id ? { parentRunId: row.parent_run_id } : {}),
+    },
     workspaceId: row.workspace_id,
     prompt: row.run_prompt ?? row.content,
     attachments: [],

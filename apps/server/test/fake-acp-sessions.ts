@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 
@@ -95,4 +102,34 @@ export function recordContext(sessionId: string, used: number): void {
     return;
   }
   write(sessionId, { ...readFakeSession(sessionId), used });
+}
+
+export function legacySession(config: Record<string, string>) {
+  return {
+    sessionId: 'fake-session',
+    modes: {
+      currentModeId: config.mode ?? '',
+      availableModes: [
+        { id: 'read-only', name: 'Ask first' },
+        { id: 'agent', name: 'Agent' },
+      ],
+    },
+    models: {
+      currentModelId: config.model,
+      availableModels: [
+        { modelId: 'fast-1', name: 'Fast One' },
+        { modelId: 'smart-2', name: 'Smart Two' },
+      ],
+    },
+  };
+}
+
+export function listFakeSessions(cwd: string | null): acp.ListSessionsResponse {
+  if (!store || !existsSync(store)) return { sessions: [] };
+  const sessions = readdirSync(store)
+    .filter((file) => file.endsWith('.json') && !file.endsWith('.config.json'))
+    .map((file) => file.slice(0, -'.json'.length))
+    .map((sessionId) => ({ sessionId, cwd: readFakeSession(sessionId).cwd }))
+    .filter((session) => cwd === null || session.cwd === cwd);
+  return { sessions };
 }

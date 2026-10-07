@@ -2,8 +2,7 @@ import { expect, test } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import {
   agentHead,
-  autoContinueAfter,
-  buildThePlan,
+  card,
   crewChat,
   crewRepo,
   resetCrew,
@@ -22,26 +21,22 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-test('a story split into pieces is planned first, then shows the coordinator and a read-only piece board', async ({
+test('a story split into pieces builds with no plan card and shows the coordinator and a read-only piece board', async ({
   page,
 }) => {
   test.setTimeout(150_000);
-  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Full auto');
   await send(page, 'Split this up: build a store, add an API and add a view. #build #pieces');
 
-  await expect(page.getByRole('group', { name: /Build this plan\?/ })).toBeVisible({
-    timeout: 30_000,
-  });
-  await buildThePlan(page);
   const board = page.getByRole('region', { name: 'Pieces' });
   await expect(board).toBeVisible({ timeout: 60_000 });
   const rows = board.getByRole('listitem');
   await expect(rows).toHaveCount(3);
-  await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 60_000 });
+  await expect(board).toContainText('3 pieces, in the shared tree · 3 landed', { timeout: 60_000 });
   await expect(board.locator('.piece-board-why')).toContainText(
-    /^Jev: 3 Builders \(0\.90\) · P1 [^·]+ · P2 [^·]+ · P3 [^·;]+; /,
+    /^Jev: 3 pieces · P1 [^·]+, shared tree · P2 [^·]+, shared tree · P3 [^·]+, shared tree; /,
   );
+  await expect(card(page, /Build this plan\?/)).toHaveCount(0);
   const pieces: [string, string][] = [
     ['P1', 'Store'],
     ['P2', 'API'],

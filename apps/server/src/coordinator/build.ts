@@ -10,9 +10,14 @@ import { askBuilders } from './builder-jev.ts';
 import { integratorRoute, integratorSeat } from './integrator.ts';
 import { landedPieces, type PieceSite } from './piece-run.ts';
 import { integratorSection } from './prompts.ts';
-import { runPieces } from './run-pieces.ts';
+import { runPieces, type PiecesRun } from './run-pieces.ts';
 import { noteSection } from './notes.ts';
-import { markNotesDelivered, pendingListNotes } from '../persistence/piece-notes.ts';
+import {
+  markNotesDelivered,
+  pendingListNotes,
+  strandedPieceNotes,
+} from '../persistence/piece-notes.ts';
+import { watchMidBuild } from './mid-build.ts';
 import { coordinatorMode, mayCoordinate } from './shadow.ts';
 import type { Coordination } from './state.ts';
 import { writePieceList } from './turn.ts';
@@ -27,14 +32,13 @@ function stopped(s: Session): boolean {
 
 function pieceSite(s: Session): PieceSite {
   const root = s.input.projectRoots[0]!;
-  if (!s.needsCopy) return { cwd: async () => root, place: async () => null, copy: null };
+  if (!s.needsCopy) return { cwd: async () => root, place: async () => null };
   return {
     cwd: async () => {
       const record = s.copyRunId ? await getWorktree(s.deps.db, s.copyRunId) : null;
       return record?.path ?? root;
     },
     place: () => placeFor(s),
-    copy: null,
   };
 }
 
@@ -58,7 +62,7 @@ async function engage(s: Session): Promise<void> {
     names: written.ok ? written.value.names : new Map(),
     topTier: written.ok ? written.value.topTier : new Set(),
     scoutNotes: [],
-    violations: 0,
+    crossed: new Set(),
     integrated: false,
     integrator: null,
     base: await treeOf(s, root),
@@ -78,6 +82,28 @@ async function landingSite(s: Session, coordination: Coordination): Promise<Land
   };
 }
 
+async function followUpNotes(s: Session, listId: string) {
+  return [
+    ...(await pendingListNotes(s.deps.db, listId)),
+    ...(await strandedPieceNotes(s.deps.db, listId)),
+  ];
+}
+
+async function runWatched(
+  s: Session,
+  action: Spawn,
+  coordination: Coordination,
+  site: PieceSite,
+): Promise<PiecesRun> {
+  const listId = coordination.list?.id;
+  const watch = listId ? watchMidBuild(s, listId) : null;
+  try {
+    return await runPieces(s, action, coordination, site);
+  } finally {
+    await watch?.stop();
+  }
+}
+
 async function integrate(
   s: Session,
   action: Spawn,
@@ -87,7 +113,7 @@ async function integrate(
   s.integrator = await integratorSeat(s, coordination);
   coordination.integrator = s.integrator.name;
   const integration = coordination.list?.integration ?? null;
-  const notes = coordination.list ? await pendingListNotes(s.deps.db, coordination.list.id) : [];
+  const notes = coordination.list ? await followUpNotes(s, coordination.list.id) : [];
   if ((!integration && notes.length === 0) || coordination.integrated) return null;
   const section = integratorSection(integration ?? NO_GLUE, landedPieces(coordination));
   const noted = noteSection(notes);
@@ -114,7 +140,7 @@ async function buildInPieces(
   coordination: Coordination,
 ): Promise<MemberOutcome> {
   const site = pieceSite(s);
-  const run = await runPieces(s, action, coordination, site);
+  const run = await runWatched(s, action, coordination, site);
   if (run.failure) return { result: run.failure };
   const last = run.last;
   const spawn = last ? { ...action, escalate: false } : action;

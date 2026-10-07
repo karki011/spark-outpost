@@ -1,12 +1,16 @@
 import {
   PLAN_DOCUMENT_MAX_LENGTH,
+  PLAN_SAVED_OPTION,
   type ConversationPlans,
   type PlanDocument,
   type PlanDocumentSource,
   type PlanDocumentStatus,
+  type PlanLine,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { outlinePlan } from '../plans/agreed-block.ts';
+import { isExitPlanAllow } from '../plans/plan-mode.ts';
 
 interface PlanDocumentRow {
   id: string;
@@ -275,11 +279,34 @@ export async function assistantMessage(
   return rows[0] ? toAssistantMessage(rows[0]) : null;
 }
 
+interface PlanLineRow {
+  run_id: string;
+  version: number;
+  body: string;
+  approved_option: string | null;
+}
+
+function planLines(rows: readonly PlanLineRow[]): PlanLine[] {
+  const saved = Object.values(PLAN_SAVED_OPTION);
+  const latest = new Map<string, PlanLine>();
+  for (const row of rows) {
+    const option = row.approved_option;
+    if (option === null || !(saved.includes(option) || isExitPlanAllow(option))) continue;
+    latest.set(row.run_id, {
+      runId: row.run_id,
+      version: row.version,
+      items: outlinePlan(row.body).open.length,
+      unit: option === PLAN_SAVED_OPTION.pieces ? 'pieces' : 'steps',
+    });
+  }
+  return [...latest.values()];
+}
+
 export async function conversationPlans(
   db: Queryable,
   conversationId: string,
 ): Promise<ConversationPlans> {
-  const [saved, offers] = await Promise.all([
+  const [saved, offers, lines] = await Promise.all([
     db.query<{ message_id: string; version: number }>(
       `SELECT DISTINCT ON (source_message_id) source_message_id AS message_id, version
        FROM plan_documents
@@ -295,6 +322,14 @@ export async function conversationPlans(
        ORDER BY a.created_at`,
       [conversationId],
     ),
+    db.query<PlanLineRow>(
+      `SELECT COALESCE(r.parent_run_id, r.id) AS run_id, p.version, p.body, p.approved_option
+       FROM plan_documents p JOIN runs r ON r.id = p.approved_run_id
+       WHERE p.conversation_id = $1 AND p.source_message_id IS NULL
+         AND p.status IN ('approved', 'superseded')
+       ORDER BY p.version`,
+      [conversationId],
+    ),
   ]);
   const savedIds = new Set(saved.rows.map((row) => row.message_id));
   return {
@@ -302,5 +337,6 @@ export async function conversationPlans(
     offers: offers.rows
       .filter((row) => !savedIds.has(row.message_id))
       .map((row) => ({ runId: row.run_id, messageId: row.message_id })),
+    lines: planLines(lines.rows),
   };
 }

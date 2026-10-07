@@ -42,8 +42,8 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 - **Fix:** open **Settings → Connectors → GitHub** and select **Test**.
 - **Still stuck:** run the shown command in a terminal, or create the PR from the link.
 
-## A plan didn't build by itself
+## A reply ends with Needs you
 
-- **You see:** **Build this plan?** waiting.
-- **Why:** a plan waits for you at both autonomy levels and in every agent mode.
-- **Fix:** select **Build**.
+- **You see:** **Needs you: …** at the end of a reply.
+- **Why:** the request was unclear, a step failed twice, or Jev could not confirm the change.
+- **Fix:** answer in your next message.

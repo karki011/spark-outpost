@@ -10,7 +10,7 @@ import {
   waitLabel,
 } from './auto-continue-model.ts';
 
-describe('wait before going with best guesses', () => {
+describe('wait before going on without your answer', () => {
   it('offers 30s, 60s, 2 min, 5 min, Never and Custom', () => {
     expect(WAIT_OPTIONS.map((option) => option.label)).toEqual([
       '30s',
@@ -45,7 +45,7 @@ describe('wait before going with best guesses', () => {
 
   it('says what happens after the wait, and that Never waits for you', () => {
     expect(waitLabel(90)).toBe('90s');
-    expect(waitHint(300)).toBe('After 5 min, Spark goes with its best guess or the safe option.');
+    expect(waitHint(300)).toBe('After 5 min, Spark goes with the safe option.');
     expect(waitHint(null)).toBe('Spark waits for your answer.');
   });
 });

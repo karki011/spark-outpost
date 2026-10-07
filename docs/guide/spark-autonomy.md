@@ -21,7 +21,7 @@ You'll choose what Spark does with finished work. About 1 minute.
 | **Automatic**                | Keeps changes. You ship.                             |
 | **Full auto → PR** (default) | Works in a worktree copy, then opens a pull request. |
 
-A plan waits for **Build** at both levels.
+Neither level waits on a plan. The agent's [Plan mode](plan-card.md) does.
 
 ## For every new chat
 

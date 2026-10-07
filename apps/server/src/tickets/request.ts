@@ -10,6 +10,8 @@ const CRITERIA_HEADING =
 const NEXT_HEADING = /^\s*(?:#{1,6}\s+\S|h\d\.\s+\S)/m;
 export const BRIEF_TEXT_LIMIT = 1_500;
 
+export const PLAN_COMMAND = '/plan ';
+
 export const PLAN_FIRST_LINE =
   'Start by proposing a plan and wait for my go-ahead before changing any files.';
 
@@ -102,6 +104,6 @@ export function ticketBrief(
   const references = referenceLines(context);
   if (references.length > 0) parts.push(`## References\n\n${references.join('\n')}`);
   if (mode !== 'plan') return clip(parts.join('\n\n'), MESSAGE_MAX_LENGTH);
-  const room = MESSAGE_MAX_LENGTH - PLAN_FIRST_LINE.length - 2;
-  return `${clip(parts.join('\n\n'), room)}\n\n${PLAN_FIRST_LINE}`;
+  const room = MESSAGE_MAX_LENGTH - PLAN_COMMAND.length - PLAN_FIRST_LINE.length - 2;
+  return `${PLAN_COMMAND}${clip(parts.join('\n\n'), room)}\n\n${PLAN_FIRST_LINE}`;
 }

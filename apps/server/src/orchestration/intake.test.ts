@@ -100,23 +100,22 @@ describe('intake decisions', () => {
     ).toMatchObject({ start: 'plan_first', destructive: true });
   });
 
-  it('plans first before any destructive build, at every level, also after clarifying (E)', () => {
+  it('plans first before any destructive build, at every level (E)', () => {
     const cleanup = 'Clean up the uploads table — drop the unused columns and old rows.';
     for (const level of ['hands-off', 'full-auto'] as const) {
       expect(decideIntake(null, facts({ request: 'Drop the users table', level }))).toMatchObject({
         start: 'plan_first',
-        then: 'plan_first',
         destructive: true,
       });
       expect(
         decideIntake(jev({ vague: 0.9, destructive: 0.95 }), facts({ request: cleanup, level })),
-      ).toMatchObject({ start: 'ask_agent', then: 'plan_first', destructive: true });
+      ).toMatchObject({ start: 'ask_agent', destructive: true });
     }
   });
 
-  it('asks the agent to clarify a vague follow-up with no referent, then plans first at Full auto', () => {
+  it('asks the agent to clarify a vague follow-up with no referent', () => {
     const wrapUp = facts({ request: 'wrap up', previousReply: 'There is no src/dates.ts here.' });
-    expect(decideIntake(null, wrapUp)).toMatchObject({ start: 'ask_agent', then: 'build' });
+    expect(decideIntake(null, wrapUp)).toMatchObject({ start: 'ask_agent' });
     expect(decideIntake(null, wrapUp).calls.vague).toMatchObject({ rule: true, value: true });
     expect(decideIntake(jev({ vague: 0.9 }), { ...wrapUp, request: 'sort it' }).start).toBe(
       'ask_agent',
@@ -124,7 +123,6 @@ describe('intake decisions', () => {
     expect(decideIntake(null, { ...wrapUp, level: 'hands-off' }).start).toBe('ask_agent');
     expect(decideIntake(null, { ...wrapUp, level: 'full-auto' })).toMatchObject({
       start: 'ask_agent',
-      then: 'plan_first',
     });
     expect(decideIntake(jev({ vague: 0.05 }), wrapUp).start).toBe('build');
     const offered = { ...wrapUp, request: 'do it', previousReply: 'Want me to add the retry?' };
@@ -224,13 +222,9 @@ describe('intake decisions', () => {
 
   it('asks the agent to clarify a vague first message at every level', () => {
     const vague = facts({ request: 'Make the reports better', firstMessage: true });
-    expect(decideIntake(jev({ vague: 0.95 }), vague)).toMatchObject({
-      start: 'ask_agent',
-      then: 'build',
-    });
+    expect(decideIntake(jev({ vague: 0.95 }), vague)).toMatchObject({ start: 'ask_agent' });
     expect(decideIntake(jev({ vague: 0.95 }), { ...vague, level: 'full-auto' })).toMatchObject({
       start: 'ask_agent',
-      then: 'plan_first',
     });
     const faster = { ...vague, request: 'Make it faster.', level: 'hands-off' as const };
     const decided = decideIntake(jev({ vague: 0.94, intent: 'refactor' }), faster);
