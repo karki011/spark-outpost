@@ -9,9 +9,15 @@ function busyStep(activity: StepActivity | null): StepActivity | null {
   return activity && activity.kind !== 'think' ? activity : null;
 }
 
+const LEAD_DOING = 'choosing the next step';
+
+function idleDoing(worker: Worker): string {
+  return worker.doing ?? (worker.kind === 'lead' ? LEAD_DOING : 'thinking');
+}
+
 function whoText(worker: Worker, step: StepActivity | null): string {
   if (step) return `${worker.name} is working`;
-  return `${worker.name} is ${worker.kind === 'lead' ? 'planning' : 'thinking'}…`;
+  return `${worker.name} is ${idleDoing(worker)}…`;
 }
 
 export function runningText(worker: Worker, activity: StepActivity | null): string {

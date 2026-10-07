@@ -258,19 +258,30 @@ describe('while the agent works', () => {
     act(() => view.store.report({ ...BOLT, working: false, step: null }));
     expect(status().dataset.state).toBe('idle');
     act(() => view.store.showHead(JEV.id, false));
-    expect(shown()).toBe('Jev is planning…');
+    expect(shown()).toBe('Jev is choosing the next step…');
   });
 
   it('names the crew member at work, and the lead only while nobody else works', () => {
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
     act(() => view.store.report({ ...JEV, working: true, step: null }));
-    expect(shown()).toBe('Jev is planning…');
+    expect(shown()).toBe('Jev is choosing the next step…');
+    act(() => view.store.report({ ...JEV, working: true, step: null, doing: 'checking P1' }));
+    expect(shown()).toBe('Jev is checking P1…');
     act(() => view.store.report({ ...BOLT, working: true, step: null }));
     expect(shown()).toBe('Bolt is thinking…');
     act(() => view.store.report({ ...BOLT, working: true, step: 'Read `CLAUDE.md`' }));
     expect(shown()).toBe('Bolt is working · Reading CLAUDE.md');
     act(() => view.store.report({ ...BOLT, working: false, step: null }));
-    expect(shown()).toBe('Jev is planning…');
+    expect(shown()).toBe('Jev is checking P1…');
+  });
+
+  it('says the Coordinator is planning the pieces until it runs a step', () => {
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    const atlas = { ...BOLT, name: 'Atlas', doing: 'planning the pieces' };
+    act(() => view.store.report({ ...atlas, working: true, step: null }));
+    expect(shown()).toBe('Atlas is planning the pieces…');
+    act(() => view.store.report({ ...atlas, working: true, step: 'Read `CLAUDE.md`' }));
+    expect(shown()).toBe('Atlas is working · Reading CLAUDE.md');
   });
 
   it('adds the elapsed time once a step runs long', async () => {
