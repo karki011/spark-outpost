@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { PieceList } from '@spark-outpost/contracts';
+import { EventType, type PieceList } from '@spark-outpost/contracts';
 import { listQueue } from '../src/persistence/chat-queue.ts';
 import { getMemberMessage, insertMemberMessage } from '../src/persistence/member-messages.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
@@ -8,6 +8,7 @@ import { pendingPieceNotes } from '../src/persistence/piece-notes.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { chatTarget, drainQueue, sendNow, waitingQueues } from '../src/workflow/queue-drain.ts';
+import { expectConformantRun, storedEvents } from './agui-conformance.ts';
 import { pieceRepo, projectFlags } from './coordinator-parallel-support.ts';
 import {
   connectProviders,
@@ -113,6 +114,25 @@ describe(
       expect(sessions.map((row) => row.key)).toContain('chat:claude');
       expect((await getMemberMessage(t.db, id))?.deliveredRunId).toBe(answered.id);
       expect(await statuses()).toMatchObject({ P1: 'running', P2: 'running' });
+      const own = await storedEvents(t.db, answered.id);
+      expect(own[0]).toMatchObject({ type: EventType.RUN_STARTED, parentRunId: runId });
+      const inChat = (await storedEvents(t.db, runId)).filter(
+        (event) => (event as { subagentRunId?: string }).subagentRunId === answered.id,
+      );
+      expect(inChat.map((event) => event.type)).toEqual([
+        EventType.SUBAGENT_STARTED,
+        EventType.TEXT_MESSAGE_START,
+        ...inChat.slice(2, -2).map(() => EventType.TEXT_MESSAGE_CONTENT),
+        EventType.TEXT_MESSAGE_END,
+        EventType.SUBAGENT_FINISHED,
+      ]);
+      expect(inChat[0]).toMatchObject({ name: 'conversation', parentMessageId: id });
+      expect(inChat.length).toBeGreaterThan(4);
+      const crew = (await loadOrchestration(t.db, runId))?.crew ?? [];
+      expect(crew.find((member) => member.runId === answered.id)?.answers).toBe(id);
+      await requestCancel(t.db, runId);
+      await eventually(async () => (await getRun(t.db, runId))?.finishedAt, 45_000);
+      await expectConformantRun(t.db, runId);
     });
 
     it('gives an added requirement to the worker on that file, or to the brief of one not started', async () => {

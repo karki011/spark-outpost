@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { expectConformantRun } from './agui-conformance.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
 import {
@@ -54,6 +55,7 @@ describe('provider fallback for pieces', { timeout: 120_000 }, () => {
       ['claude', 'succeeded'],
     ]);
     expect(p1[0]!.error).toMatch(/rate limited/);
+    await expectConformantRun(t.db, runId);
     expect(p1[1]!.prompt).not.toContain('## Handoff');
     const list = await pieceList(t, runId);
     expect(list.pieces.map((piece) => [piece.key, piece.status, piece.provider])).toEqual([

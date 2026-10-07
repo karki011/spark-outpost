@@ -44,6 +44,7 @@ export interface StoredRoute {
   sameProvider?: boolean;
   fileReads?: number;
   routeNote?: string;
+  answers?: string;
   spark?: CrewSpark;
 }
 
@@ -85,6 +86,7 @@ const routeFieldsSchema = z.object({
   copy: crew.copy.catch(undefined),
   sameProvider: crew.sameProvider.catch(undefined),
   routeNote: crew.routeNote.catch(undefined),
+  answers: crew.answers.catch(undefined),
   pieceKey: crew.pieceKey.catch(undefined),
   placement: crew.placement.catch(undefined),
   spark: crew.spark.catch(undefined),
@@ -146,6 +148,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
     ...(route.routeNote ? { routeNote: route.routeNote } : {}),
+    ...(route.answers ? { answers: route.answers } : {}),
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
     ...(route.spark ? { spark: route.spark } : {}),

@@ -115,6 +115,7 @@ export const crewMemberSchema = z.object({
   placement: piecePlacementSchema.optional(),
   sameProvider: z.boolean().optional(),
   routeNote: z.string().optional(),
+  answers: z.uuid().optional(),
   spark: crewSparkSchema.optional(),
   modelSwitch: modelSwitchSchema.optional(),
   errorDetails: z.string().optional(),

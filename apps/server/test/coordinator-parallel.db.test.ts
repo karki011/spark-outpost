@@ -4,6 +4,7 @@ import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
 import { taskChanges } from '../src/projects/task-changes.ts';
+import { expectConformantRun, storedEvents } from './agui-conformance.ts';
 import {
   beginPieces,
   crewRuns,
@@ -96,6 +97,10 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Pieces (3, in the shared tree, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | shared tree · owns 3 files |');
+    await expectConformantRun(t.db, runId);
+    for (const run of runs) {
+      expect((await storedEvents(t.db, run.id))[0]).toMatchObject({ parentRunId: runId });
+    }
   });
 
   it('lets an install follow the agent mode while pieces share the tree', async () => {
@@ -172,5 +177,6 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
       'cancelled',
       'cancelled',
     ]);
+    await expectConformantRun(t.db, runId);
   });
 });

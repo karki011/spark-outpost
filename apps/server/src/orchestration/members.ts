@@ -13,6 +13,7 @@ import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import type { SubagentAnnounce } from '../workflow/subagent-events.ts';
 import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
@@ -55,6 +56,7 @@ export interface MemberOptions {
   seat?: Seat;
   resumeKey?: string;
   publishes?: boolean;
+  announce?: SubagentAnnounce;
 }
 
 export interface MemberOutcome {
@@ -340,6 +342,7 @@ async function runChild(
         stopNow: stopNow.signal,
         recordsPlan: spawn.role === 'builder' && (!seat || seat.role === 'integrator'),
         ...(spawn.role === 'builder' ? { observeEdits: editObserver(s, lease.runId) } : {}),
+        ...(options.announce ? { announce: options.announce } : {}),
       },
       s.append,
     );

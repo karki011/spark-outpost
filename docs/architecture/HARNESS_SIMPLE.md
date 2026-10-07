@@ -375,7 +375,24 @@ Commits `384fe346` and the one after it on `feat/harness-simple`. Read this with
 
 **For the owner to decide.** (a) Whether "the Coordinator is told" should become a real Coordinator turn mid-build; today code routes it. (b) Whether the whole-project check refusal and the git-state refusal for pieces stay; they are not ownership rules, so they were kept. (c) Whether to delete the unreachable "One PR or separate PRs?" card now or with slice 7. (d) Whether `spark_map`'s 200-dependent cap is acceptable in the Coordinator prompt for hub files.
 
-Order from here: the events item when `main` has `feat/agui-events` (then flag concurrent-owner edits from tool-call paths and delete `sharesTree`), then slices 5 and 6, the removal list, slice 7.
+Order from there: the events item when `main` has `feat/agui-events` (then flag concurrent-owner edits from tool-call paths and delete `sharesTree`), then slices 5 and 6, the removal list, slice 7. The fourth session below did the first two.
+
+### Slice 4, fourth session (October 7, 2026)
+
+`main` was merged first (`b7db060a`): two conflicts, `apps/server/test/fake-acp-agent.ts` (both imports kept) and `docs/guide/cards.md` (main's wording for the kept result line, this branch's removal of the "One PR or separate PRs?" row and its wider flag row). Typecheck was clean after the merge.
+
+**Sub-agent events** (both settings; the events are AG-UI 1.0.2's own, no upgrade).
+
+- _`parentRunId`._ Every run another run started carries it on `RUN_STARTED`: `childInput` puts it in the run's identity, and the two places that write `RUN_STARTED` without loading the input (a queued run stopped before a worker claims it, a run recovery marks before it started) read it from the row.
+- _Where a worker writes into the chat's own run._ Read from the code, there is one such place with a run of its own: none before this session. A crew member's reply, steps and tool calls go to its own run's stream, which the thread opens per member; the chat run holds the board snapshot, Spark's own steps and a copy of each approval event. The Reader that answers in place is the chat run's own agent, not a second run, so it is not a sub-agent and is left unmarked. Approval copies keep their shape (old readers match them by name).
+- _The answer to a question during a build_ now is that place. The answering run (`chat:<provider>`, read-only) is announced in the chat run with `SUBAGENT_STARTED` (`subagentRunId` its run id, `name` `conversation`, `parentMessageId` the message it answers), its `TEXT_MESSAGE_*` events are copied there with the same `subagentRunId`, and it closes with `SUBAGENT_FINISHED`, or `SUBAGENT_ERROR` when it failed or was stopped (`workflow/subagent-events.ts`, `execute-run.ts`). `attributed` marks the five families the owner named (text, step, tool call, reasoning, activity); only the reply text is copied, because the steps and tool calls are already in the worker's own run and copying them would store them twice.
+- _Shown as a chat message._ Yes, with one stored field beside the events. The run's route keeps `answers: <message id>`, which reaches the web as `CrewMember.answers`. The thread leaves that member out of the crew blocks and shows its reply as an ordinary assistant message directly under the message it answers (`chat/steer/SteerAnswer.tsx`). The events alone were not enough for a finished turn: the thread does not replay a finished chat run's stream, so it needs the link in stored data. The web's run projection keeps text that carries a `subagentRunId` out of the chat run's own reply.
+- _Ends._ If the chat run ends while a worker is still announced, the appender closes the copied reply and writes `SUBAGENT_ERROR` (code `interrupted`) before the terminal event (`open-spans.ts`).
+- _Old runs._ No migration. A stored `RUN_STARTED` without `parentRunId` and a stored run with no sub-agent events parse and render as before (the fields are optional; covered by a unit test and by every existing db test).
+- _No new `CUSTOM` name_ was needed.
+- **Tests run.** Unit: `workflow/subagent-events.test.ts` (bracket and copies pass `verifyEvents`; failed and stopped workers; the chat run ending first; run-scoped events never marked), `workflow/run-appender.test.ts`, web `chat/run-projection.test.ts`. DB with `verifyEvents` over the chat run and every child: `coordinator-parallel` (parallel build; stop mid-group; every worker's `RUN_STARTED` names its parent), `coordinator-providers` (a worker that fails), `mid-build` (the answer's events in the chat run, `answers` on the crew member, then a stop mid-build). The verifier found nothing to fix in these streams.
+- **Not verified.** The answer's look in the thread: no browser spec runs a build under `simple`.
+- **Limit.** The answering member still counts in the turn's crew totals and status list.
 
 ## 11. Open decisions for the owner
 

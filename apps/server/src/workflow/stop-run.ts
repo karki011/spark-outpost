@@ -32,13 +32,18 @@ async function cancelUnclaimed(db: Db, runId: string): Promise<void> {
       [runId],
     );
     if (job.rowCount !== 1) return;
-    const { rows } = await client.query<{ conversation_id: string }>(
+    const { rows } = await client.query<{ conversation_id: string; parent_run_id: string | null }>(
       `UPDATE runs SET status = 'cancelled', finished_at = now()
-       WHERE id = $1 RETURNING conversation_id`,
+       WHERE id = $1 RETURNING conversation_id, parent_run_id`,
       [runId],
     );
     const threadId = rows[0]!.conversation_id;
-    await insertRunEvent(client, runId, runEvents.started({ runId, threadId }));
+    const parentRunId = rows[0]!.parent_run_id;
+    await insertRunEvent(
+      client,
+      runId,
+      runEvents.started({ runId, threadId, ...(parentRunId ? { parentRunId } : {}) }),
+    );
     await insertRunEvent(client, runId, runEvents.cancelled({ runId, threadId }));
     await client.query('UPDATE conversations SET updated_at = now() WHERE id = $1', [threadId]);
     await client.query(`SELECT pg_notify('run_events', $1)`, [runId]);

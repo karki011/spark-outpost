@@ -1,4 +1,5 @@
 import {
+  CONVERSATION_SUBAGENT,
   MEMBER_MESSAGE_ACTIVITY,
   nextCrewName,
   STEER_AUTO,
@@ -80,7 +81,9 @@ async function answer(s: Session, list: PieceList, message: MemberMessage): Prom
       resumeKey: conversationSeatKey(s.taskId!),
       prompt: answerPrompt(message.body, s.input.userRequest, list),
       memberRoute: chatRoute(s),
+      route: { answers: message.id },
     },
+    announce: { name: CONVERSATION_SUBAGENT, parentMessageId: message.id },
   });
   await setMessageReader(s.deps.db, message.id, result.runId);
   return 'answered read-only while the Builders carry on';

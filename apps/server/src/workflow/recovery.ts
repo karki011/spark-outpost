@@ -3,7 +3,7 @@ import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
 import { failRunningPieces, skipUnstartedPieces } from '../persistence/pieces.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
-import { runEvents } from './run-events.ts';
+import { runEvents, type RunIdentity } from './run-events.ts';
 
 export const OUTCOME_UNKNOWN_MESSAGE =
   'The worker stopped while this run was in progress, so its outcome is unknown. Nothing was retried automatically.';
@@ -31,8 +31,8 @@ async function markOutcomeUnknown(db: Db, lease: Lease): Promise<boolean> {
   try {
     const started = await hasStarted(db, lease.runId);
     if (!started) {
-      const threadId = await conversationOf(db, lease.runId);
-      await appendRunEvent(db, lease, runEvents.started({ runId: lease.runId, threadId }), {
+      const identity = await runIdentity(db, lease.runId);
+      await appendRunEvent(db, lease, runEvents.started(identity), {
         expectExpired: true,
       });
     }
@@ -56,10 +56,11 @@ async function hasStarted(db: Db, runId: string): Promise<boolean> {
   return rowCount === 1;
 }
 
-async function conversationOf(db: Db, runId: string): Promise<string> {
-  const { rows } = await db.query<{ conversation_id: string }>(
-    'SELECT conversation_id FROM runs WHERE id = $1',
+async function runIdentity(db: Db, runId: string): Promise<RunIdentity> {
+  const { rows } = await db.query<{ conversation_id: string; parent_run_id: string | null }>(
+    'SELECT conversation_id, parent_run_id FROM runs WHERE id = $1',
     [runId],
   );
-  return rows[0]!.conversation_id;
+  const { conversation_id: threadId, parent_run_id: parentRunId } = rows[0]!;
+  return { runId, threadId, ...(parentRunId ? { parentRunId } : {}) };
 }
