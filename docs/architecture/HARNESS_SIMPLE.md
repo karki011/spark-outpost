@@ -441,6 +441,8 @@ Owner request: keep the chat's agent process and ACP connection alive between tu
 
 **Open question this raises.** Under `simple` a chat alternates questions (Ask: read-only tool list, no write capability) and changes (Do). By the fingerprint rule each switch falls back to resume, so the warm path would help runs of same-kind turns only. Making Ask and Do share one live session means opening the conversation session once with the Do shape and holding a question to read-only through the mode and the gate alone. That changes what a question turn's session is allowed to do and is the owner's call.
 
+**Whole-branch checks, fourth session.** `pnpm check` passed (702 unit files, 5,912 tests). `pnpm test:db`: 236 of 237 files and 1,565 of 1,566 tests passed; the one failure, `preview-servers.db.test.ts` ("fails with the last lines when the command exits before the page answers"), passed 3 of 3 times alone and is on the known load-flaky list. `tests/browser/pieces-parallel.spec.ts` passed against a production build. Not run: the rest of the browser suite, the replay, real providers.
+
 ## 11. Open decisions for the owner
 
 The build proceeds on the recommended answer to each of these. Every one is **assumed, not yet confirmed by the owner**; a different answer changes the slice named beside it.
