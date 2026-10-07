@@ -60,7 +60,7 @@ test('failing checks stay in In review as a badge and are seen once the ticket i
   await expect(detail).not.toContainText('Why it needs attention');
   await expect(detail.getByRole('button', { name: 'Remind me later' })).toHaveCount(0);
   await expect(detail.getByRole('button', { name: /^Dismiss/ })).toHaveCount(0);
-  const pulls = detail.getByRole('region', { name: 'Pull requests' });
+  const pulls = detail.getByRole('region', { name: 'Development' });
   const pull = pulls.getByRole('link', { name: /#342/ });
   await expect(pull).toContainText('Open');
   await expect(pull).toContainText('Checks failing');

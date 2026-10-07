@@ -7,6 +7,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
+import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.ts';
 import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
 import {
   KEY_QUERY,
@@ -75,8 +76,10 @@ const fieldsSchema = z.object({
   [SPRINT_FIELD]: sprintSchema,
   ...jiraExtraFieldsShape,
 });
-const issueSchema = z.object({ key: z.string(), fields: fieldsSchema });
+const issueSchema = z.object({ id: z.string().optional(), key: z.string(), fields: fieldsSchema });
+const issueIdSchema = z.object({ id: z.string() });
 const detailSchema = z.object({
+  id: z.string().optional(),
   key: z.string(),
   fields: fieldsSchema.extend({
     description: z.unknown().optional(),
@@ -166,6 +169,7 @@ export function jiraSource(
 ): TicketSource {
   const authorization = `Basic ${Buffer.from(`${access.email}:${access.apiToken}`).toString('base64')}`;
   const issuePath = (key: string) => `/rest/api/3/issue/${encodeURIComponent(key)}`;
+  const issueIds = new Map<string, string>();
 
   async function call<T>(
     schema: z.ZodType<T> | null,
@@ -192,7 +196,30 @@ export function jiraSource(
       projectMap(statusMap, project),
     );
 
+  async function issueIdOf(key: string): Promise<string> {
+    const known = issueIds.get(key);
+    if (known) return known;
+    const issue = await call(
+      issueIdSchema,
+      { method: 'GET', path: `${issuePath(key)}?fields=summary` },
+      `reading ${key}`,
+    );
+    return issue.id;
+  }
+
+  async function devStatus(path: string, deadline: number): Promise<unknown> {
+    const answer = await callJson(fetchImpl, NAME, {
+      method: 'GET',
+      url: `${access.siteUrl}${path}`,
+      authorization,
+      timeoutMs: Math.max(1, deadline - Date.now()),
+    });
+    if (!isOk(answer)) throw failure(NAME, 'reading development information', answer);
+    return answer.data;
+  }
+
   function summary(issue: z.infer<typeof issueSchema>): TicketSummary {
+    if (issue.id) issueIds.set(issue.key, issue.id);
     const project = issue.fields.project?.key ?? issue.key.split('-')[0] ?? null;
     const sprints = issue.fields[SPRINT_FIELD] ?? [];
     const sprint = sprints.find((entry) => entry.state === 'active') ?? sprints.at(-1);
@@ -360,6 +387,11 @@ export function jiraSource(
         url: `${access.siteUrl}/browse/${created.key}`,
         skippedLabels: [],
       };
+    },
+    async development(key) {
+      const deadline = Date.now() + DEV_STATUS_TIMEOUT_MS;
+      const issueId = await issueIdOf(key);
+      return readJiraDevelopment((path) => devStatus(path, deadline), issueId);
     },
     async linkPullRequest(key, pull) {
       await call(

@@ -132,6 +132,7 @@ export function placeTicket(facts: TicketFacts, limits: Thresholds, now: Date): 
         }
       : null,
     pullRequest: facts.pullRequest,
+    ...(facts.development ? { development: facts.development } : {}),
     lastSync: facts.lastSync,
     ...(snooze ? { snooze } : {}),
     ...(notice ? { notice: { ...notice, seen: facts.noticeSeen === notice.id } } : {}),

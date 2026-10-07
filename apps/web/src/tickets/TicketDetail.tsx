@@ -15,7 +15,7 @@ import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 import { TicketBody } from './TicketBody.tsx';
 import { pullUrl, safeUrl } from './ticket-model.ts';
 import { createdText, exactDate } from './ticket-status.ts';
-import { LinkedWork, PullRequests } from './TicketPulls.tsx';
+import { Development, LinkedWork } from './TicketPulls.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { useDismiss } from './use-dismiss.ts';
 
@@ -102,7 +102,16 @@ export function TicketDetail({
   const flagged = inbox?.section === 'attention' && inbox.flags.length > 0;
   const trackerLinks = view.data?.ticket.links ?? [];
   const pullsFirst = Boolean(inbox?.notice) && !flagged;
-  const pulls = <PullRequests ticket={inbox} trackerLinks={trackerLinks} lead={pullsFirst} />;
+  const pulls = (
+    <Development
+      ticket={inbox}
+      trackerLinks={trackerLinks}
+      development={view.data?.development ?? inbox?.development}
+      sourceName={source}
+      loading={view.isPending}
+      lead={pullsFirst}
+    />
+  );
 
   const created = createdText(ticket.createdAt, now);
   const paneWidth = { '--tk-detail-w': `${width ?? DETAIL_DEFAULT_WIDTH}px` } as CSSProperties;

@@ -5,10 +5,8 @@ import { FAKE_PROVIDER_NAME, createFakeProvider } from '../providers/fake.ts';
 import type { Provider } from '../providers/provider.ts';
 import { childEnvironment } from '../setup/environment.ts';
 import type { SecretStore } from '../setup/secrets.ts';
-import type { SparkToolsAccess } from '../agents/acp/spark-tools.ts';
+import type { AgentRuntime, SparkToolsAccess } from '../agents/acp/spark-tools.ts';
 import type { CliLocator } from '../agents/acp/agent-cli.ts';
-
-export type AgentRuntime = 'acp' | 'fake';
 
 const FAKE_ACP_TRIGGER = '#build';
 

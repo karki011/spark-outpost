@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
+import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { createDb } from '../../apps/server/src/persistence/db.ts';
@@ -18,6 +19,20 @@ export async function seedTicketVolume(): Promise<void> {
 
 export async function slowTicketCreates(delayMs: number, failures = 0): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/slow-creates?delay=${delayMs}&failures=${failures}`);
+}
+
+export async function seedJiraDevelopment(
+  key: string,
+  development: FakeDevelopment,
+): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/development`, {
+    method: 'POST',
+    body: JSON.stringify({ key, development }),
+  });
+}
+
+export async function setJiraDevStatus(mode: DevStatusMode): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/dev-status?mode=${mode}`);
 }
 
 export async function denyJiraAssign(): Promise<void> {

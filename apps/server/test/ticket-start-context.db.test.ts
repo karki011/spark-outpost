@@ -97,7 +97,7 @@ describe('starting a ticket with extra context', () => {
     const message = detail.messages.find((m: { role: string }) => m.role === 'user');
     expect(message.content).toContain('## Ticket data from Jira');
     expect(message.content).toContain('untrusted third-party text');
-    expect(message.content).toContain('spark_tickets with action "read" and key WEB-418');
+    expect(message.content).not.toContain('spark_tickets');
     expect(message.content).toContain('### Acceptance criteria');
     expect(message.content).not.toContain('Include cost too.');
     expect(message.content).toContain('## Note from me\n\nMatch the billing CSV format.');
@@ -137,6 +137,35 @@ describe('starting a ticket with extra context', () => {
 
     const again = await send('post', '/api/tickets/jira/WEB-418/start', body).expect(201);
     expect(again.body.runId).toBe(started.runId);
+  });
+
+  it('tells an agent that gets Spark tools to read the ticket instead of pasting it', async () => {
+    await connectJira();
+    const withTools = createTestApp(t, {
+      secrets,
+      fetch,
+      fixedRunProvider: 'claude',
+      agentRuntime: 'acp',
+    });
+    const body = startBody({ mode: 'build', note: 'Match the billing CSV format.' });
+    const response = await request(withTools)
+      .post('/api/tickets/jira/WEB-418/start')
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .send(body)
+      .expect(201);
+    const started = startTicketResponseSchema.parse(response.body);
+    const detail = (await get(`/api/conversations/${started.conversationId}`).expect(200)).body;
+    const message = detail.messages.find((m: { role: string }) => m.role === 'user');
+    expect(message.content).toContain('- Key: WEB-418');
+    expect(message.content).toContain('- Status: To Do');
+    expect(message.content).toContain('untrusted third-party text');
+    expect(message.content).toContain(
+      'Before you start, read the ticket: call spark_tickets with action "read" and key WEB-418',
+    );
+    expect(message.content).not.toContain('### Acceptance criteria');
+    expect(message.content).not.toContain('A Download CSV button');
+    expect(message.content).toContain('## Note from me\n\nMatch the billing CSV format.');
   });
 
   it('refuses secret files, hidden folders and missing folders', async () => {

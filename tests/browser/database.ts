@@ -63,6 +63,7 @@ const RESET_TABLES = [
   'ticket_connections',
   'ticket_events',
   'tickets',
+  'ticket_development',
   'slack_connections',
   'slack_channels',
   'slack_direct_conversations',

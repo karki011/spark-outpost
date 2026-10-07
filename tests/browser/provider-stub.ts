@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts';
 import type { FakeGitHubApp } from '../../apps/server/test/fake-github-app.ts';
+import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
 import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
@@ -84,6 +85,13 @@ async function setApp(req: IncomingMessage, res: ServerResponse) {
   send(res, 200, { ok: true });
 }
 const tickets = ticketFakes();
+async function setDevelopment(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const { key, development } = JSON.parse(text) as { key: string; development: FakeDevelopment };
+  tickets.development(key, development);
+  send(res, 200, { ok: true });
+}
 let slack = fakeSlack();
 
 const server = createServer((req, res) => {
@@ -136,6 +144,14 @@ const server = createServer((req, res) => {
   if (path === '/tickets-test/slow-creates') {
     const wanted = new URL(req.url ?? '', 'http://stub').searchParams;
     tickets.slowCreates(Number(wanted.get('delay') ?? 0), Number(wanted.get('failures') ?? 0));
+    return send(res, 200, { ok: true });
+  }
+  if (path === '/tickets-test/development' && req.method === 'POST') {
+    return void setDevelopment(req, res);
+  }
+  if (path === '/tickets-test/dev-status') {
+    const mode = new URL(req.url ?? '', 'http://stub').searchParams.get('mode');
+    tickets.devStatusMode(mode as DevStatusMode);
     return send(res, 200, { ok: true });
   }
   if (path === '/tickets-test/deny-assign') {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ConversationSummary, PlanProgress } from './conversations.ts';
+import { pullRequestStatusSchema, ticketDevelopmentSchema } from './ticket-development.ts';
 import {
   TICKET_KEY_MAX_LENGTH,
   TICKET_SEARCH_MAX_LENGTH,
@@ -53,32 +54,6 @@ export const assignTicketResponseSchema = z.object({
   previous: ticketPersonSchema.nullable(),
 });
 export type AssignTicketResponse = z.infer<typeof assignTicketResponseSchema>;
-
-export const pullRequestStateSchema = z.enum([
-  'draft',
-  'review',
-  'changes_requested',
-  'approved',
-  'merged',
-  'closed',
-]);
-export type PullRequestState = z.infer<typeof pullRequestStateSchema>;
-
-export const pullRequestChecksSchema = z.enum(['passing', 'failing', 'pending']);
-export type PullRequestChecks = z.infer<typeof pullRequestChecksSchema>;
-
-export const pullRequestStatusSchema = z.object({
-  url: z.string(),
-  repo: z.string(),
-  number: z.number().int().positive(),
-  state: pullRequestStateSchema,
-  openedAt: z.string(),
-  mergedAt: z.string().nullable(),
-  checks: pullRequestChecksSchema.nullable(),
-  headSha: z.string().nullable().optional(),
-  failedChecks: z.array(z.string()).optional(),
-});
-export type PullRequestStatus = z.infer<typeof pullRequestStatusSchema>;
 
 export const attentionRuleSchema = z.enum([
   'chat-asking',
@@ -182,6 +157,7 @@ export const inboxTicketSchema = ticketListItemSchema.extend({
     .object({ conversationId: z.uuid(), title: z.string(), state: ticketChatStateSchema })
     .nullable(),
   pullRequest: pullRequestStatusSchema.nullable(),
+  development: ticketDevelopmentSchema.optional(),
   lastSync: ticketLastSyncSchema.nullable(),
   snooze: ticketSnoozeSchema.optional(),
   notice: ticketNoticeSchema.optional(),
