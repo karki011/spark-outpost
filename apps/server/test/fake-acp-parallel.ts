@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
@@ -105,10 +105,28 @@ async function afterStore(turn: RoleTurn): Promise<void> {
   }
 }
 
+async function locatedEdit(turn: RoleTurn, file: string, line: string): Promise<void> {
+  const target = join(turn.cwd, file);
+  const toolCallId = `located-${file}`;
+  await turn.update({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: `Edit ${file}`,
+    kind: 'edit',
+    status: 'pending',
+    locations: [{ path: target }],
+  });
+  await appendFile(target, `${line}\n`);
+  await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
+}
+
 export async function pieceExtras(turn: RoleTurn, key: string): Promise<void> {
   const tagged = (tag: string) => turn.text.includes(tag);
   const firstTurn = !turn.text.includes(RESUMED) && !turn.text.includes('checks failed');
   if (tagged('#parallel') && key === 'P1' && firstTurn) await pause(HOLD_MS, turn.signal);
+  if (tagged('#crossedit') && key === 'P1' && firstTurn) {
+    await locatedEdit(turn, 'api.ts', 'crossed by P1');
+  }
   if (tagged('#parallel') && key === 'P2' && firstTurn) await afterStore(turn);
   if (tagged('#slowpieces') && key !== 'P3') await untilStopped(turn.signal);
   if (tagged('#useredit') && key === 'P1') {

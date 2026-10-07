@@ -17,6 +17,7 @@ import { handoffSection, pieceSection, type LandedPiece } from './prompts.ts';
 import { builderEnvFor, withCheckLock } from './builder-env.ts';
 import { routeRequirement } from './follow-up.ts';
 import { attributableOwner, reportCrossings } from './crossings.ts';
+import { editEvidence } from './edit-evidence.ts';
 import { neededFiles, needText } from './needs.ts';
 import { owns } from './owned.ts';
 import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
@@ -250,6 +251,7 @@ async function guardTurn(s: Session, work: PieceWork, result: MemberResult): Pro
     work.piece,
     (await changedFiles(cwd, work.before)).filter((file) => !seen.has(file)),
     attributableOwner(list, work.since),
+    await editEvidence(s.deps.db, s.lease.runId, work.piece.key, cwd),
   );
   work.note = violationNote(violations);
   if (violations.length === 0) return;

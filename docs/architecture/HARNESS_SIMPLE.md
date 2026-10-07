@@ -394,6 +394,14 @@ Order from there: the events item when `main` has `feat/agui-events` (then flag 
 - **Not verified.** The answer's look in the thread: no browser spec runs a build under `simple`.
 - **Limit.** The answering member still counts in the turn's crew totals and status list.
 
+**Who changed another piece's file** (closes two limits of the third session; both settings).
+
+- _Evidence per worker._ After each worker turn Spark reads, for the build's runs, the files each piece's own tool calls edited (the `file_focus` activity with action `edit` that every edit tool call already writes to its run's events) and the files its reported commands redirect into (`>` and `>>` targets parsed from `run_commands`), as paths inside the tree (`coordinator/edit-evidence.ts`, `persistence/run-writes.ts`). No watcher, no new table, no new event.
+- _Rule_ (`crossedBy` in `coordinator/ownership.ts`). A changed file another piece owns is this worker's change when its own evidence names the file, whatever the owner is doing, so an edit to the file of a piece running at the same moment is now flagged. With no evidence of its own, the worker is flagged only when no other worker's evidence names the file and the owner cannot have made the change (not started, or landed before this worker started): that is the old rule, now used only for writes Spark cannot see.
+- _Unchanged._ The flag is the `other_piece` rail flag with its audit entry, the change is kept, the diff is routed to the owner, nothing is refused or reverted and the run goes on.
+- **Tests run.** DB `coordinator-parallel`: P1 edits `api.ts` while its owner P2 is running; the flag and the audit entry are on P1's run and name P1's worker, no request is denied, every piece lands. Unit `coordinator/edit-evidence.test.ts`: flagged while the owner runs; not flagged without evidence; of two workers that own neither file, the one that edited it is named; an unobserved write is still flagged once; path placement; redirect targets. `coordinator-ownership` db unchanged and passing.
+- **Limits.** A write Spark cannot read (a script, `sed -i`, a formatter) to the file of a piece that is running is still not flagged. The evidence is that the tool call was made: an edit call that failed, on a file its running owner then changed, would name the caller. Command redirects are covered by the unit test only, not end to end.
+
 ## 11. Open decisions for the owner
 
 The build proceeds on the recommended answer to each of these. Every one is **assumed, not yet confirmed by the owner**; a different answer changes the slice named beside it.

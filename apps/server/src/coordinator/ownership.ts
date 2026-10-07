@@ -2,6 +2,7 @@ import { rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { PieceViolation, TaskPiece } from '@spark-outpost/contracts';
 import { gitFileAt } from '../projects/snapshot.ts';
+import { NO_EVIDENCE, type EditEvidence } from './edit-evidence.ts';
 import { ownerLabel, owns, type OwnedFiles, type OwnedSet } from './owned.ts';
 import type { Coordination } from './state.ts';
 
@@ -35,11 +36,30 @@ function adopt(coordination: Coordination, key: string, files: readonly string[]
   coordination.owned = owned;
 }
 
+function crossedBy(
+  coordination: Coordination,
+  key: string,
+  file: string,
+  ownerIdle: boolean,
+  evidence: EditEvidence,
+): boolean {
+  const observed = `${key}\n${file}`;
+  if (evidence.mine.has(file)) {
+    if (coordination.crossed.has(observed)) return false;
+    coordination.crossed.add(observed).add(file);
+    return true;
+  }
+  if (coordination.crossed.has(file) || evidence.others.has(file) || !ownerIdle) return false;
+  coordination.crossed.add(file);
+  return true;
+}
+
 export function checkOwnership(
   coordination: Coordination,
   piece: TaskPiece,
   changed: readonly string[],
   attributable: (ownerKey: string) => boolean,
+  evidence: EditEvidence = NO_EVIDENCE,
 ): PieceViolation[] {
   const owned = ownedFilesFor(coordination, piece);
   const outside = changed.filter((file) => !owns(owned, file));
@@ -52,8 +72,7 @@ export function checkOwnership(
       violations.push({ path: file, action: 'moved', owner: null });
       continue;
     }
-    if (coordination.crossed.has(file) || !attributable(owner.key)) continue;
-    coordination.crossed.add(file);
+    if (!crossedBy(coordination, piece.key, file, attributable(owner.key), evidence)) continue;
     violations.push({ path: file, action: 'kept', owner: ownerLabel(owner) });
   }
   if (unowned.length > 0) adopt(coordination, piece.key, unowned);
