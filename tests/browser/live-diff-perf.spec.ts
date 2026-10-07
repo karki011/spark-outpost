@@ -5,7 +5,6 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import {
   CLICK_LIMIT_MS,
-  clickFeedbackMs,
   lagMs,
   lagWarningsSince,
   markServerLogs,
@@ -15,6 +14,7 @@ import {
   writeReport,
   type ProbeResult,
 } from './perf-probe.ts';
+import { clickCost, expectWithin, type Cost } from './perf-trace.ts';
 
 test.use({ trace: 'off' });
 
@@ -99,7 +99,7 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   const stopApi = watchApi(page);
   await startProbe(page);
   const phases: Record<string, ProbeResult> = {};
-  const clicks: Record<string, number> = {};
+  const clicks: Record<string, Cost> = {};
   const chipLabels = new Map<string, number>();
   const sampleChip = async () => {
     const label = await chip.getAttribute('aria-label').catch(() => null);
@@ -112,7 +112,7 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   }
   phases['thread while streaming'] = await takeProbe(page);
 
-  clicks.openDrawer = await clickFeedbackMs(chip);
+  clicks.openDrawer = await clickCost(chip);
   const drawer = page.getByRole('dialog', { name: /^Changes/ });
   const tree = drawer.getByRole('tree', { name: 'Changed files' });
   await expect(tree.getByRole('treeitem').first()).toBeVisible({ timeout: 30_000 });
@@ -120,7 +120,7 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   await filter.fill('growing');
   const growing = tree.getByRole('treeitem', { name: /growing\.ts/ }).first();
   await expect(growing).toBeVisible({ timeout: 30_000 });
-  clicks.pickGrowing = await clickFeedbackMs(growing);
+  clicks.pickGrowing = await clickCost(growing);
   await expect(drawer.locator('.dd-code .cm-content')).toContainText('row0 = compute', {
     timeout: 30_000,
   });
@@ -143,7 +143,7 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   for (let index = 0; index < 6; index++) {
     const item = tree.getByRole('treeitem', { name: /module\d+\.ts/ }).nth(index);
     if ((await item.count()) === 0) continue;
-    clicks[`file${index}`] = await clickFeedbackMs(item);
+    clicks[`file${index}`] = await clickCost(item);
     await page.evaluate(async () => {
       const scroller = document.querySelector<HTMLElement>('.dd-tree-scroll');
       if (!scroller) return;
@@ -176,7 +176,10 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
     chipLabels: Object.fromEntries(chipLabels),
     clicks,
     maxScrollDriftPx: Math.max(0, ...drift),
-    maxTaskMs: Math.max(...all.map((phase) => phase.maxTaskMs)),
+    longestTask: {
+      wallMs: Math.max(...all.map((phase) => phase.longestTask.wallMs)),
+      cpuMs: Math.max(...all.map((phase) => phase.longestTask.cpuMs)),
+    },
     maxFrameGapMs: Math.max(...all.map((phase) => phase.maxFrameGapMs)),
     api,
     serverLagMs: lagMs(warnings),
@@ -190,8 +193,10 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   expect(requests.summary).toBeLessThan(EDITS / 5);
   expect(requests.diffs).toBeLessThan(EDITS / 5);
   expect(summary.maxScrollDriftPx).toBeLessThan(2);
-  expect(Math.max(...Object.values(clicks))).toBeLessThan(CLICK_LIMIT_MS);
-  expect(summary.maxTaskMs).toBeLessThan(TASK_LIMIT_MS);
+  for (const [name, click] of Object.entries(clicks)) {
+    expectWithin(click, CLICK_LIMIT_MS, `${name} click to next paint`);
+  }
+  expectWithin(summary.longestTask, TASK_LIMIT_MS, 'longest task');
   expect(warnings).toEqual([]);
   expect(api.maxMs).toBeLessThan(API_STALL_MS);
 });

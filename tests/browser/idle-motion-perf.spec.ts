@@ -1,14 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, island, openIsland } from './island-home-desktop.ts';
-import { BUSY_MACHINE, idleBusyPercent, PRODUCTION, writeReport } from './perf-probe.ts';
+import { idleBusyPercent, PRODUCTION, writeReport } from './perf-probe.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 test.use({ trace: 'off' });
 
 const FOCUSED_LIMIT = PRODUCTION ? 5 : 25;
 const UNFOCUSED_LIMIT = PRODUCTION ? 2 : 10;
-const LIVE_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 30 : 15) : 80;
+const LIVE_LIMIT = PRODUCTION ? 15 : 80;
 const REST_WAIT_MS = 5_000;
 
 const motion = (page: Page) => page.evaluate(() => document.documentElement.dataset.motion ?? null);

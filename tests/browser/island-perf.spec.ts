@@ -3,7 +3,6 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, island, openIsland } from './island-home-desktop.ts';
 import {
   CLICK_LIMIT_MS,
-  clickFeedbackMs,
   restingBusyPercent,
   PRODUCTION,
   settledMetrics,
@@ -13,6 +12,7 @@ import {
   writeReport,
   type ProbeResult,
 } from './perf-probe.ts';
+import { clickCost, expectWithin, needsQuietMachine } from './perf-trace.ts';
 import { seedTourChats } from './tour-seed.ts';
 
 test.use({ trace: 'off' });
@@ -55,6 +55,7 @@ async function leave(page: Page) {
 }
 
 test('Spark Island stays smooth with many chats and live activity', async ({ page }) => {
+  needsQuietMachine();
   test.setTimeout(240_000);
   await resetTestDatabase({ onboarded: true });
   const [running] = await seedTourChats();
@@ -75,7 +76,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
 
   await hoverOpen(page);
   const chats = island(page).getByRole('tab', { name: /^Chats/ });
-  const chatsClickMs = await clickFeedbackMs(chats);
+  const chatsClick = await clickCost(chats);
   await expect(chats).toHaveAttribute('aria-selected', 'true');
   await page.waitForTimeout(1_200);
   phases['open Chats'] = await takeProbe(page);
@@ -87,7 +88,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   phases['search Chats'] = await takeProbe(page);
 
   const home = island(page).getByRole('tab', { name: 'Home' });
-  const homeClickMs = await clickFeedbackMs(home);
+  const homeClick = await clickCost(home);
   await expect(home).toHaveAttribute('aria-selected', 'true');
   await addSteps(running!, LIVE_STEPS);
   await page.waitForTimeout(1_500);
@@ -101,7 +102,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
     chats: 50,
     liveSteps: LIVE_STEPS,
     restingBusyPercent: restingBusy,
-    clicks: { chats: chatsClickMs, home: homeClickMs },
+    clicks: { chats: chatsClick, home: homeClick },
     phases,
     growth: {
       heapMb: Number((after.heapMb - before.heapMb).toFixed(1)),
@@ -112,10 +113,12 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   writeReport('island', summary);
   test.info().annotations.push({ type: 'island perf', description: JSON.stringify(summary) });
 
-  expect(Math.max(chatsClickMs, homeClickMs)).toBeLessThan(CLICK_LIMIT_MS);
+  expectWithin(chatsClick, CLICK_LIMIT_MS, 'Chats click to next paint');
+  expectWithin(homeClick, CLICK_LIMIT_MS, 'Home click to next paint');
   for (const [name, phase] of Object.entries(phases)) {
-    expect.soft(phase.maxTaskMs, name).toBeLessThan(TASK_LIMIT_MS);
+    expectWithin(phase.longestTask, TASK_LIMIT_MS, `${name}: longest task`);
   }
-  if (PRODUCTION) expect(restingBusy).toBeLessThan(IDLE_BUSY_LIMIT);
-  expect(summary.growth.listeners).toBeLessThan(200);
+  if (PRODUCTION)
+    expect.soft(restingBusy, 'main thread percent at rest').toBeLessThan(IDLE_BUSY_LIMIT);
+  expect.soft(summary.growth.listeners).toBeLessThan(200);
 });

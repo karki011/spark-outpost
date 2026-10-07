@@ -4,14 +4,14 @@ import { card, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, openIsland } from './island-home-desktop.ts';
 import { openChats } from './navigation.ts';
-import { BUSY_MACHINE, frameWork, PRODUCTION, writeReport, type FrameWork } from './perf-probe.ts';
+import { frameWork, PRODUCTION, writeReport, type FrameWork } from './perf-probe.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 test.use({ trace: 'off' });
 
 const SHOTS = process.env.BLOB_SHOTS ?? '';
-const BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 10 : 5) : 25;
-const POINTER_BUSY_LIMIT = PRODUCTION ? (BUSY_MACHINE ? 45 : 30) : 80;
+const BUSY_LIMIT = PRODUCTION ? 5 : 25;
+const POINTER_BUSY_LIMIT = PRODUCTION ? 30 : 80;
 const FRAME_LIMIT = 15;
 const PAINT_LIMIT = 60;
 
