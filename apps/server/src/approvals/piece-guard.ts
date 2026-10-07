@@ -51,7 +51,7 @@ function ownList(owned: OwnedFiles): string {
 export function ownershipReason(owned: OwnedFiles, relative: string): string {
   const owner = ownerOf(owned, relative);
   const who = owner && owner !== owned ? `${ownerLabel(owner)} owns` : 'No piece owns';
-  return `${who} \`${relative}\`; this piece (${ownerLabel(owned)}) owns ${ownList(owned)}; ask the coordinator in your reply if you need it changed`;
+  return `${who} \`${relative}\`; this piece (${ownerLabel(owned)}) owns ${ownList(owned)}; if it must change, end your reply with \`Needs: ${relative} — <what must change>\``;
 }
 
 function scratchOutput(owned: OwnedFiles, relative: string): boolean {

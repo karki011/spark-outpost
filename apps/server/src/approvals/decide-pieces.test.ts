@@ -49,7 +49,7 @@ describe('decide() for a Builder of a coordinated task', () => {
     expect(verdict(posture, edit('src/view.tsx'))).toEqual({
       verdict: 'reject',
       reason:
-        'Tack (P3) owns `src/view.tsx`; this piece (Rivet (P2)) owns `src/api.ts`, `src/api/**`; ask the coordinator in your reply if you need it changed',
+        'Tack (P3) owns `src/view.tsx`; this piece (Rivet (P2)) owns `src/api.ts`, `src/api/**`; if it must change, end your reply with `Needs: src/view.tsx — <what must change>`',
     });
   });
 

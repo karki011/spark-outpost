@@ -174,3 +174,17 @@ export async function deliveredToCrew(
   );
   return rows.map((row) => ({ name: row.name ?? 'the agent', body: row.body }));
 }
+
+export async function claimChatMessages(db: Queryable, topRunId: string): Promise<MemberMessage[]> {
+  const { rows } = await db.query<MemberMessageRow>(
+    `UPDATE member_messages SET status = 'delivered', delivered_at = now(), delivered_run_id = $1
+     WHERE status = 'queued' AND run_id = $1 AND urgency = 'next'
+     RETURNING *`,
+    [topRunId],
+  );
+  return inOrder(rows);
+}
+
+export async function setMessageReader(db: Queryable, id: string, runId: string): Promise<void> {
+  await db.query('UPDATE member_messages SET delivered_run_id = $2 WHERE id = $1', [id, runId]);
+}

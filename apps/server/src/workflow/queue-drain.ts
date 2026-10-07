@@ -1,9 +1,16 @@
-import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-outpost/contracts';
+import {
+  PERMISSION_DO,
+  type HarnessSetting,
+  type QueuedMessage,
+  type SendNowOutcome,
+} from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
 import { alreadySent, takeQueued } from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
+import { harnessSetting } from '../harness/setting.ts';
+import { buildingInPieces } from '../persistence/piece-notes.ts';
 import {
   getMemberMessage,
   insertMemberMessage,
@@ -110,6 +117,7 @@ export async function sendNow(
   conversationId: string,
   request: SendNowRequest,
   resolveTarget: ResolveTarget,
+  harness: HarnessSetting = harnessSetting(),
 ): Promise<SendNowOutcome | null> {
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
@@ -129,12 +137,13 @@ export async function sendNow(
       );
       return 'sent';
     }
+    const toIntake = harness === 'simple' && (await buildingInPieces(client, running));
     await insertMemberMessage(client, {
       id: request.id,
       conversationId,
       runId: running,
       body: content,
-      urgency: 'now',
+      urgency: toIntake ? 'next' : 'now',
     });
     return 'steering';
   });

@@ -1,7 +1,7 @@
 import { type CheckBody, type PieceViolation, type TaskPiece } from '@spark-outpost/contracts';
 import { COORD_HANDOFF_SHARE, COORD_PIECE_FIX_TURNS } from '../advisor/policy.ts';
 import { configuredChecks } from '../checks/detect.ts';
-import { movePiece } from '../persistence/pieces.ts';
+import { movePiece, pieceListById } from '../persistence/pieces.ts';
 import { git, workingTree } from '../projects/snapshot.ts';
 import { runChecks } from '../orchestration/checks.ts';
 import { changeFailureText, startsCheckFix } from '../orchestration/check-results.ts';
@@ -15,6 +15,8 @@ import type { Spawn } from '../orchestration/transitions.ts';
 import type { Coordination } from './state.ts';
 import { handoffSection, pieceSection, type LandedPiece } from './prompts.ts';
 import { builderEnvFor, withCheckLock } from './builder-env.ts';
+import { routeRequirement } from './follow-up.ts';
+import { neededFiles, needText, revertedText } from './needs.ts';
 import { owns } from './owned.ts';
 import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
 import { announceLanding } from './landing-notices.ts';
@@ -223,12 +225,72 @@ function pieceChanges(work: PieceWork): Promise<string[]> {
   return work.site.cwd().then((cwd) => changedFiles(cwd, work.before));
 }
 
+function workerLabel(work: PieceWork): string {
+  const name = work.coordination.names.get(work.piece.key);
+  return name ? `${name} (${work.piece.key})` : work.piece.key;
+}
+
+async function askOthers(
+  s: Session,
+  work: PieceWork,
+  wanted: readonly { path: string; body: string }[],
+): Promise<void> {
+  const listId = work.coordination.list?.id;
+  const list = listId && wanted.length > 0 ? await pieceListById(s.deps.db, listId) : null;
+  if (!list) return;
+  for (const { path, body } of wanted) {
+    await routeRequirement(s.deps.db, list, {
+      body,
+      files: [path],
+      source: 'coordinator',
+      from: work.piece.key,
+    });
+  }
+}
+
+async function reportReverted(
+  s: Session,
+  work: PieceWork,
+  reverted: readonly PieceViolation[],
+  trees: { cwd: string; before: string; after: string | null },
+): Promise<void> {
+  if (!trees.after || reverted.length === 0) return;
+  const wanted = [];
+  for (const { path } of reverted) {
+    const patch = await git(trees.cwd, [
+      'diff',
+      '--relative',
+      trees.before,
+      trees.after,
+      '--',
+      path,
+    ]).catch(() => '');
+    wanted.push({ path, body: revertedText(workerLabel(work), path, patch) });
+  }
+  await askOthers(s, work, wanted);
+}
+
+async function reportNeeds(s: Session, work: PieceWork, reply: string): Promise<void> {
+  const owned = ownedFilesFor(work.coordination, work.piece);
+  const wanted = neededFiles(reply)
+    .filter((need) => !owns(owned, need.path))
+    .map((need) => ({ path: need.path, body: needText(workerLabel(work), need) }));
+  await askOthers(s, work, wanted);
+}
+
 async function guardTurn(s: Session, work: PieceWork): Promise<void> {
   if (work.piece.research || !work.before) return;
   const cwd = await work.site.cwd();
   const changed = await pieceChanges(work);
+  const after = await workingTree(cwd).catch(() => null);
   const violations = await checkOwnership(work.coordination, work.piece, changed, cwd, work.before);
   work.note = violationNote(violations);
+  await reportReverted(
+    s,
+    work,
+    violations.filter((violation) => violation.action === 'reverted'),
+    { cwd, before: work.before, after },
+  );
   if (violations.length > 0) {
     work.violations.push(...violations);
     const owned = work.coordination.owned.get(work.piece.key);
@@ -348,6 +410,7 @@ export async function runPiece(
   }
   if (turn.result.outcome !== 'succeeded')
     return failPiece(s, work, turn.result, { fixTurns: fixes });
+  if (!piece.research) await reportNeeds(s, work, turn.result.text);
   const unlanded = (await site.land?.(turn.result)) ?? null;
   if (unlanded !== null) {
     return failPiece(
