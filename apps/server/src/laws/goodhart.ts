@@ -116,18 +116,45 @@ function inScope(path: string, named: readonly string[], text: string): boolean 
 const NOT_SCOPED =
   /(?:^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?|Cargo\.lock|go\.sum|poetry\.lock|uv\.lock)$/;
 
-function scopeFindings(files: readonly PatchFile[], facts: LawFacts): LawFinding[] {
+function stem(path: string): string {
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  return name.replace(/\.[^.]+$/, '').replace(/[._-]?(?:test|spec)$/i, '');
+}
+
+function folder(path: string): string {
+  return dirName(path).replace(/\/(?:__tests__|tests?|specs?)$/, '');
+}
+
+function testsChangedCode(path: string, changed: readonly string[]): boolean {
+  if (!TEST_FILE.test(path)) return false;
+  return changed.some(
+    (other) =>
+      !TEST_FILE.test(other) && (folder(other) === folder(path) || stem(other) === stem(path)),
+  );
+}
+
+function scopeFindings(
+  files: readonly PatchFile[],
+  changed: readonly string[],
+  facts: LawFacts,
+): LawFinding[] {
+  if (facts.followUp || facts.reviewed) return [];
   const named = namedFiles([facts.request, ...facts.plan]);
   if (named.length === 0) return [];
   const text = [facts.request, ...facts.plan, ...facts.replies].join('\n');
   return files
-    .filter((file) => !NOT_SCOPED.test(file.path) && !inScope(file.path, named, text))
+    .filter(
+      (file) =>
+        !NOT_SCOPED.test(file.path) &&
+        !inScope(file.path, named, text) &&
+        !testsChangedCode(file.path, changed),
+    )
     .slice(0, LAW_SCOPE_ITEMS)
     .map((file) => ({
       law: 'goodhart' as const,
       kind: 'scope' as const,
       path: file.path,
-      text: `Changed ${code(file.path)}, which the request and plan didn't name — check it.`,
+      text: `Changed ${code(file.path)}, outside the request and plan.`,
     }));
 }
 
@@ -146,6 +173,7 @@ export function guardFindings(patch: string, facts: LawFacts): LawFinding[] {
   const flagged = new Set(perFile.map((finding) => finding.path));
   const scoped = scopeFindings(
     files.filter((file) => !flagged.has(file.path)),
+    files.map((file) => file.path),
     facts,
   );
   return [...perFile, ...scoped];

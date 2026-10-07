@@ -3,13 +3,14 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   agentBlock,
   allowEdit,
+  autoContinueAfter,
   card,
   crewChat,
   crewRepo,
+  keptResult,
   resetCrew,
   send,
   type CrewRepo,
-  autoContinueAfter,
 } from './crew-engine.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
@@ -74,7 +75,7 @@ test('the questions dock above the composer, wait without a countdown when auto-
   await expect(answered).toContainText('Which report? → Usage');
   await expect(statusLine(page)).not.toContainText('Waiting for you');
   await allowEdit(page);
-  const keep = card(page, /Keep these changes\?/);
+  const keep = keptResult(page);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
   await shot(page, 'answered');

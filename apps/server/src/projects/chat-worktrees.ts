@@ -221,6 +221,15 @@ async function namesBetween(root: string, from: string, to: string): Promise<str
   return lines(await git(root, ['diff', '--name-only', '--no-renames', from, to]));
 }
 
+export async function bringReady(root: string, from: string): Promise<boolean> {
+  const dirty = await changedFiles(root).catch(() => null);
+  if (dirty === null || dirty.length > 0) return false;
+  return git(root, ['merge-base', '--is-ancestor', from, 'HEAD']).then(
+    () => true,
+    () => false,
+  );
+}
+
 export async function bringChanges(
   root: string,
   copy: string,

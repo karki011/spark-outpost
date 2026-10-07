@@ -41,10 +41,7 @@ async function sendAndKeep(page: Page) {
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept automatically.',
-    { timeout: 20_000 },
-  );
+  await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
 }
 
@@ -88,10 +85,13 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   expect(readFileSync(path.join(repo.root, 'notes.txt'), 'utf8')).toBe('one\n');
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
 
-  const keep = page.getByRole('group', { name: /Keep these changes\?/ });
-  await expect(keep).toContainText(`Kept on ${branch} in this chat’s worktree.`);
-  await expect(keep.locator('.ship-btn')).toHaveText('Open PR');
-  await keep.getByRole('button', { name: 'Bring changes into main' }).click();
+  const kept = page.getByRole('region', { name: /^Kept · / });
+  await expect(kept.locator('.ship-btn')).toHaveCount(0);
+  await expect(kept.getByRole('button', { name: 'Bring changes into main' })).toHaveCount(0);
+  await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
+  await expect(kept.locator('.result-where')).toHaveText(`${branch} · not committed`);
+  await expect(kept).toContainText('In this chat’s worktree.');
+  await kept.getByRole('button', { name: 'Bring changes into main' }).click();
   const done = page.getByRole('status').filter({ hasText: 'Brought 1 file into main.' });
   await expect(done).toBeVisible();
   await expect(done).toBeFocused();

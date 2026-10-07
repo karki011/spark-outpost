@@ -6,6 +6,7 @@ import {
   type CrewMember,
   type Orchestration,
 } from '@spark-outpost/contracts';
+import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
 import { handOffAt } from '../chat/crew/crew-items.ts';
 import type { CrewAgent, CrewState } from './crew-model.ts';
 
@@ -49,12 +50,14 @@ function handedOff(member: CrewMember, orchestration: Orchestration): boolean {
 function memberState(member: CrewMember, orchestration: Orchestration): CrewState {
   if (orchestration.pendingCheckpoint?.runId === member.runId) return 'waiting';
   if (handedOff(member, orchestration)) return 'done';
+  if (timedOut(member.error)) return 'stopped';
   const state = RUN_STATES[member.status];
   if (state === 'working' && !member.toolCalls) return 'thinking';
   return state;
 }
 
 function memberLine(member: CrewMember, state: CrewState, steps: readonly ActivityStep[]): string {
+  if (timedOut(member.error)) return WAITED_LABEL;
   if (state === 'queued') return member.role === 'critic' ? 'queued for review' : 'queued';
   if (state === 'waiting') return 'waiting for you';
   if (state === 'stopped') return 'stopped';
@@ -103,7 +106,7 @@ function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): Cre
     return 'waiting';
   }
   if (orchestration.status === 'succeeded') return 'done';
-  if (orchestration.status === 'cancelled') return 'stopped';
+  if (orchestration.status === 'cancelled' || timedOut(orchestration.error)) return 'stopped';
   if (orchestration.status !== 'running' && orchestration.status !== 'queued') return 'failed';
   if (orchestration.phase === 'intake') return 'thinking';
   return crew.some((agent) => agent.state === 'working' || agent.state === 'thinking')
@@ -112,6 +115,7 @@ function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): Cre
 }
 
 function jevLine(orchestration: Orchestration, state: CrewState): string {
+  if (timedOut(orchestration.error)) return WAITED_LABEL;
   if (state === 'waiting') return 'waiting on you';
   if (state === 'stopped') return 'stopped';
   if (state === 'failed') return 'hit a problem';

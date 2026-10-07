@@ -2,7 +2,7 @@ import { LAW_ITEMS_SHOWN, POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import type { Session } from '../orchestration/session.ts';
 import { claimFindings, type BuilderReply } from './claims.ts';
-import type { LawFacts, LawFinding } from './finding.ts';
+import { code, type LawFacts, type LawFinding } from './finding.ts';
 import { guardFindings } from './goodhart.ts';
 import { removalFindings } from './removals.ts';
 
@@ -27,7 +27,26 @@ export function lawFacts(
     request: s.input.userRequest,
     replies: builderReplies(s).map((reply) => reply.text),
     plan: [...s.plan.map((entry) => entry.content), ...(agreedPlan ? [agreedPlan] : [])],
+    followUp: s.input.followUpRound === true,
+    reviewed: s.results.some(
+      (result) => result.role === 'critic' && result.outcome === 'succeeded',
+    ),
   };
+}
+
+function sameFinding(finding: LawFinding): string {
+  const text = finding.text.toLowerCase().replace(/\s+/g, ' ').trim();
+  return `${finding.kind}\u0000${finding.path ?? ''}\u0000${text}`;
+}
+
+export function distinctFindings(findings: readonly LawFinding[]): LawFinding[] {
+  const seen = new Set<string>();
+  return findings.filter((finding) => {
+    const key = sameFinding(finding);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function criticRemovals(removed: readonly string[]): LawFinding[] {
@@ -45,26 +64,44 @@ export function reviewLaws(
     ? criticRemovals(s.criticRemovals ?? [])
     : removalFindings(patch, facts);
   return {
-    findings: [
+    findings: distinctFindings([
       ...removals,
       ...claimFindings(builderReplies(s), s.checkBodies),
       ...guardFindings(patch, facts),
-    ],
+    ]),
     removalsBy: byCritic ? 'critic' : 'rules',
   };
 }
 
+function shownFindings(s: Pick<Session, 'laws'>): LawFinding[] {
+  return (s.laws?.findings ?? []).filter((finding) => finding.kind !== 'scope');
+}
+
 export function lawItems(s: Pick<Session, 'laws'>): string[] {
-  return (s.laws?.findings ?? []).slice(0, LAW_ITEMS_SHOWN).map((finding) => finding.text);
+  return shownFindings(s)
+    .slice(0, LAW_ITEMS_SHOWN)
+    .map((finding) => finding.text);
+}
+
+export function outsidePlanFiles(s: Pick<Session, 'laws'>): string[] {
+  return (s.laws?.findings ?? []).flatMap((finding) =>
+    finding.kind === 'scope' && finding.path ? [finding.path] : [],
+  );
+}
+
+export function outsidePlanLine(files: readonly string[]): string | null {
+  if (files.length === 0) return null;
+  const count = `${files.length} file${files.length === 1 ? '' : 's'}`;
+  return `${count} outside the plan: ${files.map(code).join(', ')}`;
 }
 
 export function lawsNote(s: Pick<Session, 'laws'>): string | null {
-  const findings = s.laws?.findings ?? [];
-  if (findings.length === 0) return null;
-  const more =
-    findings.length > LAW_ITEMS_SHOWN ? `\n- and ${findings.length - LAW_ITEMS_SHOWN} more` : '';
-  const items = lawItems(s).map((text) => `- ${text}`);
-  return `Worth a look:\n${items.join('\n')}${more}`;
+  const shown = shownFindings(s);
+  const outside = outsidePlanLine(outsidePlanFiles(s));
+  if (shown.length === 0 && !outside) return null;
+  const more = shown.length > LAW_ITEMS_SHOWN ? [`and ${shown.length - LAW_ITEMS_SHOWN} more`] : [];
+  const items = [...lawItems(s), ...more, ...(outside ? [outside] : [])];
+  return `Worth a look:\n${items.map((text) => `- ${text}`).join('\n')}`;
 }
 
 function lawSummary(review: LawReview): string {

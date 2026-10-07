@@ -1,5 +1,6 @@
 import type { CrewAgent, CrewState } from '../../crew/crew-model.ts';
 import type { RunStep } from '../run-projection.ts';
+import { timedOut, WAITED_LABEL } from '../approvals/timed-out.ts';
 import { stepActivity } from '../status/step-activity.ts';
 
 export interface BlockStatus {
@@ -29,7 +30,9 @@ function stepWords(name: string): string {
 export function blockStatus(
   agent: Pick<CrewAgent, 'state'>,
   { steps, waiting, started }: BlockWork,
+  error: string | null = null,
 ): BlockStatus {
+  if (timedOut(error)) return { state: 'stopped', label: WAITED_LABEL };
   const settled = SETTLED[agent.state];
   if (settled) return { state: agent.state, label: settled };
   if (waiting || agent.state === 'waiting') return { state: 'waiting', label: 'waiting for you' };

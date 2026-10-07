@@ -23,6 +23,8 @@ export interface LawFacts {
   request: string;
   replies: readonly string[];
   plan: readonly string[];
+  followUp?: boolean;
+  reviewed?: boolean;
 }
 
 export function code(text: string): string {

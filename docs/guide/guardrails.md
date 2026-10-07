@@ -10,9 +10,9 @@ A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guard
 
 ## Worth a look
 
-The kept card and the final reply list flags under **Worth a look**. At **Full auto → PR** the list is in the PR description too.
+The result line and the final reply list flags under **Worth a look**. At **Full auto → PR** the list is in the PR description too.
 
-![A kept card with its Worth a look list](images/guardrails-keep-card-light.png)
+![A kept result with its Worth a look list](images/guardrails-keep-card-light.png)
 
 | Flag                                                 | Means                                                                              |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |

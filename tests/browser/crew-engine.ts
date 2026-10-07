@@ -195,6 +195,8 @@ export async function send(page: Page, text: string): Promise<void> {
 
 export const card = (page: Page, name: RegExp) => page.getByRole('group', { name });
 
+export const keptResult = (page: Page) => page.getByRole('region', { name: /^Kept · / });
+
 export async function buildThePlan(page: Page): Promise<void> {
   const build = card(page, /Build this plan\?/).getByRole('button', { name: 'Build', exact: true });
   await build.click({ timeout: 60_000 });

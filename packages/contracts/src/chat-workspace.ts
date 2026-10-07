@@ -48,3 +48,9 @@ export const bringChangesResultSchema = z.object({
   files: z.array(z.string()),
 });
 export type BringChangesResult = z.infer<typeof bringChangesResultSchema>;
+
+export const bringReadinessSchema = z.object({
+  into: z.string().nullable(),
+  ready: z.boolean(),
+});
+export type BringReadiness = z.infer<typeof bringReadinessSchema>;

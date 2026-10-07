@@ -10,6 +10,7 @@ import {
   crewChat,
   crewRepo,
   failingCheck,
+  keptResult,
   resetCrew,
   send,
   type CrewRepo,
@@ -107,10 +108,8 @@ test('Manual: one task Builder with an edit approval, the Critic, then it keeps 
 
   await allowEdit(page);
 
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await expect(keep).toContainText('Kept automatically.');
-  await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
+  await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /Keep these changes\?/)).toHaveCount(0);
   await expect(agentHead(page, 'Hawk')).toContainText('6 Solmedium effort');
   await expect(agentHead(page, 'Hawk')).toContainText('small diff: first review at medium effort');
   await expect(agentBlock(page, 'Hawk')).toContainText('Verdict: looks good');
@@ -177,7 +176,8 @@ test.fixme("Review jumps to a second turn's keep card, which renders once", asyn
   const anchor = await keep.getAttribute('id');
   expect(anchor).toMatch(/^approval-/);
   await expect(page.locator(`[id="${anchor}"]`)).toHaveCount(1);
-  await expect(turns.first().getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(1);
+  await expect(turns.first().getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
+  await expect(turns.first().getByRole('region', { name: /^Kept · / })).toHaveCount(1);
 
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
   const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
@@ -195,9 +195,11 @@ test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own
   const turn = page.locator('.crew-turn');
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file|Run a command/ })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: /Keep these/ })).toContainText(
-    'Kept by Full auto → PR.',
-  );
+  await expect(page.getByRole('group', { name: /Keep these/ })).toHaveCount(0);
+  await keptResult(page)
+    .getByRole('button', { name: /^Kept · / })
+    .click();
+  await expect(keptResult(page).locator('.result-why')).toContainText('Full auto → PR');
   await agentHead(page, 'Bolt').first().click();
   const build = agentBlock(page, 'Bolt').first();
   await build.getByRole('button', { name: /^\d+ steps$/ }).click();

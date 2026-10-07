@@ -234,8 +234,7 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
     timeout: 15_000,
   });
   expect(readFileSync(notes(), 'utf8')).toContain('Edited by the fake agent');
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept automatically.');
+  await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible();
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await panel.getByRole('tab', { name: 'Changes' }).click();
   await expect(panel.getByRole('tab', { name: 'Changes' })).toHaveAttribute(

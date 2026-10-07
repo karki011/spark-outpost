@@ -30,6 +30,7 @@ GET /api/chat-settings/defaults
 GET /api/conversations/:id/share
 GET /api/conversations/:id/tickets
 GET /api/conversations/:id/workspace
+GET /api/conversations/:id/workspace/bring
 GET /api/projects/:id/branches
 GET /api/providers/:provider/capabilities
 PATCH /api/conversations/:id/settings

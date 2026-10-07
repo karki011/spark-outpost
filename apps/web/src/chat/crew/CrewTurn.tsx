@@ -21,13 +21,15 @@ import { ShotReply } from '../../browser/ShotReply.tsx';
 import { runCommands } from '../commands/command-model.ts';
 import { RailFlags } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
+import { askedBeforeTimeout, isLatestTurn, timedOut } from '../approvals/timed-out.ts';
+import { TimedOutNote } from '../approvals/TimedOutNote.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
 import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
-import { KeepCardFooter } from '../outcomes/KeepCardFooter.tsx';
+import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
 import type { RunStep } from '../run-projection.ts';
 import { useLiveReport } from '../status/status-context.ts';
@@ -133,23 +135,18 @@ function CrewTurnBody({
       <FilesChanged taskId={changeTask.id} runIds={[runId]} />
     ) : null;
   const unlisted = crewRunIds.filter((runId) => runId === run.id || !showsOwnChanges(runId));
-  const host = finished ? keepCardHost(checkpoints, run.revertedAt !== null) : null;
-  const checkpointCard = (approval: CheckpointApproval) => (
-    <CheckpointCard
-      key={approval.id}
-      approval={approval}
-      footer={
-        host?.approvalId === approval.id ? (
-          <KeepCardFooter
-            runId={run.id}
-            host={host}
-            taskId={changeTask?.id ?? null}
-            conversationId={detail.conversation.id}
-          />
-        ) : undefined
-      }
-    />
-  );
+  const host = keepCardHost(checkpoints, run.revertedAt !== null);
+  const latest = isLatestTurn(detail, run.id);
+  const waitedOn = (runIds: readonly string[]) => ({
+    asked: askedBeforeTimeout(
+      detail.approvals.filter((approval) => runIds.includes(approval.runId)),
+    ),
+    retryIn: latest ? detail.conversation.id : null,
+  });
+  const crewTimedOut = orchestration.crew.some((member) => timedOut(member.error));
+  const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
+  const checkpointCard = (approval: CheckpointApproval) =>
+    approval === kept ? null : <CheckpointCard key={approval.id} approval={approval} />;
 
   const agentBlock = (item: Extract<CrewItem, { kind: 'agent' }>, collapsible: boolean) => {
     const member = item.member;
@@ -173,6 +170,7 @@ function CrewTurnBody({
         modelSwitch={member.modelSwitch ?? null}
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
+        waited={waitedOn([member.runId])}
         changes={changedBy(member.runId)}
         after={item.checkpoints.map(checkpointCard)}
       />
@@ -237,7 +235,14 @@ function CrewTurnBody({
           </ShotReply>
         </div>
       )}
-      {orchestration.error && <p className="error-line">{orchestration.error}</p>}
+      {timedOut(orchestration.error)
+        ? !crewTimedOut && (
+            <TimedOutNote
+              asked={waitedOn(crewRunIds).asked}
+              conversationId={latest ? detail.conversation.id : null}
+            />
+          )
+        : orchestration.error && <p className="error-line">{orchestration.error}</p>}
       <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
       <TurnPlanOffer detail={detail} runId={run.id} />
@@ -249,8 +254,19 @@ function CrewTurnBody({
         finished={finished}
         category={run.category}
       />
-      {finished && changeTask && run.mode === 'do' && (
+      {finished && changeTask && run.mode === 'do' && !kept && (
         <FilesChanged taskId={changeTask.id} runIds={crewRunIds} listed={unlisted} />
+      )}
+      {host && kept && (
+        <ResultBlock
+          approval={kept}
+          variant={host.variant}
+          runId={run.id}
+          runIds={crewRunIds}
+          revertible={finished && run.mode === 'do' && run.snapshot ? run : null}
+          taskId={run.mode === 'do' ? (changeTask?.id ?? null) : null}
+          conversationId={detail.conversation.id}
+        />
       )}
       <div className="turn-foot">
         <p className="crew-foot">
@@ -265,8 +281,8 @@ function CrewTurnBody({
             runIds={crewRunIds}
           />
         )}
-        {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
-        {run.mode === 'do' && run.snapshot && finished && <RevertRun run={run} compact />}
+        {finished && !kept && <TurnFeedback runId={run.id} variant="turn" />}
+        {run.mode === 'do' && run.snapshot && finished && !kept && <RevertRun run={run} compact />}
       </div>
     </div>
   );
