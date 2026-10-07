@@ -52,6 +52,9 @@ const SCRIPT = `
     done.hidden = stage !== 'paired';
     retry.hidden = stage !== 'ended';
   };
+  document.addEventListener('visibilitychange', () => {
+    main.toggleAttribute('data-paused', document.hidden);
+  });
   const status = document.getElementById('status');
   const code = document.getElementById('code');
   const name = document.getElementById('name');
