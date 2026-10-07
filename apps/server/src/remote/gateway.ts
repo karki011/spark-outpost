@@ -17,6 +17,7 @@ import { deviceTokenOf, secretHash } from './session.ts';
 import {
   approvalPayload,
   deviceByTokenHash,
+  recordPairingPageShown,
   recordRemoteAudit,
   remoteAccess,
   setRemoteAuditStatus,
@@ -44,7 +45,7 @@ const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';
 const NOT_PAIRED = 'Pair this device first.';
 const PAIR_AGAIN = 'This device needs to pair again.';
-const PAIRING_PAGE_AUDIT_EVERY_MS = 60_000;
+const PAIRING_PAGE_AUDIT_EVERY_SECONDS = 60;
 const ASSET_PATH = /\.[a-z0-9]+$/i;
 
 const uuid = z.uuid();
@@ -110,19 +111,8 @@ export function remoteGateway(deps: GatewayDeps) {
     refuse(res, status, error);
   };
 
-  const pairingPageAudited = new Map<string, number>();
-
-  const auditPairingPage = async (reason: string, device: RemoteDevicePrincipal | null) => {
-    const key = `${device?.id ?? ''}:${reason}`;
-    const now = Date.now();
-    if (now - (pairingPageAudited.get(key) ?? -Infinity) < PAIRING_PAGE_AUDIT_EVERY_MS) return;
-    pairingPageAudited.set(key, now);
-    await recordRemoteAudit(db, workspaceId, {
-      action: 'pairing_page_shown',
-      device,
-      detail: { reason },
-    });
-  };
+  const auditPairingPage = (reason: string, device: RemoteDevicePrincipal | null) =>
+    recordPairingPageShown(db, workspaceId, device, reason, PAIRING_PAGE_AUDIT_EVERY_SECONDS);
 
   const answerUnpaired = async (
     req: Request,

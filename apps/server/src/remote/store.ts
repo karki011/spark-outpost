@@ -231,6 +231,35 @@ export async function recordRemoteAudit(
   return id;
 }
 
+export async function recordPairingPageShown(
+  db: Queryable,
+  workspaceId: string,
+  device: { id: string; name: string } | null,
+  reason: string,
+  everySeconds: number,
+): Promise<void> {
+  await db.query(
+    `INSERT INTO remote_audit (id, workspace_id, device_id, device_name, action, detail)
+     SELECT $1, $2, $3, $4, 'pairing_page_shown', $5::jsonb
+     WHERE NOT EXISTS (
+       SELECT 1 FROM remote_audit
+       WHERE workspace_id = $2 AND action = 'pairing_page_shown'
+         AND device_id IS NOT DISTINCT FROM $3
+         AND detail->>'reason' = $6
+         AND created_at > now() - make_interval(secs => $7)
+     )`,
+    [
+      newId(),
+      workspaceId,
+      device?.id ?? null,
+      device?.name ?? null,
+      JSON.stringify({ reason }),
+      reason,
+      everySeconds,
+    ],
+  );
+}
+
 export async function setRemoteAuditStatus(
   db: Queryable,
   id: string,

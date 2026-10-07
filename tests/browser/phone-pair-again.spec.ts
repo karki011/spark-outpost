@@ -1,6 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
-import { PHONE_ADDRESS, denyWaitingPhones, resetPhone, setFakeTailscale } from './phone-support.ts';
+import {
+  PHONE_ADDRESS,
+  denyWaitingPhones,
+  resetPhone,
+  setFakeTailscale,
+  startPairing,
+} from './phone-support.ts';
 import {
   arriveFromElsewhere,
   newPhone,
@@ -41,15 +47,8 @@ async function openPhonePage(page: Page): Promise<Locator> {
   return page.getByRole('main');
 }
 
-async function newCode(main: Locator): Promise<string> {
-  await main.getByRole('button', { name: /Pair a phone|Get a new code|Pair another/ }).click();
-  const code = main.locator('.ph-code-text');
-  await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-  return (await code.textContent()) ?? '';
-}
-
 async function pair(main: Locator, phone: BrowserContext, name: string): Promise<Page> {
-  const code = await newCode(main);
+  const code = await startPairing(main.page(), /Pair a phone|Get a new code|Pair another/);
   const { page } = await arriveFromElsewhere(phone, `${PHONE_ADDRESS}/#code=${code}`);
   await expect(page.getByLabel('Pairing code')).toHaveValue(code);
   await page.getByLabel('Device name').fill(name);

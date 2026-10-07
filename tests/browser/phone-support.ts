@@ -117,7 +117,10 @@ export async function turnOn(page: Page) {
   await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible();
 }
 
-export async function startPairing(page: Page, button = 'Pair a phone'): Promise<string> {
+export async function startPairing(
+  page: Page,
+  button: string | RegExp = 'Pair a phone',
+): Promise<string> {
   const code = page.locator('.ph-code-text');
   const limited = page.locator('.ph-scene-line', { hasText: 'Too many pairing attempts' });
   await page.getByRole('button', { name: button }).click();
