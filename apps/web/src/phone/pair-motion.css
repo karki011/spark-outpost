@@ -111,8 +111,16 @@
   }
 }
 .ph-scene[data-paused] :is(.ph-scene-blob, .ph-scene-phone, .scout, .scout *),
-:root[data-motion='paused'] .ph-scene :is(.ph-scene-blob, .ph-scene-phone, .scout, .scout *) {
+:root[data-motion='paused'] .ph-scene :is(.ph-scene-blob, .ph-scene-phone, .scout) {
   animation-play-state: paused !important;
+}
+:root[data-motion='paused'] .ph-scene .scout {
+  --motion-paused: 1;
+}
+@container style(--motion-paused: 1) {
+  .ph-scene .scout * {
+    animation-play-state: paused !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .ph-scene .scout {
