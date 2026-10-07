@@ -109,7 +109,6 @@ const PREVIOUS_COLUMNS = `r.provider, r.model, r.route->>'modelLabel' AS model_l
 export async function resumableConversation(
   db: Queryable,
   input: RunInput,
-  now = new Date(),
 ): Promise<ResumableSession | null> {
   const stored = await latestProviderSession(
     db,
@@ -118,9 +117,6 @@ export async function resumableConversation(
   );
   const decision = decideConversationResume({
     stored,
-    provider: input.provider,
-    model: stored?.model ?? null,
-    now,
     continuing: input.continuesRunId != null,
   });
   if (!stored?.model || !decision.resume) return null;

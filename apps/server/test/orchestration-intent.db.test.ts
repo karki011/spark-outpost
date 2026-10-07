@@ -31,7 +31,7 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, type TestDb, underCurrent } from './support.ts';
 
 let t: TestDb;
 let root: string;
@@ -195,29 +195,33 @@ describe('missing context', () => {
 });
 
 describe('the project changes mid-chat', () => {
-  it('records the roots per run, notes the move and starts a fresh session', async () => {
-    const { conversationId } = await linkedConversation(t, root);
-    const first = await turn(conversationId, PLAN_TALK);
-    expect(first.orchestration.status).toBe('succeeded');
-    other = await gitRepo();
-    const { project } = await createProject(t.db, t.workspaceId, other);
-    await setConversationProjects(t.db, t.workspaceId, conversationId, [project.id]);
-    const second = await turn(conversationId, PLAN_TALK);
-    const { rows } = await t.db.query<{ id: string; project_roots: string[] }>(
-      'SELECT id, project_roots FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL',
-      [conversationId],
-    );
-    expect(rows.find((row) => row.id === first.runId)?.project_roots).toEqual([root]);
-    expect(rows.find((row) => row.id === second.runId)?.project_roots).toEqual([other]);
-    const steps = await t.db.query<{ name: string }>(
-      `SELECT payload->>'stepName' AS name FROM run_events
+  it.runIf(underCurrent)(
+    'records the roots per run, notes the move and starts a fresh session',
+    async () => {
+      const { conversationId } = await linkedConversation(t, root);
+      const first = await turn(conversationId, PLAN_TALK);
+      expect(first.orchestration.status).toBe('succeeded');
+      other = await gitRepo();
+      const { project } = await createProject(t.db, t.workspaceId, other);
+      await setConversationProjects(t.db, t.workspaceId, conversationId, [project.id]);
+      const second = await turn(conversationId, PLAN_TALK);
+      const { rows } = await t.db.query<{ id: string; project_roots: string[] }>(
+        'SELECT id, project_roots FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL',
+        [conversationId],
+      );
+      expect(rows.find((row) => row.id === first.runId)?.project_roots).toEqual([root]);
+      expect(rows.find((row) => row.id === second.runId)?.project_roots).toEqual([other]);
+      const steps = await t.db.query<{ name: string }>(
+        `SELECT payload->>'stepName' AS name FROM run_events
        WHERE run_id = $1 AND payload->>'stepName' IS NOT NULL`,
-      [second.runId],
-    );
-    const names = steps.rows.map((row) => row.name);
-    expect(names.some((name) => name.startsWith('Project changed since the last turn:'))).toBe(
-      true,
-    );
-    expect(names).toContain('Fresh session (project changed)');
-  }, 90_000);
+        [second.runId],
+      );
+      const names = steps.rows.map((row) => row.name);
+      expect(names.some((name) => name.startsWith('Project changed since the last turn:'))).toBe(
+        true,
+      );
+      expect(names).toContain('Fresh session (project changed)');
+    },
+    90_000,
+  );
 });

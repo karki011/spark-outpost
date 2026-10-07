@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SessionEvent } from '@spark-outpost/contracts';
-import { handoffNote } from '../src/agents/acp/session-open.ts';
+import { FRESH_REASONS, handoffNote } from '../src/agents/acp/session-open.ts';
 import { SESSION_HANDOFF_HEADING } from '../src/orchestration/handoff.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { sweepSessions } from '../src/workflow/turn-session.ts';
@@ -41,6 +41,10 @@ const FOLLOW_UP: Scenario = {
   continuesTask: 0.95,
 };
 
+const LISTS_SESSIONS = {
+  FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {}, list: {} }),
+};
+
 let t: TestDb;
 let root: string;
 let store: string;
@@ -57,7 +61,7 @@ beforeEach(async () => {
   harness = startOrchestrator(t, jevFetch(script), {
     sessions: store,
     harness: 'simple',
-    agentEnv: { FAKE_ACP_STICKY_CONFIG: '1' },
+    agentEnv: { ...LISTS_SESSIONS, FAKE_ACP_STICKY_CONFIG: '1' },
   });
   conversationId = (await linkedConversation(t, root)).conversationId;
   await pinChatLevel(t.db, conversationId, 'hands-off');
@@ -211,20 +215,23 @@ describe(
       expect(allowed.rowCount).toBe(0);
     });
 
-    it('seeds a replacement with the handoff, says so in one line and records why', async () => {
+    it('seeds a replacement with the handoff, says in one line that the session is gone and records why', async () => {
       const first = await turn(NORMAL);
       for (const file of readdirSync(store)) rmSync(join(store, file));
       const question = await turn(QUESTION);
 
       expect(await events(question)).toMatchObject([
-        { event: 'replace', reason: "couldn't resume", handoff: true, agentKey: 'chat:claude' },
+        { event: 'replace', reason: FRESH_REASONS.gone, handoff: true, agentKey: 'chat:claude' },
       ]);
       const closes = await t.db.query<{ reason: string }>(
         `SELECT reason FROM provider_session_events WHERE conversation_id = $1 AND event = 'close'`,
         [conversationId],
       );
-      expect(closes.rows).toEqual([{ reason: "couldn't resume" }]);
-      expect(await steps(question)).toContain(handoffNote("couldn't resume"));
+      expect(closes.rows).toEqual([{ reason: FRESH_REASONS.gone }]);
+      expect(await steps(question)).toContain(handoffNote(FRESH_REASONS.gone));
+      expect((await requests(question)).map((request) => request.method)).toEqual(
+        expect.arrayContaining(['session/resume', 'session/list', 'session/new']),
+      );
       const seeded = storedPrompts().flat().join('\n');
       expect(seeded).toContain(SESSION_HANDOFF_HEADING);
       expect(seeded).toContain(`## Goal\n${NORMAL.text}`);
@@ -233,6 +240,50 @@ describe(
       expect(seeded).toContain('## Chat totals\nEarlier turns: 1. Runs: 2.');
       expect(seeded).toContain(QUESTION.text);
       expect((await events(first)).map((event) => event.event)).toEqual(['open']);
+    });
+
+    it('says the agent still has the session when the resume fails for another reason', async () => {
+      await turn(NORMAL);
+      await harness.stop();
+      harness = startOrchestrator(t, jevFetch(script), {
+        sessions: store,
+        harness: 'simple',
+        agentEnv: { ...LISTS_SESSIONS, FAKE_ACP_RESUME_FAILS: '1' },
+      });
+      const question = await turn(QUESTION);
+      expect(await events(question)).toMatchObject([
+        { event: 'replace', reason: FRESH_REASONS.listed, handoff: true },
+      ]);
+      expect(await steps(question)).toContain(handoffNote(FRESH_REASONS.listed));
+    });
+
+    it('hands a second agent the handoff when the chat changes provider', async () => {
+      await turn(NORMAL);
+      script.scenario = QUESTION;
+      const sent = await sendUserMessage(
+        t.db,
+        conversationId,
+        { id: randomUUID(), content: QUESTION.text },
+        {
+          provider: 'codex',
+          model: 'gpt-6-sol',
+          effort: 'medium',
+          permission: 'do',
+          agentMode: 'ask-every-action',
+          level: 'hands-off',
+        },
+      );
+      harness.worker.wake();
+      await driveToEnd(t, conversationId, sent.run.id, undefined, 90_000);
+      expect(await events(sent.run.id)).toMatchObject([
+        { event: 'open', reason: 'the agent changed', handoff: true, agentKey: 'chat:codex' },
+      ]);
+      expect(storedPrompts().flat().join('\n')).toContain(SESSION_HANDOFF_HEADING);
+      const open = await t.db.query(
+        `SELECT 1 FROM provider_sessions WHERE conversation_id = $1 AND closed_at IS NULL`,
+        [conversationId],
+      );
+      expect(open.rowCount).toBe(2);
     });
 
     it('resumes after days idle, even when the sweeper closed the session', async () => {

@@ -16,6 +16,8 @@ import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   createFakeSession,
+  legacySession,
+  listFakeSessions,
   loadSessionAdvertised,
   newSessionId,
   readFakeSession,
@@ -416,25 +418,10 @@ acp
     createFakeSession(sessionId, sessionCwd, sessionDirectories);
     pushAuthStatus(ctx.client);
     return process.env.FAKE_ACP_LEGACY
-      ? {
-          sessionId: 'fake-session',
-          modes: {
-            currentModeId: config.mode ?? '',
-            availableModes: [
-              { id: 'read-only', name: 'Ask first' },
-              { id: 'agent', name: 'Agent' },
-            ],
-          },
-          models: {
-            currentModelId: config.model,
-            availableModels: [
-              { modelId: 'fast-1', name: 'Fast One' },
-              { modelId: 'smart-2', name: 'Smart Two' },
-            ],
-          },
-        }
+      ? legacySession(config)
       : { sessionId, configOptions: configOptions() };
   })
+  .onRequest(acp.methods.agent.session.list, (ctx) => listFakeSessions(ctx.params.cwd ?? null))
   .onRequest(acp.methods.agent.session.resume, (ctx) => {
     restoreConfig(ctx.params.sessionId, config);
     sessionCwd = ctx.params.cwd;

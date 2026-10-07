@@ -23,7 +23,7 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, type TestDb, BUILDER_SESSION_KEYS } from './support.ts';
 
 const FAILS_UNTIL_FIXED = `import { existsSync, readFileSync } from 'node:fs';
 if (readFileSync('notes.txt', 'utf8').includes('step') && !existsSync('fixed.txt')) {
@@ -147,7 +147,8 @@ describe('checks after a Builder lands', { timeout: 60_000 }, () => {
     });
 
     const { rows: sessions } = await t.db.query<{ close_reason: string | null }>(
-      `SELECT close_reason FROM provider_sessions WHERE agent_key LIKE 'key:%'`,
+      `SELECT close_reason FROM provider_sessions WHERE agent_key LIKE $1`,
+      [BUILDER_SESSION_KEYS],
     );
     expect(sessions.map((row) => row.close_reason)).toEqual([null]);
   });

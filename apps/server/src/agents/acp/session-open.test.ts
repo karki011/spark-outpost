@@ -5,8 +5,10 @@ import {
   afterOpening,
   catchUp,
   handoffNote,
+  FRESH_REASONS,
   sameWorkspace,
   sessionNote,
+  whyResumeFailed,
 } from './session-open.ts';
 
 const turn = (session?: ProviderTurn['session']): ProviderTurn => ({
@@ -103,5 +105,45 @@ describe('sameWorkspace', () => {
     const request = { cwd: '/a', additionalDirectories: ['/b', '/c'], mcpServers: [] };
     expect(sameWorkspace(stored, request)).toBe(true);
     expect(sameWorkspace(stored, { ...request, cwd: '/elsewhere' })).toBe(false);
+  });
+});
+
+describe('whyResumeFailed', () => {
+  const stored = { sessionId: 's1', cwd: '/repo', additionalDirectories: [] };
+  const lists = { protocolVersion: 1, agentCapabilities: { sessionCapabilities: { list: {} } } };
+  const pages = (...sessions: string[][]) => {
+    const asked: unknown[] = [];
+    const ctx = {
+      request: (_method: string, params: { cursor?: string }) => {
+        asked.push(params);
+        const index = params.cursor ? Number(params.cursor) : 0;
+        return Promise.resolve({
+          sessions: sessions[index]!.map((sessionId) => ({ sessionId, cwd: '/repo' })),
+          nextCursor: index + 1 < sessions.length ? String(index + 1) : null,
+        });
+      },
+    } as unknown as Parameters<typeof whyResumeFailed>[0];
+    return { ctx, asked };
+  };
+
+  it('says the session is gone when the agent does not list it for that folder', async () => {
+    const { ctx, asked } = pages(['other'], ['another']);
+    expect(await whyResumeFailed(ctx, lists, stored)).toBe(FRESH_REASONS.gone);
+    expect(asked).toEqual([{ cwd: '/repo' }, { cwd: '/repo', cursor: '1' }]);
+  });
+
+  it('says the session is still there when the agent lists it, on any page', async () => {
+    const { ctx } = pages(['other'], ['s1']);
+    expect(await whyResumeFailed(ctx, lists, stored)).toBe(FRESH_REASONS.listed);
+  });
+
+  it('keeps the plain reason when the agent cannot list sessions or the list fails', async () => {
+    const { ctx, asked } = pages(['s1']);
+    expect(await whyResumeFailed(ctx, { protocolVersion: 1 }, stored)).toBe(FRESH_REASONS.failed);
+    expect(asked).toEqual([]);
+    const failing = {
+      request: () => Promise.reject(new Error('no')),
+    } as unknown as Parameters<typeof whyResumeFailed>[0];
+    expect(await whyResumeFailed(failing, lists, stored)).toBe(FRESH_REASONS.failed);
   });
 });

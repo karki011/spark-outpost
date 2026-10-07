@@ -37,7 +37,7 @@ import {
   untilStatus,
 } from './interruption-support.ts';
 import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb, underCurrent } from './support.ts';
 
 const TARGET = {
   provider: 'claude',
@@ -231,7 +231,7 @@ describe('Continue from here after a lease expired mid-turn', { timeout: 90_000 
     await untilFinished(t, clicks[0]!.run.id);
   });
 
-  it('refuses once a newer message started a turn', async () => {
+  it.runIf(underCurrent)('refuses once a newer message started a turn', async () => {
     start();
     const turn = await interrupted();
     await rewriteRequest(turn.runId, 'Tell me a long story about herons');

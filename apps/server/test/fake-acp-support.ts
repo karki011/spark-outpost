@@ -26,6 +26,8 @@ const configFile = (sessionId: string) => join(configStore ?? '', `${sessionId}.
 
 export function restoreConfig(sessionId: string, config: Record<string, string>): void {
   readFakeSession(sessionId);
+  if (process.env.FAKE_ACP_RESUME_FAILS === '1')
+    throw new Error('The session could not be reopened.');
   if (!configStore || !existsSync(configFile(sessionId))) return;
   Object.assign(config, JSON.parse(readFileSync(configFile(sessionId), 'utf8')));
 }

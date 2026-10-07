@@ -13,7 +13,7 @@ import {
   startOrchestrator,
   type Harness,
 } from './orchestration-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb, underCurrent } from './support.ts';
 
 let t: TestDb;
 let root: string;
@@ -56,18 +56,21 @@ async function crew(conversationId: string) {
 }
 
 describe('the main chat session keeps one model in an Auto chat', { timeout: 90_000 }, () => {
-  it('answers a trivial follow-up on the same model while the Builder is routed', async () => {
-    const { conversationId } = await linkedConversation(t, root);
-    await t.db.query(`UPDATE conversations SET model_routing = 'auto' WHERE id = $1`, [
-      conversationId,
-    ]);
-    await say(conversationId, 'What does parseDate do?', 'ask');
-    await say(conversationId, 'Fix the typo in the README heading. #build', 'do');
-    await say(conversationId, 'Fix the typo?', 'ask');
-    expect(await crew(conversationId)).toEqual([
-      ['scout', 'opus[1m]'],
-      ['builder', 'sonnet'],
-      ['scout', 'opus[1m]'],
-    ]);
-  });
+  it.runIf(underCurrent)(
+    'answers a trivial follow-up on the same model while the Builder is routed',
+    async () => {
+      const { conversationId } = await linkedConversation(t, root);
+      await t.db.query(`UPDATE conversations SET model_routing = 'auto' WHERE id = $1`, [
+        conversationId,
+      ]);
+      await say(conversationId, 'What does parseDate do?', 'ask');
+      await say(conversationId, 'Fix the typo in the README heading. #build', 'do');
+      await say(conversationId, 'Fix the typo?', 'ask');
+      expect(await crew(conversationId)).toEqual([
+        ['scout', 'opus[1m]'],
+        ['builder', 'sonnet'],
+        ['scout', 'opus[1m]'],
+      ]);
+    },
+  );
 });

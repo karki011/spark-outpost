@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { auditFileLineSchema, type AuditFileLine } from '@spark-outpost/contracts';
 import { sweepProviderSessions } from '../src/persistence/provider-sessions.ts';
 import { verifyRunLog } from '../src/persistence/audit-log.ts';
+import { harnessSetting } from '../src/harness/setting.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { REPLAY_CASES } from './replay/replay-cases.ts';
 import { runReplay, type ReplayResult } from './replay/replay-support.ts';
@@ -47,7 +48,7 @@ describe('decision audit in the export', { timeout: 300_000 }, () => {
     const lines = await exported(replay);
 
     expect(ofType(lines, 'meta')).toMatchObject([
-      { appVersion: '9.8.7', harness: 'current', messageText: 'redacted', exportVersion: 2 },
+      { appVersion: '9.8.7', harness: harnessSetting(), messageText: 'redacted', exportVersion: 2 },
     ]);
     const turns = ofType(lines, 'turn');
     expect(turns.map((turn) => turn.messageText)).toEqual(

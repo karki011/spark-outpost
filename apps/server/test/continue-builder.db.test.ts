@@ -30,7 +30,7 @@ import {
   type Harness,
   type JevScript,
 } from './orchestration-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb, BUILDER_SESSION_KEYS } from './support.ts';
 
 const STALLING = withTag(TRIVIAL, '#stallbuild');
 
@@ -74,8 +74,8 @@ async function builders(runId: string): Promise<BuilderRun[]> {
 async function builderSessions(conversationId: string) {
   const { rows } = await t.db.query<{ session_id: string; last_reply_hash: string | null }>(
     `SELECT session_id, last_reply_hash FROM provider_sessions
-     WHERE conversation_id = $1 AND starts_with(agent_key, 'key:') ORDER BY created_at`,
-    [conversationId],
+     WHERE conversation_id = $1 AND agent_key LIKE $2 ORDER BY created_at`,
+    [conversationId, BUILDER_SESSION_KEYS],
   );
   return rows;
 }

@@ -76,6 +76,16 @@ export const DEFAULT_SWEEP_LIMITS: SweepLimits = {
 };
 
 const COULD_NOT_REOPEN = "the agent couldn't reopen it";
+const PROVIDER_CHANGED = 'the agent changed';
+
+async function usedAnotherProvider(db: Db, conversationId: string, provider: string) {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM provider_sessions
+     WHERE conversation_id = $1 AND provider <> $2 AND starts_with(agent_key, 'chat:') LIMIT 1`,
+    [conversationId, provider],
+  );
+  return rowCount === 1;
+}
 const UNKEYED_SETTINGS = { model: null, effort: null, mode: null, planning: false, roots: [] };
 
 function acrossFolders(provider: string): boolean {
@@ -120,13 +130,7 @@ export async function prepareTurnSession(
   );
   const stored = await latestProviderSession(db, conversationId, key);
   const decision = conversation
-    ? decideConversationResume({
-        stored,
-        provider: input.provider,
-        model: input.settings.model,
-        now,
-        continuing: input.continuesRunId != null,
-      })
+    ? decideConversationResume({ stored, continuing: input.continuesRunId != null })
     : decideResume({
         stored,
         hash,
@@ -137,15 +141,19 @@ export async function prepareTurnSession(
         cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
         continuing: input.continuesRunId != null,
       });
-  const handoff =
-    conversation && stored
-      ? await loadSessionHandoff(db, input, decision.freshReason ?? COULD_NOT_REOPEN).catch(
-          (error: unknown) => {
-            console.error('Could not build the session handoff', error);
-            return null;
-          },
-        )
-      : null;
+  const handoffReason = !(conversation && chatTurn)
+    ? null
+    : decision.resume
+      ? COULD_NOT_REOPEN
+      : !stored && (await usedAnotherProvider(db, conversationId, input.provider))
+        ? PROVIDER_CHANGED
+        : null;
+  const handoff = handoffReason
+    ? await loadSessionHandoff(db, input, handoffReason).catch((error: unknown) => {
+        console.error('Could not build the session handoff', error);
+        return null;
+      })
+    : null;
   const missed =
     conversation && stored && decision.resume
       ? await missedMessages(db, input, stored.lastUsedAt, stored.lastReplyHash, key).catch(
@@ -220,7 +228,7 @@ export async function prepareTurnSession(
     target: {
       workdir,
       resume,
-      freshReason: decision.freshReason,
+      freshReason: decision.freshReason ?? (decision.resume ? null : handoffReason),
       ...(followUp ? { followUp } : {}),
       ...(interrupted ? { interrupted } : {}),
       ...(handoff ? { handoff } : {}),

@@ -17,6 +17,7 @@ import {
   createTestDb,
   SESSION_LIMITS,
   type TestDb,
+  underCurrent,
 } from './support.ts';
 
 let t: TestDb;
@@ -71,33 +72,36 @@ async function completeTurn(input: RunInput, sessionId: string, reply: string, c
 }
 
 describe('provider sessions across chat turns', () => {
-  it('resumes the next turn and starts fresh once the chat moves on', async () => {
-    const id = await conversation();
-    await message(id, 'user', 'hi');
-    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
-    expect(first.turn.target).toMatchObject({ resume: null, freshReason: null });
-    expect(first.turn.target.workdir?.startsWith(SESSION_WORKDIR_ROOT)).toBe(true);
+  it.runIf(underCurrent)(
+    'resumes the next turn and starts fresh once the chat moves on',
+    async () => {
+      const id = await conversation();
+      await message(id, 'user', 'hi');
+      const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
+      expect(first.turn.target).toMatchObject({ resume: null, freshReason: null });
+      expect(first.turn.target.workdir?.startsWith(SESSION_WORKDIR_ROOT)).toBe(true);
 
-    await message(id, 'user', 'again');
-    const second = await prepareTurnSession(
-      t.db,
-      chatTurnInput(t, id, first.messageId),
-      SESSION_LIMITS,
-    );
-    expect(second?.target.resume).toEqual({
-      sessionId: 's-1',
-      cwd: first.turn.target.workdir,
-      additionalDirectories: [],
-    });
+      await message(id, 'user', 'again');
+      const second = await prepareTurnSession(
+        t.db,
+        chatTurnInput(t, id, first.messageId),
+        SESSION_LIMITS,
+      );
+      expect(second?.target.resume).toEqual({
+        sessionId: 's-1',
+        cwd: first.turn.target.workdir,
+        additionalDirectories: [],
+      });
 
-    await message(id, 'user', 'a queued message');
-    const moved = await prepareTurnSession(
-      t.db,
-      chatTurnInput(t, id, randomUUID()),
-      SESSION_LIMITS,
-    );
-    expect(moved?.target).toMatchObject({ resume: null, freshReason: 'chat changed since' });
-  });
+      await message(id, 'user', 'a queued message');
+      const moved = await prepareTurnSession(
+        t.db,
+        chatTurnInput(t, id, randomUUID()),
+        SESSION_LIMITS,
+      );
+      expect(moved?.target).toMatchObject({ resume: null, freshReason: 'chat changed since' });
+    },
+  );
 
   it('records only the new cost when the agent reports a cumulative session cost', async () => {
     const id = await conversation();
@@ -116,31 +120,34 @@ describe('provider sessions across chat turns', () => {
     expect(fresh.recorded.costUsd).toBe(0.02);
   });
 
-  it('starts fresh after a changed model and keeps one open session per key', async () => {
-    const id = await conversation();
-    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
-    const input = chatTurnInput(t, id, first.messageId);
-    const changed = { ...input, settings: { ...input.settings, model: 'opus' } };
-    const turn = await prepareTurnSession(t.db, changed, SESSION_LIMITS);
-    expect(turn?.target).toMatchObject({ resume: null, freshReason: 'settings changed' });
-    await turn?.started({
-      kind: 'session',
-      sessionId: 's-2',
-      cwd: '/work',
-      additionalDirectories: [],
-      continued: false,
-      freshReason: 'settings changed',
-    });
-    const { rows } = await t.db.query<{ session_id: string; close_reason: string | null }>(
-      'SELECT session_id, close_reason FROM provider_sessions ORDER BY created_at',
-    );
-    expect(rows).toEqual([
-      { session_id: 's-1', close_reason: 'settings changed' },
-      { session_id: 's-2', close_reason: null },
-    ]);
-  });
+  it.runIf(underCurrent)(
+    'starts fresh after a changed model and keeps one open session per key',
+    async () => {
+      const id = await conversation();
+      const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
+      const input = chatTurnInput(t, id, first.messageId);
+      const changed = { ...input, settings: { ...input.settings, model: 'opus' } };
+      const turn = await prepareTurnSession(t.db, changed, SESSION_LIMITS);
+      expect(turn?.target).toMatchObject({ resume: null, freshReason: 'settings changed' });
+      await turn?.started({
+        kind: 'session',
+        sessionId: 's-2',
+        cwd: '/work',
+        additionalDirectories: [],
+        continued: false,
+        freshReason: 'settings changed',
+      });
+      const { rows } = await t.db.query<{ session_id: string; close_reason: string | null }>(
+        'SELECT session_id, close_reason FROM provider_sessions ORDER BY created_at',
+      );
+      expect(rows).toEqual([
+        { session_id: 's-1', close_reason: 'settings changed' },
+        { session_id: 's-2', close_reason: null },
+      ]);
+    },
+  );
 
-  it('closes the session when the turn fails', async () => {
+  it.runIf(underCurrent)('closes the session when the turn fails', async () => {
     const id = await conversation();
     const turn = await prepareTurnSession(t.db, chatTurnInput(t, id, null), SESSION_LIMITS);
     await turn?.started({

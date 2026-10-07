@@ -95,10 +95,10 @@ function fakeAgent(
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
-      ...extraEnv,
       FAKE_ACP_PROVIDER: id,
       FAKE_ACP_MODELS: JSON.stringify(models.map((model) => [model.id, model.label])),
       ...sessionEnv(store),
+      ...extraEnv,
     },
   });
 }

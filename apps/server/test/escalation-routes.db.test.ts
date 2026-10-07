@@ -18,7 +18,7 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, type TestDb, underCurrent } from './support.ts';
 
 let t: TestDb;
 let root: string;
@@ -115,85 +115,93 @@ function prompts(sessionId: string): string[] {
 }
 
 describe('escalating a hard follow-up in a long task session', () => {
-  it('spawns a stronger Builder with a brief at large context and keeps the chat session warm', async () => {
-    const first = await firstTask(180_000);
-    first.script.scenario = hardFollowUp(2);
-    const second = await followUp(first.conversationId);
-    expect(second.orchestration.status).toBe('succeeded');
+  it.runIf(underCurrent)(
+    'spawns a stronger Builder with a brief at large context and keeps the chat session warm',
+    async () => {
+      const first = await firstTask(180_000);
+      first.script.scenario = hardFollowUp(2);
+      const second = await followUp(first.conversationId);
+      expect(second.orchestration.status).toBe('succeeded');
 
-    const [builder] = await builderRuns(second.runId);
-    expect(builder).toMatchObject({
-      model: 'opus[1m]',
-      task_id: first.taskId,
-      resume_key: `${first.taskId}:escalated`,
-      escalation: { kind: 'brief', model: 'opus[1m]' },
-    });
-    expect(builder!.prompt).toContain(HANDOFF_HEADINGS.brief);
-    for (const heading of ['## Goal', '## Rules', '## Decisions so far', '## Current diff']) {
-      expect(builder!.prompt).toContain(heading);
-    }
-    expect(builder!.prompt).toContain(FOLLOW_UP);
+      const [builder] = await builderRuns(second.runId);
+      expect(builder).toMatchObject({
+        model: 'opus[1m]',
+        task_id: first.taskId,
+        resume_key: `${first.taskId}:escalated`,
+        escalation: { kind: 'brief', model: 'opus[1m]' },
+      });
+      expect(builder!.prompt).toContain(HANDOFF_HEADINGS.brief);
+      for (const heading of ['## Goal', '## Rules', '## Decisions so far', '## Current diff']) {
+        expect(builder!.prompt).toContain(heading);
+      }
+      expect(builder!.prompt).toContain(FOLLOW_UP);
 
-    const rows = await sessions(first.conversationId);
-    const main = rows.find((row) => row.agent_key === `key:${first.taskId}:builder`);
-    const escalated = rows.find((row) => row.agent_key === `key:${first.taskId}:escalated`);
-    expect(main?.close_reason).toBeNull();
-    expect(escalated?.close_reason).toBeNull();
-    expect(prompts(main!.session_id)).toHaveLength(1);
+      const rows = await sessions(first.conversationId);
+      const main = rows.find((row) => row.agent_key === `key:${first.taskId}:builder`);
+      const escalated = rows.find((row) => row.agent_key === `key:${first.taskId}:escalated`);
+      expect(main?.close_reason).toBeNull();
+      expect(escalated?.close_reason).toBeNull();
+      expect(prompts(main!.session_id)).toHaveLength(1);
 
-    expect(second.route?.answer.rule).toBe(
-      'hard follow-up at 180K → Opus 5.5 Builder with brief; Sonnet 5 session kept warm',
-    );
-    expect(second.route?.answer.why).toContain('Builder with brief');
-    expect(second.route?.answer.escalation).toMatchObject({
-      kind: 'brief',
-      hard: true,
-      contextTokens: 180_000,
-      from: { model: 'sonnet' },
-      to: { model: 'opus[1m]' },
-    });
-    expect(second.route?.answer.session).toMatchObject({ kept: true });
+      expect(second.route?.answer.rule).toBe(
+        'hard follow-up at 180K → Opus 5.5 Builder with brief; Sonnet 5 session kept warm',
+      );
+      expect(second.route?.answer.why).toContain('Builder with brief');
+      expect(second.route?.answer.escalation).toMatchObject({
+        kind: 'brief',
+        hard: true,
+        contextTokens: 180_000,
+        from: { model: 'sonnet' },
+        to: { model: 'opus[1m]' },
+      });
+      expect(second.route?.answer.session).toMatchObject({ kept: true });
 
-    first.script.scenario = {
-      ...NORMAL,
-      continuesTask: 0.95,
-      ratings: { complexity: 2, ambiguity: 2, stakes: 2, context_dependence: 2 },
-    };
-    const third = await followUp(first.conversationId, 'Also rename the helper. #build');
-    const [back] = await builderRuns(third.runId);
-    expect(back).toMatchObject({ model: 'sonnet', resume_key: `${first.taskId}:builder` });
-    const resumed = prompts(main!.session_id);
-    expect(resumed).toHaveLength(2);
-    expect(resumed[1]).toContain('handled the last request in this task from a brief');
-    expect(resumed[1]).toContain('Also rename the helper.');
-  }, 90_000);
+      first.script.scenario = {
+        ...NORMAL,
+        continuesTask: 0.95,
+        ratings: { complexity: 2, ambiguity: 2, stakes: 2, context_dependence: 2 },
+      };
+      const third = await followUp(first.conversationId, 'Also rename the helper. #build');
+      const [back] = await builderRuns(third.runId);
+      expect(back).toMatchObject({ model: 'sonnet', resume_key: `${first.taskId}:builder` });
+      const resumed = prompts(main!.session_id);
+      expect(resumed).toHaveLength(2);
+      expect(resumed[1]).toContain('handled the last request in this task from a brief');
+      expect(resumed[1]).toContain('Also rename the helper.');
+    },
+    90_000,
+  );
 
-  it('compacts and switches the session when the follow-up depends on the context', async () => {
-    const first = await firstTask(180_000);
-    first.script.scenario = hardFollowUp(4);
-    const second = await followUp(first.conversationId);
-    expect(second.orchestration.status).toBe('succeeded');
+  it.runIf(underCurrent)(
+    'compacts and switches the session when the follow-up depends on the context',
+    async () => {
+      const first = await firstTask(180_000);
+      first.script.scenario = hardFollowUp(4);
+      const second = await followUp(first.conversationId);
+      expect(second.orchestration.status).toBe('succeeded');
 
-    const [builder] = await builderRuns(second.runId);
-    expect(builder).toMatchObject({
-      model: 'opus[1m]',
-      resume_key: `${first.taskId}:builder`,
-      escalation: { kind: 'compact', model: 'opus[1m]' },
-    });
-    const rows = await sessions(first.conversationId);
-    const keyed = rows.filter((row) => row.agent_key === `key:${first.taskId}:builder`);
-    expect(keyed).toHaveLength(2);
-    expect(keyed[0]!.close_reason).not.toBeNull();
-    expect(keyed[1]!.close_reason).toBeNull();
-    const handoff = prompts(keyed[1]!.session_id);
-    expect(handoff).toHaveLength(1);
-    expect(handoff[0]).toContain(HANDOFF_HEADINGS.compact);
-    expect(handoff[0]).toContain('## Recent turns, verbatim');
-    expect(handoff[0]).toContain(FOLLOW_UP);
-    expect(second.route?.answer.rule).toBe(
-      'hard follow-up at 180K → compacted handoff; session moves to Opus 5.5',
-    );
-  }, 90_000);
+      const [builder] = await builderRuns(second.runId);
+      expect(builder).toMatchObject({
+        model: 'opus[1m]',
+        resume_key: `${first.taskId}:builder`,
+        escalation: { kind: 'compact', model: 'opus[1m]' },
+      });
+      const rows = await sessions(first.conversationId);
+      const keyed = rows.filter((row) => row.agent_key === `key:${first.taskId}:builder`);
+      expect(keyed).toHaveLength(2);
+      expect(keyed[0]!.close_reason).not.toBeNull();
+      expect(keyed[1]!.close_reason).toBeNull();
+      const handoff = prompts(keyed[1]!.session_id);
+      expect(handoff).toHaveLength(1);
+      expect(handoff[0]).toContain(HANDOFF_HEADINGS.compact);
+      expect(handoff[0]).toContain('## Recent turns, verbatim');
+      expect(handoff[0]).toContain(FOLLOW_UP);
+      expect(second.route?.answer.rule).toBe(
+        'hard follow-up at 180K → compacted handoff; session moves to Opus 5.5',
+      );
+    },
+    90_000,
+  );
 
   it('switches the session directly when the context is small', async () => {
     const first = await firstTask(20_000);

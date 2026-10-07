@@ -15,6 +15,8 @@ export const FRESH_REASONS = {
   unsupported: "agent can't resume",
   repos: 'repos changed',
   failed: "couldn't resume",
+  gone: 'the agent no longer has the earlier session',
+  listed: "the agent still has the earlier session but couldn't reopen it",
 } as const;
 
 const CLOSE_WAIT_MS = 3_000;
@@ -130,7 +132,36 @@ export async function openSession(
     return { session, continued: true, freshReason: null };
   } catch (error) {
     if (signal.aborted) throw error;
-    return fresh(FRESH_REASONS.failed);
+    return fresh(await whyResumeFailed(ctx, init, stored));
+  }
+}
+
+export function listsSessions(init: acp.InitializeResponse): boolean {
+  const list = init.agentCapabilities?.sessionCapabilities?.list;
+  return list !== undefined && list !== null;
+}
+
+export async function whyResumeFailed(
+  ctx: Pick<acp.ClientContext, 'request'>,
+  init: acp.InitializeResponse,
+  stored: StoredSession,
+): Promise<string> {
+  if (!listsSessions(init)) return FRESH_REASONS.failed;
+  try {
+    let cursor: string | null = null;
+    do {
+      const page: acp.ListSessionsResponse = await ctx.request(acp.methods.agent.session.list, {
+        cwd: stored.cwd,
+        ...(cursor ? { cursor } : {}),
+      });
+      if (page.sessions.some((session) => session.sessionId === stored.sessionId)) {
+        return FRESH_REASONS.listed;
+      }
+      cursor = page.nextCursor ?? null;
+    } while (cursor);
+    return FRESH_REASONS.gone;
+  } catch {
+    return FRESH_REASONS.failed;
   }
 }
 
