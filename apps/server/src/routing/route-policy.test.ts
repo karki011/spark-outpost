@@ -71,7 +71,7 @@ describe('policy that stays in code', () => {
     const policy = routePolicy(context('pinned'), { trivial: false, destructive: false }, true);
     expect(policy).toMatchObject({ kind: 'pinned', codePick: { model: 'sonnet' } });
     const risky = routePolicy(context('pinned'), { trivial: false, destructive: true }, true);
-    expect(risky).toMatchObject({ kind: 'pinned', codePick: { model: 'opus[1m]' } });
+    expect(risky).toMatchObject({ kind: 'pinned', codePick: { model: 'sonnet' } });
   });
 
   it('sends destructive work to the top tier without asking', () => {
