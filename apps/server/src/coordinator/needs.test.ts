@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { neededFiles, needText, revertedText } from './needs.ts';
+import { neededFiles, needText, crossedText } from './needs.ts';
 
 describe('neededFiles', () => {
   it('reads one need per line, with or without a bullet or backticks', () => {
@@ -38,9 +38,9 @@ describe('the text a follow-up is given', () => {
     );
   });
 
-  it('carries a reverted change as a diff, cut when it is long', () => {
-    const text = revertedText('P2', 'api.ts', `+${'x'.repeat(5_000)}`);
-    expect(text).toContain('P2 changed `api.ts`, which it does not own');
+  it('carries a kept change to another piece’s file as a diff, cut when it is long', () => {
+    const text = crossedText('P2', 'api.ts', `+${'x'.repeat(5_000)}`);
+    expect(text).toContain('P2 changed `api.ts`, which your piece owns');
     expect(text).toContain('[cut at 4000 characters]');
   });
 });

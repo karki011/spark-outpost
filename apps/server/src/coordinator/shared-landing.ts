@@ -36,7 +36,6 @@ export function sharedSite(
   return {
     cwd: async () => root,
     place: async () => null,
-    copy: null,
     slot,
     changed: async (before) =>
       (await changedFiles(root, before)).filter((file) => !ownedByOther(file)),

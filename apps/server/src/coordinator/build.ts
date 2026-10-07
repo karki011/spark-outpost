@@ -33,14 +33,13 @@ function stopped(s: Session): boolean {
 
 function pieceSite(s: Session): PieceSite {
   const root = s.input.projectRoots[0]!;
-  if (!s.needsCopy) return { cwd: async () => root, place: async () => null, copy: null };
+  if (!s.needsCopy) return { cwd: async () => root, place: async () => null };
   return {
     cwd: async () => {
       const record = s.copyRunId ? await getWorktree(s.deps.db, s.copyRunId) : null;
       return record?.path ?? root;
     },
     place: () => placeFor(s),
-    copy: null,
   };
 }
 
@@ -64,7 +63,7 @@ async function engage(s: Session): Promise<void> {
     names: written.ok ? written.value.names : new Map(),
     topTier: written.ok ? written.value.topTier : new Set(),
     scoutNotes: [],
-    violations: 0,
+    crossed: new Set(),
     integrated: false,
     integrator: null,
     base: await treeOf(s, root),

@@ -101,7 +101,6 @@ export async function runReplay(
     sessions: store,
     harness,
     ...(replay.coordinator ? { coordinator: replay.coordinator } : {}),
-    ...(replay.placement ? { forcedPlacement: replay.placement } : {}),
     ...(place.stub
       ? {
           shipAccess: {

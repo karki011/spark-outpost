@@ -7,7 +7,6 @@ import {
   type ApprovalOption,
   type RunEvent,
 } from '@spark-outpost/contracts';
-import { routesSharedPieces } from '../agents/acp/agents.ts';
 import { normalizeCommand } from '../approvals/commands.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
@@ -23,7 +22,6 @@ import {
   FS_WRITE_TOOL_KIND,
   SECRET_REASON,
   decide,
-  relativeTo,
   secretLabels,
   type ApprovalRequest,
   type DecideOptions,
@@ -390,9 +388,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
-    const pieceRefused = deps.piece
-      ? pieceRefusal(request, deps.piece, relativeTo(request.roots))
-      : null;
+    const pieceRefused = deps.piece ? pieceRefusal(request, deps.piece) : null;
     const covered =
       pieceRefused === null &&
       request.toolKind === FS_WRITE_TOOL_KIND &&
@@ -417,7 +413,6 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
-      routedPiece: deps.piece?.sharesTree === true && routesSharedPieces(deps.provider),
       ...(deps.piece ? { piece: deps.piece } : {}),
       ...(await publishContext(deps.db, deps.publish, request)),
     };

@@ -1,12 +1,9 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
-import { COORD_OWNERSHIP_STRIKES } from '../advisor/policy.ts';
 import { pieceListById } from '../persistence/pieces.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import type { MemberResult, Session } from '../orchestration/session.ts';
-import { cleanupCopies } from '../orchestration/solo-copy.ts';
 import type { Spawn } from '../orchestration/transitions.ts';
 import { projectSettings } from './builder-env.ts';
-import { copySite, dropCopy, openCopies } from './group.ts';
 import { runPiece, type PieceSite } from './piece-run.ts';
 import { runReadySet, type PieceEnd } from './schedule.ts';
 import { attributeShared, sharedBase, sharedSite } from './shared-landing.ts';
@@ -20,8 +17,7 @@ export interface PiecesRun {
 interface PieceGroup {
   limit: number;
   site(piece: TaskPiece, slot: number): Promise<PieceSite>;
-  landed(piece: TaskPiece): Promise<void>;
-  close(): Promise<void>;
+  landed(): Promise<void>;
 }
 
 const LIMITED = new Set(['rate_limit', 'usage_limit']);
@@ -44,32 +40,19 @@ function inOrderGroup(site: PieceSite): PieceGroup {
     limit: 1,
     site: async () => site,
     landed: async () => undefined,
-    close: async () => undefined,
   };
 }
 
-async function placedGroup(s: Session, coordination: Coordination): Promise<PieceGroup> {
-  const building = coordination.list!.pieces.filter((piece) => !piece.research);
-  const base = building.some((piece) => piece.placement === 'shared')
-    ? await sharedBase(s, coordination)
-    : null;
-  const copies = building.some((piece) => piece.placement === 'worktree')
-    ? await openCopies(s)
-    : null;
+async function sharedGroup(s: Session, coordination: Coordination): Promise<PieceGroup> {
+  const base = await sharedBase(s, coordination);
   let attributed = Promise.resolve();
   return {
     limit: await pieceSlots(s),
-    site: async (piece, slot) =>
-      piece.placement === 'worktree'
-        ? copySite(s, coordination, copies!, piece, slot)
-        : sharedSite(coordination, base!.root, piece, slot),
-    landed: async (piece) => {
-      if (piece.placement === 'worktree') await dropCopy(s, copies!, piece.key);
-      if (!base) return;
+    site: async (piece, slot) => sharedSite(coordination, base.root, piece, slot),
+    landed: async () => {
       attributed = attributed.then(() => attributeShared(s, coordination));
       await attributed;
     },
-    close: () => (copies ? cleanupCopies(s) : Promise.resolve()),
   };
 }
 
@@ -79,7 +62,7 @@ async function openGroup(
   inOrder: PieceSite,
 ): Promise<PieceGroup> {
   if (coordination.list!.placement === 'in_order') return inOrderGroup(inOrder);
-  return placedGroup(s, coordination);
+  return sharedGroup(s, coordination);
 }
 
 function withAgentSlot<T>(s: Session, work: () => Promise<T>): Promise<T> {
@@ -99,32 +82,27 @@ export async function runPieces(
   const settled = list.pieces
     .filter((piece) => piece.status === 'landed' || piece.status === 'skipped')
     .map((piece) => piece.key);
-  try {
-    await runReadySet(list.pieces, {
-      limit: group.limit,
-      narrowed: () => coordination.violations >= COORD_OWNERSHIP_STRIKES,
-      settled: new Set(settled),
-      stopped: () => stopped(s),
-      run: async (piece, slot): Promise<PieceEnd> => {
-        const current = coordination.list!.pieces.find((item) => item.key === piece.key)!;
-        if (current.status === 'skipped') return 'skipped';
-        const next = spawn;
-        spawn = { ...action, escalate: false };
-        const site = current.research ? inOrder : await group.site(current, slot);
-        const ran = await withAgentSlot(s, () => runPiece(s, next, current, coordination, site));
-        coordination.list = await pieceListById(s.deps.db, list.id);
-        if (ran.skipped) return 'skipped';
-        outcome.last = ran.result;
-        if (!ran.landed) {
-          outcome.failure ??= ran.result;
-          return 'failed';
-        }
-        await group.landed(current);
-        return 'landed';
-      },
-    });
-  } finally {
-    await group.close();
-  }
+  await runReadySet(list.pieces, {
+    limit: group.limit,
+    settled: new Set(settled),
+    stopped: () => stopped(s),
+    run: async (piece, slot): Promise<PieceEnd> => {
+      const current = coordination.list!.pieces.find((item) => item.key === piece.key)!;
+      if (current.status === 'skipped') return 'skipped';
+      const next = spawn;
+      spawn = { ...action, escalate: false };
+      const site = current.research ? inOrder : await group.site(current, slot);
+      const ran = await withAgentSlot(s, () => runPiece(s, next, current, coordination, site));
+      coordination.list = await pieceListById(s.deps.db, list.id);
+      if (ran.skipped) return 'skipped';
+      outcome.last = ran.result;
+      if (!ran.landed) {
+        outcome.failure ??= ran.result;
+        return 'failed';
+      }
+      await group.landed();
+      return 'landed';
+    },
+  });
   return outcome;
 }

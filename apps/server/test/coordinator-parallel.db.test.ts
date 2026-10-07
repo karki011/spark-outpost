@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SHARED_INSTALL_REASON } from '../src/approvals/piece-guard.ts';
 import { NOT_STARTED_STOPPED } from '../src/coordinator/skip.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
@@ -53,15 +52,6 @@ const CLAUDE_MODES = [
   ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
 ];
 
-async function sharedGuards(runId: string): Promise<Record<string, boolean>> {
-  const { rows } = await t.db.query<{ key: string; shares: boolean }>(
-    `SELECT route->>'pieceKey' AS key, COALESCE((route->'guard'->>'sharesTree')::boolean, false) AS shares
-       FROM runs WHERE parent_run_id = $1 AND route ? 'guard' AND route ? 'pieceKey'`,
-    [runId],
-  );
-  return Object.fromEntries(rows.map((row) => [row.key, row.shares]));
-}
-
 async function begin(tags: string, options: Parameters<typeof beginPieces>[3] = {}) {
   const begun = beginPieces(t, root, tags, options);
   harness = begun.harness;
@@ -106,33 +96,22 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Pieces (3, in the shared tree, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | shared tree · owns 3 files |');
-    expect(await sharedGuards(runId)).toEqual({ P1: true, P2: true, P3: true });
   });
 
-  it("holds an install while pieces share the tree and says it was Spark's policy", async () => {
+  it('lets an install follow the agent mode while pieces share the tree', async () => {
     await projectFlags(t, root, { parallel: true });
     const { conversationId, runId } = await begin('#addpkg');
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
-    const { rows } = await t.db.query<{ status: string; decided_by: string; reason: string }>(
-      `SELECT a.status, a.decided_by, a.reason FROM approvals a JOIN runs r ON r.id = a.run_id
+    const { rows } = await t.db.query<{ status: string }>(
+      `SELECT a.status FROM approvals a JOIN runs r ON r.id = a.run_id
        WHERE r.parent_run_id = $1 AND a.title = 'pnpm add left-pad'`,
       [runId],
     );
-    expect(rows).toEqual([
-      { status: 'denied', decided_by: 'policy', reason: SHARED_INSTALL_REASON },
-    ]);
-    const steps = await t.db.query<{ name: string }>(
-      `SELECT e.payload->>'stepName' AS name FROM run_events e JOIN runs r ON r.id = e.run_id
-       WHERE r.parent_run_id = $1 AND e.type = 'STEP_STARTED' AND e.payload->>'stepName' LIKE 'Spark''s policy blocked%'`,
-      [runId],
-    );
-    expect(steps.rows.map((row) => row.name)).toEqual([
-      `Spark's policy blocked \`pnpm add left-pad\` (${SHARED_INSTALL_REASON})`,
-    ]);
+    expect(rows).toEqual([{ status: 'allowed' }]);
   });
 
-  it("answers a piece's targeted check itself in Auto and refuses a whole-workspace run", async () => {
+  it("leaves a piece's noted check to the mode in Auto and refuses a whole-workspace run", async () => {
     await projectFlags(t, root, { parallel: true });
     const { conversationId, runId } = await begin('#targeted #allnx', {
       agentMode: 'auto',
@@ -141,14 +120,15 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     });
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
-    const { rows } = await t.db.query<{ title: string; status: string; decided_by: string }>(
-      `SELECT a.title, a.status, a.decided_by FROM approvals a JOIN runs r ON r.id = a.run_id
+    const { rows } = await t.db.query<{ title: string; status: string; policy: boolean }>(
+      `SELECT a.title, a.status, a.decided_by = 'policy' AS policy FROM approvals a
+       JOIN runs r ON r.id = a.run_id
        WHERE r.parent_run_id = $1 AND a.kind = 'execute' ORDER BY a.created_at`,
       [runId],
     );
     expect(rows).toEqual([
-      { title: TARGETED_CHECK, status: 'allowed', decided_by: 'level' },
-      { title: 'npx nx run-many --target=test', status: 'denied', decided_by: 'policy' },
+      { title: TARGETED_CHECK, status: 'allowed', policy: false },
+      { title: 'npx nx run-many --target=test', status: 'denied', policy: true },
     ]);
   });
 
@@ -165,7 +145,6 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const runs = await crewRuns(t, runId);
     const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
     expect(overlap(first('P1'), first('P2'))).toBe(false);
-    expect(await sharedGuards(runId)).toEqual({ P1: false, P2: false, P3: false });
   });
 
   it('stops every running piece when you press Stop mid-group', async () => {

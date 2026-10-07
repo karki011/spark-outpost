@@ -3,8 +3,7 @@ import { selectableModels } from '../advisor/intake-questions.ts';
 import { FLOOR_REASON, floorPick } from '../orchestration/model-floor.ts';
 import { builderEffort, DESTRUCTIVE_RULE, type RouteContext } from '../orchestration/routing.ts';
 import { pickOf } from '../routing/candidates.ts';
-import { reaches } from './graph.ts';
-import { sharedFiles, type OwnedSet } from './owned.ts';
+import type { OwnedSet } from './owned.ts';
 import {
   atChatTier,
   belowChatBlock,
@@ -202,47 +201,6 @@ function choosePlace<T extends RoutablePiece>(rules: RouteRules<T>, piece: T): P
   return { placement: rules.placement, decidedBy: 'rules', reason: 'follows the list' };
 }
 
-function ordered(
-  graph: ReadonlyMap<string, readonly string[]>,
-  a: RoutablePiece,
-  b: RoutablePiece,
-): boolean {
-  return reaches(graph, a.key, b.key) || reaches(graph, b.key, a.key);
-}
-
-function separateShared(pieces: readonly RoutablePiece[], routes: PieceRoute[]): void {
-  const graph = new Map(pieces.map((piece) => [piece.key, piece.dependsOn]));
-  const placed = new Map(routes.map((route) => [route.key, route]));
-  const shared: RoutablePiece[] = [];
-  for (const piece of pieces) {
-    const route = placed.get(piece.key)!;
-    if (route.place.placement !== 'shared') continue;
-    const clash = shared.find(
-      (other) => !ordered(graph, piece, other) && sharedFiles(piece.owned, other.owned).length > 0,
-    );
-    if (!clash) {
-      shared.push(piece);
-      continue;
-    }
-    route.place = {
-      ...route.place,
-      placement: 'worktree',
-      decidedBy: 'rules',
-      reason: `shares files with ${clash.key}`,
-    };
-  }
-}
-
-function listPlacement<T extends RoutablePiece>(
-  rules: RouteRules<T>,
-  routes: readonly PieceRoute[],
-): ListPlacement {
-  if (rules.placement === 'in_order') return 'in_order';
-  const building = routes.filter((route) => route.place.placement !== 'read_only');
-  if (building.length === 0) return rules.placement;
-  return building.some((route) => route.place.placement === 'shared') ? 'shared' : 'worktree';
-}
-
 export function routePieceList<T extends RoutablePiece>(
   pieces: readonly T[],
   rules: RouteRules<T>,
@@ -262,6 +220,5 @@ export function routePieceList<T extends RoutablePiece>(
       files: fileCount(piece),
     };
   });
-  if (rules.placement !== 'in_order') separateShared(pieces, routes);
-  return { pieces: routes, placement: listPlacement(rules, routes) };
+  return { pieces: routes, placement: rules.placement };
 }

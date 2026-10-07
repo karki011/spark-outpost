@@ -3,7 +3,6 @@ import path from 'node:path';
 import type { PieceViolation, TaskPiece } from '@spark-outpost/contracts';
 import { gitFileAt } from '../projects/snapshot.ts';
 import { ownerLabel, owns, type OwnedFiles, type OwnedSet } from './owned.ts';
-import { sharedTreeBlocker } from './placement.ts';
 import type { Coordination } from './state.ts';
 
 export function ownedFilesFor(coordination: Coordination, piece: TaskPiece): OwnedFiles {
@@ -36,13 +35,12 @@ function adopt(coordination: Coordination, key: string, files: readonly string[]
   coordination.owned = owned;
 }
 
-export async function checkOwnership(
+export function checkOwnership(
   coordination: Coordination,
   piece: TaskPiece,
   changed: readonly string[],
-  cwd: string,
-  before: string,
-): Promise<PieceViolation[]> {
+  attributable: (ownerKey: string) => boolean,
+): PieceViolation[] {
   const owned = ownedFilesFor(coordination, piece);
   const outside = changed.filter((file) => !owns(owned, file));
   const violations: PieceViolation[] = [];
@@ -51,29 +49,23 @@ export async function checkOwnership(
     const owner = owned.others.find((other) => owns(other, file));
     if (!owner) {
       unowned.push(file);
+      violations.push({ path: file, action: 'moved', owner: null });
       continue;
     }
-    await revertFile(cwd, before, file);
-    violations.push({ path: file, action: 'reverted', owner: ownerLabel(owner) });
+    if (coordination.crossed.has(file) || !attributable(owner.key)) continue;
+    coordination.crossed.add(file);
+    violations.push({ path: file, action: 'kept', owner: ownerLabel(owner) });
   }
-  const kept = unowned.filter((file) => sharedTreeBlocker(file) === null);
-  for (const file of unowned) {
-    const moved = kept.includes(file);
-    if (!moved) await revertFile(cwd, before, file);
-    violations.push({ path: file, action: moved ? 'moved' : 'reverted', owner: null });
-  }
-  if (kept.length > 0) adopt(coordination, piece.key, kept);
-  if (violations.length > 0) coordination.violations += 1;
+  if (unowned.length > 0) adopt(coordination, piece.key, unowned);
   return violations;
 }
 
 export function violationNote(violations: readonly PieceViolation[]): string | null {
   if (violations.length === 0) return null;
-  const lines = violations.map((violation) => {
-    const whose = violation.owner ? `${violation.owner} owns it` : 'no piece owned it';
-    return violation.action === 'moved'
-      ? `- \`${violation.path}\`: ${whose}; it is now part of your piece.`
-      : `- \`${violation.path}\`: ${whose}; your change was reverted.`;
-  });
+  const lines = violations.map((violation) =>
+    violation.owner
+      ? `- \`${violation.path}\`: ${violation.owner} owns it; your change was kept and its owner was told.`
+      : `- \`${violation.path}\`: no piece owned it; it is now part of your piece.`,
+  );
   return `## Note from the coordinator\nYou changed files outside your piece:\n${lines.join('\n')}`;
 }

@@ -47,13 +47,10 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   branchPrefix?: string;
   shipAccess?: ShipAccess;
   coordinator?: CoordinatorMode;
-  forcedPlacement?: ForcedPlacement | undefined;
   agentSlots?: Slots;
 }
 
 export type CoordinatorMode = 'off' | 'shadow' | 'in_order' | 'parallel';
-
-export type ForcedPlacement = 'shared' | 'worktree';
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 

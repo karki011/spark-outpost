@@ -2,8 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SHARED_INSTALL_REASON, type PieceGuard } from '../src/approvals/piece-guard.ts';
-import { pieceUnclearReason } from '../src/approvals/piece-route.ts';
+import type { PieceGuard } from '../src/approvals/piece-guard.ts';
 import { getApproval } from '../src/persistence/approvals.ts';
 import { createApprovalGate, type GateDeps } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
@@ -15,7 +14,6 @@ let root: string;
 
 const PIECE: PieceGuard = {
   coordinated: true,
-  sharesTree: true,
   owned: {
     key: 'P1',
     name: 'Bolt',
@@ -116,19 +114,18 @@ describe('the gate for a piece that shares its folder with other pieces', () => 
     expect(await recorded(run.runId)).toEqual(commands.map(() => ['allowed', 'level', null]));
   });
 
-  it('answers a targeted check itself in Auto, with or without Claude’s note', async () => {
+  it('runs a targeted check in Auto and leaves Claude’s own ask to the mode', async () => {
     const run = await doRun(t, root);
     const gate = gateFor(run.runId);
-    const signal = new AbortController().signal;
-    const first = await gate.review(commandRequest(root, CHECK, 'a'), signal);
-    const second = await gate.review(noted(CHECK, 'b'), signal);
+    const controller = new AbortController();
+    const first = await gate.review(commandRequest(root, CHECK, 'a'), controller.signal);
     expect(first).toMatchObject({ outcome: 'selected', allowed: true });
-    expect(second).toMatchObject({ outcome: 'selected', allowed: true });
-    expect(second.note).toContain("Spark saw no change outside this piece's files");
-    expect(await recorded(run.runId)).toEqual([
-      ['allowed', 'level', null],
-      ['allowed', 'level', null],
-    ]);
+    const second = gate.review(noted(CHECK, 'b'), controller.signal);
+    const card = await pendingCard(run.runId);
+    expect(card?.payload.agentReason).toBe(CLAUDE_NOTE);
+    expect(card?.payload.asksBecause).toBeUndefined();
+    controller.abort();
+    await second;
   });
 
   it('shows the card in Manual, where the mode asks', async () => {
@@ -142,36 +139,22 @@ describe('the gate for a piece that shares its folder with other pieces', () => 
     await answer;
   });
 
-  it('refuses an install, a whole-project run and a write to another piece’s file without a card', async () => {
+  it('lets an install and a write to another piece’s file follow the mode, and still refuses a whole-project run', async () => {
     const run = await doRun(t, root);
     const gate = gateFor(run.runId);
     const signal = new AbortController().signal;
-    const commands = ['pnpm add left-pad', 'pnpm check', 'echo x > api.ts', 'npx eslint --fix .'];
-    for (const [index, command] of commands.entries()) {
-      const answer = await gate.review(noted(command, `c${index}`), signal);
-      expect(answer).toMatchObject({ outcome: 'selected', allowed: false });
+    const allowed = ['pnpm add left-pad', 'echo x > api.ts', 'npx eslint --fix .'];
+    for (const [index, command] of allowed.entries()) {
+      const answer = await gate.review(commandRequest(root, command, `c${index}`), signal);
+      expect(answer, command).toMatchObject({ outcome: 'selected', allowed: true });
     }
+    const refused = await gate.review(commandRequest(root, 'pnpm check', 'check'), signal);
+    expect(refused).toMatchObject({ outcome: 'selected', allowed: false });
     const rows = await recorded(run.runId);
-    expect(rows.map(([status, by]) => [status, by])).toEqual(
-      commands.map(() => ['denied', 'policy']),
-    );
-    expect(rows[0]![2]).toBe(SHARED_INSTALL_REASON);
-    expect(rows[2]![2]).toMatch(/^Rivet \(P2\) owns `api.ts`/);
-  });
-
-  it('says why it asks when Claude noted a command Spark cannot read', async () => {
-    const run = await doRun(t, root);
-    const controller = new AbortController();
-    const answer = gateFor(run.runId).review(
-      noted('npx vitest run store.test.ts > "$OUT"'),
-      controller.signal,
-    );
-    const card = await pendingCard(run.runId);
-    expect(card?.reason).toBeNull();
-    expect(card?.payload.asksBecause).toBe(pieceUnclearReason(PIECE.owned));
-    expect(card?.payload.agentReason).toBe(CLAUDE_NOTE);
-    controller.abort();
-    await answer;
+    expect(rows.map(([status, by]) => [status, by])).toEqual([
+      ...allowed.map(() => ['allowed', 'level']),
+      ['denied', 'policy'],
+    ]);
   });
 
   it('leaves an agent that sends only its own asks alone', async () => {

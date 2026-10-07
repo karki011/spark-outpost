@@ -41,7 +41,7 @@ afterAll(async () => {
 
 function start(crew = false) {
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
-    ...(crew ? { coordinator: 'parallel' as const, forcedPlacement: 'shared' as const } : {}),
+    ...(crew ? { coordinator: 'parallel' as const } : {}),
     shipAccess: {
       secrets: memorySecretStore(),
       runCommand,

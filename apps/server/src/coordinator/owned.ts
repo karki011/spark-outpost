@@ -42,11 +42,6 @@ export function owns(set: OwnedSet, relative: string): boolean {
   return set.globs.some((glob) => matchesGlob(relative, glob));
 }
 
-export function ownerOf(files: OwnedFiles, relative: string): PieceOwner | null {
-  if (owns(files, relative)) return files;
-  return files.others.find((other) => owns(other, relative)) ?? null;
-}
-
 function literalPrefix(glob: string): string {
   const index = glob.search(GLOB);
   return index === -1 ? glob : glob.slice(0, index);

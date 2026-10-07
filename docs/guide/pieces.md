@@ -3,7 +3,7 @@ title: Watch and steer the crew
 section: Chats
 type: how-to
 order: 230
-summary: Watch a chat's agents in Agent TV, message one of them, steer the pieces of big work, and pick one pull request or several.
+summary: Watch a chat's agents in Agent TV, message one of them, and steer the pieces of big work.
 ---
 
 You'll watch the agents on a request, message one, and steer big work. About 2 minutes.
@@ -37,14 +37,5 @@ Spark may split a big plan into [pieces](spark-crew.md#pieces), one Builder each
 
 1. Open **Settings → Projects** and select the project.
 2. Under **Builders at once**, pick **1 at a time, in order**, **Up to 2 at once** or **Up to 3 at once** (the default).
-
-## One PR or separate PRs
-
-At **Full auto → PR**, Spark asks **One PR or separate PRs?** when pieces were built in their own copies.
-
-1. Pick **One PR** or **Separate PRs**.
-2. To skip the card next time, pick **Always one PR here** or **Always separate PRs here**.
-
-Unanswered, Spark picks **One PR** after the **Wait before going with best guesses** time.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

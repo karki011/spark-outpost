@@ -13,7 +13,7 @@ import {
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
-import { ownershipReason, type PieceGuard } from './piece-guard.ts';
+import type { PieceGuard } from './piece-guard.ts';
 import { otherBranchReason } from './publish-policy.ts';
 import { OUTSIDE_DELETE_REASON, outsideDeleteReason, outsideWriteReason } from './rails.ts';
 import { parseShell } from './shell-parse.ts';
@@ -34,8 +34,7 @@ const OWNED: NonNullable<PieceGuard['owned']> = {
 };
 const SHARED: DecideOptions = {
   builder: true,
-  piece: { coordinated: true, owned: OWNED, sharesTree: true },
-  routedPiece: true,
+  piece: { coordinated: true, owned: OWNED },
 };
 const SENSITIVE = ['.env', 'web page https://example.org'];
 const CLAUDE_NOTE = 'This command requires approval';
@@ -117,10 +116,13 @@ describe("commands inside the chat's own worktree", () => {
     expect(verdicts).toEqual(verdicts.map(() => 'allow'));
   });
 
-  it.each([...READS, ...CHANGES])('Auto answers a routed piece itself: %s', async (command) => {
-    const decision = await decided('auto', command, { ...SHARED, observed: SENSITIVE }, true);
-    expect(decision.verdict).toBe('allow');
-  });
+  it.each([...READS, ...CHANGES])(
+    'Auto leaves a piece’s noted command to the mode: %s',
+    async (command) => {
+      const decision = await decided('auto', command, { ...SHARED, observed: SENSITIVE }, true);
+      expect(decision).toEqual(await decided('auto', command, { observed: SENSITIVE }, true));
+    },
+  );
 
   const PROVEN_READS = READS.filter((command) => !command.includes('grep -rn'));
 
@@ -133,14 +135,10 @@ describe("commands inside the chat's own worktree", () => {
     expect(await decided('asks', command)).toEqual({ verdict: 'ask', reason: null });
   });
 
-  it("refuses a change to another piece's file instead of asking", async () => {
+  it("lets a change to another piece's file follow the mode", async () => {
     const command = `R=${WT}; cd $R; P=libs/features/pulse/view.tsx; sed -i '' 's/a/b/' $P`;
-    for (const posture of ['full_access', 'auto', 'asks'] as const) {
-      expect(await decided(posture, command, SHARED, true)).toEqual({
-        verdict: 'reject',
-        reason: ownershipReason(OWNED, 'libs/features/pulse/view.tsx'),
-      });
-    }
+    expect((await decided('full_access', command, SHARED, true)).verdict).toBe('allow');
+    expect((await decided('asks', command, SHARED, true)).verdict).toBe('ask');
   });
 
   it('keeps a run rule the user saved for the command as written', async () => {

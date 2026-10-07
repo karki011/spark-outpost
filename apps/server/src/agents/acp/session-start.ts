@@ -38,21 +38,15 @@ export function sessionMeta(
   {
     builder,
     coordinated,
-    sharesTree,
     publishes,
     planning,
     approvals,
-  }: Pick<
-    ProviderTurn,
-    'builder' | 'coordinated' | 'sharesTree' | 'publishes' | 'planning' | 'approvals'
-  >,
+  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'publishes' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) {
-    return (
-      definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes, sharesTree) ?? null
-    );
+    return definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes) ?? null;
   }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;

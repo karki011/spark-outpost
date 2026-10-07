@@ -36,12 +36,11 @@ A Builder fixes findings, up to 3 rounds. If the Critic fails, the other provide
 
 A Coordinator splits a big plan into pieces such as **P1**, one Builder each. Jev or rules pick 1 to 4 Builders. A piece never raises a plan card. See [Watch and steer the crew](pieces.md).
 
-| Where pieces run     | Means                                    | Used for                                            |
-| -------------------- | ---------------------------------------- | --------------------------------------------------- |
-| **in order**         | One Builder at a time                    | Dependent pieces                                    |
-| **shared tree**      | Builders side by side on their own files | Independent pieces                                  |
-| _Builder_**'s copy** | Each Builder in its own worktree         | Data or migration work, lockfiles, package installs |
+| Where pieces run | Means                                    | Used for           |
+| ---------------- | ---------------------------------------- | ------------------ |
+| **in order**     | One Builder at a time                    | Dependent pieces   |
+| **shared tree**  | Builders side by side on their own files | Independent pieces |
 
-In a shared tree, Spark refuses edits and commands outside a Builder's files. A card appears only when your agent mode asks or a command is unreadable.
+The Coordinator gives each piece its own files. Spark checks that plan once: two pieces that run at the same time can't own the same file.
 
-If two copies clash, you get a card; **Full auto → PR** stops and reports.
+Builders share one working tree and follow your agent mode like any other run. If one changes another piece's file, Spark keeps the change, flags it and tells that piece's Builder. The run goes on.

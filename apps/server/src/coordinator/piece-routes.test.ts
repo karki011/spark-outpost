@@ -240,26 +240,6 @@ describe('routePieceList', () => {
     expect(result.placement).toBe('shared');
   });
 
-  it('never leaves two unordered pieces with the same files in the shared tree', () => {
-    const overlapping = [
-      piece('P1', ['a.ts']),
-      piece('P2', ['a.ts', 'b.ts']),
-      piece('P3', ['a.ts'], { dependsOn: ['P1'] }),
-    ];
-    const result = routePieceList(
-      overlapping,
-      rules(),
-      { answers: null, failure: null },
-      fileCount,
-    );
-    expect(result.pieces.map((entry) => [entry.key, entry.place.placement])).toEqual([
-      ['P1', 'shared'],
-      ['P2', 'worktree'],
-      ['P3', 'shared'],
-    ]);
-    expect(result.pieces[1]!.place.reason).toBe('shares files with P1');
-  });
-
   it('leaves in-order lists and read-only pieces alone', () => {
     const result = routePieceList(
       [...pieces, piece('R1', [], { research: true })],

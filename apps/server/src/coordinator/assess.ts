@@ -1,4 +1,4 @@
-import { modeSkipsGate, type PlanDocument } from '@spark-outpost/contracts';
+import type { PlanDocument } from '@spark-outpost/contracts';
 import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
@@ -40,7 +40,7 @@ function planPieces(items: readonly string[]): PlaceablePiece[] {
 }
 
 export function placementFacts(s: Session): PlacementFacts {
-  return { git: s.git, skipsGate: modeSkipsGate(s.input.provider, s.input.agentMode) };
+  return { git: s.git };
 }
 
 async function awaitScan(s: Session) {

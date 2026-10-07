@@ -77,17 +77,50 @@ async function refusals(runId: string): Promise<string[]> {
 }
 
 describe('ownership and git guards', { timeout: 120_000 }, () => {
-  it('refuses a Builder’s edit to a file another piece owns', async () => {
-    const { orchestration, runId, list } = await build('#strayedit', 'hands-off');
-    expect(orchestration.status).toBe('succeeded');
-    expect(await refusals(runId)).toEqual([
-      expect.stringMatching(
-        /^Tack \(P3\) owns `view.ts`; this piece \(Rivet \(P2\)\) owns `api.ts`/,
-      ),
-    ]);
-    expect(await readFile(join(root, 'view.ts'), 'utf8')).toBe('built by P3\n');
-    expect(list.pieces.every((piece) => piece.status === 'landed')).toBe(true);
-  });
+  it.each([
+    ['#strayedit', 'edited by P2\nbuilt by P3\nnoted\n'],
+    ['#shellwrite', 'shell write by P2\nbuilt by P3\nnoted\n'],
+  ])(
+    'flags a change to another piece’s file, keeps it and tells the owner: %s',
+    async (tag, kept) => {
+      const { orchestration, runId, list } = await build(tag, 'hands-off');
+      expect(orchestration.status).toBe('succeeded');
+      expect(list.pieces.every((piece) => piece.status === 'landed')).toBe(true);
+      expect(await refusals(runId)).toEqual([]);
+      expect(await readFile(join(root, 'view.ts'), 'utf8')).toBe(kept);
+      expect(list.pieces[1]!.violations).toEqual([
+        { path: 'view.ts', action: 'kept', owner: 'Tack (P3)' },
+      ]);
+      const flags = await t.db.query<{ rail: string; title: string; status: string; role: string }>(
+        `SELECT f.rail, f.title, f.status, r.route->>'pieceKey' AS role FROM rail_flags f
+         JOIN runs r ON r.id = f.run_id WHERE r.parent_run_id = $1`,
+        [runId],
+      );
+      expect(flags.rows).toEqual([
+        {
+          rail: 'other_piece',
+          title: 'Rivet changed a file another piece owns: view.ts',
+          status: 'open',
+          role: 'P2',
+        },
+      ]);
+      const audit = await t.db.query<{ paths: string[] }>(
+        `SELECT l.payload->'paths' AS paths FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
+         WHERE r.parent_run_id = $1 AND l.method = 'spark/rail_crossed'`,
+        [runId],
+      );
+      expect(audit.rows).toEqual([{ paths: ['view.ts'] }]);
+      const owner = await t.db.query<{ prompt: string }>(
+        `SELECT prompt FROM runs WHERE parent_run_id = $1 AND route->>'pieceKey' = 'P3'`,
+        [runId],
+      );
+      expect(owner.rows[0]!.prompt).toContain(
+        'Rivet (P2) changed `view.ts`, which your piece owns',
+      );
+      const reply = (await assistantReplies(t, runId)).at(-1);
+      expect(reply).toContain('`view.ts` kept (P2, Tack (P3) owns it)');
+    },
+  );
 
   it('lets a piece install packages when it has the tree to itself', async () => {
     const { orchestration, runId } = await build('#addpkg', 'hands-off');
@@ -104,17 +137,6 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
   it('refuses git stash to a piece Builder', async () => {
     const { runId } = await build('#gitstash', 'hands-off');
     expect(await refusals(runId)).toEqual([BUILDER_GIT_REASON]);
-  });
-
-  it('reverts a shell write to another piece’s file and says so in the report', async () => {
-    const { runId, list } = await build('#shellwrite', 'hands-off');
-    expect(list.pieces[1]!.violations).toEqual([
-      { path: 'view.ts', action: 'reverted', owner: 'Tack (P3)' },
-    ]);
-    expect(list.pieces[1]!.filesChanged).toEqual(['api.ts']);
-    expect(await readFile(join(root, 'view.ts'), 'utf8')).toBe('built by P3\n');
-    const reply = (await assistantReplies(t, runId)).at(-1);
-    expect(reply).toContain('`view.ts` reverted (P2, Tack (P3) owns it)');
   });
 
   it('moves a shell write to a file no piece owns into the piece at Automatic', async () => {

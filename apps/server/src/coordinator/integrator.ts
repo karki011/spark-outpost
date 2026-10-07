@@ -6,7 +6,7 @@ import type { Seat, Session } from '../orchestration/session.ts';
 import { builderEnvFor } from './builder-env.ts';
 import type { Coordination } from './state.ts';
 
-export type IntegratorWork = 'glue' | 'fix' | 'conflict';
+export type IntegratorWork = 'glue' | 'fix';
 
 export interface IntegratorFacts {
   pieces: readonly Pick<TaskPiece, 'key' | 'provider' | 'model' | 'owns'>[];
@@ -51,9 +51,6 @@ function sharedModel(pieces: IntegratorFacts['pieces']) {
 }
 
 export function integratorModel(facts: IntegratorFacts): IntegratorModel {
-  if (facts.work === 'conflict') {
-    return { follow: null, reason: 'a merge conflict across pieces' };
-  }
   const built = facts.pieces.filter((piece) => piece.provider);
   const shared = sharedModel(built);
   if (!shared) return { follow: null, reason: 'the pieces used different models' };

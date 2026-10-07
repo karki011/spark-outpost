@@ -6,7 +6,7 @@ export interface NeededFile {
 }
 
 export const NEEDS_RULE =
-  'If a file you do not own must change, do not change it: finish your own files and end your reply with one line per file, `Needs: <path> — <what must change>`.';
+  'If a file you do not own must change, leave it to its owner: finish your own files and end your reply with one line per file, `Needs: <path> — <what must change>`.';
 
 const NEEDS_LINE =
   /^[ \t]*(?:[-*][ \t]+)?Needs:[ \t]*`?([^\s`]+)`?[ \t]*(?:[—–:-]+[ \t]*)?(.*)$/gim;
@@ -29,10 +29,10 @@ export function needText(worker: string, need: NeededFile): string {
   return `${worker} needs \`${need.path}\` changed: ${what}`;
 }
 
-export function revertedText(worker: string, path: string, patch: string): string {
+export function crossedText(worker: string, path: string, patch: string): string {
   const shown =
     patch.length > PATCH_LIMIT
       ? `${patch.slice(0, PATCH_LIMIT)}\n[cut at ${PATCH_LIMIT} characters]`
       : patch;
-  return `${worker} changed \`${path}\`, which it does not own, and the change was reverted. Make the change its piece needs there. What it had changed:\n\`\`\`diff\n${shown.trim()}\n\`\`\``;
+  return `${worker} changed \`${path}\`, which your piece owns. The change was kept. Check it fits your piece and change it if it does not. What it changed:\n\`\`\`diff\n${shown.trim()}\n\`\`\``;
 }

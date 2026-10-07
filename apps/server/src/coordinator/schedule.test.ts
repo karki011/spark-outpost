@@ -110,28 +110,6 @@ describe('the ready-set scheduler', () => {
     expect(result.failed).toBe(false);
   });
 
-  it('runs one piece at a time once it is narrowed', async () => {
-    let running = 0;
-    let most = 0;
-    let finished = 0;
-    await runReadySet([piece('A'), piece('B'), piece('C'), piece('D')], {
-      limit: 3,
-      settled: new Set(),
-      stopped: () => false,
-      narrowed: () => finished >= 1,
-      run: async () => {
-        running += 1;
-        most = Math.max(most, running);
-        await tick();
-        running -= 1;
-        finished += 1;
-        return 'landed';
-      },
-    });
-    expect(most).toBe(3);
-    expect(finished).toBe(4);
-  });
-
   it('rethrows a piece error once the other running pieces settle', async () => {
     const finished: string[] = [];
     const run = runReadySet([piece('P1'), piece('P2')], {

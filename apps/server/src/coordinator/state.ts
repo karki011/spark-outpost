@@ -1,18 +1,6 @@
 import type { PieceList } from '@spark-outpost/contracts';
 import type { OwnedSet } from './owned.ts';
 
-export interface Renumbered {
-  piece: string;
-  from: string;
-  to: string;
-}
-
-export interface Conflict {
-  piece: string;
-  files: string[];
-  resolvedBy: 'integrator' | 'you' | null;
-}
-
 export interface SharedBase {
   root: string;
   commit: string;
@@ -25,13 +13,11 @@ export interface Coordination {
   builderEnv: Record<string, string> | null;
   names: ReadonlyMap<string, string>;
   scoutNotes: string[];
-  violations: number;
+  crossed: Set<string>;
   integrated: boolean;
   integrator: string | null;
   base: string | null;
   unhealthy: Map<string, string>;
   sharedBase?: SharedBase;
-  renumbered?: Renumbered[];
-  conflicts?: Conflict[];
   topTier?: ReadonlySet<string>;
 }

@@ -16,7 +16,8 @@ import type { Coordination } from './state.ts';
 import { handoffSection, pieceSection, type LandedPiece } from './prompts.ts';
 import { builderEnvFor, withCheckLock } from './builder-env.ts';
 import { routeRequirement } from './follow-up.ts';
-import { neededFiles, needText, revertedText } from './needs.ts';
+import { attributableOwner, reportCrossings } from './crossings.ts';
+import { neededFiles, needText } from './needs.ts';
 import { owns } from './owned.ts';
 import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
 import { announceLanding } from './landing-notices.ts';
@@ -26,12 +27,8 @@ import { pieceRoute } from './provider-state.ts';
 export interface PieceSite {
   cwd(): Promise<string>;
   place(): Promise<Place | null>;
-  copy: string | null;
   slot?: number;
-  before?(): Promise<string | null>;
   changed?(before: string | null): Promise<string[]>;
-  boundary?(): Promise<string | null>;
-  land?(result: MemberResult): Promise<string | null>;
 }
 
 export type PieceOutcome =
@@ -111,14 +108,6 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
   return `${base}\n\n${brief}`;
 }
 
-function sharesTree(coordination: Coordination, piece: TaskPiece): boolean {
-  if (piece.placement !== 'shared') return false;
-  const shared = (coordination.list?.pieces ?? []).filter(
-    (other) => !other.research && other.placement === 'shared',
-  );
-  return shared.length > 1;
-}
-
 function seatFor(
   s: Session,
   piece: TaskPiece,
@@ -130,13 +119,7 @@ function seatFor(
   const name = coordination.names.get(piece.key) ?? piece.key;
   const guard = piece.research
     ? {}
-    : {
-        guard: {
-          coordinated: true,
-          owned: ownedFilesFor(coordination, piece),
-          ...(sharesTree(coordination, piece) ? { sharesTree: true } : {}),
-        },
-      };
+    : { guard: { coordinated: true, owned: ownedFilesFor(coordination, piece) } };
   const memberRoute = pieceRoute(s, piece);
   return {
     role: piece.research ? 'scout' : 'builder',
@@ -154,13 +137,13 @@ function seatFor(
 }
 
 interface PieceWork extends TurnWork {
+  since: string;
   violations: PieceViolation[];
   note: string | null;
 }
 
 interface CheckSite {
   cwd: string;
-  copy: string | null;
   slot: number;
 }
 
@@ -176,7 +159,7 @@ export async function runPieceChecks(
     runId: result.runId,
     name: result.name,
     cwd: site.cwd,
-    copy: site.copy,
+    copy: null,
     env: builderEnvFor(coordination.builderEnv, site.slot, result.name),
   };
   const run = () => runChecks(s, target, configuredChecks(piece.checks));
@@ -193,7 +176,6 @@ async function scopedChecks(
   if (piece.checks.length === 0) return null;
   return runPieceChecks(s, coordination, piece, result, {
     cwd: await site.cwd(),
-    copy: site.copy,
     slot: site.slot ?? 1,
   });
 }
@@ -248,28 +230,6 @@ async function askOthers(
   }
 }
 
-async function reportReverted(
-  s: Session,
-  work: PieceWork,
-  reverted: readonly PieceViolation[],
-  trees: { cwd: string; before: string; after: string | null },
-): Promise<void> {
-  if (!trees.after || reverted.length === 0) return;
-  const wanted = [];
-  for (const { path } of reverted) {
-    const patch = await git(trees.cwd, [
-      'diff',
-      '--relative',
-      trees.before,
-      trees.after,
-      '--',
-      path,
-    ]).catch(() => '');
-    wanted.push({ path, body: revertedText(workerLabel(work), path, patch) });
-  }
-  await askOthers(s, work, wanted);
-}
-
 async function reportNeeds(s: Session, work: PieceWork, reply: string): Promise<void> {
   const owned = ownedFilesFor(work.coordination, work.piece);
   const wanted = neededFiles(reply)
@@ -278,28 +238,41 @@ async function reportNeeds(s: Session, work: PieceWork, reply: string): Promise<
   await askOthers(s, work, wanted);
 }
 
-async function guardTurn(s: Session, work: PieceWork): Promise<void> {
-  if (work.piece.research || !work.before) return;
+async function guardTurn(s: Session, work: PieceWork, result: MemberResult): Promise<void> {
+  const listId = work.coordination.list?.id;
+  if (work.piece.research || !work.before || !listId) return;
   const cwd = await work.site.cwd();
-  const changed = await pieceChanges(work);
-  const after = await workingTree(cwd).catch(() => null);
-  const violations = await checkOwnership(work.coordination, work.piece, changed, cwd, work.before);
-  work.note = violationNote(violations);
-  await reportReverted(
-    s,
-    work,
-    violations.filter((violation) => violation.action === 'reverted'),
-    { cwd, before: work.before, after },
+  const list = await pieceListById(s.deps.db, listId);
+  if (!list) return;
+  const seen = new Set(work.violations.map((violation) => violation.path));
+  const violations = checkOwnership(
+    work.coordination,
+    work.piece,
+    (await changedFiles(cwd, work.before)).filter((file) => !seen.has(file)),
+    attributableOwner(list, work.since),
   );
-  if (violations.length > 0) {
-    work.violations.push(...violations);
-    const owned = work.coordination.owned.get(work.piece.key);
-    await movePiece(s.deps.db, work.piece.id, ['running'], 'running', {
-      violations: work.violations,
-      ...(owned ? { owns: [...owned.paths, ...owned.globs] } : {}),
-    });
-  }
-  work.before = (await work.site.boundary?.()) ?? work.before;
+  work.note = violationNote(violations);
+  if (violations.length === 0) return;
+  await reportCrossings(
+    s.deps.db,
+    list,
+    {
+      runId: result.runId,
+      worker: result.name,
+      workerLabel: workerLabel(work),
+      pieceKey: work.piece.key,
+      cwd,
+      before: work.before,
+      after: await workingTree(cwd).catch(() => null),
+    },
+    violations,
+  );
+  work.violations.push(...violations);
+  const owned = work.coordination.owned.get(work.piece.key);
+  await movePiece(s.deps.db, work.piece.id, ['running'], 'running', {
+    violations: work.violations,
+    ...(owned ? { owns: [...owned.paths, ...owned.globs] } : {}),
+  });
 }
 
 function stopped(s: Session): boolean {
@@ -360,7 +333,8 @@ export async function runPiece(
     piece,
     coordination,
     site,
-    before: site.before ? await site.before() : await treeOf(s, await site.cwd()),
+    before: await treeOf(s, await site.cwd()),
+    since: new Date().toISOString(),
     violations: [],
     note: null,
     brief: (current) => piecePrompt(s, current, coordination),
@@ -376,7 +350,7 @@ export async function runPiece(
   let turn: PieceTurn = { generation: first.generation, result: first.result };
   await movePiece(db, piece.id, ['running'], 'running', { builderRunId: turn.result.runId });
   if (turn.result.outcome !== 'succeeded') return failPiece(s, work, turn.result);
-  await guardTurn(s, work);
+  await guardTurn(s, work, turn.result);
   if (piece.research) coordination.scoutNotes.push(`${piece.key}: ${turn.result.text.trim()}`);
   let fixes = 0;
   if (expectsChanges(piece) && (await changedNothing(work)) && !stopped(s)) {
@@ -387,7 +361,7 @@ export async function runPiece(
     if (turn.result.outcome !== 'succeeded') {
       return failPiece(s, work, turn.result, { fixTurns: fixes });
     }
-    await guardTurn(s, work);
+    await guardTurn(s, work, turn.result);
     if (await changedNothing(work)) {
       return failPiece(
         s,
@@ -405,21 +379,12 @@ export async function runPiece(
     turn = fixed;
     fixes += 1;
     if (turn.result.outcome !== 'succeeded') break;
-    await guardTurn(s, work);
+    await guardTurn(s, work, turn.result);
     checks = await scopedChecks(s, work, turn.result);
   }
   if (turn.result.outcome !== 'succeeded')
     return failPiece(s, work, turn.result, { fixTurns: fixes });
   if (!piece.research) await reportNeeds(s, work, turn.result.text);
-  const unlanded = (await site.land?.(turn.result)) ?? null;
-  if (unlanded !== null) {
-    return failPiece(
-      s,
-      work,
-      { ...turn.result, outcome: 'cancelled' },
-      { fixTurns: fixes, note: unlanded },
-    );
-  }
   await movePiece(db, piece.id, ['running'], 'landed', {
     builderRunId: turn.result.runId,
     fixTurns: fixes,

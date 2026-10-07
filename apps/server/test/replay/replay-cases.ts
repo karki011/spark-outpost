@@ -13,7 +13,6 @@ export interface ReplayCase {
   title: string;
   repo?: 'remote';
   coordinator?: 'in_order' | 'parallel';
-  placement?: 'shared' | 'worktree';
   pieceCheck?: boolean;
   failingCheck?: boolean;
   turns: readonly ReplayTurn[];
@@ -118,7 +117,6 @@ export const REPLAY_CASES: readonly ReplayCase[] = [
     id: 'parallel',
     title: 'Parallel build, shared tree',
     coordinator: 'parallel',
-    placement: 'shared',
     pieceCheck: true,
     turns: [{ scenario: SPLIT }],
   },

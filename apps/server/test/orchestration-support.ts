@@ -341,7 +341,6 @@ export function startOrchestrator(
     cancelPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
     coordinator?: OrchestratorDeps['coordinator'];
-    forcedPlacement?: OrchestratorDeps['forcedPlacement'];
     agentEnv?: Record<string, string>;
   } & Pick<OrchestratorDeps, 'checkTimeoutMs' | 'criticQuietNoticeMs'> = {},
 ): Harness {
@@ -373,7 +372,6 @@ export function startOrchestrator(
     ...(options.checkTimeoutMs ? { checkTimeoutMs: options.checkTimeoutMs } : {}),
     ...(options.criticQuietNoticeMs ? { criticQuietNoticeMs: options.criticQuietNoticeMs } : {}),
     ...(options.coordinator ? { coordinator: options.coordinator } : {}),
-    ...(options.forcedPlacement ? { forcedPlacement: options.forcedPlacement } : {}),
   });
   return {
     worker,

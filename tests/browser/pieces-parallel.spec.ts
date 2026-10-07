@@ -49,12 +49,6 @@ function allowChecksUntil(page: Page, done: Locator, text: string): Promise<void
   return allowChecksWhile(page, () => expect(done).toContainText(text, { timeout: 1_000 }));
 }
 
-function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}
-
 const board = (page: Page) => page.getByRole('region', { name: 'Pieces' });
 const pieceRow = (page: Page, key: string) =>
   board(page)
@@ -152,74 +146,4 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   await expect(boltRow).toContainText('P1 · Store · shared tree · owns 1 file');
   await expect(boltRow.locator('.piece-state')).toHaveText('landed');
   expect(repo.file('api.ts')).toContain('built by P2');
-});
-
-test('Full auto builds each piece in its own copy of the chat worktree', async ({ page }) => {
-  test.setTimeout(150_000);
-  await autoContinueAfter(page, 3);
-  await crewChat(page, repo, 'Full auto');
-  await send(page, `${REQUEST} #manifest`);
-  await buildThePlan(page);
-
-  await expect(board(page)).toContainText('3 pieces, in worktrees · 3 landed', {
-    timeout: 90_000,
-  });
-  const group = parallelGroup(page);
-  await expect(group.locator('.par-head').filter({ hasText: 'Tack' })).toContainText(
-    "P3 · Tack's copy",
-  );
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 60_000 });
-  expect(repo.file('view.ts')).toContain('built by P3');
-
-  await page.setViewportSize({ width: 375, height: 812 });
-  await board(page).scrollIntoViewIfNeeded();
-  await expect(board(page)).toBeInViewport();
-  expect(await horizontalOverflow(page)).toBe(0);
-  const boardBox = (await board(page).boundingBox())!;
-  expect(boardBox.x + boardBox.width).toBeLessThanOrEqual(375);
-  await expect(pieceRow(page, 'P3')).toContainText("Tack's copy");
-
-  const tv = await openTv(page, 'Stage');
-  const hub = tv.locator('.tv-n.jev');
-  await expect(hub).toContainText('Coordinator');
-  const tvBox = (await tv.boundingBox())!;
-  expect(tvBox.x).toBeGreaterThanOrEqual(0);
-  expect(tvBox.x + tvBox.width).toBeLessThanOrEqual(375);
-  expect(tvBox.y + tvBox.height).toBeLessThanOrEqual(812);
-  for (const key of ['P1', 'P2', 'P3']) {
-    const box = (await spoke(page, key).boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(tvBox.x);
-    expect(box.x + box.width).toBeLessThanOrEqual(tvBox.x + tvBox.width);
-    expect(box.y + box.height).toBeLessThanOrEqual(tvBox.y + tvBox.height);
-  }
-  await expect(spoke(page, 'P3')).toContainText("Tack's copy");
-  expect(await horizontalOverflow(page)).toBe(0);
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await expect(spoke(page, 'P3').locator('.piece-state')).toHaveText('landed');
-  await expect(spoke(page, 'P3')).toBeVisible();
-});
-
-test('two copies that collide go to the integrator, then to the merge conflict card', async ({
-  page,
-}) => {
-  test.setTimeout(180_000);
-  await crewChat(page, repo, 'Auto-edit');
-  await send(page, `${REQUEST} #manifest #useredit #unresolvable`);
-  await buildThePlan(page);
-  await expect(board(page)).toContainText('in worktrees', { timeout: 60_000 });
-
-  const conflict = card(page, /copy and your files collided/);
-  await allowChecksWhile(page, () => expect(conflict).toBeVisible({ timeout: 1_000 }));
-  await expect(conflict).toContainText("Bolt's copy and your working tree both changed store.ts.");
-  await expect(conflict.getByRole('list', { name: 'Conflicting changes' })).toContainText(
-    'store.ts',
-  );
-  const keepBolt = conflict.getByRole('button', { name: /^Keep Bolt/ });
-  await expect(conflict.getByRole('button', { name: 'Stop' })).toBeVisible();
-  await keepBolt.click();
-  await expect(keepBolt).toBeHidden({ timeout: 15_000 });
-
-  await allowChecksUntil(page, board(page), '3 pieces, in worktrees · 3 landed');
-  await expect(pieceRow(page, 'P1')).toContainText("Bolt's copy");
-  expect(repo.file('store.ts')).toContain('built by P1');
 });

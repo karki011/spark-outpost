@@ -53,7 +53,7 @@ export function touchedSymbols(symbols: readonly string[], patch: string): strin
 
 export interface LandingNotice {
   pieceKey: string;
-  kind: 'merge_main' | 'contract_changed';
+  kind: 'contract_changed';
   body: string;
   urgent: boolean;
 }
@@ -93,14 +93,6 @@ export function landingNotices(
   for (const { piece, sources } of running) {
     const imports = importsAny(sources, landed.piece.filesChanged);
     const uses = imports || usesLanded(piece, landed.piece);
-    if (piece.placement === 'worktree' && uses) {
-      notices.push({
-        pieceKey: piece.key,
-        kind: 'merge_main',
-        body: `main merged: ${name} landed (${landed.piece.filesChanged.join(', ') || 'no files'}); re-run your scoped checks.`,
-        urgent: false,
-      });
-    }
     const symbols = [
       ...contractSymbols(piece.contract),
       ...(uses ? contractSymbols(landed.piece.contract) : []),

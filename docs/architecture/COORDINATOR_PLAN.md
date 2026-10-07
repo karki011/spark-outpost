@@ -2,6 +2,8 @@
 
 Design of **coordinator delegation**: one coordinator splits a story into Builder-sized pieces with declared file ownership, places each piece (one Builder in order, shared-tree Builders, or worktree Builders), steers them while they run, integrates their work as the only writer, runs the full checks and the Critic once, and reports. Phases C0–C8 are built. The C8 story benchmark ([story-2026-10-01.md](../benchmarks/story-2026-10-01.md)) found that parallel placement and pieces in order both fail their turn-off criteria (section 10); parallel Builders stay on by default (the user's decision) while the bugs it found (B1–B3) are fixed and it is re-run.
 
+**Changed October 7, 2026 (moderator placement; see [HARNESS_SIMPLE.md](HARNESS_SIMPLE.md), "Slice 4, third session").** Pieces share one working tree in every agent mode. The code for separate copies is deleted (`coordinator/group.ts`, `merge.ts`, `merge-main.ts`, `migrations.ts`, `COORDINATOR_PLACEMENT`), so everything below about worktree Builders, copy merges, the integrator reconciling a conflict, migration renumbering, the `merge_main` notice, ownership strikes and "One PR or separate PRs" describes removed behaviour and is kept as history: section 4, and the matching lines in the as-built list, sections 1, 6 and 8. The gate no longer holds a piece to its files; sections 2 and 3 below are current.
+
 Read with [HARNESS_PLAN.md](HARNESS_PLAN.md) (the lean harness around it) and [ROUTING_PLAN.md](ROUTING_PLAN.md) (code scan, Builder floor, complexity rule). Evidence: [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md), [harness-e2e-lean-2026-09-27.md](../benchmarks/harness-e2e-lean-2026-09-27.md).
 
 ## Status
@@ -93,34 +95,31 @@ A story that comes back as one piece runs as one Builder with the piece's contra
 
 A pure function, `placePieces(pieces, facts)` in `coordinator/placement.ts`. It has no thresholds: size, saving and Jev's opinion do not place pieces (changed October 7, 2026; see [HARNESS_SIMPLE.md](HARNESS_SIMPLE.md)).
 
-| Placement                | When                                                                                                                                                                                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **One Builder**          | The coordinator did not engage                                                                                                                                                                                                                         |
-| **Pieces in order**      | Outside git; parallel pieces off for the project; one Builder slot; or the task runs in its own copy                                                                                                                                                   |
-| **Shared-tree Builders** | The agent's mode sends edits and commands through the approval gate, which holds each piece to its own files                                                                                                                                           |
-| **Worktree Builders**    | The agent's mode runs without the gate (Claude Bypass permissions, Codex Approve for me and Full access): each piece works in its own copy and code merges the copies (`git merge` of disjoint files); the integrator runs only when a merge conflicts |
-| **Read-only pieces**     | Pieces marked `research`: Scouts in Ask mode in the main tree, before the Builders that depend on them                                                                                                                                                 |
+| Placement                | When                                                                                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **One Builder**          | The coordinator did not engage                                                                                                                                              |
+| **Pieces in order**      | Outside git; parallel pieces off for the project; one Builder slot; or the task runs in its own copy                                                                        |
+| **Shared-tree Builders** | Every other case, in every agent mode. The plan gives each piece its own files; `pieces-validate.ts` rejects two pieces that can run at the same time and own the same file |
+| **Read-only pieces**     | Pieces marked `research`: Scouts in Ask mode in the main tree, before the Builders that depend on them                                                                      |
 
 **How the plan and the code scan inform it.** A piece list that leaves an agreed-plan item without a piece fails validation once and is re-prompted. The code scan validates ownership (paths exist or sit under an existing folder, none are secret files), expands globs, adds `dependsOn` edges when a piece's owned file imports a symbol another piece changes, and supplies line counts. Scan evidence only adds edges or moves a piece towards isolation.
 
 **When to fall back.**
 
-| Trigger                                           | Fallback                                                          |
-| ------------------------------------------------- | ----------------------------------------------------------------- |
-| Piece list invalid after one repair               | One Builder in order with the agreed plan                         |
-| `git worktree add` or the group base commit fails | That piece and later ones: in order in the main tree              |
-| Two ownership violations in one story             | Rest of the story: one piece at a time                            |
-| An integrator turn fails twice on a conflict      | The conflict card, except Full auto → PR, which stops and reports |
-| A provider becomes unavailable                    | Section 5                                                         |
+| Trigger                             | Fallback                                  |
+| ----------------------------------- | ----------------------------------------- |
+| Piece list invalid after one repair | One Builder in order with the agreed plan |
+| A provider becomes unavailable      | Section 5                                 |
 
 ## 3. Shared-tree Builders
 
 Several Builders work in the same tree (the chat's worktree, or the checkout when the chat works in place), each on its own piece.
 
-- **Ownership in the approval gate** (`approvals/piece-guard.ts`): an edit outside the piece's owned paths is refused with a message naming the owner. Commands whose write targets can be named (redirects, `sed -i`, `mv`, `cp`, `rm`, `touch`, `tee`) are checked the same way. This is the same hard-rule layer as the publish refusal, so it applies in every agent mode and autonomy.
-- **Diff check after every Builder turn** (`coordinator/ownership.ts`): changes outside the piece's files are a violation. At Review each step a card asks (keep it in the piece, revert that file, stop); at Automatic and Full auto the file moves into the piece when no other piece owns it and it is not a blocker, otherwise it is reverted and the Builder told. Two violations narrow the rest of the story to one piece at a time.
+- **No ownership rule in the approval gate.** A piece follows the agent's mode like any other run: Spark adds no ask rules for it, refuses no edit, command or install because of who owns a file, and answers no card on the agent's behalf. `approvals/piece-guard.ts` keeps two refusals, below.
+- **A change to another piece's file is flagged, not reverted** (`coordinator/ownership.ts`, `crossings.ts`). After every Builder turn Spark reads the files changed since the piece started. A file another piece owns counts as this Builder's change when that owner has not started, or landed before this piece started; a file whose owner is running at the same time cannot be told from the owner's own edit and is left alone. Each such file is recorded once: a rail flag (`other_piece`: "Rivet changed a file another piece owns: view.ts", the same non-blocking card and island notice as other flags), a `spark/rail_crossed` audit entry on the Builder's run, a `kept` line in the report, and a requirement routed with the diff to the owning piece (its running Builder, its brief if it has not started, otherwise the follow-up run). A file no piece owns joins the piece that changed it. Nothing is reverted and the run goes on.
+- **`Needs: <path> — <what>`** as the last lines of a Builder's reply asks for a change to a file it does not own; it is routed the same way and is never enforced by a refusal.
 - **No git operations** (`BUILDER_GIT_REASON`): Builders of a coordinated task can't `stash`, `checkout`, `switch`, `reset`, `restore`, `clean`, `commit`, `merge`, `rebase`, `cherry-pick`, `am`, `worktree` or `branch -d/-D`; read-only git stays allowed. Claude Builder sessions get matching deny rules. Coordinated Builders don't get the `Agent` tool.
-- **Scoped checks only.** Whole-project commands (the full check, installs, repo-wide formatters) are refused inside a piece: the coordinator runs the full checks after integration.
+- **Scoped checks only.** A whole-project check command is refused inside a piece: the full checks run once after every piece has landed. Installs and formatters follow the agent's mode.
 - **Per-Builder environment.** Builders and their checks get `SPARK_BUILDER_SLOT` and `SPARK_BUILDER_NAME`. `projects.builder_env` (a map with `{slot}` substitution, such as `TEST_DATABASE_URL=…_test_b{slot}`) gives each Builder its own test database and ports; without it, scoped checks take a per-project Postgres advisory lock (`coordinator/builder-env.ts`).
 - **Landing.** A piece lands when its scoped checks pass (or after its 2 fix turns). When every piece has landed or been skipped, the integrator runs if integration needs edits (the piece list's `integration` note or a contract mismatch), then the full checks run once, with at most 2 integration repair rounds, then plan completion, the verified cascade, the Critic and its fix loop (run by the integrator), the keep card, and Ship for Full auto → PR.
 

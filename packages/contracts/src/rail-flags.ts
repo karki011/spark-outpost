@@ -8,6 +8,7 @@ export const railKindSchema = z.enum([
   'git_control',
   'instructions',
   'sent_out',
+  'other_piece',
 ]);
 export type RailKind = z.infer<typeof railKindSchema>;
 
@@ -44,6 +45,7 @@ const RAIL_VERBS: Record<RailKind, string> = {
   git_control: 'changed git hooks or config',
   instructions: 'changed agent instructions',
   sent_out: 'sent data out',
+  other_piece: 'changed a file another piece owns',
 };
 
 const SHOWN_PATHS = 3;
