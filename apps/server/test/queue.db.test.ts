@@ -76,4 +76,19 @@ describe('job queue', () => {
       LeaseLostError,
     );
   });
+
+  it('ends a run that crashed mid-step with one error the stream check accepts', async () => {
+    const [runId] = await queueRuns(1);
+    const lease = (await claimNextJob(t.db, 30))!;
+    await appendRunEvent(t.db, lease, runEvents.started({ runId: runId!, threadId: 'thread' }));
+    await appendRunEvent(t.db, lease, runEvents.stepStarted('Running tests'));
+    await appendRunEvent(t.db, lease, runEvents.toolCallStart('call-1', 'Running tests'));
+    await expireLease(lease.jobId);
+
+    expect(await recoverExpiredLeases(t.db)).toBe(1);
+    expect(await recoverExpiredLeases(t.db)).toBe(0);
+
+    expect((await eventTypes(t.db, runId!)).slice(-2)).toEqual(['TOOL_CALL_START', 'RUN_ERROR']);
+    await expectConformantRun(t.db, runId!);
+  });
 });
