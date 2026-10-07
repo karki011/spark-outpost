@@ -109,6 +109,7 @@ export function acceptCard(
   fixLabel: string | null = null,
   laws: readonly string[] = [],
   lines: ChangedLines = null,
+  outsidePlan: readonly string[] = [],
 ): CheckpointCard {
   return {
     kind: 'accept',
@@ -119,6 +120,7 @@ export function acceptCard(
       reason,
       files: [...files],
       laws: [...laws],
+      outsidePlan: [...outsidePlan],
       lines,
     }),
     options: [

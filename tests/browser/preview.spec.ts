@@ -241,7 +241,9 @@ test('a finished turn says whether the change was checked in the browser', async
   await editedChat(page, root);
   const turns = page.locator('.crew-turn');
   await expect(turns.first().locator('.crew-foot')).toContainText('Done');
-  await expect(page.getByRole('region', { name: /Files changed/ }).first()).toBeVisible();
+  const kept = turns.first().getByRole('region', { name: /^Kept · / });
+  await kept.getByRole('button', { name: /^Kept · / }).click();
+  await expect(kept.getByRole('region', { name: /Files changed/ })).toBeVisible();
   await expect(page.getByText('Not checked in browser')).toHaveCount(0);
   await expect(page.getByText('Checked in browser')).toHaveCount(0);
 

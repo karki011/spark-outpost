@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
+import { ticketDevelopmentSchema } from './ticket-development.ts';
 
 export const TICKET_KEY_MAX_LENGTH = 64;
 export const TICKET_SEARCH_MAX_LENGTH = 200;
@@ -117,6 +118,7 @@ export type TicketList = z.infer<typeof ticketListSchema>;
 export const ticketViewSchema = z.object({
   ticket: ticketDetailSchema,
   work: z.array(ticketWorkSchema),
+  development: ticketDevelopmentSchema.optional(),
 });
 export type TicketView = z.infer<typeof ticketViewSchema>;
 

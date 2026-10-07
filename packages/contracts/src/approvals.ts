@@ -151,6 +151,8 @@ export function isCheckApproval(approval: Pick<Approval, 'toolCallId'>): boolean
 }
 
 export const APPROVAL_NOTE_MAX_LENGTH = 4000;
+export const APPROVAL_TIMED_OUT = 'Approval timed out';
+export const APPROVAL_WAIT_MINUTES = 30;
 
 export const approvalDecisionRequestSchema = z.object({
   optionId: z.string().min(1).max(200),

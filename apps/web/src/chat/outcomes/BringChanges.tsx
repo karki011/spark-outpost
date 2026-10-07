@@ -1,8 +1,11 @@
 import './bring-changes.css';
 import { useEffect, useRef } from 'react';
 import type { BringChangesResult } from '@spark-outpost/contracts';
-import { useProjectBranch } from '../project/use-chat-repos.ts';
-import { useBringChanges, useChatWorkspace } from '../project/use-chat-workspace.ts';
+import {
+  useBringChanges,
+  useBringReadiness,
+  useChatWorkspace,
+} from '../project/use-chat-workspace.ts';
 
 function broughtLine(result: BringChangesResult): string {
   const count = result.files.length;
@@ -14,7 +17,7 @@ function broughtLine(result: BringChangesResult): string {
 export function BringChanges({ conversationId }: { conversationId: string }) {
   const workspace = useChatWorkspace(conversationId);
   const current = workspace.data?.current ?? null;
-  const checkout = useProjectBranch(current?.worktree ? current.projectId : null);
+  const readiness = useBringReadiness(conversationId);
   const bring = useBringChanges(conversationId);
   const doneRef = useRef<HTMLParagraphElement>(null);
 
@@ -23,25 +26,30 @@ export function BringChanges({ conversationId }: { conversationId: string }) {
   }, [bring.isSuccess]);
 
   if (!current?.worktree) return null;
-  const into = checkout ?? 'my files';
+  const offered = readiness.data?.ready === true && !bring.data;
+  const into = readiness.data?.into ?? 'my files';
   return (
     <div className="bring">
       <p className="bring-where">
-        Kept on <code>{current.branch}</code> in this chat&rsquo;s worktree.
+        In this chat&rsquo;s worktree.
+        {offered && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="bring-link"
+              disabled={bring.isPending}
+              onClick={() => bring.mutate()}
+            >
+              {bring.isPending ? 'Bringing…' : `Bring changes into ${into}`}
+            </button>
+          </>
+        )}
       </p>
-      {bring.data ? (
+      {bring.data && (
         <p ref={doneRef} className="bring-done" role="status" tabIndex={-1}>
           {broughtLine(bring.data)}
         </p>
-      ) : (
-        <button
-          type="button"
-          className="btn line sm"
-          disabled={bring.isPending}
-          onClick={() => bring.mutate()}
-        >
-          {bring.isPending ? 'Bringing…' : `Bring changes into ${into}`}
-        </button>
       )}
       {bring.isError && (
         <p className="bring-err" role="alert">

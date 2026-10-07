@@ -3,7 +3,14 @@ import { measuredSeedSchema, vendorCardsFileSchema } from '@spark-outpost/contra
 import seedJson from './measured-seed.json' with { type: 'json' };
 import vendorJson from './vendor-cards.json' with { type: 'json' };
 import { cardFor, effectiveDefaultModel, usableDefault, VENDOR_CARDS } from './cards.ts';
-import { modelTier, oneTierUp, tierInfo, tierLadder, topTier } from '../orchestration/tiers.ts';
+import {
+  modelTier,
+  oneTierUp,
+  tierInfo,
+  tierLadder,
+  tierName,
+  topTier,
+} from '../orchestration/tiers.ts';
 
 const claude = [
   { id: 'default', label: 'Default (recommended)' },
@@ -52,12 +59,26 @@ describe('tiers from cards', () => {
   });
 
   it('treats a changed label as no card and falls back to the name pattern', () => {
-    expect(cardFor({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')).toBeNull();
-    expect(tierInfo({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')).toEqual({
+    expect(cardFor({ id: 'sonnet', label: 'Sonnet 9' }, 'claude')).toBeNull();
+    expect(tierInfo({ id: 'sonnet', label: 'Sonnet 9' }, 'claude')).toEqual({
       tier: 1,
       source: 'pattern',
     });
     expect(tierInfo({ id: 'mystery', label: 'Mystery' })).toEqual({ tier: null, source: 'none' });
+  });
+
+  it('gives Sonnet 5.5 its own mid-tier card, by label or by id', () => {
+    const listed = cardFor({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude');
+    expect(listed?.id).toBe('claude-sonnet-5-5');
+    expect(listed?.price).toMatchObject({ inputPerMillion: 2, outputPerMillion: 10 });
+    expect(cardFor({ id: 'claude-sonnet-5-5' }, 'claude')?.id).toBe('claude-sonnet-5-5');
+    expect(cardFor({ id: 'sonnet', label: 'Sonnet 5' }, 'claude')?.id).toBe('claude-sonnet-5');
+    expect(tierInfo({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')).toEqual({
+      tier: 1,
+      source: 'card',
+    });
+    expect(tierName({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')).toBe('mid');
+    expect(tierName({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
   });
 
   it('keeps frontier models off the ladder, so Opus stays top and Codex tops out at 6 Sol', () => {

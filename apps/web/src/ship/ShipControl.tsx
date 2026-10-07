@@ -11,7 +11,6 @@ import {
   type ShipResult,
 } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
-import { LinkChip } from '../tasks/LinksPane.tsx';
 import { taskKeys } from '../tasks/task-api.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -37,10 +36,6 @@ function resultLine(result: ShipResult): string {
   }
   if (result.pushed) return `Pushed ${result.branch}.`;
   return `Committed ${result.commit?.slice(0, 7) ?? ''} on ${result.branch}.`;
-}
-
-function pullTitle(repo: string | null | undefined, number: number): string {
-  return repo ? `${repo}#${number}` : `Pull request #${number}`;
 }
 
 function withShipResult(preview: ShipPreview, result: ShipResult): ShipPreview {
@@ -214,16 +209,6 @@ export function ShipControl({
   const pull = result?.pullRequest ?? data.shipped?.pullRequest ?? null;
   return (
     <div className="ship">
-      {pull && (
-        <LinkChip
-          link={{
-            kind: 'pr',
-            url: pull.url,
-            title: result?.link?.title ?? pullTitle(data.remote?.repo, pull.number),
-            source: 'ship',
-          }}
-        />
-      )}
       {result && (
         <p ref={doneRef} className="ship-done" role="status" tabIndex={-1}>
           {resultLine(result)}

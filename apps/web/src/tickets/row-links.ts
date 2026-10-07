@@ -64,6 +64,8 @@ export interface PullEntry {
   badge: PullBadge;
   checks: PullRequestChecks | null;
   failedChecks: string[];
+  origin?: string;
+  note?: string | null;
 }
 
 function entryOf(ref: TicketRef, status: PullRequestStatus | null): PullEntry {

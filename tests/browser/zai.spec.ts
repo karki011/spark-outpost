@@ -90,7 +90,16 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.getByRole('button', { name: /Model and effort/ }).click();
   await page.getByRole('tab', { name: 'Z.ai (GLM)' }).click();
-  await expect(page.getByRole('button', { name: /Model and effort: GLM-5\.3/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Z.ai (GLM)' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  const models = page.getByRole('radiogroup', { name: 'Z.ai (GLM) model' });
+  await expect(models.getByRole('radio', { name: /^Auto/ })).toBeChecked();
+  await expect(models.getByRole('radio', { name: /^GLM-5\.3 \(default\)/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
+    'Model and effort: Auto',
+  );
   await page.keyboard.press('Escape');
 
   const input = page.getByRole('textbox', { name: 'Message' });

@@ -221,6 +221,62 @@
     },
     {
       "provider": "claude",
+      "id": "claude-sonnet-5-5",
+      "label": "Sonnet 5.5",
+      "match": {
+        "ids": ["claude-sonnet-5-5"],
+        "labels": ["Sonnet 5.5"]
+      },
+      "tier": "mid",
+      "price": {
+        "inputPerMillion": 2,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 2.5,
+        "outputPerMillion": 10,
+        "note": "Cache write is the 5-minute rate; the 1-hour write is $4."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "adaptive",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "note": "Effort levels are recalibrated from Sonnet 5; the vendor suggests medium for well-specified agentic coding and high for harder work."
+      },
+      "strengths": [
+        "Best combination of speed and intelligence",
+        "Agentic coding and multistep tool use"
+      ],
+      "weakSpots": [
+        "No forced tool use",
+        "Text between tool calls arrives as thinking blocks",
+        "No sampling parameters"
+      ],
+      "blurb": "fast everyday coding and tool use",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-09-28",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-10-06"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
       "id": "claude-opus-5-5",
       "label": "Opus 5.5",
       "match": {

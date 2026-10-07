@@ -5,6 +5,7 @@ import {
   agentBlock,
   crewChat,
   crewRepo,
+  keptResult,
   resetCrew,
   send,
   type CrewRepo,
@@ -131,7 +132,10 @@ test.describe('a finished crew', () => {
       timeout: 30_000,
     });
 
-    const files = page.locator('.crew-turn > .fchg');
+    const kept = keptResult(page);
+    await expect(page.locator('.crew-turn > .fchg')).toHaveCount(0);
+    await kept.getByRole('button', { name: 'Kept · 1 file' }).click();
+    const files = kept.locator('.fchg');
     await expect(files).toContainText('1 file changed+1 −0');
     await files.getByRole('button', { name: 'Open the diff of notes.txt' }).click();
     const drawer = page.getByRole('dialog', { name: 'Changes · 1 file' });

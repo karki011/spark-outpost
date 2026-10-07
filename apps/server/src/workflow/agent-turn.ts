@@ -50,6 +50,7 @@ import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
+import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
@@ -289,6 +290,7 @@ export async function runAgentTurn(
   });
   const guard = { ...input, db: deps.db, runId: lease.runId, append };
   const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
+  const events = createTurnEvents({ append, secretValues });
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {
@@ -423,9 +425,7 @@ export async function runAgentTurn(
         continue;
       }
       options.onOutput?.(output);
-      if (output.kind === 'step_started') await append(runEvents.stepStarted(output.name));
-      if (output.kind === 'step_finished') await append(runEvents.stepFinished(output.name));
-      if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
+      await events.observe(output);
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
       if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
@@ -455,6 +455,7 @@ export async function runAgentTurn(
       if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
       await commands.observe(output);
     }
+    await events.close();
     await commands.close();
     await rails?.finish();
     await sayText(redaction.finish());
@@ -479,6 +480,7 @@ export async function runAgentTurn(
     await sayText(redaction.finish()).catch((failure: unknown) =>
       console.error('Could not save the end of the reply', failure),
     );
+    await events.close().catch(() => undefined);
     await commands.close().catch(() => undefined);
     await settleAudit();
     const reason = control.reason();

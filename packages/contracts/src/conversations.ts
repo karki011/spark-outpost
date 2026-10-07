@@ -116,7 +116,11 @@ export const conversationOrderRequestSchema = z.object({
 });
 export type ConversationOrderRequest = z.infer<typeof conversationOrderRequestSchema>;
 
-export const activityStepSchema = z.object({ name: z.string(), done: z.boolean() });
+export const activityStepSchema = z.object({
+  name: z.string(),
+  done: z.boolean(),
+  reasoningId: z.string().optional(),
+});
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 
 export const conversationDetailSchema = z.object({

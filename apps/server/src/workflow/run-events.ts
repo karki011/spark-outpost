@@ -3,14 +3,20 @@ import {
   APPROVAL_REQUESTED,
   EventType,
   FILE_FOCUS_ACTIVITY,
+  SPARK_METADATA,
   type Approval,
   type FileFocus,
   type RunEvent,
+  type StepMark,
 } from '@spark-outpost/contracts';
 
 export interface RunIdentity {
   runId: string;
   threadId: string;
+}
+
+function marked(mark: StepMark | undefined): { metadata?: Record<string, StepMark> } {
+  return mark && Object.keys(mark).length > 0 ? { metadata: { [SPARK_METADATA]: mark } } : {};
 }
 
 export const runEvents = {
@@ -36,8 +42,16 @@ export const runEvents = {
     message,
     code,
   }),
-  stepStarted: (stepName: string): RunEvent => ({ type: EventType.STEP_STARTED, stepName }),
-  stepFinished: (stepName: string): RunEvent => ({ type: EventType.STEP_FINISHED, stepName }),
+  stepStarted: (stepName: string, mark?: StepMark): RunEvent => ({
+    type: EventType.STEP_STARTED,
+    stepName,
+    ...marked(mark),
+  }),
+  stepFinished: (stepName: string, mark?: StepMark): RunEvent => ({
+    type: EventType.STEP_FINISHED,
+    stepName,
+    ...marked(mark),
+  }),
   fileFocus: ({ path, line, limit, action }: FileFocus): RunEvent => ({
     type: EventType.ACTIVITY_SNAPSHOT,
     messageId: FILE_FOCUS_ACTIVITY,
@@ -56,6 +70,38 @@ export const runEvents = {
     delta,
   }),
   textEnd: (messageId: string): RunEvent => ({ type: EventType.TEXT_MESSAGE_END, messageId }),
+  reasoningStart: (messageId: string): RunEvent[] => [
+    { type: EventType.REASONING_START, messageId },
+    { type: EventType.REASONING_MESSAGE_START, messageId, role: 'reasoning' },
+  ],
+  reasoningContent: (messageId: string, delta: string): RunEvent => ({
+    type: EventType.REASONING_MESSAGE_CONTENT,
+    messageId,
+    delta,
+  }),
+  reasoningMessageEnd: (messageId: string): RunEvent => ({
+    type: EventType.REASONING_MESSAGE_END,
+    messageId,
+  }),
+  reasoningEnd: (messageId: string): RunEvent => ({ type: EventType.REASONING_END, messageId }),
+  toolCallStart: (toolCallId: string, toolCallName: string): RunEvent => ({
+    type: EventType.TOOL_CALL_START,
+    toolCallId,
+    toolCallName,
+  }),
+  toolCallArgs: (toolCallId: string, delta: string): RunEvent => ({
+    type: EventType.TOOL_CALL_ARGS,
+    toolCallId,
+    delta,
+  }),
+  toolCallEnd: (toolCallId: string): RunEvent => ({ type: EventType.TOOL_CALL_END, toolCallId }),
+  toolCallResult: (messageId: string, toolCallId: string, content: string): RunEvent => ({
+    type: EventType.TOOL_CALL_RESULT,
+    messageId,
+    toolCallId,
+    content,
+    role: 'tool',
+  }),
   approvalRequested: (approval: Approval): RunEvent => ({
     type: EventType.CUSTOM,
     name: APPROVAL_REQUESTED,

@@ -1,4 +1,6 @@
 import {
+  APPROVAL_TIMED_OUT,
+  APPROVAL_WAIT_MINUTES,
   modeKind,
   modePosture,
   type AgentModeOption,
@@ -62,9 +64,9 @@ interface Weighed {
 
 const UNDECIDED: Weighed = { decision: { verdict: 'ask', reason: null }, secretReads: [] };
 
-export const APPROVAL_TIMEOUT_MS = 30 * 60 * 1000;
+export const APPROVAL_TIMEOUT_MS = APPROVAL_WAIT_MINUTES * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
-export const APPROVAL_TIMEOUT_MESSAGE = 'Approval timed out';
+export const APPROVAL_TIMEOUT_MESSAGE = APPROVAL_TIMED_OUT;
 
 export interface ObservedDecision {
   verdict: 'allow' | 'reject' | 'ask';

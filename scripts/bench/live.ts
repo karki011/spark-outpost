@@ -22,7 +22,8 @@ import { loadOrchestration, waitedMs } from '../../apps/server/src/persistence/o
 import { getRun, requestCancel } from '../../apps/server/src/persistence/runs.ts';
 import { keychainSecretStore } from '../../apps/server/src/setup/secrets.ts';
 import { executeChildRun } from '../../apps/server/src/workflow/execute-run.ts';
-import { createProviders, type AgentRuntime } from '../../apps/server/src/workflow/providers.ts';
+import type { AgentRuntime } from '../../apps/server/src/agents/acp/spark-tools.ts';
+import { createProviders } from '../../apps/server/src/workflow/providers.ts';
 import { linkedConversation } from '../../apps/server/test/approval-support.ts';
 import { seedConnections } from '../../apps/server/test/orchestration-live-support.ts';
 import { createTestDb, type TestDb } from '../../apps/server/test/support.ts';

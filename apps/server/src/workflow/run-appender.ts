@@ -1,8 +1,10 @@
-import { EventType, type RunEvent } from '@spark-outpost/contracts';
+import { EventType, isTerminalRunEvent, type RunEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { appendRunEvents, type AppendOptions } from '../persistence/run-events.ts';
 import type { Append } from './agent-turn.ts';
+import { trackOpenSpans } from './open-spans.ts';
+import { withRunUsage } from './run-usage.ts';
 
 export const TEXT_FLUSH_MS = 50;
 export const TEXT_FLUSH_CHARS = 8_192;
@@ -21,11 +23,19 @@ export async function flushBufferedText(): Promise<void> {
   await Promise.all([...unflushed].map((flush) => flush()));
 }
 
+type StreamedText = Extract<
+  RunEvent,
+  { type: typeof EventType.TEXT_MESSAGE_CONTENT | typeof EventType.REASONING_MESSAGE_CONTENT }
+>;
+
 function isStreamedText(
   event: RunEvent,
   options: AppendOptions | undefined,
-): event is Extract<RunEvent, { type: typeof EventType.TEXT_MESSAGE_CONTENT }> {
-  return event.type === EventType.TEXT_MESSAGE_CONTENT && options === undefined;
+): event is StreamedText {
+  const streamed =
+    event.type === EventType.TEXT_MESSAGE_CONTENT ||
+    event.type === EventType.REASONING_MESSAGE_CONTENT;
+  return streamed && options === undefined;
 }
 
 export function bufferingText(write: Write, options: TextBufferOptions = {}): Append {
@@ -38,6 +48,7 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
   let flushedAt = -Infinity;
   let lastWrite: Promise<unknown> = Promise.resolve();
   let failure: { error: unknown } | null = null;
+  const spans = trackOpenSpans();
 
   const take = (): RunEvent[] => {
     const taken = waiting;
@@ -74,7 +85,9 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
   return async (event, appendOptions) => {
     raiseFailure();
     if (!isStreamedText(event, appendOptions)) {
-      return inOrder([...take(), event], appendOptions);
+      const closing = isTerminalRunEvent(event) ? spans.closers() : [];
+      spans.observe(event);
+      return inOrder([...take(), ...closing, event], appendOptions);
     }
     waiting.push(event);
     waitingChars += event.delta.length;
@@ -91,7 +104,8 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
 
 export function runAppender(db: Db, lease: Lease, options: TextBufferOptions = {}): Append {
   return bufferingText(
-    (events, appendOptions) => appendRunEvents(db, lease, events, appendOptions),
+    async (events, appendOptions) =>
+      appendRunEvents(db, lease, await withRunUsage(db, lease.runId, events), appendOptions),
     options,
   );
 }

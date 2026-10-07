@@ -15,8 +15,13 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
   const activity: Record<string, ActivityStep[]> = {};
   const openByRun = new Map<string, Map<string, OpenQueue>>();
   for (const { name: raw, ...row } of rows) {
-    const name = friendlyStep(raw);
     const steps = (activity[row.run_id] ??= []);
+    if (row.type === 'REASONING_START') {
+      const thinking = steps.at(-1);
+      if (thinking && !thinking.done) thinking.reasoningId = raw;
+      continue;
+    }
+    const name = friendlyStep(raw);
     const open = openQueues(openByRun, row.run_id);
     if (row.type === 'STEP_STARTED') {
       const step = { name, done: false };

@@ -77,6 +77,8 @@ export function defaultIssue(
   };
 }
 
+const MODEL_NOTE =
+  "New chats start on Auto, which picks the model. Chats that aren't on Auto and have no model of their own use this one.";
 const PER_CHAT = 'per-chat';
 const PER_CHAT_NOTE = 'Each chat keeps its own effort, and Do-task Builders follow it.';
 
@@ -160,6 +162,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
                 onChange={(id) => mutation.mutate({ model: id })}
               />
             )}
+            <small className="note">{MODEL_NOTE}</small>
           </dd>
         </div>
         <div className="pdef">
@@ -202,7 +205,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       {issue && (
         <UnusableModelNotice
           issue={issue}
-          detail="It is the default model for new chats."
+          detail="It is your default model."
           busy={mutation.isPending}
           onSwitch={(model) => mutation.mutate({ model })}
         />

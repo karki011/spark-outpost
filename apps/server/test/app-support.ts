@@ -22,6 +22,7 @@ export interface TestAppOptions {
   runCommand?: RunCommand;
   secrets?: SecretStore;
   fixedRunProvider?: string | null;
+  agentRuntime?: AppOptions['agentRuntime'];
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
   githubApiUrl?: string;
@@ -96,6 +97,7 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),
     ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
     ...(options.webRoot ? { webRoot: options.webRoot } : {}),
+    ...(options.agentRuntime ? { agentRuntime: options.agentRuntime } : {}),
   };
 }
 

@@ -1,5 +1,8 @@
 import { useId } from 'react';
-import type { InboxTicket, TicketRef } from '@spark-outpost/contracts';
+import type { InboxTicket, TicketDevelopment, TicketRef } from '@spark-outpost/contracts';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { relativeTime } from '../ui/relative-time.ts';
+import { buildsText, commitsText, developmentPulls } from './development-model.ts';
 import { ticketPulls, type PullEntry } from './row-links.ts';
 import { ChecksBadge } from './StatusChip.tsx';
 import { Glyph } from './ticket-icons.tsx';
@@ -36,6 +39,11 @@ function PullLink({ entry }: { entry: PullEntry }) {
             {entry.title ? `${pullName(entry)} · ` : ''}
             {reviewText(entry)}
           </small>
+          {(entry.origin || entry.note) && (
+            <small className="pr-origin">
+              {[entry.origin, entry.note].filter(Boolean).join(' · ')}
+            </small>
+          )}
           {entry.failedChecks.length > 0 && (
             <small className="pr-failed">Failed: {entry.failedChecks.join(', ')}</small>
           )}
@@ -86,24 +94,96 @@ export function LinkedWork({ ticket, trackerLinks, onOpenChat }: LinkedWorkProps
   );
 }
 
-export function PullRequests({
+interface DevelopmentProps extends PullRequestsProps {
+  development: TicketDevelopment | undefined;
+  sourceName: string;
+  loading: boolean;
+  lead?: boolean;
+}
+
+function BranchList({ branches }: { branches: TicketDevelopment['branches'] }) {
+  return (
+    <ul className="dev-list" aria-label="Branches">
+      {branches.map((branch) => {
+        const url = safeUrl(branch.url);
+        return (
+          <li key={`${branch.repo ?? ''}:${branch.name}`}>
+            <span className="dev-k">Branch</span>
+            {url ? (
+              <a className="dev-branch" href={url} target="_blank" rel="noreferrer">
+                {branch.name}
+              </a>
+            ) : (
+              <span className="dev-branch">{branch.name}</span>
+            )}
+            {branch.repo && <small>{branch.repo}</small>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Activity({ development }: { development: TicketDevelopment }) {
+  const { commits, builds } = development;
+  if (!commits && !builds) return null;
+  const built = builds ? buildsText(builds) : null;
+  return (
+    <ul className="dev-list" aria-label="Commits and builds">
+      {commits && (
+        <li>
+          <span className="dev-k">Commits</span>
+          <span>{commitsText(commits)}</span>
+          {commits.lastAt && <small>last {relativeTime(commits.lastAt)}</small>}
+        </li>
+      )}
+      {built && (
+        <li>
+          <span className="dev-k">Builds</span>
+          <span className={built.failing ? 'dev-bad' : undefined}>
+            {built.failing && <Glyph name="x-circle" size={13} />}
+            {built.text}
+          </span>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+export function Development({
   ticket,
   trackerLinks,
+  development,
+  sourceName,
+  loading,
   lead,
-}: PullRequestsProps & { lead?: boolean }) {
-  const pullsId = useId();
-  const pulls = ticketPulls(ticket, trackerLinks);
+}: DevelopmentProps) {
+  const headingId = useId();
+  const pulls = development
+    ? developmentPulls(development, sourceName)
+    : ticketPulls(ticket, trackerLinks);
+  const branches = development?.branches ?? [];
+  const unavailable = development?.availability === 'unavailable';
+  const hasActivity = Boolean(development?.commits ?? development?.builds);
+  const empty = pulls.length === 0 && branches.length === 0 && !hasActivity;
   return (
-    <section className={lead ? 'tk-sec lead' : 'tk-sec'} aria-labelledby={pullsId}>
-      <h4 id={pullsId}>Pull requests</h4>
-      {pulls.length === 0 ? (
-        <p className="tk-quiet">No pull request is linked to this ticket yet.</p>
-      ) : (
-        <ul className="pr-list">
+    <section className={lead ? 'tk-sec lead' : 'tk-sec'} aria-labelledby={headingId}>
+      <h4 id={headingId}>Development</h4>
+      {pulls.length > 0 && (
+        <ul className="pr-list" aria-label="Pull requests">
           {pulls.map((entry) => (
             <PullLink key={entry.url} entry={entry} />
           ))}
         </ul>
+      )}
+      {branches.length > 0 && <BranchList branches={branches} />}
+      {development && <Activity development={development} />}
+      {unavailable && (
+        <p className="tk-quiet dev-note">Development info unavailable from {sourceName}.</p>
+      )}
+      {empty && !unavailable && loading && <Skeleton label="Loading development info" rows={1} />}
+      {empty && !unavailable && !loading && (
+        <p className="tk-quiet">No pull request is linked to this ticket yet.</p>
       )}
     </section>
   );

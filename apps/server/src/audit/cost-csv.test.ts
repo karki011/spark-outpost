@@ -45,18 +45,24 @@ describe('cost CSV', () => {
     expect(lines[0]).toBe(
       'run_id,created_at,role,provider,model,effort,mode,status,input_tokens,output_tokens,' +
         'cached_read_tokens,cached_write_tokens,thinking_tokens,total_tokens,cost_usd,' +
-        'cost_source,duration_ms,tool_calls,file_reads',
+        'cost_source,duration_ms,tool_calls,file_reads,routed_by,route_rule,model_tier',
     );
     expect(lines[1]).toBe(
       `${first.runId},2026-09-26T10:00:00.000Z,Scout,codex,gpt-6-sol,high,ask,succeeded,` +
-        '1000,200,400,,50,1200,0.0032,estimated,1200,3,',
+        '1000,200,400,,50,1200,0.0032,estimated,1200,3,,,,',
     );
     expect(lines[2]).toContain(',reported,');
   });
 
   it('adds the file reads a crew member recorded', () => {
     const csv = costCsv([run({ fileReads: 5 })]);
-    expect(csv.split('\r\n')[1]).toMatch(/,3,5$/);
+    expect(csv.split('\r\n')[1]).toMatch(/,3,5,,,$/);
+  });
+
+  it('adds who routed the run, the rule that decided and the model tier', () => {
+    const route = { routedBy: 'rules' as const, rule: 'simple → mid tier', tier: 'mid' as const };
+    const csv = costCsv([run({ route })]);
+    expect(csv.split('\r\n')[1]).toMatch(/,rules,simple → mid tier,mid$/);
   });
 
   it('marks a run without a cost as not reported instead of guessing', () => {

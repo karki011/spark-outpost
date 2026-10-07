@@ -92,7 +92,10 @@ const PR_RULES = new Set(['pr-changes', 'pr-approved', 'review-slow']);
 
 export function pullUrl(ticket: InboxTicket): string | null {
   return (
-    ticket.pullRequest?.url ?? ticket.work.flatMap((work) => work.pullRequests).at(-1)?.url ?? null
+    ticket.pullRequest?.url ??
+    ticket.work.flatMap((work) => work.pullRequests).at(-1)?.url ??
+    ticket.development?.pullRequests[0]?.url ??
+    null
   );
 }
 

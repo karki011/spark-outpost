@@ -1,0 +1,86 @@
+.dt-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.dt {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dt > * > tr > th,
+.dt > * > tr > td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  font-weight: normal;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.dt > thead th {
+  vertical-align: bottom;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.dt > tbody:last-child > tr:last-child > * {
+  border-bottom: 0;
+}
+
+.dt > * > tr > .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt > * > tr > .dt-pin {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+}
+
+.dt-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: -2px -4px;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.dt-sort:hover,
+.dt th[aria-sort] .dt-sort {
+  color: var(--text);
+}
+
+.dt-sort svg {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+}
+
+.dt-sort:hover svg,
+.dt-sort:focus-visible svg {
+  opacity: 0.55;
+}
+
+.dt th[aria-sort] .dt-sort svg {
+  opacity: 1;
+}
+
+.dt th[aria-sort='descending'] .dt-sort svg {
+  transform: rotate(180deg);
+}
+
+.dt .num > .dt-sort {
+  flex-direction: row-reverse;
+}

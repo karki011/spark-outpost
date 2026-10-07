@@ -1,0 +1,65 @@
+.wal {
+  margin: 6px 0 0;
+  padding: 6px 0 4px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.wal.pending {
+  margin: 8px 14px 0;
+  padding: 8px 10px;
+  border-top: 0;
+  border-left: 3px solid var(--warn);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.wal .wal-h {
+  margin: 0 0 2px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+.wal ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.wal li {
+  overflow-wrap: anywhere;
+}
+.wal code {
+  font-size: 12px;
+}
+.wal .wal-fold {
+  margin-left: -14px;
+  list-style: none;
+}
+.wal-outside summary {
+  width: fit-content;
+  min-height: 24px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.wal-outside summary:hover {
+  color: var(--text);
+}
+.wal-outside summary:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+.wal-outside ul {
+  list-style: none;
+  padding: 2px 0 4px 14px;
+}
+@media (pointer: coarse) {
+  .wal .wal-fold {
+    margin-left: -14px;
+    list-style: none;
+  }
+  .wal-outside summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}

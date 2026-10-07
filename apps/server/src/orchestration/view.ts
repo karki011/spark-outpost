@@ -22,6 +22,7 @@ import {
   type OrchestrationDecision,
   type OrchestrationTotals,
   type PieceList,
+  type ModelTier,
   type RouteSource,
   type ReviewVerdict,
   type RunMode,
@@ -32,6 +33,8 @@ import {
 export interface StoredRoute {
   name?: string;
   routedBy?: RouteSource;
+  rule?: string;
+  tier?: ModelTier | null;
   autoWouldUse?: AgentPick | null;
   planStep?: string | null;
   modelLabel?: string | null;

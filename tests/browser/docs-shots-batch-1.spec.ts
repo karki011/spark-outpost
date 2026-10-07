@@ -9,6 +9,7 @@ import { connectorCard, connectorHead } from './connector-cards.ts';
 import {
   card,
   failingCheck,
+  keptResult,
   pickerPanel,
   pickPermission,
   send,
@@ -183,9 +184,8 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await projectChat(page, 'Auto-edit');
   await failingCheck(page, repo.root);
   await send(page, 'Fix the totals divider #build #removehelper #criticremoval');
-  const keep = card(page, /Keep these changes\?/);
+  const keep = keptResult(page);
   await expect(keep.getByRole('list', { name: 'Worth a look' })).toBeVisible({ timeout: 30_000 });
-  await expect(keep).toContainText('Kept automatically');
   await keep.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'prompt-flow-crew-turn');
   await shoot(page, IMAGES, 'guardrails-keep-card', keep);
@@ -215,7 +215,11 @@ test('Ship screenshot', async ({ page }) => {
       .getByRole('button', { name: 'Allow', exact: true })
       .click();
     await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
-    await page.locator('.ship-btn').click();
+    const showPanel = page.getByRole('button', { name: 'Show work panel' });
+    if (await showPanel.isVisible()) await showPanel.click();
+    const work = page.getByRole('complementary', { name: 'Work panel' });
+    await work.getByRole('tab', { name: 'Changes' }).click();
+    await work.locator('.ship-btn').click();
     const panel = page.getByRole('group', { name: 'Ship this task' });
     await panel.getByLabel('Pull request title').fill('Add a line to the release notes');
     await shoot(page, IMAGES, 'ship-panel', panel);

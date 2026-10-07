@@ -63,17 +63,21 @@ async function editAndKeep(page: Page, text: string) {
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(page.getByRole('group', { name: /Keep these changes\?/ }).last()).toContainText(
-    'Kept automatically.',
-    { timeout: 20_000 },
-  );
+  await expect(page.getByRole('region', { name: /^Kept · / }).last()).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {
     timeout: 20_000,
   });
 }
 
 async function shipDraft(page: Page) {
-  await page.locator('.ship-btn').last().click();
+  await expect(page.locator('.col .ship-btn')).toHaveCount(0);
+  const showPanel = page.getByRole('button', { name: 'Show work panel' });
+  if (await showPanel.isVisible()) await showPanel.click();
+  const workPanel = page.getByRole('complementary', { name: 'Work panel' });
+  await workPanel.getByRole('tab', { name: 'Changes' }).click();
+  await workPanel.locator('.ship-btn').click();
   const panel = page.getByRole('group', { name: 'Ship this task' });
   await panel.getByRole('button', { name: 'Open PR' }).click();
   await expect(page.getByRole('status').filter({ hasText: /Opened (draft )?PR #1\./ })).toBeVisible(

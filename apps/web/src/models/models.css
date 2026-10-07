@@ -169,124 +169,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.mc-group {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-}
-
-.mc-group-title {
-  margin: 4px 0 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.mc-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-radius: var(--r);
-  background: var(--panel);
-  box-shadow: var(--set-card-shadow);
-}
-
-.mc-row + .mc-row {
-  border-top: 1px solid var(--line);
-}
-
-.mc-row-head {
-  margin: 0;
-  font: inherit;
-}
-
-.mc-row-head button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 0;
-  text-align: left;
-  transition: background-color 0.15s var(--out);
-}
-
-.mc-row-head button:hover {
-  background: var(--raise);
-}
-
-.mc-row:first-child .mc-row-head button {
-  border-top-left-radius: var(--r);
-  border-top-right-radius: var(--r);
-}
-
-.mc-row:last-child:not(.open) .mc-row-head button {
-  border-bottom-left-radius: var(--r);
-  border-bottom-right-radius: var(--r);
-}
-
-.mc-row-head svg {
-  overflow: visible;
-}
-
-.mc-row-head .chev {
-  color: var(--faint);
-  transition: transform 0.2s var(--out);
-}
-
-.mc-row.open .mc-row-head .chev {
-  transform: rotate(90deg);
-}
-
-.mc-name {
-  flex: 0 0 132px;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.mc-purpose {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
-.mc-tags {
-  display: flex;
-  flex-shrink: 0;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.mc-tag.default {
-  color: var(--accent-text);
-  background: var(--accent-soft);
-}
-
-@container (max-width: 520px) {
-  .mc-row-head button {
-    flex-wrap: wrap;
-    row-gap: 2px;
-  }
-
-  .mc-name {
-    flex: 1 1 auto;
-  }
-
-  .mc-purpose {
-    order: 5;
-    flex-basis: 100%;
-    padding-left: 32px;
-    white-space: normal;
-  }
-}
-
 .mc-blob {
   position: relative;
   display: inline-grid;
@@ -317,7 +199,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
-  padding: 4px 12px 12px 44px;
+  padding: 4px 12px 12px 42px;
 }
 
 .mc-facts {
@@ -347,10 +229,6 @@
   .mc-details {
     padding-left: 12px;
   }
-}
-
-.mc-details[hidden] {
-  display: none;
 }
 
 .mc-lists {
@@ -424,8 +302,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc-row-head button,
-  .mc-row-head .chev,
+  .mc-model button,
+  .mc-model .chev,
   .mc-chip {
     transition: none;
   }

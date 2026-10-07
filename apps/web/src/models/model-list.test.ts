@@ -3,11 +3,15 @@ import type { ModelCard, ModelCardView, ModelStat } from '@spark-outpost/contrac
 import {
   ALL_PROVIDERS,
   benchmarkBadge,
+  contextLine,
   effortRange,
   fullPrice,
   groupModels,
+  knowledgeMonth,
   modelFacts,
+  nextSort,
   orderModels,
+  priceCells,
   readSavedProvider,
   purposeLine,
   retirementDetail,
@@ -17,6 +21,7 @@ import {
   staleNote,
   usedBySpark,
   writeSavedProvider,
+  type ModelSort,
 } from './model-list.ts';
 
 const card = (overrides: Partial<ModelCard>): ModelCard => ({
@@ -140,6 +145,53 @@ describe('model list', () => {
     expect(purposeLine(view({ tier: 'small' }))).toBeNull();
   });
 
+  it('sorts inside each group, keeps models without a price last, and cycles back to the default order', () => {
+    const price = (inputPerMillion: number, outputPerMillion: number) => ({
+      ...card({}).price!,
+      inputPerMillion,
+      outputPerMillion,
+    });
+    const models = [
+      view({ id: 'mid-cheap', tier: 'mid', price: price(1, 9) }),
+      view({ id: 'top', tier: 'top', price: price(4, 20) }),
+      view({ id: 'mid-dear', tier: 'mid', price: price(3, 5) }),
+      view({ id: 'small-free', tier: 'small', price: null }),
+      view({ id: 'small', tier: 'small', price: price(0.1, 0.5) }),
+    ];
+    const ids = (sort: ModelSort | null) =>
+      groupModels(models, sort).map((group) => group.models.map((model) => model.card.id));
+    expect(ids(null)).toEqual([
+      ['mid-cheap', 'mid-dear', 'top'],
+      ['small-free', 'small'],
+    ]);
+    expect(ids({ key: 'output', direction: 'ascending' })).toEqual([
+      ['mid-dear', 'mid-cheap', 'top'],
+      ['small', 'small-free'],
+    ]);
+    expect(ids({ key: 'input', direction: 'descending' })).toEqual([
+      ['top', 'mid-dear', 'mid-cheap'],
+      ['small', 'small-free'],
+    ]);
+    expect(ids({ key: 'tier', direction: 'descending' })[0]).toEqual([
+      'top',
+      'mid-cheap',
+      'mid-dear',
+    ]);
+    const ascending = nextSort(null, 'output');
+    expect(ascending).toEqual({ key: 'output', direction: 'ascending' });
+    expect(nextSort(ascending, 'output')).toEqual({ key: 'output', direction: 'descending' });
+    expect(nextSort(nextSort(ascending, 'output'), 'output')).toBeNull();
+    expect(nextSort(ascending, 'tier')).toEqual({ key: 'tier', direction: 'ascending' });
+  });
+
+  it('fills the table cells and shows a dash for what a card does not say', () => {
+    expect(priceCells(card({}))).toEqual(['$2', '$0.2', '$10']);
+    expect(priceCells(card({ price: null }))).toEqual(['—', '—', '—']);
+    expect(contextLine(card({}))).toBe('200K / 64K');
+    expect(knowledgeMonth(card({ knowledgeCutoff: '2026-05-18' }))).toBe('2026-05');
+    expect(knowledgeMonth(card({ knowledgeCutoff: 'not documented' }))).toBe('—');
+  });
+
   it('lists the secondary facts for the details panel', () => {
     const now = Date.parse('2026-09-28T12:00:00Z');
     expect(modelFacts(card({ retiresNotBefore: '2027-06-30' }), now)).toEqual([
@@ -148,6 +200,7 @@ describe('model list', () => {
       ['Context', '200K · 64K max output'],
       ['Speed', 'fast'],
       ['Effort', 'low–high (default medium)'],
+      ['Knowledge', '2026-01'],
       ['Retirement', 'Retires 2027-06-30'],
     ]);
     expect(fullPrice(card({ price: null }))).toBe('No price listed');
@@ -180,6 +233,7 @@ describe('model list', () => {
       ]),
     );
     expect(badge).toEqual({
+      ratio: '2/2',
       text: '2/2 passed',
       detail: 'Best at plan as Architect · medium, $0.250 mean',
       anecdotal: true,
