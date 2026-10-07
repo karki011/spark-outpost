@@ -87,19 +87,11 @@ function Sources({ view }: { view: ModelCardView }) {
   );
 }
 
-export function ModelDetails({
-  view,
-  id,
-  open,
-}: {
-  view: ModelCardView;
-  id: string;
-  open: boolean;
-}) {
+export function ModelDetails({ view }: { view: ModelCardView }) {
   const { card } = view;
   const stale = staleNote(view);
   return (
-    <div className="mc-details" id={id} hidden={!open}>
+    <div className="mc-details">
       {stale && (
         <p className="mc-warn" role="note">
           {stale.full}
