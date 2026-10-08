@@ -26,7 +26,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | **On wide windows**                                    | **Context rail**       | With the work panel closed: a rail with project, agent and tasks, the panel, or nothing |
 | **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                     |
 | **Show Spark Island**, **Spark Island size**           | On, **Full**           | [Spark Island](desktop-companion.md)                                                    |
-| **Island chimes**                                      | Off                    | [Spark Island](desktop-companion.md#answer-a-card)                                      |
+| **Open requests by themselves**, **Island chimes**     | On, off                | [Spark Island](desktop-companion.md#answer-a-card)                                      |
 | **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                          |
 
 Under **Spark**, **Workflow options** holds autonomy, compaction and PR controls.
