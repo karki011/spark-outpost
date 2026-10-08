@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary, NativeTerminalSession } from '@spark-outpost/contracts';
-import { terminalEnded, terminalLabel, terminalMood, terminalNeedsInput } from './native-state.ts';
+import {
+  terminalEnded,
+  terminalLabel,
+  terminalMood,
+  terminalNeedsInput,
+  terminalRelaunch,
+} from './native-state.ts';
 import { rowState, isRunning } from '../conversations/row-state.ts';
 import { sessionState, pendingCards } from '../island/island-model.ts';
 
@@ -38,5 +44,18 @@ describe('native terminal activity across surfaces', () => {
       expect(terminalEnded(terminal(state))).toBe(true);
     expect(terminalEnded(terminal('ready'))).toBe(false);
     expect(terminalMood('interrupted')).toBe('failed');
+  });
+  it('offers resume for any ended session with a provider session, and start again otherwise', () => {
+    const ended = (state: NativeTerminalSession['state'], resumeAvailable: boolean) =>
+      ({ state, resumeAvailable }) as NativeTerminalSession;
+    for (const state of ['exited', 'error', 'interrupted'] as const) {
+      expect(terminalRelaunch(ended(state, true), 'outcome_unknown')).toBe('resume');
+      expect(terminalRelaunch(ended(state, false), 'outcome_unknown')).toBe('restart');
+      expect(terminalRelaunch(ended(state, false), 'failed')).toBe('restart');
+    }
+    expect(terminalRelaunch(ended('exited', false), 'cancelled')).toBeNull();
+    expect(terminalRelaunch(ended('exited', true), 'cancelled')).toBe('resume');
+    expect(terminalRelaunch(ended('working', true), 'running')).toBeNull();
+    expect(terminalRelaunch(ended('unknown', false), null)).toBeNull();
   });
 });

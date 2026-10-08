@@ -154,6 +154,14 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
     const input = page.getByRole('textbox', { name: 'What would you like to work on?' });
     await input.fill('Inspect the selected folder.');
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
+    const projectButton = (await page
+      .getByRole('button', { name: 'Choose project', exact: true })
+      .boundingBox())!;
+    await expect
+      .poll(
+        async () => (await page.getByRole('dialog', { name: 'Project folders' }).boundingBox())!.y,
+      )
+      .toBeGreaterThanOrEqual(projectButton.y + projectButton.height);
     await page
       .getByRole('dialog', { name: 'Project folders' })
       .getByRole('button', { name: 'Choose a folder…' })
@@ -389,9 +397,57 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     await expect(
       workspace.getByRole('button', { name: 'Resume session', exact: true }),
     ).toHaveCount(0);
+    await expect(workspace.getByRole('button', { name: 'Start again', exact: true })).toHaveCount(
+      0,
+    );
     await expect.poll(processId).toBeUndefined();
   } finally {
     await page.request.delete(`/api/conversations/${session.conversationId}/terminal`);
     await db.end();
+  }
+});
+
+test('an exited terminal session starts again in the same chat @packaged', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page
+    .getByRole('radiogroup', { name: 'Session type' })
+    .getByRole('radio', { name: 'Terminal' })
+    .click();
+  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'What would you like to work on?' })
+    .fill('Inspect the fixture.');
+  const launched = page.waitForResponse(
+    (response) =>
+      /\/api\/conversations\/[^/]+\/terminal$/.test(response.url()) &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
+  const { session } = (await (await launched).json()) as { session: { conversationId: string } };
+  try {
+    const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
+    const screen = workspace.locator('.xterm-accessibility');
+    await expect(screen).toContainText('Ready for terminal input.');
+    const firstPid = /PID (\d+)/.exec((await screen.textContent())!)![1];
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.press('Control+d');
+    await expect(workspace.getByRole('status').first()).toHaveText('Exited');
+    await expect(workspace).toContainText('Its last output is shown below.');
+    await expect(screen).toContainText(`PID ${firstPid}`);
+    await expect(
+      workspace.getByRole('button', { name: 'Resume session', exact: true }),
+    ).toHaveCount(0);
+    await workspace.getByRole('button', { name: 'Start again', exact: true }).click();
+    await expect(workspace.getByRole('status').first()).toHaveText('Open');
+    await expect(screen).toContainText('Ready for terminal input.');
+    await expect(screen).not.toContainText(`PID ${firstPid}`);
+    await expect(workspace.getByRole('button', { name: 'Start again', exact: true })).toHaveCount(
+      0,
+    );
+  } finally {
+    await page.request.delete(`/api/conversations/${session.conversationId}/terminal`);
   }
 });

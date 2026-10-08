@@ -39,6 +39,6 @@ The shell starts in the chat's worktree, checkout or home folder. Closing a busy
 
 Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents; outside terminals are unaffected.
 
-After a crash or restart, **Interrupted** sessions offer **Resume session** where supported. It restores history, not a running command. A failed launch offers **Start again**.
+After a crash, restart or agent exit, the session offers **Resume session** where supported. It restores history, not a running command. Otherwise **Start again** resends your first message, unless you stopped it.
 
 **Next:** [Use the browser](use-the-browser.md)

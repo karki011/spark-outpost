@@ -59,7 +59,7 @@ export async function prepareNativeSession(
     const existing = runs.rows[0];
     const retried =
       !request.resume &&
-      existing?.status === 'failed' &&
+      (existing?.status === 'failed' || existing?.status === 'outcome_unknown') &&
       !previous?.native_session_id &&
       (await requeueNativeLaunchRun(deps.db, existing.id));
     if (!existing || (!request.resume && existing.status !== 'queued' && !retried)) {

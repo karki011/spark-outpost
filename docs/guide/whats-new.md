@@ -12,7 +12,7 @@ Recent changes, newest first.
 
 | What changed                                                                                                           | What to do                                          |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Finished builds no longer fail as "missing context". **Title:** lines stay hidden.                                     | No action.                                          |
+| Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |
 | Spark Island rests as blobs and keeps its position on your chosen display.                                             | Hover or click to open.                             |
@@ -31,4 +31,3 @@ Recent changes, newest first.
 | New chats start at **Full auto → PR**. Budgets are gone: nothing is capped.                                            | See [Spark autonomy](spark-autonomy.md).            |
 | Reading Spark's own chat data or running a local script no longer asks.                                                | No action.                                          |
 | **⌘D** opens **Changes**. A message sent to a running turn shows in the thread.                                        | No action.                                          |
-| **Restart to update** gets the newest version first. Later updates download only changes.                              | No action.                                          |
