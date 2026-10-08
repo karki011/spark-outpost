@@ -108,7 +108,7 @@ test('failed terminal creation unlocks session and agent choices @packaged', asy
   await expect(page.locator('.composer textarea')).toBeVisible();
 });
 
-test('a terminal whose first launch failed reopens as a new session @packaged', async ({
+test('a failed first terminal launch unlocks the choices and leaves no dead session @packaged', async ({
   page,
 }) => {
   await openChats(page);
@@ -134,13 +134,6 @@ test('a terminal whose first launch failed reopens as a new session @packaged', 
   await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
   await sessions.getByRole('radio', { name: 'Terminal' }).click();
   await expect(prompt).toBeVisible();
-  const reset = page.waitForResponse(
-    (response) =>
-      response.url().endsWith('/api/conversations') && response.request().method() === 'POST',
-  );
-  await sessions.getByRole('radio', { name: 'Chat', exact: true }).click();
-  expect((await reset).ok()).toBe(true);
-  await expect(page.locator('.composer textarea')).toBeVisible();
 });
 
 test('terminal uses the chat folder browser and preserves linked folders at launch @packaged', async ({

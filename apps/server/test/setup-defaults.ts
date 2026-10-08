@@ -15,6 +15,8 @@ export const NEW_PROFILE = {
   sparkEnabled: true,
   agentInstructions: '',
   agentInstructionsFile: '',
+  agentInstructionsFileSet: false,
+  agentInstructionsFileError: null,
   defaultLevel: 'full-auto',
   defaultLevelNotice: false,
   morningBrief: true,
