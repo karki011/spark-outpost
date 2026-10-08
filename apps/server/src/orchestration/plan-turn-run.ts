@@ -1,7 +1,8 @@
+import { markInPlaceMember } from '../persistence/orchestrations.ts';
 import { runAgentTurn } from '../workflow/agent-turn.ts';
 import type { FlowEvent } from './flow-types.ts';
 import { checkAndFix, treeOf } from './land.ts';
-import { nameFor } from './member-routes.ts';
+import { labelFor, nameFor } from './member-routes.ts';
 import { ensureParentSnapshot, type MemberOutcome } from './members.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { NeedRead } from './simple-intake.ts';
@@ -19,12 +20,28 @@ export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
   const before = await treeOf(s, root);
   await ensureParentSnapshot(s);
   const name = await nameFor(s, 'builder');
+  const { model, modelLabel, effort } = s.input.settings;
+  const label = labelFor(
+    'builder',
+    { provider: s.input.provider, model, modelLabel, effort },
+    name,
+  );
+  await markInPlaceMember(s.deps.db, s.lease.runId, {
+    role: 'builder',
+    stepIndex: 0,
+    attempt: 1,
+    agentLabel: label,
+    provider: s.input.provider,
+    model,
+    effort,
+    route: { name },
+  });
   const turn = await runAgentTurn(s.deps, s.lease, s.input, s.append, s.control);
   if (turn.messageId) s.message = { id: turn.messageId, text: turn.text };
   const result: MemberResult = {
     role: 'builder',
     runId: s.lease.runId,
-    label: name,
+    label,
     outcome: turn.outcome,
     error: turn.error,
     text: turn.text,
