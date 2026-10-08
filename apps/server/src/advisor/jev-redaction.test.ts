@@ -120,6 +120,20 @@ describe('what Jev is sent never holds a secret from free text', () => {
     expectClean(await sent(() => pieceQuestions(pieces)));
   });
 
+  it('the verdict: request, agreed plan, requirements, checks and diff', async () => {
+    const body = await sent(() =>
+      buildVerdictQuestions({
+        request: LEAK,
+        plan: [`Set the key to ${API_KEY}`, `Store ${AWS_KEY} in config`],
+        requirements: [`Requirement ${LEAK}`],
+        diff: `+const key = '${API_KEY}';\n+const id = '${AWS_KEY}';`,
+        checks: [`pnpm test printed ${LEAK}`],
+      }),
+    );
+    expectClean(body);
+    expect((JSON.parse(body) as { state: { plan: string[] } }).state.plan).toHaveLength(2);
+  });
+
   it('review findings with the agreed plan and diff', async () => {
     expectClean(
       await sent(() =>
