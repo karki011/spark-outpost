@@ -34,7 +34,13 @@ import { AttachmentError } from '../persistence/attachment-content.ts';
 import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
-import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './validation.ts';
+import {
+  BadRequestError,
+  RequestTooLargeError,
+  UploadTooLargeError,
+  paramId,
+  parseBody,
+} from './validation.ts';
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
@@ -197,7 +203,9 @@ export function statusForError(error: unknown): { status: number; message: strin
   ) {
     return { status: 400, message: error.message };
   }
-  if (error instanceof UploadTooLargeError) return { status: 413, message: error.message };
+  if (error instanceof UploadTooLargeError || error instanceof RequestTooLargeError) {
+    return { status: 413, message: error.message };
+  }
   if (error instanceof KeychainWaitingError) return { status: 503, message: error.message };
   if (error instanceof SteerError) return { status: error.status, message: error.message };
   if (error instanceof TerminalLimitError) {

@@ -9,6 +9,16 @@ export class UploadTooLargeError extends Error {
   }
 }
 
+export class RequestTooLargeError extends Error {}
+
+export function isTooLarge(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { type?: unknown }).type === 'entity.too.large'
+  );
+}
+
 export function parseBody<T>(schema: z.ZodType<T>, req: Request): T {
   const result = schema.safeParse(req.body);
   if (!result.success) {

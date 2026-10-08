@@ -2,7 +2,7 @@ import express, { Router, type NextFunction, type Request, type Response } from 
 import { ATTACHMENT_IMAGE_MAX_BYTES } from '@spark-outpost/contracts';
 import { getAttachmentContent, saveAttachment } from '../persistence/attachments.ts';
 import type { Db } from '../persistence/db.ts';
-import { UploadTooLargeError, paramId } from './validation.ts';
+import { UploadTooLargeError, isTooLarge, paramId } from './validation.ts';
 import { UPLOAD_NAME_HEADER } from './security.ts';
 
 export interface AttachmentRouteDeps {
@@ -11,14 +11,6 @@ export interface AttachmentRouteDeps {
 }
 
 const rawBody = express.raw({ type: () => true, limit: ATTACHMENT_IMAGE_MAX_BYTES });
-
-function isTooLarge(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { type?: unknown }).type === 'entity.too.large'
-  );
-}
 
 function readUpload(req: Request, res: Response, next: NextFunction) {
   rawBody(req, res, (error?: unknown) => {
