@@ -34,6 +34,7 @@ Newest first. Each release adds a section before packaging; the release script t
 - Ship: a commit Spark makes is named after its own turn, not the chat's first request.
 - Known: on Codex in Ask every time, an approved change to a secret file still fails; change the file yourself.
 - Known: in a Plan-mode Claude chat, a build request sent after a question may build without showing a plan first.
+- Known: a plan saved from a reply with Save as agreed plan shows in the chat, but the Work panel has no Plan tab for it until the chat has a task.
 
 ## 0.1.0-beta.6
 
