@@ -1,15 +1,16 @@
 import { fork, type ChildProcess, type Serializable } from 'node:child_process';
-import { timingSafeEqual } from 'node:crypto';
-import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
-import { createServer, type Socket } from 'node:net';
+import { chmod, rename, rm, writeFile } from 'node:fs/promises';
+import { connect, createServer, type Socket } from 'node:net';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { setTimeout as delay } from 'node:timers/promises';
 import { startDatabase, type Database } from './postgres.ts';
 import { descendantsOf, isAlive, processTable } from '../../server/src/terminal/process-group.ts';
+import { isBundledService } from './runtime-entries.ts';
+import { createSecret, runtimePaths, runtimeProof, sameProof } from './runtime-handshake.ts';
 import {
   RUNTIME_FRAME_LIMIT,
-  runtimeEnvelopeSchema,
+  runtimeFrameSchema,
   type RuntimeEvent,
   type RuntimeInfo,
   type RuntimeRequest,
@@ -22,12 +23,18 @@ interface Service {
 
 const directory = process.argv[2] ?? '';
 if (!directory) throw new Error('The local runtime needs its channel directory.');
-const token = (await readFile(path.join(directory, 'token'), 'utf8')).trim();
+const paths = runtimePaths(directory);
+const token = createSecret();
 const services = new Map<string, Service>();
 const clients = new Set<Socket>();
 const browserPorts = new Map<string, unknown>();
 const pendingBrowser = new Map<string, { name: string; message: unknown }>();
-const info: RuntimeInfo = { database: null, api: null };
+const version = process.argv[3] ?? null;
+const bundled = {
+  bootstrap: path.join(import.meta.dirname, 'server-entry.js'),
+  serverDir: process.argv[4] ? path.resolve(process.argv[4]) : null,
+};
+const info: RuntimeInfo = { version, pid: process.pid, database: null, api: null };
 let database: Database | null = null;
 let databaseStarting: Promise<Database> | null = null;
 let desktop: Socket | null = null;
@@ -62,7 +69,7 @@ async function stopService(name: string) {
   service.child.kill('SIGTERM');
   const finished = await Promise.race([
     service.exited.then(() => true),
-    delay(10_000).then(() => false),
+    delay(10_000, undefined, { ref: false }).then(() => false),
   ]);
   if (!finished) service.child.kill('SIGKILL');
   await service.exited;
@@ -91,7 +98,8 @@ function shutdown(): Promise<void> {
     await database?.stop();
     database = null;
     server.close();
-    await rm(path.join(directory, 'endpoint.json'), { force: true });
+    await rm(paths.endpoint, { force: true });
+    await rm(paths.token, { force: true });
     process.exitCode = 0;
   })();
   return stopping;
@@ -140,6 +148,8 @@ async function handle(request: RuntimeRequest): Promise<unknown> {
     return null;
   }
   const options = request.options;
+  if (!isBundledService(options, bundled))
+    throw new Error(`${options.name} was not started: its entry is not part of this app.`);
   if (services.has(options.name)) {
     const ports = browserPorts.get(options.name);
     if (ports && desktop)
@@ -191,7 +201,8 @@ async function handle(request: RuntimeRequest): Promise<unknown> {
 const server = createServer((socket) => {
   let buffer = '';
   const decoder = new StringDecoder('utf8');
-  let authenticated = false;
+  let expected: string | null = null;
+  let proven = false;
   socket.on('data', (chunk: Buffer) => {
     buffer += decoder.write(chunk);
     if (buffer.length > RUNTIME_FRAME_LIMIT) {
@@ -209,29 +220,43 @@ const server = createServer((socket) => {
         socket.destroy();
         return;
       }
-      const parsed = runtimeEnvelopeSchema.safeParse(raw);
+      const parsed = runtimeFrameSchema.safeParse(raw);
       if (!parsed.success) {
         socket.destroy();
         return;
       }
-      const envelope = parsed.data;
-      const offered = Buffer.from(envelope.token);
-      const expected = Buffer.from(token);
-      if (offered.length !== expected.length || !timingSafeEqual(offered, expected)) {
+      const frame = parsed.data;
+      if ('kind' in frame) {
+        if (frame.kind === 'hello' && expected === null && !proven) {
+          const nonce = createSecret();
+          expected = runtimeProof(token, 'client', frame.nonce, nonce);
+          send(socket, {
+            kind: 'welcome',
+            nonce,
+            proof: runtimeProof(token, 'host', frame.nonce, nonce),
+          });
+          continue;
+        }
+        if (frame.kind === 'proof' && expected !== null && sameProof(frame.proof, expected)) {
+          expected = null;
+          proven = true;
+          clients.add(socket);
+          desktop = socket;
+          continue;
+        }
         socket.destroy();
         return;
       }
-      if (!authenticated) {
-        authenticated = true;
-        clients.add(socket);
-        desktop = socket;
+      if (!proven) {
+        socket.destroy();
+        return;
       }
-      void handle(envelope.request).then(
+      void handle(frame.request).then(
         (result) => {
-          send(socket, { kind: 'reply', id: envelope.id, result });
-          if (envelope.request.kind === 'shutdown') for (const client of clients) client.end();
+          send(socket, { kind: 'reply', id: frame.id, result });
+          if (frame.request.kind === 'shutdown') for (const client of clients) client.end();
         },
-        (error: Error) => send(socket, { kind: 'reply', id: envelope.id, error: error.message }),
+        (error: Error) => send(socket, { kind: 'reply', id: frame.id, error: error.message }),
       );
     }
   });
@@ -244,14 +269,25 @@ const server = createServer((socket) => {
     pendingBrowser.clear();
   });
 });
-server.listen(0, '127.0.0.1', async () => {
-  const address = server.address();
-  if (!address || typeof address === 'string') return;
-  const endpoint = path.join(directory, 'endpoint.json');
-  await writeFile(endpoint, JSON.stringify({ port: address.port, pid: process.pid }), {
-    mode: 0o600,
+const answered = await new Promise<boolean>((resolve) => {
+  const probe = connect(paths.socket);
+  probe.once('connect', () => {
+    probe.destroy();
+    resolve(true);
   });
-  await chmod(endpoint, 0o600);
+  probe.once('error', () => resolve(false));
+});
+if (answered) process.exit(0);
+await rm(paths.socket, { force: true });
+await rm(paths.endpoint, { force: true });
+await writeFile(`${paths.token}.next`, token, { mode: 0o600 });
+await rename(`${paths.token}.next`, paths.token);
+const umask = process.umask(0o077);
+server.listen(paths.socket, async () => {
+  process.umask(umask);
+  await chmod(paths.socket, 0o600);
+  await writeFile(paths.endpoint, JSON.stringify({ pid: process.pid, version }), { mode: 0o600 });
+  await chmod(paths.endpoint, 0o600);
 });
 for (const signal of ['SIGTERM', 'SIGINT'] as const)
   process.on(signal, () => {
