@@ -2,7 +2,7 @@ import type { PieceList, PieceViolation } from '@spark-outpost/contracts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { insertRailFlag } from '../persistence/rail-flags.ts';
-import { git } from '../projects/snapshot.ts';
+import { crossingChange } from './crossing-change.ts';
 import { routeNotice } from './follow-up.ts';
 import { crossedText } from './needs.ts';
 
@@ -51,18 +51,6 @@ async function flag(db: Db, crossing: Crossing, paths: string[]): Promise<void> 
   ]);
 }
 
-async function patchOf(crossing: Crossing, path: string): Promise<string> {
-  if (!crossing.after) return '';
-  return git(crossing.cwd, [
-    'diff',
-    '--relative',
-    crossing.before,
-    crossing.after,
-    '--',
-    path,
-  ]).catch(() => '');
-}
-
 export async function reportCrossings(
   db: Db,
   list: PieceList,
@@ -76,7 +64,7 @@ export async function reportCrossings(
   await flag(db, crossing, paths);
   for (const path of paths) {
     await routeNotice(db, list, {
-      body: crossedText(crossing.workerLabel, path, await patchOf(crossing, path)),
+      body: crossedText(crossing.workerLabel, path, await crossingChange(db, crossing, path)),
       files: [path],
       source: 'coordinator',
       from: crossing.pieceKey,
