@@ -13,8 +13,14 @@ export interface NotchSetup {
   notch?: boolean;
 }
 
+export interface RestSize {
+  width: number;
+  height: number;
+}
+
 export interface NotchWindow {
   islandFocus: boolean[];
+  islandRest: (RestSize | null)[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
 }
@@ -46,8 +52,10 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const none = () => () => undefined;
       const hasNotch = setup.notch !== false;
       const focus: boolean[] = [];
+      const rest: ({ width: number; height: number } | null)[] = [];
       Object.assign(window, {
         islandFocus: focus,
+        islandRest: rest,
         sparkDesktop: {
           platform: 'darwin',
           companion: {
@@ -87,7 +95,7 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
             setFocusable: (on: boolean) => focus.push(on),
             drag: () => undefined,
             openChat: () => undefined,
-            setRestSize: () => undefined,
+            setRestSize: (size: { width: number; height: number } | null) => rest.push(size),
           },
           onOpenChat: none,
         },
@@ -159,6 +167,22 @@ export async function underNotch(page: Page): Promise<string[]> {
 
 export const focusCalls = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandFocus);
+
+export const restSize = (page: Page) =>
+  page.evaluate(() => (window as unknown as NotchWindow).islandRest.at(-1) ?? null);
+
+export const shownText = (page: Page) =>
+  page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('.isl *, .isl-peekrow-wrap *'))
+      .filter((element) =>
+        element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }),
+      )
+      .flatMap((element) => Array.from(element.childNodes))
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent?.trim() ?? '')
+      .filter(Boolean)
+      .join(' '),
+  );
 
 export const sparkFocus = (page: Page, focused: boolean) =>
   page.evaluate((next) => (window as unknown as NotchWindow).sparkFocus(next), focused);
