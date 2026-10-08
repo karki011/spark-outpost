@@ -7,7 +7,7 @@ import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { nativeTerminalApi } from './terminal-api.ts';
 import { openTerminal } from './terminal-connection.ts';
-import { terminalEnded, terminalLabel } from './native-state.ts';
+import { terminalEnded, terminalLabel, terminalRelaunch } from './native-state.ts';
 import { TerminalCompanion } from './TerminalCompanion.tsx';
 import './native-terminal.css';
 
@@ -91,6 +91,7 @@ export function NativeTerminalWorkspace({
   const native = session.data ?? chat.terminal;
   const state = native?.state ?? 'starting';
   const ended = native ? terminalEnded(native) : false;
+  const relaunch = native ? terminalRelaunch(native, chat.latestRun?.status ?? null) : null;
   const showsScreen = shown && !session.isPending && (!ended || opened);
   const refresh = async () => {
     await Promise.all([
@@ -168,24 +169,14 @@ export function NativeTerminalWorkspace({
               Reconnect
             </button>
           )}
-          {native?.resumeAvailable && ended && (
+          {relaunch && (
             <button
               type="button"
               className="btn primary sm"
               disabled={busy}
-              onClick={() => void act('resume')}
+              onClick={() => void act(relaunch)}
             >
-              Resume session
-            </button>
-          )}
-          {native && !native.resumeAvailable && state === 'error' && (
-            <button
-              type="button"
-              className="btn primary sm"
-              disabled={busy}
-              onClick={() => void act('restart')}
-            >
-              Start again
+              {relaunch === 'resume' ? 'Resume session' : 'Start again'}
             </button>
           )}
           {!ended && (

@@ -53,10 +53,10 @@ const native: NativeTerminalSession = {
 };
 const chat = { id: 'chat', terminal: native, sessionType: 'terminal' } as ConversationSummary;
 const detail = { approvals: [] } as unknown as ConversationDetail;
-function mount() {
+function mount(summary: ConversationSummary = chat) {
   return render(
     <QueryClientProvider client={client}>
-      <NativeTerminalWorkspace chat={chat} detail={detail} />
+      <NativeTerminalWorkspace chat={summary} detail={detail} />
     </QueryClientProvider>,
   );
 }
@@ -128,5 +128,35 @@ describe('native terminal lifecycle controls', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Start again' }));
     await waitFor(() => expect(fake.launch).toHaveBeenCalledWith('chat', {}));
     await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
+  });
+  it('offers to start again, keeping the last output, when the agent exited with nothing to resume', async () => {
+    mount();
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
+    fake.get.mockResolvedValue({ ...native, state: 'exited', reason: 'Native agent exited (0).' });
+    fake.handlers[0]!.onEnded('exited');
+    const again = await screen.findByRole('button', { name: 'Start again' });
+    expect(screen.getByLabelText('Interactive agent terminal')).toBeTruthy();
+    expect(fake.disposed).not.toHaveBeenCalled();
+    expect(fake.launch).not.toHaveBeenCalled();
+    fake.launch.mockImplementation(async () => {
+      fake.get.mockResolvedValue(native);
+      return { session: native, connection: { id: native.id, token: 'fresh-token' } };
+    });
+    fireEvent.click(again);
+    await waitFor(() => expect(fake.launch).toHaveBeenCalledWith('chat', {}));
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledTimes(2));
+  });
+  it('offers to resume an exited session that has a provider session', async () => {
+    fake.get.mockResolvedValue({ ...native, state: 'exited', resumeAvailable: true });
+    mount();
+    await screen.findByRole('button', { name: 'Resume session' });
+    expect(screen.queryByRole('button', { name: 'Start again' })).toBeNull();
+  });
+  it('offers no restart for a session the user stopped before it had anything to resume', async () => {
+    fake.get.mockResolvedValue({ ...native, state: 'exited', reason: 'Stopped by the user.' });
+    mount({ ...chat, latestRun: { status: 'cancelled' } } as ConversationSummary);
+    await screen.findByText('This terminal session has stopped.');
+    expect(screen.queryByRole('button', { name: 'Start again' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resume session' })).toBeNull();
   });
 });

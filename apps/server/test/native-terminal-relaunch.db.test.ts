@@ -67,6 +67,36 @@ describe('native terminal launch recovery', () => {
     expect(await messages()).toBe(1);
   });
 
+  it('starts again with the saved first message after the agent exited before reporting a session', async () => {
+    await f.launch();
+    f.exits.at(-1)!({ exitCode: 0 });
+    await expect
+      .poll(async () => (await nativeTerminalRow(f.t.db, f.conversationId))?.state)
+      .toBe('exited');
+    expect(await nativeTerminalRow(f.t.db, f.conversationId)).toMatchObject({
+      native_session_id: null,
+      reason: 'Native agent exited (0).',
+    });
+    expect((await runs())[0]!.status).toBe('outcome_unknown');
+    const started = await f.runtime.launch(f.conversationId, { resume: false });
+    expect(started.session.state).toBe('unknown');
+    expect(f.spawn).toHaveBeenCalledTimes(2);
+    expect(f.inputs.at(-1)!.prompt).toContain('Check the native fixture');
+    expect(f.inputs.at(-1)!.resumeSessionId).toBeUndefined();
+    expect(await runs()).toEqual([{ status: 'running', error: null }]);
+    expect(await messages()).toBe(1);
+  });
+
+  it('does not start a session the user stopped again without a new message', async () => {
+    await f.launch();
+    await f.runtime.stop(f.conversationId);
+    expect((await runs())[0]!.status).toBe('cancelled');
+    await expect(f.runtime.launch(f.conversationId, { resume: false })).rejects.toThrow(
+      'first message',
+    );
+    expect(f.spawn).toHaveBeenCalledTimes(1);
+  });
+
   it('does not start a launch the user stopped again without a new message', async () => {
     let release: (() => void) | null = null;
     const place = f.place;

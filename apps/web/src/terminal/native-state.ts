@@ -1,4 +1,8 @@
-import type { ConversationSummary, NativeTerminalSession } from '@spark-outpost/contracts';
+import type {
+  ConversationSummary,
+  NativeTerminalSession,
+  RunStatus,
+} from '@spark-outpost/contracts';
 import type { SessionState } from '../island/island-model.ts';
 
 export function terminalLabel(state: NativeTerminalSession['state']): string {
@@ -32,4 +36,13 @@ export function terminalNeedsInput(chat: ConversationSummary): boolean {
 
 export function terminalEnded(session: NativeTerminalSession): boolean {
   return ['exited', 'error', 'interrupted'].includes(session.state);
+}
+
+export function terminalRelaunch(
+  session: NativeTerminalSession,
+  latestRunStatus: RunStatus | null,
+): 'resume' | 'restart' | null {
+  if (!terminalEnded(session)) return null;
+  if (session.resumeAvailable) return 'resume';
+  return latestRunStatus === 'cancelled' ? null : 'restart';
 }

@@ -308,7 +308,7 @@ export async function requeueNativeLaunchRun(db: Db, runId: string): Promise<boo
   const requeued = await db.query(
     `UPDATE runs r SET status = 'queued', error = NULL, started_at = NULL, finished_at = NULL
      FROM conversations c WHERE r.id = $1 AND c.id = r.conversation_id AND c.session_type = 'terminal'
-       AND r.status = 'failed' AND r.cancel_requested_at IS NULL
+       AND r.status IN ('failed', 'outcome_unknown') AND r.cancel_requested_at IS NULL
        AND NOT EXISTS (SELECT 1 FROM jobs WHERE run_id = r.id)
        AND NOT EXISTS (
          SELECT 1 FROM native_terminal_sessions n
