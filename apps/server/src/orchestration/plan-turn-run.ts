@@ -15,33 +15,32 @@ export function startsPlanBuild(s: Session, action: Extract<FlowAction, { type: 
   return s.planTurn === true && action.role === 'builder' && action.reason === 'first';
 }
 
-export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
-  const root = s.input.projectRoots[0]!;
-  const before = await treeOf(s, root);
-  await ensureParentSnapshot(s);
-  const name = await nameFor(s, 'builder');
+async function markAsBuilder(s: Session, name: string): Promise<void> {
   const { model, modelLabel, effort } = s.input.settings;
-  const label = labelFor(
-    'builder',
-    { provider: s.input.provider, model, modelLabel, effort },
-    name,
-  );
+  const pick = { provider: s.input.provider, model, modelLabel, effort };
   await markInPlaceMember(s.deps.db, s.lease.runId, {
     role: 'builder',
     stepIndex: 0,
     attempt: 1,
-    agentLabel: label,
+    agentLabel: labelFor('builder', pick, name),
     provider: s.input.provider,
     model,
     effort,
     route: { name },
   });
+}
+
+export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
+  const root = s.input.projectRoots[0]!;
+  const before = await treeOf(s, root);
+  await ensureParentSnapshot(s);
+  const name = await nameFor(s, 'builder');
   const turn = await runAgentTurn(s.deps, s.lease, s.input, s.append, s.control);
   if (turn.messageId) s.message = { id: turn.messageId, text: turn.text };
   const result: MemberResult = {
     role: 'builder',
     runId: s.lease.runId,
-    label,
+    label: name,
     outcome: turn.outcome,
     error: turn.error,
     text: turn.text,
@@ -53,6 +52,7 @@ export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
   s.results.push(result);
   if (result.outcome !== 'succeeded') return { result };
   const landed = await checkAndFix(s, result, { cwd: root, before, place: null });
+  if (landed.changed) await markAsBuilder(s, name);
   return { result: landed.result };
 }
 
