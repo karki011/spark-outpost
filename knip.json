@@ -37,7 +37,7 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/desktop": {
-      "entry": ["src/server-entry.ts", "src/boot-preload.ts"],
+      "entry": ["src/server-entry.ts", "src/boot-preload.ts", "src/runtime-host.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/contracts": {

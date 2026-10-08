@@ -17,6 +17,8 @@ interface ChatHeadToolsProps {
   browser: { open: boolean; onToggle: () => void } | null;
   onAudit?: (() => void) | undefined;
   onStartFresh: () => void;
+  terminalDock?: boolean;
+  canStartFresh?: boolean;
 }
 
 export function ChatHeadTools({
@@ -25,6 +27,8 @@ export function ChatHeadTools({
   browser,
   onAudit,
   onStartFresh,
+  terminalDock = true,
+  canStartFresh = true,
 }: ChatHeadToolsProps) {
   const phone = usePhone();
   const { remote } = useRemoteClient();
@@ -50,13 +54,13 @@ export function ChatHeadTools({
         <ChatHeaderMenu
           chatId={conversationId}
           onAudit={onAudit}
-          onStartFresh={onAudit ? onStartFresh : undefined}
+          onStartFresh={onAudit && canStartFresh ? onStartFresh : undefined}
           extras={extras}
         />
       )}
       {!phone && <AgentTvButton conversationId={conversationId} agents={agents} />}
       {browser && !remote && <BrowserButton open={browser.open} onToggle={browser.onToggle} />}
-      {!remote && <TerminalButton chatId={conversationId} />}
+      {!remote && terminalDock && <TerminalButton chatId={conversationId} />}
       {!phone && <ThemePicker />}
     </>
   );

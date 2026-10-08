@@ -1,4 +1,6 @@
 import { setupStateFor } from '../remote/redaction.ts';
+import { isRemote } from '../remote/principal.ts';
+import { AgentInstructionsError } from '../setup/agent-instructions.ts';
 import { Router, type Request, type Response } from 'express';
 import { forgetRejectedModels } from '../model-access/store.ts';
 import {
@@ -99,7 +101,17 @@ export function setupRoutes(deps: SetupDeps): Router {
   });
 
   router.patch('/profile', async (req, res) => {
-    await updateProfile(db, workspaceId, parseBody(updateProfileRequestSchema, req));
+    const update = parseBody(updateProfileRequestSchema, req);
+    if (isRemote(res) && update.agentInstructionsFile !== undefined) {
+      res.status(403).json({ error: 'Choose local instruction files on your Mac.' });
+      return;
+    }
+    try {
+      await updateProfile(db, workspaceId, update);
+    } catch (error) {
+      if (error instanceof AgentInstructionsError) throw new BadRequestError(error.message);
+      throw error;
+    }
     res.json(await setupState());
   });
 

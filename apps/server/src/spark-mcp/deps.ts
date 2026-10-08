@@ -54,6 +54,7 @@ export interface SparkScope {
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;
+  beforeToolCall?: () => Promise<void>;
 }
 
 export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {

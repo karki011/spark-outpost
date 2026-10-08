@@ -13,6 +13,8 @@ export const NEW_PROFILE = {
   prFollowUpAsk: false,
   personality: 'friendly',
   sparkEnabled: true,
+  agentInstructions: '',
+  agentInstructionsFile: '',
   defaultLevel: 'full-auto',
   defaultLevelNotice: false,
   morningBrief: true,

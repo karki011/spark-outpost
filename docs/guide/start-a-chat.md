@@ -6,30 +6,32 @@ order: 210
 summary: Start a chat, link the folder the agent may work in, and add files or commands to your message.
 ---
 
-You'll start a chat and point it at your code. About 1 minute.
+You'll start a chat linked to your code. About 1 minute.
 
 ## Start a chat
 
 1. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
-2. Type your message and press **Enter**.
+2. Leave **Chat** selected, type your message and press **Enter**.
 
 ![A new chat with the message box and the context bar above it](images/chats-and-modes-new-chat-light.png)
 
 Or type in **Start a new chat** on **Home**.
 
+Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals.md).
+
 ## Link a project
 
-Without one, the agent can answer but can't read or change files.
+Link a project so the agent can work on files.
 
 1. Above the message box, select **Choose project**.
 2. Pick a folder under **Recent**, or select **Choose a folder…**, then **Use this folder**.
-3. To add a second repo, select **Add another repo…** in the same menu.
+3. For another repo, select **Add another repo…**.
 
-To clone a repo instead, select **+** beside **Projects**, then **Clone a repository**.
+To clone, select **Projects → + → Clone a repository**.
 
 ![The context bar with a linked project, its branch and the Spark autonomy chip](images/chats-and-modes-project-light.png)
 
-To unlink, select **No project (chat only)** in the menu.
+To unlink, select **No project folder** in the menu.
 
 ## Write a message
 
@@ -44,12 +46,8 @@ Or paste or drag files into the box.
 
 ## Share a chat with another chat
 
-1. On the chat to share, select **Chat actions**, then **Copy chat link**.
-2. In another chat, paste the link, or select **+**, then **Add another chat…**.
-3. Check the chip's title, project and state, then send.
+Copy its link from **Chat actions → Copy chat link**, then paste into another chat. The agent can [read it](spark-tools.md), never change it.
 
-The agent gets a short summary, can [read more](spark-tools.md), but never changes that chat.
-
-> **Tip:** To talk to a named teammate, select **Talk to…** before your first message; for one job, type `@` and its name. See [Make a Spark](sparks.md).
+> **Tip:** Select **Talk to…** or type `@` to work with a [Spark](sparks.md).
 
 **Next:** [Pick the model, effort and mode](agent-mode.md)

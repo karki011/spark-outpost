@@ -76,6 +76,10 @@ import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
+import { NewTerminalSession } from '../terminal/NewTerminalSession.tsx';
+import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
+import '../terminal/native-terminal.css';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 
 const NO_REPOS: string[] = [];
@@ -90,6 +94,11 @@ interface ChatViewProps {
 
 export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const queryClient = useQueryClient();
+  const [sessionChoice, setSessionChoice] = useState<SessionChoice>({
+    sessionType: 'chat',
+    terminalProvider: 'claude',
+  });
+  const [terminalLaunching, setTerminalLaunching] = useState(false);
   const detail = useQuery({
     queryKey: queryKeys.conversation(conversationId),
     queryFn: () => api.getConversation(conversationId),
@@ -133,7 +142,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
-    repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
+    repos.length > 0 && settings && detail.data?.conversation.sessionType !== 'terminal'
+      ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL)
+      : null;
   const { remote } = useRemoteClient();
   const browserPane = useBrowserPane(conversationId);
   const hasBrowser = browserPane !== null;
@@ -219,6 +230,15 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     [conversationId, addPick],
   );
   const firstRepo = repos[0] ?? null;
+  const terminalSession =
+    detail.data?.conversation.sessionType === 'terminal' && !terminalLaunching;
+  const newSession =
+    Boolean(detail.data) &&
+    (terminalLaunching ||
+      (detail.data?.conversation.sessionType !== 'terminal' &&
+        (detail.data?.messages.length ?? 0) === 0 &&
+        (detail.data?.runs.length ?? 0) === 0));
+  const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
   const panelRoots = useMemo(
     () => [
       ...(chatBranch?.worktree ? [chatBranch.path] : []),
@@ -235,7 +255,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <main
               ref={mainRef}
               className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
-              {...drop.handlers}
+              {...(terminalSession || terminalDraft ? {} : drop.handlers)}
             >
               <header className="head chat-head">
                 <SidebarToggle />
@@ -269,6 +289,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
                     onAudit={openAudit}
                     onStartFresh={() => startFresh.mutate()}
+                    canStartFresh={!terminalSession}
+                    terminalDock={!terminalSession && !terminalDraft}
                   />
                 </div>
               </header>
@@ -278,7 +300,31 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {detail.error.message}
                 </p>
               )}
-              {detail.data ? (
+              {newSession && (
+                <SessionTypePicker
+                  value={sessionChoice}
+                  onChange={setSessionChoice}
+                  disabled={terminalLaunching}
+                />
+              )}
+              {terminalSession && detail.data ? (
+                <NativeTerminalWorkspace chat={detail.data.conversation} detail={detail.data} />
+              ) : terminalDraft ? (
+                <NewTerminalSession
+                  conversationId={conversationId}
+                  choice={sessionChoice}
+                  settings={settings}
+                  connected={connected.some(
+                    (provider) => provider.id === sessionChoice.terminalProvider,
+                  )}
+                  projectIds={detail.data?.conversation.projectIds ?? []}
+                  onStarting={() => setTerminalLaunching(true)}
+                  onLaunched={() => setTerminalLaunching(false)}
+                  onFailed={(created) => {
+                    if (!created) setTerminalLaunching(false);
+                  }}
+                />
+              ) : detail.data ? (
                 <PanelOpenContext value={panel.open}>
                   <RailContext
                     value={
@@ -321,61 +367,70 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   )}
                 </div>
               )}
-              <ComposerStatus
-                store={status}
-                runs={detail.data?.runs ?? NO_RUNS}
-                activeRunId={running?.id ?? null}
-                provider={detail.data?.settings.provider ?? ''}
-                queued={queue.items.length}
-              />
-              <QueueStrip
-                queue={queue}
-                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
-              />
-              <Composer
-                conversationId={conversationId}
-                repos={repos}
-                settings={settings}
-                providers={connected}
-                runs={detail.data?.runs ?? []}
-                orchestration={orchestration}
-                usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-                busy={running !== null}
-                sending={sends.sending}
-                error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
-                notice={sendNowStatus({
-                  memberMessages: detail.data?.memberMessages,
-                  runs: detail.data?.runs ?? NO_RUNS,
-                })}
-                stopping={stop.stopping}
-                attachments={attachments}
-                quotes={quotes}
-                onSend={async (content, files, annotations) => {
-                  sends.send({ content, attachments: files, annotations });
-                }}
-                onStop={stop.stop}
-                onQueue={(content) => {
-                  followRequests.request();
-                  return queue.add(content);
-                }}
-                onSendNow={(content) => {
-                  followRequests.request();
-                  return queue.sendFirst(content);
-                }}
-                busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
-                steer={steer}
-                above={
-                  <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
-                }
-                {...(openAudit ? { onAudit: openAudit } : {})}
-                onStartFresh={() => startFresh.mutate()}
-                autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
-                agentCommands={commands.data?.commands ?? NO_COMMANDS}
-                agentName={providerName(
-                  commands.data?.provider ?? detail.data?.settings.provider ?? '',
-                )}
-              />
-              {!remote && <TerminalDock chatId={conversationId} />}
+              {!terminalSession && !terminalDraft && (
+                <>
+                  <ComposerStatus
+                    store={status}
+                    runs={detail.data?.runs ?? NO_RUNS}
+                    activeRunId={running?.id ?? null}
+                    provider={detail.data?.settings.provider ?? ''}
+                    queued={queue.items.length}
+                  />
+                  <QueueStrip
+                    queue={queue}
+                    mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
+                  />
+                  <Composer
+                    conversationId={conversationId}
+                    repos={repos}
+                    settings={settings}
+                    providers={connected}
+                    runs={detail.data?.runs ?? []}
+                    orchestration={orchestration}
+                    usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+                    busy={running !== null}
+                    sending={sends.sending}
+                    error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
+                    notice={sendNowStatus({
+                      memberMessages: detail.data?.memberMessages,
+                      runs: detail.data?.runs ?? NO_RUNS,
+                    })}
+                    stopping={stop.stopping}
+                    attachments={attachments}
+                    quotes={quotes}
+                    onSend={async (content, files, annotations) => {
+                      sends.send({ content, attachments: files, annotations });
+                    }}
+                    onStop={stop.stop}
+                    onQueue={(content) => {
+                      followRequests.request();
+                      return queue.add(content);
+                    }}
+                    onSendNow={(content) => {
+                      followRequests.request();
+                      return queue.sendFirst(content);
+                    }}
+                    busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
+                    steer={steer}
+                    above={
+                      <PrCard
+                        conversationId={conversationId}
+                        onOpenLinks={task ? openLinks : null}
+                      />
+                    }
+                    {...(openAudit ? { onAudit: openAudit } : {})}
+                    onStartFresh={() => startFresh.mutate()}
+                    autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
+                    agentCommands={commands.data?.commands ?? NO_COMMANDS}
+                    agentName={providerName(
+                      commands.data?.provider ?? detail.data?.settings.provider ?? '',
+                    )}
+                  />
+                </>
+              )}
+              {!remote && !terminalSession && !terminalDraft && (
+                <TerminalDock chatId={conversationId} />
+              )}
               <DropOverlay visible={drop.dragging} />
             </main>
             {panel.available && (

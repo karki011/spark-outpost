@@ -104,6 +104,22 @@ const emptyListComment = {
 const remoteTip = () => git(pull.repo.bare, 'rev-parse', `refs/heads/${PR_BRANCH}`);
 
 describe('PR follow-up', { timeout: 60_000 }, () => {
+  it('holds feedback for the native terminal agent without starting another agent turn', async () => {
+    await t.db.query(
+      `UPDATE conversations SET session_type = 'terminal', terminal_provider = 'claude' WHERE id = $1`,
+      [pull.conversationId],
+    );
+    fake.pull.reviewComments = [emptyListComment];
+    await poll();
+    const watched = await current(t, pull.watch);
+    expect(watched.phase).toBe('needs_you');
+    expect(watched.doing).toContain('Terminal session');
+    expect(rounds).toEqual([]);
+    expect((await feedbackFor(t.db, pull.watch.id)).map((item) => item.state)).toEqual([
+      'needs_user',
+    ]);
+  });
+
   it('with ask first on, turns a failing check and review feedback into one round, one card, then a push and replies', async () => {
     await updateProfile(t.db, t.workspaceId, { prFollowUpAsk: true });
     fake.pull.checkRuns = [failingCheck];

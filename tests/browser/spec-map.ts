@@ -99,6 +99,7 @@ export const SPEC_GROUPS = {
   'terminal-preview-browser': [
     'browser-pane',
     'chat-terminal',
+    'native-terminal',
     'command-terminal',
     'preview',
     'shot-order',
@@ -132,6 +133,7 @@ export const SPEC_GROUPS = {
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
   sparks: ['spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
   'settings-providers': [
+    'agent-instructions',
     'keychain-notice',
     'mcp-settings',
     'model-availability',

@@ -99,10 +99,22 @@ export async function startSparkMcpHost(
     const cancelled = cancelledId(body);
     if (cancelled !== null) calls.get(`${grant}:${cancelled}`)?.abort();
     const call = toolCallId(body);
+    if (call !== null) {
+      try {
+        await session.scope.beforeToolCall?.();
+      } catch {
+        reply(res, 409, 'This terminal turn is unavailable. Check its session in Spark.');
+        return;
+      }
+      if (grants.get(grant) !== session) {
+        reply(res, 401, 'This Spark session has ended.');
+        return;
+      }
+    }
     const key = call === null ? null : `${grant}:${call}`;
     const controller = new AbortController();
     if (key) calls.set(key, controller);
-    const server = sparkMcpServer(deps, session.scope, session.available, controller.signal);
+    const server = sparkMcpServer(deps, { ...session.scope }, session.available, controller.signal);
     const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
     res.on('close', () => {
       controller.abort();
@@ -154,6 +166,9 @@ export async function startSparkMcpHost(
         token,
         revoke: () => {
           grants.delete(key);
+          for (const [callKey, controller] of calls) {
+            if (callKey.startsWith(`${key}:`)) controller.abort();
+          }
           void endBrowserRun(deps, scope);
         },
       };

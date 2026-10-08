@@ -13,7 +13,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | Row                                                    | Default                | Read more                                                                               |
 | ------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
 | **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                |
-| **Spark**                                              | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                     |
+| **Use Spark workflow**                                 | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                     |
 | **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                     |
 | **Wait before going on without your answer**           | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
 | **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
@@ -26,10 +26,12 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 | **On wide windows**                                    | **Context rail**       | With the work panel closed: a rail with project, agent and tasks, the panel, or nothing |
 | **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                     |
 | **Show Spark Island**, **Spark Island size**           | On, **Full**           | [Spark Island](desktop-companion.md)                                                    |
-| **Open requests by themselves**, **Island chimes**     | On, off                | [Spark Island](desktop-companion.md#answer-a-card)                                      |
+| **Island chimes**                                      | Off                    | [Spark Island](desktop-companion.md#answer-a-card)                                      |
 | **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                          |
 
-The Spark Island rows show in the Mac app only.
+Under **Spark**, **Workflow options** holds autonomy, compaction and PR controls.
+
+**Custom instructions** accepts text or a local UTF-8 file up to 16 KB. Select **Save instructions**. New sessions send both to your agent. Choose files on Mac.
 
 ## Other sections
 

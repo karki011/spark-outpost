@@ -119,7 +119,7 @@ test('links two repos, reorders them, removes one, and goes chat-only', async ({
   await expect(rows).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Project folders: lib' })).toBeVisible();
 
-  await repoMenu(page).getByRole('button', { name: 'No project (chat only)' }).click();
+  await repoMenu(page).getByRole('button', { name: 'No project folder' }).click();
   await expect(page.getByRole('button', { name: 'Choose project' })).toBeVisible();
   await expect(page.locator('.head .crumb')).toHaveCount(0);
 });

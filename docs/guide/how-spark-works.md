@@ -6,7 +6,7 @@ order: 510
 summary: What Spark adds around Claude, Codex and Z.ai, and the path a request takes from the message box to a pull request.
 ---
 
-Claude Code, Codex and Z.ai are the agents that read and write code. Spark is the layer around them: it picks who works on a request, checks the work, keeps you in charge and ships the result.
+Claude Code, Codex and Z.ai read and write code. Spark picks who works, checks results and ships changes with your approval.
 
 ## What happens to a message
 
@@ -28,4 +28,6 @@ Hover the line above the crew to see how Spark handled each step. For where a ca
 
 ## With Spark off
 
-Turn off the **Spark** switch in **Settings → Spark** and chats go straight to the agent and model you pick. There's no reading step, crew, Critic or Jev call. Approvals and protected paths still apply.
+Turn off **Use Spark workflow** in **Settings → Spark** for direct Chat agents or Terminal without Spark tools and workflow prompts. Custom instructions still apply. Approvals remain; Terminal activity tracking stays on.
+
+Start a new session to remove earlier instructions from its history.

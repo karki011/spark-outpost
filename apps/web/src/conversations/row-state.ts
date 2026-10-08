@@ -1,4 +1,5 @@
 import type { ConversationAttention, ConversationSummary } from '@spark-outpost/contracts';
+import { terminalLabel, terminalMood, terminalNeedsInput } from '../terminal/native-state.ts';
 import { providerName } from '../chat/provider-name.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
@@ -18,10 +19,12 @@ function reason(error: string | null): string {
 }
 
 export function needsInput(chat: ConversationSummary): boolean {
-  return chat.needsInput;
+  return chat.needsInput || terminalNeedsInput(chat);
 }
 
 export function isRunning(chat: ConversationSummary): boolean {
+  if (chat.sessionType === 'terminal')
+    return chat.terminal?.state === 'working' || chat.terminal?.state === 'starting';
   const status = chat.latestRun?.status;
   return status === 'queued' || status === 'running';
 }
@@ -65,6 +68,26 @@ function waitingState(chat: ConversationSummary): RowState {
 }
 
 export function rowState(chat: ConversationSummary, open: boolean): RowState {
+  if (
+    chat.needsInput &&
+    !(chat.sessionType === 'terminal' && terminalNeedsInput(chat) && !chat.attention?.approvalId)
+  )
+    return waitingState(chat);
+  if (chat.sessionType === 'terminal' && chat.terminal) {
+    const state = chat.terminal.state;
+    const mood = terminalMood(state);
+    const tone: RowTone =
+      state === 'waiting_for_permission'
+        ? 'permission'
+        : mood === 'waiting'
+          ? 'asking'
+          : mood === 'working'
+            ? 'running'
+            : mood === 'failed'
+              ? 'error'
+              : 'idle';
+    return { tone, label: terminalLabel(state), sub: terminalLabel(state) };
+  }
   if (needsInput(chat)) return waitingState(chat);
   const run = chat.latestRun;
   if (!run) return IDLE;

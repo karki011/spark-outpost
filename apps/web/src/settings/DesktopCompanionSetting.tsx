@@ -15,7 +15,6 @@ import { SettingRow } from './SettingRow.tsx';
 
 const LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
-const AUTO_EXPAND = 'Open requests by themselves';
 
 let revealPending = false;
 const revealers = new Set<() => void>();
@@ -142,7 +141,6 @@ export function DesktopCompanionSetting() {
   const status = useCompanionStatus();
   const showId = useId();
   const chimesId = useId();
-  const expandId = useId();
   const loaded = status !== null;
   useEffect(() => {
     if (!loaded) return;
@@ -181,20 +179,6 @@ export function DesktopCompanionSetting() {
             <IslandSizeSetting
               status={status}
               onChange={(size) => void desktop.companion.setIslandSize?.(size)}
-            />
-          )}
-          {desktop.companion.setAutoExpand && (
-            <SwitchRow
-              id={expandId}
-              label={AUTO_EXPAND}
-              doc={{ page: 'desktop-companion', heading: 'answer-a-card' }}
-              hint={
-                status.autoExpand
-                  ? 'When a chat needs you, Spark Island opens the request once. It never takes the keyboard.'
-                  : 'Off. A chat that needs you shows Review; select it to open the request.'
-              }
-              checked={status.autoExpand === true}
-              onChange={(on) => void desktop.companion.setAutoExpand?.(on)}
             />
           )}
           {SHORTCUTS.map((shortcut) => (

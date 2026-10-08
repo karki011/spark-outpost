@@ -76,6 +76,20 @@ describe('island state machine', () => {
     expect(hoverOpens(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBeNull();
   });
 
+  it('stays collapsed in hover-only mode even with Full size and pending requests', () => {
+    const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
+    const inputs = { ...quiet, hoverOnly: true, full: true, cards: [card], nudge: true };
+    expect(islandView(inputs)).toEqual({ kind: 'peek' });
+    expect(hoverOpens(islandView(inputs))).toEqual({ kind: 'home' });
+    expect(hoverOpens(islandView(inputs), card)).toEqual({ kind: 'card', card });
+    expect(quickShortcutTarget(null, islandView(inputs), card)).toEqual({
+      kind: 'review',
+      chatId: 'a',
+    });
+    expect(islandView({ ...inputs, panel: 'sessions' }).kind).toBe('panel');
+    expect(islandView({ ...inputs, review: 'a' }).kind).toBe('card');
+  });
+
   it('rests as the full bar at Full size, carrying the request instead of a pill', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     const full = { ...quiet, full: true };

@@ -88,15 +88,13 @@ async function hoverIsland(page: Page, y = 8) {
 
 async function leaveIsland(page: Page) {
   await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', /peek|nudge/);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 }
 
 const homeTab = (page: Page) => island(page).getByRole('tab', { name: 'Home' });
 const nowCard = (page: Page) => island(page).getByRole('region', { name: /^Now/ });
 
-test('stays at rest while work runs and finishes, nudges for approvals, and opens in full on hover', async ({
-  page,
-}) => {
+test('stays collapsed through running work and approvals, and opens on hover', async ({ page }) => {
   test.setTimeout(60_000);
   await resetTestDatabase({ onboarded: true });
   await openIsland(page);
@@ -129,11 +127,11 @@ test('stays at rest while work runs and finishes, nudges for approvals, and open
       approval: { kind: 'execute', title: 'npm install sharp', command: 'npm install sharp' },
     },
   ]);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  await expect(island(page)).toContainText('Approve: run npm install sharp');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+
   await shot(page, 'nudge');
-  expect((await island(page).boundingBox())!.y).toBeGreaterThanOrEqual(32);
-  await hoverIsland(page, 56);
+  await hoverIsland(page);
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -195,9 +193,11 @@ test('the approval card takes Y only once focused', async ({ page }) => {
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.keyboard.press('y');
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.keyboard.press('Alt+Space');
   const card = island(page).getByRole('group', { name: /pnpm rotate/ });
   await expect(card).toBeFocused();
@@ -290,7 +290,8 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.keyboard.press('Alt+Shift+Space');
   await page.keyboard.press('Meta+4');
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
@@ -352,7 +353,8 @@ test('the island has no serious accessibility problems in its main views', async
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   const views: string[] = [];
   const check = async (name: string) => {
     await page.waitForTimeout(700);
@@ -365,7 +367,7 @@ test('the island has no serious accessibility problems in its main views', async
       }
     }
   };
-  await check('nudge');
+  await check('collapsed approval');
   await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   await check('card');

@@ -163,6 +163,10 @@ POST /api/remote/tailscale/off
 DELETE /api/terminal/sessions/:id
 GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
+POST /api/terminal/sessions/:id/attach
+GET /api/conversations/:id/terminal
+POST /api/conversations/:id/terminal
+DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
 POST /api/terminal/previews
 GET /api/conversations/:id/preview

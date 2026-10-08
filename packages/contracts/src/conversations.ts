@@ -23,6 +23,11 @@ import {
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
+import {
+  nativeTerminalProviderSchema,
+  nativeTerminalSessionSchema,
+  sessionTypeSchema,
+} from './native-terminal.ts';
 
 export const MESSAGE_MAX_LENGTH = 20_000;
 export const TITLE_MAX_LENGTH = 40;
@@ -68,6 +73,8 @@ export type PlanProgress = z.infer<typeof planProgressSchema>;
 
 export const conversationSummarySchema = z.object({
   id: z.uuid(),
+  sessionType: sessionTypeSchema.optional(),
+  terminal: nativeTerminalSessionSchema.nullable().optional(),
   title: z.string(),
   updatedAt: z.string(),
   projectIds: z.array(z.uuid()),
@@ -149,6 +156,10 @@ export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 
 export const createConversationRequestSchema = z.object({
   id: z.uuid(),
+  sessionType: sessionTypeSchema.optional(),
+  terminalProvider: nativeTerminalProviderSchema.optional(),
+  projectIds: z.array(z.uuid()).max(20).optional(),
+  title: z.string().trim().min(1).max(100).optional(),
 });
 export type CreateConversationRequest = z.infer<typeof createConversationRequestSchema>;
 

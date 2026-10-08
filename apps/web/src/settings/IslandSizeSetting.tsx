@@ -24,7 +24,7 @@ export function IslandSizeSetting({
     <SettingRow
       label={LABEL}
       doc={{ page: 'desktop-companion' }}
-      hint="Full shows the current chat and what it is doing. Small, Medium and Large show only Scout."
+      hint="Sets the resting blob size. Hover or click for details."
       hintId={hintId}
     >
       <Segmented

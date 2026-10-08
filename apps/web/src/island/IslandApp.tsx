@@ -47,8 +47,7 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
-import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
-import { useAutoExpand } from './auto-expand.ts';
+import { useIslandSize } from './island-size.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -143,6 +142,7 @@ export function IslandApp() {
   const size = useIslandSize();
   const view = islandView({
     full: size === 'full',
+    hoverOnly: true,
     note: note !== null,
     panel,
     cards: allCards,
@@ -220,7 +220,7 @@ export function IslandApp() {
       }
       return;
     }
-    const target = quickShortcutTarget(panel, view);
+    const target = quickShortcutTarget(panel, view, cards[0] ?? null);
     if (target.kind === 'review') {
       setReview(target.chatId);
       setFocusSignal((value) => value + 1);
@@ -366,22 +366,11 @@ export function IslandApp() {
     onNote: setDropNote,
   });
 
-  useAutoExpand({
-    enabled: useAutoExpandSetting(),
-    idle: grab.phase === 'idle' && !sparkFocused && (resting || view.kind === 'nudge'),
-    cards,
-    pending: allCards,
-    onExpand: (card) => {
-      setFocusSignal(0);
-      setReview(card.chat.id);
-    },
-  });
-
   useEffect(() => {
     settleHover.current = (inside: boolean) => {
       if (inside) {
         if (grab.phase !== 'idle') return;
-        const target = hoverOpens(view);
+        const target = hoverOpens(view, !sparkFocused ? (cards[0] ?? null) : null);
         if (target?.kind === 'home') openPanel('home', 'hover');
         else if (target?.kind === 'card') openCard(target.card, 'hover');
         return;

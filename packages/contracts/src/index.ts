@@ -36,6 +36,7 @@ export * from './setup.ts';
 export * from './spark.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';
+export * from './native-terminal.ts';
 export * from './usage.ts';
 export * from './lean.ts';
 export * from './model-cards.ts';

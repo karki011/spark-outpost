@@ -4,10 +4,13 @@ import type * as Xterm from './xterm-terminal.ts';
 
 export interface TerminalHandlers<T extends TerminalTicket> {
   onOpen(created: T): void;
+  preserveSession?: boolean;
+  onDisconnected?(): void;
   onCommandRun?(): void;
   onHint?(hint: TerminalHint): void;
   onEnded(reason: TerminalEndReason): void;
   onError(message: string): void;
+  onInputError?(message: string): void;
 }
 
 export interface TerminalConnection {

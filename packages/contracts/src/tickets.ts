@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { ticketDevelopmentSchema } from './ticket-development.ts';
+import { nativeTerminalProviderSchema, sessionTypeSchema } from './native-terminal.ts';
 
 export const TICKET_KEY_MAX_LENGTH = 64;
 export const TICKET_SEARCH_MAX_LENGTH = 200;
@@ -193,6 +194,8 @@ export type TicketStartMode = z.infer<typeof ticketStartModeSchema>;
 
 export const startTicketRequestSchema = z.object({
   conversationId: z.uuid(),
+  sessionType: sessionTypeSchema.optional(),
+  terminalProvider: nativeTerminalProviderSchema.optional(),
   messageId: z.uuid(),
   projectId: z.uuid().optional(),
   mode: ticketStartModeSchema.default('build'),
@@ -215,6 +218,7 @@ export type TicketSync = z.infer<typeof ticketSyncSchema>;
 
 export const startTicketResponseSchema = z.object({
   conversationId: z.uuid(),
+  sessionType: sessionTypeSchema.optional(),
   taskId: z.uuid(),
   runId: z.uuid(),
   ticket: ticketSummarySchema,

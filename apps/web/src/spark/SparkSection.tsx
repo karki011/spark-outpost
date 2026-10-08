@@ -1,6 +1,7 @@
 import './spark.css';
 import { useState } from 'react';
 import type { SetupState } from '@spark-outpost/contracts';
+import { AgentInstructionsSetting } from './AgentInstructionsSetting.tsx';
 import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
 import { BusyEnterSetting } from '../settings/BusyEnterSetting.tsx';
 import { CompanionSetting } from '../settings/CompanionSetting.tsx';
@@ -32,16 +33,20 @@ export function SparkSection({ setup }: { setup: SetupState }) {
       <section className="spark-group" aria-labelledby="spark-work">
         <h4 id="spark-work">How Spark works</h4>
         <SparkSwitch enabled={profile.sparkEnabled} />
+        <AgentInstructionsSetting profile={profile} />
+      </section>
+      <details className="spark-group spark-options">
+        <summary>Workflow options</summary>
         <LevelSetting level={profile.defaultLevel} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
-      </section>
-      <CompactionSettings profile={profile} />
-      <section className="spark-group" aria-labelledby="spark-prs">
-        <h4 id="spark-prs">Pull requests</h4>
-        <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />
-        <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
-        <PrFollowUpSettings profile={profile} />
-      </section>
+        <CompactionSettings profile={profile} />
+        <section className="spark-group" aria-labelledby="spark-prs">
+          <h4 id="spark-prs">Pull requests</h4>
+          <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />
+          <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
+          <PrFollowUpSettings profile={profile} />
+        </section>
+      </details>
       <section className="spark-group" aria-labelledby="spark-around">
         <h4 id="spark-around">Around the app</h4>
         <MorningBriefSetting enabled={profile.morningBrief} time={profile.morningBriefTime} />

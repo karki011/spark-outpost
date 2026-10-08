@@ -44,6 +44,8 @@ import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { PreviewServers } from '../preview/servers.ts';
+import type { NativeRuntime } from '../terminal/native-runtime.ts';
+import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
 
 export interface AppOptions
   extends
@@ -60,6 +62,7 @@ export interface AppOptions
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
+  nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
   appEvents: AppEventFeed;
   port: number;
@@ -126,15 +129,17 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', analyticsRoutes(options));
   app.use('/api', diagnosticsRoutes(options));
   app.use('/api', terminalRoutes(options));
+  app.use('/api', nativeTerminalRoutes(options.nativeTerminals));
   app.use('/api', previewRoutes(options));
   app.use('/api', signInRoutes(options));
   app.use(
     '/api',
     resetRoutes({
       ...options,
-      stopTerminals: () => {
+      stopTerminals: async () => {
+        await options.nativeTerminals?.stopAll();
         options.terminals.killAll();
-        void options.previews.stopAll('reset');
+        await options.previews.stopAll('reset');
       },
     }),
   );

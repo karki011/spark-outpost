@@ -72,6 +72,7 @@ export function TerminalPanel({
       },
       onCommandRun: () => setRan(true),
       onHint: setHint,
+      onInputError: setNotice,
       onEnded: (reason) => {
         setStatus('ended');
         setNotice(endMessages[reason]);

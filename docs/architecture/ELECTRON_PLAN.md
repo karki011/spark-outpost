@@ -6,12 +6,14 @@
 
 ### Process layout
 
-| Today                                   | In Electron                                    |
-| --------------------------------------- | ---------------------------------------------- |
-| Browser tab (UI)                        | Renderer process, the same React app           |
-| API server                              | Its own process, started with `utilityProcess` |
-| Workflow worker (agents, code scan)     | Its own process                                |
-| Postgres (installed by `pnpm db:setup`) | Bundled Postgres, started as a child process   |
+| Today                                   | In Electron                                             |
+| --------------------------------------- | ------------------------------------------------------- |
+| Browser tab (UI)                        | Renderer process, the same React app                    |
+| API server                              | Its own process, owned by the independent local runtime |
+| Workflow worker (agents, code scan)     | Its own process                                         |
+| Postgres (installed by `pnpm db:setup`) | Bundled Postgres, started as a child process            |
+
+The independent channel-local runtime owns PostgreSQL, the API, and the worker, and survives Electron UI crashes. Reopening adopts the same authenticated runtime; explicit Quit stops it. See [Native Terminal sessions](NATIVE_TERMINALS.md) for lifecycle and validation boundaries.
 
 No server work runs in Electron's main process. It drives the windows, menus and shortcuts, so blocking it freezes the app. A slow scan or agent can only delay its own task.
 

@@ -23,6 +23,7 @@ import { catalog, catalogEntry } from '../providers/catalog.ts';
 import { INITIAL_PROVIDER_EFFORT } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
+import { readAgentInstructions } from '../setup/agent-instructions.ts';
 import { listAdvisors } from './advisors.ts';
 import type { Queryable } from './db.ts';
 
@@ -41,6 +42,8 @@ interface ProfileRow {
   pr_follow_up_ask: boolean;
   personality: Personality;
   spark_enabled: boolean;
+  agent_instructions: string;
+  agent_instructions_file: string;
   default_level: InvolvementLevel;
   default_level_notice: boolean;
   morning_brief: boolean;
@@ -92,7 +95,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
-       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, default_level,
+       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
@@ -178,6 +181,8 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     prFollowUpAsk: profile.pr_follow_up_ask,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
+    agentInstructions: profile.agent_instructions,
+    agentInstructionsFile: profile.agent_instructions_file,
     defaultLevel: profile.default_level,
     defaultLevelNotice: profile.default_level_notice,
     morningBrief: profile.morning_brief,
@@ -206,6 +211,8 @@ export async function updateProfile(
   update: UpdateProfileRequest,
 ): Promise<void> {
   assertThresholds(await ensureProfile(db, workspaceId), update);
+  if (update.agentInstructionsFile?.trim())
+    await readAgentInstructions(update.agentInstructions ?? '', update.agentInstructionsFile);
   if (update.defaultProvider) {
     const connected = connectedIds(await connectionRows(db, workspaceId));
     if (!connected.includes(update.defaultProvider)) {
@@ -243,6 +250,8 @@ export async function updateProfile(
        busy_enter = COALESCE($24, busy_enter),
        pr_follow_up_ask = COALESCE($25, pr_follow_up_ask),
        default_level_notice = default_level_notice AND $26,
+       agent_instructions = COALESCE($27, agent_instructions),
+       agent_instructions_file = COALESCE($28, agent_instructions_file),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -272,6 +281,8 @@ export async function updateProfile(
       update.busyEnter ?? null,
       update.prFollowUpAsk ?? null,
       update.defaultLevel === undefined && update.defaultLevelNotice === undefined,
+      update.agentInstructions?.trim() ?? null,
+      update.agentInstructionsFile?.trim() ?? null,
     ],
   );
 }
@@ -293,6 +304,10 @@ export async function sparkPreferences(
     displayName: profile.display_name,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
+    agentInstructions: await readAgentInstructions(
+      profile.agent_instructions,
+      profile.agent_instructions_file,
+    ),
   };
 }
 

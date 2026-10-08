@@ -71,6 +71,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.row-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.row-title-line .tt {
+  flex: 1;
+  min-width: 0;
+}
 
 .tt[data-marquee] {
   text-overflow: clip;

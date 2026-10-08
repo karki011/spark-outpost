@@ -14,7 +14,7 @@ export interface ResetDeps {
   db: Db;
   workspaceId: string;
   secrets: SecretStore;
-  stopTerminals: () => void;
+  stopTerminals: () => void | Promise<void>;
   settleMs?: number;
 }
 
@@ -68,9 +68,9 @@ export async function resetSparkOutpost(
   { keepApiKeys }: { keepApiKeys: boolean },
 ): Promise<ResetReport> {
   const problems: string[] = [];
+  await deps.stopTerminals();
   const stillRunning = await stopActiveWork(deps.db, deps.settleMs ?? RUN_SETTLE_MS);
   if (stillRunning > 0) problems.push(`${stillRunning} agent runs were still stopping.`);
-  deps.stopTerminals();
   const secretIds = await storedSecretIds(deps.db, keepApiKeys);
   const worktrees = await ownedWorktrees(deps.db);
   const chatCopies = await allLiveChatWorktrees(deps.db);

@@ -31,7 +31,16 @@ async function cancelUnclaimed(db: Db, runId: string): Promise<void> {
        RETURNING id`,
       [runId],
     );
-    if (job.rowCount !== 1) return;
+    if (job.rowCount !== 1) {
+      const native = await client.query(
+        `UPDATE runs r SET status = 'cancelled', finished_at = now()
+         FROM conversations c WHERE r.id = $1 AND c.id = r.conversation_id
+           AND c.session_type = 'terminal' AND r.status = 'queued'
+           AND NOT EXISTS (SELECT 1 FROM jobs WHERE run_id = r.id) RETURNING r.id`,
+        [runId],
+      );
+      if (native.rowCount !== 1) return;
+    }
     const { rows } = await client.query<{ conversation_id: string; parent_run_id: string | null }>(
       `UPDATE runs SET status = 'cancelled', finished_at = now()
        WHERE id = $1 RETURNING conversation_id, parent_run_id`,

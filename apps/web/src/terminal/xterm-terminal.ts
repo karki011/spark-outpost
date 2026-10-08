@@ -9,6 +9,7 @@ import type { TerminalConnection, TerminalHandlers } from './terminal-connection
 import { lineEditingSequence } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { themeFromTokens } from './terminal-theme.ts';
+import { followTerminalDrops } from './terminal-drop.ts';
 
 const OSC_CLIPBOARD = 52;
 const encoder = new TextEncoder();
@@ -105,6 +106,16 @@ export function openXterm<T extends TerminalTicket>(
   resizeObserver.observe(element);
   const unfollowTheme = followTheme(terminal);
   const inputSubscription = terminal.onData(sendInput);
+  const unfollowDrops = followTerminalDrops(
+    element,
+    (text) => {
+      if (socket?.readyState !== WebSocket.OPEN)
+        throw new Error('Reconnect the terminal before dropping files or folders.');
+      terminal.paste(text);
+      terminal.focus();
+    },
+    (message) => handlers.onInputError?.(message),
+  );
   terminal.attachCustomKeyEventHandler((event) => {
     const sequence = lineEditingSequence(event);
     if (!sequence) return true;
@@ -143,6 +154,7 @@ export function openXterm<T extends TerminalTicket>(
     ws.addEventListener(
       'close',
       (event) => {
+        handlers.onDisconnected?.();
         if (event.code === 4401) handlers.onError(event.reason || 'The terminal could not start.');
       },
       { signal },
@@ -155,7 +167,7 @@ export function openXterm<T extends TerminalTicket>(
       if (!created) return;
       session = created;
       if (disposed) {
-        void deleteTerminalSession(created.id);
+        if (!handlers.preserveSession) void deleteTerminalSession(created.id);
         return;
       }
       connect(created);
@@ -184,9 +196,10 @@ export function openXterm<T extends TerminalTicket>(
       abort.abort();
       resizeObserver.disconnect();
       unfollowTheme();
+      unfollowDrops();
       inputSubscription.dispose();
       if (socket) socket.close();
-      else if (session) void deleteTerminalSession(session.id);
+      else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);
       webgl?.dispose();
       terminal.dispose();
     },

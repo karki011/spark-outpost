@@ -17,7 +17,7 @@ async function hoverIsland(page: Page) {
 
 async function leaveIsland(page: Page) {
   await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', /peek|nudge/);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 }
 
 test('hovering waits a moment before opening and a moment before closing', async ({ page }) => {
