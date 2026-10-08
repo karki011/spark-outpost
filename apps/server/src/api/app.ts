@@ -31,7 +31,6 @@ import { remoteAccessParts } from '../remote/access.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
-import { planRoutes } from './plan-routes.ts';
 import { previewRoutes } from './preview-routes.ts';
 import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
@@ -120,7 +119,6 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', ticketRoutes(options));
   app.use('/api', chatTicketRoutes(options));
   app.use('/api', slackRoutes(options));
-  app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));

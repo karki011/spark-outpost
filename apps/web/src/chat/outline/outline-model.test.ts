@@ -80,19 +80,14 @@ describe('chatOutline', () => {
     ]);
   });
 
-  it('marks a turn whose reply was saved or offered as a plan', () => {
+  it('marks a turn whose reply or build saved a plan', () => {
     const detail = chat({
       plans: {
         saved: [{ messageId: 'a-one', version: 1 }],
-        offers: [{ runId: 'two', messageId: 'a-two' }],
         lines: [{ runId: 'three', version: 2, items: 4, unit: 'pieces' }],
       },
     });
-    expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([
-      ['plan'],
-      ['plan'],
-      ['plan'],
-    ]);
+    expect(chatOutline(detail, NONE).map((entry) => entry.marks)).toEqual([['plan'], [], ['plan']]);
   });
 
   it('previews the start of each reply as plain text', () => {

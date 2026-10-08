@@ -27,7 +27,7 @@ import { MakeChange } from './make-change/MakeChange.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
-import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
+import { AgreedReplyLine } from './plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from './plans/PlanSavedLine.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import { ResultBlock } from './outcomes/ResultBlock.tsx';
@@ -210,7 +210,6 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
         </div>
       )}
       <PlanSavedLine detail={detail} runId={run.id} />
-      <TurnPlanOffer detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}
       <TurnReply
@@ -222,12 +221,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
         {(part, last) => <Markdown text={part} streaming={last && leads && active} />}
       </TurnReply>
       {cards.pending.map(approvalCard)}
-      <ReplyPlanAction
-        detail={detail}
-        message={assistantMessage}
-        finished={finished}
-        category={run.category}
-      />
+      <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
       {finished && <MakeChange run={run} detail={detail} />}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       <ModelSwitchNote change={finished ? shown.modelSwitch : stream.modelSwitch} />

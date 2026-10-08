@@ -8,20 +8,9 @@
   color: var(--muted);
 }
 
-.saveplan.offer {
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
-  background: var(--accent-soft);
-  color: var(--text);
-}
-
 .saveplan.saved svg {
   flex-shrink: 0;
   color: var(--accent-text);
-}
-
-.saveplan-err {
-  color: var(--danger);
 }
 
 .plan-line-open {

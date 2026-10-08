@@ -32,7 +32,7 @@ import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
 import { ResultBlock } from '../outcomes/ResultBlock.tsx';
-import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
+import { AgreedReplyLine } from '../plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
 import type { RunStep } from '../run-projection.ts';
 import { useLiveReport } from '../status/status-context.ts';
@@ -266,14 +266,12 @@ function CrewTurnBody({
       <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
       <PlanSavedLine detail={detail} runId={run.id} />
-      <TurnPlanOffer detail={detail} runId={run.id} />
-      <ReplyPlanAction
+      <AgreedReplyLine
         detail={detail}
         message={detail.messages.find(
           (message) => message.role === 'assistant' && message.runId === run.id,
         )}
         finished={finished}
-        category={run.category}
       />
       {finished && changeTask && run.mode === 'do' && !kept && (
         <FilesChanged taskId={changeTask.id} runIds={crewRunIds} listed={unlisted} />

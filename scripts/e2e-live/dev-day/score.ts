@@ -10,7 +10,7 @@ export interface Evidence {
   reviewText: string;
   clarifyCard: boolean;
   planCard: boolean;
-  planSaved: 'auto' | 'offer' | 'manual' | 'none' | null;
+  planSaved: 'auto' | 'none' | null;
   hidden: TestCounts | null;
   suite: TestCounts | null;
   timedOut: boolean;
@@ -35,7 +35,7 @@ export interface Evidence {
 }
 
 export interface Intervention {
-  kind: 'paste' | 'checkpoint' | 'save-plan' | 'clarify' | 'manual-pr' | 'manual-push';
+  kind: 'paste' | 'checkpoint' | 'clarify' | 'manual-pr' | 'manual-push';
   text: string;
 }
 
