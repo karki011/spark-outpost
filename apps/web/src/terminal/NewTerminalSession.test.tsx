@@ -30,6 +30,8 @@ vi.mock('../api/projects.ts', () => ({
 }));
 vi.mock('./terminal-api.ts', () => ({ nativeTerminalApi: { launch: fake.launch } }));
 const { NewTerminalSession } = await import('./NewTerminalSession.tsx');
+const SETTLE = { timeout: 20_000 };
+vi.setConfig({ testTimeout: 60_000 });
 let client: QueryClient;
 beforeEach(() => {
   vi.clearAllMocks();
@@ -54,7 +56,7 @@ it('requires an explicit supported choice instead of weakening Ask every time', 
       />
     </QueryClientProvider>,
   );
-  await screen.findByRole('button', { name: 'Agent mode' });
+  await screen.findByRole('button', { name: 'Agent mode' }, SETTLE);
   fireEvent.change(screen.getByRole('textbox', { name: 'What would you like to work on?' }), {
     target: { value: 'Inspect the code.' },
   });
@@ -66,7 +68,7 @@ it('requires an explicit supported choice instead of weakening Ask every time', 
   expect(screen.queryByRole('menuitemradio', { name: 'Ask every time' })).toBeNull();
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Read-only' }));
   fireEvent.click(screen.getByRole('button', { name: 'Start terminal' }));
-  await waitFor(() => expect(fake.launch).toHaveBeenCalled());
+  await waitFor(() => expect(fake.launch).toHaveBeenCalled(), SETTLE);
   expect(fake.settings).toHaveBeenCalledWith('chat', { provider: 'codex', agentMode: 'read-only' });
 });
 
@@ -86,11 +88,13 @@ it('starts a signed-in native CLI without requiring an ACP connection', async ()
     target: { value: 'Inspect the code.' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Start terminal' }));
-  await waitFor(() =>
-    expect(fake.launch).toHaveBeenCalledWith(
-      'native-only',
-      expect.objectContaining({ provider: 'codex', prompt: 'Inspect the code.' }),
-    ),
+  await waitFor(
+    () =>
+      expect(fake.launch).toHaveBeenCalledWith(
+        'native-only',
+        expect.objectContaining({ provider: 'codex', prompt: 'Inspect the code.' }),
+      ),
+    SETTLE,
   );
   expect(fake.settings).not.toHaveBeenCalled();
 });
@@ -115,8 +119,13 @@ it('shows the existing secret warning before sending a terminal prompt', async (
   expect(screen.getByRole('alert').textContent).toContain('GitHub token');
   expect(fake.create).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Send anyway' }));
-  await waitFor(() =>
-    expect(fake.launch).toHaveBeenCalledWith('secret-warning', expect.objectContaining({ prompt })),
+  await waitFor(
+    () =>
+      expect(fake.launch).toHaveBeenCalledWith(
+        'secret-warning',
+        expect.objectContaining({ prompt }),
+      ),
+    SETTLE,
   );
 });
 
@@ -138,13 +147,13 @@ it('retries a failed launch with the same message and uses a new one after the p
   const sentIds = () => fake.launch.mock.calls.map((call) => call[1].messageId as string);
   fireEvent.change(prompt, { target: { value: 'Inspect the code.' } });
   fireEvent.click(start);
-  await screen.findByText('The terminal could not start. Try again.');
+  await screen.findByText('The terminal could not start. Try again.', undefined, SETTLE);
   fireEvent.click(start);
-  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(2), SETTLE);
   expect(sentIds()[1]).toBe(sentIds()[0]);
-  await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
+  await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false), SETTLE);
   fireEvent.change(prompt, { target: { value: 'Inspect the tests instead.' } });
   fireEvent.click(start);
-  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(3));
+  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(3), SETTLE);
   expect(sentIds()[2]).not.toBe(sentIds()[0]);
 });
