@@ -11,7 +11,7 @@ export const BIGGER = `${PARALLEL}
 1. src/slugify.ts exporting slugify(text: string, options?: { separator?: string; maxLength?: number }): string (lower-case, strips accents with normalize('NFKD'), spaces and punctuation to a single separator, trims separators, cuts at maxLength without a trailing separator), with at least 8 test cases in test/slugify.test.ts.
 2. src/duration.ts exporting parseDuration(text: string): number (milliseconds from strings like "1h 30m", "45s", "2d", "250ms"; throws SyntaxError on anything else) and formatDuration(ms: number): string (the inverse, largest units first), with at least 8 test cases in test/duration.test.ts.
 3. src/csv.ts exporting parseCsv(text: string): string[][] (quoted fields, escaped quotes, commas and newlines inside quotes, CRLF) and toCsv(rows: readonly string[][]): string, with at least 8 test cases in test/csv.test.ts.
-4. src/lru.ts exporting class LruCache<K, V> with get, set, has, delete, size and a capacity given to the constructor (evicts the least recently used; throws RangeError for capacity < 1), with at least 8 test cases in test/lru.test.ts.
+4. src/lru.ts exporting class LruCache<K, V> with get, set, has, size and a capacity given to the constructor (evicts the least recently used; throws RangeError for capacity < 1), with at least 8 test cases in test/lru.test.ts.
 Tests use node:test and node:assert/strict like test/strings.test.ts, and \`npm test\` must pass.`;
 
 export const MIXED = `Use parallel builders. Three parts:
@@ -35,3 +35,8 @@ export const MAPPED = `Use parallel builders, in 3 pieces:
 2. Add src/tax.ts exporting withTax(value: Money, rate: number): Money (rounded to whole cents), with test/tax.test.ts.
 3. Add subtract(left: Money, right: Money): Money to src/money.ts, with test/money.test.ts.
 \`npm test\` must pass.`;
+
+export const TWO = `${PARALLEL}
+1. src/duration.ts exporting parseDuration(text: string): number (milliseconds from strings like "1h 30m", "45s", "2d", "250ms"; throws SyntaxError on anything else) and formatDuration(ms: number): string (the inverse, largest units first), with at least 10 test cases in test/duration.test.ts.
+2. src/csv.ts exporting parseCsv(text: string): string[][] (quoted fields, escaped quotes, commas and newlines inside quotes, CRLF) and toCsv(rows: readonly string[][]): string, with at least 10 test cases in test/csv.test.ts.
+Tests use node:test and node:assert/strict like test/strings.test.ts, and \`npm test\` must pass.`;
