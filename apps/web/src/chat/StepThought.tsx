@@ -4,6 +4,7 @@ import { reasoningTextSchema } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { thoughtText } from './thought-text.ts';
 
 interface ThoughtToggleProps {
   open: boolean;
@@ -54,7 +55,7 @@ export function StepThought({ id, runId, reasoningId, live, streaming }: StepTho
       ) : text.trim() === '' && !streaming ? (
         'No thinking text was shared.'
       ) : (
-        text
+        thoughtText(text)
       )}
     </div>
   );
