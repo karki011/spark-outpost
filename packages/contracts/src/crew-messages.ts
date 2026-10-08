@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { STEER_TEXT_LIMIT } from './steer.ts';
 
 export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
 export const CONVERSATION_SUBAGENT = 'conversation';
@@ -32,7 +31,7 @@ export type MemberMessage = z.infer<typeof memberMessageSchema>;
 
 export const memberMessageRequestSchema = z.object({
   id: z.uuid(),
-  text: z.string().trim().min(1).max(STEER_TEXT_LIMIT),
+  text: z.string().trim().min(1),
   continue: z.boolean().default(false),
 });
 export type MemberMessageRequest = z.infer<typeof memberMessageRequestSchema>;
