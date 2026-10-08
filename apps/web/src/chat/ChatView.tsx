@@ -76,6 +76,7 @@ import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { sessionView } from './session-view.ts';
 import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
 import { NewTerminalSession } from '../terminal/NewTerminalSession.tsx';
 import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
@@ -230,14 +231,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     [conversationId, addPick],
   );
   const firstRepo = repos[0] ?? null;
-  const terminalSession =
-    detail.data?.conversation.sessionType === 'terminal' && !terminalLaunching;
-  const newSession =
-    Boolean(detail.data) &&
-    (terminalLaunching ||
-      (detail.data?.conversation.sessionType !== 'terminal' &&
-        (detail.data?.messages.length ?? 0) === 0 &&
-        (detail.data?.runs.length ?? 0) === 0));
+  const view = sessionView(detail.data, terminalLaunching);
+  const terminalSession = view === 'terminal';
+  const newSession = view === 'draft';
+  const chooseSession = (choice: SessionChoice) => {
+    setSessionChoice(choice);
+    if (choice.sessionType === 'chat' && detail.data?.conversation.sessionType === 'terminal')
+      void api.resetSessionDraft(conversationId).then(refresh, () => null);
+  };
   const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
   const panelRoots = useMemo(
     () => [
@@ -303,7 +304,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               {newSession && (
                 <SessionTypePicker
                   value={sessionChoice}
-                  onChange={setSessionChoice}
+                  onChange={chooseSession}
                   disabled={terminalLaunching}
                 />
               )}
@@ -321,7 +322,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   onStarting={() => setTerminalLaunching(true)}
                   onLaunched={() => setTerminalLaunching(false)}
                   onFailed={(created) => {
-                    if (!created) setTerminalLaunching(false);
+                    setTerminalLaunching(false);
+                    if (created) void refresh();
                   }}
                 />
               ) : detail.data ? (

@@ -117,6 +117,11 @@ export const api = {
     }),
   markConversationRead: (id: string): Promise<null> =>
     request(z.null(), `/conversations/${id}/read`, { method: 'POST', body: '{}' }),
+  resetSessionDraft: (id: string): Promise<ConversationSummary> =>
+    request(conversationSummarySchema, '/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ id, sessionType: 'chat' }),
+    }),
   startFreshSession: (id: string): Promise<{ closed: number }> =>
     request(z.object({ closed: z.number() }), `/conversations/${id}/fresh-session`, {
       method: 'POST',
