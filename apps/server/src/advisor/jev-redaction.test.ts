@@ -3,6 +3,7 @@ import { builderQuestions } from '../coordinator/builder-jev.ts';
 import { midBuildQuestions } from '../coordinator/mid-build-question.ts';
 import { pieceQuestions, type PieceAsk } from '../coordinator/piece-questions.ts';
 import { scanReport } from '../codescan/scan-fixtures.ts';
+import { updatePlan, updateQuestions, type ChatFacts } from '../companion/update-summary.ts';
 import { callJev, type JevAccess } from '../orchestration/jev-calls.ts';
 import { triageQuestions } from '../pr-follow-up/triage.ts';
 import { evidenceQuestions, previewOf } from '../routing/file-evidence.ts';
@@ -94,6 +95,21 @@ const pieces: PieceAsk = {
   facts: new Map(),
 };
 
+const chat: ChatFacts = {
+  title: `Fix uploads ${LEAK}`,
+  state: 'running',
+  phase: 'building',
+  step: `Editing with ${LEAK}`,
+  agent: { name: 'Bolt', role: 'Builder' },
+  steps: { done: 1, total: 3 },
+  files: ['a.ts'],
+  checks: null,
+  costUsd: null,
+  waitingOn: null,
+  error: null,
+  quietMinutes: 1,
+};
+
 describe('what Jev is sent never holds a secret from free text', () => {
   it('intake: the message, the open task, the previous reply and attached text', async () => {
     const { bodies, deps } = recorder();
@@ -178,6 +194,10 @@ describe('what Jev is sent never holds a secret from free text', () => {
       url: null,
     };
     expectClean(await sent(() => triageQuestions({ repo: 'acme/shop', number: 7 }, [item])));
+  });
+
+  it('the chat update: title, step and the next-step choices', async () => {
+    expectClean(await sent(() => updateQuestions(chat, updatePlan(chat))));
   });
 });
 
