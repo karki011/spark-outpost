@@ -119,3 +119,32 @@ it('shows the existing secret warning before sending a terminal prompt', async (
     expect(fake.launch).toHaveBeenCalledWith('secret-warning', expect.objectContaining({ prompt })),
   );
 });
+
+it('retries a failed launch with the same message and uses a new one after the prompt is edited', async () => {
+  fake.launch.mockRejectedValue(new Error('The terminal could not start. Try again.'));
+  render(
+    <QueryClientProvider client={client}>
+      <NewTerminalSession
+        conversationId="native-retry"
+        choice={{ sessionType: 'terminal', terminalProvider: 'codex' }}
+        projectIds={[]}
+        settings={null}
+        connected={false}
+      />
+    </QueryClientProvider>,
+  );
+  const prompt = screen.getByRole('textbox', { name: 'What would you like to work on?' });
+  const start = screen.getByRole('button', { name: 'Start terminal' });
+  const sentIds = () => fake.launch.mock.calls.map((call) => call[1].messageId as string);
+  fireEvent.change(prompt, { target: { value: 'Inspect the code.' } });
+  fireEvent.click(start);
+  await screen.findByText('The terminal could not start. Try again.');
+  fireEvent.click(start);
+  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(2));
+  expect(sentIds()[1]).toBe(sentIds()[0]);
+  await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.change(prompt, { target: { value: 'Inspect the tests instead.' } });
+  fireEvent.click(start);
+  await waitFor(() => expect(fake.launch).toHaveBeenCalledTimes(3));
+  expect(sentIds()[2]).not.toBe(sentIds()[0]);
+});
