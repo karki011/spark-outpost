@@ -7,6 +7,7 @@ import {
 import type { IntakeQuestions, SystemOneResponse } from '../advisor/intake-questions.ts';
 import { validChoice } from '../advisor/intake-questions.ts';
 import type { Description } from '../advisor/questions.ts';
+import { redactText, redactValue } from '../audit/redact.ts';
 import { ROOT_AREA } from './areas.ts';
 import { MAP_ACT_AT } from './policy.ts';
 
@@ -86,10 +87,13 @@ const GENERIC = new Set([
 ]);
 
 export function nameCandidates(
-  root: string,
-  packageName: string,
-  topFiles: readonly string[],
+  rawRoot: string,
+  rawPackageName: string,
+  rawTopFiles: readonly string[],
 ): string[] {
+  const root = redactText(rawRoot);
+  const packageName = redactText(rawPackageName);
+  const topFiles = rawTopFiles.map(redactText);
   const folder =
     root === ROOT_AREA ? 'Repository root' : words(root.slice(root.lastIndexOf('/') + 1));
   const parent = root.includes('/') ? words(root.split('/').slice(-2).join(' ')) : null;
@@ -133,7 +137,7 @@ export function labelQuestions(
       criteria: Object.fromEntries(names.map((name) => [name, `Call the area "${name}"`])),
     };
   }
-  return { state: { area, code_evidence: evidence }, questions };
+  return { state: { area: redactValue(area), code_evidence: redactText(evidence) }, questions };
 }
 
 export function parseLabel(

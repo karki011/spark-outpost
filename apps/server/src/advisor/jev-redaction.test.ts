@@ -4,6 +4,8 @@ import { midBuildQuestions } from '../coordinator/mid-build-question.ts';
 import { pieceQuestions, type PieceAsk } from '../coordinator/piece-questions.ts';
 import { scanReport } from '../codescan/scan-fixtures.ts';
 import { updatePlan, updateQuestions, type ChatFacts } from '../companion/update-summary.ts';
+import { areaEvidence } from '../map/label-evidence.ts';
+import { labelQuestions, nameCandidates } from '../map/label-questions.ts';
 import { callJev, type JevAccess } from '../orchestration/jev-calls.ts';
 import { triageQuestions } from '../pr-follow-up/triage.ts';
 import { evidenceQuestions, previewOf } from '../routing/file-evidence.ts';
@@ -198,6 +200,29 @@ describe('what Jev is sent never holds a secret from free text', () => {
 
   it('the chat update: title, step and the next-step choices', async () => {
     expectClean(await sent(() => updateQuestions(chat, updatePlan(chat))));
+  });
+
+  it('Map labels: area facts, names, file paths and file contents', async () => {
+    const root = `packages/${AWS_KEY}`;
+    const files = [`${root}/index.ts`, `${root}/${AWS_KEY}.ts`];
+    const evidence = await areaEvidence({
+      facts: [`Area ${root} in package ${API_KEY}: 2 files, 10 lines.`],
+      rankedPaths: files,
+      ignore: [],
+      read: async () => `export const key = '${API_KEY}';\n`,
+    });
+    const names = nameCandidates(root, API_KEY, files);
+    const area = {
+      repository: `shop-${API_KEY}`,
+      root,
+      package: API_KEY,
+      grouped_because: `package.json at ${root}`,
+      used_by_areas: [root],
+      uses_areas: [root],
+    };
+    const body = await sent(() => labelQuestions(area, evidence.text, names));
+    expectClean(body);
+    expect(body).not.toContain(API_KEY.replaceAll('-', ' '));
   });
 });
 
