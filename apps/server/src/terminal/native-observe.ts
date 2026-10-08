@@ -35,14 +35,12 @@ export function nativeObserver({
   waiters,
   tokens,
   enqueue,
-  kill,
-  control: { syncScope, closeTurn, finish, completed },
+  control: { syncScope, closeTurn, completed },
 }: {
   db: Db;
   waiters: ApprovalWaiters;
   tokens: Map<string, LiveSession>;
   enqueue: <T>(session: LiveSession, work: () => Promise<T>) => Promise<T>;
-  kill: (id: string) => void;
   control: ReturnType<typeof nativeControl>;
 }) {
   const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
@@ -139,17 +137,25 @@ export function nativeObserver({
     if (event.kind === 'error')
       await closeTurn(session, 'failed', 'The native agent reported a turn failure.');
     if (event.kind === 'session_end') {
-      await finish(session, 'exited', false, 'The native session ended.');
-      kill(session.row.id);
-      return;
+      if (session.context)
+        await closeTurn(
+          session,
+          'outcome_unknown',
+          event.reason
+            ? `The native session ended (${event.reason}).`
+            : 'The native session ended.',
+        );
+      session.nativeSessionEnded = true;
     }
+    if (event.kind === 'session_start') session.nativeSessionEnded = false;
+    const state = nativeActivity(event, session.context !== null);
     await setNativeTerminalState(db, {
       ...session.row,
-      state: nativeActivity(event, session.context !== null),
+      state,
       ...(event.nativeSessionId ? { nativeSessionId: event.nativeSessionId } : {}),
       ...(event.nativeTurnId ? { nativeTurnId: event.nativeTurnId } : {}),
     });
-    session.row.state = nativeActivity(event, session.context !== null);
+    session.row.state = state;
     if (event.nativeSessionId) session.row.native_session_id = event.nativeSessionId;
   };
   const hook = async (token: string, body: unknown) => {
@@ -163,15 +169,15 @@ export function nativeObserver({
     )
       return false;
     const event = parseNativeHook(session.row.provider, parsed.data.payload);
-    if (
-      !event ||
-      (event.nativeSessionId &&
-        session.row.native_session_id &&
-        event.nativeSessionId !== session.row.native_session_id)
-    )
-      return false;
+    if (!event) return false;
     return enqueue(session, async () => {
       if (tokens.get(session.hookKey) !== session) return false;
+      const anotherSession =
+        event.nativeSessionId !== undefined &&
+        session.row.native_session_id !== null &&
+        event.nativeSessionId !== session.row.native_session_id;
+      if (anotherSession && !(event.kind === 'session_start' && session.nativeSessionEnded))
+        return false;
       const seen = await db.query(
         'SELECT 1 FROM native_terminal_events WHERE session_id = $1 AND generation = $2 AND event_id = $3',
         [session.row.id, session.row.generation, parsed.data.eventId],

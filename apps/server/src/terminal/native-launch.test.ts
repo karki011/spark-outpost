@@ -251,6 +251,7 @@ describe('native terminal launch', () => {
         session_id: 'native',
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
+        reason: 'clear',
         tool_input: { secret: 'hidden' },
         tool_response: 'hidden output',
       }),
@@ -267,6 +268,7 @@ describe('native terminal launch', () => {
         session_id: 'native',
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
+        reason: 'clear',
       },
     });
     expect(JSON.stringify(received.body)).not.toContain('hidden');

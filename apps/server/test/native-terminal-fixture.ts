@@ -1,0 +1,121 @@
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { vi } from 'vitest';
+import { createConversation } from '../src/persistence/conversations.ts';
+import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
+import { startSparkMcpHost } from '../src/spark-mcp/host.ts';
+import type { NativeLaunch, NativeLaunchInput } from '../src/terminal/native-launch.ts';
+import { createNativeRuntime, type NativeRuntimeDeps } from '../src/terminal/native-runtime.ts';
+import type { PtyOptions, PtyProcess } from '../src/terminal/pty.ts';
+import { defaultLimits, TerminalSessions } from '../src/terminal/sessions.ts';
+import { toolDeps } from './spark-mcp-support.ts';
+import { createTestDb } from './support.ts';
+
+export async function nativeRuntimeFixture(options: { maxShells?: number } = {}) {
+  const t = await createTestDb();
+  const folder = await realpath(await mkdtemp(join(tmpdir(), 'spark-native-lifecycle-')));
+  const conversationId = randomUUID();
+  await createConversation(t.db, t.workspaceId, conversationId, {
+    sessionType: 'terminal',
+    terminalProvider: 'claude',
+    title: 'Native fixture',
+  });
+  await t.db.query(
+    `UPDATE conversations SET overrides = '{"claude":{"agentMode":"default","level":"hands-off"}}'::jsonb WHERE id = $1`,
+    [conversationId],
+  );
+  const inputs: NativeLaunchInput[] = [];
+  const exits: ((exit: { exitCode: number }) => void)[] = [];
+  const spawn = vi.fn((_options: PtyOptions): PtyProcess => ({
+    pid: 999_999_999,
+    write: vi.fn(),
+    resize: vi.fn(),
+    onData: () => undefined,
+    onExit: (listener) => {
+      exits.push(listener);
+    },
+  }));
+  const terminals = new TerminalSessions(spawn, {
+    ...defaultLimits,
+    maxShells: options.maxShells ?? defaultLimits.maxShells,
+  });
+  const host = await startSparkMcpHost(toolDeps(t), async () => ({
+    ...EVERYTHING_AVAILABLE,
+    browser: false,
+  }));
+  const place: NonNullable<NativeRuntimeDeps['place']> = async (_deps, input) => ({
+    input: { ...input, projectRoots: [folder] },
+    repoRoot: folder,
+    note: null,
+  });
+  const fixture = {
+    t,
+    conversationId,
+    inputs,
+    exits,
+    spawn,
+    terminals,
+    observation: 'hooks' as NativeLaunch['observation'],
+    place,
+  };
+  const prepare: NonNullable<NativeRuntimeDeps['prepareLaunch']> = async (input) => {
+    inputs.push(input);
+    return {
+      command: '/fixture/claude',
+      args: ['--', input.prompt],
+      env: {},
+      observation: fixture.observation,
+      version: '2.1.280',
+      dispose: async () => undefined,
+    };
+  };
+  const runtime = await createNativeRuntime({
+    db: t.db,
+    workspaceId: t.workspaceId,
+    terminals,
+    dataDir: folder,
+    channel: 'test',
+    mcp: host,
+    locateCli: async () => '/fixture/claude',
+    place: (...args) => fixture.place(...args),
+    prepareLaunch: prepare,
+  });
+  return Object.assign(fixture, {
+    runtime,
+    launch: () =>
+      runtime.launch(conversationId, { prompt: 'Check the native fixture', resume: false }),
+    async hook(name: string, extra: Record<string, unknown> = {}) {
+      const input = inputs.at(-1)!;
+      const response = await fetch(input.hooks.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${input.hooks.token}`,
+        },
+        body: JSON.stringify({
+          sessionId: input.sessionId,
+          provider: 'claude',
+          eventId: randomUUID(),
+          payload: {
+            hook_event_name: name,
+            session_id: 'native-provider-session',
+            permission_mode: 'manual',
+            ...extra,
+          },
+        }),
+      });
+      return response.status;
+    },
+    async cleanup() {
+      await runtime.dispose();
+      terminals.killAll();
+      await host.close();
+      await t.cleanup();
+      await rm(folder, { recursive: true, force: true });
+    },
+  });
+}
+
+export type NativeRuntimeFixture = Awaited<ReturnType<typeof nativeRuntimeFixture>>;

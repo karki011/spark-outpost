@@ -55,14 +55,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   };
   const control = nativeControl(deps.db, live, tokens);
   const { syncScope, finish } = control;
-  const hook = nativeObserver({
-    db: deps.db,
-    waiters,
-    tokens,
-    enqueue,
-    kill: (id) => deps.terminals.kill(id),
-    control,
-  });
+  const hook = nativeObserver({ db: deps.db, waiters, tokens, enqueue, control });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
     conversationId: string,
@@ -177,6 +170,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         mode: null,
         ceiling: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
         seedPending: prepared.runId !== null,
+        nativeSessionEnded: false,
         chain: Promise.resolve(),
         hookKey: digest(token),
         completedTurns: new Set(),

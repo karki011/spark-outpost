@@ -19,7 +19,10 @@ export interface NativeHookEvent {
   nativeTurnId?: string;
   permissionMode?: string;
   prompt?: string;
+  reason?: string;
 }
+
+const END_REASON = /^[a-z_]{1,40}$/;
 
 const COMMON_EVENTS: Record<string, NativeHookKind> = {
   SessionStart: 'session_start',
@@ -57,6 +60,7 @@ export function parseNativeHook(
     !optionalString(payload.permission_mode, 100) ||
     !optionalString(payload.tool_name, 200) ||
     !optionalString(payload.notification_type, 100) ||
+    !optionalString(payload.reason, 100) ||
     !optionalString(payload.prompt, 100_000)
   ) {
     return null;
@@ -73,6 +77,11 @@ export function parseNativeHook(
       ? { permissionMode: payload.permission_mode }
       : {}),
     ...(kind === 'prompt' && typeof payload.prompt === 'string' ? { prompt: payload.prompt } : {}),
+    ...(kind === 'session_end' &&
+    typeof payload.reason === 'string' &&
+    END_REASON.test(payload.reason)
+      ? { reason: payload.reason }
+      : {}),
   };
 }
 

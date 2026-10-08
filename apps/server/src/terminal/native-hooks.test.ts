@@ -72,4 +72,17 @@ describe('native terminal observation', () => {
     });
     expect(parseNativeHook('claude', { hook_event_name: 'Stop', prompt_id: 3 })).toBeNull();
   });
+
+  it('forwards a session end reason only when it is a plain token', () => {
+    expect(parseNativeHook('claude', { hook_event_name: 'SessionEnd', reason: 'clear' })).toEqual({
+      kind: 'session_end',
+      reason: 'clear',
+    });
+    expect(parseNativeHook('claude', { hook_event_name: 'Stop', reason: 'clear' })).toEqual({
+      kind: 'stop',
+    });
+    expect(
+      parseNativeHook('claude', { hook_event_name: 'SessionEnd', reason: 'Not a token!' }),
+    ).toEqual({ kind: 'session_end' });
+  });
 });
