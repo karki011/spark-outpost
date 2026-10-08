@@ -26,7 +26,7 @@ What each document is for. Each one describes what runs today plus its open item
 - [ACP_AGENTS.md](architecture/ACP_AGENTS.md): how Claude, Codex and Z.ai run over ACP.
 - [ACP_COMPLIANCE.md](architecture/ACP_COMPLIANCE.md): spec audit and what each adapter advertises.
 - [ACP_COVERAGE.md](architecture/ACP_COVERAGE.md): ACP client coverage table, generated and checked by `pnpm acp:coverage` from `acp-coverage.json`.
-- [PATCHES.md](architecture/PATCHES.md): the codex-acp patch parts, guard tests, upstream issues and PRs, and the upgrade checklist.
+- [PATCHES.md](architecture/PATCHES.md): the codex-acp and claude-agent-acp patches, their guard tests, upstream issues and PRs, and the upgrade checklist.
 - [CODEX_DO.md](architecture/CODEX_DO.md): the live probe behind Codex in Do mode.
 
 ## Design
