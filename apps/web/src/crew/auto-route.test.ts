@@ -18,6 +18,19 @@ describe('Auto routing labels', () => {
     expect(autoThisTurn(orchestration({ crew, routing: 'pinned' }))).toBeNull();
   });
 
+  it('names the model that did the work, not the Critic on another agent', () => {
+    const crew = [
+      member({ provider: 'codex', model: 'gpt-6-sol', modelLabel: 'GPT-6 Sol' }),
+      member({ role: 'critic', provider: 'claude', modelLabel: 'Sonnet 5' }),
+    ];
+    const codex = orchestration({ provider: 'codex', crew });
+    expect(autoThisTurn(codex)).toBe('GPT');
+    const reviewing = [crew[0]!, member({ ...crew[1]!, status: 'running' })];
+    expect(autoThisTurn(orchestration({ provider: 'codex', crew: reviewing }))).toBe('GPT');
+    const sameAgent = [member({ modelLabel: 'Opus 5.5' }), member({ role: 'critic' })];
+    expect(autoThisTurn(orchestration({ crew: sameAgent }))).toBe('Opus');
+  });
+
   it('hints what Auto would have used with a pinned model', () => {
     const pick = { provider: 'claude', model: 'haiku-4.5', modelLabel: 'Haiku 4.5', effort: 'low' };
     const crew = [member({ autoWouldUse: pick })];

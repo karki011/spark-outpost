@@ -7,17 +7,20 @@ export function modelFamily(pick: Pick<AgentPick, 'model' | 'modelLabel'>): stri
   return words.find((word) => /[a-z]/i.test(word)) ?? words[0] ?? null;
 }
 
-function focusMember(crew: readonly CrewMember[]): CrewMember | undefined {
+export function workingMember(orchestration: Orchestration): CrewMember | undefined {
+  const workers = orchestration.crew.filter(
+    (member) => member.role !== 'critic' && member.provider === orchestration.provider,
+  );
   return (
-    crew.findLast(
+    workers.findLast(
       (member) => member.status === 'running' || member.status === 'awaiting_approval',
-    ) ?? crew.findLast((member) => member.startedAt !== null)
+    ) ?? workers.findLast((member) => member.startedAt !== null)
   );
 }
 
 export function autoThisTurn(orchestration: Orchestration | null): string | null {
   if (!orchestration || orchestration.routing !== 'auto') return null;
-  const member = focusMember(orchestration.crew);
+  const member = workingMember(orchestration);
   return member ? modelFamily(member) : null;
 }
 
