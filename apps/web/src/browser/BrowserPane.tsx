@@ -2,6 +2,7 @@ import './browser-pane.css';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { addressToUrl, type BrowserPaneTab } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
+import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import {
   NavBackIcon,
@@ -19,6 +20,7 @@ import {
   useChatBrowser,
 } from './browser-store.ts';
 import { BrowserTabs } from './BrowserTabs.tsx';
+import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { useViewPlacement, type BrowserHome } from './use-view-placement.ts';
@@ -177,6 +179,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
     });
   };
   const blank = !tab || tab.url === '' || tab.error !== null;
+  const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
   const agentTab = browser.tabs.find((candidate) => candidate.id === browser.agentOpened) ?? null;
 
   return (
@@ -226,6 +229,13 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
           onClick={() => pick('region')}
         >
           <PickRegionIcon />
+        </ToolButton>
+        <ToolButton
+          label="Open in default browser"
+          disabled={outside === null}
+          onClick={() => outside && openInDefaultBrowser(outside)}
+        >
+          <ExternalLinkIcon />
         </ToolButton>
       </div>
       <div className="bp-status" aria-live="polite">
