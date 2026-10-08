@@ -2,6 +2,25 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.8
+
+- Terminal sessions: New chat → Terminal runs the real Claude Code or Codex CLI in a terminal Spark owns, in the chat's worktree, with your agent mode and Spark's tools. The chat row shows Running, Waiting for input, Waiting for permission or Idle from the agent's own events. Hide view keeps the agent running, Open terminal reattaches, and Stop session asks you to hold. Spark's cards, protected paths and audit do not apply inside a Terminal session, and it opens no pull request by itself.
+- Terminal sessions: a session whose agent exited, crashed or was interrupted offers Resume session where the agent supports it, and otherwise Start again, which resends your first message. A session you stopped stays stopped.
+- App: agents and the local services now run in a runtime of their own. Closing the window or a crash of the window leaves agents running, and opening Spark again reattaches. Quit stops them. An update replaces the older runtime when the new version starts.
+- Settings → Spark: Use Spark workflow turns Spark's own workflow off for direct agents, with the remaining choices under Workflow options. Custom instructions take text and a file, and are sent to every agent, Terminal sessions included. With Spark off, the agent gets your custom instructions and nothing from Spark.
+- Chat: links in a reply or a card open in the Browser pane first; ⌘-click or Open in default browser uses yours.
+- Chat: the Work panel keeps the Crew list after a turn ends, with each agent's model, tokens, cost and time. The rail reads "Crew · N agents".
+- Chat: the message box has no length limit.
+- Chat: Save as agreed plan is removed. A build saves its plan by itself, as before.
+- Chat: a finished build is no longer stopped as "the Builder is missing context" because its reply quoted a "No such file" line from a command.
+- Chat: the hidden Title line stays hidden when your custom instructions add a short sign-off after it.
+- Commands: `gh` commands that only read (pull request, run, issue and API reads, with or without output redirects such as `2>&1`) are no longer refused by the publish rules. `gh auth status --show-token` and `gh auth token` are not reads.
+- Secret files: reading a secret file outside the linked repos follows the agent's mode and is recorded in the audit by path, and the card names the file. Changing, moving or deleting a secret file, and reading a file listed in `.sparkignore`, still ask.
+- Spark Island: at rest it shows only the blobs, opens on hover or click, and keeps its place on the display you chose.
+- Sidebar: long chat titles and status text no longer overlap.
+- Known: Terminal sessions are Mac-only and are not available from a paired phone.
+- Known: Claude Code and Codex ask once per repository whether to trust the folder the first time you open it in a Terminal session.
+
 ## 0.1.0-beta.7
 
 - Fewer cards: Spark raises no plan, question, retry or verify cards of its own. An unclear request, a step that failed twice or a change Jev could not confirm ends the reply with "Needs you: …"; answer in your next message. The chat's sidebar row shows that line.
