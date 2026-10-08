@@ -128,6 +128,7 @@ Jev is TypeSafe's "System One" model, called at `POST /v1/systemone` with a `sta
 - The composer's `/plan` sends the text `/plan …`. "Plan first" in the ticket start dialog and the Slack start settings sends the brief prefixed with `/plan ` (`PLAN_COMMAND` in `tickets/request.ts`).
 - A pending approval that carries a plan gives the chat attention kind `plan` (`persistence/attention.ts`): the sidebar line, and "Approve plan" on a ticket.
 - In a mode that never asks, the leave-plan request is allowed at once. Seen live on October 7, 2026: Codex in Full access with `/plan` showed the plan and built in the same turn with no card; Claude in Auto raised one card from the agent, "Approve Plan", and its allow-once option is "manually approve edits", so Claude then asked for each edit.
+- **A plan turn on a resumed Claude session can build without a plan.** Seen live on October 7, 2026: in a Plan-mode chat a question ran first (a read-only turn in plan mode), then a build request resumed the session. Spark set `mode=plan`, the adapter confirmed it before the prompt, and the edit requests had plan mode's options (Yes and No only, no "allow all edits"), so the mode was in force. Claude still never asked to leave plan mode: it asked for each Write and built. Claude Code attaches its plan-mode instructions at most once every 5 user turns of a session (`TURNS_BETWEEN_ATTACHMENTS` in the CLI bundled with claude-agent-sdk 0.3.280), and the question turn had already used that attachment. This is the agent's behaviour, not a setting Spark failed to apply. Spark's record of such a turn is what happened: the edit cards and the reply, no saved plan and no "Plan saved" line. A fresh chat in Plan mode showed "Approve Plan" as designed.
 
 ## 6. Builds in pieces
 
@@ -296,7 +297,7 @@ Where it would help later, when a real caller exists: Spark as an A2A server for
 
 **Still open. Each is the working answer, assumed until the owner confirms.**
 
-1. **A question in a Plan-mode chat is an ordinary read-only turn; only a build request starts a plan turn.** Coordinator decision, owner to confirm (section 5).
+1. **A question in a Plan-mode chat is an ordinary read-only turn; only a build request starts a plan turn.** Coordinator decision, owner to confirm (section 5). The read-only turn still runs in the agent's plan mode, which is what makes the next plan turn on that Claude session skip its plan (section 5). Two fixes are possible and neither was tried with a real provider: run the question in the ask mode instead of plan mode, or have Spark state the plan-first rule in its own prompt for a plan turn on a resumed session.
 2. **`/plan` in a mode that never asks builds without a card**, because the agent's leave-plan request is allowed at once. Assumed; whether a `/plan` turn should always wait is not decided.
 3. **The mode picker still labels Plan as read-only** (`packages/contracts/src/agent-modes.ts`), although a plan turn can change files once the leave-plan request is allowed. Not decided.
 4. **Jev's `speed` intake question** is still asked although nothing reads it. Removing it changes what Jev is sent, so it is left for a separate decision.
