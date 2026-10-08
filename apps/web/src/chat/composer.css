@@ -50,6 +50,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  flex-shrink: 1000;
   font-size: 12px;
   color: var(--faint);
   opacity: 0;
