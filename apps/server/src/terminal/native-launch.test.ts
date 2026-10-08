@@ -210,6 +210,10 @@ describe('native terminal launch', () => {
 
   it('does not prepare remote callback URLs or path-traversing identities', async () => {
     const request = await input();
+    for (const resumeSessionId of ['--dangerously-skip-permissions', '-c', 'two words', ''])
+      await expect(prepareNativeLaunch({ ...request, resumeSessionId })).rejects.toThrow(
+        'identity',
+      );
     await expect(prepareNativeLaunch({ ...request, sessionId: '../other' })).rejects.toThrow(
       'identity',
     );

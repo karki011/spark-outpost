@@ -7,7 +7,7 @@ import { isRecord } from '../agent-config/records.ts';
 import type { TurnAttachment } from '../providers/provider.ts';
 import { nativeHookScript } from './native-hook-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
-import { nativeHookNames, type NativeProvider } from './native-hooks.ts';
+import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
 
 export interface NativeLaunchInput {
   provider: NativeProvider;
@@ -110,7 +110,11 @@ async function privateJson(path: string, value: unknown): Promise<void> {
 }
 
 export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<NativeLaunch> {
-  if (!SESSION_ID.test(input.sessionId) || !CHANNEL.test(input.channel)) {
+  if (
+    !SESSION_ID.test(input.sessionId) ||
+    !CHANNEL.test(input.channel) ||
+    (input.resumeSessionId !== undefined && !isNativeSessionId(input.resumeSessionId))
+  ) {
     throw new Error('Invalid native session identity.');
   }
   if (!isAbsolute(input.dataDir) || !isAbsolute(input.cwd)) {

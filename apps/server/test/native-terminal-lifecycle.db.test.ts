@@ -43,4 +43,26 @@ describe('native terminal provider session lifecycle', () => {
     ).toBe(400);
     expect((await row()).native_session_id).toBe('native-provider-session');
   });
+
+  it('never stores a provider session id that could be read as a command-line option', async () => {
+    await f.launch();
+    for (const session_id of ['--dangerously-skip-permissions', '-c', 'two words', 'a/b', ''])
+      expect(await f.hook('SessionStart', { session_id })).toBe(400);
+    expect((await row()).native_session_id).toBeNull();
+    await f.t.db.query(
+      `UPDATE native_terminal_sessions SET native_session_id = '--dangerously-skip-permissions'`,
+    );
+    await f.runtime.stop(f.conversationId);
+    await expect(f.runtime.launch(f.conversationId, { resume: true })).rejects.toThrow(
+      'no native session to resume',
+    );
+    expect(f.spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers no hook credential when lifecycle observation is unsupported', async () => {
+    f.observation = 'unsupported';
+    await f.launch();
+    expect(await f.hook('SessionStart')).toBe(401);
+    expect((await row()).state).toBe('unknown');
+  });
 });

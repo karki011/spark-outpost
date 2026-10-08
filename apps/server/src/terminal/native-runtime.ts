@@ -24,6 +24,7 @@ import { attachNativeSession } from './native-attach.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
+import { isNativeSessionId } from './native-hooks.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
@@ -85,7 +86,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       throw new NativeTerminalConflictError(
         'Resume the ended terminal explicitly, or start a new Terminal session.',
       );
-    if (request.resume && (!previous?.native_session_id || previous.provider !== provider))
+    if (
+      request.resume &&
+      (!isNativeSessionId(previous?.native_session_id) || previous?.provider !== provider)
+    )
       throw new NativeTerminalConflictError(
         'This terminal has no native session to resume. Start a new Terminal session.',
       );
@@ -188,7 +192,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         await context!.mode(null);
       }
       live.set(conversationId, session);
-      tokens.set(session.hookKey, session);
+      if (launch.observation === 'hooks') tokens.set(session.hookKey, session);
       const reason =
         launch.observation === 'unsupported'
           ? 'Lifecycle hook compatibility could not be verified. Native terminal permissions still apply.'

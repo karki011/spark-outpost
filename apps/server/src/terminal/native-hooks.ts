@@ -22,7 +22,12 @@ export interface NativeHookEvent {
   reason?: string;
 }
 
+const NATIVE_SESSION_ID = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{0,99}$/;
 const END_REASON = /^[a-z_]{1,40}$/;
+
+export function isNativeSessionId(value: unknown): value is string {
+  return typeof value === 'string' && NATIVE_SESSION_ID.test(value);
+}
 
 const COMMON_EVENTS: Record<string, NativeHookKind> = {
   SessionStart: 'session_start',
@@ -54,7 +59,7 @@ export function parseNativeHook(
   if (!isRecord(payload) || typeof payload.hook_event_name !== 'string') return null;
   if (!nativeHookNames(provider).includes(payload.hook_event_name)) return null;
   if (
-    !optionalString(payload.session_id, 200) ||
+    (payload.session_id !== undefined && !isNativeSessionId(payload.session_id)) ||
     !optionalString(payload.turn_id, 200) ||
     !optionalString(payload.prompt_id, 200) ||
     !optionalString(payload.permission_mode, 100) ||
