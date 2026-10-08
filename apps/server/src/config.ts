@@ -53,7 +53,6 @@ const configSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
   LEASE_SECONDS: z.coerce.number().int().min(5).default(30),
   SESSION_IDLE_MINUTES: z.coerce.number().int().min(1).default(240),
-  SESSION_OPEN_LIMIT: z.coerce.number().int().min(1).max(64).default(16),
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
   OUTCOME_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),

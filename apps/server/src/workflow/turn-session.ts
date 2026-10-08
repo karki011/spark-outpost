@@ -6,7 +6,6 @@ import { isCancelRequested } from '../persistence/run-events.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import {
   closeProviderSession,
-  evictBeyondLimit,
   finishProviderSession,
   forgetWorkdir,
   idleWorkdirs,
@@ -39,7 +38,6 @@ import {
   STOPPED_NOTE,
   STOPPED_REPLY,
   SESSION_IDLE_MS,
-  SESSION_OPEN_LIMIT,
   SESSION_WORKDIR_ROOT,
   agentKey,
   decideResume,
@@ -72,7 +70,6 @@ export interface TurnEnd {
 
 export const DEFAULT_SWEEP_LIMITS: SweepLimits = {
   idleMs: SESSION_IDLE_MS,
-  openLimit: SESSION_OPEN_LIMIT,
 };
 
 const COULD_NOT_REOPEN = "the agent couldn't reopen it";
@@ -254,7 +251,6 @@ export async function prepareTurnSession(
       if (!rowId) return;
       if (output.continued && costBaseline > 0) await recordReportedCost(db, rowId, costBaseline);
       await record(sessionEvent(facts, output));
-      await evictBeyondLimit(db, limits.openLimit);
     },
     async settings(output) {
       if (!rowId || !sessionId) return;

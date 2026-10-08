@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
-import { evictBeyondLimit, latestProviderSession } from '../src/persistence/provider-sessions.ts';
+import { latestProviderSession } from '../src/persistence/provider-sessions.ts';
 import { createProject } from '../src/projects/projects.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { SESSION_WORKDIR_ROOT } from '../src/workflow/session-decision.ts';
@@ -138,16 +138,17 @@ describe('provider session lifecycle', () => {
       )
     ).rows.map((row) => row.session_id);
 
-  it('evicts the least recently used sessions beyond the limit', async () => {
-    const id = await conversation();
-    for (let index = 0; index < 10; index++) await openSession(id, `s-${index}`, index + 1);
-    expect(await evictBeyondLimit(t.db, 8)).toBe(2);
-    expect(await openIds()).not.toContain('s-9');
-    expect(await openIds()).not.toContain('s-8');
-    const reasons = await t.db.query<{ close_reason: string }>(
-      'SELECT DISTINCT close_reason FROM provider_sessions WHERE closed_at IS NOT NULL',
+  it('keeps every session open however many chats have one', async () => {
+    for (let index = 0; index < 20; index++) {
+      const id = await conversation();
+      await completeTurn(chatTurnInput(t, id, null), `s-${index}`, 'Hello.');
+    }
+    await sweepSessions(t.db, SESSION_LIMITS);
+    const { rows } = await t.db.query<{ open: string; closed: string }>(
+      `SELECT count(*) FILTER (WHERE closed_at IS NULL) AS open,
+              count(*) FILTER (WHERE closed_at IS NOT NULL) AS closed FROM provider_sessions`,
     );
-    expect(reasons.rows).toEqual([{ close_reason: 'too many open sessions' }]);
+    expect(rows).toEqual([{ open: '20', closed: '0' }]);
   });
 
   it('closes idle and archived sessions and removes idle session folders', async () => {

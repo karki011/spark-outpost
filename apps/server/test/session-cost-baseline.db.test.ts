@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
-import { evictBeyondLimit } from '../src/persistence/provider-sessions.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { conversationSeatKey } from '../src/workflow/conversation-session.ts';
 import { prepareTurnSession, type TurnEnd } from '../src/workflow/turn-session.ts';
@@ -138,7 +137,7 @@ describe("a run's cost when the agent reports its session's cumulative cost", ()
       continued: true,
       freshReason: null,
     });
-    await evictBeyondLimit(t.db, 0);
+    await t.db.query(`UPDATE provider_sessions SET closed_at = now(), close_reason = 'idle'`);
     await session?.usage({ kind: 'usage', contextUsed: 10, contextSize: 100, costUsd: 1.15 });
     await session?.finished(done());
     const [next] = await run(builder(), { reported: [AFTER_STOP], end: done() });

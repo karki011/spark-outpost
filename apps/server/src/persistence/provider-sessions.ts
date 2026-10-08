@@ -256,7 +256,6 @@ export const SESSION_CLOSE_REASONS = {
   fresh: 'started fresh',
   idle: 'idle',
   archived: 'chat archived',
-  evicted: 'too many open sessions',
   orchestrationDone: 'orchestration finished',
   compacted: 'compacted',
   movedToFreshChat: 'moved to a fresh chat',
@@ -264,7 +263,6 @@ export const SESSION_CLOSE_REASONS = {
 
 export interface SweepLimits {
   idleMs: number;
-  openLimit: number;
 }
 
 export async function sweepProviderSessions(db: Queryable, limits: SweepLimits): Promise<number> {
@@ -279,20 +277,7 @@ export async function sweepProviderSessions(db: Queryable, limits: SweepLimits):
      WHERE c.id = s.conversation_id AND c.archived_at IS NOT NULL AND s.closed_at IS NULL`,
     [SESSION_CLOSE_REASONS.archived],
   );
-  const evicted = await evictBeyondLimit(db, limits.openLimit);
-  return (idle.rowCount ?? 0) + (archived.rowCount ?? 0) + evicted;
-}
-
-export async function evictBeyondLimit(db: Queryable, openLimit: number): Promise<number> {
-  const { rowCount } = await db.query(
-    `UPDATE provider_sessions SET closed_at = now(), close_reason = $2
-     WHERE id IN (
-       SELECT id FROM provider_sessions WHERE closed_at IS NULL
-       ORDER BY last_used_at DESC, created_at DESC OFFSET $1
-     )`,
-    [openLimit, SESSION_CLOSE_REASONS.evicted],
-  );
-  return rowCount ?? 0;
+  return (idle.rowCount ?? 0) + (archived.rowCount ?? 0);
 }
 
 export async function idleWorkdirs(db: Queryable, idleMs: number): Promise<string[]> {

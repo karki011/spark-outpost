@@ -145,7 +145,7 @@ export async function startChat(
   return { conversationId, runId: sent.run.id };
 }
 
-export const SESSION_LIMITS = { idleMs: 30 * 60_000, openLimit: 8 };
+export const SESSION_LIMITS = { idleMs: 30 * 60_000 };
 
 export function chatTurnInput(
   t: TestDb,
