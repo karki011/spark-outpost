@@ -31,7 +31,7 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 
 Under **Spark**, **Workflow options** holds autonomy, compaction and PR controls.
 
-**Custom instructions** accepts text or a local UTF-8 file up to 16 KB. Select **Save instructions**. New sessions send both to your agent. Choose files on Mac.
+**Custom instructions** accepts text or a UTF-8 file on your Mac, up to 16 KB. Select **Save instructions**. New sessions send both and skip an unreadable file with a note.
 
 ## Other sections
 

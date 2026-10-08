@@ -82,4 +82,12 @@ Validation passed: the full `pnpm check`, including 6,043 unit tests in 719 file
 
 The build preserves currently running services and terminals. The updated API, runtime, hooks, and native window behavior load after an explicit app Quit/reopen; activity hooks require a new or explicitly resumed terminal process. No new explanatory code comments were added.
 
+### Review follow-up
+
+Terminal sessions have no Spark safety floor: the provider's CLI runs under the agent's own permission mode, and Spark's approval cards, protected-path rules and ran-without-review audit do not apply inside the PTY. Spark records that the session started, its mode and its observed state. The owner chose to document this rather than build a floor; AGENTS.md and the guide say so.
+
+Runs of a Terminal session are recorded at the non-publishing level (`hands-off`) whatever the profile default is, so the Spark MCP scope has publish authority only when the user's message asks for it or the agent's mode would run it. A Terminal conversation with no terminal row and no messages is a draft: the app shows the new-session picker again, and the chat list and pruning treat it like an empty chat.
+
+An instruction file that can no longer be read does not fail a run: preferences load without its text, a chat run records one note with the reason, and the profile reports the reason for Settings. A Terminal launch goes on without the text but records no note yet. The file check refuses credential locations by full resolved path, and a paired phone sees that a file is set but not its path.
+
 See [Electron plan](ELECTRON_PLAN.md), [protocol alignment](PROTOCOL_ALIGNMENT.md), and [phone remote access](PHONE_REMOTE.md).

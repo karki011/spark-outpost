@@ -8,6 +8,8 @@ summary: Run commands beside a chat, or work with Claude Code or Codex in a Term
 
 Open an AI terminal. About 1 minute.
 
+> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply; Spark records only its start, mode and state.
+
 ## Start a Terminal session
 
 1. Select **New chat**, then **Terminal**.
@@ -15,13 +17,11 @@ Open an AI terminal. About 1 minute.
 3. Pick **Agent mode** when available.
 4. Describe the work and select **Start terminal**.
 
-Answer questions in the terminal. Native commands follow the agent's permissions. Pull requests aren't automatic.
+Answer questions in the terminal. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
 
-Agents can read this activity with `spark_terminals`.
-
-**Hide view** keeps the agent running; **Open terminal** reattaches. **Stop session** asks you to hold before stopping the agent and its commands. Terminal sessions are available only on your Mac.
+**Hide view** keeps the agent running; **Open terminal** reattaches. **Stop session** asks you to hold before stopping the agent and its commands. Terminal sessions are Mac-only.
 
 ## Open a shell beside Chat
 
