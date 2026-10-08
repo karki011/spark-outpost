@@ -1,6 +1,5 @@
 import { providerIssueKind, type TaskPiece } from '@spark-outpost/contracts';
 import { COORD_PROVIDER_HEALTH_MS } from '../advisor/policy.ts';
-import type { Queryable } from '../persistence/db.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { builderFacts, seatRoute } from '../orchestration/member-routes.ts';
 import { builderComplexity, builderEffort, type MemberRoute } from '../orchestration/routing.ts';
@@ -32,23 +31,7 @@ async function recentIssues(s: Session, now: Date): Promise<Map<string, string>>
   );
 }
 
-async function builderLoad(db: Queryable, workspaceId: string): Promise<Map<string, number>> {
-  const { rows } = await db.query<{ provider: string; running: number }>(
-    `SELECT r.provider, COUNT(*)::int AS running FROM runs r
-     JOIN conversations c ON c.id = r.conversation_id
-     WHERE c.workspace_id = $1 AND r.status IN ('running', 'awaiting_approval')
-       AND r.role IN ('builder', 'integrator')
-     GROUP BY r.provider`,
-    [workspaceId],
-  );
-  return new Map(rows.map((row) => [row.provider, row.running]));
-}
-
-export async function assignFacts(
-  s: Session,
-  parallel: boolean,
-  failed: ReadonlyMap<string, string> = new Map(),
-): Promise<AssignFacts> {
+export async function assignFacts(s: Session): Promise<AssignFacts> {
   const now = s.route.now ?? new Date();
   const facts = builderFacts(s);
   const builder = seatRoute(s, BUILDER_SPAWN).route.pick;
@@ -56,9 +39,7 @@ export async function assignFacts(
     route: s.route,
     builder,
     complex: facts.destructive || builderComplexity(s.route, facts) !== null,
-    unhealthy: new Map([...(await recentIssues(s, now)), ...failed]),
-    load: await builderLoad(s.deps.db, s.input.workspaceId),
-    parallel,
+    unhealthy: await recentIssues(s, now),
   };
 }
 

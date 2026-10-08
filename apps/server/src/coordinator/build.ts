@@ -66,7 +66,6 @@ async function engage(s: Session): Promise<void> {
     integrated: false,
     integrator: null,
     base: await treeOf(s, root),
-    unhealthy: new Map(),
   };
   await publish(s);
 }

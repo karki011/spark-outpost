@@ -22,9 +22,13 @@ To set it, see [Pick the model, effort and mode](agent-mode.md).
 
 | Request          | Goes to                                                                   |
 | ---------------- | ------------------------------------------------------------------------- |
-| Destructive work | The top model                                                             |
+| Destructive work | The provider's top model                                                  |
 | Trivial edits    | A middle model                                                            |
 | Everything else  | The best score: each model's chance of getting it right, against its cost |
+
+Destructive means deleting data, files or history; a `delete` method isn't.
+
+Builders and pieces keep the chat's provider and agent mode.
 
 Spark never runs a Builder on a small, fast model; it raises it one model up and says so. Auto skips models your sign-in can't use.
 

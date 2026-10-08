@@ -11,7 +11,6 @@ import { runMember } from '../orchestration/members.ts';
 import { seatRoute } from '../orchestration/member-routes.ts';
 import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
-import { assignPieces } from './assign.ts';
 import { blastRadius } from './blast-radius.ts';
 import { likelyFiles } from './engage.ts';
 import { askPieces, type BuilderPlan } from './builder-jev.ts';
@@ -185,9 +184,9 @@ export async function writePieceList(
   const saved = planned ? null : await saveBuildPlan(s, piecesPlanBody(pieces), 'pieces');
   const routing = planned ? plan : await askPieces(s, building(pieces));
   const place = await chooseListPlace(s, pieces);
-  const facts = await assignFacts(s, place.placement !== 'in_order');
-  const assigned = new Map(assignPieces(pieces, facts).map((entry) => [entry.key, entry.pick]));
-  const routed = await routePieces(s, pieces, place, assigned, facts, routing);
+  const facts = await assignFacts(s);
+  const assigned = new Map(pieces.map((piece) => [piece.key, facts.builder]));
+  const routed = await routePieces(s, pieces, place, assigned, routing);
   const routes = new Map(routed.pieces.map((route) => [route.key, route]));
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,

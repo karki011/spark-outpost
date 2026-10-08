@@ -2,7 +2,7 @@ import type { TaskPiece } from '@spark-outpost/contracts';
 import { movePiece } from '../persistence/pieces.ts';
 import { git, workingTree } from '../projects/snapshot.ts';
 import type { Session } from '../orchestration/session.ts';
-import { fallbackPick, providerOption } from './assign.ts';
+import { providerOption } from './assign.ts';
 import { changedFiles, type PieceSite } from './piece-run.ts';
 import { owns } from './owned.ts';
 import { assignFacts } from './provider-state.ts';
@@ -116,30 +116,13 @@ async function moveTo(
   return { moved: true, handoff };
 }
 
-export async function moveAfterFailure(
-  s: Session,
-  move: MoveContext,
-  why: string,
-  tried: Set<string>,
-): Promise<Moved> {
-  const from = move.piece.provider ?? s.input.provider;
-  tried.add(from);
-  move.coordination.unhealthy.set(from, why);
-  const facts = await assignFacts(s, false, move.coordination.unhealthy);
-  const next = fallbackPick(facts, tried);
-  const fromName = providerName(s, from);
-  if (!next)
-    return { moved: false, reason: `${fromName} ${why}, and no other provider can take the piece` };
-  return moveTo(s, move, next.pick, `moved from ${fromName} (${why})`, why);
-}
-
 export async function moveOnRequest(
   s: Session,
   move: MoveContext,
   provider: string,
 ): Promise<Moved> {
   if (provider === move.piece.provider) return { moved: false, reason: 'already there' };
-  const facts = await assignFacts(s, false, move.coordination.unhealthy);
+  const facts = await assignFacts(s);
   const option = providerOption(facts, provider);
   if (!option) return { moved: false, reason: `${providerName(s, provider)} can't take it now` };
   const fromName = providerName(s, move.piece.provider);
