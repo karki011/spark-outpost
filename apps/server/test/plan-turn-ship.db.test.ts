@@ -97,4 +97,12 @@ describe('a plan turn that a Critic reviews', { timeout: 120_000 }, () => {
     expect(turn.committed).toBe('export.ts');
     expect(turn.pending).toBe('');
   });
+
+  it('a build in a Plan-mode chat keeps the chat level and ships', async () => {
+    const turn = await planTurn(REQUEST, 'ask', 'plan');
+
+    expect(turn.runs[0]!.level).toBe('full-auto');
+    expect(turn.reply).toMatch(/Committed [0-9a-f]{7} on spark\/\S+, not pushed\./);
+    expect(turn.pending).toBe('');
+  });
 });
