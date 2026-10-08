@@ -151,6 +151,12 @@ export type OrchestrationTotals = z.infer<typeof orchestrationTotalsSchema>;
 
 export const MAX_REPAIR_RETRIES = 2;
 
+export const jevAskSchema = z.object({
+  kind: z.enum(['models', 'check']),
+  pieces: z.number().int().positive().nullable(),
+});
+export type JevAsk = z.infer<typeof jevAskSchema>;
+
 export const orchestrationSchema = z.object({
   runId: z.uuid(),
   conversationId: z.uuid(),
@@ -172,6 +178,7 @@ export const orchestrationSchema = z.object({
   pendingCheckpoint: approvalSchema.nullable(),
   decisions: z.array(orchestrationDecisionSchema),
   pieces: pieceListSchema.optional(),
+  jevAsk: jevAskSchema.optional(),
   usage: orchestrationUsageSchema.optional(),
   totals: orchestrationTotalsSchema,
   error: z.string().nullable(),

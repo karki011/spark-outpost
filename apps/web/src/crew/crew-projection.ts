@@ -25,7 +25,7 @@ const RUN_STATES: Record<CrewMember['status'], CrewState> = {
 const VERDICT_LINES = { looks_good: 'looks good', concerns: 'has concerns', unclear: 'unclear' };
 
 const PHASE_LINES: Record<Orchestration['phase'], string> = {
-  intake: 'reading the request',
+  intake: 'read the request',
   scouting: 'answering',
   planning: 'working',
   building: 'handed off the build',
@@ -95,7 +95,11 @@ export function runAgent(
   };
 }
 
-function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState {
+function busy(crew: readonly CrewAgent[]): boolean {
+  return crew.some((agent) => agent.state === 'working' || agent.state === 'thinking');
+}
+
+function haltedState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState | null {
   const crewWaiting = crew.some((agent) => agent.state === 'waiting');
   if (
     orchestration.pendingCheckpoint ||
@@ -108,10 +112,16 @@ function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): Cre
   if (orchestration.status === 'succeeded') return 'done';
   if (orchestration.status === 'cancelled' || timedOut(orchestration.error)) return 'stopped';
   if (orchestration.status !== 'running' && orchestration.status !== 'queued') return 'failed';
-  if (orchestration.phase === 'intake') return 'thinking';
-  return crew.some((agent) => agent.state === 'working' || agent.state === 'thinking')
-    ? 'done'
-    : 'working';
+  return null;
+}
+
+function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState {
+  return haltedState(orchestration, crew) ?? (orchestration.jevAsk ? 'working' : 'done');
+}
+
+export function betweenAgents(orchestration: Orchestration, crew: readonly CrewAgent[]): boolean {
+  if (haltedState(orchestration, crew) !== null) return false;
+  return Boolean(orchestration.jevAsk) || !busy(crew);
 }
 
 function jevLine(orchestration: Orchestration, state: CrewState): string {

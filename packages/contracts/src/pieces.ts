@@ -90,6 +90,7 @@ export const pieceStatusSchema = z.enum([
   'landed',
   'skipped',
   'failed',
+  'stopped',
 ]);
 export type PieceStatus = z.infer<typeof pieceStatusSchema>;
 
@@ -156,7 +157,7 @@ export type PieceList = z.infer<typeof pieceListSchema>;
 
 export const PIECES_ACTIVITY = 'pieces';
 
-export type PieceTone = 'waiting' | 'running' | 'done' | 'skipped' | 'failed';
+export type PieceTone = 'waiting' | 'running' | 'done' | 'skipped' | 'failed' | 'stopped';
 
 export interface PieceBoardRow {
   key: string;
@@ -205,6 +206,8 @@ function statusOf(
       return { status: 'skipped', tone: 'skipped' };
     case 'failed':
       return { status: 'failed', tone: 'failed' };
+    case 'stopped':
+      return { status: 'stopped', tone: 'stopped' };
     default: {
       const waiting = waitingOn(piece, landed);
       return waiting.length > 0
@@ -225,6 +228,8 @@ function checkLabel(piece: TaskPiece): string | null {
   return null;
 }
 
+const NOTED_STATUSES: ReadonlySet<PieceStatus> = new Set(['failed', 'skipped', 'stopped']);
+
 export function pieceBoard(list: Pick<PieceList, 'pieces'>): PieceBoardRow[] {
   const landed = new Set(
     list.pieces.filter((piece) => piece.status === 'landed').map((piece) => piece.key),
@@ -240,7 +245,7 @@ export function pieceBoard(list: Pick<PieceList, 'pieces'>): PieceBoardRow[] {
     check: checkLabel(piece),
     costUsd: piece.costUsd,
     notes: notesLabel(piece.notesQueued),
-    note: piece.status === 'failed' || piece.status === 'skipped' ? piece.note : null,
+    note: NOTED_STATUSES.has(piece.status) ? piece.note : null,
     pick: piece.pickNote,
     folded: piece.status === 'landed',
   }));

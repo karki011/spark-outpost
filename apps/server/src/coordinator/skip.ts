@@ -16,7 +16,9 @@ export function dependentsOf(pieces: readonly TaskPiece[], key: string): TaskPie
 export function skipBlocker(piece: TaskPiece): string | null {
   if (piece.status === 'landed') return `${piece.key} has landed; ask for a change instead.`;
   if (piece.status === 'skipped') return `${piece.key} is already skipped.`;
-  if (piece.status === 'failed') return `${piece.key} has already stopped.`;
+  if (piece.status === 'failed' || piece.status === 'stopped') {
+    return `${piece.key} has already stopped.`;
+  }
   return null;
 }
 
@@ -46,6 +48,7 @@ export async function skipWithDependents(
 }
 
 export const NOT_STARTED_STOPPED = 'Not started: you stopped the run';
+export const STOPPED_BY_USER = 'You stopped the run.';
 
 function unstartedNote(pieces: readonly TaskPiece[], cancelled: boolean): string {
   if (cancelled) return NOT_STARTED_STOPPED;

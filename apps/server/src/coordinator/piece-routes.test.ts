@@ -29,14 +29,6 @@ const routes: RouteOption[] = [
     tier: 'top',
     passRate: null,
   },
-  {
-    id: 'codex/gpt-6-sol',
-    provider: 'codex',
-    model: 'gpt-6-sol',
-    label: '6 Sol',
-    tier: 'mid',
-    passRate: 0.85,
-  },
 ].map((route) => ({
   ...route,
   tier: route.tier as RouteOption['tier'],
@@ -102,13 +94,14 @@ describe('routePieceList', () => {
       ['P2', HARD],
     ]);
     expect(result.pieces.map((entry) => [entry.key, entry.model.pick.model])).toEqual([
-      ['P1', 'gpt-6-sol'],
+      ['P1', 'sonnet'],
       ['P2', 'opus[1m]'],
     ]);
     expect(result.pieces[0]!.model).toMatchObject({
       decidedBy: 'jev',
-      reason: 'reasoning 2.6, coding 3, context 2 → mid tier → Codex 6 Sol (best pass rate)',
-      jevPick: { provider: 'codex', model: 'gpt-6-sol' },
+      reason:
+        'reasoning 2.6, coding 3, context 2 → mid tier → Claude Sonnet 5 (only mid-tier route)',
+      jevPick: { provider: 'claude', model: 'sonnet' },
       demand: { tier: 'mid' },
     });
     expect(result.pieces[1]!.model.reason).toBe(
@@ -130,7 +123,7 @@ describe('routePieceList', () => {
         pick: SONNET,
         decidedBy: 'rules',
         reason: 'pinned in this chat',
-        jevPick: { provider: 'codex', model: 'gpt-6-sol' },
+        jevPick: null,
       },
       { pick: SONNET, decidedBy: 'rules', jevPick: { provider: 'claude', model: 'opus[1m]' } },
     ]);
@@ -146,7 +139,7 @@ describe('routePieceList', () => {
     const result = routed([['P1', easy]]);
     expect(result.pieces[0]!.model).toMatchObject({
       reason:
-        'reasoning 1.5, coding 1.2, context 1 → demand low → mid route → Codex 6 Sol (best pass rate)',
+        'reasoning 1.5, coding 1.2, context 1 → demand low → mid route → Claude Sonnet 5 (only mid-tier route)',
       demand: { tier: 'low' },
     });
   });
@@ -175,14 +168,20 @@ describe('routePieceList', () => {
     });
   });
 
-  it('steps up when no route is healthy at the demanded tier', () => {
+  it("stays on the current model when the chat's provider has no higher tier", () => {
     const midOnly = routes.filter((route) => route.tier === 'mid');
     const result = routed([['P1', HARD]], { routes: midOnly });
     expect(result.pieces[0]!.model).toMatchObject({
       pick: SONNET,
       decidedBy: 'rules',
-      reason: 'no healthy top-tier route or higher',
+      reason: 'no higher tier on Claude',
       demand: { tier: 'top' },
+    });
+    const destructive = routed([['P1', answer()]], { routes: midOnly, destructive: () => true });
+    expect(destructive.pieces[0]!.model).toMatchObject({
+      pick: SONNET,
+      reason: 'no higher tier on Claude',
+      demand: { tier: 'top', raisedBy: 'destructive' },
     });
   });
 
@@ -196,7 +195,7 @@ describe('routePieceList', () => {
     );
     expect(result.pieces[0]!.model).toMatchObject({
       decidedBy: 'jev',
-      pick: { model: 'gpt-6-sol' },
+      pick: { model: 'sonnet' },
     });
     expect(result.pieces[1]!.model).toMatchObject({
       pick: { provider: 'claude', model: 'opus[1m]' },
@@ -216,7 +215,7 @@ describe('routePieceList', () => {
     );
     expect(owned.pieces.map((entry) => [entry.key, entry.model.pick.model])).toEqual([
       ['P1', 'opus[1m]'],
-      ['P2', 'gpt-6-sol'],
+      ['P2', 'sonnet'],
     ]);
     const migrate = answer({
       kind: { choice: 'migrate', confidence: 1, probabilities: { migrate: 1 } },
@@ -228,7 +227,7 @@ describe('routePieceList', () => {
       ],
       { requestDestructive: true },
     );
-    expect(byJev.pieces.map((entry) => entry.model.pick.model)).toEqual(['opus[1m]', 'gpt-6-sol']);
+    expect(byJev.pieces.map((entry) => entry.model.pick.model)).toEqual(['opus[1m]', 'sonnet']);
     expect(byJev.pieces[0]!.model.reason).toContain('top tier (destructive)');
     const stakes = routed(
       [
@@ -237,7 +236,7 @@ describe('routePieceList', () => {
       ],
       { requestDestructive: true },
     );
-    expect(stakes.pieces.map((entry) => entry.model.pick.model)).toEqual(['gpt-6-sol', 'opus[1m]']);
+    expect(stakes.pieces.map((entry) => entry.model.pick.model)).toEqual(['sonnet', 'opus[1m]']);
   });
 
   it('floors every building piece when the destructive request names none of them', () => {
@@ -315,10 +314,7 @@ describe('routing below the chat model (C2)', () => {
       ],
       opusRules(),
     );
-    expect(result.pieces.map((entry) => entry.model.pick.model)).toEqual([
-      'gpt-6-sol',
-      'gpt-6-sol',
-    ]);
+    expect(result.pieces.map((entry) => entry.model.pick.model)).toEqual(['sonnet', 'sonnet']);
   });
 
   it('keeps easy work on a core area, or rated with low confidence, at the chat tier', () => {
@@ -340,10 +336,10 @@ describe('routing below the chat model (C2)', () => {
       demand: { raisedBy: MEASURED_BELOW_CHAT },
     });
     const loose = routed([['P1', C2_CSV]], opusRules({ kindPassRates: measured(0.88) }));
-    expect(loose.pieces[0]!.model.pick.model).toBe('gpt-6-sol');
+    expect(loose.pieces[0]!.model.pick.model).toBe('sonnet');
     const thin = () => ({ below: 0.2, chat: 0.9, runs: 3 });
     expect(
       routed([['P1', EASY]], opusRules({ kindPassRates: thin })).pieces[0]!.model.pick.model,
-    ).toBe('gpt-6-sol');
+    ).toBe('sonnet');
   });
 });

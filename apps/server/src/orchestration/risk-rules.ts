@@ -6,9 +6,6 @@ import {
 } from '../advisor/policy.ts';
 import { namedFiles } from './context.ts';
 
-const DESTRUCTIVE =
-  /\b(?:delete|drop|truncate|wipe|purge|erase|destroy)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b|\bmigrat\w*\b[^.\n]{0,40}\b(?:data|rows?|records?)\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?)\b|\b(?:alter|change)\w*\b[^.\n]{0,40}\bcolumn\b[^.\n]{0,40}\btypes?\b|\bcolumn types?\b|\bremove\s+(?:the |all |every )?(?:files?|folders?|director(?:y|ies)|tables?|columns?|rows?|records?|data|database|branch(?:es)?)\b/i;
-
 const TRIVIAL_VERB =
   /\b(?:typos?|rename|reword|spelling|comment|comments|bump|format(?:ting)?|lint|whitespace|indent(?:ation)?)\b/i;
 
@@ -23,19 +20,67 @@ export function wordCount(text: string): number {
 const FOREIGN_KEY_ACTION =
   /\bon\s+(?:delete|update)\s+(?:cascade|set\s+null|set\s+default|restrict|no\s+action)\b|\bcascad\w*\s+delet\w*|\bdelet\w*\s+cascad\w*/gi;
 
-const STRONG_REMOVAL =
-  /\b(?:drop\s+(?:table|column|schema|database|type)|delete\s+from|truncate(?:\s+table)?)\b|\b(?:delete|drop|remove|purge|wipe|erase|destroy|truncate)\w*\s+(?:(?!(?:to|for|on|in|of|with|at|by|button|event|handler|endpoint|action|icon|link|option|menu|modal|dialog|key|route|api|confirm\w*)\b)\w+\s+){0,3}(?:data|rows?|records?|tables?|columns?|database|db|files?|folders?|director(?:y|ies)|branch(?:es)?|history|users?|accounts?|uploads?|backups?|entries|logs?)\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?)\b|\b(?:alter|change)\w*\b[^.\n]{0,40}\bcolumn\b[^.\n]{0,40}\btypes?\b|\bmigrat\w*\b[^.\n]{0,40}\b(?:data|rows?|records?)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b/i;
+const NOT_AN_OBJECT =
+  '(?:to|for|on|in|of|with|at|by|button|event|handler|endpoint|action|icon|link|option|menu|modal|dialog|key|route|api|confirm\\w*)';
+const REMOVABLE =
+  '(?:data|rows?|records?|tables?|columns?|database|db|files?|folders?|director(?:y|ies)|branch(?:es)?|history|users?|accounts?|uploads?|backups?|entries|logs?)';
+const QUOTE = '[`\'"]?';
 
-function withoutForeignKeyActions(text: string): string {
-  return text.replace(FOREIGN_KEY_ACTION, ' ');
+function removalOf(verb: string): string {
+  return `\\b${verb}\\s+(?:(?!${NOT_AN_OBJECT}\\b)${QUOTE}\\w+${QUOTE}\\s+){0,3}${QUOTE}${REMOVABLE}\\b`;
+}
+
+const SQL_REMOVAL =
+  '\\b(?:drop\\s+(?:table|column|schema|database|type)|delete\\s+from|truncate\\s+table)\\b';
+const REMOVES_A_PATH =
+  '\\b(?:delete|wipe|purge|erase|destroy)\\s+(?:the\\s+)?`?(?=\\S*(?:\\/|\\.\\w))[\\w.~/-]+';
+const REMOVES_STORED_THINGS =
+  '\\bremove\\s+(?:the |all |every )?(?:files?|folders?|director(?:y|ies)|tables?|columns?|rows?|records?|data|database|branch(?:es)?)\\b';
+
+const REWRITES: readonly string[] = [
+  '\\brenam\\w*\\b[^.\\n]{0,40}\\b(?:columns?|tables?)\\b',
+  '\\b(?:alter|change)\\w*\\b[^.\\n]{0,40}\\bcolumn\\b[^.\\n]{0,40}\\btypes?\\b',
+  '\\bmigrat\\w*\\b[^.\\n]{0,40}\\b(?:data|rows?|records?)\\b',
+  '\\brm\\s+-\\w*r',
+  '\\breset\\s+--hard\\b',
+  '\\bforce[- ]?push\\b',
+  '\\bpush\\s+(?:-f|--force)\\b',
+  '\\brewrite (?:the )?(?:git )?history\\b',
+];
+
+const DESTRUCTIVE = new RegExp(
+  [
+    SQL_REMOVAL,
+    removalOf('(?:delete|drop|truncate|wipe|purge|erase|destroy)'),
+    REMOVES_A_PATH,
+    REMOVES_STORED_THINGS,
+    ...REWRITES,
+    '\\bcolumn types?\\b',
+  ].join('|'),
+  'i',
+);
+
+const STRONG_REMOVAL = new RegExp(
+  [
+    SQL_REMOVAL,
+    removalOf('(?:delete|drop|remove|purge|wipe|erase|destroy|truncate)\\w*'),
+    ...REWRITES,
+  ].join('|'),
+  'i',
+);
+
+const TEST_TITLE = /\b(?:tests?|specs?|cases?|it|describe)\b[^.\n'"`]{0,24}(['"`])(?:(?!\1).)*\1/gi;
+
+function operationsOnly(text: string): string {
+  return text.replace(FOREIGN_KEY_ACTION, ' ').replace(TEST_TITLE, ' ');
 }
 
 export function destructiveByRule(request: string): boolean {
-  return DESTRUCTIVE.test(withoutForeignKeyActions(request));
+  return DESTRUCTIVE.test(operationsOnly(request));
 }
 
 export function strongRemovalByRule(request: string): boolean {
-  return STRONG_REMOVAL.test(withoutForeignKeyActions(request));
+  return STRONG_REMOVAL.test(operationsOnly(request));
 }
 
 export function destructiveTargets(request: string): string[] {
@@ -53,15 +98,13 @@ export function migrationByRule(request: string): boolean {
 }
 
 export function destructiveMigrationWording(request: string): boolean {
-  return (
-    MIGRATION.test(request) && DESTRUCTIVE_SCHEMA_WORDING.test(withoutForeignKeyActions(request))
-  );
+  return MIGRATION.test(request) && DESTRUCTIVE_SCHEMA_WORDING.test(operationsOnly(request));
 }
 
 export function additiveMigrationWording(request: string): boolean {
   return (
     MIGRATION.test(request) &&
-    !DESTRUCTIVE_SCHEMA_WORDING.test(withoutForeignKeyActions(request)) &&
+    !DESTRUCTIVE_SCHEMA_WORDING.test(operationsOnly(request)) &&
     !destructiveByRule(request)
   );
 }

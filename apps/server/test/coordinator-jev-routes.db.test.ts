@@ -111,8 +111,8 @@ function failingPieceQuestions(script: JevScript, failure: 'status' | 'hang'): t
   };
 }
 
-async function runInOrder(jev: typeof fetch | null) {
-  const started = await startPieces(t, root, '#pieces', { jev });
+async function runInOrder(jev: typeof fetch | null, provider: 'claude' | 'codex' = 'claude') {
+  const started = await startPieces(t, root, '#pieces', { jev, provider });
   harness = started.harness;
   const { orchestration } = await driveToEnd(
     t,
@@ -145,21 +145,21 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
 
     const list = await pieceList(t, runId);
     expect(list.pieces.map((piece) => [piece.key, piece.provider, piece.model])).toEqual([
-      ['P1', 'codex', 'gpt-6-sol'],
+      ['P1', 'claude', 'sonnet'],
       ['P2', 'claude', 'opus[1m]'],
       ['P3', 'claude', 'sonnet'],
     ]);
     expect(list.placementReason).toContain(
-      'Jev: 3 pieces · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
+      'Jev: 3 pieces · P1 Claude Sonnet 5 · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
     );
     expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
-      'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
+      'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Claude Sonnet 5 (only mid-tier route)',
       'Jev: reasoning 4.5, coding 2, context 2 → top tier (deep reasoning) → Claude Opus 5.5 (only top-tier route)',
-      "Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 (the chat's provider)",
+      'Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 (only mid-tier route)',
     ]);
     const builders = (await children(t, runId)).filter((child) => child.pieceKey);
     expect(builders.map((child) => [child.pieceKey, child.provider])).toEqual([
-      ['P1', 'codex'],
+      ['P1', 'claude'],
       ['P2', 'claude'],
       ['P3', 'claude'],
     ]);
@@ -187,6 +187,31 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       signals: { reasoning: { mean: 4.5 }, coding: { mean: 2 } },
       demand: { tier: 'top', raisedBy: 'deep reasoning', capability: 'reasoning' },
     });
+  });
+
+  it('keeps every piece of a Codex chat on Codex when a piece needs a tier Codex lacks', async () => {
+    const script: JevScript = {
+      calls: [],
+      scenario: NORMAL,
+      scores: { P1_reasoning: 3.5, P1_coding: 2.5, P2_reasoning: 4.5 },
+    };
+    const { runId, orchestration } = await runInOrder(jevFetch(script), 'codex');
+    expect(orchestration.status).toBe('succeeded');
+    const list = await pieceList(t, runId);
+    expect(list.pieces.map((piece) => [piece.key, piece.provider])).toEqual([
+      ['P1', 'codex'],
+      ['P2', 'codex'],
+      ['P3', 'codex'],
+    ]);
+    expect(list.pieces[1]!.pickNote).toContain('no higher tier on Codex');
+    const builders = (await children(t, runId)).filter((child) => child.pieceKey);
+    expect(new Set(builders.map((child) => child.provider))).toEqual(new Set(['codex']));
+    const recorded = await decision(runId);
+    expect(recorded.body.answer.pieces.map((piece) => piece.pick.provider)).toEqual([
+      'codex',
+      'codex',
+      'codex',
+    ]);
   });
 
   it('keeps the rules when Jev fails, and records why', async () => {
@@ -262,7 +287,7 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     expect(list.pieces[0]!.pickNote).toContain(
       'reasoning 2, coding 2, context 2 → top tier (destructive) → Claude Opus 5.5',
     );
-    expect(list.pieces[2]).toMatchObject({ provider: 'codex', model: 'gpt-6-sol' });
+    expect(list.pieces[2]).toMatchObject({ provider: 'claude', model: 'sonnet' });
     const recorded = await decision(runId);
     expect(recorded.body.answer.pieces[0]).toMatchObject({
       decidedBy: 'jev',

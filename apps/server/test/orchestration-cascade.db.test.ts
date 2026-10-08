@@ -64,6 +64,15 @@ async function builders(runId: string) {
   return rows;
 }
 
+async function jevAsks(runId: string): Promise<(string | null)[]> {
+  const { rows } = await t.db.query<{ ask: string | null }>(
+    `SELECT payload #>> '{content,jevAsk,kind}' AS ask FROM run_events
+     WHERE run_id = $1 AND payload ->> 'activityType' = 'orchestration' ORDER BY seq`,
+    [runId],
+  );
+  return rows.map((row) => row.ask);
+}
+
 async function reply(runId: string): Promise<string> {
   return (await assistantReplies(t, runId)).join('\n');
 }
@@ -130,6 +139,11 @@ describe('verified cascade', () => {
       evidence: { checksPass: true, criticConcerns: false, confidentUnmet: false },
     });
     expect(await reply(runId)).not.toContain(ESCALATED_NOTE);
+    const asks = await jevAsks(runId);
+    const sent = asks.indexOf('check');
+    expect(sent).toBeGreaterThan(-1);
+    expect(asks.slice(sent)).toEqual(['check', ...asks.slice(sent + 1).map(() => null)]);
+    expect(asks.length).toBeGreaterThan(sent + 1);
   }, 60_000);
 
   it('says what needs you when Jev declines, with no card, and keeps the change', async () => {

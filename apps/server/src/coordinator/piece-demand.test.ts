@@ -160,23 +160,16 @@ describe('pickForDemand', () => {
       option('claude', 'sonnet', 'Sonnet 5', 'mid', 0.6),
       option('codex', 'gpt-6-sol', '6 Sol', 'mid', 0.85),
     ];
-    expect(pickForDemand(mid(), routes, 'claude')).toMatchObject({
+    expect(pickForDemand(mid(), routes)).toMatchObject({
       route: { id: 'codex/gpt-6-sol' },
       why: 'best pass rate',
     });
   });
 
   it('uses model-card strengths for the capability the piece needs', () => {
-    expect(pickForDemand(mid({ capability: 'reasoning' }), LIVE_ROUTES, 'claude')).toMatchObject({
+    expect(pickForDemand(mid({ capability: 'reasoning' }), LIVE_ROUTES)).toMatchObject({
       route: { id: 'codex/gpt-6-sol' },
       why: 'strong at reasoning',
-    });
-  });
-
-  it("breaks a tie between equal routes with the chat's provider", () => {
-    expect(pickForDemand(mid(), LIVE_ROUTES, 'claude')).toMatchObject({
-      route: { id: 'claude/sonnet' },
-      why: "the chat's provider",
     });
   });
 
@@ -185,28 +178,17 @@ describe('pickForDemand', () => {
       { ...option('claude', 'sonnet', 'Sonnet 5', 'mid'), priceUsd: 3 },
       { ...option('codex', 'gpt-6-sol', '6 Sol', 'mid'), priceUsd: 2 },
     ];
-    expect(pickForDemand(mid(), routes, 'claude')).toMatchObject({
+    expect(pickForDemand(mid(), routes)).toMatchObject({
       route: { id: 'codex/gpt-6-sol' },
       why: 'cheapest',
     });
   });
 
-  it("keeps the chat's provider over a cheaper route at the top tier", () => {
-    expect(pickForDemand(mid({ tier: 'top' }), LIVE_ROUTES, 'claude')).toMatchObject({
-      route: { id: 'claude/opus[1m]' },
-      why: "the chat's provider",
-    });
-    expect(pickForDemand(mid({ tier: 'top' }), LIVE_ROUTES, 'codex')).toMatchObject({
-      route: { id: 'zai/opus' },
-      why: 'cheapest',
-    });
-  });
-
   it('steps up a tier when none is left at the demanded one, and never down', () => {
-    expect(pickForDemand(mid({ tier: 'low' }), LIVE_ROUTES, 'claude')!.route.tier).toBe('mid');
+    expect(pickForDemand(mid({ tier: 'low' }), LIVE_ROUTES)!.route.tier).toBe('mid');
     const topOnly = LIVE_ROUTES.filter((route) => route.tier === 'top');
-    expect(pickForDemand(mid(), topOnly, 'claude')!.route.tier).toBe('top');
+    expect(pickForDemand(mid(), topOnly)!.route.tier).toBe('top');
     const midOnly = LIVE_ROUTES.filter((route) => route.tier === 'mid');
-    expect(pickForDemand(mid({ tier: 'top' }), midOnly, 'claude')).toBeNull();
+    expect(pickForDemand(mid({ tier: 'top' }), midOnly)).toBeNull();
   });
 });

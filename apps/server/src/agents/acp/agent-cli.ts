@@ -1,6 +1,6 @@
 import { ProviderError } from '../../providers/provider.ts';
 import { runCommand } from '../../setup/command.ts';
-import { locateCli } from '../../setup/verify.ts';
+import { cliLogin, locateCli } from '../../setup/verify.ts';
 
 export type AgentCli = 'claude' | 'codex';
 
@@ -28,4 +28,13 @@ export async function cliEnvironment(
     );
   }
   return { [EXECUTABLE_ENV[definition.cli]]: path };
+}
+
+export async function cliSignedIn(
+  cli: AgentCli,
+  locate: CliLocator = defaultLocator,
+): Promise<boolean | null> {
+  const path = await locate(cli);
+  if (!path) return null;
+  return (await cliLogin(cli, path, runCommand))?.signedIn ?? null;
 }

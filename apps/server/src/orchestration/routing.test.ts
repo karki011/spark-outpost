@@ -134,10 +134,10 @@ describe('rule routes', () => {
     });
     const third = escalate(context('auto'), second);
     expect(third.pick).toMatchObject({ model: 'opus[1m]', effort: 'medium' });
-    expect(escalate(context('auto'), third).pick).toMatchObject({
-      model: 'opus[1m]',
-      effort: 'high',
-    });
+    expect(third.rule).toBe('one tier up');
+    const fourth = escalate(context('auto'), third);
+    expect(fourth.pick).toMatchObject({ provider: 'claude', model: 'opus[1m]', effort: 'high' });
+    expect(fourth.rule).toBe('no higher tier on Claude');
   });
 
   it('raises a low effort to at least medium when escalating, and keeps a higher one', () => {

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { attributeFiles, runSnapshots } from './shared-tree.ts';
-import { commitWorkingTree, gitChanges } from './snapshot.ts';
+import { commitWorkingTree, gitChanges, workingTree } from './snapshot.ts';
 
 let root: string;
 const git = (...args: string[]) =>
@@ -57,7 +57,14 @@ describe('attributing a shared working tree to pieces', () => {
       ['bolt', ['a.ts', 'old.ts']],
       ['rivet', ['b.ts']],
     ]);
-    const [bolt, rivet] = await runSnapshots(root, base, source, ['bolt', 'rivet'], files);
+    const [bolt, rivet] = await runSnapshots(
+      root,
+      base,
+      source,
+      ['bolt', 'rivet'],
+      files,
+      new Map(),
+    );
     expect(bolt!.commit).toBe(base);
     expect(await gitChanges(root, bolt!.commit, rivet!.commit)).toEqual([
       { path: 'a.ts', change: 'modified' },
@@ -65,6 +72,48 @@ describe('attributing a shared working tree to pieces', () => {
     ]);
     expect(await gitChanges(root, rivet!.commit, source)).toEqual([
       { path: 'b.ts', change: 'modified' },
+    ]);
+  });
+
+  it('gives a file two pieces own to both of them', () => {
+    const attribution = attributeFiles(
+      ['a.ts'],
+      [owner('P1', ['a.ts']), owner('P2', ['a.ts'])],
+      'P2',
+    );
+    expect(attribution.files).toEqual(
+      new Map([
+        ['P1', ['a.ts']],
+        ['P2', ['a.ts']],
+      ]),
+    );
+  });
+
+  it('shows the second of two ordered pieces its own change to a file they share', async () => {
+    const base = git('rev-parse', 'HEAD').trim();
+    await writeFile(join(root, 'a.ts'), 'a\nfrom bolt\n');
+    const rivetStarted = await workingTree(root);
+    await writeFile(join(root, 'a.ts'), 'a\nfrom bolt\nfrom rivet\n');
+    const source = await commitWorkingTree(root, [base], 'after');
+    const files = new Map([
+      ['bolt', ['a.ts']],
+      ['rivet', ['a.ts']],
+    ]);
+    const [bolt, rivet] = await runSnapshots(
+      root,
+      base,
+      source,
+      ['bolt', 'rivet'],
+      files,
+      new Map([['rivet', rivetStarted]]),
+    );
+    expect(bolt!.commit).toBe(base);
+    expect(git('show', `${rivet!.commit}:a.ts`)).toBe('a\nfrom bolt\n');
+    expect(await gitChanges(root, bolt!.commit, rivet!.commit)).toEqual([
+      { path: 'a.ts', change: 'modified' },
+    ]);
+    expect(await gitChanges(root, rivet!.commit, source)).toEqual([
+      { path: 'a.ts', change: 'modified' },
     ]);
   });
 });

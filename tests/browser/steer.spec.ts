@@ -35,6 +35,16 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await expect(input).toHaveAttribute('placeholder', 'Steer the pieces while they run');
   const target = page.getByRole('button', { name: 'Steer to' });
   await expect(target).toHaveText('Auto');
+  const modelName = page.getByRole('button', { name: /^Model and effort/ }).locator('.mname');
+  await expect(modelName).toBeVisible();
+  const squeezedBy = await modelName.evaluate((name) => {
+    const cap = Number.parseFloat(getComputedStyle(name).maxWidth);
+    return Math.min(name.scrollWidth, cap) - name.getBoundingClientRect().width;
+  });
+  const hintWidth = await page
+    .locator('.comp-bar .hint')
+    .evaluate((hint) => hint.getBoundingClientRect().width);
+  expect(squeezedBy < 1 || hintWidth < 1).toBe(true);
   await target.click();
   const menu = page.getByRole('menu', { name: 'Steer to' });
   await expect(menu.getByRole('menuitemradio')).toHaveText([

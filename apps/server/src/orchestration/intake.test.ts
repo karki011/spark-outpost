@@ -172,12 +172,15 @@ describe('intake decisions', () => {
 
   it('lets a sure Jev overrule a weak keyword, but never strong evidence of data removal (D)', () => {
     const button = facts({ request: 'Add a delete button to each upload row' });
-    expect(decideIntake(null, button).destructive).toBe(true);
-    expect(decideIntake(jev({ destructive: 0.05 }), button)).toMatchObject({
+    expect(decideIntake(null, button)).toMatchObject({ destructive: false, risk: 'edits' });
+    expect(decideIntake(jev({ destructive: 0.6 }), button).destructive).toBe(false);
+    const weak = facts({ request: 'Show the column types in the schema viewer' });
+    expect(decideIntake(null, weak).destructive).toBe(true);
+    expect(decideIntake(jev({ destructive: 0.05 }), weak)).toMatchObject({
       destructive: false,
       risk: 'edits',
     });
-    expect(decideIntake(jev({ destructive: 0.6 }), button).destructive).toBe(true);
+    expect(decideIntake(jev({ destructive: 0.6 }), weak).destructive).toBe(true);
     const removal = facts({ request: 'Delete the old upload rows from the database' });
     expect(decideIntake(jev({ destructive: 0.05 }), removal).destructive).toBe(true);
     const cascade = facts({

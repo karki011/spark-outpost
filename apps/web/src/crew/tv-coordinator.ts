@@ -8,7 +8,7 @@ import {
 import { isBusy, isDispatcher, type CrewAgent, type CrewState } from './crew-model.ts';
 import { runAgent } from './crew-projection.ts';
 
-export type PieceState = 'waiting' | 'running' | 'landed' | 'skipped' | 'failed';
+export type PieceState = 'waiting' | 'running' | 'landed' | 'skipped' | 'failed' | 'stopped';
 
 export interface PieceTag {
   key: string;
@@ -31,6 +31,7 @@ const PIECE_STATES: Record<PieceStatus, PieceState> = {
   landed: 'landed',
   skipped: 'skipped',
   failed: 'failed',
+  stopped: 'stopped',
 };
 
 const SETTLED_STATES: Partial<Record<PieceState, CrewState>> = {
@@ -38,6 +39,7 @@ const SETTLED_STATES: Partial<Record<PieceState, CrewState>> = {
   landed: 'done',
   skipped: 'stopped',
   failed: 'failed',
+  stopped: 'stopped',
 };
 
 export const COORDINATOR_TITLE = 'Coordinator';

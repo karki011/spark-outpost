@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { providerIssues } from '../src/persistence/provider-health.ts';
 import { expectConformantRun } from './agui-conformance.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
@@ -45,80 +46,40 @@ async function runOnCodex(tags: string) {
   return { runId: started.runId, orchestration };
 }
 
-describe('provider fallback for pieces', { timeout: 120_000 }, () => {
-  it('moves a Codex piece to Claude when Codex is rate limited before its first edit', async () => {
-    const { runId, orchestration } = await runOnCodex('#pieces #ratelimit');
-    expect(orchestration.status).toBe('succeeded');
-    const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
-    expect(p1.map((child) => [child.provider, child.status])).toEqual([
-      ['codex', 'failed'],
-      ['claude', 'succeeded'],
-    ]);
-    expect(p1[0]!.error).toMatch(/rate limited/);
-    await expectConformantRun(t.db, runId);
-    expect(p1[1]!.prompt).not.toContain('## Handoff');
-    const list = await pieceList(t, runId);
-    expect(list.pieces.map((piece) => [piece.key, piece.status, piece.provider])).toEqual([
-      ['P1', 'landed', 'claude'],
-      ['P2', 'landed', 'claude'],
-      ['P3', 'landed', 'claude'],
-    ]);
-    expect(list.pieces[0]!.note).toBe('moved from Codex (rate limited)');
-    expect(await readFile(join(root, 'store.ts'), 'utf8')).toBe('built by P1\n');
-    const reply = (await assistantReplies(t, runId)).at(-1);
-    expect(reply).toContain('P1: moved from Codex (rate limited)');
-  });
-
-  it('hands a Codex piece to Claude with its edits after the first edit', async () => {
-    const { runId, orchestration } = await runOnCodex('#pieces #ratelimitafter');
-    expect(orchestration.status).toBe('succeeded');
-    const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
-    expect(p1.map((child) => [child.provider, child.status])).toEqual([
-      ['codex', 'failed'],
-      ['claude', 'succeeded'],
-    ]);
-    const handoff = p1[1]!.prompt;
-    expect(handoff).toContain('## Handoff');
-    expect(handoff).toContain('from a Builder on Codex, which stopped (rate limited)');
-    expect(handoff).toContain('- store.ts');
-    expect(handoff).toContain('store.ts | 1 +');
-    expect(p1[1]!.resumeKey).toMatch(/:piece:P1:2$/);
-    expect(await readFile(join(root, 'store.ts'), 'utf8')).toBe('built by P1\nbuilt by P1\n');
-    const list = await pieceList(t, runId);
-    expect(list.pieces[0]).toMatchObject({ status: 'landed', provider: 'claude', check: 'passed' });
-    expect(list.pieces[0]!.filesChanged).toEqual(['store.ts']);
-  });
-
-  it.each(['#turn429', '#retry429'])(
-    'moves a Codex piece whose turn ends normally after a 429 (%s)',
+describe('a piece whose provider fails', { timeout: 120_000 }, () => {
+  it.each(['#ratelimit', '#ratelimitafter', '#turn429', '#retry429', '#turn429after'])(
+    'fails on Codex with the plain reason and never moves to another provider (%s)',
     async (tag) => {
       const { runId, orchestration } = await runOnCodex(`#pieces ${tag}`);
-      expect(orchestration.status).toBe('succeeded');
-      const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
-      expect(p1.map((child) => [child.provider, child.status])).toEqual([
-        ['codex', 'failed'],
-        ['claude', 'succeeded'],
-      ]);
+      const builders = (await children(t, runId)).filter((child) => child.role === 'builder');
+      expect(new Set(builders.map((child) => child.provider))).toEqual(new Set(['codex']));
+      const p1 = builders.filter((child) => child.pieceKey === 'P1');
+      expect(p1.length).toBeGreaterThan(0);
+      expect(new Set(p1.map((child) => child.status))).toEqual(new Set(['failed']));
       expect(p1[0]!.error).toMatch(/rate limited/);
+      await expectConformantRun(t.db, runId);
       const list = await pieceList(t, runId);
-      expect(list.pieces[0]).toMatchObject({
-        status: 'landed',
-        provider: 'claude',
-        note: 'moved from Codex (rate limited)',
-      });
-      expect(list.pieces[0]!.filesChanged).toEqual(['store.ts']);
+      expect(list.pieces[0]).toMatchObject({ key: 'P1', status: 'failed', provider: 'codex' });
+      expect(list.pieces[0]!.note).not.toMatch(/moved from/);
+      expect(list.pieces.every((piece) => piece.provider === 'codex')).toBe(true);
+      const reply = (await assistantReplies(t, runId)).at(-1);
+      expect(reply).toMatch(/P1[^\n]*failed[^\n]*rate limited/);
+      expect(orchestration.status).not.toBe('running');
     },
   );
 
-  it('hands over the edits of a Codex turn that ended on a 429 after editing', async () => {
-    const { runId, orchestration } = await runOnCodex('#pieces #turn429after');
-    expect(orchestration.status).toBe('succeeded');
-    const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
-    expect(p1.map((child) => [child.provider, child.status])).toEqual([
-      ['codex', 'failed'],
-      ['claude', 'succeeded'],
+  it('fails a signed-out piece once with the sign-in message and stays on Codex', async () => {
+    const { runId, orchestration } = await runOnCodex('#pieces #piecesignedout');
+    expect(orchestration.status).toBe('failed');
+    const builders = (await children(t, runId)).filter((child) => child.role === 'builder');
+    expect(builders.map((child) => [child.pieceKey, child.provider, child.status])).toEqual([
+      ['P1', 'codex', 'failed'],
     ]);
-    expect(p1[1]!.prompt).toContain('## Handoff');
-    expect(p1[1]!.prompt).toContain('- store.ts');
+    expect(builders[0]!.error).toMatch(/couldn't sign in .*reconnect Codex/);
+    const list = await pieceList(t, runId);
+    expect(list.pieces[0]).toMatchObject({ key: 'P1', status: 'failed', provider: 'codex' });
+    expect(list.pieces[0]!.note).toMatch(/couldn't sign in/);
+    const health = await providerIssues(t.db, t.workspaceId);
+    expect(health).toMatchObject([{ provider: 'codex', kind: 'auth' }]);
   });
 });

@@ -23,6 +23,7 @@ const TONE_STATES: Record<PieceTone, PieceState> = {
   done: 'landed',
   skipped: 'skipped',
   failed: 'failed',
+  stopped: 'stopped',
 };
 
 function money(usd: number | null): string | null {

@@ -76,7 +76,20 @@ export async function attributeShared(s: Session, coordination: Coordination): P
   const files = new Map(
     landed.map((piece) => [piece.builderRunId!, attribution.files.get(piece.key) ?? []]),
   );
-  const snapshots = await runSnapshots(base.root, base.commit, source, await pieceRuns(s), files);
+  const started = new Map(
+    landed.flatMap((piece) => {
+      const tree = coordination.startTrees?.get(piece.key);
+      return tree ? [[piece.builderRunId!, tree] as const] : [];
+    }),
+  );
+  const snapshots = await runSnapshots(
+    base.root,
+    base.commit,
+    source,
+    await pieceRuns(s),
+    files,
+    started,
+  );
   for (const snapshot of snapshots) {
     await pinSnapshot(base.root, snapshot.runId, snapshot.commit);
     await saveSnapshot(s.deps.db, snapshot.runId, {

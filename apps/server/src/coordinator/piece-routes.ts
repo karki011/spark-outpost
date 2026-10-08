@@ -98,6 +98,11 @@ function routeLabel(context: RouteContext, route: RouteOption): string {
   return `${provider?.name ?? route.provider} ${route.label}`;
 }
 
+function noHigherTier(context: RouteContext): string {
+  const provider = context.candidates.find((entry) => entry.provider === context.chat.provider);
+  return `no higher tier on ${provider?.name ?? context.chat.provider}`;
+}
+
 function tierText(demand: Demand, chosen: RoutePick): string {
   const raised = demand.raisedBy ? ` (${demand.raisedBy})` : '';
   if (chosen.route.tier === demand.tier) return `${demand.tier} tier${raised}`;
@@ -166,13 +171,11 @@ function chooseModel<T extends RoutablePiece>(
   const facts = { destructive, core: rules.core(piece) };
   const result = pieceDemand(answer, facts);
   if (!result.ok) return rulesChoice(rules, piece, result.reason);
-  const first = pickForDemand(result.demand, rules.routes, rules.route.chat.provider);
+  const first = pickForDemand(result.demand, rules.routes);
   const kept = first ? chatTierDemand(rules, answer, facts, result.demand, first) : null;
   const demand = kept ?? result.demand;
-  const chosen = kept ? pickForDemand(kept, rules.routes, rules.route.chat.provider) : first;
-  if (!chosen) {
-    return rulesChoice(rules, piece, `no healthy ${demand.tier}-tier route or higher`, demand);
-  }
+  const chosen = kept ? pickForDemand(kept, rules.routes) : first;
+  if (!chosen) return rulesChoice(rules, piece, noHigherTier(rules.route), demand);
   return jevModel(rules, destructive, demand, chosen);
 }
 

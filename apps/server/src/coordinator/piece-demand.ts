@@ -248,18 +248,12 @@ function byPrice(a: RouteOption, b: RouteOption): Comparison {
   return { winner: a.priceUsd < b.priceUsd ? -1 : 1, why: 'cheapest' };
 }
 
-function byChat(a: RouteOption, b: RouteOption, chatProvider: string): Comparison {
-  const sameA = a.provider === chatProvider;
-  if (sameA === (b.provider === chatProvider)) return null;
-  return { winner: sameA ? -1 : 1, why: "the chat's provider" };
-}
-
-function compare(a: RouteOption, b: RouteOption, demand: Demand, chat: string): Verdict {
-  const measured = byPassRate(a, b) ?? byFit(a, b, demand.capability);
-  const cost = () => byPrice(a, b);
-  const trusted = () => byChat(a, b, chat);
-  const rest = demand.tier === 'top' ? (trusted() ?? cost()) : (cost() ?? trusted());
-  return measured ?? rest ?? { winner: -1, why: 'listed first' };
+function compare(a: RouteOption, b: RouteOption, demand: Demand): Verdict {
+  return (
+    byPassRate(a, b) ??
+    byFit(a, b, demand.capability) ??
+    byPrice(a, b) ?? { winner: -1, why: 'listed first' }
+  );
 }
 
 function tierRoutes(routes: readonly RouteOption[], tier: DemandTier): RouteOption[] {
@@ -271,17 +265,12 @@ function tierRoutes(routes: readonly RouteOption[], tier: DemandTier): RouteOpti
   return [];
 }
 
-export function pickForDemand(
-  demand: Demand,
-  routes: readonly RouteOption[],
-  chatProvider: string,
-): RoutePick | null {
+export function pickForDemand(demand: Demand, routes: readonly RouteOption[]): RoutePick | null {
   const pool = tierRoutes(routes, demand.tier);
   if (pool.length === 0) return null;
   if (pool.length === 1) return { route: pool[0]!, why: `only ${pool[0]!.tier}-tier route` };
-  const better = (a: RouteOption, b: RouteOption) =>
-    compare(a, b, demand, chatProvider).winner === -1 ? a : b;
+  const better = (a: RouteOption, b: RouteOption) => (compare(a, b, demand).winner === -1 ? a : b);
   const best = pool.reduce(better);
   const second = pool.filter((route) => route !== best).reduce(better);
-  return { route: best, why: compare(best, second, demand, chatProvider).why };
+  return { route: best, why: compare(best, second, demand).why };
 }

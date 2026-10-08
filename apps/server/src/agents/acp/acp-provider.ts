@@ -34,7 +34,8 @@ import {
   promptText,
 } from './conversation-prompt.ts';
 import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
-import { assertProtocolVersion, failureError, namesCause, toProviderError } from './errors.ts';
+import { exitCause, type SignInCheck } from './exit-cause.ts';
+import { assertProtocolVersion, failureError, namesCause } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
 import { watchRanModel } from './ran-model.ts';
@@ -85,6 +86,7 @@ export interface AcpProviderOptions {
   secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
   sparkTools?: SparkToolsAccess;
+  signedIn?: SignInCheck;
 }
 
 const DEFAULT_CANCEL_GRACE_MS = 5_000;
@@ -239,7 +241,7 @@ async function runSession(
       const reported = cause instanceof ProviderError ? null : mapper.failure();
       if (signal.aborted) channel.close();
       else if (reported) channel.close(failureError(definition.name, reported));
-      else channel.close(toProviderError(definition.name, cause, tail));
+      else channel.close(await exitCause(definition.name, cause, tail, turn, options.signedIn));
     }
   } finally {
     signal.removeEventListener('abort', onAbort);
