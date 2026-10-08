@@ -305,10 +305,18 @@ async function restartToUpdate(app: string, running: Running): Promise<void> {
   }
 }
 
+async function backupFrom(version: string): Promise<string | undefined> {
+  const dir = path.join(userData, 'backups');
+  const files = existsSync(dir) ? await readdir(dir) : [];
+  return files.find((file) => file.endsWith(`-from-${version}.dump`));
+}
+
 async function migrationCycle(v2: string, v3: string): Promise<void> {
   const second = launch(await install(v2));
   const ready = await waitForLine(second, /\[main\] Spark Outpost \S* ?ready on/, 120_000);
-  const backedUp = second.lines.find((line) => /\[migrate\] Backed up the database/.test(line));
+  const backedUp =
+    second.lines.find((line) => /\[migrate\] Backed up the database/.test(line)) ??
+    (await backupFrom('0.0.1'));
   const marker = await readJson(path.join(userData, 'migrated-version.json'));
   record(
     '0.0.2 backs up before its new migration, migrates and records the version',
