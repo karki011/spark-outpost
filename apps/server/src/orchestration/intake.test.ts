@@ -84,6 +84,27 @@ describe('intake decisions', () => {
     expect(unsure.calls.question).toMatchObject({ jev: 0.36, value: true, source: 'rules' });
   });
 
+  it('builds when Jev is unsure and a later step says then and a change verb', () => {
+    const steps =
+      'First run sh scripts/seed.sh to create the throwaway SQLite file data/dev.sqlite. Then delete all rows from the users table in data/dev.sqlite and tell me the row count afterwards.';
+    const unsure = decideIntake(jev({ question: 0.47 }), facts({ request: steps }));
+    expect(unsure.start).not.toBe('answer');
+    expect(unsure.calls.question).toMatchObject({ jev: 0.47, value: false, source: 'rules' });
+    const oneLine = 'Run seed.sh, then delete all rows from the users table and tell me the count';
+    expect(decideIntake(jev({ question: 0.47 }), facts({ request: oneLine })).start).not.toBe(
+      'answer',
+    );
+    expect(decideIntake(jev({ question: 0.95 }), facts({ request: steps })).start).toBe('answer');
+    for (const request of [
+      'Run seed.sh and tell me the row count of the users table',
+      'First tell me what seed.sh does, then tell me the row count',
+    ]) {
+      expect(decideIntake(jev({ question: 0.47 }), facts({ request })).start, request).toBe(
+        'answer',
+      );
+    }
+  });
+
   it('answers plan and feedback wording by rule when Jev is not there', () => {
     expect(
       decideIntake(null, facts({ request: 'give me details summary of the repo' })).start,
@@ -172,12 +193,15 @@ describe('intake decisions', () => {
 
   it('lets a sure Jev overrule a weak keyword, but never strong evidence of data removal (D)', () => {
     const button = facts({ request: 'Add a delete button to each upload row' });
-    expect(decideIntake(null, button).destructive).toBe(true);
-    expect(decideIntake(jev({ destructive: 0.05 }), button)).toMatchObject({
+    expect(decideIntake(null, button)).toMatchObject({ destructive: false, risk: 'edits' });
+    expect(decideIntake(jev({ destructive: 0.6 }), button).destructive).toBe(false);
+    const weak = facts({ request: 'Show the column types in the schema viewer' });
+    expect(decideIntake(null, weak).destructive).toBe(true);
+    expect(decideIntake(jev({ destructive: 0.05 }), weak)).toMatchObject({
       destructive: false,
       risk: 'edits',
     });
-    expect(decideIntake(jev({ destructive: 0.6 }), button).destructive).toBe(true);
+    expect(decideIntake(jev({ destructive: 0.6 }), weak).destructive).toBe(true);
     const removal = facts({ request: 'Delete the old upload rows from the database' });
     expect(decideIntake(jev({ destructive: 0.05 }), removal).destructive).toBe(true);
     const cascade = facts({

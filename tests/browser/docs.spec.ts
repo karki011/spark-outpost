@@ -71,7 +71,7 @@ test('Docs opens on a short list of tasks, and a task opens its how-to with a de
     'Follow, stop and queue messages',
   );
   await pager.getByRole('link', { name: /^Next/ }).click();
-  await expect(pageTitle(page)).toHaveText('Answer a plan');
+  await expect(pageTitle(page)).toHaveText('Plan before building');
 
   await page.goBack();
   await expect(pageTitle(page)).toHaveText('Answer an approval card');

@@ -51,3 +51,31 @@ export function pushAuthStatus(client: acp.AgentContext): void {
   const status = process.env.FAKE_ACP_AUTH_STATUS;
   if (status) void client.notify(AUTH_STATUS_METHOD, JSON.parse(status) as Record<string, unknown>);
 }
+
+const EXIT_AFTER_MS = 20;
+
+export async function signedOut(update: Update, says: boolean): Promise<never> {
+  if (says) {
+    await update({
+      sessionUpdate: 'session_info_update',
+      _meta: {
+        jetbrains: {
+          air: {
+            version: 1,
+            sessionFailure: {
+              id: 't:session-error',
+              revision: 1,
+              category: 'access',
+              severity: 'error',
+              title: 'Sign in to continue using Claude.',
+              details: 'Failed to authenticate: OAuth session expired and could not be refreshed',
+              actions: ['login'],
+            },
+          },
+        },
+      },
+    });
+  }
+  setTimeout(() => process.exit(1), EXIT_AFTER_MS);
+  throw new acp.RequestError(-32603, 'Internal error', { errorKind: 'authentication_failed' });
+}

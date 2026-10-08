@@ -6,6 +6,7 @@ import {
   type ApprovalOption,
   type FileDiff,
 } from '@spark-outpost/contracts';
+import { splitCommandLine } from '../../approvals/commands.ts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
 import { exitPlanText } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
@@ -27,9 +28,16 @@ function kindOf(toolKind: string | null): ApprovalKind {
   return 'other';
 }
 
+function quotedScript(command: string): string | null {
+  if (!/^["']/.test(command.trim())) return null;
+  const parts = splitCommandLine(command);
+  const script = parts.length === 1 && parts[0]!.tokens.length === 1 ? parts[0]!.tokens[0]! : null;
+  return script !== null && /\s/.test(script.trim()) ? script : null;
+}
+
 function commandOf(rawInput: Record<string, unknown>, title: string): string | null {
   const command = rawInput.command ?? rawInput.cmd;
-  if (typeof command === 'string' && command.trim()) return command;
+  if (typeof command === 'string' && command.trim()) return quotedScript(command) ?? command;
   if (Array.isArray(command) && command.every((part) => typeof part === 'string')) {
     return command.join(' ');
   }

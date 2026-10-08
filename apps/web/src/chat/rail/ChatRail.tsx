@@ -11,7 +11,8 @@ import type {
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
-import { latestOrchestration } from '../../crew/conversation-crew.ts';
+import { chatModelName } from '../../crew/auto-route.ts';
+import { latestOrchestration, orchestrationsInOrder } from '../../crew/conversation-crew.ts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
@@ -102,12 +103,17 @@ function OpenRail({
   const watch = primaryPull(list);
   const branch = workspace.data?.current ?? null;
   const reading = latestContext(detail.runs, settings.provider);
-  const model = currentModel(settings, capabilities.data);
+  const picked = currentModel(settings, capabilities.data);
   const rows = railRows({
     repoNames: repos.map((repo) => repo.name),
     branch: branch ? { name: branch.branch, worktree: branch.worktree } : null,
     provider: providerName(provider),
-    model: model ? shortLabel(model.label) : null,
+    model: chatModelName(
+      settings.routing,
+      picked ? shortLabel(picked.label) : null,
+      orchestrationsInOrder(detail),
+      capabilities.data?.models,
+    ),
     mode: permissionState(settings, capabilities.data).label,
     autonomy,
     changes: changes.data ?? null,

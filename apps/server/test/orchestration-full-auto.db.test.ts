@@ -1,9 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { CHECKPOINT_OPTION, modeForLegacy, type Approval } from '@spark-outpost/contracts';
+import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { NO_TASK_BRANCH_REASON } from '../src/approvals/publish-policy.ts';
@@ -277,6 +278,41 @@ describe('Full auto runs to a draft PR', () => {
     expect(git(repo.root, 'log', '-1', '--format=%s', ship!.branch)).toMatch(/^The divider shows/);
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   }, 120_000);
+
+  it('names each commit after its own turn and opens its body with that turn’s reply', async () => {
+    await newRepo('none');
+    start();
+    const first = await runFullAuto();
+    const followUp = 'Also make the divider say Yesterday for the day before. #build';
+    const sent = await sendUserMessage(
+      t.db,
+      first.conversationId,
+      { id: randomUUID(), content: followUp },
+      {
+        provider: 'claude',
+        model: 'sonnet',
+        effort: 'medium',
+        permission: 'do',
+        agentMode: modeForLegacy('claude', 'do', 'full-auto'),
+        level: 'full-auto',
+      },
+    );
+    harness!.worker.wake();
+    await driveToEnd(t, first.conversationId, sent.run.id, answerEverything, 90_000);
+    const detail = (await getConversationDetail(t.db, first.conversationId))!;
+    expect(detail.tasks).toHaveLength(1);
+    const replyOf = (runId: string) =>
+      detail.messages.find((message) => message.runId === runId && message.role === 'assistant')!
+        .content;
+    const ship = await getTaskShip(t.db, first.taskId!);
+    const [second, earlier] = git(repo.root, 'log', '-2', '--format=%s%n%b%x00', ship!.branch)
+      .split('\0')
+      .map((entry) => entry.trim().split('\n'));
+    expect(earlier![0]).toMatch(/^The divider shows/);
+    expect(second![0]).toMatch(/^Also make the divider say Yesterday/);
+    expect(replyOf(first.runId).startsWith(earlier![1]!)).toBe(true);
+    expect(replyOf(sent.run.id).startsWith(second![1]!)).toBe(true);
+  }, 180_000);
 
   it.each([
     ['a question', QUESTION],

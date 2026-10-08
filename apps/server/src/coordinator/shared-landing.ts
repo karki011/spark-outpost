@@ -33,12 +33,13 @@ export function sharedSite(
   );
   const ownedByOther = (file: string) =>
     others.some((other) => owns(ownedSet(coordination, other.key), file));
+  const ownedHere = (file: string) => owns(ownedSet(coordination, piece.key), file);
   return {
     cwd: async () => root,
     place: async () => null,
     slot,
     changed: async (before) =>
-      (await changedFiles(root, before)).filter((file) => !ownedByOther(file)),
+      (await changedFiles(root, before)).filter((file) => ownedHere(file) || !ownedByOther(file)),
   };
 }
 
@@ -75,7 +76,20 @@ export async function attributeShared(s: Session, coordination: Coordination): P
   const files = new Map(
     landed.map((piece) => [piece.builderRunId!, attribution.files.get(piece.key) ?? []]),
   );
-  const snapshots = await runSnapshots(base.root, base.commit, source, await pieceRuns(s), files);
+  const started = new Map(
+    landed.flatMap((piece) => {
+      const tree = coordination.startTrees?.get(piece.key);
+      return tree ? [[piece.builderRunId!, tree] as const] : [];
+    }),
+  );
+  const snapshots = await runSnapshots(
+    base.root,
+    base.commit,
+    source,
+    await pieceRuns(s),
+    files,
+    started,
+  );
   for (const snapshot of snapshots) {
     await pinSnapshot(base.root, snapshot.runId, snapshot.commit);
     await saveSnapshot(s.deps.db, snapshot.runId, {

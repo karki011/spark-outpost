@@ -4,11 +4,27 @@ What we change in third-party code, why, what guards it, and when each part can 
 
 ## Patch files
 
-| File                                                   | Package                                                                   | Applied by                                                        |
-| ------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `patches/@agentclientprotocol__codex-acp@1.13.1.patch` | `@agentclientprotocol/codex-acp` 1.13.1 (bundles `@openai/codex` 0.156.1) | `patchedDependencies` in `pnpm-workspace.yaml`, on `pnpm install` |
+| File                                                          | Package                                                                   | Applied by                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `patches/@agentclientprotocol__codex-acp@1.13.1.patch`        | `@agentclientprotocol/codex-acp` 1.13.1 (bundles `@openai/codex` 0.156.1) | `patchedDependencies` in `pnpm-workspace.yaml`, on `pnpm install` |
+| `patches/@agentclientprotocol__claude-agent-acp@0.81.2.patch` | `@agentclientprotocol/claude-agent-acp` 0.81.2                            | The same                                                          |
 
-It is the only patch. It edits the bundled `dist/index.js` (about 40 changed lines in seven parts). pnpm refuses to install if a hunk no longer applies, so a version bump always forces a decision.
+There are two patches. The codex-acp patch edits the bundled `dist/index.js` (about 40 changed lines in seven parts). The claude-agent-acp patch edits `dist/permissions/effects.js` (three changed lines, one part). pnpm refuses to install if a hunk no longer applies, so a version bump always forces a decision.
+
+## claude-agent-acp 0.81.2 patch
+
+### A reject carries Spark's reason to Claude
+
+|             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Changes     | `dist/permissions/effects.js`. `parseClaudePermissionSelection` reads `_meta.denyMessage` from the permission response when it is a string and returns it with the selection. `applyCommonSelection` passes it to `deny()` for the `reject` option. Without `_meta.denyMessage` the adapter behaves as upstream.                                                                                                                                                              |
+| Why         | When Spark's policy, not the user, rejects a tool call, Spark answers `session/request_permission` with the reject option and `_meta.denyMessage` (`permissionResponse` in `apps/server/src/agents/acp/permission-request.ts`; `declineInConversation` in `permissions.ts`). Unpatched, Claude is told "User refused permission to run tool" and reports that the user said no. Patched, the tool's denial message is Spark's reason, for example "Spark's policy blocked …". |
+| Upstream    | Not checked. No upstream issue or pull request is recorded for this change.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Guard tests | `apps/server/src/agents/acp/permission-request.test.ts` › "reaches Claude as the tool's denial message instead of 'User refused'" (runs the installed adapter's `decodeClaudePermissionResponse`).                                                                                                                                                                                                                                                                            |
+| If removed  | Nothing is allowed that was refused before: the call is still denied. Claude hears "User refused permission to run tool" for a policy denial and may tell the user they refused it.                                                                                                                                                                                                                                                                                           |
+| Remove when | claude-agent-acp passes a deny message from the permission response on its own, or Spark stops sending `_meta.denyMessage`. Verify with the same guard test against the unpatched package.                                                                                                                                                                                                                                                                                    |
+
+On a claude-agent-acp bump: rename the patch file and its `patchedDependencies` key in `pnpm-workspace.yaml` to the new version, re-create the hunk with `pnpm patch` and `pnpm patch-commit` if upstream still lacks it, then run the guard test.
 
 ## codex-acp 1.13.1 patch, part by part
 

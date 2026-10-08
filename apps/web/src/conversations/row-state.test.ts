@@ -22,12 +22,16 @@ function chat(overrides: Partial<ConversationSummary> = {}): ConversationSummary
   };
 }
 
-const run = (status: string, extra: { error?: string | null; step?: string | null } = {}) =>
+const run = (
+  status: string,
+  extra: { error?: string | null; step?: string | null; needsYou?: string } = {},
+) =>
   ({
     id: '00000000-0000-4000-8000-000000000002',
     status,
     error: extra.error ?? null,
     step: extra.step ?? null,
+    needsYou: extra.needsYou ?? null,
   }) as ConversationSummary['latestRun'];
 
 describe('rowState', () => {
@@ -53,6 +57,17 @@ describe('rowState', () => {
     });
     expect(rowState(finished, true).tone).toBe('idle');
     expect(rowState(chat({ latestRun: run('succeeded') }), false).tone).toBe('idle');
+  });
+
+  it('says what a finished turn still needs instead of calling it ready to review', () => {
+    const needsYou = 'Needs you: Stopped after 2 retries.';
+    const finished = chat({ unread: true, latestRun: run('succeeded', { needsYou }) });
+    expect(rowState(finished, false)).toEqual({
+      tone: 'done',
+      label: 'Finished, needs you',
+      sub: needsYou,
+    });
+    expect(rowState(finished, true).tone).toBe('idle');
   });
 
   it('explains why a run stopped', () => {

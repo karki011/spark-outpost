@@ -6,7 +6,6 @@ import { effortKeepsCache } from '../model-cards/cards.ts';
 import type { StoredSession } from '../providers/provider.ts';
 
 export const SESSION_IDLE_MS = 4 * 60 * 60 * 1000;
-export const SESSION_OPEN_LIMIT = 16;
 export const SESSION_WORKDIR_ROOT = join(tmpdir(), 'spark-outpost-sessions');
 
 export const RESUME_REASONS = {

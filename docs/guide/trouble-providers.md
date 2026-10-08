@@ -16,7 +16,7 @@ Open **Settings → AI providers** and select the provider's tile. The message u
 | "API key mode also needs the `claude` CLI installed"     | Install the CLI as above. Z.ai and API keys run through it.                                      |
 | "You're not logged in to the `claude` CLI"               | Run `claude auth login`, or `codex login`, then **Try again**.                                   |
 | "Couldn't reach …"                                       | Check your internet connection.                                                                  |
-| In a chat: "… isn't signed in"                           | Reconnect on the provider's screen, then resend.                                                 |
+| In a chat: "… isn't signed in" or "… couldn't sign in"   | Reconnect on the provider's screen, then resend.                                                 |
 
 Still stuck? **Detect and verify** on **Local CLI** reruns every check.
 

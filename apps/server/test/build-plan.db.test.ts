@@ -141,7 +141,7 @@ describe('the plan of a build is saved as the agreed plan', { timeout: 200_000 }
     const list = await pieceList(t, runId);
     expect(list.planVersion).toBe(1);
     expect(list.pieces.map((piece) => [piece.key, piece.provider, piece.model])).toEqual([
-      ['P1', 'codex', 'gpt-6-sol'],
+      ['P1', 'claude', 'sonnet'],
       ['P2', 'claude', 'opus[1m]'],
       ['P3', 'claude', 'sonnet'],
     ]);

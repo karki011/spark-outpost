@@ -454,7 +454,8 @@ export function escalate(context: RouteContext, previous: MemberRoute): MemberRo
         effort: escalatedEffort(effortIds(candidate), previous.pick.effort),
       }
     : { ...previous.pick, effort: strongerEffort(effortIds(candidate), previous.pick.effort) };
-  const next: MemberRoute = { ...previous, pick, rule: 'one tier up' };
+  const rule = up ? 'one tier up' : `no higher tier on ${candidate?.name ?? provider}`;
+  const next: MemberRoute = { ...previous, pick, rule };
   delete next.note;
   return next;
 }

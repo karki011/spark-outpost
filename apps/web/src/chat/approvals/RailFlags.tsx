@@ -6,6 +6,7 @@ import { queryKeys } from '../../api/client.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { ShieldIcon } from '../../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
+import { flagNote } from './rail-flag-text.ts';
 
 function Original({ original }: { original: RailOriginal }) {
   const { state, copy } = useCopyFeedback();
@@ -42,10 +43,7 @@ function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId
       </p>
       {open ? (
         <>
-          <p className="rail-flag-sub">
-            The agent did this without asking. Spark didn&apos;t stop the run.
-            {!flag.inside && flag.originals.length === 0 && " Spark can't revert this."}
-          </p>
+          <p className="rail-flag-sub">{flagNote(flag)}</p>
           {flag.originals.map((original) => (
             <Original key={original.path} original={original} />
           ))}

@@ -3,9 +3,11 @@ import {
   modePosture,
   isReadOnlyPosture,
   type Category,
+  type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import type { turnIntent } from '../orchestration/intake.ts';
 import { buildsByRule, planOnlyByRule, questionByRule } from '../orchestration/risk-rules.ts';
+import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { PLAN_MODE_ID } from './plan-mode.ts';
@@ -67,6 +69,11 @@ export function asPlanTurn(input: RunInput): RunInput {
   };
 }
 
-export async function markPlanTurn(db: Db, runId: string): Promise<void> {
-  await db.query(`UPDATE runs SET mode = 'do' WHERE id = $1`, [runId]);
+export async function markPlanTurn(db: Db, input: RunInput): Promise<RunInput> {
+  const chat = await resolveChatSettings(db, input.identity.threadId);
+  const { rows } = await db.query<{ level: InvolvementLevel }>(
+    `UPDATE runs SET mode = 'do', level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
+    [input.identity.runId, chat.level],
+  );
+  return { ...input, level: rows[0]?.level ?? input.level };
 }

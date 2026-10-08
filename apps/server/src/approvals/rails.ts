@@ -94,7 +94,7 @@ function touchesSecret(request: ApprovalRequest, tree: CommandTree | null, readi
   if (!tree) return false;
   const cwd = commandCwd(request);
   return treeWords(tree)
-    .filter((word) => word !== '' && !word.startsWith('-'))
+    .filter((word) => word !== '' && !word.startsWith('-') && !word.startsWith('!'))
     .some((word) => {
       if (!reading && isSecretPath(path.basename(word))) return true;
       return asks(resolveCommandPath(word, cwd, request.home));

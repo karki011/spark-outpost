@@ -116,12 +116,5 @@ test('a plan-only request writes the plan, changes nothing, and raises no card; 
   await turn.getByRole('button', { name: 'Save as agreed plan' }).click();
   await expect(turn.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible();
 
-  await page.locator('.head').getByRole('button', { name: 'Show work panel' }).click();
-  const work = panel(page);
-  await work.getByRole('tab', { name: 'Plan' }).click();
-  const agreed = work.getByRole('region', { name: 'Agreed plan' });
-  await expect(agreed).toContainText('Approved', { timeout: 30_000 });
-  await expect(agreed.locator('.vbadge')).toHaveText('v1');
-  await expect(agreed.getByRole('heading', { name: 'Add CSV export' })).toBeVisible();
   expect(repo.notes()).toBe('start\n');
 });

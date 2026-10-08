@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { NOT_STARTED_STOPPED } from '../src/coordinator/skip.ts';
+import { NOT_STARTED_STOPPED, STOPPED_BY_USER } from '../src/coordinator/skip.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
@@ -105,52 +105,73 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     }
   });
 
-  it('flags a change to the file of a piece running at the same moment and names who made it', async () => {
+  it('lands two ordered pieces that own the same file', async () => {
     await projectFlags(t, root, { parallel: true });
-    const { conversationId, runId } = await begin('#crossedit');
+    const { conversationId, runId } = await begin('#samefile');
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
     const list = await pieceListOf(t, runId);
-    expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
-      ['P1', 'landed'],
-      ['P2', 'landed'],
-      ['P3', 'landed'],
+    expect(list.placement).toBe('shared');
+    expect(list.pieces.map((piece) => [piece.key, piece.status, piece.filesChanged])).toEqual([
+      ['P1', 'landed', ['strings.ts']],
+      ['P2', 'landed', ['strings.ts']],
     ]);
-    const runs = await crewRuns(t, runId);
-    const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
-    expect(overlap(first('P1'), first('P2'))).toBe(true);
-    expect(list.pieces[0]!.violations).toEqual([
-      { path: 'api.ts', action: 'kept', owner: `${first('P2').name} (P2)` },
-    ]);
-    expect(list.pieces[1]!.violations).toEqual([]);
-    const flags = await t.db.query<{ rail: string; title: string; key: string }>(
-      `SELECT f.rail, f.title, r.route->>'pieceKey' AS key FROM rail_flags f
-       JOIN runs r ON r.id = f.run_id WHERE r.parent_run_id = $1`,
-      [runId],
-    );
-    expect(flags.rows).toEqual([
-      {
-        rail: 'other_piece',
-        title: `${first('P1').name} changed a file another piece owns: api.ts`,
-        key: 'P1',
-      },
-    ]);
-    const audit = await t.db.query<{ run_id: string }>(
-      `SELECT l.run_id FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
-       WHERE r.parent_run_id = $1 AND l.method = 'spark/rail_crossed'`,
-      [runId],
-    );
-    expect(audit.rows).toEqual([{ run_id: first('P1').id }]);
-    const refused = await t.db.query(
-      `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
-       WHERE r.parent_run_id = $1 AND a.status = 'denied'`,
-      [runId],
-    );
-    expect(refused.rowCount).toBe(0);
-    expect(await readFile(join(root, 'api.ts'), 'utf8')).toContain('crossed by P1');
-    const reply = (await assistantReplies(t, runId)).at(-1);
-    expect(reply).toContain('`api.ts` kept (P1,');
+    expect(list.pieces.flatMap((piece) => piece.violations)).toEqual([]);
+    expect(await readFile(join(root, 'strings.ts'), 'utf8')).toBe('built by P1\nbuilt by P2\n');
   });
+
+  it.each([
+    ['locations, as Claude reports an edit', '#crossedit'],
+    ['diff content only, as Codex reports an edit', '#crossdiff'],
+  ])(
+    'flags a change to the file of a piece running at the same moment and names who made it: %s',
+    async (_shape, tag) => {
+      await projectFlags(t, root, { parallel: true });
+      const { conversationId, runId } = await begin(tag);
+      const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+      expect(orchestration.status).toBe('succeeded');
+      const list = await pieceListOf(t, runId);
+      expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
+        ['P1', 'landed'],
+        ['P2', 'landed'],
+        ['P3', 'landed'],
+      ]);
+      const runs = await crewRuns(t, runId);
+      const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
+      expect(overlap(first('P1'), first('P2'))).toBe(true);
+      expect(list.pieces[0]!.violations).toEqual([
+        { path: 'api.ts', action: 'kept', owner: `${first('P2').name} (P2)` },
+      ]);
+      expect(list.pieces[1]!.violations).toEqual([]);
+      const flags = await t.db.query<{ rail: string; title: string; key: string }>(
+        `SELECT f.rail, f.title, r.route->>'pieceKey' AS key FROM rail_flags f
+       JOIN runs r ON r.id = f.run_id WHERE r.parent_run_id = $1`,
+        [runId],
+      );
+      expect(flags.rows).toEqual([
+        {
+          rail: 'other_piece',
+          title: `${first('P1').name} changed a file another piece owns: api.ts`,
+          key: 'P1',
+        },
+      ]);
+      const audit = await t.db.query<{ run_id: string }>(
+        `SELECT l.run_id FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
+       WHERE r.parent_run_id = $1 AND l.method = 'spark/rail_crossed'`,
+        [runId],
+      );
+      expect(audit.rows).toEqual([{ run_id: first('P1').id }]);
+      const refused = await t.db.query(
+        `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.status = 'denied'`,
+        [runId],
+      );
+      expect(refused.rowCount).toBe(0);
+      expect(await readFile(join(root, 'api.ts'), 'utf8')).toContain('crossed by P1');
+      const reply = (await assistantReplies(t, runId)).at(-1);
+      expect(reply).toContain('`api.ts` kept (P1,');
+    },
+  );
 
   it('lets an install follow the agent mode while pieces share the tree', async () => {
     await projectFlags(t, root, { parallel: true });
@@ -217,11 +238,18 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     expect(orchestration.status).toBe('cancelled');
     const list = await pieceListOf(t, runId);
     expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
-      ['P1', 'failed'],
-      ['P2', 'failed'],
+      ['P1', 'stopped'],
+      ['P2', 'stopped'],
       ['P3', 'skipped'],
     ]);
-    expect(list.pieces[2]!.note).toBe(NOT_STARTED_STOPPED);
+    expect(list.pieces.map((piece) => piece.note)).toEqual([
+      STOPPED_BY_USER,
+      STOPPED_BY_USER,
+      NOT_STARTED_STOPPED,
+    ]);
+    const reply = (await assistantReplies(t, runId)).at(-1) ?? '';
+    expect(reply).toContain('stopped — You stopped the run.');
+    expect(reply).not.toMatch(/P[12][^\n]*failed/);
     const runs = await crewRuns(t, runId);
     expect(runs.filter((run) => run.pieceKey).map((run) => run.status)).toEqual([
       'cancelled',

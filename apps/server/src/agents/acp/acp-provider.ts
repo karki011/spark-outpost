@@ -34,9 +34,11 @@ import {
   promptText,
 } from './conversation-prompt.ts';
 import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
-import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
+import { exitCause, type SignInCheck } from './exit-cause.ts';
+import { assertProtocolVersion, failureError, namesCause } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
-import { applySessionSettings, modeName } from './apply-settings.ts';
+import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
+import { watchRanModel } from './ran-model.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
@@ -84,6 +86,7 @@ export interface AcpProviderOptions {
   secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
   sparkTools?: SparkToolsAccess;
+  signedIn?: SignInCheck;
 }
 
 const DEFAULT_CANCEL_GRACE_MS = 5_000;
@@ -235,8 +238,10 @@ async function runSession(
       codexConfigFailed(cause, tail);
     if (!retryWithoutProfiles) {
       push(mapper.finish(true));
+      const reported = cause instanceof ProviderError ? null : mapper.failure();
       if (signal.aborted) channel.close();
-      else channel.close(toProviderError(definition.name, cause, tail));
+      else if (reported) channel.close(failureError(definition.name, reported));
+      else channel.close(await exitCause(definition.name, cause, tail, turn, options.signedIn));
     }
   } finally {
     signal.removeEventListener('abort', onAbort);
@@ -250,7 +255,7 @@ async function runSession(
 }
 
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
-  if (error instanceof ProviderError) return error;
+  if (namesCause(error)) return error;
   const exit = await Promise.race([
     agent.exited.catch((reason: unknown) => reason),
     delay(EXIT_WAIT_MS).then(() => null),
@@ -392,25 +397,22 @@ async function converse(
     try {
       if (turn.session) push([sessionOutput(plan.request, opened, turn.session.freshReason)]);
       const wish = modeWish(definition, turn, policy !== null, doing !== null);
-      const applied = await applySessionSettings(ctx, session, definition, turn.settings, wish);
-      push([
-        { kind: 'capabilities', report: applied.capabilities },
-        {
-          kind: 'session_settings',
-          ...applied.current,
-          mode: applied.mode,
-          options: applied.values,
-        },
-        ...(workspace.repo
-          ? [{ kind: 'instructions' as const, files: workspace.repo.following }]
-          : []),
-      ]);
+      const applied = await applySessionSettings(
+        ctx,
+        session,
+        definition,
+        turn.settings,
+        wish,
+        continued,
+      );
+      push(settingsOutputs(applied, workspace.repo?.following ?? null));
       const sessionNotes = turn.session ? [sessionNote(opened, turn.session)] : [];
       const notes = [applied.using, ...sessionNotes, ...workspace.notes, ...plan.notes];
       for (const note of [...notes, ...applied.notes]) {
         if (note) push(mapper.note(note));
       }
       const { live } = applied;
+      const ranModel = watchRanModel(definition.id, definition.name, live, mapper.note);
       const allowed = modeAllowed(definition, policy !== null, doing !== null);
       mapper.trackSettings(
         { ...applied.current, mode: applied.mode, values: applied.values },
@@ -472,6 +474,7 @@ async function converse(
           live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
+        push(ranModel.see(message.update));
         push(commands.see(message.update));
         const observed = await rails?.observe(message.update);
         for (const flag of doing ? (observed?.rails ?? []) : []) {

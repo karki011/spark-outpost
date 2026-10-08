@@ -81,6 +81,25 @@ describe('tiers from cards', () => {
     expect(tierName({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
   });
 
+  it('gives Haiku 5.5 its own small-tier card without taking the haiku alias from Haiku 4.5', () => {
+    const byId = cardFor({ id: 'claude-haiku-5-5' }, 'claude');
+    expect(byId?.id).toBe('claude-haiku-5-5');
+    expect(byId?.price).toMatchObject({
+      inputPerMillion: 0.1,
+      cachedInputPerMillion: 0.01,
+      cacheWritePerMillion: 0.125,
+      outputPerMillion: 0.5,
+    });
+    expect(cardFor({ id: 'haiku', label: 'Haiku 5.5' }, 'claude')?.id).toBe('claude-haiku-5-5');
+    expect(cardFor({ id: 'haiku', label: 'Haiku 4.5' }, 'claude')?.id).toBe('claude-haiku-4-5');
+    expect(cardFor({ id: 'haiku' }, 'claude')?.id).toBe('claude-haiku-4-5');
+    expect(cardFor({ id: 'haiku', label: 'GLM-5.3-Flash' }, 'zai')?.id).toBe('glm-5.3-flash');
+    expect(tierName({ id: 'claude-haiku-5-5', label: 'Haiku 5.5' }, 'claude')).toBe('small');
+    const afterHaiku45 = new Date('2026-10-20T00:00:00Z');
+    expect(usableDefault('claude', 'claude-haiku-5-5', afterHaiku45)).toBe('claude-haiku-5-5');
+    expect(usableDefault('claude', 'haiku', afterHaiku45)).toBeNull();
+  });
+
   it('keeps frontier models off the ladder, so Opus stays top and Codex tops out at 6 Sol', () => {
     expect(tierLadder(claude, 'claude').map((model) => model.id)).toEqual([
       'haiku',

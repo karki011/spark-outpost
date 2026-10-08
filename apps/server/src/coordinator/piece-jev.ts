@@ -7,7 +7,7 @@ import { insertDecision } from '../persistence/orchestrations.ts';
 import { builderModels } from '../orchestration/model-floor.ts';
 import type { Session } from '../orchestration/session.ts';
 import { routeCandidates } from '../routing/candidates.ts';
-import { measuredRate, measuredStrength, type AssignFacts } from './assign.ts';
+import { measuredRate, measuredStrength } from './assign.ts';
 import { destructivePath, JEV_NOT_CONNECTED, type BuilderPlan } from './builder-jev.ts';
 import type { KindPassRates } from './piece-demand.ts';
 import type { ListPlace } from './place-list.ts';
@@ -37,11 +37,11 @@ function blendedPrice(model: AdvisorOption, provider: string): number | null {
   );
 }
 
-function offeredRoutes(s: Session, facts: AssignFacts): RouteOption[] {
+function offeredRoutes(s: Session): RouteOption[] {
   const now = s.route.now ?? new Date();
-  return routeCandidates(s.route.candidates).flatMap((route) => {
-    const candidate = s.route.candidates.find((entry) => entry.provider === route.provider)!;
-    if (facts.unhealthy.has(route.provider)) return [];
+  const chat = s.route.candidates.filter((entry) => entry.provider === s.route.chat.provider);
+  return routeCandidates(chat).flatMap((route) => {
+    const candidate = chat.find((entry) => entry.provider === route.provider)!;
     const floorOk = builderModels(selectableModels(candidate), route.provider, now).some(
       (model) => model.id === route.model,
     );
@@ -212,7 +212,6 @@ export async function routePieces(
   pieces: readonly CheckedPiece[],
   place: ListPlace,
   rulesPicks: ReadonlyMap<string, AgentPick>,
-  facts: AssignFacts,
   plan: BuilderPlan,
 ): Promise<PiecePicks> {
   const building = pieces.filter((piece) => !piece.research);
@@ -227,7 +226,7 @@ export async function routePieces(
   const rules: RouteRules<CheckedPiece> = {
     route: s.route,
     picks: rulesPicks,
-    routes: offeredRoutes(s, facts),
+    routes: offeredRoutes(s),
     placement: place.placement,
     requestDestructive: s.facts.destructive,
     destructive: destructive(s),

@@ -29,10 +29,18 @@ export function needText(worker: string, need: NeededFile): string {
   return `${worker} needs \`${need.path}\` changed: ${what}`;
 }
 
-export function crossedText(worker: string, path: string, patch: string): string {
+export function crossedText(
+  worker: string,
+  path: string,
+  change: { patch: string; whole: boolean },
+): string {
+  const { patch } = change;
   const shown =
     patch.length > PATCH_LIMIT
       ? `${patch.slice(0, PATCH_LIMIT)}\n[cut at ${PATCH_LIMIT} characters]`
       : patch;
-  return `${worker} changed \`${path}\`, which your piece owns. The change was kept. Check it fits your piece and change it if it does not. What it changed:\n\`\`\`diff\n${shown.trim()}\n\`\`\``;
+  const what = change.whole
+    ? `Spark could not single out its change, so this is the whole diff of the file since ${worker} started; it can include your own changes:`
+    : 'What it changed:';
+  return `${worker} changed \`${path}\`, which your piece owns. The change was kept. Check it fits your piece and change it if it does not. ${what}\n\`\`\`diff\n${shown.trim()}\n\`\`\``;
 }

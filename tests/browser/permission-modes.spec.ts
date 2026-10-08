@@ -201,7 +201,7 @@ test('modes and options reported by a live run show up in the picker', async ({ 
   await expect(pickerPanel(page).getByRole('tab', { name: /Options/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await send(page, 'Say hello #build');
+  await send(page, 'How does notes.txt read? #debug #build');
 
   const panel = await openPermissions(page);
   const yolo = panel

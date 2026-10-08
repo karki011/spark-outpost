@@ -12,7 +12,7 @@ import {
 } from '@spark-outpost/contracts';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
-import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
+import { betweenAgents, crewAgents, runAgent } from '../../crew/crew-projection.ts';
 import { doingPhrase, jevDoing } from '../../crew/jev-doing.ts';
 import { PieceBoard } from '../../crew/PieceBoard.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
@@ -125,7 +125,7 @@ function CrewTurnBody({
       )),
     ]);
   const finished = isTerminalRunStatus(orchestration.status);
-  const deciding = !finished && (jev.state === 'thinking' || jev.state === 'working');
+  const deciding = !finished && betweenAgents(orchestration, agents.slice(1));
   const leadId = `lead:${run.id}`;
   const planLine = detail.plans?.lines.find((line) => line.runId === run.id);
   const plannedPieces = planLine?.unit === 'pieces' && planLine.items > 0 ? planLine.items : null;

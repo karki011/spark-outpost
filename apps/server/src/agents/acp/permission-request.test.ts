@@ -27,6 +27,40 @@ const exitPlanOptions = [
 ];
 
 describe('approvalRequestFrom', () => {
+  const asked = (command: unknown) =>
+    approvalRequestFrom(
+      {
+        sessionId: 's',
+        toolCall: { toolCallId: 'a', title: 'Run command', kind: 'execute', rawInput: { command } },
+        options,
+      },
+      context,
+    ).command;
+
+  it('reads a script Codex sends quoted as one shell word as the script itself', () => {
+    expect(asked(`"pwd && rg --files -g '"'!**/.env'"' -g '"'!**/.env.*'"' | head -80"`)).toBe(
+      "pwd && rg --files -g '!**/.env' -g '!**/.env.*' | head -80",
+    );
+    expect(asked(`"sed -n '1,160p' README.md && node --version"`)).toBe(
+      "sed -n '1,160p' README.md && node --version",
+    );
+    expect(asked(`"rm -rf /etc/x && echo \\"done\\""`)).toBe('rm -rf /etc/x && echo "done"');
+    expect(asked(`'git push --force origin main'`)).toBe('git push --force origin main');
+  });
+
+  it('leaves every other command as the agent sent it', () => {
+    for (const command of [
+      'npm test',
+      'git diff --check && git status --short',
+      `/bin/zsh -lc "sed -n '1,160p' package.json"`,
+      `"quoted" plain`,
+      `echo "a b"`,
+      `"node"`,
+    ]) {
+      expect(asked(command)).toBe(command);
+    }
+  });
+
   it("keeps the agent's own reason for asking", () => {
     const request = (description: unknown) =>
       approvalRequestFrom(

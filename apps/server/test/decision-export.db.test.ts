@@ -117,7 +117,7 @@ describe('decision audit in the export', { timeout: 300_000 }, () => {
     await replay.db.db.query(
       `UPDATE provider_sessions SET last_used_at = now() - interval '2 days' WHERE closed_at IS NULL`,
     );
-    const closed = await sweepProviderSessions(replay.db.db, { idleMs: 60_000, openLimit: 16 });
+    const closed = await sweepProviderSessions(replay.db.db, { idleMs: 60_000 });
     expect(closed).toBeGreaterThan(0);
     const sessions = ofType(await exported(replay), 'session');
     expect(sessions.at(-1)).toMatchObject({ event: 'close', reason: 'idle', runId: null });

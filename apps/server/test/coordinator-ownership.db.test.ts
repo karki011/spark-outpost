@@ -117,6 +117,9 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
       expect(owner.rows[0]!.prompt).toContain(
         'Rivet (P2) changed `view.ts`, which your piece owns',
       );
+      expect(owner.rows[0]!.prompt.split('changed `view.ts`, which your piece owns')).toHaveLength(
+        2,
+      );
       const reply = (await assistantReplies(t, runId)).at(-1);
       expect(reply).toContain('`view.ts` kept (P2, Tack (P3) owns it)');
     },

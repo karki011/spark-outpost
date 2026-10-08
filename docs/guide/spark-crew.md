@@ -42,3 +42,5 @@ A Coordinator splits a big plan into pieces such as **P1**, one Builder each. Je
 The Coordinator gives each piece its own files. Spark checks that plan once: two pieces that run at the same time can't own the same file.
 
 Builders share one working tree and follow your agent mode like any other run. If one changes another piece's file, Spark keeps the change, flags it and tells that piece's Builder. The run goes on.
+
+When you press **Stop**, running pieces read **stopped**, not failed.

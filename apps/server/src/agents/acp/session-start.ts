@@ -30,7 +30,15 @@ export function extraRoots(policy: PathPolicy | null): string[] {
   return policy ? policy.roots.slice(1).map((root) => root.path) : [];
 }
 
-export function sessionMeta(
+const THINKING_ARGS = { 'thinking-display': 'summarized' };
+
+function withThinkingShown(meta: Record<string, unknown>): Record<string, unknown> {
+  const claudeCode = meta.claudeCode as { options: Record<string, unknown> };
+  const options = { ...claudeCode.options, extraArgs: THINKING_ARGS };
+  return { ...meta, claudeCode: { ...claudeCode, options } };
+}
+
+function definedMeta(
   definition: AgentDefinition,
   policy: PathPolicy | null,
   changing: boolean,
@@ -50,4 +58,9 @@ export function sessionMeta(
   }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
+}
+
+export function sessionMeta(...args: Parameters<typeof definedMeta>) {
+  const meta = definedMeta(...args);
+  return meta && args[0].summarizesThinking ? withThinkingShown(meta) : meta;
 }

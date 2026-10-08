@@ -46,6 +46,8 @@ export interface ShipOptions {
   keepCheckout?: boolean;
   duringRun?: boolean;
   notes?: readonly string[];
+  subject?: string;
+  summary?: string | null;
   exclude?: readonly string[];
   draft?: boolean;
 }

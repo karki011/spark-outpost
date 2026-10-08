@@ -47,9 +47,13 @@ test('a story split into pieces builds with no plan card and shows the coordinat
     await expect(rows.filter({ hasText: key })).toContainText('landed');
   }
   await expect(board.getByRole('button')).toHaveCount(0);
-  for (const name of ['Atlas', 'Bolt', 'Rivet', 'Tack']) {
-    await expect(agentHead(page, name)).toBeVisible();
-  }
+  await expect(agentHead(page, 'Atlas')).toBeVisible();
+  const builders = page.getByRole('group', { name: 'Worked in parallel: Bolt, Rivet and Tack' });
+  await expect(builders.locator('.par-head')).toHaveText([
+    /^Bolt\s*P1 · shared tree/,
+    /^Rivet\s*P2 · shared tree/,
+    /^Tack\s*P3 · shared tree/,
+  ]);
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
   expect(repo.file('view.ts')).toContain('built by P3');
 });

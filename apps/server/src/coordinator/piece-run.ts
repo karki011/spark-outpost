@@ -23,6 +23,7 @@ import { owns } from './owned.ts';
 import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
 import { announceLanding } from './landing-notices.ts';
 import { pieceTurn, type TurnWork } from './piece-turn.ts';
+import { STOPPED_BY_USER } from './skip.ts';
 import { pieceRoute } from './provider-state.ts';
 
 export interface PieceSite {
@@ -287,8 +288,9 @@ async function failPiece(
   result: MemberResult,
   patch: { fixTurns?: number; note?: string | null } = {},
 ): Promise<PieceOutcome> {
-  await movePiece(s.deps.db, work.piece.id, ['running'], 'failed', {
-    note: result.error,
+  const stoppedByUser = result.outcome === 'cancelled';
+  await movePiece(s.deps.db, work.piece.id, ['running'], stoppedByUser ? 'stopped' : 'failed', {
+    note: stoppedByUser ? STOPPED_BY_USER : result.error,
     ...patch,
   });
   await publish(s);
@@ -331,11 +333,13 @@ export async function runPiece(
     attempts: piece.attempts + 1,
   });
   await publish(s);
+  const before = await treeOf(s, await site.cwd());
+  if (before) (coordination.startTrees ??= new Map()).set(piece.key, before);
   const work: PieceWork = {
     piece,
     coordination,
     site,
-    before: await treeOf(s, await site.cwd()),
+    before,
     since: new Date().toISOString(),
     violations: [],
     note: null,

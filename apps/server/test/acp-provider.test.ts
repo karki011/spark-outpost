@@ -171,10 +171,59 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
       "Fake finished without a reply. It may not be able to reach its model, so check that it's signed in and try again.",
     ],
     ['#refuse', 'Fake declined to answer this request.'],
+    [
+      '#signedout',
+      "Fake couldn't sign in (Sign in to continue using Claude.). Open Settings, reconnect Fake, and try again.",
+    ],
+    [
+      '#signedoutquiet',
+      "Fake isn't signed in any more. Open Settings, reconnect Fake, and try again.",
+    ],
   ])('turns the agent failure %s into a readable provider error', async (prompt, message) => {
     const { error } = await collect(prompt);
     expect(error).toBeInstanceOf(ProviderError);
     expect((error as Error).message).toBe(message);
+  });
+
+  it('checks the sign-in once when the agent exits without saying why', async () => {
+    const exits = async (signedIn?: () => Promise<boolean | null>) => {
+      const checked = createAcpProvider({
+        definition,
+        launch,
+        cancelGraceMs: 2_000,
+        ...(signedIn ? { signedIn } : {}),
+      });
+      const run = checked.run({
+        prompt: '#crash',
+        history: [],
+        settings,
+        signal: new AbortController().signal,
+      });
+      try {
+        for await (const output of run) void output;
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return null;
+    };
+    let checks = 0;
+    const signedOut = async () => {
+      checks += 1;
+      return false;
+    };
+    expect(await exits(signedOut)).toBe(
+      "Fake isn't signed in any more. Open Settings, reconnect Fake, and try again.",
+    );
+    expect(checks).toBe(1);
+    const crashed = 'Fake stopped unexpectedly (exit code 3). Try again.';
+    expect(await exits()).toBe(crashed);
+    expect(await exits(async () => true)).toBe(crashed);
+    expect(await exits(async () => null)).toBe(crashed);
+    expect(
+      await exits(async () => {
+        throw new Error('no CLI');
+      }),
+    ).toBe(crashed);
   });
 
   it('warns while the agent reconnects to its model before failing', async () => {

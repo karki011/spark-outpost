@@ -64,11 +64,6 @@ export interface LandedChange {
   patch: string;
 }
 
-function usesLanded(piece: TaskPiece, landed: LandedChange['piece']): boolean {
-  if (piece.dependsOn.includes(landed.key)) return true;
-  return piece.reads.some((file) => landed.filesChanged.includes(file));
-}
-
 function stem(file: string): string {
   return file.replace(/^.*\//, '').replace(/\.[^.]+$/, '');
 }
@@ -84,6 +79,29 @@ export function importsAny(sources: readonly string[], files: readonly string[])
   );
 }
 
+function usedFiles(
+  piece: TaskPiece,
+  sources: readonly string[],
+  landed: LandedChange['piece'],
+): string[] {
+  if (piece.dependsOn.includes(landed.key)) return landed.filesChanged;
+  return landed.filesChanged.filter(
+    (file) => piece.reads.includes(file) || importsAny(sources, [file]),
+  );
+}
+
+const FILE_HEADER = /^diff --git a\/.* b\/(.+)$/;
+
+function patchOf(patch: string, files: readonly string[]): string {
+  return patch
+    .split(/^(?=diff --git )/m)
+    .filter((part) => {
+      const file = FILE_HEADER.exec(part.split('\n', 1)[0]!)?.[1];
+      return file !== undefined && files.includes(file);
+    })
+    .join('');
+}
+
 export function landingNotices(
   landed: LandedChange,
   running: readonly { piece: TaskPiece; sources: readonly string[] }[],
@@ -91,19 +109,16 @@ export function landingNotices(
   const notices: LandingNotice[] = [];
   const name = `${landed.builder}'s ${landed.piece.title}`;
   for (const { piece, sources } of running) {
-    const imports = importsAny(sources, landed.piece.filesChanged);
-    const uses = imports || usesLanded(piece, landed.piece);
-    const symbols = [
-      ...contractSymbols(piece.contract),
-      ...(uses ? contractSymbols(landed.piece.contract) : []),
-    ];
-    const touched = touchedSymbols([...new Set(symbols)], landed.patch);
+    const used = usedFiles(piece, sources, landed.piece);
+    if (used.length === 0) continue;
+    const symbols = [...contractSymbols(piece.contract), ...contractSymbols(landed.piece.contract)];
+    const touched = touchedSymbols([...new Set(symbols)], patchOf(landed.patch, used));
     if (touched.length === 0) continue;
     notices.push({
       pieceKey: piece.key,
       kind: 'contract_changed',
       body: `${name} changed ${touched.map((symbol) => `\`${symbol}\``).join(', ')}, which your piece uses; check your code against the new version.`,
-      urgent: imports,
+      urgent: importsAny(sources, landed.piece.filesChanged),
     });
   }
   return notices;

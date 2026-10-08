@@ -31,6 +31,15 @@ export function projectMoveNote(move: ProjectMove): string {
   return `Note: this chat's project folder changed from ${move.from} to ${move.to} since the earlier messages. Files, paths and work mentioned earlier refer to the old folder and may not exist here; check the current folder before relying on them.`;
 }
 
+async function ownWorktree(db: Db, conversationId: string, move: ProjectMove): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM chat_worktrees
+     WHERE conversation_id = $1 AND removed_at IS NULL AND repo_root = $2 AND path = $3`,
+    [conversationId, move.from, move.to],
+  );
+  return rows.length > 0;
+}
+
 export async function noteProjectMove(db: Db, input: RunInput, append: Append): Promise<RunInput> {
   if (input.parentRunId !== null) return input;
   const previous = await recordRoots(db, input.identity.runId, input.projectRoots);
@@ -38,6 +47,7 @@ export async function noteProjectMove(db: Db, input: RunInput, append: Append): 
   const to = input.projectRoots[0];
   if (!from || !to || from === to || input.history.length === 0) return input;
   const move = { from, to };
+  if (await ownWorktree(db, input.identity.threadId, move)) return input;
   const step = projectMoveStep(move);
   await append(runEvents.stepStarted(step));
   await append(runEvents.stepFinished(step));

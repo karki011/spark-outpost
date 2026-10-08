@@ -12,6 +12,7 @@ export function mayCoordinate(s: Session): boolean {
     s.input.projectRoots.length > 0 &&
     s.taskId !== null &&
     !s.flow.solo &&
+    !s.planTurn &&
     !s.facts.trivial &&
     (s.need === undefined || s.need === 'build')
   );

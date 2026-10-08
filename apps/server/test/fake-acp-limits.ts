@@ -1,4 +1,5 @@
 import type * as acp from '@agentclientprotocol/sdk';
+import { signedOut } from './fake-acp-access.ts';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
 
 export function rateLimited(turn: RoleTurn, key: string, tag: RegExp): boolean {
@@ -35,6 +36,7 @@ export function withTurnFailure(
 }
 
 export async function codexLimited(turn: RoleTurn, key: string, file: string): Promise<boolean> {
+  if (rateLimited(turn, key, /#piecesignedout/)) return signedOut(turn.update, true);
   if (rateLimited(turn, key, /#turn429(?!after)/)) {
     await turn.say(`I'll build ${key} in ${file}.`);
     failedTurns.set(turn.sessionId, airFailure('error'));

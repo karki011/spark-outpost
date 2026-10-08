@@ -1,4 +1,5 @@
 import {
+  NEEDS_YOU_PREFIX,
   PERMISSION_DO,
   UNTITLED_CONVERSATION,
   titleFromMessage,
@@ -76,6 +77,10 @@ const summaryQuery = `
       SELECT e.payload->>'stepName' FROM run_events e
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
+    CASE WHEN r.status = 'succeeded' THEN (
+      SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$) FROM messages m
+      WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
+    ) END AS latest_run_needs_you,
     COALESCE(
       r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
       false
@@ -85,8 +90,8 @@ const summaryQuery = `
     ) AS needs_input,
     fl.flag_title,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
-    p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_provider,
-    p.pending_pr_feedback,
+    p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_plan,
+    p.pending_provider, p.pending_pr_feedback,
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
       WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at

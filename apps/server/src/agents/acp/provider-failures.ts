@@ -67,7 +67,7 @@ const QUOTA_TEXT =
   /usage limit|insufficient_quota|exceeded your current quota|credit balance is too low|billing_error/i;
 const RATE_LIMIT_TEXT = /\b429\b|rate[\s_-]?limit|too many requests/i;
 const AUTH_TEXT =
-  /\b401\b|authentication_error|invalid_api_key|token[_ ]expired|token has expired|unauthorized/i;
+  /\b401\b|authentication_error|invalid_api_key|token[_ ]expired|token has expired|access token could not be refreshed|unauthorized/i;
 const CONTEXT_TEXT =
   /context_length_exceeded|prompt is too long|maximum context length|context window/i;
 const OVERLOADED_TEXT = /\b529\b|overloaded_error|server is overloaded|serverOverloaded/i;

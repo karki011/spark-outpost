@@ -68,6 +68,7 @@ test('Models is one table per provider and a row opens for the details', async (
     /^Sonnet 5\.5/,
     /^Opus 5\.5/,
     'Only when you pick it',
+    /^Haiku 5\.5/,
     /^Haiku 4\.5/,
     /^Fable 5\.1/,
   ]);
@@ -148,6 +149,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);
@@ -160,6 +162,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);
@@ -172,6 +175,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5.5',
     'Fable 5.1',
     'Haiku 4.5',
+    'Haiku 5.5',
   ]);
   await expect(codex.getByRole('columnheader', { name: 'Out', exact: true })).toHaveAttribute(
     'aria-sort',
@@ -194,6 +198,7 @@ test('price and tier headers sort every table inside its groups', async ({ page 
     'Sonnet 5',
     'Sonnet 5.5',
     'Opus 5.5',
+    'Haiku 5.5',
     'Haiku 4.5',
     'Fable 5.1',
   ]);
@@ -254,7 +259,7 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   const chips = dialog.getByRole('radiogroup', { name: 'Show models from' });
   const regions = dialog.getByRole('region');
   await expect(regions).toHaveCount(3);
-  await expect(chips.getByRole('radio', { name: /^Claude\s*5 models$/ })).toBeVisible();
+  await expect(chips.getByRole('radio', { name: /^Claude\s*6 models$/ })).toBeVisible();
 
   await chips.getByRole('radio', { name: /^Codex/ }).click();
   await expect(chips.getByRole('radio', { name: /^Codex/ })).toBeChecked();

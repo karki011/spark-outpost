@@ -67,8 +67,21 @@ function pieceTurn(pieces: TaskPiece[], crew: CrewMember[]) {
 }
 
 describe('what Jev is doing between agents', () => {
-  it('reads the message while the turn is at intake', () => {
-    expect(jevDoing(orchestration({ phase: 'intake' }), null)).toEqual({ kind: 'message' });
+  it('names the question that is out for as long as Jev has it', () => {
+    const reviewed = [builder(1, 'P1'), member({ runId: RUN(4), role: 'critic', name: 'Wren' })];
+    const turn = pieceTurn([piece('P1', 'landed')], reviewed);
+    expect(jevDoing(turn, 1)).toEqual({ kind: 'next' });
+    const checking = { ...turn, jevAsk: { kind: 'check' as const, pieces: null } };
+    expect(jevDoing(checking, 1)).toEqual({ kind: 'check', pieceKey: null });
+    const routing = { ...turn, jevAsk: { kind: 'models' as const, pieces: 4 } };
+    expect(jevDoing(routing, null)).toEqual({ kind: 'models', count: 4 });
+  });
+
+  it('does not say Jev is reading the message once the turn has its answer', () => {
+    expect(jevDoing(orchestration({ phase: 'intake' }), null)).toEqual({
+      kind: 'model',
+      pieceKey: null,
+    });
   });
 
   it('picks a model before the first agent starts', () => {
@@ -142,7 +155,6 @@ describe('what Jev is doing between agents', () => {
 
 describe('the words for what Jev is doing', () => {
   it.each([
-    [{ kind: 'message' } as const, 'reading your message'],
     [{ kind: 'models', count: 3 } as const, 'picking models for 3 pieces'],
     [{ kind: 'models', count: 1 } as const, 'picking a model for 1 piece'],
     [{ kind: 'models', count: null } as const, 'picking models for the pieces'],

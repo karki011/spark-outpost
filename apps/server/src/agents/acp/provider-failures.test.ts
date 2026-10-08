@@ -107,6 +107,13 @@ describe('other common provider errors in plain words', () => {
     expect(
       kind(body({ type: 'authentication_error', message: 'OAuth token has expired.' }, 401)),
     ).toBe('auth');
+    for (const refresh of [
+      'Your access token could not be refreshed because your refresh token was revoked. Please log out and sign in again.',
+      'Your access token could not be refreshed because you have since logged out or signed in to another account. Please sign in again.',
+      'Your access token could not be refreshed. Please log out and sign in again.',
+    ]) {
+      expect(kind(refresh), refresh).toBe('auth');
+    }
     expect(
       kind(
         body({

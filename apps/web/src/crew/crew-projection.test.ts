@@ -123,6 +123,15 @@ describe('crew agents', () => {
     );
   });
 
+  it('shows Jev done once its answer is back and working only while a question is out', () => {
+    const answered = orchestration({ status: 'running', phase: 'intake', crew: [] });
+    expect(crewAgents(answered)[0]!.state).toBe('done');
+    const settled = orchestration({ status: 'running', phase: 'building' });
+    expect(crewAgents(settled)[0]!.state).toBe('done');
+    const asking = { ...settled, jevAsk: { kind: 'check' as const, pieces: null } };
+    expect(crewAgents(asking)[0]!.state).toBe('working');
+  });
+
   it('shows Jev waiting while a checkpoint is open', () => {
     const agents = crewAgents(
       orchestration({ pendingCheckpoint: checkpoint({ kind: 'clarify' }) }),

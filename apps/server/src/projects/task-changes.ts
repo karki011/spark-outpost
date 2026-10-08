@@ -22,6 +22,7 @@ import { gitFileAt, workingTree } from './snapshot.ts';
 
 export interface ListedRun {
   runId: string;
+  root: string;
   revertedAt: string | null;
   name?: string;
   copy?: string;
@@ -213,7 +214,12 @@ async function runFiles(
         )
       : await backupListed(db, run, sameRoot);
   if (files.length === 0) return null;
-  return { runId: run.runId, revertedAt: run.revertedAt?.toISOString() ?? null, files };
+  return {
+    runId: run.runId,
+    root: run.snapshot.root,
+    revertedAt: run.revertedAt?.toISOString() ?? null,
+    files,
+  };
 }
 
 export async function taskChangeSet(
@@ -244,7 +250,13 @@ export async function taskChangeSet(
 
 export function leanChanges(runs: readonly ListedRun[]): TaskChanges {
   return {
-    runs: runs.map(({ files, ...run }) => ({ ...run, files: files.map((entry) => entry.file) })),
+    runs: runs.map(({ runId, revertedAt, name, copy, files }) => ({
+      runId,
+      revertedAt,
+      ...(name ? { name } : {}),
+      ...(copy ? { copy } : {}),
+      files: files.map((entry) => entry.file),
+    })),
   };
 }
 

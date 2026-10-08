@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { planDocuments } from '../src/persistence/plan-documents.ts';
+import { expectConformantRun } from './agui-conformance.ts';
 import { linkedConversation } from './approval-support.ts';
 import { FAKE_PLAN } from './fake-acp-plans.ts';
 import {
@@ -116,6 +117,30 @@ describe('a plan turn', { timeout: 120_000 }, () => {
       expect.objectContaining({ source: 'claude_plan_mode', body: FAKE_PLAN, status: 'approved' }),
     ]);
     expect(lines).toEqual([{ runId, version: 1, items: 3, unit: 'steps' }]);
+  });
+
+  it('checks, keeps and commits what an approved plan built, like any other build', async () => {
+    const { run, reply, done, runId } = await turn(
+      '/plan Add CSV export #nativeplan #planbuilds',
+      'do',
+      'auto',
+    );
+
+    expect(run).toEqual({ mode: 'do', status: 'succeeded' });
+    expect(reply).toContain('Building it now.');
+    expect(reply).toMatch(/Committed [0-9a-f]{7} on spark\/\S+, not pushed\./);
+    expect(done?.orchestration).toMatchObject({ status: 'succeeded' });
+    const kept = await t.db.query<{ kind: string; decided_by: string }>(
+      `SELECT kind, decided_by FROM approvals WHERE run_id = $1 AND kind = 'accept'`,
+      [runId],
+    );
+    expect(kept.rows).toEqual([{ kind: 'accept', decided_by: 'level' }]);
+    const turns = await t.db.query<{ role: string | null }>(
+      `SELECT role FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL`,
+      [conversationId],
+    );
+    expect(turns.rows).toHaveLength(1);
+    await expectConformantRun(t.db, runId);
   });
 
   it('a question in a Plan-mode chat stays a read-only turn with an orchestration record', async () => {

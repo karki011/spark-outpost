@@ -7,6 +7,7 @@ import type {
   ChangedFile,
 } from '@spark-outpost/contracts';
 import type { FileContents, ListedFile } from './change-list.ts';
+import { netTotals, type EntryContents } from './change-totals.ts';
 import type { ListedRun } from './task-changes.ts';
 
 const MAX_SETS = 8;
@@ -16,6 +17,7 @@ const TOP_FILES = 5;
 
 export interface SetEntry {
   runId: string;
+  root: string;
   listed: ListedFile;
 }
 
@@ -56,7 +58,7 @@ export function buildChangeSet(
 ): ChangeSet {
   const entries = runs
     .filter((run) => !run.revertedAt)
-    .flatMap((run) => run.files.map((listed) => ({ runId: run.runId, listed })))
+    .flatMap((run) => run.files.map((listed) => ({ runId: run.runId, root: run.root, listed })))
     .sort(byPath);
   return { version, taskId, createdAt: now, runs, entries };
 }
@@ -88,7 +90,7 @@ function sums(files: readonly ChangedFile[]): { files: number; added: number; re
   };
 }
 
-export function summarize(set: ChangeSet) {
+export async function summarize(set: ChangeSet, contents: EntryContents) {
   const runs: ChangeRunSummary[] = set.runs.map((run) => ({
     runId: run.runId,
     revertedAt: run.revertedAt,
@@ -102,7 +104,7 @@ export function summarize(set: ChangeSet) {
     .map(toEntry);
   return {
     version: set.version,
-    ...sums(set.entries.map((entry) => entry.listed.file)),
+    ...(await netTotals(set.entries, contents)),
     runs,
     top,
   };

@@ -32,6 +32,29 @@ describe('which file a tool call is looking at', () => {
     expect(fileFocus('read', [], { file_path: '/work/app/.env' })).toBeNull();
   });
 
+  it('reads every file of an edit that names its files only in diff content', () => {
+    const tracker = createFocusTracker();
+    const diff = (path: string) => ({ type: 'diff', path, oldText: null, newText: 'x' });
+    const content = [diff('/repo/src/lru.ts'), diff('/repo/test/lru.test.ts'), diff('/repo/.env')];
+    expect(tracker.see('e', 'edit', undefined, undefined, content)).toEqual([
+      { kind: 'file_focus', path: '/repo/src/lru.ts', line: null, limit: null, action: 'edit' },
+      {
+        kind: 'file_focus',
+        path: '/repo/test/lru.test.ts',
+        line: null,
+        limit: null,
+        action: 'edit',
+      },
+    ]);
+    expect(tracker.see('e', 'edit', undefined, undefined, content)).toEqual([]);
+    expect(tracker.see('r', 'read', undefined, undefined, content)).toEqual([]);
+    expect(
+      tracker.see('c', 'edit', [{ path: '/repo/a.ts' }], { file_path: '/repo/a.ts' }, [
+        diff('/repo/a.ts'),
+      ]),
+    ).toHaveLength(1);
+  });
+
   it('reports a tool call once until what it looks at changes', () => {
     const tracker = createFocusTracker();
     const first = tracker.see('t', 'read', [{ path: '/repo/a.ts', line: 1 }], {});

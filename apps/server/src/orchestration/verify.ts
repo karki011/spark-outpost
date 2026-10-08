@@ -9,7 +9,7 @@ import { callJev } from './jev-calls.ts';
 import { changesForReview } from './member-prompts.ts';
 import { DIFFS_OFF, recordAdvice } from './observe.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
-import type { Session } from './session.ts';
+import { whileAskingJev, type Session } from './session.ts';
 import { ACT_AT } from '../advisor/policy.ts';
 import { checksPhrase } from './critic-fix.ts';
 import type { CascadeEvidence } from './flow-types.ts';
@@ -54,17 +54,19 @@ export async function verifyChange(s: Session): Promise<FlowEvent> {
     });
     return NOT_VERIFIED;
   }
-  const call = await callJev(
-    s.jev,
-    () =>
-      buildVerdictQuestions({
-        request: s.input.userRequest,
-        plan,
-        requirements,
-        diff: patch,
-        checks: s.checkLines,
-      }),
-    s.control.signal,
+  const call = await whileAskingJev(s, { kind: 'check', pieces: null }, () =>
+    callJev(
+      s.jev,
+      () =>
+        buildVerdictQuestions({
+          request: s.input.userRequest,
+          plan,
+          requirements,
+          diff: patch,
+          checks: s.checkLines,
+        }),
+      s.control.signal,
+    ),
   );
   const reading = readVerdict(
     requirements,

@@ -2,8 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { getConversationDetail, getSummary } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
+import { providerIssues } from '../src/persistence/provider-health.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { runChanges, revertRun } from '../src/projects/run-changes.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
@@ -87,6 +88,31 @@ describe('repair and escalation', () => {
       /Needs you: Stopped after 2 retries\.$/,
     );
     expect(orchestration.status).toBe('succeeded');
+    expect((await getSummary(t.db, conversationId))?.latestRun).toMatchObject({
+      status: 'succeeded',
+      needsYou: 'Needs you: Stopped after 2 retries.',
+    });
+  }, 60_000);
+
+  it('says a signed-out provider plainly, once, and does not retry on it', async () => {
+    await start();
+    script.scenario = TRIVIAL;
+    const signedOut = withTag(TRIVIAL, '#signedout');
+    const { conversationId, runId } = await startScenario(t, root, signedOut, 'hands-off');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    const message =
+      "Claude couldn't sign in (Sign in to continue using Claude.). Open Settings, reconnect Claude, and try again.";
+    expect(asked).toEqual([]);
+    expect(orchestration.crew.map((member) => [member.role, member.status])).toEqual([
+      ['builder', 'failed'],
+    ]);
+    expect(orchestration.retries).toBe(0);
+    expect(orchestration.status).toBe('failed');
+    expect((await getRun(t.db, runId))?.error).toBe(message);
+    expect((await assistantReplies(t, runId)).at(-1)).toContain(message);
+    expect(await providerIssues(t.db, t.workspaceId)).toMatchObject([
+      { provider: 'claude', kind: 'auth', message },
+    ]);
   }, 60_000);
 
   it('recovers from one failure by retrying one tier up without asking', async () => {

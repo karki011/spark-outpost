@@ -4,7 +4,7 @@ import type { JevStatus } from '@spark-outpost/contracts';
 import { BUILDER_TASKS_MAX } from '../advisor/policy.ts';
 import { callJev, type JevCall } from '../orchestration/jev-calls.ts';
 import { destructiveTargets } from '../orchestration/risk-rules.ts';
-import type { Session } from '../orchestration/session.ts';
+import { whileAskingJev, type Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
 import { projectSettings } from './builder-env.ts';
 import {
@@ -147,7 +147,9 @@ export async function askBuilders(s: Session, assessment: Assessment): Promise<B
     pieces: tasks,
     facts,
   };
-  const call = await callJev(s.jev, () => builderQuestions(ask), s.control.signal);
+  const call = await whileAskingJev(s, { kind: 'models', pieces: tasks.length }, () =>
+    callJev(s.jev, () => builderQuestions(ask), s.control.signal),
+  );
   if (call.status !== 'answered' || !call.response) {
     return rulesPlan(s, tasks, jevFailure(call), call);
   }
@@ -188,7 +190,9 @@ export async function askPieces(s: Session, pieces: readonly JevPiece[]): Promis
   const root = s.input.projectRoots[0]!;
   const facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
   const ask: PieceAsk = { request: s.input.userRequest, pieces, facts };
-  const call = await callJev(s.jev, () => pieceQuestions(ask), s.control.signal);
+  const call = await whileAskingJev(s, { kind: 'models', pieces: pieces.length }, () =>
+    callJev(s.jev, () => pieceQuestions(ask), s.control.signal),
+  );
   if (call.status !== 'answered' || !call.response) {
     return rulesPlan(s, pieces, jevFailure(call), call);
   }

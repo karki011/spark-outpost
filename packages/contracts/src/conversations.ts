@@ -80,6 +80,7 @@ export const conversationSummarySchema = z.object({
       provider: z.string().nullable().default(null),
       progress: planProgressSchema.nullable().default(null),
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
+      needsYou: z.string().nullable().optional(),
     })
     .nullable(),
   archivedAt: z.string().nullable(),

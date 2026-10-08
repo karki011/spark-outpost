@@ -34,3 +34,58 @@ export async function pieceCommands(db: Queryable, parentRunId: string): Promise
   );
   return rows.map((row) => ({ pieceKey: row.piece_key, command: row.command, cwd: row.cwd }));
 }
+
+export interface RunEditDiff {
+  path: string;
+  oldText: string | null;
+  newText: string;
+}
+
+export interface RunEditRecord {
+  diffs: RunEditDiff[];
+  cut: boolean;
+}
+
+const SESSION_UPDATE = 'session/update';
+
+export async function runEditDiffs(db: Queryable, runId: string): Promise<RunEditRecord> {
+  const { rows } = await db.query<{
+    call: string | null;
+    path: string | null;
+    old_text: string | null;
+    new_text: string | null;
+  }>(
+    `SELECT l.payload #>> '{params,update,toolCallId}' AS call, d.value->>'path' AS path,
+       d.value->>'oldText' AS old_text, d.value->>'newText' AS new_text
+     FROM run_protocol_log l,
+       jsonb_path_query(l.payload, '$.params.update.content[*] ? (@.type == "diff")') AS d(value)
+     WHERE l.run_id = $1 AND l.method = $2 AND NOT l.truncated
+     ORDER BY l.seq`,
+    [runId, SESSION_UPDATE],
+  );
+  const cut = await db.query(
+    'SELECT 1 FROM run_protocol_log WHERE run_id = $1 AND method = $2 AND truncated LIMIT 1',
+    [runId, SESSION_UPDATE],
+  );
+  const latest = new Map<string, RunEditDiff>();
+  for (const row of rows) {
+    if (row.path === null || row.new_text === null) continue;
+    latest.set(`${row.call ?? ''}\u0000${row.path}`, {
+      path: row.path,
+      oldText: row.old_text,
+      newText: row.new_text,
+    });
+  }
+  return { diffs: [...latest.values()], cut: cut.rowCount === 1 };
+}
+
+export async function runCommandLines(
+  db: Queryable,
+  runId: string,
+): Promise<{ command: string; cwd: string | null }[]> {
+  const { rows } = await db.query<{ command: string; cwd: string | null }>(
+    'SELECT command, cwd FROM run_commands WHERE run_id = $1 ORDER BY started_at, id',
+    [runId],
+  );
+  return rows;
+}

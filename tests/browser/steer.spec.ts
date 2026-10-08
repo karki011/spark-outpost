@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await resetCrew();
   repo = crewRepo();
   repo.commit('piece-check.mjs', PIECE_CHECK_SCRIPT);
-  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.setViewportSize({ width: 1440, height: 900 });
 });
 
 test.afterEach(() => repo.remove());
@@ -35,6 +35,22 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await expect(input).toHaveAttribute('placeholder', 'Steer the pieces while they run');
   const target = page.getByRole('button', { name: 'Steer to' });
   await expect(target).toHaveText('Auto');
+  const modelName = page.getByRole('button', { name: /^Model and effort/ }).locator('.mname');
+  await expect(modelName).toBeVisible();
+  const showRail = page.getByRole('button', { name: 'Show context rail' });
+  if (await showRail.isVisible()) await showRail.click();
+  await expect(page.getByRole('region', { name: 'Chat context' })).toBeVisible();
+  const name = await modelName.evaluate((element) => {
+    const text = document.createRange();
+    text.selectNodeContents(element);
+    return {
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      cutBy: text.getBoundingClientRect().width - element.getBoundingClientRect().width,
+    };
+  });
+  expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  expect(name.cutBy).toBeLessThan(0.01);
   await target.click();
   const menu = page.getByRole('menu', { name: 'Steer to' });
   await expect(menu.getByRole('menuitemradio')).toHaveText([
@@ -56,7 +72,7 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await expect(input).toHaveValue('');
   await expect(api).toContainText('1 note queued');
 
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await page.getByRole('button', { name: 'Agent TV', exact: true }).click();
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await tv.getByRole('radio', { name: 'Stage' }).click();
   await expect(tv.locator('.tv-n.jev')).toContainText('Coordinator');

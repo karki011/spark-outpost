@@ -290,7 +290,7 @@ describe(
         `UPDATE provider_sessions SET last_used_at = now() - interval '3 days' WHERE conversation_id = $1`,
         [conversationId],
       );
-      expect(await sweepSessions(t.db, { idleMs: 60_000, openLimit: 16 })).toBe(1);
+      expect(await sweepSessions(t.db, { idleMs: 60_000 })).toBe(1);
       const second = await turn(FOLLOW_UP);
       expect((await events(second)).map((event) => event.event)).toEqual(['resume']);
       expect(storedPrompts()).toHaveLength(1);

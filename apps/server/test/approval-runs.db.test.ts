@@ -11,7 +11,7 @@ import { getConversationDetail, sendUserMessage } from '../src/persistence/conve
 import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
-import { getApproval } from '../src/persistence/approvals.ts';
+import { getApproval, insertApproval } from '../src/persistence/approvals.ts';
 import { FAKE_COMMAND, FAKE_EDIT_FILE } from '../src/providers/fake-approvals.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../src/workflow/approval-gate.ts';
@@ -118,6 +118,35 @@ describe('Do runs with approvals', () => {
       `Allowed \`${FAKE_COMMAND}\` (you allowed it)`,
     );
     expect(detail?.runs[0]).toMatchObject({ mode: 'do', level: 'hands-off', snapshot: 'files' });
+  });
+
+  it("lists the agent's own plan approval as a plan to review, not a step to allow", async () => {
+    const { conversationId, runId } = await doRun(t, root);
+    const approval = await insertApproval(t.db, {
+      runId,
+      toolCallId: 'plan-1',
+      rpcId: null,
+      kind: 'other',
+      title: 'Approve Plan',
+      payload: {
+        command: null,
+        cwd: null,
+        paths: [],
+        diffs: [],
+        truncated: false,
+        plan: '# Add CSV export',
+      },
+      options: [
+        { optionId: 'allow', name: 'Approve', kind: 'allow_once' },
+        { optionId: 'reject', name: 'Keep planning', kind: 'reject_once' },
+      ],
+      reason: null,
+    });
+    const list = await request(api()).get('/api/conversations').set(LOCAL_HEADERS);
+    expect(list.body.find((c: ConversationSummary) => c.id === conversationId)).toMatchObject({
+      needsInput: true,
+      attention: { kind: 'plan', title: 'Approve Plan', approvalId: approval.id },
+    });
   });
 
   it('answers 409 when the approval was already decided', async () => {

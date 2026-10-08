@@ -15,7 +15,13 @@ const RESUMED = 'Continue where you stopped';
 const HOLD_MS = 700;
 const STORE_WAIT_MS = 30_000;
 
+const SAME_FILE_PIECES: ParallelPiece[] = [
+  { key: 'P1', title: 'Truncate', owns: ['strings.ts'], dependsOn: [], size: 'S' },
+  { key: 'P2', title: 'Pad', owns: ['strings.ts'], dependsOn: ['P1'], size: 'S' },
+];
+
 function parallelPieces(text: string): ParallelPiece[] {
+  if (text.includes('#samefile')) return SAME_FILE_PIECES;
   const migrations = text.includes('#migrations');
   const manifest = text.includes('#manifest');
   return [
@@ -44,7 +50,7 @@ function parallelPieces(text: string): ParallelPiece[] {
 }
 
 export function parallelBlock(text: string) {
-  if (!text.includes('#parallel')) return null;
+  if (!text.includes('#parallel') && !text.includes('#samefile')) return null;
   return {
     pieces: parallelPieces(text).map((piece) => ({
       key: piece.key,
@@ -120,12 +126,32 @@ async function locatedEdit(turn: RoleTurn, file: string, line: string): Promise<
   await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
 }
 
+async function diffEdit(turn: RoleTurn, file: string, line: string): Promise<void> {
+  const target = join(turn.cwd, file);
+  const toolCallId = `diff-${file}`;
+  const oldText = await readFile(target, 'utf8').catch(() => null);
+  const newText = `${oldText ?? ''}${line}\n`;
+  await turn.update({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: 'Editing files',
+    kind: 'edit',
+    status: 'in_progress',
+    content: [{ type: 'diff', path: target, oldText, newText }],
+  });
+  await writeFile(target, newText);
+  await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
+}
+
 export async function pieceExtras(turn: RoleTurn, key: string): Promise<void> {
   const tagged = (tag: string) => turn.text.includes(tag);
   const firstTurn = !turn.text.includes(RESUMED) && !turn.text.includes('checks failed');
   if (tagged('#parallel') && key === 'P1' && firstTurn) await pause(HOLD_MS, turn.signal);
   if (tagged('#crossedit') && key === 'P1' && firstTurn) {
     await locatedEdit(turn, 'api.ts', 'crossed by P1');
+  }
+  if (tagged('#crossdiff') && key === 'P1' && firstTurn) {
+    await diffEdit(turn, 'api.ts', 'crossed by P1');
   }
   if (tagged('#parallel') && key === 'P2' && firstTurn) await afterStore(turn);
   if (tagged('#slowpieces') && key !== 'P3') await untilStopped(turn.signal);

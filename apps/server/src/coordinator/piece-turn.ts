@@ -10,13 +10,7 @@ import { checkFixFollowUp } from '../orchestration/context.ts';
 import { runMember } from '../orchestration/members.ts';
 import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Spawn } from '../orchestration/transitions.ts';
-import {
-  interruptedSection,
-  moveAfterFailure,
-  moveOnRequest,
-  pieceChanges,
-  type Moved,
-} from './fallback.ts';
+import { interruptedSection, moveOnRequest, pieceChanges, type Moved } from './fallback.ts';
 import { deliverable, noteSection } from './notes.ts';
 import type { PieceSite } from './piece-run.ts';
 import { providerFailure } from './provider-state.ts';
@@ -49,7 +43,6 @@ interface Turn {
   sections: string[];
   checkFailures: string | null;
   ran: boolean;
-  tried: Set<string>;
 }
 
 function stopped(s: Session): boolean {
@@ -115,14 +108,6 @@ async function reassignIfAsked(
   if (moved.moved) await restart(s, work, turn, moved);
 }
 
-async function leaveUnhealthy(s: Session, work: TurnWork, turn: Turn): Promise<void> {
-  const provider = work.piece.provider;
-  const why = provider ? work.coordination.unhealthy.get(provider) : undefined;
-  if (!why) return;
-  const moved = await moveAfterFailure(s, moveContext(work, turn), why, turn.tried);
-  if (moved.moved) await restart(s, work, turn, moved);
-}
-
 function followUp(notes: readonly StoredNote[], turn: Turn): string | null {
   const parts = [
     noteSection(notes),
@@ -136,7 +121,6 @@ async function runOnce(s: Session, work: TurnWork, turn: Turn): Promise<MemberRe
   let notes = await pendingPieceNotes(s.deps.db, work.piece.id);
   if (work.piece.status === 'skipped' || notes.some((note) => note.kind === 'skip')) return 'skip';
   await reassignIfAsked(s, work, turn, notes);
-  await leaveUnhealthy(s, work, turn);
   notes = deliverable(await pendingPieceNotes(s.deps.db, work.piece.id));
   const extra = followUp(notes, turn);
   const spawn: Spawn = extra ? { ...turn.spawn, followUp: extra } : turn.spawn;
@@ -175,7 +159,6 @@ export async function pieceTurn(
     sections: [...request.sections],
     checkFailures: request.checkFailures ?? null,
     ran: false,
-    tried: new Set(),
   };
   let noteTurns = 0;
   for (;;) {
@@ -183,13 +166,6 @@ export async function pieceTurn(
     if (result === 'skip') return skip(s, work, await pendingPieceNotes(s.deps.db, work.piece.id));
     const end = { skipped: false as const, result, generation: turn.generation };
     if (stopped(s)) return end;
-    const why = result.outcome === 'failed' ? providerFailure(result.error) : null;
-    if (why) {
-      const moved = await moveAfterFailure(s, moveContext(work, turn), why, turn.tried);
-      if (!moved.moved) return { ...end, result: { ...result, error: moved.reason } };
-      await restart(s, work, turn, moved);
-      continue;
-    }
     if (result.outcome === 'cancelled') {
       const interrupt = await wantsInterrupt(s, work);
       if (interrupt === 'skip') {

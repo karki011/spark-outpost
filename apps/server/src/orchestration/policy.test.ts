@@ -44,6 +44,43 @@ describe('risk rules', () => {
     }
   });
 
+  it('does not call a removal word used as a name, a method or a test title destructive', () => {
+    const lru =
+      'Add an LRU cache class with get/set/delete methods to src/lru.ts, with tests in test/lru.test.ts.';
+    const strings =
+      'Add truncate(text: string, max: number): string to src/strings.ts (cuts to max characters), with tests added to test/strings.test.ts.';
+    for (const request of [
+      'Add a truncate(text, n) helper',
+      'Add an LRU cache with get/set/delete methods',
+      "Add a test named 'deletes expired entries'",
+      "it('delete old rows from the cache view')",
+      'Add a `delete` method and a `drop()` helper to the queue',
+      'Add truncate and its tests',
+      'Call removeUser from accounts.ts',
+      'Reset the form after submit and remove the unused import',
+      lru,
+      strings,
+    ]) {
+      expect(destructiveByRule(request), request).toBe(false);
+    }
+    expect(strongRemovalByRule('Add a truncate(text, n) helper')).toBe(false);
+    expect(destructiveTargets(`${lru}\n${strings}`)).toEqual([]);
+    for (const request of [
+      'Drop the users table',
+      'Delete all rows',
+      'rm -rf build',
+      'Force push the branch',
+      'TRUNCATE TABLE uploads',
+      'Delete the stale release branches',
+      'Wipe the database',
+    ]) {
+      expect(destructiveByRule(request), request).toBe(true);
+    }
+    expect(
+      destructiveMigrationWording('Add a migration that removes the legacy_notes column'),
+    ).toBe(true);
+  });
+
   it('points destructive wording at the files named in the same line', () => {
     const request = [
       'Split this up into pieces:',
@@ -234,6 +271,10 @@ describe('risk rules', () => {
     expect(buildsByRule('lets plan the export')).toBe(false);
     expect(buildsByRule('any feedback')).toBe(false);
     expect(buildsByRule('The export looks slow to me')).toBe(false);
+    expect(buildsByRule('First run the seed script. Then delete all rows from users')).toBe(true);
+    expect(buildsByRule('Run seed.sh, then please remove the old rows')).toBe(true);
+    expect(buildsByRule('Run seed.sh, then tell me the row count')).toBe(false);
+    expect(buildsByRule('What happens to a row if we then query it?')).toBe(false);
   });
 
   it('treats short references back, or a quick reply, as a follow-up', () => {
