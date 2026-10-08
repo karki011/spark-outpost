@@ -3,6 +3,7 @@ import {
   type AgentRole,
   type BuildStyle,
   type CheckBody,
+  type JevAsk,
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { Need } from './simple-intake.ts';
@@ -93,6 +94,7 @@ export interface Session {
   append: Append;
   control: RunControl;
   jev: JevAccess | null;
+  jevAsk?: JevAsk | null;
   route: RouteContext;
   facts: RouteFacts;
   intake: IntakeResult;
@@ -173,7 +175,24 @@ export async function publish(s: Session, patch: OrchestrationPatch = {}): Promi
   await save(s, patch);
   const view = await loadOrchestration(s.deps.db, s.lease.runId);
   if (!view) return;
-  await s.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, view));
+  const shown = s.jevAsk ? { ...view, jevAsk: s.jevAsk } : view;
+  await s.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, shown));
+}
+
+export async function whileAskingJev<T>(
+  s: Session,
+  ask: JevAsk,
+  call: () => Promise<T>,
+): Promise<T> {
+  if (!s.jev) return call();
+  s.jevAsk = ask;
+  await publish(s);
+  try {
+    return await call();
+  } finally {
+    s.jevAsk = null;
+    await publish(s);
+  }
 }
 
 export async function appendNewArtifact(

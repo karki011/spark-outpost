@@ -1,7 +1,11 @@
-import { isTerminalRunStatus, type CrewMember, type Orchestration } from '@spark-outpost/contracts';
+import {
+  isTerminalRunStatus,
+  type CrewMember,
+  type JevAsk,
+  type Orchestration,
+} from '@spark-outpost/contracts';
 
 export type JevDoing =
-  | { kind: 'message' }
   | { kind: 'models'; count: number | null }
   | { kind: 'model'; pieceKey: string | null }
   | { kind: 'check'; pieceKey: string | null }
@@ -36,8 +40,13 @@ function betweenPieces(orchestration: Orchestration): JevDoing {
   return afterLastMember(crew.at(-1));
 }
 
+function asked(ask: JevAsk, plannedPieces: number | null): JevDoing {
+  if (ask.kind === 'models') return { kind: 'models', count: ask.pieces ?? plannedPieces };
+  return { kind: 'check', pieceKey: null };
+}
+
 export function jevDoing(orchestration: Orchestration, plannedPieces: number | null): JevDoing {
-  if (orchestration.phase === 'intake') return { kind: 'message' };
+  if (orchestration.jevAsk) return asked(orchestration.jevAsk, plannedPieces);
   if (orchestration.pieces) return betweenPieces(orchestration);
   const last = orchestration.crew.at(-1);
   if (!last) return { kind: 'model', pieceKey: null };
@@ -53,8 +62,6 @@ function modelsPhrase(count: number | null): string {
 
 export function doingPhrase(doing: JevDoing): string {
   switch (doing.kind) {
-    case 'message':
-      return 'reading your message';
     case 'models':
       return modelsPhrase(doing.count);
     case 'model':
