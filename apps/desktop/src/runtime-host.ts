@@ -1,10 +1,12 @@
 import { fork, type ChildProcess, type Serializable } from 'node:child_process';
 import { chmod, rename, rm, writeFile } from 'node:fs/promises';
 import { connect, createServer, type Socket } from 'node:net';
+import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { setTimeout as delay } from 'node:timers/promises';
 import { startDatabase, type Database } from './postgres.ts';
 import { descendantsOf, isAlive, processTable } from '../../server/src/terminal/process-group.ts';
+import { isBundledService } from './runtime-entries.ts';
 import { createSecret, runtimePaths, runtimeProof, sameProof } from './runtime-handshake.ts';
 import {
   RUNTIME_FRAME_LIMIT,
@@ -28,6 +30,10 @@ const clients = new Set<Socket>();
 const browserPorts = new Map<string, unknown>();
 const pendingBrowser = new Map<string, { name: string; message: unknown }>();
 const version = process.argv[3] ?? null;
+const bundled = {
+  bootstrap: path.join(import.meta.dirname, 'server-entry.js'),
+  serverDir: process.argv[4] ? path.resolve(process.argv[4]) : null,
+};
 const info: RuntimeInfo = { version, pid: process.pid, database: null, api: null };
 let database: Database | null = null;
 let databaseStarting: Promise<Database> | null = null;
@@ -142,6 +148,8 @@ async function handle(request: RuntimeRequest): Promise<unknown> {
     return null;
   }
   const options = request.options;
+  if (!isBundledService(options, bundled))
+    throw new Error(`${options.name} was not started: its entry is not part of this app.`);
   if (services.has(options.name)) {
     const ports = browserPorts.get(options.name);
     if (ports && desktop)

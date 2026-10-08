@@ -31,6 +31,7 @@ import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import type { Database, DatabaseOptions } from './postgres.ts';
 import { LocalRuntime } from './runtime-client.ts';
+import { serverEntry } from './runtime-entries.ts';
 import { startPrivacy, type Privacy } from './privacy.ts';
 import {
   apiEnv,
@@ -215,7 +216,7 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
       services!.once({
         name: 'Spark Outpost Migrate',
         bootstrap,
-        entry: path.join(serverDir, 'src/persistence/migrate-cli.ts'),
+        entry: serverEntry(serverDir, 'migrate'),
         cwd: serverDir,
         env: workerEnv(launchInfo),
         log: log('migrate'),
@@ -269,6 +270,7 @@ async function launch(): Promise<void> {
   runtime = await LocalRuntime.connect({
     userData: paths.userData,
     version: app.getVersion(),
+    serverDir,
     bootstrap: path.join(import.meta.dirname, 'runtime-host.js'),
     log: (name, line) => log(name)(line),
   });
@@ -331,7 +333,7 @@ async function launch(): Promise<void> {
   let apiReady = false;
   supervise(
     'Spark Outpost API',
-    path.join(serverDir, 'src/api/main.ts'),
+    serverEntry(serverDir, 'api'),
     { ...apiEnv(launchInfo), [BROWSER_HOST_ENV]: '1' },
     () => apiReady,
     (port) => browserHost.connectWorker(port),
@@ -340,7 +342,7 @@ async function launch(): Promise<void> {
   apiReady = true;
   supervise(
     'Spark Outpost Worker',
-    path.join(serverDir, 'src/workflow/main.ts'),
+    serverEntry(serverDir, 'worker'),
     browserWorkerEnv(launchInfo),
     () => true,
     (port) => browserHost.connectWorker(port),

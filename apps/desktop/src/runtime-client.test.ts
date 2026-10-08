@@ -45,6 +45,7 @@ async function connect(userData: string, version = 'test') {
   const runtime = await LocalRuntime.connect({
     userData,
     version,
+    serverDir: userData,
     bootstrap: path.join(bundle, 'runtime-host.js'),
     log: () => undefined,
   });
@@ -79,7 +80,8 @@ function alive(pid: number) {
 }
 
 async function fixture(userData: string) {
-  const entry = path.join(userData, 'service.mjs');
+  const entry = path.join(userData, 'src/api/main.ts');
+  await mkdir(path.dirname(entry), { recursive: true });
   await writeFile(
     entry,
     `process.send({ kind: 'ready', pid: process.pid }); process.on('message', message => { if (message.ping) process.send({kind: 'pong', pid: process.pid}); }); setInterval(() => {}, 1000);`,
@@ -252,7 +254,7 @@ describe('independent local runtime', () => {
     const module = pathToFileURL(path.join(import.meta.dirname, 'runtime-client.ts')).href;
     await writeFile(
       controller,
-      `import { writeFile } from 'node:fs/promises'; import { LocalRuntime } from ${JSON.stringify(module)}; const runtime = await LocalRuntime.connect({ userData: ${JSON.stringify(userData)}, version: 'test', bootstrap: ${JSON.stringify(path.join(bundle, 'runtime-host.js'))}, log: () => {} }); await runtime.configure({port: 12345, token: 'test-launch-identity', version: 'test'}); runtime.service({ ...${JSON.stringify(options)}, log: () => {}, connect: () => ({receive: async message => { await writeFile(${JSON.stringify(resultFile)}, JSON.stringify(message)); process.kill(process.pid, 'SIGKILL'); }, close: () => {}}) });`,
+      `import { writeFile } from 'node:fs/promises'; import { LocalRuntime } from ${JSON.stringify(module)}; const runtime = await LocalRuntime.connect({ userData: ${JSON.stringify(userData)}, version: 'test', serverDir: ${JSON.stringify(userData)}, bootstrap: ${JSON.stringify(path.join(bundle, 'runtime-host.js'))}, log: () => {} }); await runtime.configure({port: 12345, token: 'test-launch-identity', version: 'test'}); runtime.service({ ...${JSON.stringify(options)}, log: () => {}, connect: () => ({receive: async message => { await writeFile(${JSON.stringify(resultFile)}, JSON.stringify(message)); process.kill(process.pid, 'SIGKILL'); }, close: () => {}}) });`,
     );
     const child = spawn(
       process.execPath,
@@ -377,5 +379,41 @@ describe('independent local runtime', () => {
     const fresh = await connect(userData, '2.0.0');
     expect((await fresh.info()).version).toBe('2.0.0');
     expect(alive(external.pid!)).toBe(true);
+  });
+
+  it("starts only the app's own server entries", async () => {
+    const userData = await mkdtemp(path.join(folder, 'x-'));
+    const runtime = await connect(userData);
+    const options = await fixture(userData);
+    const marker = path.join(userData, 'ran');
+    const outsideEntry = path.join(userData, 'outside.mjs');
+    await writeFile(
+      outsideEntry,
+      `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'ran');`,
+    );
+    const attempts = [
+      { ...options, entry: outsideEntry },
+      { ...options, bootstrap: outsideEntry },
+      { ...options, entry: path.join(userData, 'src/api/../../outside.mjs') },
+      { ...options, cwd: os.tmpdir() },
+    ];
+    for (const attempt of attempts) {
+      const lines: string[] = [];
+      const refused = runtime.service({ ...attempt, log: (line) => lines.push(line) });
+      expect(await refused.exited).toBe(1);
+      expect(lines.join('\n')).toContain('not part of this app');
+    }
+    expect(await exists(marker)).toBe(false);
+    let pid = 0;
+    runtime.service({
+      ...options,
+      connect: () => ({
+        receive: (raw) => {
+          pid = (raw as { pid: number }).pid;
+        },
+        close: () => undefined,
+      }),
+    });
+    await until(() => pid > 0);
   });
 });

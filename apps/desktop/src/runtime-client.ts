@@ -23,6 +23,7 @@ import type { Supervised } from './supervisor.ts';
 interface RuntimeOptions {
   userData: string;
   version: string;
+  serverDir: string;
   bootstrap: string;
   log(name: string, line: string): void;
 }
@@ -140,11 +141,15 @@ export class LocalRuntime {
         stop: existing ? () => existing.runtime.stop() : null,
       });
       await rm(paths.endpoint, { force: true });
-      const child = spawn(process.execPath, [options.bootstrap, directory, options.version], {
-        detached: true,
-        stdio: 'ignore',
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-      });
+      const child = spawn(
+        process.execPath,
+        [options.bootstrap, directory, options.version, options.serverDir],
+        {
+          detached: true,
+          stdio: 'ignore',
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        },
+      );
       child.unref();
       let failed: Error | null = null;
       child.once('error', (error) => {
