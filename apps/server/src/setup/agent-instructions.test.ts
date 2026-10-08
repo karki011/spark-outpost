@@ -32,7 +32,7 @@ it('rejects missing, relative, oversized, binary and directory instruction files
   await writeFile(file, 'x'.repeat(16_001));
   await expect(readAgentInstructions('', file)).rejects.toThrow('16 KB');
   await writeFile(file, Buffer.from([0xff, 0xfe]));
-  await expect(readAgentInstructions('', file)).rejects.toThrow('could not be read');
+  await expect(readAgentInstructions('', file)).rejects.toThrow('UTF-8');
   await writeFile(file, 'hello\0world');
   await expect(readAgentInstructions('', file)).rejects.toThrow('UTF-8');
   const directory = join(root, 'folder');
@@ -48,4 +48,18 @@ it('rejects secret paths including a symlink target without returning contents',
   for (const path of [secret, link]) {
     await expect(readAgentInstructions('', path)).rejects.toThrow('not a secret file');
   }
+});
+
+it('rejects files in credential folders by their full resolved path', async () => {
+  const folders = ['.ssh', '.aws', '.config/gh', '.codex', '.kube'];
+  const names = ['config', 'config', 'hosts.yml', 'auth.json', 'config'];
+  for (const [index, folder] of folders.entries()) {
+    await mkdir(join(root, folder), { recursive: true });
+    const file = join(root, folder, names[index]!);
+    await writeFile(file, 'token: never-show');
+    await expect(readAgentInstructions('', file)).rejects.toThrow('sign-in details');
+  }
+  const link = join(root, 'notes.md');
+  await symlink(join(root, '.ssh', 'config'), link);
+  await expect(readAgentInstructions('', link)).rejects.toThrow('sign-in details');
 });

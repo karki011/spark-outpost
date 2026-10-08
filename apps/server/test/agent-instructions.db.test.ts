@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
@@ -51,6 +51,38 @@ it('keeps the previous setting if a replacement file cannot be read', async () =
     }),
   ).rejects.toThrow('could not be read');
   expect((await getSetupState(t.db, t.workspaceId)).profile.agentInstructions).toBe('Keep this.');
+});
+
+it('goes on without a saved file that was removed and reports it in Settings', async () => {
+  const file = join(root, 'instructions.md');
+  await writeFile(file, 'Use tests.');
+  await updateProfile(t.db, t.workspaceId, {
+    agentInstructions: 'Be concise.',
+    agentInstructionsFile: file,
+  });
+  expect((await getSetupState(t.db, t.workspaceId)).profile).toMatchObject({
+    agentInstructionsFileSet: true,
+    agentInstructionsFileError: null,
+  });
+  await unlink(file);
+  expect(await sparkPreferences(t.db, t.workspaceId)).toMatchObject({
+    agentInstructions: 'Be concise.',
+    instructionsNote:
+      'Instruction file could not be read: it was moved or deleted. Went on without it.',
+  });
+  expect((await getSetupState(t.db, t.workspaceId)).profile).toMatchObject({
+    agentInstructionsFile: file,
+    agentInstructionsFileSet: true,
+    agentInstructionsFileError: 'it was moved or deleted',
+  });
+  await writeFile(file, 'x'.repeat(16_001));
+  expect((await sparkPreferences(t.db, t.workspaceId)).instructionsNote).toContain(
+    'it is larger than 16 KB',
+  );
+  await writeFile(file, Buffer.from([0xff, 0xfe]));
+  expect((await sparkPreferences(t.db, t.workspaceId)).instructionsNote).toContain(
+    'it is not UTF-8 text',
+  );
 });
 
 it('keeps terminal tracking and custom instructions when Spark workflow is off, including resume', async () => {

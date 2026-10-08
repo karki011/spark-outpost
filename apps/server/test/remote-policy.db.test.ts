@@ -1,4 +1,4 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -176,6 +176,17 @@ describe('switches', () => {
       .send('patch', '/api/profile', { agentInstructionsFile: '/tmp/instructions.md' })
       .expect(403);
     await phone.send('patch', '/api/profile', { agentInstructionsFile: '' }).expect(403);
+    const file = join(root, 'instructions.md');
+    await writeFile(file, 'Use tests.');
+    const local = await localClient(app)
+      .send('patch', '/api/profile', { agentInstructionsFile: file })
+      .expect(200);
+    expect(local.body.profile.agentInstructionsFile).toBe(file);
+    const hidden = { agentInstructionsFile: '', agentInstructionsFileSet: true };
+    expect((await phone.get('/api/setup').expect(200)).body.profile).toMatchObject(hidden);
+    const saved = await phone.send('patch', '/api/profile', { name: 'Hari' }).expect(200);
+    expect(saved.body.profile).toMatchObject(hidden);
+    expect(JSON.stringify(saved.body)).not.toContain(file);
     const trust = await phone.send('put', `/api/projects/${id}/agent-config/trust`, {});
     expect(trust.status).not.toBe(403);
     const redirects = await phone.send(

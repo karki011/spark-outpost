@@ -20,6 +20,8 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
       }),
     onSuccess: (state) => client.setQueryData(setupKey, state),
   });
+  const fileError =
+    file === (profile.agentInstructionsFile ?? '') ? profile.agentInstructionsFileError : null;
   const changed =
     text !== (profile.agentInstructions ?? '') || file !== (profile.agentInstructionsFile ?? '');
   return (
@@ -59,7 +61,15 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
                 setFile(event.target.value);
               }}
             />
+            {fileError && (
+              <small role="alert">
+                This file can’t be read: {fileError}. Sessions go on without it.
+              </small>
+            )}
           </details>
+        )}
+        {remote && profile.agentInstructionsFileSet && (
+          <p className="spark-instructions-remote">An instruction file is set on your Mac.</p>
         )}
         <div className="spark-instructions-save">
           <button type="submit" className="btn line sm" disabled={!changed}>

@@ -3,10 +3,10 @@ title: Protected paths
 section: Reference
 type: reference
 order: 616
-summary: The hard rails - what always asks or is refused in every agent mode and at both autonomy levels.
+summary: The hard rails - what always asks or is refused in a chat, in every agent mode and at both autonomy levels.
 ---
 
-These hold in every agent mode, at both autonomy levels, for every agent. No setting turns them off.
+These hold in every chat, agent mode and autonomy level, not in [Terminal sessions](terminals.md). No setting turns them off.
 
 ## What always asks
 

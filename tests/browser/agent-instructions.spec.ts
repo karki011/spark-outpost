@@ -49,6 +49,10 @@ test('direct-agent settings save custom text and a local instruction file @packa
     expect(profile.agentInstructionsFile).toBe(file);
     await settings.getByLabel('Instructions file path').fill(file);
     await expect(settings.getByRole('alert')).toHaveCount(0);
+    rmSync(file);
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(settings.getByRole('alert')).toContainText('it was moved or deleted');
     await settings
       .getByLabel('What should Spark call you?', { exact: true })
       .scrollIntoViewIfNeeded();

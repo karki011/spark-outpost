@@ -1,5 +1,9 @@
 import path from 'node:path';
-import { SECRET_FILE_EXCEPTIONS, SECRET_FILE_PATTERNS } from './secret-files.ts';
+import {
+  CREDENTIAL_LOCATIONS,
+  SECRET_FILE_EXCEPTIONS,
+  SECRET_FILE_PATTERNS,
+} from './secret-files.ts';
 
 export const PROJECT_READ_MAX_BYTES = 1024 * 1024;
 
@@ -106,6 +110,20 @@ export function isIgnoredPath(relative: string, ignore: readonly string[]): bool
 export function isSecretPath(relative: string, ignore: readonly string[] = []): boolean {
   const name = relative.split('/').pop() ?? '';
   return isSecretName(name) || isIgnoredPath(relative, ignore);
+}
+
+const CREDENTIAL_LOCATION_RULES = CREDENTIAL_LOCATIONS.map((location) =>
+  location.toLowerCase().split('/').map(globToRegExp),
+);
+
+export function isCredentialPath(absolute: string): boolean {
+  const segments = absolute.toLowerCase().split('/').filter(Boolean);
+  if (isSecretName(segments.at(-1) ?? '')) return true;
+  return CREDENTIAL_LOCATION_RULES.some((rule) =>
+    segments.some((_, start) =>
+      rule.every((part, offset) => part.test(segments[start + offset] ?? '')),
+    ),
+  );
 }
 
 export type ProtectedKind = 'instructions' | 'git_control';

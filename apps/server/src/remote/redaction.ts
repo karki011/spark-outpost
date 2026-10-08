@@ -25,6 +25,7 @@ export function setupStateFor(res: Response, state: SetupState): SetupState {
   if (!isRemote(res)) return state;
   return {
     ...state,
+    profile: { ...state.profile, agentInstructionsFile: '' },
     providers: state.providers.map(withShortKey),
     advisors: state.advisors.map(withShortKey),
   };
