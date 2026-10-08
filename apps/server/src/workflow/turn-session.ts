@@ -11,6 +11,7 @@ import {
   forgetWorkdir,
   idleWorkdirs,
   latestProviderSession,
+  recordReportedCost,
   startProviderSession,
   sweepProviderSessions,
   type ContextReading,
@@ -58,7 +59,7 @@ export interface TurnSession {
   commands(commands: readonly AgentCommand[]): Promise<void>;
   settings(output: SettingsOutput): Promise<void>;
   noteSession(output: SessionOutput): void;
-  usage(output: UsageOutput): UsageOutput;
+  usage(output: UsageOutput): Promise<UsageOutput>;
   finished(result: TurnEnd): Promise<void>;
 }
 
@@ -195,7 +196,6 @@ export async function prepareTurnSession(
   let sessionId: string | null = null;
   let rowId: string | null = null;
   let costBaseline = 0;
-  let reportedCost: number | null = null;
   let continued = false;
   let context: ContextReading | null = null;
   const previous = stored ? readingOf(stored.contextUsed, stored.contextSize) : null;
@@ -252,6 +252,7 @@ export async function prepareTurnSession(
         return;
       }
       if (!rowId) return;
+      if (output.continued && costBaseline > 0) await recordReportedCost(db, rowId, costBaseline);
       await record(sessionEvent(facts, output));
       await evictBeyondLimit(db, limits.openLimit);
     },
@@ -263,10 +264,10 @@ export async function prepareTurnSession(
     async commands(commands) {
       if (rowId) await recordSessionCommands(db, rowId, commands);
     },
-    usage(output) {
+    async usage(output) {
       context = readingOf(output.contextUsed, output.contextSize) ?? context;
       if (output.costUsd === null) return output;
-      reportedCost = output.costUsd;
+      if (rowId) await recordReportedCost(db, rowId, output.costUsd);
       return { ...output, costUsd: Math.max(0, output.costUsd - costBaseline) };
     },
     async finished(result) {
@@ -275,7 +276,6 @@ export async function prepareTurnSession(
         await finishProviderSession(db, rowId, {
           lastMessageId: chatTurn ? result.messageId : null,
           replyHash: STOPPED_REPLY,
-          reportedCostUsd: reportedCost,
           context,
         });
         return;
@@ -288,7 +288,6 @@ export async function prepareTurnSession(
       await finishProviderSession(db, rowId, {
         lastMessageId: chatTurn ? result.messageId : null,
         replyHash: replyHash(result.text),
-        reportedCostUsd: reportedCost,
         context,
       });
     },

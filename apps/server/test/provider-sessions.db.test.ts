@@ -64,7 +64,7 @@ async function completeTurn(input: RunInput, sessionId: string, reply: string, c
     continued: turn.target.resume?.sessionId === sessionId,
     freshReason: turn.target.freshReason,
   });
-  const recorded = turn.usage(usage(cost));
+  const recorded = await turn.usage(usage(cost));
   const messageId = await message(input.identity.threadId, 'assistant', reply);
   await turn.finished({ outcome: 'succeeded', messageId, text: reply });
   return { turn, messageId, recorded };
@@ -83,7 +83,7 @@ describe('provider sessions across chat turns', () => {
     );
     expect(second.turn.target.resume?.sessionId).toBe('s-1');
     expect(second.recorded.costUsd).toBeCloseTo(0.0014, 6);
-    expect(second.turn.usage(usage(null)).costUsd).toBeNull();
+    expect((await second.turn.usage(usage(null))).costUsd).toBeNull();
     const fresh = await completeTurn(chatTurnInput(t, id, randomUUID()), 's-2', 'New.', 0.02);
     expect(fresh.recorded.costUsd).toBe(0.02);
   });

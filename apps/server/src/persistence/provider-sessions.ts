@@ -161,20 +161,18 @@ export async function finishProviderSession(
   finished: {
     lastMessageId: string | null;
     replyHash: string;
-    reportedCostUsd: number | null;
     context?: ContextReading | null;
   },
 ): Promise<void> {
   await db.query(
     `UPDATE provider_sessions SET last_message_id = $2, last_reply_hash = $3,
-            reported_cost_usd = $4, last_used_at = now(),
-            context_used = COALESCE($5, context_used), context_size = COALESCE($6, context_size)
+            last_used_at = now(),
+            context_used = COALESCE($4, context_used), context_size = COALESCE($5, context_size)
      WHERE id = $1 AND closed_at IS NULL`,
     [
       id,
       finished.lastMessageId,
       finished.replyHash,
-      finished.reportedCostUsd,
       finished.context?.used ?? null,
       finished.context?.size ?? null,
     ],
@@ -211,6 +209,17 @@ export async function recordCompacted(
 
 export async function snoozeCompaction(db: Queryable, id: string): Promise<void> {
   await db.query('UPDATE provider_sessions SET compact_snoozed = true WHERE id = $1', [id]);
+}
+
+export async function recordReportedCost(
+  db: Queryable,
+  id: string,
+  reportedCostUsd: number,
+): Promise<void> {
+  await db.query('UPDATE provider_sessions SET reported_cost_usd = $2 WHERE id = $1', [
+    id,
+    reportedCostUsd,
+  ]);
 }
 
 export async function closeProviderSession(
