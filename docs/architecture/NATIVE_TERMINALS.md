@@ -15,6 +15,17 @@ On reconnect, Electron adopts the runtime's database port, API port, launch toke
 | Explicit Quit                                                | Services stop, managed PTYs stop, grants are revoked, then PostgreSQL stops                |
 | API/runtime failure or Mac restart                           | Session history remains; running state is reconciled as interrupted and resume is explicit |
 | Native CLI exits                                             | Session records its exit and does not restart automatically                                |
+| Provider reports `SessionEnd` (`/clear`, `/resume`, logout)  | PTY continues; an open turn closes; the next `SessionStart` may carry a new session ID     |
+| Launch fails before the agent starts                         | Run fails with the reason; a plain launch starts again with the saved first message        |
+| Dock shell (not an agent) loses its socket                   | Shell ends; only agent sessions are kept for reattachment                                  |
+
+Only the PTY's own exit marks a session exited. A provider `SessionEnd` hook is an observation: Spark closes the open turn as outcome unknown, records the provider's reason when it is a plain token, and keeps the process. After a `SessionEnd`, the next `SessionStart` from the same hook credential and generation may replace the recorded provider session ID; any other event carrying a different session ID is refused.
+
+A provider session ID is accepted from a hook only when it is 1–100 letters, digits, `_` or `-` and does not start with `-`. It is checked again when the resume command line is built, so a stored value can never be read as an option. Anything else is refused and not stored.
+
+A session with no provider session ID has nothing to resume. When its launch failed (terminal limit, CLI probe, worktree), its run is failed with the reason and a plain launch is allowed again: the saved first message's run is re-queued, and the session view offers Start again. A launch the user stopped stays cancelled. Startup recovery fails Terminal runs that were queued but never launched, so they do not count as active work.
+
+An attach token is single-use: after its socket disconnects, reattaching needs a token newly issued by the authenticated attach route. Agent sessions keep a replay buffer; ordinary dock shells end when their socket closes.
 
 Terminal output replay is bounded to 256,000 JavaScript characters in memory. It is not a durable terminal transcript. Reattachment preserves a running process; provider-native resume creates another process from provider history and does not restore an interrupted shell command exactly.
 
@@ -74,7 +85,7 @@ Settings now reuses Use Spark workflow for Chat and Terminal, with advanced work
 
 Terminal launches pass custom instructions through the provider's instruction configuration, including explicit resume. Claude resume disables its saved system-prompt snapshot when applying or clearing current instructions; an older CLI without that capability requires a new session. Turning workflow off removes Spark's MCP configuration and task-context prompts while retaining native activity observation. Existing processes and prior provider history are not rewritten.
 
-Claude hook events and Codex session hooks are checked with isolated, bounded CLI diagnostics. Successful checks are cached by executable and reported version; failed checks can retry. Local Claude 2.1.294 and Codex 0.153.4 accepted the required hook configuration. Claude prompt IDs fence stale activity, and elicitation and permission events distinguish waiting from running. The UI shows Running, Idle, Waiting for input, Waiting for permission, or Open when detailed activity is unavailable. Terminal borders and the previous help guidance have been removed.
+Claude hook events and Codex session hooks are checked with isolated, bounded CLI diagnostics. Checks are cached by executable and reported version for the life of the service, including failed ones; a check the caller aborted is retried. Local Claude 2.1.294 and Codex 0.153.4 accepted the required hook configuration. Claude prompt IDs fence stale activity, and elicitation and permission events distinguish waiting from running. The UI shows Running, Idle, Waiting for input, Waiting for permission, or Open when detailed activity is unavailable. Terminal borders and the previous help guidance have been removed.
 
 The Island rests as blobs at every size and opens on hover, click, or an explicit action. It defaults to the primary display and retains a chosen docking position across ordinary disconnect/reconnect, with existing all-Spaces and fullscreen window behavior preserved. Position restoration uses display coordinates; rearranging displays or changing resolution may require repositioning.
 
