@@ -37,6 +37,16 @@ describe('Auto routing labels', () => {
     expect(autoThisTurn(orchestration({ crew: sameAgent }))).toBe('Opus');
   });
 
+  it('falls back to the model card label when a member carries none', () => {
+    const cards = [{ id: 'gpt-6-sol', label: '6 Sol' }];
+    const crew = [member({ provider: 'codex', model: 'gpt-6-sol', modelLabel: null })];
+    const ran = orchestration({ provider: 'codex', crew });
+    expect(autoThisTurn(ran, cards)).toBe('Sol');
+    expect(chatModelName('auto', null, [ran], cards)).toBe('6 Sol');
+    expect(autoThisTurn(ran)).toBe('gpt');
+    expect(chatModelName('auto', null, [ran])).toBe('gpt-6-sol');
+  });
+
   it('names the model an Auto chat ran on, not the one stored for a pinned chat', () => {
     const opus = { model: 'opus', modelLabel: 'Opus 5.5 (1M context)' };
     const ran = orchestration({

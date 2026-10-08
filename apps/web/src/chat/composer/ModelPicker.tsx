@@ -120,7 +120,7 @@ export function ModelPicker({
   const pinnedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
   const auto = settings.routing === 'auto';
-  const thisTurn = autoThisTurn(orchestration);
+  const thisTurn = autoThisTurn(orchestration, capabilities?.models);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
   const would = autoWouldHaveUsed(orchestration);
   const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);

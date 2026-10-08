@@ -4,6 +4,7 @@ import type { FlowEvent } from './flow-types.ts';
 import { checkAndFix, treeOf } from './land.ts';
 import { labelFor, nameFor } from './member-routes.ts';
 import { ensureParentSnapshot, type MemberOutcome } from './members.ts';
+import { chatPick } from './routing.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { NeedRead } from './simple-intake.ts';
 import type { FlowAction } from './transitions.ts';
@@ -16,17 +17,16 @@ export function startsPlanBuild(s: Session, action: Extract<FlowAction, { type: 
 }
 
 async function markAsBuilder(s: Session, name: string): Promise<void> {
-  const { model, modelLabel, effort } = s.input.settings;
-  const pick = { provider: s.input.provider, model, modelLabel, effort };
+  const pick = chatPick(s.route);
   await markInPlaceMember(s.deps.db, s.lease.runId, {
     role: 'builder',
     stepIndex: 0,
     attempt: 1,
     agentLabel: labelFor('builder', pick, name),
-    provider: s.input.provider,
-    model,
-    effort,
-    route: { name },
+    provider: pick.provider,
+    model: pick.model,
+    effort: pick.effort,
+    route: { name, modelLabel: pick.modelLabel },
   });
 }
 

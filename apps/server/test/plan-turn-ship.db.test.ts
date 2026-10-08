@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { primaryChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { taskChanges } from '../src/projects/task-changes.ts';
 import { linkedConversation } from './approval-support.ts';
@@ -74,6 +75,7 @@ async function planTurn(content: string, permission: 'ask' | 'do', agentMode: st
     runId: sent.run.id,
     runs: runs.rows,
     reply: detail?.messages.filter((message) => message.role === 'assistant').at(-1)?.content ?? '',
+    crew: (await loadOrchestration(t.db, sent.run.id))?.crew ?? [],
     changes: await taskChanges(t.db, t.workspaceId, runs.rows[0]!.task_id),
     pending: execFileSync('git', ['-C', copy.path, 'status', '--porcelain']).toString(),
     committed: execFileSync('git', ['-C', copy.path, 'show', '--name-only', '--format=', 'HEAD'])
@@ -96,6 +98,11 @@ describe('a plan turn that a Critic reviews', { timeout: 120_000 }, () => {
     expect(turn.reply).toMatch(/Committed [0-9a-f]{7} on spark\/\S+, not pushed\./);
     expect(turn.committed).toBe('export.ts');
     expect(turn.pending).toBe('');
+    expect(turn.crew.find((member) => member.runId === turn.runId)).toMatchObject({
+      role: 'builder',
+      model: 'sonnet',
+      modelLabel: 'Sonnet 5',
+    });
   });
 
   it('a build in a Plan-mode chat keeps the chat level and ships', async () => {

@@ -112,6 +112,7 @@ function OpenRail({
       settings.routing,
       picked ? shortLabel(picked.label) : null,
       orchestrationsInOrder(detail),
+      capabilities.data?.models,
     ),
     mode: permissionState(settings, capabilities.data).label,
     autonomy,
