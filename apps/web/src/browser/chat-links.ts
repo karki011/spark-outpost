@@ -119,20 +119,3 @@ export function openInDefaultBrowser(href: string): void {
   const url = defaultBrowserUrl(href, window.location.origin);
   if (url) window.open(url, '_blank', NEW_WINDOW);
 }
-
-type PaneOpener = (url: string) => void;
-
-let chatOpener: PaneOpener | null = null;
-
-export function setChatLinkOpener(opener: PaneOpener | null): void {
-  chatOpener = opener;
-}
-
-export function openChatLink(href: string, click: ClickFacts, target: EventTarget | null): boolean {
-  if (!chatOpener) return false;
-  const link = { href, inChat: insideChat(target), download: false };
-  const action = linkAction(click, link, true);
-  if (action.open !== 'pane') return false;
-  chatOpener(action.url);
-  return true;
-}

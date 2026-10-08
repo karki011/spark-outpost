@@ -13,7 +13,6 @@ import {
   openInDefaultBrowser,
   openInPane,
   paneTarget,
-  setChatLinkOpener,
 } from './chat-links.ts';
 import type { BrowserHome } from './use-view-placement.ts';
 
@@ -43,11 +42,9 @@ export function ChatLinks({ home }: { home: BrowserHome }) {
       const point = event.button === 2 ? { x: event.clientX, y: event.clientY } : null;
       setMenu({ url, anchor: anchorFor(anchor, point) });
     };
-    setChatLinkOpener(open);
     document.addEventListener('click', onClick);
     document.addEventListener('contextmenu', onContextMenu);
     return () => {
-      setChatLinkOpener(null);
       document.removeEventListener('click', onClick);
       document.removeEventListener('contextmenu', onContextMenu);
     };
