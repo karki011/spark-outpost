@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import {
-  GH_RAIL_REASON,
   NO_TASK_BRANCH_REASON,
   REMOTE_RAIL_REASON,
   REMOTE_URL_REASON,
   WIDE_PUSH_REASON,
+  ghRailReason,
   otherBranchReason,
   publishBasis,
   publishRequested,
@@ -77,8 +77,6 @@ describe('publishVerdict() allows the own branch when publishing is permitted', 
     'gh pr create --title "Fix dates" --body "Parses ISO dates"',
     'gh pr create --draft --fill',
     `gh pr create --base main --head ${BRANCH} --title x`,
-    'gh pr view',
-    'gh pr view --json url',
     `gh pr edit ${BRANCH} --title "Better title"`,
     `git push -u origin ${BRANCH} && gh pr create --fill`,
   ])('%s', (command) => {
@@ -119,20 +117,96 @@ describe("publishVerdict() for the chat's own pull request number and text writt
   });
 
   it.each([
-    ['gh pr view 77 --json body', GH_RAIL_REASON],
-    ['gh pr edit 77 --title x', GH_RAIL_REASON],
-    ['gh pr merge 2202', GH_RAIL_REASON],
-    [`bash <<'EOF'\ngh pr merge 2202\nEOF`, GH_RAIL_REASON],
+    ['gh pr edit 77 --title x', ghRailReason('gh pr edit')],
+    ['gh pr merge 2202', ghRailReason('gh pr merge')],
+    [`bash <<'EOF'\ngh pr merge 2202\nEOF`, ghRailReason('gh pr merge')],
+    ['gh pr view 77 --json url && gh pr edit 77 --title x', ghRailReason('gh pr edit')],
     [`sh -s <<'EOF'\ngit push origin main\nEOF`, otherBranchReason(BRANCH)],
   ])('still refuses %s', (command, reason) => {
     expect(own(command)).toEqual({ kind: 'refuse', reason });
   });
 
-  it('accepts no number when the chat has no open pull request', () => {
-    expect(publishVerdict('gh pr view 2202', 'full_access', context(MANUAL))).toEqual({
+  it('accepts no number to edit when the chat has no open pull request', () => {
+    expect(publishVerdict('gh pr edit 2202 --title x', 'full_access', context(MANUAL))).toEqual({
       kind: 'refuse',
-      reason: GH_RAIL_REASON,
+      reason: ghRailReason('gh pr edit'),
     });
+  });
+});
+
+const GREPTILE_COMMENT = `gh pr view 2233 --json comments,reviews -q '[.comments[] | select(.author.login=="greptile-apps") | {updated: .updatedAt, body: (.body | gsub("<[^>]*>"; "") | .[0:1500])}] | last' 2>&1 | head -40`;
+const SCORE_LINES = `gh pr view 2233 --comments > /tmp/pr2233-comments.txt 2>&1; rg -n "Confidence Score|P1|P2|P3" /tmp/pr2233-comments.txt | sed 's/<[^>]*>//g' | cut -c1-220 | tail -15`;
+
+describe('publishVerdict() never refuses a read through gh', () => {
+  const pulls = [null, 2233, 77];
+  const grants: [ModePosture, PublishGrant][] = [
+    ['full_access', MANUAL],
+    ['auto', MANUAL],
+    ['asks', { level: 'full-auto', requested: false }],
+    ['asks', { level: 'hands-off', requested: true }],
+    ['asks', MANUAL],
+    ['edits', MANUAL],
+  ];
+
+  it.each([
+    GREPTILE_COMMENT,
+    SCORE_LINES,
+    'gh pr view 77 --json body',
+    'gh pr view https://github.com/a/b/pull/9',
+    'gh pr view other-branch',
+    'gh pr view 5 --repo other/repo',
+    'gh pr view 5 -R other/repo',
+    'gh pr checks',
+    'gh pr checks 5 --watch',
+    'gh pr diff 5',
+    'gh pr list --state open',
+    'gh pr status',
+    'gh run view 1 --log-failed',
+    'gh run list --limit 5',
+    'gh run watch 1',
+    'gh issue view 12',
+    'gh issue list',
+    'gh issue status',
+    'gh repo view other/repo',
+    'gh release view v1',
+    'gh release list',
+    'gh search prs --author @me',
+    'gh auth status',
+    'gh api repos/o/r/pulls/5/comments',
+    'gh api repos/o/r/pulls/5/comments --paginate -q .[].body',
+    'gh api -X GET search/issues -f q=repo:o/r',
+    'gh api --method GET repos/o/r/pulls -F per_page=5',
+    "gh api graphql -f query='query { viewer { login } }'",
+    "gh api graphql -f query='{ viewer { login } }' -F first=5",
+  ])('%s', (command) => {
+    for (const pull of pulls) {
+      for (const [posture, grant] of grants) {
+        const task = { ...TASK, pull };
+        const verdict = publishVerdict(command, posture, context(grant, task));
+        expect(verdict?.kind, `${posture} pull ${pull}`).not.toBe('refuse');
+      }
+    }
+    expect(publishVerdict(command, 'full_access', context(MANUAL, null))).toBeNull();
+  });
+
+  it("still runs gh pr view of the chat's own pull request without a card at Full auto → PR", () => {
+    const fullAuto = context({ level: 'full-auto', requested: false }, { ...TASK, pull: 2233 });
+    for (const command of ['gh pr view', 'gh pr view --json url', 'gh pr view 2233']) {
+      expect(publishVerdict(command, 'asks', fullAuto)).toEqual({
+        kind: 'allow',
+        basis: 'full_auto',
+      });
+    }
+    expect(publishVerdict('gh pr view 77', 'asks', fullAuto)).toBeNull();
+    expect(publishVerdict('gh pr checks', 'asks', fullAuto)).toBeNull();
+  });
+});
+
+describe('ghRailReason()', () => {
+  it('names the refused subcommand and says what is allowed', () => {
+    expect(ghRailReason('gh pr merge')).toBe(
+      "gh pr merge is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, and reading any pull request, check, run or gh api GET is fine",
+    );
   });
 });
 
@@ -199,15 +273,35 @@ describe('publishVerdict() keeps the rails in every permitted mode', () => {
     ['git send-email HEAD~1', REMOTE_RAIL_REASON],
     ['hub pull-request', REMOTE_RAIL_REASON],
     ['glab mr create', REMOTE_RAIL_REASON],
-    ['gh pr merge', GH_RAIL_REASON],
-    ['gh pr close 12', GH_RAIL_REASON],
-    ['gh repo delete', GH_RAIL_REASON],
-    ['gh api repos/x/y/pulls', GH_RAIL_REASON],
-    ['gh pr edit 42 --title x', GH_RAIL_REASON],
-    ['gh pr view https://github.com/a/b/pull/9', GH_RAIL_REASON],
-    ['gh pr create -R other/repo --fill', GH_RAIL_REASON],
-    ['gh pr create --head main --fill', GH_RAIL_REASON],
-    ['gh pr edit other-branch --title x', GH_RAIL_REASON],
+    ['gh pr merge', ghRailReason('gh pr merge')],
+    ['gh pr close 12', ghRailReason('gh pr close')],
+    ['gh repo delete', ghRailReason('gh repo delete')],
+    ['gh pr edit 42 --title x', ghRailReason('gh pr edit')],
+    ['gh pr create -R other/repo --fill', ghRailReason('gh pr create')],
+    ['gh pr create --head main --fill', ghRailReason('gh pr create')],
+    ['gh pr edit other-branch --title x', ghRailReason('gh pr edit')],
+    ['gh pr edit https://github.com/a/b/pull/9 --title x', ghRailReason('gh pr edit')],
+    [`gh pr edit ${BRANCH} --repo other/repo --title x`, ghRailReason('gh pr edit')],
+    [`gh pr comment ${BRANCH} --body done`, ghRailReason('gh pr comment')],
+    ['gh pr review --approve', ghRailReason('gh pr review')],
+    ['gh pr ready', ghRailReason('gh pr ready')],
+    ['gh repo create acme/new --public', ghRailReason('gh repo create')],
+    ['gh repo edit --visibility public', ghRailReason('gh repo edit')],
+    ['gh release create v1', ghRailReason('gh release create')],
+    ['gh secret set TOKEN', ghRailReason('gh secret set')],
+    ['gh workflow run ci.yml', ghRailReason('gh workflow run')],
+    ['gh auth token', ghRailReason('gh auth token')],
+    ['gh auth status --show-token', ghRailReason('gh auth status')],
+    ['gh frobnicate now', ghRailReason('gh frobnicate now')],
+    ['gh api -X POST repos/o/r/pulls/5/comments', ghRailReason('gh api')],
+    ['gh api -XPOST repos/o/r/pulls/5/comments', ghRailReason('gh api')],
+    ['gh api --method=DELETE repos/o/r/git/refs/heads/x', ghRailReason('gh api')],
+    ['gh api repos/o/r/pulls/5/comments -f body=x', ghRailReason('gh api')],
+    ['gh api repos/o/r/pulls/5/comments -fbody=x', ghRailReason('gh api')],
+    ['gh api repos/o/r/issues --input issue.json', ghRailReason('gh api')],
+    ["gh api graphql -f query='mutation { x }'", ghRailReason('gh api')],
+    ['gh api graphql -F query=@query.graphql', ghRailReason('gh api')],
+    ['gh api graphql --input query.json', ghRailReason('gh api')],
   ])('%s', (command, reason) => {
     for (const [posture, grant] of permitted) {
       expect(publishVerdict(command, posture, context(grant))).toEqual({ kind: 'refuse', reason });

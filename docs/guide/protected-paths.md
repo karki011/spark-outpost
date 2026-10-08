@@ -30,7 +30,7 @@ Claude can't edit secret files or force push even in **Bypass permissions**. Rea
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
 - Merging a pull request.
-- Hosting tools other than `gh pr create`, `gh pr view` and `gh pr edit` for the chat's own pull request.
+- Changing things with hosting tools, except `gh pr create` and `gh pr edit` on the chat's own pull request. Reading with `gh` (pull requests, checks, runs, `gh api` GETs) follows the agent's mode.
 
 A blocked step says "Spark's policy blocked", so you can tell it from your own **Deny**.
 

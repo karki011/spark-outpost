@@ -1,12 +1,12 @@
 import type { InvolvementLevel, ModePosture } from '@spark-outpost/contracts';
-import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
-import { withoutDataHeredocs } from './inline-code.ts';
 import {
-  HOSTING_CLIS,
   gitPublishesBesidesPush,
+  hostingCommands,
+  hostingRead,
   publishesCode,
   pushTargets,
+  reachesHosting,
   type PushTarget,
 } from './git-commands.ts';
 
@@ -46,8 +46,10 @@ export const NO_TASK_BRANCH_REASON =
   "Only this chat's own spark/ branch can be pushed, and this run isn't on one";
 export const REMOTE_RAIL_REASON =
   'Changing git remotes, mailing patches and hosting CLIs other than gh stay refused';
-export const GH_RAIL_REASON =
-  "Only gh pr create, gh pr view and gh pr edit for this chat's own pull request are allowed";
+
+export function ghRailReason(subcommand: string): string {
+  return `${subcommand} is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, and reading any pull request, check, run or gh api GET is fine`;
+}
 export const REMOTE_URL_REASON = 'Push to a named remote such as origin, not a URL';
 export const WIDE_PUSH_REASON = 'Pushes that delete, prune, mirror or push every ref are refused';
 
@@ -82,8 +84,9 @@ export function withoutPublishAsks(text: string): string {
   return text.replace(every(PR_ASK), ' ').replace(every(PUSH_ASK), ' ');
 }
 
-const GH_PR_VERBS = new Set(['create', 'view', 'edit']);
+const GH_PR_WRITES = new Set(['create', 'edit']);
 const PR_SELECTOR = /^(#?\d+|https?:\/\/.*)$/i;
+const NAMES_REPO = /^(?:-R|--repo(?:=|$))/;
 
 function flagName(token: string): string {
   return token.split('=')[0]!;
@@ -105,28 +108,41 @@ function positionals(args: readonly string[]): string[] {
   });
 }
 
-function ghRefusal(args: readonly string[], task: TaskBranch): string | null {
-  const [group, verb, ...rest] = args;
-  if (group !== 'pr' || !verb || !GH_PR_VERBS.has(verb)) return GH_RAIL_REASON;
-  if (rest.some((token) => flagName(token) === '--repo' || token.startsWith('-R'))) {
-    return GH_RAIL_REASON;
-  }
+function ownPullTarget(rest: readonly string[], task: TaskBranch): boolean {
+  if (rest.some((token) => NAMES_REPO.test(token))) return false;
   const own = (token: string) =>
     token === task.branch || (Boolean(task.pull) && token.replace(/^#/, '') === String(task.pull));
-  if (flagValue(rest, ['-H', '--head']).some((head) => head !== task.branch)) return GH_RAIL_REASON;
-  if (rest.some((token) => PR_SELECTOR.test(token) && !own(token))) return GH_RAIL_REASON;
-  if (positionals(rest).some((token) => !own(token))) return GH_RAIL_REASON;
-  return null;
+  if (flagValue(rest, ['-H', '--head']).some((head) => head !== task.branch)) return false;
+  if (rest.some((token) => PR_SELECTOR.test(token) && !own(token))) return false;
+  return positionals(rest).every(own);
+}
+
+function ghSubcommand(args: readonly string[]): string {
+  const named = args[0] === 'api' ? args.slice(0, 1) : args.slice(0, 2);
+  return ['gh', ...named.filter((word) => !word.startsWith('-'))].join(' ');
+}
+
+function ghRefusal(args: readonly string[], task: TaskBranch): string | null {
+  const [group, verb, ...rest] = args;
+  const allowed = group === 'pr' && verb !== undefined && GH_PR_WRITES.has(verb);
+  return allowed && ownPullTarget(rest, task) ? null : ghRailReason(ghSubcommand(args));
 }
 
 function hostingRefusal(command: string, task: TaskBranch): string | null {
-  for (const program of commandTree(withoutDataHeredocs(command)).commands) {
-    const name = programName(program);
-    if (!HOSTING_CLIS.includes(name)) continue;
-    const refused = name === 'gh' ? ghRefusal(program.slice(1), task) : REMOTE_RAIL_REASON;
+  for (const program of hostingCommands(command)) {
+    if (hostingRead(program)) continue;
+    const refused =
+      programName(program) === 'gh' ? ghRefusal(program.slice(1), task) : REMOTE_RAIL_REASON;
     if (refused) return refused;
   }
   return null;
+}
+
+function viewsOwnPull(command: string, task: TaskBranch | null): boolean {
+  if (!task) return false;
+  return hostingCommands(command).every(([, group, verb, ...rest]) => {
+    return group === 'pr' && verb === 'view' && ownPullTarget(rest, task);
+  });
 }
 
 function pushRefusal(push: PushTarget, task: TaskBranch): string | null {
@@ -156,9 +172,12 @@ export function publishVerdict(
   posture: ModePosture,
   context: PublishContext,
 ): PublishVerdict | null {
-  if (!publishesCode(command)) return null;
+  if (!reachesHosting(command)) return null;
   const basis = publishBasis(posture, context.grant);
   if (!basis) return null;
+  if (!publishesCode(command)) {
+    return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
+  }
   const refused = publishRefusal(command, context.task);
   return refused ? { kind: 'refuse', reason: refused } : { kind: 'allow', basis };
 }

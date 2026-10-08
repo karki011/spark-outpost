@@ -1,3 +1,12 @@
+import {
+  API_FIELD_FLAGS,
+  apiEndpoint,
+  apiMethod,
+  apiWords,
+  flagName,
+  flagValues,
+  ghPullRead,
+} from './gh-reads.ts';
 import { gitSubcommand, pushTargetOf } from './git-commands.ts';
 
 export interface OwnRepo {
@@ -12,16 +21,6 @@ const REPO_PLACEHOLDER = '{owner}/{repo}';
 const GIT_ELSEWHERE = new Set(['-C', '--git-dir', '--work-tree']);
 const GIT_FETCHES = new Set(['clone', 'fetch', 'pull', 'ls-remote']);
 const GH_ELSEWHERE = /^(?:-R|--repo|--hostname)(?:=|$)/;
-const GH_READS: Readonly<Record<string, ReadonlySet<string>>> = {
-  pr: new Set(['view', 'checks', 'status', 'diff', 'list']),
-  run: new Set(['view', 'list', 'watch']),
-};
-const API_VALUE_FLAGS = new Set([
-  ...['-X', '--method', '-f', '-F', '--field', '--raw-field', '-H', '--header', '--input'],
-  ...['-q', '--jq', '-t', '--template', '--cache', '-p', '--preview'],
-]);
-const API_FIELD_FLAGS = new Set(['-f', '-F', '--field', '--raw-field']);
-const API_BODY_FLAGS = new Set([...API_FIELD_FLAGS, '--input']);
 const REPLY_MUTATIONS = new Set([
   ...['addPullRequestReviewThreadReply', 'addPullRequestReviewComment', 'addComment'],
   ...['resolveReviewThread', 'unresolveReviewThread'],
@@ -44,26 +43,6 @@ function ownUrl(word: string, own: OwnRepo): boolean {
 
 function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function flagName(token: string): string {
-  return token.split('=')[0]!;
-}
-
-function positionals(args: readonly string[], valueFlags: ReadonlySet<string>): string[] {
-  return args.filter((token, index) => {
-    if (token.startsWith('-')) return false;
-    const previous = args[index - 1];
-    return !previous || !valueFlags.has(previous);
-  });
-}
-
-function flagValues(args: readonly string[], flags: ReadonlySet<string>): string[] {
-  return args.flatMap((token, index) => {
-    if (!flags.has(flagName(token))) return [];
-    const inline = token.indexOf('=');
-    return [inline === -1 ? (args[index + 1] ?? '') : token.slice(inline + 1)];
-  });
 }
 
 export function ownGitUse(args: readonly string[], own: OwnRepo): boolean {
@@ -104,12 +83,6 @@ function opensOwnPull(args: readonly string[], own: OwnRepo): boolean {
   return heads.every((head) => head === own.branch) && namesOwnPull(args, own);
 }
 
-function apiMethod(args: readonly string[]): string {
-  const named = flagValues(args, new Set(['-X', '--method']))[0];
-  if (named) return named.toUpperCase();
-  return args.some((token) => API_BODY_FLAGS.has(flagName(token))) ? 'POST' : 'GET';
-}
-
 function ownGraphql(args: readonly string[], own: OwnRepo): boolean {
   if (args.some((token) => flagName(token) === '--input')) return false;
   const text = flagValues(args, API_FIELD_FLAGS).join('\n');
@@ -130,8 +103,9 @@ function replyEndpoint(endpoint: string, own: OwnRepo): boolean {
   return new RegExp(`^/?repos/${repo}/(?:${routes.join('|')})/?$`, 'i').test(endpoint);
 }
 
-function ownApi(args: readonly string[], own: OwnRepo): boolean {
-  const endpoint = positionals(args, API_VALUE_FLAGS)[0];
+function ownApi(given: readonly string[], own: OwnRepo): boolean {
+  const args = apiWords(given);
+  const endpoint = apiEndpoint(args);
   if (!endpoint) return false;
   if (isUrl(endpoint)) return apiMethod(args) === 'GET' && ownUrl(endpoint, own);
   if (endpoint === 'graphql') return ownGraphql(args, own);
@@ -145,19 +119,10 @@ export function ownGhUse(args: readonly string[], own: OwnRepo): boolean {
   if (!group) return false;
   if (group === 'api') return ownApi(args.slice(1), own);
   if (!verb || rest.some((word) => isUrl(word) && !ownUrl(word, own))) return false;
-  if (GH_READS[group]?.has(verb)) return true;
+  if (ghPullRead(group, verb)) return true;
   if (group !== 'pr') return false;
   if (verb === 'comment') return own.pull !== null && namesOwnPull(rest, own);
   return (verb === 'create' || verb === 'edit') && opensOwnPull(rest, own);
-}
-
-export function ghOnlyReads(args: readonly string[]): boolean {
-  const [group, verb] = args;
-  if (group !== 'api') return Boolean(group && verb && GH_READS[group]?.has(verb));
-  const rest = args.slice(1);
-  if (positionals(rest, API_VALUE_FLAGS)[0] !== 'graphql') return apiMethod(rest) === 'GET';
-  const text = flagValues(rest, API_BODY_FLAGS).join('\n');
-  return !/\bmutation\b/.test(text) && !rest.some((token) => flagName(token) === '--input');
 }
 
 export function namesAnotherRepo(command: string): boolean {

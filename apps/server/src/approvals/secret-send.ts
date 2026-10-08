@@ -8,7 +8,7 @@ import { programName, resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { gitSubcommand } from './git-commands.ts';
 import { withoutHereText } from './inline-code.ts';
-import { ghOnlyReads } from './own-repo.ts';
+import { ghOnlyReads, ghSendsQuery } from './gh-reads.ts';
 import { commandCwd } from './request-place.ts';
 import { peelSubstitutions } from './substitutions.ts';
 
@@ -126,7 +126,9 @@ async function uploadedText(args: readonly string[], cwd: string, home: string):
 async function sentBy(program: readonly string[], cwd: string, home: string): Promise<Sent | null> {
   const name = programName(program);
   if (name === 'gh') {
-    return ghOnlyReads(program.slice(1)) ? null : uploadedText(program.slice(1), cwd, home);
+    const args = program.slice(1);
+    const sendsNothing = ghOnlyReads(args) && !ghSendsQuery(args);
+    return sendsNothing ? null : uploadedText(args, cwd, home);
   }
   const sub = name === 'git' ? gitSubcommand(program.slice(1)) : null;
   return sub?.name === 'push' ? pushedText(cwd, pushedRefs(sub.rest)) : null;
