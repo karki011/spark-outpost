@@ -271,6 +271,10 @@ describe('risk rules', () => {
     expect(buildsByRule('lets plan the export')).toBe(false);
     expect(buildsByRule('any feedback')).toBe(false);
     expect(buildsByRule('The export looks slow to me')).toBe(false);
+    expect(buildsByRule('First run the seed script. Then delete all rows from users')).toBe(true);
+    expect(buildsByRule('Run seed.sh, then please remove the old rows')).toBe(true);
+    expect(buildsByRule('Run seed.sh, then tell me the row count')).toBe(false);
+    expect(buildsByRule('What happens to a row if we then query it?')).toBe(false);
   });
 
   it('treats short references back, or a quick reply, as a follow-up', () => {

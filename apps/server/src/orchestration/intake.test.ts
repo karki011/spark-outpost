@@ -84,6 +84,27 @@ describe('intake decisions', () => {
     expect(unsure.calls.question).toMatchObject({ jev: 0.36, value: true, source: 'rules' });
   });
 
+  it('builds when Jev is unsure and a later step says then and a change verb', () => {
+    const steps =
+      'First run sh scripts/seed.sh to create the throwaway SQLite file data/dev.sqlite. Then delete all rows from the users table in data/dev.sqlite and tell me the row count afterwards.';
+    const unsure = decideIntake(jev({ question: 0.47 }), facts({ request: steps }));
+    expect(unsure.start).not.toBe('answer');
+    expect(unsure.calls.question).toMatchObject({ jev: 0.47, value: false, source: 'rules' });
+    const oneLine = 'Run seed.sh, then delete all rows from the users table and tell me the count';
+    expect(decideIntake(jev({ question: 0.47 }), facts({ request: oneLine })).start).not.toBe(
+      'answer',
+    );
+    expect(decideIntake(jev({ question: 0.95 }), facts({ request: steps })).start).toBe('answer');
+    for (const request of [
+      'Run seed.sh and tell me the row count of the users table',
+      'First tell me what seed.sh does, then tell me the row count',
+    ]) {
+      expect(decideIntake(jev({ question: 0.47 }), facts({ request })).start, request).toBe(
+        'answer',
+      );
+    }
+  });
+
   it('answers plan and feedback wording by rule when Jev is not there', () => {
     expect(
       decideIntake(null, facts({ request: 'give me details summary of the repo' })).start,
