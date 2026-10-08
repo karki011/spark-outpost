@@ -44,4 +44,4 @@ Everything is redacted first. TypeSafe doesn't train on it.
 
 TypeSafe bills your account by input tokens, well under $0.0001 a call. **Settings → Usage** shows the cost.
 
-With the **Spark** switch off, Jev isn't called for chats. The Map still uses it. To check a reply, see [Jev on a reply](statuses-and-limits.md#jev-on-a-reply).
+With **Use Spark workflow** off, Jev isn't called for chats. The Map still uses it. To check a reply, see [Jev on a reply](statuses-and-limits.md#jev-on-a-reply).

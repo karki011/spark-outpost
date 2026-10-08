@@ -14,7 +14,7 @@ Only your name and one provider are required. Change the rest later in **Setting
 
 1. Type your name under **What should Spark call you?**.
 2. Pick a **Personality**: **Playful**, **Friendly** (the default) or **Just the facts**.
-3. Leave the **Spark** switch on and select **Continue**.
+3. Leave **Use Spark workflow** on and select **Continue**.
 4. Select a theme card, then **Continue**. **Graphite** is the default.
 
 ![The Meet Spark step with a name typed in and the Friendly personality selected](images/getting-started-meet-spark-light.png)
