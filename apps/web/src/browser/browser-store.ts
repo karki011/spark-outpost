@@ -83,6 +83,10 @@ export function useChatBrowser(chatId: string): ChatBrowser {
   return useSyncExternalStore(subscribe, () => chats.get(chatId) ?? EMPTY);
 }
 
+export function knownTabs(chatId: string): readonly BrowserPaneTab[] {
+  return chats.get(chatId)?.tabs ?? EMPTY.tabs;
+}
+
 export function useAgentOpened(chatId: string): string | null {
   return useSyncExternalStore(subscribe, () => chats.get(chatId)?.agentOpened ?? null);
 }

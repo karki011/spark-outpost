@@ -28,6 +28,7 @@ import {
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
+import { ChatLinks } from '../browser/ChatLinks.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
 import { onBrowserPick } from '../browser/browser-store.ts';
 import { useBrowserPane } from '../browser/pane-open.ts';
@@ -247,6 +248,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     ],
     [chatBranch, repos],
   );
+  const browserHome = {
+    chatId: conversationId,
+    projectId: firstRepo?.id ?? null,
+    keepSignIns: firstRepo?.browserKeepSignIns ?? true,
+    roots: panelRoots,
+  };
 
   return (
     <ViewChangesContext value={viewChanges}>
@@ -256,6 +263,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <main
               ref={mainRef}
               className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
+              data-chat-links=""
               {...(terminalSession || terminalDraft ? {} : drop.handlers)}
             >
               <header className="head chat-head">
@@ -460,12 +468,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   hasBrowser
                     ? ({ views, close }) => (
                         <BrowserPane
-                          home={{
-                            chatId: conversationId,
-                            projectId: firstRepo?.id ?? null,
-                            keepSignIns: firstRepo?.browserKeepSignIns ?? true,
-                            roots: panelRoots,
-                          }}
+                          home={browserHome}
                           shown={browsing}
                           lead={views}
                           trail={close}
@@ -476,6 +479,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 {...(openAudit ? { onAudit: openAudit } : {})}
               />
             )}
+            {hasBrowser && <ChatLinks home={browserHome} />}
             <DiffDrawerHost state={diff} taskId={taskId} />
             <AnimatePresence>
               {auditOpen && (

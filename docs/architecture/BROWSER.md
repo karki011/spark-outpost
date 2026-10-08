@@ -43,6 +43,26 @@ Tabs belong to a chat. The address bar accepts any address: it is the user's bro
 
 Agent tabs close when the turn's grant is revoked unless the user pinned them.
 
+## Links the user opens
+
+A plain click (or Enter) on an `http` or `https` link in a chat surface opens it in that chat's pane instead of the system browser. One document listener does it (`ChatLinks.tsx`, mounted by `ChatView` only when the shell's browser bridge is there), with the rules in `chat-links.ts`; the links stay real `<a href target="_blank">` elements.
+
+| Link                                                                                                                                                         | Goes to                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| An absolute `http(s)` address inside `[data-chat-links]`: the chat's `<main>` (replies, steps, cards, result line, PR card, ticket chips) and the Work panel | The pane                                                                            |
+| The same with ⌘, Ctrl, Shift, Alt or the middle button                                                                                                       | The system, untouched: the shell's `setWindowOpenHandler` opens the default browser |
+| Any other scheme, a `download` link, an address with a username or password, or one over 4096 characters                                                     | The system, as before; never the pane                                               |
+| A relative or `#` link (guide pages, anchors, attachments)                                                                                                   | The app, as before                                                                  |
+| Anything outside a chat surface: Settings, onboarding, Integrations, Phone, Tickets, Docs, Home, dialogs, the Island                                         | The system, as before, so sign-in and connect flows keep the user's own browser     |
+
+- **Where it lands.** A tab already on exactly that address is selected; an empty tab that is showing is replaced; with 12 tabs the showing tab is navigated; otherwise a new user tab opens (`paneCommands`). When the renderer knows no tabs for the chat it calls `start` first, with no bounds, so the chat's project and **Keep sign-ins** choice pick the partition before the tab exists. The pane then opens through `setBrowserPaneOpen`, the same switch an agent-opened page uses, and nothing moves the focus.
+- **Nothing new is trusted.** The tab is an ordinary user tab: same partitions, same blocked ports, same request guard. A link to one of Spark's own ports goes to the pane and shows **This page didn't load**; it is never handed to the system instead. The page is still untrusted data, and an agent reading it goes through the same policy as any site the user opened.
+- **The way out.** A right-click (or the menu key) on such a link offers **Open in Spark browser**, **Open in default browser** and **Copy link** (the sidebar's `MenuShell`), and the toolbar's **Open in default browser** opens the showing tab's address. Both refuse Spark's own origin (`defaultBrowserUrl`), which the shell would otherwise open in a viewer window with the app session.
+- **No pane, no change.** `pnpm dev` in a browser and a paired phone have no `sparkDesktop.browser`, so the listener is not mounted and links open a new browser tab.
+- **Terminals stay outside.** xterm links are not anchors; `openTerminalLink` still calls `window.open`, so a link printed in the dock, a command terminal or a Terminal session opens the default browser on a plain click, and has no link menu. CLI sign-in addresses (`claude login`, `codex login`, `gh auth login`, device flows) need the user's own browser session and often a localhost callback, which the pane's partition would break.
+
+Not built: the Island's links still open the default browser (the pane lives in the main window), and a user message's text has no links today.
+
 ## Bridge
 
 The worker is forked by main, so the channel is the utility process's `parentPort`. Messages are validated with Zod on both sides: `browser:request` `{ id, request }`, `browser:response` `{ id, ok, result | code, message }`, `browser:cancel` `{ id }` and `browser:ports`. The client times out after 30 s and sends a cancel; an aborted tool call sends a cancel too. Tools see the channel as `BrowserHost` in `SparkToolDeps`; without the shell (`pnpm dev`, tests) it is absent.
