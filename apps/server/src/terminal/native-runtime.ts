@@ -175,6 +175,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         ceiling: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
         seedPending: prepared.runId !== null,
         nativeSessionEnded: false,
+        observedTurnId: null,
         chain: Promise.resolve(),
         hookKey: digest(token),
         completedTurns: new Set(),

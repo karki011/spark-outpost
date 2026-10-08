@@ -63,6 +63,7 @@ export interface LiveSession {
   ceiling: string;
   seedPending: boolean;
   nativeSessionEnded: boolean;
+  observedTurnId: string | null;
   chain: Promise<unknown>;
   hookKey: string;
   completedTurns: Set<string>;

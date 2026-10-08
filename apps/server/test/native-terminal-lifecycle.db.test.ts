@@ -11,6 +11,13 @@ afterEach(async () => {
 });
 
 const row = async () => (await nativeTerminalRow(f.t.db, f.conversationId))!;
+const updatedAt = async () =>
+  (
+    await f.t.db.query<{ updated_at: Date }>('SELECT updated_at FROM conversations WHERE id = $1', [
+      f.conversationId,
+    ])
+  ).rows[0]!.updated_at.getTime();
+
 describe('native terminal provider session lifecycle', () => {
   it('keeps the process running when the provider session ends and adopts the session that follows', async () => {
     await f.launch();
@@ -64,5 +71,19 @@ describe('native terminal provider session lifecycle', () => {
     await f.launch();
     expect(await f.hook('SessionStart')).toBe(401);
     expect((await row()).state).toBe('unknown');
+  });
+
+  it('leaves the conversation untouched when a hook event changes nothing', async () => {
+    await f.launch();
+    await f.hook('SessionStart');
+    expect(await f.hook('PreToolUse')).toBe(204);
+    const before = await updatedAt();
+    const rowBefore = (await row()).updated_at.getTime();
+    expect(await f.hook('PostToolUse')).toBe(204);
+    expect(await f.hook('PreToolUse')).toBe(204);
+    expect(await updatedAt()).toBe(before);
+    expect((await row()).updated_at.getTime()).toBe(rowBefore);
+    expect(await f.hook('PermissionRequest')).toBe(204);
+    expect(await updatedAt()).toBeGreaterThan(before);
   });
 });

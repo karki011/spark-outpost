@@ -149,6 +149,14 @@ export function nativeObserver({
     }
     if (event.kind === 'session_start') session.nativeSessionEnded = false;
     const state = nativeActivity(event, session.context !== null);
+    const nativeSessionId = event.nativeSessionId ?? session.row.native_session_id;
+    const nativeTurnId = event.nativeTurnId ?? session.observedTurnId;
+    if (
+      state === session.row.state &&
+      nativeSessionId === session.row.native_session_id &&
+      nativeTurnId === session.observedTurnId
+    )
+      return;
     await setNativeTerminalState(db, {
       ...session.row,
       state,
@@ -156,7 +164,8 @@ export function nativeObserver({
       ...(event.nativeTurnId ? { nativeTurnId: event.nativeTurnId } : {}),
     });
     session.row.state = state;
-    if (event.nativeSessionId) session.row.native_session_id = event.nativeSessionId;
+    session.row.native_session_id = nativeSessionId;
+    session.observedTurnId = nativeTurnId;
   };
   const hook = async (token: string, body: unknown) => {
     const session = tokens.get(digest(token));
