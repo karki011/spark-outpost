@@ -264,6 +264,7 @@ export class TerminalSessions {
         else {
           session.client = null;
           session.attached = false;
+          session.tokenExpiresAt = 0;
         }
       },
     };

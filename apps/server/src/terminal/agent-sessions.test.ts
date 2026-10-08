@@ -147,4 +147,18 @@ describe('native terminal ownership', () => {
     expect(f.sessions.reattach(shell.id)).toBeNull();
     expect(f.sessions.activeCount).toBe(1);
   });
+
+  it('refuses a used attach token after the socket disconnects', () => {
+    const f = useFixture();
+    const first = f.sessions.createAgent(f.request);
+    const connection = f.sessions.attach(first.id, first.token, f.client(), { cols: 80, rows: 24 });
+    connection.disconnect();
+    expect(() =>
+      f.sessions.attach(first.id, first.token, f.client(), { cols: 80, rows: 24 }),
+    ).toThrow(TerminalAuthError);
+    expect(f.sessions.activeCount).toBe(1);
+    const fresh = f.sessions.reattach(first.id)!;
+    f.sessions.attach(fresh.id, fresh.token, f.client(), { cols: 80, rows: 24 });
+    expect(f.spawn).toHaveBeenCalledTimes(1);
+  });
 });
