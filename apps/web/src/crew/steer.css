@@ -1,7 +1,7 @@
 .steer-target {
-  flex-shrink: 1;
+  flex: 1000 0 96px;
   min-width: 0;
-  width: 168px;
+  max-width: 168px;
   margin-left: 6px;
 }
 .steer-target .field-button {
@@ -10,7 +10,7 @@
 }
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .steer-target {
-    width: 124px;
+    max-width: 124px;
   }
 }
 .steer-target .note {
