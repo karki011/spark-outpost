@@ -8,12 +8,16 @@ import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
 import { withPublishNote } from '../workflow/publish-context.ts';
-import { stopRun } from '../workflow/stop-run.ts';
 import { placeChat } from '../orchestration/chat-place.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
 import { shellFolder } from './shell-folder.ts';
 import { nativeModeArgs } from './native-launch.ts';
+import { nativeLaunchError, NativeRuntimeError } from './native-control.ts';
+import {
+  failNativeLaunchRun,
+  requeueNativeLaunchRun,
+} from '../persistence/native-terminal-turns.ts';
 
 export async function prepareNativeSession(
   deps: {
@@ -53,10 +57,17 @@ export async function prepareNativeSession(
       [conversationId, provider, runId],
     );
     const existing = runs.rows[0];
-    if (!existing || (!request.resume && existing.status !== 'queued')) {
-      throw new Error('Give this terminal session a first message before starting it.');
+    const retried =
+      !request.resume &&
+      existing?.status === 'failed' &&
+      !previous?.native_session_id &&
+      (await requeueNativeLaunchRun(deps.db, existing.id));
+    if (!existing || (!request.resume && existing.status !== 'queued' && !retried)) {
+      throw new NativeRuntimeError(
+        'Give this terminal session a first message before starting it.',
+      );
     }
-    if (!runId && existing.status === 'queued') runId = existing.id;
+    if (!runId && (existing.status === 'queued' || retried)) runId = existing.id;
     let input = await loadRunInput(deps.db, existing.id);
     nativeModeArgs(provider, input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'));
     const placed = await (deps.place ?? placeChat)(
@@ -103,7 +114,8 @@ export async function prepareNativeSession(
       instructions: prefs.agentInstructions,
     };
   } catch (error) {
-    if (runId) await stopRun(deps.db, runId);
-    throw error;
+    const failure = nativeLaunchError(error);
+    if (runId) await failNativeLaunchRun(deps.db, runId, failure.message);
+    throw failure;
   }
 }

@@ -50,7 +50,7 @@ export function NewTerminalSession({
   const secrets = useSecretGuard(prompt);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [messageId] = useState(() => crypto.randomUUID());
+  const message = useRef<{ id: string; prompt: string } | null>(null);
   const start = async (event?: FormEvent) => {
     event?.preventDefault();
     if (
@@ -61,6 +61,8 @@ export function NewTerminalSession({
     )
       return;
     if (secrets.blocks(prompt)) return;
+    if (message.current?.prompt !== prompt) message.current = { id: crypto.randomUUID(), prompt };
+    const messageId = message.current.id;
     setBusy(true);
     onStarting?.();
     setError(null);

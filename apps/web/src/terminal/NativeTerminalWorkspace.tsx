@@ -87,9 +87,11 @@ export function NativeTerminalWorkspace({
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [opened, setOpened] = useState(false);
   const native = session.data ?? chat.terminal;
   const state = native?.state ?? 'starting';
   const ended = native ? terminalEnded(native) : false;
+  const showsScreen = shown && !session.isPending && (!ended || opened);
   const refresh = async () => {
     await Promise.all([
       session.refetch(),
@@ -97,17 +99,19 @@ export function NativeTerminalWorkspace({
       client.invalidateQueries({ queryKey: queryKeys.conversation(chat.id) }),
     ]);
   };
-  const act = async (resume: boolean) => {
+  const act = async (action: 'resume' | 'restart' | 'stop') => {
     if (!native || busy) return;
     setBusy(true);
     setProblem(null);
     try {
-      if (resume) await nativeTerminalApi.launch(chat.id, { resume: true });
-      else await nativeTerminalApi.stop(chat.id);
+      if (action === 'stop') await nativeTerminalApi.stop(chat.id);
+      else await nativeTerminalApi.launch(chat.id, action === 'resume' ? { resume: true } : {});
       setConfirm(false);
       await refresh();
-      if (resume) {
+      if (action !== 'stop') {
         setShown(true);
+        setOpened(false);
+        setConnectionState('connecting');
         setAttempt((value) => value + 1);
       }
     } catch (error) {
@@ -169,9 +173,19 @@ export function NativeTerminalWorkspace({
               type="button"
               className="btn primary sm"
               disabled={busy}
-              onClick={() => void act(true)}
+              onClick={() => void act('resume')}
             >
               Resume session
+            </button>
+          )}
+          {native && !native.resumeAvailable && state === 'error' && (
+            <button
+              type="button"
+              className="btn primary sm"
+              disabled={busy}
+              onClick={() => void act('restart')}
+            >
+              Start again
             </button>
           )}
           {!ended && (
@@ -204,7 +218,7 @@ export function NativeTerminalWorkspace({
             hint="Press and hold for 1.5 seconds."
             holdingHint="Keep holding. Let go to cancel."
             releasedHint="Released early. The session is still running."
-            onConfirm={() => void act(false)}
+            onConfirm={() => void act('stop')}
             adornment={
               <button type="button" className="btn line" onClick={() => setConfirm(false)}>
                 Keep running
@@ -223,11 +237,17 @@ export function NativeTerminalWorkspace({
           {session.error.message}
         </p>
       )}
-      {shown && !ended && !session.isPending && !session.isError ? (
+      {ended && showsScreen && (
+        <p className="native-note" role="status">
+          This terminal session has stopped. Its last output is shown below.
+        </p>
+      )}
+      {showsScreen ? (
         <TerminalScreen
           chatId={chat.id}
           attempt={attempt}
           onConnected={() => {
+            setOpened(true);
             setConnectionState('connected');
             void session.refetch();
           }}

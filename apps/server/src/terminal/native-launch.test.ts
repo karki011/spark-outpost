@@ -210,6 +210,10 @@ describe('native terminal launch', () => {
 
   it('does not prepare remote callback URLs or path-traversing identities', async () => {
     const request = await input();
+    for (const resumeSessionId of ['--dangerously-skip-permissions', '-c', 'two words', ''])
+      await expect(prepareNativeLaunch({ ...request, resumeSessionId })).rejects.toThrow(
+        'identity',
+      );
     await expect(prepareNativeLaunch({ ...request, sessionId: '../other' })).rejects.toThrow(
       'identity',
     );
@@ -251,6 +255,7 @@ describe('native terminal launch', () => {
         session_id: 'native',
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
+        reason: 'clear',
         tool_input: { secret: 'hidden' },
         tool_response: 'hidden output',
       }),
@@ -267,6 +272,7 @@ describe('native terminal launch', () => {
         session_id: 'native',
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
+        reason: 'clear',
       },
     });
     expect(JSON.stringify(received.body)).not.toContain('hidden');

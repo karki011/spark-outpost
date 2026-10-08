@@ -99,4 +99,34 @@ describe('native terminal lifecycle controls', () => {
     fireEvent.click(resume);
     await waitFor(() => expect(fake.launch).toHaveBeenCalledWith('chat', { resume: true }));
   });
+  it('keeps the last terminal output on screen with a notice after the session ends', async () => {
+    mount();
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
+    fake.get.mockResolvedValue({ ...native, state: 'exited', reason: 'Native agent exited (0).' });
+    fake.handlers[0]!.onEnded('exited');
+    await screen.findByText('This terminal session has stopped. Its last output is shown below.');
+    expect(screen.getByLabelText('Interactive agent terminal')).toBeTruthy();
+    expect(fake.disposed).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Stop session' })).toBeNull();
+  });
+  it('keeps a live terminal mounted when a status check fails', async () => {
+    mount();
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
+    fake.get.mockRejectedValue(new Error('Status is unavailable.'));
+    await client.refetchQueries({ queryKey: ['native-terminal', 'chat'] });
+    await screen.findByText('Status is unavailable.');
+    expect(screen.getByLabelText('Interactive agent terminal')).toBeTruthy();
+    expect(fake.disposed).not.toHaveBeenCalled();
+  });
+  it('offers to start again when the launch failed before any native session existed', async () => {
+    fake.get.mockResolvedValue({ ...native, state: 'error', reason: 'Close a terminal first.' });
+    fake.launch.mockImplementation(async () => {
+      fake.get.mockResolvedValue(native);
+      return { session: native, connection: { id: native.id, token: 'fresh-token' } };
+    });
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Start again' }));
+    await waitFor(() => expect(fake.launch).toHaveBeenCalledWith('chat', {}));
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
+  });
 });

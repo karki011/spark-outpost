@@ -1,17 +1,13 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { z } from 'zod';
-import {
-  permissionFor,
-  type NativeTerminalLaunchRequest,
-  type NativeTerminalLaunchResponse,
-  type NativeTerminalProvider,
+import { randomBytes, randomUUID } from 'node:crypto';
+import type {
+  NativeTerminalLaunchRequest,
+  NativeTerminalLaunchResponse,
+  NativeTerminalProvider,
 } from '@spark-outpost/contracts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
-import { sendUserMessage } from '../persistence/conversations.ts';
-import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
 import { nativeTerminalRow, nativeTerminalView } from '../persistence/native-terminals.ts';
 import {
-  acceptNativeEvent,
+  failNativeLaunchRun,
   finishNativeRun,
   recoverNativeTerminals,
   reserveNativeTerminalLaunch,
@@ -22,41 +18,19 @@ import {
 import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { SparkGrant } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
-import { loadRunInput } from '../workflow/run-input.ts';
 import { stopRun as cancelRun } from '../workflow/stop-run.ts';
-import { nativeControl } from './native-control.ts';
+import { nativeControl, nativeLaunchError, NativeRuntimeError } from './native-control.ts';
+import { nativeObserver, hookTokenDigest as digest } from './native-observe.ts';
 import { attachNativeSession } from './native-attach.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
-import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
-import {
-  nativeTurnContext,
-  observedNativeMode,
-  boundedNativeMode,
-  nativeActivity,
-} from './native-context.ts';
+import { nativeTurnContext } from './native-context.ts';
+import { isNativeSessionId } from './native-hooks.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
-export class NativeRuntimeError extends Error {
-  constructor(
-    message: string,
-    readonly status = 400,
-  ) {
-    super(message);
-  }
-}
-
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
 import type { NativeRuntime, NativeRuntimeDeps, LiveSession } from './native-runtime-types.ts';
-
-const digest = (token: string) => createHash('sha256').update(token).digest('hex');
-const envelopeSchema = z.strictObject({
-  sessionId: z.uuid(),
-  provider: z.enum(['claude', 'codex']),
-  eventId: z.uuid(),
-  payload: z.unknown(),
-});
 
 export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<NativeRuntime> {
   const live = new Map<string, LiveSession>();
@@ -81,144 +55,9 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
     return rows[0];
   };
-  const { syncScope, closeTurn, finish, completed } = nativeControl(deps.db, live, tokens);
-  const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
-    if ((session.seedPending || session.currentPromptEventId === eventId) && session.context)
-      session.seedPending = false;
-    else {
-      if (session.context)
-        await closeTurn(
-          session,
-          'outcome_unknown',
-          'A new prompt arrived before completion was observed.',
-        );
-      session.currentPromptEventId = eventId;
-      const target = await nativeTerminalTarget(
-        deps.db,
-        session.row.conversation_id,
-        session.row.provider,
-      );
-      const mode = session.mode ?? (session.row.provider === 'claude' ? 'plan' : 'read-only');
-      const sent = await sendUserMessage(
-        deps.db,
-        session.row.conversation_id,
-        {
-          id: eventId,
-          content: event.prompt || 'Continue in the native terminal.',
-        },
-        { ...target, agentMode: mode, permission: permissionFor(session.row.provider, mode) },
-      );
-      if (
-        !(await setNativeRun(deps.db, {
-          ...session.row,
-          runId: sent.run.id,
-          ...(event.nativeTurnId ? { nativeTurnId: event.nativeTurnId } : {}),
-        }))
-      )
-        throw new NativeRuntimeError('This terminal turn is no longer current.', 409);
-      session.context = await nativeTurnContext(
-        deps.db,
-        session.row,
-        await loadRunInput(deps.db, sent.run.id),
-        session.mode,
-        waiters,
-      );
-    }
-    session.currentPromptEventId = eventId;
-    session.row.native_turn_id = event.nativeTurnId ?? null;
-    await session.context!.mode(session.mode);
-    syncScope(session);
-  };
-  const observe = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
-    const retryCompletion = session.completedEvents.has(eventId);
-    if (retryCompletion && session.completedEvents.get(eventId) !== session.currentPromptEventId)
-      return;
-    if (!retryCompletion && event.nativeTurnId && session.completedTurns.has(event.nativeTurnId))
-      return;
-    if (
-      !retryCompletion &&
-      event.kind !== 'prompt' &&
-      event.kind !== 'session_start' &&
-      event.kind !== 'session_end'
-    ) {
-      if (
-        !session.context ||
-        (event.nativeTurnId &&
-          session.row.native_turn_id &&
-          event.nativeTurnId !== session.row.native_turn_id)
-      )
-        return;
-    }
-    if (
-      event.kind === 'prompt' &&
-      event.nativeTurnId &&
-      event.nativeTurnId === session.row.native_turn_id &&
-      !session.seedPending &&
-      session.currentPromptEventId !== eventId
-    )
-      return;
-    if (event.permissionMode !== undefined) {
-      const mode = boundedNativeMode(
-        session.row.provider,
-        session.ceiling,
-        observedNativeMode(session.row.provider, event),
-      );
-      if (mode !== session.mode) {
-        session.mode = mode;
-        await session.context?.mode(mode);
-      }
-    }
-    if (event.kind === 'prompt') await turn(session, event, eventId);
-    if (['stop', 'interrupt', 'error'].includes(event.kind)) completed(session, eventId);
-    if (event.kind === 'stop') await closeTurn(session, 'succeeded');
-    if (event.kind === 'interrupt')
-      await closeTurn(session, 'cancelled', 'Interrupted in the native terminal.');
-    if (event.kind === 'error')
-      await closeTurn(session, 'failed', 'The native agent reported a turn failure.');
-    if (event.kind === 'session_end') {
-      await finish(session, 'exited', false, 'The native session ended.');
-      deps.terminals.kill(session.row.id);
-      return;
-    }
-    await setNativeTerminalState(deps.db, {
-      ...session.row,
-      state: nativeActivity(event, session.context !== null),
-      ...(event.nativeSessionId ? { nativeSessionId: event.nativeSessionId } : {}),
-      ...(event.nativeTurnId ? { nativeTurnId: event.nativeTurnId } : {}),
-    });
-    session.row.state = nativeActivity(event, session.context !== null);
-    if (event.nativeSessionId) session.row.native_session_id = event.nativeSessionId;
-  };
-  const hook = async (token: string, body: unknown) => {
-    const session = tokens.get(digest(token));
-    const parsed = envelopeSchema.safeParse(body);
-    if (
-      !session ||
-      !parsed.success ||
-      parsed.data.sessionId !== session.row.id ||
-      parsed.data.provider !== session.row.provider
-    )
-      return false;
-    const event = parseNativeHook(session.row.provider, parsed.data.payload);
-    if (
-      !event ||
-      (event.nativeSessionId &&
-        session.row.native_session_id &&
-        event.nativeSessionId !== session.row.native_session_id)
-    )
-      return false;
-    return enqueue(session, async () => {
-      if (tokens.get(session.hookKey) !== session) return false;
-      const seen = await deps.db.query(
-        'SELECT 1 FROM native_terminal_events WHERE session_id = $1 AND generation = $2 AND event_id = $3',
-        [session.row.id, session.row.generation, parsed.data.eventId],
-      );
-      if (seen.rowCount) return true;
-      await observe(session, event, parsed.data.eventId);
-      await acceptNativeEvent(deps.db, { ...session.row, eventId: parsed.data.eventId });
-      return true;
-    });
-  };
+  const control = nativeControl(deps.db, live, tokens);
+  const { syncScope, finish } = control;
+  const hook = nativeObserver({ db: deps.db, waiters, tokens, enqueue, control });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
     conversationId: string,
@@ -234,9 +73,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (current) {
       if (request.prompt || request.resume)
         throw new NativeTerminalConflictError('Use the running terminal to send another message.');
+      const connection = deps.terminals.reattach(current.row.id);
+      if (!connection)
+        throw new NativeTerminalConflictError('This terminal is closing. Try again in a moment.');
       return {
         session: nativeTerminalView((await nativeTerminalRow(deps.db, conversationId))!),
-        connection: { ...deps.terminals.reattach(current.row.id)!, ...current.folder },
+        connection: { ...connection, ...current.folder },
       };
     }
     const previous = await nativeTerminalRow(deps.db, conversationId);
@@ -244,11 +86,14 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!provider) throw new NativeRuntimeError('Choose Claude Code or Codex for this terminal.');
     if (previous && !['exited', 'error', 'interrupted'].includes(previous.state))
       throw new NativeTerminalConflictError('That terminal agent is already running.');
-    if (previous && !request.resume)
+    if (previous?.native_session_id && !request.resume)
       throw new NativeTerminalConflictError(
         'Resume the ended terminal explicitly, or start a new Terminal session.',
       );
-    if (request.resume && (!previous?.native_session_id || previous.provider !== provider))
+    if (
+      request.resume &&
+      (!isNativeSessionId(previous?.native_session_id) || previous?.provider !== provider)
+    )
       throw new NativeTerminalConflictError(
         'This terminal has no native session to resume. Start a new Terminal session.',
       );
@@ -284,6 +129,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       resume: request.resume,
       observation: 'unsupported',
       reason: null,
+    }).catch(async (error: unknown) => {
+      const failure = nativeLaunchError(error);
+      if (prepared.runId) await failNativeLaunchRun(deps.db, prepared.runId, failure.message);
+      throw failure;
     });
     const token = randomBytes(32).toString('base64url');
     const scope: SparkScope = {
@@ -333,6 +182,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         mode: null,
         ceiling: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
         seedPending: prepared.runId !== null,
+        nativeSessionEnded: false,
+        observedTurnId: null,
         chain: Promise.resolve(),
         hookKey: digest(token),
         completedTurns: new Set(),
@@ -350,7 +201,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         await context!.mode(null);
       }
       live.set(conversationId, session);
-      tokens.set(session.hookKey, session);
+      if (launch.observation === 'hooks') tokens.set(session.hookKey, session);
       const reason =
         launch.observation === 'unsupported'
           ? 'Lifecycle hook compatibility could not be verified. Native terminal permissions still apply.'
@@ -402,14 +253,15 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         disposed ||
         stoppedLaunches.has(conversationId) ||
         (prepared.runId !== null && (await isCancelRequested(deps.db, prepared.runId)));
-      const reason = cancelled ? 'Stopped by the user.' : 'The native terminal could not start.';
+      const failure = nativeLaunchError(error);
+      const reason = cancelled ? 'Stopped by the user.' : failure.message;
       await finishNativeRun(deps.db, row, cancelled ? 'cancelled' : 'failed', reason);
       await setNativeTerminalState(deps.db, {
         ...row,
         state: cancelled ? 'exited' : 'error',
         reason,
       });
-      throw error;
+      throw failure;
     }
   };
   const stop = async (conversationId: string) => {

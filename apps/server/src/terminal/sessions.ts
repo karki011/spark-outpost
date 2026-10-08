@@ -117,6 +117,9 @@ export interface ShellWatcher {
   ended(id: string): void;
 }
 
+const isAgent = (kind: Session['kind']): kind is ShellKind & { agent: AgentRequest } =>
+  kind.type === 'shell' && kind.agent !== undefined;
+
 export class TerminalLimitError extends Error {}
 export class TerminalAuthError extends Error {}
 
@@ -199,7 +202,7 @@ export class TerminalSessions {
 
   reattach(id: string): { id: string; token: string } | null {
     const session = this.sessions.get(id);
-    if (!session || session.kind.type !== 'shell') return null;
+    if (!session || !isAgent(session.kind)) return null;
     const oldClient = session.client;
     session.client = null;
     session.attached = false;
@@ -257,10 +260,11 @@ export class TerminalSessions {
       },
       disconnect: () => {
         if (session.client !== client) return;
-        if (kind.type === 'setup') this.end(session, 'disconnected', null);
+        if (!isAgent(kind)) this.end(session, 'disconnected', null);
         else {
           session.client = null;
           session.attached = false;
+          session.tokenExpiresAt = 0;
         }
       },
     };
@@ -432,8 +436,7 @@ export class TerminalSessions {
   }
 
   private handleOutput(session: Session, data: string) {
-    if (session.kind.type === 'shell')
-      session.replay = (session.replay + data).slice(-REPLAY_BYTES);
+    if (isAgent(session.kind)) session.replay = (session.replay + data).slice(-REPLAY_BYTES);
     session.client?.output(data);
     if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;

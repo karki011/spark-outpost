@@ -3,6 +3,21 @@ import { finishNativeRun, setNativeTerminalState } from '../persistence/native-t
 import { SparkToolError } from '../spark-mcp/tool.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
+export class NativeRuntimeError extends Error {
+  constructor(
+    message: string,
+    readonly status = 400,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
+}
+
+export function nativeLaunchError(error: unknown): Error {
+  if (error instanceof Error && error.constructor !== Error) return error;
+  return new NativeRuntimeError('The terminal could not start. Try again.', 500, { cause: error });
+}
+
 export function nativeControl(
   db: Db,
   live: Map<string, LiveSession>,

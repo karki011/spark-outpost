@@ -2,7 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { nativeTerminalLaunchRequestSchema } from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
 import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
-import { NativeRuntimeError, type NativeRuntime } from './native-runtime.ts';
+import { NativeRuntimeError } from './native-control.ts';
+import type { NativeRuntime } from './native-runtime.ts';
 
 export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
   const router = Router();

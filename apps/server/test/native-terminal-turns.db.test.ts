@@ -157,10 +157,15 @@ describe('native terminal persistence', () => {
     await setNativeTerminalState(t.db, { ...fence, state: 'error' });
     expect(await setNativeTerminalState(t.db, { ...fence, state: 'working' })).toBe(false);
     expect(await acceptNativeEvent(t.db, { ...fence, eventId: randomUUID() })).toBe(false);
-    await expect(reserveNativeTerminalLaunch(t.db, reservation)).rejects.toThrow('explicitly');
     await expect(
       reserveNativeTerminalLaunch(t.db, { ...reservation, resume: true }),
     ).rejects.toThrow('no native session');
+    await setNativeTerminalState(t.db, {
+      ...fence,
+      state: 'error',
+      nativeSessionId: 'ended-session',
+    });
+    await expect(reserveNativeTerminalLaunch(t.db, reservation)).rejects.toThrow('explicitly');
   });
 
   it('marks host failures interrupted without placing recovery work in the queue', async () => {
@@ -194,6 +199,36 @@ describe('native terminal persistence', () => {
     expect(await getSummary(t.db, conversationId)).toMatchObject({
       terminal: { resumeAvailable: true },
     });
+  });
+
+  it('settles a queued terminal run that never launched and leaves queued Chat runs alone', async () => {
+    const { sent, conversationId } = await seed();
+    const chatId = randomUUID();
+    await createConversation(t.db, t.workspaceId, chatId, {});
+    const chat = await sendUserMessage(
+      t.db,
+      chatId,
+      { id: randomUUID(), content: 'Queued chat work' },
+      { provider: 'claude' },
+    );
+    await recoverNativeTerminals(t.db);
+    await recoverNativeTerminals(t.db);
+    const status = async (id: string) =>
+      (await t.db.query('SELECT status, error, finished_at FROM runs WHERE id = $1', [id])).rows[0];
+    expect(await status(sent.run.id)).toMatchObject({
+      status: 'failed',
+      error: expect.stringContaining('was not started'),
+      finished_at: expect.any(Date),
+    });
+    expect(await status(chat.run.id)).toMatchObject({ status: 'queued' });
+    expect(
+      (
+        await t.db.query("SELECT * FROM run_events WHERE run_id = $1 AND type = 'RUN_ERROR'", [
+          sent.run.id,
+        ])
+      ).rowCount,
+    ).toBe(1);
+    expect(await nativeTerminalRow(t.db, conversationId)).toBeNull();
   });
 
   it('cancels a queued native launch without an ACP job and refuses starting it afterward', async () => {

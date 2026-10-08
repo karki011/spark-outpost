@@ -123,4 +123,42 @@ describe('native terminal ownership', () => {
     expect(client.send).toHaveBeenCalledWith({ type: 'ended', reason: 'exited', exitCode: 7 });
     expect(f.sessions.reattach(created.id)).toBeNull();
   });
+
+  it('ends an ordinary shell when its socket disconnects and keeps no replay for it', () => {
+    const f = useFixture();
+    const shell = f.sessions.createShell({ cwd: '/tmp', conversationId: 'chat-a' });
+    const client = f.client();
+    const connection = f.sessions.attach(shell.id, shell.token, client, { cols: 80, rows: 24 });
+    f.output('shell output');
+    connection.disconnect();
+    expect(client.send).toHaveBeenCalledWith({
+      type: 'ended',
+      reason: 'disconnected',
+      exitCode: null,
+    });
+    expect(f.sessions.activeCount).toBe(0);
+    expect(f.sessions.reattach(shell.id)).toBeNull();
+  });
+
+  it('refuses to reattach an ordinary shell', () => {
+    const f = useFixture();
+    const shell = f.sessions.createShell({ cwd: '/tmp', conversationId: 'chat-a' });
+    f.sessions.attach(shell.id, shell.token, f.client(), { cols: 80, rows: 24 });
+    expect(f.sessions.reattach(shell.id)).toBeNull();
+    expect(f.sessions.activeCount).toBe(1);
+  });
+
+  it('refuses a used attach token after the socket disconnects', () => {
+    const f = useFixture();
+    const first = f.sessions.createAgent(f.request);
+    const connection = f.sessions.attach(first.id, first.token, f.client(), { cols: 80, rows: 24 });
+    connection.disconnect();
+    expect(() =>
+      f.sessions.attach(first.id, first.token, f.client(), { cols: 80, rows: 24 }),
+    ).toThrow(TerminalAuthError);
+    expect(f.sessions.activeCount).toBe(1);
+    const fresh = f.sessions.reattach(first.id)!;
+    f.sessions.attach(fresh.id, fresh.token, f.client(), { cols: 80, rows: 24 });
+    expect(f.spawn).toHaveBeenCalledTimes(1);
+  });
 });

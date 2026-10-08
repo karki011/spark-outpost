@@ -61,7 +61,7 @@ export async function reserveNativeTerminalLaunch(
     const previous = current.rows[0];
     if (previous && !endedStates.has(previous.state))
       throw new NativeTerminalConflictError('That terminal agent is already running.');
-    if (previous && !input.resume)
+    if (previous?.native_session_id && !input.resume)
       throw new NativeTerminalConflictError('Resume the interrupted or ended terminal explicitly.');
     if (input.resume && (!previous?.native_session_id || previous.provider !== input.provider)) {
       throw new NativeTerminalConflictError('This terminal has no native session to resume.');
@@ -224,11 +224,17 @@ export type NativeRunOutcome = 'succeeded' | 'failed' | 'cancelled' | 'outcome_u
 async function finishLockedRun(
   client: DbClient,
   row: NativeTerminalRow,
-  status: NativeRunOutcome,
+  requested: NativeRunOutcome,
   reason?: string,
 ): Promise<void> {
   if (!row.active_run_id) return;
   const runId = row.active_run_id;
+  const neverStarted = await client.query(
+    `SELECT 1 FROM runs WHERE id = $1 AND status = 'queued' FOR UPDATE`,
+    [runId],
+  );
+  const status: NativeRunOutcome =
+    neverStarted.rowCount === 1 && requested === 'outcome_unknown' ? 'failed' : requested;
   const ended = await client.query(
     `UPDATE runs SET status = $2, error = $3, started_at = COALESCE(started_at, now()), finished_at = now()
      WHERE id = $1 AND status IN ('queued', 'running', 'awaiting_approval') RETURNING id`,
@@ -273,6 +279,47 @@ export async function finishNativeRun(
   });
 }
 
+async function failUnstartedRuns(
+  client: DbClient,
+  reason: string,
+  runId: string | null,
+): Promise<void> {
+  const failed = await client.query<{ id: string; conversation_id: string }>(
+    `UPDATE runs r SET status = 'failed', error = $1, started_at = COALESCE(r.started_at, now()), finished_at = now()
+     FROM conversations c WHERE c.id = r.conversation_id AND c.session_type = 'terminal'
+       AND r.status = 'queued' AND ($2::uuid IS NULL OR r.id = $2)
+       AND NOT EXISTS (SELECT 1 FROM jobs WHERE run_id = r.id)
+       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions n WHERE n.active_run_id = r.id)
+     RETURNING r.id, r.conversation_id`,
+    [reason, runId],
+  );
+  for (const row of failed.rows) {
+    await insertRunEvent(client, row.id, runEvents.error(reason, 'failed'));
+    await client.query(`SELECT pg_notify('run_events', $1)`, [row.id]);
+    await notifyNativeTerminal(client, row.conversation_id);
+  }
+}
+
+export async function failNativeLaunchRun(db: Db, runId: string, reason: string): Promise<void> {
+  await withTransaction(db, (client) => failUnstartedRuns(client, reason, runId));
+}
+
+export async function requeueNativeLaunchRun(db: Db, runId: string): Promise<boolean> {
+  const requeued = await db.query(
+    `UPDATE runs r SET status = 'queued', error = NULL, started_at = NULL, finished_at = NULL
+     FROM conversations c WHERE r.id = $1 AND c.id = r.conversation_id AND c.session_type = 'terminal'
+       AND r.status = 'failed' AND r.cancel_requested_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM jobs WHERE run_id = r.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM native_terminal_sessions n
+         WHERE n.conversation_id = c.id
+           AND (n.native_session_id IS NOT NULL OR n.state NOT IN ('exited', 'error', 'interrupted'))
+       )`,
+    [runId],
+  );
+  return requeued.rowCount === 1;
+}
+
 export async function recoverNativeTerminals(db: Db): Promise<void> {
   await withTransaction(db, async (client) => {
     const { rows } = await client.query<NativeTerminalRow>(
@@ -300,5 +347,10 @@ export async function recoverNativeTerminals(db: Db): Promise<void> {
       await client.query(`SELECT pg_notify('run_events', $1)`, [row.id]);
       await notifyNativeTerminal(client, row.conversation_id);
     }
+    await failUnstartedRuns(
+      client,
+      'The terminal was not started before Spark stopped. Open the session to start it.',
+      null,
+    );
   });
 }

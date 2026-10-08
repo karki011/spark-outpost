@@ -52,7 +52,7 @@ export function nativeActivity(event: NativeHookEvent, active: boolean) {
     question: 'waiting_for_input',
     stop: 'ready',
     error: 'ready',
-    session_end: 'exited',
+    session_end: 'ready',
     interrupt: 'ready',
   } as const;
   return states[event.kind];
