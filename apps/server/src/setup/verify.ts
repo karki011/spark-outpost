@@ -202,29 +202,57 @@ async function* claudeTestRequest(
   return label;
 }
 
+export interface CliLogin {
+  signedIn: boolean;
+  label: string;
+}
+
+async function claudeLogin(path: string, run: RunCommand): Promise<CliLogin | null> {
+  const result = await run(path, ['auth', 'status', '--json'], VERSION_TIMEOUT_MS);
+  const status = parseAuthStatus(result.stdout);
+  if (!status) return null;
+  const method = typeof status.authMethod === 'string' ? status.authMethod : '';
+  return { signedIn: status.loggedIn === true, label: authMethodLabels[method] ?? 'Logged in' };
+}
+
+async function codexLogin(path: string, run: RunCommand): Promise<CliLogin> {
+  const result = await run(path, ['login', 'status'], VERSION_TIMEOUT_MS);
+  const label = `${result.stdout}${result.stderr}`.trim().split('\n')[0] || 'Logged in';
+  return { signedIn: result.code === 0, label };
+}
+
+export function cliLogin(
+  cli: 'claude' | 'codex',
+  path: string,
+  run: RunCommand,
+): Promise<CliLogin | null> {
+  return cli === 'claude' ? claudeLogin(path, run) : codexLogin(path, run);
+}
+
+function notLoggedIn(entry: CatalogEntry): VerifyStep {
+  return failed(
+    `You're not logged in to the \`${entry.cli}\` CLI. ${entry.loginHint}`,
+    'not_logged_in',
+  );
+}
+
 async function* checkClaudeLogin(
   entry: CatalogEntry,
   path: string,
   run: RunCommand,
 ): AsyncGenerator<VerifyStep, string | null> {
   yield started('Checking your CLI login');
-  const result = await run(path, ['auth', 'status', '--json'], VERSION_TIMEOUT_MS);
-  const status = parseAuthStatus(result.stdout);
-  if (!status) {
+  const login = await claudeLogin(path, run);
+  if (!login) {
     yield succeeded('This CLI version has no login status command');
     return yield* claudeTestRequest(entry, path, run);
   }
-  if (status.loggedIn !== true) {
-    yield failed(
-      `You're not logged in to the \`${entry.cli}\` CLI. ${entry.loginHint}`,
-      'not_logged_in',
-    );
+  if (!login.signedIn) {
+    yield notLoggedIn(entry);
     return null;
   }
-  const method = typeof status.authMethod === 'string' ? status.authMethod : '';
-  const label = authMethodLabels[method] ?? 'Logged in';
-  yield succeeded(label);
-  return label;
+  yield succeeded(login.label);
+  return login.label;
 }
 
 async function* checkCodexLogin(
@@ -233,17 +261,13 @@ async function* checkCodexLogin(
   run: RunCommand,
 ): AsyncGenerator<VerifyStep, string | null> {
   yield started('Checking your CLI login');
-  const result = await run(path, ['login', 'status'], VERSION_TIMEOUT_MS);
-  if (result.code !== 0) {
-    yield failed(
-      `You're not logged in to the \`${entry.cli}\` CLI. ${entry.loginHint}`,
-      'not_logged_in',
-    );
+  const login = await codexLogin(path, run);
+  if (!login.signedIn) {
+    yield notLoggedIn(entry);
     return null;
   }
-  const label = `${result.stdout}${result.stderr}`.trim().split('\n')[0] || 'Logged in';
-  yield succeeded(label);
-  return label;
+  yield succeeded(login.label);
+  return login.label;
 }
 
 export async function locateCli(

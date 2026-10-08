@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { providerIssues } from '../src/persistence/provider-health.ts';
 import { expectConformantRun } from './agui-conformance.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
@@ -66,4 +67,19 @@ describe('a piece whose provider fails', { timeout: 120_000 }, () => {
       expect(orchestration.status).not.toBe('running');
     },
   );
+
+  it('fails a signed-out piece once with the sign-in message and stays on Codex', async () => {
+    const { runId, orchestration } = await runOnCodex('#pieces #piecesignedout');
+    expect(orchestration.status).toBe('failed');
+    const builders = (await children(t, runId)).filter((child) => child.role === 'builder');
+    expect(builders.map((child) => [child.pieceKey, child.provider, child.status])).toEqual([
+      ['P1', 'codex', 'failed'],
+    ]);
+    expect(builders[0]!.error).toMatch(/couldn't sign in .*reconnect Codex/);
+    const list = await pieceList(t, runId);
+    expect(list.pieces[0]).toMatchObject({ key: 'P1', status: 'failed', provider: 'codex' });
+    expect(list.pieces[0]!.note).toMatch(/couldn't sign in/);
+    const health = await providerIssues(t.db, t.workspaceId);
+    expect(health).toMatchObject([{ provider: 'codex', kind: 'auth' }]);
+  });
 });
