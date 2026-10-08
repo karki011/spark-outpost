@@ -259,7 +259,7 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   const chips = dialog.getByRole('radiogroup', { name: 'Show models from' });
   const regions = dialog.getByRole('region');
   await expect(regions).toHaveCount(3);
-  await expect(chips.getByRole('radio', { name: /^Claude\s*5 models$/ })).toBeVisible();
+  await expect(chips.getByRole('radio', { name: /^Claude\s*6 models$/ })).toBeVisible();
 
   await chips.getByRole('radio', { name: /^Codex/ }).click();
   await expect(chips.getByRole('radio', { name: /^Codex/ })).toBeChecked();

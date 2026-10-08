@@ -116,7 +116,7 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   await expect(tv.locator('.tv-n[data-piece]')).toHaveCount(3);
   await expect(spoke(page, 'P2')).toHaveAttribute(
     'aria-label',
-    /^Rivet, P2 API, shared tree, landed, Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 \(the chat's provider\)\. Show details$/,
+    /^Rivet, P2 API, shared tree, landed, Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 \(only mid-tier route\)\. Show details$/,
   );
   await expect(spoke(page, 'P1')).toContainText('P1 · Store');
   await expect(spoke(page, 'P1').locator('.piece-state')).toHaveText('landed');
