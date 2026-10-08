@@ -181,7 +181,7 @@ Edit and command approvals inside pieces follow the agent's mode as for one Buil
 `0063_coordinator.sql`:
 
 - `piece_lists`: task, orchestration run, version, the `plan_documents` id and version, `pieces_hash`, placement (`in_order`, `shared`, `worktree`) and its reason, status (proposed, approved, superseded, rejected), approval and `approved_by` (user or level).
-- `task_pieces`: key, title, goal, `owns`, `reads`, `depends_on`, contract and its version, acceptance, checks, `research`, size estimate, placement (adds `read_only`), provider, model, Builder run, worktree, status (pending, ready, running, landed, skipped, failed), attempts, fix turns, files changed, violations, `landed_at`, note and `check_status`.
+- `task_pieces`: key, title, goal, `owns`, `reads`, `depends_on`, contract and its version, acceptance, checks, `research`, size estimate, placement (adds `read_only`), provider, model, Builder run, worktree, status (pending, ready, running, landed, skipped, failed, and stopped for a piece the user stopped), attempts, fix turns, files changed, violations, `landed_at`, note and `check_status`.
 - `piece_notes`: kind (`merge_main`, `contract_changed`, `requirement_added`, `skip`, `stop`, `reassign`, `steer`), body, source (user or coordinator), urgent, delivery time and run.
 - `runs.role` and `run_advice.role` add `coordinator` and `integrator`; approval kinds add `pieces` and `ownership`; `projects.builder_env`.
 

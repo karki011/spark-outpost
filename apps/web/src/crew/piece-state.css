@@ -31,6 +31,12 @@
 .piece-state[data-state='skipped']::before {
   content: '–' / '';
 }
+.piece-state[data-state='stopped'] {
+  color: var(--muted);
+}
+.piece-state[data-state='stopped']::before {
+  content: '■' / '';
+}
 .piece-state[data-state='failed'] {
   color: var(--danger);
 }

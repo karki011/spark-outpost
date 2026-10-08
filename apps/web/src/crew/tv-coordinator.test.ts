@@ -90,6 +90,19 @@ function coordinated() {
   });
 }
 
+describe('a piece the user stopped', () => {
+  it('reads as stopped on its spoke and its tag, not failed', () => {
+    const current = orchestration({
+      crew: [member({ runId: RUN(1), role: 'coordinator', name: 'Atlas', mode: 'ask' })],
+      pieces: list([piece('P1', { status: 'stopped', placement: 'shared', builderName: 'Bolt' })]),
+    });
+    const scene = coordinatorScene(current, crewAgents(current))!;
+    const bolt = scene.members.find((agent) => agent.name === 'Bolt')!;
+    expect([bolt.state, bolt.line]).toEqual(['stopped', 'stopped']);
+    expect(Object.values(scene.tags).map((tag) => tag.state)).toEqual(['stopped']);
+  });
+});
+
 describe('Agent TV coordinator scene', () => {
   it('puts the coordinator in the hub and one spoke per piece, with the other crew after', () => {
     const current = coordinated();

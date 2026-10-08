@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pieceBoard, type TaskPiece } from './pieces.ts';
+import { pieceBoard, pieceStatusSchema, type TaskPiece } from './pieces.ts';
 
 function piece(key: string, extra: Partial<TaskPiece> = {}): TaskPiece {
   return {
@@ -76,5 +76,18 @@ describe('pieceBoard', () => {
       ['skipped', 'skipped by you'],
       ['running', null],
     ]);
+  });
+
+  it('shows a piece the user stopped as stopped, not failed', () => {
+    expect(pieceStatusSchema.parse('stopped')).toBe('stopped');
+    const rows = pieceBoard({
+      pieces: [piece('P1', { status: 'stopped', note: 'You stopped the run.' })],
+    });
+    expect(rows[0]).toMatchObject({
+      status: 'stopped',
+      tone: 'stopped',
+      note: 'You stopped the run.',
+      folded: false,
+    });
   });
 });

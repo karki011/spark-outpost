@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PieceList, TaskPiece } from '@spark-outpost/contracts';
 import type { MemberResult } from '../orchestration/session.ts';
 import type { Coordination } from './state.ts';
+import { STOPPED_BY_USER } from './skip.ts';
 import { piecesSummary } from './summary.ts';
 
 function piece(key: string, extra: Partial<TaskPiece>): TaskPiece {
@@ -199,6 +200,18 @@ describe('piecesSummary', () => {
       [],
     );
     expect(summary).toBe('Built in 1 piece:\n- P1 · Piece P1 (Bolt): failed — Provider crashed');
+  });
+
+  it('says a piece the user stopped was stopped', () => {
+    const summary = piecesSummary(
+      coordination([
+        piece('P1', { status: 'stopped', note: STOPPED_BY_USER, builderName: 'Bolt' }),
+      ]),
+      [],
+    );
+    expect(summary).toBe(
+      'Built in 1 piece:\n- P1 · Piece P1 (Bolt): stopped — You stopped the run.',
+    );
   });
 
   it('is absent without a piece list', () => {

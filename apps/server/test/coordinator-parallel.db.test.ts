@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { NOT_STARTED_STOPPED } from '../src/coordinator/skip.ts';
+import { NOT_STARTED_STOPPED, STOPPED_BY_USER } from '../src/coordinator/skip.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
@@ -238,11 +238,18 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     expect(orchestration.status).toBe('cancelled');
     const list = await pieceListOf(t, runId);
     expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
-      ['P1', 'failed'],
-      ['P2', 'failed'],
+      ['P1', 'stopped'],
+      ['P2', 'stopped'],
       ['P3', 'skipped'],
     ]);
-    expect(list.pieces[2]!.note).toBe(NOT_STARTED_STOPPED);
+    expect(list.pieces.map((piece) => piece.note)).toEqual([
+      STOPPED_BY_USER,
+      STOPPED_BY_USER,
+      NOT_STARTED_STOPPED,
+    ]);
+    const reply = (await assistantReplies(t, runId)).at(-1) ?? '';
+    expect(reply).toContain('stopped — You stopped the run.');
+    expect(reply).not.toMatch(/P[12][^\n]*failed/);
     const runs = await crewRuns(t, runId);
     expect(runs.filter((run) => run.pieceKey).map((run) => run.status)).toEqual([
       'cancelled',
