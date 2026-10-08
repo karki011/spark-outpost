@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { nativeTerminalRow } from '../src/persistence/native-terminals.ts';
+import { NativeTerminalConflictError } from '../src/persistence/native-terminal-turns.ts';
 import { NativeRuntimeError } from '../src/terminal/native-control.ts';
 import { TerminalLimitError } from '../src/terminal/sessions.ts';
 import { nativeRuntimeFixture, type NativeRuntimeFixture } from './native-terminal-fixture.ts';
@@ -88,5 +89,13 @@ describe('native terminal launch recovery', () => {
       'first message',
     );
     expect(f.spawn).not.toHaveBeenCalled();
+  });
+
+  it('refuses to hand out a connection for a terminal process that already ended', async () => {
+    const first = await f.launch();
+    f.terminals.kill(first.session.id);
+    await expect(f.runtime.launch(f.conversationId, { resume: false })).rejects.toBeInstanceOf(
+      NativeTerminalConflictError,
+    );
   });
 });

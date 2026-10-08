@@ -73,9 +73,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (current) {
       if (request.prompt || request.resume)
         throw new NativeTerminalConflictError('Use the running terminal to send another message.');
+      const connection = deps.terminals.reattach(current.row.id);
+      if (!connection)
+        throw new NativeTerminalConflictError('This terminal is closing. Try again in a moment.');
       return {
         session: nativeTerminalView((await nativeTerminalRow(deps.db, conversationId))!),
-        connection: { ...deps.terminals.reattach(current.row.id)!, ...current.folder },
+        connection: { ...connection, ...current.folder },
       };
     }
     const previous = await nativeTerminalRow(deps.db, conversationId);
