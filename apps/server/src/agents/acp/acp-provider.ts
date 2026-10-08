@@ -36,7 +36,8 @@ import {
 import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
 import { assertProtocolVersion, failureError, namesCause, toProviderError } from './errors.ts';
 import { declineInConversation, nativePlan } from './permissions.ts';
-import { applySessionSettings, modeName } from './apply-settings.ts';
+import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
+import { watchRanModel } from './ran-model.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
@@ -394,25 +395,22 @@ async function converse(
     try {
       if (turn.session) push([sessionOutput(plan.request, opened, turn.session.freshReason)]);
       const wish = modeWish(definition, turn, policy !== null, doing !== null);
-      const applied = await applySessionSettings(ctx, session, definition, turn.settings, wish);
-      push([
-        { kind: 'capabilities', report: applied.capabilities },
-        {
-          kind: 'session_settings',
-          ...applied.current,
-          mode: applied.mode,
-          options: applied.values,
-        },
-        ...(workspace.repo
-          ? [{ kind: 'instructions' as const, files: workspace.repo.following }]
-          : []),
-      ]);
+      const applied = await applySessionSettings(
+        ctx,
+        session,
+        definition,
+        turn.settings,
+        wish,
+        continued,
+      );
+      push(settingsOutputs(applied, workspace.repo?.following ?? null));
       const sessionNotes = turn.session ? [sessionNote(opened, turn.session)] : [];
       const notes = [applied.using, ...sessionNotes, ...workspace.notes, ...plan.notes];
       for (const note of [...notes, ...applied.notes]) {
         if (note) push(mapper.note(note));
       }
       const { live } = applied;
+      const ranModel = watchRanModel(definition.id, definition.name, live, mapper.note);
       const allowed = modeAllowed(definition, policy !== null, doing !== null);
       mapper.trackSettings(
         { ...applied.current, mode: applied.mode, values: applied.values },
@@ -474,6 +472,7 @@ async function converse(
           live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
+        push(ranModel.see(message.update));
         push(commands.see(message.update));
         const observed = await rails?.observe(message.update);
         for (const flag of doing ? (observed?.rails ?? []) : []) {

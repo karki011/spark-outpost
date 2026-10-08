@@ -4,6 +4,7 @@ import {
   ProviderError,
   type AgentSettings,
   type ProviderCapabilityReport,
+  type ProviderOutput,
 } from '../../providers/provider.ts';
 import { PLAN_MODE_ID } from '../../plans/plan-mode.ts';
 import type { AgentDefinition } from './agents.ts';
@@ -32,6 +33,17 @@ export interface AppliedSettings {
   values: ConfigValues;
   using: string;
   live: SettingsSession;
+}
+
+export function settingsOutputs(
+  applied: AppliedSettings,
+  following: string[] | null,
+): ProviderOutput[] {
+  return [
+    { kind: 'capabilities', report: applied.capabilities },
+    { kind: 'session_settings', ...applied.current, mode: applied.mode, options: applied.values },
+    ...(following ? [{ kind: 'instructions' as const, files: following }] : []),
+  ];
 }
 
 const COLLABORATION_CATEGORY = 'collaboration_mode';
@@ -130,6 +142,7 @@ export async function applySessionSettings(
   definition: AgentDefinition,
   settings: AgentSettings,
   mode: ModeWish = { wanted: definition.conversationMode },
+  resumed = false,
 ): Promise<AppliedSettings> {
   const initial = withLegacy(
     session.newSessionResponse.configOptions ?? [],
@@ -166,7 +179,7 @@ export async function applySessionSettings(
     { category: 'thought_level', value: settings.effort },
   ];
   for (const wish of wishes) {
-    const plan = planConfig(live.options(), [wish]);
+    const plan = planConfig(live.options(), [wish], resumed && reasserted(live.options(), wish));
     if (plan.unmatched.length > 0) {
       notes.push(defaultNote(wish, "isn't offered by the agent"));
       continue;
@@ -200,6 +213,11 @@ export async function applySessionSettings(
     using: usingLabel(options, definition.name),
     live,
   };
+}
+
+function reasserted(options: readonly acp.SessionConfigOption[], wish: ConfigWish): boolean {
+  const option = findOption(options, wish.category);
+  return wish.category === 'model' && option !== undefined && option.id !== LEGACY_MODEL_OPTION;
 }
 
 function assertModeInForce(
