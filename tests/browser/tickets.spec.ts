@@ -148,7 +148,7 @@ test('Start from a ticket creates a linked chat', async ({ page }) => {
   await row(page, 'ENG-1210').hover({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Start ENG-1210' }).click();
   const dialog = page.getByRole('dialog', { name: 'Start work on ENG-1210' });
-  await expect(dialog.getByRole('radio', { name: 'Plan first' })).toBeFocused();
+  await expect(dialog.getByRole('radio', { name: 'Chat', exact: true })).toBeFocused();
   await expect(dialog).toContainText('Move ENG-1210 to In progress in Linear');
   await dialog.getByRole('button', { name: 'Start with a plan' }).click();
   await expect(page.locator('.chat-title')).toContainText('ENG-1210', { timeout: 15_000 });

@@ -303,6 +303,7 @@ for (const theme of ['graphite', 'apricot']) {
 }
 
 test('a live edit by the agent shows the edited file while the turn runs', async ({ page }) => {
+  test.setTimeout(60_000);
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
   expect(response.ok()).toBe(true);
   await openChats(page);

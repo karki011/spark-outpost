@@ -27,6 +27,7 @@ test('new chats start at Full auto → PR, and one click in Settings puts the de
   const before = await (await page.request.get('/api/chat-settings/defaults')).json();
   expect(before.level).toBe('full-auto');
   const spark = await openSpark(page);
+  await spark.getByText('Workflow options', { exact: true }).click();
   const level = spark.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
   await expect(level).toHaveAccessibleDescription(
@@ -42,6 +43,7 @@ test('new chats start at Full auto → PR, and one click in Settings puts the de
 
 test('Spark settings offer no spend cap or budget', async ({ page }) => {
   const spark = await openSpark(page);
+  await spark.getByText('Workflow options', { exact: true }).click();
   await expect(spark.getByRole('radiogroup', { name: 'How much Spark does alone' })).toBeVisible();
   await expect(spark.getByText(/spend cap|budget/i)).toHaveCount(0);
 });

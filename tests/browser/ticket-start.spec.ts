@@ -120,7 +120,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width: 1280, height: 860 });
     mkdirSync(SHOTS, { recursive: true });
     const dialog = await openStart(page);
-    await expect(dialog.getByRole('radio', { name: 'Plan first' })).toBeFocused();
+    await expect(dialog.getByRole('radio', { name: 'Chat', exact: true })).toBeFocused();
     await dialog.screenshot({ path: `${SHOTS}/collapsed-${scheme}.png` });
 
     await dialog.getByRole('button', { name: /^Add context/ }).click();

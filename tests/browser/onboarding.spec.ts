@@ -136,7 +136,7 @@ test('Meet Spark sets the personality and the Spark switch, and the blob reacts'
     'Warm, a little humour, celebrates your wins.',
   );
 
-  const spark = dialog(page).getByRole('switch', { name: 'Spark', exact: true });
+  const spark = dialog(page).getByRole('switch', { name: 'Use Spark workflow', exact: true });
   await expect(spark).toHaveAttribute('aria-checked', 'true');
   await expect(dialog(page).getByRole('switch')).toHaveCount(1);
   const saved = page.waitForResponse(

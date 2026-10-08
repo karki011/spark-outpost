@@ -285,6 +285,6 @@ test('Tickets and GitHub screenshots', async ({ page }) => {
   await main.locator('li[data-ticket$=":ENG-1210"]').hover();
   await page.getByRole('button', { name: 'Start ENG-1210' }).click();
   const start = page.getByRole('dialog', { name: 'Start work on ENG-1210' });
-  await expect(start.getByRole('radio', { name: 'Plan first' })).toBeFocused();
+  await expect(start.getByRole('radio', { name: 'Chat', exact: true })).toBeFocused();
   await shoot(page, IMAGES, 'tickets-start', start);
 });
