@@ -29,7 +29,6 @@ import {
 } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
-import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
@@ -146,7 +145,6 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
         }
       : {}),
     ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
-    missingContext: missingContext(result.text, result.error),
   };
 }
 

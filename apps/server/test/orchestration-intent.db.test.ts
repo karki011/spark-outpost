@@ -4,12 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  modeForLegacy,
-  type AdviceBody,
-  type InvolvementLevel,
-  needsYouLine,
-} from '@spark-outpost/contracts';
+import { modeForLegacy, type AdviceBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { MAKE_CHANGE_RULE } from '../src/orchestration/context.ts';
 import { NEEDS_YOU_NOTE } from '../src/orchestration/simple-intake.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
@@ -18,8 +13,6 @@ import { getRun } from '../src/persistence/runs.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { linkedConversation } from './approval-support.ts';
 import {
-  TRIVIAL,
-  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -178,23 +171,6 @@ describe('a vague follow-up', () => {
       [runId],
     );
     expect(rows.map((row) => row.text).join('\n')).toContain(NEEDS_YOU_NOTE);
-  }, 90_000);
-});
-
-describe('missing context', () => {
-  it('says what it needs in the reply instead of retrying one tier up, with no card', async () => {
-    const { conversationId } = await linkedConversation(t, root);
-    const failing = withTag(TRIVIAL, '#build #nofile');
-    const { asked, orchestration, runId } = await turn(conversationId, failing);
-    expect(asked).toEqual([]);
-    expect(await approvalKinds(runId)).toEqual([]);
-    expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['builder', 'sonnet'],
-    ]);
-    expect(orchestration.status).toBe('succeeded');
-    const replies = await assistantReplies(t, runId);
-    expect(replies).toHaveLength(1);
-    expect(replies[0]!.endsWith(needsYouLine('There is no src/dates.ts in this repo.'))).toBe(true);
   }, 90_000);
 });
 

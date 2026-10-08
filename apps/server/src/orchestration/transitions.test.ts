@@ -233,6 +233,28 @@ describe('failures and retries', () => {
     });
   });
 
+  it('reruns a passing build Jev could not confirm one tier up instead of stopping it', () => {
+    for (const level of ['hands-off', 'full-auto'] as const) {
+      const results = run(initialFlow('edits', level, false, true), [
+        { type: 'start', start: 'build' },
+        built({ green: true }),
+        {
+          type: 'verified',
+          accepted: 'unsupported',
+          reasons: [],
+          evidence: { checksPass: true, criticConcerns: false, confidentUnmet: true },
+        },
+      ]);
+      expect(results[1]!.action).toEqual({ type: 'verify' });
+      expect(results[2]!.action).toMatchObject({
+        type: 'spawn',
+        role: 'builder',
+        reason: 'escalate',
+        escalate: true,
+      });
+    }
+  });
+
   it('stops with a report when the Builder loops', () => {
     const looped: FlowEvent = {
       type: 'looped',

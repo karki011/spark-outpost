@@ -155,13 +155,11 @@ function builderDone(
   const next = {
     ...state,
     open: [...(event.open ?? state.open)],
-    missingContext: event.missingContext ?? null,
     unchanged: event.unchanged === true,
   };
   if (event.outcome === 'failed' && (state.solo || signedOut(event.error))) {
     return finish(next, 'failed', event.error ?? 'The agent hit a problem.');
   }
-  if (event.outcome === 'failed' && next.missingContext) return askContext(next);
   if (event.outcome === 'failed') {
     if (next.retries < MAX_REPAIR_RETRIES) return retry(next);
     return needsYou(next, `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
@@ -214,18 +212,9 @@ function fixFindings(state: FlowState): FlowResult {
   );
 }
 
-function askContext(state: FlowState): FlowResult {
-  const missing = state.missingContext ?? '';
-  if (state.level === 'full-auto') {
-    return stopReport(state, `Stopped: the Builder is missing context. ${missing}`);
-  }
-  return needsYou(state, missing);
-}
-
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
   const next = { ...state, verdicts: state.verdicts + 1 };
   const action = cascadeAction(event.accepted, state.escalated, event.evidence);
-  if (action !== 'finish' && next.missingContext) return askContext(next);
   if (action === 'escalate') return escalateOnce(next, escalateFollowUp(event.reasons));
   if (action === 'ask') {
     const reason = event.accepted === 'unsupported' ? UNCONFIRMED_REASON : DECLINED_REASON;
