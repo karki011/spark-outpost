@@ -1,6 +1,6 @@
 import { modePosture } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import { publishesCode } from '../approvals/git-commands.ts';
+import { reachesHosting } from '../approvals/git-commands.ts';
 import {
   publishBasis,
   publishRequested,
@@ -72,7 +72,7 @@ export async function publishContext(
   grant: PublishGrant | undefined,
   request: ApprovalRequest,
 ): Promise<{ publish?: PublishContext }> {
-  if (!grant || !request.command || !publishesCode(request.command)) return {};
+  if (!grant || !request.command || !reachesHosting(request.command)) return {};
   const task = await taskBranch(db, request.roots[0]?.path ?? null).catch(() => null);
   return { publish: { grant: await effectiveGrant(db, grant, task), task } };
 }

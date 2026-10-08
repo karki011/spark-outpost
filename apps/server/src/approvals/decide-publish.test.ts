@@ -14,7 +14,12 @@ import {
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
-import { REMOTE_RAIL_REASON, otherBranchReason, type PublishGrant } from './publish-policy.ts';
+import {
+  REMOTE_RAIL_REASON,
+  ghRailReason,
+  otherBranchReason,
+  type PublishGrant,
+} from './publish-policy.ts';
 
 const ROOT = '/work/app/.spark/worktrees/chat-1';
 const BRANCH = 'spark/fix-dates-1a2b';
@@ -201,5 +206,149 @@ describe('decide() when the agent publishes for itself', () => {
 
   it('lets the publishing agent reinstall dependencies in Auto without a card', () => {
     expect(decideAs('auto', 'pnpm install --frozen-lockfile', main(ASKED)).verdict).toBe('allow');
+  });
+});
+
+const GREPTILE_COMMENT = `gh pr view 2233 --json comments,reviews -q '[.comments[] | select(.author.login=="greptile-apps") | {updated: .updatedAt, body: (.body | gsub("<[^>]*>"; "") | .[0:1500])}] | last' 2>&1 | head -40`;
+const SCORE_LINES = `gh pr view 2233 --comments > /tmp/pr2233-comments.txt 2>&1; rg -n "Confidence Score|P1|P2|P3" /tmp/pr2233-comments.txt | sed 's/<[^>]*>//g' | cut -c1-220 | tail -15`;
+
+describe('decide() for a read through gh', () => {
+  const READS = [
+    GREPTILE_COMMENT,
+    SCORE_LINES,
+    'gh pr checks',
+    'gh pr diff 5',
+    'gh run view 1',
+    'gh api repos/o/r/pulls/5/comments',
+    "gh api graphql -f query='query { viewer { login } }'",
+    'gh pr view 5 --repo other/repo',
+  ];
+  const withPull = (pull: number | null, builder: boolean): DecideOptions => ({
+    builder,
+    files,
+    publish: { grant: MANUAL, task: { branch: BRANCH, protectedBranches: ['main'], pull } },
+  });
+
+  describe.each([null, 2233, 77])('when the recorded pull request is %s', (pull) => {
+    it.each(READS)('runs in Auto and Bypass permissions: %s', (command) => {
+      for (const builder of [true, false]) {
+        for (const posture of ['auto', 'full_access'] as const) {
+          expect(decideAs(posture, command, withPull(pull, builder))).toEqual({
+            verdict: 'allow',
+            by: 'level',
+          });
+        }
+      }
+    });
+
+    it.each(READS)("gets the mode's ordinary card in Manual and Accept edits: %s", (command) => {
+      for (const builder of [true, false]) {
+        for (const posture of ['asks', 'edits'] as const) {
+          expect(decideAs(posture, command, withPull(pull, builder))).toEqual({
+            verdict: 'ask',
+            reason: null,
+          });
+        }
+      }
+    });
+  });
+
+  it('is an ordinary command in a question turn, not a change', () => {
+    const question = { files, askRun: true };
+    expect(decideAs('asks', GREPTILE_COMMENT, question)).toMatchObject({ verdict: 'ask' });
+    expect(decideAs('asks', 'gh pr edit 5 --title x', question)).toMatchObject({
+      verdict: 'reject',
+    });
+  });
+
+  it('keeps every write refused for a Builder', () => {
+    for (const command of [
+      'gh pr edit 5 --title x',
+      'gh pr merge 2233',
+      'gh pr close 2233',
+      'gh pr comment 2233 --body done',
+      'gh pr review 2233 --approve',
+      'gh api -X POST repos/o/r/pulls/5/comments',
+      'gh api repos/o/r/pulls/5/comments -f body=x',
+      "gh api graphql -f query='mutation { x }'",
+      'gh pr edit 2233 --repo other/repo --title x',
+      'gh frobnicate now',
+    ]) {
+      for (const posture of ['auto', 'full_access', 'asks', 'edits'] as const) {
+        expect(decideAs(posture, command, withPull(2233, true)).verdict, command).toBe('reject');
+      }
+    }
+    expect(decideAs('auto', 'gh pr merge 2233', withPull(2233, true))).toEqual({
+      verdict: 'reject',
+      reason: ghRailReason('gh pr merge'),
+    });
+  });
+
+  const OWN = { host: 'github.com', slug: 'acme/app', branch: BRANCH, pull: 2233 };
+
+  it('still asks before a redirect into a secret file or out of the project', () => {
+    for (const posture of ['auto', 'full_access', 'asks'] as const) {
+      for (const builder of [true, false]) {
+        expect(decideAs(posture, 'gh pr view 5 > ~/.npmrc', withPull(2233, builder))).toMatchObject(
+          {
+            verdict: 'ask',
+            secretFiles: ['~/.npmrc'],
+          },
+        );
+        expect(decideAs(posture, 'gh pr view 5 > /etc/x', withPull(2233, builder))).toMatchObject({
+          verdict: 'ask',
+          reason: 'This changes /etc/x, which is outside this project',
+        });
+      }
+    }
+  });
+
+  it('writes with a redirect as it does without one', () => {
+    const fullAuto = (command: string) =>
+      decideAs('asks', command, {
+        ...withPull(2233, true),
+        publish: {
+          grant: FULL_AUTO,
+          task: { branch: BRANCH, protectedBranches: ['main'], pull: 2233 },
+        },
+      });
+    const allowed = { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
+    expect(fullAuto('gh pr create --fill 2>&1 | tail')).toEqual(allowed);
+    expect(fullAuto('gh pr edit 2233 --title x 2>&1')).toEqual(allowed);
+    expect(fullAuto('gh pr view 2233 2>&1 | head')).toEqual(allowed);
+    expect(fullAuto('gh pr edit 5 2>&1')).toEqual({
+      verdict: 'reject',
+      reason: ghRailReason('gh pr edit'),
+    });
+  });
+
+  it('does not note a reply on the own pull request as a send because of a redirect', () => {
+    const read = { builder: false, files, observed: ['.env'], own: OWN };
+    for (const command of [
+      'gh pr comment 2233 --body done 2>&1',
+      'gh pr view 2233 --comments > /tmp/x 2>&1',
+    ]) {
+      expect(decideAs('auto', command, read), command).toEqual({ verdict: 'allow', by: 'level' });
+    }
+    expect(decideAs('auto', 'gh pr comment 77 --body done 2>&1', read)).toMatchObject({
+      sent: { target: 'out through `gh`' },
+    });
+  });
+
+  it("counts another repository's pull request as a send after work data, and the own one not", () => {
+    const read = { ...withPull(2233, true), observed: ['.env'], own: OWN };
+    expect(decideAs('auto', 'gh pr view 5 --repo other/repo', read)).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      sent: { observed: ['.env'], target: 'out through `gh`' },
+    });
+    expect(decideAs('asks', 'gh pr view 5 --repo other/repo', read)).toEqual({
+      verdict: 'ask',
+      reason: null,
+      observed: ['.env'],
+      sendsTo: 'out through `gh`',
+    });
+    expect(decideAs('auto', GREPTILE_COMMENT, read)).toEqual({ verdict: 'allow', by: 'level' });
+    expect(decideAs('auto', 'gh pr checks 5', read)).toEqual({ verdict: 'allow', by: 'level' });
   });
 });
