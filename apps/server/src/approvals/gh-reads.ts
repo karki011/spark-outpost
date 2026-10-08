@@ -15,7 +15,7 @@ const API_VALUE_FLAGS = new Set([
 export const API_FIELD_FLAGS: ReadonlySet<string> = new Set(['-f', '-F', '--field', '--raw-field']);
 const API_BODY_FLAGS = new Set([...API_FIELD_FLAGS, '--input']);
 const QUERY_FIELD = 'query=';
-const SHOWS_TOKEN = /^(?:--show-token$|-[a-zA-Z]*t)/;
+const SHOWS_TOKEN = /^(?:--show-token(?:=|$)|-[a-zA-Z]*t)/;
 
 export function flagName(token: string): string {
   return token.split('=')[0]!;

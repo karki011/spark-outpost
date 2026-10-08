@@ -335,6 +335,8 @@ describe('publishVerdict() keeps the rails in every permitted mode', () => {
     ['gh workflow run ci.yml', ghRailReason('gh workflow run')],
     ['gh auth token', ghRailReason('gh auth token')],
     ['gh auth status --show-token', ghRailReason('gh auth status')],
+    ['gh auth status --show-token=true', ghRailReason('gh auth status')],
+    ['gh auth status -a --show-token=true 2>&1', ghRailReason('gh auth status')],
     ['gh frobnicate now', ghRailReason('gh frobnicate now')],
     ['gh api -X POST repos/o/r/pulls/5/comments', ghRailReason('gh api')],
     ['gh api -XPOST repos/o/r/pulls/5/comments', ghRailReason('gh api')],
