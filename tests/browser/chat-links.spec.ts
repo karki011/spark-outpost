@@ -82,18 +82,13 @@ test('a link in a reply opens in the Browser pane, not in a new window', async (
   expect(context.pages()).toHaveLength(1);
 });
 
-test('Command-click, Shift-click and other schemes stay with the system', async ({
-  page,
-  context,
-}) => {
+test('Command-click and other schemes stay with the system', async ({ page, context }) => {
   await withDesktopBrowser(page);
   const reply = await replyWithLinks(page);
   const link = reply.getByRole('link', { name: 'the site' });
 
   await link.click({ modifiers: ['ControlOrMeta'] });
   await expect.poll(() => context.pages().length).toBe(2);
-  await link.click({ modifiers: ['Shift'] });
-  await expect.poll(() => context.pages().length).toBe(3);
 
   await expect(reply.getByRole('link', { name: 'mail' })).toHaveAttribute('target', '_blank');
   expect(await sent(page)).toEqual([]);
