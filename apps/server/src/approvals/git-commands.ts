@@ -26,9 +26,10 @@ export function gitSubcommand(args: readonly string[]): { name: string; rest: st
 }
 
 export function gitSubcommands(command: string): { name: string; rest: string[] }[] {
-  return commandTree(withoutDataHeredocs(command)).commands.flatMap((program) => {
+  const tree = commandTree(withoutDataHeredocs(command));
+  return tree.commands.flatMap((program) => {
     if (programName(program) !== 'git') return [];
-    const sub = gitSubcommand(program.slice(1));
+    const sub = gitSubcommand(argumentWords(tree, program).slice(1));
     return sub ? [sub] : [];
   });
 }

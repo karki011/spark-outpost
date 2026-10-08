@@ -3,7 +3,7 @@ import path from 'node:path';
 import { secretFileValues } from '../audit/secret-values.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
-import { commandTree } from './command-tree.ts';
+import { argumentWords, commandTree, type CommandTree } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { gitSubcommand } from './git-commands.ts';
@@ -160,16 +160,22 @@ function catFiles(inner: string): string[] | null {
   return program.slice(1).filter((word) => !word.startsWith('-'));
 }
 
+function sendingPrograms(tree: CommandTree): string[][] {
+  return tree.commands.map((program) =>
+    programName(program) === 'git' ? argumentWords(tree, program) : program,
+  );
+}
+
 function seenPrograms(command: string): Seen {
   const text = withoutHereText(command);
   const tree = commandTree(text);
-  if (!tree.opaque) return { programs: tree.commands, unreadable: false };
+  if (!tree.opaque) return { programs: sendingPrograms(tree), unreadable: false };
   const peeled = peelSubstitutions(text, '');
   const outer = peeled ? commandTree(peeled.outer) : null;
   if (!peeled || !outer || outer.opaque) return { programs: [], unreadable: true };
   const read = peeled.inner.map(catFiles);
   const files = read.flatMap((names) => names ?? []);
-  const programs = outer.commands.map((program) =>
+  const programs = sendingPrograms(outer).map((program) =>
     programName(program) === 'gh' ? [...program, ...files] : program,
   );
   return { programs, unreadable: read.includes(null) };
