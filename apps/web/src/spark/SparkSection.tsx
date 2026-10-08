@@ -1,5 +1,5 @@
 import './spark.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SetupState } from '@spark-outpost/contracts';
 import { AgentInstructionsSetting } from './AgentInstructionsSetting.tsx';
 import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
@@ -15,9 +15,30 @@ import { MorningBriefSetting } from './MorningBriefSetting.tsx';
 import { NameSetting, PersonalitySetting, SparkSwitch } from './SparkSettings.tsx';
 import { SparkPreview } from './SparkPreview.tsx';
 
+let optionsRevealPending = false;
+const optionsRevealers = new Set<() => void>();
+
+export function revealWorkflowOptions(): void {
+  optionsRevealPending = true;
+  optionsRevealers.forEach((reveal) => reveal());
+}
+
 export function SparkSection({ setup }: { setup: SetupState }) {
   const { profile } = setup;
   const [name, setName] = useState(profile.displayName);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  useEffect(() => {
+    const reveal = () => {
+      if (!optionsRevealPending) return;
+      optionsRevealPending = false;
+      setOptionsOpen(true);
+    };
+    optionsRevealers.add(reveal);
+    reveal();
+    return () => {
+      optionsRevealers.delete(reveal);
+    };
+  }, []);
   return (
     <>
       <SparkPreview
@@ -35,7 +56,11 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <SparkSwitch enabled={profile.sparkEnabled} />
         <AgentInstructionsSetting profile={profile} />
       </section>
-      <details className="spark-group spark-options">
+      <details
+        className="spark-group spark-options"
+        open={optionsOpen}
+        onToggle={(event) => setOptionsOpen(event.currentTarget.open)}
+      >
         <summary>Workflow options</summary>
         <LevelSetting level={profile.defaultLevel} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
