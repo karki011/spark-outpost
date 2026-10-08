@@ -181,6 +181,7 @@ const DUPLICATES = /^\d*[<>]&$|^&>$/;
 export type RedirectKind =
   | 'quiet'
   | 'reads'
+  | 'reads_outside'
   | 'reads_unknown'
   | 'writes_inside'
   | 'writes_unknown'
@@ -189,6 +190,11 @@ export type RedirectKind =
   | 'secret';
 
 const UNKNOWN_SEGMENT = 'spark-unknown';
+const UNPLACED_WHEN_DYNAMIC: ReadonlySet<RedirectKind> = new Set([
+  'reads',
+  'reads_outside',
+  'writes_inside',
+]);
 
 function unknownKind(operator: string): RedirectKind {
   return operator.includes('<') ? 'reads_unknown' : 'writes_unknown';
@@ -196,7 +202,8 @@ function unknownKind(operator: string): RedirectKind {
 
 function placedKind(operator: string, resolved: string, place: PartPlace): RedirectKind {
   if (operator === '<') {
-    return place.inside(resolved) && !place.readAsks(resolved) ? 'reads' : 'secret';
+    if (place.readAsks(resolved)) return 'secret';
+    return place.inside(resolved) ? 'reads' : 'reads_outside';
   }
   if (place.isSecret(resolved)) return 'secret';
   if (place.inside(resolved)) return 'writes_inside';
@@ -209,7 +216,7 @@ function dynamicKind(operator: string, text: string, place: PartPlace): Redirect
   if (place.isSecret(resolved)) return 'secret';
   if (text.startsWith(DYNAMIC)) return unknownKind(operator);
   const kind = placedKind(operator, resolved, place);
-  return kind === 'reads' || kind === 'writes_inside' ? unknownKind(operator) : kind;
+  return UNPLACED_WHEN_DYNAMIC.has(kind) ? unknownKind(operator) : kind;
 }
 
 export function redirectKind(redirect: ShellRedirect, place: PartPlace): RedirectKind {

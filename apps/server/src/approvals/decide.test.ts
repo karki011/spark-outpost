@@ -5,7 +5,6 @@ import {
   OUTSIDE_DELETE_REASON,
   PUSH_REASON,
   SAFE_READ_WHY,
-  SECRET_REASON,
   DENIES_REASON,
   NO_RUN_RULES,
   RUN_REJECTED_REASON,
@@ -239,11 +238,6 @@ describe('decide() always asks, in every mode', () => {
       outsideDeleteReason(['/var/log'], home),
     ],
     ['rm at a path Spark cannot resolve', run('rm -rf "$OUT/x"'), OUTSIDE_DELETE_REASON],
-    ['moving .env in a command', run('mv .env .env.bak'), SECRET_REASON],
-    ['deleting .env in a command', run('rm .env'), SECRET_REASON],
-    ['reading a key outside the repo', run('cat ~/.ssh/id_rsa'), SECRET_REASON],
-    ['redirecting into a key file', run('echo x > deploy.pem'), SECRET_REASON],
-    ['editing .env', edit(`${ROOT}/.env`), SECRET_REASON],
     [
       'editing outside the repo',
       edit('/work/other/a.ts'),
@@ -256,6 +250,32 @@ describe('decide() always asks, in every mode', () => {
       expect(
         decide(level, input, allowing(ruleFor(input)!), ['git', 'rm', 'cat', 'find', 'echo']),
       ).toEqual({ verdict: 'ask', reason });
+    }
+  });
+
+  it.each([
+    [
+      'moving .env in a command',
+      run('mv .env .env.bak'),
+      'This changes .env, .env.bak, secret files',
+    ],
+    ['deleting .env in a command', run('rm .env'), 'This changes .env, a secret file'],
+    [
+      'changing a key outside the repo',
+      run('chmod 600 ~/.ssh/id_rsa'),
+      'This uses ~/.ssh/id_rsa, a secret file, in a command that does more than read it',
+    ],
+    [
+      'redirecting into a key file',
+      run('echo x > deploy.pem'),
+      'This changes deploy.pem, a secret file',
+    ],
+    ['editing .env', edit(`${ROOT}/.env`), 'This changes .env, a secret file'],
+  ])('%s', (_name, input, reason) => {
+    for (const level of EVERY_MODE) {
+      expect(
+        decide(level, input, allowing(ruleFor(input)!), ['git', 'rm', 'cat', 'chmod', 'echo']),
+      ).toMatchObject({ verdict: 'ask', reason, secretFiles: expect.any(Array) });
     }
   });
 
@@ -367,9 +387,9 @@ describe('decide() for the other postures', () => {
       verdict: 'allow',
       by: 'level',
     });
-    expect(decide('auto', run('rm .env'), NO_RUN_RULES, [])).toEqual({
+    expect(decide('auto', run('rm .env'), NO_RUN_RULES, [])).toMatchObject({
       verdict: 'ask',
-      reason: SECRET_REASON,
+      secretFiles: expect.any(Array),
     });
     expect(decide('auto', run('git push'), NO_RUN_RULES, [], { builder: true })).toEqual({
       verdict: 'reject',

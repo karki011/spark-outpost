@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
-import { SECRET_REASON } from '../src/approvals/decide.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import type { ProviderOutput } from '../src/providers/provider.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
@@ -91,7 +90,7 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
     })();
 
     const [pending] = await pendingReasons(run.runId, 1);
-    expect(pending!.reason).toBe(SECRET_REASON);
+    expect(pending!.reason).toBe('This changes .env, a secret file');
     await decideApproval(t.db, t.workspaceId, pending!.id, { optionId: 'decline', scope: 'once' });
     waiters.notify(pending!.id);
     await turn;

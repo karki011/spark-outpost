@@ -6,7 +6,14 @@ import type { ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { worktreeAdds, worktreeRemoves } from './git-worktrees.ts';
-import { commandCwd, isSecretTarget, outsideRoots, secretReadAsks } from './request-place.ts';
+import {
+  commandCwd,
+  homeRelative,
+  isSecretTarget,
+  outsideRoots,
+  placedLabel,
+  secretReadAsks,
+} from './request-place.ts';
 import { changesNothing, partRequests, type ShellView } from './shell-view.ts';
 import { inTempDir } from './temp-dirs.ts';
 import { writeTargets } from './write-targets.ts';
@@ -14,7 +21,7 @@ import { writeTargets } from './write-targets.ts';
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON =
-  'Changing a secret file always asks, and so does reading one in .sparkignore or outside the project';
+  'Changing a secret file always asks, and so does reading one listed in .sparkignore';
 
 export interface RailAsk {
   rail: 'outside_delete' | 'outside_write' | 'secret';
@@ -24,16 +31,14 @@ export interface RailAsk {
 
 const SHOWN_PATHS = 2;
 
-function shown(target: string, home: string): string {
-  const inHome = path.relative(home, target);
-  const underHome = inHome !== '' && !inHome.startsWith('..') && !path.isAbsolute(inHome);
-  return underHome ? `~/${inHome}` : target;
+function shortList(names: readonly string[]): string {
+  const first = names.slice(0, SHOWN_PATHS);
+  const more = names.length - first.length;
+  return more > 0 ? `${first.join(', ')} and ${more} more` : first.join(', ');
 }
 
 function listed(paths: readonly string[], home: string): string {
-  const names = paths.slice(0, SHOWN_PATHS).map((target) => shown(target, home));
-  const more = paths.length - names.length;
-  return more > 0 ? `${names.join(', ')} and ${more} more` : names.join(', ');
+  return shortList(paths.map((target) => homeRelative(target, home)));
 }
 
 export function outsideDeleteReason(paths: readonly string[], home: string): string {
@@ -88,17 +93,23 @@ function secretAsks(request: ApprovalRequest, reading: boolean): SecretTest {
     : (target) => isSecretTarget(request.roots, target);
 }
 
-function touchesSecret(request: ApprovalRequest, tree: CommandTree | null, reading: boolean) {
+function secretTargets(
+  request: ApprovalRequest,
+  tree: CommandTree | null,
+  reading: boolean,
+): string[] {
   const asks = secretAsks(request, reading);
-  if (request.paths.some(asks)) return true;
-  if (!tree) return false;
+  const named = request.paths.filter(asks);
+  if (!tree) return named;
   const cwd = commandCwd(request);
-  return treeWords(tree)
+  const words = treeWords(tree)
     .filter((word) => word !== '' && !word.startsWith('-') && !word.startsWith('!'))
-    .some((word) => {
-      if (!reading && isSecretPath(path.basename(word))) return true;
-      return asks(resolveCommandPath(word, cwd, request.home));
+    .flatMap((word) => {
+      const target = resolveCommandPath(word, cwd, request.home);
+      const secret = (!reading && isSecretPath(path.basename(word))) || asks(target);
+      return secret ? [target] : [];
     });
+  return unique([...named, ...words]);
 }
 
 function readsSecret(
@@ -118,6 +129,43 @@ function readsSecret(
 }
 
 const SECRET_ASK: RailAsk = { rail: 'secret', reason: SECRET_REASON, paths: [] };
+const TOOL_CHANGES = new Set(['delete', 'move']);
+
+function changedTargets(request: ApprovalRequest, tree: CommandTree | null): string[] {
+  if (!request.command || !tree) {
+    return request.kind === 'edit' || TOOL_CHANGES.has(request.toolKind ?? '') ? request.paths : [];
+  }
+  const cwd = commandCwd(request);
+  return [
+    ...(writeTargets(request.command, cwd, request.home) ?? []),
+    ...(deleteTargets(tree, cwd, request.home) ?? []),
+  ];
+}
+
+type SecretUse = 'changes' | 'reads' | 'uses';
+
+function secretReason(names: string, count: number, use: SecretUse, ignored: boolean): string {
+  const kind = count > 1 ? 'secret files' : 'a secret file';
+  if (use === 'changes') return `This changes ${names}, ${kind}`;
+  if (ignored) return `This ${use} ${names}, which .sparkignore lists`;
+  return `This uses ${names}, ${kind}, in a command that does more than read it`;
+}
+
+function secretAsk(
+  request: ApprovalRequest,
+  tree: CommandTree | null,
+  targets: readonly string[],
+  reading: boolean,
+): RailAsk {
+  if (targets.length === 0) return SECRET_ASK;
+  const changed = changedTargets(request, tree);
+  const changes = targets.some((target) => changed.includes(target));
+  const use = changes ? 'changes' : reading ? 'reads' : 'uses';
+  const ignored = targets.every((target) => secretReadAsks(request.roots, target));
+  const labels = unique(targets.map((target) => placedLabel(request.roots, request.home, target)));
+  const reason = secretReason(shortList(labels), labels.length, use, ignored);
+  return { rail: 'secret', reason, paths: [...targets] };
+}
 
 function commandRail(
   request: ApprovalRequest,
@@ -131,8 +179,9 @@ function commandRail(
     const reason = outsideDeleteReason(deleted, request.home);
     return { rail: 'outside_delete', reason, paths: deleted };
   }
-  if (touchesSecret(request, tree, reading) || readsSecret(request, tree, files, reading)) {
-    return SECRET_ASK;
+  const secrets = secretTargets(request, tree, reading);
+  if (secrets.length > 0 || readsSecret(request, tree, files, reading)) {
+    return secretAsk(request, tree, secrets, reading);
   }
   const written = outsideWrites(request);
   if (written === null) return { rail: 'outside_write', reason: OUTSIDE_WRITE_REASON, paths: [] };

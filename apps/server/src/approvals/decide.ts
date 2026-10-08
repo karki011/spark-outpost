@@ -1,4 +1,3 @@
-import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
 import { protectedPath, refusalFor } from '../projects/path-policy.ts';
 import { commandTree, treeWords } from './command-tree.ts';
@@ -26,8 +25,8 @@ import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
 import { writeTargets } from './write-targets.ts';
-import { commandCwd, isSecretTarget, outsideRoots, place } from './request-place.ts';
-import { alwaysAsk } from './rails.ts';
+import { commandCwd, isSecretTarget, outsideRoots, place, placedLabel } from './request-place.ts';
+import { alwaysAsk, type RailAsk } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { withResolvedVariables } from './shell-variables.ts';
 import { onlyReads, partRequests, shellView, type ShellView } from './shell-view.ts';
@@ -72,6 +71,7 @@ export type Decision =
       observed?: string[];
       sendsTo?: string;
       secretSend?: string[];
+      secretFiles?: string[];
     };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
@@ -139,10 +139,6 @@ export interface DecideOptions {
   publish?: PublishContext;
 }
 
-function secretLabel(roots: readonly RequestRoot[], target: string): string {
-  return place(roots, target).relative ?? path.basename(target);
-}
-
 export function namedSecrets(
   request: ApprovalRequest,
   secret: (target: string) => boolean,
@@ -155,7 +151,7 @@ export function namedSecrets(
       .filter((word) => word !== '' && !word.startsWith('-'))
       .map((word) => resolveCommandPath(word, cwd, request.home)),
   ].filter(secret);
-  return [...new Set(targets.map((target) => secretLabel(request.roots, target)))];
+  return [...new Set(targets.map((target) => placedLabel(request.roots, request.home, target)))];
 }
 
 export const UNNAMED_SECRET = 'a secret file';
@@ -328,7 +324,7 @@ function byMode(
   options: DecideOptions,
 ): Decision {
   const always = alwaysAsk(request, files, view);
-  if (always) return { verdict: 'ask', reason: always.reason };
+  if (always) return railAsked(request, always);
   if (runRules.allow.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
@@ -364,6 +360,12 @@ function byMode(
     return unapproved(posture);
   }
   return unapproved(posture);
+}
+
+function railAsked(request: ApprovalRequest, asked: RailAsk): Decision {
+  if (asked.rail !== 'secret') return { verdict: 'ask', reason: asked.reason };
+  const secretFiles = asked.paths.map((target) => placedLabel(request.roots, request.home, target));
+  return { verdict: 'ask', reason: asked.reason, secretFiles: [...new Set(secretFiles)] };
 }
 
 function agentAsked(

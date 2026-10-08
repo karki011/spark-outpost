@@ -95,7 +95,7 @@ The safety floor holds at every level.`,
       'budget',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one in the project follows the mode, audited by path (.sparkignore and outside ones ask); agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
+    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one follows the mode, audited by path (.sparkignore ones ask); agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 

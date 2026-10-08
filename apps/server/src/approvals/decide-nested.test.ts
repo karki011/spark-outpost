@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BUILDER_PUBLISH_REASON,
-  NO_RUN_RULES,
-  SECRET_REASON,
-  decide,
-  type ApprovalRequest,
-} from './decide.ts';
+import { BUILDER_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
 import { parseShell } from './shell-parse.ts';
@@ -84,7 +78,7 @@ describe('decide() looks inside nested and wrapped commands', () => {
     'timeout 5 cat .env',
     'find . -exec cat .env \\;',
   ])('asks before touching a secret file: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
   });
 
   it.each(['find . -name "*.log" | xargs rm', 'ls | xargs -n 1 rm -f'])(

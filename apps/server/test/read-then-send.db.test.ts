@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
-import { PUSH_HOOKS_REASON, PUSH_REASON, SECRET_REASON } from '../src/approvals/decide.ts';
+import { PUSH_HOOKS_REASON, PUSH_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { ApprovalInputError, decideApproval, getApproval } from '../src/persistence/approvals.ts';
@@ -271,6 +271,21 @@ describe('a send somewhere else after reading sensitive data', () => {
     ]);
   });
 
+  it('records a secret file read outside the project by its path and notes the later send', async () => {
+    const chat = await turn();
+    const { gate, observations, audited, egress } = gateFor(chat, 'auto');
+    await gate.review(commandRequest(root, 'cat ~/.npmrc', 'read-npmrc'), signal());
+    await gate.review(commandRequest(root, CURL, 'send'), signal());
+    await observations.settled();
+    const allowed = { status: 'allowed', decided_by: 'level' };
+    expect(await cardsOf(chat.runId)).toEqual([allowed, allowed]);
+    const observed = audited.filter((entry) => entry.method === 'spark/observed');
+    expect(observed.map((entry) => entry.params)).toEqual([
+      { source: 'secret_file', label: '~/.npmrc' },
+    ]);
+    expect(egress()[0]!.params).toMatchObject({ outcome: 'ran', observed: ['~/.npmrc'] });
+  });
+
   it('flags each destination once in a turn', async () => {
     const chat = await turn();
     const { gate, observations, read } = gateFor(chat);
@@ -363,7 +378,7 @@ describe('a send somewhere else after reading sensitive data', () => {
       const { gate, waiters } = gateFor(chat, mode);
       const write = gate.review(commandRequest(root, 'echo TOKEN=x > .env', 'write-env'), signal());
       const card = await pendingFor(chat.runId);
-      expect(card.reason, mode).toBe(SECRET_REASON);
+      expect(card.reason, mode).toBe('This changes .env, a secret file');
       await decideApproval(t.db, t.workspaceId, card.id, { optionId: 'reject', scope: 'once' });
       waiters.notify(card.id);
       expect(await write).toMatchObject({ allowed: false });
