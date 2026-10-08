@@ -331,7 +331,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       input = asPlanTurn(input);
       doing = true;
     }
-    if (planTurn) await markPlanTurn(deps.db, lease.runId);
+    if (planTurn) input = await markPlanTurn(deps.db, input);
     const need = planTurn ? PLAN_TURN_NEED : readNeed(taken.decisions, answered?.need ?? null);
     const decisions = simpleDecisions(taken.decisions, need);
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(

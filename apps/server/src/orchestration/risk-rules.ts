@@ -288,8 +288,10 @@ export function questionByRule(request: string): boolean {
   return ASKS_HOW_OR_WHY.test(request) || !BUILD_VERB.test(request);
 }
 
+const THEN_BUILD = new RegExp(`\\bthen\\s+(?:please\\s+)?${BUILD_VERB.source}`, 'i');
+
 export function buildsByRule(request: string): boolean {
-  return LEADS_WITH_BUILD.test(request);
+  return LEADS_WITH_BUILD.test(request) || THEN_BUILD.test(request);
 }
 
 export function followUpByRule(

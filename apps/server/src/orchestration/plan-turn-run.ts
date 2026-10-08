@@ -1,7 +1,8 @@
+import { markInPlaceMember } from '../persistence/orchestrations.ts';
 import { runAgentTurn } from '../workflow/agent-turn.ts';
 import type { FlowEvent } from './flow-types.ts';
 import { checkAndFix, treeOf } from './land.ts';
-import { nameFor } from './member-routes.ts';
+import { labelFor, nameFor } from './member-routes.ts';
 import { ensureParentSnapshot, type MemberOutcome } from './members.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { NeedRead } from './simple-intake.ts';
@@ -12,6 +13,21 @@ export const PLAN_TURN_WHY = 'a plan turn: the agent plans in its own plan mode,
 
 export function startsPlanBuild(s: Session, action: Extract<FlowAction, { type: 'spawn' }>) {
   return s.planTurn === true && action.role === 'builder' && action.reason === 'first';
+}
+
+async function markAsBuilder(s: Session, name: string): Promise<void> {
+  const { model, modelLabel, effort } = s.input.settings;
+  const pick = { provider: s.input.provider, model, modelLabel, effort };
+  await markInPlaceMember(s.deps.db, s.lease.runId, {
+    role: 'builder',
+    stepIndex: 0,
+    attempt: 1,
+    agentLabel: labelFor('builder', pick, name),
+    provider: s.input.provider,
+    model,
+    effort,
+    route: { name },
+  });
 }
 
 export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
@@ -36,6 +52,7 @@ export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
   s.results.push(result);
   if (result.outcome !== 'succeeded') return { result };
   const landed = await checkAndFix(s, result, { cwd: root, before, place: null });
+  if (landed.changed) await markAsBuilder(s, name);
   return { result: landed.result };
 }
 
