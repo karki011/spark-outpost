@@ -27,7 +27,7 @@ const doctor = (events = nativeHookNames('claude'), additional = '') =>
   `process.stdout.write(${JSON.stringify(`Invalid settings\n- probe › hooks.SparkCapabilityProbe: Unknown hook event. Valid events: ${events.join(', ')}\n${additional}`)});`;
 
 describe('installed native hook capabilities', () => {
-  it('verifies resume snapshot support from the installed help and caches only successful checks', async () => {
+  it('verifies resume snapshot support from the installed help and caches each check per version', async () => {
     const cli = await fixture(
       'process.stdout.write("Usage: claude --system-prompt-snapshot <on|off>\\n");',
     );
@@ -38,27 +38,31 @@ describe('installed native hook capabilities', () => {
       false,
     );
     await cli.update('process.stdout.write("--system-prompt-snapshot <on|off>\\n");');
-    expect(await verifyNativeOption(cli.command, '2.1.295', '--system-prompt-snapshot')).toBe(true);
+    expect(await verifyNativeOption(cli.command, '2.1.295', '--system-prompt-snapshot')).toBe(
+      false,
+    );
+    expect(await verifyNativeOption(cli.command, '2.1.296', '--system-prompt-snapshot')).toBe(true);
   });
-  it('accepts compatible patch drift by validated schema and caches successes per binary version', async () => {
+  it('accepts compatible patch drift by validated schema and caches results per binary version', async () => {
     const cli = await fixture(doctor());
     expect(await verifyNativeHooks('claude', cli.command, '2.1.294')).toBe(true);
     await cli.update(doctor(['Stop']));
     expect(await verifyNativeHooks('claude', cli.command, '2.1.294')).toBe(true);
     expect(await verifyNativeHooks('claude', cli.command, '2.1.295')).toBe(false);
     await cli.update(doctor());
-    expect(await verifyNativeHooks('claude', cli.command, '2.1.295')).toBe(true);
+    expect(await verifyNativeHooks('claude', cli.command, '2.1.295')).toBe(false);
+    expect(await verifyNativeHooks('claude', cli.command, '2.1.296')).toBe(true);
   });
 
-  it('rejects a missing event or changed hook handler schema without caching failure', async () => {
+  it('rejects a missing event or changed hook handler schema', async () => {
     const cli = await fixture(
       doctor(nativeHookNames('claude'), '- probe › hooks.Stop: Invalid handler\n'),
     );
     expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
     await cli.update(doctor(['SessionStart', 'Stop']));
-    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
+    expect(await verifyNativeHooks('claude', cli.command, 'future-b')).toBe(false);
     await cli.update(doctor());
-    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(true);
+    expect(await verifyNativeHooks('claude', cli.command, 'future-c')).toBe(true);
     expect(
       supportsNativeHookEvents(
         'codex',
@@ -67,11 +71,12 @@ describe('installed native hook capabilities', () => {
     ).toBe(true);
   });
 
-  it('recovers from diagnostic process failure on the next launch', async () => {
+  it('does not repeat a failed diagnostic until the CLI version changes', async () => {
     const cli = await fixture('process.exit(1);');
     expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
     await cli.update(doctor());
-    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(true);
+    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
+    expect(await verifyNativeHooks('claude', cli.command, 'future-next')).toBe(true);
   });
 
   it('cancels its own diagnostic process and retries successfully later', async () => {

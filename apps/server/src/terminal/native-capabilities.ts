@@ -20,11 +20,7 @@ export function verifyNativeOption(
   if (!pending) {
     pending = exec(command, ['--help'], { timeout: 5000, maxBuffer: 1_000_000 })
       .then(({ stdout }) => stdout.split(/\s+/).includes(option))
-      .catch(() => false)
-      .then((supported) => {
-        if (!supported) checks.delete(key);
-        return supported;
-      });
+      .catch(() => false);
     checks.set(key, pending);
   }
   return pending;
@@ -51,7 +47,7 @@ export function verifyNativeHooks(
     pending = probe(provider, command, signal)
       .catch(() => false)
       .then((supported) => {
-        if (!supported) checks.delete(key);
+        if (signal?.aborted) checks.delete(key);
         return supported;
       });
     checks.set(key, pending);
