@@ -421,7 +421,7 @@ Since September 28, 2026 (provider permission modes, below) the agent's own mode
   - `sed -n N,Mp`
   - `git status`, `git diff`, `git log`, `git show` and `git branch`, without `rev:path` or `--output`
 
-  Its working directory and every path must be inside the project. Since October 6, 2026 a command that only reads may name a secret file inside the project (`changesNothing` in `shell-view.ts`, `readsWithoutChanging` in `rails.ts`); anything else that names one, a `.sparkignore` entry or a secret file outside the project asks. Recursive searches (`grep -r`, `rg --hidden`) are not safe reads, so they follow the mode.
+  Its working directory and every path must be inside the project. Since October 6, 2026 a command that only reads may name a secret file inside the project (`changesNothing` in `shell-view.ts`, `readsWithoutChanging` in `rails.ts`); anything else that names one, or a `.sparkignore` entry, asks. Since October 8, 2026 the same holds for a secret file outside the project: a command that only reads it follows the mode and is recorded by its home-relative path (`isReadableSecret` in `request-place.ts`), and a secret-file card names the file that raised it. Recursive searches (`grep -r`, `rg --hidden`) are not safe reads, so they follow the mode.
 
 - **Package installs always ask**, in every mode. The exception is an install that only restores the lockfile: `npm ci`, or `--frozen-lockfile`, `--immutable` or `--offline` with no package named.
 - **Stop** applies at every autonomy. There are no run budgets.

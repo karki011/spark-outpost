@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { NO_RUN_RULES, SECRET_REASON, decide, type ApprovalRequest } from './decide.ts';
+import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister, ScriptFile } from './file-lister.ts';
 
 const ROOT = '/work/app';
@@ -83,7 +83,7 @@ describe('decide() looks inside scripts the agent runs by name', () => {
     'python3 dump.py 2>&1 | tail -5',
     'python3 -c "from dotenv import load_dotenv; load_dotenv(); import os; print(os.environ)"',
   ])('asks when it reads a secret: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
   });
 
   it.each(['python3 walk.py', 'bash each.sh', 'python3 $SCRIPT'])(
@@ -143,7 +143,7 @@ describe('decide() treats code piped into an interpreter as inline code', () => 
     'python3 <<EOF\nprint(open(".env").read())\nEOF',
     'cat <<EOF | node\nconsole.log(require("fs").readFileSync(".env", "utf8"))\nEOF',
   ])('asks when the piped code reads a secret: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
   });
 
   it.each([

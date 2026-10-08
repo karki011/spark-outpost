@@ -26,8 +26,18 @@ export function isSecretTarget(roots: readonly RequestRoot[], target: string): b
 
 export function isReadableSecret(roots: readonly RequestRoot[], target: string): boolean {
   const { relative, root } = place(roots, target);
-  if (relative === null || !root) return false;
+  if (relative === null || !root) return isSecretPath(path.basename(target));
   return isSecretPath(relative) && !isIgnoredPath(relative, root.ignore);
+}
+
+export function homeRelative(target: string, home: string): string {
+  const inHome = path.relative(home, target);
+  const underHome = inHome !== '' && !inHome.startsWith('..') && !path.isAbsolute(inHome);
+  return underHome ? `~/${inHome}` : target;
+}
+
+export function placedLabel(roots: readonly RequestRoot[], home: string, target: string): string {
+  return place(roots, target).relative ?? homeRelative(target, home);
 }
 
 export function secretReadAsks(roots: readonly RequestRoot[], target: string): boolean {

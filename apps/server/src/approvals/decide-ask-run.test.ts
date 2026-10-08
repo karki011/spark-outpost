@@ -4,7 +4,6 @@ import {
   ASK_TURN_ASKS,
   NO_RUN_RULES,
   SAFE_READ_WHY,
-  SECRET_REASON,
   decide,
   type ApprovalRequest,
 } from './decide.ts';
@@ -38,6 +37,10 @@ const edit = request({
   command: null,
   paths: [`${ROOT}/a.ts`],
 });
+const LISTED_READ = {
+  ...run('cat private/notes.md'),
+  roots: [{ path: ROOT, ignore: ['private/'] }],
+};
 const asking = (command: string) =>
   decide('read_only', run(command), NO_RUN_RULES, [], { askRun: true });
 
@@ -81,7 +84,10 @@ describe('decide() in an Ask run', () => {
   });
 
   it('keeps the safety floor', () => {
-    expect(asking('cat ~/.ssh/id_rsa')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(decide('read_only', LISTED_READ, NO_RUN_RULES, [], { askRun: true })).toMatchObject({
+      verdict: 'ask',
+      secretFiles: expect.any(Array),
+    });
   });
 
   it('reads a secret file in the project like any other file', () => {
@@ -117,7 +123,11 @@ describe('decide() in an Ask run at Automatic and Full auto', () => {
   });
 
   it('keeps the safety floor', () => {
-    expect(automatic('cat ~/.ssh/id_rsa')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    const options = { askRun: true, askAutoWhy: ASK_AUTO_WHY };
+    expect(decide('read_only', LISTED_READ, NO_RUN_RULES, [], options)).toMatchObject({
+      verdict: 'ask',
+      secretFiles: expect.any(Array),
+    });
   });
 
   it('still runs read-only commands as safe reads', () => {

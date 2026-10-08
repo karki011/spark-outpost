@@ -4,7 +4,6 @@ import {
   BUILDER_PUBLISH_REASON,
   NO_RUN_RULES,
   PUSH_REASON,
-  SECRET_REASON,
   decide,
   ruleFor,
   secretLabels,
@@ -13,7 +12,9 @@ import {
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import type { OwnRepo } from './own-repo.ts';
+import { secretReadLabels } from './secret-reads.ts';
 import type { SecretSend } from './secret-send.ts';
+import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
 const BRANCH = 'spark/fix-dates-1a2b';
@@ -278,12 +279,31 @@ describe('decide() for a send that holds a value from a secret file', () => {
   });
 });
 
+describe('a secret file read outside the project', () => {
+  it('is noted on a later send like one read inside it', async () => {
+    const read = run('cat ~/.npmrc');
+    const observed = secretReadLabels(read, files, await parseShell(read.command));
+    expect(observed).toEqual(['~/.npmrc']);
+    const sent = { observed, target: 'to collect.example.net' };
+    expect(decide('auto', CURL, NO_RUN_RULES, [], { files, observed })).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      sent,
+    });
+    expect(decide('asks', CURL, NO_RUN_RULES, [], { files, observed })).toEqual({
+      verdict: 'ask',
+      reason: null,
+      observed,
+      sendsTo: sent.target,
+    });
+  });
+});
+
 describe('secretLabels', () => {
   it('names the secret files a request touches, relative to the project', () => {
-    expect(decide('auto', run('rm .env config/.npmrc'), NO_RUN_RULES, [], { files })).toEqual({
-      verdict: 'ask',
-      reason: SECRET_REASON,
-    });
+    expect(decide('auto', run('rm .env config/.npmrc'), NO_RUN_RULES, [], { files })).toMatchObject(
+      { verdict: 'ask', secretFiles: expect.any(Array) },
+    );
     expect(secretLabels(run('cat .env config/.npmrc README.md'))).toEqual([
       '.env',
       'config/.npmrc',

@@ -66,10 +66,11 @@ describe('rail crossings Spark flags after an unasked action', () => {
     ]);
   });
 
-  it('does not flag reading a secret file in the project', async () => {
+  it('does not flag reading a secret file, in the project or outside it', async () => {
     expect(await run('cat .env')).toEqual([]);
     expect(await run('grep -rn TOKEN .')).toEqual([]);
-    expect(await run('cat ~/.npmrc')).toEqual([{ rail: 'secret', paths: ['.npmrc'] }]);
+    expect(await run('cat ~/.npmrc')).toEqual([]);
+    expect(await run('echo x >> ~/.npmrc')).toEqual([{ rail: 'secret', paths: ['~/.npmrc'] }]);
   });
 
   it('flags nothing for an ordinary command in the project', async () => {

@@ -12,7 +12,7 @@ These hold in every chat, agent mode and autonomy level, not in [Terminal sessio
 
 | What                         | Examples                                                                                                             | What happens                                                                   |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Secret files**             | See the list below                                                                                                   | Changes ask. Reading follows your agent's mode.                                |
+| **Secret files**             | See the list below                                                                                                   | Changes ask. Reading follows your agent's mode, anywhere.                      |
 | **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                  | Reading asks too.                                                              |
 | **Agent instruction files**  | `AGENTS.md` and `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.claude/`, `.cursor/rules/`, `.spark/` | Always ask, with **Allow once** or **Allow for this chat**.                    |
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` commands                                                                 | Ask with hold to confirm. Other files in `.git` can't be changed.              |

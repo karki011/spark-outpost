@@ -22,7 +22,6 @@ import { secretReadLabels } from '../approvals/secret-reads.ts';
 import { secretSend } from '../approvals/secret-send.ts';
 import {
   FS_WRITE_TOOL_KIND,
-  SECRET_REASON,
   decide,
   secretLabels,
   type ApprovalRequest,
@@ -115,6 +114,7 @@ export type Asking = Pick<
   | 'observed'
   | 'sendsTo'
   | 'secretSend'
+  | 'secretFiles'
 >;
 
 function onceOnly(asking: Asking): boolean {
@@ -372,7 +372,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       waiting -= 1;
     }
     const answer = await settle(pending, result, request);
-    const secretAllowed = reason === SECRET_REASON && answer.outcome === 'selected';
+    const secretAllowed = asking.secretFiles !== undefined && answer.outcome === 'selected';
     return secretAllowed ? readSecrets(answer, secretLabels(request)) : answer;
   };
 
