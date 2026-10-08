@@ -9,6 +9,11 @@ export function latestOrchestration(detail: ConversationDetail | undefined): Orc
   return run ? orchestrations[run.id]! : null;
 }
 
+export function orchestrationsInOrder(detail: ConversationDetail): Orchestration[] {
+  const orchestrations = detail.orchestrations ?? {};
+  return detail.runs.flatMap((run) => orchestrations[run.id] ?? []);
+}
+
 export function isCrewTurn(orchestration: Orchestration | null | undefined): boolean {
   if (!orchestration) return false;
   const planned = orchestration.depth !== 'direct' && orchestration.depth !== 'execute';
