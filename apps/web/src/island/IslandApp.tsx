@@ -47,7 +47,8 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
-import { useIslandSize } from './island-size.ts';
+import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
+import { opensByItself, useAutoExpand } from './auto-expand.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -364,6 +365,17 @@ export function IslandApp() {
       if (outcome === 'project') backFromDrop();
     },
     onNote: setDropNote,
+  });
+
+  useAutoExpand({
+    enabled: useAutoExpandSetting(),
+    idle: opensByItself(view, { sparkFocused, dragging: grab.phase !== 'idle' }),
+    cards,
+    pending: allCards,
+    onExpand: (card) => {
+      setFocusSignal(0);
+      setReview(card.chat.id);
+    },
   });
 
   useEffect(() => {

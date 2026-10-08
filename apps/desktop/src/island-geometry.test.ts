@@ -131,6 +131,14 @@ describe('island placement', () => {
     expect(isSize(null)).toBe(false);
   });
 
+  it('sizes the resting window to the blobs it is told about, not to a row or the open island', () => {
+    const blobs = { width: 176, height: 41.05 };
+    const bounds = islandBounds({ x: 360, y: 0 }, blobs);
+    expect(bounds).toEqual({ x: 360 + (ISLAND_WIDTH - 176) / 2, y: 0, width: 176, height: 42 });
+    expect(bounds.width).toBeLessThan(ISLAND_WIDTH / 4);
+    expect(bounds.height).toBeLessThan(ISLAND_HEIGHT / 10);
+  });
+
   it('restores a floating position on a display that still exists', () => {
     const saved = { docked: false as const, x: 2000, y: 100 };
     expect(placement(saved, [builtIn, external], 1)).toMatchObject({
