@@ -9,6 +9,8 @@ import {
   verifyNativeOption,
 } from './native-capabilities.ts';
 
+const LOADED_MACHINE = { timeout: 60_000 };
+const PROCESS_STARTED = { timeout: 30_000, interval: 20 };
 const roots: string[] = [];
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((path) => rm(path, { recursive: true, force: true })));
@@ -26,7 +28,7 @@ async function fixture(source: string) {
 const doctor = (events = nativeHookNames('claude'), additional = '') =>
   `process.stdout.write(${JSON.stringify(`Invalid settings\n- probe › hooks.SparkCapabilityProbe: Unknown hook event. Valid events: ${events.join(', ')}\n${additional}`)});`;
 
-describe('installed native hook capabilities', () => {
+describe('installed native hook capabilities', LOADED_MACHINE, () => {
   it('verifies resume snapshot support from the installed help and caches each check per version', async () => {
     const cli = await fixture(
       'process.stdout.write("Usage: claude --system-prompt-snapshot <on|off>\\n");',
@@ -79,6 +81,13 @@ describe('installed native hook capabilities', () => {
     expect(await verifyNativeHooks('claude', cli.command, 'future-next')).toBe(true);
   });
 
+  it('checks again after a diagnostic that ran out of time', async () => {
+    const cli = await fixture('setInterval(() => {}, 1000);');
+    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
+    await cli.update(doctor());
+    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(true);
+  });
+
   it('cancels its own diagnostic process and retries successfully later', async () => {
     const cli = await fixture('');
     const marker = join(cli.root, 'started');
@@ -87,7 +96,10 @@ describe('installed native hook capabilities', () => {
     );
     const controller = new AbortController();
     const checking = verifyNativeHooks('claude', cli.command, 'future', controller.signal);
-    await vi.waitFor(async () => expect(await readFile(marker, 'utf8')).toBe('ready'));
+    await vi.waitFor(
+      async () => expect(await readFile(marker, 'utf8')).toBe('ready'),
+      PROCESS_STARTED,
+    );
     controller.abort();
     expect(await checking).toBe(false);
     await cli.update(doctor());

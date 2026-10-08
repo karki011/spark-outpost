@@ -10,6 +10,11 @@ const exec = promisify(execFile);
 const checks = new Map<string, Promise<boolean>>();
 const normalise = (name: string) => name.replaceAll('_', '').toLowerCase();
 
+function forgetIfTimedOut(key: string, error: unknown): false {
+  if (isRecord(error) && error.killed === true) checks.delete(key);
+  return false;
+}
+
 export function verifyNativeOption(
   command: string,
   version: string,
@@ -20,7 +25,7 @@ export function verifyNativeOption(
   if (!pending) {
     pending = exec(command, ['--help'], { timeout: 5000, maxBuffer: 1_000_000 })
       .then(({ stdout }) => stdout.split(/\s+/).includes(option))
-      .catch(() => false);
+      .catch((error: unknown) => forgetIfTimedOut(key, error));
     checks.set(key, pending);
   }
   return pending;
@@ -45,7 +50,7 @@ export function verifyNativeHooks(
   let pending = checks.get(key);
   if (!pending) {
     pending = probe(provider, command, signal)
-      .catch(() => false)
+      .catch((error: unknown) => forgetIfTimedOut(key, error))
       .then((supported) => {
         if (signal?.aborted) checks.delete(key);
         return supported;
