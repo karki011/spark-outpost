@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PieceList, TaskPiece } from '@spark-outpost/contracts';
-import { insideTree, redirectTargets, type EditEvidence } from './edit-evidence.ts';
+import { commandDir, insideTree, redirectWrites, type EditEvidence } from './edit-evidence.ts';
 import { checkOwnership } from './ownership.ts';
 import type { Coordination } from './state.ts';
 
@@ -77,10 +77,35 @@ describe('paths a run wrote', () => {
   });
 
   it('reads the files a command redirects into', async () => {
-    expect(await redirectTargets('echo hi > api.ts && cat x >> notes/log.txt')).toEqual([
-      'api.ts',
-      'notes/log.txt',
+    expect(await redirectWrites('echo hi > api.ts && cat x >> notes/log.txt', '/t')).toEqual([
+      '/t/api.ts',
+      '/t/notes/log.txt',
     ]);
-    expect(await redirectTargets('cat < input.txt; echo "$X" > "$OUT"')).toEqual([]);
+    expect(await redirectWrites('cat < input.txt; echo "$X" > "$OUT"', '/t')).toEqual([]);
+  });
+
+  const tree = '/work/chat-tree';
+
+  it('reads a stored command folder as a place in the run\u2019s tree, not the server\u2019s folder', () => {
+    expect(commandDir('./', tree)).toBe(tree);
+    expect(commandDir('./packages/api', tree)).toBe(`${tree}/packages/api`);
+    expect(commandDir(null, tree)).toBe(tree);
+    expect(commandDir('/elsewhere/repo', tree)).toBe('/elsewhere/repo');
+  });
+
+  it('places a redirect from a command Claude reports with no folder inside the tree', async () => {
+    const from = commandDir('./', tree);
+    const written = await redirectWrites('echo "// tiny-utils test" >> test/csv.test.ts', from);
+    expect(written.map((target) => insideTree([tree], tree, target))).toEqual(['test/csv.test.ts']);
+  });
+
+  it('follows a leading cd before the redirect', async () => {
+    expect(
+      await redirectWrites(`cd "${tree}/packages/api" && echo x >> src/routes.ts`, '/somewhere'),
+    ).toEqual([`${tree}/packages/api/src/routes.ts`]);
+    expect(await redirectWrites('cd packages/api && echo x > notes.md', tree)).toEqual([
+      `${tree}/packages/api/notes.md`,
+    ]);
+    expect(await redirectWrites('cd "$DIR" && echo x > notes.md', tree)).toEqual([]);
   });
 });

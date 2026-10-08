@@ -93,6 +93,7 @@ export function currentValue(
 export function planConfig(
   options: readonly SessionConfigOption[],
   wishes: ConfigWish[],
+  reassert = false,
 ): ConfigPlan {
   const plan: ConfigPlan = { changes: [], unmatched: [] };
   for (const wish of wishes) {
@@ -103,7 +104,8 @@ export function planConfig(
       plan.unmatched.push(wish);
       continue;
     }
-    if (option.currentValue !== value) plan.changes.push({ configId: option.id, value });
+    if (reassert || option.currentValue !== value)
+      plan.changes.push({ configId: option.id, value });
   }
   return plan;
 }

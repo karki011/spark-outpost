@@ -7,6 +7,7 @@ import {
   type ShipResult,
 } from '@spark-outpost/contracts';
 import { insertApproval } from '../persistence/approvals.ts';
+import { taskTitle } from '../persistence/tasks.ts';
 import { shipsFailingChecks } from '../persistence/setup.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
@@ -22,6 +23,7 @@ import {
   publishByAgent,
 } from './agent-publish.ts';
 import { checksFailing, unrelatedCheckNotes } from './check-results.ts';
+import { replySoFar } from './final-message.ts';
 import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { KEPT_BY_AUTO_EDIT, RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { criticSkippedLine, sessionReviewLine } from './critic-fix.ts';
@@ -177,10 +179,13 @@ async function ship(s: Session, failing: boolean): Promise<string> {
     const unrelatedFailures = unrelated.length > 0;
     return publishByAgent(s, deps, plan, { failing, titlePrefix, notes, unrelatedFailures });
   }
+  const asked = taskTitle(s.input.userRequest);
   const options = {
     keepCheckout: true,
     duringRun: true,
     notes,
+    subject: failing ? `[${CHECKS_FAILING_NOTE}] ${asked}` : asked,
+    summary: replySoFar(s.results, s.message?.text ?? null),
     ...(failing ? { draft: true } : {}),
   };
   return shipMain(s, deps, failing, options);

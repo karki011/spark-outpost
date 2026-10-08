@@ -86,7 +86,6 @@ const worker = startWorker({
   leaseSeconds: config.LEASE_SECONDS,
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
-    openLimit: config.SESSION_OPEN_LIMIT,
   },
   concurrency: config.WORKER_CONCURRENCY,
   codeScan,

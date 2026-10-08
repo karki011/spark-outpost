@@ -197,3 +197,29 @@ describe('sending data out after a secret file was read', () => {
     });
   });
 });
+
+describe('a pattern that leaves secret files out', () => {
+  it.each([
+    "rg --files -g '!**/.env' -g '!**/.env.*' | head -80",
+    "prettier --write src '!**/.env'",
+    "eslint --fix src '!**/.env.local'",
+  ])('does not name a secret file: %s', async (command) => {
+    for (const posture of EVERY_MODE) {
+      expect(await parsed(posture, command)).not.toMatchObject(SECRET_ASK);
+    }
+  });
+
+  it.each([
+    'prettier --write .env',
+    "prettier --write '!**/.env' .env",
+    'echo TOKEN=1 > .env',
+    "sometool '!src/**' config/.env.local",
+    'rm .env',
+    'cat private/notes.txt',
+    'cat /Users/me/.ssh/id_rsa',
+  ])('still asks for a secret file the command names: %s', async (command) => {
+    for (const posture of EVERY_MODE) {
+      expect(await parsed(posture, command)).toMatchObject(SECRET_ASK);
+    }
+  });
+});

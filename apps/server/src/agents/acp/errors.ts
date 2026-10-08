@@ -58,6 +58,14 @@ function classified(
   return new ProviderError(failureText(found.kind, agentName), details);
 }
 
+export function namesCause(error: unknown): boolean {
+  if (error instanceof ProviderError) return true;
+  if (!(error instanceof RequestError)) return false;
+  if (error.code === AUTH_REQUIRED) return true;
+  const signal = { text: errorText(error), status: statusOf(error), errorKind: errorKindOf(error) };
+  return classifyFailure(signal) !== null;
+}
+
 export function toProviderError(agentName: string, error: unknown, stderrTail: string): Error {
   if (error instanceof ProviderError) return error;
   if (error instanceof RequestError && error.code === AUTH_REQUIRED) {

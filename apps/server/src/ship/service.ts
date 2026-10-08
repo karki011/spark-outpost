@@ -78,12 +78,12 @@ async function summaryFor(
   plan: ShipPlan,
   title: string,
   files: ShipFile[],
-  notes: readonly string[] = [],
+  options: ShipOptions,
 ) {
   const summary: ShipSummary = {
-    notes,
+    notes: options.notes ?? [],
     title,
-    summary: plan.facts?.summary ?? null,
+    summary: options.summary ?? plan.facts?.summary ?? null,
     files,
     checks: plan.facts?.checks ?? [],
     review: plan.facts?.review ?? null,
@@ -123,12 +123,12 @@ async function commitStep(
   plan: ShipPlan,
   title: string,
   progress: Progress,
-  notes: readonly string[],
+  options: ShipOptions,
 ) {
   if (plan.files.length === 0) return;
   const root = plan.root!;
-  const summary = await summaryFor(deps, plan, title, plan.files, notes);
-  const subject = commitSubject(title);
+  const summary = await summaryFor(deps, plan, title, plan.files, options);
+  const subject = commitSubject(options.subject ? shipTitle(plan, options.subject) : title);
   const body = commitBody(summary);
   if (plan.keepCheckout) {
     const commit = await commitWithoutCheckout(plan, subject, body);
@@ -264,7 +264,7 @@ async function pullRequestStep(
   const base = await baseFor(plan);
   if (base === plan.branch) throw new ShipBlockedError('The branch and its base are the same.');
   const files = await pullRequestFiles(plan, base);
-  const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
+  const summary = await summaryFor(deps, plan, title, files, options);
   const body = pullRequestBody(summary);
   const draft = await draftFor(deps, options);
   progress.draft = draft;
@@ -343,7 +343,6 @@ async function runShip(
   options: ShipOptions,
 ): Promise<ShipResult> {
   const plan = await planShip(deps, taskId, options);
-  const notes = options.notes ?? [];
   if (plan.blocked) throw new ShipBlockedError(plan.blocked.message);
   if (!plan.modes.includes(request.mode)) {
     throw new ShipBlockedError(plan.notes[0] ?? 'That kind of ship isn’t available for this task.');
@@ -371,7 +370,7 @@ async function runShip(
     prLink: null,
   };
   try {
-    await commitStep(deps, plan, title, progress, notes);
+    await commitStep(deps, plan, title, progress, options);
     if (request.mode !== 'commit') await pushStep(deps, plan, progress);
     if (request.mode === 'draft_pr') await pullRequestStep(deps, plan, title, progress, options);
   } catch (error) {

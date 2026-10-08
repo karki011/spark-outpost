@@ -52,7 +52,7 @@ export function longContextEnv(
   return Object.fromEntries(entries);
 }
 
-function reportedModel(meta: unknown): string | null {
+export function reportedModel(meta: unknown): string | null {
   if (meta === null || typeof meta !== 'object') return null;
   const model = (meta as Record<string, unknown>)['_claude/model'];
   return typeof model === 'string' ? model : null;

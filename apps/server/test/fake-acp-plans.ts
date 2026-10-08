@@ -1,3 +1,5 @@
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import type { RoleTurn } from './fake-acp-roles.ts';
 
@@ -5,6 +7,7 @@ export const PLAN_MODE_TRIGGER = '#planmode';
 export const PROPOSED_PLAN_TRIGGER = '#proposedplan';
 export const PLAN_REPLY_TRIGGER = '#planreply';
 export const NATIVE_PLAN_TRIGGER = '#nativeplan';
+export const PLAN_BUILDS_TRIGGER = '#planbuilds';
 export const PLAN_CALL_ONLY_TRIGGER = '#plancallonly';
 export const PLAN_FILE_TRIGGER = '#planinfile';
 
@@ -62,6 +65,9 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
       status: 'completed',
     });
     await turn.say(`Plan approved with ${chose}. Building it now.`);
+    if (turn.text.includes(PLAN_BUILDS_TRIGGER)) {
+      await writeFile(join(turn.cwd, 'export.ts'), 'export const csv = true;\n');
+    }
     return 'end_turn';
   }
   await turn.update({ sessionUpdate: 'tool_call_update', toolCallId: 'plan1', status: 'failed' });

@@ -39,8 +39,18 @@ describe('the text a follow-up is given', () => {
   });
 
   it('carries a kept change to another piece’s file as a diff, cut when it is long', () => {
-    const text = crossedText('P2', 'api.ts', `+${'x'.repeat(5_000)}`);
+    const patch = `+${'x'.repeat(5_000)}`;
+    const text = crossedText('P2', 'api.ts', { patch, whole: false });
     expect(text).toContain('P2 changed `api.ts`, which your piece owns');
+    expect(text).toContain('What it changed:');
     expect(text).toContain('[cut at 4000 characters]');
+  });
+
+  it('says so when the diff is the whole file’s and may hold the owner’s own changes', () => {
+    const text = crossedText('P2', 'api.ts', { patch: '+a', whole: true });
+    expect(text).toContain(
+      'this is the whole diff of the file since P2 started; it can include your own changes:',
+    );
+    expect(text).not.toContain('What it changed:');
   });
 });

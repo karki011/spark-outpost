@@ -6,6 +6,7 @@ import {
 import { getCapabilities, saveCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
+import { cardFor } from '../model-cards/cards.ts';
 import { estimateCostUsd } from '../usage/prices.ts';
 import type { RunInput } from './run-input.ts';
 
@@ -82,15 +83,36 @@ export async function recordTokens(
   );
 }
 
+interface LabelledRun {
+  provider: string;
+  model: string | null;
+  agent_label: string | null;
+  model_label: string | null;
+}
+
+const LABEL_SEPARATOR = ' · ';
+
+function labelForRanModel(run: LabelledRun, ranModel: string | null): string | null {
+  const shown = run.model_label ?? run.model;
+  const card = ranModel ? cardFor({ id: ranModel }, run.provider) : null;
+  if (!run.agent_label || !shown || !card || card.label === shown) return null;
+  const parts = run.agent_label.split(LABEL_SEPARATOR);
+  if (!parts.includes(shown)) return null;
+  return parts.map((part) => (part === shown ? card.label : part)).join(LABEL_SEPARATOR);
+}
+
 export async function recordSessionSettings(
   db: Db,
   runId: string,
   settings: Extract<ProviderOutput, { kind: 'session_settings' }>,
 ): Promise<void> {
-  await db.query(
-    'UPDATE runs SET used_model = $2, used_effort = $3, used_mode = $4 WHERE id = $1',
+  const { rows } = await db.query<LabelledRun>(
+    `UPDATE runs SET used_model = $2, used_effort = $3, used_mode = $4 WHERE id = $1
+     RETURNING provider, model, agent_label, route->>'modelLabel' AS model_label`,
     [runId, settings.model, settings.effort, settings.mode],
   );
+  const label = rows[0] ? labelForRanModel(rows[0], settings.model) : null;
+  if (label) await db.query('UPDATE runs SET agent_label = $2 WHERE id = $1', [runId, label]);
 }
 
 export async function recordFollowedInstructions(

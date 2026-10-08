@@ -16,6 +16,7 @@ const EVERY_NX_PROJECT =
   /(?:^|[\s;&|(])nx\s+(?:run-many|affected)\b(?![^;&|]*\s(?:--projects?|-p)[=\s])/;
 const NARROWING_FLAG = /(?:^|\s)(?:--filter|-F|--project|--dir|-C|--workspace)[=\s]+\S+/;
 const PATH_WORD = /(?:^|\s)[./\w@-]*(?:\/[\w.@-]+|\.[cm]?[jt]sx?|\.py|\.go|\.rs|\.rb)(?=\s|$)/;
+const QUOTED_FILE = /['"`(][./\w@-]*[\w@-]\.(?:[cm]?[jt]sx?|py|go|rs|rb)['"`)]/;
 
 const TEST_RUNNERS = new Set([
   'node',
@@ -90,7 +91,7 @@ export function scopedCheckProblem(
   if (projectChecks.some((check) => squash(check) === text)) {
     return `is a whole-project check; narrow it to the piece's files (${FULL_CHECKS_REASON})`;
   }
-  if (!NARROWING_FLAG.test(text) && !PATH_WORD.test(text)) {
+  if (!NARROWING_FLAG.test(text) && !PATH_WORD.test(text) && !QUOTED_FILE.test(text)) {
     return 'names no path or package to narrow it to the piece';
   }
   return null;

@@ -344,7 +344,7 @@ export async function runAgentTurn(
     turnSession = await turnSessionFor(deps, input);
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
-      const counted = session ? session.usage(output) : output;
+      const counted = session ? await session.usage(output) : output;
       await recordUsage(deps.db, lease.runId, counted);
     };
     const userMcp = input.assistant
