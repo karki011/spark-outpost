@@ -76,6 +76,20 @@ describe('island state machine', () => {
     expect(hoverOpens(islandView({ ...quiet, cards: [card], review: card.chat.id }))).toBeNull();
   });
 
+  it('rests as blobs alone at every size while one chat works, narrower than any row', () => {
+    const working = chat('a', { latestRun: run('r1', 'running') });
+    const row = peekRow([working], new Set(), Date.parse(working.updatedAt));
+    expect(row.sessions.map((session) => session.id)).toEqual(['a']);
+    for (const full of [true, false]) {
+      const view = islandView({ ...quiet, hoverOnly: true, full });
+      expect(view).toEqual({ kind: 'peek' });
+      expect(viewWidth(view, 0, 1440)).toBeLessThan(
+        viewWidth({ kind: 'now', card: null }, 0, 1440),
+      );
+      expect(viewWidth(view, 186, 1440)).toBe(186);
+    }
+  });
+
   it('stays collapsed in hover-only mode even with Full size and pending requests', () => {
     const card = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     const inputs = { ...quiet, hoverOnly: true, full: true, cards: [card], nudge: true };

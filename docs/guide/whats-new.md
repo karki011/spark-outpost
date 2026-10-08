@@ -14,7 +14,7 @@ What changed recently in Spark, newest first.
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                                |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | Choose **Terminal**. See [Open a terminal](terminals.md). |
-| Spark Island rests as blobs and keeps its position on your chosen display.                                             | Hover or click to open; drag to another display.          |
+| Spark Island rests as blobs and keeps its position on your chosen display.                                             | Hover or click to open.                                   |
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                              | Answer in your next message.                              |
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.          | See [Plan before building](plan-card.md).                 |
 | Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages. | No action.                                                |

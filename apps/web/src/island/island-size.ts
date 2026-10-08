@@ -47,6 +47,10 @@ export function restMetrics(size: IslandSize): RestMetrics {
   return METRICS.get(size) ?? measure(SMALL_BLOB);
 }
 
+export function useAutoExpandSetting(): boolean {
+  return useCompanionStatus()?.autoExpand === true;
+}
+
 export function useIslandSize(): IslandSize {
   return useCompanionStatus()?.islandSize ?? UNSET_ISLAND_SIZE;
 }

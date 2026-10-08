@@ -12,12 +12,12 @@ You'll answer agents from Spark Island. About 2 minutes.
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off (on by default).
-3. Pick **Spark Island size**. Every size rests as blobs; hover opens details.
+3. Pick **Spark Island size**. Every size rests as blobs.
 4. **Island chimes** play when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-Drag the island to any display. Its position persists across reconnects and Spaces.
+Drag the island to any display; it stays there.
 
 ## Open it
 
@@ -34,7 +34,7 @@ Select an edit to see the change; **Open chat** jumps to that turn. Terminal ses
 
 ## Answer a card
 
-Requests mark the blobs. Hover or select one to review it.
+Requests mark the blobs. With **Open requests by themselves** on, a card opens once, without the keyboard, then returns to blobs.
 
 1. Press **⌥Space** to focus it.
 2. Press **Y** to allow once or **N** to deny.
