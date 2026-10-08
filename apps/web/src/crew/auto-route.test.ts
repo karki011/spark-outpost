@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { autoThisTurn, autoWouldHaveUsed, builderRouteNote, modelFamily } from './auto-route.ts';
+import {
+  autoThisTurn,
+  autoWouldHaveUsed,
+  builderRouteNote,
+  chatModelName,
+  modelFamily,
+} from './auto-route.ts';
 import { member, orchestration } from './test-orchestration.ts';
 
 describe('Auto routing labels', () => {
@@ -16,6 +22,33 @@ describe('Auto routing labels', () => {
     ];
     expect(autoThisTurn(orchestration({ crew }))).toBe('Sonnet');
     expect(autoThisTurn(orchestration({ crew, routing: 'pinned' }))).toBeNull();
+  });
+
+  it('names the model that did the work, not the Critic on another agent', () => {
+    const crew = [
+      member({ provider: 'codex', model: 'gpt-6-sol', modelLabel: 'GPT-6 Sol' }),
+      member({ role: 'critic', provider: 'claude', modelLabel: 'Sonnet 5' }),
+    ];
+    const codex = orchestration({ provider: 'codex', crew });
+    expect(autoThisTurn(codex)).toBe('GPT');
+    const reviewing = [crew[0]!, member({ ...crew[1]!, status: 'running' })];
+    expect(autoThisTurn(orchestration({ provider: 'codex', crew: reviewing }))).toBe('GPT');
+    const sameAgent = [member({ modelLabel: 'Opus 5.5' }), member({ role: 'critic' })];
+    expect(autoThisTurn(orchestration({ crew: sameAgent }))).toBe('Opus');
+  });
+
+  it('names the model an Auto chat ran on, not the one stored for a pinned chat', () => {
+    const opus = { model: 'opus', modelLabel: 'Opus 5.5 (1M context)' };
+    const ran = orchestration({
+      crew: [member(opus), member({ role: 'critic', modelLabel: 'Sonnet 5' })],
+    });
+    const starting = orchestration({ crew: [member({ startedAt: null, status: 'queued' })] });
+    expect(chatModelName('auto', 'Sonnet 5', [ran])).toBe('Opus 5.5');
+    expect(chatModelName('auto', 'Sonnet 5', [ran, starting])).toBe('Opus 5.5');
+    expect(chatModelName('auto', 'Sonnet 5', [])).toBe('Auto');
+    expect(chatModelName('auto', 'Sonnet 5', [{ ...ran, routing: 'pinned' }])).toBe('Auto');
+    expect(chatModelName('pinned', 'Sonnet 5', [ran])).toBe('Sonnet 5');
+    expect(chatModelName(undefined, null, [ran])).toBeNull();
   });
 
   it('hints what Auto would have used with a pinned model', () => {

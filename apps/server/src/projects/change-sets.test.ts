@@ -6,6 +6,7 @@ import type { ListedRun } from './task-changes.ts';
 
 const RUN_A = '00000000-0000-4000-8000-00000000000a';
 const RUN_B = '00000000-0000-4000-8000-00000000000b';
+const RUN_C = '00000000-0000-4000-8000-00000000000c';
 
 function listed(path: string, added = 1, removed = 0): ListedFile {
   const file: ChangedFile = {
@@ -24,12 +25,18 @@ function bigRuns(count: number): ListedRun[] {
   return [
     {
       runId: RUN_A,
+      root: '/repo',
       revertedAt: null,
       files: Array.from({ length: count }, (_, index) =>
         listed(`src/area${index % 10}/file${String(index).padStart(5, '0')}.ts`, 2, 1),
       ),
     },
-    { runId: RUN_B, revertedAt: '2026-10-01T00:00:00.000Z', files: [listed('undone.ts', 99)] },
+    {
+      runId: RUN_B,
+      root: '/repo',
+      revertedAt: '2026-10-01T00:00:00.000Z',
+      files: [listed('undone.ts', 99)],
+    },
   ];
 }
 
@@ -46,17 +53,60 @@ describe('change sets', () => {
     expect(changePage(set, { offset: 4990, limit: 200 }).files).toHaveLength(10);
   });
 
-  it('filters by text and run, and sums only live changes', () => {
+  it('filters by text and run, and sums only live changes', async () => {
     const set = buildChangeSet('task', bigRuns(20), 0, 'v1');
     expect(changePage(set, { offset: 0, limit: 50, q: 'AREA3/' }).total).toBe(2);
     expect(changePage(set, { offset: 0, limit: 50, runs: [RUN_B] }).total).toBe(0);
-    const summary = summarize(set);
+    const summary = await summarize(set, (entry) => entry.listed.contents());
     expect(summary).toMatchObject({ files: 20, added: 40, removed: 20 });
     expect(summary.runs.map((run) => [run.runId, run.files, run.added])).toEqual([
       [RUN_A, 20, 40],
       [RUN_B, 1, 99],
     ]);
     expect(summary.top).toHaveLength(5);
+  });
+
+  it('totals the net change when several runs changed the same file', async () => {
+    const step = (path: string, before: string | null, after: string): ListedFile => ({
+      ...listed(path, 1, before === null ? 0 : 1),
+      contents: () =>
+        Promise.resolve({
+          before: before === null ? null : Buffer.from(before),
+          after: Buffer.from(after),
+        }),
+    });
+    const runs: ListedRun[] = [
+      {
+        runId: RUN_A,
+        root: '/repo',
+        revertedAt: null,
+        files: [step('src/a.ts', null, 'one\n'), step('src/back.ts', 'kept\n', 'tried\n')],
+      },
+      {
+        runId: RUN_B,
+        root: '/repo',
+        revertedAt: null,
+        files: [
+          step('src/a.ts', 'one\n', 'two\n'),
+          step('src/back.ts', 'tried\n', 'kept\n'),
+          step('src/b.ts', null, 'new\n'),
+        ],
+      },
+      {
+        runId: RUN_C,
+        root: '/other-repo',
+        revertedAt: null,
+        files: [step('src/a.ts', null, 'elsewhere\n')],
+      },
+    ];
+    const set = buildChangeSet('task', runs, 0, 'v1');
+    const summary = await summarize(set, (entry) => entry.listed.contents());
+    expect(summary).toMatchObject({ files: 3, added: 3, removed: 0 });
+    expect(summary.runs.map((run) => [run.files, run.added, run.removed])).toEqual([
+      [2, 2, 1],
+      [3, 3, 2],
+      [1, 1, 0],
+    ]);
   });
 
   it('serves pages from the same version until it expires', async () => {
@@ -83,7 +133,7 @@ describe('change sets', () => {
 
   it('keeps the version while the content stays the same', () => {
     const revised = (revision: string): ListedRun[] => [
-      { runId: RUN_A, revertedAt: null, files: [{ ...listed('a.ts'), revision }] },
+      { runId: RUN_A, root: '/repo', revertedAt: null, files: [{ ...listed('a.ts'), revision }] },
     ];
     const first = buildChangeSet('task', revised('1..2'), 0);
     expect(buildChangeSet('task', revised('1..2'), 5).version).toBe(first.version);

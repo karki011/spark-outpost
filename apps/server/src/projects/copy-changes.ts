@@ -21,6 +21,7 @@ async function describeCopy(
   if (files.length === 0) return null;
   return {
     runId: record.runId,
+    root: record.repoRoot,
     revertedAt: null,
     files,
     ...(record.name ? { name: record.name } : {}),
