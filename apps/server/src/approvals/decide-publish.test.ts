@@ -286,6 +286,55 @@ describe('decide() for a read through gh', () => {
 
   const OWN = { host: 'github.com', slug: 'acme/app', branch: BRANCH, pull: 2233 };
 
+  it('still asks before a redirect into a secret file or out of the project', () => {
+    for (const posture of ['auto', 'full_access', 'asks'] as const) {
+      for (const builder of [true, false]) {
+        expect(decideAs(posture, 'gh pr view 5 > ~/.npmrc', withPull(2233, builder))).toMatchObject(
+          {
+            verdict: 'ask',
+            secretFiles: ['~/.npmrc'],
+          },
+        );
+        expect(decideAs(posture, 'gh pr view 5 > /etc/x', withPull(2233, builder))).toMatchObject({
+          verdict: 'ask',
+          reason: 'This changes /etc/x, which is outside this project',
+        });
+      }
+    }
+  });
+
+  it('writes with a redirect as it does without one', () => {
+    const fullAuto = (command: string) =>
+      decideAs('asks', command, {
+        ...withPull(2233, true),
+        publish: {
+          grant: FULL_AUTO,
+          task: { branch: BRANCH, protectedBranches: ['main'], pull: 2233 },
+        },
+      });
+    const allowed = { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
+    expect(fullAuto('gh pr create --fill 2>&1 | tail')).toEqual(allowed);
+    expect(fullAuto('gh pr edit 2233 --title x 2>&1')).toEqual(allowed);
+    expect(fullAuto('gh pr view 2233 2>&1 | head')).toEqual(allowed);
+    expect(fullAuto('gh pr edit 5 2>&1')).toEqual({
+      verdict: 'reject',
+      reason: ghRailReason('gh pr edit'),
+    });
+  });
+
+  it('does not note a reply on the own pull request as a send because of a redirect', () => {
+    const read = { builder: false, files, observed: ['.env'], own: OWN };
+    for (const command of [
+      'gh pr comment 2233 --body done 2>&1',
+      'gh pr view 2233 --comments > /tmp/x 2>&1',
+    ]) {
+      expect(decideAs('auto', command, read), command).toEqual({ verdict: 'allow', by: 'level' });
+    }
+    expect(decideAs('auto', 'gh pr comment 77 --body done 2>&1', read)).toMatchObject({
+      sent: { target: 'out through `gh`' },
+    });
+  });
+
   it("counts another repository's pull request as a send after work data, and the own one not", () => {
     const read = { ...withPull(2233, true), observed: ['.env'], own: OWN };
     expect(decideAs('auto', 'gh pr view 5 --repo other/repo', read)).toEqual({

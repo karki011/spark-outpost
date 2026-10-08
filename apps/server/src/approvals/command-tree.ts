@@ -7,6 +7,7 @@ export interface CommandTree {
   fedByXargs: string[][];
   stdinFrom: Map<string[], string[] | null>;
   fragments: string[][];
+  redirected: Map<string[], ReadonlySet<number>>;
 }
 
 const MAX_NESTING = 3;
@@ -80,7 +81,12 @@ function addShell(tree: CommandTree, program: readonly string[], depth: number):
   if (readsStdin || program.slice(1).every((token) => token.startsWith('-'))) tree.opaque = true;
 }
 
-function addCommand(tree: CommandTree, tokens: readonly string[], depth: number): string[] | null {
+function addCommand(
+  tree: CommandTree,
+  tokens: readonly string[],
+  depth: number,
+  redirected: readonly number[] = [],
+): string[] | null {
   if (depth > MAX_NESTING) {
     tree.opaque = true;
     return null;
@@ -90,6 +96,8 @@ function addCommand(tree: CommandTree, tokens: readonly string[], depth: number)
   const name = programName(program);
   if (name === '') return null;
   tree.commands.push(program);
+  const unwrapped = tokens.length - program.length;
+  tree.redirected.set(program, new Set(redirected.map((index) => index - unwrapped)));
   if (wrappers.includes('xargs')) tree.fedByXargs.push(program);
   if (UNKNOWN_WORD.test(program[0]!)) tree.opaque = true;
   const runsCode = DELETERS.has(name) || SHELLS.has(name) || name === 'eval';
@@ -108,8 +116,8 @@ function addScript(tree: CommandTree, script: string, depth: number): void {
     return;
   }
   let previous: string[] | null = null;
-  for (const { tokens, stdin, fragment } of splitCommandLine(script)) {
-    const program = addCommand(tree, tokens, depth);
+  for (const { tokens, stdin, fragment, redirected } of splitCommandLine(script)) {
+    const program = addCommand(tree, tokens, depth, redirected);
     if (program && stdin) tree.stdinFrom.set(program, stdin === 'pipe' ? previous : null);
     if (program && fragment) tree.fragments.push(program);
     previous = program;
@@ -123,9 +131,15 @@ export function commandTree(command: string): CommandTree {
     fedByXargs: [],
     stdinFrom: new Map(),
     fragments: [],
+    redirected: new Map(),
   };
   addScript(tree, command, 0);
   return tree;
+}
+
+export function argumentWords(tree: CommandTree, program: string[]): string[] {
+  const redirected = tree.redirected.get(program);
+  return redirected ? program.filter((_word, index) => !redirected.has(index)) : program;
 }
 
 export function treeWords(tree: CommandTree): string[] {

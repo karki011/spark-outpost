@@ -202,6 +202,49 @@ describe('publishVerdict() never refuses a read through gh', () => {
   });
 });
 
+describe('publishVerdict() does not read a redirection as a pull request selector', () => {
+  const OWN_TASK = { ...TASK, pull: 2233 };
+  const fullAuto = context({ level: 'full-auto', requested: false }, OWN_TASK);
+  const allowed = { kind: 'allow', basis: 'full_auto' };
+
+  it.each([
+    'gh pr create --fill 2>&1 | tail',
+    'gh pr create --fill > /tmp/x 2>&1',
+    'gh pr create --fill &> /tmp/x',
+    'gh pr create --fill 2> /tmp/err >> /tmp/out',
+    `gh pr create --head ${BRANCH} --body-file - < /tmp/body.md`,
+    'gh pr edit 2233 --title x 2>&1',
+    'gh pr edit 2233 --title x 2>/dev/null',
+    'gh pr edit --title x 2233>/tmp/x',
+    'bash -c "gh pr edit 2233 --title x 2>&1"',
+    'gh pr view 2233 --comments > /tmp/x 2>&1',
+    'gh pr view 2233 2>&1 | head',
+    'gh pr view 2>&1',
+  ])('allows %s', (command) => {
+    expect(publishVerdict(command, 'asks', fullAuto)).toEqual(allowed);
+  });
+
+  it.each([
+    ['gh pr edit 5 2>&1', 'gh pr edit'],
+    ['gh pr edit 5 --title x > /tmp/x 2>&1', 'gh pr edit'],
+    ['gh pr edit 2233 5 2>&1', 'gh pr edit'],
+    ['gh pr edit --title x >/tmp/x 5', 'gh pr edit'],
+    ['gh pr create --head main --fill 2>&1', 'gh pr create'],
+    ['gh pr create --fill -R other/repo 2>&1', 'gh pr create'],
+    ['gh pr merge 2233 2>&1', 'gh pr merge'],
+    ['gh pr create --fill > >(gh pr merge 2233)', 'gh pr merge'],
+  ])('still refuses %s', (command, named) => {
+    expect(publishVerdict(command, 'asks', fullAuto)).toEqual({
+      kind: 'refuse',
+      reason: ghRailReason(named),
+    });
+  });
+
+  it('gives a pull request that is not its own no shortcut', () => {
+    expect(publishVerdict('gh pr view 5 2>&1 | head', 'asks', fullAuto)).toBeNull();
+  });
+});
+
 describe('ghRailReason()', () => {
   it('names the refused subcommand and says what is allowed', () => {
     expect(ghRailReason('gh pr merge')).toBe(

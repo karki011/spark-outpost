@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { ApprovalRequest } from './decide.ts';
-import { commandTree } from './command-tree.ts';
+import { argumentWords, commandTree } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';
 import type { FileLister } from './file-lister.ts';
 import { gitSubcommand } from './git-commands.ts';
@@ -180,10 +180,14 @@ function ownRepoUse(name: string, args: readonly string[], scan: Scan): boolean 
   return name === 'git' && ownGitUse(args, own);
 }
 
-function programReach(program: readonly string[], scan: Scan): Reach | null {
+function programReach(
+  program: readonly string[],
+  scan: Scan,
+  unredirected: readonly string[],
+): Reach | null {
   const name = programName(program);
   const args = program.slice(1);
-  if (ownRepoUse(name, args, scan)) return null;
+  if (ownRepoUse(name, unredirected.slice(1), scan)) return null;
   if (HOST_CLIENTS.has(name)) return { via: quoted(name), hosts: hostArgs(args) };
   if (REMOTE_COPIES.has(name)) {
     const hosts = copyHosts(args);
@@ -245,7 +249,9 @@ function commandReach(command: string, place: EgressPlace, depth: number): Reach
   const devNet = devNetHosts(command);
   const reaches = [
     ...(devNet.length > 0 ? [{ via: quoted('/dev/tcp'), hosts: devNet }] : []),
-    ...tree.commands.flatMap((program) => programReach(program, scan) ?? []),
+    ...tree.commands.flatMap(
+      (program) => programReach(program, scan, argumentWords(tree, program)) ?? [],
+    ),
   ].filter(stillSends);
   return merge(reaches);
 }

@@ -3,6 +3,7 @@ import path from 'node:path';
 const CONTROL_OPERATORS = /[;&|\n]|\$\(|`|[<>]/;
 const SEPARATORS = new Set([';', '&', '|', '\n']);
 const REDIRECTS = new Set(['<', '>']);
+const FD_NUMBER = /^\d+$/;
 const WRAPPER_VALUE_FLAGS = new Map<string, ReadonlySet<string>>([
   ['sudo', new Set(['-u', '-g', '-C', '-D', '-h', '-p', '-r', '-t', '-U', '--user', '--group'])],
   ['doas', new Set(['-u', '-C'])],
@@ -44,6 +45,7 @@ export interface SimpleCommand {
   tokens: string[];
   stdin: StdinFrom;
   fragment: boolean;
+  redirected: number[];
 }
 
 export function splitCommandLine(command: string): SimpleCommand[] {
@@ -56,20 +58,28 @@ export function splitCommandLine(command: string): SimpleCommand[] {
   let piped: StdinFrom = null;
   let closedGroup = false;
   let fragment = false;
+  let redirected: number[] = [];
+  let awaitsTarget = false;
   const endToken = () => {
-    if (started) tokens.push(current);
+    if (started) {
+      if (awaitsTarget) redirected.push(tokens.length);
+      tokens.push(current);
+      awaitsTarget = false;
+    }
     current = '';
     started = false;
   };
   const endCommand = () => {
     endToken();
     if (tokens.length > 0) {
-      commands.push({ tokens, stdin: piped, fragment });
+      commands.push({ tokens, stdin: piped, fragment, redirected });
       piped = null;
       closedGroup = false;
       fragment = false;
     }
     tokens = [];
+    redirected = [];
+    awaitsTarget = false;
   };
   for (let index = 0; index < command.length; index++) {
     const char = command[index]!;
@@ -111,7 +121,9 @@ export function splitCommandLine(command: string): SimpleCommand[] {
       closedGroup = char === ')';
       fragment = char === ')';
     } else if (REDIRECTS.has(char)) {
+      if (started && !awaitsTarget && FD_NUMBER.test(current)) redirected.push(tokens.length);
       endToken();
+      awaitsTarget = true;
     } else if (/\s/.test(char)) {
       endToken();
     } else {

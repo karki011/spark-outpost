@@ -1,4 +1,4 @@
-import { commandTree } from './command-tree.ts';
+import { argumentWords, commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
 import { ghOnlyReads } from './gh-reads.ts';
 import { withoutDataHeredocs } from './inline-code.ts';
@@ -176,9 +176,10 @@ function gitPublishes(command: string, publishing: readonly string[]): boolean {
 }
 
 export function hostingCommands(command: string): string[][] {
-  return commandTree(withoutDataHeredocs(command)).commands.filter((program) =>
-    HOSTING_CLIS.includes(programName(program)),
-  );
+  const tree = commandTree(withoutDataHeredocs(command));
+  return tree.commands
+    .filter((program) => HOSTING_CLIS.includes(programName(program)))
+    .map((program) => argumentWords(tree, program));
 }
 
 export function hostingRead(program: readonly string[]): boolean {
