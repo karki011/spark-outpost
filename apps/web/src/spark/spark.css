@@ -133,6 +133,11 @@
   gap: 12px;
   margin: 12px 0;
 }
+.spark-instructions-remote,
 .spark-instructions-save small {
   color: var(--muted);
+}
+.spark-instructions-remote {
+  margin: 10px 0 0;
+  font-size: 12px;
 }
