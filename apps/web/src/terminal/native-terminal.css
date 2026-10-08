@@ -20,6 +20,21 @@
   width: auto;
   margin: 0 0 18px;
 }
+.chat-head .session-choice {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  width: auto;
+  max-width: none;
+  margin: 0 0 0 8px;
+}
+.chat-head .session-choice > .seg {
+  flex: 0 1 200px;
+  min-width: 150px;
+}
+.chat-head .session-choice > .choice-picker {
+  flex: 0 1 170px;
+  min-width: 120px;
+}
 .native-workspace {
   display: flex;
   flex: 1;

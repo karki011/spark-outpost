@@ -277,6 +277,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {title}
                 </h1>
                 <ChatTicketChips chat={tickets} />
+                {newSession && (
+                  <SessionTypePicker
+                    value={sessionChoice}
+                    onChange={chooseSession}
+                    disabled={terminalLaunching}
+                  />
+                )}
                 <div className="head-r">
                   <DiffChip
                     taskId={task?.id ?? null}
@@ -300,13 +307,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 <p className="error-line" role="alert">
                   {detail.error.message}
                 </p>
-              )}
-              {newSession && (
-                <SessionTypePicker
-                  value={sessionChoice}
-                  onChange={chooseSession}
-                  disabled={terminalLaunching}
-                />
               )}
               {terminalSession && detail.data ? (
                 <NativeTerminalWorkspace chat={detail.data.conversation} detail={detail.data} />
