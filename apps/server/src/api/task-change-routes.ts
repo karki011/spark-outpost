@@ -44,7 +44,7 @@ export function taskChangeRoutes({ db, workspaceId }: TaskChangeRouteDeps): Rout
     const taskId = paramId(req);
     const set = await sets.fresh(taskId);
     const summary: ChangeSummary = {
-      ...summarize(set),
+      ...(await summarize(set, (entry) => sets.fileContents(set, entry))),
       core: await taskCoreImpact(db, taskId, leanChanges(set.runs)),
     };
     res.json(summary);
