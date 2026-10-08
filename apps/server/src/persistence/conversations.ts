@@ -49,6 +49,7 @@ import {
 } from './rows.ts';
 
 const LOCAL_WORKSPACE_SLUG = 'local';
+const TERMINAL_RUN_LEVEL: InvolvementLevel = 'hands-off';
 
 const summaryQuery = `
   SELECT c.id, c.title, c.updated_at, c.archived_at, c.pinned_at, c.pinned_order, c.title_source,
@@ -377,6 +378,7 @@ export async function sendInTransaction(
   );
   await insertAnnotations(client, conversationId, request.id, request.annotations ?? []);
   const runId = newId();
+  const terminal = current.session_type === 'terminal';
   const task = await taskForNewRun(client, conversationId);
   const mode = await runMode(client, conversationId, target.permission ?? null);
   const run = await client.query<RunRow>(
@@ -395,7 +397,7 @@ export async function sendInTransaction(
       task?.taskId ?? null,
       task?.planVersion ?? null,
       mode,
-      mode === 'do' ? (target.level ?? null) : null,
+      mode === 'do' ? (terminal ? TERMINAL_RUN_LEVEL : (target.level ?? null)) : null,
       target.agentMode ?? null,
       JSON.stringify(target.options ?? {}),
       mode === 'do' ? (request.startAs ?? null) : null,
@@ -404,7 +406,7 @@ export async function sendInTransaction(
       target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
     ],
   );
-  if (current.session_type !== 'terminal') {
+  if (!terminal) {
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
       newId(),
       runId,
@@ -418,8 +420,7 @@ export async function sendInTransaction(
     'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
     [conversationId, title],
   );
-  if (current.session_type !== 'terminal')
-    await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
+  if (!terminal) await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
   return { message: toMessage(inserted.rows[0], attachments), run: toRun(run.rows[0]!) };
 }
 
