@@ -22,6 +22,10 @@ export function formatCost(usd: number, source?: CostSourceLabel): string {
   return source === 'estimated' ? `~${amount}` : amount;
 }
 
+export function compactCost(usd: number, source?: CostSourceLabel): string {
+  return formatCost(usd, source === 'mixed' ? 'estimated' : source);
+}
+
 export function costNote(source: CostSourceLabel): string | null {
   if (source === 'estimated') return 'estimated';
   if (source === 'mixed') return 'includes estimates';

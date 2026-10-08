@@ -82,7 +82,7 @@ function AgentRow({ row }: { row: CostRow }) {
       <span className="cost-eff">{row.effort ?? ''}</span>
       <span className="cost-num">{row.tokens === null ? '—' : formatTokens(row.tokens)}</span>
       <span className="cost-num cost-usd">
-        <CostText usd={row.costUsd} source={row.source} />
+        <CostText usd={row.costUsd} source={row.source} compact />
         {!row.estimated && row.costUsd !== null ? (
           <i className="cost-dot" title={sourceTip(row)} aria-label={sourceTip(row)} />
         ) : (
