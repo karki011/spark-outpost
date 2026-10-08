@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import type { TaskDetail } from '../../packages/contracts/src/tasks.ts';
 import {
   CREW_REQUEST,
   agentBlock,
@@ -14,6 +15,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.FILES_SHOTS ?? '';
+const RAIL_SHOTS = process.env.RAIL_SHOTS ?? '';
 
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 
@@ -24,6 +26,55 @@ async function shot(page: Page, name: string) {
     await page.waitForTimeout(400);
     await page.screenshot({ path: path.join(SHOTS, `files-${name}-${skin}.png`) });
   }
+}
+
+async function addEstimatedTurns(page: Page) {
+  await page.route(/\/api\/tasks\/[0-9a-f-]{36}$/, async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    const task = (await response.json()) as TaskDetail;
+    const reported = task.runs.map((run) => ({
+      ...run,
+      costUsd: 1200,
+      costSource: 'reported' as const,
+    }));
+    const estimated = task.runs.map((run) => ({
+      ...run,
+      tokens: 5_499_000,
+      costUsd: 34.56,
+      costSource: 'estimated' as const,
+    }));
+    await route.fulfill({ response, json: { ...task, runs: [...reported, ...estimated] } });
+  });
+}
+
+async function overlappingCells(page: Page): Promise<string[]> {
+  return panel(page)
+    .getByRole('list', { name: 'Cost by agent' })
+    .evaluate((list) => {
+      const overlaps: string[] = [];
+      for (const row of list.querySelectorAll('li')) {
+        const cells = [...row.children].map((cell) => {
+          const range = document.createRange();
+          range.selectNodeContents(cell);
+          const ink = range.getBoundingClientRect();
+          const box = cell.getBoundingClientRect();
+          return { name: cell.className, left: ink.left, right: Math.min(ink.right, box.right) };
+        });
+        const inked = cells.filter((cell) => cell.right > cell.left);
+        for (const [index, cell] of inked.entries()) {
+          const next = inked[index + 1];
+          if (next && cell.right > next.left + 0.5) overlaps.push(`${cell.name} over ${next.name}`);
+        }
+        const rowBox = row.getBoundingClientRect();
+        if (
+          inked.some((cell) => cell.left < rowBox.left - 0.5 || cell.right > rowBox.right + 0.5)
+        ) {
+          overlaps.push('outside the row');
+        }
+      }
+      return overlaps;
+    });
 }
 
 async function panelWidth(page: Page): Promise<number> {
@@ -160,6 +211,29 @@ test.describe('a finished crew', () => {
     await expect(work.getByRole('list', { name: 'Cost by model' })).toContainText('6 Sol');
     await expect(work.getByRole('img', { name: /^Cost by model: / })).toBeVisible();
     await shot(page, 'cost');
+
+    await addEstimatedTurns(page);
+    await page.reload();
+    await work.getByRole('tab', { name: 'Cost' }).click();
+    await expect(rows.nth(0).locator('.cost-usd')).toContainText('~$1234');
+    await expect(rows.locator('.cost-note')).toHaveCount(0);
+    await expect(rows.nth(0).locator('.cost-text')).toHaveAttribute('title', /^Includes estimated/);
+    await expect(work.locator('.cost-total')).toContainText('includes estimates');
+    const handle = page.getByRole('separator', { name: 'Resize work panel' });
+    for (const key of ['End', 'Home']) {
+      await handle.focus();
+      await page.keyboard.press(key);
+      await expect.poll(() => overlappingCells(page)).toEqual([]);
+    }
+    await expect.poll(() => panelWidth(page)).toBe(340);
+    const rights = await rows.evaluateAll((all) =>
+      all.map((row) => Math.round(row.querySelector('.cost-usd')!.getBoundingClientRect().right)),
+    );
+    expect(new Set(rights).size).toBe(1);
+    if (RAIL_SHOTS) await work.screenshot({ path: path.join(RAIL_SHOTS, 'cost-by-agent-340.png') });
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect.poll(() => overlappingCells(page)).toEqual([]);
+    await page.setViewportSize({ width: 1400, height: 900 });
 
     await work.getByRole('button', { name: 'View in audit' }).click();
     await expect(page.getByRole('dialog', { name: /Audit/ })).toBeVisible();

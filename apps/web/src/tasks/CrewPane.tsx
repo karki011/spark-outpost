@@ -4,15 +4,9 @@ import { AgentBlob } from '../brand/AgentBlob.tsx';
 import { formatDuration } from '../audit/audit-model.ts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { CostText } from '../usage/CostText.tsx';
-import { CrewBlob } from '../crew/CrewBlob.tsx';
+import { CrewMemberRow } from '../crew/CrewMemberRow.tsx';
 import { MessageMemberButton } from '../crew/MessageMemberButton.tsx';
-import {
-  crewStateWord,
-  modelLabel,
-  roleLabel,
-  type CrewAgent,
-  type CrewState,
-} from '../crew/crew-model.ts';
+import { modelLabel, roleLabel, type CrewAgent } from '../crew/crew-model.ts';
 
 const statusWords: Record<RunStatus, { word: string; tone: string }> = {
   queued: { word: 'Queued', tone: 'pending' },
@@ -33,16 +27,6 @@ export function crewNames(runs: readonly TaskRun[]): string[] {
     return count > 1 ? `${role} ${count}` : role;
   });
 }
-
-const crewTones: Record<CrewState, string> = {
-  thinking: 'active',
-  working: 'active',
-  waiting: 'waiting',
-  done: 'done',
-  failed: 'failed',
-  stopped: 'failed',
-  queued: 'pending',
-};
 
 function jobLine(agent: CrewAgent, piece: string | undefined): string {
   return [piece ?? roleLabel(agent), modelLabel(agent)].join(' · ');
@@ -65,34 +49,11 @@ function OrchestratedCrew({ agents, labels, conversationId }: OrchestratedCrewPr
       </div>
       <ul className="tlist" aria-label="Crew">
         {agents.map((agent) => (
-          <li key={agent.id} className="crow">
-            <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={30} />
-            <span className="nm">
-              <b>
-                {agent.name}
-                <span className={`cst ${crewTones[agent.state]}`}>
-                  {crewStateWord(agent.state)}
-                </span>
-              </b>
-              <small>{jobLine(agent, labels.get(agent.id))}</small>
-            </span>
-            <span className="num">
-              {agent.tokens === null ? '—' : `${formatTokens(agent.tokens)} tok`}
-              <small>
-                {agent.state === 'queued' && agent.costUsd === null ? (
-                  'not started'
-                ) : (
-                  <>
-                    <CostText usd={agent.costUsd} source={agent.costSource} empty="no cost" /> ·{' '}
-                    {formatDuration(agent.durationMs)}
-                  </>
-                )}
-              </small>
-            </span>
+          <CrewMemberRow key={agent.id} agent={agent} job={jobLine(agent, labels.get(agent.id))}>
             {conversationId && (
               <MessageMemberButton conversationId={conversationId} agent={agent} />
             )}
-          </li>
+          </CrewMemberRow>
         ))}
       </ul>
     </div>

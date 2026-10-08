@@ -166,6 +166,7 @@ function mergeAgents(earlier: CrewAgent, later: CrewAgent): CrewAgent {
         ? later.costSource
         : 'mixed',
     durationMs: addNullable(earlier.durationMs, later.durationMs),
+    turns: (earlier.turns ?? 1) + 1,
   };
 }
 
