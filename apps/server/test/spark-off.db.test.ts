@@ -102,8 +102,7 @@ describe('Spark off', () => {
     expect(await childModels(runId)).toEqual([]);
     const [reply] = await assistantReplies(t, runId);
     const append = sessionOf(reply!).meta?.systemPrompt?.append ?? '';
-    expect(append).toContain("The user's name is Sam; use it sparingly");
-    expect(append).toContain('act as a coordinator');
+    expect(append).toBe('');
   }, 60_000);
 
   it('builds risky work once on the chat’s model with no Critic, retry or Jev', async () => {
@@ -122,7 +121,7 @@ describe('Spark off', () => {
     expect(advice).toMatchObject({ jevStatus: 'not_asked', jevError: 'Spark is off', jev: null });
   }, 60_000);
 
-  it('keeps team mode and the name for Codex in its developer instructions', async () => {
+  it('sends Codex no developer instructions of its own', async () => {
     const { conversationId } = await linkedConversation(t, root);
     const sent = await sendUserMessage(
       t.db,
@@ -143,20 +142,13 @@ describe('Spark off', () => {
     const config = JSON.parse(sessionOf(reply!).codexConfig ?? '{}') as {
       developer_instructions?: string;
     };
-    expect(config.developer_instructions).toContain('keep a short checklist');
-    expect(config.developer_instructions).toContain("The user's name is Sam; use it sparingly");
-    const logged = await eventually(async () => {
-      const { entries } = await listProtocolLog(t.db, runId, {
-        after: 0,
-        limit: 50,
-        direction: 'harness',
-        method: CODEX_INSTRUCTIONS_METHOD,
-      });
-      return entries[0] ?? null;
-    });
-    expect(logged.payload).toEqual({
+    expect(config.developer_instructions).toBeUndefined();
+    const { entries } = await listProtocolLog(t.db, runId, {
+      after: 0,
+      limit: 50,
+      direction: 'harness',
       method: CODEX_INSTRUCTIONS_METHOD,
-      params: { developer_instructions: config.developer_instructions },
     });
+    expect(entries).toEqual([]);
   }, 60_000);
 });
