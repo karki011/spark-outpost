@@ -8,7 +8,6 @@ import type {
   ConversationDetail,
 } from '../../../packages/contracts/src/index.ts';
 import { planDocuments } from '../../../apps/server/src/persistence/plan-documents.ts';
-import { looksLikePlan } from '../../../packages/contracts/src/plans.ts';
 import { agentUsage } from '../../bench/metrics.ts';
 import { Api, sleep, type Answered, type Chat, type TurnOutcome } from '../api-driver.ts';
 import { balancedChoice } from '../balanced.ts';
@@ -244,33 +243,9 @@ export class HarnessDay implements ArmDay {
     return message?.id ?? null;
   }
 
-  private async savePlan(chat: Chat, thread: string, lastRunId: string, reply: string) {
+  private async planSaved(chat: Chat): Promise<'auto' | 'none'> {
     const saved = await planDocuments(this.stack.db, chat.conversationId);
-    if (saved.some((plan) => plan.status === 'approved'))
-      return { how: 'auto' as const, extra: [] };
-    const detail = await this.api.call<ConversationDetail>(
-      'GET',
-      `/conversations/${chat.conversationId}`,
-    );
-    const offer = detail.plans?.offers.at(-1);
-    if (offer) {
-      await this.api.call('POST', `/conversations/${chat.conversationId}/plans`, {
-        messageId: offer.messageId,
-        offered: true,
-      });
-      const extra: Intervention[] = [{ kind: 'save-plan', text: 'clicked "Save as agreed plan"' }];
-      return { how: 'offer' as const, extra };
-    }
-    const messageId = await this.replyMessageId(thread, lastRunId);
-    if (!messageId || !looksLikePlan(reply)) return { how: 'none' as const, extra: [] };
-    await this.api.call('POST', `/conversations/${chat.conversationId}/plans`, {
-      messageId,
-      offered: false,
-    });
-    const extra: Intervention[] = [
-      { kind: 'save-plan', text: 'saved the reply as the plan by hand' },
-    ];
-    return { how: 'manual' as const, extra };
+    return saved.some((plan) => plan.status === 'approved') ? 'auto' : 'none';
   }
 
   private shipAvailable(): boolean {
@@ -340,9 +315,7 @@ export class HarnessDay implements ArmDay {
     const reply = logs.at(-1)?.metrics.reply ?? '';
     const lastRunId = runIds.at(-1) ?? '';
     const planCard = (await planCards(this.stack, ids)) > 0;
-    const plan = session.savePlan
-      ? await this.savePlan(chat, session.thread, lastRunId, reply)
-      : null;
+    const planSaved = session.savePlan ? await this.planSaved(chat) : null;
     const { list, clicks } = interventionsFrom(answered);
     const clarifyCard =
       stoppedOnClarify ||
@@ -367,7 +340,7 @@ export class HarnessDay implements ArmDay {
       cappedAtUsd,
       clarifyCard,
       planCard,
-      planSaved: plan?.how ?? null,
+      planSaved,
       roles: [...new Set(agents.map((agent) => agent.role))],
       checksRan: logs.reduce((sum, log) => sum + log.metrics.checks.length, 0),
       builderPlanLoaded:
@@ -385,7 +358,7 @@ export class HarnessDay implements ArmDay {
       handoff: await handedOff(this.stack, ids),
       resumed,
       shipAvailable: session.ship ? this.shipAvailable() : null,
-      interventions: [...list, ...(plan?.extra ?? [])],
+      interventions: list,
       clicks,
       shots: shot ? [shot] : [],
       conversation: chat.conversationId,

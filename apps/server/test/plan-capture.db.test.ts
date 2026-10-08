@@ -332,24 +332,24 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.plans).toEqual({
       saved: [{ messageId: reply!.id, version: 1 }],
-      offers: [],
       lines: [],
     });
   });
 
-  it('offers a "Save as agreed plan" card when Jev is unsure', async () => {
+  it('saves nothing and offers nothing when Jev is unsure', async () => {
     start(0.7);
     const { conversationId } = await linkedConversation(t, root);
     await finished(await say(conversationId, 'Plan CSV export #planreply', 'ask'));
-    const [reply] = await assistantReplies(conversationId);
     const agreed = await say(conversationId, 'hmm ok maybe', 'ask');
     await finished(agreed);
     expect(await planDocuments(t.db, conversationId)).toEqual([]);
+    const [advice] = await planAdvice(agreed);
+    expect(advice?.body).toMatchObject({ applied: 'none', answer: { jev: 0.7, action: 'none' } });
     const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.plans?.offers).toEqual([{ runId: agreed, messageId: reply!.id }]);
+    expect(detail?.plans).toEqual({ saved: [], lines: [] });
   });
 
-  it('does nothing below 0.6', async () => {
+  it('does nothing for a message that does not agree', async () => {
     start(0.2);
     const { conversationId } = await linkedConversation(t, root);
     await finished(await say(conversationId, 'Plan CSV export #planreply', 'ask'));
@@ -372,8 +372,6 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
       applied: 'none',
       answer: { jev: 0.7, previousIsPlan: 0.08, rule: true, action: 'none' },
     });
-    const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.plans?.offers ?? []).toEqual([]);
   });
 
   it('does nothing when Jev does not say whether the previous reply is a plan', async () => {
@@ -388,8 +386,6 @@ describe('plans agreed in chat', { timeout: 60_000 }, () => {
       applied: 'none',
       answer: { jev: 0.93, previousIsPlan: null, action: 'none' },
     });
-    const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.plans?.offers ?? []).toEqual([]);
   });
 
   it('approves a proposed Codex plan instead of copying the reply', async () => {

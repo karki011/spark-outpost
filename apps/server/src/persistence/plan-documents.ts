@@ -265,20 +265,6 @@ export async function previousAssistantMessage(
   return rows[0] ? toAssistantMessage(rows[0]) : null;
 }
 
-export async function assistantMessage(
-  db: Queryable,
-  conversationId: string,
-  messageId: string,
-): Promise<AssistantMessage | null> {
-  const { rows } = await db.query<AssistantMessageRow>(
-    `SELECT m.id, m.conversation_id, m.content, m.run_id, r.task_id
-     FROM messages m LEFT JOIN runs r ON r.id = m.run_id
-     WHERE m.id = $1 AND m.conversation_id = $2 AND m.role = 'assistant'`,
-    [messageId, conversationId],
-  );
-  return rows[0] ? toAssistantMessage(rows[0]) : null;
-}
-
 interface PlanLineRow {
   run_id: string;
   version: number;
@@ -306,20 +292,13 @@ export async function conversationPlans(
   db: Queryable,
   conversationId: string,
 ): Promise<ConversationPlans> {
-  const [saved, offers, lines] = await Promise.all([
+  const [saved, lines] = await Promise.all([
     db.query<{ message_id: string; version: number }>(
       `SELECT DISTINCT ON (source_message_id) source_message_id AS message_id, version
        FROM plan_documents
        WHERE conversation_id = $1 AND source_message_id IS NOT NULL
          AND status IN ('approved', 'superseded')
        ORDER BY source_message_id, version DESC`,
-      [conversationId],
-    ),
-    db.query<{ run_id: string; message_id: string }>(
-      `SELECT a.run_id, a.body->'answer'->>'messageId' AS message_id
-       FROM run_advice a JOIN runs r ON r.id = a.run_id
-       WHERE r.conversation_id = $1 AND a.purpose = 'plan_agreed' AND a.body->>'applied' = 'offer'
-       ORDER BY a.created_at`,
       [conversationId],
     ),
     db.query<PlanLineRow>(
@@ -331,12 +310,8 @@ export async function conversationPlans(
       [conversationId],
     ),
   ]);
-  const savedIds = new Set(saved.rows.map((row) => row.message_id));
   return {
     saved: saved.rows.map((row) => ({ messageId: row.message_id, version: row.version })),
-    offers: offers.rows
-      .filter((row) => !savedIds.has(row.message_id))
-      .map((row) => ({ runId: row.run_id, messageId: row.message_id })),
     lines: planLines(lines.rows),
   };
 }

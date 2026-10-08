@@ -1,4 +1,4 @@
-import type { AgreedPlans, PlanDocument, PlanDocumentSource } from '@spark-outpost/contracts';
+import type { AgreedPlans, PlanDocument } from '@spark-outpost/contracts';
 import { conversationRoots } from '../persistence/conversation-projects.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
 import {
@@ -13,8 +13,6 @@ import { headCommit } from '../projects/snapshot.ts';
 import { staleFiles } from './plan-staleness.ts';
 
 export interface AgreementSource {
-  by: 'user' | 'jev';
-  source: Extract<PlanDocumentSource, 'chat' | 'user'>;
   root: string | null;
   approvedRunId: string | null;
 }
@@ -28,7 +26,7 @@ export async function saveAgreedMessage(
   if (saved?.status === 'approved') return saved;
   const commit = agreement.root ? await headCommit(agreement.root) : null;
   const approval = {
-    by: agreement.by,
+    by: 'jev' as const,
     option: null,
     runId: agreement.approvedRunId,
     commit,
@@ -38,7 +36,7 @@ export async function saveAgreedMessage(
   return insertPlanDocument(db, {
     conversationId: message.conversationId,
     taskId: message.taskId,
-    source: agreement.source,
+    source: 'chat',
     body: message.content,
     sourceRunId: message.runId,
     sourceMessageId: message.id,

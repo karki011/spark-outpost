@@ -4,15 +4,17 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { planDocumentSchema, taskDetailSchema } from '@spark-outpost/contracts';
+import { taskDetailSchema } from '@spark-outpost/contracts';
 import { createConversation } from '../src/persistence/conversations.ts';
 import {
   approvePlanDocument,
+  conversationPlans,
   insertPlanDocument,
   latestApprovedPlan,
   planDocuments,
   rejectPlanDocument,
 } from '../src/persistence/plan-documents.ts';
+import { saveAgreedMessage } from '../src/plans/agreed-plans.ts';
 import { staleFiles } from '../src/plans/plan-staleness.ts';
 import { headCommit } from '../src/projects/snapshot.ts';
 import { PLAN_SAVE_FAILED, createPlanRecorder } from '../src/workflow/plan-recorder.ts';
@@ -134,7 +136,7 @@ describe('stale agreed plans', () => {
   });
 });
 
-describe('plan API', () => {
+describe('a reply agreed as the plan', () => {
   let root: string;
   let app: ReturnType<typeof createTestApp>;
 
@@ -145,9 +147,6 @@ describe('plan API', () => {
 
   afterEach(() => removeRepo(root));
 
-  const post = (path: string, body: object) =>
-    request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
-
   async function reply(conversationId: string, content: string) {
     const runId = await sendDo(t, conversationId, 'Plan it');
     const messageId = randomUUID();
@@ -156,35 +155,31 @@ describe('plan API', () => {
        VALUES ($1, $2, 'assistant', $3, $4)`,
       [messageId, conversationId, content, runId],
     );
-    return { runId, messageId };
+    return { id: messageId, conversationId, content, runId, taskId: null };
   }
 
-  it('saves an assistant reply as the agreed plan once, and shows it in the task detail', async () => {
+  it('is saved once, and shows in the task detail', async () => {
     await trackedDoc(root);
     const { conversationId } = await linkedConversation(t, root);
-    const { runId, messageId } = await reply(conversationId, '## Plan\n1. Edit docs/notes.txt');
-    const saved = planDocumentSchema.parse(
-      (await post(`/api/conversations/${conversationId}/plans`, { messageId }).expect(201)).body,
-    );
+    const message = await reply(conversationId, '## Plan\n1. Edit docs/notes.txt');
+    const agreement = { root, approvedRunId: message.runId };
+    const saved = await saveAgreedMessage(t.db, message, agreement);
     expect(saved).toMatchObject({
       status: 'approved',
-      source: 'user',
-      approvedBy: 'user',
-      sourceMessageId: messageId,
+      source: 'chat',
+      approvedBy: 'jev',
+      sourceMessageId: message.id,
       approvedCommit: await headCommit(root),
     });
-    const again = await post(`/api/conversations/${conversationId}/plans`, {
-      messageId,
-      offered: true,
-    }).expect(201);
-    expect(again.body.id).toBe(saved.id);
+    const again = await saveAgreedMessage(t.db, message, agreement);
+    expect(again.id).toBe(saved.id);
 
     const taskId = randomUUID();
     await t.db.query(`INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, 'Plan')`, [
       taskId,
       conversationId,
     ]);
-    await t.db.query('UPDATE runs SET task_id = $2 WHERE id = $1', [runId, taskId]);
+    await t.db.query('UPDATE runs SET task_id = $2 WHERE id = $1', [message.runId, taskId]);
     await writeFile(join(root, 'docs/notes.txt'), 'changed\n');
     const detail = taskDetailSchema.parse(
       (await request(app).get(`/api/tasks/${taskId}`).set(LOCAL_HEADERS).expect(200)).body,
@@ -196,10 +191,34 @@ describe('plan API', () => {
     });
   });
 
-  it('refuses a message from another conversation', async () => {
+  it('keeps showing a plan saved by hand in an earlier version', async () => {
     const { conversationId } = await linkedConversation(t, root);
-    const other = await conversation();
-    const { messageId } = await reply(conversationId, '## Plan\n1. Edit notes.txt');
-    await post(`/api/conversations/${other}/plans`, { messageId }).expect(404);
+    const message = await reply(conversationId, '## Plan\n1. Edit notes.txt');
+    await insertPlanDocument(t.db, {
+      conversationId,
+      taskId: null,
+      source: 'user',
+      body: message.content,
+      sourceRunId: message.runId,
+      sourceMessageId: message.id,
+      approval: { by: 'user', option: null, runId: null, commit: null },
+    });
+    const [plan] = await planDocuments(t.db, conversationId);
+    expect(plan).toMatchObject({ status: 'approved', source: 'user', approvedBy: 'user' });
+    expect((await conversationPlans(t.db, conversationId)).saved).toEqual([
+      { messageId: message.id, version: 1 },
+    ]);
+  });
+
+  it('has no route that saves a reply as the plan', async () => {
+    const { conversationId } = await linkedConversation(t, root);
+    const message = await reply(conversationId, '## Plan\n1. Edit notes.txt');
+    await request(app)
+      .post(`/api/conversations/${conversationId}/plans`)
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .send({ messageId: message.id })
+      .expect(404);
+    expect(await planDocuments(t.db, conversationId)).toEqual([]);
   });
 });
