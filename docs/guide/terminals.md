@@ -26,12 +26,12 @@ Answer questions in the terminal. Pull requests aren't automatic.
 ## Open a shell beside Chat
 
 1. Select **Terminal** in a chat header, or press **⌃\`**.
-2. Type commands in your own shell; Spark doesn't ask for approval.
+2. Type commands; Spark doesn't ask for approval.
 3. Select **+** for another tab, or **×** to close one.
 
 ![The terminal dock below a chat](images/terminals-dock-light.png)
 
-The shell starts in the chat's worktree, chosen checkout, or home folder. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
+The shell starts in the chat's worktree, checkout or home folder. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
@@ -39,6 +39,6 @@ The shell starts in the chat's worktree, chosen checkout, or home folder. Closin
 
 Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents; outside terminals are unaffected.
 
-After a service crash or Mac restart, **Interrupted** sessions offer **Resume session** where the provider supports it. Resume restores provider history, not an interrupted command. Nothing restarts automatically.
+After a crash or restart, **Interrupted** sessions offer **Resume session** where supported. It restores history, not a running command. A failed launch offers **Start again**.
 
 **Next:** [Use the browser](use-the-browser.md)
