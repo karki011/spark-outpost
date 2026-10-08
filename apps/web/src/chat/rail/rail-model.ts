@@ -1,10 +1,15 @@
 import {
   autonomyLabel,
+  isTerminalRunStatus,
   type ConversationUsage,
   type InvolvementLevel,
+  type Orchestration,
   type PrChecks,
   type PrWatch,
 } from '@spark-outpost/contracts';
+import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
+import { turnState } from '../../crew/tv-list.ts';
+import { countLabel } from '../../ui/count-label.ts';
 import { formatTokens } from '../composer/model-options.ts';
 import { filesLabel, formatTotal } from '../changes/change-rules.ts';
 import { repoSummary } from '../project/repo-list.ts';
@@ -168,4 +173,24 @@ export function railRows(facts: RailFacts): RailRow[] {
   const usage = usageRow(facts);
   if (usage) rows.push(usage);
   return rows;
+}
+
+export function finishedCrew(
+  orchestration: Orchestration,
+  agents: readonly CrewAgent[],
+): CrewAgent[] {
+  if (!isTerminalRunStatus(orchestration.status)) return [...agents];
+  const ended = turnState(orchestration.status);
+  return agents.map((agent) =>
+    isBusy(agent.state) || agent.state === 'queued' ? { ...agent, state: ended } : agent,
+  );
+}
+
+export function crewHeading(agents: readonly CrewAgent[]): string {
+  return `Crew · ${countLabel(agents.length, 'agent')}`;
+}
+
+export function crewJob(agent: CrewAgent): string {
+  const turns = agent.turns && agent.turns > 1 ? `${agent.turns} turns` : null;
+  return [roleLabel(agent), modelLabel(agent), turns].filter(Boolean).join(' · ');
 }

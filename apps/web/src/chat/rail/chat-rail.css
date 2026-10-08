@@ -321,3 +321,45 @@
   font-size: 12px;
   font-weight: 400;
 }
+
+.crail-crew {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 64px;
+  margin-top: 14px;
+}
+
+.crail-crew ul {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.crail-crew .crow {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 0 8px;
+  align-items: start;
+  padding: 4px 6px;
+}
+
+.crail-crew .crow .nm b {
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.crail-crew .crow .num {
+  grid-column: 2;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.crail-crew .crow .num small {
+  display: inline;
+  margin-left: 8px;
+}
