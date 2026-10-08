@@ -7,6 +7,7 @@ import type {
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { nativeTerminalRow, nativeTerminalView } from '../persistence/native-terminals.ts';
 import {
+  failNativeLaunchRun,
   finishNativeRun,
   recoverNativeTerminals,
   reserveNativeTerminalLaunch,
@@ -18,7 +19,7 @@ import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { SparkGrant } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { stopRun as cancelRun } from '../workflow/stop-run.ts';
-import { nativeControl, NativeRuntimeError } from './native-control.ts';
+import { nativeControl, nativeLaunchError, NativeRuntimeError } from './native-control.ts';
 import { nativeObserver, hookTokenDigest as digest } from './native-observe.ts';
 import { attachNativeSession } from './native-attach.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
@@ -82,7 +83,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!provider) throw new NativeRuntimeError('Choose Claude Code or Codex for this terminal.');
     if (previous && !['exited', 'error', 'interrupted'].includes(previous.state))
       throw new NativeTerminalConflictError('That terminal agent is already running.');
-    if (previous && !request.resume)
+    if (previous?.native_session_id && !request.resume)
       throw new NativeTerminalConflictError(
         'Resume the ended terminal explicitly, or start a new Terminal session.',
       );
@@ -125,6 +126,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       resume: request.resume,
       observation: 'unsupported',
       reason: null,
+    }).catch(async (error: unknown) => {
+      const failure = nativeLaunchError(error);
+      if (prepared.runId) await failNativeLaunchRun(deps.db, prepared.runId, failure.message);
+      throw failure;
     });
     const token = randomBytes(32).toString('base64url');
     const scope: SparkScope = {
@@ -245,14 +250,15 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         disposed ||
         stoppedLaunches.has(conversationId) ||
         (prepared.runId !== null && (await isCancelRequested(deps.db, prepared.runId)));
-      const reason = cancelled ? 'Stopped by the user.' : 'The native terminal could not start.';
+      const failure = nativeLaunchError(error);
+      const reason = cancelled ? 'Stopped by the user.' : failure.message;
       await finishNativeRun(deps.db, row, cancelled ? 'cancelled' : 'failed', reason);
       await setNativeTerminalState(deps.db, {
         ...row,
         state: cancelled ? 'exited' : 'error',
         reason,
       });
-      throw error;
+      throw failure;
     }
   };
   const stop = async (conversationId: string) => {

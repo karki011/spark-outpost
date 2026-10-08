@@ -7,9 +7,15 @@ export class NativeRuntimeError extends Error {
   constructor(
     message: string,
     readonly status = 400,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
   }
+}
+
+export function nativeLaunchError(error: unknown): Error {
+  if (error instanceof Error && error.constructor !== Error) return error;
+  return new NativeRuntimeError('The terminal could not start. Try again.', 500, { cause: error });
 }
 
 export function nativeControl(

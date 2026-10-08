@@ -5,6 +5,7 @@ import { isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 import { isRecord } from '../agent-config/records.ts';
 import type { TurnAttachment } from '../providers/provider.ts';
+import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
 import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
@@ -78,7 +79,9 @@ export function nativeModeArgs(provider: NativeProvider, mode: string): string[]
     if (
       !['manual', 'acceptEdits', 'plan', 'auto', 'dontAsk', 'bypassPermissions'].includes(selected)
     ) {
-      throw new Error('This Claude permission mode is not supported in Terminal sessions.');
+      throw new NativeRuntimeError(
+        'This Claude permission mode is not supported in Terminal sessions.',
+      );
     }
     return ['--permission-mode', selected];
   }
@@ -93,7 +96,7 @@ export function nativeModeArgs(provider: NativeProvider, mode: string): string[]
         'approvals_reviewer="user"',
       ];
     case 'ask-every-action':
-      throw new Error(
+      throw new NativeRuntimeError(
         'Ask every time is unavailable in this Codex terminal. Choose Read-only, Approve for me, or Full access.',
       );
     case 'agent':
@@ -101,7 +104,9 @@ export function nativeModeArgs(provider: NativeProvider, mode: string): string[]
     case 'agent-full-access':
       return ['--dangerously-bypass-approvals-and-sandbox'];
     default:
-      throw new Error('This Codex permission mode is not supported in Terminal sessions.');
+      throw new NativeRuntimeError(
+        'This Codex permission mode is not supported in Terminal sessions.',
+      );
   }
 }
 
@@ -175,7 +180,7 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
           '--system-prompt-snapshot',
         ))
       )
-        throw new Error(
+        throw new NativeRuntimeError(
           'This Claude version cannot refresh custom instructions when resuming. Start a new Terminal session.',
         );
       args.push('--system-prompt-snapshot', 'off');
