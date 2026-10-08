@@ -1,15 +1,18 @@
 import { spawn } from 'node:child_process';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { chmod, mkdir, open, readFile, rm } from 'node:fs/promises';
 import { connect, type Socket } from 'node:net';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Database, DatabaseOptions } from './postgres.ts';
+import { createSecret, runtimePaths, runtimeProof, sameProof } from './runtime-handshake.ts';
 import {
   RUNTIME_FRAME_LIMIT,
   runtimeEventSchema,
   runtimeInfoSchema,
+  type RuntimeEvent,
+  type RuntimeHandshake,
   type RuntimeInfo,
   type RuntimeRequest,
 } from './runtime-protocol.ts';
@@ -32,10 +35,10 @@ export class LocalRuntime {
   private readonly exits = new Map<string, (code: number | null) => void>();
   private buffer = '';
   private readonly decoder = new StringDecoder('utf8');
+  private welcomed: ((event: Extract<RuntimeEvent, { kind: 'welcome' }>) => void) | null = null;
 
   private constructor(
     private readonly socket: Socket,
-    private readonly token: string,
     private readonly options: RuntimeOptions,
   ) {
     socket.on('data', (chunk: Buffer) => this.receive(this.decoder.write(chunk)));
@@ -55,55 +58,40 @@ export class LocalRuntime {
     const directory = path.join(options.userData, 'runtime');
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await chmod(directory, 0o700);
-    const tokenFile = path.join(directory, 'token');
-    let token: string;
-    try {
-      token = (await readFile(tokenFile, 'utf8')).trim();
-    } catch {
-      token = randomBytes(32).toString('base64url');
-      try {
-        await writeFile(tokenFile, token, { mode: 0o600, flag: 'wx' });
-      } catch {
-        token = (await readFile(tokenFile, 'utf8')).trim();
-      }
-    }
-    const endpointFile = path.join(directory, 'endpoint.json');
+    const paths = runtimePaths(directory);
+    const endpointFile = paths.endpoint;
     const attach = async () => {
+      let token: string;
       try {
-        const endpoint = JSON.parse(await readFile(endpointFile, 'utf8')) as {
-          port: number;
-          pid: number;
-        };
-        if (!Number.isInteger(endpoint.port) || endpoint.port < 1 || endpoint.port > 65535)
-          return null;
-        const socket = await new Promise<Socket | null>((resolve) => {
-          const candidate = connect(endpoint.port, '127.0.0.1');
-          candidate.once('connect', () => resolve(candidate));
-          candidate.once('error', () => {
-            candidate.destroy();
-            resolve(null);
-          });
-          candidate.setTimeout(1_000, () => {
-            candidate.destroy();
-            resolve(null);
-          });
-        });
-        if (!socket) return null;
-        socket.setTimeout(0);
-        const runtime = new LocalRuntime(socket, token, options);
-        try {
-          await Promise.race([
-            runtime.info(),
-            delay(5_000).then(() => {
-              throw new Error('The local runtime did not authenticate.');
-            }),
-          ]);
-          return runtime;
-        } catch {
-          socket.destroy();
-          return null;
-        }
+        token = (await readFile(paths.token, 'utf8')).trim();
       } catch {
+        return null;
+      }
+      const socket = await new Promise<Socket | null>((resolve) => {
+        const candidate = connect(paths.socket);
+        candidate.once('connect', () => resolve(candidate));
+        candidate.once('error', () => {
+          candidate.destroy();
+          resolve(null);
+        });
+        candidate.setTimeout(1_000, () => {
+          candidate.destroy();
+          resolve(null);
+        });
+      });
+      if (!socket) return null;
+      socket.setTimeout(0);
+      const runtime = new LocalRuntime(socket, options);
+      try {
+        await Promise.race([
+          runtime.prove(token).then(() => runtime.info()),
+          delay(5_000, undefined, { ref: false }).then(() => {
+            throw new Error('The local runtime did not authenticate.');
+          }),
+        ]);
+        return runtime;
+      } catch {
+        socket.destroy();
         return null;
       }
     };
@@ -162,6 +150,27 @@ export class LocalRuntime {
     }
   }
 
+  private prove(token: string): Promise<void> {
+    const nonce = createSecret();
+    return new Promise((resolve, reject) => {
+      this.socket.once('close', () => reject(new Error('The local runtime disconnected.')));
+      this.welcomed = (event) => {
+        this.welcomed = null;
+        if (!sameProof(event.proof, runtimeProof(token, 'host', nonce, event.nonce))) {
+          reject(new Error('The local runtime did not prove its identity.'));
+          return;
+        }
+        this.write({ kind: 'proof', proof: runtimeProof(token, 'client', nonce, event.nonce) });
+        resolve();
+      };
+      this.write({ kind: 'hello', nonce });
+    });
+  }
+
+  private write(frame: RuntimeHandshake | { id: string; request: RuntimeRequest }) {
+    this.socket.write(`${JSON.stringify(frame)}\n`);
+  }
+
   private receive(chunk: string) {
     this.buffer += chunk;
     if (this.buffer.length > RUNTIME_FRAME_LIMIT) {
@@ -185,7 +194,13 @@ export class LocalRuntime {
         return;
       }
       const event = parsed.data;
-      if (event.kind === 'reply') {
+      if (event.kind === 'welcome') {
+        if (!this.welcomed) {
+          this.socket.destroy();
+          return;
+        }
+        this.welcomed(event);
+      } else if (event.kind === 'reply') {
         const pending = this.waiting.get(event.id);
         this.waiting.delete(event.id);
         if (event.error) pending?.reject(new Error(event.error));
@@ -210,7 +225,7 @@ export class LocalRuntime {
     const id = randomUUID();
     return new Promise((resolve, reject) => {
       this.waiting.set(id, { resolve, reject });
-      this.socket.write(`${JSON.stringify({ id, token: this.token, request })}\n`);
+      this.write({ id, request });
     });
   }
 
@@ -275,10 +290,6 @@ export class LocalRuntime {
         await this.request({ kind: 'service:stop', name: options.name });
       },
     };
-  }
-
-  get port(): number {
-    return this.socket.remotePort!;
   }
 
   detach(): void {

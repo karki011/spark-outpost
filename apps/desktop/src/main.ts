@@ -332,7 +332,7 @@ async function launch(): Promise<void> {
     window: () => spark?.window ?? null,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     userData: paths.userData,
-    blockedPorts: [apiPort, databaseOptions.port, runtime.port],
+    blockedPorts: [apiPort, databaseOptions.port],
     log: log('browser'),
   });
   browser = browserHost;

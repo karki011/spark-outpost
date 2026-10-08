@@ -17,7 +17,10 @@ export type RuntimeRequest =
   | { kind: 'configure'; api: NonNullable<RuntimeInfo['api']> }
   | { kind: 'shutdown' };
 
+export type RuntimeHandshake = { kind: 'hello'; nonce: string } | { kind: 'proof'; proof: string };
+
 export type RuntimeEvent =
+  | { kind: 'welcome'; nonce: string; proof: string }
   | { kind: 'reply'; id: string; result?: unknown; error?: string }
   | { kind: 'log'; name: string; line: string }
   | { kind: 'service:message'; name: string; message: unknown }
@@ -33,9 +36,9 @@ const api = z.object({
   token: z.string().min(1).max(4096),
   version: z.string().min(1).max(100),
 });
-export const runtimeEnvelopeSchema = z.object({
+const secret = z.string().min(32).max(100);
+const runtimeEnvelopeSchema = z.object({
   id: z.uuid(),
-  token: z.string().min(32).max(100),
   request: z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('info') }),
     z.object({
@@ -59,7 +62,13 @@ export const runtimeEnvelopeSchema = z.object({
     z.object({ kind: z.literal('shutdown') }),
   ]),
 });
+export const runtimeFrameSchema = z.union([
+  z.object({ kind: z.literal('hello'), nonce: secret }),
+  z.object({ kind: z.literal('proof'), proof: secret }),
+  runtimeEnvelopeSchema,
+]);
 export const runtimeEventSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('welcome'), nonce: secret, proof: secret }),
   z.object({
     kind: z.literal('reply'),
     id: z.uuid(),
