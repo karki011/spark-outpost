@@ -3,6 +3,15 @@ import { finishNativeRun, setNativeTerminalState } from '../persistence/native-t
 import { SparkToolError } from '../spark-mcp/tool.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
+export class NativeRuntimeError extends Error {
+  constructor(
+    message: string,
+    readonly status = 400,
+  ) {
+    super(message);
+  }
+}
+
 export function nativeControl(
   db: Db,
   live: Map<string, LiveSession>,
