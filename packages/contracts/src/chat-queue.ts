@@ -1,17 +1,16 @@
 import { z } from 'zod';
-import { MESSAGE_MAX_LENGTH } from './conversations.ts';
 import { queuedMessageSchema } from './crew-messages.ts';
 
 export const QUEUE_LIMIT = 50;
 
 export const queueAddRequestSchema = z.object({
   id: z.uuid(),
-  content: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH),
+  content: z.string().trim().min(1),
 });
 export type QueueAddRequest = z.infer<typeof queueAddRequestSchema>;
 
 export const queueEditRequestSchema = z.object({
-  content: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH),
+  content: z.string().trim().min(1),
 });
 export type QueueEditRequest = z.infer<typeof queueEditRequestSchema>;
 

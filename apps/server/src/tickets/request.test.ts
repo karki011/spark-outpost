@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MESSAGE_MAX_LENGTH, type TicketDetail } from '@spark-outpost/contracts';
+import type { TicketDetail } from '@spark-outpost/contracts';
 import {
   BRIEF_TEXT_LIMIT,
   PLAN_FIRST_LINE,
+  TICKET_BRIEF_MAX_LENGTH,
   readTicketLine,
   splitCriteria,
   ticketBrief,
@@ -124,7 +125,7 @@ describe('ticket brief', () => {
     expect(ticketBrief(ticket, 'build', { canReadTicket: true })).not.toContain('## References');
   });
 
-  it('stays within the message limit and keeps the plan line', () => {
+  it('stays within the brief budget and keeps the plan line', () => {
     const huge = { ...ticket, title: 'y'.repeat(30_000) };
     const context = {
       note: 'n'.repeat(4_000),
@@ -134,7 +135,7 @@ describe('ticket brief', () => {
     };
     for (const canReadTicket of [true, false]) {
       const text = ticketBrief(huge, 'plan', { context, canReadTicket });
-      expect(text.length).toBeLessThanOrEqual(MESSAGE_MAX_LENGTH);
+      expect(text.length).toBeLessThanOrEqual(TICKET_BRIEF_MAX_LENGTH);
       expect(text.endsWith(PLAN_FIRST_LINE)).toBe(true);
     }
   });

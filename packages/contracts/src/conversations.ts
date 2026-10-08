@@ -29,7 +29,6 @@ import {
   sessionTypeSchema,
 } from './native-terminal.ts';
 
-export const MESSAGE_MAX_LENGTH = 20_000;
 export const TITLE_MAX_LENGTH = 40;
 export const UNTITLED_CONVERSATION = 'New chat';
 
@@ -166,7 +165,7 @@ export type CreateConversationRequest = z.infer<typeof createConversationRequest
 export const sendMessageRequestSchema = z
   .object({
     id: z.uuid(),
-    content: z.string().trim().max(MESSAGE_MAX_LENGTH),
+    content: z.string().trim(),
     attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
     annotations: z.array(annotationInputSchema).max(ANNOTATIONS_PER_MESSAGE).default([]),
     startAs: startAsSchema.optional(),

@@ -1,5 +1,4 @@
 import {
-  MESSAGE_MAX_LENGTH,
   slackPlaceLabel,
   type SlackMessageRef,
   type StartSlackResponse,
@@ -25,6 +24,8 @@ import { NEEDS_OWN_APP, requireSlack, type OpenSlack, type SlackDeps } from './c
 import { sendSlackMessage } from './post.ts';
 import { readSlackThread, type SlackThread } from './thread.ts';
 import { SlackChannelNotAllowedError } from './web-api.ts';
+
+const SLACK_START_MESSAGE_MAX_LENGTH = 20_000;
 
 export interface SlackStartDeps extends SlackDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
@@ -66,7 +67,7 @@ export function slackStartBrief(thread: SlackThread, mode: TicketStartMode, note
     ...(mode === 'plan' ? [PLAN_FIRST_LINE] : []),
   ];
   const command = mode === 'plan' ? PLAN_COMMAND : '';
-  return `${command}${parts.join('\n\n')}`.slice(0, MESSAGE_MAX_LENGTH);
+  return `${command}${parts.join('\n\n')}`.slice(0, SLACK_START_MESSAGE_MAX_LENGTH);
 }
 
 function mayStart(open: OpenSlack, userId: string | null): boolean {

@@ -1,5 +1,4 @@
 import {
-  MESSAGE_MAX_LENGTH,
   ticketSourceNames,
   type TicketDetail,
   type TicketStartMode,
@@ -9,6 +8,7 @@ const CRITERIA_HEADING =
   /^\s*(?:#{1,6}\s*|\*\*|h\d\.\s*)?(acceptance criteria|definition of done)\b[^\n]*$/im;
 const NEXT_HEADING = /^\s*(?:#{1,6}\s+\S|h\d\.\s+\S)/m;
 export const BRIEF_TEXT_LIMIT = 1_500;
+export const TICKET_BRIEF_MAX_LENGTH = 20_000;
 
 export const PLAN_COMMAND = '/plan ';
 
@@ -103,7 +103,7 @@ export function ticketBrief(
   if (context.note) parts.push(`## Note from me\n\n${context.note}`);
   const references = referenceLines(context);
   if (references.length > 0) parts.push(`## References\n\n${references.join('\n')}`);
-  if (mode !== 'plan') return clip(parts.join('\n\n'), MESSAGE_MAX_LENGTH);
-  const room = MESSAGE_MAX_LENGTH - PLAN_COMMAND.length - PLAN_FIRST_LINE.length - 2;
+  if (mode !== 'plan') return clip(parts.join('\n\n'), TICKET_BRIEF_MAX_LENGTH);
+  const room = TICKET_BRIEF_MAX_LENGTH - PLAN_COMMAND.length - PLAN_FIRST_LINE.length - 2;
   return `${PLAN_COMMAND}${clip(parts.join('\n\n'), room)}\n\n${PLAN_FIRST_LINE}`;
 }

@@ -24,17 +24,15 @@ export const steerTargetSchema = z.union([
 ]);
 export type SteerTarget = z.infer<typeof steerTargetSchema>;
 
-export const STEER_TEXT_LIMIT = 4_000;
-
 export const steerRequestSchema = z.object({
-  text: z.string().trim().min(1).max(STEER_TEXT_LIMIT),
+  text: z.string().trim().min(1),
   target: steerTargetSchema.default(STEER_AUTO),
 });
 export type SteerRequest = z.infer<typeof steerRequestSchema>;
 
 export const pieceNoteRequestSchema = z.object({
   kind: z.enum(['requirement_added', 'skip', 'stop', 'reassign', 'steer']),
-  body: z.string().trim().min(1).max(STEER_TEXT_LIMIT),
+  body: z.string().trim().min(1),
   urgent: z.boolean().default(false),
 });
 export type PieceNoteRequest = z.infer<typeof pieceNoteRequestSchema>;

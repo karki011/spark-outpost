@@ -4,6 +4,7 @@ import { analyticsRoutes } from './analytics-routes.ts';
 import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
+import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
 import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
@@ -94,7 +95,7 @@ export function createAppParts(options: AppOptions) {
     ]),
   );
   app.use('/api', attachmentRoutes(options));
-  app.use(express.json({ limit: '256kb' }));
+  app.use(jsonBody());
   app.use(remote.bodyGuard);
   app.use('/api', remote.routes);
   app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));

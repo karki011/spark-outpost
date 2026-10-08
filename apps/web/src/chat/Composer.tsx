@@ -12,7 +12,6 @@ import {
 } from 'react';
 import {
   DEFAULT_BUSY_ENTER,
-  MESSAGE_MAX_LENGTH,
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
@@ -271,10 +270,6 @@ export function Composer({
     const typed = outgoing();
     if (typed === null) return;
     const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
-    if (content.length > MESSAGE_MAX_LENGTH) {
-      attachments.notify('Your quotes and message are too long to send. Remove a quote first.');
-      return;
-    }
     setDraft('');
     if (queueing && onQueue) {
       const deliver = choice === 'now' && onSendNow ? onSendNow : onQueue;
@@ -420,7 +415,6 @@ export function Composer({
           autoFocus={autoFocus}
           value={draft}
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
-          maxLength={MESSAGE_MAX_LENGTH}
           placeholder={composerPlaceholder({
             steering: steering !== null,
             queueing,

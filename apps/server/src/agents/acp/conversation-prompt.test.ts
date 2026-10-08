@@ -28,6 +28,17 @@ describe('conversation prompt', () => {
     expect(conversationPrompt([], 'Hi')).toBe(`${CHAT_ONLY_NOTE}\n\nHi`);
   });
 
+  it('hands a very long message to the agent whole, in one text block', () => {
+    const long = `${'word '.repeat(40_000)}end`;
+    const history = [{ role: 'user' as const, content: 'earlier' }];
+
+    const blocks = conversationBlocks(history, long);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ type: 'text' });
+    expect(conversationPrompt(history, long).endsWith(long)).toBe(true);
+  });
+
   it('lets a chat without a folder use the tools its session offers, but not change files', () => {
     const [withTools] = conversationBlocks([], 'Hi', { toolsAvailable: true });
     expect(withTools).toEqual({ type: 'text', text: `${CHAT_TOOLS_NOTE}\n\nHi` });
