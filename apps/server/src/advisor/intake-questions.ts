@@ -12,11 +12,11 @@ import {
   type AdvisorOption,
   type IntakeRequest,
 } from './advice.ts';
+import { redactText } from '../audit/redact.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import { noulQuestion, type Description } from './questions.ts';
 import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
 import { parseRatings, ratingQuestions } from './rating-questions.ts';
-import { asksForSpeed, SPEED_KEY, speedQuestion } from '../orchestration/clarify.ts';
 import { tierLadder } from '../orchestration/tiers.ts';
 import { NEED_OPTIONS, needQuestion } from './need-question.ts';
 
@@ -178,7 +178,6 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
   };
   questions.vague = request.firstMessage ? firstVagueQuestion() : followUpVagueQuestion();
   Object.assign(questions, ratingQuestions());
-  if (request.firstMessage && asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
   if (request.currentTask) {
     questions.continues_task = noulQuestion(CONTINUES_QUESTION, {
       true: {
@@ -326,8 +325,9 @@ function tierQuestion(candidate: AdvisorCandidate | undefined) {
 function capUntrusted(untrusted: readonly string[]): string[] {
   const kept: string[] = [];
   let left = MAX_UNTRUSTED_CHARACTERS;
-  for (const text of untrusted) {
+  for (const raw of untrusted) {
     if (left <= 0) break;
+    const text = redactText(raw);
     kept.push(text.slice(0, left));
     left -= text.length;
   }
@@ -361,18 +361,21 @@ export function buildIntakeQuestions(request: IntakeRequest): IntakeQuestions {
     );
   }
   const state: Record<string, unknown> = {
-    task: request.task.slice(0, MAX_TASK_CHARACTERS),
+    task: redactText(request.task).slice(0, MAX_TASK_CHARACTERS),
     mode: request.mode,
   };
   if (request.currentTask) {
-    state.previous_request = request.currentTask.previousRequest.slice(
+    state.previous_request = redactText(request.currentTask.previousRequest).slice(
       0,
       MAX_PREVIOUS_REQUEST_CHARACTERS,
     );
-    state.task_summary = request.currentTask.summary.slice(0, MAX_TASK_SUMMARY_CHARACTERS);
+    state.task_summary = redactText(request.currentTask.summary).slice(
+      0,
+      MAX_TASK_SUMMARY_CHARACTERS,
+    );
   }
   if (request.previousReply) {
-    state.previous_reply = tail(request.previousReply, MAX_PREVIOUS_REPLY_CHARACTERS);
+    state.previous_reply = tail(redactText(request.previousReply), MAX_PREVIOUS_REPLY_CHARACTERS);
   }
   if (untrusted.length > 0) state.untrusted = untrusted;
   return { state, questions };

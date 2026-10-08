@@ -20,7 +20,6 @@ import {
 } from './intake-questions.ts';
 import { notAskedReasons } from './not-asked.ts';
 import { POLICY_VERSION } from './policy.ts';
-import { SPEED_ANGLES, SPEED_KEY } from '../orchestration/clarify.ts';
 
 const claude = {
   provider: 'claude' as const,
@@ -127,20 +126,6 @@ describe('intake questions', () => {
       previous_request: 'Add a CSV export',
       task_summary: 'Added exportCsv.',
     });
-  });
-
-  it('asks what kind of speed a first vague "faster" request means, with concrete choices', () => {
-    const faster = buildIntakeQuestions({
-      ...request,
-      task: 'Make it faster.',
-      firstMessage: true,
-    });
-    expect(faster.questions[SPEED_KEY]).toMatchObject({ type: 'choice' });
-    expect(Object.keys(faster.questions[SPEED_KEY]!.criteria as object)).toEqual([...SPEED_ANGLES]);
-    const later = buildIntakeQuestions({ ...request, task: 'Make it faster.' });
-    expect(later.questions[SPEED_KEY]).toBeUndefined();
-    const other = buildIntakeQuestions({ ...request, task: 'Make it better.', firstMessage: true });
-    expect(other.questions[SPEED_KEY]).toBeUndefined();
   });
 
   it('asks whether the previous reply is a plan and whether the message accepts it, only with a previous reply, and sends its end', () => {
@@ -353,7 +338,6 @@ describe('advice record', () => {
       plan_agreed: 'no previous reply',
       previous_is_plan: 'no previous reply',
       injection: 'no attached text',
-      speed: 'not a first request to make something faster',
     });
     const ask = { ...request, mode: 'ask' as const };
     expect(notAskedReasons(ask, buildIntakeQuestions(ask))).toMatchObject({

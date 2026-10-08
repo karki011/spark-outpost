@@ -83,7 +83,7 @@ export function buildVerdictQuestions(facts: VerdictFacts): IntakeQuestions {
       },
     );
   });
-  const plan = facts.plan.slice(0, MAX_PLAN_ENTRIES).map((entry) => capped(entry, 300));
+  const plan = facts.plan.slice(0, MAX_PLAN_ENTRIES).map((entry) => capped(redactText(entry), 300));
   return {
     state: {
       task: capped(redactText(facts.request), MAX_REQUEST_CHARACTERS),

@@ -180,7 +180,7 @@ export function updateQuestions(facts: ChatFacts, plan: UpdatePlan): IntakeQuest
       type: 'choice',
       instructions: 'What most likely happens next in `chat`?',
       criteria: Object.fromEntries(
-        plan.next.map((key) => [key, { what: capped(nextText(key, facts), 200) }]),
+        plan.next.map((key) => [key, { what: capped(redactText(nextText(key, facts)), 200) }]),
       ),
     };
   }
