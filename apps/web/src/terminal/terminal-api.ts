@@ -1,4 +1,7 @@
+import { z } from 'zod';
 import {
+  nativeTerminalSessionSchema,
+  nativeTerminalLaunchResponseSchema,
   createShellResponseSchema,
   createTerminalResponseSchema,
   shellBusyResponseSchema,
@@ -47,8 +50,34 @@ export function streamUrl(session: TerminalTicket, cols: number, rows: number): 
 }
 
 export async function deleteTerminalSession(id: string): Promise<void> {
-  await fetch(`/api/terminal/sessions/${id}`, {
+  const response = await fetch(`/api/terminal/sessions/${id}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
   });
+  if (!response.ok) throw new Error('The terminal could not be stopped. Try again.');
 }
+
+export const nativeTerminalApi = {
+  stop: (conversationId: string) =>
+    request(z.null(), `/conversations/${conversationId}/terminal`, { method: 'DELETE' }),
+  get: (conversationId: string) =>
+    request(nativeTerminalSessionSchema.nullable(), `/conversations/${conversationId}/terminal`),
+  launch: (
+    conversationId: string,
+    body: {
+      provider?: 'claude' | 'codex';
+      prompt?: string;
+      messageId?: string;
+      resume?: boolean;
+    } = {},
+  ) =>
+    request(nativeTerminalLaunchResponseSchema, `/conversations/${conversationId}/terminal`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  attach: (id: string) =>
+    request(createShellResponseSchema, `/terminal/sessions/${id}/attach`, {
+      method: 'POST',
+      body: '{}',
+    }),
+};

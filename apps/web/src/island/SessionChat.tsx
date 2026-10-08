@@ -269,18 +269,20 @@ export function SessionChat({ chat, projectNames, onBack, onOpenChat }: SessionC
           {update.error.message}
         </p>
       )}
-      <Reply chat={chat} {...(detail.data ? { detail: detail.data } : {})} />
+      {chat.sessionType !== 'terminal' && (
+        <Reply chat={chat} {...(detail.data ? { detail: detail.data } : {})} />
+      )}
       <div className="isl-acts">
         <button
           type="button"
           className="isl-btn"
-          disabled={update.isPending}
+          disabled={update.isPending || chat.sessionType === 'terminal'}
           onClick={() => update.mutate()}
         >
           Ask for update
         </button>
         <button type="button" className="isl-btn link" onClick={() => onOpenChat(chat.id)}>
-          Open in Spark
+          {chat.sessionType === 'terminal' ? 'Open terminal in Spark' : 'Open in Spark'}
         </button>
       </div>
     </div>

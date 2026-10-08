@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ghOnlyReads, namesAnotherRepo, ownGhUse, ownGitUse, type OwnRepo } from './own-repo.ts';
+import { ghOnlyReads } from './gh-reads.ts';
+import { namesAnotherRepo, ownGhUse, ownGitUse, type OwnRepo } from './own-repo.ts';
 
 const BRANCH = 'spark/fix-dates-1a2b';
 const OWN: OwnRepo = { host: 'github.com', slug: 'acme/app', branch: BRANCH, pull: 2202 };
@@ -39,6 +40,10 @@ describe('ownGhUse', () => {
     'gh api repos/acme/app/pulls/77/comments -f body=x',
     'gh api https://collect.example.net/in',
     'gh api graphql --input query.json',
+    'gh api -XDELETE repos/acme/app/git/refs/heads/x',
+    'gh api repos/acme/app/pulls/77/comments -fbody=x',
+    'gh issue view 5',
+    'gh search prs --author @me',
     'gh auth token',
   ])('%s is not', (command) => {
     expect(ownGhUse(words(command), OWN)).toBe(false);
@@ -95,6 +100,80 @@ describe('ghOnlyReads and namesAnotherRepo', () => {
     expect(ghOnlyReads(words('gh gist create notes.md'))).toBe(false);
     expect(ghOnlyReads(words('gh pr comment --body x'))).toBe(false);
     expect(ghOnlyReads(words('gh api repos/a/b/issues -f title=x'))).toBe(false);
+  });
+
+  it.each([
+    'gh pr checks 5 --watch',
+    'gh pr diff 5',
+    'gh pr list',
+    'gh pr status',
+    'gh run view 1',
+    'gh run list',
+    'gh run watch 1',
+    'gh issue view 12',
+    'gh issue list',
+    'gh issue status',
+    'gh repo view other/repo',
+    'gh release view v1',
+    'gh release list',
+    'gh search issues flaky',
+    'gh auth status',
+    'gh api -X GET search/issues -f q=x',
+    'gh api -XGET search/issues -fq=x',
+    'gh api --method=get repos/a/b/pulls -F per_page=5',
+    'gh api -i repos/a/b/pulls',
+  ])('%s only reads', (command) => {
+    expect(ghOnlyReads(words(command))).toBe(true);
+  });
+
+  it.each([
+    'gh',
+    'gh pr',
+    'gh pr merge 5',
+    'gh pr close 5',
+    'gh pr review 5 --approve',
+    'gh pr ready',
+    'gh pr -R other/repo view 5',
+    'gh run rerun 1',
+    'gh run download 1',
+    'gh issue close 5',
+    'gh repo delete',
+    'gh repo create x',
+    'gh release create v1',
+    'gh release download v1',
+    'gh secret set X',
+    'gh workflow run ci.yml',
+    'gh search',
+    'gh auth token',
+    'gh auth status --show-token',
+    'gh auth status -t',
+    'gh api',
+    'gh api -X POST repos/a/b/issues',
+    'gh api -XPOST repos/a/b/issues',
+    'gh api -iXPOST repos/a/b/issues',
+    'gh api -X=PATCH repos/a/b/issues/1',
+    'gh api repos/a/b/issues -ftitle=x',
+    'gh api repos/a/b/issues -Ftitle=x',
+    'gh api repos/a/b/issues --raw-field title=x',
+    'gh api repos/a/b/issues --input body.json',
+    'gh api graphql',
+    'gh api graphql -F query=@q.graphql',
+    'gh api graphql --input q.json',
+    'gh api graphql -f owner=a',
+  ])('%s is not provably a read', (command) => {
+    expect(ghOnlyReads(words(command))).toBe(false);
+  });
+
+  it('reads a graphql document only when it is a query', () => {
+    const api = (query: string) => ghOnlyReads(['api', 'graphql', '-f', `query=${query}`]);
+    expect(api('query { viewer { login } }')).toBe(true);
+    expect(api('query($n: Int!) { repository { pullRequest(number: $n) { id } } }')).toBe(true);
+    expect(api('{ viewer { login } }')).toBe(true);
+    expect(api('mutation { resolveReviewThread(input: {threadId: "x"}) { thread { id } } }')).toBe(
+      false,
+    );
+    expect(api('query A { viewer { login } } mutation B { x }')).toBe(false);
+    expect(api('fragment F on User { login }')).toBe(false);
   });
 
   it('sees a repository named through the environment', () => {

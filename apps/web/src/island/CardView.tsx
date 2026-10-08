@@ -403,7 +403,7 @@ export function CardView({
             </button>
           )}
           <button type="button" className="isl-btn link" onClick={() => onOpenChat(card.chat.id)}>
-            Open chat
+            {card.chat.sessionType === 'terminal' ? 'Open terminal' : 'Open chat'}
           </button>
           <button type="button" className="isl-btn link" onClick={onLater}>
             Later
@@ -428,7 +428,7 @@ export function CardView({
             className={card.kind === 'open' ? 'isl-btn primary' : 'isl-btn link'}
             onClick={() => onOpenChat(card.chat.id)}
           >
-            Open chat
+            {card.chat.sessionType === 'terminal' ? 'Open terminal' : 'Open chat'}
           </button>
           <button type="button" className="isl-btn link" onClick={onLater}>
             Later

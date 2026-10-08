@@ -3,38 +3,42 @@ title: Open a terminal
 section: Chats
 type: how-to
 order: 226
-summary: Open a terminal in the chat's worktree or project, run several, and stop a busy one safely.
+summary: Run commands beside a chat, or work with Claude Code or Codex in a Terminal session.
 ---
 
-You'll open a terminal next to a chat and stop one that's still busy. About 1 minute.
+Open an AI terminal. About 1 minute.
 
-## Open one
+> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply; Spark records only its start, mode and state.
 
-1. Open a chat and select **Terminal** in the chat header, or press **⌃\`**.
-2. Type your commands. It's your own shell, so Spark doesn't ask for approval here.
-3. Select **+** (**New terminal**) for another tab, or a tab's **×** to close it.
+## Start a Terminal session
 
-![A chat with the terminal dock open below the message box, showing two terminal tabs](images/terminals-dock-light.png)
+1. Select **New chat**, then **Terminal**.
+2. Pick **Claude Code** or **Codex** in the agent menu. Select **Choose project → Choose a folder…**, then **Use this folder**.
+3. Pick **Agent mode** when available.
+4. Describe the work and select **Start terminal**.
 
-Press **⌃\`** again to hide the dock. Hidden terminals keep running, also when you switch chats.
+Answer questions in the terminal. Pull requests aren't automatic.
 
-| Tab name                 | Folder                                         |
-| ------------------------ | ---------------------------------------------- |
-| _branch_ **· worktree**  | The chat's own worktree                        |
-| **my files ·** _project_ | Your own checkout                              |
-| **~**                    | Your home folder, for a chat without a project |
+**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
 
-## Stop a busy terminal
+**Hide view** keeps the agent running; **Open terminal** reattaches. **Stop session** asks you to hold before stopping the agent and its commands. Terminal sessions are Mac-only.
 
-Closing a tab with a running command asks first, for example **Stop sleep 300?**.
+## Open a shell beside Chat
 
-1. Press and hold **Hold to stop** for 1.5 seconds. This stops the command and everything it started.
-2. Or select **Keep running**, or press **Esc**.
+1. Select **Terminal** in a chat header, or press **⌃\`**.
+2. Type commands; Spark doesn't ask for approval.
+3. Select **+** for another tab, or **×** to close one.
 
-![The Stop sleep 300 question with Hold to stop and Keep running](images/terminals-stop-light.png)
+![The terminal dock below a chat](images/terminals-dock-light.png)
 
-Terminals end when you reload the page, quit the app or delete the chat. For the limits, see [Statuses and limits](statuses-and-limits.md#limits).
+The shell starts in the chat's worktree, checkout or home folder. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
 
-Agents can see which terminals are open and what program runs in each, never what's on the screen.
+![Hold to stop a busy terminal](images/terminals-stop-light.png)
+
+## Close and recover
+
+Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents; outside terminals are unaffected.
+
+After a crash, restart or agent exit, the session offers **Resume session** where supported. It restores history, not a running command. Otherwise **Start again** resends your first message, unless you stopped it.
 
 **Next:** [Use the browser](use-the-browser.md)

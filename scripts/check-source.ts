@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { checkSource } from './source-rules.ts';
 
 const HANDWRITTEN = /\.(ts|tsx|js|mjs|css|sql|sh)$/;
@@ -9,7 +9,7 @@ const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclud
   encoding: 'utf8',
 })
   .split('\n')
-  .filter((file) => HANDWRITTEN.test(file) && !EXCLUDED.test(file));
+  .filter((file) => HANDWRITTEN.test(file) && !EXCLUDED.test(file) && existsSync(file));
 
 const violations = files.flatMap((file) => checkSource(file, readFileSync(file, 'utf8')));
 

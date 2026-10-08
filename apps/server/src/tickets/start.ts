@@ -26,6 +26,7 @@ import {
 } from './start-context.ts';
 import { summaryOf, TicketConflictError } from './source.ts';
 import { moveTicket } from './sync.ts';
+import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
 
 export interface StartDeps extends TicketDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
@@ -48,7 +49,10 @@ async function prepareTask(
 ): Promise<string> {
   return withTransaction(deps.db, async (client) => {
     const { conversationId } = request;
-    await createConversation(client, deps.workspaceId, conversationId);
+    await createConversation(client, deps.workspaceId, conversationId, {
+      ...(request.sessionType ? { sessionType: request.sessionType } : {}),
+      ...(request.terminalProvider ? { terminalProvider: request.terminalProvider } : {}),
+    });
     const existing = await openTicketTask(client, conversationId, ticket);
     if (existing) return existing;
     if (await hasMessages(client, conversationId)) {
@@ -93,7 +97,15 @@ export async function startTicket(
   const ticket = await open.source.getTicket(key);
   const context = await resolveStartContext(deps.db, deps.workspaceId, request);
   const taskId = await prepareTask(deps, ticket, request, context);
-  const target = await deps.runTarget(request.conversationId);
+  const terminal = request.sessionType === 'terminal';
+  const target = terminal
+    ? await nativeTerminalTarget(
+        deps.db,
+        request.conversationId,
+        request.terminalProvider ?? 'claude',
+        request.mode === 'plan',
+      )
+    : await deps.runTarget(request.conversationId);
   const sent = await sendUserMessage(
     deps.db,
     request.conversationId,
@@ -101,7 +113,7 @@ export async function startTicket(
       id: request.messageId,
       content: ticketBrief(ticket, request.mode, {
         context,
-        canReadTicket: deps.offersSparkTools(target.provider),
+        canReadTicket: terminal || deps.offersSparkTools(target.provider),
       }),
       attachmentIds: context.attachments.map((file) => file.id),
       source: 'ticket',
@@ -132,5 +144,6 @@ export async function startTicket(
     runId: sent.run.id,
     ticket: summaryOf(ticket),
     transition,
+    ...(terminal ? { sessionType: 'terminal' } : {}),
   };
 }

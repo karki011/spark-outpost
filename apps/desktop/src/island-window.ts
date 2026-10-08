@@ -102,7 +102,6 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     if (window.isDestroyed() || dragging) return;
     placed = currentPlacement(options.position());
     if (!placed) return;
-    if (placed.docked) options.savePosition({ docked: true });
     moveTo(placed.position);
     report('placed');
     send(IPC.islandGeometryChanged, geometry());
@@ -157,17 +156,16 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   void window.loadURL(`${options.origin}${ISLAND_PATH}`);
 
   const finishDrag = (pointer: Point) => {
-    const [x = 0, y = 0] = window.getPosition();
+    if (!dragging) return;
     const display = info(screen.getDisplayNearestPoint(pointer));
-    if (nearDock({ x, y }, display)) {
-      options.savePosition({ docked: true });
-      placed = { display, position: dockedPosition(display), docked: true };
-      moveTo(placed.position, true);
-      report('docked');
-    } else {
-      options.savePosition({ docked: false, x, y });
-      placed = { display, position: { x, y }, docked: false };
-    }
+    const position = draggedPosition(dragging.origin, dragging.pointer, pointer, display);
+    const docked = nearDock(position, display);
+    const settled = docked ? dockedPosition(display) : position;
+    dragging = null;
+    options.savePosition({ docked: false, ...settled });
+    placed = { display, position: settled, docked };
+    moveTo(settled, docked);
+    report(docked ? 'docked' : 'moved');
     send(IPC.islandGeometryChanged, geometry());
   };
 
@@ -208,7 +206,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       if (window.isDestroyed()) return;
       if (phase === 'start') {
         const [x = 0, y = 0] = window.getPosition();
-        dragging = { origin: { x, y }, pointer };
+        dragging = { origin: placed?.position ?? { x, y }, pointer };
         return;
       }
       if (!dragging) return;
@@ -217,7 +215,6 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
         moveTo(draggedPosition(dragging.origin, dragging.pointer, pointer, display));
         return;
       }
-      dragging = null;
       finishDrag(pointer);
     },
     geometry,

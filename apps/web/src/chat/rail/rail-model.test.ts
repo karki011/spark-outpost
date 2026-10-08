@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_CONVERSATION_USAGE } from '@spark-outpost/contracts';
-import { railRows, type RailFacts } from './rail-model.ts';
+import { crewAgents } from '../../crew/crew-projection.ts';
+import { member, orchestration } from '../../crew/test-orchestration.ts';
+import { crewHeading, crewJob, finishedCrew, railRows, type RailFacts } from './rail-model.ts';
 
 const base: RailFacts = {
   repoNames: [],
@@ -124,5 +126,54 @@ describe('railRows', () => {
       text: '5% context',
       detail: null,
     });
+  });
+});
+
+describe('the crew of a finished turn', () => {
+  const builder = member({ name: 'Bolt' });
+  const retry = member({ name: 'Bolt', runId: '00000000-0000-4000-8000-0000000000a2', attempt: 2 });
+  const critic = member({
+    name: 'Hawk',
+    role: 'critic',
+    runId: '00000000-0000-4000-8000-0000000000a3',
+    status: 'failed',
+  });
+  const piece = member({
+    name: 'Pip',
+    runId: '00000000-0000-4000-8000-0000000000a4',
+    status: 'running',
+  });
+
+  it('keeps its crew, with final states', () => {
+    const turn = orchestration({
+      status: 'succeeded',
+      phase: 'finished',
+      crew: [builder, retry, critic],
+    });
+    const crew = finishedCrew(turn, crewAgents(turn));
+    expect(crew.map((agent) => [agent.name, agent.state])).toEqual([
+      ['Jev', 'done'],
+      ['Bolt', 'done'],
+      ['Hawk', 'failed'],
+    ]);
+    expect(crewHeading(crew)).toBe('Crew · 3 agents');
+    expect(crewJob(crew[1]!)).toBe('Builder · Sonnet 5 · medium · 2 turns');
+    expect(crewJob(crew[2]!)).toBe('Critic · Sonnet 5 · medium');
+    expect(crewJob(crew[0]!)).toBe('Dispatcher · router');
+    expect(crew[1]).toMatchObject({ tokens: 24_800, costUsd: 0.062 });
+  });
+
+  it('settles a member the turn left unfinished and counts a solo Builder with Jev', () => {
+    const stopped = orchestration({ status: 'cancelled', crew: [builder, piece] });
+    const crew = finishedCrew(stopped, crewAgents(stopped));
+    expect(crew.map((agent) => agent.state)).toEqual(['stopped', 'done', 'stopped']);
+    const solo = orchestration({ status: 'succeeded', depth: 'direct', crew: [builder] });
+    expect(crewHeading(finishedCrew(solo, crewAgents(solo)))).toBe('Crew · 2 agents');
+  });
+
+  it('leaves a turn that is still going as it is', () => {
+    const live = orchestration({ status: 'running', crew: [piece] });
+    const agents = crewAgents(live);
+    expect(finishedCrew(live, agents)).toEqual(agents);
   });
 });

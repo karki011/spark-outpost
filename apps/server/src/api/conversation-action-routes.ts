@@ -22,6 +22,7 @@ import { allowedCommands } from '../agents/acp/slash-commands.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import { openChatCommands } from '../persistence/session-commands.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
+import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { DEFAULT_SETTLE_MS, stopConversationWork } from '../workflow/stop-conversation.ts';
 import { paramId, parseBody } from './validation.ts';
 
@@ -30,12 +31,14 @@ export interface ConversationActionDeps {
   workspaceId: string;
   terminals: Pick<TerminalSessions, 'endChat'>;
   deleteSettleMs?: number;
+  nativeTerminals?: NativeRuntime;
 }
 
 export function conversationActionRoutes({
   db,
   workspaceId,
   terminals,
+  nativeTerminals,
   deleteSettleMs = DEFAULT_SETTLE_MS,
 }: ConversationActionDeps): Router {
   const router = Router();
@@ -51,6 +54,7 @@ export function conversationActionRoutes({
     const id = paramId(req);
     const summary = await updateConversation(db, workspaceId, id, update);
     if (update.archived === true) {
+      await nativeTerminals?.stop(id);
       await closeConversationSessions(db, workspaceId, id, SESSION_CLOSE_REASONS.archived);
       await releaseConversation(db, id, 'archived');
     }
@@ -83,6 +87,7 @@ export function conversationActionRoutes({
 
   router.delete('/conversations/:id', async (req, res) => {
     const id = paramId(req);
+    await nativeTerminals?.stop(id);
     await stopConversationWork(db, id, deleteSettleMs);
     const workdirs = await conversationWorkdirs(db, id);
     terminals.endChat(id);

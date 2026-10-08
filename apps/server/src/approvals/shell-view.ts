@@ -31,15 +31,19 @@ export function shellView(request: ApprovalRequest, script: ShellScript | null):
   };
 }
 
-const HARMLESS_REDIRECTS: ReadonlySet<RedirectKind> = new Set(['quiet', 'reads']);
+const INSIDE_READS: ReadonlySet<RedirectKind> = new Set(['quiet', 'reads']);
+const ANY_READS: ReadonlySet<RedirectKind> = new Set([...INSIDE_READS, 'reads_outside']);
 
-function harmless(view: ShellView | null): view is ShellView {
+function redirectsOnly(
+  view: ShellView | null,
+  kinds: ReadonlySet<RedirectKind>,
+): view is ShellView {
   if (!view || view.unparsed) return false;
-  return view.redirects.every((kind) => HARMLESS_REDIRECTS.has(kind));
+  return view.redirects.every((kind) => kinds.has(kind));
 }
 
 export function provenRead(view: ShellView | null): boolean {
-  return harmless(view) && view.reads.every(Boolean);
+  return redirectsOnly(view, INSIDE_READS) && view.reads.every(Boolean);
 }
 
 export function onlyReads(request: ApprovalRequest, view: ShellView | null): boolean {
@@ -48,7 +52,9 @@ export function onlyReads(request: ApprovalRequest, view: ShellView | null): boo
 }
 
 export function changesNothing(request: ApprovalRequest, view: ShellView | null): boolean {
-  return onlyReads(request, view) || (harmless(view) && view.passive.every(Boolean));
+  return (
+    onlyReads(request, view) || (redirectsOnly(view, ANY_READS) && view.passive.every(Boolean))
+  );
 }
 
 export function partRequests(request: ApprovalRequest, view: ShellView | null): ApprovalRequest[] {

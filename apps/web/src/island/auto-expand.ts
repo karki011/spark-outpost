@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Card } from './island-model.ts';
+import type { Card, IslandView } from './island-model.ts';
 
 export function attentionKey(card: Card): string {
   return card.approval?.id ?? `chat:${card.chat.id}`;
@@ -18,6 +18,13 @@ export function nextToExpand(
   if (!next) return null;
   shown.add(attentionKey(next));
   return next;
+}
+
+export function opensByItself(
+  view: IslandView,
+  state: { sparkFocused: boolean; dragging: boolean },
+): boolean {
+  return view.kind === 'peek' && !state.sparkFocused && !state.dragging;
 }
 
 interface AutoExpandOptions {

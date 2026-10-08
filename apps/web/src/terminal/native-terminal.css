@@ -1,0 +1,223 @@
+.session-choice {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 48px);
+  max-width: 572px;
+  margin: 28px auto 0;
+  flex-wrap: wrap;
+}
+.session-choice > .seg {
+  width: 200px;
+}
+.session-choice > .choice-picker {
+  width: 170px;
+}
+.tk-start .session-choice {
+  width: auto;
+  margin: 0 0 18px;
+}
+.chat-head .session-choice {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  width: auto;
+  max-width: none;
+  margin: 0 0 0 8px;
+}
+.chat-head .session-choice > .seg {
+  flex: 0 1 200px;
+  min-width: 150px;
+}
+.chat-head .session-choice > .choice-picker {
+  flex: 0 1 170px;
+  min-width: 120px;
+}
+.native-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px 24px 12px;
+  gap: 10px;
+}
+.native-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+}
+.native-status b {
+  font-size: 14px;
+}
+.native-status p {
+  color: var(--muted);
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.native-controls {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.native-companion {
+  display: inline-flex;
+  flex: none;
+  transition: transform 0.2s var(--out);
+}
+.native-companion:hover {
+  transform: rotate(-8deg) scale(1.08);
+}
+.native-companion[data-motion='off'] *,
+.native-companion[data-motion='off'] {
+  animation-play-state: paused !important;
+}
+.native-cwd {
+  color: var(--muted);
+  font: 12px var(--mono, monospace);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.native-screen {
+  flex: 1;
+  min-height: 240px;
+  border: 0;
+  border-radius: 0;
+  padding: 10px;
+  background: var(--code);
+  overflow: hidden;
+}
+.native-detached {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  color: var(--muted);
+  text-align: center;
+}
+.native-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.native-stop {
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.native-approvals:empty {
+  display: none;
+}
+.native-new {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 620px;
+  width: 100%;
+  margin: 12px auto auto;
+  padding: 24px;
+}
+.native-context {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0;
+}
+.native-context .ctxbar-wrap {
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+}
+.native-context .ctxbar {
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.native-context .mpop {
+  top: calc(100% + 8px);
+  bottom: auto;
+  transform: scale(0.94) translateY(-6px);
+  transform-origin: top right;
+}
+.native-context .mpop.left {
+  transform-origin: top left;
+}
+.native-context .mpop.repopop {
+  left: 0;
+}
+.native-context .mpop.open {
+  transform: none;
+}
+.native-context > .choice-picker {
+  width: 160px;
+}
+.native-new h2,
+.native-new p {
+  margin: 0;
+}
+.native-new p,
+.native-new small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.native-new textarea {
+  resize: vertical;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+.native-new button {
+  align-self: flex-start;
+}
+.isl-sblob[data-terminal='true'] {
+  position: relative;
+}
+.isl-terminal-mark {
+  position: absolute;
+  bottom: -3px;
+  right: -5px;
+  font: 9px monospace;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 2px;
+  line-height: 1;
+}
+.row-terminal-mark {
+  flex: none;
+  font: 11px monospace;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .native-companion {
+    transition: none;
+  }
+  .native-companion:hover {
+    transform: none;
+  }
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .native-workspace {
+    padding: 12px;
+  }
+  .native-status {
+    flex-wrap: wrap;
+  }
+  .native-controls {
+    margin-left: 0;
+  }
+}

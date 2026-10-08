@@ -12,6 +12,7 @@ import {
   type MessageSource,
   type SendMessageRequest,
   type SendMessageResponse,
+  type CreateConversationRequest,
 } from '@spark-outpost/contracts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
 import { STEP_NOT_INTERRUPTED } from './run-events.ts';
@@ -36,6 +37,8 @@ import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
 import { findInterruption } from './interruptions.ts';
+import { withNativeTerminals } from './native-terminals.ts';
+import { applyConversationOptions } from './conversation-options.ts';
 import {
   toConversationSummary,
   toMessage,
@@ -46,6 +49,7 @@ import {
 } from './rows.ts';
 
 const LOCAL_WORKSPACE_SLUG = 'local';
+const TERMINAL_RUN_LEVEL: InvolvementLevel = 'hands-off';
 
 const summaryQuery = `
   SELECT c.id, c.title, c.updated_at, c.archived_at, c.pinned_at, c.pinned_order, c.title_source,
@@ -160,19 +164,20 @@ export async function listConversations(
   const text = search.trim();
   const { rows } = await db.query<ConversationSummaryRow>(
     `${summaryQuery} WHERE c.workspace_id = $1 AND c.kind = 'chat'
-       AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+       AND (EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+         OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id))
        AND ($2 = '' OR c.title ILIKE $3 OR EXISTS (
          SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3
        ))
      ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT 500`,
     [workspaceId, text, containsPattern(text)],
   );
-  return withChatBranches(db, rows.map(toConversationSummary));
+  return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
 }
 
 export async function getSummary(db: Queryable, id: string): Promise<ConversationSummary | null> {
   const { rows } = await db.query<ConversationSummaryRow>(`${summaryQuery} WHERE c.id = $1`, [id]);
-  return rows[0] ? toConversationSummary(rows[0]) : null;
+  return rows[0] ? (await withNativeTerminals(db, [toConversationSummary(rows[0])]))[0]! : null;
 }
 
 async function insertConversation(db: Queryable, workspaceId: string, id: string): Promise<void> {
@@ -187,8 +192,11 @@ export async function createConversation(
   db: Queryable,
   workspaceId: string,
   id: string,
+  options: Omit<CreateConversationRequest, 'id'> = {},
 ): Promise<ConversationSummary> {
   await insertConversation(db, workspaceId, id);
+  if (!(await applyConversationOptions(db, workspaceId, id, options)))
+    throw new ConversationNotFoundError(id);
   const summary = await getSummary(db, id);
   if (!summary) throw new ConversationNotFoundError(id);
   return summary;
@@ -198,7 +206,8 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
   await db.query(
     `DELETE FROM conversations c WHERE c.workspace_id = $1
        AND c.updated_at < now() - interval '1 day'
-       AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)`,
+       AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)`,
     [workspaceId],
   );
 }
@@ -344,8 +353,8 @@ export async function sendInTransaction(
   workspaceId?: string,
 ): Promise<SendMessageResponse> {
   if (workspaceId) await insertConversation(client, workspaceId, conversationId);
-  const conversation = await client.query<{ title: string }>(
-    'SELECT title FROM conversations WHERE id = $1 FOR UPDATE',
+  const conversation = await client.query<{ title: string; session_type: string }>(
+    'SELECT title, session_type FROM conversations WHERE id = $1 FOR UPDATE',
     [conversationId],
   );
   const current = conversation.rows[0];
@@ -369,6 +378,7 @@ export async function sendInTransaction(
   );
   await insertAnnotations(client, conversationId, request.id, request.annotations ?? []);
   const runId = newId();
+  const terminal = current.session_type === 'terminal';
   const task = await taskForNewRun(client, conversationId);
   const mode = await runMode(client, conversationId, target.permission ?? null);
   const run = await client.query<RunRow>(
@@ -387,7 +397,7 @@ export async function sendInTransaction(
       task?.taskId ?? null,
       task?.planVersion ?? null,
       mode,
-      mode === 'do' ? (target.level ?? null) : null,
+      mode === 'do' ? (terminal ? TERMINAL_RUN_LEVEL : (target.level ?? null)) : null,
       target.agentMode ?? null,
       JSON.stringify(target.options ?? {}),
       mode === 'do' ? (request.startAs ?? null) : null,
@@ -396,10 +406,12 @@ export async function sendInTransaction(
       target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
     ],
   );
-  await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
-    newId(),
-    runId,
-  ]);
+  if (!terminal) {
+    await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
+      newId(),
+      runId,
+    ]);
+  }
   const title =
     current.title === UNTITLED_CONVERSATION
       ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
@@ -408,7 +420,7 @@ export async function sendInTransaction(
     'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
     [conversationId, title],
   );
-  await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
+  if (!terminal) await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
   return { message: toMessage(inserted.rows[0], attachments), run: toRun(run.rows[0]!) };
 }
 

@@ -157,7 +157,7 @@ test('the island opens these settings, and its chimes stay off until switched on
   await expect(spark).toContainText('It never takes the keyboard.');
   await requests.click();
   await expect(requests).toHaveAttribute('aria-checked', 'false');
-  await expect(spark).toContainText('shows Review');
+  await expect(spark).toContainText('marks the blobs');
   expect(
     await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
   ).toEqual([

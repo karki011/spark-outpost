@@ -76,6 +76,13 @@ test('picks a folder from the context bar and shows it in the bar and header', a
   await expect(page.getByRole('button', { name: 'Choose project' })).toBeVisible();
 
   await openRepoMenu(page);
+  const projectButton = (await page.getByRole('button', { name: 'Choose project' }).boundingBox())!;
+  await expect
+    .poll(async () => {
+      const menu = (await repoMenu(page).boundingBox())!;
+      return menu.y + menu.height;
+    })
+    .toBeLessThanOrEqual(projectButton.y);
   await repoMenu(page).getByRole('button', { name: 'Choose a folder…' }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
   await expect(dialog).toBeVisible();
@@ -119,7 +126,7 @@ test('links two repos, reorders them, removes one, and goes chat-only', async ({
   await expect(rows).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Project folders: lib' })).toBeVisible();
 
-  await repoMenu(page).getByRole('button', { name: 'No project (chat only)' }).click();
+  await repoMenu(page).getByRole('button', { name: 'No project folder' }).click();
   await expect(page.getByRole('button', { name: 'Choose project' })).toBeVisible();
   await expect(page.locator('.head .crumb')).toHaveCount(0);
 });

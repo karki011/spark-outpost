@@ -25,6 +25,12 @@ export async function resolveRunTarget(
   { db, workspaceId, fixedRunProvider }: RunTargetDeps,
   conversationId: string,
 ): Promise<RunTarget> {
+  const session = await db.query<{ session_type: string }>(
+    'SELECT session_type FROM conversations WHERE id = $1',
+    [conversationId],
+  );
+  if (session.rows[0]?.session_type === 'terminal')
+    throw new BadRequestError('Use this session’s terminal to continue working.');
   if (fixedRunProvider) return { provider: fixedRunProvider };
   const settings = await resolveChatSettings(db, conversationId).catch((error: unknown) => {
     if (error instanceof ConversationMissingError) return draftChatSettings(db, workspaceId);

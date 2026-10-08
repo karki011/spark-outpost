@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import { NO_RUN_RULES, SECRET_REASON, decide, type ApprovalRequest } from './decide.ts';
+import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 
 const ROOT = '/work/app';
@@ -122,7 +122,7 @@ describe('decide() asks when a command reads files it computes', () => {
     'grep -r --include=*.{env,x} TOKEN .',
     'F=.e; cat ${F}nv',
   ])('names a secret the glob or walk reaches: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(fullAccess(command)).toMatchObject({ verdict: 'ask', secretFiles: expect.any(Array) });
   });
 
   it.each([

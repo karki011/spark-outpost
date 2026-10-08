@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Orchestration, Run } from '@spark-outpost/contracts';
 import {
+  compactCost,
   contextPercent,
   costNote,
   costTip,
@@ -53,6 +54,14 @@ describe('estimated costs', () => {
         tokens,
       }),
     ).toBe('1.2K tokens · ~$0.50');
+  });
+
+  it('marks a row that includes estimates with a tilde and keeps the long words for totals', () => {
+    expect(compactCost(1.71, 'mixed')).toBe('~$1.71');
+    expect(compactCost(0.0004, 'estimated')).toBe('~<$0.001');
+    expect(compactCost(5.83, 'reported')).toBe('$5.83');
+    expect(compactCost(5.83, null)).toBe('$5.83');
+    expect(formatCost(1.71, 'mixed')).toBe('$1.71');
   });
 
   it('explains estimates only when there is one', () => {

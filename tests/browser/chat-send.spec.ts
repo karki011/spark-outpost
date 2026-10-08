@@ -112,6 +112,55 @@ test('Edit puts a failed message back in the composer', async ({ page }) => {
   await expect(page.locator('.msg.me', { hasText: marker })).toHaveCount(0);
 });
 
+test('sends a 200,000-character paste whole and keeps the composer usable', async ({ page }) => {
+  const marker = `Long send ${Date.now()}`;
+  const line = 'The quick brown fox jumps over the lazy dog.\n';
+  const long = `${marker}\n${line.repeat(5_000)}`.slice(0, 199_999) + '!';
+  const bodies: string[] = [];
+  page.on('request', (request: Request) => {
+    if (request.method() === 'POST' && SEND_URL.test(request.url())) {
+      bodies.push((request.postDataJSON() as { content: string }).content);
+    }
+  });
+  const input = await newChat(page);
+
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate((text) => navigator.clipboard.writeText(text), long);
+  await input.press('ControlOrMeta+V');
+  await expect
+    .poll(() => input.evaluate((node: HTMLTextAreaElement) => node.value.length))
+    .toBe(200_000);
+  expect(await input.evaluate((node) => node.clientHeight)).toBeLessThan(240);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await input.press('Enter');
+
+  const bubble = page.locator('.msg.me .bubble', { hasText: marker });
+  await expect(bubble).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('.send-status')).toHaveCount(0, { timeout: 15_000 });
+  await expect(input).toHaveValue('');
+  expect(bodies).toEqual([long]);
+  expect(await bubble.evaluate((node) => node.textContent?.length)).toBe(200_000);
+});
+
+test('a message the server finds too large says so and Edit gives the text back', async ({
+  page,
+}) => {
+  const marker = `Too large ${Date.now()}`;
+  const reason =
+    'This message is over 16 MB, more than Spark can receive in one request. Shorten it and send again.';
+  await page.route(SEND_URL, (route) => route.fulfill({ status: 413, json: { error: reason } }));
+  const input = await newChat(page);
+
+  await input.fill(marker);
+  await input.press('Enter');
+
+  const failed = page.locator('.msg.me', { hasText: marker }).getByRole('alert');
+  await expect(failed).toContainText(`Not sent. ${reason}`);
+  await failed.getByRole('button', { name: 'Edit' }).click();
+
+  await expect(input).toHaveValue(marker);
+});
+
 test('Stop shows Stopping… at once and the chat settles as stopped @packaged', async ({ page }) => {
   let release: () => void = () => undefined;
   const held = new Promise<void>((resolve) => {

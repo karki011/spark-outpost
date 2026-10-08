@@ -20,7 +20,6 @@ export interface PlanAgreementDeps {
 
 const SUMMARIES: Record<PlanAgreementAction, string> = {
   save: 'Saved the previous reply as the agreed plan',
-  offer: 'Offered to save the previous reply as the agreed plan',
   none: 'No plan agreement',
 };
 
@@ -42,8 +41,6 @@ export async function observePlanAgreement(deps: PlanAgreementDeps): Promise<Pla
   if (action === 'save') {
     try {
       saved = await saveAgreedMessage(deps.db, previous, {
-        by: 'jev',
-        source: 'chat',
         root: deps.input.projectRoots[0] ?? null,
         approvedRunId: deps.runId,
       });

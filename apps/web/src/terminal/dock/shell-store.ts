@@ -123,6 +123,7 @@ function addTab(chatId: string, preview: boolean, front: boolean): string {
     onEnded: (reason) =>
       ended(chatId, id, preview ? PREVIEW_ENDED : endMessages[reason], reason === 'chat_removed'),
     onError: (message) => ended(chatId, id, message, false),
+    onInputError: (notice) => updateTab(chatId, id, { notice }),
   });
   connections.set(id, connection);
   return id;

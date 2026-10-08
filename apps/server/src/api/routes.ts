@@ -7,7 +7,7 @@ import {
   sendMessageRequestSchema,
   type ActiveRuns,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import {
   ConversationNotFoundError,
   MessageConflictError,
@@ -34,7 +34,13 @@ import { AttachmentError } from '../persistence/attachment-content.ts';
 import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
-import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './validation.ts';
+import {
+  BadRequestError,
+  RequestTooLargeError,
+  UploadTooLargeError,
+  paramId,
+  parseBody,
+} from './validation.ts';
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
@@ -49,6 +55,8 @@ import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
 import { KeychainWaitingError } from '../setup/keychain.ts';
 import { ChatNotFoundError } from '../chat-share/digest.ts';
+import type { NativeRuntime } from '../terminal/native-runtime.ts';
+import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
 
 export interface RouteDeps {
   db: Db;
@@ -56,6 +64,7 @@ export interface RouteDeps {
   workspaceId: string;
   fixedRunProvider?: string;
   warmTicketMentions?: (content: string) => Promise<void>;
+  nativeTerminals?: NativeRuntime;
 }
 
 export function apiRoutes(deps: RouteDeps): Router {
@@ -79,8 +88,12 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/conversations', async (req, res) => {
-    const { id } = parseBody(createConversationRequestSchema, req);
-    res.status(201).json(await createConversation(db, workspaceId, id));
+    const { id, ...options } = parseBody(createConversationRequestSchema, req);
+    res
+      .status(201)
+      .json(
+        await withTransaction(db, (client) => createConversation(client, workspaceId, id, options)),
+      );
   });
 
   router.get('/conversations/:id', async (req, res) => {
@@ -140,7 +153,9 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/runs/:id/cancel', async (req, res) => {
-    const stopped = await stopRun(db, paramId(req));
+    let stopped = await stopRun(db, paramId(req));
+    if (stopped && (await deps.nativeTerminals?.stopRun(paramId(req))))
+      stopped = await stopRun(db, paramId(req));
     if (!stopped) {
       res.status(404).json({ error: 'Run not found.' });
       return;
@@ -197,10 +212,12 @@ export function statusForError(error: unknown): { status: number; message: strin
   ) {
     return { status: 400, message: error.message };
   }
-  if (error instanceof UploadTooLargeError) return { status: 413, message: error.message };
+  if (error instanceof UploadTooLargeError || error instanceof RequestTooLargeError) {
+    return { status: 413, message: error.message };
+  }
   if (error instanceof KeychainWaitingError) return { status: 503, message: error.message };
   if (error instanceof SteerError) return { status: error.status, message: error.message };
-  if (error instanceof TerminalLimitError) {
+  if (error instanceof TerminalLimitError || error instanceof NativeTerminalConflictError) {
     return { status: 409, message: error.message };
   }
   if (error instanceof ConversationNotFoundError || error instanceof ConversationMissingError) {

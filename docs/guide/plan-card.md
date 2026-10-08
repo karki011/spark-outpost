@@ -28,6 +28,4 @@ Spark has no plan card of its own. When your message is a build, Spark saves the
 
 The thread shows one line, such as **Plan saved · 4 pieces**. Select it to open the plan in the **Work** panel. A revised plan is saved as a new version, and the line updates.
 
-> **Tip:** **Save as agreed plan** under a reply makes that reply the chat's plan.
-
 **Next:** [Review, keep or revert changes](review-changes.md)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
-import { attentionKey, nextToExpand } from './auto-expand.ts';
-import type { Card } from './island-model.ts';
+import { attentionKey, nextToExpand, opensByItself } from './auto-expand.ts';
+import { islandView, type Card } from './island-model.ts';
 
 function card(chatId: string, approvalId: string | null, loading = false): Card {
   return {
@@ -47,5 +47,37 @@ describe('opening a request by itself', () => {
     expect(nextToExpand([loading], [loading], shown)).toBeNull();
     expect(shown.size).toBe(0);
     expect(attentionKey(card('a', 'one'))).toBe('one');
+  });
+});
+
+describe('resting as blobs with requests opening by themselves', () => {
+  const rest = { note: false, panel: null, review: null, nudge: true, hoverOnly: true };
+
+  it('rests as blobs at every size until a request opens, and again once it is put away', () => {
+    const request = card('a', 'one');
+    const shown = new Set<string>();
+    for (const full of [true, false]) {
+      expect(islandView({ ...rest, full, cards: [] })).toEqual({ kind: 'peek' });
+      expect(islandView({ ...rest, full, cards: [request] })).toEqual({ kind: 'peek' });
+    }
+    const opened = nextToExpand([request], [request], shown);
+    expect(islandView({ ...rest, cards: [request], review: opened!.chat.id }).kind).toBe('card');
+    expect(islandView({ ...rest, cards: [request] })).toEqual({ kind: 'peek' });
+    expect(nextToExpand([], [request], shown)).toBeNull();
+    expect(islandView({ ...rest, cards: [] })).toEqual({ kind: 'peek' });
+  });
+
+  it('opens a request only from the resting blobs, never over Spark, a drag or an open view', () => {
+    const request = card('a', 'one');
+    const blobs = islandView({ ...rest, cards: [request] });
+    const calm = { sparkFocused: false, dragging: false };
+    expect(opensByItself(blobs, calm)).toBe(true);
+    expect(opensByItself(blobs, { ...calm, sparkFocused: true })).toBe(false);
+    expect(opensByItself(blobs, { ...calm, dragging: true })).toBe(false);
+    expect(opensByItself(islandView({ ...rest, cards: [request], panel: 'home' }), calm)).toBe(
+      false,
+    );
+    expect(opensByItself(islandView({ ...rest, cards: [request], review: 'a' }), calm)).toBe(false);
+    expect(opensByItself(islandView({ ...rest, cards: [request], note: true }), calm)).toBe(false);
   });
 });

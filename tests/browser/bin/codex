@@ -16,5 +16,13 @@ case "$1" in
     echo '{"type":"item.completed","item":{"type":"agent_message","text":"OK"}}'
     echo '{"type":"turn.completed","model":"gpt-5-codex"}'
     ;;
+  --approve-for-me|--sandbox|--dangerously-bypass-approvals-and-sandbox)
+    printf '\033[36mSpark native terminal fixture · PID %s\033[0m\n' "$$"
+    if [ -z "${NO_COLOR+x}" ] && [ "$COLORTERM" = truecolor ]; then printf 'Color mode: truecolor\n'; fi
+    printf 'Ready for terminal input. No provider request is made.\n'
+    while IFS= read -r line; do
+      printf 'received[%s]: %s\n' "$$" "$line"
+    done
+    ;;
   *) echo "fake codex does not support: $*"; exit 2 ;;
 esac

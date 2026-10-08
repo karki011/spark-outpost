@@ -75,6 +75,21 @@ export async function startRound(
   watch: Watch,
   all: readonly StoredFeedback[],
 ): Promise<Watch> {
+  const conversation = await deps.db.query<{ session_type: string }>(
+    'SELECT session_type FROM conversations WHERE id = $1 AND workspace_id = $2',
+    [watch.conversationId, watch.workspaceId],
+  );
+  if (conversation.rows[0]?.session_type === 'terminal') {
+    await updateFeedback(
+      deps.db,
+      all.map((item) => item.id),
+      { state: 'needs_user' },
+    );
+    return needsYou(
+      watch,
+      'Needs you: Open this Terminal session to handle the pull request feedback.',
+    );
+  }
   if (await chatBusy(deps, watch.conversationId)) {
     return { ...watch, phase: 'watching', doing: CHAT_BUSY_LINE };
   }

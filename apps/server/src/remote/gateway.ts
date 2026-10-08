@@ -228,6 +228,10 @@ export function remoteGateway(deps: GatewayDeps) {
 
     bodyGuard: (async (req, res, next) => {
       const device = remoteDeviceOf(res);
+      if (device && req.body?.sessionType === 'terminal') {
+        await refuseDevice(req, res, device, 403, 'policy', 'Terminal sessions stay on the Mac.');
+        return;
+      }
       const field = blockedFieldIn(req.body, blockedFieldsOf(res));
       if (!device || !field) {
         next();

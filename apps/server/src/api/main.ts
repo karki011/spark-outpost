@@ -41,6 +41,14 @@ import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { pruneOldRows } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
+import { connectDesktopBrowser } from '../browser/host-client.ts';
+import { createCodeScanner } from '../codescan/scanner.ts';
+import { scanIndexPace } from '../map/scan-index-pace.ts';
+import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
+import { locateCli } from '../setup/verify.ts';
+import { startSparkMcpHost } from '../spark-mcp/host.ts';
+import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import { createNativeRuntime } from '../terminal/native-runtime.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -116,6 +124,45 @@ const terminals = new TerminalSessions(
     ),
   ),
 );
+const desktopBrowser = connectDesktopBrowser(process.env, process);
+const nativeMcp = await startSparkMcpHost({
+  db,
+  secrets,
+  fetch,
+  linearApiUrl: config.LINEAR_API_URL,
+  slackApiUrl: config.SLACK_API_URL,
+  slackSignIn,
+  github: {
+    runCommand,
+    apiUrl: config.GITHUB_API_URL,
+    app: githubApp,
+    locateGh: () => locateCli('gh', runCommand, loginShell),
+    loginPath: loginShellPath(runCommand, loginShell),
+    loginEnv: loginShellEnv(runCommand, loginShell),
+  },
+  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
+  branchPrefix: config.BRANCH_PREFIX,
+  linkScheme: config.SPARK_LINK_SCHEME,
+  codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
+  browser: desktopBrowser?.host,
+});
+const nativeApprovalWaiters = new ApprovalWaiters();
+const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
+  nativeApprovalWaiters.notify(id),
+);
+const nativeTerminals = await createNativeRuntime({
+  db,
+  workspaceId,
+  terminals,
+  dataDir: config.SPARK_DATA_DIR ?? resolve(import.meta.dirname, '../../../..', '.local'),
+  channel: config.BRANCH_PREFIX,
+  mcp: nativeMcp,
+  locateCli: loginShellLocator(loginShell),
+  branchPrefix: config.BRANCH_PREFIX,
+  approvalWaiters: nativeApprovalWaiters,
+});
+await nativeTerminals.recover();
+desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const { app, reconcileRemote } = createAppParts({
@@ -139,6 +186,7 @@ const { app, reconcileRemote } = createAppParts({
   agentRuntime: config.AGENT_RUNTIME,
   loginShell,
   terminals,
+  nativeTerminals,
   previews,
   appEvents,
   activeWork,
@@ -195,7 +243,10 @@ attachTerminalSockets(server, terminals, {
 
 const shutdown = async () => {
   clones.stopAll();
+  await nativeTerminals.dispose();
   terminals.killAll();
+  await nativeMcp.close();
+  await nativeApprovalListener.close();
   await previews.stopAll('shutdown').catch(() => undefined);
   stopLagMonitor();
   outcomeSweep.stop();

@@ -14,6 +14,7 @@ import { StatusBadge } from './StatusChip.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { StartContext } from './StartContext.tsx';
 import { useStartContext } from './use-start-context.ts';
 
@@ -36,6 +37,10 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
   const titleId = useId();
   const queryClient = useQueryClient();
   const panelRef = useRef<HTMLDivElement>(null);
+  const [sessionChoice, setSessionChoice] = useState<SessionChoice>({
+    sessionType: 'chat',
+    terminalProvider: 'claude',
+  });
   const [mode, setMode] = useState<TicketStartMode>('plan');
   const [projectId, setProjectId] = useState(NO_PROJECT);
   const [move, setMove] = useState(true);
@@ -87,6 +92,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
         conversationId,
         messageId: crypto.randomUUID(),
         mode,
+        ...sessionChoice,
         moveToInProgress: move,
         ...context.request(),
         ...(projectId ? { projectId } : {}),
@@ -154,6 +160,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
             </button>
           </div>
           <div className="dlg-body">
+            <SessionTypePicker value={sessionChoice} onChange={setSessionChoice} />
             <p className="dlabel">How to start</p>
             <Segmented
               ariaLabel="How to start"
@@ -209,7 +216,8 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
           </div>
           <div className="dlg-foot">
             <span className="why">
-              {context.hold ?? `Creates a chat and links ${ticket.key} to it.`}
+              {context.hold ??
+                `Creates a ${sessionChoice.sessionType === 'terminal' ? 'Terminal session' : 'chat'} and links ${ticket.key} to it.`}
             </span>
             <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>
               Cancel

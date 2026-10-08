@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import { NO_RUN_RULES, SECRET_REASON, decide, type ApprovalRequest } from './decide.ts';
+import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { parseShell } from './shell-parse.ts';
 
@@ -57,20 +57,22 @@ describe('decide() reads redirects with variable paths by their literal part', (
   it.each([
     'cat < .env.$STAGE',
     'cat < config/.env.$STAGE',
-    'cat < ~/.ssh/$KEY',
     'cat < $HOME/.ssh/id_rsa',
     'wc -l < $DIR/server.pem',
     'echo x > .env.$STAGE',
   ])('still asks when the literal part names a secret: %s', async (command) => {
-    expect(await parsed('full_access', command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+    expect(await parsed('full_access', command)).toMatchObject({
+      verdict: 'ask',
+      secretFiles: expect.any(Array),
+    });
   });
 
-  it('reads a secret file in the project through a redirect like any other file', async () => {
+  it('reads a secret file through a redirect like any other file, in the project or outside it', async () => {
     expect(await parsed('full_access', 'cat < .env')).toEqual({ verdict: 'allow', by: 'level' });
-    expect(await parsed('full_access', 'cat < ~/.npmrc')).toEqual({
-      verdict: 'ask',
-      reason: SECRET_REASON,
-    });
+    for (const command of ['cat < ~/.npmrc', 'cat < ~/.ssh/$KEY', 'wc -l < /etc/hosts']) {
+      expect(await parsed('full_access', command)).toEqual({ verdict: 'allow', by: 'level' });
+      expect(await parsed('asks', command)).toEqual({ verdict: 'ask', reason: null });
+    }
   });
 
   it.each([

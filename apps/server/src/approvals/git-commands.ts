@@ -1,5 +1,6 @@
-import { commandTree } from './command-tree.ts';
+import { argumentWords, commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
+import { ghOnlyReads } from './gh-reads.ts';
 import { withoutDataHeredocs } from './inline-code.ts';
 
 const GIT_PUBLISHES = ['push', 'send-email', 'request-pull'];
@@ -25,9 +26,10 @@ export function gitSubcommand(args: readonly string[]): { name: string; rest: st
 }
 
 export function gitSubcommands(command: string): { name: string; rest: string[] }[] {
-  return commandTree(withoutDataHeredocs(command)).commands.flatMap((program) => {
+  const tree = commandTree(withoutDataHeredocs(command));
+  return tree.commands.flatMap((program) => {
     if (programName(program) !== 'git') return [];
-    const sub = gitSubcommand(program.slice(1));
+    const sub = gitSubcommand(argumentWords(tree, program).slice(1));
     return sub ? [sub] : [];
   });
 }
@@ -174,11 +176,24 @@ function gitPublishes(command: string, publishing: readonly string[]): boolean {
   });
 }
 
+export function hostingCommands(command: string): string[][] {
+  const tree = commandTree(withoutDataHeredocs(command));
+  return tree.commands
+    .filter((program) => HOSTING_CLIS.includes(programName(program)))
+    .map((program) => argumentWords(tree, program));
+}
+
+export function hostingRead(program: readonly string[]): boolean {
+  return programName(program) === 'gh' && ghOnlyReads(program.slice(1));
+}
+
 function publishes(command: string, publishing: readonly string[]): boolean {
-  const hosting = commandTree(withoutDataHeredocs(command)).commands.some((program) =>
-    HOSTING_CLIS.includes(programName(program)),
-  );
+  const hosting = hostingCommands(command).some((program) => !hostingRead(program));
   return hosting || gitPublishes(command, publishing);
+}
+
+export function reachesHosting(command: string): boolean {
+  return hostingCommands(command).length > 0 || gitPublishes(command, GIT_PUBLISHES);
 }
 
 export function gitPublishesBesidesPush(command: string): boolean {

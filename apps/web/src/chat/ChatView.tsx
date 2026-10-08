@@ -28,6 +28,7 @@ import {
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
+import { ChatLinks } from '../browser/ChatLinks.tsx';
 import { usePreviewDockTab } from '../browser/use-chat-preview.ts';
 import { onBrowserPick } from '../browser/browser-store.ts';
 import { useBrowserPane } from '../browser/pane-open.ts';
@@ -76,6 +77,11 @@ import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { sessionView } from './session-view.ts';
+import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
+import { NewTerminalSession } from '../terminal/NewTerminalSession.tsx';
+import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
+import '../terminal/native-terminal.css';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 
 const NO_REPOS: string[] = [];
@@ -90,6 +96,11 @@ interface ChatViewProps {
 
 export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const queryClient = useQueryClient();
+  const [sessionChoice, setSessionChoice] = useState<SessionChoice>({
+    sessionType: 'chat',
+    terminalProvider: 'claude',
+  });
+  const [terminalLaunching, setTerminalLaunching] = useState(false);
   const detail = useQuery({
     queryKey: queryKeys.conversation(conversationId),
     queryFn: () => api.getConversation(conversationId),
@@ -133,7 +144,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const settings = detail.data?.settings ?? null;
   const autonomyLevel =
-    repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
+    repos.length > 0 && settings && detail.data?.conversation.sessionType !== 'terminal'
+      ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL)
+      : null;
   const { remote } = useRemoteClient();
   const browserPane = useBrowserPane(conversationId);
   const hasBrowser = browserPane !== null;
@@ -219,6 +232,15 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     [conversationId, addPick],
   );
   const firstRepo = repos[0] ?? null;
+  const view = sessionView(detail.data, terminalLaunching);
+  const terminalSession = view === 'terminal';
+  const newSession = view === 'draft';
+  const chooseSession = (choice: SessionChoice) => {
+    setSessionChoice(choice);
+    if (choice.sessionType === 'chat' && detail.data?.conversation.sessionType === 'terminal')
+      void api.resetSessionDraft(conversationId).then(refresh, () => null);
+  };
+  const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
   const panelRoots = useMemo(
     () => [
       ...(chatBranch?.worktree ? [chatBranch.path] : []),
@@ -226,6 +248,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     ],
     [chatBranch, repos],
   );
+  const browserHome = {
+    chatId: conversationId,
+    projectId: firstRepo?.id ?? null,
+    keepSignIns: firstRepo?.browserKeepSignIns ?? true,
+    roots: panelRoots,
+  };
 
   return (
     <ViewChangesContext value={viewChanges}>
@@ -235,7 +263,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <main
               ref={mainRef}
               className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
-              {...drop.handlers}
+              data-chat-links=""
+              {...(terminalSession || terminalDraft ? {} : drop.handlers)}
             >
               <header className="head chat-head">
                 <SidebarToggle />
@@ -256,6 +285,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {title}
                 </h1>
                 <ChatTicketChips chat={tickets} />
+                {newSession && (
+                  <SessionTypePicker
+                    value={sessionChoice}
+                    onChange={chooseSession}
+                    disabled={terminalLaunching}
+                  />
+                )}
                 <div className="head-r">
                   <DiffChip
                     taskId={task?.id ?? null}
@@ -269,6 +305,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     browser={hasBrowser ? { open: browsing, onToggle: toggleBrowser } : null}
                     onAudit={openAudit}
                     onStartFresh={() => startFresh.mutate()}
+                    canStartFresh={!terminalSession}
+                    terminalDock={!terminalSession && !terminalDraft}
                   />
                 </div>
               </header>
@@ -278,7 +316,25 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {detail.error.message}
                 </p>
               )}
-              {detail.data ? (
+              {terminalSession && detail.data ? (
+                <NativeTerminalWorkspace chat={detail.data.conversation} detail={detail.data} />
+              ) : terminalDraft ? (
+                <NewTerminalSession
+                  conversationId={conversationId}
+                  choice={sessionChoice}
+                  settings={settings}
+                  connected={connected.some(
+                    (provider) => provider.id === sessionChoice.terminalProvider,
+                  )}
+                  projectIds={detail.data?.conversation.projectIds ?? []}
+                  onStarting={() => setTerminalLaunching(true)}
+                  onLaunched={() => setTerminalLaunching(false)}
+                  onFailed={(created) => {
+                    setTerminalLaunching(false);
+                    if (created) void refresh();
+                  }}
+                />
+              ) : detail.data ? (
                 <PanelOpenContext value={panel.open}>
                   <RailContext
                     value={
@@ -321,61 +377,70 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   )}
                 </div>
               )}
-              <ComposerStatus
-                store={status}
-                runs={detail.data?.runs ?? NO_RUNS}
-                activeRunId={running?.id ?? null}
-                provider={detail.data?.settings.provider ?? ''}
-                queued={queue.items.length}
-              />
-              <QueueStrip
-                queue={queue}
-                mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
-              />
-              <Composer
-                conversationId={conversationId}
-                repos={repos}
-                settings={settings}
-                providers={connected}
-                runs={detail.data?.runs ?? []}
-                orchestration={orchestration}
-                usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-                busy={running !== null}
-                sending={sends.sending}
-                error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
-                notice={sendNowStatus({
-                  memberMessages: detail.data?.memberMessages,
-                  runs: detail.data?.runs ?? NO_RUNS,
-                })}
-                stopping={stop.stopping}
-                attachments={attachments}
-                quotes={quotes}
-                onSend={async (content, files, annotations) => {
-                  sends.send({ content, attachments: files, annotations });
-                }}
-                onStop={stop.stop}
-                onQueue={(content) => {
-                  followRequests.request();
-                  return queue.add(content);
-                }}
-                onSendNow={(content) => {
-                  followRequests.request();
-                  return queue.sendFirst(content);
-                }}
-                busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
-                steer={steer}
-                above={
-                  <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
-                }
-                {...(openAudit ? { onAudit: openAudit } : {})}
-                onStartFresh={() => startFresh.mutate()}
-                autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
-                agentCommands={commands.data?.commands ?? NO_COMMANDS}
-                agentName={providerName(
-                  commands.data?.provider ?? detail.data?.settings.provider ?? '',
-                )}
-              />
-              {!remote && <TerminalDock chatId={conversationId} />}
+              {!terminalSession && !terminalDraft && (
+                <>
+                  <ComposerStatus
+                    store={status}
+                    runs={detail.data?.runs ?? NO_RUNS}
+                    activeRunId={running?.id ?? null}
+                    provider={detail.data?.settings.provider ?? ''}
+                    queued={queue.items.length}
+                  />
+                  <QueueStrip
+                    queue={queue}
+                    mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
+                  />
+                  <Composer
+                    conversationId={conversationId}
+                    repos={repos}
+                    settings={settings}
+                    providers={connected}
+                    runs={detail.data?.runs ?? []}
+                    orchestration={orchestration}
+                    usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+                    busy={running !== null}
+                    sending={sends.sending}
+                    error={stop.error ?? (queue.items.length === 0 ? queue.error : null)}
+                    notice={sendNowStatus({
+                      memberMessages: detail.data?.memberMessages,
+                      runs: detail.data?.runs ?? NO_RUNS,
+                    })}
+                    stopping={stop.stopping}
+                    attachments={attachments}
+                    quotes={quotes}
+                    onSend={async (content, files, annotations) => {
+                      sends.send({ content, attachments: files, annotations });
+                    }}
+                    onStop={stop.stop}
+                    onQueue={(content) => {
+                      followRequests.request();
+                      return queue.add(content);
+                    }}
+                    onSendNow={(content) => {
+                      followRequests.request();
+                      return queue.sendFirst(content);
+                    }}
+                    busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
+                    steer={steer}
+                    above={
+                      <PrCard
+                        conversationId={conversationId}
+                        onOpenLinks={task ? openLinks : null}
+                      />
+                    }
+                    {...(openAudit ? { onAudit: openAudit } : {})}
+                    onStartFresh={() => startFresh.mutate()}
+                    autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
+                    agentCommands={commands.data?.commands ?? NO_COMMANDS}
+                    agentName={providerName(
+                      commands.data?.provider ?? detail.data?.settings.provider ?? '',
+                    )}
+                  />
+                </>
+              )}
+              {!remote && !terminalSession && !terminalDraft && (
+                <TerminalDock chatId={conversationId} />
+              )}
               <DropOverlay visible={drop.dragging} />
             </main>
             {panel.available && (
@@ -403,12 +468,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   hasBrowser
                     ? ({ views, close }) => (
                         <BrowserPane
-                          home={{
-                            chatId: conversationId,
-                            projectId: firstRepo?.id ?? null,
-                            keepSignIns: firstRepo?.browserKeepSignIns ?? true,
-                            roots: panelRoots,
-                          }}
+                          home={browserHome}
                           shown={browsing}
                           lead={views}
                           trail={close}
@@ -419,6 +479,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 {...(openAudit ? { onAudit: openAudit } : {})}
               />
             )}
+            {hasBrowser && <ChatLinks home={browserHome} />}
             <DiffDrawerHost state={diff} taskId={taskId} />
             <AnimatePresence>
               {auditOpen && (

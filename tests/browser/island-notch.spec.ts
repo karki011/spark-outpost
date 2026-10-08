@@ -5,9 +5,12 @@ import {
   command,
   focusCalls,
   island,
+  NOTCH,
   notchBox,
   openNotchIsland,
+  restSize,
   settled,
+  shownText,
   sparkFocus,
   underNotch,
 } from './island-notch-desktop.ts';
@@ -16,9 +19,8 @@ import { seedChats } from './sidebar-seed.ts';
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const SIZES = ['full', 'small', 'medium', 'large'] as const;
 const LONG = 'Rework the checkout flow so that abandoned carts are recovered by email reminders';
-
 const LONG_COMMAND = 'pnpm deploy --prod --region eu-west-1 --tag release-candidate --confirm';
-
+const REST_MAX = { width: 200, height: 60 };
 const deploy = {
   title: 'Deploy the site',
   run: { status: 'awaiting_approval' },
@@ -57,19 +59,24 @@ async function staysOn(page: Page, view: string) {
   await expect(island(page)).toHaveAttribute('data-view', view);
 }
 
+async function hover(page: Page, y: number) {
+  await page.mouse.move(640, 300);
+  await page.mouse.move(640, y, { steps: 4 });
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+}
+
 for (const size of SIZES) {
-  test(`at ${size} size nothing readable or clickable sits under the notch`, async ({ page }) => {
+  test(`at ${size} size resting blobs and hovered content stay clear of the notch`, async ({
+    page,
+  }) => {
     await resetTestDatabase({ onboarded: true });
     await seedChats([
       { title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 },
       { title: 'Tidy the README', run: { status: 'succeeded' }, minutesAgo: 3 },
     ]);
     await openNotchIsland(page, { size, autoExpand: false });
-    const resting = size === 'full' ? 'now' : 'peek';
-    await expect(island(page)).toHaveAttribute('data-view', resting);
-    await expect(page.getByRole('button', { name: /^Chat: /, disabled: false })).toHaveCount(
-      size === 'full' ? 0 : 2,
-    );
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expect(page.getByRole('button', { name: /^Chat: /, disabled: false })).toHaveCount(2);
     expect(await underNotch(page)).toEqual([]);
     await shot(page, `${size}-rest`);
 
@@ -80,43 +87,58 @@ for (const size of SIZES) {
         approval: { kind: 'execute', title: 'Deploy', command: LONG_COMMAND },
       },
     ]);
-    const collapsed = size === 'full' ? 'now' : 'nudge';
-    await expect(island(page)).toHaveAttribute('data-view', collapsed);
-    await expect(island(page).getByRole('button', { name: /Review/ })).toBeVisible();
+    await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+    await staysOn(page, 'peek');
+    expect(await focusCalls(page)).not.toContain(true);
     expect(await underNotch(page)).toEqual([]);
-    const title = island(page).locator(size === 'full' ? '.isl-nowbar-title' : '.isl-nudge-title');
-    await expect(title).toContainText(size === 'full' ? LONG : LONG_COMMAND);
-    const clipped = await title.evaluate((element) => ({
-      truncated: element.scrollWidth > element.clientWidth,
-      rect: element.getBoundingClientRect().toJSON() as DOMRect,
-      frame: element.closest('.isl')!.getBoundingClientRect().toJSON() as DOMRect,
-    }));
-    expect(clipped.truncated).toBe(true);
-    expect(clipped.rect.left).toBeGreaterThanOrEqual(clipped.frame.left);
-    expect(clipped.rect.right).toBeLessThanOrEqual(clipped.frame.right);
-    expect(clipped.rect.top).toBeGreaterThanOrEqual(notchBox().bottom);
     await shot(page, `${size}-needs-you`);
 
-    await page.mouse.move(640, 300);
-    const review = (await island(page)
-      .getByRole('button', { name: /Review/ })
-      .boundingBox())!;
-    await page.mouse.move(review.x + review.width / 2, review.y + review.height / 2, { steps: 4 });
-    await expect(island(page)).toHaveAttribute('data-view', 'panel');
+    await hover(page, 40);
+    const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+    await expect(waiting).toContainText(LONG_COMMAND);
     expect(await underNotch(page)).toEqual([]);
     await page.mouse.move(5, 600);
-    await expect(island(page)).toHaveAttribute('data-view', collapsed);
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
   });
 }
 
+for (const size of SIZES) {
+  for (const notch of [true, false]) {
+    test(`at ${size} size ${notch ? 'under a notch' : 'on a flat display'} one working chat rests as blobs alone, with no title, status line or row`, async ({
+      page,
+    }) => {
+      await resetTestDatabase({ onboarded: true });
+      await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
+      await openNotchIsland(page, { size, autoExpand: true, notch });
+      await expect(page.getByRole('button', { name: /^Chat: Fix billing totals/ })).toBeVisible();
+      await staysOn(page, 'peek');
+      await expect(island(page).locator('.isl-nudge, .isl-nowbar, .isl-view')).toHaveCount(0);
+      expect(await shownText(page)).toBe('');
+      await settled(page);
+      const drawn = (await island(page).boundingBox())!;
+      if (notch) {
+        expect(drawn.width).toBeLessThanOrEqual(NOTCH.width);
+        expect(drawn.y + drawn.height).toBeLessThanOrEqual(NOTCH.menuBar);
+        return;
+      }
+      expect(drawn.width).toBeLessThanOrEqual(REST_MAX.width);
+      await expect.poll(() => restSize(page)).not.toBeNull();
+      const rest = (await restSize(page))!;
+      expect(rest.width).toBeLessThanOrEqual(REST_MAX.width);
+      expect(rest.height).toBeLessThanOrEqual(REST_MAX.height);
+    });
+  }
+}
+
 for (const size of ['full', 'large'] as const) {
-  test(`at ${size} size a request opens once, clear of the notch, without taking the keyboard`, async ({
+  test(`at ${size} size a request opens once from the blobs, clear of the notch, without taking the keyboard`, async ({
     page,
   }) => {
     await resetTestDatabase({ onboarded: true });
+    await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
     await openNotchIsland(page, { size, autoExpand: true });
-    const resting = size === 'full' ? 'now' : 'peek';
-    await expect(island(page)).toHaveAttribute('data-view', resting);
+    await staysOn(page, 'peek');
+    await expect(island(page).locator('.isl-nudge, .isl-nowbar')).toHaveCount(0);
 
     const [first] = await seedChats([deploy]);
     await expect(island(page)).toHaveAttribute('data-view', 'card');
@@ -131,12 +153,13 @@ for (const size of ['full', 'large'] as const) {
 
     await island(page).getByRole('button', { name: 'Later' }).click();
     await page.mouse.move(5, 600);
-    await expect(island(page)).toHaveAttribute('data-view', resting);
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
     await touch(first!);
-    await staysOn(page, resting);
+    await staysOn(page, 'peek');
     await sparkFocus(page, true);
     await sparkFocus(page, false);
-    await staysOn(page, resting);
+    await staysOn(page, 'peek');
 
     const [second] = await seedChats([
       {
@@ -153,8 +176,8 @@ for (const size of ['full', 'large'] as const) {
     await expect(island(page)).toContainText('Allowed once');
     await finish(second!);
     await page.mouse.move(5, 600);
-    await expect(island(page)).toHaveAttribute('data-view', resting);
-    await staysOn(page, resting);
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await staysOn(page, 'peek');
     expect(await focusCalls(page)).not.toContain(true);
   });
 }
@@ -177,55 +200,62 @@ test('a request waits while Spark is focused or a panel is open, and Escape puts
   await command(page, 'quick');
   await expect.poll(() => focusCalls(page)).toContain(true);
   await page.keyboard.press('Escape');
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   expect(await underNotch(page)).toEqual([]);
-  await staysOn(page, 'nudge');
+  await staysOn(page, 'peek');
 });
 
-test('with the switch off a request stays a pill until it is opened', async ({ page }) => {
+test('with the switch off a request stays as blobs until it is opened', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   await seedChats([deploy]);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  await staysOn(page, 'nudge');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await staysOn(page, 'peek');
+  expect(await focusCalls(page)).not.toContain(true);
+  await command(page, 'quick');
+  await expect(island(page)).toHaveAttribute('data-view', 'card');
+  await expect(island(page).getByRole('group', { name: /pnpm deploy/ })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });
 
-test('the full island shows the current chat on a display without a notch', async ({ page }) => {
+test('saved Full size shows blobs on a display without a notch and opens Home on hover', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
   await openNotchIsland(page, { size: 'full', autoExpand: true, notch: false });
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
-  const bar = island(page).getByRole('status').filter({ hasText: 'Fix billing totals' });
-  await expect(bar).toBeVisible();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(page.getByRole('button', { name: /^Chat: Fix billing totals/ })).toBeVisible();
   await settled(page);
   const box = (await island(page).boundingBox())!;
   expect(box.y).toBe(0);
   expect(box.width).toBeLessThanOrEqual(420);
   expect(box.height).toBeLessThanOrEqual(90);
   await shot(page, 'full-flat');
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 40, { steps: 4 });
-  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await hover(page, 8);
   await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
   await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });
 
 test.describe('screenshots', () => {
   test.use({ deviceScaleFactor: 2 });
   for (const theme of ['graphite', 'apricot']) {
-    test(`shows the full island and a request in ${theme}`, async ({ page }) => {
+    test(`shows the resting blobs and a request opened by itself in ${theme}`, async ({ page }) => {
       test.skip(!SHOTS, 'screenshots only');
       await resetTestDatabase({ onboarded: true });
       await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
       await openNotchIsland(page, { size: 'full', autoExpand: true, theme });
-      await expect(island(page)).toHaveAttribute('data-view', 'now');
+      await expect(island(page)).toHaveAttribute('data-view', 'peek');
       await shot(page, `${theme}-full`);
       await seedChats([deploy]);
       await expect(island(page)).toHaveAttribute('data-view', 'card');
+      await expect(island(page).getByRole('button', { name: /Allow once/ })).toBeVisible();
+      await settled(page);
       await shot(page, `${theme}-request`);
     });
   }

@@ -52,6 +52,12 @@ export async function addToQueue(
   conversationId: string,
   item: NewQueued,
 ): Promise<void> {
+  const session = await db.query<{ session_type: string }>(
+    'SELECT session_type FROM conversations WHERE id = $1',
+    [conversationId],
+  );
+  if (session.rows[0]?.session_type === 'terminal')
+    throw new QueueError(409, 'Send messages in this session’s terminal.');
   if (await alreadySent(db, item.id)) return;
   const { rows } = await db.query<{ count: number }>(
     'SELECT count(*)::int AS count FROM chat_queue WHERE conversation_id = $1',

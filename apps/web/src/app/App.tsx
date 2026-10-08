@@ -59,6 +59,7 @@ import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
+import { revealWorkflowOptions } from '../spark/SparkSection.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import { useChatRequests } from './chat-request.ts';
@@ -318,7 +319,12 @@ function ChatShell({ entering }: { entering: boolean }) {
           onHome={() => setView('home')}
         />
         {live.paused && !connection.lost && <LivePausedHint />}
-        <DefaultLevelNotice onSettings={() => setSettings('spark')} />
+        <DefaultLevelNotice
+          onSettings={() => {
+            revealWorkflowOptions();
+            setSettings('spark');
+          }}
+        />
         <TeammateHost />
         <MemberChatHost />
         <AnimatePresence>

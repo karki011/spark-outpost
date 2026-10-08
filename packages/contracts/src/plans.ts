@@ -33,12 +33,6 @@ export const agreedPlansSchema = z.object({
 });
 export type AgreedPlans = z.infer<typeof agreedPlansSchema>;
 
-export const planOfferSchema = z.object({
-  runId: z.uuid(),
-  messageId: z.uuid(),
-});
-export type PlanOffer = z.infer<typeof planOfferSchema>;
-
 export const planLineUnitSchema = z.enum(['pieces', 'steps']);
 export type PlanLineUnit = z.infer<typeof planLineUnitSchema>;
 
@@ -68,16 +62,9 @@ export function planSavedText(line: Pick<PlanLine, 'items' | 'unit'>): string {
 
 export const conversationPlansSchema = z.object({
   saved: z.array(z.object({ messageId: z.uuid(), version: z.number().int().positive() })),
-  offers: z.array(planOfferSchema),
   lines: z.array(planLineSchema).default([]),
 });
 export type ConversationPlans = z.infer<typeof conversationPlansSchema>;
-
-export const savePlanRequestSchema = z.object({
-  messageId: z.uuid(),
-  offered: z.boolean().default(false),
-});
-export type SavePlanRequest = z.input<typeof savePlanRequestSchema>;
 
 export const PLAN_SOURCE_LABELS: Record<PlanDocumentSource, string> = {
   claude_plan_mode: 'Claude plan mode',

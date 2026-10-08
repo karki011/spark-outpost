@@ -10,26 +10,28 @@ Select **Settings** at the bottom of the rail. A row's book icon opens the guide
 
 ## Spark
 
-| Row                                                    | Default                | Read more                                                                               |
-| ------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
-| **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                |
-| **Spark**                                              | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                     |
-| **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                     |
-| **Wait before going on without your answer**           | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                  |
-| **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
-| **Compact automatically at**                           | 80%, on                | [Manage a long chat](compaction.md#change-when-spark-compacts)                          |
-| **Open pull requests as**                              | **Ready for review**   | [Ship a change](ship-and-pull-requests.md#ready-for-review-or-draft)                    |
-| **When checks still fail in Full auto**                | **Open a draft PR**    | [Ship a change](ship-and-pull-requests.md#when-checks-still-fail-in-full-auto)          |
-| **Follow up on pull requests**, and its three switches | On                     | [PR feedback](pr-follow-up.md#turn-it-off)                                              |
-| **Morning brief**                                      | 7:00                   | A daily summary on **Home**                                                             |
-| **While the agent is working, Enter**                  | **Queues the message** | [Queue or send now](follow-a-turn.md#queue-messages)                                    |
-| **On wide windows**                                    | **Context rail**       | With the work panel closed: a rail with project, agent and tasks, the panel, or nothing |
-| **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                     |
-| **Show Spark Island**, **Spark Island size**           | On, **Full**           | [Spark Island](desktop-companion.md)                                                    |
-| **Open requests by themselves**, **Island chimes**     | On, off                | [Spark Island](desktop-companion.md#answer-a-card)                                      |
-| **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                          |
+| Row                                                    | Default                | Read more                                                                                     |
+| ------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
+| **What should Spark call you?**, **Personality**       | **Friendly**           | [Set up](getting-started.md#meet-spark-and-pick-a-theme)                                      |
+| **Use Spark workflow**                                 | On                     | [With Spark off](how-spark-works.md#with-spark-off)                                           |
+| **How much Spark does alone**                          | **Full auto → PR**     | [Spark autonomy](spark-autonomy.md)                                                           |
+| **Wait before going on without your answer**           | **60s**                | [If you don't answer](approvals.md#if-you-dont-answer)                                        |
+| **Warn when context is**                               | 60%                    | [Manage a long chat](compaction.md#change-when-spark-compacts)                                |
+| **Compact automatically at**                           | 80%, on                | [Manage a long chat](compaction.md#change-when-spark-compacts)                                |
+| **Open pull requests as**                              | **Ready for review**   | [Ship a change](ship-and-pull-requests.md#ready-for-review-or-draft)                          |
+| **When checks still fail in Full auto**                | **Open a draft PR**    | [Ship a change](ship-and-pull-requests.md#when-checks-still-fail-in-full-auto)                |
+| **Follow up on pull requests**, and its three switches | On                     | [PR feedback](pr-follow-up.md#turn-it-off)                                                    |
+| **Morning brief**                                      | 7:00                   | A daily summary on **Home**                                                                   |
+| **While the agent is working, Enter**                  | **Queues the message** | [Queue or send now](follow-a-turn.md#queue-messages)                                          |
+| **On wide windows**                                    | **Context rail**       | With the work panel closed: a rail with project, agent, tasks and crew, the panel, or nothing |
+| **Status companion**                                   | **Show**               | [Spark Island](desktop-companion.md#inside-the-app)                                           |
+| **Show Spark Island**, **Spark Island size**           | On, **Full**           | [Spark Island](desktop-companion.md)                                                          |
+| **Open requests by themselves**, **Island chimes**     | On, off                | [Spark Island](desktop-companion.md#answer-a-card)                                            |
+| **Quick chat shortcut**, **Sessions shortcut**         | ⌥Space, ⌥⇧Space        | [Change a shortcut](companion-quick-chat.md#change-a-shortcut)                                |
 
-The Spark Island rows show in the Mac app only.
+Under **Spark**, **Workflow options** holds autonomy, compaction and PR controls.
+
+**Custom instructions** accepts text or a UTF-8 file on your Mac, up to 16 KB. Select **Save instructions**. New sessions send both and skip an unreadable file with a note.
 
 ## Other sections
 

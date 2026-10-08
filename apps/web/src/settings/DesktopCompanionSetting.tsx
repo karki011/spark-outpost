@@ -191,7 +191,7 @@ export function DesktopCompanionSetting() {
               hint={
                 status.autoExpand
                   ? 'When a chat needs you, Spark Island opens the request once. It never takes the keyboard.'
-                  : 'Off. A chat that needs you shows Review; select it to open the request.'
+                  : 'Off. A chat that needs you marks the blobs; hover or select one to open the request.'
               }
               checked={status.autoExpand === true}
               onChange={(on) => void desktop.companion.setAutoExpand?.(on)}

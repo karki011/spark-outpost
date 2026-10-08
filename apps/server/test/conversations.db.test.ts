@@ -8,6 +8,7 @@ import {
   pruneEmptyConversations,
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
+import { reserveNativeTerminalLaunch } from '../src/persistence/native-terminal-turns.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -133,5 +134,30 @@ describe('draft chats', () => {
     await pruneEmptyConversations(t.db, t.workspaceId);
     expect(await getConversationDetail(t.db, empty.id)).toBeNull();
     expect(await getConversationDetail(t.db, used)).not.toBeNull();
+  });
+  it('treats a Terminal session that never launched like an empty chat', async () => {
+    const options = { sessionType: 'terminal', terminalProvider: 'claude' } as const;
+    const failed = await createConversation(t.db, t.workspaceId, randomUUID(), options);
+    const launched = await createConversation(t.db, t.workspaceId, randomUUID(), options);
+    await reserveNativeTerminalLaunch(t.db, {
+      id: randomUUID(),
+      conversationId: launched.id,
+      provider: 'claude',
+      cwd: '/tmp',
+      label: 'Session',
+      runId: null,
+      messageId: null,
+      observation: 'unsupported',
+      reason: null,
+      resume: false,
+    });
+
+    const listed = await listConversations(t.db, t.workspaceId);
+    expect(listed.map((item) => item.id)).toEqual([launched.id]);
+
+    await t.db.query(`UPDATE conversations SET updated_at = now() - interval '2 days'`);
+    await pruneEmptyConversations(t.db, t.workspaceId);
+    expect(await getConversationDetail(t.db, failed.id)).toBeNull();
+    expect(await getConversationDetail(t.db, launched.id)).not.toBeNull();
   });
 });

@@ -12,6 +12,11 @@ import { addProject, fakeJev, mapBuilder, writeRepo } from './map-support.ts';
 import { seedConversation, seedTurn } from './outcome-seed.ts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
 import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
+import { createConversation } from '../src/persistence/conversations.ts';
+import {
+  reserveNativeTerminalLaunch,
+  setNativeTerminalState,
+} from '../src/persistence/native-terminal-turns.ts';
 
 let t: TestDb;
 let tools: SparkToolsHarness | null = null;
@@ -194,6 +199,53 @@ describe('spark_terminals', () => {
 
     await forgetAllShells(t.db, t.workspaceId);
     expect(await listShells(t.db, t.workspaceId)).toEqual([]);
+  });
+
+  it('reports verified native activity without treating unknown activity as idle', async () => {
+    const conversationId = randomUUID();
+    await createConversation(t.db, t.workspaceId, conversationId, {
+      sessionType: 'terminal',
+      terminalProvider: 'codex',
+    });
+    const session = await reserveNativeTerminalLaunch(t.db, {
+      id: randomUUID(),
+      conversationId,
+      provider: 'codex',
+      cwd: '/tmp',
+      label: 'Codex',
+      runId: null,
+      messageId: null,
+      resume: false,
+      observation: 'hooks',
+      reason: null,
+    });
+    await recordShell(t.db, t.workspaceId, {
+      id: session.id,
+      conversationId,
+      label: 'Codex',
+      cwd: '/tmp',
+      pid: process.pid,
+    });
+    const harness = await open();
+    const current = async () =>
+      (await harness.call('spark_terminals')).json<{ terminals: Record<string, unknown>[] }>()
+        .terminals[0];
+    expect(await current()).toMatchObject({
+      busy: null,
+      agent: { provider: 'codex', state: 'starting' },
+    });
+    await setNativeTerminalState(t.db, {
+      id: session.id,
+      generation: session.generation,
+      state: 'working',
+    });
+    expect(await current()).toMatchObject({ busy: true, agent: { state: 'working' } });
+    await setNativeTerminalState(t.db, {
+      id: session.id,
+      generation: session.generation,
+      state: 'unknown',
+    });
+    expect(await current()).toMatchObject({ busy: null, agent: { state: 'unknown' } });
   });
 });
 

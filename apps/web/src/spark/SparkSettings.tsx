@@ -95,7 +95,7 @@ const SPARK_INFO = {
     },
     {
       label: 'Off',
-      text: 'Chats go straight to your agent and model. No Jev, Critic or extra agents.',
+      text: 'Chat uses your chosen agent directly. Terminal keeps the native agent and activity tracking without Spark tools or workflow prompts.',
     },
   ],
   footer: 'Approvals and safety rules apply either way.',
@@ -106,12 +106,12 @@ export function SparkSwitch({ enabled }: { enabled: boolean }) {
     <ProfileSwitchSetting
       blob="spark"
       enabled={enabled}
-      label="Spark"
+      label="Use Spark workflow"
       info={SPARK_INFO}
       hint={(on) =>
         on
-          ? 'Spark reads, routes and reviews your work.'
-          : 'Chats go straight to the agent you pick.'
+          ? 'Chat routes and reviews work. Terminal includes Spark tools.'
+          : 'Use your agent directly with your custom instructions.'
       }
       toUpdate={(value) => ({ sparkEnabled: value })}
     />

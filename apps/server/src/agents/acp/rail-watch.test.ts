@@ -59,7 +59,7 @@ describe('watching actions the agent took without asking', () => {
     ]);
   });
 
-  it('notes an unasked read of a secret file without flagging it', async () => {
+  it('notes an unasked read of a secret file, in the project or outside it, without flagging it', async () => {
     const rails = watch();
     await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'cat .env' } }));
     expect(await rails.observe(done('c1'))).toEqual({ rails: [], secretReads: ['.env'] });
@@ -70,6 +70,12 @@ describe('watching actions the agent took without asking', () => {
       rails: [],
       secretReads: ['config/.env.local'],
     });
+    await rails.observe(started('c2', { kind: 'execute', rawInput: { command: 'cat ~/.npmrc' } }));
+    expect(await rails.observe(done('c2'))).toEqual({ rails: [], secretReads: ['~/.npmrc'] });
+    await rails.observe(
+      started('r3', { kind: 'read', locations: [{ path: '/Users/me/.ssh/id_rsa' }] }),
+    );
+    expect(await rails.observe(done('r3'))).toEqual({ rails: [], secretReads: ['~/.ssh/id_rsa'] });
     await rails.observe(started('r2', { kind: 'read', locations: [{ path: `${ROOT}/a.ts` }] }));
     expect(await rails.observe(done('r2'))).toEqual(NOTHING);
   });

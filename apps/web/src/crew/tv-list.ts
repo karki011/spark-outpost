@@ -180,7 +180,7 @@ function unstartedRows(
   });
 }
 
-function turnState(status: Orchestration['status']): CrewState {
+export function turnState(status: Orchestration['status']): CrewState {
   if (status === 'succeeded') return 'done';
   if (status === 'cancelled') return 'stopped';
   return 'failed';

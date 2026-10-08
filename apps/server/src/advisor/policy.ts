@@ -32,7 +32,6 @@ export const ACT_AT: Record<ActingQuestion | ObservedQuestion, number> = {
 export const ASK_AT = 0.5;
 
 export const PLAN_AGREED_ACT_AT = 0.85;
-export const PLAN_AGREED_OFFER_AT = 0.6;
 
 export const POLICY_BLOCK_AT = 0.85;
 export const POLICY_REVIEW_AT = 0.5;

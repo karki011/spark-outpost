@@ -24,11 +24,12 @@ import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
+import { RailCrew } from './RailCrew.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTasks } from './RailTasks.tsx';
 import { RailTv } from './RailTv.tsx';
-import { railRows, type RailAction } from './rail-model.ts';
+import { finishedCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
 interface ChatRailProps {
@@ -124,8 +125,10 @@ function OpenRail({
     hasTask: taskId !== null,
   });
   const openTasks = useCallback(() => onTab('tasks'), [onTab]);
-  const orchestration = running ? latestOrchestration(detail) : null;
-  const agents = orchestration ? crewAgents(orchestration, detail.activity) : [];
+  const orchestration = latestOrchestration(detail);
+  const members = orchestration ? crewAgents(orchestration, detail.activity) : [];
+  const agents = running ? members : [];
+  const crew = running || !orchestration ? [] : finishedCrew(orchestration, members);
 
   const act = (action: RailAction) => {
     if (action.kind === 'project') requestProjectMenu(conversationId);
@@ -145,6 +148,7 @@ function OpenRail({
       <AnimatePresence>
         {agents.length > 0 && <RailTv key="tv" conversationId={conversationId} agents={agents} />}
       </AnimatePresence>
+      {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} />}
     </section>
   );
 }

@@ -47,7 +47,6 @@ Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 | Under a reply                                  | Use it to                                                   |
 | ---------------------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result**               | Rate the reply. Ratings stay on this computer.              |
-| **Save as agreed plan**                        | Make the reply the chat's plan.                             |
 | Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
 | `/fresh`, or **Start fresh** in the **…** menu | Restart the agent without the old context.                  |
 | Ticks left of the thread                       | Jump to a message.                                          |

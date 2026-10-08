@@ -68,6 +68,8 @@ describe('secretSend', () => {
   it('finds nothing in a push of ordinary commits', async () => {
     await commit('notes.md', 'port 3000, development\n', 'notes');
     expect(await secretSend(run(`git push -u origin ${BRANCH}`))).toEqual({ kind: 'clean' });
+    const redirected = `git push -u origin ${BRANCH} > /tmp/push.log 2>&1`;
+    expect(await secretSend(run(redirected))).toEqual({ kind: 'clean' });
     expect(await pushedSecretFiles(root, BRANCH)).toEqual([]);
   });
 
@@ -77,6 +79,7 @@ describe('secretSend', () => {
     expect(found).toEqual({ kind: 'found', files: ['.env'] });
     expect(JSON.stringify(found)).not.toContain(TOKEN);
     expect(await secretSend(run(`git push origin HEAD:${BRANCH}`))).toEqual(found);
+    expect(await secretSend(run(`git push origin ${BRANCH} 2>&1 | tail -5`))).toEqual(found);
     expect(await pushedSecretFiles(root, BRANCH)).toEqual(['.env']);
   });
 

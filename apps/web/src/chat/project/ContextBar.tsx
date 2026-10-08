@@ -1,33 +1,16 @@
-import './context-bar.css';
-import { useEffect, useId, useState, type ReactNode } from 'react';
-import { AnimatePresence } from 'motion/react';
+import type { ReactNode } from 'react';
 import type { Project } from '@spark-outpost/contracts';
-import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
-import { useTooltip } from '../../ui/Tooltip.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { TalkToChip } from '../../teammates/TalkToChip.tsx';
 import { AgentSetup } from './AgentSetup.tsx';
 import { AutonomyChip, type AutonomyControl } from './AutonomyChip.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
-import { FolderDialog } from './FolderDialog.tsx';
-import { RepoMenu } from './RepoMenu.tsx';
+import { ProjectFolders } from './ProjectFolders.tsx';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
-import { onProjectMenuRequest } from './project-menu-request.ts';
-import { PICK_PROJECT_HINT, recentProjects, repoSummary } from './repo-list.ts';
-import { useChatRepos, useProjectBranch, useProjects, type RepoRequest } from './use-chat-repos.ts';
+import { useProjectBranch } from './use-chat-repos.ts';
 import { useChatWorkspace } from './use-chat-workspace.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
-
-interface ContextBarProps {
-  conversationId: string;
-  repos: Project[];
-  popover: RepoPopover;
-  autonomy: AutonomyControl | null;
-  suggestion?: ReactNode;
-}
-
-const RECENT_LIMIT = 5;
 
 export function ContextBar({
   conversationId,
@@ -35,117 +18,33 @@ export function ContextBar({
   popover,
   autonomy,
   suggestion,
-}: ContextBarProps) {
-  const { open, toggle, setOpen, anchorRef, panelRef } = popover;
-  const [browsing, setBrowsing] = useState(false);
-  const projects = useProjects();
-  const change = useChatRepos(conversationId);
-  const menuId = useId();
+}: {
+  conversationId: string;
+  repos: Project[];
+  popover: RepoPopover;
+  autonomy: AutonomyControl | null;
+  suggestion?: ReactNode;
+}) {
   const primary = repos[0] ?? null;
   const branch = useProjectBranch(primary?.id ?? null);
   const current = useChatWorkspace(conversationId, primary !== null).data?.current ?? null;
-  const linkedIds = new Set(repos.map((repo) => repo.id));
-  const recent = recentProjects(projects.data ?? [], linkedIds, RECENT_LIMIT);
-  const names = repos.map((repo) => repo.name);
-  const projectTip = useTooltip(
-    primary ? repos.map((repo) => repo.rootPath).join(', ') : PICK_PROJECT_HINT,
-  );
-
-  useEffect(
-    () =>
-      onProjectMenuRequest(conversationId, () => {
-        setOpen(true);
-        anchorRef.current?.focus();
-      }),
-    [conversationId, setOpen, anchorRef],
-  );
-
-  const apply = (request: RepoRequest) => {
-    change.mutate(request, {
-      onSuccess: () => {
-        if (browsing) {
-          setBrowsing(false);
-          anchorRef.current?.focus();
-        }
-      },
-    });
-  };
-
-  const openBrowser = () => {
-    change.reset();
-    setOpen(false);
-    setBrowsing(true);
-  };
-
-  const closeBrowser = () => {
-    setBrowsing(false);
-    anchorRef.current?.focus();
-  };
-
-  const error = change.isError && !browsing ? change.error.message : null;
-
   return (
-    <div className="ctxbar-wrap">
-      <div className="ctxbar">
-        <button
-          ref={anchorRef}
-          type="button"
-          className={primary ? 'ctx-repo' : 'ctx-repo unset'}
-          aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls={menuId}
-          {...projectTip.triggerProps}
-          onClick={() => {
-            change.reset();
-            toggle();
-          }}
-        >
-          <FolderIcon />
-          <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
-          <ChevronIcon />
-        </button>
-        {projectTip.tooltip}
-        {!primary && (
-          <span className="ctx-unlinked">Not linked, so the agent can't read files</span>
-        )}
-        {primary && current && (
-          <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
-        )}
-        {primary && !current && (
-          <WorkPlaceMenu
-            conversationId={conversationId}
-            projectId={primary.id}
-            checkoutBranch={branch}
-          />
-        )}
-        <TalkToChip conversationId={conversationId} />
-        {primary && autonomy && <AutonomyChip {...autonomy} />}
-        {primary && <AgentSetup key={primary.id} repos={repos} />}
-        {suggestion}
-      </div>
-      <RepoMenu
-        id={menuId}
-        open={open}
-        panelRef={panelRef}
-        linked={repos}
-        recent={recent}
-        busy={change.isPending}
-        error={error ?? (projects.isError ? projects.error.message : null)}
-        onChange={apply}
-        onBrowse={openBrowser}
-      />
-      <AnimatePresence>
-        {browsing && (
-          <FolderDialog
-            key="folders"
-            linking={change.isPending}
-            error={change.isError ? change.error.message : null}
-            onUse={(rootPath) => apply({ type: 'add', rootPath })}
-            onClose={closeBrowser}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+    <ProjectFolders conversationId={conversationId} repos={repos} popover={popover}>
+      {!primary && <span className="ctx-unlinked">Not linked, so the agent can't read files</span>}
+      {primary && current && (
+        <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
+      )}
+      {primary && !current && (
+        <WorkPlaceMenu
+          conversationId={conversationId}
+          projectId={primary.id}
+          checkoutBranch={branch}
+        />
+      )}
+      <TalkToChip conversationId={conversationId} />
+      {primary && autonomy && <AutonomyChip {...autonomy} />}
+      {primary && <AgentSetup key={primary.id} repos={repos} />}
+      {suggestion}
+    </ProjectFolders>
   );
 }

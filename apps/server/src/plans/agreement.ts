@@ -1,6 +1,6 @@
-import { PLAN_AGREED_ACT_AT, PLAN_AGREED_OFFER_AT } from '../advisor/policy.ts';
+import { PLAN_AGREED_ACT_AT } from '../advisor/policy.ts';
 
-export type PlanAgreementAction = 'save' | 'offer' | 'none';
+export type PlanAgreementAction = 'save' | 'none';
 
 const AGREEMENT =
   /^\s*(yes|yep|yeah|ok|okay|sure|go ahead|go for it|do (that|it)|sounds good|looks good|lgtm|let'?s do (it|that)|approved?|proceed|ship it)\b/i;
@@ -18,9 +18,6 @@ function atLeast(score: Score, threshold: number): boolean {
 }
 
 export function planAgreementAction(agreed: Score, previousIsPlan: Score): PlanAgreementAction {
-  const both = (threshold: number) =>
-    atLeast(agreed, threshold) && atLeast(previousIsPlan, threshold);
-  if (both(PLAN_AGREED_ACT_AT)) return 'save';
-  if (both(PLAN_AGREED_OFFER_AT)) return 'offer';
-  return 'none';
+  const both = atLeast(agreed, PLAN_AGREED_ACT_AT) && atLeast(previousIsPlan, PLAN_AGREED_ACT_AT);
+  return both ? 'save' : 'none';
 }

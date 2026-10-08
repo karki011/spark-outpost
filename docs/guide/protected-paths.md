@@ -3,16 +3,16 @@ title: Protected paths
 section: Reference
 type: reference
 order: 616
-summary: The hard rails - what always asks or is refused in every agent mode and at both autonomy levels.
+summary: The hard rails - what always asks or is refused in a chat, in every agent mode and at both autonomy levels.
 ---
 
-These hold in every agent mode, at both autonomy levels, for every agent. No setting turns them off.
+These hold in every chat, agent mode and autonomy level, not in [Terminal sessions](terminals.md). No setting turns them off.
 
 ## What always asks
 
 | What                         | Examples                                                                                                             | What happens                                                                   |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Secret files**             | See the list below                                                                                                   | Changes ask. Reading follows your agent's mode.                                |
+| **Secret files**             | See the list below                                                                                                   | Changes ask. Reading follows your agent's mode, anywhere.                      |
 | **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                  | Reading asks too.                                                              |
 | **Agent instruction files**  | `AGENTS.md` and `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.claude/`, `.cursor/rules/`, `.spark/` | Always ask, with **Allow once** or **Allow for this chat**.                    |
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` commands                                                                 | Ask with hold to confirm. Other files in `.git` can't be changed.              |
@@ -30,7 +30,7 @@ Claude can't edit secret files or force push even in **Bypass permissions**. Rea
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
 - Merging a pull request.
-- Hosting tools other than `gh pr create`, `gh pr view` and `gh pr edit` for the chat's own pull request.
+- Changing things with hosting tools, except `gh pr create` and `gh pr edit` on the chat's own pull request. Reading with `gh` follows the agent's mode.
 
 A blocked step says "Spark's policy blocked", so you can tell it from your own **Deny**.
 

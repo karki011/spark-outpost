@@ -159,6 +159,7 @@ export function WorkPanel({
         className={`wp${open ? ' on' : ''}${wide ? '' : ' over'}${browsing ? ' browser' : ''}`}
         id="work-panel"
         aria-label="Work panel"
+        data-chat-links=""
         inert={!open}
         style={{ '--wp-w': `${width ?? limits.fallback}px` } as CSSProperties}
         onKeyDown={(event) => {

@@ -142,6 +142,10 @@ export const profileSchema = z.object({
   prFollowUpAsk: z.boolean().default(false),
   personality: personalitySchema.default(DEFAULT_PERSONALITY),
   sparkEnabled: z.boolean().default(true),
+  agentInstructions: z.string().max(8000).optional(),
+  agentInstructionsFile: z.string().max(4096).optional(),
+  agentInstructionsFileSet: z.boolean().optional(),
+  agentInstructionsFileError: z.string().nullable().optional(),
   defaultLevel: involvementLevelSchema.default(DEFAULT_INVOLVEMENT_LEVEL),
   defaultLevelNotice: z.boolean().default(false),
   morningBrief: z.boolean().default(true),
@@ -154,7 +158,11 @@ export const profileSchema = z.object({
   busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
 });
 export type Profile = z.infer<typeof profileSchema>;
-export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'> & {
+export type SparkSessionPrefs = Pick<
+  Profile,
+  'displayName' | 'personality' | 'agentInstructions'
+> & {
+  sparkEnabled?: boolean;
   teammate?: TeammateBrief | null;
 };
 
@@ -182,6 +190,8 @@ export const updateProfileRequestSchema = z
     prFollowUpAsk: z.boolean(),
     personality: personalitySchema,
     sparkEnabled: z.boolean(),
+    agentInstructions: z.string().max(8000),
+    agentInstructionsFile: z.string().max(4096),
     defaultLevel: involvementLevelSchema,
     defaultLevelNotice: z.literal(false),
     morningBrief: z.boolean(),

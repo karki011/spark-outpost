@@ -4,6 +4,7 @@ import { analyticsRoutes } from './analytics-routes.ts';
 import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
+import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
 import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
@@ -30,7 +31,6 @@ import { remoteAccessParts } from '../remote/access.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
-import { planRoutes } from './plan-routes.ts';
 import { previewRoutes } from './preview-routes.ts';
 import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
@@ -44,6 +44,8 @@ import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { PreviewServers } from '../preview/servers.ts';
+import type { NativeRuntime } from '../terminal/native-runtime.ts';
+import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
 
 export interface AppOptions
   extends
@@ -60,6 +62,7 @@ export interface AppOptions
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
+  nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
   appEvents: AppEventFeed;
   port: number;
@@ -91,7 +94,7 @@ export function createAppParts(options: AppOptions) {
     ]),
   );
   app.use('/api', attachmentRoutes(options));
-  app.use(express.json({ limit: '256kb' }));
+  app.use(jsonBody());
   app.use(remote.bodyGuard);
   app.use('/api', remote.routes);
   app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));
@@ -116,7 +119,6 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', ticketRoutes(options));
   app.use('/api', chatTicketRoutes(options));
   app.use('/api', slackRoutes(options));
-  app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
@@ -126,15 +128,17 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', analyticsRoutes(options));
   app.use('/api', diagnosticsRoutes(options));
   app.use('/api', terminalRoutes(options));
+  app.use('/api', nativeTerminalRoutes(options.nativeTerminals));
   app.use('/api', previewRoutes(options));
   app.use('/api', signInRoutes(options));
   app.use(
     '/api',
     resetRoutes({
       ...options,
-      stopTerminals: () => {
+      stopTerminals: async () => {
+        await options.nativeTerminals?.stopAll();
         options.terminals.killAll();
-        void options.previews.stopAll('reset');
+        await options.previews.stopAll('reset');
       },
     }),
   );

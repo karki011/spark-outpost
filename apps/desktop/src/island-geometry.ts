@@ -53,8 +53,8 @@ export function islandDisplay(
   primaryId: number,
 ): DisplayInfo | null {
   return (
-    displays.find((display) => display.internal) ??
     displays.find((display) => display.id === primaryId) ??
+    displays.find((display) => display.internal) ??
     displays[0] ??
     null
   );
@@ -176,8 +176,16 @@ export function placement(
   const home = islandDisplay(displays, primaryId);
   if (!home) return null;
   if (!saved.docked) {
-    const host = displays.find((display) => contains(display.bounds, saved));
-    if (host) return { display: host, position: clampToDisplay(saved, host), docked: false };
+    const anchor = { x: saved.x + ISLAND_WIDTH / 2, y: saved.y };
+    const host = displays.find((display) => contains(display.bounds, anchor));
+    if (host) {
+      const docked = nearDock(saved, host);
+      return {
+        display: host,
+        position: docked ? dockedPosition(host) : clampToDisplay(saved, host),
+        docked,
+      };
+    }
   }
   return { display: home, position: dockedPosition(home), docked: true };
 }

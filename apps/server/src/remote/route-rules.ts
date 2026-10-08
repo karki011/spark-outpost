@@ -66,7 +66,6 @@ GET /api/conversations/:id/mcp
 GET /api/model-cards
 GET /api/runs/:id/outcome
 PUT /api/runs/:id/feedback
-POST /api/conversations/:id/plans
 GET /api/conversations/:id/pull-requests
 POST /api/conversations/:id/pull-requests/refresh
 GET /api/project-clones
@@ -163,6 +162,10 @@ POST /api/remote/tailscale/off
 DELETE /api/terminal/sessions/:id
 GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
+POST /api/terminal/sessions/:id/attach
+GET /api/conversations/:id/terminal
+POST /api/conversations/:id/terminal
+DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
 POST /api/terminal/previews
 GET /api/conversations/:id/preview

@@ -55,39 +55,41 @@ test("Claude's plan shows on the approval card, and once approved it is the agre
   await expect(work.getByRole('region', { name: 'Agreed plan' })).toContainText('Approved');
 });
 
-test('an unsure agreement offers to save the plan, and older plans fold away in the Plan tab', async ({
+test('a reply you agree to becomes the agreed plan, and older plans fold away in the Plan tab', async ({
   page,
 }) => {
   test.setTimeout(120_000);
   await crewChat(page, repo, 'Full auto');
   await send(page, 'How would you add CSV export? #planreply #build');
   const first = page.getByRole('region', { name: 'Turn' }).first();
-  await expect(first.getByRole('button', { name: 'Save as agreed plan' })).toBeVisible({
+  await expect(first.getByRole('heading', { name: 'Add CSV export' })).toBeVisible({
     timeout: 30_000,
   });
+  await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);
 
-  await send(page, 'ok I guess #maybe #build');
-  const offer = page.getByText('Save the plan above as the agreed plan?');
-  await expect(offer).toBeVisible({ timeout: 30_000 });
-  await page
-    .locator('.saveplan.offer')
-    .getByRole('button', { name: 'Save as agreed plan' })
-    .click();
-  await expect(offer).toHaveCount(0);
-  await expect(first.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible();
-
+  await send(page, 'sounds good, go ahead #agreed #build');
+  await expect(first.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible({
+    timeout: 30_000,
+  });
   const second = page.getByRole('region', { name: 'Turn' }).nth(1);
   await expect(second.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
+
   await send(page, 'How would you do the next part? #planreply #build');
   const third = page.getByRole('region', { name: 'Turn' }).nth(2);
-  await third.getByRole('button', { name: 'Save as agreed plan' }).click({ timeout: 30_000 });
-  await expect(third.getByRole('status').filter({ hasText: 'Agreed plan v2' })).toBeVisible();
+  await expect(third.getByRole('heading', { name: 'Add CSV export' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await send(page, 'yes, do that #agreed #build');
+  await expect(third.getByRole('status').filter({ hasText: 'Agreed plan v2' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);
 
   const work = panel(page);
   await work.getByRole('tab', { name: 'Plan' }).click();
   const agreed = work.getByRole('region', { name: 'Agreed plan' });
   await expect(agreed.locator('.wsec-h .vbadge')).toHaveText('v2');
-  await expect(agreed).toContainText('saved by you');
+  await expect(agreed).toContainText('agreed in chat');
   const older = agreed.getByRole('button', { name: 'Older versions · 1' });
   await expect(older).toHaveAttribute('aria-expanded', 'false');
   await older.click();
@@ -96,7 +98,7 @@ test('an unsure agreement offers to save the plan, and older plans fold away in 
   await expect(agreed.locator('.pv')).toContainText('agreed in chat');
 });
 
-test('a plan-only request writes the plan, changes nothing, and raises no card; the reply saves as the agreed plan', async ({
+test('a plan-only request writes the plan, changes nothing, raises no card and shows no Save as agreed plan button', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -113,8 +115,8 @@ test('a plan-only request writes the plan, changes nothing, and raises no card; 
   await expect(turn.getByText('Answered without changing files.')).toBeVisible();
   await expect(card(page, /Approve the plan\?/)).toHaveCount(0);
   await expect(card(page, /Jev has a question/)).toHaveCount(0);
-  await turn.getByRole('button', { name: 'Save as agreed plan' }).click();
-  await expect(turn.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);
+  await expect(page.getByText(/Agreed plan v\d/)).toHaveCount(0);
 
   expect(repo.notes()).toBe('start\n');
 });

@@ -16,6 +16,8 @@ You'll watch the agents on a request, message one, and steer big work. About 2 m
 
 Agent TV keeps following its chat while you open another.
 
+After a turn, the context rail keeps its crew: role, model, result and cost.
+
 ## Message a crew member
 
 1. Select **Message** on the agent's row in **Agent TV**, in the **Crew** tab of the **Work** panel, or in the chat.

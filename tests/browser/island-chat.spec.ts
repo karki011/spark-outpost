@@ -163,20 +163,18 @@ test('Sessions lists every active chat and opens one inline to read, approve and
   ).toEqual([chatId]);
 });
 
-test('when Spark is in the background a request shows a short pill that opens the chat on its card', async ({
-  page,
-}) => {
+test('when Spark is in the background a waiting blob opens its chat', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await openWithDesktop(page, false);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await seedWaitingChat();
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  const pill = island(page).locator('.isl-nudge');
-  await expect(pill).toContainText('Approve: run npm test');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  const blob = page.getByRole('button', { name: /Chat: Speed up the test suite/ });
+  await expect(blob).toBeVisible();
   await page.waitForTimeout(500);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await shot(page, 'nudge');
-  await pill.click();
+  await blob.click();
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
   await expect(waiting).toBeFocused();

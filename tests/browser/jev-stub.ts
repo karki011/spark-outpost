@@ -5,7 +5,7 @@ export const DEBUG_MARKER = '#debug';
 export const VAGUE_MARKER = '#vague';
 export const UNSUPPORTED_MARKER = '#unsupported';
 export const DECLINED_MARKER = '#declined';
-export const MAYBE_AGREED_MARKER = '#maybe';
+export const AGREED_MARKER = '#agreed';
 
 interface StubQuestion {
   type: 'choice' | 'score' | 'noul';
@@ -37,8 +37,8 @@ function nouls(task: string): Record<string, number> {
     destructive: 0.03,
     vague: task.includes(VAGUE_MARKER) ? 0.96 : 0.04,
     continues_task: 0.9,
-    plan_agreed: task.includes(MAYBE_AGREED_MARKER) ? 0.7 : 0.05,
-    previous_is_plan: task.includes(MAYBE_AGREED_MARKER) ? 0.9 : 0.05,
+    plan_agreed: task.includes(AGREED_MARKER) ? 0.93 : 0.05,
+    previous_is_plan: task.includes(AGREED_MARKER) ? 0.95 : 0.05,
     injection: 0.02,
   };
 }

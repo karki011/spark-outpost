@@ -1,4 +1,6 @@
 import { setupStateFor } from '../remote/redaction.ts';
+import { isRemote } from '../remote/principal.ts';
+import { AgentInstructionsError } from '../setup/agent-instructions.ts';
 import { Router, type Request, type Response } from 'express';
 import { forgetRejectedModels } from '../model-access/store.ts';
 import {
@@ -99,8 +101,18 @@ export function setupRoutes(deps: SetupDeps): Router {
   });
 
   router.patch('/profile', async (req, res) => {
-    await updateProfile(db, workspaceId, parseBody(updateProfileRequestSchema, req));
-    res.json(await setupState());
+    const update = parseBody(updateProfileRequestSchema, req);
+    if (isRemote(res) && update.agentInstructionsFile !== undefined) {
+      res.status(403).json({ error: 'Choose local instruction files on your Mac.' });
+      return;
+    }
+    try {
+      await updateProfile(db, workspaceId, update);
+    } catch (error) {
+      if (error instanceof AgentInstructionsError) throw new BadRequestError(error.message);
+      throw error;
+    }
+    res.json(setupStateFor(res, await setupState()));
   });
 
   function startVerification(id: ConnectableId, request: VerifyRequest): Verification {
@@ -168,7 +180,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       secrets,
     });
     await recordTest(db, workspaceId, provider, outcome);
-    res.json(await setupState());
+    res.json(setupStateFor(res, await setupState()));
   });
 
   router.delete('/providers/:provider/connection', async (req, res) => {
@@ -177,7 +189,7 @@ export function setupRoutes(deps: SetupDeps): Router {
     if (advisor.success) await disconnectAdvisor(db, workspaceId, advisor.data);
     else await disconnectProvider(db, workspaceId, providerIdSchema.parse(provider));
     await secrets.delete(provider);
-    res.json(await setupState());
+    res.json(setupStateFor(res, await setupState()));
   });
 
   router.patch('/providers/:provider/defaults', async (req, res) => {
@@ -188,7 +200,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       provider,
       parseBody(updateProviderDefaultsRequestSchema, req),
     );
-    res.json(await setupState());
+    res.json(setupStateFor(res, await setupState()));
   });
 
   return router;

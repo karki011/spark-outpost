@@ -63,4 +63,63 @@ describe('Spark tools host', () => {
     expect((await fetch(grant.url, { headers: auth })).status).toBe(405);
     expect((await post(grant.url, auth, '{not json')).status).toBe(400);
   });
+
+  it('checks the native turn before dispatching a tool and fails closed when unavailable', async () => {
+    let calls = 0;
+    const grant = await host.grant({
+      ...scope,
+      beforeToolCall: async () => {
+        calls += 1;
+        throw new Error('Ended turn');
+      },
+    });
+    const auth = { Authorization: `Bearer ${grant.token}` };
+    expect((await post(grant.url, auth)).status).toBe(200);
+    expect(calls).toBe(0);
+    const response = await post(
+      grant.url,
+      auth,
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'spark_docs', arguments: {} },
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(calls).toBe(1);
+    expect(await response.text()).not.toContain('Ended turn');
+  });
+
+  it('does not dispatch a tool if its grant is revoked while waiting for the native turn', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const grant = await host.grant({
+      ...scope,
+      beforeToolCall: async () => {
+        entered();
+        await waiting;
+      },
+    });
+    const response = post(
+      grant.url,
+      { Authorization: `Bearer ${grant.token}` },
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: { name: 'spark_docs', arguments: {} },
+      }),
+    );
+    await started;
+    grant.revoke();
+    release();
+    expect((await response).status).toBe(401);
+  });
 });

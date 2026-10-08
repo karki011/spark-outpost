@@ -1,9 +1,10 @@
-import { MESSAGE_MAX_LENGTH, type FeedbackTriage } from '@spark-outpost/contracts';
+import type { FeedbackTriage } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import type { StoredFeedback } from '../persistence/pr-watches.ts';
 
 const DATA_TAG = 'pr_feedback';
 const MAX_ITEM_CHARS = 1_500;
+const FOLLOW_UP_PROMPT_MAX_LENGTH = 20_000;
 const SKIPPED_NOTE =
   /^\W*(?:skip(?:ped)?|not (?:changed|fixed)|left (?:it|as is|unchanged)|did(?:n't| not) (?:change|fix))\b/i;
 const NOTE_LINE = /^\s*(?:[-*]\s*)?\[(F\d+)\]\s*[:-]?\s*(.+?)\s*$/;
@@ -83,7 +84,7 @@ export function roundPrompt(target: RoundTarget, items: readonly StoredFeedback[
     '[F4] left for you: why the user has to decide',
     'Then one closing summary for the user: what you fixed, what you pushed back on and why, and what is left for them.',
   ].join('\n');
-  const budget = MESSAGE_MAX_LENGTH - head.length - tail.length - 100;
+  const budget = FOLLOW_UP_PROMPT_MAX_LENGTH - head.length - tail.length - 100;
   const blocks: string[] = [];
   let used = 0;
   for (const item of items) {

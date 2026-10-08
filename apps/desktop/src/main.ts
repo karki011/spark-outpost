@@ -9,7 +9,7 @@ import {
   session,
   shell,
 } from 'electron';
-import { isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
+import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
 import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
@@ -29,7 +29,9 @@ import { FileLog } from './file-log.ts';
 import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
-import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
+import type { Database, DatabaseOptions } from './postgres.ts';
+import { LocalRuntime } from './runtime-client.ts';
+import { serverEntry } from './runtime-entries.ts';
 import { startPrivacy, type Privacy } from './privacy.ts';
 import {
   apiEnv,
@@ -39,12 +41,12 @@ import {
   type ServerLaunch,
 } from './server-env.ts';
 import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
-import { forkService, OutputTail, type ServiceOptions } from './service.ts';
+import type { ServiceOptions } from './service.ts';
+import { RuntimeServices } from './runtime-services.ts';
 import { createShutdown } from './shutdown.ts';
 import { bakedSignInEnv, deliverSlackCallback, isSlackCallback } from './slack-sign-in.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
-import { Supervisor } from './supervisor.ts';
 import {
   failureDialog,
   isMigrationFailure,
@@ -86,7 +88,8 @@ app.setAppLogsPath(paths.logs);
 process.env.LC_ALL = POSTGRES_LOCALE;
 
 let database: Database | null = null;
-const supervisors: Supervisor[] = [];
+let runtime: LocalRuntime | null = null;
+let services: RuntimeServices | null = null;
 let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
@@ -123,39 +126,27 @@ function supervise(
   ready: () => boolean,
   connect?: ServiceOptions['connect'],
 ) {
-  const tail = new OutputTail();
-  const supervisor = new Supervisor({
-    start: () =>
-      forkService(
-        {
-          name,
-          bootstrap,
-          entry,
-          cwd: serverDir,
-          env,
-          log: log(name),
-          ...(connect ? { connect } : {}),
-        },
-        tail,
-      ),
-    onRestart: (delayMs, code) => {
-      if (!ready()) {
-        fail(`${name} stopped during startup (exit ${code}).`, tail.text());
-        return;
-      }
-      mainLog(`${name} exited with ${code}; restarting in ${delayMs} ms.`);
+  services!.start(
+    {
+      name,
+      bootstrap,
+      entry,
+      cwd: serverDir,
+      env,
+      log: log(name),
+      ...(connect ? { connect } : {}),
     },
-    onGiveUp: (code) => fail(`${name} keeps stopping (last exit ${code}).`, tail.text()),
-  });
-  supervisors.push(supervisor);
-  supervisor.start();
+    ready,
+  );
 }
 
 async function stopEverything(): Promise<void> {
   await bootTeasers.saveNow();
-  await Promise.all(supervisors.map((supervisor) => supervisor.stop()));
-  mainLog('API and worker stopped; stopping Postgres.');
-  await database?.stop();
+  await services?.stop();
+  services = null;
+  mainLog('API and worker stopped; stopping the local runtime.');
+  await runtime?.stop();
+  runtime = null;
   database = null;
   mainLog('Stopped.');
 }
@@ -208,18 +199,6 @@ function fail(message: string, detail: string): void {
   shutdown.fail(message, detail);
 }
 
-async function runOnce(name: string, entry: string, env: NodeJS.ProcessEnv) {
-  const tail = new OutputTail();
-  const service = forkService(
-    { name, bootstrap, entry, cwd: serverDir, env, log: log(name) },
-    tail,
-  );
-  const code = await service.exited;
-  return code === 0
-    ? { ok: true as const }
-    : { ok: false as const, detail: tail.text() || `The migration exited with ${code}.` };
-}
-
 async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOptions) {
   const effects = startupMigrationEffects({
     paths,
@@ -231,14 +210,17 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
       database = null;
     },
     startDatabase: async () => {
-      database = await startDatabase(options);
+      database = await runtime!.database(options);
     },
     runMigrate: () =>
-      runOnce(
-        'Spark Outpost Migrate',
-        path.join(serverDir, 'src/persistence/migrate-cli.ts'),
-        workerEnv(launchInfo),
-      ),
+      services!.once({
+        name: 'Spark Outpost Migrate',
+        bootstrap,
+        entry: serverEntry(serverDir, 'migrate'),
+        cwd: serverDir,
+        env: workerEnv(launchInfo),
+        log: log('migrate'),
+      }),
     log: log('migrate'),
   });
   const result = await guardMigrations(
@@ -285,16 +267,25 @@ async function launch(): Promise<void> {
   if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
 
+  runtime = await LocalRuntime.connect({
+    userData: paths.userData,
+    version: app.getVersion(),
+    serverDir,
+    bootstrap: path.join(import.meta.dirname, 'runtime-host.js'),
+    log: (name, line) => log(name)(line),
+  });
+  services = new RuntimeServices(runtime, fail, mainLog);
+  const existingRuntime = await runtime.info();
   const databaseOptions: DatabaseOptions = {
     dataDir: paths.postgresData,
     passwordFile: paths.postgresPassword,
-    port: await freePort(),
+    port: existingRuntime.database?.port ?? (await freePort()),
     log: log('postgres'),
   };
   spark?.status('database');
   const started = await prepareBoot({
     startDatabase: async () => {
-      database = await startDatabase(databaseOptions);
+      database = await runtime!.database(databaseOptions);
       return database;
     },
     adoptShellPath: async () => {
@@ -304,13 +295,15 @@ async function launch(): Promise<void> {
       if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
     },
   });
-  const apiPort = await stableApiPort(paths.userData, {
-    isFree: portIsFree,
-    fallback: freePort,
-    log: mainLog,
-  });
+  const apiPort =
+    existingRuntime.api?.port ??
+    (await stableApiPort(paths.userData, {
+      isFree: portIsFree,
+      fallback: freePort,
+      log: mainLog,
+    }));
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
-  const token = createLaunchToken();
+  const token = existingRuntime.api?.token ?? createLaunchToken();
   const launchInfo: ServerLaunch = {
     config,
     paths,
@@ -325,18 +318,10 @@ async function launch(): Promise<void> {
       ...process.env,
     },
   };
-  if (!(await migrateBeforeStart(launchInfo, databaseOptions))) return;
+  if (!existingRuntime.api && !(await migrateBeforeStart(launchInfo, databaseOptions))) return;
+  await runtime.configure({ port: apiPort, token, version: app.getVersion() });
 
   spark?.status('spark');
-  let apiReady = false;
-  supervise(
-    'Spark Outpost API',
-    path.join(serverDir, 'src/api/main.ts'),
-    apiEnv(launchInfo),
-    () => apiReady,
-  );
-  await waitForApi(apiUrl, token, shutdown.failed);
-  apiReady = true;
   const browserHost = await startBrowserHost({
     window: () => spark?.window ?? null,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
@@ -345,9 +330,19 @@ async function launch(): Promise<void> {
     log: log('browser'),
   });
   browser = browserHost;
+  let apiReady = false;
+  supervise(
+    'Spark Outpost API',
+    serverEntry(serverDir, 'api'),
+    { ...apiEnv(launchInfo), [BROWSER_HOST_ENV]: '1' },
+    () => apiReady,
+    (port) => browserHost.connectWorker(port),
+  );
+  await waitForApi(apiUrl, token, shutdown.failed);
+  apiReady = true;
   supervise(
     'Spark Outpost Worker',
-    path.join(serverDir, 'src/workflow/main.ts'),
+    serverEntry(serverDir, 'worker'),
     browserWorkerEnv(launchInfo),
     () => true,
     (port) => browserHost.connectWorker(port),
@@ -476,9 +471,7 @@ if (!app.requestSingleInstanceLock()) {
     openLink(url);
   });
   app.on('activate', showSpark);
-  app.on('window-all-closed', () => {
-    if (!companionHost?.companion.running()) app.quit();
-  });
+  app.on('window-all-closed', () => undefined);
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
   nativeUpdater.on('before-quit-for-update', () => {
     companionHost?.dispose();

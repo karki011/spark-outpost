@@ -6,7 +6,7 @@ order: 332
 summary: Find what needs you in the Tickets inbox, start a chat from a ticket, and follow it through to a pull request.
 ---
 
-You'll find your tickets in Spark and turn one into a chat. About 2 minutes.
+You'll start work from a ticket. About 2 minutes.
 
 First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
 
@@ -20,22 +20,23 @@ First [connect Jira or Linear](tickets-and-github.md#connect-jira-or-linear).
 
 Snooze hides a ticket until later. **Dismiss** clears a **Needs you** ticket until something changes.
 
-Failing checks show as a badge in **In review / PR open**; opening the ticket marks them seen.
+Failing checks appear under **In review / PR open**.
 
-Select a ticket for **Development**: pull requests from Spark, your tracker or a key match. Drag the pane's edge to resize.
+Select a ticket for **Development**, including linked pull requests.
 
 ## Start a chat from a ticket
 
 1. Point at a ticket's row and select **Start**.
-2. Under **How to start**, pick **Plan first** or **Build**.
-3. Pick the **Project folder**.
-4. Leave **Move** _KEY_ **to In progress** on to update your tracker.
-5. Optionally open **Add context** for a **Note**, **Add link**, **Add files** or **Add folder**.
-6. Select **Start with a plan** or **Start building**.
+2. Pick **Chat** or **Terminal**; Terminal also asks for **Claude Code** or **Codex**.
+3. Under **How to start**, pick **Plan first** or **Build**.
+4. Pick the **Project folder**.
+5. Leave **Move** _KEY_ **to In progress** on to update your tracker.
+6. Optionally open **Add context** for a **Note**, **Add link**, **Add files** or **Add folder**.
+7. Select **Start with a plan** or **Start building**.
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-The chat starts with the ticket's key, title, status and link; the agent reads the rest with `spark_tickets`.
+Both types receive the ticket brief and your context. Terminal uses the native agent with Spark tools; answer questions there.
 
 Ticket text is data, never instructions. For a link or a folder, Spark sends only the address or path. Secret files are refused.
 

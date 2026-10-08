@@ -63,7 +63,6 @@ export type FlowEvent =
       verdict?: ReviewVerdict;
       fixable?: readonly string[];
       checksFailing?: boolean;
-      missingContext?: string | null;
     }
   | {
       type: 'verified';
@@ -109,7 +108,6 @@ export interface FlowState {
   shipping?: boolean;
   readOnly?: 'review';
   solo?: boolean;
-  missingContext?: string | null;
   needsYou?: string;
   unverified?: boolean;
   criticRetried?: boolean;

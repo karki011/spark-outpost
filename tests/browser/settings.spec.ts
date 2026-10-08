@@ -74,15 +74,17 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   );
   await expect(spark.getByRole('tab', { name: 'Profile' })).toHaveCount(0);
 
-  const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });
+  const sparkSwitch = spark.getByRole('switch', { name: 'Use Spark workflow', exact: true });
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
+  await expect(spark.locator('.spark-options')).not.toHaveAttribute('open');
+  await spark.getByText('Workflow options', { exact: true }).click();
   const switches = spark.getByRole('switch');
   await expect(switches).toHaveCount(8);
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
   await expect(sparkSwitch).toHaveAccessibleDescription(
-    'Spark reads, routes and reviews your work.',
+    'Chat routes and reviews work. Terminal includes Spark tools.',
   );
   await sparkSwitch.focus();
   const saved = page.waitForResponse(
@@ -91,14 +93,16 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await page.keyboard.press('Enter');
   await saved;
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'false');
-  await expect(sparkSwitch).toHaveAccessibleDescription('Chats go straight to the agent you pick.');
+  await expect(sparkSwitch).toHaveAccessibleDescription(
+    'Use your agent directly with your custom instructions.',
+  );
   await expect(spark.locator('.spark-preview .scout')).toHaveClass(/sleep/);
 
   const personality = spark.getByRole('radiogroup', { name: 'Personality' });
   await personality.getByRole('radio', { name: 'Just the facts' }).click();
   await expect(personality).toHaveAccessibleDescription('Short answers, no small talk.');
 
-  const info = spark.getByRole('button', { name: 'More about Spark', exact: true });
+  const info = spark.getByRole('button', { name: 'More about Use Spark workflow', exact: true });
   await info.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('tooltip')).toContainText('rules pick the model');
@@ -140,6 +144,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await expect.poll(savedWait).toBe(45);
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
+  await spark.getByText('Workflow options', { exact: true }).click();
   await expect(wait.getByRole('radio', { name: 'Custom' })).toBeChecked();
   await expect(custom).toHaveValue('45');
   await wait.getByRole('radio', { name: '2 min' }).click();
@@ -232,6 +237,7 @@ test('Spark sets what Full auto does when checks still fail, opening the draft P
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByText('Workflow options', { exact: true }).click();
   const choice = page.getByRole('dialog', { name: 'Spark' }).getByRole('radiogroup', {
     name: 'When checks still fail in Full auto',
   });
@@ -321,6 +327,7 @@ test('context compaction thresholds validate inline and save from Spark settings
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Spark' });
+  await spark.getByText('Workflow options', { exact: true }).click();
   const warn = spark.getByRole('textbox', { name: 'Warn when context is, in percent' });
   const compact = spark.getByRole('textbox', { name: 'Compact automatically at, in percent' });
   const saved = () =>

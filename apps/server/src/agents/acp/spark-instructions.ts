@@ -48,6 +48,14 @@ export function sparkInstructions(
   sparkTools = false,
   browser = false,
 ): string {
+  const custom = prefs.agentInstructions?.trim();
+  const standing = [
+    custom ? `# Custom instructions from the user\n${custom}` : '',
+    prefs.teammate ? teammateBriefText(prefs.teammate) : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  if (prefs.sparkEnabled === false) return standing;
   const name = firstName(prefs.displayName);
   const lines = [
     HEADER,
@@ -60,7 +68,7 @@ export function sparkInstructions(
     ...(sparkTools && browser ? [SPARK_BROWSER_LINE] : []),
   ];
   const base = lines.join('\n').slice(0, SPARK_INSTRUCTIONS_MAX_LENGTH);
-  return prefs.teammate ? `${base}\n\n${teammateBriefText(prefs.teammate)}` : base;
+  return standing ? `${base}\n\n${standing}` : base;
 }
 
 function joined(first: string | null, second: string): string {

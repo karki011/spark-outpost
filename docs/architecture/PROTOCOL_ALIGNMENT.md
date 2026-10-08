@@ -66,7 +66,11 @@ The worker writes `TEXT_MESSAGE_CONTENT` and `REASONING_MESSAGE_CONTENT` events 
 
 Command output events are written by `apps/server/src/workflow/command-recorder.ts`, batched for 100 ms and capped per command; what each adapter provides is in [ACP_AGENTS.md](ACP_AGENTS.md#command-output-in-the-chat-october-6-2026). Evidence: `command-output.test.ts`, `command-recorder.test.ts`, `acp-terminal.test.ts`, `command-terminal.db.test.ts` (fake agent); the live check is reported there separately.
 
-Real providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGENTS.md)). The fake provider, which echoes the message, remains for tests; it is not evidence of any real provider capability.
+Chat providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGENTS.md)). Separate Terminal sessions run the installed Claude Code or Codex interactive CLI in a Spark-owned PTY, with session-scoped Spark MCP tools. They do not create ACP worker jobs or Coordinator/Builder runs. See [native Terminal sessions](NATIVE_TERMINALS.md).
+
+Native Terminal hooks are tested against Claude Code 2.1.280 and Codex CLI 0.153.4. Other versions launch with activity observation marked unsupported. Codex session hooks retain the CLI's own trust requirement. A version match alone does not establish that hooks are active: until an authenticated observation arrives, activity remains unknown. Terminal output stays in the PTY and its bounded memory replay; it is not translated into an AG-UI transcript. Native usage and cost are not inferred from output.
+
+Native lifecycle writes use a session-generation fence rather than a worker lease. Duplicate launch reservations, duplicate event IDs, stale generations, and interrupted recovery are covered by `native-terminal-turns.db.test.ts`; direct process launch and same-process reattachment are covered by `agent-sessions.test.ts`. These fixtures do not establish live provider acceptance. The fake provider, which echoes the message, remains for tests; it is not evidence of any real provider capability.
 
 ## Deviations from the AG-UI client model
 

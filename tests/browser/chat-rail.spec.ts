@@ -38,6 +38,8 @@ async function setWideWindows(page: Page, choice: string) {
   await page.keyboard.press('Escape');
 }
 
+const RAIL_SHOTS = process.env.RAIL_SHOTS ?? '';
+
 test.beforeAll(() => {
   mkdirSync(SHOTS, { recursive: true });
 });
@@ -216,7 +218,7 @@ test.describe('working chats', () => {
     repo = null;
   });
 
-  test('Agent TV docks in the rail while a turn runs, opens the full TV and leaves when it ends', async ({
+  test('Agent TV docks in the rail while a turn runs, opens the full TV and leaves the crew listed when it ends', async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -226,7 +228,7 @@ test.describe('working chats', () => {
     repo = crewRepo();
     await page.setViewportSize(WIDE);
     await crewChat(page, repo, 'Full auto');
-    await send(page, CREW_REQUEST);
+    await send(page, `${CREW_REQUEST} #build #crew`);
 
     const dock = rail(page).locator('.crail-tv');
     await expect(dock).toBeVisible({ timeout: 30_000 });
@@ -256,7 +258,35 @@ test.describe('working chats', () => {
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
     expect(after.width).toBe(before.width);
+    const crew = rail(page).getByRole('region', { name: 'Crew' });
+    const members = crew.getByRole('list', { name: 'Crew members' }).getByRole('listitem');
+    await expect(crew.getByRole('heading')).toHaveText('Crew · 3 agents');
+    await expect(members).toHaveCount(3);
+    await expect(members.nth(0)).toContainText('JevDoneDispatcher');
+    await expect(members.nth(1)).toContainText('BoltDoneBuilder · Opus 5.5');
+    await expect(members.nth(2)).toContainText(/Hawk(Done|Failed)Critic/);
+    expect(
+      await crew.evaluate(
+        (section) =>
+          section.getAnimations({ subtree: true }).filter((animation) => {
+            const timing = animation.effect?.getComputedTiming();
+            return animation.playState === 'running' && timing?.iterations === Infinity;
+          }).length,
+      ),
+    ).toBe(0);
+    const fits = await members.evaluateAll((rows) =>
+      rows.every((row) => row.scrollWidth <= row.clientWidth),
+    );
+    expect(fits).toBe(true);
     await shoot(page, 'crew-done-2000');
+    if (RAIL_SHOTS) await page.screenshot({ path: `${RAIL_SHOTS}/rail-finished-crew-light.png` });
+    await crew.getByRole('button', { name: 'Open Agent TV' }).click();
+    await expect(tv).toBeVisible();
+    await tv.getByRole('button', { name: 'Close Agent TV' }).click();
+    await page.reload();
+    await expect(members).toHaveCount(3);
+    await expect(members.nth(1)).toContainText('BoltDoneBuilder');
+    await expect(members.nth(2)).toContainText('Critic');
 
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();

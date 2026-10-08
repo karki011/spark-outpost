@@ -10,6 +10,7 @@ import { isGitWorkTree } from '../projects/snapshot.ts';
 import { runAgentTurn, startControl } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage, failSafely, finishRun } from '../workflow/execute-run.ts';
+import { planNote } from '../workflow/plan-recorder.ts';
 import { prepareTurn } from '../compaction/prepare-turn.ts';
 import { runAppender } from '../workflow/run-appender.ts';
 import { runEvents } from '../workflow/run-events.ts';
@@ -28,7 +29,6 @@ import {
 } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
-import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
@@ -145,7 +145,6 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
         }
       : {}),
     ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
-    missingContext: missingContext(result.text, result.error),
   };
 }
 
@@ -309,6 +308,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     if (handed === 'finished') return;
     input = handed;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
+    if (prefs.instructionsNote) await planNote(append, prefs.instructionsNote);
     const solo = !prefs.sparkEnabled;
     const planChat = isPlanModeChat(input);
     let planTurn = isPlanCommand(input) || (planChat && solo);

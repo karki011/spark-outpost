@@ -10,12 +10,14 @@ import { BadRequestError, parseBody } from '../api/validation.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { catalogEntry } from '../providers/catalog.ts';
 import type { TerminalSessions } from './sessions.ts';
+import type { NativeRuntime } from './native-runtime.ts';
 import { shellFolder } from './shell-folder.ts';
 
 export interface TerminalRouteDeps {
   db: Queryable;
   workspaceId: string;
   terminals: TerminalSessions;
+  nativeTerminals?: NativeRuntime;
 }
 
 function sessionId(req: Request): string {
@@ -24,7 +26,12 @@ function sessionId(req: Request): string {
   return id.data;
 }
 
-export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps): Router {
+export function terminalRoutes({
+  db,
+  workspaceId,
+  terminals,
+  nativeTerminals,
+}: TerminalRouteDeps): Router {
   const router = Router();
 
   router.post('/terminal/sessions', (req, res) => {
@@ -48,6 +55,16 @@ export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps
     res.status(201).json(response);
   });
 
+  router.post('/terminal/sessions/:id/attach', async (req, res) => {
+    const id = sessionId(req);
+    const attached = (await nativeTerminals?.attachSession(id)) ?? terminals.reattach(id);
+    if (!attached) {
+      res.status(404).json({ error: 'Terminal session is no longer running.' });
+      return;
+    }
+    res.json(attached);
+  });
+
   router.get('/terminal/sessions/:id/busy', async (req, res) => {
     const response: ShellBusyResponse = {
       command: await terminals.runningCommand(sessionId(req)),
@@ -55,8 +72,9 @@ export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps
     res.json(response);
   });
 
-  router.delete('/terminal/sessions/:id', (req, res) => {
-    terminals.kill(sessionId(req));
+  router.delete('/terminal/sessions/:id', async (req, res) => {
+    const id = sessionId(req);
+    if (!(await nativeTerminals?.stopSession(id))) terminals.kill(id);
     res.status(204).end();
   });
 

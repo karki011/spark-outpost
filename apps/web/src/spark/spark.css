@@ -91,3 +91,53 @@
   align-items: center;
   gap: 8px;
 }
+.spark-options > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 10px 0;
+}
+.spark-instructions fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.spark-instructions label {
+  display: block;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.spark-instructions .inp {
+  width: 100%;
+}
+.spark-instructions textarea {
+  resize: vertical;
+}
+.spark-instructions details {
+  margin-top: 10px;
+}
+.spark-instructions details small {
+  display: block;
+  margin-top: 6px;
+  color: var(--danger);
+}
+.spark-instructions summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.spark-instructions-save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.spark-instructions-remote,
+.spark-instructions-save small {
+  color: var(--muted);
+}
+.spark-instructions-remote {
+  margin: 10px 0 0;
+  font-size: 12px;
+}

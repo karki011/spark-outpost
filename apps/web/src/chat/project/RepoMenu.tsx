@@ -144,7 +144,7 @@ export function RepoMenu({
             />
           </svg>
         </span>
-        <b>No project (chat only)</b>
+        <b>No project folder</b>
         <TickIcon />
       </button>
       {error && (

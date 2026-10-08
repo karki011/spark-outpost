@@ -6,15 +6,17 @@ order: 227
 summary: Open your app in the chat's Browser pane, let the agent look at it, and point at what you mean.
 ---
 
-You'll open a page next to a chat, have the agent check it, and select an element for your next message. About 2 minutes. Mac app only.
+You'll open a page beside a chat, let the agent check it, and point at an element. About 2 minutes. Mac app only.
 
 ## Open a page
 
-1. Open a chat and select **Browser** in the chat header, or press **⌘⇧B**.
+1. In a chat, select **Browser** in the header, or press **⌘⇧B**.
 2. Type an address, such as `localhost:5173`, and press **Enter**.
-3. **+** adds a tab; **×** closes one.
+3. **+** adds a tab.
 
 The top-left icons switch **Work** and **Browser**.
+
+Chat links open here; **⌘**-click or **Open in default browser** uses yours.
 
 ## Let the agent look
 
@@ -26,7 +28,7 @@ Ask: "Check the sign-in page".
 | Read a page, take a screenshot, read its logs  | See password or card fields      |
 | Use its own tabs, marked **Agent**             | Navigate a tab you opened        |
 
-Agent tabs close with the turn unless pinned. Screenshots appear in the reply where taken; select to enlarge.
+Agent tabs close with the turn unless pinned. Screenshots appear in the reply; select to enlarge.
 
 A site you opened follows the [agent mode](agent-mode.md): an asking mode shows **Let the agent read this page?**. What a page says is untrusted, never instructions.
 
@@ -40,8 +42,7 @@ Spark keeps it running between turns; **Show output** opens its **Preview** term
 ## Point at something
 
 1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box.
-2. It becomes one **Selected:** chip.
-3. Send.
+2. Send the **Selected:** chip.
 
 ## Save a test sign-in
 

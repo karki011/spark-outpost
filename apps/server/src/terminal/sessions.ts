@@ -41,6 +41,7 @@ export const defaultLimits: TerminalLimits = {
 };
 
 const OUTPUT_TAIL_BYTES = 8_000;
+const REPLAY_BYTES = 256_000;
 
 interface SetupKind {
   type: 'setup';
@@ -53,6 +54,15 @@ interface ShellKind {
   cwd: string;
   conversationId: string | null;
   label?: string | undefined;
+  agent?: AgentRequest;
+}
+
+export interface AgentRequest extends ShellRequest {
+  id: string;
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+  onExit?: (exit: { exitCode: number; signal?: number | undefined }) => void;
 }
 
 export interface TerminalView {
@@ -81,6 +91,8 @@ interface Session {
   token: Buffer;
   kind: SetupKind | ShellKind | ViewKind;
   attached: boolean;
+  tokenExpiresAt: number;
+  replay: string;
   view: TerminalView | null;
   pty: PtyProcess | null;
   client: TerminalClient | null;
@@ -104,6 +116,9 @@ export interface ShellWatcher {
   output?(id: string, data: string): void;
   ended(id: string): void;
 }
+
+const isAgent = (kind: Session['kind']): kind is ShellKind & { agent: AgentRequest } =>
+  kind.type === 'shell' && kind.agent !== undefined;
 
 export class TerminalLimitError extends Error {}
 export class TerminalAuthError extends Error {}
@@ -153,6 +168,50 @@ export class TerminalSessions {
     return { id: session.id, token };
   }
 
+  createAgent(request: AgentRequest): { id: string; token: string } {
+    const existing = this.sessions.get(request.id);
+    if (existing) {
+      if (
+        existing.kind.type !== 'shell' ||
+        !existing.kind.agent ||
+        existing.kind.conversationId !== request.conversationId ||
+        existing.kind.cwd !== request.cwd ||
+        existing.kind.agent.command !== request.command ||
+        JSON.stringify(existing.kind.agent.args) !== JSON.stringify(request.args)
+      ) {
+        throw new TerminalAuthError('That terminal session belongs to another launch.');
+      }
+      return this.reattach(request.id)!;
+    }
+    if (this.countOf('shell') >= this.limits.maxShells) {
+      throw new TerminalLimitError('Close a terminal before starting another agent.');
+    }
+    const { session, token } = this.register(
+      { type: 'shell', ...request, agent: request },
+      request.id,
+    );
+    try {
+      this.startPty(session, { cols: 100, rows: 30 });
+    } catch (error) {
+      this.end(session, 'closed', null);
+      throw error;
+    }
+    this.watchFolders();
+    return { id: session.id, token };
+  }
+
+  reattach(id: string): { id: string; token: string } | null {
+    const session = this.sessions.get(id);
+    if (!session || !isAgent(session.kind)) return null;
+    const oldClient = session.client;
+    session.client = null;
+    session.attached = false;
+    oldClient?.close();
+    session.token = randomBytes(32);
+    session.tokenExpiresAt = Date.now() + this.limits.tokenTtlMs;
+    return { id, token: session.token.toString('base64url') };
+  }
+
   createView(open: OpenView): { id: string; token: string } {
     if (this.countOf('view') >= this.limits.maxViews) {
       throw new TerminalLimitError('Too many terminal views are open. Close one first.');
@@ -172,6 +231,7 @@ export class TerminalSessions {
     const valid =
       session !== undefined &&
       !session.attached &&
+      Date.now() < session.tokenExpiresAt &&
       offered.length === session.token.length &&
       timingSafeEqual(offered, session.token);
     if (!session || !valid)
@@ -181,7 +241,54 @@ export class TerminalSessions {
     session.attached = true;
     const kind = session.kind;
     if (kind.type === 'view') return this.attachView(session, kind, size);
-    const pty = this.spawn(kind.type === 'shell' ? { ...size, cwd: kind.cwd } : size);
+    if (session.pty) {
+      session.pty.resize(size.cols, size.rows);
+      if (session.replay) client.output(session.replay);
+    } else this.startPty(session, size);
+
+    return {
+      input: (data) => {
+        if (session.client !== client) return;
+        if (kind.type === 'setup') this.noteSetupInput(session, data);
+        session.pty?.write(data);
+      },
+      resize: (cols, rows) => {
+        if (session.client === client) session.pty?.resize(cols, rows);
+      },
+      close: () => {
+        if (session.client === client) this.end(session, 'closed', null);
+      },
+      disconnect: () => {
+        if (session.client !== client) return;
+        if (!isAgent(kind)) this.end(session, 'disconnected', null);
+        else {
+          session.client = null;
+          session.attached = false;
+          session.tokenExpiresAt = 0;
+        }
+      },
+    };
+  }
+
+  private startPty(session: Session, size: { cols: number; rows: number }): void {
+    const kind = session.kind;
+    if (kind.type === 'view') return;
+    const agent = kind.type === 'shell' ? kind.agent : undefined;
+    const pty = this.spawn(
+      kind.type === 'shell'
+        ? {
+            ...size,
+            cwd: kind.cwd,
+            ...(agent
+              ? {
+                  command: agent.command,
+                  args: agent.args,
+                  ...(agent.env ? { env: agent.env } : {}),
+                }
+              : {}),
+          }
+        : size,
+    );
     session.pty = pty;
     if (kind.type === 'shell') {
       this.watcher?.opened({
@@ -200,23 +307,16 @@ export class TerminalSessions {
         pty.write(kind.firstCommand);
       }
     });
-    pty.onExit(({ exitCode }) => this.end(session, 'exited', exitCode));
+    pty.onExit((exit) => {
+      this.end(session, 'exited', exit.exitCode);
+      agent?.onExit?.(exit);
+    });
     if (kind.type === 'setup') {
       session.timers.push(
         setTimeout(() => this.end(session, 'time_limit', null), this.limits.maxMs),
       );
       this.resetIdle(session);
     }
-
-    return {
-      input: (data) => {
-        if (kind.type === 'setup') this.noteSetupInput(session, data);
-        session.pty?.write(data);
-      },
-      resize: (cols, rows) => session.pty?.resize(cols, rows),
-      close: () => this.end(session, 'closed', null),
-      disconnect: () => this.end(session, 'disconnected', null),
-    };
   }
 
   private attachView(
@@ -269,13 +369,18 @@ export class TerminalSessions {
     for (const session of [...this.sessions.values()]) this.end(session, 'shutdown', null);
   }
 
-  private register(kind: Session['kind']): { session: Session; token: string } {
+  private register(
+    kind: Session['kind'],
+    id: string = randomUUID(),
+  ): { session: Session; token: string } {
     const token = randomBytes(32);
     const session: Session = {
-      id: randomUUID(),
+      id,
       token,
       kind,
       attached: false,
+      tokenExpiresAt: Date.now() + this.limits.tokenTtlMs,
+      replay: '',
       view: null,
       pty: null,
       client: null,
@@ -289,7 +394,7 @@ export class TerminalSessions {
     };
     session.timers.push(
       setTimeout(() => {
-        if (!session.attached) this.end(session, 'closed', null);
+        if (!session.attached && !session.pty) this.end(session, 'closed', null);
       }, this.limits.tokenTtlMs),
     );
     this.sessions.set(session.id, session);
@@ -331,6 +436,7 @@ export class TerminalSessions {
   }
 
   private handleOutput(session: Session, data: string) {
+    if (isAgent(session.kind)) session.replay = (session.replay + data).slice(-REPLAY_BYTES);
     session.client?.output(data);
     if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;

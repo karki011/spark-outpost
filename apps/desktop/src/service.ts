@@ -1,8 +1,3 @@
-import { setTimeout as delay } from 'node:timers/promises';
-import { utilityProcess } from 'electron';
-import type { Supervised } from './supervisor.ts';
-
-const STOP_TIMEOUT_MS = 10_000;
 const TAIL_LINES = 40;
 
 export interface ServiceOptions {
@@ -37,51 +32,4 @@ export class OutputTail {
   text(): string {
     return this.lines.join('\n');
   }
-}
-
-function forceKill(pid: number): boolean {
-  try {
-    process.kill(pid, 'SIGKILL');
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function forkService(options: ServiceOptions, tail: OutputTail): Supervised {
-  const child = utilityProcess.fork(options.bootstrap, [options.entry], {
-    cwd: options.cwd,
-    env: options.env,
-    stdio: 'pipe',
-    serviceName: options.name,
-  });
-  const record = (chunk: Buffer) => {
-    for (const line of tail.push(chunk.toString('utf8'))) options.log(line);
-  };
-  child.stdout?.on('data', record);
-  child.stderr?.on('data', record);
-  let running = true;
-  const link = options.connect?.({
-    post: (message) => {
-      if (running) child.postMessage(message);
-    },
-  });
-  if (link) child.on('message', (message: unknown) => link.receive(message));
-  const exited = new Promise<number | null>((resolve) => {
-    child.once('exit', (code) => {
-      running = false;
-      link?.close();
-      resolve(code);
-    });
-  });
-  return {
-    exited,
-    async stop() {
-      if (!running) return;
-      child.kill();
-      await Promise.race([exited, delay(STOP_TIMEOUT_MS)]);
-      if (running && child.pid && !forceKill(child.pid)) return;
-      await exited;
-    },
-  };
 }

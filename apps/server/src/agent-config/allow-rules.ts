@@ -6,7 +6,7 @@ import {
   normalizeCommand,
   splitSimpleCommands,
 } from '../approvals/commands.ts';
-import { PUBLISH_COMMANDS, publishesCode } from '../approvals/git-commands.ts';
+import { PUBLISH_COMMANDS, reachesHosting } from '../approvals/git-commands.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { SECRET_FILE_PATTERNS } from '../projects/secret-files.ts';
 
@@ -63,7 +63,7 @@ function leavesProject(spec: string): boolean {
 }
 
 function publishes(prefix: string): boolean {
-  if (publishesCode(prefix)) return true;
+  if (reachesHosting(prefix)) return true;
   return PUBLISH_COMMANDS.some((command) => command === prefix || command.startsWith(`${prefix} `));
 }
 

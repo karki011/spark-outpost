@@ -7,10 +7,10 @@ describe('planAgreementAction', () => {
     expect(planAgreementAction(0.85, 0.85)).toBe('save');
   });
 
-  it('offers when the plan is real but the acceptance is unsure, or the reverse', () => {
-    expect(planAgreementAction(0.7, 0.95)).toBe('offer');
-    expect(planAgreementAction(0.6, 0.6)).toBe('offer');
-    expect(planAgreementAction(0.95, 0.84)).toBe('offer');
+  it('does nothing when the plan is real but the acceptance is unsure, or the reverse', () => {
+    expect(planAgreementAction(0.7, 0.95)).toBe('none');
+    expect(planAgreementAction(0.6, 0.6)).toBe('none');
+    expect(planAgreementAction(0.95, 0.84)).toBe('none');
   });
 
   it('does nothing when the previous reply is not a plan, however clear the "ok"', () => {

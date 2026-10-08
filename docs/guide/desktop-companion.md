@@ -6,18 +6,18 @@ order: 410
 summary: Turn on Spark Island in the Mac app, size and move it, and allow or deny an agent's request from the top of your screen.
 ---
 
-You'll set up Spark Island and answer agents from it. About 2 minutes.
+You'll answer agents from Spark Island. About 2 minutes.
 
 ## Turn it on and size it
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off (on by default).
-3. Pick **Spark Island size**: **Full** (default) shows the current chat; others show only Scout.
+3. Pick **Spark Island size**. Every size rests as blobs.
 4. **Island chimes** play when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-Drag the island to move.
+Drag the island to any display; it stays there.
 
 ## Open it
 
@@ -26,15 +26,15 @@ Drag the island to move.
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
-Select a Spark tile to chat, right-click to edit or delete, or select **New Spark**.
+Select a Spark to chat, right-click to edit, or select **New Spark**.
 
-Steps show verbs and file names, never full paths or secrets. A file being read or edited shows beside them. Scout's faces: [Spark Island states](statuses-and-limits.md#spark-island-states).
+Steps show verbs and file names, never secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
 
-Select an edit to see the change; **Open chat** jumps to that turn. A finished chat shows the reply's first sentence.
+Select an edit to see the change; **Open chat** jumps to that turn. Terminal sessions have a **>_** blob; **Open terminal** or **Open terminal in Spark** opens the native agent. Answer its questions there.
 
 ## Answer a card
 
-A chat that needs you opens its card once, never taking the keyboard, unless **Open requests by themselves** is off.
+Requests mark the blobs. With **Open requests by themselves** on, a card opens once, without the keyboard, then returns to blobs.
 
 1. Press **⌥Space** to focus it.
 2. Press **Y** to allow once or **N** to deny.
@@ -48,12 +48,9 @@ Edit cards show the first changed lines, never secret files.
 | **Always in this project** | Adds a plain command to the project's list.                       |
 | **Open chat**              | Plans and instruction-file changes offer only this and **Later**. |
 | **Later**                  | Puts the card aside under **Needs you**.                          |
-| **Hold to force-push**     | Hold a second. The push waits 10 seconds; **Undo** stops it.      |
-
-Question cards count down to a default; point to pause.
 
 ## Inside the app
 
-The island hides while Spark is focused; Scout floats in a corner instead. Select it for **Needs you**, **Failed**, **Running** and **Just finished**; **Status companion** hides it.
+In Spark, **Status companion** shows session status.
 
 **Next:** [Start and check chats from anywhere](companion-quick-chat.md)

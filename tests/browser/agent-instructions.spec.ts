@@ -1,0 +1,63 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { expect, test } from '@playwright/test';
+import { resetTestDatabase } from './database.ts';
+
+test('direct-agent settings save custom text and a local instruction file @packaged', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  const root = mkdtempSync(path.join(tmpdir(), 'spark-instructions-browser-'));
+  const file = path.join(root, 'instructions.md');
+  writeFileSync(file, 'Check keyboard focus.');
+  try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'dark'));
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'Spark' });
+    await expect(settings.locator('.spark-options')).not.toHaveAttribute('open');
+    const workflow = settings.getByRole('switch', { name: 'Use Spark workflow' });
+    await workflow.focus();
+    const toggled = page.waitForResponse(
+      (response) => response.url().endsWith('/api/profile') && response.ok(),
+    );
+    await page.keyboard.press('Enter');
+    await toggled;
+    await expect(workflow).toHaveAttribute('aria-checked', 'false');
+    await settings.getByLabel('Custom instructions', { exact: true }).fill('Keep changes small.');
+    await settings.getByText('Use an instruction file', { exact: true }).click();
+    await settings.getByLabel('Instructions file path').fill(file);
+    const saved = page.waitForResponse(
+      (response) => response.url().endsWith('/api/profile') && response.ok(),
+    );
+    await settings.getByRole('button', { name: 'Save instructions' }).click();
+    expect((await saved).status()).toBe(200);
+    await expect(settings.getByRole('button', { name: 'Save instructions' })).toBeDisabled();
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(settings.getByLabel('Custom instructions', { exact: true })).toHaveValue(
+      'Keep changes small.',
+    );
+    await expect(settings.getByLabel('Instructions file path')).toHaveValue(file);
+    await expect(workflow).toHaveAttribute('aria-checked', 'false');
+    await settings.getByLabel('Instructions file path').fill(path.join(root, 'missing.md'));
+    await settings.getByRole('button', { name: 'Save instructions' }).click();
+    await expect(settings.getByRole('alert')).toContainText('could not be read');
+    const profile = (await (await page.request.get('/api/setup')).json()).profile;
+    expect(profile.agentInstructionsFile).toBe(file);
+    await settings.getByLabel('Instructions file path').fill(file);
+    await expect(settings.getByRole('alert')).toHaveCount(0);
+    rmSync(file);
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(settings.getByRole('alert')).toContainText('it was moved or deleted');
+    await settings
+      .getByLabel('What should Spark call you?', { exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '.local/report/workflow-settings.png', fullPage: true });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

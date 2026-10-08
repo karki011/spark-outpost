@@ -14,22 +14,27 @@ export interface PtyOptions {
   cols: number;
   rows: number;
   cwd?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;
 
 export function shellEnvironment(env: NodeJS.ProcessEnv): Record<string, string> {
-  return { ...childEnvironment(env), TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+  const clean = childEnvironment(env);
+  for (const flag of ['NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE']) delete clean[flag];
+  return { ...clean, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
 }
 
 export function loginShellSpawner(shell = process.env.SHELL || '/bin/zsh'): SpawnPty {
-  return ({ cols, rows, cwd }) => {
-    const pty = spawnNodePty(shell, ['-l'], {
+  return ({ cols, rows, cwd, command, args, env }) => {
+    const pty = spawnNodePty(command ?? shell, command ? (args ?? []) : ['-l'], {
       name: 'xterm-256color',
       cols,
       rows,
       cwd: cwd ?? os.homedir(),
-      env: shellEnvironment(process.env),
+      env: { ...shellEnvironment(process.env), ...env },
     });
     return {
       pid: pty.pid,

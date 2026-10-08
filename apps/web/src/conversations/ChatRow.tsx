@@ -220,12 +220,19 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             </span>
           )}
           <span className="rt">
-            <RowTitle
-              text={chat.title}
-              overflow={marquee.overflow}
-              running={marquee.running}
-              titleRef={marquee.ref}
-            />
+            <span className="row-title-line">
+              {chat.sessionType === 'terminal' && (
+                <span className="row-terminal-mark" aria-label="Terminal session">
+                  &gt;_
+                </span>
+              )}
+              <RowTitle
+                text={chat.title}
+                overflow={marquee.overflow}
+                running={marquee.running}
+                titleRef={marquee.ref}
+              />
+            </span>
             {state.sub && <small className="sub">{state.sub}</small>}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>

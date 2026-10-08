@@ -67,9 +67,14 @@ describe('detectHint', () => {
 });
 
 describe('shellEnvironment', () => {
-  it('keeps PATH and removes secrets', () => {
+  it('keeps PATH, removes secrets and enables terminal color detection', () => {
     const env = shellEnvironment({
       PATH: '/usr/bin',
+      NO_COLOR: '1',
+      FORCE_COLOR: '0',
+      CLICOLOR: '0',
+      CLICOLOR_FORCE: '0',
+      TERM: 'dumb',
       DATABASE_URL: 'postgres://secret',
       ANTHROPIC_API_KEY: 'sk-ant-x',
       GITHUB_TOKEN: 'ghp',
@@ -85,5 +90,8 @@ describe('shellEnvironment', () => {
     expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
     expect(env).not.toHaveProperty('GITHUB_TOKEN');
     expect(env.TERM).toBe('xterm-256color');
+    expect(env.COLORTERM).toBe('truecolor');
+    for (const flag of ['NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE'])
+      expect(env).not.toHaveProperty(flag);
   });
 });

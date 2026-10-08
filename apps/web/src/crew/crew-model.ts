@@ -25,6 +25,7 @@ export interface CrewAgent {
   costUsd: number | null;
   costSource: TotalCostSource | null;
   durationMs: number | null;
+  turns?: number;
   sameProvider?: boolean;
   routeNote?: string;
   title?: string;

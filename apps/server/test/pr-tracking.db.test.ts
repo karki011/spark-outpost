@@ -9,6 +9,7 @@ import { discoverChatPullRequests } from '../src/pr-tracking/discover.ts';
 import { chatPullRefresher } from '../src/pr-tracking/refresh.ts';
 import { trackTerminalPull } from '../src/pr-tracking/terminal.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
+import { taskBranch } from '../src/workflow/publish-context.ts';
 import {
   addPull,
   agentOpens,
@@ -194,6 +195,16 @@ describe('discovering the pull requests of a chat', () => {
     expect(await audited(t, chat.conversationId)).toMatchObject([
       { method: 'ship/pr_tracked', payload: { via: 'discovery', outcome: 'found', number: 7 } },
     ]);
+  });
+
+  it("makes a pull request found on the chat's branch the chat's own for the publish rules", async () => {
+    const chat = await chatOnBranch(t, base, 'widgets');
+    await connectToken(t, secrets);
+    addPull(stub, 7);
+    expect((await taskBranch(t.db, chat.root))?.pull).toBeNull();
+
+    await discoverChatPullRequests(deps(), chat.conversationId);
+    expect(await taskBranch(t.db, chat.root)).toMatchObject({ branch: CHAT_BRANCH, pull: 7 });
   });
 
   it('also looks at a branch checked out in the worktree, and keeps what the agent recorded', async () => {

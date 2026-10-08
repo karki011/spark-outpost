@@ -110,7 +110,7 @@ test('the resting island follows the chosen size live and still opens on hover',
   await restingBlob(page, 48, 25);
 });
 
-test('the needs-you pill grows with the island size', async ({ page }) => {
+test('pending requests stay as blobs at every size, including saved Full', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await openSizedIsland(page);
   await seedChats([
@@ -120,12 +120,17 @@ test('the needs-you pill grows with the island size', async ({ page }) => {
       approval: { kind: 'execute', title: 'npm test', command: 'npm test' },
     },
   ]);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  const pillHeight = async () => Math.round((await island(page).boundingBox())!.height);
-  await expect.poll(pillHeight).toBe(34);
-  await setSize(page, 'large');
-  await expect.poll(pillHeight).toBe(52);
-  const scout = island(page).locator('.isl-scout-wrap');
-  await expect.poll(async () => Math.round((await scout.boundingBox())!.height)).toBe(34);
-  await expect(island(page).locator('.isl-nudge')).toBeVisible();
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  for (const size of ['small', 'medium', 'large', 'full']) {
+    await setSize(page, size);
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expect(island(page).locator('.isl-nudge, .isl-nowbar')).toHaveCount(0);
+  }
+  await restingBlob(page, 58, 31);
+  await page.mouse.move(640, 300);
+  await page.mouse.move(640, 8, { steps: 4 });
+  const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+  await expect(waiting).toContainText('npm test');
+  await page.mouse.move(5, 600);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });

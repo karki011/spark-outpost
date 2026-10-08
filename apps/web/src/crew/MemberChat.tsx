@@ -2,7 +2,7 @@ import './member-chat.css';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { STEER_TEXT_LIMIT, type MemberMessage } from '@spark-outpost/contracts';
+import type { MemberMessage } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { useRunStream } from '../chat/use-run-stream.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
@@ -141,7 +141,6 @@ export function MemberChat({ conversationId, agent, messages, onClose }: MemberC
           id={`${titleId}-input`}
           ref={inputRef}
           rows={2}
-          maxLength={STEER_TEXT_LIMIT}
           disabled={closed}
           placeholder={
             closed

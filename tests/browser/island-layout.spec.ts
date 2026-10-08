@@ -221,8 +221,9 @@ for (const width of [420, 1280]) {
         approval: { kind: 'execute', title: 'pnpm deploy', command: 'pnpm deploy --prod' },
       },
     ]);
-    await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-    await expectClean(page, 'nudge');
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+    await expectClean(page, 'collapsed approval');
     await command(page, 'quick');
     await expect(island(page)).toHaveAttribute('data-view', 'card');
     await expectClean(page, 'approval');
@@ -276,7 +277,7 @@ test('running and finished work never expand the island', async ({ page }) => {
 });
 
 for (const { name, sparkFocused, expected } of [
-  { name: 'nudges when you are in another app', sparkFocused: false, expected: 'nudge' },
+  { name: 'stays collapsed in another app', sparkFocused: false, expected: 'peek' },
   { name: 'stays quiet while the Spark window is focused', sparkFocused: true, expected: 'peek' },
 ]) {
   test(`a chat that needs you ${name}`, async ({ page }) => {
@@ -295,18 +296,14 @@ for (const { name, sparkFocused, expected } of [
     await page.waitForTimeout(1200);
     await expect(island(page)).toHaveAttribute('data-view', expected);
     if (expected === 'peek') await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-    if (expected === 'nudge') {
-      await expectClean(page, 'nudge');
-      await page.evaluate(() =>
-        (window as unknown as { sparkFocus: (focused: boolean) => void }).sparkFocus(true),
-      );
-      await expect(island(page)).toHaveAttribute('data-view', 'peek');
-      return;
-    }
     await page.mouse.move(640, 300);
     await page.mouse.move(640, 6, { steps: 4 });
-    const now = island(page).getByRole('region', { name: 'Now: Deploy the site' });
-    await now.getByRole('button', { name: 'Open Deploy the site' }).click();
+    if (sparkFocused) {
+      const now = island(page).getByRole('region', { name: 'Now: Deploy the site' });
+      await now.getByRole('button', { name: 'Open Deploy the site' }).click();
+    } else {
+      await island(page).getByRole('group', { name: 'Waiting for you' }).click();
+    }
     await expect(island(page)).toHaveAttribute('data-view', 'panel');
     const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
     await expect(waiting).toBeFocused();
@@ -357,7 +354,7 @@ test('clicking the blob opens Home, quiet or busy, and the shortcuts still open 
   );
 });
 
-test('hovering the needs-you pill opens the full panel on that chat, and leaving closes it', async ({
+test('hovering a collapsed Island opens the waiting chat, and leaving closes it', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -373,7 +370,8 @@ test('hovering the needs-you pill opens the full panel on that chat, and leaving
       minutesAgo: 8,
     },
   ]);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
   await page.mouse.move(640, 300);
   await page.mouse.move(640, 6, { steps: 4 });
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
@@ -385,5 +383,5 @@ test('hovering the needs-you pill opens the full panel on that chat, and leaving
   await expect(waiting.getByRole('button', { name: 'Allow', exact: true })).toBeVisible();
   await expectClean(page, 'pending chat on hover');
   await page.mouse.move(640, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 });

@@ -6,6 +6,8 @@ const TITLE_START = /^title[\s*_]*(?::.*)?$/i;
 const LEADING_MARKUP = /^[\s*_>#-]*/;
 const MAX_TITLE_WORDS = 8;
 const MAX_TITLE_LENGTH = 60;
+const MAX_LINES_AFTER_TITLE = 2;
+const MAX_LINE_LENGTH_AFTER_TITLE = 40;
 
 export function cleanTitle(raw: string): string | null {
   const text = raw
@@ -34,13 +36,28 @@ export interface SplitReply {
   title: string | null;
 }
 
+function fitsAfterTitle(lines: readonly string[]): boolean {
+  const written = lines.map((line) => line.trim()).filter((line) => line !== '');
+  return (
+    written.length <= MAX_LINES_AFTER_TITLE &&
+    written.every((line) => line.length <= MAX_LINE_LENGTH_AFTER_TITLE)
+  );
+}
+
 export function splitTitle(reply: string): SplitReply {
   const lines = reply.split('\n');
-  let last = lines.length - 1;
-  while (last >= 0 && lines[last]!.trim() === '') last -= 1;
-  const title = last >= 0 ? titleOfLine(lines[last]!) : null;
-  if (!title) return { text: reply, title: null };
-  return { text: lines.slice(0, last).join('\n').trimEnd(), title };
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const after = lines.slice(index + 1);
+    if (!fitsAfterTitle(after)) break;
+    const title = titleOfLine(lines[index]!);
+    if (title) return { text: [...lines.slice(0, index), ...after].join('\n').trimEnd(), title };
+  }
+  return { text: reply, title: null };
+}
+
+function endsReply(held: string, line: string, end: number): boolean {
+  if (end === -1) return mayBecomeTitle(line);
+  return titleOfLine(line) !== null && fitsAfterTitle(held.slice(end + 1).split('\n'));
 }
 
 function holdFrom(held: string, atLineStart: boolean): number {
@@ -57,7 +74,7 @@ function holdFrom(held: string, atLineStart: boolean): number {
     first = false;
     if (lineStart && line.trim() === '') {
       blankStart ??= withBreak(start);
-    } else if (lineStart && (complete ? titleOfLine(line) !== null : mayBecomeTitle(line))) {
+    } else if (lineStart && endsReply(held, line, end)) {
       return blankStart ?? withBreak(start);
     } else {
       blankStart = null;

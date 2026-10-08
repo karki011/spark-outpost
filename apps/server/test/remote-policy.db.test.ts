@@ -1,4 +1,4 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -81,6 +81,10 @@ describe('never from a phone', () => {
     const id = crypto.randomUUID();
     await phone.send('post', '/api/terminal/sessions').expect(403);
     await phone.send('post', '/api/terminal/shells').expect(403);
+    await phone.send('post', `/api/terminal/sessions/${id}/attach`).expect(403);
+    await phone.get(`/api/conversations/${id}/terminal`).expect(403);
+    await phone.send('post', `/api/conversations/${id}/terminal`).expect(403);
+    await phone.send('delete', `/api/conversations/${id}/terminal`).expect(403);
     await phone.send('delete', `/api/terminal/sessions/${id}`).expect(403);
     await phone.get(`/api/terminal/sessions/${id}/busy`).expect(403);
     await phone.send('post', `/api/conversations/${id}/preview/start`).expect(403);
@@ -99,6 +103,16 @@ describe('never from a phone', () => {
     await phone.send('post', '/api/remote/tailscale/off').expect(403);
     await phone.send('post', '/api/setup/git/install').expect(403);
     await phone.send('post', '/API/Terminal/Sessions/').expect(403);
+  });
+
+  it('refuses terminal creation through shared conversation and ticket routes', async () => {
+    await phone
+      .send('post', '/api/conversations', { sessionType: 'terminal', title: 'Native' })
+      .expect(403);
+    await phone
+      .send('post', '/api/tickets/linear/TEST-1/start', { sessionType: 'terminal', mode: 'build' })
+      .expect(403);
+    expect((await refusals()).map((entry) => entry.detail.reason)).toEqual(['policy', 'policy']);
   });
 
   it('keeps those refused with every switch on', async () => {
@@ -155,6 +169,24 @@ describe('switches', () => {
   it('settings: profile changes and trusting a folder', async () => {
     const id = crypto.randomUUID();
     await phone.send('patch', '/api/profile', { name: 'Hari' }).expect(200);
+    await phone
+      .send('patch', '/api/profile', { agentInstructions: 'Keep changes small.' })
+      .expect(200);
+    await phone
+      .send('patch', '/api/profile', { agentInstructionsFile: '/tmp/instructions.md' })
+      .expect(403);
+    await phone.send('patch', '/api/profile', { agentInstructionsFile: '' }).expect(403);
+    const file = join(root, 'instructions.md');
+    await writeFile(file, 'Use tests.');
+    const local = await localClient(app)
+      .send('patch', '/api/profile', { agentInstructionsFile: file })
+      .expect(200);
+    expect(local.body.profile.agentInstructionsFile).toBe(file);
+    const hidden = { agentInstructionsFile: '', agentInstructionsFileSet: true };
+    expect((await phone.get('/api/setup').expect(200)).body.profile).toMatchObject(hidden);
+    const saved = await phone.send('patch', '/api/profile', { name: 'Hari' }).expect(200);
+    expect(saved.body.profile).toMatchObject(hidden);
+    expect(JSON.stringify(saved.body)).not.toContain(file);
     const trust = await phone.send('put', `/api/projects/${id}/agent-config/trust`, {});
     expect(trust.status).not.toBe(403);
     const redirects = await phone.send(
