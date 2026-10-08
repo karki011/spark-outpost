@@ -49,3 +49,17 @@ it('rejects secret paths including a symlink target without returning contents',
     await expect(readAgentInstructions('', path)).rejects.toThrow('not a secret file');
   }
 });
+
+it('rejects files in credential folders by their full resolved path', async () => {
+  const folders = ['.ssh', '.aws', '.config/gh', '.codex', '.kube'];
+  const names = ['config', 'config', 'hosts.yml', 'auth.json', 'config'];
+  for (const [index, folder] of folders.entries()) {
+    await mkdir(join(root, folder), { recursive: true });
+    const file = join(root, folder, names[index]!);
+    await writeFile(file, 'token: never-show');
+    await expect(readAgentInstructions('', file)).rejects.toThrow('sign-in details');
+  }
+  const link = join(root, 'notes.md');
+  await symlink(join(root, '.ssh', 'config'), link);
+  await expect(readAgentInstructions('', link)).rejects.toThrow('sign-in details');
+});

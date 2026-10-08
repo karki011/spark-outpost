@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
-import { isSecretPath } from '../projects/path-policy.ts';
+import { isCredentialPath } from '../projects/path-policy.ts';
 
 const MAX_FILE_BYTES = 16_000;
 
@@ -16,8 +16,10 @@ export async function readAgentInstructions(text: string, file: string): Promise
     throw new AgentInstructionsError('Use an absolute instructions file path or ~/path.');
   try {
     const resolved = await realpath(path);
-    if (isSecretPath(path) || isSecretPath(resolved))
-      throw new AgentInstructionsError('Choose an instructions file, not a secret file.');
+    if (isCredentialPath(path) || isCredentialPath(resolved))
+      throw new AgentInstructionsError(
+        'Choose an instructions file, not a secret file or a folder that holds sign-in details.',
+      );
     const handle = await open(
       resolved,
       constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,

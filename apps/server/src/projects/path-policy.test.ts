@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { projectPolicy, readProjectText, RootMissingError } from './project-fs.ts';
 import {
   PathRefusedError,
+  isCredentialPath,
   isSecretPath,
   parseSparkIgnore,
   protectedPath,
@@ -345,5 +346,39 @@ describe('sliceLines', () => {
     expect(sliceLines(text, 2, 2)).toBe('two\nthree');
     expect(sliceLines(text, null, 1)).toBe('one');
     expect(sliceLines(text, 9, 2)).toBe('');
+  });
+});
+
+describe('credential locations', () => {
+  it.each([
+    '/Users/sam/.codex/auth.json',
+    '/Users/sam/.config/gh/hosts.yml',
+    '/Users/sam/.ssh/config',
+    '/Users/sam/.aws/credentials',
+    '/Users/sam/.aws/config',
+    '/Users/sam/.gnupg/gpg.conf',
+    '/Users/sam/.claude/.credentials.json',
+    '/Users/sam/.docker/config.json',
+    '/Users/sam/.kube/config',
+    '/Users/sam/.npmrc',
+    '/Users/sam/.netrc',
+    '/Users/sam/.pgpass',
+    '/Users/sam/Library/Keychains/login.keychain-db',
+    '/Users/sam/library/keychains/notes.md',
+    '/Users/sam/work/old.keychain',
+    '/Users/sam/work/.env',
+  ])('treats %s as a credential path', (file) => {
+    expect(isCredentialPath(file)).toBe(true);
+  });
+
+  it.each([
+    '/Users/sam/Documents/agent-instructions.md',
+    '/Users/sam/.claude/CLAUDE.md',
+    '/Users/sam/.codex/AGENTS.md',
+    '/Users/sam/.config/spark/instructions.md',
+    '/Users/sam/work/ssh/notes.md',
+    '/Users/sam/.docker/notes.md',
+  ])('allows %s', (file) => {
+    expect(isCredentialPath(file)).toBe(false);
   });
 });

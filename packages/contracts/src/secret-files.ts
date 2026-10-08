@@ -25,6 +25,22 @@ export const SECRET_FILE_PATTERNS: readonly string[] = [
   'api-token',
 ];
 
+export const CREDENTIAL_LOCATIONS: readonly string[] = [
+  '.ssh',
+  '.aws',
+  '.gnupg',
+  '.kube',
+  '.config/gh',
+  '.config/gcloud',
+  '.docker/config.json',
+  '.codex/auth.json',
+  '.claude/.credentials.json',
+  '.claude.json',
+  'Library/Keychains',
+  '*.keychain',
+  '*.keychain-db',
+];
+
 export const SECRET_FILE_REFUSAL = 'Spark never reads secret files like .env.';
 
 export const SECRET_FILE_EXCEPTIONS: readonly string[] = ['.env.example'];
