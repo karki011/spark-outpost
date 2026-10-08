@@ -98,7 +98,7 @@ describe('Spark off', () => {
     expect(run.status).toBe('succeeded');
     expect(run.model).toBe('haiku');
     expect(jev.calls).toEqual([]);
-    expect(await loadOrchestration(t.db, runId)).toBeNull();
+    expect((await loadOrchestration(t.db, runId))?.crew).toEqual([]);
     expect(await childModels(runId)).toEqual([]);
     const [reply] = await assistantReplies(t, runId);
     const append = sessionOf(reply!).meta?.systemPrompt?.append ?? '';
