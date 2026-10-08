@@ -27,7 +27,8 @@ const services = new Map<string, Service>();
 const clients = new Set<Socket>();
 const browserPorts = new Map<string, unknown>();
 const pendingBrowser = new Map<string, { name: string; message: unknown }>();
-const info: RuntimeInfo = { database: null, api: null };
+const version = process.argv[3] ?? null;
+const info: RuntimeInfo = { version, pid: process.pid, database: null, api: null };
 let database: Database | null = null;
 let databaseStarting: Promise<Database> | null = null;
 let desktop: Socket | null = null;
@@ -62,7 +63,7 @@ async function stopService(name: string) {
   service.child.kill('SIGTERM');
   const finished = await Promise.race([
     service.exited.then(() => true),
-    delay(10_000).then(() => false),
+    delay(10_000, undefined, { ref: false }).then(() => false),
   ]);
   if (!finished) service.child.kill('SIGKILL');
   await service.exited;
@@ -277,7 +278,7 @@ const umask = process.umask(0o077);
 server.listen(paths.socket, async () => {
   process.umask(umask);
   await chmod(paths.socket, 0o600);
-  await writeFile(paths.endpoint, JSON.stringify({ pid: process.pid }), { mode: 0o600 });
+  await writeFile(paths.endpoint, JSON.stringify({ pid: process.pid, version }), { mode: 0o600 });
   await chmod(paths.endpoint, 0o600);
 });
 for (const signal of ['SIGTERM', 'SIGINT'] as const)

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, open, readFile, rm } from 'node:fs/promises';
+import { chmod, mkdir, open, readFile, rm, type FileHandle } from 'node:fs/promises';
 import { connect, type Socket } from 'node:net';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
@@ -16,13 +16,32 @@ import {
   type RuntimeInfo,
   type RuntimeRequest,
 } from './runtime-protocol.ts';
+import { isAlive, recordedPid, retireHost } from './runtime-retire.ts';
 import type { ServiceLink, ServiceOptions } from './service.ts';
 import type { Supervised } from './supervisor.ts';
 
 interface RuntimeOptions {
   userData: string;
+  version: string;
   bootstrap: string;
   log(name: string, line: string): void;
+}
+
+async function claim(lockFile: string): Promise<FileHandle | null> {
+  for (;;) {
+    try {
+      return await open(lockFile, 'wx', 0o600);
+    } catch {
+      let owner: number;
+      try {
+        owner = Number((await readFile(lockFile, 'utf8')).trim());
+      } catch {
+        continue;
+      }
+      if (!Number.isInteger(owner) || owner <= 0 || isAlive(owner)) return null;
+      await rm(lockFile, { force: true });
+    }
+  }
 }
 
 export class LocalRuntime {
@@ -59,7 +78,6 @@ export class LocalRuntime {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await chmod(directory, 0o700);
     const paths = runtimePaths(directory);
-    const endpointFile = paths.endpoint;
     const attach = async () => {
       let token: string;
       try {
@@ -83,49 +101,46 @@ export class LocalRuntime {
       socket.setTimeout(0);
       const runtime = new LocalRuntime(socket, options);
       try {
-        await Promise.race([
+        const info = await Promise.race([
           runtime.prove(token).then(() => runtime.info()),
           delay(5_000, undefined, { ref: false }).then(() => {
             throw new Error('The local runtime did not authenticate.');
           }),
         ]);
-        return runtime;
+        return { runtime, info };
       } catch {
         socket.destroy();
         return null;
       }
     };
     const existing = await attach();
-    if (existing) return existing;
+    if (existing?.info.version === options.version) return existing.runtime;
     const lockFile = path.join(directory, 'starting');
-    let lock: Awaited<ReturnType<typeof open>>;
-    try {
-      lock = await open(lockFile, 'wx', 0o600);
-    } catch {
-      try {
-        const owner = Number((await readFile(lockFile, 'utf8')).trim());
-        if (Number.isInteger(owner) && owner > 0) {
-          try {
-            process.kill(owner, 0);
-          } catch {
-            await rm(lockFile, { force: true });
-            return LocalRuntime.connect(options);
-          }
-        }
-      } catch {
-        return LocalRuntime.connect(options);
-      }
+    const lock = await claim(lockFile);
+    if (!lock) {
+      existing?.runtime.detach();
       for (let attempt = 0; attempt < 100; attempt += 1) {
         await delay(100);
         const pending = await attach();
-        if (pending) return pending;
+        if (pending?.info.version === options.version) return pending.runtime;
+        pending?.runtime.detach();
       }
       throw new Error('The local runtime is still starting. Reopen Spark to retry.');
     }
     try {
       await lock.writeFile(String(process.pid));
-      await rm(endpointFile, { force: true });
-      const child = spawn(process.execPath, [options.bootstrap, directory], {
+      if (existing)
+        options.log(
+          'runtime',
+          `Stopping the local runtime left by Spark ${existing.info.version ?? 'of an earlier build'}.`,
+        );
+      await retireHost({
+        directory,
+        pid: existing?.info.pid ?? (await recordedPid(paths.endpoint)),
+        stop: existing ? () => existing.runtime.stop() : null,
+      });
+      await rm(paths.endpoint, { force: true });
+      const child = spawn(process.execPath, [options.bootstrap, directory, options.version], {
         detached: true,
         stdio: 'ignore',
         env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
@@ -138,8 +153,8 @@ export class LocalRuntime {
       for (let attempt = 0; attempt < 200; attempt += 1) {
         if (failed) throw failed;
         await delay(100);
-        const runtime = await attach();
-        if (runtime) return runtime;
+        const started = await attach();
+        if (started) return started.runtime;
         if (child.exitCode !== null)
           throw new Error(`The local runtime exited with ${child.exitCode}.`);
       }

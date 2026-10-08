@@ -3,6 +3,8 @@ import type { DatabaseOptions } from './postgres.ts';
 import type { ServiceOptions } from './service.ts';
 
 export interface RuntimeInfo {
+  version?: string | null | undefined;
+  pid?: number | undefined;
   database: { url: string; port: number } | null;
   api: { port: number; token: string; version: string } | null;
 }
@@ -80,6 +82,8 @@ export const runtimeEventSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('service:exit'), name, code: z.number().int().nullable() }),
 ]);
 export const runtimeInfoSchema = z.object({
+  version: z.string().min(1).max(100).nullish(),
+  pid: z.number().int().min(2).optional(),
   database: z.object({ url: z.string().url(), port }).nullable(),
   api: api.nullable(),
 });

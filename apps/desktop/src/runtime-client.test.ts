@@ -41,9 +41,10 @@ afterAll(async () => {
   await rm(bundle, { recursive: true, force: true });
 });
 
-async function connect(userData: string) {
+async function connect(userData: string, version = 'test') {
   const runtime = await LocalRuntime.connect({
     userData,
+    version,
     bootstrap: path.join(bundle, 'runtime-host.js'),
     log: () => undefined,
   });
@@ -62,6 +63,11 @@ async function exists(file: string) {
     () => true,
     () => false,
   );
+}
+async function endpoint(userData: string) {
+  return JSON.parse(
+    await readFile(path.join(userData, 'runtime/endpoint.json'), 'utf8'),
+  ) as unknown;
 }
 function alive(pid: number) {
   try {
@@ -246,7 +252,7 @@ describe('independent local runtime', () => {
     const module = pathToFileURL(path.join(import.meta.dirname, 'runtime-client.ts')).href;
     await writeFile(
       controller,
-      `import { writeFile } from 'node:fs/promises'; import { LocalRuntime } from ${JSON.stringify(module)}; const runtime = await LocalRuntime.connect({ userData: ${JSON.stringify(userData)}, bootstrap: ${JSON.stringify(path.join(bundle, 'runtime-host.js'))}, log: () => {} }); await runtime.configure({port: 12345, token: 'test-launch-identity', version: 'test'}); runtime.service({ ...${JSON.stringify(options)}, log: () => {}, connect: () => ({receive: async message => { await writeFile(${JSON.stringify(resultFile)}, JSON.stringify(message)); process.kill(process.pid, 'SIGKILL'); }, close: () => {}}) });`,
+      `import { writeFile } from 'node:fs/promises'; import { LocalRuntime } from ${JSON.stringify(module)}; const runtime = await LocalRuntime.connect({ userData: ${JSON.stringify(userData)}, version: 'test', bootstrap: ${JSON.stringify(path.join(bundle, 'runtime-host.js'))}, log: () => {} }); await runtime.configure({port: 12345, token: 'test-launch-identity', version: 'test'}); runtime.service({ ...${JSON.stringify(options)}, log: () => {}, connect: () => ({receive: async message => { await writeFile(${JSON.stringify(resultFile)}, JSON.stringify(message)); process.kill(process.pid, 'SIGKILL'); }, close: () => {}}) });`,
     );
     const child = spawn(
       process.execPath,
@@ -277,5 +283,99 @@ describe('independent local runtime', () => {
     await recovered.stop();
     runtimes.splice(runtimes.indexOf(recovered), 1);
     await until(() => !alive(pid));
+  });
+
+  it('adopts a runtime of the same app version', async () => {
+    const userData = await mkdtemp(path.join(folder, 's-'));
+    const first = await connect(userData, '1.0.0');
+    const { pid } = await first.info();
+    first.detach();
+    runtimes.splice(runtimes.indexOf(first), 1);
+    const next = await connect(userData, '1.0.0');
+    expect(await next.info()).toMatchObject({ pid, version: '1.0.0' });
+    expect(await endpoint(userData)).toEqual({ pid, version: '1.0.0' });
+  });
+
+  it('shuts down a runtime another app version left running and starts a fresh one', async () => {
+    const userData = await mkdtemp(path.join(folder, 'v-'));
+    const old = await connect(userData, '1.0.0');
+    let servicePid = 0;
+    old.service({
+      ...(await fixture(userData)),
+      connect: () => ({
+        receive: (raw) => {
+          servicePid = (raw as { pid: number }).pid;
+        },
+        close: () => undefined,
+      }),
+    });
+    await until(() => servicePid > 0);
+    await old.configure({ port: 12345, token: 'old-launch-identity', version: '1.0.0' });
+    const { pid } = await old.info();
+    old.detach();
+    runtimes.splice(runtimes.indexOf(old), 1);
+    const fresh = await connect(userData, '2.0.0');
+    const info = await fresh.info();
+    expect(info).toMatchObject({ version: '2.0.0', api: null, database: null });
+    expect(info.pid).not.toBe(pid);
+    expect(alive(pid!)).toBe(false);
+    expect(alive(servicePid)).toBe(false);
+    expect(await endpoint(userData)).toEqual({ pid: info.pid, version: '2.0.0' });
+  });
+
+  it('replaces a host that reports no version', async () => {
+    const userData = await mkdtemp(path.join(folder, 'o-'));
+    const directory = path.join(userData, 'runtime');
+    await mkdir(directory, { mode: 0o700 });
+    const host = spawn(process.execPath, [path.join(bundle, 'runtime-host.js'), directory], {
+      stdio: 'ignore',
+    });
+    outside.push(host);
+    const gone = new Promise((resolve) => host.once('exit', resolve));
+    await until(() => exists(path.join(directory, 'endpoint.json')));
+    const fresh = await connect(userData, '2.0.0');
+    await gone;
+    const info = await fresh.info();
+    expect(info.version).toBe('2.0.0');
+    expect(info.pid).not.toBe(host.pid);
+  });
+
+  it('stops a headless host of the earlier loopback protocol before starting', async () => {
+    const userData = await mkdtemp(path.join(folder, 'l-'));
+    const directory = path.join(userData, 'runtime');
+    await mkdir(directory, { mode: 0o700 });
+    await mkdir(path.join(userData, 'old'));
+    const script = path.join(userData, 'old/runtime-host.js');
+    const stopped = path.join(userData, 'stopped');
+    await writeFile(
+      script,
+      `const fs = require('node:fs'); const path = require('node:path'); process.on('SIGTERM', () => { fs.writeFileSync(${JSON.stringify(stopped)}, 'graceful'); process.exit(0); }); fs.writeFileSync(path.join(process.argv[2], 'token'), 'legacy-control-token-'.repeat(2)); fs.writeFileSync(path.join(process.argv[2], 'endpoint.json'), JSON.stringify({ port: 9, pid: process.pid })); setInterval(() => {}, 1000);`,
+    );
+    await writeFile(path.join(userData, 'old/package.json'), '{"type":"commonjs"}');
+    const host = spawn(process.execPath, [script, directory], { stdio: 'ignore' });
+    outside.push(host);
+    const gone = new Promise((resolve) => host.once('exit', resolve));
+    await until(() => exists(path.join(directory, 'endpoint.json')));
+    const fresh = await connect(userData, '2.0.0');
+    await gone;
+    expect(await readFile(stopped, 'utf8')).toBe('graceful');
+    expect((await fresh.info()).version).toBe('2.0.0');
+  });
+
+  it('starts fresh and leaves the process alone when a stale endpoint names an unrelated pid', async () => {
+    const external = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      stdio: 'ignore',
+    });
+    outside.push(external);
+    const userData = await mkdtemp(path.join(folder, 'e-'));
+    const directory = path.join(userData, 'runtime');
+    await mkdir(directory, { mode: 0o700 });
+    await writeFile(
+      path.join(directory, 'endpoint.json'),
+      JSON.stringify({ pid: external.pid, version: '1.0.0' }),
+    );
+    const fresh = await connect(userData, '2.0.0');
+    expect((await fresh.info()).version).toBe('2.0.0');
+    expect(alive(external.pid!)).toBe(true);
   });
 });

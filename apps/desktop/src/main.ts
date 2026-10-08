@@ -268,6 +268,7 @@ async function launch(): Promise<void> {
 
   runtime = await LocalRuntime.connect({
     userData: paths.userData,
+    version: app.getVersion(),
     bootstrap: path.join(import.meta.dirname, 'runtime-host.js'),
     log: (name, line) => log(name)(line),
   });
@@ -315,15 +316,6 @@ async function launch(): Promise<void> {
       ...process.env,
     },
   };
-  if (existingRuntime.api && existingRuntime.api.version !== app.getVersion()) {
-    runtime.detach();
-    runtime = null;
-    services = null;
-    database = null;
-    throw new Error(
-      'A different Spark version owns the local runtime. Quit that version before reopening Spark.',
-    );
-  }
   if (!existingRuntime.api && !(await migrateBeforeStart(launchInfo, databaseOptions))) return;
   await runtime.configure({ port: apiPort, token, version: app.getVersion() });
 
