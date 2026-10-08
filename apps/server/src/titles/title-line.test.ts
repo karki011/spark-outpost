@@ -20,9 +20,35 @@ describe('title line', () => {
     });
   });
 
+  it('takes a Title line followed by one or two short lines and keeps those lines', () => {
+    expect(
+      splitTitle('It printed five lines.\n\nTitle: View pull request 2233 output\nPINEAPPLE-42'),
+    ).toEqual({
+      text: 'It printed five lines.\n\nPINEAPPLE-42',
+      title: 'View pull request 2233 output',
+    });
+    expect(splitTitle('Done.\nTitle: Add subtract function\n\nThanks,\nCodex\n')).toEqual({
+      text: 'Done.\n\nThanks,\nCodex',
+      title: 'Add subtract function',
+    });
+    expect(splitTitle('Done.\nTitle: First guess\nTitle: Second guess\nBye')).toEqual({
+      text: 'Done.\nTitle: First guess\nBye',
+      title: 'Second guess',
+    });
+  });
+
+  it('keeps a Title line that more than two lines or a long line follow', () => {
+    const three = 'Title: A heading\nOne.\nTwo.\nThree.';
+    expect(splitTitle(three)).toEqual({ text: three, title: null });
+    const long = `Title: A heading\n${'x'.repeat(41)}`;
+    expect(splitTitle(long)).toEqual({ text: long, title: null });
+    const edge = `Done.\nTitle: A heading\n${'x'.repeat(40)}`;
+    expect(splitTitle(edge)).toEqual({ text: `Done.\n${'x'.repeat(40)}`, title: 'A heading' });
+  });
+
   it('keeps the reply whole when the title is missing, mid-reply, or unusable', () => {
     expect(splitTitle('Just an answer.')).toEqual({ text: 'Just an answer.', title: null });
-    const middle = 'Title: A heading\nThen more text.';
+    const middle = 'Title: A heading\nThen the reply goes on with an ordinary sentence of prose.';
     expect(splitTitle(middle)).toEqual({ text: middle, title: null });
     const long = `Done.\nTitle: ${'word '.repeat(12)}`;
     expect(splitTitle(long)).toEqual({ text: long, title: null });
@@ -57,9 +83,44 @@ describe('title filter', () => {
     expect(result.title).toBeNull();
   });
 
-  it('holds a Title line that is followed by more text, then gives it back', () => {
-    const result = streamed(['Intro\nTitle: Not the end\n', 'More words.']);
-    expect(result).toMatchObject({ text: 'Intro\nTitle: Not the end\nMore words.', title: null });
+  it('holds a Title line until the text after it is too long to be a sign-off, then gives it back', () => {
+    const filter = createTitleFilter();
+    expect(filter.push('Intro\nTitle: Not the end\n')).toBe('Intro');
+    expect(filter.push('More words.')).toBe('');
+    expect(filter.push(' And the reply goes on well past forty characters.')).toBe(
+      '\nTitle: Not the end\nMore words. And the reply goes on well past forty characters.',
+    );
+    expect(filter.finish()).toEqual({ text: '', title: null });
+  });
+
+  it('gives a held Title line back when a third line follows it', () => {
+    const result = streamed(['Intro\nTitle: Not the end\nOne.\nTwo.\n', 'Three']);
+    expect(result.shown.join('')).toBe('Intro\nTitle: Not the end\nOne.\nTwo.\nThree');
+    expect(result.title).toBeNull();
+  });
+
+  it('never streams a Title line that a short sign-off follows', () => {
+    const result = streamed([
+      'It printed five lines.\nTit',
+      'le: View pull request\nPINE',
+      'APPLE-42',
+    ]);
+    expect(result.shown.join('')).toBe('It printed five lines.');
+    expect(result).toMatchObject({
+      text: 'It printed five lines.\nPINEAPPLE-42',
+      title: 'View pull request',
+    });
+  });
+
+  it('still hides the final Title line after an earlier one was given back', () => {
+    const result = streamed([
+      'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.\n',
+      'Title: Explain the draft',
+    ]);
+    expect(result).toMatchObject({
+      text: 'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.',
+      title: 'Explain the draft',
+    });
   });
 
   it('does not treat a title word inside a line as the marker', () => {
