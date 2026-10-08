@@ -17,7 +17,6 @@ import { cardFor } from '../model-cards/cards.ts';
 import { noulQuestion, type Description } from './questions.ts';
 import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
 import { parseRatings, ratingQuestions } from './rating-questions.ts';
-import { asksForSpeed, SPEED_KEY, speedQuestion } from '../orchestration/clarify.ts';
 import { tierLadder } from '../orchestration/tiers.ts';
 import { NEED_OPTIONS, needQuestion } from './need-question.ts';
 
@@ -179,7 +178,6 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
   };
   questions.vague = request.firstMessage ? firstVagueQuestion() : followUpVagueQuestion();
   Object.assign(questions, ratingQuestions());
-  if (request.firstMessage && asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
   if (request.currentTask) {
     questions.continues_task = noulQuestion(CONTINUES_QUESTION, {
       true: {
