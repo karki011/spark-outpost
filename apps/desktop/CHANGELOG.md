@@ -2,6 +2,39 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.7
+
+- Fewer cards: Spark raises no plan, question, retry or verify cards of its own. An unclear request, a step that failed twice or a change Jev could not confirm ends the reply with "Needs you: …"; answer in your next message. The chat's sidebar row shows that line.
+- Plans: when a message is a build, Spark saves the plan it already has as the chat's agreed plan, shows one line such as "Plan saved · 4 pieces" and keeps building. `/plan` and a chat in Plan mode use the agent's own plan approval, and a question in a Plan-mode chat is answered as usual.
+- Plans: what an approved plan builds is checked, shown in Changes and kept or shipped by the chat's Spark autonomy level. A build in a Plan-mode chat keeps the chat's level instead of ending as Automatic.
+- Pieces: pieces share one working tree in every agent mode, with files assigned by the Coordinator. A piece's change to a file another piece owns is never refused or reverted: it is flagged with a card that does not stop the run and passed to the owning piece.
+- Messages during a build: Jev sorts each one. A question is answered at once, a requirement goes to the piece working on those files or to the follow-up, and unrelated work is queued.
+- Crew: Builders and pieces stay on the chat's provider and agent mode. A piece whose provider is rate-limited or signed out fails with the plain reason instead of moving to another provider. A chat pinned to a model runs every Builder and piece on it and says which model Jev would have used.
+- Pieces: a piece running when you press Stop reads "stopped", not failed.
+- Models: new chats start on Auto. Claude Sonnet 5.5 and Claude Haiku 5.5 have model cards, and Settings → Models is one comparison table per provider with tier, prices, context, speed and effort.
+- Models: with Auto, the message box and the context panel name the model that did the chat's work. A resumed Claude session runs the model you picked, and the name keeps its room while pieces run.
+- Chat: one quiet result line under a turn replaces the kept card: files and lines, checks, the commit, the pull request, thumbs and Revert. Ship stays in the Work panel's Changes tab. An approval that timed out reads "waited for you", with Try again.
+- Chat: the status line says what Jev is doing between agents (reading the message, picking models, checking a piece or the change) instead of "planning".
+- Chat: the Thinking step opens to show the agent's thinking, and Claude now sends thinking summaries.
+- Chat: commands an agent runs show their output in a small read-only terminal in the reply. Codex output is live; Claude's appears when the command ends.
+- Chat: the ticks sit at the chat's left edge, and the chat can no longer scroll under the message box.
+- Pull requests: the pull request is a one-line row above the message box that opens to every check, each reviewer's verdict and the open comment threads; Links shows the same. An eye on the row says who is on it: Watching, Agent is on it, Paused or Follow-up off.
+- Checks: a failing check is blamed on the change only with evidence. Failures Spark cannot place are one calm row, with no fix turn and no draft, and setup problems such as the wrong Node version are named as such.
+- Secret files: reading a secret file inside a linked repo follows the agent's mode and is recorded in the audit by path. Changing, moving or deleting one still asks, and so does reading a file listed in `.sparkignore` or a secret file outside the linked repos.
+- Sending data: after a turn read a secret file or other private data, a send no longer adds a card of its own. It runs or asks as the agent's mode decides, with a note and an audit entry, and work on the chat's own repository and pull request is not a send. A push or upload that holds a secret file's value asks with hold-to-confirm in every mode.
+- Tickets: a ticket shows Development, with its linked pull requests and branches. A chat started from a ticket gets the key, title, status and link, and the agent reads the rest itself.
+- Spark Island: Full is the default size, nothing sits under the camera notch, and a chat that needs you opens its card once without taking the keyboard.
+- Phone: the pairing blob moves while phone access turns on, a code waits and the time runs down. Pairing again keeps one device, a paired phone stays signed in when it arrives from another app, Tailscale answers when Spark was opened from the Dock, and a refused turn-on keeps showing its reason.
+- Providers: a signed-out provider says so instead of "stopped unexpectedly", and the turn is not retried.
+- Cost: a run on a session you stopped earlier is no longer charged that session's earlier cost again.
+- Changes: the files-changed total is the net change with each file counted once, and a piece's diff starts from the tree as it was when the piece started.
+- Routing: a request is destructive only when it deletes data, files or history; adding a `truncate` helper or a `delete` method is not.
+- Jev: keys are redacted in more of what is sent to Jev: your message and attached text, plan entries, next-step choices and Map area names and paths.
+- Sessions: the limit that closed sessions of other chats with "too many open sessions" is removed.
+- Ship: a commit Spark makes is named after its own turn, not the chat's first request.
+- Known: on Codex in Ask every time, an approved change to a secret file still fails; change the file yourself.
+- Known: in a Plan-mode Claude chat, a build request sent after a question may build without showing a plan first.
+
 ## 0.1.0-beta.6
 
 - Phone: a Phone page above Settings. Turn on phone access over Tailscale Serve, pair a phone with a QR code and a matching code, manage devices, choose what a phone may do and see recent phone activity. A paired phone does what the Mac app does, except the Browser pane, preview and terminal.
