@@ -18,5 +18,6 @@ export interface Coordination {
   integrator: string | null;
   base: string | null;
   sharedBase?: SharedBase;
+  startTrees?: Map<string, string>;
   topTier?: ReadonlySet<string>;
 }

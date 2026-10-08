@@ -333,11 +333,13 @@ export async function runPiece(
     attempts: piece.attempts + 1,
   });
   await publish(s);
+  const before = await treeOf(s, await site.cwd());
+  if (before) (coordination.startTrees ??= new Map()).set(piece.key, before);
   const work: PieceWork = {
     piece,
     coordination,
     site,
-    before: await treeOf(s, await site.cwd()),
+    before,
     since: new Date().toISOString(),
     violations: [],
     note: null,
