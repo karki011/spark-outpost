@@ -81,6 +81,13 @@ describe('installed native hook capabilities', LOADED_MACHINE, () => {
     expect(await verifyNativeHooks('claude', cli.command, 'future-next')).toBe(true);
   });
 
+  it('checks again after a diagnostic that ran out of time', async () => {
+    const cli = await fixture('setInterval(() => {}, 1000);');
+    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(false);
+    await cli.update(doctor());
+    expect(await verifyNativeHooks('claude', cli.command, 'future')).toBe(true);
+  });
+
   it('cancels its own diagnostic process and retries successfully later', async () => {
     const cli = await fixture('');
     const marker = join(cli.root, 'started');
