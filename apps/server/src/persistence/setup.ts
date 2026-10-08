@@ -23,7 +23,11 @@ import { catalog, catalogEntry } from '../providers/catalog.ts';
 import { INITIAL_PROVIDER_EFFORT } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
-import { readAgentInstructions } from '../setup/agent-instructions.ts';
+import {
+  instructionsFileNote,
+  loadAgentInstructions,
+  readAgentInstructions,
+} from '../setup/agent-instructions.ts';
 import { listAdvisors } from './advisors.ts';
 import type { Queryable } from './db.ts';
 
@@ -166,6 +170,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     defaultEffort: entry.defaultEffort,
     connection: toConnection(rows.find((row) => row.provider === entry.id)),
   }));
+  const instructionsFile = await loadAgentInstructions('', profile.agent_instructions_file);
   const result: Profile = {
     displayName: profile.display_name,
     defaultProvider,
@@ -183,6 +188,8 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     sparkEnabled: profile.spark_enabled,
     agentInstructions: profile.agent_instructions,
     agentInstructionsFile: profile.agent_instructions_file,
+    agentInstructionsFileSet: profile.agent_instructions_file !== '',
+    agentInstructionsFileError: instructionsFile.fileError,
     defaultLevel: profile.default_level,
     defaultLevelNotice: profile.default_level_notice,
     morningBrief: profile.morning_brief,
@@ -293,6 +300,7 @@ export async function shipsFailingChecks(db: Queryable, workspaceId: string): Pr
 
 export interface SparkPreferences extends SparkSessionPrefs {
   sparkEnabled: boolean;
+  instructionsNote: string | null;
 }
 
 export async function sparkPreferences(
@@ -300,14 +308,16 @@ export async function sparkPreferences(
   workspaceId: string,
 ): Promise<SparkPreferences> {
   const profile = await ensureProfile(db, workspaceId);
+  const instructions = await loadAgentInstructions(
+    profile.agent_instructions,
+    profile.agent_instructions_file,
+  );
   return {
     displayName: profile.display_name,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
-    agentInstructions: await readAgentInstructions(
-      profile.agent_instructions,
-      profile.agent_instructions_file,
-    ),
+    agentInstructions: instructions.text,
+    instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
   };
 }
 

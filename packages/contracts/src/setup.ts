@@ -144,6 +144,8 @@ export const profileSchema = z.object({
   sparkEnabled: z.boolean().default(true),
   agentInstructions: z.string().max(8000).optional(),
   agentInstructionsFile: z.string().max(4096).optional(),
+  agentInstructionsFileSet: z.boolean().optional(),
+  agentInstructionsFileError: z.string().nullable().optional(),
   defaultLevel: involvementLevelSchema.default(DEFAULT_INVOLVEMENT_LEVEL),
   defaultLevelNotice: z.boolean().default(false),
   morningBrief: z.boolean().default(true),

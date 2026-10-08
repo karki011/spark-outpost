@@ -32,7 +32,7 @@ it('rejects missing, relative, oversized, binary and directory instruction files
   await writeFile(file, 'x'.repeat(16_001));
   await expect(readAgentInstructions('', file)).rejects.toThrow('16 KB');
   await writeFile(file, Buffer.from([0xff, 0xfe]));
-  await expect(readAgentInstructions('', file)).rejects.toThrow('could not be read');
+  await expect(readAgentInstructions('', file)).rejects.toThrow('UTF-8');
   await writeFile(file, 'hello\0world');
   await expect(readAgentInstructions('', file)).rejects.toThrow('UTF-8');
   const directory = join(root, 'folder');
