@@ -31,6 +31,7 @@ interface Draft {
   priority: string;
   labels: string;
   status: string;
+  to: string;
   skip: string[];
 }
 
@@ -38,6 +39,11 @@ const STATUS_CHOICES = ticketStatusSchema.options.map((status) => ({
   id: status,
   label: ticketStatusLabels[status],
 }));
+
+function nameChoices(action: SparkAction, current: string) {
+  const names = action.action === 'transition_ticket' ? (action.choices ?? []) : [];
+  return [...new Set([...names, current])].map((name) => ({ id: name, label: name }));
+}
 
 const PRIORITY_CHOICES = [
   { id: '', label: 'None' },
@@ -61,6 +67,7 @@ function draftOf(action: SparkAction): Draft {
     priority: action.action === 'create_ticket' ? (action.priority ?? '') : '',
     labels: action.action === 'create_ticket' ? action.labels.join(', ') : '',
     status: action.action === 'transition_ticket' ? action.status : '',
+    to: action.action === 'transition_ticket' ? (action.to ?? '') : '',
     skip: action.action === 'pr_follow_up' ? action.skip : [],
   };
 }
@@ -277,12 +284,21 @@ function Fields({ action, draft, onChange, disabled }: FieldsProps) {
       {fields.includes('status') && (
         <div className="field">
           <span>Move to</span>
-          <ChoicePicker
-            label="Move to"
-            choices={STATUS_CHOICES}
-            value={draft.status}
-            onChange={set('status')}
-          />
+          {draft.to ? (
+            <ChoicePicker
+              label="Move to"
+              choices={nameChoices(action, draft.to)}
+              value={draft.to}
+              onChange={set('to')}
+            />
+          ) : (
+            <ChoicePicker
+              label="Move to"
+              choices={STATUS_CHOICES}
+              value={draft.status}
+              onChange={set('status')}
+            />
+          )}
         </div>
       )}
       {fields.includes('priority') && (

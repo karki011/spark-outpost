@@ -39,6 +39,16 @@ export async function denyJiraAssign(): Promise<void> {
   await fetch(`${STUB_URL}/tickets-test/deny-assign`);
 }
 
+export async function setJiraWorkflow(
+  project: string,
+  statuses: Record<string, 'new' | 'indeterminate' | 'done'>,
+): Promise<void> {
+  await fetch(`${STUB_URL}/tickets-test/jira-workflow`, {
+    method: 'POST',
+    body: JSON.stringify({ project, statuses }),
+  });
+}
+
 export async function connectTickets(page: Page, sources = ['linear', 'jira']): Promise<void> {
   if (sources.includes('linear')) {
     await page.request.put('/api/tickets/connections/linear', {

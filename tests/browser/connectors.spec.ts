@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
 import { resetTestDatabase } from './database.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
-import { connectTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import { setJiraWorkflow, connectTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 
 const MIN_CHECK_MS = 1200;
 
@@ -134,4 +134,58 @@ test('Disconnect waits for Undo, and the ticket update switches save @packaged',
   await expect(jira.getByRole('form', { name: 'Connect Jira' })).toBeVisible({ timeout: 10_000 });
   await expect(jira.locator('.pill-ok')).toHaveCount(0);
   expect(await connections(page)).toEqual([]);
+});
+
+test('The status pickers list real statuses, warn when unclear, and a choice changes the move', async ({
+  page,
+}) => {
+  await setJiraWorkflow('API', {
+    'To Do': 'new',
+    'In Progress': 'indeterminate',
+    'Design review': 'indeterminate',
+    'QA review': 'indeterminate',
+    Rejected: 'done',
+    Done: 'done',
+  });
+  await connectTickets(page, ['jira']);
+  await openConnectors(page);
+  const jira = connectorCard(page, 'jira');
+  await connectorHead(jira).click();
+
+  const doneNotes = jira.getByRole('list', { name: 'Done status by project' });
+  await expect(doneNotes.getByRole('listitem')).toHaveText(['API Automatic uses Done.']);
+  await jira.getByRole('button', { name: 'Done status' }).click();
+  await expect(
+    page.getByRole('menu', { name: 'Done status' }).getByRole('menuitemradio'),
+  ).toHaveText(['Automatic', 'Rejected', 'Done']);
+  await page.keyboard.press('Escape');
+
+  const reviewNotes = jira.getByRole('list', { name: 'In review status by project' });
+  await expect(reviewNotes.getByRole('listitem')).toHaveText([
+    'API Several review statuses: Design review, QA review. Choose one.',
+  ]);
+  const unclear = await page.request.post('/api/tickets/jira/API-77/transition', {
+    data: { status: 'in_review' },
+  });
+  expect(await unclear.json()).toMatchObject({
+    outcome: 'failed',
+    message: expect.stringContaining('API-77 was not moved: this project has several review'),
+  });
+
+  await jira.getByRole('button', { name: 'In review status' }).click();
+  await page
+    .getByRole('menu', { name: 'In review status' })
+    .getByRole('menuitemradio', { name: 'QA review' })
+    .click();
+  await expect(jira.getByRole('button', { name: 'In review status' })).toHaveText('QA review');
+  await expect(reviewNotes.getByRole('listitem')).toHaveText(['API Moves to QA review.']);
+
+  const moved = await page.request.post('/api/tickets/jira/API-77/transition', {
+    data: { status: 'in_review' },
+  });
+  expect(await moved.json()).toEqual({ outcome: 'succeeded', message: null });
+  const ticket = await page.request.get('/api/tickets/jira/API-77');
+  expect(((await ticket.json()) as { ticket: { statusName: string } }).ticket.statusName).toBe(
+    'QA review',
+  );
 });

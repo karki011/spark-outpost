@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import type {
-  TicketDetail,
-  TicketPriorityName,
-  TicketStatusMap,
-  TicketSummary,
-} from '@spark-outpost/contracts';
+import type { TicketDetail, TicketPriorityName, TicketSummary } from '@spark-outpost/contracts';
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
 import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.ts';
@@ -19,13 +14,13 @@ import {
   type TicketSource,
 } from './source.ts';
 import {
-  bucketOf,
-  noStateMessage,
-  pickState,
-  projectMap,
-  shouldMove,
-  type StateKind,
-} from './status.ts';
+  effectiveMap,
+  planMove,
+  settingsFor,
+  type MoveRequest,
+  type SourceMoveSettings,
+} from './move-target.ts';
+import { bucketOf, sameName, type SourceState, type StateKind } from './status.ts';
 
 const NAME = 'Jira';
 const DEFAULT_TYPE = 'Task';
@@ -73,6 +68,7 @@ const fieldsSchema = z.object({
   updated: dateSchema,
   priority: named,
   project: z.object({ key: z.string() }).nullable().optional(),
+  issuetype: named,
   [SPRINT_FIELD]: sprintSchema,
   ...jiraExtraFieldsShape,
 });
@@ -112,6 +108,9 @@ const remoteLinksSchema = z.array(
 const transitionsSchema = z.object({
   transitions: z.array(z.object({ id: z.string(), name: z.string(), to: statusSchema })),
 });
+const projectStatusesSchema = z.array(
+  z.object({ name: z.string(), statuses: z.array(statusSchema) }),
+);
 const myselfSchema = z.object({
   accountId: z.string(),
   displayName: z.string(),
@@ -164,7 +163,7 @@ export interface JiraAccess {
 
 export function jiraSource(
   access: JiraAccess,
-  statusMap: TicketStatusMap,
+  moves: SourceMoveSettings,
   fetchImpl: typeof fetch,
 ): TicketSource {
   const authorization = `Basic ${Buffer.from(`${access.email}:${access.apiToken}`).toString('base64')}`;
@@ -190,11 +189,57 @@ export function jiraSource(
     return parsed.data;
   }
 
+  const stateOf = (status: z.infer<typeof statusSchema>): SourceState => ({
+    name: status.name,
+    kind: jiraKind(status.statusCategory?.key),
+  });
   const bucket = (status: z.infer<typeof statusSchema>, project: string | null) =>
-    bucketOf(
-      { name: status.name, kind: jiraKind(status.statusCategory?.key) },
-      projectMap(statusMap, project),
+    bucketOf(stateOf(status), effectiveMap(settingsFor(moves, project)));
+
+  async function statusesOf(project: string, issueType: string | null): Promise<SourceState[]> {
+    const types = await call(
+      projectStatusesSchema,
+      { method: 'GET', path: `/rest/api/3/project/${encodeURIComponent(project)}/statuses` },
+      `reading the statuses of ${project}`,
     );
+    const own = types.filter((type) => issueType !== null && sameName(type.name, issueType));
+    const byName = new Map<string, SourceState>();
+    for (const status of (own.length > 0 ? own : types).flatMap((type) => type.statuses)) {
+      byName.set(status.name.trim().toLowerCase(), stateOf(status));
+    }
+    return [...byName.values()];
+  }
+
+  async function gatherMove(key: string, request: MoveRequest) {
+    const fields = [...SUMMARY_FIELDS, 'issuetype'].join(',');
+    const issue = await call(
+      issueSchema,
+      { method: 'GET', path: `${issuePath(key)}?fields=${fields}` },
+      `reading ${key}`,
+    );
+    const { project } = summary(issue);
+    const [statuses, { transitions }] = await Promise.all([
+      project ? statusesOf(project, issue.fields.issuetype?.name ?? null) : [],
+      call(
+        transitionsSchema,
+        { method: 'GET', path: `${issuePath(key)}/transitions` },
+        `reading the transitions for ${key}`,
+      ),
+    ]);
+    const plan = planMove({
+      key: issue.key,
+      sourceName: NAME,
+      project,
+      current: stateOf(issue.fields.status),
+      statuses,
+      reachable: transitions.map((transition) => stateOf(transition.to)),
+      request,
+      settings: settingsFor(moves, project),
+    });
+    const { to } = plan;
+    const next = to ? transitions.find((transition) => sameName(transition.to.name, to)) : null;
+    return { plan, transitionId: next?.id ?? null };
+  }
 
   async function issueIdOf(key: string): Promise<string> {
     const known = issueIds.get(key);
@@ -319,45 +364,24 @@ export function jiraSource(
       };
       return detail;
     },
-    async transition(key, target) {
-      const issue = await call(
-        issueSchema,
-        { method: 'GET', path: `${issuePath(key)}?fields=${SUMMARY_FIELDS.join(',')}` },
-        `reading ${key}`,
-      );
-      const current = summary(issue);
-      const decision = shouldMove(current.status, target);
-      if (!decision.move)
-        return { moved: false, statusName: current.statusName, message: decision.reason };
-      const { transitions } = await call(
-        transitionsSchema,
-        { method: 'GET', path: `${issuePath(key)}/transitions` },
-        `reading the transitions for ${key}`,
-      );
-      const options = transitions.map((transition) => ({
-        id: transition.id,
-        name: transition.to.name,
-        kind: jiraKind(transition.to.statusCategory?.key),
-      }));
-      const next = pickState(options, target, projectMap(statusMap, current.project));
-      if (!next) {
-        return {
-          moved: false,
-          statusName: current.statusName,
-          message: noStateMessage(target, current.project),
-        };
-      }
+    async planMove(key, request) {
+      return (await gatherMove(key, request)).plan;
+    },
+    async transition(key, request) {
+      const { plan, transitionId } = await gatherMove(key, request);
+      if (!transitionId) return { ...plan, moved: false };
       await call(
         null,
         {
           method: 'POST',
           path: `${issuePath(key)}/transitions`,
-          body: { transition: { id: next.id } },
+          body: { transition: { id: transitionId } },
         },
         `moving ${key}`,
       );
-      return { moved: true, statusName: next.name, message: null };
+      return { ...plan, moved: true };
     },
+    projectStatuses: (project) => statusesOf(project, null),
     async comment(key, body) {
       await call(
         null,

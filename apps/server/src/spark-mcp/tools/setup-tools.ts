@@ -130,6 +130,7 @@ async function connectors(context: SparkToolContext) {
             checkedAt: connection.validatedAt,
             moveOnShip: connection.moveOnShip,
             moveOnMerge: connection.moveOnMerge,
+            moveStatuses: connection.moveStatuses,
             ...(connection.keySaved ? {} : { problem: 'The saved key is missing; reconnect it.' }),
           }
         : {}),

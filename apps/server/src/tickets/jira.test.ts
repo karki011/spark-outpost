@@ -26,11 +26,12 @@ const issue = (fields: Record<string, unknown>) => ({
   fields: { summary: 'Fix it', status: { name: 'To Do' }, updated: 'yesterday-ish', ...fields },
 });
 
+const NO_MOVES = { statusMap: {}, moveStatuses: {} };
 const access = { siteUrl: 'https://jira.example.test', email: 'me@example.test', apiToken: 't' };
 
 describe('Jira answers', () => {
   it('reports an invalid date as a Jira API error', async () => {
-    const list = jiraSource(access, {}, answering({ issues: [issue({})] })).listAssigned({});
+    const list = jiraSource(access, NO_MOVES, answering({ issues: [issue({})] })).listAssigned({});
     await expect(list).rejects.toBeInstanceOf(TicketApiError);
     await expect(list).rejects.toMatchObject({ status: 502 });
 
@@ -38,7 +39,7 @@ describe('Jira answers', () => {
       updated: '2026-09-01T10:00:00.000+0000',
       comment: { comments: [{ body: null, created: 'not a date' }] },
     });
-    const detail = jiraSource(access, {}, answering(withBadComment)).getTicket('WEB-1');
+    const detail = jiraSource(access, NO_MOVES, answering(withBadComment)).getTicket('WEB-1');
     await expect(detail).rejects.toBeInstanceOf(TicketApiError);
   });
 });

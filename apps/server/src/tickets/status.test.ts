@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bucketOf, pickState, projectMap, shouldMove, type SourceState } from './status.ts';
+import { bucketOf, projectMap, shouldMove, type SourceState } from './status.ts';
 
 const states: (SourceState & { id: string })[] = [
   { id: '1', name: 'Todo', kind: 'todo' },
@@ -25,18 +25,6 @@ describe('ticket status mapping', () => {
     expect(bucketOf({ name: 'blocked', kind: 'started' }, mapped)).toBe('in_review');
     expect(projectMap({ web: { in_review: 'Blocked' } }, 'API')).toEqual({});
     expect(projectMap({ web: { in_review: 'Blocked' } }, null)).toEqual({});
-  });
-
-  it('picks the most fitting state for a target', () => {
-    expect(pickState(states, 'in_progress')?.name).toBe('In Progress');
-    expect(pickState(states, 'in_review')?.name).toBe('Code Review');
-    expect(pickState(states, 'done')?.name).toBe('Done');
-  });
-
-  it('uses the configured name and finds nothing when it is missing', () => {
-    expect(pickState(states, 'in_review', { in_review: 'blocked' })?.id).toBe('2');
-    expect(pickState(states, 'in_review', { in_review: 'QA' })).toBeNull();
-    expect(pickState(states.slice(0, 3).concat(states[4]!), 'in_review')).toBeNull();
   });
 
   it('never moves a ticket backwards except to Done', () => {

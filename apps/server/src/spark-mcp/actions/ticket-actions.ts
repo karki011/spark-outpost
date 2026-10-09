@@ -14,6 +14,7 @@ import { recordTicketEvent } from '../../persistence/ticket-events.ts';
 import { assignTicket } from '../../tickets/assign.ts';
 import { connectedSources, requireSource, type TicketDeps } from '../../tickets/connections.ts';
 import { createTicket } from '../../tickets/create.ts';
+import type { MoveRequest } from '../../tickets/move-target.ts';
 import { moveTicket } from '../../tickets/sync.ts';
 import { ticketDepsFor } from '../deps.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
@@ -119,21 +120,36 @@ export async function performCommentTicket(
   return { message: `Commented on ${ticket.key}.`, url: ticket.url, output: { key: ticket.key } };
 }
 
+function moveRequest(status: string): MoveRequest {
+  const group = ticketStatusSchema.safeParse(status.trim().toLowerCase());
+  return group.success ? { group: group.data } : { name: status };
+}
+
 async function transition(
   context: SparkToolContext,
-  args: { source?: TicketSourceId | undefined; key: string; status: SparkStatus },
+  args: { source?: TicketSourceId | undefined; key: string; status: string },
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
   const source = await pickSource(deps, args.source);
-  const { summary, ref } = await ticketOf(deps, source, args.key);
-  if (summary.status === args.status) {
-    return { outcome: 'unchanged', message: `${ref.key} is already ${summary.statusName}.` };
+  const { open, ref } = await ticketOf(deps, source, args.key);
+  const plan = await open.source.planMove(ref.key, moveRequest(args.status));
+  if (plan.stopped === 'unchanged') {
+    return { outcome: 'unchanged', message: `${ref.key} stays at ${plan.from}. ${plan.message}` };
+  }
+  if (!plan.to || !plan.status) {
+    return {
+      outcome: 'needs_status',
+      message: `${plan.message} Nothing was moved. Call again with status set to one of the exact names in statuses.`,
+      statuses: plan.statuses,
+    };
   }
   const action: SparkAction = {
     action: 'transition_ticket',
     ticket: ref,
-    from: summary.statusName,
-    status: args.status,
+    from: plan.from,
+    status: plan.status,
+    to: plan.to,
+    choices: plan.statuses,
   };
   return proposeAction(context, action);
 }
@@ -145,18 +161,16 @@ export async function performTransitionTicket(
   const deps = ticketDepsFor(context.deps, context.scope);
   const { ticket } = action;
   const open = await requireSource(deps, ticket.source);
-  const sync = await moveTicket(deps, open, ticket.key, action.status, null, {
-    via: 'spark_tools',
-  });
+  const request: MoveRequest = action.to ? { name: action.to } : { group: action.status };
+  const sync = await moveTicket(deps, open, ticket.key, request, null, { via: 'spark_tools' });
   if (sync.outcome === 'failed') throw new Error(sync.message ?? 'The move failed.');
+  const moved = sync.outcome === 'succeeded';
   return {
-    message: sync.message ?? `Moved ${ticket.key}.`,
+    message: sync.message ?? `Moved ${ticket.key}${action.to ? ` to ${action.to}` : ''}.`,
     url: ticket.url,
-    output: { key: ticket.key, moved: sync.outcome === 'succeeded' },
+    output: { key: ticket.key, moved, ...(moved && action.to ? { status: action.to } : {}) },
   };
 }
-
-type SparkStatus = z.infer<typeof ticketStatusSchema>;
 
 async function assign(
   context: SparkToolContext,
@@ -222,8 +236,12 @@ export const ticketActionTools = [
     title: 'Move a ticket',
     acts: true,
     needs: 'tickets',
-    description: `Move a Jira or Linear ticket to todo, in_progress, in_review or done (mapped to the project's own statuses). ${ACTION_NOTE}`,
-    input: { source: sourceInput, key: keyInput, status: ticketStatusSchema },
+    description: `Move a Jira or Linear ticket. status is a group (todo, in_progress, in_review, done) or the exact name of one of the project's statuses. A group moves only when the project has one clear status for it; otherwise nothing moves and the result lists the status names to choose from. ${ACTION_NOTE}`,
+    input: {
+      source: sourceInput,
+      key: keyInput,
+      status: z.string().trim().min(1).max(100).describe('A group or an exact status name.'),
+    },
     run: (args, context) => transition(context, args),
   }),
   sparkTool({

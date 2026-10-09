@@ -136,7 +136,7 @@ export async function startTicket(
     },
   });
   const transition = request.moveToInProgress
-    ? await moveTicket(deps, open, ticket.key, 'in_progress', taskId)
+    ? await moveTicket(deps, open, ticket.key, { group: 'in_progress' }, taskId)
     : null;
   return {
     conversationId: request.conversationId,

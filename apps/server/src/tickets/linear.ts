@@ -3,7 +3,6 @@ import type {
   TicketPriorityName,
   TicketDetail,
   TicketStatus,
-  TicketStatusMap,
   TicketSummary,
 } from '@spark-outpost/contracts';
 import { callJson, failure, isOk } from './http.ts';
@@ -18,13 +17,13 @@ import {
   type TicketSource,
 } from './source.ts';
 import {
-  bucketOf,
-  noStateMessage,
-  pickState,
-  projectMap,
-  shouldMove,
-  type StateKind,
-} from './status.ts';
+  effectiveMap,
+  planMove,
+  settingsFor,
+  type MoveRequest,
+  type SourceMoveSettings,
+} from './move-target.ts';
+import { bucketOf, sameName, type SourceState, type StateKind } from './status.ts';
 
 export const LINEAR_API_URL = 'https://api.linear.app/graphql';
 const NAME = 'Linear';
@@ -107,6 +106,11 @@ const LINK = `mutation Link($issueId: String!, $url: String!, $title: String!) {
 const TEAM = `query Team($key: String!) {
   teams(filter: { key: { eqIgnoreCase: $key } }) {
     nodes { id key labels { nodes { id name } } } } }`;
+const TEAM_STATUSES = `query TeamStatuses($key: String!) {
+  teams(filter: { key: { eqIgnoreCase: $key } }) { nodes { states { nodes { name type } } } } }`;
+const teamStatusesSchema = z.object({
+  teams: nodes(z.object({ states: nodes(z.object({ name: z.string(), type: z.string() })) })),
+});
 const CREATE = `mutation Create($input: IssueCreateInput!) {
   issueCreate(input: $input) { success issue { identifier url } } }`;
 const teamSchema = z.object({
@@ -139,6 +143,11 @@ export function linearKind(type: string): StateKind {
   return 'todo';
 }
 
+const stateOf = (state: { name: string; type: string }): SourceState => ({
+  name: state.name,
+  kind: linearKind(state.type),
+});
+
 export function linearTextFilter(q: string) {
   const key = KEY_QUERY.exec(q.trim());
   if (key) {
@@ -164,7 +173,7 @@ function authError(errors: unknown): boolean {
 
 export function linearSource(
   apiKey: string,
-  statusMap: TicketStatusMap,
+  moves: SourceMoveSettings,
   fetchImpl: typeof fetch,
   apiUrl = LINEAR_API_URL,
 ): TicketSource {
@@ -195,7 +204,25 @@ export function linearSource(
   }
 
   const bucket = (state: z.infer<typeof stateSchema>, team: string | null) =>
-    bucketOf({ name: state.name, kind: linearKind(state.type) }, projectMap(statusMap, team));
+    bucketOf(stateOf(state), effectiveMap(settingsFor(moves, team)));
+
+  async function gatherMove(key: string, request: MoveRequest) {
+    const { issue } = await graphql(teamStatesSchema, TEAM_STATES, { id: key }, `reading ${key}`);
+    const states = issue.team.states.nodes;
+    const plan = planMove({
+      key,
+      sourceName: NAME,
+      project: issue.team.key,
+      current: stateOf(issue.state),
+      statuses: states.map(stateOf),
+      reachable: null,
+      request,
+      settings: settingsFor(moves, issue.team.key),
+    });
+    const { to } = plan;
+    const next = to ? states.find((state) => sameName(state.name, to)) : null;
+    return { plan, issueId: issue.id, stateId: next?.id ?? null };
+  }
 
   function summary(issue: z.infer<typeof issueSchema>): TicketSummary {
     const team = issue.team?.key ?? null;
@@ -307,32 +334,23 @@ export function linearSource(
       };
       return detail;
     },
-    async transition(key, target) {
-      const { issue } = await graphql(teamStatesSchema, TEAM_STATES, { id: key }, `reading ${key}`);
-      const mapped = projectMap(statusMap, issue.team.key);
-      const decision = shouldMove(bucket(issue.state, issue.team.key), target);
-      if (!decision.move) {
-        return { moved: false, statusName: issue.state.name, message: decision.reason };
-      }
-      const states = issue.team.states.nodes.map((state) => ({
-        ...state,
-        kind: linearKind(state.type),
-      }));
-      const next = pickState(states, target, mapped);
-      if (!next) {
-        return {
-          moved: false,
-          statusName: issue.state.name,
-          message: noStateMessage(target, issue.team.key),
-        };
-      }
-      await graphql(
-        successSchema('issueUpdate'),
-        MOVE,
-        { id: issue.id, stateId: next.id },
-        `moving ${key}`,
+    async planMove(key, request) {
+      return (await gatherMove(key, request)).plan;
+    },
+    async transition(key, request) {
+      const { plan, issueId, stateId } = await gatherMove(key, request);
+      if (!stateId) return { ...plan, moved: false };
+      await graphql(successSchema('issueUpdate'), MOVE, { id: issueId, stateId }, `moving ${key}`);
+      return { ...plan, moved: true };
+    },
+    async projectStatuses(project) {
+      const { teams } = await graphql(
+        teamStatusesSchema,
+        TEAM_STATUSES,
+        { key: project },
+        `reading the statuses of ${project}`,
       );
-      return { moved: true, statusName: next.name, message: null };
+      return (teams.nodes[0]?.states.nodes ?? []).map(stateOf);
     },
     async comment(key, body) {
       await graphql(

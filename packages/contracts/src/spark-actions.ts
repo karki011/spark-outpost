@@ -61,6 +61,8 @@ export const transitionTicketActionSchema = z.object({
   ticket: ticketRefSchema,
   from: z.string(),
   status: ticketStatusSchema,
+  to: z.string().optional(),
+  choices: z.array(z.string()).optional(),
 });
 
 export const assignTicketActionSchema = z.object({
@@ -202,6 +204,7 @@ export const sparkActionEditsSchema = z
     priority: ticketPriorityNameSchema.nullable(),
     labels,
     status: ticketStatusSchema,
+    to: z.string().trim().min(1).max(100),
     skip: z.array(z.string().max(60)).max(101),
   })
   .partial()
@@ -211,7 +214,7 @@ export type SparkActionEdits = z.infer<typeof sparkActionEditsSchema>;
 const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   create_ticket: ['title', 'description', 'type', 'priority', 'labels'],
   comment_ticket: ['body'],
-  transition_ticket: ['status'],
+  transition_ticket: ['status', 'to'],
   assign_ticket: [],
   open_pr: ['title', 'body'],
   pr_follow_up: ['skip'],

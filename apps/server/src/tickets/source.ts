@@ -12,6 +12,9 @@ import type {
   TicketSummary,
 } from '@spark-outpost/contracts';
 
+import type { MovePlan, MoveRequest } from './move-target.ts';
+import type { SourceState } from './status.ts';
+
 export interface TicketAccount {
   id: string;
   name: string;
@@ -34,10 +37,8 @@ export interface TicketSearchFilter {
 export const SEARCH_PAGE_SIZE = 50;
 export const KEY_QUERY = /^([A-Za-z][A-Za-z0-9_]*)-(\d+)$/;
 
-export interface TransitionResult {
+export interface TransitionResult extends MovePlan {
   moved: boolean;
-  statusName: string;
-  message: string | null;
 }
 
 export interface NewTicket {
@@ -82,7 +83,9 @@ export interface TicketSource {
   getSummary(key: string): Promise<TicketSummary>;
   getTicket(key: string): Promise<TicketDetail>;
   assign(key: string, accountId: string | null): Promise<void>;
-  transition(key: string, status: TicketStatus): Promise<TransitionResult>;
+  planMove(key: string, request: MoveRequest): Promise<MovePlan>;
+  transition(key: string, request: MoveRequest): Promise<TransitionResult>;
+  projectStatuses(project: string): Promise<SourceState[]>;
   comment(key: string, body: string): Promise<void>;
   linkPullRequest(key: string, pull: TicketRef): Promise<void>;
   create(ticket: NewTicket): Promise<CreatedTicket>;

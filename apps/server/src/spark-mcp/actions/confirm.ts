@@ -71,6 +71,9 @@ function cardTitle(action: SparkAction): string {
   if (action.action === 'pr_follow_up' || action.action === 'pr_follow_up_round') {
     return `${question} ${action.repo}#${action.number}`;
   }
+  if (action.action === 'transition_ticket' && action.to) {
+    return `${question} ${action.ticket.key} → ${action.to}`;
+  }
   return `${question} ${action.ticket.key}`;
 }
 

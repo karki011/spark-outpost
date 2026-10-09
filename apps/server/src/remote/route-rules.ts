@@ -136,6 +136,7 @@ GET /api/tickets
 GET /api/tickets/:source/:key
 GET /api/tickets/attention-settings
 GET /api/tickets/connections
+GET /api/tickets/connections/:source/move-options
 GET /api/tickets/inbox
 GET /api/tickets/search
 DELETE /api/tickets/:source/:key/dismiss

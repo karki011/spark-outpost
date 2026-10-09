@@ -35,6 +35,7 @@ import { searchTickets } from '../tickets/search.ts';
 import { dismissFlags, markNoticeSeen, snoozeProblem, snoozeTicket } from '../tickets/snooze.ts';
 import { TicketApiError, TicketConflictError, TicketNotConnectedError } from '../tickets/source.ts';
 import { startTicket } from '../tickets/start.ts';
+import { moveOptions } from '../tickets/move-options.ts';
 import { moveTicket } from '../tickets/sync.ts';
 import { sparkToolsOffered, type AgentRuntime } from '../agents/acp/spark-tools.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -98,6 +99,10 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
     res.json(await changeSettings(deps, sourceParam(req), settings));
   });
 
+  router.get('/tickets/connections/:source/move-options', async (req, res) => {
+    res.json(await moveOptions(await requireSource(deps, sourceParam(req))));
+  });
+
   router.delete('/tickets/connections/:source', async (req, res) => {
     res.json(await removeConnection(deps, sourceParam(req)));
   });
@@ -155,7 +160,7 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
   router.post('/tickets/:source/:key/transition', async (req, res) => {
     const { status } = parseBody(transitionTicketRequestSchema, req);
     const open = await requireSource(deps, sourceParam(req));
-    res.json(await moveTicket(deps, open, keyParam(req), status, null));
+    res.json(await moveTicket(deps, open, keyParam(req), { group: status }, null));
   });
 
   router.put('/tickets/:source/:key/snooze', async (req, res) => {

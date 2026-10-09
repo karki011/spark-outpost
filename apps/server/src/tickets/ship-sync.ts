@@ -26,7 +26,7 @@ async function syncTicket(
   }
   await linkPullRequest(deps, open, ticket.key, pull, taskId);
   if (open.connection.moveOnShip) {
-    await moveTicket(deps, open, ticket.key, 'in_review', taskId);
+    await moveTicket(deps, open, ticket.key, { group: 'in_review' }, taskId);
   }
 }
 
