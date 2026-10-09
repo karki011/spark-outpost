@@ -71,6 +71,16 @@ function nameIt(name = 'Usage by user') {
 }
 
 describe('the steps to a new outpost', () => {
+  it('previews two chats with the same colour as different blobs, in list order', () => {
+    const ids = countingIds();
+    const sameColor = '0c000000-0000-4000-8000-000000000009';
+    const chats = [existing(ids, FE_CHAT, 'fe'), existing(ids, sameColor, 'mobile')];
+    render(<Harness initial={draftOf(chats)} />);
+    pressEnter(nameInput());
+    const rows = [...dialog().querySelectorAll<HTMLElement>('.op-chat-row .chat-face')];
+    expect(rows.map((face) => face.dataset.color)).toEqual(['gold', 'ember']);
+  });
+
   it('opens on the name, and Enter moves on only when there is one', () => {
     render(<Harness />);
     expect(document.activeElement).toBe(nameInput());

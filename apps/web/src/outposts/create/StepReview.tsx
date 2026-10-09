@@ -1,4 +1,4 @@
-import { ChatFace } from '../../brand/ChatFace.tsx';
+import { MemberFace } from '../MemberFace.tsx';
 import { FileIcon } from '../../chat/attachments/attachment-icons.tsx';
 import { CommentIcon } from '../../ui/icons.tsx';
 import { listedChats, type CreateDraft } from './create-draft.ts';
@@ -39,7 +39,7 @@ export function StepReview({ draft, data, onEditName, onEditChats }: StepReviewP
             const excerpt = messageExcerpt(chat);
             return (
               <li key={chat.key}>
-                <ChatFace chatId={view.faceId} size="strip" />
+                <MemberFace chatId={view.faceId} size="strip" />
                 <b className="op-review-handle">@{chat.handle}</b>
                 <span className="op-chat-text">
                   <b>

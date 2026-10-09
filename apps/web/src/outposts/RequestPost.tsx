@@ -7,7 +7,7 @@ import {
   InfoIcon,
   MoveIcon,
 } from '../ui/icons.tsx';
-import { ChatFace } from '../brand/ChatFace.tsx';
+import { MemberFace } from './MemberFace.tsx';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { PostText } from './PostText.tsx';
 import {
@@ -84,7 +84,7 @@ export function RequestPost({
   const to = receiverName(post);
   const chatId = post.toConversationId;
   const receiver = chatId && (
-    <ChatFace chatId={chatId} state={requestFaceState(state)} size="post" />
+    <MemberFace chatId={chatId} state={requestFaceState(state)} size="post" />
   );
   return (
     <li
@@ -93,7 +93,7 @@ export function RequestPost({
       data-post={post.id}
     >
       <div className="op-post-head">
-        {post.fromConversationId && <ChatFace chatId={post.fromConversationId} size="post" />}
+        {post.fromConversationId && <MemberFace chatId={post.fromConversationId} size="post" />}
         <b>{senderName(post)}</b>
         <span className="op-to">
           <MoveIcon />

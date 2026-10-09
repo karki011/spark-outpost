@@ -69,6 +69,10 @@ function projectOf(
   return picked?.projectIds.map((id) => names[id]).find(Boolean) ?? null;
 }
 
+export function faceIds(chats: readonly ChatDraft[]): string[] {
+  return chats.map((chat) => memberId(chat) ?? chat.key);
+}
+
 export function chatView(
   chat: ChatDraft,
   { chats, projectNames, agent }: ChatViewContext,
@@ -77,7 +81,7 @@ export function chatView(
   const project = projectOf(chat, picked, projectNames);
   const newTitle = project ? `New chat in ${project}` : 'New chat';
   return {
-    faceId: memberId(chat) ?? chat.key,
+    faceId: faceIds([chat])[0]!,
     title: chat.kind === 'new' ? newTitle : (picked?.title ?? 'Choose a chat'),
     tag: chat.kind === 'new' ? 'New' : 'Existing',
     meta: [project, agent?.agent, agent?.mode].filter(Boolean).join(' · '),

@@ -5,7 +5,15 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { FailedMember } from '@spark-outpost/contracts';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { XIcon } from '../../ui/icons.tsx';
-import { hasUnsavedInput, settled, type ChatDraft, type CreateDraft } from './create-draft.ts';
+import { OutpostFaces } from '../MemberFace.tsx';
+import {
+  hasUnsavedInput,
+  listedChats,
+  settled,
+  type ChatDraft,
+  type CreateDraft,
+} from './create-draft.ts';
+import { faceIds } from './create-labels.ts';
 import { continueBlock, isFinished, nameProblem } from './create-problems.ts';
 import { SheetFooter } from './SheetFooter.tsx';
 import { StartResult } from './StartResult.tsx';
@@ -149,30 +157,32 @@ export function CreateSheet(props: CreateSheetProps) {
         </header>
         <Stepper current={failed ? REVIEW + 1 : step} />
         <div className="op-sheet-body">
-          {failed && <StartResult name={draft.name.trim()} failed={failed} />}
-          {!failed && step === NAME && (
-            <StepName
-              inputRef={nameRef}
-              name={draft.name}
-              problem={nameTried ? nameProblem(draft.name) : null}
-              onName={(name) => onChange((current) => ({ ...current, name }))}
-            />
-          )}
-          <StepChats
-            draft={draft}
-            data={data}
-            hidden={failed !== null || step !== CHATS}
-            focusSignal={chatsFocus}
-            onChange={onChange}
-          />
-          {!failed && step === REVIEW && (
-            <StepReview
+          <OutpostFaces listed={faceIds(listedChats(draft))}>
+            {failed && <StartResult name={draft.name.trim()} failed={failed} />}
+            {!failed && step === NAME && (
+              <StepName
+                inputRef={nameRef}
+                name={draft.name}
+                problem={nameTried ? nameProblem(draft.name) : null}
+                onName={(name) => onChange((current) => ({ ...current, name }))}
+              />
+            )}
+            <StepChats
               draft={draft}
               data={data}
-              onEditName={() => goTo(NAME)}
-              onEditChats={() => goTo(CHATS)}
+              hidden={failed !== null || step !== CHATS}
+              focusSignal={chatsFocus}
+              onChange={onChange}
             />
-          )}
+            {!failed && step === REVIEW && (
+              <StepReview
+                draft={draft}
+                data={data}
+                onEditName={() => goTo(NAME)}
+                onEditChats={() => goTo(CHATS)}
+              />
+            )}
+          </OutpostFaces>
         </div>
         {props.failure && (
           <p className="op-sheet-failure" role="alert">

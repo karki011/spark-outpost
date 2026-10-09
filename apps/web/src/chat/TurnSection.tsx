@@ -29,6 +29,7 @@ import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
 import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
+import { OutpostFaces } from '../outposts/MemberFace.tsx';
 
 type Task = ConversationDetail['tasks'][number];
 
@@ -46,11 +47,15 @@ interface TurnSectionProps {
 function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }) {
   const seam = useOutpostSeam();
   const open = seam ? () => seam.onOpenOutpost(outpost.outpostId, outpost.postId) : undefined;
-  const fromChatId = memberChatId(seam?.outposts ?? [], outpost.outpostId, outpost.fromHandle);
+  const outposts = seam?.outposts ?? [];
+  const fromChatId = memberChatId(outposts, outpost.outpostId, outpost.fromHandle);
+  const members = outposts.find((listed) => listed.id === outpost.outpostId)?.members;
   return (
-    <RequestHeader outpost={outpost} fromChatId={fromChatId} onOpen={open}>
-      <QuotedText text={text} />
-    </RequestHeader>
+    <OutpostFaces members={members}>
+      <RequestHeader outpost={outpost} fromChatId={fromChatId} onOpen={open}>
+        <QuotedText text={text} />
+      </RequestHeader>
+    </OutpostFaces>
   );
 }
 

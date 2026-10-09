@@ -1,6 +1,6 @@
 import '../chat/composer/composer-popovers.css';
 import '../chat/project/project.css';
-import { ChatFace } from '../brand/ChatFace.tsx';
+import { MemberFace } from './MemberFace.tsx';
 import type { MemberView } from './member-view.ts';
 
 interface HandlePickerProps {
@@ -35,7 +35,7 @@ export function HandlePicker({ listId, options, active, onActive, onPick }: Hand
             }}
             onClick={() => onPick(member)}
           >
-            <ChatFace chatId={member.conversationId} state={member.state} size="post" />
+            <MemberFace chatId={member.conversationId} state={member.state} size="post" />
             <b>@{member.handle}</b>
             <small>{member.title}</small>
           </div>

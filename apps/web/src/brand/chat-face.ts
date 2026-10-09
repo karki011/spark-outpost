@@ -26,9 +26,12 @@ export const CHAT_FACE_SHAPES = [
   'hexagon',
 ] as const satisfies readonly TeammateShape[];
 
-export interface ChatFaceLook {
+export interface ChatFaceStyle {
   color: TeammateColor;
   shape: TeammateShape;
+}
+
+export interface ChatFaceLook extends ChatFaceStyle {
   expression: BlobExpression;
 }
 
@@ -45,13 +48,20 @@ export function chatFaceSeed(chatId: string): string {
   return `chat:${chatId}`;
 }
 
-export function chatFace(chatId: string, state: ChatFaceState): ChatFaceLook {
+export function chatFaceStyle(chatId: string): ChatFaceStyle {
   const hash = nameHash(chatFaceSeed(chatId));
   return {
     color: TEAMMATE_COLORS[hash % TEAMMATE_COLORS.length]!,
     shape: CHAT_FACE_SHAPES[(hash >>> 8) % CHAT_FACE_SHAPES.length]!,
-    expression: EXPRESSIONS[state],
   };
+}
+
+export function chatFace(
+  chatId: string,
+  state: ChatFaceState,
+  style: ChatFaceStyle = chatFaceStyle(chatId),
+): ChatFaceLook {
+  return { color: style.color, shape: style.shape, expression: EXPRESSIONS[state] };
 }
 
 export function isLive(state: ChatFaceState): boolean {

@@ -3,15 +3,21 @@ import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import { colorHue, shapeTrait } from '../teammates/face-style.ts';
 import { useReducedMotion } from '../ui/motion.ts';
-import { chatFace, chatFaceSeed, isLive, type ChatFaceState } from './chat-face.ts';
+import {
+  chatFace,
+  chatFaceSeed,
+  chatFaceStyle,
+  isLive,
+  type ChatFaceState,
+  type ChatFaceStyle,
+} from './chat-face.ts';
 
 const DRAWN = { row: 22, post: 24, strip: 32 } as const;
 type ChatFaceSize = keyof typeof DRAWN;
 
 const TONE = 0.5;
 
-export function chatBlob(chatId: string) {
-  const look = chatFace(chatId, 'idle');
+export function chatBlob(chatId: string, look: ChatFaceStyle = chatFaceStyle(chatId)) {
   return {
     name: chatFaceSeed(chatId),
     hue: colorHue(look.color),
@@ -25,12 +31,17 @@ interface ChatFaceProps {
   size: ChatFaceSize;
   state?: ChatFaceState;
   label?: string | undefined;
+  style?: ChatFaceStyle | undefined;
 }
 
-export function ChatFace({ chatId, size, state = 'idle', label }: ChatFaceProps) {
+export function ChatFace({ chatId, size, state = 'idle', label, style }: ChatFaceProps) {
   const reduced = useReducedMotion();
-  const look = chatFace(chatId, state);
-  const blob = { ...chatBlob(chatId), size: DRAWN[size], expression: expressions[look.expression] };
+  const look = chatFace(chatId, state, style);
+  const blob = {
+    ...chatBlob(chatId, look),
+    size: DRAWN[size],
+    expression: expressions[look.expression],
+  };
   const naming = label
     ? ({ role: 'img', 'aria-label': label } as const)
     : ({ 'aria-hidden': true } as const);

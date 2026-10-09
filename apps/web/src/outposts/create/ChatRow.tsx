@@ -1,4 +1,4 @@
-import { ChatFace } from '../../brand/ChatFace.tsx';
+import { MemberFace } from '../MemberFace.tsx';
 import { FileIcon } from '../../chat/attachments/attachment-icons.tsx';
 import { CommentIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
 import type { ChatDraft } from './create-draft.ts';
@@ -23,7 +23,7 @@ export function ChatRow({ chat, view, problems, onHandle, onEdit, onRemove }: Ch
   const problemId = `op-row-problem-${chat.key}`;
   return (
     <div className="op-chat-row" data-chat={view.faceId}>
-      <ChatFace chatId={view.faceId} size="strip" />
+      <MemberFace chatId={view.faceId} size="strip" />
       <HandleInput
         value={chat.handle}
         label={`Handle for ${view.title}`}

@@ -5,7 +5,8 @@ import type { QueuedMessage } from '@spark-outpost/contracts';
 import { QueueStrip } from '../queue/QueueStrip.tsx';
 import type { ChatQueue } from '../queue/use-chat-queue.ts';
 import { OutpostChip } from './OutpostChip.tsx';
-import { API_CHAT, OUTPOST_ID, outpost } from '../../outposts/test-fixtures.ts';
+import { OutpostFaces } from '../../outposts/MemberFace.tsx';
+import { API_CHAT, FE_CHAT, OUTPOST_ID, outpost } from '../../outposts/test-fixtures.ts';
 import { RequestHeader, requestSender, type RunOutpost } from './RequestHeader.tsx';
 import { memberChatId } from './outpost-seam.ts';
 
@@ -112,6 +113,22 @@ describe('RequestHeader', () => {
       </RequestHeader>,
     );
     expect(container.querySelector('.chat-face')).toBeNull();
+  });
+
+  it('draws the asking chat as its outpost shows it when two members share a colour', () => {
+    const clashing = '0c000000-0000-4000-8000-000000000009';
+    const members = [
+      { conversationId: FE_CHAT, joinedAt: '2026-10-09T10:00:00.000Z' },
+      { conversationId: clashing, joinedAt: '2026-10-09T10:05:00.000Z' },
+    ];
+    const { container } = render(
+      <OutpostFaces members={members}>
+        <RequestHeader outpost={request({})} fromChatId={clashing}>
+          Text
+        </RequestHeader>
+      </OutpostFaces>,
+    );
+    expect(container.querySelector<HTMLElement>('.chat-face')?.dataset.color).toBe('ember');
   });
 
   it('finds the asking chat from its handle in the outpost', () => {

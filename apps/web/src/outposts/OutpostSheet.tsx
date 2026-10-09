@@ -1,7 +1,11 @@
 import './outpost-sheet.css';
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { OUTPOST_NAME_MAX, type ConversationSummary } from '@spark-outpost/contracts';
-import { ChatFace } from '../brand/ChatFace.tsx';
+import {
+  OUTPOST_NAME_MAX,
+  type ConversationSummary,
+  type OutpostMember,
+} from '@spark-outpost/contracts';
+import { MemberFace, OutpostFaces } from './MemberFace.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
@@ -19,6 +23,7 @@ import {
 
 interface OutpostSheetProps {
   initial: SheetForm;
+  joined?: readonly OutpostMember[];
   chats: readonly ConversationSummary[];
   projectNames: Readonly<Record<string, string>>;
   outpostId?: string | null;
@@ -45,6 +50,7 @@ function problemFor(
 
 export function OutpostSheet({
   initial,
+  joined,
   chats,
   projectNames,
   outpostId = null,
@@ -178,54 +184,61 @@ export function OutpostSheet({
                 <p className="op-sheet-empty">No chats yet. Add one below, or add them later.</p>
               ) : (
                 <ul className="op-sheet-members">
-                  {form.members.map((member) => {
-                    const chat = chats.find((candidate) => candidate.id === member.conversationId);
-                    const title = chat?.title ?? 'Deleted chat';
-                    const problem =
-                      problemFor(problems, 'handle', member.conversationId) ??
-                      problemFor(problems, 'members', member.conversationId);
-                    const problemId = `${ids}p${member.conversationId}`;
-                    return (
-                      <li key={member.conversationId}>
-                        <ChatFace chatId={member.conversationId} size="strip" />
-                        <span className="op-handle-field">
-                          <span aria-hidden="true">@</span>
-                          <input
-                            className="inp"
-                            value={member.handle}
-                            aria-label={`Handle for ${title}`}
-                            aria-invalid={problem !== null}
-                            aria-describedby={problem ? problemId : undefined}
-                            autoCapitalize="off"
-                            autoCorrect="off"
-                            spellCheck={false}
-                            onChange={(event) =>
-                              setForm(
-                                withHandleFor(form, member.conversationId, event.target.value),
-                              )
-                            }
-                          />
-                        </span>
-                        <span className="op-sheet-chat">
-                          <b>{title}</b>
-                          <small>{chatPlace(chat, projectNames)}</small>
-                        </span>
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          aria-label={`Remove ${title}`}
-                          onClick={() => setForm(withoutMember(form, member.conversationId))}
-                        >
-                          <XIcon />
-                        </button>
-                        {problem && (
-                          <small id={problemId} className="op-problem">
-                            {problem}
-                          </small>
-                        )}
-                      </li>
-                    );
-                  })}
+                  <OutpostFaces
+                    members={joined}
+                    listed={form.members.map((member) => member.conversationId)}
+                  >
+                    {form.members.map((member) => {
+                      const chat = chats.find(
+                        (candidate) => candidate.id === member.conversationId,
+                      );
+                      const title = chat?.title ?? 'Deleted chat';
+                      const problem =
+                        problemFor(problems, 'handle', member.conversationId) ??
+                        problemFor(problems, 'members', member.conversationId);
+                      const problemId = `${ids}p${member.conversationId}`;
+                      return (
+                        <li key={member.conversationId}>
+                          <MemberFace chatId={member.conversationId} size="strip" />
+                          <span className="op-handle-field">
+                            <span aria-hidden="true">@</span>
+                            <input
+                              className="inp"
+                              value={member.handle}
+                              aria-label={`Handle for ${title}`}
+                              aria-invalid={problem !== null}
+                              aria-describedby={problem ? problemId : undefined}
+                              autoCapitalize="off"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              onChange={(event) =>
+                                setForm(
+                                  withHandleFor(form, member.conversationId, event.target.value),
+                                )
+                              }
+                            />
+                          </span>
+                          <span className="op-sheet-chat">
+                            <b>{title}</b>
+                            <small>{chatPlace(chat, projectNames)}</small>
+                          </span>
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            aria-label={`Remove ${title}`}
+                            onClick={() => setForm(withoutMember(form, member.conversationId))}
+                          >
+                            <XIcon />
+                          </button>
+                          {problem && (
+                            <small id={problemId} className="op-problem">
+                              {problem}
+                            </small>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </OutpostFaces>
                 </ul>
               )}
               {listProblem && <small className="op-problem">{listProblem}</small>}

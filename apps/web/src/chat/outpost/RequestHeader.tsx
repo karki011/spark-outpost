@@ -1,7 +1,7 @@
 import './outpost-chat.css';
 import type { ReactNode } from 'react';
 import type { Run } from '@spark-outpost/contracts';
-import { ChatFace } from '../../brand/ChatFace.tsx';
+import { MemberFace } from '../../outposts/MemberFace.tsx';
 import { ChevronIcon, OutpostIcon } from '../../ui/icons.tsx';
 
 export type RunOutpost = NonNullable<Run['outpost']>;
@@ -22,7 +22,7 @@ export function RequestHeader({ outpost, fromChatId, onOpen, children }: Request
   return (
     <div className="bubble from">
       <p className="from-head">
-        {fromChatId && !outpost.fromUser && <ChatFace chatId={fromChatId} size="row" />}
+        {fromChatId && !outpost.fromUser && <MemberFace chatId={fromChatId} size="row" />}
         <b>{requestSender(outpost)}</b>
         <span className="from-where">
           <OutpostIcon />

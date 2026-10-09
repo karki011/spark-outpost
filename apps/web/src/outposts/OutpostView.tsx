@@ -7,6 +7,7 @@ import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { PauseIcon, PenIcon, ResumeIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { OutpostFaces } from './MemberFace.tsx';
 import { MemberStrip } from './MemberStrip.tsx';
 import { OutpostComposer } from './OutpostComposer.tsx';
 import { OutpostSheet } from './OutpostSheet.tsx';
@@ -132,75 +133,80 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
     );
 
   return (
-    <main className="main op" aria-label={`Outpost ${outpost.name}`}>
-      <header className="head chat-head op-head">
-        <SidebarToggle />
-        <h1 className="chat-title">{outpost.name}</h1>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Edit outpost"
-          onClick={() => setEditing(true)}
-        >
-          <PenIcon />
-        </button>
-        <button type="button" className="op-count" onClick={() => setEditing(true)}>
-          {membersLabel(members.length)}
-          <span className="sr-only">{remote ? ', edit the name' : ', edit chats and handles'}</span>
-        </button>
-        <div className="head-r">
+    <OutpostFaces members={outpost.members}>
+      <main className="main op" aria-label={`Outpost ${outpost.name}`}>
+        <header className="head chat-head op-head">
+          <SidebarToggle />
+          <h1 className="chat-title">{outpost.name}</h1>
           <button
             type="button"
-            className="btn sm line"
-            aria-pressed={paused}
-            onClick={() => pause.mutate(!paused)}
+            className="icon-btn"
+            aria-label="Edit outpost"
+            onClick={() => setEditing(true)}
           >
-            {paused ? <ResumeIcon /> : <PauseIcon />}
-            {paused ? 'Resume' : 'Pause'}
+            <PenIcon />
           </button>
-        </div>
-      </header>
-      <MemberStrip members={members} onOpen={onOpenChat} />
-      {paused && (
-        <p className="op-banner" role="status">
-          Paused. New requests wait until you resume. Turns that are already running finish.
-        </p>
-      )}
-      {problem && (
-        <p className="op-banner bad" role="alert">
-          {problem}
-        </p>
-      )}
-      <PostList
-        items={items}
-        answeringId={answering?.postId ?? null}
-        jumpTo={jumpTo ?? null}
-        approvalChats={approvalChats}
-        empty={empty}
-        onAnswer={(asked) => setAnsweringId(asked.id)}
-        onCancel={(postId) => cancel.mutate(postId)}
-        onOpenChat={onOpenChat}
-      />
-      <OutpostComposer
-        members={members}
-        answering={answering}
-        paused={paused}
-        onCancelAnswer={() => setAnsweringId(null)}
-        onSend={send}
-      />
-      {editing && (
-        <OutpostSheet
-          initial={formOf(outpost)}
-          chats={chats}
-          projectNames={projectNames}
-          outpostId={id}
-          canManage={!remote}
-          onStart={saveEdit}
-          onDelete={deleteOutpost}
-          onClose={() => setEditing(false)}
+          <button type="button" className="op-count" onClick={() => setEditing(true)}>
+            {membersLabel(members.length)}
+            <span className="sr-only">
+              {remote ? ', edit the name' : ', edit chats and handles'}
+            </span>
+          </button>
+          <div className="head-r">
+            <button
+              type="button"
+              className="btn sm line"
+              aria-pressed={paused}
+              onClick={() => pause.mutate(!paused)}
+            >
+              {paused ? <ResumeIcon /> : <PauseIcon />}
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+          </div>
+        </header>
+        <MemberStrip members={members} onOpen={onOpenChat} />
+        {paused && (
+          <p className="op-banner" role="status">
+            Paused. New requests wait until you resume. Turns that are already running finish.
+          </p>
+        )}
+        {problem && (
+          <p className="op-banner bad" role="alert">
+            {problem}
+          </p>
+        )}
+        <PostList
+          items={items}
+          answeringId={answering?.postId ?? null}
+          jumpTo={jumpTo ?? null}
+          approvalChats={approvalChats}
+          empty={empty}
+          onAnswer={(asked) => setAnsweringId(asked.id)}
+          onCancel={(postId) => cancel.mutate(postId)}
+          onOpenChat={onOpenChat}
         />
-      )}
-    </main>
+        <OutpostComposer
+          members={members}
+          answering={answering}
+          paused={paused}
+          onCancelAnswer={() => setAnsweringId(null)}
+          onSend={send}
+        />
+        {editing && (
+          <OutpostSheet
+            initial={formOf(outpost)}
+            joined={outpost.members}
+            chats={chats}
+            projectNames={projectNames}
+            outpostId={id}
+            canManage={!remote}
+            onStart={saveEdit}
+            onDelete={deleteOutpost}
+            onClose={() => setEditing(false)}
+          />
+        )}
+      </main>
+    </OutpostFaces>
   );
 }
 

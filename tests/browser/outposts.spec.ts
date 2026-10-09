@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { seedChats } from './sidebar-seed.ts';
 import {
   CANCEL_URL,
   LONG_ASK,
@@ -429,4 +430,39 @@ test('an outpost fits a phone with no sideways page scroll', async ({ browser, p
   } finally {
     await phone.context().close();
   }
+});
+
+test('two chats with the same blob colour look different in their outpost, not in the sidebar', async ({
+  page,
+}) => {
+  const [web, mobile] = await seedChats([
+    { id: '0c000000-0000-4000-8000-000000000001', title: 'Web client' },
+    { id: '0c000000-0000-4000-8000-000000000009', title: 'Mobile client' },
+  ]);
+  await openChats(page);
+  const created = await page.request.post('/api/outposts', {
+    data: {
+      id: '0a000000-0000-4000-8000-000000000001',
+      name: NAME,
+      members: [
+        { conversationId: web, handle: 'web' },
+        { conversationId: mobile, handle: 'mobile' },
+      ],
+    },
+  });
+  expect(created.ok()).toBe(true);
+  await openChats(page);
+  await openOutpost(page);
+
+  const rowFace = (title: string) =>
+    sidebar(page).getByRole('listitem').filter({ hasText: title }).locator('.chat-face');
+  await expect(rowFace('Web client')).toHaveAttribute('data-color', 'gold');
+  await expect(rowFace('Mobile client')).toHaveAttribute('data-color', 'gold');
+  await expect(chip(page, 'web').locator('.chat-face')).toHaveAttribute('data-color', 'gold');
+  await expect(chip(page, 'mobile').locator('.chat-face')).toHaveAttribute('data-color', 'ember');
+  await expect(thread(page).locator('.op-notice .chat-face')).toHaveCount(2);
+  await expect(thread(page).locator('.op-notice .chat-face').nth(1)).toHaveAttribute(
+    'data-color',
+    'ember',
+  );
 });
