@@ -144,6 +144,8 @@ export const prWatchSchema = z.object({
   doing: z.string(),
   prState: z.enum(['open', 'merged', 'closed']),
   draft: z.boolean(),
+  additions: z.number().int().nonnegative().nullable(),
+  deletions: z.number().int().nonnegative().nullable(),
   checks: prChecksSchema,
   failingChecks: z.array(prFailingCheckSchema),
   review: prReviewSchema,
@@ -164,6 +166,14 @@ export type PrWatch = z.infer<typeof prWatchSchema>;
 
 export const prWatchListSchema = z.object({ watches: z.array(prWatchSchema) });
 export type PrWatchList = z.infer<typeof prWatchListSchema>;
+
+const prRefreshProblemSchema = z.enum([...prPollProblemSchema.options, 'no_answer']);
+export type PrRefreshProblem = z.infer<typeof prRefreshProblemSchema>;
+
+export const prRefreshResultSchema = prWatchListSchema.extend({
+  problem: prRefreshProblemSchema.nullable(),
+});
+export type PrRefreshResult = z.infer<typeof prRefreshResultSchema>;
 
 export const feedbackTriageLabels: Record<FeedbackTriage, string> = {
   fix: 'Fix',

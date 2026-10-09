@@ -61,6 +61,9 @@ export interface TrackedPull extends PullAddress {
   details: StoredDetails;
   statusReason: string | null;
   headSha: string | null;
+  additions: number | null;
+  deletions: number | null;
+  refreshRequested: boolean;
   rounds: number;
   roundRunId: string | null;
   approvalId: string | null;
@@ -101,6 +104,9 @@ export interface PullRow {
   details: unknown;
   status_reason: string | null;
   head_sha: string | null;
+  additions: number | null;
+  deletions: number | null;
+  refresh_requested: boolean;
   rounds: number;
   round_run_id: string | null;
   approval_id: string | null;
@@ -142,6 +148,9 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     details: parseDetails(row.details),
     statusReason: row.status_reason,
     headSha: row.head_sha,
+    additions: row.additions,
+    deletions: row.deletions,
+    refreshRequested: row.refresh_requested,
     rounds: row.rounds,
     roundRunId: row.round_run_id,
     approvalId: row.approval_id,
@@ -237,10 +246,13 @@ export async function trackedPullsOf(
   return rows.map(toTrackedPull);
 }
 
+const STILL_CHECKED = "(phase <> 'done' OR pr_state = 'closed')";
+
 export async function duePulls(db: Queryable, now: Date, limit = 10): Promise<TrackedPull[]> {
   const { rows } = await db.query<PullRow>(
-    `SELECT * FROM pr_watches WHERE phase <> 'done' AND next_poll_at <= $1
-     ORDER BY next_poll_at LIMIT $2`,
+    `SELECT * FROM pr_watches
+     WHERE (${STILL_CHECKED} OR refresh_requested) AND next_poll_at <= $1
+     ORDER BY refresh_requested DESC, next_poll_at LIMIT $2`,
     [now, limit],
   );
   return rows.map(toTrackedPull);
@@ -252,7 +264,8 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        head_sha = $7, rounds = $8, round_run_id = $9, approval_id = $10, requested = $11,
        interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
-       status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, updated_at = now()
+       status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, additions = $25,
+       deletions = $26, refresh_requested = $27, updated_at = now()
      WHERE id = $1`,
     [
       pull.id,
@@ -279,6 +292,9 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.followUp,
       JSON.stringify(pull.details),
       pull.pollProblem,
+      pull.additions,
+      pull.deletions,
+      pull.refreshRequested,
     ],
   );
 }
@@ -291,7 +307,7 @@ export async function pollChatPullsNow(
 ): Promise<number> {
   const { rowCount } = await db.query(
     `UPDATE pr_watches SET next_poll_at = now()
-     WHERE workspace_id = $1 AND conversation_id = $2 AND phase <> 'done' AND next_poll_at > now()
+     WHERE workspace_id = $1 AND conversation_id = $2 AND ${STILL_CHECKED} AND next_poll_at > now()
        AND (last_polled_at IS NULL OR last_polled_at <= $3)`,
     [workspaceId, conversationId, staleBefore],
   );
@@ -308,7 +324,26 @@ export async function deferPulls(
   await db.query(
     `UPDATE pr_watches SET next_poll_at = $3, last_error = $4, poll_problem = 'rate_limit',
        updated_at = now()
-     WHERE workspace_id = $1 AND host = $2 AND phase <> 'done' AND next_poll_at < $3`,
+     WHERE workspace_id = $1 AND host = $2 AND ${STILL_CHECKED} AND next_poll_at < $3`,
     [workspaceId, host, until, reason],
   );
+}
+
+export async function requestRefresh(
+  db: Queryable,
+  workspaceId: string,
+  conversationId: string,
+  id: string,
+): Promise<TrackedPull | null> {
+  const { rows } = await db.query<PullRow>(
+    `UPDATE pr_watches SET refresh_requested = true, next_poll_at = now()
+     WHERE id = $1 AND workspace_id = $2 AND conversation_id = $3 RETURNING *`,
+    [id, workspaceId, conversationId],
+  );
+  return rows[0] ? toTrackedPull(rows[0]) : null;
+}
+
+export async function pullById(db: Queryable, id: string): Promise<TrackedPull | null> {
+  const { rows } = await db.query<PullRow>('SELECT * FROM pr_watches WHERE id = $1', [id]);
+  return rows[0] ? toTrackedPull(rows[0]) : null;
 }

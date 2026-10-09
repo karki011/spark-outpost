@@ -13,6 +13,7 @@ What changed recently in Spark, newest first.
 | What changed                                                                                                                        | What to do                                 |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).               |
+| The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.          |
 | Scout rests half hidden at the top and comes out when a chat is active. **Spark Island size** adds **Extra large**.                 | See [Spark Island](desktop-companion.md).  |
 | **Make the change** is gone. Replies, your messages and the message box share one centred column; replies sit under the agent name. | Ask for the change in your next message.   |
 | The context rail lists Agent TV's crew. Chats with a merged PR show an icon.                                                        | No action.                                 |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | The PR row sits above the message box. Its eye says who is on the pull request.                                                     | Select it for checks and reviews.          |
 | Commands show output in a terminal in the reply. **Thinking** opens to read.                                                        | No action.                                 |
 | Reading a secret file in a linked repo follows the agent's mode. Changing one still asks.                                           | See [protected paths](protected-paths.md). |
-| Spark Island is **Full** by default and opens requests by itself. Tickets show **Development**.                                     | See [Spark Island](desktop-companion.md).  |

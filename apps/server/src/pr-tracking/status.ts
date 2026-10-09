@@ -1,6 +1,6 @@
 import type { PrPollProblem } from '@spark-outpost/contracts';
 import type { TrackedPull } from '../persistence/tracked-pulls.ts';
-import { TRACKING_LINE } from '../persistence/tracked-pulls.ts';
+import { TRACKING_LINE, WATCHING_LINE } from '../persistence/tracked-pulls.ts';
 import { readCheckSummary, readPullFacts, type PullFacts } from '../pr-follow-up/gather.ts';
 import { reviewVerdict } from '../tickets/pull-status.ts';
 import { discussionDetails, readDiscussion } from './details.ts';
@@ -35,13 +35,25 @@ export function pollProblemOf(error: unknown): PrPollProblem {
   return isUnreachable(error) ? 'offline' : 'error';
 }
 
+const CLOSED_LINE = 'The PR was closed. Spark picks it up again if it is reopened.';
+
 export function endedPull<T extends TrackedPull>(pull: T, state: 'merged' | 'closed'): T {
   const verb = pull.followUp ? 'watching' : 'tracking';
   return {
     ...pull,
     prState: state,
     phase: 'done',
-    doing: `The PR was ${state}. Spark stopped ${verb} it.`,
+    doing: state === 'closed' ? CLOSED_LINE : `The PR was merged. Spark stopped ${verb} it.`,
+  };
+}
+
+export function reopenedPull<T extends TrackedPull>(pull: T): T {
+  if (pull.prState === 'open') return pull;
+  return {
+    ...pull,
+    prState: 'open',
+    phase: 'watching',
+    doing: pull.followUp ? WATCHING_LINE : TRACKING_LINE,
   };
 }
 
@@ -53,6 +65,8 @@ export function withFacts<T extends TrackedPull>(pull: T, facts: PullFacts): T {
     headSha: facts.headSha,
     title: facts.title ?? pull.title,
     base: facts.base ?? pull.base,
+    additions: facts.additions ?? pull.additions,
+    deletions: facts.deletions ?? pull.deletions,
     branch: head,
     followUp: pull.followUp && head === pull.branch,
     statusReason: null,

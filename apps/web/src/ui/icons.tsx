@@ -243,6 +243,12 @@ export function ExternalLinkIcon() {
   );
 }
 
+export function RefreshIcon() {
+  return (
+    <StrokeIcon path="M20 11a8 8 0 0 0-14.6-3.5M4 4v4h4M4 13a8 8 0 0 0 14.6 3.5M20 20v-4h-4" />
+  );
+}
+
 export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }

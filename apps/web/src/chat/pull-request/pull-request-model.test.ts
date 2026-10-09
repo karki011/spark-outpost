@@ -3,9 +3,13 @@ import {
   branchLine,
   ciState,
   groupByRepo,
+  lineChange,
+  lineChangeLabel,
   openedIn,
   openedLine,
   pullState,
+  refreshProblemLine,
+  repoLabels,
   reviewLabel,
   worstCi,
 } from './pull-request-model.ts';
@@ -93,5 +97,38 @@ describe('the turn row', () => {
     expect(
       openedIn([later, elsewhere, terminal, watch()], [RUN, 'child']).map((pull) => pull.number),
     ).toEqual([7, 8]);
+  });
+});
+
+describe('what the row says about a pull request', () => {
+  it('names the repository alone unless two repositories in the chat share that name', () => {
+    const widgets = watch({ repo: 'acme/widgets' });
+    const gadgets = watch({ number: 3, repo: 'acme/gadgets' });
+    const fork = watch({ number: 4, repo: 'maya/widgets' });
+    expect([...repoLabels([widgets, gadgets]).values()]).toEqual(['widgets', 'gadgets']);
+    const labels = repoLabels([widgets, gadgets, fork]);
+    expect(labels.get('acme/widgets')).toBe('acme/widgets');
+    expect(labels.get('maya/widgets')).toBe('maya/widgets');
+    expect(labels.get('acme/gadgets')).toBe('gadgets');
+    expect(
+      repoLabels([widgets, watch({ number: 8, repo: 'Acme/Widgets' })]).get('acme/widgets'),
+    ).toBe('widgets');
+  });
+
+  it('shows line changes only when GitHub reported them', () => {
+    expect(lineChange(watch())).toBeNull();
+    expect(lineChange(watch({ additions: 2303, deletions: null }))).toBeNull();
+    expect(lineChange(watch({ additions: 0, deletions: 0 }))).toBeNull();
+    const change = lineChange(watch({ additions: 2303, deletions: 1 }));
+    expect(change).toEqual({ added: 2303, removed: 1 });
+    expect(lineChangeLabel(change!)).toBe('2,303 lines added, 1 removed');
+  });
+
+  it('puts every failed refresh in one plain line', () => {
+    expect(refreshProblemLine('no_answer')).toBe('GitHub did not answer. Try again.');
+    expect(refreshProblemLine('offline')).toBe('GitHub did not answer. Try again.');
+    expect(refreshProblemLine('not_connected')).toBe(
+      'GitHub is not connected. Connect GitHub in Settings.',
+    );
   });
 });

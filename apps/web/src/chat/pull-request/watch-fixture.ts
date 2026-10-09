@@ -19,6 +19,8 @@ export function watch(fields: Partial<PrWatch> = {}): PrWatch {
     doing: '',
     prState: 'open',
     draft: false,
+    additions: null,
+    deletions: null,
     checks: 'passing',
     failingChecks: [],
     review: 'none',

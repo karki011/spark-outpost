@@ -1,4 +1,4 @@
-import type { PrWatch } from '@spark-outpost/contracts';
+import type { PrRefreshProblem, PrWatch } from '@spark-outpost/contracts';
 
 export type PullState = 'draft' | 'open' | 'merged' | 'closed';
 export type CiState = 'failing' | 'pending' | 'unknown' | 'passing' | 'none';
@@ -101,4 +101,44 @@ export function openedIn(watches: readonly PrWatch[], runIds: readonly string[])
   return watches
     .filter((watch) => watch.opened.runId !== null && runIds.includes(watch.opened.runId))
     .toSorted((a, b) => a.opened.at.localeCompare(b.opened.at));
+}
+
+export const NO_ANSWER_LINE = 'GitHub did not answer. Try again.';
+
+const REFRESH_PROBLEM_LINES: Record<PrRefreshProblem, string> = {
+  not_connected: 'GitHub is not connected. Connect GitHub in Settings.',
+  no_access: 'Your GitHub connection can’t read this repository.',
+  rate_limit: 'GitHub’s rate limit is used up. Try again later.',
+  offline: NO_ANSWER_LINE,
+  error: NO_ANSWER_LINE,
+  no_answer: NO_ANSWER_LINE,
+};
+
+export const refreshProblemLine = (problem: PrRefreshProblem) => REFRESH_PROBLEM_LINES[problem];
+
+const repoName = (repo: string) => repo.slice(repo.lastIndexOf('/') + 1);
+
+export function repoLabels(watches: readonly Pick<PrWatch, 'repo'>[]): Map<string, string> {
+  const repos = new Set(watches.map((watch) => watch.repo.toLowerCase()));
+  const sameName = (repo: string) =>
+    [...repos].filter((other) => repoName(other) === repoName(repo.toLowerCase())).length > 1;
+  return new Map(
+    watches.map((watch) => [watch.repo, sameName(watch.repo) ? watch.repo : repoName(watch.repo)]),
+  );
+}
+
+interface LineChange {
+  added: number;
+  removed: number;
+}
+
+export function lineChange(watch: Pick<PrWatch, 'additions' | 'deletions'>): LineChange | null {
+  if (watch.additions === null || watch.deletions === null) return null;
+  if (watch.additions + watch.deletions === 0) return null;
+  return { added: watch.additions, removed: watch.deletions };
+}
+
+export function lineChangeLabel({ added, removed }: LineChange): string {
+  const count = (value: number) => value.toLocaleString('en-US');
+  return `${count(added)} ${added === 1 ? 'line' : 'lines'} added, ${count(removed)} removed`;
 }

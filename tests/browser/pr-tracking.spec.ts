@@ -3,7 +3,14 @@ import path from 'node:path';
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { pollTrackedPullsNow, pullUrl, SEED_TITLE, seedTrackedPulls } from './pr-tracking-seed.ts';
+import {
+  pollTrackedPullsNow,
+  pullUrl,
+  runSql,
+  SEED_PULLS,
+  SEED_TITLE,
+  seedTrackedPulls,
+} from './pr-tracking-seed.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
@@ -191,4 +198,35 @@ test('checks move from failing to passing without reopening the chat', async ({
   await expect(group(page)).toContainText('4 open');
   await showInLinks(page);
   await expect(row(page, 7)).toContainText('Checks passing');
+});
+
+test('Refresh reads a pull request Spark stopped checking, from the row and from Links', async ({
+  page,
+}) => {
+  await seedTrackedPulls([SEED_PULLS[0]!]);
+  await openChats(page);
+  const card = page.getByRole('group', { name: 'Pull request acme/widgets#7', exact: true });
+  const state = card.locator('.prc-state');
+  await expect(state).toHaveText('Open', POLLED);
+
+  const stop = `UPDATE pr_watches SET pr_state = 'closed', phase = 'done', last_polled_at = now(),
+    next_poll_at = now() + interval '1 day'`;
+  await runSql(stop);
+  await expect(state).toHaveText('Closed');
+  const refresh = card.getByRole('button', { name: 'Refresh pull request #7' });
+  await refresh.focus();
+  await page.keyboard.press('Enter');
+  await expect(state).toHaveText('Open');
+  await expect(refresh).toBeFocused();
+  await expect(refresh).toHaveAttribute('aria-busy', 'false');
+  await expect(card.getByRole('alert')).toHaveCount(0);
+
+  await runSql(stop);
+  await expect(state).toHaveText('Closed');
+  await card.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
+  await card.getByRole('button', { name: 'Show in Links' }).click();
+  await expect(row(page, 7)).toContainText('Closed');
+  await row(page, 7).getByRole('button', { name: 'Refresh pull request #7' }).press('Space');
+  await expect(row(page, 7)).toContainText('Open');
+  await expect(state).toHaveText('Open');
 });
