@@ -9,9 +9,10 @@ import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { OutpostFaces } from './MemberFace.tsx';
 import { MemberStrip } from './MemberStrip.tsx';
-import { OutpostComposer } from './OutpostComposer.tsx';
+import { OutpostComposer, type ComposerFill } from './OutpostComposer.tsx';
 import { OutpostSheet } from './OutpostSheet.tsx';
 import { PostList } from './PostList.tsx';
+import { StoryBar } from './StoryBar.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
 import { chatsOnApproval, memberViews, membersLabel } from './member-view.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
@@ -24,6 +25,7 @@ import {
   usePause,
   usePost,
   useSaveOutpost,
+  useStartNow,
 } from './use-outposts.ts';
 
 interface OutpostViewProps {
@@ -71,14 +73,16 @@ interface LoadedProps extends OutpostViewProps {
 }
 
 function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
-  const { outpost, posts } = detail;
+  const { outpost, posts, stories } = detail;
   const { chats, projectNames } = useOutpostChats();
   const { remote } = useRemoteClient();
   const [answeringId, setAnsweringId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [fill, setFill] = useState<ComposerFill | null>(null);
   const post = usePost(id);
   const answer = useAnswer(id);
   const cancel = useCancel(id);
+  const startNow = useStartNow(id);
   const pause = usePause(id);
   const save = useSaveOutpost(id);
   const remove = useDeleteOutpost(id);
@@ -90,7 +94,12 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const approvalChats = useMemo(() => chatsOnApproval(chats), [chats]);
   const answering = answeringOf(posts, answeringId, approvalChats);
   const paused = outpost.pausedAt !== null;
-  const problem = cancel.error?.message ?? pause.error?.message ?? null;
+  const problem = cancel.error?.message ?? startNow.error?.message ?? pause.error?.message ?? null;
+
+  const fillBox = (text: string) => {
+    setAnsweringId(null);
+    setFill((last) => ({ id: (last?.id ?? 0) + 1, text }));
+  };
 
   const send = async (target: ComposerTarget, text: string) => {
     if (target.action === 'answer' && answering) {
@@ -165,6 +174,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
           </div>
         </header>
         <MemberStrip members={members} onOpen={onOpenChat} />
+        <StoryBar stories={stories} onOpenChat={onOpenChat} onFill={fillBox} />
         {paused && (
           <p className="op-banner" role="status">
             Paused. New requests wait until you resume. Turns that are already running finish.
@@ -183,12 +193,14 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
           empty={empty}
           onAnswer={(asked) => setAnsweringId(asked.id)}
           onCancel={(postId) => cancel.mutate(postId)}
+          onStartNow={(postId) => startNow.mutate(postId)}
           onOpenChat={onOpenChat}
         />
         <OutpostComposer
           members={members}
           answering={answering}
           paused={paused}
+          fill={fill}
           onCancelAnswer={() => setAnsweringId(null)}
           onSend={send}
         />

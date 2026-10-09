@@ -8,10 +8,13 @@ import type { ChatDraft, ChatKind } from './create-draft.ts';
 import type { ChatView } from './create-labels.ts';
 import { joinBlock, type ChatField, type ChatProblem } from './create-problems.ts';
 import { AgentField } from './AgentField.tsx';
+import { DependsField } from './DependsField.tsx';
 import { FirstMessage } from './FirstMessage.tsx';
 import { HandleInput } from './HandleInput.tsx';
 import { ModeField } from './ModeField.tsx';
+import { PullField } from './PullField.tsx';
 import { ProblemLine } from './ProblemLine.tsx';
+import { levelOf, type AfterChoice } from './story-draft.ts';
 import type { CreateData } from './use-create-data.ts';
 
 export interface ChatFormActions {
@@ -30,6 +33,8 @@ interface ChatFormProps extends ChatFormActions {
   view: ChatView;
   data: CreateData;
   taken: ReadonlySet<string>;
+  after: readonly AfterChoice[] | null;
+  stackedOn: string | null;
   problems: readonly ChatProblem[];
   attachments: AttachmentsState;
   finished: boolean;
@@ -95,6 +100,15 @@ export function ChatForm(props: ChatFormProps) {
     </div>
   );
 
+  const startsAfter = props.after && (
+    <DependsField
+      choices={props.after}
+      value={chat.dependsOn}
+      problem={field('after')}
+      onChange={(dependsOn) => props.onPatch({ dependsOn })}
+    />
+  );
+
   return (
     <div
       ref={formRef}
@@ -130,6 +144,7 @@ export function ChatForm(props: ChatFormProps) {
             {field('chat')}
           </div>
           {picked && handle}
+          {picked && startsAfter}
         </div>
       ) : (
         <div className="op-form-grid">
@@ -171,6 +186,14 @@ export function ChatForm(props: ChatFormProps) {
             />
           </div>
           {handle}
+          {startsAfter}
+          {props.after && (
+            <PullField
+              level={levelOf(chat, data.level)}
+              stackedOn={props.stackedOn}
+              onChange={(level) => props.onPatch({ level })}
+            />
+          )}
         </div>
       )}
       {picked && (

@@ -19,6 +19,7 @@ import {
   requestFaceState,
   canCancel,
   filesLabel,
+  isHeld,
   postAnchor,
   postTime,
   pullRequestLabel,
@@ -33,6 +34,7 @@ interface RequestPostProps {
   answerable: boolean;
   onAnswer: (post: OutpostPost) => void;
   onCancel: (postId: string) => void;
+  onStartNow?: ((postId: string) => void) | undefined;
   onOpenChat: (conversationId: string) => void;
 }
 
@@ -81,6 +83,7 @@ export function RequestPost({
   answerable,
   onAnswer,
   onCancel,
+  onStartNow,
   onOpenChat,
 }: RequestPostProps) {
   const state = post.state ?? 'sent';
@@ -100,6 +103,7 @@ export function RequestPost({
       <div className="op-post-head">
         {post.fromConversationId && <MemberFace chatId={post.fromConversationId} size="post" />}
         <b>{senderName(post)}</b>
+        {!post.fromUser && <span className="op-kind">not from you</span>}
         <span className="op-to">
           <MoveIcon />
           <span className="sr-only">to</span>
@@ -146,6 +150,16 @@ export function RequestPost({
             onClick={() => onAnswer(post)}
           >
             Answer
+          </button>
+        )}
+        {onStartNow && isHeld(post) && (
+          <button
+            type="button"
+            className="op-link"
+            aria-label={`Start the request to ${to} anyway`}
+            onClick={() => onStartNow(post.id)}
+          >
+            Start anyway
           </button>
         )}
         {canCancel(post) && (

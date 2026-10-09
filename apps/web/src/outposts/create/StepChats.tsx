@@ -21,6 +21,7 @@ import { chatView, summaryLine } from './create-labels.ts';
 import { chatProblems, isFinished } from './create-problems.ts';
 import { startSummary } from './create-request.ts';
 import { ChatEntry } from './ChatEntry.tsx';
+import { afterChoices, parentOf, stackParent } from './story-draft.ts';
 import type { CreateData } from './use-create-data.ts';
 
 export type DraftChange = (draft: CreateDraft) => CreateDraft;
@@ -105,6 +106,9 @@ export function StepChats({ draft, data, hidden, focusSignal, onChange }: StepCh
             view={chatView(chat, { ...data, agent: data.agentOf(chat) })}
             data={data}
             taken={taken}
+            after={afterChoices(draft, chat)}
+            stackedOn={stackParent(draft, chat, data.chats)?.handle ?? null}
+            afterHandle={parentOf(draft, chat)?.handle ?? null}
             problems={chatProblems(chat, draft, data.chats)}
             finished={finished(chat, draft)}
             focusOnMount={chat.key === opened}

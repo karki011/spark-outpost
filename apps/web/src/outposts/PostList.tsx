@@ -18,6 +18,7 @@ interface PostListProps {
   empty: ReactNode;
   onAnswer: (post: OutpostPost) => void;
   onCancel: (postId: string) => void;
+  onStartNow?: ((postId: string) => void) | undefined;
   onOpenChat: (conversationId: string) => void;
 }
 
@@ -43,6 +44,7 @@ export function PostList({
   empty,
   onAnswer,
   onCancel,
+  onStartNow,
   onOpenChat,
 }: PostListProps) {
   const { scrollerRef, away, unfollow, jumpToLatest } = useStickToBottom();
@@ -68,6 +70,7 @@ export function PostList({
                     answerable={!approvalChats?.has(item.post.toConversationId ?? '')}
                     onAnswer={onAnswer}
                     onCancel={onCancel}
+                    onStartNow={onStartNow}
                     onOpenChat={onOpenChat}
                   />
                 );

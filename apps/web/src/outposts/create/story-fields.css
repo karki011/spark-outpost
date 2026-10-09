@@ -1,0 +1,22 @@
+.op-review-order {
+  display: flex;
+  flex-basis: 100%;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding-left: 42px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.op-review-order.warn {
+  color: var(--warn);
+}
+
+.op-review-order svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+}
