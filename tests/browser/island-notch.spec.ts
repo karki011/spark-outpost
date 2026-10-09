@@ -1,8 +1,10 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { FLOATING_BLOB, ISLAND_WIDTH } from '../../apps/desktop/src/island-geometry.ts';
 import {
   command,
+  dragPhases,
   focusCalls,
   island,
   NOTCH,
@@ -13,6 +15,7 @@ import {
   shownText,
   sparkFocus,
   underNotch,
+  VIEWPORT,
 } from './island-notch-desktop.ts';
 import { seedChats } from './sidebar-seed.ts';
 
@@ -124,6 +127,66 @@ for (const [name, windowTop] of [
     await shot(page, name);
   });
 }
+
+const WINDOW_LEFT = (VIEWPORT.width - ISLAND_WIDTH) / 2;
+
+for (const [name, notch, windowTop] of [
+  ['under-notch', true, WIDE_NOTCH.height],
+  ['flat-top', false, 0],
+] as const) {
+  test(`a floating island rests as the blob alone at the top of its window: ${name}`, async ({
+    page,
+  }) => {
+    await resetTestDatabase({ onboarded: true });
+    for (const size of ['small', 'full'] as const) {
+      await openNotchIsland(page, {
+        size,
+        autoExpand: false,
+        notch,
+        cutout: WIDE_NOTCH,
+        docked: false,
+        windowTop,
+        asScreen: true,
+      });
+      await expect(island(page)).toHaveAttribute('data-view', 'peek');
+      await expect
+        .poll(() => page.locator('.isl-scout-wrap').boundingBox())
+        .toEqual({
+          x: WINDOW_LEFT + FLOATING_BLOB.x,
+          y: windowTop + FLOATING_BLOB.y,
+          width: FLOATING_BLOB.size,
+          height: FLOATING_BLOB.size,
+        });
+      expect((await island(page).boundingBox())!.height).toBeLessThanOrEqual(1);
+    }
+    await page.waitForTimeout(600);
+    await page.screenshot({
+      path: path.join(SHOTS || test.info().outputDir, `island-float-${name}.png`),
+      clip: { x: 320, y: 0, width: 640, height: 200 },
+    });
+  });
+}
+
+test('the resting blob drags as a blob and a drag does not open the island', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await openNotchIsland(page, { size: 'full', autoExpand: false, notch: false, docked: false });
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  const blob = (await page.locator('.isl-scout-wrap').boundingBox())!;
+  const at = { x: blob.x + blob.width / 2, y: blob.y + blob.height / 2 };
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x + 12, at.y + 3, { steps: 3 });
+  await page.mouse.up();
+  const phases = await dragPhases(page);
+  expect(phases.at(0)).toBe('lift');
+  expect(phases.at(-1)).toBe('end');
+  await page.mouse.move(at.x, 500);
+  await staysOn(page, 'peek');
+
+  await page.getByRole('button', { name: 'Open Spark Island' }).click();
+  await page.mouse.move(at.x, 500);
+  await staysOn(page, 'panel');
+});
 
 for (const size of SIZES) {
   for (const notch of [true, false]) {

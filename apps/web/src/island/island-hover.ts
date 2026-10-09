@@ -37,7 +37,9 @@ export function minuteOf(time: number): number {
 
 export function coreRects(island: HTMLElement | null): DOMRect[] {
   if (!island) return [];
-  const scout = island.classList.contains('hang') ? island.querySelector('.isl-scout-wrap') : null;
+  const scout = island.matches('.hang, .peek.floating')
+    ? island.querySelector('.isl-scout-wrap')
+    : null;
   return [island, scout].flatMap((element) => (element ? [element.getBoundingClientRect()] : []));
 }
 

@@ -2,10 +2,13 @@ import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electr
 import type { IslandPosition, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
+  clampToDisplay,
   dockedPosition,
   draggedPosition,
   islandBounds,
   islandGeometry,
+  liftedPosition,
+  movedPosition,
   nearDock,
   placement,
   placementLine,
@@ -115,7 +118,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
 
   const settle = () => {
     if (window.isDestroyed() || !placed || !requested) return;
-    const line = placementLine(placed.display, requested, window.getBounds());
+    const line = placementLine(placed.display, placed.docked, requested, window.getBounds());
     if (line !== logged) options.log(line);
     logged = line;
     const next = geometry();
@@ -187,9 +190,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const finishDrag = (pointer: Point) => {
     if (!dragging) return;
     const display = info(screen.getDisplayNearestPoint(pointer));
-    const position = draggedPosition(dragging.origin, dragging.pointer, pointer, display);
-    const docked = nearDock(position, display);
-    const settled = docked ? dockedPosition(display) : position;
+    const dropped = movedPosition(dragging.origin, dragging.pointer, pointer);
+    const docked = nearDock(dropped, display);
+    const settled = docked ? dockedPosition(display) : clampToDisplay(dropped, display);
     dragging = null;
     options.savePosition({ docked: false, ...settled });
     placed = { display, position: settled, docked };
@@ -235,6 +238,15 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       if (phase === 'start') {
         const [x = 0, y = 0] = window.getPosition();
         dragging = { origin: placed?.position ?? { x, y }, pointer };
+        return;
+      }
+      if (phase === 'lift') {
+        const host = info(screen.getDisplayNearestPoint(pointer));
+        const origin = liftedPosition(pointer);
+        dragging = { origin, pointer };
+        placed = { display: host, position: clampToDisplay(origin, host), docked: false };
+        moveTo(placed.position);
+        send(IPC.islandGeometryChanged, geometry());
         return;
       }
       if (!dragging) return;
