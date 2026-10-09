@@ -8,6 +8,7 @@ import {
   createPostRequestSchema,
   memberRequestSchema,
   outpostDetailSchema,
+  outpostPostSchema,
   outpostDraftSchema,
   outpostHandleSchema,
   pinPostRequestSchema,
@@ -75,6 +76,7 @@ const detail: OutpostDetail = {
         changes: ['src/orders.ts'],
         pullRequests: ['https://github.com/acme/api/pull/7'],
       },
+      exchanges: [{ question: 'Needs you: which fields?', answer: 'All of them.' }],
       files: 0,
       intro: null,
     },
@@ -82,6 +84,12 @@ const detail: OutpostDetail = {
 };
 
 describe('outpost schemas', () => {
+  it('reads a post written before exchanges existed as having none', () => {
+    const earlier = { ...detail.posts[0], exchanges: undefined };
+
+    expect(outpostPostSchema.parse(earlier).exchanges).toEqual([]);
+  });
+
   it('reads back an outpost with a request and its answer unchanged', () => {
     expect(outpostDetailSchema.parse(JSON.parse(JSON.stringify(detail)))).toEqual(detail);
   });
@@ -188,7 +196,7 @@ describe('outpost schemas', () => {
       runStatus: null,
       runNeedsYou: null,
       paused: false,
-      held: false,
+      held: null,
       chatDeleted: false,
     };
     expect(requestFactsSchema.parse(facts)).toEqual(facts);

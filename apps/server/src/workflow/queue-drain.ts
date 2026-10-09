@@ -5,6 +5,7 @@ import {
   alreadySent,
   PAUSED_OUTPOST_ITEM,
   QueueError,
+  takePostedAfterStop,
   takeQueued,
 } from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
@@ -107,9 +108,11 @@ export async function drainQueue(
       await markMessageSent(client, urgent.id, 'sent', urgent.id);
       return 'sent';
     }
-    if (!(await lastTurnSucceeded(client, conversationId))) return 'paused';
-    const next = await takeQueued(client, conversationId, null);
-    if (!next) return 'empty';
+    const flowing = await lastTurnSucceeded(client, conversationId);
+    const next = flowing
+      ? await takeQueued(client, conversationId, null)
+      : await takePostedAfterStop(client, conversationId);
+    if (!next) return flowing ? 'empty' : 'paused';
     await sendQueued(client, conversationId, next, target);
     return 'sent';
   });

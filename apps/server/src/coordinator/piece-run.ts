@@ -5,7 +5,7 @@ import { movePiece, pieceListById } from '../persistence/pieces.ts';
 import { git, workingTree } from '../projects/snapshot.ts';
 import { runChecks } from '../orchestration/checks.ts';
 import { changeFailureText, startsCheckFix } from '../orchestration/check-results.ts';
-import { builderPrompt } from '../orchestration/context.ts';
+import { builderPrompt, section } from '../orchestration/context.ts';
 import { treeOf } from '../orchestration/land.ts';
 import { codeContext } from '../orchestration/code-context.ts';
 import { agreedPlanText } from '../orchestration/member-prompts.ts';
@@ -94,7 +94,7 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
     landed: landedPieces(coordination),
     scoutNotes: coordination.scoutNotes.join('\n\n') || null,
   });
-  if (piece.research) return `Request: ${s.input.userRequest}\n\n${brief}`;
+  if (piece.research) return `${section('Request', s.input.userRequest)}\n\n${brief}`;
   const owned = coordination.owned.get(piece.key) ?? { paths: [], globs: [] };
   const relevant = (path: string) => owns(owned, path) || piece.reads.includes(path);
   const base = builderPrompt({

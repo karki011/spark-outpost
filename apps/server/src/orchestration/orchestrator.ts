@@ -38,6 +38,7 @@ import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
 import { beginFixRound, startsFixRound } from './fix-rounds.ts';
 import { finalText } from './final-message.ts';
+import { finalReplyOf } from './final-reply.ts';
 import {
   decideBuildStyle,
   NO_PROJECT_STYLE,
@@ -265,8 +266,15 @@ async function finish(
   const notes = [pieces, escalated, upgraded, fixed, suggested, skipped, laws, stopped, incomplete];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
-  const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
-  const text = withNotes(reply, [...notes, shipped], s.message !== null);
+  const hasMessage = s.message !== null;
+  const compose = (results: Session['results']) =>
+    withNotes(
+      finalText(results, verdict, s.findings, hasMessage, s.checkBodies, summary),
+      [...notes, shipped],
+      hasMessage,
+    );
+  const text = compose(s.results);
+  const finalReply = finalReplyOf(s.message, s.results, compose);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {
@@ -277,7 +285,8 @@ async function finish(
     s.message.text += text;
   }
   if (s.message) {
-    await closeMessage(s.append, { messageId: s.message.id, text: s.message.text }, true);
+    const closed = { messageId: s.message.id, text: s.message.text, finalReply };
+    await closeMessage(s.append, closed, true);
   }
   const identity = s.input.identity;
   if (status === 'succeeded') {

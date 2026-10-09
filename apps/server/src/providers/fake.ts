@@ -14,6 +14,7 @@ import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
 import { commandPlan, fakeCommandTurn } from './fake-commands.ts';
+import { asFinalMessage, fakeCommentary } from './fake-phases.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 import {
   fakeCompactOutputs,
@@ -132,9 +133,10 @@ export function fakeProviderPlan(
     ...attachmentSteps(attachments),
     ...thinkingSteps(prompt),
     ...planSteps(prompt),
+    ...fakeCommentary(prompt),
     { kind: 'step_started', name: 'Writing a reply' },
     { kind: 'step_finished', name: 'Writing a reply' },
-    ...replyOutputs(reply),
+    ...asFinalMessage(prompt, replyOutputs(reply)),
   ];
 }
 

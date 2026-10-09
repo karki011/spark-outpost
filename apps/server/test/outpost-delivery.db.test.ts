@@ -9,6 +9,7 @@ import {
 } from '../src/persistence/chat-queue.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
+import { requestCancel } from '../src/persistence/runs.ts';
 import {
   drainQueue,
   drainWaiting,
@@ -45,8 +46,19 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const request = (body = 'Add the orders endpoint.') =>
-  deliverRequest(t.db, { outpostId, toConversationId: api, toHandle: 'api', body });
+const request = (body = 'Add the orders endpoint.', fromUser = true) =>
+  deliverRequest(t.db, { outpostId, toConversationId: api, toHandle: 'api', body, fromUser });
+
+async function stopTurn(runId: string): Promise<void> {
+  await requestCancel(t.db, runId);
+  await finishRun(t.db, runId, 'cancelled');
+}
+
+async function workingRequest(): Promise<string> {
+  const postId = await request('first');
+  await drainQueue(t.db, api, target);
+  return (await postRunId(t.db, postId))!;
+}
 
 const userTurn = (content = 'my own message') =>
   sendUserMessage(t.db, api, { id: randomUUID(), content }, { provider: 'fake' });
@@ -297,5 +309,71 @@ describe('a restart', () => {
     expect(await drainQueue(t.db, api, target)).toBe('paused');
     expect(await queuedIds()).toEqual([second]);
     expect(await postRunId(t.db, second)).toBeNull();
+  });
+});
+
+describe('a chat whose last turn the user stopped', () => {
+  it('starts a request the user posts afterwards', async () => {
+    await stopTurn(await workingRequest());
+    const next = await request('second');
+
+    expect(await drainQueue(t.db, api, target)).toBe('sent');
+    expect(await queuedIds()).toEqual([]);
+    const turns = await chatTurns(t.db, api);
+    expect(turns.at(-1)).toMatchObject({ source: 'outpost', user_message_id: next });
+    expect(await postRunId(t.db, next)).toBe(turns.at(-1)!.id);
+  });
+
+  it('starts a request the user posted while the turn was still stopping', async () => {
+    const runId = await workingRequest();
+    await requestCancel(t.db, runId);
+    const next = await request('second');
+    expect(await drainQueue(t.db, api, target)).toBe('busy');
+    await finishRun(t.db, runId, 'cancelled');
+
+    expect(await drainQueue(t.db, api, target)).toBe('sent');
+    expect(await postRunId(t.db, next)).not.toBeNull();
+  });
+
+  it('starts it ahead of what the stop left queued, and leaves that queued', async () => {
+    const runId = await workingRequest();
+    const own = randomUUID();
+    await addToQueue(t.db, api, { id: own, content: 'queued by the user' });
+    const leftover = await request('queued before the stop');
+    await stopTurn(runId);
+    const next = await request('posted after the stop');
+
+    expect(await drainQueue(t.db, api, target)).toBe('sent');
+    expect(await queuedIds()).toEqual([own, leftover]);
+    expect((await chatTurns(t.db, api)).at(-1)).toMatchObject({ user_message_id: next });
+  });
+
+  it('still holds what was queued before the stop', async () => {
+    const runId = await workingRequest();
+    const own = randomUUID();
+    await addToQueue(t.db, api, { id: own, content: 'queued by the user' });
+    const leftover = await request('queued before the stop');
+    await stopTurn(runId);
+
+    expect(await drainQueue(t.db, api, target)).toBe('paused');
+    expect(await queuedIds()).toEqual([own, leftover]);
+  });
+
+  it('still holds a request another chat writes afterwards', async () => {
+    await stopTurn(await workingRequest());
+    const fromAgent = await request('from another chat', false);
+
+    expect(await drainQueue(t.db, api, target)).toBe('paused');
+    expect(await queuedIds()).toEqual([fromAgent]);
+  });
+
+  it('holds a request the user posts after a turn that failed', async () => {
+    const runId = await workingRequest();
+    await requestCancel(t.db, runId);
+    await finishRun(t.db, runId, 'failed');
+    const next = await request('second');
+
+    expect(await drainQueue(t.db, api, target)).toBe('paused');
+    expect(await queuedIds()).toEqual([next]);
   });
 });

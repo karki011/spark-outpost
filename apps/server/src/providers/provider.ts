@@ -107,6 +107,8 @@ export interface ProviderTurn {
   sparkScope?: SparkScope;
 }
 
+export type MessagePhase = 'commentary' | 'final';
+
 export type GateAnswer =
   | {
       outcome: 'selected';
@@ -167,7 +169,7 @@ export type ProviderOutput =
       target?: string;
     }
   | ({ kind: 'file_focus' } & FileFocus)
-  | { kind: 'text_delta'; delta: string }
+  | { kind: 'text_delta'; delta: string; phase?: MessagePhase }
   | { kind: 'thought_delta'; delta: string }
   | { kind: 'tool_started'; id: string; name: string }
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }

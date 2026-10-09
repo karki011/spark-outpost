@@ -40,7 +40,7 @@ const facts: RequestFacts = {
   runStatus: null,
   runNeedsYou: null,
   paused: false,
-  held: false,
+  held: null,
   chatDeleted: false,
 };
 
@@ -94,11 +94,32 @@ describe('the post the outpost page receives', () => {
     expect(toOutpostPost(line, null)).toMatchObject({ body: '@api joined', intro: null });
   });
 
+  it('keeps the questions a request was asked and the user’s answers', () => {
+    const found: PostWithFacts = {
+      post: { ...stored, taskId: stored.id, runId: stored.id },
+      facts: { ...facts, sent: true, runStatus: 'running' },
+    };
+    const exchanges = [{ question: 'Needs you: v1 or v2?', answer: 'v2' }];
+
+    expect(toOutpostPost(found, null, null, exchanges)).toMatchObject({
+      state: 'working',
+      exchanges,
+    });
+    expect(toOutpostPost(found, null).exchanges).toEqual([]);
+  });
+
   it('gives a note no state, reason or answer', () => {
     const note: PostWithFacts = {
       post: { ...stored, kind: 'note', toHandle: null, toConversationId: null },
       facts: null,
     };
-    expect(toOutpostPost(note, answer)).toMatchObject({ state: null, reason: null, answer: null });
+    const exchanges = [{ question: 'Needs you: v1 or v2?', answer: 'v2' }];
+
+    expect(toOutpostPost(note, answer, null, exchanges)).toMatchObject({
+      state: null,
+      reason: null,
+      answer: null,
+      exchanges: [],
+    });
   });
 });
