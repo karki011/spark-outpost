@@ -1,6 +1,6 @@
 # Agent terminals
 
-Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table and the gate are built (see "Built so far"); the runner, the tool, the web rows and the guide pages are not. The owner's decisions are recorded at the end.
+Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table, the gate and the tool are built (see "Built so far"); the runner, the web rows and the rest of the guide pages are not. The owner's decisions are recorded at the end.
 
 Goal: when an agent runs a command, the user can see that a terminal is going on. There is the small terminal in the reply (today) and a tab in the Terminal dock to watch it, check on it and stop it. A long-running command (a dev server, a watcher) keeps running in its tab after the turn ends.
 
@@ -249,7 +249,7 @@ Seams between lanes: 2c and 2e meet only through the table and its NOTIFY. 2d gi
 
 ## Built so far
 
-Phase 1 and lanes 2a, 2b and 2d. Nothing here registers the tool or starts a process. Lanes 2c, 2e and 2f build against these.
+Phase 1 and lanes 2a, 2b, 2d and 2e. The tool is registered and inserts the row; nothing here starts a process until the runner (2c) lands. Lanes 2c and 2f build against these.
 
 ### Contracts (2a): `packages/contracts/src/agent-terminal.ts`
 
@@ -303,6 +303,16 @@ sparkCommandStarted(scope, review, approvalId | null): void
 - `audit` holds the redacted command, the folder, the agent's mode, the decision (`mode`, `card` or `refused`), the reason, and `unreviewed`, which is true only when no card stands between the agent and the start. A command that looks like it holds a secret is not kept in the audit facts.
 - `card` is a ready `NewApproval` (kind `execute`, Allow once and Reject, the rail's reason, and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." as `asksBecause`). Lane 2e inserts it, waits and settles it the way the turn's gate does, calls `sparkCommandAsked` when it is raised and `sparkCommandStarted` when the command starts. Those two record the read-then-send note and any secret file read, as the gate does for the agent's own commands.
 - Pass the agent's current mode in `scope.agentMode` when it changed during the turn.
+
+### Tool (2e): `apps/server/src/spark-mcp/tools/terminal-run-tool.ts`, `terminal-run-start.ts`, `terminal-run-folder.ts`
+
+- Registered as `spark_terminal_run` with `needs: 'project'` and `acts: true`, so a plain chat and a read-only session are never offered it. An Ask turn, a piece and the Coordinator are offered it and refused by the gate. A Terminal session has no command scope, so it is refused too.
+- The turn passes its `SparkCommandScope` as `sparkScope.commands` (`workflow/agent-turn.ts`). The tool swaps in the mode the session is in now (`runs.used_mode`).
+- `start` answers `{ action, terminal }`, or `{ action, refused: true, reason }` for every refusal: the gate's, a folder that does not exist or leads outside the project through a link, a card that was rejected, timed out, cancelled or closed by a restart, and a turn that ended. The card is raised with `createApprovalGate(...).raise`, the gate's own insert, wait and settle.
+- The tool call id is the MCP request id plus a hash of the command and folder. A second `start` with the same id returns the terminal while it is still live.
+- `output` returns the facts as JSON and the lines in a second `<terminal_output>` block, so the tail is never clipped from the wrong end.
+- It appends the `agent_terminal_started` run event (`runEvents.agentTerminalStarted`) and writes the `spark/terminal_start` audit entry and, for `agent`, `spark/terminal_stop` (`workflow/terminal-audit.ts`).
+- Stopping a turn calls `stopTurnTerminals` (`workflow/stop-terminals.ts`) from `stopRun`: the run and its member runs. It writes `spark/terminal_stop` for `turn_stopped`. The entries for `user`, `quit`, `chat_removed` and `folder_removed` belong to the runner and its routes; `recordTerminalStop` is there for them.
 
 ## Test plan
 

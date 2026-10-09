@@ -36,6 +36,7 @@ import { mcpServersTool } from './tools/mcp-tool.ts';
 import { setupTools } from './tools/setup-tools.ts';
 import { taskTool } from './tools/task-tool.ts';
 import { teammatesTool } from './tools/teammates-tool.ts';
+import { terminalRunTool } from './tools/terminal-run-tool.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
@@ -66,6 +67,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...ticketActionTools,
   prFollowUpRoundTool,
   ...publishTools,
+  terminalRunTool,
   createTeammateTool,
   updateTeammateTool,
   ...mcpActionTools,
@@ -156,9 +158,10 @@ export function sparkMcpServer(
         inputSchema: tool.input,
         annotations: { title: tool.title, ...(tool.acts ? CONFIRMED_ACTION : READ_ONLY) },
       },
-      (args: unknown, extra: { signal: AbortSignal }) =>
+      (args: unknown, extra: { signal: AbortSignal; requestId: string | number }) =>
         callSparkTool(tool, args, {
           ...context,
+          callId: String(extra.requestId),
           signal: stopped ? AbortSignal.any([extra.signal, stopped]) : extra.signal,
         }),
     );

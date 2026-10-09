@@ -47,6 +47,7 @@ The agent proposes, and Spark does it.
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
+| Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
 An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
 
@@ -64,12 +65,26 @@ Change any field, then select the confirm button or **Don't**. The card then sho
 
 Agents open pull requests themselves.
 
+## Keep a command running
+
+Ask the agent to leave a command running, such as a dev server. `spark_terminal_run` runs it in a Spark terminal, outside the agent's sandbox, and it keeps running after the turn.
+
+| When                                                                    | Spark                                         |
+| ----------------------------------------------------------------------- | --------------------------------------------- |
+| **Auto**, **Bypass permissions**, **Approve for me** or **Full access** | Starts it at once, marked ran without review. |
+| Any other mode                                                          | Shows a card: **Allow once** or **Reject**.   |
+| Ask or read-only turn, no project, a piece or the Coordinator           | Refuses, with the reason.                     |
+
+[Protected paths](protected-paths.md) and push rules ask or refuse first in every mode. It takes no input; the agent can read its recent output and stop it.
+
+It also stops when you stop the turn that started it or when Spark quits. Spark never restarts it.
+
 ## What the tools never return
 
 | Never returned               | Instead                                               |
 | ---------------------------- | ----------------------------------------------------- |
 | File contents                | `spark_find` gives files, functions and line numbers. |
-| Terminal output              | A terminal's name, folder and running program.        |
+| Your terminals' output       | A terminal's name, folder and running program.        |
 | Password and card fields     | `[masked]`, and painted over in screenshots.          |
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |

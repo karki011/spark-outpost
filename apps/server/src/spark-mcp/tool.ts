@@ -5,6 +5,7 @@ export interface SparkToolContext {
   deps: SparkToolDeps;
   scope: SparkScope;
   signal?: AbortSignal;
+  callId?: string;
 }
 
 export type SparkBlock =
