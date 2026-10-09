@@ -2,6 +2,18 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.9
+
+- Chat: replies, your messages and the message box share one centred column, wider than before, and a reply's text sits under the agent's name. Table headers no longer break in the middle of a word.
+- Chat: Make the change is removed. Ask for the change in your next message.
+- Work panel: the rail lists the same crew as Agent TV and keeps it after the turn ends, and the task list no longer scrolls inside a short box.
+- Sidebar: a chat whose pull request was merged shows a merged icon.
+- Terminal sessions: pressing Esc while the agent is replying shows the session as waiting for input instead of Running.
+- Terminal sessions: the note Spark gives the agent is sent as a system instruction and no longer appears as a dark bar above your first message.
+- Spark Island: press the resting blob and drag to place it anywhere, including up beside the notch. The place is saved when you let go. On a display with a notch it docks again only when dropped on the notch, and a floating Island rests as the blob alone.
+- Spark Island: the log records where the Island was placed on each display, to help diagnose a blob that sits too low.
+- Known: Esc before a Terminal agent has started replying still shows Running until its next event.
+
 ## 0.1.0-beta.8
 
 - Terminal sessions: New chat → Terminal runs the real Claude Code or Codex CLI in a terminal Spark owns, in the chat's worktree, with your agent mode and Spark's tools. The chat row shows Running, Waiting for input, Waiting for permission or Idle from the agent's own events. Hide view keeps the agent running, Open terminal reattaches, and Stop session asks you to hold. Spark's cards, protected paths and audit do not apply inside a Terminal session, and it opens no pull request by itself.
