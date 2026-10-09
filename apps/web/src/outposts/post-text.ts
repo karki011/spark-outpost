@@ -16,6 +16,10 @@ const COLLAPSE_CHARS = 280;
 const WEB_LINK = /^https?:\/\//i;
 const PULL_NUMBER = /\/pull\/(\d+)(?:[/?#]|$)/;
 
+export function postAnchor(postId: string): string {
+  return `op-post-${postId}`;
+}
+
 export function senderName(post: OutpostPost): string {
   if (post.fromUser) return 'You';
   return post.fromHandle ? `@${post.fromHandle}` : 'A removed chat';

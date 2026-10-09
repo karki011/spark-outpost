@@ -444,7 +444,12 @@ export const ConversationList = memo(function ConversationList({
               ? {
                   list: outpostSeam.outposts,
                   onAdd: (outpostId, handle) =>
-                    outpostSeam.onAddToOutpost(outpostId, { conversationId: menuChat.id, handle }),
+                    void outpostSeam
+                      .onAddToOutpost(outpostId, { conversationId: menuChat.id, handle })
+                      .then(
+                        () => toaster.show({ text: `Added ${menuChat.title} as @${handle}` }),
+                        (error: Error) => toaster.show({ text: error.message }),
+                      ),
                   onNew: () => outpostSeam.onNewOutpost(menuChat.id),
                 }
               : undefined

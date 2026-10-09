@@ -12,6 +12,7 @@ import {
   STATE_LABELS,
   canCancel,
   filesLabel,
+  postAnchor,
   postTime,
   pullRequestLabel,
   receiverName,
@@ -71,7 +72,11 @@ export function RequestPost({ post, answering, onAnswer, onCancel, onOpenChat }:
   const to = receiverName(post);
   const chatId = post.toConversationId;
   return (
-    <li className={answering ? 'op-post answering' : 'op-post'} data-post={post.id}>
+    <li
+      id={postAnchor(post.id)}
+      className={answering ? 'op-post answering' : 'op-post'}
+      data-post={post.id}
+    >
       <div className="op-post-head">
         <b>{senderName(post)}</b>
         <span className="op-to">

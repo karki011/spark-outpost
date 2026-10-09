@@ -164,6 +164,7 @@ export function OutpostSheet({
               Chats
               <small>
                 Each one gets a short handle the others use to address it. You can rename it later.
+                A new chat can be added after its first message.
               </small>
             </span>
             {form.members.length === 0 ? (
@@ -228,7 +229,7 @@ export function OutpostSheet({
                   onChange={addChat}
                 />
               ) : (
-                <small className="op-sheet-note">Every chat is already here.</small>
+                <small className="op-sheet-note">No other chats to add.</small>
               )}
             </div>
           </div>

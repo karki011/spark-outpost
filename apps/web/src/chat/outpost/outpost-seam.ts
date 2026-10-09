@@ -6,7 +6,7 @@ export interface OutpostSeam {
   openOutpostId: string | null;
   onOpenOutpost: (outpostId: string, postId?: string) => void;
   onNewOutpost: (conversationId?: string) => void;
-  onAddToOutpost: (outpostId: string, member: MemberRequest) => void;
+  onAddToOutpost: (outpostId: string, member: MemberRequest) => Promise<unknown>;
 }
 
 export const OutpostSeamContext = createContext<OutpostSeam | null>(null);

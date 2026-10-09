@@ -25,26 +25,28 @@ const outpostPaths = {
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
 };
 
-const done = z.unknown();
+function changed(path: string, init: RequestInit): Promise<OutpostDetail> {
+  return request(outpostDetailSchema, path, init);
+}
 
 export const outpostsApi = {
   list: (): Promise<Outpost[]> => request(z.array(outpostSchema), outpostPaths.list),
   get: (id: string): Promise<OutpostDetail> => request(outpostDetailSchema, outpostPaths.one(id)),
-  create: (body: CreateOutpostRequest): Promise<unknown> =>
-    request(done, outpostPaths.list, { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: UpdateOutpostRequest): Promise<unknown> =>
-    request(done, outpostPaths.one(id), { method: 'PATCH', body: JSON.stringify(body) }),
-  remove: (id: string): Promise<unknown> =>
-    request(done, outpostPaths.one(id), { method: 'DELETE', body: '{}' }),
-  putMember: (id: string, member: MemberRequest): Promise<unknown> =>
-    request(done, outpostPaths.member(id, member.conversationId), {
+  create: (body: CreateOutpostRequest): Promise<OutpostDetail> =>
+    changed(outpostPaths.list, { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: UpdateOutpostRequest): Promise<OutpostDetail> =>
+    changed(outpostPaths.one(id), { method: 'PATCH', body: JSON.stringify(body) }),
+  remove: (id: string): Promise<null> =>
+    request(z.null(), outpostPaths.one(id), { method: 'DELETE' }),
+  putMember: (id: string, member: MemberRequest): Promise<OutpostDetail> =>
+    changed(outpostPaths.member(id, member.conversationId), {
       method: 'PUT',
-      body: JSON.stringify(member),
+      body: JSON.stringify({ handle: member.handle }),
     }),
-  removeMember: (id: string, conversationId: string): Promise<unknown> =>
-    request(done, outpostPaths.member(id, conversationId), { method: 'DELETE', body: '{}' }),
-  post: (id: string, body: CreatePostRequest): Promise<unknown> =>
-    request(done, outpostPaths.posts(id), { method: 'POST', body: JSON.stringify(body) }),
-  cancelPost: (id: string, postId: string): Promise<unknown> =>
-    request(done, outpostPaths.cancelPost(id, postId), { method: 'POST', body: '{}' }),
+  removeMember: (id: string, conversationId: string): Promise<OutpostDetail> =>
+    changed(outpostPaths.member(id, conversationId), { method: 'DELETE' }),
+  post: (id: string, body: CreatePostRequest): Promise<OutpostDetail> =>
+    changed(outpostPaths.posts(id), { method: 'POST', body: JSON.stringify(body) }),
+  cancelPost: (id: string, postId: string): Promise<OutpostDetail> =>
+    changed(outpostPaths.cancelPost(id, postId), { method: 'POST', body: '{}' }),
 };
