@@ -53,6 +53,9 @@ async function editsChat(page: Page, edits: number): Promise<void> {
   await expect(page.locator('.md', { hasText: `livediff=done ${edits}` })).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
+    timeout: 30_000,
+  });
 }
 
 async function islandPage(page: Page, theme = 'graphite'): Promise<Page> {

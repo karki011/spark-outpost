@@ -84,6 +84,13 @@ describe('companion settings file', () => {
     expect(size({ islandSize: 'full', islandSizePicked: true })).toBe('full');
   });
 
+  it('keeps a picked extra large island', () => {
+    const saved = parseSettings(JSON.stringify({ islandSize: 'xlarge', islandSizePicked: true }));
+    expect(saved).toMatchObject({ islandSize: 'xlarge', islandSizePicked: true });
+    expect(parseSettings(JSON.stringify(saved)).islandSize).toBe('xlarge');
+    expect(parseSettings(JSON.stringify({ islandSize: 'xlarge' })).islandSize).toBe('full');
+  });
+
   it('opens requests by itself unless that was turned off', () => {
     expect(parseSettings('{}').autoExpand).toBe(true);
     expect(parseSettings(JSON.stringify({ autoExpand: false })).autoExpand).toBe(false);

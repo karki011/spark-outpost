@@ -112,6 +112,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         origin: options.origin,
         preload: options.preload,
         position: () => companion.position(),
+        size: () => companion.status().islandSize,
         savePosition: (position) => companion.setPosition(position),
         log: options.log,
         onGone: () => {
@@ -180,9 +181,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.companionSetSound, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setSound(on) : companion.status(),
   );
-  ipcMain.handle(IPC.companionSetIslandSize, (event, size: unknown) =>
-    fromSpark(event) && isIslandSize(size) ? companion.setIslandSize(size) : companion.status(),
-  );
+  ipcMain.handle(IPC.companionSetIslandSize, (event, size: unknown) => {
+    if (!fromSpark(event) || !isIslandSize(size)) return companion.status();
+    const status = companion.setIslandSize(size);
+    island?.sizeChanged();
+    return status;
+  });
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );

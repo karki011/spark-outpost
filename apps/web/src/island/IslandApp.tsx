@@ -47,15 +47,16 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
-import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
+import { restMetrics, useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
+import { restsQuietly } from './island-fit.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
-import { coreRects, flatRowRects, minuteOf, useHoverIntent } from './island-hover.ts';
+import { coreRects, flatRowRects, minuteOf, useHoverIntent, zoneRects } from './island-hover.ts';
 import { useIslandData } from './use-island-data.ts';
 import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
@@ -229,14 +230,26 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
+  const mood = wave
+    ? 'happy'
+    : scoutMoodFor(view, {
+        waiting,
+        hour: new Date(now).getHours(),
+        idleMinutes: 0,
+        running: running.length,
+        moment,
+        failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
+      });
+
   const geometry = useIslandBridge({
     islandRef,
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
     coreRects: () => coreRects(islandRef.current),
     blobRects: () => flatRowRects(rowRef.current),
+    zoneRects: (docked) => zoneRects(islandRef.current, restMetrics(size).reach, docked),
     peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -406,18 +419,7 @@ export function IslandApp() {
         view={view}
         geometry={geometry}
         size={size}
-        mood={
-          wave
-            ? 'happy'
-            : scoutMoodFor(view, {
-                waiting,
-                hour: new Date(now).getHours(),
-                idleMinutes: 0,
-                running: running.length,
-                moment,
-                failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
-              })
-        }
+        mood={mood}
         reduced={reduced}
         wave={wave}
         hover={hover}

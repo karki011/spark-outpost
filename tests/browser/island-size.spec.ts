@@ -80,7 +80,7 @@ async function restingBlob(page: Page, size: number, tuck: number) {
     .locator('.sc-eye')
     .evaluateAll((all) => all.map((eye) => eye.getBoundingClientRect()));
   expect(Math.min(...eyes.map((eye) => eye.top))).toBeGreaterThanOrEqual(0);
-  expect(Math.max(...eyes.map((eye) => eye.bottom))).toBeLessThanOrEqual(24);
+  expect(Math.max(...eyes.map((eye) => eye.bottom))).toBeLessThanOrEqual(size - tuck);
   await expect.poll(async () => (await lastRest(page))?.width ?? 0).toBeGreaterThan(size);
   return (await lastRest(page))!;
 }
@@ -98,6 +98,11 @@ test('the resting island follows the chosen size live and still opens on hover',
   expect(large.width).toBeGreaterThan(small.width);
   expect(large.height).toBeGreaterThan(small.height);
   expect((await island(page).boundingBox())!.y).toBe(0);
+
+  await setSize(page, 'xlarge');
+  const extra = await restingBlob(page, 116, 61);
+  expect(Math.abs(extra.width - (116 + 2 * 32))).toBeLessThanOrEqual(1);
+  expect(Math.abs(extra.height - (116 - 61 + 32))).toBeLessThanOrEqual(1);
 
   await setSize(page, 'medium');
   await restingBlob(page, 48, 25);
@@ -121,12 +126,22 @@ test('pending requests stay as blobs at every size, including saved Full', async
     },
   ]);
   await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-  for (const size of ['small', 'medium', 'large', 'full']) {
+  const scout = island(page).locator('.isl-scout-wrap');
+  for (const [size, blob] of [
+    ['small', 38],
+    ['medium', 48],
+    ['large', 58],
+    ['xlarge', 116],
+    ['full', 58],
+  ] as const) {
     await setSize(page, size);
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
     await expect(island(page).locator('.isl-nudge, .isl-nowbar')).toHaveCount(0);
+    await expect.poll(() => scout.boundingBox()).toMatchObject({ y: 4, height: blob });
+    await expect
+      .poll(async () => Math.abs(((await lastRest(page))?.height ?? 0) - (blob + 18)))
+      .toBeLessThanOrEqual(1);
   }
-  await restingBlob(page, 58, 31);
   await page.mouse.move(640, 300);
   await page.mouse.move(640, 8, { steps: 4 });
   const waiting = island(page).getByRole('group', { name: 'Waiting for you' });

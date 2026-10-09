@@ -1,13 +1,12 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { ISLAND_SIZES, type IslandSize } from '@spark-outpost/contracts';
+
+export type { IslandSize };
 
 export type ShortcutAction = 'quick' | 'sessions';
 
 export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = ['quick', 'sessions'];
-
-export type IslandSize = 'full' | 'small' | 'medium' | 'large';
-
-export const ISLAND_SIZES: readonly IslandSize[] = ['full', 'small', 'medium', 'large'];
 
 export type IslandPosition = { docked: true } | { docked: false; x: number; y: number };
 
