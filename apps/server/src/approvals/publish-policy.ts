@@ -21,10 +21,18 @@ export interface PublishGrant {
   followUp?: FollowUpRound | null;
 }
 
+export interface StackBase {
+  branch: string;
+  owner: string;
+  onRemote: boolean;
+}
+
 export interface TaskBranch {
   branch: string;
   protectedBranches: readonly string[];
   pull?: number | null;
+  stackBase?: StackBase | null;
+  pullBase?: string | null;
 }
 
 export interface PublishContext {
@@ -37,6 +45,7 @@ export type PublishBasis = 'requested' | 'full_auto' | 'follow_up' | 'mode';
 export interface PublishBrief {
   basis: PublishBasis;
   branch: string;
+  base?: string | null;
 }
 
 export type PublishVerdict =
@@ -55,6 +64,14 @@ export const WIDE_PUSH_REASON = 'Pushes that delete, prune, mirror or push every
 
 export function otherBranchReason(branch: string): string {
   return `Only this chat's own branch can be pushed, named explicitly: git push origin ${branch}`;
+}
+
+export function parentNotPushedReason(
+  branch: string,
+  stack: Pick<StackBase, 'branch' | 'owner'>,
+): string {
+  const { owner } = stack;
+  return `${branch} can't be pushed yet: it is built on ${owner}'s branch ${stack.branch}, which is not on the remote, so the push would publish ${owner}'s commits under this chat's branch. Push after ${owner}'s branch is pushed; if the user has to act, end with "Needs you: ${owner}'s branch is not pushed".`;
 }
 
 const PERFORMING_POSTURES: ReadonlySet<ModePosture> = new Set(['auto', 'full_access']);
@@ -151,6 +168,9 @@ function pushRefusal(push: PushTarget, task: TaskBranch): string | null {
   const named = push.branches.length > 0 && push.branches.every((name) => name === task.branch);
   if (!named || task.protectedBranches.includes(task.branch)) {
     return otherBranchReason(task.branch);
+  }
+  if (task.stackBase && !task.stackBase.onRemote) {
+    return parentNotPushedReason(task.branch, task.stackBase);
   }
   return null;
 }

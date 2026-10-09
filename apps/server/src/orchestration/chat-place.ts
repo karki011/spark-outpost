@@ -11,6 +11,7 @@ import {
 import type { Db, Queryable } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { newId } from '../persistence/ids.ts';
+import { stackParentOf, type StackParent } from '../outposts/stack-base.ts';
 import {
   addChatWorktree,
   branchCheckedOut,
@@ -34,7 +35,7 @@ import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { auditDepsPrep, depsNote, installingNote } from './deps-audit.ts';
-import { decidePlace, namedBranch, type PlaceDecision } from './place-decision.ts';
+import { decidePlace, namedBranch, type PlaceDecision, type StackOn } from './place-decision.ts';
 
 const WORKTREE_FAILED =
   "Couldn't set up a worktree for this chat, so nothing was changed. Choose Edit my files to work in place.";
@@ -215,7 +216,17 @@ function placeNote(record: ChatWorktree, extra: string | null): string {
   return extra ? `${where} ${extra}` : where;
 }
 
+function stackOnOf(parent: StackParent | null): StackOn | null {
+  return parent?.branch ? { branch: parent.branch, owner: parent.owner } : null;
+}
+
+function notStackedNote(parent: StackParent | null, decision: PlaceDecision): string | null {
+  if (!parent || decision.kind !== 'new' || decision.from !== null) return null;
+  return `${parent.owner} has no branch to build on, so this chat's branch does not start from ${parent.owner}'s work.`;
+}
+
 async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
+  const parent = await stackParentOf(deps.db, target.conversationId);
   const choice = await placeChoice(deps.db, target.conversationId, target.projectId);
   const branches = await listBranches(target.root);
   const known = new Set([...branches.local, ...branches.remote.keys()]);
@@ -229,8 +240,9 @@ async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
     local: branches.local,
     remote: branches.remote,
     checkedOutElsewhere: requested ? await branchCheckedOut(target.root, requested) : false,
+    stackOn: stackOnOf(parent),
   });
-  return { decision, branches, clean };
+  return { decision, branches, clean, notStacked: notStackedNote(parent, decision) };
 }
 
 async function inPlace(deps: ChatPlaceDeps, target: Target, branch: string) {
@@ -254,7 +266,7 @@ async function inPlace(deps: ChatPlaceDeps, target: Target, branch: string) {
 const DIRTY_NOTE = 'Uncommitted changes in your checkout are not part of it.';
 
 async function freshPlace(deps: ChatPlaceDeps, input: RunInput, target: Target) {
-  const { decision, branches, clean } = await decide(deps, target, input.userRequest);
+  const { decision, branches, clean, notStacked } = await decide(deps, target, input.userRequest);
   if (decision.kind === 'checkout') return { input, repoRoot: target.root, note: decision.note };
   if (decision.kind === 'in_place') {
     const record = await inPlace(deps, target, decision.branch);
@@ -266,7 +278,7 @@ async function freshPlace(deps: ChatPlaceDeps, input: RunInput, target: Target) 
   const extra = decision.kind === 'new' ? decision.note : null;
   const fromHead = decision.kind === 'new' && decision.from === null;
   const dirty = fromHead && !clean ? DIRTY_NOTE : null;
-  const said = [extra, dirty, depsNote(prep)].filter(Boolean).join(' ') || null;
+  const said = [extra, notStacked, dirty, depsNote(prep)].filter(Boolean).join(' ') || null;
   return {
     input: inCopy(input, record),
     repoRoot: target.root,

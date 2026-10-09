@@ -8,6 +8,7 @@ const run = promisify(execFile);
 
 const PUBLISH_HEADING = '## Publish this change';
 const BRANCH = /`git push origin ([^`\s]+)`/;
+const PULL_BASE = /`gh pr create --base ([^`\s]+)`/;
 const FOLLOW_UP = "Don't open another pull request";
 const FAKE_GH = path.resolve(import.meta.dirname, '../../../tests/browser/bin/gh');
 const AUTHOR = ['-c', 'user.email=agent@example.test', '-c', 'user.name=Fake Agent'];
@@ -84,6 +85,8 @@ export async function publishTurn(turn: RoleTurn): Promise<acp.StopReason | null
     return 'end_turn';
   }
   const draft = asked.includes('--draft') ? ['--draft'] : [];
+  const named = PULL_BASE.exec(asked)?.[1];
+  const base = named ? ['--base', named] : [];
   const opened = await command(turn, 'publish-pr', FAKE_GH, [
     'pr',
     'create',
@@ -92,6 +95,7 @@ export async function publishTurn(turn: RoleTurn): Promise<acp.StopReason | null
     '--body',
     asked,
     ...draft,
+    ...base,
   ]);
   await turn.say(
     opened.ok ? `published=${opened.output.trim()}` : `published=no pr=${opened.output}`,
