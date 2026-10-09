@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import type { Asking } from './approval-gate.ts';
+import type { Asking } from './approval-options.ts';
 
 const DIFF_BUDGET = 64 * 1024;
 
