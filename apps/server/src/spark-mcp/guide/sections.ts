@@ -227,9 +227,9 @@ Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, sp
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
-Spend: spark_spend. Trends, outcomes: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins.`,
+    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, queue: spark_chats, spark_chat. Old turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend. Trends: spark_analytics. Models: spark_models.
+Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Estimates: spark_laws. Sparks, @Spark jobs, replies: spark_sparks. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
   },
   {
     id: 'compaction',

@@ -1,4 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
+import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubStatus } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
 import { connectedSources } from '../tickets/connections.ts';
@@ -41,10 +42,11 @@ export async function sparkAvailability(
   deps: SparkToolDeps,
   scope: SparkScope,
 ): Promise<SparkAvailability> {
-  const [sources, slack, project] = await Promise.all([
+  const [sources, slack, project, outposts] = await Promise.all([
     connectedSources(ticketDepsFor(deps, scope)),
     openSlack(slackDepsFor(deps, scope)),
     chatHasProject(deps, scope),
+    outpostNeeds(deps.db, scope),
   ]);
   const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
   return {
@@ -55,8 +57,7 @@ export async function sparkAvailability(
     publish: project,
     pull_request_create: gitHub.ownLogin,
     browser: deps.browser !== undefined,
-    outpost: false,
-    outpost_draft: false,
+    ...outposts,
   };
 }
 
