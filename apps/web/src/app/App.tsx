@@ -61,6 +61,7 @@ import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { revealWorkflowOptions } from '../spark/SparkSection.tsx';
+import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import { useChatRequests } from './chat-request.ts';
@@ -357,6 +358,7 @@ function ChatShell({ entering }: { entering: boolean }) {
               setSettings('spark');
             }}
           />
+          <PasskeyOffer />
           <TeammateHost />
           <MemberChatHost />
           <AnimatePresence>

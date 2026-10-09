@@ -103,6 +103,28 @@ describe('remote policy', () => {
     expect(remoteDecision('POST', '/api/remote/pair/claim', ALL_OFF).kind).toBe('pairing');
   });
 
+  it('opens passkey sign-in without a device only while its switch is on', () => {
+    const routes = [...ROUTE_RULES]
+      .filter(([, rule]) => rule === 'passkey')
+      .map(([route]) => route);
+    expect(routes).toEqual([
+      'POST /api/remote/passkey/sign-in/options',
+      'POST /api/remote/passkey/sign-in',
+    ]);
+    for (const route of routes) {
+      expect(kindOf(route, { ...ALL_OFF, passkeys: true })).toBe('pairing');
+      expect(kindOf(route, { ...ALL_ON, passkeys: false })).toBe('refuse');
+    }
+  });
+
+  it('needs a paired device to save a passkey and keeps removal on the Mac', () => {
+    expect(kindOf('POST /api/remote/passkeys/options', ALL_ON)).toBe('allow');
+    expect(kindOf('POST /api/remote/passkeys', ALL_ON)).toBe('allow');
+    expect(kindOf('GET /api/remote/passkeys', ALL_ON)).toBe('allow');
+    expect(kindOf('POST /api/remote/passkeys', { ...ALL_ON, passkeys: false })).toBe('refuse');
+    expect(kindOf('DELETE /api/remote/devices/:id/passkeys', ALL_ON)).toBe('refuse');
+  });
+
   it('blocks mode and autonomy fields only when that switch is off', () => {
     const path = `/api/conversations/${ID}/settings`;
     const off = remoteDecision('PATCH', path, { ...ALL_ON, agentMode: false });

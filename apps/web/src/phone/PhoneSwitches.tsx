@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   REMOTE_MAC_ONLY_SWITCHES,
+  REMOTE_SIGN_IN_SWITCHES,
   REMOTE_SWITCH_LABELS,
   type RemoteSession,
   type RemoteSwitch,
@@ -11,12 +12,18 @@ import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
 const SHOWN = (Object.keys(REMOTE_SWITCH_LABELS) as RemoteSwitch[]).filter(
-  (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id),
+  (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id) && !REMOTE_SIGN_IN_SWITCHES.includes(id),
 );
 
 export const MAC_ONLY_LINE = 'The Browser pane, preview and terminal stay on the Mac.';
 
-function SwitchRow({ id, checked }: { id: RemoteSwitch; checked: boolean }) {
+interface SwitchRowProps {
+  id: RemoteSwitch;
+  checked: boolean;
+  label?: string;
+}
+
+export function SwitchRow({ id, checked, label = REMOTE_SWITCH_LABELS[id] }: SwitchRowProps) {
   const queryClient = useQueryClient();
   const switchId = useId();
   const change = useMutation({
@@ -30,11 +37,11 @@ function SwitchRow({ id, checked }: { id: RemoteSwitch; checked: boolean }) {
   });
   return (
     <li className="ph-switch">
-      <label htmlFor={switchId}>{REMOTE_SWITCH_LABELS[id]}</label>
+      <label htmlFor={switchId}>{label}</label>
       <BlobToggle
         id={switchId}
         size="sm"
-        label={REMOTE_SWITCH_LABELS[id]}
+        label={label}
         checked={change.isPending ? change.variables : checked}
         disabled={change.isPending}
         onChange={(next) => change.mutate(next)}

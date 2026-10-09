@@ -118,6 +118,7 @@ export function remoteGateway(deps: GatewayDeps) {
     req: Request,
     res: Response,
     reason: string,
+    passkeys: boolean,
     device: RemoteDevicePrincipal | null = null,
   ) => {
     if (!isPageRequest(req)) {
@@ -133,7 +134,7 @@ export function remoteGateway(deps: GatewayDeps) {
       return;
     }
     await auditPairingPage(reason, device);
-    sendPairingPage(res);
+    sendPairingPage(res, { passkeys });
   };
 
   const cardRefusal = async (req: Request, switches: Record<string, boolean>) => {
@@ -184,14 +185,17 @@ export function remoteGateway(deps: GatewayDeps) {
     const token = deviceTokenOf(req.headers.cookie);
     const row = token ? await deviceByTokenHash(db, workspaceId, secretHash(token)) : null;
     if (!row) {
-      await answerUnpaired(req, res, token ? 'unknown' : 'missing');
+      await answerUnpaired(req, res, token ? 'unknown' : 'missing', access.switches.passkeys);
       return;
     }
     const device = { id: row.id, name: row.name };
     const stale = staleReason(row);
     if (stale) {
-      if (isPageRequest(req)) await answerUnpaired(req, res, stale, device);
-      else await refuseDevice(req, res, device, 401, stale, PAIR_AGAIN);
+      if (isPageRequest(req)) {
+        await answerUnpaired(req, res, stale, access.switches.passkeys, device);
+      } else {
+        await refuseDevice(req, res, device, 401, stale, PAIR_AGAIN);
+      }
       return;
     }
     if (decision.kind === 'refuse') {

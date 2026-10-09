@@ -1,6 +1,6 @@
 import type { RemoteSwitch } from '@spark-outpost/contracts';
 
-export type RemoteRule = 'always' | 'never' | 'pairing' | RemoteSwitch;
+export type RemoteRule = 'always' | 'never' | 'pairing' | 'passkey' | RemoteSwitch;
 
 const ALWAYS = `
 GET /{*path}
@@ -156,6 +156,7 @@ PATCH /api/remote/switches
 GET /api/remote/devices
 PATCH /api/remote/devices/:id
 DELETE /api/remote/devices/:id
+DELETE /api/remote/devices/:id/passkeys
 POST /api/remote/devices/disconnect-all
 GET /api/remote/pairings
 POST /api/remote/pairings
@@ -194,6 +195,11 @@ POST /api/a2a/chats/:chatId
 const PAIRING = `
 POST /api/remote/pair
 POST /api/remote/pair/claim
+`;
+
+const PASSKEY_SIGN_IN = `
+POST /api/remote/passkey/sign-in/options
+POST /api/remote/passkey/sign-in
 `;
 
 const BEHIND_SWITCH: Record<RemoteSwitch, string> = {
@@ -269,6 +275,11 @@ DELETE /api/conversations/:id
 DELETE /api/projects/:id
 `,
   devices: '',
+  passkeys: `
+GET /api/remote/passkeys
+POST /api/remote/passkeys/options
+POST /api/remote/passkeys
+`,
 };
 
 export const AGENT_MODE_FIELDS: Record<string, readonly string[]> = {
@@ -289,6 +300,7 @@ export const ROUTE_RULES: ReadonlyMap<string, RemoteRule> = new Map<string, Remo
   ...routesOf(ALWAYS).map((route) => [route, 'always'] as const),
   ...routesOf(NEVER).map((route) => [route, 'never'] as const),
   ...routesOf(PAIRING).map((route) => [route, 'pairing'] as const),
+  ...routesOf(PASSKEY_SIGN_IN).map((route) => [route, 'passkey'] as const),
   ...(Object.entries(BEHIND_SWITCH) as [RemoteSwitch, string][]).flatMap(([name, block]) =>
     routesOf(block).map((route) => [route, name] as const),
   ),

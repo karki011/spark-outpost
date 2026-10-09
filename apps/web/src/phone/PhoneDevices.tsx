@@ -2,8 +2,11 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_DEVICE_NAME_MAX, type RemoteDevice } from '@spark-outpost/contracts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
+import { KeyIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
+import { passkeySummary } from './phone-copy.ts';
+import { SwitchRow } from './PhoneSwitches.tsx';
 
 const FRESH_SLACK_MS = 5000;
 
@@ -50,6 +53,41 @@ function RenameForm({ device, onDone }: { device: RemoteDevice; onDone: () => vo
         </p>
       )}
     </form>
+  );
+}
+
+function DevicePasskeys({ device }: { device: RemoteDevice }) {
+  const queryClient = useQueryClient();
+  const remove = useMutation({
+    mutationFn: () => phoneApi.removePasskeys(device.id),
+    onSuccess: (devices) => {
+      queryClient.setQueryData(phoneKeys.devices, devices);
+      void queryClient.invalidateQueries({ queryKey: phoneKeys.audit });
+    },
+  });
+  const summary = passkeySummary(device.passkeys);
+  if (!summary) return null;
+  return (
+    <div className="ph-device-passkeys">
+      <span>
+        <KeyIcon />
+        {summary}
+      </span>
+      <button
+        type="button"
+        className="btn ghost sm"
+        aria-label={`Remove passkeys for ${device.name}`}
+        disabled={remove.isPending}
+        onClick={() => remove.mutate()}
+      >
+        Remove passkeys
+      </button>
+      {remove.error && (
+        <p className="ph-error" role="alert">
+          {remove.error.message}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -108,6 +146,7 @@ function DeviceRow({ device, fresh }: { device: RemoteDevice; fresh: boolean }) 
               {revoke.error.message}
             </p>
           )}
+          <DevicePasskeys device={device} />
         </>
       )}
     </li>
@@ -150,10 +189,28 @@ function RemovedDevices({ removed }: { removed: RemoteDevice[] }) {
 interface PhoneDevicesProps {
   devices: RemoteDevice[] | undefined;
   freshAfter: number | null;
+  passkeysAllowed: boolean;
   wait: ReactNode;
 }
 
-export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
+export const PASSKEY_SWITCH = 'Allow passkey sign-in';
+
+function PasskeySwitch({ allowed }: { allowed: boolean }) {
+  return (
+    <div className="ph-passkey-switch">
+      <ul className="ph-switches">
+        <SwitchRow id="passkeys" checked={allowed} label={PASSKEY_SWITCH} />
+      </ul>
+      <p className="ph-note">
+        A paired phone can save a passkey and use it to sign in again in another browser, without
+        coming back to this Mac. A passkey never pairs a new phone. If this Mac&apos;s Tailscale
+        name changes, saved passkeys stop matching and each phone pairs again.
+      </p>
+    </div>
+  );
+}
+
+export function PhoneDevices({ devices, freshAfter, passkeysAllowed, wait }: PhoneDevicesProps) {
   const queryClient = useQueryClient();
   const active = (devices ?? []).filter((device) => !device.revokedAt);
   const removed = (devices ?? []).filter((device) => device.revokedAt).reverse();
@@ -183,7 +240,7 @@ export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
           </ul>
           <HoldToConfirm
             label="Hold to disconnect all"
-            hint="Every device will need to pair again."
+            hint="Every device will need to pair again. Their passkeys are removed too."
             holdingHint="Keep holding. Let go now to cancel."
             releasedHint="Released early. Nothing happened."
             disabled={disconnect.isPending}
@@ -197,6 +254,7 @@ export function PhoneDevices({ devices, freshAfter, wait }: PhoneDevicesProps) {
         </>
       )}
       <RemovedDevices removed={removed} />
+      <PasskeySwitch allowed={passkeysAllowed} />
     </section>
   );
 }

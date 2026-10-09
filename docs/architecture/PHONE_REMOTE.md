@@ -73,6 +73,8 @@ So a local program gains nothing it could not already do by pairing a device wit
 
 ### Pairing
 
+A phone that is already paired can also sign in again with a passkey; see Passkey sign-in below. That never creates a device.
+
 1. A local request starts it: `POST /api/remote/pairings` returns a 12-character code (60 bits, shown as `XXXX-XXXX-XXXX`) valid for two minutes. A new code replaces the last. Five starts a minute.
 2. The phone posts the code and a device name to `POST /api/remote/pair`. The code is burned on first use. The answer holds a one-time claim secret and a six-digit matching code. Five attempts a minute across all callers; wrong, expired and reused codes get the same `403`.
 3. The Mac lists waiting requests (`GET /api/remote/pairings`: device name, matching code) and answers with `POST /api/remote/pairings/:id/confirm` or `/deny`.
@@ -93,7 +95,7 @@ Decisions the plan left open:
 
 ### Sessions and devices
 
-- Cookie `__Host-spark_device`: 32 random bytes, `HttpOnly; Secure; SameSite=Strict; Path=/`, no Domain. Table `remote_devices` holds id, name, token hash, created, last seen (written at most once a minute) and revoked.
+- Cookie `__Host-spark_device`: 32 random bytes, `HttpOnly; Secure; SameSite=Strict; Path=/`, no Domain. Table `remote_devices` holds id, name, token hash, created, last seen (written at most once a minute) and revoked. A passkey sign-in adds a second token for the same row in `remote_device_sessions`.
 - A device not seen for 30 days is refused and must pair again. The server enforces this from `last_seen_at`; the cookie's own lifetime is longer (`Max-Age` of 400 days, the most browsers keep), so closing the browser does not end the session.
 - The cookie belongs to the exact Serve hostname (`__Host-`). If the Mac's tailnet name changes, the phone has no cookie for the new address, sees the pairing page and pairs as a new device; the old row stays until removed. Turning Phone access off and on, restarting or updating the app, a port change and the Serve check at start revoke nothing. Only Revoke, Disconnect all and pairing again over a revoked or run-out cookie set `revoked_at`.
 
@@ -120,7 +122,7 @@ When the pairing page is shown, a `pairing_page_shown` audit row records why: `m
 
 ### Policy
 
-`apps/server/src/remote/route-rules.ts` is the single list. Each `METHOD /path` is `always`, `never`, `pairing` (the two unauthenticated pairing calls) or the name of a switch. Matching mirrors the router (any case, trailing slash, `HEAD` as `GET`); when two patterns fit one path every one of them must allow it; a path with no rule is refused. `apps/server/test/remote-policy.db.test.ts` walks the routes the app registers and fails when one has no rule, or a rule has no route.
+`apps/server/src/remote/route-rules.ts` is the single list. Each `METHOD /path` is `always`, `never`, `pairing` (the two unauthenticated pairing calls), `passkey` (the two unauthenticated passkey sign-in calls, refused when their switch is off) or the name of a switch. Matching mirrors the router (any case, trailing slash, `HEAD` as `GET`); when two patterns fit one path every one of them must allow it; a path with no rule is refused. `apps/server/test/remote-policy.db.test.ts` walks the routes the app registers and fails when one has no rule, or a rule has no route.
 
 Decisions the plan left open:
 
@@ -162,6 +164,61 @@ The run audit log is a per-run hash chain of agent traffic, so phone activity ha
 
 `POST /api/slack/presence` takes an optional `clientId`. Local windows are `local:<id>` and a phone is always `device:<device id>`, whatever it sends. Slack stays quiet while any client is focused, and one client's blur no longer clears another's focus. T4 can read the focused clients to quiet a phone's own notifications.
 
+## Passkey sign-in (built)
+
+Code: `apps/server/src/remote/passkey-*.ts`, `apps/web/src/phone/passkey-*.ts` and `Passkey*.tsx`. Storage: migration `0157_remote_passkeys.sql`. Library: `@simplewebauthn/server` 14.0.3, pinned.
+
+The device cookie lives in one browser. Another browser on the same phone, or the home-screen app, has none and saw the pairing page. A passkey lets a phone that is already paired sign in again there without going back to the Mac. It never pairs a new device: pairing still starts on the Mac and is confirmed on the Mac.
+
+### Flows
+
+- **Save.** A paired phone (valid device cookie) asks `POST /api/remote/passkeys/options`, runs `navigator.credentials.create`, and posts the result to `POST /api/remote/passkeys`. The credential is stored against that `remote_devices` row. A device can hold several (one per passkey manager); the options list the device's credentials as excluded so one manager does not store two. `GET /api/remote/passkeys` lists this device's own.
+- **Sign in.** The pairing page shows "Sign in with a passkey" when the switch is on and the browser has WebAuthn. `POST /api/remote/passkey/sign-in/options` returns a challenge with no credential list (discoverable credentials); `POST /api/remote/passkey/sign-in` verifies the assertion. On success the browser gets a new device cookie for the same device row, `last_seen_at` is set, and the page opens the app. A plain button, no autofill prompt: the page has no username field for it to attach to.
+- **Remove.** On the Mac, `DELETE /api/remote/devices/:id/passkeys` removes a device's passkeys and keeps the device.
+
+### Parameters
+
+- RP ID is the exact Serve hostname in `remote_access_settings.hostname`; the expected origin is `https://<hostname>`. A changed hostname means no stored credential matches and the phone pairs again, as it already must for the cookie.
+- Resident key required, user verification required (on create, on get, and checked in the signed flags), attestation `none`, algorithms ES256 and RS256.
+- User handle: the device id's 16 bytes. An assertion whose user handle names another device is refused.
+
+### What is stored
+
+- `remote_passkeys`: id, workspace, device (cascade), credential id (unique), COSE public key, sign counter, transports, whether the authenticator says it is synced, a label from a short built-in AAGUID list (else none), created, last used.
+- `remote_device_sessions`: token hash (unique), device (cascade), passkey (cascade), created. One row per passkey sign-in. `remote_devices.token_hash` stays the token from pairing.
+- `remote_access_settings.can_passkeys`, default true: the switch.
+- Challenges live in memory only (`passkey-challenges.ts`): 32 random bytes, two minutes, used once. A save challenge is bound to the device id; a sign-in challenge is bound to a random ticket in a `__Host-spark_passkey` cookie (`HttpOnly; Secure; SameSite=Strict`, two minutes) set by the options call, stored hashed. A restart drops them, which fails closed.
+
+### Decisions
+
+- **The old sign-in keeps working.** Pairing again rotates the token because one browser replaces its own cookie. A passkey sign-in exists for a second browser, so rotating would sign the first one out and the two would take turns. Each passkey sign-in adds a session row instead; every session resolves to the same device row, so revoke, the 30-day rule, switches and audit apply to all of them alike. Pairing again from a browser that holds a passkey session replaces that session's token, not the paired browser's.
+- **Revoke removes passkeys.** Revoke, Remove old entry, being replaced by pairing again, and Disconnect all delete the device's passkeys and passkey sessions in the same statement that sets `revoked_at`. The assertion also checks the device row every time.
+- **Disconnect all removes them too.** It revokes every device and promises that each must pair again; a passkey that survived would break that promise. The recommended "sessions end, passkeys remain" would need Disconnect all to stop revoking, which is a change to what it does today.
+- **Removing a device's passkeys ends the sessions they started** (cascade) and closes the device's streams. The browser that paired stays signed in.
+- **30 days.** A passkey sign-in counts as use. A device not seen for 30 days is refused and must pair again from the Mac, so a forgotten synced passkey cannot come back on its own.
+- **Sign counter.** Synced passkeys report 0 and are accepted. A counter that does not rise, when either side is non-zero, may mean a copied authenticator: the sign-in is still allowed (the user verified, and the Mac can remove the passkey), the audit row carries `counter: "regressed"`, the Phone page says so in plain words, and the stored counter keeps the higher value.
+- **One answer.** Unknown credential, wrong or reused challenge, wrong origin or RP ID, failed signature, removed or unused device: all `403` with the same sentence. The audit row has the reason.
+- **Rate limit.** Five sign-in option calls and five sign-in attempts a minute across all callers, the same window class pairing uses. A local program can use it up for a minute, which blocks passkey sign-in and nothing else.
+
+### Policy
+
+- Rule `passkey` (the two sign-in calls): reachable without a device cookie like the two pairing calls, and refused when the switch is off.
+- Switch `passkeys` (list, save options, save): need a device cookie and the switch.
+- Never from a phone: `DELETE /api/remote/devices/:id/passkeys`, and the switch itself (`PATCH /api/remote/switches`).
+- With the switch off the pairing page is rendered without the button.
+
+### Audit
+
+`device_passkey_added`, `device_passkey_sign_in` (with `counter` when it regressed), `device_passkeys_removed` (with the count), `passkey_sign_in_failed` (with the reason, and the device when the credential was known). Never a challenge, credential id, public key, ticket or token.
+
+### Threat notes
+
+- A passkey proves "a paired phone's passkey manager, with the user verified", not "this handset". A synced passkey works on any device signed in to the same Apple or Google account that is also on the tailnet. The Devices card shows which passkeys are synced, every sign-in is an audit row, and the switch turns the feature off.
+- The origin and RP ID are checked against the Serve hostname, so a page on another site cannot use the passkey, and a local program that spoofs the Host header gains nothing: it cannot produce an assertion.
+- A stolen cookie could save a passkey of its own. That adds no access the cookie did not have; revoking the device removes it.
+
+Not verified: any real phone. Chromium's virtual authenticator stands in for Android and iPhone in the tests.
+
 ## Tailscale and the Phone page (T2, built)
 
 Code: `apps/server/src/remote/tailscale-cli.ts` and `tailscale.ts`, `apps/web/src/phone/`. Storage: `remote_access_settings.serve_target` (migration `0137_phone_defaults.sql`).
@@ -197,10 +254,10 @@ A left-bar entry named Phone, directly above Settings, opening a full page (`app
 
 - **Status**: the Tailscale state with one next step, the switch, the address, and "Phone connected".
 - **Pair a phone**: a staged scene carried by Blob Scout. Asleep until phone access is on; ready; the QR (`https://<hostname>/#code=<code>`), the code and a two-minute ring, nudging in the last twenty seconds; the waiting phone with its name and matching code and Confirm and Deny; a short paired moment, after which the new device is highlighted once in the list; denied, expired and failed with one retry. Each stage is announced in a live region and focus moves to its main button. With reduced motion the poses are static.
-- **Devices**: name, added, last seen, connected; rename, revoke, disconnect all.
+- **Devices**: name, added, last seen, connected, passkeys (count, manager, newest date, synced); rename, revoke, remove passkeys, disconnect all; the **Allow passkey sign-in** switch.
 - **What the phone can do**: the switches, and the line that the Browser pane, preview and terminal stay on the Mac.
 - **Recent phone activity**: from `GET /api/remote/audit`.
-- Opened on a paired phone, the page is read-only: connected, this device, what it can do, "Change these on your Mac".
+- Opened on a paired phone, the page is read-only apart from **Passkey** (saved passkeys and "Save a passkey for this phone"): connected, this device, what it can do, "Change these on your Mac". The app also offers the passkey once in a dismissible notice.
 
 The server-rendered pairing page mirrors the stages (enter, waiting, paired, ended) with the same blob as inline SVG under its nonce.
 

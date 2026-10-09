@@ -5,8 +5,16 @@ import https from 'node:https';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { chromium, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import {
+  chromium,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 import { FAKE_TAILSCALE_HOST } from '../../apps/server/test/fake-tailscale.ts';
+import { PHONE_ADDRESS, startPairing } from './phone-support.ts';
 import { API_PORT } from './stub-config.ts';
 
 export const ELSEWHERE = 'https://elsewhere.example';
@@ -116,4 +124,30 @@ export async function signedInAs(page: Page): Promise<string | null> {
     const session = (await response.json()) as { device: { name: string } | null };
     return session.device?.name ?? null;
   });
+}
+
+export async function openPhonePage(page: Page): Promise<Locator> {
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Phone' })
+    .click();
+  await page.getByRole('switch', { name: 'Phone access' }).click();
+  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible({
+    timeout: 20_000,
+  });
+  return page.getByRole('main');
+}
+
+export async function pairPhone(main: Locator, phone: BrowserContext, name: string): Promise<Page> {
+  const code = await startPairing(main.page(), /Pair a phone|Get a new code|Pair another/);
+  const { page } = await arriveFromElsewhere(phone, `${PHONE_ADDRESS}/#code=${code}`);
+  await expect(page.getByLabel('Pairing code')).toHaveValue(code);
+  await page.getByLabel('Device name').fill(name);
+  await page.getByRole('button', { name: 'Pair' }).click();
+  await main.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('This device is paired.')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Pair this device' })).toHaveCount(0);
+  await expect.poll(() => signedInAs(page)).toBe(name);
+  return page;
 }

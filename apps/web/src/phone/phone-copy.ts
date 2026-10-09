@@ -1,4 +1,35 @@
-import type { RemoteAuditEntry, TailscaleState } from '@spark-outpost/contracts';
+import type { RemoteAuditEntry, RemotePasskey, TailscaleState } from '@spark-outpost/contracts';
+import { countLabel } from '../ui/count-label.ts';
+
+export const PASSKEY_PURPOSE =
+  'Lets this phone sign in again in another browser without going back to your Mac.';
+export const PASSKEY_SAVE = 'Save a passkey for this phone';
+export const PASSKEY_SAVED = 'Passkey saved. In another browser, choose Sign in with a passkey.';
+export const PASSKEY_NOT_SAVED = 'No passkey was saved. Try again when you are ready.';
+export const PASSKEY_EXISTS = 'This phone already has a passkey there.';
+export const PASSKEY_UNSUPPORTED = 'This browser cannot save passkeys.';
+export const PASSKEY_OFF = 'Passkey sign-in is turned off on your Mac.';
+
+function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export function passkeyName(passkey: RemotePasskey): string {
+  return passkey.label ?? 'Passkey';
+}
+
+export function passkeySummary(passkeys: readonly RemotePasskey[]): string | null {
+  const newest = passkeys.at(-1);
+  if (!newest) return null;
+  const names = [...new Set(passkeys.flatMap((passkey) => passkey.label ?? []))];
+  const parts = [
+    countLabel(passkeys.length, 'passkey'),
+    ...(names.length > 0 ? [names.join(', ')] : []),
+    `added ${shortDate(newest.createdAt)}`,
+    ...(passkeys.some((passkey) => passkey.synced) ? ['synced to other devices'] : []),
+  ];
+  return parts.join(' · ');
+}
 
 export interface StatusCopy {
   title: string;
@@ -57,6 +88,19 @@ function pairingPageLine(entry: RemoteAuditEntry): string {
   }
 }
 
+function passkeyRefusedLine(entry: RemoteAuditEntry): string {
+  if (!entry.deviceName) return 'A passkey sign-in was refused';
+  const unused = entry.detail.reason === 'device_unused' ? ' (not used for 30 days)' : '';
+  return `A passkey sign-in for ${entry.deviceName} was refused${unused}`;
+}
+
+function passkeySignInLine(entry: RemoteAuditEntry): string {
+  const line = `${named(entry)} signed in with a passkey`;
+  return entry.detail.counter === 'regressed'
+    ? `${line}. Its use count went backwards: remove its passkeys if this was not you`
+    : line;
+}
+
 export function activityLine(entry: RemoteAuditEntry): string {
   const device = named(entry);
   switch (entry.action) {
@@ -86,6 +130,14 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return `${device} revoked`;
     case 'devices_disconnected':
       return 'All devices disconnected';
+    case 'device_passkey_added':
+      return `${device} saved a passkey`;
+    case 'device_passkey_sign_in':
+      return passkeySignInLine(entry);
+    case 'device_passkeys_removed':
+      return `Passkeys removed for ${device}`;
+    case 'passkey_sign_in_failed':
+      return passkeyRefusedLine(entry);
     case 'request':
       return `${device} made a change`;
     case 'refused':
