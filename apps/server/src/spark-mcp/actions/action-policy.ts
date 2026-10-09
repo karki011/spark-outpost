@@ -1,4 +1,5 @@
 import { modePosture, type ModePosture, type SparkActionName } from '@spark-outpost/contracts';
+import { userText, type UserTextInput } from '../../outposts/user-asked.ts';
 import type { Queryable } from '../../persistence/db.ts';
 
 export interface ActionFacts {
@@ -63,16 +64,31 @@ interface RunFacts {
   provider: string | null;
   mode: string | null;
   request: string | null;
+  outpost_run: boolean | null;
+  from_user: boolean | null;
 }
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
   const { rows } = await db.query<RunFacts>(
-    `SELECT r.provider, COALESCE(r.used_mode, r.agent_mode) AS mode, m.content AS request
+    `SELECT r.provider, COALESCE(r.used_mode, r.agent_mode) AS mode, m.content AS request,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'outpost' AS outpost_run,
+            (SELECT post.from_user FROM outpost_posts post
+             WHERE post.id = r.user_message_id) AS from_user
      FROM runs r LEFT JOIN messages m ON m.id = r.user_message_id
      WHERE r.id = $1`,
     [runId],
   );
-  return rows[0] ?? { provider: null, mode: null, request: null };
+  return (
+    rows[0] ?? { provider: null, mode: null, request: null, outpost_run: null, from_user: null }
+  );
+}
+
+function runText(run: RunFacts): UserTextInput {
+  return {
+    userRequest: run.request ?? '',
+    outpostRequest: run.outpost_run === true ? { fromUser: run.from_user === true } : null,
+  };
 }
 
 export async function actionFacts(
@@ -83,6 +99,6 @@ export async function actionFacts(
   const run = await runFacts(db, runId);
   return {
     posture: modePosture(run.provider, run.mode),
-    requested: explicitlyAsked(action, run.request ?? ''),
+    requested: explicitlyAsked(action, userText(runText(run))),
   };
 }

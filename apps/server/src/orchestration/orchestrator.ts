@@ -95,6 +95,7 @@ import { coordinationReport } from '../coordinator/report.ts';
 import { skipUnstarted } from '../coordinator/skip.ts';
 import { piecesSummary } from '../coordinator/summary.ts';
 import { lawsNote } from '../laws/review.ts';
+import { userText } from '../outposts/user-asked.ts';
 import { ensureEstimate } from '../laws/estimate-history.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
@@ -316,7 +317,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     let doing = input.mode === 'do' && input.projectRoots[0] !== undefined;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
-    if (!planTurn && ((solo && !doing) || mainAgentInstruction(input.userRequest, current))) {
+    if (!planTurn && ((solo && !doing) || mainAgentInstruction(userText(input), current))) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
       return;

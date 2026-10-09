@@ -16,7 +16,13 @@ interface QueueRow {
   position: number;
   continue_run_id: string | null;
   created_at: Date;
+  outpost_post_id: string | null;
 }
+
+export const PAUSED_OUTPOST_ITEM = `EXISTS (
+  SELECT 1 FROM outpost_posts post JOIN outposts o ON o.id = post.outpost_id
+  WHERE post.id = q.outpost_post_id AND o.paused_at IS NOT NULL
+)`;
 
 function toQueued(row: QueueRow): QueuedMessage {
   return {
@@ -25,6 +31,7 @@ function toQueued(row: QueueRow): QueuedMessage {
     position: row.position,
     continueRunId: row.continue_run_id,
     createdAt: row.created_at.toISOString(),
+    ...(row.outpost_post_id ? { outpostPostId: row.outpost_post_id } : {}),
   };
 }
 
@@ -83,10 +90,18 @@ export async function editQueued(
 ): Promise<void> {
   const { rowCount } = await db.query(
     `UPDATE chat_queue SET content = $3, updated_at = now()
-     WHERE conversation_id = $1 AND id = $2`,
+     WHERE conversation_id = $1 AND id = $2 AND outpost_post_id IS NULL`,
     [conversationId, id, content],
   );
-  if (rowCount !== 1) throw new QueueError(404, 'That message has already been sent.');
+  if (rowCount === 1) return;
+  const outpostItem = await db.query(
+    'SELECT 1 FROM chat_queue WHERE conversation_id = $1 AND id = $2',
+    [conversationId, id],
+  );
+  if (outpostItem.rowCount === 1) {
+    throw new QueueError(409, 'A request from an outpost can’t be edited. Remove it instead.');
+  }
+  throw new QueueError(404, 'That message has already been sent.');
 }
 
 export async function reorderQueue(
@@ -109,10 +124,11 @@ export async function takeQueued(
 ): Promise<QueuedMessage | null> {
   const { rows } = await db.query<QueueRow>(
     `DELETE FROM chat_queue WHERE id = (
-       SELECT id FROM chat_queue
-       WHERE conversation_id = $1 AND ($2::uuid IS NULL OR id = $2)
-       ORDER BY position, created_at, id LIMIT 1
-       FOR UPDATE
+       SELECT q.id FROM chat_queue q
+       WHERE q.conversation_id = $1
+         AND (q.id = $2 OR ($2::uuid IS NULL AND NOT ${PAUSED_OUTPOST_ITEM}))
+       ORDER BY q.position, q.created_at, q.id LIMIT 1
+       FOR UPDATE OF q
      ) RETURNING *`,
     [conversationId, id],
   );
