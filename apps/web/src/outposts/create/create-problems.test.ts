@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { OUTPOST_MEMBERS_MAX } from '@spark-outpost/contracts';
-import { API_CHAT, DOCS_CHAT, FE_CHAT, WEB_PROJECT, chat } from '../test-fixtures.ts';
+import { API_CHAT, DOCS_CHAT, FE_CHAT, OUTPOST_ID, WEB_PROJECT, chat } from '../test-fixtures.ts';
 import { emptyChat, patchChat } from './create-draft.ts';
-import { CODEX, countingIds, draftOf, existing, file, fresh } from './create-fixtures.ts';
+import {
+  CODEX,
+  countingIds,
+  draftOf,
+  existing,
+  file,
+  fresh,
+  storyDraft,
+  withTask,
+} from './create-fixtures.ts';
 import {
   TERMINAL_CANNOT_JOIN,
   chatProblems,
@@ -130,5 +139,87 @@ describe('continuing', () => {
     expect(continueBlock(draftOf(many), CHATS)).toBe(
       `An outpost can have at most ${OUTPOST_MEMBERS_MAX} chats.`,
     );
+  });
+});
+
+describe('a sheet opened from a draft', () => {
+  const LEAD = '0c000000-0000-4000-8000-000000000007';
+  const KNOWN = [...CHATS, chat(LEAD, { title: 'Checkout plan' })];
+
+  function story() {
+    const ids = countingIds();
+    const lead = existing(ids, LEAD, 'lead');
+    const api = withTask(fresh(ids, WEB_PROJECT, 'api'), 'Add the endpoint.');
+    const fe = withTask(fresh(ids, WEB_PROJECT, 'fe'), 'Call it.', api.key);
+    return { lead, api, fe };
+  }
+
+  function found(draft: ReturnType<typeof storyDraft>) {
+    return draftProblems(draft, KNOWN).map(({ field, message }) => [field, message]);
+  }
+
+  it('finds nothing in a chain of sub-tasks with first messages', () => {
+    const { lead, api, fe } = story();
+    expect(found(storyDraft([lead, api, fe], LEAD))).toEqual([]);
+    expect(continueBlock(storyDraft([lead, api, fe], LEAD), KNOWN)).toBeNull();
+  });
+
+  it('needs a first message on both ends of a starts-after edge', () => {
+    const { lead, api, fe } = story();
+    expect(found(storyDraft([lead, api, { ...fe, text: '' }], LEAD))).toEqual([
+      ['after', '@fe needs a first message to start after @api.'],
+    ]);
+    expect(found(storyDraft([lead, { ...api, text: ' ' }, fe], LEAD))).toEqual([
+      ['after', '@api has no first message, so nothing can start after it.'],
+    ]);
+  });
+
+  it('names chats that wait for each other, once', () => {
+    const { lead, api, fe } = story();
+    const looped = storyDraft([lead, { ...api, dependsOn: fe.key }, fe], LEAD);
+    expect(found(looped)).toEqual([
+      ['after', 'These chats wait for each other: @api → @fe → @api.'],
+    ]);
+    expect(continueBlock(looped, KNOWN)).toBe('1 thing to fix');
+  });
+
+  it('refuses a first message for the chat that proposed the draft', () => {
+    const { lead, api } = story();
+    expect(found(storyDraft([withTask(lead, 'Do it yourself.'), api], LEAD))).toEqual([
+      ['message', 'The chat that proposed this draft cannot get a first message from itself.'],
+    ]);
+  });
+
+  it('needs the proposing chat in the outpost', () => {
+    const { api, fe } = story();
+    const draft = storyDraft([api, fe], LEAD);
+    expect(continueBlock(draft, KNOWN)).toBe('Add the chat that proposed this draft');
+    const into = {
+      outpostId: OUTPOST_ID,
+      name: 'Usage by user',
+      members: [{ conversationId: LEAD, handle: 'lead' }],
+    };
+    expect(continueBlock({ ...draft, into }, KNOWN)).toBeNull();
+  });
+
+  it('keeps a new handle clear of the chats already in the outpost', () => {
+    const { api } = story();
+    const into = {
+      outpostId: OUTPOST_ID,
+      name: 'Usage by user',
+      members: [
+        { conversationId: LEAD, handle: 'lead' },
+        { conversationId: FE_CHAT, handle: 'api' },
+      ],
+    };
+    const problems = draftProblems({ ...storyDraft([api], LEAD), into }, KNOWN);
+    expect(
+      problems.map(({ field, message, suggestions }) => [field, message, suggestions]),
+    ).toEqual([['handle', 'Two chats cannot share @api.', ['api2']]]);
+  });
+
+  it('ignores starts-after in a sheet opened by hand', () => {
+    const { api, fe } = story();
+    expect(draftProblems(draftOf([api, { ...fe, text: '' }]), KNOWN)).toEqual([]);
   });
 });

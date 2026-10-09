@@ -28,6 +28,7 @@ import {
   usePause,
   usePost,
   useSaveOutpost,
+  useStartNow,
 } from './use-outposts.ts';
 
 interface Call {
@@ -198,6 +199,17 @@ describe('the other actions', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calls).toEqual([{ method: 'POST', path, body: {} }]);
     expect(cached()?.posts).toEqual([cancelled]);
+  });
+
+  it('starts a held request now and keeps what the server answers', async () => {
+    const released = post(1, { reason: 'Not sent yet' });
+    const path = `/api/outposts/${OUTPOST_ID}/posts/${postId(1)}/start-now`;
+    answers.set(`POST ${path}`, () => json(detail([released])));
+    const { result } = renderHook(() => useStartNow(OUTPOST_ID), { wrapper });
+    act(() => result.current.mutate(postId(1)));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls).toEqual([{ method: 'POST', path, body: {} }]);
+    expect(cached()?.posts).toEqual([released]);
   });
 
   it('pauses at once and asks the server', async () => {

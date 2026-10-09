@@ -1,6 +1,7 @@
+import './story-fields.css';
 import { MemberFace } from '../MemberFace.tsx';
 import { FileIcon } from '../../chat/attachments/attachment-icons.tsx';
-import { CommentIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
+import { CommentIcon, MoveIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
 import type { ChatDraft } from './create-draft.ts';
 import type { ChatView } from './create-labels.ts';
 import type { ChatProblem } from './create-problems.ts';
@@ -11,13 +12,22 @@ import { ProblemLine } from './ProblemLine.tsx';
 interface ChatRowProps {
   chat: ChatDraft;
   view: ChatView;
+  afterHandle?: string | null;
   problems: readonly ChatProblem[];
   onHandle: (typed: string) => void;
   onEdit: () => void;
   onRemove: () => void;
 }
 
-export function ChatRow({ chat, view, problems, onHandle, onEdit, onRemove }: ChatRowProps) {
+export function ChatRow({
+  chat,
+  view,
+  afterHandle = null,
+  problems,
+  onHandle,
+  onEdit,
+  onRemove,
+}: ChatRowProps) {
   const message = firstMessageOf(chat);
   const handleProblem = problems.find((problem) => problem.field === 'handle') ?? null;
   const problemId = `op-row-problem-${chat.key}`;
@@ -66,6 +76,12 @@ export function ChatRow({ chat, view, problems, onHandle, onEdit, onRemove }: Ch
       >
         <XIcon />
       </button>
+      {afterHandle && (
+        <p className="op-review-order op-chat-after">
+          <MoveIcon />
+          <span>Starts after @{afterHandle}</span>
+        </p>
+      )}
       {problems.length > 0 && (
         <div id={problemId} className="op-chat-problems">
           {problems.map((problem) => (

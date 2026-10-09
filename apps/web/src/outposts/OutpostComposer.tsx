@@ -18,8 +18,14 @@ interface OutpostComposerProps {
   answering: Answering | null;
   paused: boolean;
   allowAll?: boolean;
+  fill?: ComposerFill | null;
   onCancelAnswer: () => void;
   onSend: (target: ComposerTarget, text: string) => Promise<unknown>;
+}
+
+export interface ComposerFill {
+  id: number;
+  text: string;
 }
 
 const MAX_ROWS = 8;
@@ -37,6 +43,7 @@ export function OutpostComposer({
   answering,
   paused,
   allowAll = false,
+  fill = null,
   onCancelAnswer,
   onSend,
 }: OutpostComposerProps) {
@@ -47,6 +54,13 @@ export function OutpostComposer({
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [filled, setFilled] = useState(fill?.id ?? null);
+  const fillId = fill?.id ?? null;
+  if (fill && fill.id !== filled) {
+    setFilled(fill.id);
+    setText(fill.text);
+    setDismissed(true);
+  }
   const handles = members.map((member) => member.handle);
   const target = composerTarget(text, handles, answering);
   const options = answering || dismissed ? [] : matchingHandles(handleQuery(text), members);
@@ -58,6 +72,10 @@ export function OutpostComposer({
   useEffect(() => {
     if (answeringId) textareaRef.current?.focus();
   }, [answeringId]);
+
+  useEffect(() => {
+    if (fillId !== null) textareaRef.current?.focus();
+  }, [fillId]);
 
   const change = (next: string) => {
     setText(next);

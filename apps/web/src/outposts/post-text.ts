@@ -43,6 +43,12 @@ export function receiverName(post: OutpostPost): string {
   return `@${post.toHandle ?? 'chat'}`;
 }
 
+const HELD_REASON = /^Waiting for (@[a-z][a-z0-9-]*|a deleted chat)$/;
+
+export function isHeld(post: OutpostPost): boolean {
+  return post.state === 'sent' && post.reason !== null && HELD_REASON.test(post.reason);
+}
+
 export function canCancel(post: OutpostPost): boolean {
   return post.state !== null && OPEN_STATES.includes(post.state);
 }

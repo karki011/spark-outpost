@@ -156,6 +156,15 @@ export function useCancel(id: string) {
   });
 }
 
+export function useStartNow(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => outpostsApi.startNow(id, postId),
+    onSuccess: (detail) => keep(client, detail),
+    onError: () => client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
+  });
+}
+
 export function usePause(id: string) {
   const client = useQueryClient();
   const key = outpostKeys.detail(id);

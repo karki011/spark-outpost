@@ -16,7 +16,12 @@ type Send = (target: ComposerTarget, text: string) => Promise<unknown>;
 afterEach(cleanup);
 
 function composer(
-  options: { answering?: Answering | null; paused?: boolean; onSend?: Send } = {},
+  options: {
+    answering?: Answering | null;
+    paused?: boolean;
+    onSend?: Send;
+    fill?: { id: number; text: string } | null;
+  } = {},
   onCancelAnswer = vi.fn<() => void>(),
 ) {
   return (
@@ -24,6 +29,7 @@ function composer(
       members={MEMBERS}
       answering={options.answering ?? null}
       paused={options.paused ?? false}
+      fill={options.fill ?? null}
       onCancelAnswer={onCancelAnswer}
       onSend={options.onSend ?? vi.fn<Send>(() => Promise.resolve())}
     />
@@ -163,5 +169,24 @@ describe('OutpostComposer', () => {
     });
     expect(onSend).not.toHaveBeenCalled();
     expect(box().value).toBe('@all agree the endpoint');
+  });
+
+  it('takes a message it is handed, focused and ready to send, and takes the next one too', () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    const first = '@fe merge spark/api-1 into your branch.';
+    const { rerender } = render(composer({ onSend }));
+    type('half a thought');
+    rerender(composer({ onSend, fill: { id: 1, text: first } }));
+    expect(box().value).toBe(first);
+    expect(document.activeElement).toBe(box());
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(sendButton().textContent).toBe('Send request');
+    expect(onSend).not.toHaveBeenCalled();
+
+    type('changed by hand');
+    rerender(composer({ onSend, fill: { id: 1, text: first } }));
+    expect(box().value).toBe('changed by hand');
+    rerender(composer({ onSend, fill: { id: 2, text: first } }));
+    expect(box().value).toBe(first);
   });
 });

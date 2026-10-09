@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
-import type { Outpost } from '@spark-outpost/contracts';
-import { OutpostSeamContext, type OutpostSeam } from '../chat/outpost/outpost-seam.ts';
+import type { MemberRequest, Outpost } from '@spark-outpost/contracts';
+import { OutpostSeamContext } from '../chat/outpost/outpost-seam.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useAddMember, useOutposts } from './use-outposts.ts';
 
@@ -12,6 +12,7 @@ const NO_OUTPOSTS: readonly Outpost[] = [];
 
 interface Creating {
   firstChatId: string | null;
+  draftId: string | null;
 }
 
 interface OutpostHostProps {
@@ -25,14 +26,21 @@ export function OutpostHost({ openOutpostId, onOpenOutpost, children }: OutpostH
   const addMember = useAddMember().mutateAsync;
   const { remote } = useRemoteClient();
   const [creating, setCreating] = useState<Creating | null>(null);
-  const seam = useMemo<OutpostSeam>(
+  const openOutpost = (outpostId: string) => {
+    setCreating(null);
+    onOpenOutpost(outpostId);
+  };
+  const seam = useMemo(
     () => ({
       outposts,
       openOutpostId,
       canManage: !remote,
       onOpenOutpost,
-      onNewOutpost: (conversationId) => setCreating({ firstChatId: conversationId ?? null }),
-      onAddToOutpost: (outpostId, member) => addMember({ outpostId, member }),
+      onNewOutpost: (conversationId?: string) =>
+        setCreating({ firstChatId: conversationId ?? null, draftId: null }),
+      onOpenDraft: (draftId: string) => setCreating({ firstChatId: null, draftId }),
+      onAddToOutpost: (outpostId: string, member: MemberRequest) =>
+        addMember({ outpostId, member }),
     }),
     [outposts, openOutpostId, remote, onOpenOutpost, addMember],
   );
@@ -43,10 +51,8 @@ export function OutpostHost({ openOutpostId, onOpenOutpost, children }: OutpostH
         <Suspense fallback={null}>
           <OutpostCreate
             firstChatId={creating.firstChatId}
-            onCreated={(outpostId) => {
-              setCreating(null);
-              onOpenOutpost(outpostId);
-            }}
+            draftId={creating.draftId}
+            onCreated={openOutpost}
             onClose={() => setCreating(null)}
           />
         </Suspense>

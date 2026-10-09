@@ -10,6 +10,9 @@ import {
   existing,
   file,
   fresh,
+  STORY_DRAFT_ID,
+  storyDraft,
+  withTask,
 } from './create-fixtures.ts';
 import { startLines, summaryLine } from './create-labels.ts';
 import {
@@ -113,5 +116,38 @@ describe('what starting does', () => {
     const summary = startSummary(draftOf([existing(ids, FE_CHAT, 'fe')]));
     expect(summaryLine(summary)).toBe('1 chat');
     expect(startLines(summary)).toEqual(['Each chat works under its own mode.']);
+  });
+});
+
+describe('the create request of a draft', () => {
+  it('carries the draft, each starts-after edge as a chat id and a level the user picked', () => {
+    const ids = countingIds();
+    const lead = existing(ids, FE_CHAT, 'lead');
+    const api = withTask(fresh(ids, API_PROJECT, 'api'), 'Add the endpoint.');
+    const fe = {
+      ...withTask(fresh(ids, API_PROJECT, 'fe'), 'Call it.', api.key),
+      level: 'hands-off' as const,
+    };
+    const request = buildCreateRequest(OUTPOST_ID, storyDraft([lead, api, fe], FE_CHAT));
+
+    expect(createOutpostRequestSchema.safeParse(request).success).toBe(true);
+    expect(request.draftId).toBe(STORY_DRAFT_ID);
+    expect(request.members.map((member) => member.dependsOn)).toEqual([
+      undefined,
+      undefined,
+      api.newChatId,
+    ]);
+    const [, first, second] = request.members;
+    expect(first && 'new' in first && 'level' in first.new).toBe(false);
+    expect(second && 'new' in second ? second.new.level : null).toBe('hands-off');
+  });
+
+  it('sends no edge and no draft from a sheet opened by hand', () => {
+    const ids = countingIds();
+    const api = withTask(fresh(ids, API_PROJECT, 'api'), 'Add the endpoint.');
+    const fe = withTask(fresh(ids, API_PROJECT, 'fe'), 'Call it.', api.key);
+    const request = buildCreateRequest(OUTPOST_ID, draftOf([api, fe]));
+    expect('draftId' in request).toBe(false);
+    expect(request.members.some((member) => 'dependsOn' in member)).toBe(false);
   });
 });
