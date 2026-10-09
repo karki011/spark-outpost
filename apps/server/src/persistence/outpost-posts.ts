@@ -37,6 +37,8 @@ interface PostRow {
   answer_seen_at: Date | null;
   pinned_at: Date | null;
   created_at: Date;
+  attachment_ids: string[];
+  opening: boolean;
 }
 
 interface FactsRow extends PostRow {
@@ -99,6 +101,8 @@ function toPost(row: PostRow): StoredPost {
     answerSeenAt: row.answer_seen_at?.toISOString() ?? null,
     pinnedAt: row.pinned_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
+    attachmentIds: row.attachment_ids,
+    opening: row.opening,
   };
 }
 
@@ -138,8 +142,9 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
   const { rows } = await db.query<PostRow>(
     `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, from_conversation_id,
        from_run_id, request_hash, waits, from_handle, to_handle, to_conversation_id, guest,
-       batch_id, observed)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb)
+       batch_id, observed, attachment_ids, opening)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb,
+       $16::uuid[], $17)
      ON CONFLICT DO NOTHING
      RETURNING *`,
     [
@@ -158,12 +163,37 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
       post.guest ?? false,
       post.batchId ?? null,
       JSON.stringify(post.observed ?? []),
+      post.attachmentIds ?? [],
+      post.opening ?? false,
     ],
   );
   if (rows[0]) return toPost(rows[0]);
   const existing = await existingPost(db, post);
   if (!existing) throw new Error(`Outpost post ${post.id} was neither inserted nor found.`);
   return existing;
+}
+
+export async function attachmentsFree(
+  db: Queryable,
+  workspaceId: string,
+  attachmentIds: readonly string[],
+): Promise<boolean> {
+  if (attachmentIds.length === 0) return true;
+  const { rows } = await db.query<{ free: number }>(
+    `SELECT count(*)::int AS free FROM attachments a
+     WHERE a.id = ANY($2::uuid[]) AND a.workspace_id = $1 AND a.message_id IS NULL
+       AND NOT EXISTS (SELECT 1 FROM outpost_posts p WHERE a.id = ANY(p.attachment_ids))`,
+    [workspaceId, attachmentIds],
+  );
+  return rows[0]?.free === attachmentIds.length;
+}
+
+export async function postAttachmentIds(db: Queryable, postId: string): Promise<string[]> {
+  const { rows } = await db.query<{ attachment_ids: string[] }>(
+    'SELECT attachment_ids FROM outpost_posts WHERE id = $1',
+    [postId],
+  );
+  return rows[0]?.attachment_ids ?? [];
 }
 
 export const insertPosts: PostStore['insertPosts'] = async (db, posts) => {

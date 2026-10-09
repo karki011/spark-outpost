@@ -176,7 +176,8 @@ export async function listConversations(
   const { rows } = await db.query<ConversationSummaryRow>(
     `${summaryQuery} WHERE c.workspace_id = $1 AND c.kind = 'chat'
        AND (EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
-         OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id))
+         OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
+         OR om.outpost_id IS NOT NULL)
        AND ($2 = '' OR c.title ILIKE $3 OR EXISTS (
          SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3
        ))
@@ -218,7 +219,8 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
     `DELETE FROM conversations c WHERE c.workspace_id = $1
        AND c.updated_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
-       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)`,
+       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
+       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)`,
     [workspaceId],
   );
 }

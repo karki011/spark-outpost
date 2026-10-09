@@ -25,6 +25,10 @@ export const modelOptionSchema = capabilityOptionSchema.extend({
 });
 export type ModelOption = z.infer<typeof modelOptionSchema>;
 
+export function shortModelLabel(label: string): string {
+  return label.replace(/\s*\(.*\)\s*$/, '').trim() || label;
+}
+
 export const RETIRING_WITHIN_DAYS = 30;
 const DAY_MS = 86_400_000;
 

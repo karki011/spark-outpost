@@ -30,6 +30,8 @@ function post(number: number, extra: Partial<OutpostPost> = {}): OutpostPost {
     state: null,
     reason: null,
     answer: null,
+    files: 0,
+    intro: null,
     ...extra,
   };
 }

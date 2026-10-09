@@ -43,6 +43,8 @@ const post: StoredPost = {
   answerSeenAt: null,
   pinnedAt: null,
   createdAt: '2026-10-09T10:00:00.000Z',
+  attachmentIds: [],
+  opening: false,
 };
 
 const waiting: RequestFacts = {

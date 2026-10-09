@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { providerIdSchema } from './provider-ids.ts';
 import { runStatusSchema } from './runs.ts';
 import { SPARK_TEXT_MAX } from './spark-actions.ts';
@@ -76,6 +77,12 @@ export const outpostAnswerSchema = z.object({
 });
 export type OutpostAnswer = z.infer<typeof outpostAnswerSchema>;
 
+export const outpostIntroSchema = z.object({
+  conversationId: z.uuid(),
+  task: z.string().nullable(),
+});
+export type OutpostIntro = z.infer<typeof outpostIntroSchema>;
+
 export const outpostPostSchema = z.object({
   id: z.uuid(),
   outpostId: z.uuid(),
@@ -96,6 +103,8 @@ export const outpostPostSchema = z.object({
   state: requestStateSchema.nullable(),
   reason: z.string().nullable(),
   answer: outpostAnswerSchema.nullable(),
+  files: z.number().int().nonnegative().default(0),
+  intro: outpostIntroSchema.nullable().default(null),
 });
 export type OutpostPost = z.infer<typeof outpostPostSchema>;
 
@@ -111,12 +120,57 @@ export const memberRequestSchema = z.object({
 });
 export type MemberRequest = z.infer<typeof memberRequestSchema>;
 
+export const firstMessageSchema = z.object({
+  id: z.uuid(),
+  text: postTextSchema,
+  attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
+});
+export type FirstMessage = z.infer<typeof firstMessageSchema>;
+
+export const newMemberChatSchema = z.object({
+  conversationId: z.uuid(),
+  projectId: z.uuid(),
+  provider: providerIdSchema,
+  model: z.string().min(1).max(200).nullable(),
+  agentMode: z.string().min(1).max(200).nullable(),
+});
+export type NewMemberChat = z.infer<typeof newMemberChatSchema>;
+
+const existingStartMemberSchema = memberRequestSchema.extend({
+  firstMessage: firstMessageSchema.optional(),
+});
+
+const newStartMemberSchema = z.object({
+  new: newMemberChatSchema,
+  handle: outpostHandleSchema,
+  firstMessage: firstMessageSchema.optional(),
+});
+
+export const startMemberSchema = z.union([existingStartMemberSchema, newStartMemberSchema]);
+export type StartMember = z.infer<typeof startMemberSchema>;
+
+export function startMemberChatId(member: StartMember): string {
+  return 'new' in member ? member.new.conversationId : member.conversationId;
+}
+
 export const createOutpostRequestSchema = z.object({
   id: z.uuid(),
   name: outpostNameSchema,
-  members: z.array(memberRequestSchema).max(OUTPOST_MEMBERS_MAX),
+  members: z.array(startMemberSchema).max(OUTPOST_MEMBERS_MAX),
 });
 export type CreateOutpostRequest = z.infer<typeof createOutpostRequestSchema>;
+
+export const failedMemberSchema = z.object({
+  conversationId: z.uuid(),
+  handle: z.string(),
+  message: z.string(),
+});
+export type FailedMember = z.infer<typeof failedMemberSchema>;
+
+export const createOutpostResponseSchema = outpostDetailSchema.extend({
+  failed: z.array(failedMemberSchema).default([]),
+});
+export type CreateOutpostResponse = z.infer<typeof createOutpostResponseSchema>;
 
 export const updateOutpostRequestSchema = z
   .object({

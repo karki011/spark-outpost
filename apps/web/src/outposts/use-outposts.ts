@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   parseAddress,
+  startMemberChatId,
   type CreateOutpostRequest,
   type MemberRequest,
   type Outpost,
@@ -49,6 +50,8 @@ export function optimisticPost(detail: OutpostDetail, input: NewPost, now: strin
     state: to ? 'sent' : null,
     reason: to ? (paused ? 'Paused' : 'Not sent yet') : null,
     answer: null,
+    files: 0,
+    intro: null,
   };
 }
 
@@ -174,11 +177,7 @@ export function useCreateOutpost() {
   return useMutation({
     mutationFn: (body: CreateOutpostRequest) => outpostsApi.create(body),
     onSuccess: (detail) => keep(client, detail),
-    onSettled: (_detail, _error, body) =>
-      refreshChats(
-        client,
-        body.members.map((member) => member.conversationId),
-      ),
+    onSettled: (_detail, _error, body) => refreshChats(client, body.members.map(startMemberChatId)),
   });
 }
 

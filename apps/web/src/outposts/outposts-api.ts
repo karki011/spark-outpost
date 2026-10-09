@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import {
+  createOutpostResponseSchema,
   outpostDetailSchema,
   outpostSchema,
   type CreateOutpostRequest,
+  type CreateOutpostResponse,
   type CreatePostRequest,
   type MemberRequest,
   type Outpost,
@@ -32,8 +34,11 @@ function changed(path: string, init: RequestInit): Promise<OutpostDetail> {
 export const outpostsApi = {
   list: (): Promise<Outpost[]> => request(z.array(outpostSchema), outpostPaths.list),
   get: (id: string): Promise<OutpostDetail> => request(outpostDetailSchema, outpostPaths.one(id)),
-  create: (body: CreateOutpostRequest): Promise<OutpostDetail> =>
-    changed(outpostPaths.list, { method: 'POST', body: JSON.stringify(body) }),
+  create: (body: CreateOutpostRequest): Promise<CreateOutpostResponse> =>
+    request(createOutpostResponseSchema, outpostPaths.list, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   update: (id: string, body: UpdateOutpostRequest): Promise<OutpostDetail> =>
     changed(outpostPaths.one(id), { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (id: string): Promise<null> =>

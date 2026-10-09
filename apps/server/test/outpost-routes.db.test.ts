@@ -129,14 +129,14 @@ async function postOf(postId: string): Promise<OutpostPost> {
 }
 
 describe('outposts', () => {
-  it('creates an outpost with members and handshake lines, and lists it', async () => {
+  it('creates an outpost with members and introduction lines, and lists it', async () => {
     const opened = await detail();
 
     expect(opened.outpost).toMatchObject({ id: outpostId, name: 'Orders launch', needsYou: 0 });
     expect(opened.outpost.members.map((member) => member.handle)).toEqual(['fe', 'api']);
     expect(opened.posts.map((post) => [post.kind, post.body])).toEqual([
-      ['notice', '@fe joined.'],
-      ['notice', '@api joined. @fe and @api can now ask each other.'],
+      ['notice', '@fe joined'],
+      ['notice', '@api joined'],
     ]);
     const listed = await request(app).get('/api/outposts');
     expect(outpostSchema.array().parse(listed.body)).toEqual([opened.outpost]);
@@ -235,15 +235,16 @@ describe('outposts', () => {
 });
 
 describe('members', () => {
-  it('adds a chat with a handshake line, renames it, and removes it', async () => {
+  it('adds a chat with an introduction line, renames it, and removes it', async () => {
     const docs = await newChat(t);
     const member = `/api/outposts/${outpostId}/members/${docs}`;
 
     const added = outpostDetailSchema.parse((await send('put', member, { handle: 'docs' })).body);
     expect(added.outpost.members.map((entry) => entry.handle)).toEqual(['fe', 'api', 'docs']);
-    expect(added.posts.at(-1)?.body).toBe(
-      '@docs joined. @fe, @api and @docs can now ask each other.',
-    );
+    expect(added.posts.at(-1)).toMatchObject({
+      body: '@docs joined',
+      intro: { conversationId: docs, task: null },
+    });
 
     const renamed = outpostDetailSchema.parse(
       (await send('put', member, { handle: 'guide' })).body,

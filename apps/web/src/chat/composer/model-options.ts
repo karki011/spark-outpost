@@ -1,6 +1,7 @@
 import {
   isRetiring,
   retirementState,
+  shortModelLabel,
   unavailableText,
   type ModelRef,
   type CapabilityOption,
@@ -12,7 +13,7 @@ import {
 export const AGENT_DEFAULT = 'default';
 
 export function shortLabel(label: string): string {
-  return label.replace(/\s*\(.*\)\s*$/, '').trim() || label;
+  return shortModelLabel(label);
 }
 
 export function cleanDescription(option: CapabilityOption): string | null {
