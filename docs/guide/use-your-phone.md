@@ -12,6 +12,8 @@ You'll use Spark on your phone; work stays on the Mac. About 5 minutes. Needs Ta
 2. Select **Pair a phone**, scan the code.
 3. Check the codes match, then **Confirm**.
 
-**Devices** renames or revokes a phone; **Remove old entry** clears a duplicate. **What the phone can do** holds the switches. There, **More** holds Phone and Settings; Map and Mac-only tools are hidden.
+**Passkey.** On the phone, select **Save a passkey for this phone**. In another browser, choose **Sign in with a passkey**; no trip to the Mac. It never pairs a new phone. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
+
+**Devices** renames or revokes a phone, passkeys included; **Remove old entry** clears a duplicate. **What the phone can do** holds the switches. There, **More** holds Phone and Settings; Map and Mac-only tools are hidden.
 
 **Next:** [Answer an approval card](answer-approvals.md)
