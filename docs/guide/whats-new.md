@@ -14,6 +14,7 @@ What changed recently in Spark, newest first.
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | The **Make the change** button under a reply is gone.                                                                  | Ask for the change in your next message.            |
 | The context rail lists Agent TV's crew, scrolling only when full. Chats with a merged PR show an icon.                 | No action.                                          |
+| **Terminal**: Esc in Claude shows **Idle**; Spark's note left your message.                                            | No action.                                          |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |

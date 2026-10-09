@@ -19,6 +19,9 @@ import {
   requeueNativeLaunchRun,
 } from '../persistence/native-terminal-turns.ts';
 
+const SPARK_SESSION_NOTE =
+  'This is a Spark Terminal session. Spark MCP tools provide the linked ticket, task, project, checks and action confirmations. Answer native CLI questions and approvals in this terminal.';
+
 export async function prepareNativeSession(
   deps: {
     db: Db;
@@ -95,23 +98,23 @@ export async function prepareNativeSession(
     }
     const prefs = await sparkPreferences(deps.db, deps.workspaceId);
     const prompt = runId
-      ? [
-          input.prompt,
-          prefs.sparkEnabled ? await withPublishNote(deps.db, input) : '',
-          prefs.sparkEnabled
-            ? 'This is a Spark Terminal session. Spark MCP tools provide the linked ticket, task, project, checks and action confirmations. Answer native CLI questions and approvals in this terminal.'
-            : '',
-        ]
+      ? [input.prompt, prefs.sparkEnabled ? await withPublishNote(deps.db, input) : '']
           .filter(Boolean)
           .join('\n\n')
       : '';
+    const instructions = [
+      prefs.agentInstructions ?? '',
+      prefs.sparkEnabled ? SPARK_SESSION_NOTE : '',
+    ]
+      .filter((text) => text.trim())
+      .join('\n\n');
     return {
       input,
       folder,
       runId,
       prompt,
       workflowEnabled: prefs.sparkEnabled,
-      instructions: prefs.agentInstructions,
+      instructions,
     };
   } catch (error) {
     const failure = nativeLaunchError(error);

@@ -256,6 +256,7 @@ describe('native terminal launch', () => {
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
         reason: 'clear',
+        transcript_path: '/projects/repo/native.jsonl',
         tool_input: { secret: 'hidden' },
         tool_response: 'hidden output',
       }),
@@ -273,6 +274,7 @@ describe('native terminal launch', () => {
         prompt_id: 'current-prompt',
         tool_name: 'Bash',
         reason: 'clear',
+        transcript_path: '/projects/repo/native.jsonl',
       },
     });
     expect(JSON.stringify(received.body)).not.toContain('hidden');

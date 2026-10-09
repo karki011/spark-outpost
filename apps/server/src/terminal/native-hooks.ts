@@ -1,3 +1,4 @@
+import { dirname, isAbsolute, join } from 'node:path';
 import { isRecord } from '../agent-config/records.ts';
 
 export type NativeProvider = 'claude' | 'codex';
@@ -20,6 +21,7 @@ export interface NativeHookEvent {
   permissionMode?: string;
   prompt?: string;
   reason?: string;
+  transcriptPath?: string;
 }
 
 const NATIVE_SESSION_ID = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{0,99}$/;
@@ -38,6 +40,14 @@ const COMMON_EVENTS: Record<string, NativeHookKind> = {
   Stop: 'stop',
   SessionEnd: 'session_end',
 };
+
+function sessionTranscriptPath(provider: NativeProvider, payload: Record<string, unknown>) {
+  const path = payload.transcript_path;
+  if (provider !== 'claude' || typeof path !== 'string' || typeof payload.session_id !== 'string')
+    return null;
+  if (!isAbsolute(path)) return null;
+  return path === join(dirname(path), `${payload.session_id}.jsonl`) ? path : null;
+}
 
 export function nativeHookNames(provider: NativeProvider): string[] {
   return [
@@ -66,6 +76,7 @@ export function parseNativeHook(
     !optionalString(payload.tool_name, 200) ||
     !optionalString(payload.notification_type, 100) ||
     !optionalString(payload.reason, 100) ||
+    !optionalString(payload.transcript_path, 4096) ||
     !optionalString(payload.prompt, 100_000)
   ) {
     return null;
@@ -74,6 +85,7 @@ export function parseNativeHook(
   if (!kind) return null;
   const nativeTurnId =
     provider === 'claude' ? (payload.prompt_id ?? payload.turn_id) : payload.turn_id;
+  const transcriptPath = sessionTranscriptPath(provider, payload);
   return {
     kind,
     ...(typeof payload.session_id === 'string' ? { nativeSessionId: payload.session_id } : {}),
@@ -87,6 +99,7 @@ export function parseNativeHook(
     END_REASON.test(payload.reason)
       ? { reason: payload.reason }
       : {}),
+    ...(transcriptPath ? { transcriptPath } : {}),
   };
 }
 

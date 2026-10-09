@@ -19,6 +19,7 @@ import {
 } from './native-context.ts';
 import { NativeRuntimeError, type nativeControl } from './native-control.ts';
 import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
+import type { WatchInterrupts } from './native-interrupts.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
 export const hookTokenDigest = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -30,18 +31,33 @@ const envelopeSchema = z.strictObject({
   payload: z.unknown(),
 });
 
+function interruptEventId(session: LiveSession, nativeTurnId: string): string {
+  const hash = createHash('sha256')
+    .update(JSON.stringify([session.row.id, session.row.generation, nativeTurnId, 'interrupt']))
+    .digest('hex');
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    hash.slice(12, 16),
+    hash.slice(16, 20),
+    hash.slice(20, 32),
+  ].join('-');
+}
+
 export function nativeObserver({
   db,
   waiters,
   tokens,
   enqueue,
   control: { syncScope, closeTurn, completed },
+  watchInterrupts,
 }: {
   db: Db;
   waiters: ApprovalWaiters;
   tokens: Map<string, LiveSession>;
   enqueue: <T>(session: LiveSession, work: () => Promise<T>) => Promise<T>;
   control: ReturnType<typeof nativeControl>;
+  watchInterrupts: WatchInterrupts;
 }) {
   const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
     if ((session.seedPending || session.currentPromptEventId === eventId) && session.context)
@@ -167,6 +183,32 @@ export function nativeObserver({
     session.row.native_session_id = nativeSessionId;
     session.observedTurnId = nativeTurnId;
   };
+  const accept = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
+    const seen = await db.query(
+      'SELECT 1 FROM native_terminal_events WHERE session_id = $1 AND generation = $2 AND event_id = $3',
+      [session.row.id, session.row.generation, eventId],
+    );
+    if (seen.rowCount) return;
+    await observe(session, event, eventId);
+    await acceptNativeEvent(db, { ...session.row, eventId });
+  };
+  const interrupted = (session: LiveSession, nativeTurnId: string) =>
+    enqueue(session, async () => {
+      if (tokens.get(session.hookKey) !== session) return;
+      if (!session.context || session.row.native_turn_id !== nativeTurnId) return;
+      await accept(
+        session,
+        { kind: 'interrupt', nativeTurnId },
+        interruptEventId(session, nativeTurnId),
+      );
+    });
+  const followInterrupts = (session: LiveSession, transcriptPath: string) => {
+    session.interrupts = watchInterrupts(transcriptPath, async (nativeTurnId) => {
+      await interrupted(session, nativeTurnId)
+        .catch(() => interrupted(session, nativeTurnId))
+        .catch(() => undefined);
+    });
+  };
   const hook = async (token: string, body: unknown) => {
     const session = tokens.get(digest(token));
     const parsed = envelopeSchema.safeParse(body);
@@ -187,13 +229,9 @@ export function nativeObserver({
         event.nativeSessionId !== session.row.native_session_id;
       if (anotherSession && !(event.kind === 'session_start' && session.nativeSessionEnded))
         return false;
-      const seen = await db.query(
-        'SELECT 1 FROM native_terminal_events WHERE session_id = $1 AND generation = $2 AND event_id = $3',
-        [session.row.id, session.row.generation, parsed.data.eventId],
-      );
-      if (seen.rowCount) return true;
-      await observe(session, event, parsed.data.eventId);
-      await acceptNativeEvent(db, { ...session.row, eventId: parsed.data.eventId });
+      await accept(session, event, parsed.data.eventId);
+      if (event.transcriptPath && session.context && !session.interrupts)
+        followInterrupts(session, event.transcriptPath);
       return true;
     });
   };
