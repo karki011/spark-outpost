@@ -1,7 +1,7 @@
 CREATE TABLE outpost_drafts (
   id uuid PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
-  conversation_id uuid NOT NULL REFERENCES conversations (id) ON DELETE CASCADE,
+  conversation_id uuid REFERENCES conversations (id) ON DELETE SET NULL,
   run_id uuid REFERENCES runs (id) ON DELETE SET NULL,
   outpost_id uuid REFERENCES outposts (id) ON DELETE SET NULL,
   title text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 100),

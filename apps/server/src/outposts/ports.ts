@@ -125,12 +125,20 @@ export interface PostStore {
   ): Promise<boolean>;
   setPinned(db: Queryable, postId: string, pinned: boolean): Promise<boolean>;
   unsentRequests(db: Queryable): Promise<StoredPost[]>;
+  heldRequests(db: Queryable): Promise<HeldRequest[]>;
+  releaseHold(db: Queryable, postId: string): Promise<boolean>;
+  markAnswersSeen(db: Queryable, postIds: readonly string[]): Promise<string[]>;
+}
+
+export interface HeldRequest {
+  post: StoredPost;
+  after: PostWithFacts;
 }
 
 export interface StoredDraft {
   id: string;
   workspaceId: string;
-  conversationId: string;
+  conversationId: string | null;
   runId: string | null;
   outpostId: string | null;
   title: string;
@@ -140,10 +148,9 @@ export interface StoredDraft {
   createdAt: string;
 }
 
-export type NewDraft = Pick<
-  StoredDraft,
-  'id' | 'workspaceId' | 'conversationId' | 'runId' | 'outpostId' | 'body'
->;
+export type NewDraft = Pick<StoredDraft, 'id' | 'workspaceId' | 'runId' | 'outpostId' | 'body'> & {
+  conversationId: string;
+};
 
 export interface DraftStore {
   saveDraft(db: Queryable, draft: NewDraft): Promise<StoredDraft>;
@@ -193,6 +200,7 @@ export interface StoryStore {
   insertTasks(db: Queryable, tasks: NewStoryTask[]): Promise<StoredStoryTask[]>;
   storiesOf(db: Queryable, outpostId: string): Promise<StoryTaskRow[]>;
   storyTaskOf(db: Queryable, conversationId: string): Promise<StoryTaskRow | null>;
+  removeTask(db: Queryable, conversationId: string): Promise<boolean>;
 }
 
 export interface StackGit {

@@ -161,21 +161,21 @@ describe('upgrading to outpost stories', () => {
     expect(rows).toEqual([{ after_post_id: first }]);
   });
 
-  it('keeps the tasks when the lead chat is deleted, without their draft and lead', async () => {
+  it('keeps the tasks and their draft when the lead chat is deleted, without the lead', async () => {
     const { db } = state;
     await runMigrations(db);
-    const { outpostId, lead, api, web } = await story(db);
+    const { outpostId, lead, api, web, draftId } = await story(db);
 
     await db.query('DELETE FROM conversations WHERE id = $1', [lead]);
 
     const left = await tasks(db, outpostId);
     expect(left.map((row) => row.conversation_id)).toEqual([api, web]);
     for (const row of left) {
-      expect(row).toMatchObject({ draft_id: null, lead_conversation_id: null });
+      expect(row).toMatchObject({ draft_id: draftId, lead_conversation_id: null });
     }
     expect(left[1]).toMatchObject({ depends_on_conversation_id: api });
-    const drafts = await db.query('SELECT 1 FROM outpost_drafts');
-    expect(drafts.rowCount).toBe(0);
+    const drafts = await db.query('SELECT id, conversation_id, title FROM outpost_drafts');
+    expect(drafts.rows).toEqual([{ id: draftId, conversation_id: null, title: 'Checkout' }]);
   });
 
   it('releases a held post when the post it waits for is deleted, and drops tasks with the outpost', async () => {
