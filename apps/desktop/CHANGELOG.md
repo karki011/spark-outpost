@@ -2,6 +2,17 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.11
+
+- Outposts: put several chats in one outpost and ask each for work from one thread with @ and its handle. Each request shows its state (Sent, Working, Needs you, Answered, Failed, Cancelled), and the answer lands under it with its branch, files and pull request. Notes start no work. Pause holds requests that have not started.
+- Outposts: New outpost is a three-step sheet. Add existing chats or new ones with a project, agent and permissions, give each a first message with files, review, then start. Each chat is introduced in the thread and has its own face.
+- Outposts: a request you type counts as your message, so "open a PR" publishes and a slash command runs. Answer a chat that needs you from the outpost. Agents cannot ask each other yet.
+- Phone: a paired phone can save a passkey and use it to sign in again in another browser at the same address, as the same device. The switch and removal stay on the Mac.
+- Pull requests: a pull request that was closed and reopened shows as open again. The row has a refresh button, and shows the repository name with lines added and removed in place of the full title.
+- Chat header: Agent TV, Browser and Terminal moved into the chat menu (⋯).
+- Tickets: moving a Jira ticket to Done no longer lands on another status in the same category, such as Rejected. Pick the status for each move in the connection's settings.
+- Terminal sessions: Esc is noticed reliably when the Mac is busy.
+
 ## 0.1.0-beta.10
 
 - Spark Island: at rest Scout is tucked at the top so about half shows, under the notch or the top edge of the screen. Scout comes fully out while a chat is working, needs you, has just finished or failed, and tucks back afterwards. An Island you dragged away from the top stays whole.
