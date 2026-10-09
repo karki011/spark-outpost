@@ -30,7 +30,7 @@ describe('conversation permission policy', () => {
       true,
     );
     expect(decision.note).toBe(
-      "Declined: Write notes.txt (Ask mode doesn't change files — use Make the change)",
+      "Declined: Write notes.txt (Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode)",
     );
   });
 

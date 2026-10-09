@@ -23,7 +23,6 @@ import { runCommands, shownCommands } from './commands/command-model.ts';
 import { TurnReply } from './commands/TurnReply.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints, shownApprovals } from './crew/crew-items.ts';
-import { MakeChange } from './make-change/MakeChange.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
@@ -222,7 +221,6 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       </TurnReply>
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
-      {finished && <MakeChange run={run} detail={detail} />}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       <ModelSwitchNote change={finished ? shown.modelSwitch : stream.modelSwitch} />
       <ErrorLine

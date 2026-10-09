@@ -73,7 +73,8 @@ describe('conversation prompt', () => {
     expect(note).toContain('run shell commands');
     expect(note).toContain('may ask the user before other commands');
     expect(note).toContain('including through commands');
-    expect(note).toContain('press Make the change');
+    expect(note).toContain('ask for the change in a message');
+    expect(note).not.toContain('press');
     expect(projectNote(['/work/app'])).not.toContain('shell commands');
     const [first] = conversationBlocks([], 'Hi', {
       projectRoots: ['/work/app'],

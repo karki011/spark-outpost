@@ -2,7 +2,6 @@ import { SteerError } from '../coordinator/steer.ts';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
-  PERMISSION_DO,
   createConversationRequestSchema,
   sendMessageRequestSchema,
   type ActiveRuns,
@@ -109,9 +108,6 @@ export function apiRoutes(deps: RouteDeps): Router {
     const request = parseBody(sendMessageRequestSchema, req);
     const conversationId = paramId(req);
     const target = await runTarget(conversationId);
-    if (request.startAs && target.permission !== PERMISSION_DO) {
-      throw new BadRequestError('Switch the chat to Do to make the change.');
-    }
     await deps.warmTicketMentions?.(request.content);
     res.status(201).json(await sendUserMessage(db, conversationId, request, target, workspaceId));
   });
