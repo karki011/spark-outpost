@@ -20,6 +20,7 @@ export interface RunTransition {
 export interface AssistantMessageRecord {
   id: string;
   content: string;
+  finalReply?: string | null;
 }
 
 export interface AppendOptions {
@@ -106,15 +107,20 @@ export async function assertLeaseHeld(client: DbClient, lease: Lease, expectExpi
   if (rowCount !== 1) throw new LeaseLostError(lease);
 }
 
+function finalReplyToStore(message: AssistantMessageRecord): string | null {
+  const reply = message.finalReply ?? null;
+  return reply === null || reply === message.content.trim() ? null : reply;
+}
+
 async function insertAssistantMessage(
   client: DbClient,
   runId: string,
   message: AssistantMessageRecord,
 ) {
   await client.query(
-    `INSERT INTO messages (id, conversation_id, role, content, run_id)
-     SELECT $1, conversation_id, 'assistant', $2, id FROM runs WHERE id = $3`,
-    [message.id, message.content, runId],
+    `INSERT INTO messages (id, conversation_id, role, content, run_id, final_reply)
+     SELECT $1, conversation_id, 'assistant', $2, id, $4 FROM runs WHERE id = $3`,
+    [message.id, message.content, runId, finalReplyToStore(message)],
   );
 }
 

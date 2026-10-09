@@ -67,13 +67,14 @@ export async function executeChildRun(
 
 export async function closeMessage(
   append: Append,
-  result: Pick<TurnResult, 'messageId' | 'text'>,
+  result: Pick<TurnResult, 'messageId' | 'text' | 'finalReply'>,
   record: boolean,
 ): Promise<void> {
   if (!result.messageId) return;
+  const { messageId: id, text: content, finalReply = null } = result;
   await append(
-    runEvents.textEnd(result.messageId),
-    record ? { assistantMessage: { id: result.messageId, content: result.text } } : undefined,
+    runEvents.textEnd(id),
+    record ? { assistantMessage: { id, content, finalReply } } : undefined,
   );
 }
 
