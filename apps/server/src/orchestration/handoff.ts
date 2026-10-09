@@ -8,6 +8,7 @@ import {
   INCREMENT_RULE,
   namedFiles,
   PATCH_LIMIT,
+  REQUEST_LIMIT,
   section,
   SHIP_RULE,
   type ChangedFile,
@@ -47,7 +48,6 @@ const TURNS: Record<HandoffKind, { count: number; limit: number }> = {
 const CHAT_REQUESTS = 30;
 const CHAT_REQUEST_LIMIT = 300;
 
-const REQUEST_LIMIT = 8_000;
 const REVIEW_FINDINGS = 10;
 
 export interface HandoffContext {
