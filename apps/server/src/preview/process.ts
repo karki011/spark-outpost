@@ -36,7 +36,14 @@ export async function answers(url: string): Promise<boolean> {
   }
 }
 
-function spawnInLoginShell(shell: string) {
+export function folderExists(folder: string): Promise<boolean> {
+  return stat(folder).then(
+    (info) => info.isDirectory(),
+    () => false,
+  );
+}
+
+export function spawnInLoginShell(shell: string, kill: (pid: number) => void = killProcessTree) {
   return ({ command, cwd, env }: PreviewSpawn): PreviewProcess => {
     const pty = spawnNodePty(shell, ['-ilc', command], {
       name: 'xterm-256color',
@@ -54,7 +61,7 @@ function spawnInLoginShell(shell: string) {
       onExit: (listener) => {
         pty.onExit(({ exitCode }) => listener({ exitCode }));
       },
-      kill: () => killProcessTree(pty.pid),
+      kill: () => kill(pty.pid),
     };
   };
 }
@@ -68,10 +75,6 @@ export function previewRuntime(
     portFree,
     answers,
     env,
-    folderExists: (folder) =>
-      stat(folder).then(
-        (info) => info.isDirectory(),
-        () => false,
-      ),
+    folderExists,
   };
 }

@@ -107,10 +107,14 @@ function signal(pid: number, name: NodeJS.Signals) {
   }
 }
 
-export function killProcessTree(root: number, graceMs = 1500): void {
+export function killProcessTree(
+  root: number,
+  graceMs = 1500,
+  first: NodeJS.Signals = 'SIGHUP',
+): void {
   const targets = [root, ...descendantsOf(root, processTableNow())];
-  for (const pid of targets) signal(pid, 'SIGHUP');
-  signal(-root, 'SIGHUP');
+  for (const pid of targets) signal(pid, first);
+  signal(-root, first);
   const escalate = setTimeout(() => {
     for (const pid of targets) if (isAlive(pid)) signal(pid, 'SIGKILL');
   }, graceMs);
