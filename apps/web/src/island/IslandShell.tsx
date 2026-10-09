@@ -16,6 +16,7 @@ import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
+import { notchFit, stripHeight } from './island-fit.ts';
 import { restMetrics, type RestMetrics } from './island-size.ts';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 
@@ -75,24 +76,24 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const wingRef = useRef<HTMLSpanElement>(null);
-  const hugsNotch = geometry.notch && geometry.docked;
+  const fit = notchFit(geometry);
+  const { hugsNotch, notchHeight } = fit;
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
   const rest = restMetrics(size);
   const hang = bare ? rest.tuck : null;
   const pillish = view.kind === 'nudge';
   const under = hugsNotch && pillish;
-  const notchHeight = hugsNotch ? (geometry.notchHeight ?? geometry.top) : 0;
   const drop = under ? notchHeight + UNDER_NOTCH_GAP : 0;
+  const quiet = view.kind === 'peek' || pillish;
   const top = under
     ? rest.pillHeight
     : pillish
       ? Math.max(geometry.top, rest.pillHeight)
       : bare
         ? 0
-        : geometry.top;
+        : stripHeight(fit, quiet);
   const gap = hugsNotch && !under ? geometry.notchWidth + 2 * NOTCH_MARGIN : 0;
-  const quiet = view.kind === 'peek' || pillish;
   const notchSpan = view.kind === 'peek' ? geometry.notchWidth : gap;
   const viewport = useViewportWidth();
   const screenWidth = window.screen.width;

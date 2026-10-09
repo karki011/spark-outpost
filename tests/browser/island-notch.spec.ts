@@ -102,6 +102,29 @@ for (const size of SIZES) {
   });
 }
 
+const WIDE_NOTCH = { width: 220, height: 38, menuBar: 44 };
+
+for (const [name, windowTop] of [
+  ['top', 0],
+  ['lowered', 38],
+  ['lowered-by-the-menu-bar', 44],
+] as const) {
+  test(`the resting blob sits 4 points under the notch with the window ${name}`, async ({
+    page,
+  }) => {
+    await resetTestDatabase({ onboarded: true });
+    await openNotchIsland(page, { size: 'full', autoExpand: false, cutout: WIDE_NOTCH, windowTop });
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
+    const notchBottom = Math.max(0, WIDE_NOTCH.height - windowTop);
+    const blob = page.locator('.isl-scout-wrap');
+    await expect.poll(async () => (await blob.boundingBox())?.y).toBeCloseTo(notchBottom + 4, 0);
+    const drawn = (await island(page).boundingBox())!;
+    const barBottom = Math.max(0, WIDE_NOTCH.menuBar - windowTop);
+    expect(drawn.y + drawn.height).toBeLessThanOrEqual(barBottom + 1);
+    await shot(page, name);
+  });
+}
+
 for (const size of SIZES) {
   for (const notch of [true, false]) {
     test(`at ${size} size ${notch ? 'under a notch' : 'on a flat display'} one working chat rests as blobs alone, with no title, status line or row`, async ({

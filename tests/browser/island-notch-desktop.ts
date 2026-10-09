@@ -11,6 +11,8 @@ export interface NotchSetup {
   sparkFocused?: boolean;
   theme?: string;
   notch?: boolean;
+  cutout?: { width: number; height: number; menuBar: number };
+  windowTop?: number;
 }
 
 export interface RestSize {
@@ -40,6 +42,7 @@ export function notchBox(): Box {
 export async function openNotchIsland(page: Page, setup: NotchSetup) {
   await page.addInitScript(
     ({ setup, notch }) => {
+      const windowTop = setup.windowTop ?? 0;
       const now = new Date();
       localStorage.setItem('spark-outpost.theme', setup.theme ?? 'graphite');
       localStorage.setItem(
@@ -77,6 +80,7 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
               notchHeight: hasNotch ? notch.height : 0,
               docked: true,
               menuBar: hasNotch ? notch.menuBar : 24,
+              windowTop,
             }),
             onGeometry: none,
             onCommand: (callback: (action: string) => void) => {
@@ -104,11 +108,11 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       window.addEventListener('DOMContentLoaded', () => {
         const cutout = document.createElement('div');
         cutout.dataset.testNotch = '';
-        cutout.style.cssText = `position:fixed;top:0;left:50%;width:${notch.width}px;height:${notch.height}px;margin-left:${-notch.width / 2}px;background:#000;border-radius:0 0 9px 9px;z-index:99;pointer-events:none`;
+        cutout.style.cssText = `position:fixed;top:${-windowTop}px;left:50%;width:${notch.width}px;height:${notch.height}px;margin-left:${-notch.width / 2}px;background:#000;border-radius:0 0 9px 9px;z-index:99;pointer-events:none`;
         document.body.append(cutout);
       });
     },
-    { setup, notch: NOTCH },
+    { setup, notch: setup.cutout ?? NOTCH },
   );
   await page.setViewportSize(VIEWPORT);
   await page.goto('/island');
