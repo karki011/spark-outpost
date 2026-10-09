@@ -20,8 +20,8 @@ Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Ter
 ## Send a request
 
 1. Type `@api` and your request, then select **Send request**.
-2. The answer lands under it with its [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
-3. **Needs you** means the chat stopped with a question or an approval card. Select **Answer**, then **Send answer**; for a card, **Open in chat**.
+2. The chat's final reply lands under it with its [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
+3. **Needs you**: the chat has a question or an approval card. Select **Answer**, then **Send answer**; both stay under the request. For a card, **Open in chat**.
 
 Without a handle, **Post note** starts no work.
 

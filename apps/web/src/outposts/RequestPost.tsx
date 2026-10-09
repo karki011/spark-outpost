@@ -7,9 +7,12 @@ import {
   InfoIcon,
   MoveIcon,
 } from '../ui/icons.tsx';
+import './outpost-answer.css';
+import { AskedRound } from './AskedRound.tsx';
 import { MemberFace } from './MemberFace.tsx';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { PostText } from './PostText.tsx';
+import { splitQuestion } from './answer-text.ts';
 import {
   STATE_LABELS,
   attachedLabel,
@@ -86,6 +89,8 @@ export function RequestPost({
   const receiver = chatId && (
     <MemberFace chatId={chatId} state={requestFaceState(state)} size="post" />
   );
+  const waiting = state === 'needs_you';
+  const replyText = waiting ? splitQuestion(post.answer?.text ?? '').said : post.answer?.text;
   return (
     <li
       id={postAnchor(post.id)}
@@ -118,16 +123,17 @@ export function RequestPost({
       {post.reason && (
         <p className={state === 'failed' ? 'op-reason bad' : 'op-reason'}>{post.reason}</p>
       )}
+      {post.exchanges.map((exchange, index) => (
+        <AskedRound key={index} exchange={exchange} chatId={chatId} handle={to} />
+      ))}
       {post.answer && (
         <div className="op-reply">
           <div className="op-post-head">
             {receiver}
             <b>{to}</b>
-            <span className="op-mood">
-              {state === 'needs_you' ? 'is waiting for you' : 'answered'}
-            </span>
+            <span className="op-mood">{waiting ? 'is waiting for you' : 'answered'}</span>
           </div>
-          <PostText text={post.answer.text} what="answer" />
+          {replyText && <PostText text={replyText} what="answer" markdown />}
           <AnswerResults answer={post.answer} />
         </div>
       )}
