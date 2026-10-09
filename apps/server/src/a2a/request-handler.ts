@@ -20,7 +20,7 @@ import {
 import type { A2ARequestHandler } from '@a2a-js/sdk/server';
 import type { OutpostAnswer } from '@spark-outpost/contracts';
 import { z } from 'zod';
-import type { PostStore, StoredPost } from '../outposts/ports.ts';
+import type { PostStore, PostWithFacts } from '../outposts/ports.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
 import {
   acceptTask,
@@ -35,7 +35,7 @@ import { isFinished } from './task-states.ts';
 import { messageText, streamItems, toA2aTask, withHistoryLength } from './task-view.ts';
 import type { TaskWakes } from './task-wakes.ts';
 
-export type ReadAnswer = (db: Queryable, post: StoredPost) => Promise<OutpostAnswer | null>;
+export type ReadAnswer = (db: Queryable, request: PostWithFacts) => Promise<OutpostAnswer | null>;
 
 export interface HandlerDeps {
   db: Db;
@@ -61,6 +61,8 @@ const REFUSALS: Record<AcceptRefusal, () => Error> = {
   id_taken: () => new RequestMalformedError('messageId is already used by another message.'),
   empty: () => new RequestMalformedError('The request has no text.'),
   too_long: () => new RequestMalformedError('The request text is too long.'),
+  closed: () =>
+    new UnsupportedOperationError('That request was closed before it reached this chat.'),
 };
 
 function isUuid(value: string): boolean {
@@ -119,7 +121,7 @@ export function outpostRequestHandler(
   async function readTask(postId: string): Promise<Task | null> {
     const stored = await deps.getPost(db, postId);
     if (!stored || stored.post.taskId === null || stored.facts === null) return null;
-    return toA2aTask(stored, await deps.readAnswer(db, stored.post));
+    return toA2aTask(stored, await deps.readAnswer(db, stored));
   }
 
   async function taskOfThisChat(taskId: string): Promise<Task> {

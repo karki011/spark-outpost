@@ -23,7 +23,7 @@ import {
   replyRow,
   requestRow,
   setRunStatus,
-} from './a2a-stand-ins.ts';
+} from './a2a-fixtures.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -144,9 +144,10 @@ describe('accepting a task', () => {
       why: 'other_outpost',
     });
     const postId = await storedRequest();
-    expect(
-      await acceptTask(t.db, api, { messageId: postId, contextId: other, text: '' }),
-    ).toEqual({ kind: 'refused', why: 'other_outpost' });
+    expect(await acceptTask(t.db, api, { messageId: postId, contextId: other, text: '' })).toEqual({
+      kind: 'refused',
+      why: 'other_outpost',
+    });
     expect((await postColumns(t.db, postId))?.task_id).toBeNull();
   });
 
@@ -216,13 +217,18 @@ describe('accepting a task', () => {
     expect(accepted(await acceptTask(t.db, guestChat, fromWireFor(guestPost))).queued).toBe(true);
   });
 
-  it('gives a request that was cancelled before it was sent a task and queues nothing', async () => {
+  it('refuses a request that was closed before it was delivered', async () => {
     const postId = await storedRequest();
     expect(await cancelPost(t.db, postId)).toEqual({ kind: 'cancelled' });
-    const outcome = accepted(await acceptTask(t.db, api, fromWireFor(postId)));
-    expect(outcome.queued).toBe(false);
+    expect(await acceptTask(t.db, api, fromWireFor(postId))).toEqual({
+      kind: 'refused',
+      why: 'closed',
+    });
     expect(await queueRows(t.db, api)).toEqual([]);
-    expect((await postColumns(t.db, postId))?.closed_state).toBe('cancelled');
+    expect(await postColumns(t.db, postId)).toMatchObject({
+      closed_state: 'cancelled',
+      task_id: null,
+    });
   });
 
   it('orders the reasons a request is not delivered', () => {

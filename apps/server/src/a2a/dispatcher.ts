@@ -1,11 +1,11 @@
 import type { AppEvent } from '@spark-outpost/contracts';
-import type { PeerAgent, PostStore, StoredPost } from '../outposts/ports.ts';
-import type { Db, Queryable } from '../persistence/db.ts';
+import type { PeerAgent } from '../outposts/ports.ts';
+import type { Db } from '../persistence/db.ts';
+import { unsentRequests } from '../persistence/outpost-posts.ts';
 
 export interface DispatchDeps {
   db: Db;
   peer: PeerAgent;
-  unsentRequests: PostStore['unsentRequests'];
 }
 
 export interface Dispatcher {
@@ -13,39 +13,13 @@ export interface Dispatcher {
   close(): Promise<void>;
 }
 
-async function pausedOutposts(db: Queryable, posts: readonly StoredPost[]): Promise<Set<string>> {
-  if (posts.length === 0) return new Set();
-  const { rows } = await db.query<{ id: string }>(
-    'SELECT id FROM outposts WHERE id = ANY($1::uuid[]) AND paused_at IS NOT NULL',
-    [[...new Set(posts.map((post) => post.outpostId))]],
-  );
-  return new Set(rows.map((row) => row.id));
-}
-
-export function sendable(post: StoredPost, paused: ReadonlySet<string>): boolean {
-  return (
-    post.kind === 'request' &&
-    post.taskId === null &&
-    post.closedState === null &&
-    post.toConversationId !== null &&
-    !paused.has(post.outpostId)
-  );
-}
-
-function byCreation(a: StoredPost, b: StoredPost): number {
-  if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-}
-
 function errorName(error: unknown): string {
   return error instanceof Error ? error.name : 'unknown error';
 }
 
-export async function dispatchUnsent({ db, peer, unsentRequests }: DispatchDeps): Promise<number> {
-  const unsent = await unsentRequests(db);
-  const paused = await pausedOutposts(db, unsent);
+export async function dispatchUnsent(db: Db, peer: PeerAgent): Promise<number> {
   let sent = 0;
-  for (const post of unsent.filter((candidate) => sendable(candidate, paused)).sort(byCreation)) {
+  for (const post of await unsentRequests(db)) {
     if (post.toConversationId === null) continue;
     try {
       await peer.send({
@@ -71,7 +45,7 @@ export function startDispatcher(deps: DispatchDeps): Dispatcher {
     do {
       again = false;
       try {
-        await dispatchUnsent(deps);
+        await dispatchUnsent(deps.db, deps.peer);
       } catch (error) {
         console.error(`Outpost requests were not sent (${errorName(error)}).`);
       }

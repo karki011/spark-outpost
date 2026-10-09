@@ -3,7 +3,6 @@ import {
   needsYouLines,
   QUEUE_LIMIT,
   SPARK_TEXT_MAX,
-  type AppEvent,
   type RejectReason,
   type RunStatus,
 } from '@spark-outpost/contracts';
@@ -11,6 +10,7 @@ import { redactText, storableText } from '../audit/redact.ts';
 import { alreadySent } from './chat-queue.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { notifyOutpostChanged } from './outposts.ts';
 import { requestCancel } from './runs.ts';
 
 export interface ChatFacts {
@@ -34,7 +34,8 @@ export type AcceptRefusal =
   | 'other_chat'
   | 'id_taken'
   | 'empty'
-  | 'too_long';
+  | 'too_long'
+  | 'closed';
 
 export type AcceptOutcome =
   | { kind: 'accepted'; postId: string; taskId: string; queued: boolean }
@@ -108,16 +109,6 @@ export async function chatFacts(db: Queryable, chatId: string): Promise<ChatFact
     outpostName: row.outpost_name,
     projects: row.projects,
   };
-}
-
-async function notifyOutpost(db: Queryable, outpostId: string, chatId: string | null) {
-  const event: AppEvent = {
-    kind: 'outpost_changed',
-    conversationId: chatId,
-    runId: null,
-    outpostId,
-  };
-  await db.query(`SELECT pg_notify('changes', $1)`, [JSON.stringify(event)]);
 }
 
 async function lockChat(db: Queryable, chatId: string): Promise<{ archived: boolean } | null> {
@@ -218,10 +209,6 @@ async function deliver(
   archived: boolean,
 ): Promise<AcceptOutcome> {
   const taskId = newId();
-  if (post.closed_state !== null) {
-    await db.query('UPDATE outpost_posts SET task_id = $2 WHERE id = $1', [post.id, taskId]);
-    return { kind: 'accepted', postId: post.id, taskId, queued: false };
-  }
   const reason = deliveryProblem({
     archived,
     mayReceive: await mayReceive(db, post, chatId),
@@ -241,7 +228,11 @@ async function deliver(
   return { kind: 'accepted', postId: post.id, taskId, queued: true };
 }
 
-export function acceptTask(db: Db, chatId: string, request: InboundRequest): Promise<AcceptOutcome> {
+export function acceptTask(
+  db: Db,
+  chatId: string,
+  request: InboundRequest,
+): Promise<AcceptOutcome> {
   return withTransaction(db, async (client) => {
     const chat = await lockChat(client, chatId);
     if (!chat) return { kind: 'refused', why: 'no_chat' };
@@ -253,8 +244,9 @@ export function acceptTask(db: Db, chatId: string, request: InboundRequest): Pro
     if (post.task_id !== null) {
       return { kind: 'accepted', postId: post.id, taskId: post.task_id, queued: false };
     }
+    if (post.closed_state !== null) return { kind: 'refused', why: 'closed' };
     const outcome = await deliver(client, post, chatId, chat.archived);
-    await notifyOutpost(client, post.outpost_id, chatId);
+    await notifyOutpostChanged(client, post.outpost_id);
     return outcome;
   });
 }
@@ -322,7 +314,7 @@ export function cancelPost(db: Db, postId: string): Promise<CancelOutcome> {
       unqueued.rowCount === 1
         ? await closeCancelled(client, post.id)
         : await cancelCarried(client, post);
-    await notifyOutpost(client, post.outpost_id, post.to_conversation_id);
+    await notifyOutpostChanged(client, post.outpost_id);
     return outcome;
   });
 }

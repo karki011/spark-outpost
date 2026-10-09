@@ -15,7 +15,6 @@ import { TaskWakes } from '../src/a2a/task-wakes.ts';
 import { jsonBody } from '../src/api/json-body.ts';
 import { localRequestGuard, requireLaunchToken } from '../src/api/security.ts';
 import { listen } from '../src/persistence/notifications.ts';
-import { standInGetPost, standInReadAnswer } from './a2a-stand-ins.ts';
 import { testDatabaseUrl, type TestDb } from './support.ts';
 
 export const LAUNCH_TOKEN = 'test-launch-token-0123456789abcdefghijkl';
@@ -60,8 +59,6 @@ export async function startA2a(t: TestDb): Promise<A2aHarness> {
       workspaceId: t.workspaceId,
       fixedRunProvider: 'fake',
       port,
-      getPost: standInGetPost,
-      readAnswer: standInReadAnswer,
       wakes,
     }),
   );

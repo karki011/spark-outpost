@@ -33,7 +33,7 @@ import {
   replyRow,
   requestRow,
   setRunStatus,
-} from './a2a-stand-ins.ts';
+} from './a2a-fixtures.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;

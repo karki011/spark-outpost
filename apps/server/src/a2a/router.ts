@@ -3,13 +3,13 @@ import { jsonRpcHandler, UserBuilder } from '@a2a-js/sdk/server/express';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { resolveRunTarget } from '../api/run-target.ts';
-import type { PostStore } from '../outposts/ports.ts';
 import type { Db } from '../persistence/db.ts';
+import { getPost, requestAnswer } from '../persistence/outpost-posts.ts';
 import { chatFacts } from '../persistence/outpost-tasks.ts';
 import { drainQueue } from '../workflow/queue-drain.ts';
 import { stopRun } from '../workflow/stop-run.ts';
 import { a2aBaseUrl, agentCard } from './agent-card.ts';
-import { outpostRequestHandler, type HandlerDeps, type ReadAnswer } from './request-handler.ts';
+import { outpostRequestHandler, type HandlerDeps } from './request-handler.ts';
 import type { TaskWakes } from './task-wakes.ts';
 
 export interface A2aRouteOptions {
@@ -17,15 +17,8 @@ export interface A2aRouteOptions {
   workspaceId: string;
   fixedRunProvider?: string;
   port: number;
-  getPost: PostStore['getPost'];
-  readAnswer: ReadAnswer;
   wakes: TaskWakes;
 }
-
-export const A2A_ROUTES = [
-  `GET /chats/:chatId/${AGENT_CARD_PATH}`,
-  'POST /chats/:chatId',
-] as const;
 
 const chatParam = z.uuid();
 
@@ -50,8 +43,8 @@ export function a2aRoutes(options: A2aRouteOptions): Router {
   const deps: HandlerDeps = {
     db,
     baseUrl: a2aBaseUrl(options.port),
-    getPost: options.getPost,
-    readAnswer: options.readAnswer,
+    getPost,
+    readAnswer: (queryable, request) => requestAnswer(queryable, workspaceId, request),
     wakes: options.wakes,
     drain: (conversationId) =>
       drainQueue(db, conversationId, (id) =>

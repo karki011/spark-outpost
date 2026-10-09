@@ -86,9 +86,7 @@ function answerArtifacts(answer: OutpostAnswer | null): Artifact[] {
     artifacts.push(textArtifact('branch', 'Branch', redactText(answer.branch)));
   }
   if (answer.changes.length > 0) {
-    artifacts.push(
-      textArtifact('changes', 'Changed files', redactText(answer.changes.join('\n'))),
-    );
+    artifacts.push(textArtifact('changes', 'Changed files', redactText(answer.changes.join('\n'))));
   }
   if (answer.pullRequests.length > 0) {
     artifacts.push(

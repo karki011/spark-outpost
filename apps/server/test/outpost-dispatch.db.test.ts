@@ -1,20 +1,10 @@
 import type { AppEvent } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { dispatchUnsent, sendable, startDispatcher } from '../src/a2a/dispatcher.ts';
-import type {
-  OutboundRequest,
-  PeerAgent,
-  SendOutcome,
-  StoredPost,
-} from '../src/outposts/ports.ts';
+import { dispatchUnsent, startDispatcher } from '../src/a2a/dispatcher.ts';
+import type { PeerAgent, SendOutcome } from '../src/outposts/ports.ts';
 import { acceptTask } from '../src/persistence/outpost-tasks.ts';
-import {
-  memberChat,
-  outpostRow,
-  postColumns,
-  requestRow,
-  standInUnsentRequests,
-} from './a2a-stand-ins.ts';
+import { memberChat, outpostRow, postColumns, requestRow } from './a2a-fixtures.ts';
+import { fakePeerAgent } from './fake-peer-agent.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -31,20 +21,11 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-interface FakePeer extends PeerAgent {
-  sent: OutboundRequest[];
-  failing: Set<string>;
-}
-
-function acceptingPeer(): FakePeer {
-  const sent: OutboundRequest[] = [];
+function acceptingPeer() {
   const failing = new Set<string>();
-  return {
-    sent,
-    failing,
+  const peer = fakePeerAgent({
     async send(request): Promise<SendOutcome> {
       if (failing.has(request.postId)) throw new Error('connection refused');
-      sent.push(request);
       const outcome = await acceptTask(t.db, request.toConversationId, {
         messageId: request.postId,
         contextId: request.outpostId,
@@ -56,13 +37,12 @@ function acceptingPeer(): FakePeer {
         task: { taskId: outcome.taskId, state: 'sent', reason: null },
       };
     },
-    get: () => Promise.reject(new Error('The dispatcher never reads a task.')),
-    cancel: () => Promise.reject(new Error('The dispatcher never cancels a task.')),
-  };
+  });
+  return Object.assign(peer, { failing });
 }
 
 function deps(peer: PeerAgent) {
-  return { db: t.db, peer, unsentRequests: standInUnsentRequests };
+  return { db: t.db, peer };
 }
 
 function request(body: string, toConversationId = api, toHandle = 'api') {
@@ -79,14 +59,14 @@ describe('sending unsent requests', () => {
     const third = await request('third');
     const peer = acceptingPeer();
 
-    expect(await dispatchUnsent(deps(peer))).toBe(3);
+    expect(await dispatchUnsent(t.db, peer)).toBe(3);
 
     expect(peer.sent).toEqual([
       { postId: first, outpostId, toConversationId: api, body: 'first' },
       { postId: second, outpostId, toConversationId: web, body: 'second' },
       { postId: third, outpostId, toConversationId: api, body: 'third' },
     ]);
-    expect(await dispatchUnsent(deps(peer))).toBe(0);
+    expect(await dispatchUnsent(t.db, peer)).toBe(0);
     expect(peer.sent).toHaveLength(3);
   });
 
@@ -102,12 +82,12 @@ describe('sending unsent requests', () => {
     await t.db.query('UPDATE outposts SET paused_at = now() WHERE id = $1', [outpostId]);
     const peer = acceptingPeer();
 
-    expect(await dispatchUnsent(deps(peer))).toBe(1);
+    expect(await dispatchUnsent(t.db, peer)).toBe(1);
     expect(peer.sent.map((sent) => sent.postId)).toEqual([free]);
     expect((await postColumns(t.db, held))?.task_id).toBeNull();
 
     await t.db.query('UPDATE outposts SET paused_at = NULL WHERE id = $1', [outpostId]);
-    expect(await dispatchUnsent(deps(peer))).toBe(1);
+    expect(await dispatchUnsent(t.db, peer)).toBe(1);
     expect(peer.sent.map((sent) => sent.postId)).toEqual([free, held]);
   });
 
@@ -117,13 +97,15 @@ describe('sending unsent requests', () => {
     const peer = acceptingPeer();
     peer.failing.add(broken);
 
-    expect(await dispatchUnsent(deps(peer))).toBe(1);
-    expect(peer.sent.map((sent) => sent.postId)).toEqual([fine]);
+    expect(await dispatchUnsent(t.db, peer)).toBe(1);
+    expect(peer.sent.map((sent) => sent.postId)).toEqual([broken, fine]);
     expect((await postColumns(t.db, broken))?.task_id).toBeNull();
+    expect((await postColumns(t.db, fine))?.task_id).not.toBeNull();
 
     peer.failing.clear();
-    expect(await dispatchUnsent(deps(peer))).toBe(1);
-    expect(peer.sent.map((sent) => sent.postId)).toEqual([fine, broken]);
+    expect(await dispatchUnsent(t.db, peer)).toBe(1);
+    expect(peer.sent.map((sent) => sent.postId)).toEqual([broken, fine, broken]);
+    expect((await postColumns(t.db, broken))?.task_id).not.toBeNull();
   });
 
   it('does not send a request that was closed, or one whose chat was deleted', async () => {
@@ -137,7 +119,7 @@ describe('sending unsent requests', () => {
     await t.db.query('DELETE FROM conversations WHERE id = $1', [web]);
     const peer = acceptingPeer();
 
-    expect(await dispatchUnsent(deps(peer))).toBe(0);
+    expect(await dispatchUnsent(t.db, peer)).toBe(0);
     expect(peer.sent).toEqual([]);
   });
 
@@ -146,18 +128,9 @@ describe('sending unsent requests', () => {
     const postId = await request('to an archived chat');
     const peer = acceptingPeer();
 
-    expect(await dispatchUnsent(deps(peer))).toBe(1);
-    expect(await dispatchUnsent(deps(peer))).toBe(0);
+    expect(await dispatchUnsent(t.db, peer)).toBe(1);
+    expect(await dispatchUnsent(t.db, peer)).toBe(0);
     expect((await postColumns(t.db, postId))?.closed_state).toBe('rejected');
-  });
-
-  it('decides what is sendable from the row alone', () => {
-    const post = { kind: 'request', taskId: null, closedState: null, toConversationId: api };
-    const row = { ...post, outpostId } as StoredPost;
-    expect(sendable(row, new Set())).toBe(true);
-    expect(sendable(row, new Set([outpostId]))).toBe(false);
-    expect(sendable({ ...row, taskId: outpostId }, new Set())).toBe(false);
-    expect(sendable({ ...row, kind: 'note' }, new Set())).toBe(false);
   });
 });
 
