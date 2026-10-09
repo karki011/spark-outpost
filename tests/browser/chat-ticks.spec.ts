@@ -7,6 +7,7 @@ import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import {
   COLUMN,
+  INDENT,
   PROMPTS,
   SHOTS,
   ask,
@@ -90,14 +91,15 @@ test.describe('plain chats', () => {
     const railBox = (await rail(page).boundingBox())!;
     expect(Math.abs(column.width - COLUMN)).toBeLessThan(1);
     for (const block of [table, longCode, shortCode]) {
-      expect(Math.abs(block.x - column.x)).toBeLessThan(2);
-      expect(Math.abs(block.width - column.width)).toBeLessThan(2);
+      expect(Math.abs(block.x - column.x - INDENT)).toBeLessThan(2);
+      expect(Math.abs(block.x + block.width - column.x - column.width)).toBeLessThan(2);
       expect(block.x + block.width).toBeLessThan(railBox.x);
     }
     const composer = (await page.locator('.composer').boundingBox())!;
     expect(Math.abs(composer.width - column.width)).toBeLessThan(2);
     const prose = (await page.locator('.md p').first().boundingBox())!;
-    expect(Math.abs(prose.width - column.width)).toBeLessThan(2);
+    expect(Math.abs(prose.x - column.x - INDENT)).toBeLessThan(2);
+    expect(Math.abs(prose.x + prose.width - column.x - column.width)).toBeLessThan(2);
     expect(await pageScroll(page)).toBe(0);
 
     await ticks(page).nth(1).focus();

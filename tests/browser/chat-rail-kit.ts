@@ -5,6 +5,7 @@ import { openChats } from './navigation.ts';
 export const SHOTS = process.env.CHAT_WIDE_SHOTS ?? 'test-results/chat-rail';
 export const WIDE = { width: 2000, height: 1100 };
 export const COLUMN = 880;
+export const INDENT = 38;
 export const PROMPTS = [
   'Fix the date divider #plan',
   'Compare the queue backends in a table',
@@ -135,6 +136,7 @@ export async function columnEdges(page: Page) {
       column: edges('.col'),
       prose: edges('.col .md > p'),
       head: edges('.col .ai-head'),
+      name: edges('.col .ai-head .provider-name'),
       foot: edges('.col .turn-foot'),
       table: edges('.col .md-table'),
       composer: edges('.composer'),
