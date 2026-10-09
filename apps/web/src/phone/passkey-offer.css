@@ -1,0 +1,54 @@
+.passkey-offer {
+  position: fixed;
+  top: 66px;
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--muted);
+  transform: translateX(-50%);
+}
+.passkey-offer p {
+  margin: 0;
+  padding: 3px 0;
+  line-height: 1.45;
+}
+.passkey-offer-save {
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.passkey-offer-save:disabled {
+  color: var(--muted);
+}
+.passkey-offer-problem {
+  color: var(--danger);
+}
+.passkey-offer-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+.passkey-offer-close:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+@media (pointer: coarse) {
+  .passkey-offer-close {
+    width: 44px;
+    height: 44px;
+  }
+}

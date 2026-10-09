@@ -66,6 +66,7 @@ function matchedRoutes(method: string, path: string): { route: string; rule: Rem
 function refusal(rule: RemoteRule, switches: RemoteSwitches): string | null {
   if (rule === 'always' || rule === 'pairing') return null;
   if (rule === 'never') return 'This is only available on your Mac.';
+  if (rule === 'passkey') return switches.passkeys ? null : switchRefusal('passkeys');
   return switches[rule] ? null : switchRefusal(rule);
 }
 
@@ -81,7 +82,7 @@ export function remoteDecision(
     const reason = refusal(rule, switches);
     if (reason) return { kind: 'refuse', reason };
   }
-  const pairing = matched.filter(({ rule }) => rule === 'pairing').length;
+  const pairing = matched.filter(({ rule }) => rule === 'pairing' || rule === 'passkey').length;
   if (pairing === matched.length) return { kind: 'pairing' };
   if (pairing > 0) return { kind: 'refuse', reason: 'This is only available on your Mac.' };
   const blockedFields = switches.agentMode

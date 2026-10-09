@@ -97,6 +97,8 @@ describe('never from a phone', () => {
     await phone.get('/api/remote/audit').expect(403);
     await phone.send('delete', `/api/remote/devices/${device.id}`).expect(403);
     await phone.send('post', '/api/remote/devices/disconnect-all').expect(403);
+    await phone.send('delete', `/api/remote/devices/${device.id}/passkeys`).expect(403);
+    await phone.send('patch', '/api/remote/switches', { passkeys: true }).expect(403);
     await phone.send('put', '/api/remote/access', { hostname: 'evil.example.com' }).expect(403);
     await phone.get('/api/remote/tailscale').expect(403);
     await phone.send('post', '/api/remote/tailscale/on').expect(403);
@@ -125,6 +127,7 @@ describe('never from a phone', () => {
       signIns: true,
       reset: true,
       devices: true,
+      passkeys: true,
     });
     await phone.send('post', '/api/terminal/sessions').expect(403);
     await phone.send('post', '/api/remote/pairings').expect(403);
@@ -144,6 +147,7 @@ describe('switches', () => {
       signIns: true,
       reset: true,
       devices: false,
+      passkeys: true,
     });
   });
 

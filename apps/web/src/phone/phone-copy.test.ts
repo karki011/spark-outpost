@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { RemoteAuditEntry, TailscaleState } from '@spark-outpost/contracts';
-import { activityDetail, activityLine, statusCopy } from './phone-copy.ts';
+import type { RemoteAuditEntry, RemotePasskey, TailscaleState } from '@spark-outpost/contracts';
+import { activityDetail, activityLine, passkeySummary, statusCopy } from './phone-copy.ts';
 
 function state(change: Partial<TailscaleState>): TailscaleState {
   return { status: 'off', hostname: null, address: null, message: null, ...change };
@@ -67,10 +67,58 @@ describe('activity', () => {
     expect(shown('unused', 'Pixel')).toBe('Pixel asked to pair again (not used for 30 days)');
   });
 
+  it('says what happened with passkeys, and flags a use count that went backwards', () => {
+    const line = (action: RemoteAuditEntry['action'], detail = {}, deviceName = 'Pixel') =>
+      activityLine(entry({ action, deviceName, detail }));
+    expect(line('device_passkey_added')).toBe('Pixel saved a passkey');
+    expect(line('device_passkey_sign_in')).toBe('Pixel signed in with a passkey');
+    expect(line('device_passkey_sign_in', { counter: 'regressed' })).toBe(
+      'Pixel signed in with a passkey. Its use count went backwards: remove its passkeys if this was not you',
+    );
+    expect(line('device_passkeys_removed', { count: 2 })).toBe('Passkeys removed for Pixel');
+    expect(line('passkey_sign_in_failed', { reason: 'verification' })).toBe(
+      'A passkey sign-in for Pixel was refused',
+    );
+    expect(line('passkey_sign_in_failed', { reason: 'device_unused' })).toBe(
+      'A passkey sign-in for Pixel was refused (not used for 30 days)',
+    );
+    expect(
+      activityLine(
+        entry({ action: 'passkey_sign_in_failed', detail: { reason: 'unknown_credential' } }),
+      ),
+    ).toBe('A passkey sign-in was refused');
+  });
+
   it('shows the request and its result when there is one', () => {
     expect(activityDetail(entry({ method: 'POST', path: '/api/reset', status: 403 }))).toBe(
       'POST /api/reset · 403',
     );
     expect(activityDetail(entry({ action: 'device_paired' }))).toBeNull();
+  });
+});
+
+describe('a device passkeys line', () => {
+  const passkey = (change: Partial<RemotePasskey>): RemotePasskey => ({
+    id: '11111111-1111-4111-8111-111111111111',
+    label: null,
+    synced: false,
+    createdAt: '2026-10-06T10:00:00',
+    lastUsedAt: null,
+    ...change,
+  });
+
+  it('is absent without a passkey', () => {
+    expect(passkeySummary([])).toBeNull();
+  });
+
+  it('counts them, names the managers, dates the newest and says when one is synced', () => {
+    expect(passkeySummary([passkey({})])).toMatch(/^1 passkey · added \S+ \S+$/);
+    const two = passkeySummary([
+      passkey({ label: 'Google Password Manager', synced: true }),
+      passkey({ createdAt: '2026-10-08T10:00:00' }),
+    ]);
+    expect(two).toMatch(
+      /^2 passkeys · Google Password Manager · added .*8.* · synced to other devices$/,
+    );
   });
 });

@@ -16,6 +16,7 @@ export const remoteSwitchSchema = z.enum([
   'signIns',
   'reset',
   'devices',
+  'passkeys',
 ]);
 export type RemoteSwitch = z.infer<typeof remoteSwitchSchema>;
 
@@ -28,6 +29,7 @@ export const remoteSwitchesSchema = z.object({
   signIns: z.boolean(),
   reset: z.boolean(),
   devices: z.boolean(),
+  passkeys: z.boolean(),
 });
 export type RemoteSwitches = z.infer<typeof remoteSwitchesSchema>;
 
@@ -40,9 +42,11 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   signIns: true,
   reset: true,
   devices: false,
+  passkeys: true,
 };
 
 export const REMOTE_MAC_ONLY_SWITCHES: readonly RemoteSwitch[] = ['devices'];
+export const REMOTE_SIGN_IN_SWITCHES: readonly RemoteSwitch[] = ['passkeys'];
 
 export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   settings: 'Change settings',
@@ -53,6 +57,7 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   signIns: 'Add, change and approve saved sign-ins',
   reset: 'Reset or delete data',
   devices: 'Pair another device and manage devices',
+  passkeys: 'Sign in with a passkey',
 };
 
 export const updateRemoteSwitchesRequestSchema = remoteSwitchesSchema
@@ -83,6 +88,18 @@ export type UpdateRemoteAccessRequest = z.infer<typeof updateRemoteAccessRequest
 
 const deviceName = z.string().trim().min(1).max(REMOTE_DEVICE_NAME_MAX);
 
+export const remotePasskeySchema = z.object({
+  id: z.uuid(),
+  label: z.string().nullable(),
+  synced: z.boolean(),
+  createdAt: z.string(),
+  lastUsedAt: z.string().nullable(),
+});
+export type RemotePasskey = z.infer<typeof remotePasskeySchema>;
+
+export const remotePasskeyListSchema = z.object({ passkeys: z.array(remotePasskeySchema) });
+export type RemotePasskeyList = z.infer<typeof remotePasskeyListSchema>;
+
 export const remoteDeviceSchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -93,6 +110,7 @@ export const remoteDeviceSchema = z.object({
   duplicateOf: z.uuid().nullable(),
   expired: z.boolean(),
   connected: z.boolean(),
+  passkeys: z.array(remotePasskeySchema),
 });
 export type RemoteDevice = z.infer<typeof remoteDeviceSchema>;
 
@@ -180,6 +198,10 @@ export const remoteAuditActionSchema = z.enum([
   'device_renamed',
   'device_revoked',
   'devices_disconnected',
+  'device_passkey_added',
+  'device_passkey_sign_in',
+  'device_passkeys_removed',
+  'passkey_sign_in_failed',
   'request',
   'refused',
 ]);

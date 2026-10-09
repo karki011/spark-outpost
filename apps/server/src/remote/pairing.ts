@@ -5,15 +5,15 @@ import {
   type PairingStart,
   type PendingPairing,
 } from '@spark-outpost/contracts';
+import { AttemptWindow, RateLimitError } from './attempt-window.ts';
 import { newSecret, secretHash } from './session.ts';
 
 const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const CODE_GROUP = 4;
 const START_LIMIT = 5;
 const SUBMIT_LIMIT = 5;
-const LIMIT_WINDOW_MS = 60_000;
 
-export class PairingRateLimitError extends Error {
+export class PairingRateLimitError extends RateLimitError {
   constructor() {
     super('Too many pairing attempts. Wait a minute and try again.');
   }
@@ -60,30 +60,15 @@ function newMatchCode(): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
-class AttemptWindow {
-  private attempts: number[] = [];
-
-  constructor(
-    private readonly limit: number,
-    private readonly now: () => number,
-  ) {}
-
-  take(): void {
-    const since = this.now() - LIMIT_WINDOW_MS;
-    this.attempts = this.attempts.filter((at) => at > since);
-    if (this.attempts.length >= this.limit) throw new PairingRateLimitError();
-    this.attempts.push(this.now());
-  }
-}
-
 export class Pairings {
   private readonly entries = new Map<string, Entry>();
   private readonly starts: AttemptWindow;
   private readonly submits: AttemptWindow;
 
   constructor(private readonly now: () => number = Date.now) {
-    this.starts = new AttemptWindow(START_LIMIT, now);
-    this.submits = new AttemptWindow(SUBMIT_LIMIT, now);
+    const refusal = () => new PairingRateLimitError();
+    this.starts = new AttemptWindow(START_LIMIT, now, refusal);
+    this.submits = new AttemptWindow(SUBMIT_LIMIT, now, refusal);
   }
 
   start(): PairingStart {

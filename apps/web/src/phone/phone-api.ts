@@ -1,16 +1,21 @@
 import {
   pairingStartSchema,
+  passkeyCreationOptionsSchema,
   pendingPairingListSchema,
   remoteAuditListSchema,
   remoteDeviceListSchema,
   remoteDeviceSchema,
+  remotePasskeyListSchema,
   remoteSessionSchema,
   remoteSwitchesSchema,
   tailscaleStateSchema,
   type PairingStart,
+  type PasskeyCreationOptions,
+  type PasskeyRegistration,
   type PendingPairing,
   type RemoteAuditEntry,
   type RemoteDevice,
+  type RemotePasskey,
   type RemoteSession,
   type RemoteSwitches,
   type TailscaleState,
@@ -24,6 +29,7 @@ export const phoneKeys = {
   devices: ['phone', 'devices'] as const,
   pairings: ['phone', 'pairings'] as const,
   audit: ['phone', 'audit'] as const,
+  passkeys: ['phone', 'passkeys'] as const,
 };
 
 const post = { method: 'POST', body: '{}' };
@@ -56,4 +62,21 @@ export const phoneApi = {
     }),
   audit: async (): Promise<RemoteAuditEntry[]> =>
     (await request(remoteAuditListSchema, '/remote/audit')).entries,
+  removePasskeys: async (deviceId: string): Promise<RemoteDevice[]> =>
+    (
+      await request(remoteDeviceListSchema, `/remote/devices/${deviceId}/passkeys`, {
+        method: 'DELETE',
+      })
+    ).devices,
+  passkeys: async (): Promise<RemotePasskey[]> =>
+    (await request(remotePasskeyListSchema, '/remote/passkeys')).passkeys,
+  passkeyOptions: (): Promise<PasskeyCreationOptions> =>
+    request(passkeyCreationOptionsSchema, '/remote/passkeys/options', post),
+  savePasskey: async (registration: PasskeyRegistration): Promise<RemotePasskey[]> =>
+    (
+      await request(remotePasskeyListSchema, '/remote/passkeys', {
+        method: 'POST',
+        body: JSON.stringify(registration),
+      })
+    ).passkeys,
 };

@@ -33,6 +33,11 @@ export const PAIRING_PAGE_STYLES = `
   button:focus-visible { outline: none;
     box-shadow: inset 0 0 0 2px var(--accent-ink), 0 0 0 1px var(--accent); }
   button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.quiet { color: var(--text); background: transparent;
+    border: 1px solid var(--line-strong); }
+  button.quiet:focus-visible { border-color: var(--accent); box-shadow: var(--focus-ring); }
+  #passkey { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .or { margin: 0 0 8px; font-size: 13px; }
   [hidden] { display: none; }
   .match { margin: 0 0 4px; font-size: 34px; line-height: 1.1; letter-spacing: 0.08em;
     font-variant-numeric: tabular-nums; color: var(--text); }
