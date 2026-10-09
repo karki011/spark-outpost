@@ -126,7 +126,16 @@ function policyBlocked(answer: GateAnswer): GateAnswer {
   return { ...answer, denial: policyDenial(answer.note) };
 }
 
-export function createApprovalGate(deps: GateDeps): PermissionGate {
+export interface ApprovalGate extends PermissionGate {
+  raise(
+    card: NewApproval,
+    request: ApprovalRequest,
+    signal: AbortSignal,
+    asked: (approvalId: string) => void,
+  ): Promise<GateAnswer>;
+}
+
+export function createApprovalGate(deps: GateDeps): ApprovalGate {
   const grants = new Set<string>();
   let waiting = 0;
 
@@ -292,23 +301,14 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     };
   };
 
-  const ask = async (
+  const raise = async (
+    card: NewApproval,
     request: ApprovalRequest,
-    reason: string | null,
     signal: AbortSignal,
-    asking: Asking,
+    asked: (approvalId: string) => void,
   ): Promise<GateAnswer> => {
-    const pending = await insertApproval(deps.db, newApproval(request, reason, asking));
-    observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
-    if (asking.observed) {
-      deps.observations?.egressAsked({
-        approvalId: pending.id,
-        subject: subject(request),
-        reason,
-        observed: asking.observed,
-        sendsTo: asking.sendsTo,
-      });
-    }
+    const pending = await insertApproval(deps.db, card);
+    asked(pending.id);
     waiting += 1;
     let result: WaitResult;
     try {
@@ -319,7 +319,26 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     } finally {
       waiting -= 1;
     }
-    const answer = await settle(pending, result, request);
+    return settle(pending, result, request);
+  };
+
+  const ask = async (
+    request: ApprovalRequest,
+    reason: string | null,
+    signal: AbortSignal,
+    asking: Asking,
+  ): Promise<GateAnswer> => {
+    const answer = await raise(newApproval(request, reason, asking), request, signal, (id) => {
+      observe(request, { verdict: 'ask', by: null, approvalId: id });
+      if (!asking.observed) return;
+      deps.observations?.egressAsked({
+        approvalId: id,
+        subject: subject(request),
+        reason,
+        observed: asking.observed,
+        sendsTo: asking.sendsTo,
+      });
+    });
     const secretAllowed = asking.secretFiles !== undefined && answer.outcome === 'selected';
     return secretAllowed ? readSecrets(answer, secretLabels(request)) : answer;
   };
@@ -425,5 +444,5 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     return answer;
   };
 
-  return { review };
+  return { review, raise };
 }
