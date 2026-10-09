@@ -31,4 +31,3 @@ What changed recently in Spark, newest first.
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                           | Answer in your next message.                |
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
 | Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |
-| New chats start on **Auto**. Builders and pieces stay on the chat's provider. **Settings → Models** is a table.                     | See [model routing](model-routing.md).      |

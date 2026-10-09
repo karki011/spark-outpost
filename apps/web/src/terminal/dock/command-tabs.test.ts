@@ -8,6 +8,7 @@ import {
   mirrorBody,
   mirroredCommand,
   mirrorEnding,
+  mirrorFolder,
   mirrorStatus,
   needsSavedOutput,
 } from './command-tabs.ts';
@@ -99,6 +100,15 @@ describe('what the tab says', () => {
     expect(commandTabLabel(null, 'vitest  --watch\n')).toBe('Agent · vitest --watch');
     const long = commandTabLabel('Codex', `pnpm test ${'x'.repeat(60)}`);
     expect(long).toBe(`Codex · pnpm test ${'x'.repeat(21)}…`);
+  });
+
+  it('shows the folder the chat works in instead of a project-relative one', () => {
+    expect(mirrorFolder('./', '/Users/me/widgets')).toBe('/Users/me/widgets');
+    expect(mirrorFolder('./apps/web', '/Users/me/widgets/')).toBe('/Users/me/widgets/apps/web');
+    expect(mirrorFolder('./', null)).toBe('./');
+    expect(mirrorFolder('~/notes', '/Users/me/widgets')).toBe('~/notes');
+    expect(mirrorFolder('/tmp/build', '/Users/me/widgets')).toBe('/tmp/build');
+    expect(mirrorFolder(null, '/Users/me/widgets')).toBeNull();
   });
 
   it('lights the tab while the command runs', () => {

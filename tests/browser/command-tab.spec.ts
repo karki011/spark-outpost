@@ -181,7 +181,7 @@ test('shell and preview tabs still work next to an agent tab', async ({ page }) 
     await openButton(box).click();
     await expect(agentTab(page, PASS)).toHaveAttribute('aria-pressed', 'true');
     await expect(rows(pane(page))).toContainText('Tests 23 passed');
-    await expect(dock(page).locator('.term-where')).toHaveText('./');
+    await expect(dock(page).locator('.term-where')).toHaveText(root);
 
     await dock(page).getByRole('button', { name: 'New terminal' }).click();
     const shellTab = dock(page).getByRole('button', { name: `my files · ${name}`, exact: true });

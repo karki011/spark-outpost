@@ -56,6 +56,15 @@ export function commandTabLabel(agent: string | null, command: string): string {
   return `${agent ?? UNKNOWN_AGENT} · ${short}`;
 }
 
+const PROJECT_RELATIVE = /^\.\/(.*)$/;
+
+export function mirrorFolder(cwd: string | null, workFolder: string | null): string | null {
+  const inProject = cwd ? PROJECT_RELATIVE.exec(cwd) : null;
+  if (!inProject || !workFolder) return cwd;
+  const base = workFolder.replace(/\/+$/, '');
+  return inProject[1] ? `${base}/${inProject[1]}` : base;
+}
+
 export function mirrorStatus(command: CommandView | null, searching: boolean): MirrorStatus {
   if (command) return command.status === 'running' ? 'open' : 'ended';
   return searching ? 'starting' : 'ended';

@@ -8,6 +8,7 @@ import type { LiveCommand } from '../../chat/commands/command-model.ts';
 const CHAT = 'chat-a';
 const RUN = '01990000-0000-7000-8000-0000000000aa';
 const ID = '01990000-0000-7000-8000-000000000001';
+const PROJECT = '01990000-0000-7000-8000-0000000000b1';
 
 const stream = { status: 'connecting', commands: [] as LiveCommand[] };
 const streams: { runId: string; live: boolean }[] = [];
@@ -58,6 +59,8 @@ vi.mock('../terminal-connection.ts', () => ({
 }));
 
 const { queryKeys } = await import('../../api/client.ts');
+const { projectKeys } = await import('../../api/projects.ts');
+const { workspaceKeys } = await import('../../chat/project/use-chat-workspace.ts');
 const { TerminalDock } = await import('./TerminalDock.tsx');
 const store = await import('./shell-store.ts');
 
@@ -91,17 +94,31 @@ function liveCommand(change: Partial<LiveCommand> = {}): LiveCommand {
 
 function detailWith(commands: CommandRun[], runStatus = 'running') {
   return {
-    conversation: { id: CHAT },
+    conversation: { id: CHAT, projectIds: [PROJECT] },
     runs: [{ id: RUN, provider: 'claude', status: runStatus, parentRunId: null }],
     commands,
   } as unknown as ConversationDetail;
 }
 
-function renderDock(detail: ConversationDetail) {
+interface Folders {
+  worktree?: string;
+  project?: string;
+}
+
+function renderDock(detail: ConversationDetail, folders: Folders = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
   client.setQueryData(queryKeys.conversation(CHAT), detail);
+  client.setQueryData(workspaceKeys.chat(CHAT), {
+    place: 'worktree',
+    requestedBranch: null,
+    current: folders.worktree ? { path: folders.worktree } : null,
+  });
+  client.setQueryData(
+    projectKeys.all,
+    folders.project ? [{ id: PROJECT, rootPath: folders.project }] : [],
+  );
   const tree = () => (
     <QueryClientProvider client={client}>
       <TerminalDock chatId={CHAT} />
@@ -204,6 +221,28 @@ describe('mirror tab', () => {
     expect(streams.every((call) => !call.live)).toBe(true);
     expect(within(pane()).getByRole('status').textContent).toBe('Finished, exit code 0.');
     expect(store.chatOf(CHAT).tabs[0]!.cwd).toBe('/Users/me/widgets');
+  });
+
+  it('shows the project folder in the dock header for a command run in the project', async () => {
+    renderDock(detailWith([savedCommand({ cwd: './' })], 'succeeded'), {
+      project: '/Users/me/widgets',
+    });
+    openTab();
+    await waitFor(() => expect(store.chatOf(CHAT).tabs[0]!.cwd).toBe('/Users/me/widgets'));
+    expect(document.querySelector('.term-where')?.textContent).toBe('/Users/me/widgets');
+  });
+
+  it('shows the chat’s worktree folder when the chat works in one', async () => {
+    renderDock(detailWith([savedCommand({ cwd: './apps/web' })], 'succeeded'), {
+      project: '/Users/me/widgets',
+      worktree: '/Users/me/.spark/worktrees/widgets-a1',
+    });
+    openTab();
+    await waitFor(() =>
+      expect(store.chatOf(CHAT).tabs[0]!.cwd).toBe(
+        '/Users/me/.spark/worktrees/widgets-a1/apps/web',
+      ),
+    );
   });
 
   it('says output shows at the end for an agent that reports it once', () => {

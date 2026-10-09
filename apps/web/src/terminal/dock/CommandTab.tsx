@@ -7,6 +7,8 @@ import type { CommandView } from '../../chat/commands/command-model.ts';
 import { CommandScreen } from '../../chat/commands/CommandScreen.tsx';
 import { Elapsed, stateText, StatusMark } from '../../chat/commands/CommandStatus.tsx';
 import '../../chat/commands/command-terminal.css';
+import { useLinkedProjects } from '../../chat/project/use-chat-repos.ts';
+import { useChatWorkspace } from '../../chat/project/use-chat-workspace.ts';
 import { providerName } from '../../chat/provider-name.ts';
 import { activeRuns } from '../../chat/turns.ts';
 import { useRunStream } from '../../chat/use-run-stream.ts';
@@ -23,6 +25,7 @@ import {
   mirrorBody,
   mirroredCommand,
   mirrorEnding,
+  mirrorFolder,
   mirrorStatus,
   needsSavedOutput,
   type MirroredCommand,
@@ -30,6 +33,7 @@ import {
 import { syncCommandTab, type ShellTab } from './shell-store.ts';
 
 const untouched = () => undefined;
+const NO_PROJECTS: readonly string[] = [];
 
 function MirrorHead({ command }: { command: CommandView }) {
   return (
@@ -82,7 +86,10 @@ function Mirror({
     ? commandTabLabel(provider && providerName(provider), command.command)
     : null;
   const status = mirrorStatus(command, searching);
-  const cwd = command?.cwd ?? null;
+  const workspace = useChatWorkspace(chatId);
+  const linked = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_PROJECTS);
+  const workFolder = workspace.data?.current?.path ?? linked[0]?.rootPath ?? null;
+  const cwd = mirrorFolder(command?.cwd ?? null, workFolder);
   useEffect(() => {
     syncCommandTab(chatId, tabId, { label: label ?? (searching ? null : 'Command'), cwd, status });
   }, [chatId, tabId, label, cwd, status, searching]);
