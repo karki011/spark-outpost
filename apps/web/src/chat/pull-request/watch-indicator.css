@@ -93,7 +93,7 @@
     display: none;
   }
 
-  .prw-control .btog {
+  .prw-control .btog.sm {
     width: 44px;
     height: 44px;
   }
