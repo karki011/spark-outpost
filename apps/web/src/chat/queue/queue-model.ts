@@ -18,6 +18,10 @@ export function queueNote(mode: QueueMode, count: number): string {
   return count === 1 ? 'Sends when this turn ends' : 'Send in order when this turn ends';
 }
 
+export function canEdit(item: Pick<QueuedMessage, 'outpostPostId'>): boolean {
+  return !item.outpostPostId;
+}
+
 export function movedIds(
   items: readonly Pick<QueuedMessage, 'id'>[],
   id: string,

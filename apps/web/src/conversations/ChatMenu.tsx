@@ -1,5 +1,5 @@
-import { useState, type KeyboardEvent } from 'react';
-import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import {
   ArchiveIcon,
   ArrowDownIcon,
@@ -16,7 +16,21 @@ import {
   TrashIcon,
   UnpinIcon,
 } from '../ui/icons.tsx';
+import {
+  AddToOutpostItem,
+  HandlePick,
+  OutpostPick,
+  type AddToOutpostActions,
+} from './AddToOutpost.tsx';
 import { MenuItem as Item, MenuShell, type MenuAnchor } from './MenuShell.tsx';
+
+type Page = 'main' | 'move' | 'outposts' | 'handle';
+
+const BACK_FROM: Record<Exclude<Page, 'main'>, Page> = {
+  move: 'main',
+  outposts: 'main',
+  handle: 'outposts',
+};
 
 export interface ChatMenuActions {
   onRename: () => void;
@@ -34,6 +48,7 @@ interface ChatMenuProps extends ChatMenuActions {
   chat: ConversationSummary;
   anchor: MenuAnchor;
   projects: readonly Project[];
+  outposts?: AddToOutpostActions | undefined;
   onClose: () => void;
 }
 
@@ -41,15 +56,20 @@ export function ChatMenu({
   chat,
   anchor,
   projects,
+  outposts,
   onClose,
   onMoveUp,
   onMoveDown,
   ...actions
 }: ChatMenuProps) {
-  const [page, setPage] = useState<'main' | 'move'>('main');
+  const [page, setPage] = useState<Page>('main');
+  const [target, setTarget] = useState<Outpost | null>(null);
   const [confirming, setConfirming] = useState(false);
   const archived = chat.archivedAt !== null;
   const primary = chat.projectIds[0] ?? null;
+  const canJoin = !archived && !chat.outpost && chat.sessionType !== 'terminal';
+  const joining = canJoin ? outposts : undefined;
+  const handleSource = projects.find((project) => project.id === primary)?.name ?? chat.title;
   const autoTitles = chat.titleSource !== 'user';
 
   const run = (action: () => void) => () => {
@@ -58,16 +78,16 @@ export function ChatMenu({
   };
 
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (page === 'move' && (event.key === 'Escape' || event.key === 'ArrowLeft')) {
+    if (page !== 'main' && (event.key === 'Escape' || event.key === 'ArrowLeft')) {
       event.preventDefault();
       event.stopPropagation();
-      setPage('main');
+      setPage(BACK_FROM[page]);
       return true;
     }
-    const focused = document.activeElement as HTMLElement | null;
-    if (event.key === 'ArrowRight' && page === 'main' && focused?.dataset.submenu !== undefined) {
+    const submenu = (document.activeElement as HTMLElement | null)?.dataset.submenu;
+    if (event.key === 'ArrowRight' && page === 'main' && submenu !== undefined) {
       event.preventDefault();
-      setPage('move');
+      setPage(submenu === 'outposts' ? 'outposts' : 'move');
       return true;
     }
     return false;
@@ -102,6 +122,7 @@ export function ChatMenu({
           />
         </>
       )}
+      {joining && <AddToOutpostItem onOpen={() => setPage('outposts')} />}
       {!archived && (
         <button
           type="button"
@@ -167,15 +188,43 @@ export function ChatMenu({
     </>
   );
 
+  const outpostItems = joining && (
+    <OutpostPick
+      list={joining.list}
+      onBack={() => setPage('main')}
+      onPick={(outpost) => {
+        setTarget(outpost);
+        setPage('handle');
+      }}
+      onNew={run(joining.onNew)}
+    />
+  );
+
+  const handleItems = joining && target && (
+    <HandlePick
+      outpost={target}
+      suggestFrom={handleSource}
+      onBack={() => setPage('outposts')}
+      onAdd={(handle) => run(() => joining.onAdd(target.id, handle))()}
+    />
+  );
+
+  const labels: Record<Page, string> = {
+    main: `Options for ${chat.title}`,
+    move: 'Move to project',
+    outposts: 'Add to outpost',
+    handle: target ? `Add to ${target.name}` : 'Add to outpost',
+  };
+  const pages: Record<Page, ReactNode> = {
+    main: mainItems,
+    move: moveItems,
+    outposts: outpostItems,
+    handle: handleItems,
+  };
+
   return (
-    <MenuShell
-      anchor={anchor}
-      label={page === 'main' ? `Options for ${chat.title}` : 'Move to project'}
-      page={page}
-      onClose={onClose}
-      onKey={onKey}
-    >
-      {page === 'main' ? mainItems : moveItems}
+    <MenuShell anchor={anchor} label={labels[page]} page={page} onClose={onClose} onKey={onKey}>
+      {pages[page]}
     </MenuShell>
   );
 }
