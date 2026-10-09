@@ -1,4 +1,4 @@
-import { ISLAND_BLOB, islandTuck } from '@spark-outpost/contracts';
+import { ISLAND_BLOB, islandHoverReach, islandTuck } from '@spark-outpost/contracts';
 import type { IslandSize } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 
@@ -22,6 +22,7 @@ const SMALL_PILL_WING = 40;
 export interface RestMetrics {
   blob: number;
   tuck: number;
+  reach: number;
   pillHeight: number;
   pillScout: number;
   pillInset: number;
@@ -35,6 +36,7 @@ function measure(blob: number): RestMetrics {
   return {
     blob,
     tuck: islandTuck(blob),
+    reach: islandHoverReach(blob),
     pillHeight: Math.round(SMALL_PILL * scale),
     pillScout,
     pillInset: SMALL_PILL_INSET + grow,

@@ -60,3 +60,13 @@ export function shownBox(box: Box, edge: number | null): Box {
   const top = Math.max(box.y, edge ?? 0, 0);
   return { x: box.x, y: top, width: box.width, height: Math.max(0, box.y + box.height - top) };
 }
+
+export function hoverZone(shown: Box, reach: number, docked: boolean): Box {
+  const top = docked ? 0 : shown.y - reach;
+  return {
+    x: shown.x - reach,
+    y: top,
+    width: shown.width + 2 * reach,
+    height: shown.y + shown.height + reach - top,
+  };
+}

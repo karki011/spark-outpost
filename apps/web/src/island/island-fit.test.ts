@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
-import { notchFit, restPose, restsQuietly, shownBox, stripHeight } from './island-fit.ts';
+import {
+  hoverZone,
+  notchFit,
+  restPose,
+  restsQuietly,
+  shownBox,
+  stripHeight,
+} from './island-fit.ts';
 import { restMetrics } from './island-size.ts';
 
 const notched: IslandGeometry = {
@@ -112,5 +119,58 @@ describe('the resting blob', () => {
     expect(shownBox({ ...tucked, y: -61 }, null)).toEqual({ x: 462, y: 0, width: 116, height: 55 });
     expect(shownBox({ ...tucked, y: 42 }, 38)).toEqual({ ...tucked, y: 42 });
     expect(shownBox({ ...tucked, y: -200 }, 38).height).toBe(0);
+  });
+});
+
+describe('the resting hover zone', () => {
+  const SIZES = ['full', 'small', 'medium', 'large', 'xlarge'] as const;
+  const CENTRE = 640;
+  const zoneAt = (size: IslandSize, edge: number, docked: boolean) => {
+    const { blob, tuck, reach } = restMetrics(size);
+    const pose = restPose({ docked, edge, tuck, out: false });
+    const drawn = { x: CENTRE - blob / 2, y: docked ? pose.y : 200, width: blob, height: blob };
+    return hoverZone(shownBox(drawn, pose.edge), reach, docked);
+  };
+
+  it('runs from the top edge of a flat display to a little past the half that shows', () => {
+    expect(SIZES.map((size) => zoneAt(size, 0, true))).toEqual([
+      { x: 592, y: 0, width: 96, height: 46 },
+      { x: 607, y: 0, width: 66, height: 32 },
+      { x: 600, y: 0, width: 80, height: 39 },
+      { x: 592, y: 0, width: 96, height: 46 },
+      { x: 550, y: 0, width: 180, height: 87 },
+    ]);
+  });
+
+  it('covers the menu bar strip above the blob under a notch', () => {
+    expect(SIZES.map((size) => zoneAt(size, 44, true))).toEqual([
+      { x: 592, y: 0, width: 96, height: 90 },
+      { x: 607, y: 0, width: 66, height: 76 },
+      { x: 600, y: 0, width: 80, height: 83 },
+      { x: 592, y: 0, width: 96, height: 90 },
+      { x: 550, y: 0, width: 180, height: 131 },
+    ]);
+  });
+
+  it('surrounds a floating blob on every side', () => {
+    expect(SIZES.map((size) => zoneAt(size, 0, false))).toEqual([
+      { x: 592, y: 181, width: 96, height: 96 },
+      { x: 607, y: 186, width: 66, height: 66 },
+      { x: 600, y: 184, width: 80, height: 80 },
+      { x: 592, y: 181, width: 96, height: 96 },
+      { x: 550, y: 168, width: 180, height: 180 },
+    ]);
+  });
+
+  it('is never tighter than the half of the blob that shows', () => {
+    for (const size of SIZES) {
+      for (const edge of [0, 38, 44]) {
+        const { blob, tuck } = restMetrics(size);
+        const zone = zoneAt(size, edge, true);
+        expect(zone.x).toBeLessThan(CENTRE - blob / 2);
+        expect(zone.x + zone.width).toBeGreaterThan(CENTRE + blob / 2);
+        expect(zone.y + zone.height).toBeGreaterThan(edge + blob - tuck);
+      }
+    }
   });
 });

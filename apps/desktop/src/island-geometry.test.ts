@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { islandHoverReach } from '@spark-outpost/contracts';
 import {
   clampToDisplay,
   displayNotch,
@@ -149,6 +150,24 @@ describe('island placement', () => {
     expect(bounds).toEqual({ x: 360 + (ISLAND_WIDTH - 176) / 2, y: 0, width: 176, height: 42 });
     expect(bounds.width).toBeLessThan(ISLAND_WIDTH / 4);
     expect(bounds.height).toBeLessThan(ISLAND_HEIGHT / 10);
+  });
+
+  it('opens the flat resting window over the whole hover zone of every size', () => {
+    const windows = SIZES.map((size) => {
+      const { size: blob, tuck } = restBlob(size);
+      const reach = islandHoverReach(blob);
+      return islandBounds(
+        { x: 360, y: 0 },
+        { width: blob + 2 * reach, height: blob - tuck + reach },
+      );
+    });
+    expect(windows).toEqual([
+      { x: 832, y: 0, width: 96, height: 46 },
+      { x: 847, y: 0, width: 66, height: 32 },
+      { x: 840, y: 0, width: 80, height: 39 },
+      { x: 832, y: 0, width: 96, height: 46 },
+      { x: 790, y: 0, width: 180, height: 87 },
+    ]);
   });
 
   it('restores a floating position on a display that still exists', () => {

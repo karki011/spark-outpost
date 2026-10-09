@@ -101,8 +101,8 @@ test('the resting island follows the chosen size live and still opens on hover',
 
   await setSize(page, 'xlarge');
   const extra = await restingBlob(page, 116, 61);
-  expect(Math.abs(extra.width - (116 + 2 * 14))).toBeLessThanOrEqual(1);
-  expect(Math.abs(extra.height - (116 - 61 + 14))).toBeLessThanOrEqual(1);
+  expect(Math.abs(extra.width - (116 + 2 * 32))).toBeLessThanOrEqual(1);
+  expect(Math.abs(extra.height - (116 - 61 + 32))).toBeLessThanOrEqual(1);
 
   await setSize(page, 'medium');
   await restingBlob(page, 48, 25);

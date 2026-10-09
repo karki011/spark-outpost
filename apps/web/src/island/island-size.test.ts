@@ -6,6 +6,7 @@ describe('island size', () => {
     expect(restMetrics('small')).toEqual({
       blob: 38,
       tuck: 20,
+      reach: 14,
       pillHeight: 34,
       pillScout: 22,
       pillInset: 48,

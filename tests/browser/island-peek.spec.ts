@@ -1,12 +1,18 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { ISLAND_BLOB, islandTuck } from '../../packages/contracts/src/island-size.ts';
 import {
+  ISLAND_BLOB,
+  islandHoverReach,
+  islandTuck,
+} from '../../packages/contracts/src/island-size.ts';
+import {
+  dragPhases,
   island,
   openNotchIsland,
   scoutLook,
   settled,
+  takesClicks,
   VIEWPORT,
   type NotchSetup,
 } from './island-notch-desktop.ts';
@@ -108,6 +114,102 @@ for (const notch of [true, false]) {
     await tuckedUnder(page, 'xlarge', edge);
   });
 }
+
+async function approach(page: Page, x: number, y: number) {
+  await page.mouse.move(x, 400);
+  await page.mouse.move(x, y, { steps: 4 });
+}
+
+async function pressAndPull(page: Page, x: number, y: number) {
+  return page.evaluate(
+    ({ x, y }) => {
+      const target = document.elementFromPoint(x, y)!;
+      const at = { clientX: x, clientY: y, screenX: x, screenY: y, bubbles: true };
+      target.dispatchEvent(new PointerEvent('pointerdown', { ...at, button: 0 }));
+      document.dispatchEvent(new MouseEvent('mousemove', { ...at, screenX: x + 10 }));
+      target.dispatchEvent(new PointerEvent('pointerup', { ...at, screenX: x + 10 }));
+      return target.closest('.isl-scout-btn') !== null;
+    },
+    { x, y },
+  );
+}
+
+const CENTRE = VIEWPORT.width / 2;
+const INSIDE = 3;
+const OUTSIDE = 4;
+const STAYS_SHUT_MS = 500;
+
+for (const notch of [true, false]) {
+  const edge = notch ? NOTCH.menuBar : 0;
+  const where = notch ? 'under a notch' : 'on a flat display';
+  for (const size of ['large', 'xlarge'] as const) {
+    const blob = ISLAND_BLOB[size];
+    const reach = islandHoverReach(blob);
+    const shown = blob - islandTuck(blob);
+    const low = edge + shown - 2;
+    const spots = [
+      { name: 'the half that shows', x: CENTRE, y: edge + shown / 2, first: 'on at peek' },
+      { name: 'beside it', x: CENTRE + blob / 2 + reach - INSIDE, y: low, first: 'on at panel' },
+      { name: 'left of it', x: CENTRE - blob / 2 - reach + INSIDE, y: low, first: 'on at panel' },
+      { name: 'below it', x: CENTRE, y: edge + shown + reach - INSIDE, first: 'on at panel' },
+    ];
+    for (const spot of spots) {
+      test(`at ${size} size ${where} pointing at ${spot.name} opens the island`, async ({
+        page,
+      }) => {
+        await resetTestDatabase({ onboarded: true });
+        await open(page, { size, notch });
+        await tuckedUnder(page, size, edge);
+        await approach(page, spot.x, spot.y);
+        await expect(island(page)).toHaveAttribute('data-view', 'panel');
+        expect((await takesClicks(page))[0]).toBe(spot.first);
+        await page.mouse.move(5, 600);
+        await expect(island(page)).toHaveAttribute('data-view', 'peek');
+        await tuckedUnder(page, size, edge);
+      });
+    }
+
+    test(`at ${size} size ${where} pointing just past the margin opens nothing, and only the blob itself drags`, async ({
+      page,
+    }) => {
+      await resetTestDatabase({ onboarded: true });
+      await open(page, { size, notch });
+      await tuckedUnder(page, size, edge);
+      const past = [
+        { x: CENTRE + blob / 2 + reach + OUTSIDE, y: low },
+        { x: CENTRE - blob / 2 - reach - OUTSIDE, y: low },
+        { x: CENTRE, y: edge + shown + reach + OUTSIDE },
+      ];
+      for (const spot of past) {
+        await approach(page, spot.x, spot.y);
+        await page.waitForTimeout(STAYS_SHUT_MS);
+        await expect(island(page)).toHaveAttribute('data-view', 'peek');
+      }
+      expect(await takesClicks(page)).toEqual([]);
+      await tuckedUnder(page, size, edge);
+
+      expect(await pressAndPull(page, CENTRE + blob / 2 + reach - INSIDE, low)).toBe(false);
+      expect(await pressAndPull(page, CENTRE, edge + shown + reach - INSIDE)).toBe(false);
+      expect(await dragPhases(page)).toEqual([]);
+      expect(await pressAndPull(page, CENTRE, edge + shown / 2)).toBe(true);
+      expect(await dragPhases(page)).toEqual(['lift', 'move', 'end']);
+    });
+  }
+}
+
+test('a floating blob opens from the margin around it', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await open(page, { size: 'large', docked: false });
+  await expect.poll(async () => (await scoutLook(page)).top).toBe(0);
+  const blob = ISLAND_BLOB.large;
+  const reach = islandHoverReach(blob);
+  await approach(page, CENTRE + blob / 2 + reach + OUTSIDE, blob / 2);
+  await page.waitForTimeout(STAYS_SHUT_MS);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await approach(page, CENTRE, blob + reach - INSIDE);
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  expect((await takesClicks(page))[0]).toBe('on at panel');
+});
 
 test('a working chat keeps the blob out and a floating island is never tucked', async ({
   page,

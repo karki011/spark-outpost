@@ -27,6 +27,7 @@ export interface NotchWindow {
   islandFocus: boolean[];
   islandRest: (RestSize | null)[];
   islandDrags: string[];
+  islandTakesClicks: string[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
 }
@@ -61,10 +62,12 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const focus: boolean[] = [];
       const rest: ({ width: number; height: number } | null)[] = [];
       const drags: string[] = [];
+      const takesClicks: string[] = [];
       Object.assign(window, {
         islandFocus: focus,
         islandRest: rest,
         islandDrags: drags,
+        islandTakesClicks: takesClicks,
         sparkDesktop: {
           platform: 'darwin',
           companion: {
@@ -101,7 +104,10 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
             },
             pickFolder: async () => null,
             pathForFile: () => null,
-            setInteractive: () => undefined,
+            setInteractive: (on: boolean) => {
+              const view = document.querySelector<HTMLElement>('.isl')?.dataset.view;
+              takesClicks.push(`${on ? 'on' : 'off'} at ${view}`);
+            },
             setFocusable: (on: boolean) => focus.push(on),
             drag: (phase: string) => drags.push(phase),
             openChat: () => undefined,
@@ -204,6 +210,9 @@ export const sparkFocus = (page: Page, focused: boolean) =>
 
 export const command = (page: Page, action: 'quick' | 'sessions') =>
   page.evaluate((next) => (window as unknown as NotchWindow).islandCommand(next), action);
+
+export const takesClicks = (page: Page) =>
+  page.evaluate(() => (window as unknown as NotchWindow).islandTakesClicks);
 
 export const dragPhases = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandDrags);
