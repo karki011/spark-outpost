@@ -12,10 +12,9 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                           | What to do                                          |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| The **Make the change** button under a reply is gone.                                                                  | Ask for the change in your next message.            |
-| The context rail lists Agent TV's crew, scrolling only when full. Chats with a merged PR show an icon.                 | No action.                                          |
+| **Make the change** is gone. Replies, your messages and the message box share one centred column.                      | Ask for the change in your next message.            |
+| The context rail lists Agent TV's crew. Chats with a merged PR show an icon.                                           | No action.                                          |
 | **Terminal**: Esc in Claude shows **Idle**; Spark's note left your message.                                            | No action.                                          |
-| Replies, your messages and the message box share one centred column.                                                   | No action.                                          |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |
@@ -30,7 +29,3 @@ What changed recently in Spark, newest first.
 | Reading a secret file in a linked repo follows the agent's mode. Changing one still asks.                              | See [protected paths](protected-paths.md).          |
 | Spark Island is **Full** by default and opens requests by itself. Tickets show **Development**.                        | See [Spark Island](desktop-companion.md).           |
 | **Phone**, above **Settings**: use Spark from a phone on your tailnet. Pair with a QR code.                            | See [Use Spark from your phone](use-your-phone.md). |
-| A paired phone does what the Mac app does, except Browser, Preview and Terminal. The phone bar has **More**.           | Turn things off under **What the phone can do**.    |
-| **On this chat** is now ticks left of the thread. A chat top bar, a wider right rail.                                  | Hover a tick; select it to jump.                    |
-| New chats start at **Full auto → PR**. Budgets are gone: nothing is capped.                                            | See [Spark autonomy](spark-autonomy.md).            |
-| Reading Spark's own chat data or running a local script no longer asks.                                                | No action.                                          |
