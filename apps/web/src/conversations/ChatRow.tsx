@@ -10,8 +10,7 @@ import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
-import { TeammateFace } from '../teammates/TeammateFace.tsx';
-import { ChatFace } from '../brand/ChatFace.tsx';
+import { RowFace } from './RowFace.tsx';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
@@ -167,7 +166,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);
   const [firstTone] = useState(state.tone);
-  const face = <ChatFace chatId={chat.id} state={rowFaceState(chat, state.tone)} size="row" />;
+  const face = <RowFace chat={chat} state={rowFaceState(chat, state.tone)} />;
   const classes = [
     'row',
     `st-${state.tone}`,
@@ -244,11 +243,6 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
               <StatusMark tone={state.tone} />
             </span>
           </span>
-          {chat.teammate && (
-            <span className="rface" aria-hidden="true">
-              <TeammateFace face={chat.teammate.face} size={16} />
-            </span>
-          )}
           <span className="rt">
             <span className="row-title-line">
               {chat.sessionType === 'terminal' && (

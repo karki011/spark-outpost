@@ -258,13 +258,16 @@
   position: absolute;
   right: -4px;
   bottom: -4px;
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--row-bg);
-  transition: background 0.15s;
+  box-shadow: 0 0 0 1px var(--row-bg);
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
 .st-mark:empty {
@@ -272,12 +275,12 @@
 }
 
 .orb {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: conic-gradient(from 0deg, transparent 0 15%, var(--accent));
-  -webkit-mask: radial-gradient(circle, transparent 2.6px, #000 3.1px);
-  mask: radial-gradient(circle, transparent 2.6px, #000 3.1px);
+  -webkit-mask: radial-gradient(circle, transparent 2.2px, #000 2.7px);
+  mask: radial-gradient(circle, transparent 2.2px, #000 2.7px);
   animation: rot 0.8s linear infinite;
 }
 
@@ -296,8 +299,8 @@
 
 .dchk {
   position: absolute;
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   color: var(--accent-text);
 }
 
@@ -332,11 +335,6 @@
   border: 2px solid var(--warn);
 }
 
-.st-mark .ask {
-  width: 8px;
-  height: 8px;
-}
-
 .dia {
   width: 6px;
   height: 6px;
@@ -346,8 +344,7 @@
 }
 
 .ask::before,
-.ask::after,
-.dia::after {
+.ask::after {
   content: '';
   position: absolute;
   inset: -2px;
@@ -356,12 +353,18 @@
   animation: sb-ripple 1.9s var(--out) infinite;
 }
 
-.dia::after {
-  inset: -1.5px;
-}
-
 .ask::after {
   animation-delay: 0.95s;
+}
+
+.st-mark .ask {
+  width: 8px;
+  height: 8px;
+}
+
+.st-mark .ask::before,
+.st-mark .ask::after {
+  content: none;
 }
 
 .enter .ask,
@@ -370,16 +373,16 @@
 }
 
 .row .errdot {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--danger);
   color: var(--panel);
-  font-size: 9px;
+  font-size: 8px;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1;
 }
 
