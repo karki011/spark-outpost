@@ -6,7 +6,7 @@ order: 520
 summary: The Worth a look list Spark adds to kept changes, the estimate for a build, and model demotions.
 ---
 
-A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guardrails never block you: they point out what's worth a look.
+A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guardrails never block you: they point out what's worth a look. Outposts have their own rule: [What an outpost request may do](outpost-permissions.md).
 
 ## Worth a look
 

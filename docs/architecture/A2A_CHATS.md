@@ -17,6 +17,10 @@ An outpost is a shared room for several chats, for example a frontend chat, a ba
 | Answer  | The receiving chat's reply to a request: the final message of the turn the request started, with the branch, changed files and pull request that turn produced |
 | Pause   | Stops requests from starting work in every member. Running turns finish. It is a convenience, not a safety rule                                                |
 
+**Why it exists, and when to use one.** One chat serves work in one project. A crew splits one build in one working tree into one pull request, and Spark coordinates it. An outpost is for work that spans repos or roles: each member chat keeps its own project, agent, mode, branch and pull request, and the user directs them from one thread. Example: for a usage page the user posts "@api add GET /usage and open a PR", "@fe build the page against the new endpoint" and "@docs describe the page", and reads the three answers under their requests. Release 1 does not let agents ask each other and has no `@all`; both are planned for later releases (section 9.1). The guide says this in `docs/guide/when-to-use-an-outpost.md`.
+
+**Why the authority rule is what it is.** A request another chat wrote is a colleague's suggestion, not the user asking, so "open a PR" inside it does not publish and a chat at Automatic keeps the change without pushing. A request the user types in the outpost is the user asking, exactly as if typed in that chat. A chat the user set to Full auto → PR still opens its pull request for work a request started, because that is the setting the user chose for that chat. What never changes: nothing merges, no force pushes, a chat pushes only its own branch, and a request cannot raise the receiving chat's mode. Section 6 has the detail; the guide says it in `docs/guide/outpost-permissions.md`.
+
 Request states, shown with these words everywhere: **Sent**, **Working**, **Needs you**, **Answered**, **Failed**, **Cancelled**.
 
 Rules the rest of this document implements:

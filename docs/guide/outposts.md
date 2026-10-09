@@ -6,7 +6,7 @@ order: 232
 summary: Put several chats in one outpost, ask each for work with @ and its handle, and read every answer in one thread.
 ---
 
-You'll ask several chats for work from one thread. About 3 minutes.
+You'll ask several chats for work from one thread. About 3 minutes. Not sure you need one? See [When to use an outpost](when-to-use-an-outpost.md).
 
 ## Create an outpost
 
@@ -39,7 +39,7 @@ Without a handle, **Post note** starts no work.
 | **From you**, heading a turn     | A request started this turn, under this chat's mode and autonomy. |
 | **Outpost request** in the queue | The chat is busy. You can remove it, not edit it.                 |
 
-A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `/plan` runs as a command. Text you didn't write never asks for a push, pull request or Spark action.
+A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `/plan` runs as a command. Why: [What an outpost request may do](outpost-permissions.md).
 
 Agents can't ask each other yet. On a [paired phone](use-your-phone.md) you can read, post, cancel, pause and rename; the rest stays on the Mac.
 

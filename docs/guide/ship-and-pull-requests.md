@@ -19,7 +19,7 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 ## When the agent publishes
 
-Ask for a pull request in your message, or set **Full auto → PR**. After the checks, the agent pushes the branch and opens the PR.
+Ask for a pull request in your message, or set **Full auto → PR**. After the checks, the agent pushes the branch and opens the PR. A request you type in an outpost [counts as your message](outpost-permissions.md).
 
 | The chat says                                               | Meaning                    |
 | ----------------------------------------------------------- | -------------------------- |
