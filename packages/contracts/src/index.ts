@@ -4,6 +4,7 @@ export * from './mcp.ts';
 export * from './spark-mcp-actions.ts';
 export * from './annotations.ts';
 export * from './agent-commands.ts';
+export * from './agent-terminal.ts';
 export * from './agent-modes.ts';
 export * from './approvals.ts';
 export * from './slack.ts';
