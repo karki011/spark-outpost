@@ -8,7 +8,6 @@ import {
   createPostRequestSchema,
   memberRequestSchema,
   outpostDetailSchema,
-  outpostDraftSchema,
   outpostHandleSchema,
   pinPostRequestSchema,
   rejectReasonSchema,
@@ -79,6 +78,7 @@ const detail: OutpostDetail = {
       intro: null,
     },
   ],
+  stories: [],
 };
 
 describe('outpost schemas', () => {
@@ -190,29 +190,11 @@ describe('outpost schemas', () => {
       paused: false,
       held: false,
       chatDeleted: false,
+      waitingOn: null,
     };
     expect(requestFactsSchema.parse(facts)).toEqual(facts);
     expect(requestFactsSchema.safeParse({ ...facts, closedState: 'answered' }).success).toBe(false);
     expect(requestFactsSchema.safeParse({ ...facts, runStatus: 'working' }).success).toBe(false);
-  });
-
-  it('takes a draft member that names a chat or a project, never both or neither', () => {
-    const draft = (member: object) => ({
-      name: 'Orders launch',
-      members: [{ handle: 'fe', ...member }],
-      requests: [{ to: 'fe', text: 'Build the orders page.' }],
-    });
-    expect(outpostDraftSchema.safeParse(draft({ conversationId: FRONTEND })).success).toBe(true);
-    expect(
-      outpostDraftSchema.safeParse(draft({ projectId: BACKEND, agent: 'codex' })).success,
-    ).toBe(true);
-    expect(outpostDraftSchema.safeParse(draft({})).success).toBe(false);
-    expect(
-      outpostDraftSchema.safeParse(draft({ conversationId: FRONTEND, projectId: BACKEND })).success,
-    ).toBe(false);
-    expect(
-      outpostDraftSchema.safeParse(draft({ projectId: BACKEND, agent: 'other' })).success,
-    ).toBe(false);
   });
 
   it('lets the pure rules be written against the agreed signatures', () => {
@@ -259,6 +241,7 @@ describe('outpost fields on existing contracts', () => {
       outpostName: 'Orders launch',
       fromHandle: null,
       fromUser: true,
+      userStarted: false,
     };
     expect(runSchema.shape.outpost.parse(from)).toEqual(from);
     expect(runSchema.shape.outpost.parse(undefined)).toBeUndefined();

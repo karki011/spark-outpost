@@ -29,6 +29,8 @@ const stored: StoredPost = {
   createdAt: '2026-10-09T10:00:00.000Z',
   attachmentIds: [],
   opening: false,
+  afterPostId: null,
+  userStarted: false,
 };
 
 const facts: RequestFacts = {
@@ -42,6 +44,7 @@ const facts: RequestFacts = {
   paused: false,
   held: false,
   chatDeleted: false,
+  waitingOn: null,
 };
 
 const answer = { text: 'A list of orders.', branch: null, changes: [], pullRequests: [] };

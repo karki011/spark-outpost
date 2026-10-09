@@ -12,6 +12,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   publish: false,
   pull_request_create: false,
   browser: false,
+  outpost: false,
+  outpost_draft: false,
 };
 
 export const SESSION_CASES = {

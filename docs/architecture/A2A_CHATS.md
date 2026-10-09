@@ -578,3 +578,37 @@ Smaller differences, all in what release 1 shows:
 - Members of one outpost always show distinct blobs inside it (decision 16, section 7).
 - The sidebar section's button is **New outpost**; the last step's button is **Start outpost**.
 - On a paired phone the page still shows create, delete and member controls, which the gateway refuses ([PHONE_REMOTE.md](PHONE_REMOTE.md#policy)).
+
+## 13. Release 2, step 0 (October 9, 2026)
+
+Release 2 (agents ask each other, the story flow, stacked pull requests) starts from schema and interfaces only. Nothing in this section is behaviour: no tool is registered, no draft or story row is written, and both new tool needs are off for every session.
+
+### 13.1 What step 0 adds
+
+- **Migration `0160_outpost_stories.sql`.** Tables `outpost_drafts` (a chat's proposal, with `started_at` and `reported_at`) and `outpost_story_tasks` (one row per sub-task chat, with `depends_on_conversation_id` and `opening_post_id`); columns `outpost_posts.after_post_id` (a request waits until that post is Answered) and `outpost_posts.user_started`; `outpost_changed` when a story task is added and when a member chat's pull request is first seen or changes `pr_state`, `base`, `draft` or `head_sha`. The plan named it `0157`; `0157`–`0159` were taken.
+- **Contracts.** `outpostDraftSchema` is now `{ name?, title, chats: [{ handle, title, projectId, agent?, task, dependsOn? }] }`, where `dependsOn` is a handle in the same draft. A start request takes `draftId`, a `dependsOn` chat id per member and a `level` per new chat. `outpostDetailSchema` carries `stories` (`outpostStorySchema`, `storyTaskSchema`, `stackWarningSchema`), `requestFactsSchema` carries `waitingOn`, a run's `outpost` carries `userStarted`, and `OUTPOST_DRAFT_ACTIVITY` with `outpostDraftActivitySchema` (`draftId`, `chats`, `stacked`) is the draft line's run activity. `outpost-story.ts` holds the signatures of the pure rules: `StoryProblems`, `StoryOrder`, `IsStacked`, `StackWarnings`, `PrBase`.
+- **Ports** (`apps/server/src/outposts/ports.ts`). `DraftStore`, `StoryStore`, `StackGit`, and `afterPostId` and `userStarted` on `StoredPost`.
+- **Tool needs.** `'outpost'` and `'outpost_draft'` in `SparkToolNeed`; `sparkAvailability` answers false for both and neither is in `HOW_TO_GET`.
+
+The story schemas live in `outposts.ts`, not `outpost-story.ts`, because `outpostDetailSchema` needs them and `outpost-story.ts` needs the request states: one of the two files has to import the other.
+
+### 13.2 Does a piece's grant carry its own run id?
+
+Read from the code, not run against a provider.
+
+- A grant is opened once per provider turn (`openSparkTools` in `agents/acp/acp-provider.ts`) with the scope `runAgentTurn` builds: `runId` is the lease's run id (`workflow/agent-turn.ts`).
+- A piece, and every other crew member that gets its own run, runs under the lease `insertChildRun` returns (`orchestration/members.ts`). So its grant carries its own run id, and that run has `parent_run_id` set. A check of `runs.parent_run_id IS NULL` for the scope's run id tells a top-level turn from a piece.
+- One member does not: a Scout that runs in place (`runInPlace`) uses the top-level lease, so its grant carries the top-level run id and looks like a top-level turn. `markInPlaceMember` sets that run's `role` to `scout`, which a call-time check can read.
+- A Terminal session's grant is built separately (`terminal/native-runtime.ts`); section 5 gives it no outpost tools.
+- The scope's run id is fixed for the life of a grant, so "was this turn started by a request" can be read from that run's post at call time.
+
+### 13.3 Claude's tool timeout
+
+Still unverified. Spark sets Codex's limit for the Spark server to 3,600 s (`CODEX_TOOL_TIMEOUT_SEC`, `agents/acp/spark-tools.ts`) and sets nothing for Claude: no environment variable or session option in the repository names a tool timeout for it. A long `wait` against Claude is one of the real-provider checks and is not a claim until it has run.
+
+### 13.4 Open points for the lanes
+
+- `outpost_drafts.conversation_id` cascades, as planned, so deleting the lead chat deletes its drafts and sets `draft_id` to null on the story's tasks. The tasks, their dependencies and their posts stay, but the story loses its title and the key that groups its tasks, which is why `outpostStorySchema` allows a null `draftId` and `title`. Keeping the draft (`ON DELETE SET NULL` on a nullable `conversation_id`) would keep both; that is the owner's call.
+- `reported_at` on `outpost_drafts` and `DraftStore.markReported` are for the one wrap-up turn per story. No lane in the plan owns that turn yet.
+- Clearing `after_post_id` alone ("Start anyway") sends no `outpost_changed`; the event comes when the dispatcher gives the post a task.
+- `toFacts` in `persistence/outpost-posts.ts` answers `waitingOn: null` and `GET /api/outposts/:id` answers `stories: []` until lanes B and C fill them.

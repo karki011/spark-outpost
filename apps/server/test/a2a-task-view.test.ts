@@ -45,6 +45,8 @@ const post: StoredPost = {
   createdAt: '2026-10-09T10:00:00.000Z',
   attachmentIds: [],
   opening: false,
+  afterPostId: null,
+  userStarted: false,
 };
 
 const waiting: RequestFacts = {
@@ -58,6 +60,7 @@ const waiting: RequestFacts = {
   paused: false,
   held: false,
   chatDeleted: false,
+  waitingOn: null,
 };
 
 const answer: OutpostAnswer = {

@@ -74,7 +74,7 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       const answer = await requestAnswer(db, workspaceId, post);
       posts.push(toOutpostPost(post, answer, intros.get(post.post.id)));
     }
-    return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts };
+    return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts, stories: [] };
   };
 
   const counted = async (outpost: StoredOutpost): Promise<Outpost> => {

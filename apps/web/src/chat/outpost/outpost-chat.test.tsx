@@ -21,6 +21,7 @@ function request(from: Partial<RunOutpost>): RunOutpost {
     outpostName: 'Orders launch',
     fromHandle: 'fe',
     fromUser: false,
+    userStarted: false,
     ...from,
   };
 }

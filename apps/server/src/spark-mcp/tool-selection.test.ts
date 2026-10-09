@@ -10,6 +10,8 @@ const NOTHING: SparkAvailability = {
   publish: false,
   pull_request_create: false,
   browser: false,
+  outpost: false,
+  outpost_draft: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [

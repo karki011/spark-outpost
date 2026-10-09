@@ -107,7 +107,7 @@ export function notice(number: number, body: string): OutpostPost {
 }
 
 export function detail(posts: OutpostPost[] = [], overrides: Partial<Outpost> = {}): OutpostDetail {
-  return { outpost: outpost(overrides), posts };
+  return { outpost: outpost(overrides), posts, stories: [] };
 }
 
 export function memberView(

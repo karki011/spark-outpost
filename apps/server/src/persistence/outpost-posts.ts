@@ -39,6 +39,8 @@ interface PostRow {
   created_at: Date;
   attachment_ids: string[];
   opening: boolean;
+  after_post_id: string | null;
+  user_started: boolean;
 }
 
 interface FactsRow extends PostRow {
@@ -103,6 +105,8 @@ function toPost(row: PostRow): StoredPost {
     createdAt: row.created_at.toISOString(),
     attachmentIds: row.attachment_ids,
     opening: row.opening,
+    afterPostId: row.after_post_id,
+    userStarted: row.user_started,
   };
 }
 
@@ -119,6 +123,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
     paused: row.paused,
     held: row.held,
     chatDeleted: row.to_conversation_id === null,
+    waitingOn: null,
   };
 }
 

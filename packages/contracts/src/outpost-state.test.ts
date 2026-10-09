@@ -15,6 +15,7 @@ function facts(extra: Partial<RequestFacts> = {}): RequestFacts {
     paused: false,
     held: false,
     chatDeleted: false,
+    waitingOn: null,
     ...extra,
   };
 }

@@ -66,6 +66,7 @@ export * from './outpost-handles.ts';
 export * from './outpost-address.ts';
 export * from './outpost-state.ts';
 export * from './outpost-thread.ts';
+export * from './outpost-story.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './desktop-updates.ts';

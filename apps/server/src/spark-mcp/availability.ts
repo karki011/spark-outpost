@@ -21,6 +21,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   publish: true,
   pull_request_create: true,
   browser: true,
+  outpost: true,
+  outpost_draft: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -53,11 +55,16 @@ export async function sparkAvailability(
     publish: project,
     pull_request_create: gitHub.ownLogin,
     browser: deps.browser !== undefined,
+    outpost: false,
+    outpost_draft: false,
   };
 }
 
 const HOW_TO_GET: Record<
-  Exclude<SparkToolNeed, 'browser' | 'publish' | 'pull_request_create'>,
+  Exclude<
+    SparkToolNeed,
+    'browser' | 'publish' | 'pull_request_create' | 'outpost' | 'outpost_draft'
+  >,
   string
 > = {
   tickets: 'ticket tools (connect Jira or Linear in Settings → Connectors)',
