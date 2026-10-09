@@ -7,6 +7,7 @@ import {
   WIDE_PUSH_REASON,
   ghRailReason,
   otherBranchReason,
+  parentNotPushedReason,
   publishBasis,
   publishRequested,
   publishVerdict,
@@ -364,6 +365,60 @@ describe('publishVerdict() keeps the rails in every permitted mode', () => {
     expect(publishVerdict('git push origin main', 'full_access', context(MANUAL, task))).toEqual({
       kind: 'refuse',
       reason: otherBranchReason('main'),
+    });
+  });
+});
+
+describe("publishVerdict() for a chat whose branch is built on another chat's branch", () => {
+  const PARENT = 'spark/orders-endpoint-9f8e';
+  const stacked = (onRemote: boolean) => ({
+    ...TASK,
+    protectedBranches: [...TASK.protectedBranches, PARENT],
+    stackBase: { branch: PARENT, owner: '@api', onRemote },
+    pullBase: PARENT,
+  });
+  const ASKED: PublishGrant = { level: 'hands-off', requested: true };
+
+  it('refuses the push while the parent branch is not on the remote, in every permitted mode', () => {
+    const reason = parentNotPushedReason(BRANCH, { branch: PARENT, owner: '@api' });
+    expect(reason).toContain(
+      "@api's branch spark/orders-endpoint-9f8e, which is not on the remote",
+    );
+    expect(reason).toContain("Needs you: @api's branch is not pushed");
+    for (const [posture, grant] of [
+      ['asks', ASKED],
+      ['asks', { level: 'full-auto', requested: false }],
+      ['auto', MANUAL],
+      ['full_access', MANUAL],
+    ] as [ModePosture, PublishGrant][]) {
+      expect(
+        publishVerdict(`git push origin ${BRANCH}`, posture, context(grant, stacked(false))),
+      ).toEqual({ kind: 'refuse', reason });
+    }
+  });
+
+  it('allows the push once the parent branch is on the remote', () => {
+    expect(
+      publishVerdict(`git push origin ${BRANCH}`, 'asks', context(ASKED, stacked(true))),
+    ).toEqual({ kind: 'allow', basis: 'requested' });
+  });
+
+  it('still never pushes the parent branch', () => {
+    const task = stacked(true);
+    expect(publishVerdict(`git push origin ${PARENT}`, 'asks', context(ASKED, task))).toEqual({
+      kind: 'refuse',
+      reason: otherBranchReason(BRANCH),
+    });
+    expect(
+      publishVerdict(`git push origin ${BRANCH} ${PARENT}`, 'asks', context(ASKED, task)),
+    ).toEqual({ kind: 'refuse', reason: otherBranchReason(BRANCH) });
+  });
+
+  it('lets the pull request target the parent branch', () => {
+    const create = `gh pr create --base ${PARENT} --head ${BRANCH} --title "Orders page" --body ok`;
+    expect(publishVerdict(create, 'asks', context(ASKED, stacked(true)))).toEqual({
+      kind: 'allow',
+      basis: 'requested',
     });
   });
 });

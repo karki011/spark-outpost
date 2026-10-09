@@ -12,17 +12,13 @@ export interface StackedPair {
   web: string;
 }
 
-async function projectChat(t: TestDb, projectId: string): Promise<string> {
+export async function projectChat(t: TestDb, projectId: string): Promise<string> {
   const id = randomUUID();
   await createConversation(t.db, t.workspaceId, id, { projectIds: [projectId] });
   return id;
 }
 
-export async function stackedPair(t: TestDb, root: string, webRoot = root): Promise<StackedPair> {
-  const projectId = (await createProject(t.db, t.workspaceId, root)).project.id;
-  const webProject = (await createProject(t.db, t.workspaceId, webRoot)).project.id;
-  const api = await projectChat(t, projectId);
-  const web = await projectChat(t, webProject);
+export async function dependOn(t: TestDb, api: string, web: string): Promise<string> {
   const outpostId = randomUUID();
   await createOutpost(t.db, {
     id: outpostId,
@@ -35,10 +31,30 @@ export async function stackedPair(t: TestDb, root: string, webRoot = root): Prom
   });
   const task = { outpostId, draftId: null, leadConversationId: null, openingPostId: null };
   await insertTasks(t.db, [
-    { ...task, conversationId: api, title: 'Orders endpoint', position: 0, dependsOnConversationId: null },
-    { ...task, conversationId: web, title: 'Orders page', position: 1, dependsOnConversationId: api },
+    {
+      ...task,
+      conversationId: api,
+      title: 'Orders endpoint',
+      position: 0,
+      dependsOnConversationId: null,
+    },
+    {
+      ...task,
+      conversationId: web,
+      title: 'Orders page',
+      position: 1,
+      dependsOnConversationId: api,
+    },
   ]);
-  return { projectId, outpostId, api, web };
+  return outpostId;
+}
+
+export async function stackedPair(t: TestDb, root: string, webRoot = root): Promise<StackedPair> {
+  const projectId = (await createProject(t.db, t.workspaceId, root)).project.id;
+  const webProject = (await createProject(t.db, t.workspaceId, webRoot)).project.id;
+  const api = await projectChat(t, projectId);
+  const web = await projectChat(t, webProject);
+  return { projectId, outpostId: await dependOn(t, api, web), api, web };
 }
 
 export async function ownedWorktree(

@@ -68,7 +68,7 @@ async function target(context: SparkToolContext, publish: PublishScope): Promise
     );
   }
   const worktree = await chatWorktreeAt(context.deps.db, root);
-  return { repo, base: worktree?.baseBranch ?? null };
+  return { repo, base: task.pullBase ?? worktree?.baseBranch ?? null };
 }
 
 interface PullText {

@@ -81,7 +81,11 @@ describe('where a stacked sub-chat works', () => {
   });
 
   it('keeps a different branch the user chose, and the checkout when that was chosen', () => {
-    expect(decidePlace(facts({ stackOn, local: [...local, 'feature/login'], requested: 'feature/login' }))).toEqual({
+    expect(
+      decidePlace(
+        facts({ stackOn, local: [...local, 'feature/login'], requested: 'feature/login' }),
+      ),
+    ).toEqual({
       kind: 'existing',
       branch: 'feature/login',
     });
