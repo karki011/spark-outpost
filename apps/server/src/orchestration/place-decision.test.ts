@@ -59,6 +59,43 @@ describe('where a Do chat works', () => {
   });
 });
 
+describe('where a stacked sub-chat works', () => {
+  const stackOn = { branch: 'spark/api-1a2b3c4d', owner: '@api' };
+  const local = ['main', 'spark/api-1a2b3c4d'];
+
+  it('starts its own branch from the branch it is stacked on', () => {
+    const decision = decidePlace(facts({ stackOn, local }));
+    expect(decision).toMatchObject({ kind: 'new', from: 'spark/api-1a2b3c4d' });
+    expect(decision.kind === 'new' && decision.note).toBe(
+      "This chat's branch starts from @api's branch spark/api-1a2b3c4d, and its pull request targets that branch.",
+    );
+  });
+
+  it('never works on that branch itself when the first message names it', () => {
+    for (const preference of ['worktree', 'checkout'] as const) {
+      const decision = decidePlace(
+        facts({ stackOn, local, requested: 'spark/api-1a2b3c4d', preference }),
+      );
+      expect(decision).toMatchObject({ kind: 'new', from: 'spark/api-1a2b3c4d' });
+    }
+  });
+
+  it('keeps a different branch the user chose, and the checkout when that was chosen', () => {
+    expect(decidePlace(facts({ stackOn, local: [...local, 'feature/login'], requested: 'feature/login' }))).toEqual({
+      kind: 'existing',
+      branch: 'feature/login',
+    });
+    expect(decidePlace(facts({ stackOn, local, preference: 'checkout' }))).toEqual({
+      kind: 'checkout',
+      note: null,
+    });
+  });
+
+  it('starts from the default branch when the branch it would stack on is not in the repository', () => {
+    expect(decidePlace(facts({ stackOn }))).toEqual({ kind: 'new', from: null, note: null });
+  });
+});
+
 describe('a branch named in the request', () => {
   const known = new Set(['main', 'feature/login', 'release-2']);
 
