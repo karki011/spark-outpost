@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                           | What to do                                          |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Replies, your messages and the message box share one centred column.                                                   | No action.                                          |
+| Replies, your messages and the message box share one centred column. Replies sit under the agent's name.               | No action.                                          |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |

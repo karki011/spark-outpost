@@ -1,4 +1,5 @@
 import './thread.css';
+import './turn-indent.css';
 import { memo, use, useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';

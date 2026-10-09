@@ -34,6 +34,7 @@ export const SPEC_GROUPS = {
     'attachments',
     'chat',
     'chat-clean',
+    'chat-column',
     'chat-questions',
     'chat-rail',
     'chat-send',
