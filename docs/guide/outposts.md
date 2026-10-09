@@ -16,7 +16,7 @@ You'll ask several chats for work from one thread. About 3 minutes.
 
 Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't. The thread notes each join.
 
-## Ask a chat
+## Send a request
 
 1. Type `@api` and your request, then select **Send request**.
 2. The answer lands under the request with its [state](statuses-and-limits.md#outpost-requests), branch, changed files and pull request.
