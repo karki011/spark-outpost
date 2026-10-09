@@ -261,12 +261,12 @@ export function peekRow(
 }
 
 const SLOT_GAP = 26;
-const NOTCH_CLEARANCE = 38;
+const NOTCH_ROOM = 23;
 const FLAT_SPREAD = 1.25;
 const FLAT_BADGE_ROOM = 30;
 
 export function peekClearance(flat: boolean, blob: number): number {
-  if (!flat) return NOTCH_CLEARANCE;
+  if (!flat) return Math.ceil(blob / 2) + NOTCH_ROOM;
   return Math.ceil((blob / 2 + FLAT_BADGE_ROOM) / FLAT_SPREAD);
 }
 

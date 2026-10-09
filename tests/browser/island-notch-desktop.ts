@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { IslandSize } from '../../packages/contracts/src/island-size.ts';
 
 export const NOTCH = { width: 186, height: 32, menuBar: 38 };
 export const VIEWPORT = { width: 1280, height: 720 };
@@ -6,7 +7,7 @@ export const VIEWPORT = { width: 1280, height: 720 };
 export const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 export interface NotchSetup {
-  size: 'full' | 'small' | 'medium' | 'large';
+  size: IslandSize;
   autoExpand: boolean;
   sparkFocused?: boolean;
   theme?: string;
@@ -206,3 +207,30 @@ export const command = (page: Page, action: 'quick' | 'sessions') =>
 
 export const dragPhases = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandDrags);
+
+export interface ScoutLook {
+  top: number;
+  bottom: number;
+  size: number;
+  hidden: number;
+  tucked: boolean;
+  eyesTop: number;
+}
+
+export const scoutLook = (page: Page): Promise<ScoutLook> =>
+  island(page).evaluate((root) => {
+    const wrap = root.querySelector<HTMLElement>('.isl-scout-wrap')!;
+    const box = wrap.getBoundingClientRect();
+    const clip = /inset\(([\d.]+)px/.exec(
+      getComputedStyle(wrap.querySelector('svg.scout')!).clipPath,
+    );
+    const eyes = Array.from(wrap.querySelectorAll('.sc-eye'), (eye) => eye.getBoundingClientRect());
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      size: box.height,
+      hidden: Math.max(clip ? Number(clip[1]) : 0, -box.top, 0),
+      tucked: root.classList.contains('tucked'),
+      eyesTop: Math.min(...eyes.map((eye) => eye.top)),
+    };
+  });

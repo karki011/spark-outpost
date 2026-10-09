@@ -1,6 +1,8 @@
+import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
 
 const MIN_STRIP = 24;
+const OUT_GAP = 4;
 
 interface NotchFit {
   hugsNotch: boolean;
@@ -21,4 +23,40 @@ export function notchFit(geometry: IslandGeometry): NotchFit {
 
 export function stripHeight(fit: NotchFit, quiet: boolean): number {
   return Math.max(fit.strip, quiet ? 0 : MIN_STRIP);
+}
+
+export function restsQuietly(mood: ScoutMood): boolean {
+  return mood === null || mood === 'sleep';
+}
+
+interface RestPose {
+  y: number;
+  tucked: boolean;
+  edge: number | null;
+}
+
+interface RestInput {
+  docked: boolean;
+  edge: number;
+  tuck: number;
+  out: boolean;
+}
+
+export function restPose({ docked, edge, tuck, out }: RestInput): RestPose {
+  if (!docked) return { y: 0, tucked: false, edge: null };
+  const clip = edge > 0 ? edge : null;
+  if (out) return { y: edge + OUT_GAP, tucked: false, edge: clip };
+  return { y: edge - tuck, tucked: true, edge: clip };
+}
+
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function shownBox(box: Box, edge: number | null): Box {
+  const top = Math.max(box.y, edge ?? 0, 0);
+  return { x: box.x, y: top, width: box.width, height: Math.max(0, box.y + box.height - top) };
 }

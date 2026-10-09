@@ -5,6 +5,7 @@ export interface ScoutSpot {
   x: number;
   y: number;
   size: number;
+  edge?: number | null;
 }
 
 export interface ShapeTarget {
@@ -47,6 +48,7 @@ export function useIslandShape(
   const frame = useRef(0);
   const last = useRef(0);
   const instantRef = useRef(instant);
+  const edge = useRef(start.scout.edge ?? null);
 
   useEffect(() => {
     instantRef.current = instant;
@@ -66,6 +68,11 @@ export function useIslandShape(
       scout.style.width = `${size}px`;
       scout.style.height = `${size}px`;
       scout.style.transform = `translate(${s.scoutX.value}px, ${s.scoutY.value}px)`;
+      const hidden = edge.current === null ? 0 : edge.current - s.scoutY.value;
+      scout.style.setProperty(
+        '--scout-clip',
+        hidden > 0 ? `inset(${hidden}px -50% -50% -50%)` : 'none',
+      );
     }
   }, [islandRef, scoutRef]);
 
@@ -100,6 +107,7 @@ export function useIslandShape(
   return useCallback(
     (target: ShapeTarget, scoutResponse = 0.5) => {
       const s = springs.current!;
+      edge.current = target.scout.edge ?? null;
       if (instantRef.current) {
         s.width.jump(target.width);
         s.height.jump(target.height);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { shownBox } from './island-fit.ts';
 import { noteSeen } from './use-island-moments.ts';
 
 const MINUTE_MS = 60_000;
@@ -35,12 +36,17 @@ export function minuteOf(time: number): number {
   return Math.floor(time / MINUTE_MS) * MINUTE_MS;
 }
 
+function scoutRect(scout: HTMLElement): DOMRect {
+  const edge = scout.dataset.edge === undefined ? null : Number(scout.dataset.edge);
+  return DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), edge));
+}
+
 export function coreRects(island: HTMLElement | null): DOMRect[] {
   if (!island) return [];
-  const scout = island.matches('.hang, .peek.floating')
-    ? island.querySelector('.isl-scout-wrap')
+  const scout = island.matches('.peek')
+    ? island.querySelector<HTMLElement>('.isl-scout-wrap')
     : null;
-  return [island, scout].flatMap((element) => (element ? [element.getBoundingClientRect()] : []));
+  return [island.getBoundingClientRect(), ...(scout ? [scoutRect(scout)] : [])];
 }
 
 export function flatRowRects(row: HTMLElement | null): DOMRect[] {

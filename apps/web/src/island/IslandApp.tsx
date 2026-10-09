@@ -49,6 +49,7 @@ import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
 import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
+import { restsQuietly } from './island-fit.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -229,6 +230,17 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
+  const mood = wave
+    ? 'happy'
+    : scoutMoodFor(view, {
+        waiting,
+        hour: new Date(now).getHours(),
+        idleMinutes: 0,
+        running: running.length,
+        moment,
+        failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
+      });
+
   const geometry = useIslandBridge({
     islandRef,
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
@@ -236,7 +248,7 @@ export function IslandApp() {
     blobRects: () => flatRowRects(rowRef.current),
     peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -406,18 +418,7 @@ export function IslandApp() {
         view={view}
         geometry={geometry}
         size={size}
-        mood={
-          wave
-            ? 'happy'
-            : scoutMoodFor(view, {
-                waiting,
-                hour: new Date(now).getHours(),
-                idleMinutes: 0,
-                running: running.length,
-                moment,
-                failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
-              })
-        }
+        mood={mood}
         reduced={reduced}
         wave={wave}
         hover={hover}

@@ -11,7 +11,7 @@ async function fakeDesktop(page: Page) {
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
       sound: false,
-      islandSize: 'medium',
+      islandSize: localStorage.getItem('fake-desktop.island-size') ?? 'medium',
       autoExpand: true,
     };
     const publish = () => {
@@ -51,6 +51,7 @@ async function fakeDesktop(page: Page) {
           setIslandSize: async (size: string) => {
             calls.push(['size', size]);
             status.islandSize = size;
+            localStorage.setItem('fake-desktop.island-size', size);
             return publish();
           },
           setAutoExpand: async (on: boolean) => {
@@ -74,6 +75,9 @@ async function fakeDesktop(page: Page) {
   });
 }
 
+const desktopCalls = (page: Page) =>
+  page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls);
+
 test('the desktop companion shows its shortcuts only while it is on', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
@@ -91,8 +95,31 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
     'aria-checked',
     'true',
   );
-  await sizes.getByRole('radio', { name: 'Large' }).click();
-  await expect(sizes.getByRole('radio', { name: 'Large' })).toHaveAttribute('aria-checked', 'true');
+  await sizes.getByRole('radio', { name: 'Large', exact: true }).click();
+  await expect(sizes.getByRole('radio', { name: 'Large', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(sizes.getByRole('radio')).toHaveText([
+    'Full',
+    'Small',
+    'Medium',
+    'Large',
+    'Extra large',
+  ]);
+  await sizes.getByRole('radio', { name: 'Extra large' }).click();
+  expect(await desktopCalls(page)).toEqual([
+    ['enabled', true],
+    ['size', 'large'],
+    ['size', 'xlarge'],
+  ]);
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await toggle.click();
+  await expect(sizes.getByRole('radio', { name: 'Extra large' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   const change = spark.getByRole('button', { name: 'Change Quick chat shortcut' });
   await change.click();
   await page.keyboard.press('Control+Alt+J');
@@ -104,11 +131,8 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(spark.getByRole('button', { name: 'Change Quick chat shortcut' })).toHaveCount(0);
-  expect(
-    await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
-  ).toEqual([
+  expect(await desktopCalls(page)).toEqual([
     ['enabled', true],
-    ['size', 'large'],
     ['shortcut', 'quick', 'Control+Alt+J'],
     ['shortcut', 'sessions', 'Alt+K'],
     ['enabled', false],
@@ -149,7 +173,13 @@ test('the island opens these settings, and its chimes stay off until switched on
   await expect(chimes).toHaveAttribute('aria-checked', 'true');
   await expect(spark).toContainText('plays a soft chime');
   const sizes = spark.getByRole('radiogroup', { name: 'Spark Island size' });
-  await expect(sizes.getByRole('radio')).toHaveText(['Full', 'Small', 'Medium', 'Large']);
+  await expect(sizes.getByRole('radio')).toHaveText([
+    'Full',
+    'Small',
+    'Medium',
+    'Large',
+    'Extra large',
+  ]);
   await sizes.getByRole('radio', { name: 'Full' }).click();
   await expect(sizes.getByRole('radio', { name: 'Full' })).toHaveAttribute('aria-checked', 'true');
   const requests = spark.getByRole('switch', { name: 'Open requests by themselves' });

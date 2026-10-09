@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
-import { notchFit, stripHeight } from './island-fit.ts';
+import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
+import { notchFit, restPose, restsQuietly, shownBox, stripHeight } from './island-fit.ts';
+import { restMetrics } from './island-size.ts';
 
 const notched: IslandGeometry = {
   notch: true,
@@ -64,5 +65,52 @@ describe('island fit under the notch', () => {
     expect(stripHeight(below, true)).toBe(0);
     expect(stripHeight(below, false)).toBe(24);
     expect(stripHeight(notchFit({ ...notched, windowTop: 60 }), true)).toBe(0);
+  });
+});
+
+describe('the resting blob', () => {
+  const pose = (size: IslandSize, edge: number, out = false, docked = true) =>
+    restPose({ docked, edge, tuck: restMetrics(size).tuck, out });
+
+  it('shows a little under half of itself below the top edge of a flat display', () => {
+    expect(pose('small', 0)).toEqual({ y: -20, tucked: true, edge: null });
+    expect(pose('medium', 0)).toEqual({ y: -25, tucked: true, edge: null });
+    expect(pose('large', 0)).toEqual({ y: -31, tucked: true, edge: null });
+    expect(pose('full', 0)).toEqual(pose('large', 0));
+    expect(pose('xlarge', 0)).toEqual({ y: -61, tucked: true, edge: null });
+  });
+
+  it('shows the same part below the strip over a notch, clipped at the strip', () => {
+    expect(pose('small', 44)).toEqual({ y: 24, tucked: true, edge: 44 });
+    expect(pose('large', 38)).toEqual({ y: 7, tucked: true, edge: 38 });
+    expect(pose('xlarge', 38)).toEqual({ y: -23, tucked: true, edge: 38 });
+  });
+
+  it('comes all the way out, 4 points below the edge', () => {
+    expect(pose('large', 0, true)).toEqual({ y: 4, tucked: false, edge: null });
+    expect(pose('xlarge', 38, true)).toEqual({ y: 42, tucked: false, edge: 38 });
+  });
+
+  it('is whole and unclipped when the island floats, out or not', () => {
+    for (const out of [false, true]) {
+      expect(pose('xlarge', 0, out, false)).toEqual({ y: 0, tucked: false, edge: null });
+      expect(pose('small', 38, out, false).tucked).toBe(false);
+    }
+  });
+
+  it('stays tucked only while Scout is idle or asleep', () => {
+    expect(restsQuietly(null)).toBe(true);
+    expect(restsQuietly('sleep')).toBe(true);
+    for (const mood of ['working', 'alert', 'happy', 'sad'] as const) {
+      expect(restsQuietly(mood)).toBe(false);
+    }
+  });
+
+  it('takes pointer hits on the part that shows, not the part under the edge', () => {
+    const tucked = { x: 462, y: -23, width: 116, height: 116 };
+    expect(shownBox(tucked, 38)).toEqual({ x: 462, y: 38, width: 116, height: 55 });
+    expect(shownBox({ ...tucked, y: -61 }, null)).toEqual({ x: 462, y: 0, width: 116, height: 55 });
+    expect(shownBox({ ...tucked, y: 42 }, 38)).toEqual({ ...tucked, y: 42 });
+    expect(shownBox({ ...tucked, y: -200 }, 38).height).toBe(0);
   });
 });

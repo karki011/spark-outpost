@@ -1,3 +1,4 @@
+import { ISLAND_BLOB, islandTuck, type IslandSize } from '@spark-outpost/contracts';
 import type { IslandPosition } from './companion-settings.ts';
 
 export interface Rect {
@@ -37,7 +38,20 @@ export interface IslandGeometry {
 
 export const ISLAND_WIDTH = 1040;
 export const ISLAND_HEIGHT = 600;
-export const FLOATING_BLOB = { x: 512, y: 0, size: 30 };
+
+export interface RestBlob {
+  size: number;
+  tuck: number;
+}
+
+export function restBlob(size: IslandSize): RestBlob {
+  const blob = ISLAND_BLOB[size];
+  return { size: blob, tuck: islandTuck(blob) };
+}
+
+export function floatingBlob(size: number): { x: number; y: number; size: number } {
+  return { x: (ISLAND_WIDTH - size) / 2, y: 0, size };
+}
 
 const NOTCH_MENU_BAR_MIN = 30;
 const NOTCH_ASPECT = 5;
@@ -112,17 +126,24 @@ function notchText(display: DisplayInfo): string {
   return display.notch === undefined ? `${size} (from menu bar)` : size;
 }
 
+function restText(docked: boolean, blob: RestBlob): string {
+  return docked
+    ? `docked, blob ${blob.size} tucked ${blob.tuck} at rest`
+    : `floating, blob ${blob.size} not tucked`;
+}
+
 export function placementLine(
   display: DisplayInfo,
   docked: boolean,
   requested: Rect,
   actual: Rect,
+  blob: RestBlob,
 ): string {
   return [
     `Island placed: display ${rectText(display.bounds)}`,
     `work area ${rectText(display.workArea)}`,
     `notch ${notchText(display)}`,
-    `${docked ? 'docked' : 'floating'}, requested ${rectText(requested)}`,
+    `${restText(docked, blob)}, requested ${rectText(requested)}`,
     `actual ${rectText(actual)}`,
   ].join('; ');
 }
@@ -158,16 +179,12 @@ function overlaps(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
-function blobRect(position: Point): Rect {
-  return {
-    x: position.x + FLOATING_BLOB.x,
-    y: position.y + FLOATING_BLOB.y,
-    width: FLOATING_BLOB.size,
-    height: FLOATING_BLOB.size,
-  };
+function blobRect(position: Point, size: number): Rect {
+  const blob = floatingBlob(size);
+  return { x: position.x + blob.x, y: position.y + blob.y, width: size, height: size };
 }
 
-export function clampToDisplay(position: Point, display: DisplayInfo): Point {
+export function clampToDisplay(position: Point, display: DisplayInfo, size: number): Point {
   const { bounds } = display;
   const fitted = {
     x: clamp(
@@ -175,11 +192,11 @@ export function clampToDisplay(position: Point, display: DisplayInfo): Point {
       bounds.x - SIDE_SLACK,
       bounds.x + bounds.width - ISLAND_WIDTH + SIDE_SLACK,
     ),
-    y: clamp(position.y, bounds.y - FLOATING_BLOB.y, bounds.y + bounds.height - ISLAND_HEIGHT),
+    y: clamp(position.y, bounds.y, bounds.y + bounds.height - ISLAND_HEIGHT),
   };
   const notch = notchRect(display);
-  if (!notch || !overlaps(blobRect(fitted), notch)) return fitted;
-  return { x: fitted.x, y: Math.ceil(notch.y + notch.height) - FLOATING_BLOB.y };
+  if (!notch || !overlaps(blobRect(fitted, size), notch)) return fitted;
+  return { x: fitted.x, y: Math.ceil(notch.y + notch.height) };
 }
 
 export function movedPosition(origin: Point, pointerStart: Point, pointer: Point): Point {
@@ -189,11 +206,11 @@ export function movedPosition(origin: Point, pointerStart: Point, pointer: Point
   };
 }
 
-export function liftedPosition(pointer: Point): Point {
-  const half = FLOATING_BLOB.size / 2;
+export function liftedPosition(pointer: Point, size: number): Point {
+  const blob = floatingBlob(size);
   return {
-    x: Math.round(pointer.x - FLOATING_BLOB.x - half),
-    y: Math.round(pointer.y - FLOATING_BLOB.y - half),
+    x: Math.round(pointer.x - blob.x - size / 2),
+    y: Math.round(pointer.y - blob.y - size / 2),
   };
 }
 
@@ -202,13 +219,14 @@ export function draggedPosition(
   pointerStart: Point,
   pointer: Point,
   display: DisplayInfo,
+  size: number,
 ): Point {
-  return clampToDisplay(movedPosition(origin, pointerStart, pointer), display);
+  return clampToDisplay(movedPosition(origin, pointerStart, pointer), display, size);
 }
 
-export function nearDock(position: Point, display: DisplayInfo): boolean {
+export function nearDock(position: Point, display: DisplayInfo, size: number): boolean {
   const notch = notchRect(display);
-  if (notch) return overlaps(blobRect(position), notch);
+  if (notch) return overlaps(blobRect(position, size), notch);
   const dock = dockedPosition(display);
   return (
     Math.abs(position.x - dock.x) < DOCK_REACH_X && position.y - display.bounds.y < DOCK_REACH_Y
@@ -228,6 +246,7 @@ export function placement(
   saved: IslandPosition,
   displays: readonly DisplayInfo[],
   primaryId: number,
+  size: number,
 ): { display: DisplayInfo; position: Point; docked: boolean } | null {
   const home = islandDisplay(displays, primaryId);
   if (!home) return null;
@@ -235,10 +254,10 @@ export function placement(
     const anchor = { x: saved.x + ISLAND_WIDTH / 2, y: saved.y };
     const host = displays.find((display) => contains(display.bounds, anchor));
     if (host) {
-      const docked = nearDock(saved, host);
+      const docked = nearDock(saved, host, size);
       return {
         display: host,
-        position: docked ? dockedPosition(host) : clampToDisplay(saved, host),
+        position: docked ? dockedPosition(host) : clampToDisplay(saved, host, size),
         docked,
       };
     }

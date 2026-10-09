@@ -239,10 +239,8 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     if (!desktop) return;
-    if (!resting || pointerIn) {
-      desktop.island.setRestSize(null);
-      return;
-    }
+    desktop.island.setRestSize(null);
+    if (!resting || pointerIn) return;
     const timer = setTimeout(() => {
       const { coreRects, blobRects } = latest.current;
       desktop.island.setRestSize(restSize([...coreRects(), ...blobRects()]));
