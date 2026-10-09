@@ -414,6 +414,7 @@ async function launch(): Promise<void> {
     trayIcon: icons.tray,
     showSpark,
     quit: () => app.quit(),
+    log: mainLog,
   });
   if (app.isPackaged) app.setAsDefaultProtocolClient(config.linkScheme);
   if (pendingLinkChat) companionHost.openChat(pendingLinkChat);

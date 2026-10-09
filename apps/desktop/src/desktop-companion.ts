@@ -33,6 +33,7 @@ interface CompanionHostOptions {
   trayIcon: string;
   showSpark: () => void;
   quit: () => void;
+  log: (line: string) => void;
 }
 
 export interface CompanionHost {
@@ -112,6 +113,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         preload: options.preload,
         position: () => companion.position(),
         savePosition: (position) => companion.setPosition(position),
+        log: options.log,
         onGone: () => {
           if (island === opened) island = null;
           onGone();

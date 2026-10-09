@@ -11,6 +11,7 @@ import {
   nearDock,
   notchRect,
   placement,
+  placementLine,
   ISLAND_HEIGHT,
   ISLAND_WIDTH,
   type DisplayInfo,
@@ -46,6 +47,7 @@ describe('island placement', () => {
       notchHeight: 38,
       docked: true,
       menuBar: 38,
+      windowTop: 0,
     });
     expect(islandGeometry(external, false)).toEqual({
       notch: false,
@@ -54,6 +56,7 @@ describe('island placement', () => {
       notchHeight: 0,
       docked: false,
       menuBar: 25,
+      windowTop: 0,
     });
     expect(islandGeometry({ ...builtIn, workArea: builtIn.bounds }, true).top).toBe(32);
   });
@@ -72,6 +75,7 @@ describe('island placement', () => {
         notchHeight: 0,
         docked: true,
         menuBar,
+        windowTop: 0,
       });
     }
   });
@@ -238,5 +242,36 @@ describe('island placement', () => {
     expect(clampToDisplay({ x: 100, y: 200 }, builtIn)).toEqual({ x: 100, y: 200 });
     expect(clampToDisplay({ x: 1600, y: -200 }, external)).toEqual({ x: 1600, y: -200 });
     expect(clampToDisplay({ x: 100, y: 0 }, { ...builtIn, notch: null })).toEqual({ x: 100, y: 0 });
+  });
+});
+
+describe('island window offset', () => {
+  const notched: DisplayInfo = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 2056, height: 1329 },
+    workArea: { x: 0, y: 44, width: 2056, height: 1285 },
+    internal: true,
+    notch: { width: 220, height: 38 },
+  };
+
+  it('reports how far the window top sits below the screen top', () => {
+    expect(islandGeometry(notched, true).windowTop).toBe(0);
+    expect(islandGeometry(notched, true, 44)).toMatchObject({ notchHeight: 38, windowTop: 44 });
+    expect(islandGeometry(external, true, -200).windowTop).toBe(0);
+    expect(islandGeometry(external, true, -175).windowTop).toBe(25);
+    expect(islandGeometry(notched, true, -10).windowTop).toBe(0);
+  });
+
+  it('describes a placement with the display, the notch and both bounds', () => {
+    const requested = { x: 508, y: 0, width: 1040, height: 600 };
+    expect(placementLine(notched, requested, { ...requested, y: 44 })).toBe(
+      'Island placed: display 2056x1329 at 0,0; work area 2056x1285 at 0,44; notch 220x38; requested 1040x600 at 508,0; actual 1040x600 at 508,44',
+    );
+    expect(placementLine({ ...notched, notch: undefined }, requested, requested)).toContain(
+      'notch 220x44 (from menu bar)',
+    );
+    expect(placementLine({ ...notched, notch: null }, requested, requested)).toContain(
+      'notch none',
+    );
   });
 });

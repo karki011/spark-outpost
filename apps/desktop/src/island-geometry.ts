@@ -32,6 +32,7 @@ export interface IslandGeometry {
   notchHeight: number;
   docked: boolean;
   menuBar: number;
+  windowTop: number;
 }
 
 export const ISLAND_WIDTH = 1040;
@@ -79,7 +80,11 @@ export function notchRect(display: DisplayInfo): Rect | null {
   };
 }
 
-export function islandGeometry(display: DisplayInfo, docked: boolean): IslandGeometry {
+export function islandGeometry(
+  display: DisplayInfo,
+  docked: boolean,
+  windowY: number = display.bounds.y,
+): IslandGeometry {
   const menuBar = display.workArea.y - display.bounds.y;
   const notch = displayNotch(display);
   const notchHeight = notch ? Math.ceil(notch.height) : 0;
@@ -91,7 +96,29 @@ export function islandGeometry(display: DisplayInfo, docked: boolean): IslandGeo
     notchHeight,
     docked,
     menuBar: Math.max(0, menuBar),
+    windowTop: Math.max(0, Math.round(windowY - display.bounds.y)),
   };
+}
+
+function rectText(rect: Rect): string {
+  return `${rect.width}x${rect.height} at ${rect.x},${rect.y}`;
+}
+
+function notchText(display: DisplayInfo): string {
+  const notch = displayNotch(display);
+  if (!notch) return 'none';
+  const size = `${notch.width}x${notch.height}`;
+  return display.notch === undefined ? `${size} (from menu bar)` : size;
+}
+
+export function placementLine(display: DisplayInfo, requested: Rect, actual: Rect): string {
+  return [
+    `Island placed: display ${rectText(display.bounds)}`,
+    `work area ${rectText(display.workArea)}`,
+    `notch ${notchText(display)}`,
+    `requested ${rectText(requested)}`,
+    `actual ${rectText(actual)}`,
+  ].join('; ');
 }
 
 export function dockedPosition(display: DisplayInfo): Point {

@@ -8,9 +8,11 @@ import {
   islandGeometry,
   nearDock,
   placement,
+  placementLine,
   type DisplayInfo,
   type IslandGeometry,
   type Point,
+  type Rect,
   type Size,
 } from './island-geometry.ts';
 import { emulatedNotch, readNotches, type Notches } from './notch-probe.ts';
@@ -41,6 +43,7 @@ interface IslandWindowOptions {
   position: () => IslandPosition;
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
+  log: (line: string) => void;
 }
 
 export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
@@ -61,6 +64,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
   let interactive = false;
+  let requested: Rect | null = null;
+  let logged = '';
+  let sentTop = 0;
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {
@@ -71,9 +77,17 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   guardNavigation(window, options.origin);
 
   const geometry = (): IslandGeometry =>
-    placed
-      ? islandGeometry(placed.display, placed.docked)
-      : { notch: false, top: 32, notchWidth: 0, notchHeight: 0, docked: true, menuBar: 0 };
+    placed && !window.isDestroyed()
+      ? islandGeometry(placed.display, placed.docked, window.getBounds().y)
+      : {
+          notch: false,
+          top: 32,
+          notchWidth: 0,
+          notchHeight: 0,
+          docked: true,
+          menuBar: 0,
+          windowTop: 0,
+        };
 
   const send = (channel: string, payload: unknown) => {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
@@ -95,7 +109,18 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const escape = escapeGuard(globalShortcut, () => send(IPC.islandEscape, null));
 
   const moveTo = (position: Point, animate = false) => {
-    window.setBounds(islandBounds(position, resting()), animate);
+    requested = islandBounds(position, resting());
+    window.setBounds(requested, animate);
+  };
+
+  const settle = () => {
+    if (window.isDestroyed() || !placed || !requested) return;
+    const line = placementLine(placed.display, requested, window.getBounds());
+    if (line !== logged) options.log(line);
+    logged = line;
+    const next = geometry();
+    sentTop = next.windowTop;
+    send(IPC.islandGeometryChanged, next);
   };
 
   const place = () => {
@@ -103,8 +128,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     placed = currentPlacement(options.position());
     if (!placed) return;
     moveTo(placed.position);
-    report('placed');
-    send(IPC.islandGeometryChanged, geometry());
+    settle();
   };
 
   const measure = () => {
@@ -128,6 +152,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     if (placed) moveTo(placed.position);
     window.showInactive();
     report(reason);
+    settle();
   };
   const reveal = revealGate(() => {
     if (!visibility.hidden()) showNow('shown');
@@ -143,6 +168,10 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       window.hide();
       report('hidden');
     },
+  });
+  window.on('move', () => {
+    if (dragging || window.isDestroyed() || geometry().windowTop === sentTop) return;
+    settle();
   });
   window.on('closed', () => {
     reveal.cancel();
@@ -165,8 +194,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     options.savePosition({ docked: false, ...settled });
     placed = { display, position: settled, docked };
     moveTo(settled, docked);
-    report(docked ? 'docked' : 'moved');
-    send(IPC.islandGeometryChanged, geometry());
+    settle();
   };
 
   return {

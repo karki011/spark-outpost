@@ -37,6 +37,7 @@ export interface IslandGeometry {
   notchHeight?: number;
   docked: boolean;
   menuBar: number;
+  windowTop?: number;
 }
 
 type Unsubscribe = () => void;
