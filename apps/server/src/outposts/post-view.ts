@@ -1,6 +1,7 @@
 import {
   requestState,
   type OutpostAnswer,
+  type OutpostExchange,
   type OutpostIntro,
   type OutpostPost,
 } from '@spark-outpost/contracts';
@@ -15,6 +16,7 @@ export function toOutpostPost(
   found: PostWithFacts,
   answer: OutpostAnswer | null,
   introView: IntroView | null = null,
+  exchanges: OutpostExchange[] = [],
 ): OutpostPost {
   const { post, facts } = found;
   const derived = facts ? requestState(facts) : null;
@@ -38,6 +40,7 @@ export function toOutpostPost(
     state: derived?.state ?? null,
     reason: derived?.reason ?? null,
     answer: derived ? answer : null,
+    exchanges: derived ? exchanges : [],
     files: post.attachmentIds.length,
     intro: introView?.intro ?? null,
   };

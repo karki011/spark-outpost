@@ -24,6 +24,21 @@ export const PAUSED_OUTPOST_ITEM = `EXISTS (
   WHERE post.id = q.outpost_post_id AND o.paused_at IS NOT NULL
 )`;
 
+export function postedAfterStop(post: string, lastRun: string): string {
+  return `(${post}.from_user AND ${lastRun}.status = 'cancelled'
+    AND ${post}.created_at > ${lastRun}.cancel_requested_at)`;
+}
+
+const POSTED_AFTER_STOP_ITEM = `EXISTS (
+  SELECT 1 FROM outpost_posts post
+  JOIN LATERAL (
+    SELECT r.status, r.cancel_requested_at FROM runs r
+    WHERE r.conversation_id = q.conversation_id AND r.parent_run_id IS NULL
+    ORDER BY r.created_at DESC LIMIT 1
+  ) last ON true
+  WHERE post.id = q.outpost_post_id AND ${postedAfterStop('post', 'last')}
+)`;
+
 function toQueued(row: QueueRow): QueuedMessage {
   return {
     id: row.id,
@@ -131,6 +146,22 @@ export async function takeQueued(
        FOR UPDATE OF q
      ) RETURNING *`,
     [conversationId, id],
+  );
+  return rows[0] ? toQueued(rows[0]) : null;
+}
+
+export async function takePostedAfterStop(
+  db: Queryable,
+  conversationId: string,
+): Promise<QueuedMessage | null> {
+  const { rows } = await db.query<QueueRow>(
+    `DELETE FROM chat_queue WHERE id = (
+       SELECT q.id FROM chat_queue q
+       WHERE q.conversation_id = $1 AND NOT ${PAUSED_OUTPOST_ITEM} AND ${POSTED_AFTER_STOP_ITEM}
+       ORDER BY q.position, q.created_at, q.id LIMIT 1
+       FOR UPDATE OF q
+     ) RETURNING *`,
+    [conversationId],
   );
   return rows[0] ? toQueued(rows[0]) : null;
 }

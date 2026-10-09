@@ -5,6 +5,7 @@ import {
   type TaskPiece,
 } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
+import { REQUEST_LIMIT } from '../orchestration/context.ts';
 import { blastRadiusLine, type BlastRadius } from './blast-radius.ts';
 import { pieceKey } from './builder-count.ts';
 import { NEEDS_RULE } from './needs.ts';
@@ -17,7 +18,6 @@ export const COORDINATOR_ROLE_LINE =
 export const BUILDER_GIT_RULE =
   'Use `git diff` and `git show HEAD:<path>` for baselines; never change the index, the branch or the stash.';
 const SCOUT_NOTES_LIMIT = 4_000;
-const REQUEST_LIMIT = 8_000;
 
 export interface CoordinatorContext {
   request: string;
