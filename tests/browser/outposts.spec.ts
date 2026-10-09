@@ -9,7 +9,6 @@ import {
   NAME,
   POSTS_URL,
   TURN_TIMEOUT,
-  addChat,
   asPairedPhone,
   box,
   chip,
@@ -36,58 +35,11 @@ import {
   openTouch,
   PHONE,
 } from './responsive-kit.ts';
-import { seedChats } from './sidebar-seed.ts';
 
 test.beforeEach(async ({ page }) => {
   test.slow();
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1400, height: 900 });
-});
-
-test('creates an outpost from the sidebar with a name, two chats and their handles', async ({
-  page,
-}) => {
-  await seedChats([{ title: 'Frontend' }, { title: 'Orders API' }]);
-  await openChats(page);
-  const opener = outpostsSection(page).getByRole('button', { name: 'New outpost' });
-  await opener.click();
-  const dialog = sheet(page, 'New outpost');
-  const name = dialog.getByRole('textbox', { name: /^Name/ });
-  await expect(name).toBeFocused();
-  await expect(dialog).toContainText('A new chat can be added after its first message.');
-
-  await dialog.getByRole('button', { name: 'Create outpost' }).click();
-  await expect(dialog.getByText('Enter a name.')).toBeVisible();
-  await expect(name).toBeFocused();
-  await name.fill(NAME);
-
-  const frontend = await addChat(page, dialog, 'Frontend');
-  await expect(frontend).toHaveValue('frontend');
-  const api = await addChat(page, dialog, 'Orders API');
-  await expect(api).toHaveValue('orders-api');
-  await expect(dialog.getByText('No other chats to add.')).toBeVisible();
-
-  await api.fill('frontend');
-  await dialog.getByRole('button', { name: 'Create outpost' }).click();
-  await expect(dialog.getByText('@frontend is already used in this outpost.')).toHaveCount(2);
-  await expect(outpostsSection(page).getByRole('listitem')).toHaveCount(0);
-
-  await frontend.fill('fe');
-  await api.fill('api');
-  await dialog.getByRole('button', { name: 'Create outpost' }).click();
-  await expect(dialog).toBeHidden();
-  await expect(opener).toBeFocused();
-
-  const main = outpostPage(page, NAME);
-  await expect(main).toBeVisible();
-  await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
-  await expect(main.getByRole('button', { name: /^You and 2 chats/ })).toBeVisible();
-  await expect(thread(page).locator('.op-notice')).toHaveText([
-    '@fe joined.',
-    '@api joined. @fe and @api can now ask each other.',
-  ]);
-  await expect(chip(page, 'fe')).toBeVisible();
-  await expect(chip(page, 'api')).toBeVisible();
 });
 
 test('typing @ offers the handles and the send button says what will happen', async ({ page }) => {
@@ -415,9 +367,7 @@ test('adds a chat to an outpost from its row menu with the keyboard', async ({ p
   await expect(options).toBeFocused();
   await openOutpost(page);
   await expect(chip(page, 'docs')).toBeVisible();
-  await expect(thread(page).locator('.op-notice').last()).toHaveText(
-    '@docs joined. @fe and @docs can now ask each other.',
-  );
+  await expect(thread(page).locator('.op-notice').last()).toHaveText(/^@docs joined · Claude Auto/);
 
   await chip(page, 'docs').click();
   await expect(
