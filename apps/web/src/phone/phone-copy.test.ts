@@ -48,9 +48,9 @@ describe('activity', () => {
       activityLine(entry({ action: 'pairing_submitted', detail: { deviceName: 'Pixel' } })),
     ).toBe('Pixel asked to pair');
     expect(activityLine(entry({ action: 'hostname_changed', detail: { on: true } }))).toBe(
-      'Phone access turned on',
+      'Remote control turned on',
     );
-    expect(activityLine(entry({ action: 'refused' }))).toBe('A phone was refused');
+    expect(activityLine(entry({ action: 'refused' }))).toBe('A device was refused');
   });
 
   it('says a phone paired again and why one was shown the pairing page', () => {
@@ -59,7 +59,7 @@ describe('activity', () => {
     ).toBe('Kitchen phone paired again');
     const shown = (reason: string, deviceName: string | null = null) =>
       activityLine(entry({ action: 'pairing_page_shown', deviceName, detail: { reason } }));
-    expect(shown('missing')).toBe('A phone with no sign-in opened the pairing page');
+    expect(shown('missing')).toBe('A device with no sign-in opened the pairing page');
     expect(shown('unknown')).toContain('paired before asked to pair again');
     expect(shown('revoked', 'Pixel')).toBe(
       'Pixel asked to pair again (it was removed on this Mac)',

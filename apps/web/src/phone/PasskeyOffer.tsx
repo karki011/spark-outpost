@@ -17,7 +17,7 @@ function Offer({ onDismiss }: { onDismiss: () => void }) {
   const anchor = usePanelAnchor();
   if (!save.isSuccess && passkeys.data?.length !== 0) return null;
   return (
-    <aside className="passkey-offer" aria-label="Passkey for this phone" style={anchor}>
+    <aside className="passkey-offer" aria-label="Passkey for this device" style={anchor}>
       {save.isSuccess ? (
         <p role="status">{PASSKEY_SAVED}</p>
       ) : (

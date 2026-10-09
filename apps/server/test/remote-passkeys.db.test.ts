@@ -161,7 +161,9 @@ describe('saving a passkey', () => {
     await setSwitches(app, { passkeys: false });
     const phone = remoteClient(app, device.cookie);
     const refused = await phone.send('post', '/api/remote/passkeys/options').expect(403);
-    expect(refused.body.error).toBe('Turned off for phones on your Mac: Sign in with a passkey.');
+    expect(refused.body.error).toBe(
+      'Turned off for remote control on your Mac: Sign in with a passkey.',
+    );
     await phone.send('post', '/api/remote/passkeys', {}).expect(403);
     await phone.get('/api/remote/passkeys').expect(403);
   });

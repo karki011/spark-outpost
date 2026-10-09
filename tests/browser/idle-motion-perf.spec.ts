@@ -48,7 +48,7 @@ test('idle blobs rest while the app is quiet and stop when the window loses focu
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const screens: Record<string, { live: number; rest: number; unfocused: number }> = {};
-  for (const name of ['Home', 'Chats', 'Docs', 'Phone', 'Settings']) {
+  for (const name of ['Home', 'Chats', 'Docs', 'Remote control', 'Settings']) {
     await openScreen(page, name);
     await page.mouse.move(700, 450);
     await expect.poll(() => motion(page)).toBe('live');

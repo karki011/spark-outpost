@@ -6,7 +6,7 @@ import { REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
 import { PasskeyOffer } from './PasskeyOffer.tsx';
 
 const SETTLE = { timeout: 3000 };
-const SAVE = 'Save a passkey for this phone';
+const SAVE = 'Save a passkey for this device';
 const DEVICE = { id: '11111111-1111-4111-8111-111111111111', name: 'Pixel' };
 
 class NoResizeObserver {
@@ -98,7 +98,7 @@ describe('the passkey offer on a paired phone', () => {
     await show();
     expect(await screen.findByRole('button', { name: SAVE }, SETTLE)).toBeTruthy();
     expect(
-      screen.getByText(/Lets this phone sign in again in another browser without going back/),
+      screen.getByText(/Lets this device sign in again in another browser without going back/),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));

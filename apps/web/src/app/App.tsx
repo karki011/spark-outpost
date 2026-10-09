@@ -332,7 +332,9 @@ function ChatShell({ entering }: { entering: boolean }) {
             </Suspense>
           )}
           {view === 'phone' && (
-            <Suspense fallback={<main className="page" aria-label="Phone" aria-busy="true" />}>
+            <Suspense
+              fallback={<main className="page" aria-label="Remote control" aria-busy="true" />}
+            >
               <Phone />
             </Suspense>
           )}

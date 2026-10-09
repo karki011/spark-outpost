@@ -94,13 +94,13 @@ describe('pairing scene copy', () => {
     const moods = stages.map((stage) => motionMood(stageMotion(stage, null)));
     expect(moods).toEqual(['sleep', null, null, 'alert', null, 'happy', 'sad']);
     expect(stages.map((stage) => stageLine(stage))).toEqual([
-      'Turn phone access on to pair a phone.',
+      'Turn remote control on to pair a device.',
       'Ready when you are.',
-      'Scan this with your phone, or type the code.',
+      'Scan this with a phone, or open the address on the other device and type the code.',
       'This code is about to run out.',
-      'Kitchen phone wants to pair. Same code on your phone?',
+      'Kitchen phone wants to pair. Same code on the device?',
       'Kitchen phone is paired.',
-      'That code ran out before a phone used it.',
+      'That code ran out before a device used it.',
     ]);
   });
 
@@ -147,8 +147,8 @@ describe('pairing scene motion', () => {
     expect(stageMotion(stageOf({ status: 'off' }), on)).toBe('working');
     expect(stageMotion(stageOf({ started }), off)).toBe('working');
     expect(motionMood('working')).toBe('working');
-    expect(stageLine(stageOf({ status: 'off' }), on)).toBe('Turning phone access on…');
-    expect(stageLine(stageOf({}), off)).toBe('Turning phone access off…');
+    expect(stageLine(stageOf({ status: 'off' }), on)).toBe('Turning remote control on…');
+    expect(stageLine(stageOf({}), off)).toBe('Turning remote control off…');
   });
 
   it('settles unsure with the reason when turning on failed', () => {
@@ -174,7 +174,7 @@ describe('pairing scene motion', () => {
     });
     expect(activationOf({ pending: null, failed: 'on' }, off)).toEqual({
       kind: 'failed',
-      reason: 'Phone access did not turn on.',
+      reason: 'Remote control did not turn on.',
     });
     expect(activationOf(idle, { status: 'error', message: 'serve config denied' })).toEqual({
       kind: 'failed',
@@ -182,7 +182,7 @@ describe('pairing scene motion', () => {
     });
     expect(activationOf(idle, { status: 'error', message: null })).toEqual({
       kind: 'failed',
-      reason: 'Phone access needs a look.',
+      reason: 'Remote control needs a look.',
     });
   });
 
@@ -192,13 +192,13 @@ describe('pairing scene motion', () => {
     expect(turnFailure(null, { status: 'on', message: null })).toBeNull();
     expect(turnFailure(null, refused)).toBe('serve config denied');
     expect(turnFailure(null, { status: 'error', message: null })).toBe(
-      'Phone access needs a look.',
+      'Remote control needs a look.',
     );
     expect(turnFailure(new Error('Mac did not answer'), undefined)).toBe('Mac did not answer');
     const failed = turnFailure(null, refused) === null ? null : ('on' as const);
     expect(activationOf({ pending: null, failed }, { status: 'off', message: null })).toEqual({
       kind: 'failed',
-      reason: 'Phone access did not turn on.',
+      reason: 'Remote control did not turn on.',
     });
   });
 });

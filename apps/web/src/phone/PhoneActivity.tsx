@@ -15,16 +15,16 @@ export function PhoneActivity({ entries, wait }: PhoneActivityProps) {
   if (entries === undefined) {
     return (
       <section className="ph-card" aria-labelledby="ph-activity-title">
-        <h2 id="ph-activity-title">Recent phone activity</h2>
+        <h2 id="ph-activity-title">Recent remote activity</h2>
         {wait}
       </section>
     );
   }
   return (
     <section className="ph-card" aria-labelledby="ph-activity-title">
-      <h2 id="ph-activity-title">Recent phone activity</h2>
+      <h2 id="ph-activity-title">Recent remote activity</h2>
       {entries.length === 0 ? (
-        <p className="ph-empty">Nothing yet. Pairing and every change a phone makes show here.</p>
+        <p className="ph-empty">Nothing yet. Pairing and every change a device makes show here.</p>
       ) : (
         <ol className="ph-activity">
           {entries.slice(0, shown).map((entry) => {

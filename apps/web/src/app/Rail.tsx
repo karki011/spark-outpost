@@ -101,10 +101,10 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
 
 const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map');
 
-const PHONE_ICON = (
+const REMOTE_ICON = (
   <svg {...ICON}>
-    <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
-    <path d="M11 18.5h2" />
+    <path d="M8 16H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h10.5a2 2 0 0 1 2 2V9" />
+    <rect x="11" y="12" width="10" height="7.5" rx="1.8" />
   </svg>
 );
 
@@ -160,8 +160,8 @@ export function Rail({
   const more = [
     {
       id: 'phone',
-      label: 'Phone',
-      icon: PHONE_ICON,
+      label: 'Remote control',
+      icon: REMOTE_ICON,
       current: view === 'phone',
       onSelect: () => onView('phone'),
     },
@@ -250,8 +250,8 @@ export function Rail({
             onFocus={() => onIntent('phone')}
             onClick={() => onView('phone')}
           >
-            {PHONE_ICON}
-            Phone
+            {REMOTE_ICON}
+            Remote control
           </button>
           <button type="button" className="rail-btn" onClick={onSettings}>
             {SETTINGS_ICON}

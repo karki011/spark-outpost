@@ -60,8 +60,8 @@ test('a paired phone that arrives from another site or reopens the QR link lands
   expect(new URL(unpaired.page.url()).search).toBe('');
   expect(await signedInAs(unpaired.page)).toBeNull();
 
-  const activity = main.getByRole('region', { name: 'Recent phone activity' });
-  await expect(activity.getByText('A phone with no sign-in opened the pairing page')).toBeVisible({
+  const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  await expect(activity.getByText('A device with no sign-in opened the pairing page')).toBeVisible({
     timeout: 15_000,
   });
   await phone.close();
@@ -78,7 +78,7 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(devices.getByRole('button', { name: /removed$/ })).toHaveCount(0);
 
   await devices.getByRole('button', { name: 'Revoke Kitchen phone' }).click();
-  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+  await expect(devices.getByText('No device is paired yet.')).toBeVisible();
   await expect(devices.getByRole('button', { name: '1 removed' })).toBeVisible();
 
   await pairPhone(main, phone, 'Kitchen phone');
@@ -112,7 +112,7 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(rows.first()).toContainText('kitchen phone');
   await expect(devices.getByRole('button', { name: '2 removed' })).toBeVisible();
   await expect(
-    main.getByRole('region', { name: 'Recent phone activity' }).getByText(/asked to pair again/),
+    main.getByRole('region', { name: 'Recent remote activity' }).getByText(/asked to pair again/),
   ).toBeVisible({ timeout: 15_000 });
   await second.close();
 });

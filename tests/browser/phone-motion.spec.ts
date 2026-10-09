@@ -134,11 +134,11 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 
   const on = holdTurn(page, 'on');
   await on.ready;
-  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
   await expect(scene).toHaveAttribute('data-blob', 'working');
   await expect(scene).toHaveAttribute('data-stage', 'setup');
   await expect(scene.locator('.scout')).toHaveClass(/working/);
-  await expect(main.getByRole('status').first()).toHaveText('Turning phone access on…');
+  await expect(main.getByRole('status').first()).toHaveText('Turning remote control on…');
   await expect.poll(() => loops(scene)).toEqual(expect.arrayContaining(['ph-bob', 'sc-spin']));
   await frames(page, scene, 'activating');
   await page.waitForTimeout(1200);
@@ -146,14 +146,14 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   await on.release();
   await expect(scene).toHaveAttribute('data-blob', 'ready');
   await expect(scene.locator('.scout')).not.toHaveClass(/working/);
-  await expect(main.getByRole('button', { name: 'Pair a phone' })).toBeEnabled();
+  await expect(main.getByRole('button', { name: 'Pair a device' })).toBeEnabled();
 
   const off = holdTurn(page, 'off');
   await off.ready;
-  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
   await expect(scene).toHaveAttribute('data-blob', 'working');
-  await expect(main.getByRole('status').first()).toHaveText('Turning phone access off…');
-  await expect(main.getByRole('button', { name: 'Pair a phone' })).toBeDisabled();
+  await expect(main.getByRole('status').first()).toHaveText('Turning remote control off…');
+  await expect(main.getByRole('button', { name: 'Pair a device' })).toBeDisabled();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await loops(scene.locator('.ph-scene-stage'))).toEqual([]);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -163,7 +163,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 
   setFakeTailscale({ failServe: true });
   const refused = page.waitForResponse('**/api/remote/tailscale/on');
-  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
   expect(await (await refused).json()).toMatchObject({ status: 'error' });
   const reread = await page.waitForResponse(
     (response) =>
@@ -173,13 +173,13 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   await page.waitForTimeout(500);
   await expect(scene).toHaveAttribute('data-blob', 'unsure');
   await expect(scene.locator('.scout')).toHaveClass(/sad/);
-  await expect(main.getByRole('status').first()).toHaveText('Phone access did not turn on.');
+  await expect(main.getByRole('status').first()).toHaveText('Remote control did not turn on.');
   await expect(main.getByRole('alert')).toHaveText(/serve config denied/);
-  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await frames(page, scene, 'activation-failed');
 
   setFakeTailscale(null);
-  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
   await expect(scene).toHaveAttribute('data-blob', 'ready');
   await expect(main.getByRole('alert')).toHaveCount(0);
 });

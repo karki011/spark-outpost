@@ -49,7 +49,7 @@ export function PhoneStatus({
         </div>
         {CAN_SWITCH.has(state.status) ? (
           <BlobToggle
-            label="Phone access"
+            label="Remote control"
             checked={on}
             disabled={turning}
             {...(text.step ? { describedBy: stepId } : {})}
@@ -78,7 +78,7 @@ export function PhoneStatus({
           {connected && (
             <span className="ph-connected">
               <i className="ph-dot" aria-hidden="true" />
-              Phone connected
+              Device connected
             </span>
           )}
         </div>

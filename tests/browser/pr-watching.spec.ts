@@ -413,5 +413,5 @@ test('on a phone the indicator is one icon with its full name, and the row keeps
   await page.reload();
   await toggle(page).click();
   await expect(followUp).toBeDisabled();
-  await expect(detail(page)).toContainText('Turned off for phones on your Mac');
+  await expect(detail(page)).toContainText('Turned off for remote control on your Mac');
 });
