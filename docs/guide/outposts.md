@@ -33,11 +33,11 @@ Without a handle, **Post note** starts no work.
 
 ## In the chat
 
-| You see                          | Means                                                             |
-| -------------------------------- | ----------------------------------------------------------------- |
-| A chip with the outpost's name   | Opens it.                                                         |
-| **From you**, heading a turn     | A request started this turn, under this chat's mode and autonomy. |
-| **Outpost request** in the queue | The chat is busy. You can remove it, not edit it.                 |
+| You see                          | Means                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| A chip with the outpost's name   | Opens it.                                                                            |
+| **From you**, heading a turn     | A request started this turn, under this chat's mode and autonomy.                    |
+| **Outpost request** in the queue | The chat is busy, or its last turn failed or stopped (**Send now**). Removable only. |
 
 A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `/plan` runs as a command. Why: [What an outpost request may do](outpost-permissions.md).
 

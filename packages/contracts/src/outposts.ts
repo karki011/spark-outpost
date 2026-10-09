@@ -37,7 +37,7 @@ export const requestFactsSchema = z.object({
   runStatus: runStatusSchema.nullable(),
   runNeedsYou: z.string().nullable(),
   paused: z.boolean(),
-  held: z.boolean(),
+  held: z.enum(['failed', 'stopped']).nullable(),
   chatDeleted: z.boolean(),
 });
 export type RequestFacts = z.infer<typeof requestFactsSchema>;

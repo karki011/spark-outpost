@@ -213,6 +213,29 @@ describe('cancelling a request that is still queued', () => {
   });
 });
 
+describe('cancelling a request that is working', () => {
+  it('stops its turn, and the next request the user posts to that chat starts', async () => {
+    const held = gate();
+    const stack = await start({ held: held.opened });
+    const room = await openRoom(stack);
+    const first = await post(stack, room.outpostId, '@api list the order fields');
+    await reaches(stack, room, first.id, 'working');
+
+    await stack
+      .send('post', `/api/outposts/${room.outpostId}/posts/${first.id}/cancel`)
+      .expect(200);
+    held.open();
+    await reaches(stack, room, first.id, 'cancelled');
+    const second = await post(stack, room.outpostId, '@api and the refund fields');
+
+    await reaches(stack, room, second.id, 'answered');
+    expect(await chatTurns(t.db, room.api)).toMatchObject([
+      { status: 'cancelled' },
+      { status: 'succeeded', user_message_id: second.id },
+    ]);
+  });
+});
+
 describe('a restart', () => {
   it('sends a request that was written but not sent, once', async () => {
     const stopped = await start({ dispatch: false });

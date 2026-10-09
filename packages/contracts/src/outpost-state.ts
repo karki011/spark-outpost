@@ -15,6 +15,11 @@ const REJECT_WORDS: Record<RejectReason, string> = {
   not_member: 'no longer a member',
 };
 
+const HELD_WORDS: Record<NonNullable<RequestFacts['held']>, string> = {
+  failed: 'failed',
+  stopped: 'was stopped',
+};
+
 function isRejectReason(reason: string): reason is RejectReason {
   return Object.hasOwn(REJECT_WORDS, reason);
 }
@@ -72,7 +77,10 @@ function waitingRequest(facts: RequestFacts): DerivedRequestState {
   if (facts.paused) return { state: 'sent', reason: 'Paused' };
   if (!facts.sent) return { state: 'sent', reason: 'Not sent yet' };
   if (facts.queued && facts.held) {
-    return { state: 'sent', reason: `Waiting: @${facts.toHandle}'s last turn failed` };
+    return {
+      state: 'sent',
+      reason: `Waiting: @${facts.toHandle}'s last turn ${HELD_WORDS[facts.held]}`,
+    };
   }
   return { state: 'sent', reason: null };
 }

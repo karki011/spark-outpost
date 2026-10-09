@@ -13,7 +13,7 @@ function facts(extra: Partial<RequestFacts> = {}): RequestFacts {
     runStatus: null,
     runNeedsYou: null,
     paused: false,
-    held: false,
+    held: null,
     chatDeleted: false,
     ...extra,
   };
@@ -95,7 +95,7 @@ describe('requestState from the run', () => {
   });
 
   it('is not changed by pause or a held queue once a run carries the request', () => {
-    expect(requestState(facts({ runStatus: 'running', paused: true, held: true }))).toEqual({
+    expect(requestState(facts({ runStatus: 'running', paused: true, held: 'failed' }))).toEqual({
       state: 'working',
       reason: null,
     });
@@ -181,21 +181,28 @@ describe('requestState before a run starts', () => {
       state: 'sent',
       reason: 'Paused',
     });
-    expect(requestState(facts({ queued: true, paused: true, held: true }))).toEqual({
+    expect(requestState(facts({ queued: true, paused: true, held: 'failed' }))).toEqual({
       state: 'sent',
       reason: 'Paused',
     });
   });
 
   it('says why a queued request is held after a failed turn', () => {
-    expect(requestState(facts({ toHandle: 'fe', queued: true, held: true }))).toEqual({
+    expect(requestState(facts({ toHandle: 'fe', queued: true, held: 'failed' }))).toEqual({
       state: 'sent',
       reason: "Waiting: @fe's last turn failed",
     });
   });
 
+  it('never says failed for a turn the user stopped', () => {
+    expect(requestState(facts({ toHandle: 'web', queued: true, held: 'stopped' }))).toEqual({
+      state: 'sent',
+      reason: "Waiting: @web's last turn was stopped",
+    });
+  });
+
   it('does not call an unsent request held', () => {
-    expect(requestState(facts({ sent: false, held: true })).reason).toBe('Not sent yet');
+    expect(requestState(facts({ sent: false, held: 'failed' })).reason).toBe('Not sent yet');
   });
 });
 

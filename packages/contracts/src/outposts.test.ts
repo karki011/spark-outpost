@@ -188,7 +188,7 @@ describe('outpost schemas', () => {
       runStatus: null,
       runNeedsYou: null,
       paused: false,
-      held: false,
+      held: null,
       chatDeleted: false,
     };
     expect(requestFactsSchema.parse(facts)).toEqual(facts);
