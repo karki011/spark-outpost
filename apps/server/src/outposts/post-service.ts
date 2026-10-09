@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   handleProblem,
   parseAddress,
@@ -24,10 +25,12 @@ import {
   removeMember,
   renameHandle,
 } from '../persistence/outposts.ts';
+import { removeTask } from '../persistence/outpost-stories.ts';
 import { introLine } from './handshake.ts';
 import { memberFacts } from './member-facts.ts';
-import type { RequestAuthor, StoredOutpost, StoredPost } from './ports.ts';
-import { planPost } from './post-rules.ts';
+import type { NewPost, RequestAuthor, StoredOutpost, StoredPost } from './ports.ts';
+import { planPost, type PlannedPost } from './post-rules.ts';
+import { labelsOf } from './read-labels.ts';
 
 export const POST_ID_IN_USE = 'That post id is already in use.';
 export const CHAT_NOT_IN_OUTPOST = 'That chat is not in this outpost.';
@@ -48,7 +51,23 @@ export interface PostInput {
   toConversationId?: string;
   attachmentIds?: readonly string[];
   opening?: boolean;
+  waits?: boolean;
 }
+
+export type StoryRequest = Required<
+  Pick<
+    NewPost,
+    | 'id'
+    | 'outpostId'
+    | 'body'
+    | 'fromConversationId'
+    | 'fromHandle'
+    | 'toHandle'
+    | 'toConversationId'
+    | 'attachmentIds'
+    | 'afterPostId'
+  >
+>;
 
 export interface JoinInput extends MemberRequest {
   outpostId: string;
@@ -72,7 +91,8 @@ async function repeatedPost(db: Queryable, input: PostInput): Promise<StoredPost
   if (input.id === undefined) return null;
   const existing = (await getPost(db, input.id))?.post ?? null;
   if (!existing) return null;
-  const sameAuthor = existing.fromUser === (input.author.kind === 'user');
+  const author = input.author.kind === 'chat' ? input.author.conversationId : null;
+  const sameAuthor = existing.fromUser ? author === null : existing.fromConversationId === author;
   if (existing.outpostId !== input.outpostId || !sameAuthor) {
     throw new OutpostError(409, POST_ID_IN_USE);
   }
@@ -91,6 +111,35 @@ function addressOf(input: PostInput, members: readonly OutpostMember[]): PostAdd
   return { kind: 'request', to: member.handle, body: input.text.trim() };
 }
 
+function requestHash(body: string): string {
+  return createHash('sha256').update(body).digest('hex');
+}
+
+async function chatRequestFacts(
+  db: Queryable,
+  input: PostInput,
+  post: PlannedPost,
+): Promise<Partial<NewPost>> {
+  if (input.author.kind !== 'chat' || post.kind !== 'request') return {};
+  return {
+    requestHash: requestHash(post.body),
+    waits: input.waits ?? false,
+    observed: await labelsOf(db, input.author.runId),
+  };
+}
+
+async function freeAttachments(
+  db: Queryable,
+  workspaceId: string,
+  wanted: readonly string[],
+): Promise<string[]> {
+  const attachmentIds = [...new Set(wanted)];
+  if (!(await attachmentsFree(db, workspaceId, attachmentIds))) {
+    throw new OutpostError(400, ATTACHMENT_NOT_FREE);
+  }
+  return attachmentIds;
+}
+
 export async function postToOutpost(
   { db, workspaceId }: PostServiceDeps,
   input: PostInput,
@@ -100,10 +149,7 @@ export async function postToOutpost(
     const repeated = await repeatedPost(client, input);
     if (repeated) return [repeated];
     const address = addressOf(input, outpost.members);
-    const attachmentIds = [...new Set(input.attachmentIds ?? [])];
-    if (!(await attachmentsFree(client, workspaceId, attachmentIds))) {
-      throw new OutpostError(400, ATTACHMENT_NOT_FREE);
-    }
+    const attachmentIds = await freeAttachments(client, workspaceId, input.attachmentIds ?? []);
     const plan = planPost(
       input.author,
       address,
@@ -112,17 +158,56 @@ export async function postToOutpost(
       input.guestConversationId ?? null,
     );
     if (plan.kind === 'refusal') throw new OutpostError(400, plan.message);
-    const posts = await insertPosts(
-      client,
-      plan.posts.map((post, index) => ({
+    const planned: NewPost[] = [];
+    for (const [index, plannedPost] of plan.posts.entries()) {
+      const post = { ...plannedPost, body: storedBody(plannedPost.body) };
+      planned.push({
         ...post,
         id: index === 0 && input.id !== undefined ? input.id : newId(),
-        body: storedBody(post.body),
         ...(post.kind === 'request' ? { attachmentIds, opening: input.opening ?? false } : {}),
-      })),
-    );
+        ...(await chatRequestFacts(client, input, post)),
+      });
+    }
+    const posts = await insertPosts(client, planned);
     await notifyOutpostChanged(client, outpost.id);
     return posts;
+  });
+}
+
+export async function postStoryRequest(
+  { db, workspaceId }: PostServiceDeps,
+  request: StoryRequest,
+): Promise<StoredPost> {
+  return withTransaction(db, async (client) => {
+    const outpost = await knownOutpost(client, workspaceId, request.outpostId);
+    const existing = (await getPost(client, request.id))?.post ?? null;
+    if (existing) {
+      const same =
+        existing.outpostId === request.outpostId &&
+        existing.userStarted &&
+        existing.toConversationId === request.toConversationId;
+      if (!same) throw new OutpostError(409, POST_ID_IN_USE);
+      return existing;
+    }
+    const isMember = outpost.members.some(
+      (member) => member.conversationId === request.toConversationId,
+    );
+    if (!isMember) throw new OutpostError(400, CHAT_NOT_IN_OUTPOST);
+    const attachmentIds = await freeAttachments(client, workspaceId, request.attachmentIds);
+    const [post] = await insertPosts(client, [
+      {
+        ...request,
+        kind: 'request',
+        body: storedBody(request.body),
+        fromUser: false,
+        attachmentIds,
+        opening: true,
+        userStarted: true,
+      },
+    ]);
+    if (!post) throw new Error(`Outpost post ${request.id} was not stored.`);
+    await notifyOutpostChanged(client, outpost.id);
+    return post;
   });
 }
 
@@ -197,6 +282,7 @@ export async function leaveOutpost(
     const outpost = await knownOutpost(client, workspaceId, input.outpostId);
     const removed = await removeMember(client, outpost.id, input.conversationId);
     if (!removed) return false;
+    await removeTask(client, input.conversationId);
     await rejectWaiting(client, outpost.id, input.conversationId, 'not_member');
     await notifyOutpostChanged(client, outpost.id);
     return true;

@@ -13,10 +13,15 @@ import {
 import { startOutpost } from '../src/outposts/start-outpost.ts';
 import {
   ALL_NOT_AVAILABLE,
+  AUTHOR_NOT_MEMBER,
   GUESTS_NOT_AVAILABLE,
-  ONLY_USER_POSTS,
+  OUTPOST_PAUSED,
+  REQUEST_STARTED_TURN,
 } from '../src/outposts/post-rules.ts';
-import { accept, newChat, outpostEvents } from './outpost-store-support.ts';
+import type { RequestAuthor } from '../src/outposts/ports.ts';
+import { recordObservation } from '../src/persistence/observations.ts';
+import { setPaused } from '../src/persistence/outposts.ts';
+import { accept, chatWithTurn, newChat, outpostEvents } from './outpost-store-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -223,7 +228,7 @@ describe('posting to an outpost', () => {
     }
   });
 
-  it('refuses @all, a guest and an agent author for now, and stores nothing', async () => {
+  it('refuses @all and a guest for now, and stores nothing', async () => {
     expect(await refusal(post('@all rebase on main'))).toEqual({
       status: 400,
       message: ALL_NOT_AVAILABLE,
@@ -239,21 +244,6 @@ describe('posting to an outpost', () => {
         }),
       ),
     ).toEqual({ status: 400, message: GUESTS_NOT_AVAILABLE });
-    expect(
-      await refusal(
-        postToOutpost(deps, {
-          outpostId,
-          author: {
-            kind: 'chat',
-            conversationId: fe,
-            handle: 'fe',
-            runId: randomUUID(),
-            startedByRequest: false,
-          },
-          text: '@api what is the shape?',
-        }),
-      ),
-    ).toEqual({ status: 400, message: ONLY_USER_POSTS });
     expect(await bodies()).toHaveLength(2);
   });
 
@@ -262,5 +252,99 @@ describe('posting to an outpost', () => {
       postToOutpost(deps, { outpostId: randomUUID(), author: { kind: 'user' }, text: 'Hello' }),
     );
     expect(refused.status).toBe(404);
+  });
+});
+
+describe('a post written by a member chat', () => {
+  let asker: { conversationId: string; runId: string };
+  let author: RequestAuthor;
+
+  beforeEach(async () => {
+    asker = await chatWithTurn(t);
+    await joinOutpost(deps, { outpostId, conversationId: asker.conversationId, handle: 'lead' });
+    author = {
+      kind: 'chat',
+      conversationId: asker.conversationId,
+      handle: 'lead',
+      runId: asker.runId,
+      startedByRequest: false,
+    };
+  });
+
+  function ask(text = '@api what is the response shape?', extra: object = {}) {
+    return postToOutpost(deps, { outpostId, author, text, ...extra });
+  }
+
+  it('stores a request from the chat and its turn, never from the user, with what the turn had read', async () => {
+    await recordObservation(t.db, asker.runId, { source: 'web_page', label: 'example.com' });
+
+    const [post] = await ask('@api what is the response shape?', { waits: true });
+
+    expect(post).toMatchObject({
+      kind: 'request',
+      body: 'what is the response shape?',
+      fromUser: false,
+      userStarted: false,
+      fromConversationId: asker.conversationId,
+      fromHandle: 'lead',
+      fromRunId: asker.runId,
+      toHandle: 'api',
+      toConversationId: api,
+      waits: true,
+      observed: [{ source: 'web_page', label: 'example.com' }],
+      afterPostId: null,
+    });
+    expect(post?.requestHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('stores the same request from the same turn once, and a different one again', async () => {
+    const [first] = await ask();
+    const [again] = await ask();
+    const [other] = await ask('@api and the error shape?');
+    const [toFe] = await ask('@fe what is the response shape?');
+
+    expect(again?.id).toBe(first?.id);
+    expect(new Set([first?.id, other?.id, toFe?.id]).size).toBe(3);
+    expect(first).toMatchObject({ waits: false, observed: [] });
+  });
+
+  it('stores a note from the chat without a hash or labels', async () => {
+    const [note] = await ask('The endpoint is live.');
+
+    expect(note).toMatchObject({
+      kind: 'note',
+      fromUser: false,
+      fromConversationId: asker.conversationId,
+      fromHandle: 'lead',
+      fromRunId: asker.runId,
+      requestHash: null,
+      observed: [],
+    });
+  });
+
+  it('refuses a request from a turn another chat started, while paused and from a chat that left', async () => {
+    author = { ...author, startedByRequest: true } as RequestAuthor;
+    expect(await refusal(ask())).toEqual({ status: 400, message: REQUEST_STARTED_TURN });
+
+    author = { ...author, startedByRequest: false } as RequestAuthor;
+    await setPaused(t.db, t.workspaceId, outpostId, true);
+    expect(await refusal(ask())).toEqual({ status: 400, message: OUTPOST_PAUSED });
+    await setPaused(t.db, t.workspaceId, outpostId, false);
+
+    await leaveOutpost(deps, { outpostId, conversationId: asker.conversationId });
+    expect(await refusal(ask())).toEqual({ status: 400, message: AUTHOR_NOT_MEMBER });
+    expect(
+      (await listPosts(t.db, outpostId)).filter(({ post }) => post.kind === 'request'),
+    ).toEqual([]);
+  });
+
+  it('refuses a post id another author already used', async () => {
+    const id = randomUUID();
+    await postToOutpost(deps, { outpostId, author: { kind: 'user' }, id, text: '@api hello' });
+
+    expect(await refusal(ask('@api hello', { id }))).toEqual({
+      status: 409,
+      message: POST_ID_IN_USE,
+    });
   });
 });
