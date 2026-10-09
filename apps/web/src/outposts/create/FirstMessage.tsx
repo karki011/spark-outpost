@@ -55,45 +55,47 @@ export function FirstMessage({
           Remove
         </button>
       </div>
-      <AttachmentChips
-        items={attachments.items}
-        onRemove={attachments.remove}
-        onRetry={attachments.retry}
-      />
-      <textarea
-        ref={textRef}
-        id={`${ids}text`}
-        className="inp"
-        rows={ROWS}
-        autoFocus
-        value={text}
-        placeholder="What this chat should do first"
-        aria-invalid={problem !== null}
-        aria-describedby={`${ids}hint${problem ? ` ${ids}problem` : ''}`}
-        onChange={(event) => onText(event.target.value)}
-      />
-      <div className="op-message-foot">
-        <button type="button" className="btn sm ghost" onClick={() => fileInput.current?.click()}>
-          <PlusIcon />
-          Attach files
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          multiple
-          hidden
-          accept={ATTACHMENT_ACCEPT}
-          aria-label="Attach files"
-          onChange={(event) => {
-            attachments.add(Array.from(event.target.files ?? []));
-            event.target.value = '';
-            textRef.current?.focus();
-          }}
+      <div className="op-message-box">
+        <AttachmentChips
+          items={attachments.items}
+          onRemove={attachments.remove}
+          onRetry={attachments.retry}
         />
-        <small id={`${ids}hint`}>
-          {handle ? `Goes to @${handle}` : 'Goes to this chat'} as its first request when the
-          outpost starts
-        </small>
+        <textarea
+          ref={textRef}
+          id={`${ids}text`}
+          className="inp"
+          rows={ROWS}
+          autoFocus
+          value={text}
+          placeholder="What this chat should do first"
+          aria-invalid={problem !== null}
+          aria-describedby={`${ids}hint${problem ? ` ${ids}problem` : ''}`}
+          onChange={(event) => onText(event.target.value)}
+        />
+        <div className="op-message-foot">
+          <button type="button" className="btn sm ghost" onClick={() => fileInput.current?.click()}>
+            <PlusIcon />
+            Attach files
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            hidden
+            accept={ATTACHMENT_ACCEPT}
+            aria-label="Attach files"
+            onChange={(event) => {
+              attachments.add(Array.from(event.target.files ?? []));
+              event.target.value = '';
+              textRef.current?.focus();
+            }}
+          />
+          <small id={`${ids}hint`}>
+            {handle ? `Goes to @${handle}` : 'Goes to this chat'} as its first request when the
+            outpost starts
+          </small>
+        </div>
       </div>
       {attachments.notice && (
         <p className="op-message-note" role="status">
