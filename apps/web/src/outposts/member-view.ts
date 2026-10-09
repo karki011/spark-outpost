@@ -34,6 +34,12 @@ function stateOf(chat: ConversationSummary | undefined): MemberState {
   return 'idle';
 }
 
+export function chatsOnApproval(chats: readonly ConversationSummary[]): ReadonlySet<string> {
+  return new Set(
+    chats.filter((chat) => chat.latestRun?.status === 'awaiting_approval').map((chat) => chat.id),
+  );
+}
+
 export function chatPlace(
   chat: ConversationSummary | undefined,
   projectNames: Readonly<Record<string, string>>,

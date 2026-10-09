@@ -22,6 +22,7 @@ interface OutpostSheetProps {
   chats: readonly ConversationSummary[];
   projectNames: Readonly<Record<string, string>>;
   outpostId?: string | null;
+  canManage?: boolean;
   onStart: (form: SheetForm) => Promise<unknown>;
   onDelete?: () => Promise<unknown>;
   onClose: () => void;
@@ -48,6 +49,7 @@ export function OutpostSheet({
   chats,
   projectNames,
   outpostId = null,
+  canManage = true,
   onStart,
   onDelete,
   onClose,
@@ -159,81 +161,90 @@ export function OutpostSheet({
               </small>
             )}
           </label>
-          <div className="field">
-            <span>
-              Chats
-              <small>
-                Each one gets a short handle the others use to address it. You can rename it later.
-                A new chat can be added after its first message.
-              </small>
-            </span>
-            {form.members.length === 0 ? (
-              <p className="op-sheet-empty">No chats yet. Add one below, or add them later.</p>
-            ) : (
-              <ul className="op-sheet-members">
-                {form.members.map((member) => {
-                  const chat = chats.find((candidate) => candidate.id === member.conversationId);
-                  const title = chat?.title ?? 'Deleted chat';
-                  const problem =
-                    problemFor(problems, 'handle', member.conversationId) ??
-                    problemFor(problems, 'members', member.conversationId);
-                  const problemId = `${ids}p${member.conversationId}`;
-                  return (
-                    <li key={member.conversationId}>
-                      <span className="op-handle-field">
-                        <span aria-hidden="true">@</span>
-                        <input
-                          className="inp"
-                          value={member.handle}
-                          aria-label={`Handle for ${title}`}
-                          aria-invalid={problem !== null}
-                          aria-describedby={problem ? problemId : undefined}
-                          autoCapitalize="off"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          onChange={(event) =>
-                            setForm(withHandleFor(form, member.conversationId, event.target.value))
-                          }
-                        />
-                      </span>
-                      <span className="op-sheet-chat">
-                        <b>{title}</b>
-                        <small>{chatPlace(chat, projectNames)}</small>
-                      </span>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        aria-label={`Remove ${title}`}
-                        onClick={() => setForm(withoutMember(form, member.conversationId))}
-                      >
-                        <XIcon />
-                      </button>
-                      {problem && (
-                        <small id={problemId} className="op-problem">
-                          {problem}
-                        </small>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {listProblem && <small className="op-problem">{listProblem}</small>}
-            <div className="op-sheet-add">
-              {choices.length > 0 ? (
-                <ChoicePicker
-                  label="Add a chat"
-                  placeholder="Add a chat"
-                  choices={choices}
-                  value={NOTHING_PICKED}
-                  onChange={addChat}
-                />
+          {!canManage && (
+            <p className="op-sheet-empty">
+              Chats and handles are changed on your Mac. Deleting the outpost happens there too.
+            </p>
+          )}
+          {canManage && (
+            <div className="field">
+              <span>
+                Chats
+                <small>
+                  Each one gets a short handle the others use to address it. You can rename it
+                  later. A new chat can be added after its first message.
+                </small>
+              </span>
+              {form.members.length === 0 ? (
+                <p className="op-sheet-empty">No chats yet. Add one below, or add them later.</p>
               ) : (
-                <small className="op-sheet-note">No other chats to add.</small>
+                <ul className="op-sheet-members">
+                  {form.members.map((member) => {
+                    const chat = chats.find((candidate) => candidate.id === member.conversationId);
+                    const title = chat?.title ?? 'Deleted chat';
+                    const problem =
+                      problemFor(problems, 'handle', member.conversationId) ??
+                      problemFor(problems, 'members', member.conversationId);
+                    const problemId = `${ids}p${member.conversationId}`;
+                    return (
+                      <li key={member.conversationId}>
+                        <span className="op-handle-field">
+                          <span aria-hidden="true">@</span>
+                          <input
+                            className="inp"
+                            value={member.handle}
+                            aria-label={`Handle for ${title}`}
+                            aria-invalid={problem !== null}
+                            aria-describedby={problem ? problemId : undefined}
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            onChange={(event) =>
+                              setForm(
+                                withHandleFor(form, member.conversationId, event.target.value),
+                              )
+                            }
+                          />
+                        </span>
+                        <span className="op-sheet-chat">
+                          <b>{title}</b>
+                          <small>{chatPlace(chat, projectNames)}</small>
+                        </span>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          aria-label={`Remove ${title}`}
+                          onClick={() => setForm(withoutMember(form, member.conversationId))}
+                        >
+                          <XIcon />
+                        </button>
+                        {problem && (
+                          <small id={problemId} className="op-problem">
+                            {problem}
+                          </small>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
+              {listProblem && <small className="op-problem">{listProblem}</small>}
+              <div className="op-sheet-add">
+                {choices.length > 0 ? (
+                  <ChoicePicker
+                    label="Add a chat"
+                    placeholder="Add a chat"
+                    choices={choices}
+                    value={NOTHING_PICKED}
+                    onChange={addChat}
+                  />
+                ) : (
+                  <small className="op-sheet-note">No other chats to add.</small>
+                )}
+              </div>
             </div>
-          </div>
-          {onDelete && (
+          )}
+          {onDelete && canManage && (
             <div className="op-sheet-danger">
               <HoldToConfirm
                 label="Hold to delete outpost"

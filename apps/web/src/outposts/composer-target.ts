@@ -32,7 +32,7 @@ function noteHint(text: string, handles: readonly string[]): string {
   if (text.trim() === '') return EMPTY_HINT;
   const unknown = unknownHandle(text, handles);
   if (unknown) return `No chat here is called @${unknown}. This posts as a note.`;
-  return 'A note starts no work. Chats read it at their next turn.';
+  return 'A note starts no work.';
 }
 
 export function composerTarget(

@@ -30,7 +30,6 @@ import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { OutpostHost } from '../outposts/OutpostHost.tsx';
-import { postAnchor } from '../outposts/post-text.ts';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
@@ -85,6 +84,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openOutpostId, setOpenOutpostId] = useState<string | null>(null);
+  const [outpostJumpTo, setOutpostJumpTo] = useState<string | null>(null);
   const selectChat = useCallback((id: string) => {
     setSelectedId(id);
     setOpenOutpostId(null);
@@ -169,9 +169,9 @@ function ChatShell({ entering }: { entering: boolean }) {
 
   const openOutpost = useStableCallback((id: string, postId?: string) => {
     setOpenOutpostId(id);
+    setOutpostJumpTo(postId ?? null);
     setView('chats');
     layout.closeDrawer();
-    if (postId) scrollToAnchor(postAnchor(postId), JUMP_TRIES);
   });
 
   const openFromDesktop = useRef(openChat);
@@ -275,6 +275,7 @@ function ChatShell({ entering }: { entering: boolean }) {
                   <OutpostView
                     key={openOutpostId}
                     id={openOutpostId}
+                    jumpTo={outpostJumpTo}
                     onOpenChat={openChat}
                     onGone={() => setOpenOutpostId(null)}
                   />

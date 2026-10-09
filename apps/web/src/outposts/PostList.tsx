@@ -1,16 +1,20 @@
 import '../chat/thread.css';
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import type { OutpostPost, ThreadItem } from '@spark-outpost/contracts';
 import { useStickToBottom } from '../chat/use-stick-to-bottom.ts';
+import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
 import { NotePost } from './NotePost.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
 import { RequestPost } from './RequestPost.tsx';
 import { announcements } from './post-announce.ts';
+import { postAnchor } from './post-text.ts';
 
 interface PostListProps {
   items: readonly ThreadItem[];
   answeringId: string | null;
+  jumpTo?: string | null | undefined;
+  approvalChats?: ReadonlySet<string> | undefined;
   empty: ReactNode;
   onAnswer: (post: OutpostPost) => void;
   onCancel: (postId: string) => void;
@@ -34,13 +38,20 @@ function useAnnouncements(items: readonly ThreadItem[]): readonly string[] {
 export function PostList({
   items,
   answeringId,
+  jumpTo,
+  approvalChats,
   empty,
   onAnswer,
   onCancel,
   onOpenChat,
 }: PostListProps) {
-  const { scrollerRef, away, jumpToLatest } = useStickToBottom();
+  const { scrollerRef, away, unfollow, jumpToLatest } = useStickToBottom();
   const lines = useAnnouncements(items);
+  useLayoutEffect(() => {
+    if (!jumpTo) return;
+    unfollow();
+    scrollToAnchor(postAnchor(jumpTo));
+  }, [jumpTo, unfollow]);
   return (
     <div className="thread-wrap">
       <div className="thread op-thread" ref={scrollerRef}>
@@ -54,6 +65,7 @@ export function PostList({
                     key={item.post.id}
                     post={item.post}
                     answering={item.post.id === answeringId}
+                    answerable={!approvalChats?.has(item.post.toConversationId ?? '')}
                     onAnswer={onAnswer}
                     onCancel={onCancel}
                     onOpenChat={onOpenChat}

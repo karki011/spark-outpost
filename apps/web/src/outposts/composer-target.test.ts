@@ -42,6 +42,12 @@ describe('composerTarget', () => {
     expect(target.hint).toBe(EMPTY_HINT);
   });
 
+  it('promises nothing about who reads a note', () => {
+    expect(composerTarget('The contract is settled.', HANDLES, null).hint).toBe(
+      'A note starts no work.',
+    );
+  });
+
   it('says so when the leading handle is not a member', () => {
     const target = composerTarget('@docs write it up', HANDLES, null);
     expect(target.action).toBe('note');

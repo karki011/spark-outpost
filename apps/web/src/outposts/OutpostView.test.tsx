@@ -6,6 +6,7 @@ import type { OutpostDetail } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import { OutpostView } from './OutpostView.tsx';
+import { phoneKeys } from '../phone/phone-api.ts';
 import { outpostKeys } from './outposts-api.ts';
 import {
   API_CHAT,
@@ -146,6 +147,40 @@ describe('OutpostView', () => {
     await waitFor(() => expect(screen.queryByText('Answering')).toBeNull());
   });
 
+  it('offers only Open in chat while the chat waits on an approval card', () => {
+    client.setQueryData(queryKeys.conversations, [
+      chat(FE_CHAT, { title: 'Usage page' }),
+      chat(API_CHAT, {
+        title: 'Usage endpoint',
+        latestRun: {
+          id: '0e000000-0000-4000-8000-000000000001',
+          status: 'awaiting_approval',
+          error: null,
+          step: null,
+          provider: null,
+          progress: null,
+        },
+      }),
+    ]);
+    show(
+      detail([
+        post(1, { state: 'needs_you', reason: '@api is waiting for your approval' }),
+        post(2, {
+          state: 'needs_you',
+          reason: 'Light or dark theme?',
+          toConversationId: FE_CHAT,
+          toHandle: 'fe',
+        }),
+      ]),
+    );
+    view();
+    expect(screen.getByText('@api is waiting for your approval')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Answer' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Open @api in chat' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Answer' }));
+    expect(screen.getByText('Answering').textContent).toBe('Answering @fe');
+  });
+
   it('stops answering when the request is no longer waiting for the user', async () => {
     show(detail([post(1, { state: 'needs_you' })]));
     view();
@@ -185,6 +220,19 @@ describe('OutpostView', () => {
     expect(screen.queryByRole('toolbar')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add chats' }));
     expect(screen.getByRole('dialog', { name: 'Edit outpost' })).toBeTruthy();
+  });
+
+  it('on a paired phone renames only: no chats to add, no handles, no delete', () => {
+    client.setQueryData(phoneKeys.session, { remote: true, device: null, address: null });
+    show(detail([], { members: [] }));
+    view();
+    expect(screen.getByText('Chats are added on your Mac.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add chats' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit outpost' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Edit outpost' }));
+    expect(dialog.getAllByRole('textbox')).toHaveLength(1);
+    expect(dialog.queryByRole('button', { name: /Hold to delete outpost/ })).toBeNull();
+    expect(dialog.queryByRole('button', { name: 'Add a chat' })).toBeNull();
   });
 
   it('says so when the outpost was deleted and offers the way back', async () => {
