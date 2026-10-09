@@ -44,12 +44,11 @@ Spark uses Jev for a handful of concrete judgments per Do turn: whether a messag
       'bypass',
       'read-only',
       'full access',
-      'make the change',
       'run a command',
     ],
     text: `A chat without a linked project answers from the conversation; it can't touch files or run commands, but agents can still use Spark's own spark_* tools. Link one or more project folders and a chat becomes Ask or Do, depending on the agent mode you pick.
 
-Ask: the agent reads the folders and runs read-only commands directly, loops and $(…) included. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — press Make the change for Do work. Do: the agent may also edit files and run commands.
+Ask: the agent reads the folders and runs read-only commands directly, loops and $(…) included. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — for Do work, ask for the change in a message, or leave a read-only mode. Do: the agent may also edit files and run commands.
 
 Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
   },

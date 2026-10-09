@@ -1,13 +1,16 @@
 import {
   autonomyLabel,
   isTerminalRunStatus,
+  type ConversationDetail,
   type ConversationUsage,
   type InvolvementLevel,
   type Orchestration,
   type PrChecks,
   type PrWatch,
 } from '@spark-outpost/contracts';
+import { tvOrchestration } from '../../crew/conversation-crew.ts';
 import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
+import { crewAgents } from '../../crew/crew-projection.ts';
 import { turnState } from '../../crew/tv-list.ts';
 import { countLabel } from '../../ui/count-label.ts';
 import { formatTokens } from '../composer/model-options.ts';
@@ -184,6 +187,19 @@ export function finishedCrew(
   return agents.map((agent) =>
     isBusy(agent.state) || agent.state === 'queued' ? { ...agent, state: ended } : agent,
   );
+}
+
+interface RailCrewView {
+  stage: CrewAgent[];
+  list: CrewAgent[];
+}
+
+export function railCrew(detail: ConversationDetail, running: boolean): RailCrewView {
+  const orchestration = tvOrchestration(detail);
+  if (!orchestration) return { stage: [], list: [] };
+  const members = crewAgents(orchestration, detail.activity);
+  if (running && !isTerminalRunStatus(orchestration.status)) return { stage: members, list: [] };
+  return { stage: [], list: finishedCrew(orchestration, members) };
 }
 
 export function crewHeading(agents: readonly CrewAgent[]): string {

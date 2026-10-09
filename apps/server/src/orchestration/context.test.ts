@@ -6,7 +6,6 @@ import {
   FINDING_KIND_RULE,
   IRREVERSIBLE_RULE,
   INCREMENT_RULE,
-  MAKE_CHANGE_RULE,
   SHIP_RULE,
   PUBLISH_LATER_RULE,
   PUBLISH_TURN_HEADING,
@@ -20,7 +19,6 @@ import {
   criticFixFollowUp,
   criticPrompt,
   fixFollowUp,
-  makeChangeFollowUp,
   namedFiles,
 } from './context.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
@@ -102,14 +100,6 @@ describe('context assembly', () => {
     expect(prompt).toContain('`spark_push`');
     expect(prompt).toContain("Don't open another pull request, reply on GitHub or resolve threads");
     expect(prompt).not.toContain('gh pr create');
-  });
-
-  it('tells the Builder the user chose to apply the previous answer, and includes it', () => {
-    expect(makeChangeFollowUp('Rename sum to add.')).toBe(
-      `${MAKE_CHANGE_RULE}\n\n## Answer to apply\nRename sum to add.`,
-    );
-    expect(makeChangeFollowUp(null)).toBe(MAKE_CHANGE_RULE);
-    expect(MAKE_CHANGE_RULE).toMatch(/Don't answer the question again or ask whether to make it/);
   });
 
   it('leaves out the earlier conversation when there is none, and carries your note', () => {

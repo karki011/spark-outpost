@@ -24,6 +24,7 @@ async function bridgeMain() {
       tool_name: 200,
       notification_type: 100,
       reason: 100,
+      transcript_path: 4096,
     };
     if (raw.hook_event_name === 'UserPromptSubmit') fields.prompt = 100_000;
     for (const [field, max] of Object.entries(fields)) {

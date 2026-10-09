@@ -17,7 +17,7 @@ You'll answer agents from Spark Island. About 2 minutes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-Drag the island to any display; it stays there.
+Drag Scout to place it; it stays. Drop it at top centre to dock.
 
 ## Open it
 

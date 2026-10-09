@@ -1,0 +1,32 @@
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  .col {
+    --turn-indent: calc(var(--turn-avatar) + var(--turn-gap));
+  }
+
+  .col :is(.msg.ai, .crew-turn) {
+    padding-left: var(--turn-indent);
+  }
+
+  .col .msg.ai > :is(.ai-head, .agent-head),
+  .col .crew-turn > :is(.msg, .par-group) {
+    margin-left: calc(-1 * var(--turn-indent));
+  }
+
+  .col .msg.ai > .agent-fold {
+    width: calc(100% + var(--turn-indent));
+    margin-left: calc(-8px - var(--turn-indent));
+  }
+
+  .col > section > .taskc {
+    width: calc(100% - var(--turn-indent));
+    margin-left: var(--turn-indent);
+  }
+
+  .col .jevline {
+    margin-left: 0;
+  }
+
+  .col .ai-head + .steps ul {
+    margin-left: -15px;
+  }
+}

@@ -12,7 +12,7 @@
 .agent-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--turn-gap, 8px);
   min-width: 0;
   margin: 0 0 6px;
   font-size: 13px;
@@ -21,8 +21,8 @@
   scroll-margin: 80px;
 }
 .agent-ava {
-  width: 30px;
-  height: 30px;
+  width: var(--turn-avatar, 30px);
+  height: var(--turn-avatar, 30px);
   display: grid;
   place-items: center;
   flex-shrink: 0;

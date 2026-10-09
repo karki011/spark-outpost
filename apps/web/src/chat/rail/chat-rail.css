@@ -254,7 +254,6 @@
   flex-direction: column;
   gap: 2px;
   min-height: 0;
-  max-height: 220px;
   margin: 0;
   padding: 0;
   overflow-y: auto;

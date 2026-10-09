@@ -16,6 +16,7 @@ import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
+import { notchFit, stripHeight } from './island-fit.ts';
 import { restMetrics, type RestMetrics } from './island-size.ts';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 
@@ -46,10 +47,12 @@ function scoutSpot(
   hang: number | null,
   rest: RestMetrics,
   notchHeight: number,
+  loose: boolean,
 ): ScoutSpot {
   if (hang !== null) return { x: width / 2 - rest.blob / 2, y: -hang, size: rest.blob };
   if (view.kind === 'peek') {
-    return { x: width / 2 - 9, y: Math.max(top - 13, notchHeight + SCOUT_BUTTON_REACH), size: 30 };
+    const y = loose ? 0 : Math.max(top - 13, notchHeight + SCOUT_BUTTON_REACH);
+    return { x: width / 2 - 9, y, size: 30 };
   }
   if (hasCard(view)) return { x: 22, y: top + 8 + 14, size: 46 };
   if (view.kind === 'now') return { x: 18, y: top + 9, size: 38 };
@@ -75,25 +78,26 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const wingRef = useRef<HTMLSpanElement>(null);
-  const hugsNotch = geometry.notch && geometry.docked;
+  const fit = notchFit(geometry);
+  const { hugsNotch, notchHeight } = fit;
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
+  const loose = !geometry.docked && view.kind === 'peek';
   const rest = restMetrics(size);
   const hang = bare ? rest.tuck : null;
   const pillish = view.kind === 'nudge';
   const under = hugsNotch && pillish;
-  const notchHeight = hugsNotch ? (geometry.notchHeight ?? geometry.top) : 0;
   const drop = under ? notchHeight + UNDER_NOTCH_GAP : 0;
+  const quiet = view.kind === 'peek' || pillish;
   const top = under
     ? rest.pillHeight
     : pillish
       ? Math.max(geometry.top, rest.pillHeight)
-      : bare
+      : bare || loose
         ? 0
-        : geometry.top;
+        : stripHeight(fit, quiet);
   const gap = hugsNotch && !under ? geometry.notchWidth + 2 * NOTCH_MARGIN : 0;
-  const quiet = view.kind === 'peek' || pillish;
-  const notchSpan = view.kind === 'peek' ? geometry.notchWidth : gap;
+  const notchSpan = loose ? 0 : view.kind === 'peek' ? geometry.notchWidth : gap;
   const viewport = useViewportWidth();
   const screenWidth = window.screen.width;
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
@@ -102,7 +106,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     ? rest.blob
     : Math.min(chatting ? chatWidth(screenWidth) : viewWidth(view, notchSpan, screenWidth), room);
   const hint = keyHint(view);
-  const scout = scoutSpot(view, width, top, hang, rest, notchHeight);
+  const scout = scoutSpot(view, width, top, hang, rest, notchHeight, loose);
   const rowShift = view.kind === 'peek' ? scout.x + scout.size / 2 - width / 2 : 0;
   const setTarget = useIslandShape(
     islandRef,
@@ -139,7 +143,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
           width: fitted,
           height,
           radius: pillish ? 16 : quiet ? 14 : 22,
-          scout: scoutSpot(view, fitted, top, hang, rest, notchHeight),
+          scout: scoutSpot(view, fitted, top, hang, rest, notchHeight, loose),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
@@ -152,7 +156,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, hang, pillish, setTarget, rest, notchHeight]);
+  }, [view, width, top, quiet, hint, hang, pillish, setTarget, rest, notchHeight, loose]);
 
   const classes = [
     'isl',

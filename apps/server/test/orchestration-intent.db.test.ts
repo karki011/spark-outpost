@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { modeForLegacy, type AdviceBody, type InvolvementLevel } from '@spark-outpost/contracts';
-import { MAKE_CHANGE_RULE } from '../src/orchestration/context.ts';
 import { NEEDS_YOU_NOTE } from '../src/orchestration/simple-intake.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
@@ -19,7 +18,6 @@ import {
   jevFetch,
   removeRepo,
   startOrchestrator,
-  withTag,
   type Harness,
   type JevScript,
   type Scenario,
@@ -56,13 +54,12 @@ async function send(
   conversationId: string,
   scenario: Scenario,
   level: InvolvementLevel | null = null,
-  extra: { startAs?: 'change' } = {},
 ) {
   script.scenario = scenario;
   const sent = await sendUserMessage(
     t.db,
     conversationId,
-    { id: randomUUID(), content: scenario.text, ...extra },
+    { id: randomUUID(), content: scenario.text },
     {
       provider: 'claude',
       model: 'sonnet',
@@ -75,12 +72,8 @@ async function send(
   return sent.run.id;
 }
 
-async function turn(
-  conversationId: string,
-  scenario: Scenario,
-  extra: { startAs?: 'change' } = {},
-) {
-  const runId = await send(conversationId, scenario, null, extra);
+async function turn(conversationId: string, scenario: Scenario) {
+  const runId = await send(conversationId, scenario);
   const done = await driveToEnd(t, conversationId, runId);
   return { ...done, runId };
 }
@@ -121,8 +114,15 @@ const PLAN_TALK: Scenario = {
   intentProbabilities: { feature: 0.62, question: 0.38 },
 };
 
-describe('answer first, with "Make the change" one click away', () => {
-  it('answers an unsure Do request in place, then builds the same request on "change"', async () => {
+const MAKE_THE_CHANGE: Scenario = {
+  id: 'make-the-change',
+  text: 'make the change #build',
+  mode: 'do',
+  destructive: 0.05,
+};
+
+describe('answer first, then build when the next message asks for the change', () => {
+  it('answers an unsure Do request in place, then builds on a "make the change" message', async () => {
     const { conversationId } = await linkedConversation(t, root);
     const answered = await turn(conversationId, PLAN_TALK);
     expect(answered.asked).toEqual([]);
@@ -133,21 +133,22 @@ describe('answer first, with "Make the change" one click away', () => {
     expect(advice.calls?.question).toMatchObject({ jev: 0.38, value: true, source: 'rules' });
     expect(advice.notAsked).toMatchObject({ continues_task: 'no current task' });
 
-    const built = await turn(conversationId, withTag(PLAN_TALK, '#build'), { startAs: 'change' });
+    const built = await turn(conversationId, MAKE_THE_CHANGE);
     expect(built.orchestration.crew.map((member) => member.role)).toContain('builder');
-    expect(await getRun(t.db, built.runId)).toMatchObject({ pickedMode: 'do', startAs: 'change' });
-    expect((await adviceOf(built.runId)).calls?.change).toMatchObject({ source: 'user' });
-    const answer = await t.db.query<{ content: string }>(
-      `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
-      [answered.runId],
-    );
+    expect(await getRun(t.db, built.runId)).toMatchObject({
+      mode: 'do',
+      pickedMode: 'do',
+      startAs: null,
+    });
+    const calls = (await adviceOf(built.runId)).calls;
+    expect(calls?.question).toMatchObject({ value: false });
+    expect(calls?.change).toBeUndefined();
     const builder = await t.db.query<{ prompt: string }>(
       `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'builder'`,
       [built.runId],
     );
-    expect(builder.rows[0]?.prompt).toContain(MAKE_CHANGE_RULE);
     expect(builder.rows[0]?.prompt).toContain(
-      `## Answer to apply\n${answer.rows[0]!.content.trim()}`,
+      `## Earlier conversation\nUser: ${PLAN_TALK.text}\n\nAssistant: `,
     );
   }, 90_000);
 });

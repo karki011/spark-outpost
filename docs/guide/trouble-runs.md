@@ -32,7 +32,7 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 
 - **You see:** a step that says "Spark's policy blocked", or "Declined: … (This changes .env, a secret file)".
 - **Why:** the action crossed a [protected path](protected-paths.md), or a read-only mode was asked to change files.
-- **Fix:** in a read-only mode, select **Make the change**. For a protected path, answer the card.
+- **Fix:** in a read-only mode, switch the agent's mode. For a protected path, answer the card.
 - **Still stuck:** do that step in a [terminal](terminals.md).
 
 ## A push or PR failed

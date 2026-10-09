@@ -50,8 +50,14 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     repoRoot: folder,
     note: null,
   });
+  const watchers: {
+    path: string;
+    interrupt: (nativeTurnId: string) => Promise<void>;
+    close: ReturnType<typeof vi.fn<() => void>>;
+  }[] = [];
   const fixture = {
     t,
+    watchers,
     conversationId,
     inputs,
     exits,
@@ -81,6 +87,11 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     locateCli: async () => '/fixture/claude',
     place: (...args) => fixture.place(...args),
     prepareLaunch: prepare,
+    watchInterrupts: (path, interrupt) => {
+      const close = vi.fn<() => void>();
+      watchers.push({ path, interrupt, close });
+      return { ready: Promise.resolve(), close };
+    },
   });
   return Object.assign(fixture, {
     runtime,

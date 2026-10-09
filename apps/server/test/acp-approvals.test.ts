@@ -223,7 +223,7 @@ describe('ACP permission requests in Ask mode', { timeout: 20_000 }, () => {
     expect(result.text).toContain('permission=no');
     expect(requests).toEqual([]);
     expect(result.steps).toContain(
-      "Declined: Write notes.txt (Ask mode doesn't change files — use Make the change)",
+      "Declined: Write notes.txt (Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode)",
     );
   });
 });

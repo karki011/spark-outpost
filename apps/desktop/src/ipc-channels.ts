@@ -55,4 +55,4 @@ export const IPC = {
   browserPicked: 'browser:picked',
 } as const;
 
-export type DragPhase = 'start' | 'move' | 'end';
+export type DragPhase = 'start' | 'lift' | 'move' | 'end';

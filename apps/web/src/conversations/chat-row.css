@@ -82,6 +82,21 @@
   min-width: 0;
 }
 
+.row-title-line:has(.row-merged) .tt {
+  flex: 0 1 auto;
+}
+
+.row-merged {
+  display: grid;
+  flex: none;
+  color: var(--accent-text);
+}
+
+.row-merged svg {
+  width: 13px;
+  height: 13px;
+}
+
 .tt[data-marquee] {
   text-overflow: clip;
 }

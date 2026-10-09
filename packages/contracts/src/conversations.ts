@@ -18,7 +18,6 @@ import {
   messageSourceSchema,
   runSchema,
   runStatusSchema,
-  startAsSchema,
 } from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
@@ -100,6 +99,7 @@ export const conversationSummarySchema = z.object({
   category: categorySchema.nullable().default(null),
   branch: z.string().nullable().optional(),
   teammate: teammateTagSchema.nullable().optional(),
+  pullRequestMerged: z.boolean().optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 
@@ -168,7 +168,6 @@ export const sendMessageRequestSchema = z
     content: z.string().trim(),
     attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
     annotations: z.array(annotationInputSchema).max(ANNOTATIONS_PER_MESSAGE).default([]),
-    startAs: startAsSchema.optional(),
     source: messageSourceSchema.optional(),
   })
   .refine((request) => request.content.length > 0 || request.attachmentIds.length > 0, {

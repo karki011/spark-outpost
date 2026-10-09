@@ -24,25 +24,21 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-test('an unsure request is answered first, and Make the change builds the same request', async ({
+test('an unsure request is answered first, and a "make the change" message builds it', async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Tidy the heading #build #unsure');
-  const makeChange = page.getByRole('button', { name: 'Make the change' });
-  await expect(makeChange).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText('Answered without changing files.')).toBeVisible();
+  await expect(page.locator('.msg.ai .mood').last()).toHaveText('done', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Make the change' })).toHaveCount(0);
+  await expect(page.getByText('Answered without changing files.')).toHaveCount(0);
   await expect(card(page, /Jev has a question/)).toHaveCount(0);
   expect(repo.notes()).toBe('start\n');
-  await makeChange.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.msg.me .bubble', { hasText: 'Tidy the heading' })).toHaveCount(2, {
-    timeout: 30_000,
-  });
+  await send(page, 'make the change #build');
+  await expect(page.locator('.msg.me .bubble')).toHaveCount(2, { timeout: 30_000 });
   await allowEdit(page);
   await expect(keptResult(page)).toBeVisible({ timeout: 30_000 });
-  await expect(makeChange).toHaveCount(0);
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
 

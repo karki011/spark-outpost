@@ -8,6 +8,7 @@ import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import {
+  COLUMN,
   LONG_TASKS,
   NOTES,
   PROMPTS,
@@ -74,7 +75,7 @@ test.describe('plain chats', () => {
     const column = (await page.locator('.col').boundingBox())!;
     const railBox = (await rail(page).boundingBox())!;
     const thread = (await page.locator('.thread').boundingBox())!;
-    expect(column.width).toBeGreaterThan(860);
+    expect(Math.abs(column.width - COLUMN)).toBeLessThan(1);
     expect(railBox.x).toBeGreaterThan(column.x + column.width + 16);
     expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
     expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
@@ -125,14 +126,13 @@ test.describe('plain chats', () => {
           ]);
           return Math.abs(column!.x - composer!.x) + Math.abs(column!.width - composer!.width);
         })
-        .toBeLessThan(34);
+        .toBeLessThan(1);
       await expect
         .poll(async () => (await page.locator('.col').boundingBox())!.width)
         .toBeGreaterThanOrEqual(680);
       const column = (await page.locator('.col').boundingBox())!;
       const railBox = (await rail(page).boundingBox())!;
       const thread = (await page.locator('.thread').boundingBox())!;
-      expect(column.width).toBeGreaterThanOrEqual(680);
       expect(railBox.x).toBeGreaterThanOrEqual(column.x + column.width + 16);
       expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
       expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
@@ -158,10 +158,12 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toHaveCount(0);
     const columnWidth = async () => (await page.locator('.col').boundingBox())!.width;
     await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    expect(await columnWidth()).toBeLessThanOrEqual(COLUMN + 1);
 
     await page.getByRole('button', { name: 'Hide sidebar' }).click();
     await expect(rail(page)).toBeVisible();
     await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    expect(await columnWidth()).toBeLessThanOrEqual(COLUMN + 1);
   });
 
   test('the rail collapses to a small toggle and stays collapsed after a reload', async ({

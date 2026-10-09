@@ -65,8 +65,14 @@
   background: var(--notch);
 }
 
-.isl.bare {
+.isl.bare,
+.isl.peek.floating {
   background: transparent;
+}
+
+.isl.peek.floating {
+  top: 0;
+  border-top: 0;
 }
 
 .isl-ear {

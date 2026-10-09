@@ -112,7 +112,6 @@ test('a plan-only request writes the plan, changes nothing, raises no card and s
   await expect(turn.getByRole('heading', { name: 'Add CSV export' })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(turn.getByText('Answered without changing files.')).toBeVisible();
   await expect(card(page, /Approve the plan\?/)).toHaveCount(0);
   await expect(card(page, /Jev has a question/)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Save as agreed plan' })).toHaveCount(0);

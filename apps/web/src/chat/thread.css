@@ -15,6 +15,8 @@
 
 .col {
   --overhang: 0px;
+  --turn-avatar: 30px;
+  --turn-gap: 8px;
   max-width: var(--chat-col, 700px);
   margin: 0 auto;
 }
@@ -25,10 +27,6 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 360px;
   scroll-margin-top: 8px;
-}
-
-.col .md > :is(p, ul, ol, blockquote, h1, h2, h3, h4) {
-  max-width: var(--chat-measure, 560px);
 }
 
 .col > section:not(:nth-last-child(-n + 2)) .msg {
@@ -85,7 +83,7 @@
 }
 
 .bubble {
-  max-width: min(82%, var(--chat-measure, 560px));
+  max-width: 82%;
   background: var(--user);
   color: var(--user-text);
   padding: 8px 14px;
@@ -101,14 +99,14 @@
 .ai-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--turn-gap, 8px);
   margin-bottom: 6px;
   font-size: 13px;
 }
 
 .ai-avatar {
-  width: 30px;
-  height: 30px;
+  width: var(--turn-avatar, 30px);
+  height: var(--turn-avatar, 30px);
   flex-shrink: 0;
   display: grid;
   place-items: center;

@@ -26,6 +26,7 @@ import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { isNativeSessionId } from './native-hooks.ts';
+import { watchClaudeInterrupts } from './native-interrupts.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
@@ -57,7 +58,14 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   };
   const control = nativeControl(deps.db, live, tokens);
   const { syncScope, finish } = control;
-  const hook = nativeObserver({ db: deps.db, waiters, tokens, enqueue, control });
+  const hook = nativeObserver({
+    db: deps.db,
+    waiters,
+    tokens,
+    enqueue,
+    control,
+    watchInterrupts: deps.watchInterrupts ?? watchClaudeInterrupts,
+  });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
     conversationId: string,
@@ -189,6 +197,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         completedTurns: new Set(),
         currentPromptEventId: null,
         completedEvents: new Map(),
+        interrupts: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -245,6 +254,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (session) {
         live.delete(conversationId);
         tokens.delete(session.hookKey);
+        session.interrupts?.close();
         await session.context?.close();
       }
       grant?.revoke();

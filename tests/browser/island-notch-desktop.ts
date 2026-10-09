@@ -11,6 +11,10 @@ export interface NotchSetup {
   sparkFocused?: boolean;
   theme?: string;
   notch?: boolean;
+  cutout?: { width: number; height: number; menuBar: number };
+  windowTop?: number;
+  docked?: boolean;
+  asScreen?: boolean;
 }
 
 export interface RestSize {
@@ -21,6 +25,7 @@ export interface RestSize {
 export interface NotchWindow {
   islandFocus: boolean[];
   islandRest: (RestSize | null)[];
+  islandDrags: string[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
 }
@@ -40,6 +45,7 @@ export function notchBox(): Box {
 export async function openNotchIsland(page: Page, setup: NotchSetup) {
   await page.addInitScript(
     ({ setup, notch }) => {
+      const windowTop = setup.windowTop ?? 0;
       const now = new Date();
       localStorage.setItem('spark-outpost.theme', setup.theme ?? 'graphite');
       localStorage.setItem(
@@ -53,9 +59,11 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const hasNotch = setup.notch !== false;
       const focus: boolean[] = [];
       const rest: ({ width: number; height: number } | null)[] = [];
+      const drags: string[] = [];
       Object.assign(window, {
         islandFocus: focus,
         islandRest: rest,
+        islandDrags: drags,
         sparkDesktop: {
           platform: 'darwin',
           companion: {
@@ -75,8 +83,9 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
               top: hasNotch ? notch.menuBar : 24,
               notchWidth: hasNotch ? notch.width : 0,
               notchHeight: hasNotch ? notch.height : 0,
-              docked: true,
+              docked: setup.docked !== false,
               menuBar: hasNotch ? notch.menuBar : 24,
+              windowTop,
             }),
             onGeometry: none,
             onCommand: (callback: (action: string) => void) => {
@@ -93,22 +102,27 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
             pathForFile: () => null,
             setInteractive: () => undefined,
             setFocusable: (on: boolean) => focus.push(on),
-            drag: () => undefined,
+            drag: (phase: string) => drags.push(phase),
             openChat: () => undefined,
             setRestSize: (size: { width: number; height: number } | null) => rest.push(size),
           },
           onOpenChat: none,
         },
       });
+      if (setup.asScreen) {
+        window.addEventListener('DOMContentLoaded', () => {
+          document.body.style.transform = `translateY(${windowTop}px)`;
+        });
+      }
       if (!hasNotch) return;
       window.addEventListener('DOMContentLoaded', () => {
         const cutout = document.createElement('div');
         cutout.dataset.testNotch = '';
-        cutout.style.cssText = `position:fixed;top:0;left:50%;width:${notch.width}px;height:${notch.height}px;margin-left:${-notch.width / 2}px;background:#000;border-radius:0 0 9px 9px;z-index:99;pointer-events:none`;
-        document.body.append(cutout);
+        cutout.style.cssText = `position:fixed;top:${setup.asScreen ? 0 : -windowTop}px;left:50%;width:${notch.width}px;height:${notch.height}px;margin-left:${-notch.width / 2}px;background:#000;border-radius:0 0 9px 9px;z-index:99;pointer-events:none`;
+        (setup.asScreen ? document.documentElement : document.body).append(cutout);
       });
     },
-    { setup, notch: NOTCH },
+    { setup, notch: setup.cutout ?? NOTCH },
   );
   await page.setViewportSize(VIEWPORT);
   await page.goto('/island');
@@ -189,3 +203,6 @@ export const sparkFocus = (page: Page, focused: boolean) =>
 
 export const command = (page: Page, action: 'quick' | 'sessions') =>
   page.evaluate((next) => (window as unknown as NotchWindow).islandCommand(next), action);
+
+export const dragPhases = (page: Page) =>
+  page.evaluate(() => (window as unknown as NotchWindow).islandDrags);

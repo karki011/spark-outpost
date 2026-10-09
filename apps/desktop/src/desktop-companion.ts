@@ -33,6 +33,7 @@ interface CompanionHostOptions {
   trayIcon: string;
   showSpark: () => void;
   quit: () => void;
+  log: (line: string) => void;
 }
 
 export interface CompanionHost {
@@ -42,7 +43,7 @@ export interface CompanionHost {
 }
 
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DRAG_PHASES: readonly DragPhase[] = ['start', 'move', 'end'];
+const DRAG_PHASES: readonly DragPhase[] = ['start', 'lift', 'move', 'end'];
 const SETTINGS_TARGETS: readonly string[] = ['island', 'sparks', 'spark-new', 'connectors'];
 const SPARK_EDIT_TARGET =
   /^spark-edit:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,6 +113,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         preload: options.preload,
         position: () => companion.position(),
         savePosition: (position) => companion.setPosition(position),
+        log: options.log,
         onGone: () => {
           if (island === opened) island = null;
           onGone();

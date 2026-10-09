@@ -45,6 +45,8 @@ export function nativeControl(
       if (session.completedTurns.size > 64)
         session.completedTurns.delete(session.completedTurns.values().next().value!);
     }
+    session.interrupts?.close();
+    session.interrupts = null;
     await session.context?.close();
     await finishNativeRun(db, session.row, status, reason);
     session.context = null;
