@@ -5,7 +5,9 @@ import type { QueuedMessage } from '@spark-outpost/contracts';
 import { QueueStrip } from '../queue/QueueStrip.tsx';
 import type { ChatQueue } from '../queue/use-chat-queue.ts';
 import { OutpostChip } from './OutpostChip.tsx';
+import { API_CHAT, OUTPOST_ID, outpost } from '../../outposts/test-fixtures.ts';
 import { RequestHeader, requestSender, type RunOutpost } from './RequestHeader.tsx';
+import { memberChatId } from './outpost-seam.ts';
 
 afterEach(cleanup);
 
@@ -92,6 +94,32 @@ describe('RequestHeader', () => {
     expect(screen.getByText('From you').parentElement?.textContent).toBe(
       'From youin Orders launch',
     );
+  });
+
+  it('draws the asking chat its blob, and none for the user or an unknown chat', () => {
+    const chatId = '7a1f0c1e-6f0e-4d57-9a3e-0d8a53a7b003';
+    const { container, rerender } = render(
+      <RequestHeader outpost={request({})} fromChatId={chatId}>
+        Text
+      </RequestHeader>,
+    );
+    expect(container.querySelector('.chat-face')?.getAttribute('aria-hidden')).toBe('true');
+    rerender(<RequestHeader outpost={request({})}>Text</RequestHeader>);
+    expect(container.querySelector('.chat-face')).toBeNull();
+    rerender(
+      <RequestHeader outpost={request({ fromUser: true })} fromChatId={chatId}>
+        Text
+      </RequestHeader>,
+    );
+    expect(container.querySelector('.chat-face')).toBeNull();
+  });
+
+  it('finds the asking chat from its handle in the outpost', () => {
+    const outposts = [outpost()];
+    expect(memberChatId(outposts, OUTPOST_ID, 'api')).toBe(API_CHAT);
+    expect(memberChatId(outposts, OUTPOST_ID, 'gone')).toBeNull();
+    expect(memberChatId(outposts, OUTPOST_ID, null)).toBeNull();
+    expect(memberChatId([], OUTPOST_ID, 'api')).toBeNull();
   });
 
   it('opens the outpost from the header', () => {

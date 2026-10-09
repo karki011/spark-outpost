@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import type { TodayChat } from '@spark-outpost/contracts';
+import { chatBlob } from '../../brand/ChatFace.tsx';
 import { homeApi, homeKeys } from '../../home/home-api.ts';
 import { quietToday, type Voice } from '../../spark/voice.ts';
 import { chatExpression, chatNote, todayStats } from './today-model.ts';
@@ -50,7 +51,7 @@ function ChatRow({
       >
         <span className="today-blob" aria-hidden="true">
           <Blobatar
-            name={`chat:${chat.id}`}
+            {...chatBlob(chat.id)}
             size={20}
             animate="hover"
             expression={expressions[chatExpression(chat.state)]}
