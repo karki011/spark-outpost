@@ -49,5 +49,6 @@ export const queuedMessageSchema = z.object({
   position: z.number(),
   continueRunId: z.uuid().nullable(),
   createdAt: z.string(),
+  outpostPostId: z.uuid().nullable().optional(),
 });
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

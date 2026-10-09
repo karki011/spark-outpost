@@ -108,6 +108,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [ticketInbox, ticketConnections];
     case 'preview':
       return [{ queryKey: previewKeys.all }];
+    case 'outpost_changed':
+      return [list];
   }
 }
 

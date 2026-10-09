@@ -85,6 +85,10 @@ describe('app event invalidation', () => {
     ]);
   });
 
+  it('an outpost change refreshes the sidebar list, where a chat carries its outpost', async () => {
+    expect(await invalidatedBy(event('outpost_changed', null))).toEqual(['list']);
+  });
+
   it('map progress refreshes every map on screen and nothing else', async () => {
     expect(await invalidatedBy(event('map', null))).toEqual(['mapArea', 'mapProject']);
   });

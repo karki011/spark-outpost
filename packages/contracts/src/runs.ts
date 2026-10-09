@@ -74,6 +74,15 @@ export const runSchema = z.object({
   interruptionChoice: interruptionChoiceSchema.nullable().optional(),
   modelSwitch: modelSwitchSchema.nullable().optional(),
   errorDetails: z.string().nullable().optional(),
+  outpost: z
+    .object({
+      postId: z.uuid(),
+      outpostId: z.uuid(),
+      outpostName: z.string(),
+      fromHandle: z.string().nullable(),
+      fromUser: z.boolean(),
+    })
+    .optional(),
 });
 export type Run = z.infer<typeof runSchema>;
 
