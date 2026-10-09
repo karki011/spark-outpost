@@ -25,15 +25,13 @@ import { getRun } from '../src/persistence/runs.ts';
 import { LAUNCH_TOKEN, startA2a, type A2aHarness } from './a2a-harness.ts';
 import {
   chatRow,
-  linkStartedRun,
-  memberChat,
-  outpostRow,
+  startedRun as runOf,
   postColumns,
   queueRows,
   replyRow,
-  requestRow,
   setRunStatus,
 } from './a2a-fixtures.ts';
+import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -45,8 +43,8 @@ let client: Client;
 beforeEach(async () => {
   t = await createTestDb();
   a2a = await startA2a(t);
-  outpostId = await outpostRow(t);
-  api = await memberChat(t, outpostId, 'api');
+  outpostId = await createOutpostRow(t);
+  api = await addMemberChat(t, outpostId, 'api');
   client = await a2a.client(api);
 });
 
@@ -82,7 +80,7 @@ async function send(message: Message, from: Client = client): Promise<Task> {
 }
 
 async function sendStored(body?: string): Promise<{ postId: string; task: Task }> {
-  const postId = await requestRow(t.db, {
+  const postId = await insertRequestRow(t.db, {
     outpostId,
     toConversationId: api,
     toHandle: 'api',
@@ -91,10 +89,8 @@ async function sendStored(body?: string): Promise<{ postId: string; task: Task }
   return { postId, task: await send(wireMessage('text on the wire', postId)) };
 }
 
-async function startedRun(postId: string): Promise<string> {
-  const runId = await linkStartedRun(t.db, postId);
-  if (runId === null) throw new Error('The request did not start a turn.');
-  return runId;
+function startedRun(postId: string): Promise<string> {
+  return runOf(t.db, postId);
 }
 
 function getTask(id: string, from: Client = client): Promise<Task> {
@@ -208,7 +204,11 @@ describe('SendMessage', () => {
   });
 
   it('returns at once even when the caller asks to wait', async () => {
-    const postId = await requestRow(t.db, { outpostId, toConversationId: api, toHandle: 'api' });
+    const postId = await insertRequestRow(t.db, {
+      outpostId,
+      toConversationId: api,
+      toHandle: 'api',
+    });
     const result = await client.sendMessage(sendParams(wireMessage('wait for it', postId), false));
     expect('status' in result && result.status?.state).toBe(TaskState.TASK_STATE_SUBMITTED);
   });
@@ -248,7 +248,7 @@ describe('SendMessage', () => {
     expect(full.status?.state).toBe(TaskState.TASK_STATE_REJECTED);
     expect(statusText(full)).toBe('Not delivered: queue full');
 
-    const web = await memberChat(t, outpostId, 'web');
+    const web = await addMemberChat(t, outpostId, 'web');
     await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [web]);
     const archived = await send(wireMessage(), await a2a.client(web));
     expect(archived.status?.state).toBe(TaskState.TASK_STATE_REJECTED);
@@ -285,8 +285,12 @@ describe('refusals', () => {
     await expect(send({ ...wireMessage(), contextId: randomUUID() })).rejects.toBeInstanceOf(
       RequestMalformedError,
     );
-    const web = await memberChat(t, outpostId, 'web');
-    const postId = await requestRow(t.db, { outpostId, toConversationId: web, toHandle: 'web' });
+    const web = await addMemberChat(t, outpostId, 'web');
+    const postId = await insertRequestRow(t.db, {
+      outpostId,
+      toConversationId: web,
+      toHandle: 'web',
+    });
     await expect(send(wireMessage('x', postId))).rejects.toBeInstanceOf(RequestMalformedError);
     expect((await postColumns(t.db, postId))?.task_id).toBeNull();
   });
@@ -377,7 +381,7 @@ describe('GetTask', () => {
 
   it('finds no task for an unknown id, a malformed id or another chat’s task', async () => {
     const { task } = await sendStored();
-    const web = await a2a.client(await memberChat(t, outpostId, 'web'));
+    const web = await a2a.client(await addMemberChat(t, outpostId, 'web'));
     await expect(getTask(randomUUID())).rejects.toBeInstanceOf(TaskNotFoundError);
     await expect(getTask('task-1')).rejects.toBeInstanceOf(TaskNotFoundError);
     await expect(getTask(task.id, web)).rejects.toBeInstanceOf(TaskNotFoundError);

@@ -24,26 +24,31 @@ export async function addMemberChat(t: TestDb, outpostId: string, handle: string
   return conversationId;
 }
 
+const DEFAULT_REQUEST = 'What does the orders endpoint return?';
+
 export interface RequestRow {
   outpostId: string;
   toConversationId: string;
   toHandle: string;
-  body: string;
+  body?: string;
   fromUser?: boolean;
+  guest?: boolean;
 }
 
 export async function insertRequestRow(db: Db, request: RequestRow): Promise<string> {
   const id = randomUUID();
   await db.query(
-    `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id)
-     VALUES ($1, $2, 'request', $3, $4, $5, $6)`,
+    `INSERT INTO outpost_posts
+       (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id, guest)
+     VALUES ($1, $2, 'request', $3, $4, $5, $6, $7)`,
     [
       id,
       request.outpostId,
-      request.body,
+      request.body ?? DEFAULT_REQUEST,
       request.fromUser ?? true,
       request.toHandle,
       request.toConversationId,
+      request.guest ?? false,
     ],
   );
   return id;

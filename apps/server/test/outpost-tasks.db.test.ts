@@ -15,15 +15,14 @@ import {
 import { getRun } from '../src/persistence/runs.ts';
 import {
   chatRow,
-  linkStartedRun,
-  memberChat,
-  outpostRow,
   postColumns,
   queueRows,
   replyRow,
-  requestRow,
   setRunStatus,
+  startedRun,
 } from './a2a-fixtures.ts';
+import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
+import { drainQueue } from '../src/workflow/queue-drain.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -32,8 +31,8 @@ let api: string;
 
 beforeEach(async () => {
   t = await createTestDb();
-  outpostId = await outpostRow(t);
-  api = await memberChat(t, outpostId, 'api');
+  outpostId = await createOutpostRow(t);
+  api = await addMemberChat(t, outpostId, 'api');
 });
 
 afterEach(async () => {
@@ -47,7 +46,7 @@ function fromWire(text = 'What is the shape?', contextId: string | null = null) 
 }
 
 async function storedRequest(toConversationId = api, extra: { guest?: boolean } = {}) {
-  return requestRow(t.db, { outpostId, toConversationId, toHandle: 'api', ...extra });
+  return insertRequestRow(t.db, { outpostId, toConversationId, toHandle: 'api', ...extra });
 }
 
 function accepted(outcome: AcceptOutcome) {
@@ -56,15 +55,8 @@ function accepted(outcome: AcceptOutcome) {
 }
 
 async function runCarrying(postId: string): Promise<string> {
-  const sent = await sendUserMessage(
-    t.db,
-    api,
-    { id: postId, content: 'request' },
-    { provider: 'fake' },
-  );
-  await t.db.query('DELETE FROM chat_queue WHERE outpost_post_id = $1', [postId]);
-  await linkStartedRun(t.db, postId);
-  return sent.run.id;
+  await drainQueue(t.db, api, async () => ({ provider: 'fake' }));
+  return startedRun(t.db, postId);
 }
 
 describe('accepting a task', () => {
@@ -138,7 +130,7 @@ describe('accepting a task', () => {
   });
 
   it('refuses a context that is not the request’s outpost', async () => {
-    const other = await outpostRow(t, 'Other');
+    const other = await createOutpostRow(t, 'Other');
     expect(await acceptTask(t.db, api, fromWire('hello', other))).toEqual({
       kind: 'refused',
       why: 'other_outpost',
@@ -152,7 +144,7 @@ describe('accepting a task', () => {
   });
 
   it('refuses a stored request that is addressed to another chat', async () => {
-    const web = await memberChat(t, outpostId, 'web');
+    const web = await addMemberChat(t, outpostId, 'web');
     const postId = await storedRequest();
     expect(await acceptTask(t.db, web, fromWireFor(postId))).toEqual({
       kind: 'refused',
