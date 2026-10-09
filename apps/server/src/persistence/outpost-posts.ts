@@ -325,7 +325,7 @@ export async function requestAnswer(
        SELECT child.id FROM runs child JOIN family ON child.parent_run_id = family.id
      )
      SELECT r.task_id, r.conversation_id,
-       (SELECT m.content FROM messages m
+       (SELECT COALESCE(m.final_reply, m.content) FROM messages m
         WHERE m.run_id = r.id AND m.role = 'assistant'
         ORDER BY m.created_at DESC LIMIT 1) AS reply,
        (SELECT w.branch FROM chat_worktrees w

@@ -6,7 +6,6 @@ import { auditSparkHandoff } from './spark-audit.ts';
 import { briefWithFile } from '../projects/instructions-file.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
-import { newId } from '../persistence/ids.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
 import { renewLease, type Lease } from '../persistence/jobs.ts';
 import {
@@ -33,7 +32,7 @@ import { watchUrgentNotes } from './steer-requests.ts';
 import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
-import { runEvents } from './run-events.ts';
+import { createReplyText } from './reply-text.ts';
 import type { RunInput } from './run-input.ts';
 import {
   knownModes,
@@ -166,6 +165,7 @@ export interface TurnResult {
   error: string | null;
   text: string;
   messageId: string | null;
+  finalReply?: string | null;
 }
 
 const GENERIC_PROVIDER_FAILURE =
@@ -240,18 +240,9 @@ export async function runAgentTurn(
     ).catch((error: unknown) => console.error('Could not record run metrics', error));
   };
 
-  let messageId: string | null = null;
-  let text = '';
+  const reply = createReplyText(append);
+  const say = reply.say;
   const titles = input.askTitle ? createTitleFilter() : null;
-  const say = async (delta: string) => {
-    if (!delta) return;
-    if (!messageId) {
-      messageId = newId();
-      await append(runEvents.textStart(messageId));
-    }
-    text += delta;
-    await append(runEvents.textContent(messageId, delta));
-  };
   let turnSession: TurnSession | null = null;
   const ended = async (settled: TurnResult) => {
     await turnSession
@@ -262,8 +253,7 @@ export async function runAgentTurn(
   const result = (outcome: TurnResult['outcome'], error: string | null = null): TurnResult => ({
     outcome,
     error,
-    text,
-    messageId,
+    ...reply.result(),
   });
   const modeWatch =
     input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
@@ -286,7 +276,7 @@ export async function runAgentTurn(
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   const replySoFar = () => ({
-    shown: text,
+    shown: reply.result().text,
     held: redaction.pending() + (titles?.pending() ?? 0),
   });
   const guard = { ...input, db: deps.db, runId: lease.runId, append };
@@ -451,7 +441,10 @@ export async function runAgentTurn(
       if (output.kind === 'account') {
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }
-      if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
+      if (output.kind === 'text_delta') {
+        reply.mark(output.phase, replySoFar().held);
+        await sayText(redaction.push(output.delta));
+      }
       await commands.observe(output);
     }
     await events.close();
@@ -467,6 +460,7 @@ export async function runAgentTurn(
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);
     await settleAudit();
     if (control.reason() === 'lease_lost') return result('lease_lost');
+    const { text } = reply.result();
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);
     if (codexPlan) await plans.propose(codexPlan, 'codex');

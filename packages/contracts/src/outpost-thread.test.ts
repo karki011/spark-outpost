@@ -30,6 +30,7 @@ function post(number: number, extra: Partial<OutpostPost> = {}): OutpostPost {
     state: null,
     reason: null,
     answer: null,
+    exchanges: [],
     files: 0,
     intro: null,
     ...extra,

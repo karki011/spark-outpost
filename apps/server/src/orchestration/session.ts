@@ -79,6 +79,7 @@ export interface MemberResult {
   outcome: 'succeeded' | 'failed' | 'cancelled' | 'lease_lost';
   error: string | null;
   text: string;
+  finalReply?: string | null;
   toolCalls: number;
   inPlace: boolean;
   name: string;
@@ -103,7 +104,7 @@ export interface Session {
   plan: PlanEntry[];
   taskId: string | null;
   continuesTask: boolean;
-  message: { id: string; text: string } | null;
+  message: { id: string; text: string; finalReply?: string | null } | null;
   results: MemberResult[];
   findings: string[];
   toolCalls: number;
