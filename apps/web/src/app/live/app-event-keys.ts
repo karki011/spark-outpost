@@ -6,6 +6,7 @@ import { outcomeKeys } from '../../api/outcomes.ts';
 import { previewKeys } from '../../api/preview.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
+import { outpostKeys } from '../../outposts/outposts-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
 import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
@@ -30,6 +31,7 @@ export const LIVE_ROOTS: readonly string[] = [
   teammateKeys.all[0],
   ticketKeys.all[0],
   previewKeys.all[0],
+  outpostKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -49,6 +51,7 @@ const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
+const outposts: Invalidation = { queryKey: outpostKeys.all };
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -82,12 +85,13 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         health,
         usage,
         analytics,
+        outposts,
         ...outcome(event),
       ];
     case 'step':
       return [list, ...conversationScoped(event, true), changeSummaries];
     case 'approval':
-      return [list, teammates, ...conversationScoped(event, true), tasks, today];
+      return [list, teammates, ...conversationScoped(event, true), tasks, today, outposts];
     case 'orchestration':
       return conversationScoped(event, false);
     case 'task':
@@ -109,7 +113,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
     case 'preview':
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
-      return [list];
+      return [list, outposts];
   }
 }
 
