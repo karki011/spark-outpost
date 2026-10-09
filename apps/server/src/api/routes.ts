@@ -48,6 +48,7 @@ import { ticketErrorStatus } from './ticket-routes.ts';
 import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
+import { outpostErrorStatus } from './outpost-routes.ts';
 import { interruptionErrorStatus } from './interruption-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
@@ -196,6 +197,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     slackErrorStatus(error) ??
     teammateErrorStatus(error) ??
     queueErrorStatus(error) ??
+    outpostErrorStatus(error) ??
     cloneErrorStatus(error) ??
     interruptionErrorStatus(error);
   if (known) return known;
