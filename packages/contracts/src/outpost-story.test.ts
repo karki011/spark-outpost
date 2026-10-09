@@ -100,6 +100,16 @@ describe('outpost draft', () => {
     expect(outpostDraftSchema.safeParse({ ...draft, chats: [] }).success).toBe(false);
   });
 
+  it('takes a proposed mode per chat, and none', () => {
+    const [chat] = draft.chats;
+    const proposed = { ...draft, chats: [{ ...chat, agentMode: 'acceptEdits' }] };
+    expect(outpostDraftSchema.parse(proposed)).toEqual(proposed);
+    expect(outpostDraftSchema.parse(draft).chats[0]).not.toHaveProperty('agentMode');
+    expect(
+      outpostDraftSchema.safeParse({ ...draft, chats: [{ ...chat, agentMode: '' }] }).success,
+    ).toBe(false);
+  });
+
   it('refuses a chat with no project, an unknown agent, an empty task or a malformed dependency', () => {
     const [chat] = draft.chats;
     for (const broken of [

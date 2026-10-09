@@ -80,6 +80,31 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+async function draftProposing(agentMode: string): Promise<string> {
+  const id = randomUUID();
+  await saveDraft(t.db, {
+    id,
+    workspaceId: t.workspaceId,
+    conversationId: lead,
+    runId: null,
+    outpostId: null,
+    body: {
+      title: 'Checkout',
+      chats: [
+        {
+          handle: 'api',
+          title: 'Orders endpoint',
+          projectId,
+          task: 'Add the endpoint.',
+          agentMode,
+        },
+        { handle: 'web', title: 'Orders page', projectId, task: 'Build it.', dependsOn: 'api' },
+      ],
+    },
+  });
+  return id;
+}
+
 type NewMember = Extract<StartMember, { new: object }>;
 
 function subTask(handle: string, text: string, extra: Partial<NewMember['new']> = {}): NewMember {
@@ -247,10 +272,11 @@ describe('starting a story from a draft', () => {
     expect((await getOutpost(t.db, t.workspaceId, winner.id))?.members).toHaveLength(3);
   });
 
-  it('never starts a chat in a mode that asks less often than the lead chat', async () => {
+  it('never starts a chat in a mode the draft proposed that asks less often than the lead chat', async () => {
     await updateChatSettings(t.db, lead, { provider: 'codex', agentMode: 'ask-every-action' });
+    const proposed = await draftProposing('agent-full-access');
     const { api, web } = story({ agentMode: 'agent-full-access' });
-    const start = request([api, web]);
+    const start = { ...request([api, web]), draftId: proposed };
 
     const outcome = await startOutpost(deps, start);
 
@@ -275,6 +301,29 @@ describe('starting a story from a draft', () => {
     expect(tasks.map((row) => [row.handle, row.task.dependsOnConversationId, row.opening])).toEqual(
       [['web', null, null]],
     );
+  });
+
+  it('starts a chat in the mode the user raised by hand above the lead chat', async () => {
+    await updateChatSettings(t.db, lead, { provider: 'codex', agentMode: 'ask-every-action' });
+    const { api, web } = story({ agentMode: 'agent-full-access' });
+    const start = request([api, web]);
+
+    const outcome = await startOutpost(deps, start);
+
+    expect(outcome.failed).toEqual([]);
+    const settings = await resolveChatSettings(t.db, api.new.conversationId);
+    expect(settings.agentMode).toBe('agent-full-access');
+    expect((await requests(start.id)).map((post) => post.toHandle)).toEqual(['api', 'web']);
+  });
+
+  it("takes a mode the user changed away from the proposal as the user's choice", async () => {
+    await updateChatSettings(t.db, lead, { provider: 'codex', agentMode: 'read-only' });
+    const proposed = await draftProposing('read-only');
+    const { api, web } = story({ agentMode: 'ask-every-action' });
+
+    const outcome = await startOutpost(deps, { ...request([api, web]), draftId: proposed });
+
+    expect(outcome.failed).toEqual([]);
   });
 
   it('holds a chat left on the agent default to the lead mode too', async () => {

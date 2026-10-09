@@ -4,6 +4,7 @@ import {
   modePosture,
   startMemberChatId,
   type CreateOutpostRequest,
+  type DraftChat,
   type FailedMember,
   type ModePosture,
   type NewMemberChat,
@@ -25,7 +26,7 @@ import {
   OutpostError,
 } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
-import { aboveLeadMode, modeAboveLead } from './mode-cap.ts';
+import { aboveLeadMode, modeAboveLead, userChoseMode } from './mode-cap.ts';
 import {
   addWithNotice,
   knownOutpost,
@@ -106,6 +107,16 @@ async function createMemberChat(
   });
 }
 
+interface Story {
+  draftId: string;
+  plan: StoryPlan;
+  proposed: readonly DraftChat[];
+}
+
+function proposedMode(story: Story, member: StartMember): string | null {
+  return story.proposed.find((chat) => chat.handle === member.handle)?.agentMode ?? null;
+}
+
 async function postureOf(
   db: Queryable,
   workspaceId: string,
@@ -135,7 +146,7 @@ function joinStartMember(
   { db, workspaceId, folderExists = isFolder }: StartDeps,
   outpostId: string,
   member: StartMember,
-  lead: StoryLead | null,
+  story: Story | null,
 ): Promise<void> {
   return withTransaction(db, async (client) => {
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [outpostId]);
@@ -144,7 +155,9 @@ function joinStartMember(
     if (outpost.members.some((joined) => joined.conversationId === conversationId)) return;
     if ('new' in member) {
       await createMemberChat(client, workspaceId, member.new, folderExists);
-      if (lead) await holdToLeadMode(client, workspaceId, lead, member);
+      if (story && !userChoseMode(proposedMode(story, member), member.new.agentMode)) {
+        await holdToLeadMode(client, workspaceId, story.plan.lead, member);
+      }
     }
     await addWithNotice(client, outpost, { conversationId, handle: member.handle });
     await notifyOutpostChanged(client, outpost.id);
@@ -153,11 +166,6 @@ function joinStartMember(
 
 function failure(member: StartMember, message: string): FailedMember {
   return { conversationId: startMemberChatId(member), handle: member.handle, message };
-}
-
-interface Story {
-  draftId: string;
-  plan: StoryPlan;
 }
 
 async function storyOf(
@@ -181,7 +189,7 @@ async function storyOf(
   if (plan.kind === 'refusal') {
     throw new OutpostError(plan.message === DRAFT_ALREADY_STARTED ? 409 : 400, plan.message);
   }
-  return { draftId, plan };
+  return { draftId, plan, proposed: draft.body.chats };
 }
 
 async function claimDraft(deps: StartDeps, story: Story, outpostId: string, created: boolean) {
@@ -265,9 +273,7 @@ export async function startOutpost(
   const failed: FailedMember[] = [];
   const left = new Set<string>();
   for (const member of request.members) {
-    const refusal = await refusalOf(() =>
-      joinStartMember(deps, request.id, member, story?.plan.lead ?? null),
-    );
+    const refusal = await refusalOf(() => joinStartMember(deps, request.id, member, story));
     if (refusal === null) continue;
     failed.push(failure(member, refusal));
     left.add(startMemberChatId(member));
