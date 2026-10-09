@@ -137,6 +137,32 @@ export const ticketStatusMapSchema = z.record(
 );
 export type TicketStatusMap = z.infer<typeof ticketStatusMapSchema>;
 
+export const ticketMoveSchema = z.enum(['in_progress', 'in_review', 'done']);
+export type TicketMove = z.infer<typeof ticketMoveSchema>;
+
+export const ticketMoveStatusesSchema = z.partialRecord(
+  ticketMoveSchema,
+  z.string().trim().min(1).max(100),
+);
+export type TicketMoveStatuses = z.infer<typeof ticketMoveStatusesSchema>;
+
+export const ticketMoveOptionSchema = z.object({
+  choices: z.array(z.string()),
+  to: z.string().nullable(),
+  problem: z.string().nullable(),
+});
+export type TicketMoveOption = z.infer<typeof ticketMoveOptionSchema>;
+
+export const ticketMoveOptionsSchema = z.object({
+  projects: z.array(
+    z.object({
+      project: z.string(),
+      moves: z.record(ticketMoveSchema, ticketMoveOptionSchema),
+    }),
+  ),
+});
+export type TicketMoveOptions = z.infer<typeof ticketMoveOptionsSchema>;
+
 export const ticketConnectionSchema = z.object({
   source: ticketSourceIdSchema,
   account: z.string(),
@@ -146,6 +172,7 @@ export const ticketConnectionSchema = z.object({
   moveOnShip: z.boolean(),
   moveOnMerge: z.boolean(),
   statusMap: ticketStatusMapSchema,
+  moveStatuses: ticketMoveStatusesSchema,
 });
 export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
 
@@ -183,6 +210,7 @@ export const updateTicketSettingsRequestSchema = z
     moveOnShip: z.boolean().optional(),
     moveOnMerge: z.boolean().optional(),
     statusMap: ticketStatusMapSchema.optional(),
+    moveStatuses: ticketMoveStatusesSchema.optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined), {
     message: 'Change at least one setting.',

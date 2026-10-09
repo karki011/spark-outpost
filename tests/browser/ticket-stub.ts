@@ -3,6 +3,7 @@ import {
   fakeJira,
   JIRA_ME,
   jiraPeople,
+  type FakeJira,
   type FakeJiraIssue,
 } from '../../apps/server/test/fake-jira.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
@@ -266,6 +267,14 @@ export function ticketFakes() {
     },
     denyAssign(project: string) {
       jira.denyAssign.add(project);
+    },
+    jiraWorkflow(project: string, statuses: FakeJira['workflows'][string]) {
+      jira.workflows[project] = statuses;
+      for (const issue of jira.issues) {
+        if (issue.key.startsWith(`${project}-`) && !(issue.status in statuses)) {
+          issue.status = Object.keys(statuses)[0]!;
+        }
+      }
     },
     development(key: string, development: FakeDevelopment) {
       jira.development[key] = development;

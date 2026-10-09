@@ -34,13 +34,12 @@ Keys and tokens are stored in your system keychain and never shown again. To sto
 
 ## Keep tickets in sync with pull requests
 
-Each connected Jira or Linear card has two switches, both on by default:
+Each Jira or Linear card has two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
 
-| Switch                                        | Does                                            |
-| --------------------------------------------- | ----------------------------------------------- |
-| **Move tickets to In review when a PR opens** | Moves the linked ticket when Ship opens its PR. |
-| **Move tickets to Done when the PR merges**   | Moves it when Spark sees the PR merged.         |
+Under each switch, and for **Start work**, a picker lists your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
 
-Spark always adds the PR link to the ticket. The sync never posts comments on your tickets.
+When several fit, Spark flags the ticket in **Tickets** and leaves it. Pick the status, then move it yourself.
+
+Spark always adds the PR link and never comments on tickets.
 
 **Next:** [Work from the Tickets inbox](tickets-inbox.md)

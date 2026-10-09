@@ -339,6 +339,10 @@ export function fakeLinear(): FakeLinear {
         return { commentCreate: { success: true } };
       case 'Team':
         return teamAnswer(String(variables.key));
+      case 'TeamStatuses': {
+        const states = teams[String(variables.key).toUpperCase()];
+        return { teams: { nodes: states ? [{ states: { nodes: states } }] : [] } };
+      }
       case 'Create':
         return { issueCreate: { success: true, issue: node(created(variables.input)) } };
       case 'Link':

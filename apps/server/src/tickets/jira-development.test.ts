@@ -157,7 +157,7 @@ function jiraAnswering(devStatus: (url: URL) => Response | Promise<Response>) {
     if (url.pathname.startsWith('/rest/dev-status/')) return devStatus(url);
     return new Response(JSON.stringify({ id: '10001', key: 'CP-1' }), { status: 200 });
   }) as typeof fetch;
-  return { source: jiraSource(access, {}, fetchImpl), requests };
+  return { source: jiraSource(access, { statusMap: {}, moveStatuses: {} }, fetchImpl), requests };
 }
 
 describe('Jira development requests', () => {

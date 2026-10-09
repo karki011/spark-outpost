@@ -65,7 +65,7 @@ async function closeMerged(
   const open = sources.find((entry) => entry.connection.source === ticket.source);
   if (!open?.connection.moveOnMerge || ticket.status === 'done') return ticket;
   if (await mergeMoveTried(deps.db, deps.workspaceId, ticket, pull.url)) return ticket;
-  const sync = await moveTicket(deps, open, ticket.key, 'done', taskId, {
+  const sync = await moveTicket(deps, open, ticket.key, { group: 'done' }, taskId, {
     mergedPullRequest: pull.url,
   });
   if (sync.outcome !== 'succeeded') return ticket;

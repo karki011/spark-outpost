@@ -310,3 +310,37 @@
 .tk-empty .tk-cform p {
   margin: 0;
 }
+.tk-move-title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.tk-move-title + .tk-field-help {
+  margin-top: 2px;
+}
+.tk-move {
+  display: grid;
+  gap: 4px;
+  max-width: 320px;
+  margin: 6px 0 0 42px;
+}
+.tk-move-title ~ .tk-move {
+  margin-left: 0;
+}
+.tk-move-notes {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.tk-move-notes b {
+  font-weight: 600;
+  color: var(--text);
+}
+.tk-move-notes .warn {
+  color: var(--warn);
+}

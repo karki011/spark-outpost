@@ -4,6 +4,7 @@ import {
   startTicketResponseSchema,
   ticketConnectionsSchema,
   ticketInboxSchema,
+  ticketMoveOptionsSchema,
   ticketSearchSchema,
   ticketViewSchema,
   type AssignTicketRequest,
@@ -16,6 +17,7 @@ import {
   type StartTicketResponse,
   type TicketConnections,
   type TicketInbox,
+  type TicketMoveOptions,
   type TicketSearch,
   type TicketSearchQuery,
   type TicketSourceId,
@@ -31,6 +33,7 @@ export const ticketKeys = {
   inbox: ['tickets', 'inbox'] as const,
   connections: ['tickets', 'connections'] as const,
   attentionSettings: ['tickets', 'attention-settings'] as const,
+  moveOptions: (source: TicketSourceId) => ['tickets', 'move-options', source] as const,
   disconnect: (source: TicketSourceId): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, `/tickets/connections/${source}`, { method: 'DELETE' }),
   updateSettings: (
@@ -60,6 +63,8 @@ export const ticketsApi = {
   inbox: (): Promise<TicketInbox> => request(ticketInboxSchema, '/tickets/inbox'),
   connections: (): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, '/tickets/connections'),
+  moveOptions: (source: TicketSourceId): Promise<TicketMoveOptions> =>
+    request(ticketMoveOptionsSchema, `/tickets/connections/${source}/move-options`),
   connect: (body: SaveTicketConnectionRequest): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, `/tickets/connections/${body.source}`, {
       method: 'PUT',

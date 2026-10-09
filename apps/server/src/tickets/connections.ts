@@ -38,15 +38,18 @@ async function savedSecret(deps: TicketDeps, source: TicketSourceId): Promise<st
 
 function sourceFor(
   deps: TicketDeps,
-  connection: Pick<TicketConnectionRow, 'source' | 'apiUrl' | 'email' | 'statusMap'>,
+  connection: Pick<
+    TicketConnectionRow,
+    'source' | 'apiUrl' | 'email' | 'statusMap' | 'moveStatuses'
+  >,
   secret: string,
 ): TicketSource {
   if (connection.source === 'linear') {
-    return linearSource(secret, connection.statusMap, deps.fetch, connection.apiUrl);
+    return linearSource(secret, connection, deps.fetch, connection.apiUrl);
   }
   return jiraSource(
     { siteUrl: connection.apiUrl, email: connection.email ?? '', apiToken: secret },
-    connection.statusMap,
+    connection,
     deps.fetch,
   );
 }
@@ -63,6 +66,7 @@ export async function ticketConnections(deps: TicketDeps): Promise<TicketConnect
       moveOnShip: row.moveOnShip,
       moveOnMerge: row.moveOnMerge,
       statusMap: row.statusMap,
+      moveStatuses: row.moveStatuses,
     })),
   );
   return { connections };
@@ -76,12 +80,19 @@ function requestedAccess(deps: TicketDeps, request: SaveTicketConnectionRequest)
         apiUrl: deps.linearApiUrl ?? LINEAR_API_URL,
         email: null,
         statusMap: {},
+        moveStatuses: {},
       },
       secret: request.apiKey,
     };
   }
   return {
-    row: { source: 'jira' as const, apiUrl: request.siteUrl, email: request.email, statusMap: {} },
+    row: {
+      source: 'jira' as const,
+      apiUrl: request.siteUrl,
+      email: request.email,
+      statusMap: {},
+      moveStatuses: {},
+    },
     secret: request.apiToken,
   };
 }

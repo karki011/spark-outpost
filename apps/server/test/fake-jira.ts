@@ -42,6 +42,7 @@ export interface FakeJira {
   devStatus: { mode: DevStatusMode; requests: string[] };
   jql: string[];
   denyAssign: Set<string>;
+  closedTransitions: Set<string>;
   handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
 }
 
@@ -136,6 +137,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 
 const DEV_STATUS = /^\/rest\/dev-status\/latest\/issue\/(summary|detail)$/;
 const EXPECTED_AUTH = `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_TOKEN}`).toString('base64')}`;
+const PROJECT_STATUSES = /^\/rest\/api\/3\/project\/([^/]+)\/statuses$/;
 const ISSUE = /^\/rest\/api\/3\/issue\/([^/]+)(?:\/(remotelink|transitions|comment|assignee))?$/;
 
 export function fakeJira(): FakeJira {
@@ -154,6 +156,7 @@ export function fakeJira(): FakeJira {
   const issueId = (item: FakeJiraIssue) => String(10_000 + issues.indexOf(item));
   const jql: string[] = [];
   const denyAssign = new Set<string>();
+  const closedTransitions = new Set<string>();
 
   const projectOf = (item: FakeJiraIssue) => item.key.split('-')[0]!;
   const categoryOf = (item: FakeJiraIssue) => workflows[projectOf(item)]![item.status]!;
@@ -222,6 +225,7 @@ export function fakeJira(): FakeJira {
   function transitions(item: FakeJiraIssue) {
     return Object.entries(workflows[projectOf(item)]!)
       .filter(([name]) => name !== item.status)
+      .filter(([name]) => !closedTransitions.has(`${projectOf(item)}:${item.status}>${name}`))
       .map(([name, key], index) => ({
         id: String(index + 11),
         name: `Move to ${name}`,
@@ -318,6 +322,16 @@ export function fakeJira(): FakeJira {
     return send(res, 201, { id: String(issues.length), key, self: `/rest/api/3/issue/${key}` });
   }
 
+  function projectStatuses(res: ServerResponse, key: string) {
+    const workflow = workflows[key];
+    if (!workflow) return send(res, 404, { errorMessages: ['No project could be found.'] });
+    const statuses = Object.entries(workflow).map(([name, category]) => ({
+      name,
+      statusCategory: { key: category },
+    }));
+    return send(res, 200, [{ name: 'Task', statuses }]);
+  }
+
   function devStatusRoute(res: ServerResponse, url: URL, kind: string) {
     devStatus.requests.push(`${kind}:${url.searchParams.toString()}`);
     if (devStatus.mode === 'forbidden') return send(res, 403, { errorMessages: ['Forbidden'] });
@@ -340,6 +354,7 @@ export function fakeJira(): FakeJira {
     devStatus,
     jql,
     denyAssign,
+    closedTransitions,
     async handle(req, res) {
       if (req.headers.authorization !== EXPECTED_AUTH) {
         return send(res, 401, {
@@ -368,6 +383,8 @@ export function fakeJira(): FakeJira {
       if (url.pathname === '/rest/api/3/issue' && req.method === 'POST') {
         return createIssue(res, await readJson(req));
       }
+      const project = PROJECT_STATUSES.exec(url.pathname);
+      if (project) return projectStatuses(res, decodeURIComponent(project[1]!));
       const dev = DEV_STATUS.exec(url.pathname);
       if (dev) return devStatusRoute(res, url, dev[1]!);
       const match = ISSUE.exec(url.pathname);
