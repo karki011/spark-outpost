@@ -5,7 +5,7 @@ import type { Db } from '../src/persistence/db.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
 import { migratedUpTo, oldConversation } from './migration-support.ts';
 
-const STORIES_MIGRATION = '0160_outpost_stories.sql';
+const STORIES_MIGRATION = '0161_outpost_stories.sql';
 
 async function outpost(db: Db, workspaceId: string): Promise<string> {
   const id = randomUUID();
