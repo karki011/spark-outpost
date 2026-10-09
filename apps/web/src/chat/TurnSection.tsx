@@ -27,6 +27,8 @@ import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
 import { PushNotices } from './pull-request/PushNotices.tsx';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
+import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
+import { useOutpostSeam } from './outpost/outpost-seam.ts';
 
 type Task = ConversationDetail['tasks'][number];
 
@@ -39,6 +41,16 @@ interface TurnSectionProps {
   task: Task | null;
   onOpenTask?: ((taskId: string) => void) | undefined;
   onOpenChat: (conversationId: string) => void;
+}
+
+function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }) {
+  const seam = useOutpostSeam();
+  const open = seam ? () => seam.onOpenOutpost(outpost.outpostId, outpost.postId) : undefined;
+  return (
+    <RequestHeader outpost={outpost} onOpen={open}>
+      <QuotedText text={text} />
+    </RequestHeader>
+  );
 }
 
 function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean {
@@ -101,9 +113,13 @@ export const TurnSection = memo(function TurnSection({
           <MessageAttachments attachments={userMessage.attachments} />
           {userMessage.content && (
             <>
-              <div className="bubble">
-                <QuotedText text={userMessage.content} />
-              </div>
+              {run.outpost ? (
+                <OutpostRequest outpost={run.outpost} text={userMessage.content} />
+              ) : (
+                <div className="bubble">
+                  <QuotedText text={userMessage.content} />
+                </div>
+              )}
               <MessageActions
                 text={userMessage.content}
                 createdAt={userMessage.createdAt}

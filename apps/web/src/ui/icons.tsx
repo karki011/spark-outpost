@@ -103,6 +103,10 @@ export function FolderIcon() {
   );
 }
 
+export function OutpostIcon() {
+  return <StrokeIcon path="M6 21V4M6 5h11l-2.5 3.5L17 12H6" />;
+}
+
 export function ParentFolderIcon() {
   return <StrokeIcon path="M12 19V6M6 11l6-6 6 6" />;
 }
