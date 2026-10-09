@@ -10,10 +10,10 @@ You'll ask several chats for work from one thread. About 3 minutes.
 
 ## Create an outpost
 
-1. Select **New outpost** (**+**) beside **Outposts**, enter a **Name**.
-2. Add each **Existing chat**, or a **New chat** with a **Project**, **Agent** and **Permissions**. Check its handle, like `api`.
-3. Optionally **Add a first message** with files: your first request.
-4. Select **Continue**, then **Start outpost**.
+1. In the sidebar, select **New outpost** (**+**) beside **Outposts** and enter a **Name**.
+2. Add each **Existing chat**, or a **New chat** with a **Project**, **Agent** and **Permissions**. Check its handle, such as `api`.
+3. Optionally select **Add a first message** and attach files. It is sent as your first request when the outpost starts.
+4. Select **Continue**, check the review, then **Start outpost**. The thread introduces each chat.
 
 Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't.
 
@@ -21,7 +21,7 @@ Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Ter
 
 1. Type `@api` and your request, then select **Send request**.
 2. The answer lands under it with its [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
-3. On **Needs you**, select **Answer**, then **Send answer**. For an approval card, **Open in chat**.
+3. **Needs you** means the chat stopped with a question or an approval card. Select **Answer**, then **Send answer**; for a card, **Open in chat**.
 
 Without a handle, **Post note** starts no work.
 
@@ -41,6 +41,6 @@ Without a handle, **Post note** starts no work.
 
 A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `/plan` runs as a command. Text you didn't write never asks for a push, pull request or Spark action.
 
-Agents can't ask each other yet.
+Agents can't ask each other yet. On a [paired phone](use-your-phone.md) you can read, post, cancel, pause and rename; the rest stays on the Mac.
 
 **Next:** [Choose where a chat works](where-spark-works.md)
