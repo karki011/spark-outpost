@@ -27,19 +27,25 @@ function refuseSecret(where: string): never {
   throw new SparkToolError(`The ${where} looks like it holds a secret. ${SECRET_HELP}`);
 }
 
-function assertNoSecret(where: string, text: string): void {
-  if (redactText(text) !== text) refuseSecret(where);
+export function holdsSecret(text: string): boolean {
+  if (redactText(text) !== text) return true;
   const named = FLAG_WITH_VALUE.exec(text) ?? ASSIGNMENT.exec(text);
-  if (named && sensitiveFieldKind(named[1]!)) refuseSecret(where);
+  return Boolean(named && sensitiveFieldKind(named[1]!));
+}
+
+function assertNoSecret(where: string, text: string): void {
+  if (holdsSecret(text)) refuseSecret(where);
+}
+
+export function hasSecretFlagPair(args: readonly string[]): boolean {
+  return args.some((arg, index) => {
+    const flag = /^--?([A-Za-z][\w-]*)$/.exec(arg);
+    return Boolean(flag && sensitiveFieldKind(flag[1]!) && args[index + 1] !== undefined);
+  });
 }
 
 function assertNoSecretFlagPairs(args: readonly string[]): void {
-  args.forEach((arg, index) => {
-    const flag = /^--?([A-Za-z][\w-]*)$/.exec(arg);
-    if (flag && sensitiveFieldKind(flag[1]!) && args[index + 1] !== undefined) {
-      refuseSecret('arguments');
-    }
-  });
+  if (hasSecretFlagPair(args)) refuseSecret('arguments');
 }
 
 function checkedCommand(command: string | null, args: readonly string[]): string {

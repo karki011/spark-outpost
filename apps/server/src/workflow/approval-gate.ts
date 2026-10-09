@@ -135,7 +135,7 @@ function askedOptions(options: readonly ApprovalOption[], asking: Asking): Appro
   return once.map((option) => ({ ...option, name: PROTECTED_NAMES[option.kind] ?? option.name }));
 }
 
-async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
+export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
   const root = request.roots[0]?.path;
   if (!root || !request.command || forcePush(request.command)?.kind !== 'ask') return null;
   return defaultBranch(root).catch(() => null);
