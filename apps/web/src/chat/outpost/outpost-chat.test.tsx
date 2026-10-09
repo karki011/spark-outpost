@@ -7,7 +7,7 @@ import type { ChatQueue } from '../queue/use-chat-queue.ts';
 import { OutpostChip } from './OutpostChip.tsx';
 import { OutpostFaces } from '../../outposts/MemberFace.tsx';
 import { API_CHAT, FE_CHAT, OUTPOST_ID, outpost } from '../../outposts/test-fixtures.ts';
-import { RequestHeader, requestSender, type RunOutpost } from './RequestHeader.tsx';
+import { RequestHeader, requestNote, requestSender, type RunOutpost } from './RequestHeader.tsx';
 import { memberChatId } from './outpost-seam.ts';
 
 afterEach(cleanup);
@@ -80,10 +80,31 @@ describe('RequestHeader', () => {
     expect(requestSender({ fromUser: false, fromHandle: null })).toBe('From another chat');
   });
 
+  it('says a request another chat wrote is not the user’s, and a draft task was only started by them', () => {
+    expect(requestNote({ fromUser: true, fromHandle: null })).toBeNull();
+    expect(requestNote({ fromUser: false, fromHandle: 'fe' })).toBe('not from you');
+    const task = { fromUser: false, fromHandle: 'lead', userStarted: true };
+    expect(requestSender(task)).toBe('Task from @lead');
+    expect(requestSender({ ...task, fromHandle: null })).toBe('Task from another chat');
+    expect(requestNote(task)).toBe('started by you, not written by you');
+    expect(requestSender({ fromUser: true, fromHandle: null, userStarted: true })).toBe('From you');
+  });
+
+  it('heads a story’s first message with the chat that proposed it', () => {
+    render(
+      <RequestHeader outpost={request({ fromHandle: 'lead', userStarted: true })}>
+        Build the form
+      </RequestHeader>,
+    );
+    expect(screen.getByText('Task from @lead').parentElement?.textContent).toBe(
+      'Task from @leadstarted by you, not written by youin Orders launch',
+    );
+  });
+
   it('heads the request with its sender and outpost above the text', () => {
     render(<RequestHeader outpost={request({})}>What shape is the response?</RequestHeader>);
     expect(screen.getByText('From @fe').parentElement?.textContent).toBe(
-      'From @fein Orders launch',
+      'From @fenot from youin Orders launch',
     );
     expect(screen.getByText('What shape is the response?')).toBeTruthy();
     expect(screen.queryByRole('button')).toBeNull();

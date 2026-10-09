@@ -89,3 +89,44 @@ button.ctx-outpost:hover {
     display: none;
   }
 }
+
+.from-note {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.op-line {
+  display: flex;
+  align-items: center;
+  gap: 2px 7px;
+  min-width: 0;
+  font-size: 13px;
+}
+.op-line > svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: var(--faint);
+}
+.op-line-lead {
+  flex-shrink: 0;
+  color: var(--text);
+}
+.op-line-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-line-state {
+  flex-shrink: 0;
+  color: var(--text);
+}
+.op-line-state::before {
+  content: '· ';
+  color: var(--faint);
+}
+.op-line .from-open {
+  flex-shrink: 0;
+}
