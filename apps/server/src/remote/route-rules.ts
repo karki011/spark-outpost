@@ -68,6 +68,7 @@ GET /api/runs/:id/outcome
 PUT /api/runs/:id/feedback
 GET /api/conversations/:id/pull-requests
 POST /api/conversations/:id/pull-requests/refresh
+POST /api/conversations/:id/pull-requests/:watchId/refresh
 GET /api/project-clones
 GET /api/project-clones/options
 GET /api/projects

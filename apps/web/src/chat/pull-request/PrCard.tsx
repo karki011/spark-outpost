@@ -11,6 +11,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { PrWatch } from '@spark-outpost/contracts';
 import { ChevronIcon, XIcon } from '../../ui/icons.tsx';
+import { LineTotals } from '../changes/FileChangeList.tsx';
 import { PullRequestIcon } from '../rail/RailIcons.tsx';
 import { prWatchesQuery } from './pr-follow-up-api.ts';
 import {
@@ -21,9 +22,17 @@ import {
   rowSummary,
   shownPulls,
 } from './pr-card-model.ts';
-import { PULL_STATE_LABELS, pullState } from './pull-request-model.ts';
+import {
+  lineChange,
+  lineChangeLabel,
+  PULL_STATE_LABELS,
+  pullState,
+  repoLabels,
+} from './pull-request-model.ts';
 import { PullPanel } from './PullPanel.tsx';
+import { RefreshPullButton } from './RefreshPullButton.tsx';
 import { useDismissedPulls } from './use-dismissed-pulls.ts';
+import { usePullRefresh } from './use-pull-refresh.ts';
 import { useWatchContext, type WatchContext } from './use-watch-context.ts';
 import { watchIndicator, watchLabel } from './watch-indicator-model.ts';
 import { WatchMark } from './WatchIndicator.tsx';
@@ -35,9 +44,18 @@ interface ExpandingProps {
   row: ReactNode;
   panel: ReactNode;
   trailing?: ReactNode;
+  note?: string | null;
 }
 
-function Expanding({ className, label, toggleLabel, row, panel, trailing }: ExpandingProps) {
+function Expanding({
+  className,
+  label,
+  toggleLabel,
+  row,
+  panel,
+  trailing,
+  note = null,
+}: ExpandingProps) {
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   const item = useRef<HTMLDivElement>(null);
@@ -91,6 +109,11 @@ function Expanding({ className, label, toggleLabel, row, panel, trailing }: Expa
         {row}
         {trailing}
       </div>
+      {note && (
+        <p className="prc-problem" role="alert">
+          {note}
+        </p>
+      )}
       {open && (
         <div id={panelId} className="prc-panel">
           {panel}
@@ -102,14 +125,17 @@ function Expanding({ className, label, toggleLabel, row, panel, trailing }: Expa
 
 interface PrRowProps {
   watch: PrWatch;
+  repo: string;
   nested?: boolean;
   context: WatchContext;
   onDismiss: (key: string) => void;
   onOpenLinks: (() => void) | null;
 }
 
-function PrRow({ watch, nested = false, context, onDismiss, onOpenLinks }: PrRowProps) {
+function PrRow({ watch, repo, nested = false, context, onDismiss, onOpenLinks }: PrRowProps) {
   const state = pullState(watch);
+  const lines = lineChange(watch);
+  const refresh = usePullRefresh(watch);
   const indicator = watchIndicator(watch, context.contextFor(watch.roundRunId));
   const name = `Pull request ${watch.repo}#${watch.number}`;
   return (
@@ -122,7 +148,20 @@ function PrRow({ watch, nested = false, context, onDismiss, onOpenLinks }: PrRow
           <a className="prc-num" href={watch.url} target="_blank" rel="noopener noreferrer">
             #{watch.number}
           </a>
-          <span className="prc-title">{watch.title ?? watch.branch}</span>
+          <span className="prc-repo" title={watch.title ?? undefined}>
+            {repo}
+          </span>
+          {watch.title && <span className="sr-only">{watch.title}</span>}
+          <span className="prc-lines" title={watch.title ?? undefined}>
+            {lines && (
+              <>
+                <span aria-hidden="true">
+                  <LineTotals added={lines.added} removed={lines.removed} />
+                </span>
+                <span className="sr-only">{lineChangeLabel(lines)}</span>
+              </>
+            )}
+          </span>
           <span className="prc-facts">
             {rowFacts(watch).map((fact) => (
               <span key={`${fact.key} ${fact.text}`} className={`prc-fact ${fact.tone}`}>
@@ -136,17 +175,21 @@ function PrRow({ watch, nested = false, context, onDismiss, onOpenLinks }: PrRow
           </span>
         </>
       }
+      note={refresh.problem}
       trailing={
-        watch.prState !== 'open' && (
-          <button
-            type="button"
-            className="prc-x"
-            aria-label={`Dismiss pull request #${watch.number}`}
-            onClick={() => onDismiss(dismissKey(watch))}
-          >
-            <XIcon />
-          </button>
-        )
+        <>
+          <RefreshPullButton number={watch.number} refresh={refresh} />
+          {watch.prState !== 'open' && (
+            <button
+              type="button"
+              className="prc-x"
+              aria-label={`Dismiss pull request #${watch.number}`}
+              onClick={() => onDismiss(dismissKey(watch))}
+            >
+              <XIcon />
+            </button>
+          )}
+        </>
       }
       panel={
         <PullPanel
@@ -194,6 +237,7 @@ function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) 
   const grouped = shown.length > GROUP_OVER;
   const count = `${shown.length} pull requests`;
   const line = grouped ? groupLine(shown) : '';
+  const repos = repoLabels(shown);
   return (
     <section className="prc" aria-label="PR status">
       <p className="sr-only" role="status">
@@ -218,6 +262,7 @@ function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) 
             <PrRow
               key={watch.id}
               watch={watch}
+              repo={repos.get(watch.repo) ?? watch.repo}
               nested
               context={context}
               onDismiss={onDismiss}
@@ -230,6 +275,7 @@ function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) 
           <PrRow
             key={watch.id}
             watch={watch}
+            repo={repos.get(watch.repo) ?? watch.repo}
             context={context}
             onDismiss={onDismiss}
             onOpenLinks={onOpenLinks}

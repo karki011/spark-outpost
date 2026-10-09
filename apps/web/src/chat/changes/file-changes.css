@@ -158,3 +158,23 @@ button.chf-toggle:hover .chf-p {
 .fchg-more:hover {
   background: var(--raise);
 }
+
+.ltot {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+  font:
+    12px/1 'Geist Mono',
+    ui-monospace,
+    monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ltot .plus {
+  color: var(--success);
+}
+
+.ltot .minus {
+  color: var(--danger);
+}

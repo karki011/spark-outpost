@@ -103,6 +103,14 @@
   color: var(--muted);
 }
 
+.prl-problem {
+  color: var(--danger);
+}
+
+.prl-facts .pr-refresh {
+  margin-left: auto;
+}
+
 .prl-title:focus-visible,
 .pr-opened a:focus-visible {
   outline: 2px solid var(--accent-text);

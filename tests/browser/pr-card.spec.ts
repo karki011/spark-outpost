@@ -45,6 +45,8 @@ const comment = (id: number, minute: number, body: string) => ({
 const BUSY_PULL = {
   number: 7,
   title: 'Tidy the notes and keep every heading in the order the team agreed on last spring',
+  additions: 2303,
+  deletions: 1,
   head: TIDY!.branch,
   checks: [
     check(71, 'lint', 'completed', 'success'),
@@ -130,6 +132,11 @@ test('an open pull request is one quiet row above the message box that expands u
   await expect(row).toContainText('Checks running', POLLED);
   await expect(row).toContainText('Open');
   await expect(row.getByRole('link', { name: '#7', exact: true })).toHaveAttribute('href', PULL_7);
+  await expect(row.locator('.prc-repo')).toHaveText('widgets');
+  await expect(row.locator('.prc-repo')).toHaveAttribute('title', BUSY_PULL.title);
+  await expect(row.locator('.prc-lines .ltot')).toHaveText('+2,303−1');
+  await expect(row).toContainText('2,303 lines added, 1 removed');
+  await expect(row.getByRole('button', { name: 'Refresh pull request #7' })).toBeVisible();
   await expect(card(page).getByRole('button', { name: /Dismiss/ })).toHaveCount(0);
   await expect(page.locator('header.chat-head')).not.toContainText('PR #7');
 
@@ -210,9 +217,9 @@ test('an open pull request is one quiet row above the message box that expands u
   await expect(toggle(page)).toBeFocused();
   await page.keyboard.press('Space');
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await row.locator('.prc-title').click();
+  await row.locator('.prc-repo').click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
-  await row.locator('.prc-title').click();
+  await row.locator('.prc-repo').click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
   await page.locator('.chat-title').click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
@@ -265,8 +272,8 @@ test('two pull requests get a row each, newest first, and a draft says so', asyn
   const rows = page.getByRole('region', { name: 'PR status' }).locator('.prc-row');
   await expect(rows.first()).toContainText('Draft', POLLED);
   await expect(rows).toHaveCount(2);
-  await expect(rows.nth(0)).toContainText('#8Add a changelogChecks runningDraft');
-  await expect(rows.nth(1)).toContainText('#7Tidy the notesWaiting for reviewOpen');
+  await expect(rows.nth(0)).toContainText('#8widgetsAdd a changelogChecks runningDraft');
+  await expect(rows.nth(1)).toContainText('#7widgetsTidy the notesWaiting for reviewOpen');
   const [first, second] = [await box(rows.nth(0)), await box(rows.nth(1))];
   expect(second.y).toBeGreaterThan(first.y);
 });
@@ -284,7 +291,7 @@ test('a merged or closed pull request keeps its final row until dismissed, and c
   });
   await openSeeded(page);
   const row = card(page).locator('.prc-row');
-  await expect(row).toContainText('#7Tidy the notesMerged', POLLED);
+  await expect(row).toContainText('#7widgetsTidy the notesMerged', POLLED);
   await expect(card(page)).toHaveClass(/merged/);
   await shoot(page, 'desktop-merged', ['light', 'dark']);
   await toggle(page).click();
@@ -375,8 +382,11 @@ test('on a phone the row stays one line with a 44px target and the state in view
   const line = await box(row);
   expect(line.height).toBe(44);
   expect((await box(toggle(page))).width).toBeGreaterThanOrEqual(44);
-  const title = row.locator('.prc-title');
-  expect(await title.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+  await expect(row.locator('.prc-repo')).toHaveText('widgets');
+  await expect(row.locator('.prc-lines')).toBeHidden();
+  const refresh = await box(row.getByRole('button', { name: 'Refresh pull request #7' }));
+  expect(refresh.width).toBe(44);
+  expect(refresh.x + refresh.width).toBeLessThanOrEqual(line.x + line.width);
   const state = await box(row.locator('.prc-state'));
   expect(state.x + state.width).toBeLessThanOrEqual(line.x + line.width);
   expect(state.width).toBeGreaterThan(20);

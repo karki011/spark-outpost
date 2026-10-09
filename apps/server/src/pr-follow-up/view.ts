@@ -50,6 +50,8 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
     doing: watch.doing,
     prState: watch.prState,
     draft: watch.draft,
+    additions: watch.additions,
+    deletions: watch.deletions,
     checks: watch.checks,
     failingChecks: watch.failingChecks,
     review: watch.review,

@@ -25,6 +25,8 @@ const pullSchema = z.object({
   created_at: z.string().optional(),
   head: z.object({ sha: z.string().min(1), ref: z.string().optional() }),
   base: z.object({ ref: z.string().optional() }).optional(),
+  additions: z.number().int().nonnegative().optional(),
+  deletions: z.number().int().nonnegative().optional(),
 });
 
 const checkRunSchema = z.object({
@@ -86,6 +88,8 @@ export interface PullFacts {
   base: string | null;
   author: string | null;
   createdAt: string | null;
+  additions: number | null;
+  deletions: number | null;
 }
 
 export type Gathered = Omit<NewFeedback, 'trusted'>;
@@ -114,6 +118,8 @@ export async function readPullFacts(
     base: pull.base?.ref ?? null,
     author: pull.user?.login ?? null,
     createdAt: pull.created_at ?? null,
+    additions: pull.additions ?? null,
+    deletions: pull.deletions ?? null,
   };
 }
 

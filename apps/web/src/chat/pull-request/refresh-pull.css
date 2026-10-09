@@ -1,0 +1,30 @@
+.pr-refresh {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.pr-refresh:hover {
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--text);
+}
+
+.pr-refresh[aria-busy='true'] {
+  cursor: progress;
+}
+
+.pr-refresh:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .pr-refresh {
+    width: 44px;
+    height: 44px;
+  }
+}
