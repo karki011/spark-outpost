@@ -140,6 +140,7 @@
 .md th {
   font-weight: 600;
   background: var(--raise);
+  overflow-wrap: break-word;
 }
 .md tr:last-child td {
   border-bottom: 0;

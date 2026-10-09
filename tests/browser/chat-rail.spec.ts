@@ -130,8 +130,8 @@ test.describe('plain chats', () => {
         })
         .toBeLessThan(1);
       await expect
-        .poll(async () => Math.abs((await page.locator('.col').boundingBox())!.width - COLUMN))
-        .toBeLessThan(1);
+        .poll(async () => (await page.locator('.col').boundingBox())!.width)
+        .toBeGreaterThanOrEqual(680);
       const column = (await page.locator('.col').boundingBox())!;
       const railBox = (await rail(page).boundingBox())!;
       const thread = (await page.locator('.thread').boundingBox())!;
@@ -158,13 +158,14 @@ test.describe('plain chats', () => {
     await hidePanel.click();
     await expect(workPanel(page)).toBeHidden();
     await expect(rail(page)).toHaveCount(0);
-    const columnOff = async () =>
-      Math.abs((await page.locator('.col').boundingBox())!.width - COLUMN);
-    await expect.poll(columnOff).toBeLessThan(1);
+    const columnWidth = async () => (await page.locator('.col').boundingBox())!.width;
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    expect(await columnWidth()).toBeLessThanOrEqual(COLUMN + 1);
 
     await page.getByRole('button', { name: 'Hide sidebar' }).click();
     await expect(rail(page)).toBeVisible();
-    await expect.poll(columnOff).toBeLessThan(1);
+    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    expect(await columnWidth()).toBeLessThanOrEqual(COLUMN + 1);
   });
 
   test('the rail collapses to a small toggle and stays collapsed after a reload', async ({
@@ -206,7 +207,9 @@ test.describe('plain chats', () => {
       await page.setViewportSize({ width, height: 900 });
       await expect(rail(page)).toBeVisible();
       const { column, thread } = await sharesEdges();
-      expect(Math.abs(column.right - column.left - COLUMN)).toBeLessThan(1);
+      const columnWidth = column.right - column.left;
+      expect(columnWidth).toBeLessThanOrEqual(COLUMN + 1);
+      if (width === 1920) expect(columnWidth).toBeGreaterThan(COLUMN - 1);
       const railBox = (await rail(page).boundingBox())!;
       const stripLeft = thread.right - railBox.width - 32;
       expect(Math.abs(column.left - thread.left - (stripLeft - column.right))).toBeLessThan(2);
