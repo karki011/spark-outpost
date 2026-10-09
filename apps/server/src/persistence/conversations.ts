@@ -42,6 +42,8 @@ import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
 import {
+  RUN_OUTPOST_COLUMNS,
+  RUN_OUTPOST_JOINS,
   toConversationSummary,
   toMessage,
   toRun,
@@ -102,6 +104,7 @@ const summaryQuery = `
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_plan,
     p.pending_provider, p.pending_pr_feedback,
+    om.outpost_id, ob.name AS outpost_name, om.handle AS outpost_handle,
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
       WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
@@ -110,6 +113,8 @@ const summaryQuery = `
      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
   LEFT JOIN teammates tm ON tm.id = c.teammate_id
+  LEFT JOIN outpost_members om ON om.conversation_id = c.id
+  LEFT JOIN outposts ob ON ob.id = om.outpost_id
   LEFT JOIN LATERAL (
     SELECT id, status, error, finished_at, provider, task_id, interruption_choice FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
@@ -249,7 +254,11 @@ export async function getConversationDetail(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
       [id],
     ),
-    db.query<RunRow>('SELECT * FROM runs WHERE conversation_id = $1 ORDER BY created_at', [id]),
+    db.query<RunRow>(
+      `SELECT r.*, ${RUN_OUTPOST_COLUMNS} FROM runs r ${RUN_OUTPOST_JOINS}
+       WHERE r.conversation_id = $1 ORDER BY r.created_at`,
+      [id],
+    ),
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name
