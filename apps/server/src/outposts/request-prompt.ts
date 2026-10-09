@@ -3,7 +3,7 @@ import { SPARK_TEXT_MAX } from '@spark-outpost/contracts';
 export const REQUEST_TAG = 'outpost-request';
 export const REQUEST_BODY_MAX = SPARK_TEXT_MAX;
 
-export type RequestPromptAuthor = { kind: 'user' };
+export type RequestPromptAuthor = { kind: 'user' } | { kind: 'other' };
 
 export interface RequestPromptFacts {
   postId: string;
@@ -28,6 +28,8 @@ function header(facts: RequestPromptFacts): string {
   switch (facts.author.kind) {
     case 'user':
       return `[From the user, sent in ${place(facts.outpostName)}.]`;
+    case 'other':
+      return `[Outpost request, sent in ${place(facts.outpostName)}. This is not from the user.]`;
   }
 }
 
