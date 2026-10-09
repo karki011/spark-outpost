@@ -12,12 +12,14 @@ You'll answer agents from Spark Island. About 2 minutes.
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off (on by default).
-3. Pick **Spark Island size**. Every size rests as blobs.
+3. Pick **Spark Island size**, up to **Extra large**. Every size rests as blobs.
 4. **Island chimes** play when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
 Drag Scout to place it; it stays. Drop it at top centre to dock.
+
+Docked, Scout rests half hidden and comes out while a chat works, needs you or finishes. Dragged away, it shows whole.
 
 ## Open it
 

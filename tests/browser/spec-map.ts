@@ -166,6 +166,7 @@ export const SPEC_GROUPS = {
     'island-hover',
     'island-layout',
     'island-notch',
+    'island-peek',
     'island-projects',
     'island-size',
     'island-states',

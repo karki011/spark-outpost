@@ -218,11 +218,14 @@ describe('island state machine', () => {
 
   it('keeps the peek row clear of a bigger hanging Spark and its badge', () => {
     const flatEdge = (blob: number) => peekClearance(true, blob) * 1.25 - 14 - 4;
-    for (const blob of [38, 48, 58]) {
+    for (const blob of [38, 48, 58, 116]) {
       expect(flatEdge(blob)).toBeGreaterThanOrEqual(blob / 2 + 8);
     }
     expect(peekClearance(true, 58)).toBeGreaterThan(peekClearance(true, 38));
-    expect(peekClearance(false, 58)).toBe(peekClearance(false, 38));
+    expect(peekClearance(false, 30)).toBe(38);
+    for (const blob of [38, 48, 58, 116]) {
+      expect(peekClearance(false, blob) - 11).toBeGreaterThanOrEqual(blob / 2 + 12);
+    }
   });
 
   it('reads each chat as working, waiting, done, failed or quiet', () => {

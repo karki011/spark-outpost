@@ -90,13 +90,18 @@
   translate: 0 3px;
 }
 
-.isl.bare .sc-look {
-  translate: 0 9px;
+.isl-scout-wrap svg.scout {
+  clip-path: var(--scout-clip, none);
 }
 
-.isl.bare .isl-pbadge {
-  top: auto;
-  bottom: 0;
+.isl-scout-wrap .sc-look {
+  transition:
+    transform 0.2s var(--out),
+    translate 0.3s var(--out);
+}
+
+.isl.tucked .sc-look {
+  translate: 0 9px;
 }
 
 .isl-hhead {

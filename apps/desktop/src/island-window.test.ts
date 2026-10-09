@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IslandPosition } from './companion-settings.ts';
+import type { IslandPosition, IslandSize } from './companion-settings.ts';
 import {
   dockedPosition,
-  FLOATING_BLOB,
+  floatingBlob,
   ISLAND_WIDTH,
   type DisplayInfo,
   type IslandGeometry,
@@ -69,6 +69,9 @@ vi.mock('./notch-probe.ts', () => ({
   readNotches: async () => new Map(),
 }));
 
+const FLOATING_BLOB = floatingBlob(58);
+let size: IslandSize = 'full';
+
 const internal: DisplayInfo = {
   id: 1,
   bounds: { x: 0, y: 0, width: 1512, height: 982 },
@@ -90,6 +93,7 @@ function open(saved: IslandPosition = { docked: true }) {
     origin: 'http://localhost:3000',
     preload: '/app/preload.cjs',
     position: () => saved,
+    size: () => size,
     savePosition,
     onGone: vi.fn(),
     log,
@@ -104,6 +108,7 @@ const sentGeometry = () =>
     .map(([, geometry]) => geometry as IslandGeometry);
 
 beforeEach(() => {
+  size = 'full';
   vi.useFakeTimers();
   vi.clearAllMocks();
   native.events.clear();
@@ -164,7 +169,7 @@ describe('native island window', () => {
     expect(sentGeometry().at(-1)).toMatchObject({ docked: true, notchHeight: 38, windowTop: 38 });
     expect(handle.geometry().windowTop).toBe(38);
     expect(log).toHaveBeenLastCalledWith(
-      `Island placed: display 1512x982 at 0,0; work area 1512x944 at 0,38; notch 190x38 (from menu bar); docked, requested 1040x600 at ${dock.x},0; actual 1040x600 at ${dock.x},38`,
+      `Island placed: display 1512x982 at 0,0; work area 1512x944 at 0,38; notch 190x38 (from menu bar); docked, blob 58 tucked 31 at rest, requested 1040x600 at ${dock.x},0; actual 1040x600 at ${dock.x},38`,
     );
 
     native.window.lowered = 0;
@@ -214,17 +219,19 @@ describe('dragging the resting blob', () => {
   it('floats a blob lifted just under the notch and leaves it exactly there', () => {
     native.displays = [internal];
     const { handle, savePosition } = open();
-    handle.drag('lift', { x: centre, y: 57 });
+    handle.drag('lift', { x: centre, y: 71 });
     expect(sentGeometry().at(-1)).toMatchObject({ docked: false });
     expect(native.window.bounds).toMatchObject({ x: underNotch, y: 42 });
-    handle.drag('move', { x: centre, y: 55 });
+    handle.drag('move', { x: centre, y: 69 });
     expect(native.window.bounds.y).toBe(40);
-    handle.drag('end', { x: centre, y: 53 });
+    handle.drag('end', { x: centre, y: 67 });
     expect(savePosition).toHaveBeenLastCalledWith({ docked: false, x: underNotch, y: 38 });
     expect(native.window.bounds).toMatchObject({ x: underNotch, y: 38 });
     expect(handle.geometry()).toMatchObject({ docked: false, windowTop: 38 });
     expect(log).toHaveBeenLastCalledWith(
-      expect.stringContaining(`floating, requested 1040x600 at ${underNotch},38; actual`),
+      expect.stringContaining(
+        `floating, blob 58 not tucked, requested 1040x600 at ${underNotch},38; actual`,
+      ),
     );
     handle.destroy();
   });
@@ -232,13 +239,30 @@ describe('dragging the resting blob', () => {
   it('holds a blob dragged into the notch under it, and docks it when dropped there', () => {
     native.displays = [internal];
     const { handle, savePosition } = open({ docked: false, x: underNotch, y: 120 });
-    handle.drag('lift', { x: centre, y: 135 });
+    handle.drag('lift', { x: centre, y: 149 });
     handle.drag('move', { x: centre, y: 20 });
     expect(native.window.bounds).toMatchObject({ x: underNotch, y: 38 });
     handle.drag('end', { x: centre, y: 20 });
     expect(savePosition).toHaveBeenLastCalledWith({ docked: false, ...dockedPosition(internal) });
     expect(handle.geometry()).toMatchObject({ docked: true, windowTop: 0 });
-    expect(log).toHaveBeenLastCalledWith(expect.stringContaining('docked, requested'));
+    expect(log).toHaveBeenLastCalledWith(
+      expect.stringContaining('docked, blob 58 tucked 31 at rest, requested'),
+    );
+    handle.destroy();
+  });
+
+  it('logs the placement again for a new size and lifts the bigger blob by its centre', () => {
+    native.displays = [internal];
+    const { handle } = open();
+    handle.ready();
+    expect(log).toHaveBeenLastCalledWith(expect.stringContaining('docked, blob 58 tucked 31'));
+    size = 'xlarge';
+    handle.sizeChanged();
+    expect(log).toHaveBeenLastCalledWith(expect.stringContaining('docked, blob 116 tucked 61'));
+    handle.drag('lift', { x: centre, y: 300 });
+    expect(native.window.bounds).toMatchObject({ x: centre - ISLAND_WIDTH / 2, y: 300 - 58 });
+    handle.drag('end', { x: centre, y: 300 });
+    expect(log).toHaveBeenLastCalledWith(expect.stringContaining('floating, blob 116 not tucked'));
     handle.destroy();
   });
 
@@ -265,7 +289,9 @@ describe('dragging the resting blob', () => {
     handle.ready();
     expect(handle.geometry()).toMatchObject({ docked: false });
     expect(log).toHaveBeenLastCalledWith(
-      expect.stringContaining(`floating, requested 1040x600 at ${underNotch},38`),
+      expect.stringContaining(
+        `floating, blob 58 not tucked, requested 1040x600 at ${underNotch},38`,
+      ),
     );
     native.displays = [external];
     native.events.get('display-removed')?.();

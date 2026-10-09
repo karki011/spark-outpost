@@ -6,6 +6,7 @@ import type {
   DesktopHelpInfo,
   DiagnosticsExport,
   InstallResult,
+  IslandSize,
   SignedInSite,
   UpdateChannel,
   UpdateStatus,
@@ -16,7 +17,7 @@ export type IslandAction = 'quick' | 'sessions';
 export type IslandSettingsTarget =
   'island' | 'sparks' | 'spark-new' | 'connectors' | `spark-edit:${string}`;
 
-export type IslandSize = 'full' | 'small' | 'medium' | 'large';
+export type { IslandSize };
 
 export interface CompanionStatus {
   supported: boolean;

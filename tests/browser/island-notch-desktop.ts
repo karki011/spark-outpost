@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { IslandSize } from '../../packages/contracts/src/island-size.ts';
 
 export const NOTCH = { width: 186, height: 32, menuBar: 38 };
 export const VIEWPORT = { width: 1280, height: 720 };
@@ -6,7 +7,7 @@ export const VIEWPORT = { width: 1280, height: 720 };
 export const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 export interface NotchSetup {
-  size: 'full' | 'small' | 'medium' | 'large';
+  size: IslandSize;
   autoExpand: boolean;
   sparkFocused?: boolean;
   theme?: string;
@@ -26,6 +27,7 @@ export interface NotchWindow {
   islandFocus: boolean[];
   islandRest: (RestSize | null)[];
   islandDrags: string[];
+  islandTakesClicks: string[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
 }
@@ -60,10 +62,12 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const focus: boolean[] = [];
       const rest: ({ width: number; height: number } | null)[] = [];
       const drags: string[] = [];
+      const takesClicks: string[] = [];
       Object.assign(window, {
         islandFocus: focus,
         islandRest: rest,
         islandDrags: drags,
+        islandTakesClicks: takesClicks,
         sparkDesktop: {
           platform: 'darwin',
           companion: {
@@ -100,7 +104,10 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
             },
             pickFolder: async () => null,
             pathForFile: () => null,
-            setInteractive: () => undefined,
+            setInteractive: (on: boolean) => {
+              const view = document.querySelector<HTMLElement>('.isl')?.dataset.view;
+              takesClicks.push(`${on ? 'on' : 'off'} at ${view}`);
+            },
             setFocusable: (on: boolean) => focus.push(on),
             drag: (phase: string) => drags.push(phase),
             openChat: () => undefined,
@@ -204,5 +211,35 @@ export const sparkFocus = (page: Page, focused: boolean) =>
 export const command = (page: Page, action: 'quick' | 'sessions') =>
   page.evaluate((next) => (window as unknown as NotchWindow).islandCommand(next), action);
 
+export const takesClicks = (page: Page) =>
+  page.evaluate(() => (window as unknown as NotchWindow).islandTakesClicks);
+
 export const dragPhases = (page: Page) =>
   page.evaluate(() => (window as unknown as NotchWindow).islandDrags);
+
+export interface ScoutLook {
+  top: number;
+  bottom: number;
+  size: number;
+  hidden: number;
+  tucked: boolean;
+  eyesTop: number;
+}
+
+export const scoutLook = (page: Page): Promise<ScoutLook> =>
+  island(page).evaluate((root) => {
+    const wrap = root.querySelector<HTMLElement>('.isl-scout-wrap')!;
+    const box = wrap.getBoundingClientRect();
+    const clip = /inset\(([\d.]+)px/.exec(
+      getComputedStyle(wrap.querySelector('svg.scout')!).clipPath,
+    );
+    const eyes = Array.from(wrap.querySelectorAll('.sc-eye'), (eye) => eye.getBoundingClientRect());
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      size: box.height,
+      hidden: Math.max(clip ? Number(clip[1]) : 0, -box.top, 0),
+      tucked: root.classList.contains('tucked'),
+      eyesTop: Math.min(...eyes.map((eye) => eye.top)),
+    };
+  });

@@ -2,6 +2,14 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.10
+
+- Spark Island: at rest Scout is tucked at the top so about half shows, under the notch or the top edge of the screen. Scout comes fully out while a chat is working, needs you, has just finished or failed, and tucks back afterwards. An Island you dragged away from the top stays whole.
+- Spark Island: a new size, Extra large, twice the size of Large.
+- Spark Island: on a display with a notch, and when floating, Scout now follows the Spark Island size. It was a fixed small size before.
+- Spark Island: pointing near Scout opens the Island. The area that reacts reaches about a third of Scout's width to each side and below.
+- Known: on a display with a notch, pointing at the very top edge above Scout may not open the Island. Point at Scout.
+
 ## 0.1.0-beta.9
 
 - Chat: replies, your messages and the message box share one centred column, wider than before, and a reply's text sits under the agent's name. Table headers no longer break in the middle of a word.

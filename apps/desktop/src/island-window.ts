@@ -1,5 +1,5 @@
 import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electron';
-import type { IslandPosition, ShortcutAction } from './companion-settings.ts';
+import type { IslandPosition, IslandSize, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
   clampToDisplay,
@@ -12,6 +12,7 @@ import {
   nearDock,
   placement,
   placementLine,
+  restBlob,
   type DisplayInfo,
   type IslandGeometry,
   type Point,
@@ -36,6 +37,7 @@ export interface IslandWindow extends IslandHandle {
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
   setRestSize(size: Size | null): void;
+  sizeChanged(): void;
   sparkFocus(focused: boolean): void;
   geometry(): IslandGeometry;
 }
@@ -44,6 +46,7 @@ interface IslandWindowOptions {
   origin: string;
   preload: string;
   position: () => IslandPosition;
+  size: () => IslandSize;
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
   log: (line: string) => void;
@@ -59,8 +62,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     internal: display.internal,
     notch: emulated ?? notches.get(display.id),
   });
+  const blob = () => restBlob(options.size());
   const currentPlacement = (saved: IslandPosition) =>
-    placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id);
+    placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id, blob().size);
   let placed = currentPlacement(options.position());
   const start = placed?.position ?? { x: 0, y: 0 };
   const window = new BrowserWindow(islandWindowOptions(options.preload, start));
@@ -118,7 +122,13 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
 
   const settle = () => {
     if (window.isDestroyed() || !placed || !requested) return;
-    const line = placementLine(placed.display, placed.docked, requested, window.getBounds());
+    const line = placementLine(
+      placed.display,
+      placed.docked,
+      requested,
+      window.getBounds(),
+      blob(),
+    );
     if (line !== logged) options.log(line);
     logged = line;
     const next = geometry();
@@ -191,8 +201,9 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     if (!dragging) return;
     const display = info(screen.getDisplayNearestPoint(pointer));
     const dropped = movedPosition(dragging.origin, dragging.pointer, pointer);
-    const docked = nearDock(dropped, display);
-    const settled = docked ? dockedPosition(display) : clampToDisplay(dropped, display);
+    const { size } = blob();
+    const docked = nearDock(dropped, display, size);
+    const settled = docked ? dockedPosition(display) : clampToDisplay(dropped, display, size);
     dragging = null;
     options.savePosition({ docked: false, ...settled });
     placed = { display, position: settled, docked };
@@ -242,9 +253,10 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       }
       if (phase === 'lift') {
         const host = info(screen.getDisplayNearestPoint(pointer));
-        const origin = liftedPosition(pointer);
+        const { size } = blob();
+        const origin = liftedPosition(pointer, size);
         dragging = { origin, pointer };
-        placed = { display: host, position: clampToDisplay(origin, host), docked: false };
+        placed = { display: host, position: clampToDisplay(origin, host, size), docked: false };
         moveTo(placed.position);
         send(IPC.islandGeometryChanged, geometry());
         return;
@@ -252,11 +264,12 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       if (!dragging) return;
       const display = info(screen.getDisplayNearestPoint(pointer));
       if (phase === 'move') {
-        moveTo(draggedPosition(dragging.origin, dragging.pointer, pointer, display));
+        moveTo(draggedPosition(dragging.origin, dragging.pointer, pointer, display, blob().size));
         return;
       }
       finishDrag(pointer);
     },
+    sizeChanged: () => place(),
     geometry,
   };
 }

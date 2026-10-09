@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { FLOATING_BLOB, ISLAND_WIDTH } from '../../apps/desktop/src/island-geometry.ts';
+import { floatingBlob, ISLAND_WIDTH } from '../../apps/desktop/src/island-geometry.ts';
+import { ISLAND_BLOB, islandTuck } from '../../packages/contracts/src/island-size.ts';
 import {
   command,
   dragPhases,
@@ -11,6 +12,7 @@ import {
   notchBox,
   openNotchIsland,
   restSize,
+  scoutLook,
   settled,
   shownText,
   sparkFocus,
@@ -20,10 +22,10 @@ import {
 import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
-const SIZES = ['full', 'small', 'medium', 'large'] as const;
+const SIZES = ['full', 'small', 'medium', 'large', 'xlarge'] as const;
 const LONG = 'Rework the checkout flow so that abandoned carts are recovered by email reminders';
 const LONG_COMMAND = 'pnpm deploy --prod --region eu-west-1 --tag release-candidate --confirm';
-const REST_MAX = { width: 200, height: 60 };
+const REST_ROOM = { width: 150, height: 20 };
 const deploy = {
   title: 'Deploy the site',
   run: { status: 'awaiting_approval' },
@@ -112,17 +114,20 @@ for (const [name, windowTop] of [
   ['lowered', 38],
   ['lowered-by-the-menu-bar', 44],
 ] as const) {
-  test(`the resting blob sits 4 points under the notch with the window ${name}`, async ({
+  test(`the resting blob peeks from under the notch strip with the window ${name}`, async ({
     page,
   }) => {
     await resetTestDatabase({ onboarded: true });
     await openNotchIsland(page, { size: 'full', autoExpand: false, cutout: WIDE_NOTCH, windowTop });
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
-    const notchBottom = Math.max(0, WIDE_NOTCH.height - windowTop);
-    const blob = page.locator('.isl-scout-wrap');
-    await expect.poll(async () => (await blob.boundingBox())?.y).toBeCloseTo(notchBottom + 4, 0);
-    const drawn = (await island(page).boundingBox())!;
+    await expect(island(page)).toHaveClass(/\btucked\b/);
     const barBottom = Math.max(0, WIDE_NOTCH.menuBar - windowTop);
+    const tuck = islandTuck(ISLAND_BLOB.full);
+    await expect.poll(async () => (await scoutLook(page)).top).toBe(barBottom - tuck);
+    const look = await scoutLook(page);
+    expect(look.hidden).toBe(tuck);
+    expect(look.eyesTop).toBeGreaterThan(barBottom);
+    const drawn = (await island(page).boundingBox())!;
     expect(drawn.y + drawn.height).toBeLessThanOrEqual(barBottom + 1);
     await shot(page, name);
   });
@@ -138,7 +143,8 @@ for (const [name, notch, windowTop] of [
     page,
   }) => {
     await resetTestDatabase({ onboarded: true });
-    for (const size of ['small', 'full'] as const) {
+    for (const size of ['small', 'full', 'xlarge'] as const) {
+      const blob = floatingBlob(ISLAND_BLOB[size]);
       await openNotchIsland(page, {
         size,
         autoExpand: false,
@@ -152,11 +158,13 @@ for (const [name, notch, windowTop] of [
       await expect
         .poll(() => page.locator('.isl-scout-wrap').boundingBox())
         .toEqual({
-          x: WINDOW_LEFT + FLOATING_BLOB.x,
-          y: windowTop + FLOATING_BLOB.y,
-          width: FLOATING_BLOB.size,
-          height: FLOATING_BLOB.size,
+          x: WINDOW_LEFT + blob.x,
+          y: windowTop + blob.y,
+          width: blob.size,
+          height: blob.size,
         });
+      await expect(island(page)).not.toHaveClass(/\btucked\b/);
+      expect((await scoutLook(page)).hidden).toBe(0);
       expect((await island(page).boundingBox())!.height).toBeLessThanOrEqual(1);
     }
     await page.waitForTimeout(600);
@@ -171,6 +179,7 @@ test('the resting blob drags as a blob and a drag does not open the island', asy
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'full', autoExpand: false, notch: false, docked: false });
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect.poll(() => scoutLook(page)).toMatchObject({ top: 0, size: ISLAND_BLOB.full });
   const blob = (await page.locator('.isl-scout-wrap').boundingBox())!;
   const at = { x: blob.x + blob.width / 2, y: blob.y + blob.height / 2 };
   await page.mouse.move(at.x, at.y);
@@ -207,11 +216,12 @@ for (const size of SIZES) {
         expect(drawn.y + drawn.height).toBeLessThanOrEqual(NOTCH.menuBar);
         return;
       }
-      expect(drawn.width).toBeLessThanOrEqual(REST_MAX.width);
+      const blob = ISLAND_BLOB[size];
+      expect(drawn.width).toBeLessThanOrEqual(blob);
       await expect.poll(() => restSize(page)).not.toBeNull();
       const rest = (await restSize(page))!;
-      expect(rest.width).toBeLessThanOrEqual(REST_MAX.width);
-      expect(rest.height).toBeLessThanOrEqual(REST_MAX.height);
+      expect(rest.width).toBeLessThanOrEqual(blob + REST_ROOM.width);
+      expect(rest.height).toBeLessThanOrEqual(blob + REST_ROOM.height);
     });
   }
 }

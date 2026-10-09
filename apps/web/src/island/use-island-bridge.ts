@@ -35,18 +35,31 @@ function inside(rects: readonly DOMRect[], x: number, y: number, margin = HIT_MA
   );
 }
 
-function restSize(rects: readonly DOMRect[]): { width: number; height: number } | null {
+function padded(rect: DOMRect): DOMRect {
+  return new DOMRect(
+    rect.x - HIT_MARGIN,
+    rect.y - HIT_MARGIN,
+    rect.width + 2 * HIT_MARGIN,
+    rect.height + 2 * HIT_MARGIN,
+  );
+}
+
+function restSize(
+  rects: readonly DOMRect[],
+  zone: readonly DOMRect[],
+): { width: number; height: number } | null {
   const shown = rects.filter((rect) => rect.width > 0);
   if (shown.length === 0) return null;
+  const taken = [...shown.map(padded), ...zone];
   const middle = window.innerWidth / 2;
-  const reach = Math.max(...shown.map((rect) => Math.max(middle - rect.left, rect.right - middle)));
-  const bottom = Math.max(...shown.map((rect) => rect.bottom));
-  return { width: 2 * (reach + HIT_MARGIN), height: bottom + HIT_MARGIN };
+  const reach = Math.max(...taken.map((rect) => Math.max(middle - rect.left, rect.right - middle)));
+  return { width: 2 * reach, height: Math.max(...taken.map((rect) => rect.bottom)) };
 }
 
 interface BridgeOptions {
   coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
+  zoneRects: (docked: boolean) => DOMRect[];
   peek: boolean;
   hovered: boolean;
   restKey: string;
@@ -73,10 +86,13 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const [geometry, setGeometry] = useState<IslandGeometry>(BROWSER_GEOMETRY);
   const [pointerIn, setPointerIn] = useState(false);
   const hovering = useRef(false);
+  const engage = useRef<() => void>(() => undefined);
   const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
+  const docked = useRef(geometry.docked);
   useEffect(() => {
     latest.current = options;
+    docked.current = geometry.docked;
   });
 
   useEffect(() => {
@@ -137,13 +153,19 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     let lastProbe = -Infinity;
     let probeFrame = 0;
     let trailing: { x: number; y: number } | null = null;
+    let zone: DOMRect[] = [];
+    engage.current = () => setInteractive(true);
     const probe = (x: number, y: number) => {
       lastProbe = performance.now();
       trailing = null;
       const core = latest.current.coreRects();
       const blobs = latest.current.blobRects();
-      const hit = inside([...core, ...blobs], x, y);
-      setInteractive(hit);
+      const resting = latest.current.zoneRects(docked.current);
+      if (resting.length > 0) zone = resting;
+      else if (!hovering.current) zone = [];
+      const near = inside([...core, ...blobs], x, y);
+      const hit = near || inside(zone, x, y, 0);
+      setInteractive(near || (hit && latest.current.hovered));
       const onCore = inside(core, x, y, 0);
       const onBlob = inside(blobs, x, y, 0);
       setHover(hit && (onCore || !onBlob));
@@ -235,17 +257,18 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     if (!options.hovered) hovering.current = false;
+    else if (hovering.current) engage.current();
   }, [options.hovered]);
 
   useEffect(() => {
     if (!desktop) return;
-    if (!resting || pointerIn) {
-      desktop.island.setRestSize(null);
-      return;
-    }
+    desktop.island.setRestSize(null);
+    if (!resting || pointerIn) return;
     const timer = setTimeout(() => {
-      const { coreRects, blobRects } = latest.current;
-      desktop.island.setRestSize(restSize([...coreRects(), ...blobRects()]));
+      const { coreRects, blobRects, zoneRects } = latest.current;
+      desktop.island.setRestSize(
+        restSize([...coreRects(), ...blobRects()], zoneRects(docked.current)),
+      );
     }, REST_DELAY_MS);
     return () => clearTimeout(timer);
   }, [desktop, resting, pointerIn, options.restKey]);
