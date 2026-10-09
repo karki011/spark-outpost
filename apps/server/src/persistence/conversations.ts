@@ -40,6 +40,7 @@ import { conversationUsage } from './usage.ts';
 import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
+import { continueOpenRequest } from '../outposts/continuation.ts';
 import {
   toConversationSummary,
   toMessage,
@@ -334,7 +335,7 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | undefined;
+  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | 'outpost' | undefined;
   startAs?: StartAs;
   continuesRunId?: string;
 };
@@ -412,6 +413,7 @@ export async function sendInTransaction(
       target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
     ],
   );
+  await continueOpenRequest(client, conversationId, runId);
   if (!terminal) {
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
       newId(),
