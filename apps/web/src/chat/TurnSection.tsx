@@ -29,6 +29,7 @@ import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
 import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
+import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
 import { OutpostFaces } from '../outposts/MemberFace.tsx';
 
 type Task = ConversationDetail['tasks'][number];
@@ -172,6 +173,7 @@ export const TurnSection = memo(function TurnSection({
         </>
       )}
       {!crew && <TurnSteers detail={detail} run={run} />}
+      <TurnOutpostLines conversation={detail.conversation} run={run} />
       <OpenedPullRequests
         conversationId={detail.conversation.id}
         runIds={turnRunIds(detail, run.id)}

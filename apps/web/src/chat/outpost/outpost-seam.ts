@@ -7,6 +7,7 @@ export interface OutpostSeam {
   canManage: boolean;
   onOpenOutpost: (outpostId: string, postId?: string) => void;
   onNewOutpost: (conversationId?: string) => void;
+  onOpenDraft?: ((draftId: string) => void) | undefined;
   onAddToOutpost: (outpostId: string, member: MemberRequest) => Promise<unknown>;
 }
 

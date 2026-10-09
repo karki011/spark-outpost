@@ -6,9 +6,17 @@ import { ChevronIcon, OutpostIcon } from '../../ui/icons.tsx';
 
 export type RunOutpost = NonNullable<Run['outpost']>;
 
-export function requestSender(outpost: Pick<RunOutpost, 'fromUser' | 'fromHandle'>): string {
+type Sender = Pick<RunOutpost, 'fromUser' | 'fromHandle'> & { userStarted?: boolean };
+
+export function requestSender(outpost: Sender): string {
   if (outpost.fromUser) return 'From you';
-  return outpost.fromHandle ? `From @${outpost.fromHandle}` : 'From another chat';
+  const kind = outpost.userStarted ? 'Task from' : 'From';
+  return outpost.fromHandle ? `${kind} @${outpost.fromHandle}` : `${kind} another chat`;
+}
+
+export function requestNote(outpost: Sender): string | null {
+  if (outpost.fromUser) return null;
+  return outpost.userStarted ? 'started by you, not written by you' : 'not from you';
 }
 
 interface RequestHeaderProps {
@@ -19,11 +27,13 @@ interface RequestHeaderProps {
 }
 
 export function RequestHeader({ outpost, fromChatId, onOpen, children }: RequestHeaderProps) {
+  const note = requestNote(outpost);
   return (
     <div className="bubble from">
       <p className="from-head">
         {fromChatId && !outpost.fromUser && <MemberFace chatId={fromChatId} size="row" />}
         <b>{requestSender(outpost)}</b>
+        {note && <span className="from-note">{note}</span>}
         <span className="from-where">
           <OutpostIcon />
           <span className="sr-only">in </span>
