@@ -98,9 +98,8 @@ svg {
 }
 
 .main {
-  --chat-col: clamp(680px, max(min(100cqi - 360px, 860px), 100cqi - 496px), 1040px);
+  --chat-col: 880px;
   --chat-gutter: clamp(16px, (100cqi - 480px) / 2, 56px);
-  --chat-measure: 560px;
   position: relative;
   flex: 1;
   min-width: 0;
@@ -185,6 +184,20 @@ svg {
   30% {
     transform: translateY(-4px);
     opacity: 1;
+  }
+}
+
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  .main {
+    --chat-scroll: 10px;
+    --chat-col: min(
+      880px,
+      100cqi - 2 * var(--chat-gutter) - var(--crail-strip, 0px) - 2 * var(--chat-scroll)
+    );
+  }
+
+  :root[data-scrollbars='overlay'] .main {
+    --chat-scroll: 8px;
   }
 }
 

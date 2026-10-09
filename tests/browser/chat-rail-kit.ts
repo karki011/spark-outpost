@@ -4,6 +4,7 @@ import { openChats } from './navigation.ts';
 
 export const SHOTS = process.env.CHAT_WIDE_SHOTS ?? 'test-results/chat-rail';
 export const WIDE = { width: 2000, height: 1100 };
+export const COLUMN = 880;
 export const PROMPTS = [
   'Fix the date divider #plan',
   'Compare the queue backends in a table',
@@ -115,4 +116,29 @@ export async function composerGap(page: Page): Promise<number> {
     page.locator('.composer').boundingBox(),
   ]);
   return main!.y + main!.height - (composer!.y + composer!.height);
+}
+
+interface Edges {
+  left: number;
+  right: number;
+}
+
+export async function columnEdges(page: Page) {
+  return page.evaluate(() => {
+    const edges = (selector: string): Edges => {
+      const found = [...document.querySelectorAll(selector)];
+      const box = found[found.length - 1]!.getBoundingClientRect();
+      return { left: box.left, right: box.right };
+    };
+    return {
+      thread: edges('.thread'),
+      column: edges('.col'),
+      prose: edges('.col .md > p'),
+      head: edges('.col .ai-head'),
+      foot: edges('.col .turn-foot'),
+      table: edges('.col .md-table'),
+      composer: edges('.composer'),
+      bubbleRight: edges('.col .bubble').right,
+    };
+  });
 }

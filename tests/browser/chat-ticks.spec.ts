@@ -6,9 +6,11 @@ import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import {
+  COLUMN,
   PROMPTS,
   SHOTS,
   ask,
+  columnEdges,
   composerGap,
   header,
   longChat,
@@ -86,7 +88,7 @@ test.describe('plain chats', () => {
     const shortCode = (await page.locator('.md-code').nth(1).boundingBox())!;
     const column = (await page.locator('.col').boundingBox())!;
     const railBox = (await rail(page).boundingBox())!;
-    expect(column.width).toBeGreaterThan(1000);
+    expect(Math.abs(column.width - COLUMN)).toBeLessThan(1);
     for (const block of [table, longCode, shortCode]) {
       expect(Math.abs(block.x - column.x)).toBeLessThan(2);
       expect(Math.abs(block.width - column.width)).toBeLessThan(2);
@@ -95,7 +97,7 @@ test.describe('plain chats', () => {
     const composer = (await page.locator('.composer').boundingBox())!;
     expect(Math.abs(composer.width - column.width)).toBeLessThan(2);
     const prose = (await page.locator('.md p').first().boundingBox())!;
-    expect(prose.width).toBeLessThanOrEqual(560);
+    expect(Math.abs(prose.width - column.width)).toBeLessThan(2);
     expect(await pageScroll(page)).toBe(0);
 
     await ticks(page).nth(1).focus();
@@ -180,16 +182,19 @@ test.describe('plain chats', () => {
       await page.setViewportSize({ width, height: 900 });
       await expect(ticks(page)).toHaveCount(4);
       await expect(ticks(page).first()).toBeVisible();
+      await expect
+        .poll(async () => {
+          const { column, composer } = await columnEdges(page);
+          return Math.abs(composer.left - column.left) + Math.abs(composer.right - column.right);
+        })
+        .toBeLessThan(1);
       const column = (await page.locator('.col').boundingBox())!;
       const main = (await page.getByRole('main').boundingBox())!;
       const strip = (await outline(page).boundingBox())!;
-      const composer = (await page.locator('.composer').boundingBox())!;
       expect(column.x - main.x).toBeGreaterThanOrEqual(56);
       expect(main.x + main.width - (column.x + column.width)).toBeGreaterThanOrEqual(56);
       expect(strip.x).toBeGreaterThan(main.x);
       expect(strip.x + strip.width).toBeLessThanOrEqual(column.x - 12);
-      expect(Math.abs(composer.x - column.x)).toBeLessThan(18);
-      expect(Math.abs(composer.width - column.width)).toBeLessThan(34);
       expect(await pageScroll(page)).toBe(0);
     }
 
