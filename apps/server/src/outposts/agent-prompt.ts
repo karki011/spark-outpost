@@ -1,5 +1,5 @@
 import type { RunInput } from '../workflow/run-input.ts';
-import { wrapRequest } from './request-prompt.ts';
+import { requestAuthor, wrapRequest } from './request-prompt.ts';
 
 type AgentText = Pick<RunInput, 'prompt' | 'followUp' | 'userRequest' | 'outpostRequest'>;
 
@@ -15,7 +15,7 @@ export function asAgentReads<T extends AgentText>(input: T): T {
   const wrapped = wrapRequest({
     postId: request.postId,
     outpostName: request.outpostName,
-    author: { kind: request.fromUser ? 'user' : 'other' },
+    author: requestAuthor(request),
     body,
   });
   const prompt = input.prompt.startsWith(body)
