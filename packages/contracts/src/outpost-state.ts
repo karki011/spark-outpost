@@ -68,9 +68,15 @@ function runRequest(status: RunStatus, facts: RequestFacts): DerivedRequestState
   }
 }
 
+function unsentReason(facts: RequestFacts): string {
+  if (facts.waitingOn !== null) return `Waiting for @${facts.waitingOn}`;
+  if (facts.waitingOnDeleted === true) return 'Waiting for a deleted chat';
+  return 'Not sent yet';
+}
+
 function waitingRequest(facts: RequestFacts): DerivedRequestState {
   if (facts.paused) return { state: 'sent', reason: 'Paused' };
-  if (!facts.sent) return { state: 'sent', reason: 'Not sent yet' };
+  if (!facts.sent) return { state: 'sent', reason: unsentReason(facts) };
   if (facts.queued && facts.held) {
     return { state: 'sent', reason: `Waiting: @${facts.toHandle}'s last turn failed` };
   }

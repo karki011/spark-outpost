@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  IsStacked,
-  PrBase,
-  StackFacts,
-  StackWarnings,
-  StoryOrder,
-  StoryProblems,
+import {
+  isStacked,
+  storyOrder,
+  storyProblems,
+  type StoryChat,
+  type StoryOrderItem,
 } from './outpost-story.ts';
 import {
   createOutpostRequestSchema,
@@ -87,19 +86,6 @@ const story: OutpostStory = {
       warnings: [{ kind: 'base_merged', text: 'Merging this now would not reach main' }],
     },
   ],
-};
-
-const facts: StackFacts = {
-  handle: 'web',
-  parentHandle: 'api',
-  defaultBranch: 'main',
-  branch: 'spark/orders-page-1a2b3c4d',
-  pull: { state: 'open', base: 'spark/orders-endpoint-0a1b2c3d' },
-  parentBranch: 'spark/orders-endpoint-0a1b2c3d',
-  parentOnRemote: true,
-  parentInBranch: false,
-  parentState: 'answered',
-  parentPull: { state: 'merged' },
 };
 
 describe('outpost draft', () => {
@@ -222,6 +208,11 @@ describe('outpost story', () => {
     expect(requestFactsSchema.parse(held)).toEqual(held);
     expect(requestFactsSchema.parse({ ...held, waitingOn: null }).waitingOn).toBeNull();
     expect(requestFactsSchema.safeParse({ ...held, waitingOn: undefined }).success).toBe(false);
+    expect(requestFactsSchema.parse({ ...held, waitingOn: null, waitingOnDeleted: true })).toEqual({
+      ...held,
+      waitingOn: null,
+      waitingOnDeleted: true,
+    });
   });
 
   it('marks a run started by the user from a draft, and reads a run stored before that', () => {
@@ -246,30 +237,147 @@ describe('outpost story', () => {
     expect(outpostDraftActivitySchema.safeParse({ ...line, chats: 0 }).success).toBe(false);
     expect(outpostDraftActivitySchema.safeParse({ ...line, stacked: -1 }).success).toBe(false);
   });
+});
 
-  it('lets the story rules be written against the agreed signatures', () => {
-    const rules: {
-      storyProblems: StoryProblems;
-      storyOrder: StoryOrder;
-      isStacked: IsStacked;
-      stackWarnings: StackWarnings;
-      prBase: PrBase;
-    } = {
-      storyProblems: (chats) =>
-        chats
-          .filter((chat) => chat.dependsOn === chat.handle)
-          .map((chat) => ({ kind: 'self', handle: chat.handle, text: `@${chat.handle}` })),
-      storyOrder: (tasks) => tasks.toSorted((a, b) => a.position - b.position),
-      isStacked: (task, parent) => parent !== null && task.projectId === parent.projectId,
-      stackWarnings: (given) =>
-        given.parentPull?.state === 'merged' ? [{ kind: 'base_merged', text: 'x' }] : [],
-      prBase: (given) => given.parentBranch ?? given.defaultBranch,
-    };
+function chat(handle: string, dependsOn?: string): StoryChat {
+  return dependsOn === undefined ? { handle } : { handle, dependsOn };
+}
 
-    expect(rules.storyProblems(draft.chats)).toEqual([]);
-    expect(rules.storyOrder(story.tasks).map((task) => task.handle)).toEqual(['api', 'web']);
-    expect(rules.isStacked({ projectId: PROJECT }, { projectId: PROJECT })).toBe(true);
-    expect(rules.stackWarnings(facts).map((warning) => warning.kind)).toEqual(['base_merged']);
-    expect(rules.prBase(facts)).toBe('spark/orders-endpoint-0a1b2c3d');
+function task(conversationId: string, position: number, dependsOn: string | null = null) {
+  return { conversationId, position, dependsOn } satisfies StoryOrderItem;
+}
+
+function ids(tasks: readonly StoryOrderItem[]): string[] {
+  return storyOrder(tasks).map((item) => item.conversationId);
+}
+
+describe('storyProblems', () => {
+  it('finds nothing wrong with parallel chats, a chain and a fan-out', () => {
+    expect(storyProblems(draft.chats)).toEqual([]);
+    expect(storyProblems([chat('api'), chat('web'), chat('docs')])).toEqual([]);
+    expect(storyProblems([chat('web', 'api'), chat('api', 'db'), chat('db')])).toEqual([]);
+    expect(storyProblems([chat('api'), chat('web', 'api'), chat('ios', 'api')])).toEqual([]);
+    expect(storyProblems([])).toEqual([]);
+  });
+
+  it('names a cycle once, from its first chat, as a path back to it', () => {
+    expect(storyProblems([chat('a', 'b'), chat('b', 'a')])).toEqual([
+      { kind: 'cycle', handle: 'a', text: '@a → @b → @a' },
+    ]);
+    expect(storyProblems([chat('x'), chat('c', 'a'), chat('a', 'b'), chat('b', 'c')])).toEqual([
+      { kind: 'cycle', handle: 'c', text: '@c → @a → @b → @c' },
+    ]);
+  });
+
+  it('names each of two separate cycles', () => {
+    const problems = storyProblems([
+      chat('a', 'b'),
+      chat('b', 'a'),
+      chat('c', 'd'),
+      chat('d', 'c'),
+    ]);
+    expect(problems.map((problem) => problem.text)).toEqual(['@a → @b → @a', '@c → @d → @c']);
+  });
+
+  it('does not blame a chat that only leads into a cycle', () => {
+    expect(storyProblems([chat('web', 'a'), chat('a', 'b'), chat('b', 'a')])).toEqual([
+      { kind: 'cycle', handle: 'a', text: '@a → @b → @a' },
+    ]);
+  });
+
+  it('reads a chat that depends on itself as self, not as a cycle', () => {
+    expect(storyProblems([chat('api', 'api'), chat('web', 'api')])).toEqual([
+      { kind: 'self', handle: 'api', text: '@api cannot start after itself.' },
+    ]);
+  });
+
+  it('refuses a dependency on a handle that is not in the draft', () => {
+    expect(storyProblems([chat('api'), chat('web', 'db')])).toEqual([
+      {
+        kind: 'unknown',
+        handle: 'web',
+        text: '@web starts after @db, which is not in this draft.',
+      },
+    ]);
+    expect(storyProblems([chat('web', 'toString')]).map((problem) => problem.kind)).toEqual([
+      'unknown',
+    ]);
+  });
+
+  it('reports a handle used more than once a single time', () => {
+    expect(storyProblems([chat('api'), chat('web', 'api'), chat('api'), chat('api')])).toEqual([
+      { kind: 'duplicate_handle', handle: 'api', text: '@api is used by more than one chat.' },
+    ]);
+  });
+
+  it('reports every problem of a draft, duplicates first and cycles last', () => {
+    const problems = storyProblems([
+      chat('a', 'b'),
+      chat('b', 'a'),
+      chat('web', 'web'),
+      chat('ios', 'gone'),
+      chat('web'),
+    ]);
+    expect(problems.map((problem) => [problem.kind, problem.handle])).toEqual([
+      ['duplicate_handle', 'web'],
+      ['self', 'web'],
+      ['unknown', 'ios'],
+      ['cycle', 'a'],
+    ]);
+  });
+});
+
+describe('storyOrder', () => {
+  it('keeps parallel tasks in position order', () => {
+    expect(ids([task('c', 2), task('a', 0), task('b', 1)])).toEqual(['a', 'b', 'c']);
+    expect(ids([])).toEqual([]);
+  });
+
+  it('puts a task after the one it depends on, whatever its position', () => {
+    expect(ids([task('web', 0, 'api'), task('api', 1)])).toEqual(['api', 'web']);
+    expect(ids([task('ios', 0, 'web'), task('web', 1, 'api'), task('api', 2)])).toEqual([
+      'api',
+      'web',
+      'ios',
+    ]);
+  });
+
+  it('keeps a stack together ahead of the next independent task', () => {
+    expect(
+      ids([task('api', 0), task('docs', 1), task('web', 2, 'api'), task('ios', 3, 'api')]),
+    ).toEqual(['api', 'web', 'ios', 'docs']);
+  });
+
+  it('treats a dependency outside the story, or on itself, as none', () => {
+    expect(ids([task('web', 1, 'deleted'), task('api', 0)])).toEqual(['api', 'web']);
+    expect(ids([task('web', 1, 'web'), task('api', 0)])).toEqual(['api', 'web']);
+  });
+
+  it('keeps every task of a cycle, once each, and does not loop', () => {
+    expect(ids([task('a', 1, 'b'), task('b', 2, 'a'), task('api', 0)])).toEqual(['api', 'a', 'b']);
+  });
+
+  it('keeps input order for equal positions and returns the same items without changing the input', () => {
+    const first = { ...task('a', 0), title: 'first' };
+    const second = { ...task('b', 0), title: 'second' };
+    const given = [first, second];
+    const ordered = storyOrder(given);
+    expect(ordered).toEqual([first, second]);
+    expect(ordered[0]).toBe(first);
+    expect(given).toEqual([first, second]);
+    expect(storyOrder(story.tasks).map((item) => item.handle)).toEqual(['api', 'web']);
+  });
+});
+
+describe('isStacked', () => {
+  it('is stacked on a parent in the same project', () => {
+    expect(isStacked({ projectId: PROJECT }, { projectId: PROJECT })).toBe(true);
+  });
+
+  it('is order only across projects, with no parent, or with no project', () => {
+    expect(isStacked({ projectId: PROJECT }, { projectId: DRAFT })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, null)).toBe(false);
+    expect(isStacked({ projectId: null }, { projectId: null })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, { projectId: null })).toBe(false);
   });
 });

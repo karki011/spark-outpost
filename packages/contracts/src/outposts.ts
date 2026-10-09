@@ -43,6 +43,7 @@ export const requestFactsSchema = z.object({
   held: z.boolean(),
   chatDeleted: z.boolean(),
   waitingOn: z.string().nullable(),
+  waitingOnDeleted: z.boolean().optional(),
 });
 export type RequestFacts = z.infer<typeof requestFactsSchema>;
 
