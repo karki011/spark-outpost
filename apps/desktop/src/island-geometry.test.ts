@@ -8,10 +8,13 @@ import {
   islandDisplay,
   islandGeometry,
   isSize,
+  liftedPosition,
+  movedPosition,
   nearDock,
   notchRect,
   placement,
   placementLine,
+  FLOATING_BLOB,
   ISLAND_HEIGHT,
   ISLAND_WIDTH,
   type DisplayInfo,
@@ -180,7 +183,7 @@ describe('island placement', () => {
     });
   });
 
-  it('keeps a dragged island on its display and docks when dropped near the notch', () => {
+  it('keeps a dragged island on its display and docks when dropped near the top centre of a flat display', () => {
     const origin = dockedPosition(builtIn);
     const moved = draggedPosition(origin, { x: 700, y: 10 }, { x: 900, y: 310 }, builtIn);
     expect(moved).toEqual({ x: origin.x + 200, y: 300 });
@@ -192,7 +195,10 @@ describe('island placement', () => {
     expect(draggedPosition(origin, { x: 0, y: 0 }, { x: 5000, y: 0 }, builtIn).x).toBe(
       1512 - ISLAND_WIDTH + 160,
     );
-    expect(nearDock({ x: origin.x + 24, y: 40 }, builtIn)).toBe(true);
+    const flat = { ...builtIn, notch: null };
+    expect(nearDock({ x: origin.x + 24, y: 40 }, flat)).toBe(true);
+    expect(nearDock({ x: origin.x + 24, y: 90 }, flat)).toBe(false);
+    expect(nearDock({ x: origin.x + 120, y: 0 }, flat)).toBe(false);
   });
 
   it('uses the measured notch over the menu bar guess', () => {
@@ -237,11 +243,87 @@ describe('island placement', () => {
     });
   });
 
-  it('keeps a floating island below the notch and leaves other displays alone', () => {
-    expect(clampToDisplay({ x: 100, y: 0 }, builtIn)).toEqual({ x: 100, y: 38 });
+  it('lets a floating island reach the top of the screen beside the notch and on other displays', () => {
+    expect(clampToDisplay({ x: 100, y: 0 }, builtIn)).toEqual({ x: 100, y: 0 });
+    expect(clampToDisplay({ x: 100, y: -40 }, builtIn)).toEqual({ x: 100, y: 0 });
     expect(clampToDisplay({ x: 100, y: 200 }, builtIn)).toEqual({ x: 100, y: 200 });
     expect(clampToDisplay({ x: 1600, y: -200 }, external)).toEqual({ x: 1600, y: -200 });
+    expect(clampToDisplay({ x: 1600, y: -900 }, external)).toEqual({ x: 1600, y: -200 });
     expect(clampToDisplay({ x: 100, y: 0 }, { ...builtIn, notch: null })).toEqual({ x: 100, y: 0 });
+  });
+});
+
+describe('floating blob near the notch', () => {
+  const notched: DisplayInfo = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 2056, height: 1329 },
+    workArea: { x: 0, y: 44, width: 2056, height: 1285 },
+    internal: true,
+    notch: { width: 220, height: 38 },
+  };
+  const notchLeft = (2056 - 220) / 2;
+  const centred = notchLeft + 110 - FLOATING_BLOB.x - FLOATING_BLOB.size / 2;
+  const blobLeft = (x: number) => x + FLOATING_BLOB.x;
+
+  it('keeps the blob exactly where it is dropped under the notch, at any height', () => {
+    for (const y of [38, 39, 42, 60, 89, 140]) {
+      const dropped = { x: centred, y };
+      expect(nearDock(dropped, notched)).toBe(false);
+      expect(clampToDisplay(dropped, notched)).toEqual(dropped);
+      expect(placement({ docked: false, ...dropped }, [notched], 1)).toEqual({
+        display: notched,
+        position: dropped,
+        docked: false,
+      });
+    }
+  });
+
+  it('settles a blob pushed into the notch directly under it and docks one dropped there', () => {
+    for (const y of [0, 10, 37]) {
+      expect(clampToDisplay({ x: centred, y }, notched)).toEqual({ x: centred, y: 38 });
+      expect(nearDock({ x: centred, y }, notched)).toBe(true);
+    }
+    expect(nearDock({ x: centred, y: -15 }, notched)).toBe(true);
+    const tall = { ...notched, notch: { width: 220, height: 37.5 } };
+    expect(clampToDisplay({ x: centred, y: 5 }, tall).y).toBe(38);
+  });
+
+  it('lets the blob sit in the menu bar strip right beside the notch', () => {
+    const left = { x: notchLeft - FLOATING_BLOB.size - FLOATING_BLOB.x, y: 0 };
+    const right = { x: notchLeft + 220 - FLOATING_BLOB.x, y: 4 };
+    for (const beside of [left, right]) {
+      expect(clampToDisplay(beside, notched)).toEqual(beside);
+      expect(nearDock(beside, notched)).toBe(false);
+    }
+    expect(blobLeft(left.x) + FLOATING_BLOB.size).toBe(notchLeft);
+    expect(clampToDisplay({ x: left.x + 1, y: 0 }, notched)).toEqual({ x: left.x + 1, y: 38 });
+  });
+
+  it('keeps the whole blob on the display and the open island on screen', () => {
+    const far = clampToDisplay({ x: -9000, y: 9000 }, notched);
+    expect(blobLeft(far.x)).toBeGreaterThanOrEqual(0);
+    expect(far.y + ISLAND_HEIGHT).toBe(1329);
+    const other = clampToDisplay({ x: 9000, y: -9000 }, notched);
+    expect(blobLeft(other.x) + FLOATING_BLOB.size).toBeLessThanOrEqual(2056);
+    expect(other.y).toBe(0);
+  });
+
+  it('centres a lifted blob on the pointer', () => {
+    const lifted = liftedPosition({ x: 1028, y: 57 });
+    expect(lifted).toEqual({ x: 1028 - FLOATING_BLOB.x - 15, y: 42 });
+    expect(movedPosition(lifted, { x: 1028, y: 57 }, { x: 1030, y: 50 })).toEqual({
+      x: lifted.x + 2,
+      y: 35,
+    });
+  });
+
+  it('still docks a saved dock position and restores one saved under the notch', () => {
+    const dock = dockedPosition(notched);
+    expect(placement({ docked: false, ...dock }, [notched], 1)).toMatchObject({ docked: true });
+    expect(placement({ docked: false, x: centred, y: 38 }, [notched, external], 1)).toMatchObject({
+      docked: false,
+      position: { x: centred, y: 38 },
+    });
   });
 });
 
@@ -264,14 +346,14 @@ describe('island window offset', () => {
 
   it('describes a placement with the display, the notch and both bounds', () => {
     const requested = { x: 508, y: 0, width: 1040, height: 600 };
-    expect(placementLine(notched, requested, { ...requested, y: 44 })).toBe(
-      'Island placed: display 2056x1329 at 0,0; work area 2056x1285 at 0,44; notch 220x38; requested 1040x600 at 508,0; actual 1040x600 at 508,44',
+    expect(placementLine(notched, true, requested, { ...requested, y: 44 })).toBe(
+      'Island placed: display 2056x1329 at 0,0; work area 2056x1285 at 0,44; notch 220x38; docked, requested 1040x600 at 508,0; actual 1040x600 at 508,44',
     );
-    expect(placementLine({ ...notched, notch: undefined }, requested, requested)).toContain(
+    expect(placementLine({ ...notched, notch: undefined }, true, requested, requested)).toContain(
       'notch 220x44 (from menu bar)',
     );
-    expect(placementLine({ ...notched, notch: null }, requested, requested)).toContain(
-      'notch none',
+    expect(placementLine({ ...notched, notch: null }, false, requested, requested)).toContain(
+      'notch none; floating, requested',
     );
   });
 });

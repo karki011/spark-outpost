@@ -37,6 +37,7 @@ export interface IslandGeometry {
 
 export const ISLAND_WIDTH = 1040;
 export const ISLAND_HEIGHT = 600;
+export const FLOATING_BLOB = { x: 512, y: 0, size: 30 };
 
 const NOTCH_MENU_BAR_MIN = 30;
 const NOTCH_ASPECT = 5;
@@ -111,12 +112,17 @@ function notchText(display: DisplayInfo): string {
   return display.notch === undefined ? `${size} (from menu bar)` : size;
 }
 
-export function placementLine(display: DisplayInfo, requested: Rect, actual: Rect): string {
+export function placementLine(
+  display: DisplayInfo,
+  docked: boolean,
+  requested: Rect,
+  actual: Rect,
+): string {
   return [
     `Island placed: display ${rectText(display.bounds)}`,
     `work area ${rectText(display.workArea)}`,
     `notch ${notchText(display)}`,
-    `requested ${rectText(requested)}`,
+    `${docked ? 'docked' : 'floating'}, requested ${rectText(requested)}`,
     `actual ${rectText(actual)}`,
   ].join('; ');
 }
@@ -148,19 +154,46 @@ export function islandBounds(position: Point, rest: Size | null): Rect {
   return { x: position.x + (ISLAND_WIDTH - width) / 2, y: position.y, width, height };
 }
 
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+function blobRect(position: Point): Rect {
+  return {
+    x: position.x + FLOATING_BLOB.x,
+    y: position.y + FLOATING_BLOB.y,
+    width: FLOATING_BLOB.size,
+    height: FLOATING_BLOB.size,
+  };
+}
+
 export function clampToDisplay(position: Point, display: DisplayInfo): Point {
   const { bounds } = display;
-  return {
+  const fitted = {
     x: clamp(
       position.x,
       bounds.x - SIDE_SLACK,
       bounds.x + bounds.width - ISLAND_WIDTH + SIDE_SLACK,
     ),
-    y: clamp(
-      position.y,
-      bounds.y + Math.ceil(displayNotch(display)?.height ?? 0),
-      bounds.y + bounds.height - ISLAND_HEIGHT,
-    ),
+    y: clamp(position.y, bounds.y - FLOATING_BLOB.y, bounds.y + bounds.height - ISLAND_HEIGHT),
+  };
+  const notch = notchRect(display);
+  if (!notch || !overlaps(blobRect(fitted), notch)) return fitted;
+  return { x: fitted.x, y: Math.ceil(notch.y + notch.height) - FLOATING_BLOB.y };
+}
+
+export function movedPosition(origin: Point, pointerStart: Point, pointer: Point): Point {
+  return {
+    x: Math.round(origin.x + pointer.x - pointerStart.x),
+    y: Math.round(origin.y + pointer.y - pointerStart.y),
+  };
+}
+
+export function liftedPosition(pointer: Point): Point {
+  const half = FLOATING_BLOB.size / 2;
+  return {
+    x: Math.round(pointer.x - FLOATING_BLOB.x - half),
+    y: Math.round(pointer.y - FLOATING_BLOB.y - half),
   };
 }
 
@@ -170,16 +203,12 @@ export function draggedPosition(
   pointer: Point,
   display: DisplayInfo,
 ): Point {
-  return clampToDisplay(
-    {
-      x: Math.round(origin.x + pointer.x - pointerStart.x),
-      y: Math.round(origin.y + pointer.y - pointerStart.y),
-    },
-    display,
-  );
+  return clampToDisplay(movedPosition(origin, pointerStart, pointer), display);
 }
 
 export function nearDock(position: Point, display: DisplayInfo): boolean {
+  const notch = notchRect(display);
+  if (notch) return overlaps(blobRect(position), notch);
   const dock = dockedPosition(display);
   return (
     Math.abs(position.x - dock.x) < DOCK_REACH_X && position.y - display.bounds.y < DOCK_REACH_Y

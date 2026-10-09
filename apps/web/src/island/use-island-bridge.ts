@@ -121,7 +121,8 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     let interactive = false;
-    let dragging: { x: number; y: number; started: boolean } | null = null;
+    let dragging: { x: number; y: number; started: boolean; blob: boolean } | null = null;
+    let dropped = false;
     const setInteractive = (on: boolean) => {
       if (on === interactive) return;
       interactive = on;
@@ -154,7 +155,8 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
           Math.hypot(event.screenX - dragging.x, event.screenY - dragging.y) >= DRAG_START
         ) {
           dragging.started = true;
-          desktop?.island.drag('start', dragging.x, dragging.y);
+          if (dragging.blob) setHover(false);
+          desktop?.island.drag(dragging.blob ? 'lift' : 'start', dragging.x, dragging.y);
         }
         if (dragging.started) desktop?.island.drag('move', event.screenX, event.screenY);
         return;
@@ -182,17 +184,26 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       const target = event.target as HTMLElement;
       if (!desktop || event.button !== 0) return;
       if (!latest.current.islandRef.current?.contains(target)) return;
-      if (
-        target.closest(
-          'button, a, input, textarea, [role="option"], [role="menu"], .isl-reply, [tabindex]',
-        )
-      )
-        return;
-      dragging = { x: event.screenX, y: event.screenY, started: false };
+      const blob = target.closest('.isl-scout-btn') !== null;
+      const control = target.closest(
+        'button, a, input, textarea, [role="option"], [role="menu"], .isl-reply, [tabindex]',
+      );
+      if (control && !blob) return;
+      dropped = false;
+      dragging = { x: event.screenX, y: event.screenY, started: false, blob };
     };
     const onUp = (event: PointerEvent) => {
-      if (dragging?.started) desktop?.island.drag('end', event.screenX, event.screenY);
+      if (dragging?.started) {
+        desktop?.island.drag('end', event.screenX, event.screenY);
+        dropped = dragging.blob;
+      }
       dragging = null;
+    };
+    const onClick = (event: MouseEvent) => {
+      if (!dropped) return;
+      dropped = false;
+      event.stopPropagation();
+      event.preventDefault();
     };
     const onBlur = () => latest.current.onBlur();
     const onDragIn = () => setInteractive(true);
@@ -203,6 +214,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     document.documentElement.addEventListener('mouseleave', onLeave);
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('click', onClick, true);
     window.addEventListener('blur', onBlur);
     window.addEventListener('dragenter', onDragIn);
     window.addEventListener('drop', onDragOut);
@@ -216,6 +228,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       document.documentElement.removeEventListener('mouseleave', onLeave);
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('click', onClick, true);
       window.removeEventListener('blur', onBlur);
     };
   }, [desktop]);
