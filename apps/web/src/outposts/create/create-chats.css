@@ -1,6 +1,6 @@
 .op-chat-list {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -11,7 +11,22 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
-  padding: 5px 0;
+  padding: 8px 8px 8px 12px;
+}
+
+.op-chat-row,
+.op-chat-form,
+.op-review-list > li {
+  border-radius: var(--r);
+  background: var(--raise);
+}
+
+:is(.op-chat-row, .op-chat-form) :is(.inp, .field-button, .seg),
+:is(.op-chat-row, .op-review-list) .op-tag,
+.op-chat-row .icon-btn:hover,
+.op-form-foot .btn.line,
+.op-form-foot .btn.ghost:hover:not(:disabled) {
+  background: var(--panel);
 }
 
 .op-chat-text {
@@ -99,13 +114,7 @@
 }
 
 .op-chat-form {
-  padding: 6px 0 2px;
-}
-
-li + li > .op-chat-form {
-  margin-top: 10px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+  padding: 14px;
 }
 
 .op-form-head {
@@ -200,7 +209,7 @@ li + li > .op-chat-form {
 }
 
 .op-add-message:hover {
-  background: var(--raise);
+  background: var(--panel);
 }
 
 .op-add-message svg {
@@ -232,21 +241,30 @@ li + li > .op-chat-form {
   font-weight: 500;
 }
 
-.op-message .chips:not(:empty) {
-  margin-bottom: 8px;
+.op-message-box {
+  padding: 8px;
+  border-radius: var(--r-sm);
+  background: var(--panel);
 }
 
-.op-message textarea {
+.op-message-box .chips {
+  padding: 0 0 6px;
+}
+
+.op-message-box textarea {
   display: block;
   resize: vertical;
   min-height: 72px;
+  padding-inline: 6px;
+  border-color: transparent;
+  background: transparent;
 }
 
 .op-message-foot {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 6px 0 0 -8px;
+  margin-top: 4px;
 }
 
 .op-message-foot .btn {
@@ -328,6 +346,10 @@ li + li > .op-chat-form {
   .op-chat-row .op-handle-field {
     flex: 1;
     min-width: 0;
+  }
+
+  .op-chat-form {
+    padding: 12px;
   }
 
   .op-chat-row .op-chat-text {
