@@ -28,7 +28,7 @@ Dhago remains a separate product. Reuse verified lessons and selected code only 
 | Long lists                     | TanStack Virtual where transcript/activity volume warrants it                                                                                                                                                                             |
 | Coding agents (provider layer) | ACP (Agent Client Protocol) over stdio, using `@agentclientprotocol/sdk`. Claude through `claude-agent-acp`, Codex through `codex-acp`. A native-SDK adapter only where ACP cannot cover a required capability                            |
 | Agent interface (server to UI) | AG-UI 1.0 events over SSE, replayed from a saved cursor. `@ag-ui/core`, `@ag-ui/client`, `@ag-ui/encoder` (MIT)                                                                                                                           |
-| Agent collaboration            | A2A 1.0 via `@a2a-js/sdk`, only at independent remote agent boundaries, starting in phase 3                                                                                                                                               |
+| Agent collaboration            | A2A 1.0 via `@a2a-js/sdk`: outpost chats on loopback today, independent remote agents from phase 3                                                                                                                                        |
 | CopilotKit                     | Not adopted for phases 0–1. Its prebuilt UI does not fit the mockup, and its runtime expects to own runs. Re-evaluate the headless v2 hooks after phase 1                                                                                 |
 | Decision assistance            | Optional TypeSafe/Jev for bounded typed judgments                                                                                                                                                                                         |
 | Desktop packaging              | Electron (preferred), as a thin shell around the unchanged web app and Node service. Decide after the web milestone                                                                                                                       |
@@ -107,7 +107,7 @@ Use a single local worker initially. Bound concurrent runs and provider processe
 
 Show real delegation messages, task updates, and shared artifacts in a compact collaboration timeline. Let users expand handoffs to inspect requests, authorized context, and responses. Clearly distinguish summaries from original messages. Remote private activity is unavailable unless reported.
 
-Provide an Agents connection screen for user-supplied endpoints, verified Agent Cards, authentication, and per-workflow sharing scope. Agent Card capabilities are self-reported and do not imply trust. Exposing Spark Outpost itself as an A2A endpoint is deferred and must be opt-in with authentication and scoped access.
+Provide an Agents connection screen for user-supplied endpoints, verified Agent Cards, authentication, and per-workflow sharing scope. Agent Card capabilities are self-reported and do not imply trust. Spark serves each outpost chat as an A2A agent on loopback only, behind the launch token, never to a paired phone or through Tailscale ([A2A_CHATS.md](../architecture/A2A_CHATS.md)). A remote endpoint remains deferred and must be opt-in with authentication and scoped access.
 
 ## 5. Harness behavior
 
@@ -371,14 +371,14 @@ Do not defer basic recovery, permission enforcement, provider-independent cachin
 - Initial permission defaults, spending limits, and live-test allowance.
 - Whether CopilotKit headless hooks earn adoption after phase 1. Paid boundaries: `selfManagedAgents` in production and `useThreads` require paid tiers.
 
-Decided 2026-09-25: ACP for coding agents, AG-UI to the UI, A2A only for remote agents, CopilotKit not adopted for phases 0–1, PostgreSQL everywhere, Electron as the preferred desktop shell. Also decided: `apps/desktop` uses the `embedded-postgres` binary.
+Decided 2026-09-25: ACP for coding agents, AG-UI to the UI, A2A only for remote agents (amended 2026-10-09: outpost chats are also A2A agents, on loopback only, see `docs/architecture/A2A_CHATS.md`), CopilotKit not adopted for phases 0–1, PostgreSQL everywhere, Electron as the preferred desktop shell. Also decided: `apps/desktop` uses the `embedded-postgres` binary.
 
 ## 19. Source notes
 
 Sources support protocol and library facts; proposed architecture and acceptance targets above are our design, not claims made by these sources.
 
 - [ACP introduction](https://agentclientprotocol.com/get-started/introduction), [supported agents](https://agentclientprotocol.com/get-started/agents), [protocol overview](https://agentclientprotocol.com/protocol/overview), [tool calls](https://agentclientprotocol.com/protocol/v1/tool-calls), [session config options](https://agentclientprotocol.com/protocol/v1/session-config-options), [session usage RFD](https://agentclientprotocol.com/rfds/session-usage), [HTTP/WebSocket transport RFD](https://agentclientprotocol.com/rfds/streamable-http-websocket-transport), [TypeScript SDK](https://agentclientprotocol.com/libraries/typescript): checked 2026-09-25.
-- [A2A specification](https://a2a-protocol.org/latest/specification/) (1.0) and [a2a-js](https://github.com/a2aproject/a2a-js) (`@a2a-js/sdk` 1.2.1, Apache-2.0, Express handlers): agent interoperability; verify the installed SDK version and conformance before integration.
+- [A2A specification](https://a2a-protocol.org/latest/specification/) (1.0) and [a2a-js](https://github.com/a2aproject/a2a-js) (`@a2a-js/sdk` pinned at 1.3.0, Apache-2.0, Express handlers): agent interoperability; verify the installed SDK version and conformance before integration.
 - [AG-UI events](https://docs.ag-ui.com/concepts/events): 1.0 event types, interrupt and cancelled run outcomes, `connect()` not implemented by default. Interface event protocol, separate from our durable worker.
 - [CopilotKit reference](https://docs.copilotkit.ai/reference) and [A2A integration](https://docs.copilotkit.ai/agentic-protocols/a2a): MIT packages and v2 headless hooks.
 - [CopilotKit self-managed agents](https://docs.copilotkit.ai/strands/backend/self-managed-agents) and [useThreads](https://docs.copilotkit.ai/reference/hooks/useThreads): paid tiers for these paths; do not assume every integration path is free.

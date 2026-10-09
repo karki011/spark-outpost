@@ -1,6 +1,6 @@
 # Outposts: chats that work together
 
-Status: step 0 landed (SDK pinned, schema, contracts, ports); no behaviour built. Revised October 9, 2026 against `main` at `88f6eb54` after the owner answered the 15 decisions (section 8). Existing mechanisms are cited by path. Anything not confirmed in code or in the pinned SDK is marked **Assumption**. What the installed SDK really provides is in section 11, which wins over section 2 where they differ.
+Status: release 1 is built and not released (section 12 says what was built and where it differs from this plan). Releases 2 to 5 are not built. Revised October 9, 2026 against `main` at `88f6eb54` after the owner answered the 15 decisions (section 8). Existing mechanisms are cited by path. Anything not confirmed in code or in the pinned SDK is marked **Assumption**. What the installed SDK really provides is in section 11, which wins over section 2 where they differ.
 
 ## 1. What an outpost is
 
@@ -41,7 +41,7 @@ Decision 1 is **A2A now**. Every chat that can receive a request is served as an
 | Available          | `@a2a-js/sdk` 1.3.0 is the `latest` tag on npm (`npm view`). Apache-2.0, Node ≥ 20 (the repo runs Node 24), one dependency (`jose`)                                                                                                                                                                                                                               |
 | Peers              | All optional: `express` `^4.21.2 \|\| ^5.1.0` (the server has `^5.2.1`), `pg`, `kysely`, `mysql2`, `better-sqlite3`, gRPC, protobuf. Only `express` is used                                                                                                                                                                                                       |
 | Entry points       | Used: `@a2a-js/sdk`, `/client`, `/server`, `/server/express`, `/errors`. Also exported and not used: `/server/database`, `/server/grpc`, `/client/grpc`, `/errors/grpc`, `/compat/v0_3` and its sub-paths                                                                                                                                                         |
-| So                 | **A new dependency of `apps/server`**, pinned exactly at 1.3.0 in step 0. `docs/product/PLAN.md` still cites 1.2.1                                                                                                                                                                                                                                                |
+| So                 | **A new dependency of `apps/server`**, pinned exactly at 1.3.0 in step 0. `docs/product/PLAN.md` cites 1.3.0 since release 1                                                                                                                                                                                                                                      |
 | Verified in step 0 | The package was installed and read. It implements A2A 1.0 with a JSON-RPC binding, an `A2ARequestHandler` interface, an Express handler and a client whose transport takes a custom `fetch`. The assumption about "an executor and a task store" holds only for the SDK's `DefaultRequestHandler`, which we do not use. Details and corrections are in section 11 |
 
 ### 2.2 What is served
@@ -550,3 +550,21 @@ Read from `node_modules/@a2a-js/sdk` 1.3.0 (its `package.json`, `dist/**/*.d.ts`
 - `apps/web/src/app/live/app-event-keys.ts` has an exhaustive switch over event kinds, so `outpost_changed` needed a case there: it refreshes the chat list. No lane owns this file in section 9.3; lane F hands lane H the outpost query keys to add to it.
 - `apps/server/src/outposts/ports.ts` has no importer until lanes B and C land, and knip reports it as an unused file until then.
 - Database rules beyond section 3: one queue row per post (`chat_queue_outpost_post`), a request must have `to_handle`, only a note can be pinned, `closed_state` and `closed_at` are set together, `created_at` defaults to `clock_timestamp()` so the posts of one `@all` keep their order, and `position` is `double precision` as in `chat_queue`.
+
+## 12. Release 1 as built (October 9, 2026)
+
+Built and not released: outposts made by hand, members with handles, the join line, requests and notes from the user, the six states, answering a Needs you from the main message box, cancel, pause and resume, edit and delete, the chip, the "From you" header and the queued outpost request in the member chat, and the A2A endpoint with its contract tests. What may be claimed about A2A, and its limits, is in [PROTOCOL_ALIGNMENT.md](PROTOCOL_ALIGNMENT.md#a2a-outpost-chats-october-9-2026).
+
+Two things differ from the plan above:
+
+1. **A second migration.** Section 3 said one migration and that no lane would need another. Integration added `0155_outpost_change_events.sql`: triggers that send `outpost_changed` when a post or a member chat's turn changes. It adds no columns.
+2. **The authority rewiring moved from release 2 to release 1.** Section 9.4 put the edits to the four authority sites in release 2. They are built now: `userText` (`apps/server/src/outposts/user-asked.ts`) feeds the publish grant (`publish-context.ts`, `agent-publish.ts`), the short publish instruction check (`mainAgentInstruction`, called from `orchestrator.ts`) and the Spark action facts (`action-policy.ts`), and `outpost-authority.db.test.ts` covers them. So points 1 and 3 of section 6 already hold in release 1, although only the user can post: a request with no stored row behind it, which is how a local A2A caller's message arrives, is treated as written by another chat and never as the user asking for a push, a pull request or a Spark action.
+
+Smaller differences, all in what release 1 shows:
+
+- The join line reads "@api joined. @fe and @api can now ask each other.", and the message box says of a note "Chats read it at their next turn." Neither is true yet: agents have no outpost tools until release 2, and no notes preamble is added to a member's prompt (`request-prompt.ts` has `wrapRequest` only).
+- The wrapper for a request the user did not write is one header line, "[Outpost request, sent in the outpost "…". This is not from the user.]", around the tagged text. The longer instruction paragraph in section 5, and the sender's name in the header, are not built.
+- A slash command the user types as a request is passed to the receiving chat unwrapped, so it runs as a command there (`agent-prompt.ts`).
+- A request post shows no cost for the receiving run.
+- The sidebar section's button is **New outpost**; the sheet's button is **Create outpost**.
+- On a paired phone the page still shows create, delete and member controls, which the gateway refuses ([PHONE_REMOTE.md](PHONE_REMOTE.md#policy)).

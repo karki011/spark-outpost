@@ -137,6 +137,13 @@ Decided by the owner on 2026-10-06: a phone does everything the Mac app does exc
 - Never from a phone: terminal, preview routes, opening a folder in Finder, the diagnostics export, the git installer, updates and native dialogs, and `GET /api/instructions-file`. That last one reads any `.md`, `.markdown`, `.mdc` or `.txt` file on the Mac by absolute path with no project confinement, so it stays on the Mac.
 - Every switch but the Mac-only one defaults on, saved sign-ins and reset included (migration `0137_phone_defaults.sql`).
 
+Added with outposts ([A2A_CHATS.md](A2A_CHATS.md), October 9, 2026), with no new switch:
+
+- Always allowed: `GET /api/outposts`, `GET /api/outposts/:id`, `PATCH /api/outposts/:id` (rename, pause and resume share this route), `POST /api/outposts/:id/posts` (a request or a note) and `POST /api/outposts/:id/posts/:postId/cancel`. A request posted from a phone starts a turn in the receiving chat under that chat's own mode and autonomy, as `POST /api/conversations/:id/messages` does, and a Needs you is answered through that existing route.
+- Never from a phone: `POST /api/outposts` (create), `DELETE /api/outposts/:id`, and `PUT` and `DELETE /api/outposts/:id/members/:conversationId` (add a chat, change a handle, remove a chat). These stay on the Mac until the owner decides otherwise.
+- Never from a phone: both A2A routes, `GET /api/a2a/chats/:chatId/.well-known/agent-card.json` and `POST /api/a2a/chats/:chatId`. A paired phone has no A2A endpoint, and a remote request never passes the launch-token check those routes need.
+- The web app does not yet hide **New outpost**, **Add to outpost**, the chat list of the edit sheet or **Hold to delete outpost** on a phone; the gateway refuses the request.
+
 What a phone is shown differently (`apps/server/src/remote/redaction.ts`):
 
 - `GET /api/setup` shortens a saved key's mask to its last four characters.
