@@ -14,6 +14,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { SubagentAnnounce } from '../workflow/subagent-events.ts';
 import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp } from './context.ts';
+import { writtenMessage } from './final-reply.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
 import {
@@ -180,7 +181,7 @@ async function runInPlace(
     const result = await runAgentTurn(s.deps, s.lease, input, s.append, member.control, {
       onOutput: observe,
     });
-    if (result.messageId) s.message = { id: result.messageId, text: result.text };
+    if (result.messageId) s.message = writtenMessage(result);
     return {
       role: 'scout',
       runId: s.lease.runId,
@@ -188,6 +189,7 @@ async function runInPlace(
       outcome: result.outcome,
       error: result.error,
       text: result.text,
+      finalReply: result.finalReply ?? null,
       toolCalls: total.value,
       inPlace: true,
       name,
@@ -357,6 +359,7 @@ async function runChild(
       outcome: result.outcome,
       error: result.error,
       text: result.text,
+      finalReply: result.finalReply ?? null,
       toolCalls: total.value,
       inPlace: false,
       name,

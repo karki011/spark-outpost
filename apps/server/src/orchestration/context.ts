@@ -4,7 +4,7 @@ import { fitPatch, omittedNote } from './critic-diff.ts';
 import { builderStyle, criticStyle } from './lean.ts';
 import type { PublishBrief } from '../approvals/publish-policy.ts';
 
-const REQUEST_LIMIT = 8_000;
+export const REQUEST_LIMIT = 8_000;
 export const HISTORY_TURNS = 6;
 const HISTORY_TURN_LIMIT = 1_000;
 export const PATCH_LIMIT = 24_000;

@@ -58,7 +58,7 @@ const waiting: RequestFacts = {
   runStatus: null,
   runNeedsYou: null,
   paused: false,
-  held: false,
+  held: null,
   chatDeleted: false,
   waitingOn: null,
 };

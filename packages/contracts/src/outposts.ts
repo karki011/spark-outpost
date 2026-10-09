@@ -40,7 +40,7 @@ export const requestFactsSchema = z.object({
   runStatus: runStatusSchema.nullable(),
   runNeedsYou: z.string().nullable(),
   paused: z.boolean(),
-  held: z.boolean(),
+  held: z.enum(['failed', 'stopped']).nullable(),
   chatDeleted: z.boolean(),
   waitingOn: z.string().nullable(),
   waitingOnDeleted: z.boolean().optional(),
@@ -82,6 +82,12 @@ export const outpostAnswerSchema = z.object({
 });
 export type OutpostAnswer = z.infer<typeof outpostAnswerSchema>;
 
+export const outpostExchangeSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
+export type OutpostExchange = z.infer<typeof outpostExchangeSchema>;
+
 export const outpostIntroSchema = z.object({
   conversationId: z.uuid(),
   task: z.string().nullable(),
@@ -108,6 +114,7 @@ export const outpostPostSchema = z.object({
   state: requestStateSchema.nullable(),
   reason: z.string().nullable(),
   answer: outpostAnswerSchema.nullable(),
+  exchanges: z.array(outpostExchangeSchema).default([]),
   files: z.number().int().nonnegative().default(0),
   intro: outpostIntroSchema.nullable().default(null),
 });

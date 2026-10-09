@@ -50,6 +50,7 @@ export function optimisticPost(detail: OutpostDetail, input: NewPost, now: strin
     state: to ? 'sent' : null,
     reason: to ? (paused ? 'Paused' : 'Not sent yet') : null,
     answer: null,
+    exchanges: [],
     files: 0,
     intro: null,
   };

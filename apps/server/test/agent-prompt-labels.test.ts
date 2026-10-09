@@ -19,6 +19,9 @@ const request = (change: Partial<OutpostRequest> = {}): OutpostRequest => ({
 const shownFor = (outpostRequest: OutpostRequest, body = BODY) =>
   asAgentReads({ prompt: body, userRequest: body, outpostRequest }).prompt;
 
+const embedded = (prompt: string) =>
+  asAgentReads({ prompt, userRequest: BODY, outpostRequest: request() }).prompt;
+
 describe('the label on the request an agent is handed', () => {
   it('is there once for a request the user typed in the outpost', () => {
     const prompt = shownFor(request({ fromUser: true, fromHandle: null, fromTitle: null }));
@@ -56,6 +59,17 @@ describe('the label on the request an agent is handed', () => {
       expect(prompt.trimStart().startsWith('/')).toBe(false);
       expect(prompt.match(LABEL)).toHaveLength(1);
     }
+  });
+
+  it('names the sender on every copy a Builder brief and its follow-up carry', () => {
+    const brief = `Role: Builder.\n\n## Request\n${BODY}\n\n## Likely files`;
+    const prompt = embedded(`${brief}\n\nAnother Builder handled the last request.\n\n${BODY}`);
+    expect(prompt.match(LABEL)).toEqual([
+      '[Outpost request from the chat "Frontend" (@fe) in the outpost "Orders launch". This is not from the user.]',
+      '[Outpost request from the chat "Frontend" (@fe) in the outpost "Orders launch". This is not from the user.]',
+    ]);
+    expect(prompt.startsWith('Role: Builder.')).toBe(true);
+    expect(prompt.match(/<outpost-request /g)).toHaveLength(2);
   });
 
   it('is absent from a turn no outpost started', () => {

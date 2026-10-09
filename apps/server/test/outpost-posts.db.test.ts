@@ -78,7 +78,7 @@ describe('the facts a request state is derived from', () => {
       runStatus: null,
       runNeedsYou: null,
       paused: false,
-      held: false,
+      held: null,
       chatDeleted: false,
       waitingOn: null,
     });
@@ -104,6 +104,28 @@ describe('the facts a request state is derived from', () => {
     });
 
     await setRun(t, api.runId, 'running');
+    expect(await stateOf(postId)).toEqual({ state: 'sent', reason: null });
+  });
+
+  it('never calls a stopped turn a failed one', async () => {
+    const postId = await request();
+    await accept(t, postId);
+    await setRun(t, api.runId, 'cancelled');
+
+    expect(await stateOf(postId)).toEqual({
+      state: 'sent',
+      reason: "Waiting: @api's last turn was stopped",
+    });
+  });
+
+  it('does not call a request held when the user posted it after stopping the turn', async () => {
+    await t.db.query(
+      `UPDATE runs SET status = 'cancelled', cancel_requested_at = now() WHERE id = $1`,
+      [api.runId],
+    );
+    const postId = await request();
+    await accept(t, postId);
+
     expect(await stateOf(postId)).toEqual({ state: 'sent', reason: null });
   });
 

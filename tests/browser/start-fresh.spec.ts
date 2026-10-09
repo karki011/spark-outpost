@@ -15,10 +15,12 @@ test('Start fresh closes the stored agent session from the chat menu', async ({ 
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole('button', { name: 'Chat actions' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Audit this chat' })).toBeFocused();
-  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Agent TV' })).toBeFocused();
   const fresh = page.getByRole('menuitem', { name: 'Start fresh' });
-  await expect(fresh).toBeFocused();
+  await expect(async () => {
+    await page.keyboard.press('ArrowDown');
+    await expect(fresh).toBeFocused({ timeout: 250 });
+  }).toPass();
   const response = page.waitForResponse(
     (candidate) =>
       candidate.url().endsWith('/fresh-session') && candidate.request().method() === 'POST',

@@ -13,6 +13,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { getDraft } from '../persistence/outpost-drafts.ts';
+import { requestExchanges } from '../persistence/outpost-exchanges.ts';
 import {
   cancelUnsent,
   getPost,
@@ -94,7 +95,8 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const posts: OutpostPost[] = [];
     for (const post of found) {
       const answer = await requestAnswer(db, workspaceId, post);
-      posts.push(toOutpostPost(post, answer, intros.get(post.post.id)));
+      const exchanges = await requestExchanges(db, post.post);
+      posts.push(toOutpostPost(post, answer, intros.get(post.post.id), exchanges));
     }
     const stories = await toStories(await storiesOf(db, id), stackGit);
     return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts, stories };

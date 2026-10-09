@@ -28,7 +28,7 @@ function opening(
     runStatus,
     runNeedsYou: null,
     paused: false,
-    held: false,
+    held: null,
     chatDeleted: false,
     waitingOn,
   };

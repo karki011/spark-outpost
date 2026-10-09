@@ -201,7 +201,7 @@ describe('outpost story', () => {
       runStatus: null,
       runNeedsYou: null,
       paused: false,
-      held: false,
+      held: null,
       chatDeleted: false,
       waitingOn: 'api',
     };

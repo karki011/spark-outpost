@@ -17,6 +17,7 @@ import type {
   StoredPost,
 } from '../outposts/ports.ts';
 import { taskChanges } from '../projects/task-changes.ts';
+import { postedAfterStop } from './chat-queue.ts';
 import type { Queryable } from './db.ts';
 
 interface PostRow {
@@ -52,7 +53,7 @@ interface PostRow {
 interface FactsRow extends PostRow {
   paused: boolean;
   queued: boolean;
-  held: boolean;
+  held: RequestFacts['held'];
   run_status: RunStatus | null;
   run_needs_you: string | null;
   waiting_handle: string | null;
@@ -70,12 +71,17 @@ const FACTS_QUERY = `
   SELECT p.*,
     (o.paused_at IS NOT NULL) AS paused,
     EXISTS (SELECT 1 FROM chat_queue q WHERE q.outpost_post_id = p.id) AS queued,
-    COALESCE((
-      SELECT last.status NOT IN ('succeeded', 'queued', 'running', 'awaiting_approval')
+    (
+      SELECT CASE
+        WHEN last.status IN ('succeeded', 'queued', 'running', 'awaiting_approval') THEN NULL
+        WHEN ${postedAfterStop('p', 'last')} THEN NULL
+        WHEN last.status = 'cancelled' THEN 'stopped'
+        ELSE 'failed'
+      END
       FROM runs last
       WHERE last.conversation_id = p.to_conversation_id AND last.parent_run_id IS NULL
       ORDER BY last.created_at DESC LIMIT 1
-    ), false) AS held,
+    ) AS held,
     r.status AS run_status,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$)
@@ -395,7 +401,7 @@ export async function requestAnswer(
        SELECT child.id FROM runs child JOIN family ON child.parent_run_id = family.id
      )
      SELECT r.task_id, r.conversation_id,
-       (SELECT m.content FROM messages m
+       (SELECT COALESCE(m.final_reply, m.content) FROM messages m
         WHERE m.run_id = r.id AND m.role = 'assistant'
         ORDER BY m.created_at DESC LIMIT 1) AS reply,
        (SELECT w.branch FROM chat_worktrees w

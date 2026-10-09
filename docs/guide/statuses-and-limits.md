@@ -29,14 +29,14 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Outpost requests
 
-| Status        | Means                                                             |
-| ------------- | ----------------------------------------------------------------- |
-| **Sent**      | The chat is busy, its last turn failed, or the outpost is paused. |
-| **Working**   | Its turn is running.                                              |
-| **Needs you** | The reply ends **Needs you: …**, or an approval card waits.       |
-| **Answered**  | The answer is under the request.                                  |
-| **Failed**    | The turn failed, or **Not delivered: …** says why.                |
-| **Cancelled** | You cancelled it or stopped its turn.                             |
+| Status        | Means                                                                            |
+| ------------- | -------------------------------------------------------------------------------- |
+| **Sent**      | The chat is busy, its last turn failed or was stopped, or the outpost is paused. |
+| **Working**   | Its turn is running.                                                             |
+| **Needs you** | The reply ends **Needs you: …**, or an approval card waits.                      |
+| **Answered**  | The answer is under the request.                                                 |
+| **Failed**    | The turn failed, or **Not delivered: …** says why.                               |
+| **Cancelled** | You cancelled it or stopped its turn.                                            |
 
 ## Jev on a reply
 

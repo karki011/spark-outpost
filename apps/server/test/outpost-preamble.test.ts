@@ -69,7 +69,7 @@ const facts = (change: Partial<RequestFacts> = {}): RequestFacts => ({
   runStatus: 'succeeded',
   runNeedsYou: null,
   paused: false,
-  held: false,
+  held: null,
   chatDeleted: false,
   waitingOn: null,
   ...change,
