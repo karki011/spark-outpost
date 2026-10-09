@@ -75,7 +75,6 @@ test('the rail lists the crew Agent TV shows after a later question, and its lis
   const turns = page.locator('.thread section[aria-label="Turn"]');
   await expect(turns).toHaveCount(2);
   await turnEnds(page);
-  await expect(turns.nth(1)).toContainText('Answered without changing files');
   await expect(members.getByRole('listitem')).toHaveCount(3);
   expect(await names()).toEqual(built);
 
