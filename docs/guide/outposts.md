@@ -6,13 +6,13 @@ order: 232
 summary: Put several chats in one outpost, ask each for work with @ and its handle, and read every answer in one thread.
 ---
 
-You'll ask several chats for work from one thread. About 3 minutes. Not sure you need one? See [When to use an outpost](when-to-use-an-outpost.md).
+You'll ask several chats for work from one thread. About 3 minutes. See also [When to use an outpost](when-to-use-an-outpost.md).
 
 ## Create an outpost
 
 1. In the sidebar, select **New outpost** (**+**) beside **Outposts** and enter a **Name**.
 2. Add each **Existing chat**, or a **New chat** with a **Project**, **Agent** and **Permissions**. Check its handle, such as `api`.
-3. Optionally select **Add a first message** and attach files. It is sent as your first request when the outpost starts.
+3. Optionally select **Add a first message** and attach files. It is sent as your first request.
 4. Select **Continue**, check the review, then **Start outpost**. The thread introduces each chat.
 
 Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't.
