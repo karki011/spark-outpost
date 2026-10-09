@@ -1,5 +1,6 @@
 import type { AppEvent } from '@spark-outpost/contracts';
 import type { PeerAgent } from '../outposts/ports.ts';
+import { queueWrapUps } from '../outposts/story-wrap-ups.ts';
 import type { Db } from '../persistence/db.ts';
 import { unsentRequests } from '../persistence/outpost-posts.ts';
 import { releaseAnswered } from './hold-release.ts';
@@ -54,6 +55,7 @@ export function startDispatcher(deps: DispatchDeps): Dispatcher {
     do {
       again = false;
       await attempt('Held outpost requests were not released', () => releaseAnswered(deps.db));
+      await attempt('Story wrap-ups were not written', () => queueWrapUps(deps.db));
       await attempt('Outpost requests were not sent', () => dispatchUnsent(deps.db, deps.peer));
     } while (again && !closed);
     running = null;
