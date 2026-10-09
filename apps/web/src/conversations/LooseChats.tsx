@@ -7,7 +7,7 @@ import { LOOSE_DROP_ID } from './sidebar-dnd-geometry.ts';
 import { LOOSE, pinnedIn, NO_PROJECT } from './sidebar-order.ts';
 import type { SidebarFolds } from './use-sidebar-folds.ts';
 
-type RenderRows = (
+export type RenderRows = (
   id: string,
   rows: readonly ConversationSummary[],
   options: { sortable: boolean; enabled: boolean },
