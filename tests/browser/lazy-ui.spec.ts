@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { chatMenuButton } from './header-menu.ts';
 
 type LazyPart = 'Analytics' | 'Tickets' | 'xterm-terminal' | 'DayCalendarGrid';
 
@@ -98,13 +99,12 @@ test('the terminal shortcut opens the dock at once and focus lands in the termin
   const releaseTerminal = await hold(page, 'xterm-terminal');
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  const button = page.locator('.head-r').getByRole('button', { name: 'Terminal' });
+  const button = chatMenuButton(page);
   await expect(button).toBeVisible();
 
   await page.keyboard.press('Control+Backquote');
   const dock = page.getByRole('region', { name: 'Terminal' });
   await expect(dock).toBeVisible();
-  await expect(button).toHaveAttribute('aria-pressed', 'true');
   await expect(dock.locator('.term-skel')).toBeVisible();
   await expect(dock.locator('.xterm')).toHaveCount(0);
 

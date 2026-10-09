@@ -18,7 +18,8 @@ import {
   type ShellTab,
 } from './shell-store.ts';
 import { StopShellConfirm } from './StopShellConfirm.tsx';
-import { TERMINAL_BUTTON_ID, TERMINAL_DOCK_ID } from './TerminalButton.tsx';
+import { CHAT_MENU_BUTTON_ID } from '../../audit/ChatHeaderMenu.tsx';
+import { TERMINAL_DOCK_ID } from './terminal-pane.tsx';
 
 interface Stopping {
   tabId: string;
@@ -131,7 +132,7 @@ export function TerminalDock({ chatId }: { chatId: string }) {
     setStopping(null);
     setAnnouncement(`Stopped ${command}.`);
     closeShell(chatId, tabId, true);
-    if (chatOf(chatId).tabs.length === 0) document.getElementById(TERMINAL_BUTTON_ID)?.focus();
+    if (chatOf(chatId).tabs.length === 0) document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
   };
 
   return (
@@ -178,7 +179,7 @@ export function TerminalDock({ chatId }: { chatId: string }) {
           {...hideTip.triggerProps}
           onClick={() => {
             hideShells(chatId);
-            document.getElementById(TERMINAL_BUTTON_ID)?.focus();
+            document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
           }}
         >
           <svg

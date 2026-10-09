@@ -10,6 +10,14 @@ import {
   send,
   type CrewRepo,
 } from './crew-engine.ts';
+import {
+  chatMenuButton,
+  chatMenuDot,
+  expectHeaderPane,
+  headerPaneItem,
+  openChatMenu,
+  toggleHeaderPane,
+} from './header-menu.ts';
 
 const SHOTS = process.env.TV_SHOTS ?? '';
 
@@ -48,7 +56,7 @@ async function editWaiting(page: Page) {
   await send(page, `${CREW_REQUEST} #build #crew`);
   const edit = card(page, /Change a file\?/);
   await expect(edit).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   await expect(tvOf(page)).toBeVisible();
   await settled(page);
   return edit;
@@ -100,7 +108,7 @@ test('clicking a blob bounces it and shows its status, Go to scrolls, Esc steps 
 
   await page.keyboard.press('Escape');
   await expect(tv).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Agent TV' })).toBeFocused();
+  await expect(chatMenuButton(page)).toBeFocused();
 });
 
 test('keyboard: Tab reaches the blobs, Enter opens the bubble, Enter again goes to the agent', async ({
@@ -125,9 +133,15 @@ test('a dispatch sends a packet and a line of chatter', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, `${CREW_REQUEST} #build #crew`);
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await expect(chatMenuButton(page)).toHaveAccessibleName(/^Chat actions\. \d+ agents? working\.$/);
+  await expect(chatMenuDot(page)).toHaveClass(/live/);
+  await openChatMenu(page);
+  await expect(headerPaneItem(page, 'Agent TV')).toHaveAttribute('aria-checked', 'false');
+  await expect(headerPaneItem(page, 'Agent TV')).toContainText(/\d+ working/);
+  await headerPaneItem(page, 'Agent TV').click();
   const tv = tvOf(page);
   await expect(tv).toBeVisible();
+  await expectHeaderPane(page, 'Agent TV', true);
 
   await expect(tv.locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
   await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {
@@ -245,7 +259,7 @@ test('dragging moves the TV and the position survives a reload', async ({ page }
   expect(Math.round(moved.x)).toBe(Math.round(position.x));
 
   await page.reload();
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   await settled(page);
   const again = (await tvOf(page).boundingBox())!;
   expect(Math.round(again.x)).toBe(Math.round(moved.x));
@@ -262,7 +276,7 @@ test('recording of a full run with handoffs', async ({ browser }) => {
   });
   const page = await context.newPage();
   await crewChat(page, repo, 'Ask before edits');
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   await tvOf(page).getByRole('radio', { name: 'M', exact: true }).click();
   await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });

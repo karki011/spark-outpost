@@ -14,6 +14,7 @@ import {
   send,
   type CrewRepo,
 } from './crew-engine.ts';
+import { chatMenuButton, expectHeaderPane, toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.ORCH_SCREENSHOTS ?? '';
 const THEMES = [
@@ -92,8 +93,9 @@ test('Manual: one task Builder with an edit approval, the Critic, then it keeps 
   await expect(crew.nth(1)).toContainText('BoltWaiting for you');
   await expect(crew.nth(1)).toContainText('Builder · Opus 5.5 · high');
 
-  const tvButton = page.getByRole('button', { name: 'Agent TV' });
-  await tvButton.click();
+  await expectHeaderPane(page, 'Agent TV', false);
+  await toggleHeaderPane(page, 'Agent TV');
+  await expectHeaderPane(page, 'Agent TV', true);
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   for (const name of ['Jev', 'Bolt']) {
     await expect(tv.getByRole('button', { name: new RegExp(`^${name},`) })).toBeVisible();
@@ -102,7 +104,8 @@ test('Manual: one task Builder with an edit approval, the Critic, then it keeps 
   await shot(page, 'building');
   await page.keyboard.press('Escape');
   await expect(tv).toBeHidden();
-  await expect(tvButton).toBeFocused();
+  await expect(chatMenuButton(page)).toBeFocused();
+  await expectHeaderPane(page, 'Agent TV', false);
   await work.getByRole('tab', { name: 'Tasks' }).click();
 
   await allowEdit(page);
@@ -227,8 +230,7 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
   );
   expect(roleOverNext.length).toBeGreaterThan(0);
   expect(Math.max(...roleOverNext)).toBeLessThanOrEqual(0);
-  await page.getByRole('button', { name: 'Chat actions' }).click();
-  await page.getByRole('menuitem', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect
     .poll(async () => {
@@ -240,7 +242,7 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
   await expect(tv).toBeHidden();
 
   await page.setViewportSize({ width: 1400, height: 900 });
-  await page.getByRole('button', { name: 'Agent TV', exact: true }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await expect(page.getByText('What should we work on?')).toBeVisible();
   await expect(tv).toBeVisible();
@@ -259,7 +261,7 @@ test('screenshots of the crew in every theme', async ({ page }) => {
   for (const theme of THEMES) {
     await page.evaluate((id) => localStorage.setItem('spark-outpost.theme', id), theme);
     await page.reload();
-    await page.getByRole('button', { name: 'Agent TV' }).click();
+    await toggleHeaderPane(page, 'Agent TV');
     await expect(page.getByRole('dialog', { name: 'Agent TV' })).toBeVisible();
     await shot(page, `desktop-${theme}`);
   }

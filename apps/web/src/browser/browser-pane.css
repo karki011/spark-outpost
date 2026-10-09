@@ -297,11 +297,6 @@
   color: var(--text);
 }
 
-.browser-btn[aria-pressed='true'] {
-  background: var(--raise);
-  color: var(--text);
-}
-
 .wp.browser {
   --wp-cap: max(380px, min(64vw, calc(100vw - 820px)));
 }

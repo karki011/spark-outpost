@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import { card, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const REQUEST = 'Split this up: build a store, add an API and add a view. #build #pieces #parallel';
 
@@ -40,12 +41,7 @@ const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
 const spoke = (page: Page, key: string) => tvOf(page).locator(`.tv-n[data-piece="${key}"]`);
 
 async function openTv(page: Page, view: 'Stage' | 'List'): Promise<Locator> {
-  const direct = page.getByRole('button', { name: 'Agent TV' });
-  if (await direct.isVisible()) await direct.click();
-  else {
-    await page.getByRole('button', { name: 'Chat actions' }).click();
-    await page.getByRole('menuitem', { name: 'Agent TV' }).click();
-  }
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = tvOf(page);
   await tv.getByRole('radio', { name: view }).click();
   return tv;

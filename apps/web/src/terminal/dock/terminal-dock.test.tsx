@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateShellResponse, TerminalEndReason } from '@spark-outpost/contracts';
 import type { TerminalHandlers } from '../terminal-connection.ts';
@@ -54,7 +55,8 @@ vi.mock('../terminal-connection.ts', () => ({
   },
 }));
 
-const { TerminalButton } = await import('./TerminalButton.tsx');
+const { ChatHeaderMenu } = await import('../../audit/ChatHeaderMenu.tsx');
+const { useTerminalPane } = await import('./terminal-pane.tsx');
 const { TerminalDock, tabNames } = await import('./TerminalDock.tsx');
 const store = await import('./shell-store.ts');
 
@@ -77,14 +79,22 @@ function end(connection: FakeConnection, reason: TerminalEndReason) {
 }
 
 function Chat({ id }: { id: string }) {
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const pane = useTerminalPane(id, menuButton, true);
   return (
     <>
-      <TerminalButton chatId={id} />
+      <ChatHeaderMenu chatId={id} panes={pane ? [pane] : []} buttonRef={menuButton} />
       <TerminalDock chatId={id} />
     </>
   );
 }
 
+const menuButton = () => screen.getByRole('button', { name: /^Chat actions\./ });
+const terminalItem = () => {
+  if (!screen.queryByRole('menu')) fireEvent.click(menuButton());
+  return screen.getByRole('menuitemcheckbox', { name: /^Terminal/ });
+};
+const toggleTerminal = () => fireEvent.click(terminalItem());
 const dock = () => screen.queryByRole('region', { name: 'Terminal' });
 const closeTab = (name: string) =>
   act(async () => {
@@ -109,12 +119,14 @@ afterEach(() => {
 describe('chat terminal dock', () => {
   it('opens a shell for the chat and labels its tab with the folder', async () => {
     render(<Chat id="a" />);
-    const button = screen.getByRole('button', { name: 'Terminal' });
-    expect(button.getAttribute('aria-pressed')).toBe('false');
-    expect(button.getAttribute('aria-keyshortcuts')).toBe('Control+`');
+    expect(terminalItem().getAttribute('aria-checked')).toBe('false');
+    expect(terminalItem().getAttribute('aria-keyshortcuts')).toBe('Control+`');
 
-    fireEvent.click(button);
-    expect(button.getAttribute('aria-pressed')).toBe('true');
+    toggleTerminal();
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(menuButton());
+    expect(terminalItem().getAttribute('aria-checked')).toBe('true');
+    fireEvent.keyDown(window, { key: 'Escape' });
     expect(dock()).not.toBeNull();
     expect(screen.getByText('Opening terminal')).toBeTruthy();
     await Promise.resolve();
@@ -133,16 +145,21 @@ describe('chat terminal dock', () => {
     toggleKey();
     expect(dock()).toBeNull();
     expect(opened[0]!.disposed).toBe(false);
-    expect(screen.getByRole('button', { name: 'Terminal' }).className).toContain('running');
+    expect(menuButton().getAttribute('aria-label')).toBe('Chat actions. Terminal running.');
+    expect(menuButton().querySelector('.head-menu-dot')).not.toBeNull();
+    expect(terminalItem().textContent).toContain('Running');
+    fireEvent.keyDown(window, { key: 'Escape' });
 
     toggleKey();
     expect(dock()).not.toBeNull();
     expect(opened).toHaveLength(1);
+    expect(menuButton().getAttribute('aria-label')).toBe('Chat actions.');
+    expect(menuButton().querySelector('.head-menu-dot')).toBeNull();
   });
 
   it('adds and closes tabs, closing the shell with its tab', async () => {
     render(<Chat id="a" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'New terminal' }));
     started(opened[1]!);
@@ -162,7 +179,7 @@ describe('chat terminal dock', () => {
 
   it('asks before stopping a busy shell, and keeps it running on request', async () => {
     render(<Chat id="a" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[0]!);
     running.set('session-0', 'pnpm dev');
 
@@ -188,7 +205,7 @@ describe('chat terminal dock', () => {
 
   it('stops a busy shell after a full hold', async () => {
     render(<Chat id="a" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'New terminal' }));
     started(opened[1]!);
@@ -212,11 +229,11 @@ describe('chat terminal dock', () => {
 
   it('keeps each chat’s terminals to itself', () => {
     const view = render(<Chat id="a" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[0]!);
     view.rerender(<Chat key="b" id="b" />);
     expect(dock()).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[1]!, { label: '~', cwd: '/Users/me', kind: 'home' });
     expect(screen.queryByRole('button', { name: 'my files · widgets' })).toBeNull();
     expect(screen.getByRole('button', { name: '~' })).toBeTruthy();
@@ -224,7 +241,7 @@ describe('chat terminal dock', () => {
 
   it('says why a shell ended and drops tabs of a deleted chat', () => {
     render(<Chat id="a" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    toggleTerminal();
     started(opened[0]!);
     end(opened[0]!, 'folder_removed');
     expect(screen.getByRole('status').textContent).toContain(

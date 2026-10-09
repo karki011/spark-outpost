@@ -262,5 +262,62 @@
   background: var(--raise);
 }
 .head-menu-pop svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   color: var(--muted);
+}
+.head-menu > .icon-btn {
+  position: relative;
+}
+.head-menu-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.head-menu > .icon-btn .head-menu-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.head-menu-dot.live {
+  animation: head-menu-pulse 1.8s ease-in-out infinite;
+}
+@keyframes head-menu-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.head-menu-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.head-menu-end {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 16px;
+  margin-left: auto;
+  padding-left: 12px;
+}
+.head-menu-pop .head-menu-end .tick {
+  color: var(--accent);
+}
+.head-menu-sep {
+  height: 1px;
+  margin: 5px 3px;
+  background: var(--line);
+}
+@media (prefers-reduced-motion: reduce) {
+  .head-menu-dot.live {
+    animation: none;
+  }
 }

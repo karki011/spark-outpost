@@ -14,6 +14,7 @@ What changed recently in Spark, newest first.
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).               |
 | The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.          |
+| **Agent TV**, **Browser** and **Terminal** moved into the chat's **…** menu. Its dot means agents or a hidden terminal are running. | No action.                                 |
 | Scout rests half hidden at the top and comes out when a chat is active. **Spark Island size** adds **Extra large**.                 | See [Spark Island](desktop-companion.md).  |
 | **Make the change** is gone. Replies, your messages and the message box share one centred column; replies sit under the agent name. | Ask for the change in your next message.   |
 | The context rail lists Agent TV's crew. Chats with a merged PR show an icon.                                                        | No action.                                 |

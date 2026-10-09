@@ -4,7 +4,7 @@ import type { ChangeSummary } from '@spark-outpost/contracts';
 import { DiffStat, LineTotals } from '../chat/changes/FileChangeList.tsx';
 import { DIFF_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
-import { TERMINAL_DOCK_ID } from '../terminal/dock/TerminalButton.tsx';
+import { TERMINAL_DOCK_ID } from '../terminal/dock/terminal-pane.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { diffApi, diffKeys } from './diff-api.ts';
 import { matchesDiffShortcut } from './diff-shortcut.ts';

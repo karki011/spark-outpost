@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import { crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 let repo: CrewRepo;
 
@@ -72,7 +73,7 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await expect(input).toHaveValue('');
   await expect(api).toContainText('1 note queued');
 
-  await page.getByRole('button', { name: 'Agent TV', exact: true }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await tv.getByRole('radio', { name: 'Stage' }).click();
   await expect(tv.locator('.tv-n.jev')).toContainText('Coordinator');

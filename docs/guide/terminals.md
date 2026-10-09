@@ -25,7 +25,7 @@ Answer questions in the terminal. Pull requests aren't automatic.
 
 ## Open a shell beside Chat
 
-1. Select **Terminal** in a chat header, or press **⌃\`**.
+1. In a chat's **…** menu, select **Terminal**, or press **⌃\`**.
 2. Type commands; Spark doesn't ask for approval.
 3. Select **+** for another tab, or **×** to close one.
 

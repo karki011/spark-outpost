@@ -1,15 +1,18 @@
-import { ChatHeaderMenu, type ChatMenuExtra } from '../audit/ChatHeaderMenu.tsx';
-import { BrowserButton } from '../browser/BrowserButton.tsx';
-import { AgentTvButton } from '../crew/AgentTvButton.tsx';
-import { closeAgentTv, openAgentTv, useAgentTv } from '../crew/agent-tv-store.ts';
+import { useRef } from 'react';
+import { ChatHeaderMenu, type ChatMenuPane } from '../audit/ChatHeaderMenu.tsx';
+import { GlobeIcon } from '../browser/BrowserIcons.tsx';
+import { useBrowserShortcut } from '../browser/browser-shortcut.ts';
+import { useAgentTv } from '../crew/agent-tv-store.ts';
 import type { CrewAgent } from '../crew/crew-model.ts';
-import { TvIcon } from '../crew/tv-icons.tsx';
+import { tvMenuPane } from '../crew/tv-menu-pane.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { requestSettings } from '../settings/settings-request.ts';
-import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
+import { useTerminalPane } from '../terminal/dock/terminal-pane.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
 import { usePhone } from '../ui/breakpoints.ts';
 import { SlidersIcon } from '../ui/icons.tsx';
+import { BROWSER_KEYS } from '../ui/Keys.tsx';
+import { MAC } from '../ui/shortcuts.ts';
 
 interface ChatHeadToolsProps {
   conversationId: string;
@@ -33,34 +36,44 @@ export function ChatHeadTools({
   const phone = usePhone();
   const { remote } = useRemoteClient();
   const tv = useAgentTv();
-  const watching = tv.sourceId === conversationId;
-  const extras: ChatMenuExtra[] = phone
-    ? [
-        ...(agents.length > 0
-          ? [
-              {
-                label: watching ? 'Close Agent TV' : 'Agent TV',
-                icon: <TvIcon />,
-                onSelect: () => (watching ? closeAgentTv() : openAgentTv(conversationId)),
-              },
-            ]
-          : []),
-        { label: 'Theme', icon: <SlidersIcon />, onSelect: () => requestSettings('look') },
-      ]
-    : [];
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const browserPane = browser && !remote ? browser : null;
+  useBrowserShortcut(browserPane ? browserPane.onToggle : null);
+  const terminalPane = useTerminalPane(conversationId, menuButton, !remote && terminalDock);
+  const tvPane = tvMenuPane(conversationId, agents, tv.sourceId);
+  const panes: ChatMenuPane[] = [
+    ...(tvPane ? [tvPane] : []),
+    ...(browserPane
+      ? [
+          {
+            label: 'Browser',
+            icon: <GlobeIcon />,
+            open: browserPane.open,
+            keys: BROWSER_KEYS,
+            ariaKeys: MAC ? 'Meta+Shift+B' : 'Control+Shift+B',
+            controls: 'work-panel',
+            onToggle: browserPane.onToggle,
+          },
+        ]
+      : []),
+    ...(terminalPane ? [terminalPane] : []),
+  ];
   return (
     <>
-      {(onAudit || phone) && (
+      {(onAudit || phone || panes.length > 0) && (
         <ChatHeaderMenu
           chatId={conversationId}
           onAudit={onAudit}
           onStartFresh={onAudit && canStartFresh ? onStartFresh : undefined}
-          extras={extras}
+          panes={panes}
+          extras={
+            phone
+              ? [{ label: 'Theme', icon: <SlidersIcon />, onSelect: () => requestSettings('look') }]
+              : []
+          }
+          buttonRef={menuButton}
         />
       )}
-      {!phone && <AgentTvButton conversationId={conversationId} agents={agents} />}
-      {browser && !remote && <BrowserButton open={browser.open} onToggle={browser.onToggle} />}
-      {!remote && terminalDock && <TerminalButton chatId={conversationId} />}
       {!phone && <ThemePicker />}
     </>
   );
