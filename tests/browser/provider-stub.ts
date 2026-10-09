@@ -92,6 +92,16 @@ async function setDevelopment(req: IncomingMessage, res: ServerResponse) {
   tickets.development(key, development);
   send(res, 200, { ok: true });
 }
+async function setJiraWorkflow(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const { project, statuses } = JSON.parse(text) as {
+    project: string;
+    statuses: Record<string, 'new' | 'indeterminate' | 'done'>;
+  };
+  tickets.jiraWorkflow(project, statuses);
+  send(res, 200, { ok: true });
+}
 let slack = fakeSlack();
 
 const server = createServer((req, res) => {
@@ -153,6 +163,9 @@ const server = createServer((req, res) => {
     const mode = new URL(req.url ?? '', 'http://stub').searchParams.get('mode');
     tickets.devStatusMode(mode as DevStatusMode);
     return send(res, 200, { ok: true });
+  }
+  if (path === '/tickets-test/jira-workflow' && req.method === 'POST') {
+    return void setJiraWorkflow(req, res);
   }
   if (path === '/tickets-test/deny-assign') {
     tickets.denyAssign('API');

@@ -15,7 +15,16 @@ import {
 } from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
-import { PairingRateLimitError, type Pairings } from './pairing.ts';
+import { RateLimitError } from './attempt-window.ts';
+import type { Pairings } from './pairing.ts';
+import type { PasskeyChallenges } from './passkey-challenges.ts';
+import { passkeyRoutes, toPasskey } from './passkey-routes.ts';
+import {
+  devicePasskeys,
+  listPasskeys,
+  removeDevicePasskeys,
+  type PasskeyRow,
+} from './passkey-store.ts';
 import { isRemote, remoteDeviceOf } from './principal.ts';
 import { deviceCookie, deviceTokenOf, newSecret, secretHash } from './session.ts';
 import {
@@ -42,6 +51,7 @@ export interface RemoteRouteDeps {
   db: Db;
   workspaceId: string;
   pairings: Pairings;
+  challenges: PasskeyChallenges;
   streams: DeviceStreams;
   tailscale: TailscaleServe;
 }
@@ -57,11 +67,15 @@ function sameNameKey(name: string): string {
 }
 
 export function remoteRoutes(deps: RemoteRouteDeps): Router {
-  const { db, workspaceId, pairings, streams, tailscale } = deps;
+  const { db, workspaceId, pairings, challenges, streams, tailscale } = deps;
   const router = Router();
   const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
 
-  const toDevice = (row: DeviceRow, newerSameName: DeviceRow | null = null): RemoteDevice => ({
+  const toDevice = (
+    row: DeviceRow,
+    passkeys: PasskeyRow[],
+    newerSameName: DeviceRow | null = null,
+  ): RemoteDevice => ({
     id: row.id,
     name: row.name,
     createdAt: row.created_at.toISOString(),
@@ -71,10 +85,15 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     duplicateOf: newerSameName && !streams.connected(row.id) ? newerSameName.id : null,
     expired: row.expired,
     connected: streams.connected(row.id),
+    passkeys: passkeys.map(toPasskey),
   });
 
   const deviceList = async (): Promise<RemoteDeviceList> => {
     const rows = await listDevices(db, workspaceId);
+    const passkeys = new Map<string, PasskeyRow[]>();
+    for (const passkey of await listPasskeys(db, workspaceId)) {
+      passkeys.set(passkey.device_id, [...(passkeys.get(passkey.device_id) ?? []), passkey]);
+    }
     const newestByName = new Map<string, DeviceRow>();
     for (const row of rows) {
       if (!row.revoked_at) newestByName.set(sameNameKey(row.name), row);
@@ -82,15 +101,20 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     return {
       devices: rows.map((row) => {
         const newest = row.revoked_at ? null : newestByName.get(sameNameKey(row.name));
-        return toDevice(row, newest && newest.id !== row.id ? newest : null);
+        const newer = newest && newest.id !== row.id ? newest : null;
+        return toDevice(row, passkeys.get(row.id) ?? [], newer);
       }),
     };
   };
 
   const pairClaimed = async (req: Request, pairingId: string, name: string, tokenHash: string) => {
     const carried = deviceTokenOf(req.headers.cookie);
-    const known = carried ? await deviceByTokenHash(db, workspaceId, secretHash(carried)) : null;
-    const same = known ? await repairDevice(db, workspaceId, known.id, { name, tokenHash }) : null;
+    const carriedHash = carried ? secretHash(carried) : null;
+    const known = carriedHash ? await deviceByTokenHash(db, workspaceId, carriedHash) : null;
+    const same =
+      known && carriedHash
+        ? await repairDevice(db, workspaceId, known.id, { name, tokenHash, carriedHash })
+        : null;
     if (same) {
       await audit({
         action: 'device_paired_again',
@@ -115,7 +139,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     try {
       await work();
     } catch (error) {
-      if (!(error instanceof PairingRateLimitError)) throw error;
+      if (!(error instanceof RateLimitError)) throw error;
       res.status(429).json({ error: error.message });
     }
   };
@@ -168,6 +192,8 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       .set('Set-Cookie', deviceCookie(token))
       .json({ status: 'paired' } satisfies PairingClaimResponse);
   });
+
+  router.use(passkeyRoutes({ db, workspaceId, challenges }));
 
   router.get('/remote/switches', async (_req, res) => {
     res.json((await remoteAccess(db, workspaceId)).switches);
@@ -238,7 +264,24 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       return;
     }
     await audit({ action: 'device_renamed', device: { id: device.id, name: device.name } });
-    res.json(toDevice(device));
+    res.json(toDevice(device, await devicePasskeys(db, workspaceId, device.id)));
+  });
+
+  router.delete('/remote/devices/:id/passkeys', async (req, res) => {
+    const id = paramId(req);
+    const device = (await listDevices(db, workspaceId)).find((row) => row.id === id);
+    if (!device) {
+      res.status(404).json({ error: NO_DEVICE });
+      return;
+    }
+    const count = await removeDevicePasskeys(db, workspaceId, device.id);
+    streams.close(device.id);
+    await audit({
+      action: 'device_passkeys_removed',
+      device: { id: device.id, name: device.name },
+      detail: { count },
+    });
+    res.json(await deviceList());
   });
 
   router.delete('/remote/devices/:id', async (req, res) => {

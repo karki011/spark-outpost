@@ -12,6 +12,7 @@ import {
   send,
   type CrewRepo,
 } from './crew-engine.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.AGENT_TV_QUEUE_SHOTS ?? '';
 
@@ -89,7 +90,7 @@ test('message the Builder from Agent TV while it waits, and it reads it at its n
   test.setTimeout(90_000);
   await waitingCrew(page);
   const name = await builderName(page);
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = tvOf(page);
   await tv.getByRole('radio', { name: 'List' }).click();
   const open = tv.getByRole('button', { name: `Message ${name}` });
@@ -228,7 +229,7 @@ test('Agent TV keeps following its chat while you look at another one', async ({
   test.setTimeout(90_000);
   await waitingCrew(page);
   const name = await builderName(page);
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = tvOf(page);
   await tv.getByRole('radio', { name: 'List' }).click();
   await expect(tv.getByRole('listitem', { name: `${name} · Builder` })).toBeVisible();

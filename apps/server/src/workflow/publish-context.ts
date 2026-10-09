@@ -17,6 +17,7 @@ import { watchesForConversation } from '../persistence/pr-watches.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
+import { userText } from '../outposts/user-asked.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
@@ -77,7 +78,10 @@ export async function publishContext(
   return { publish: { grant: await effectiveGrant(db, grant, task), task } };
 }
 
-type GrantFacts = Pick<RunInput, 'level' | 'userRequest' | 'followUpRound' | 'workspaceId'> & {
+type GrantFacts = Pick<
+  RunInput,
+  'level' | 'userRequest' | 'followUpRound' | 'workspaceId' | 'outpostRequest'
+> & {
   identity: Pick<RunInput['identity'], 'threadId'>;
 };
 
@@ -85,7 +89,7 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   const followUp = input.followUpRound
     ? { workspaceId: input.workspaceId, conversationId: input.identity.threadId }
     : null;
-  return { level: input.level, requested: publishRequested(input.userRequest), followUp };
+  return { level: input.level, requested: publishRequested(userText(input)), followUp };
 }
 
 type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode' | 'piece'>;

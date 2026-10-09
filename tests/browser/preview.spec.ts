@@ -9,6 +9,7 @@ import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { editedChat } from './edited-chat.ts';
 import { openChats } from './navigation.ts';
 import { slot } from './stub-config.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const PORT = slot === 0 ? 4877 : 20_000 + slot * 10 + 7;
@@ -159,7 +160,7 @@ test('the Browser pane starts the preview, shows it as a Preview terminal and st
   const folders = page.getByRole('dialog', { name: 'Project folders' });
   await folders.getByRole('button', { name: new RegExp(`^${name}`) }).click();
   await page.keyboard.press('Escape');
-  await page.locator('.head-r').getByRole('button', { name: 'Browser' }).click();
+  await toggleHeaderPane(page, 'Browser');
   const pane = page.getByRole('region', { name: 'Browser' });
 
   const preview = pane.getByRole('group', { name: 'Preview', exact: true });

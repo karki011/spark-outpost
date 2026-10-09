@@ -12,6 +12,7 @@ import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
+import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { PlusIcon } from '../ui/icons.tsx';
@@ -29,12 +30,13 @@ import { anchorFor, type OpenMenu, type OpenProjectMenu } from './menu-anchor.ts
 import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
-import { FoldSection } from './FoldSection.tsx';
+import { HistoryChats } from './HistoryChats.tsx';
 import { LooseChats } from './LooseChats.tsx';
+import { OutpostRows } from './OutpostRows.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { attention } from './row-state.ts';
-import { activeGroups, historyGroups, movedOrder, pinnedSiblings } from './sidebar-groups.ts';
+import { activeGroups, movedOrder, pinnedSiblings } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
 import {
   isNewChatShortcut,
@@ -75,6 +77,7 @@ export const ConversationList = memo(function ConversationList({
 }: ConversationListProps) {
   const client = useQueryClient();
   const layout = useSidebarLayout();
+  const outpostSeam = useOutpostSeam();
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
@@ -277,6 +280,17 @@ export const ConversationList = memo(function ConversationList({
     if (nothing) return <p className="pempty wide">No active chats match “{search.trim()}”.</p>;
     return (
       <>
+        {outpostSeam && !searching && (
+          <OutpostRows
+            outposts={outpostSeam.outposts}
+            openId={outpostSeam.openOutpostId}
+            onOpen={(id) => {
+              outpostSeam.onOpenOutpost(id);
+              layout?.closeDrawer();
+            }}
+            onNew={outpostSeam.canManage ? () => outpostSeam.onNewOutpost() : undefined}
+          />
+        )}
         <div className="sec">
           <span>Projects</span>
           <button
@@ -346,34 +360,6 @@ export const ConversationList = memo(function ConversationList({
     );
   };
 
-  const renderHistory = () => {
-    const groups = historyGroups(visible);
-    if (groups.length === 0) {
-      return (
-        <p className="pempty wide">
-          {searching
-            ? `No archived chats match “${search.trim()}”.`
-            : 'Nothing archived. Archive a chat from its menu and it moves here.'}
-        </p>
-      );
-    }
-    return groups.map((group) => {
-      const key = `section:history:${group.label}`;
-      return (
-        <FoldSection
-          key={group.label}
-          label={group.label}
-          open={searching || folds.isOpen(key)}
-          onToggle={() => folds.toggle(key)}
-        >
-          <ul className="rows">
-            {group.chats.map((chat, index) => renderRow(chat, false, index))}
-          </ul>
-        </FoldSection>
-      );
-    });
-  };
-
   const activeChat = dnd.active?.type === 'chat' ? (byId.get(dnd.active.chatId) ?? null) : null;
   const draggedProject =
     dnd.active?.type === 'project' ? projectById.get(dnd.active.projectId) : undefined;
@@ -432,7 +418,16 @@ export const ConversationList = memo(function ConversationList({
             aria-busy={searching && results.isFetching}
           >
             <div key={tab} className="list-in">
-              {tab === 'active' ? renderActive() : renderHistory()}
+              {tab === 'active' ? (
+                renderActive()
+              ) : (
+                <HistoryChats
+                  chats={visible}
+                  search={searching ? search.trim() : null}
+                  folds={folds}
+                  renderRow={renderRow}
+                />
+              )}
             </div>
           </div>
         </SidebarDndContext>
@@ -444,6 +439,21 @@ export const ConversationList = memo(function ConversationList({
           chat={menuChat}
           anchor={menu.anchor}
           projects={projectList}
+          outposts={
+            outpostSeam?.canManage
+              ? {
+                  list: outpostSeam.outposts,
+                  onAdd: (outpostId, handle) =>
+                    void outpostSeam
+                      .onAddToOutpost(outpostId, { conversationId: menuChat.id, handle })
+                      .then(
+                        () => toaster.show({ text: `Added ${menuChat.title} as @${handle}` }),
+                        (error: Error) => toaster.show({ text: error.message }),
+                      ),
+                  onNew: () => outpostSeam.onNewOutpost(menuChat.id),
+                }
+              : undefined
+          }
           onClose={closeMenu}
           onRename={() => setRenamingId(menuChat.id)}
           onAutoTitle={(on) => actions.setAutoTitle(menuChat, on)}

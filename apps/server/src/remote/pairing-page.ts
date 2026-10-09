@@ -45,9 +45,12 @@ const SCRIPT = `
   const wait = document.getElementById('wait');
   const done = document.getElementById('done');
   const retry = document.getElementById('retry');
+  const passkey = document.getElementById('passkey');
+  const canPasskey = Boolean(passkey && window.PublicKeyCredential && navigator.credentials);
   const show = (stage) => {
     main.dataset.stage = stage;
     form.hidden = stage !== 'enter';
+    if (passkey) passkey.hidden = stage !== 'enter' || !canPasskey;
     wait.hidden = stage !== 'waiting';
     done.hidden = stage !== 'paired';
     retry.hidden = stage !== 'ended';
@@ -143,7 +146,85 @@ const SCRIPT = `
   });
 `;
 
-function page(nonce: string): string {
+const PASSKEY_SCRIPT = `
+  const passkeyButton = document.getElementById('passkey-button');
+  const NO_ANSWER = 'Your Mac did not answer. Try again.';
+  const NOT_USED = 'No passkey was used. Try again, or pair with a code from your Mac.';
+  const bytes = (text) =>
+    Uint8Array.from(atob(text.replaceAll('-', '+').replaceAll('_', '/')), (char) =>
+      char.charCodeAt(0));
+  const encoded = (buffer) =>
+    btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+  const answerOf = async (path, body) => {
+    const response = await post(path, body).catch(() => null);
+    if (!response) return { error: NO_ANSWER };
+    const answer = await response.json().catch(() => ({}));
+    return response.ok ? { body: answer } : { error: answer.error || NOT_USED };
+  };
+  const askPasskey = (options) =>
+    navigator.credentials
+      .get({
+        publicKey: {
+          challenge: bytes(options.challenge),
+          rpId: options.rpId,
+          timeout: options.timeout,
+          userVerification: options.userVerification,
+        },
+      })
+      .catch(() => null);
+  const assertionOf = (credential) => {
+    const { clientDataJSON, authenticatorData, signature, userHandle } = credential.response;
+    return {
+      id: credential.id,
+      rawId: encoded(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: encoded(clientDataJSON),
+        authenticatorData: encoded(authenticatorData),
+        signature: encoded(signature),
+        ...(userHandle && userHandle.byteLength ? { userHandle: encoded(userHandle) } : {}),
+      },
+    };
+  };
+  const signInWithPasskey = async () => {
+    const options = await answerOf('/api/remote/passkey/sign-in/options', {});
+    if (options.error) return options.error;
+    const credential = await askPasskey(options.body);
+    if (!credential) return NOT_USED;
+    const signedIn = await answerOf('/api/remote/passkey/sign-in', assertionOf(credential));
+    return signedIn.error || null;
+  };
+  if (canPasskey) {
+    passkey.hidden = false;
+    passkeyButton.addEventListener('click', async () => {
+      passkeyButton.disabled = true;
+      say('Asking for your passkey…');
+      const problem = await signInWithPasskey();
+      if (problem) {
+        passkeyButton.disabled = false;
+        say(problem, 'error');
+        passkeyButton.focus();
+        return;
+      }
+      show('paired');
+      say('Signed in. Opening Spark Outpost…');
+      setTimeout(() => location.replace('/'), ${PAIRED_MOMENT_MS});
+    });
+  }
+`;
+
+const PASSKEY_SECTION = `
+<section id="passkey" hidden>
+<p class="or">Paired this phone before?</p>
+<button type="button" id="passkey-button" class="quiet">Sign in with a passkey</button>
+</section>`;
+
+export interface PairingPageOptions {
+  passkeys: boolean;
+}
+
+function page(nonce: string, options: PairingPageOptions): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -166,7 +247,7 @@ function page(nonce: string): string {
 <label for="name">Device name</label>
 <input id="name" name="name" required maxlength="${REMOTE_DEVICE_NAME_MAX}" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="My phone">
 <button type="submit">Pair</button>
-</form>
+</form>${options.passkeys ? PASSKEY_SECTION : ''}
 <section id="wait" hidden>
 <p>Confirm on your Mac. It should show this code.</p>
 <p class="match" id="match"></p>
@@ -177,12 +258,12 @@ function page(nonce: string): string {
 <button type="button" id="retry" hidden>Try again</button>
 <p id="status" role="status" aria-live="polite"></p>
 </main>
-<script nonce="${nonce}">${SCRIPT}</script>
+<script nonce="${nonce}">${SCRIPT}${options.passkeys ? PASSKEY_SCRIPT : ''}</script>
 </body>
 </html>`;
 }
 
-export function sendPairingPage(res: Response): void {
+export function sendPairingPage(res: Response, options: PairingPageOptions): void {
   const nonce = randomBytes(16).toString('base64');
   res
     .status(200)
@@ -194,5 +275,5 @@ export function sendPairingPage(res: Response): void {
       'X-Frame-Options': 'DENY',
       'Content-Security-Policy': `default-src 'none'; style-src 'self' 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
     })
-    .send(page(nonce));
+    .send(page(nonce, options));
 }

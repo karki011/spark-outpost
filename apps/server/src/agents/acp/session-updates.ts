@@ -14,6 +14,7 @@ import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 import { shortWindowNote } from './long-context.ts';
 import { createFocusTracker } from './file-focus.ts';
+import { messagePhase } from './message-phase.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -356,7 +357,8 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
               : '';
           lastMessageId = messageId ?? lastMessageId;
           wroteText = true;
-          return [...stopThinking(), ...linked, { kind: 'text_delta', delta: separator + chunk }];
+          const said = { kind: 'text_delta', delta: separator + chunk } as const;
+          return [...stopThinking(), ...linked, { ...said, ...messagePhase(update._meta) }];
         }
         case 'tool_call': {
           rememberPlan(update.kind, update.rawInput, update.content);

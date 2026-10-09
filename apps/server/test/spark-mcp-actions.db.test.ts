@@ -63,6 +63,25 @@ async function events(action: string) {
 
 const newest = () => stubs.linear.issues.at(-1)!;
 
+function stateOf(key: string) {
+  const issue = stubs.linear.issues.find((item) => item.identifier === key)!;
+  return stubs.linear.teams[issue.team]!.find((entry) => entry.id === issue.stateId)!.name;
+}
+
+async function cardCount() {
+  const { rows } = await t.db.query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM approvals WHERE kind = 'spark_action'`,
+  );
+  return rows[0]!.count;
+}
+
+async function moveEvents() {
+  const { rows } = await t.db.query<{ detail: Record<string, unknown> }>(
+    `SELECT detail FROM ticket_events WHERE action = 'transition' ORDER BY at`,
+  );
+  return rows.map((row) => row.detail);
+}
+
 describe('spark_create_ticket', () => {
   it('shows a card, creates the ticket with the user’s edits once confirmed, and audits it', async () => {
     const waiting = await tools.call('spark_create_ticket', {
@@ -173,9 +192,77 @@ describe('ticket changes', () => {
       })
     ).json();
 
-    expect(card.payload.sparkAction).toMatchObject({ from: 'Todo', status: 'in_progress' });
-    expect(card.payload.sparkResult).toMatchObject({ state: 'done', output: { moved: true } });
+    expect(card.title).toBe('Move this ticket? ENG-12 → In Progress');
+    expect(card.payload.sparkAction).toMatchObject({
+      from: 'Todo',
+      status: 'in_progress',
+      to: 'In Progress',
+      choices: ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled'],
+    });
+    expect(card.payload.sparkResult).toMatchObject({
+      state: 'done',
+      message: 'Moved ENG-12 to In Progress.',
+      output: { moved: true, status: 'In Progress' },
+    });
     expect(again).toMatchObject({ outcome: 'unchanged' });
+  });
+
+  it('shows Done on the card for the done group, never Canceled', async () => {
+    const eng = stubs.linear.teams.ENG!;
+    eng.unshift(
+      ...eng.splice(
+        eng.findIndex((entry) => entry.name === 'Canceled'),
+        1,
+      ),
+    );
+    await tools.call('spark_transition_ticket', { key: 'ENG-12', status: 'done' });
+    const card = await confirmCard(t);
+
+    expect(card.title).toBe('Move this ticket? ENG-12 → Done');
+    expect(stateOf('ENG-12')).toBe('Done');
+  });
+
+  it('lists the status names instead of guessing when a group is unclear', async () => {
+    const eng = stubs.linear.teams.ENG!;
+    eng.find((entry) => entry.name === 'Done')!.name = 'Shipped';
+    eng.push({ id: 'eng-released', name: 'Released', type: 'completed' });
+    const result = (
+      await tools.call('spark_transition_ticket', { key: 'ENG-12', status: 'done' })
+    ).json();
+
+    expect(result).toMatchObject({
+      outcome: 'needs_status',
+      statuses: ['Backlog', 'Todo', 'In Progress', 'In Review', 'Shipped', 'Canceled', 'Released'],
+    });
+    expect(result.message).toContain(
+      'ENG-12 was not moved: this project has several finished statuses (Shipped, Canceled, Released).',
+    );
+    expect(result.message).toContain('Call again with status set to one of the exact names');
+    expect(await cardCount()).toBe(0);
+    expect(stateOf('ENG-12')).toBe('Todo');
+
+    const unknown = (
+      await tools.call('spark_transition_ticket', { key: 'ENG-12', status: 'QA' })
+    ).json();
+    expect(unknown).toMatchObject({ outcome: 'needs_status' });
+    expect(unknown.message).toContain('ENG-12 has no status named QA.');
+    expect(await cardCount()).toBe(0);
+  });
+
+  it('moves to exactly the status the agent names, or the one picked on the card', async () => {
+    await tools.call('spark_transition_ticket', { key: 'ENG-12', status: 'canceled' });
+    const card = await confirmCard(t);
+    expect(card.title).toBe('Move this ticket? ENG-12 → Canceled');
+    expect(card.payload.sparkAction).toMatchObject({ status: 'done', to: 'Canceled' });
+    expect(stateOf('ENG-12')).toBe('Canceled');
+    expect(await moveEvents()).toEqual([
+      expect.objectContaining({ target: 'Canceled', from: 'Todo', to: 'Canceled', rule: 'exact' }),
+    ]);
+
+    await tools.call('spark_transition_ticket', { key: 'ENG-13', status: 'in_review' });
+    const edited = await confirmCard(t, { edits: { to: 'Done' } });
+    expect(edited.payload.sparkResult).toMatchObject({ message: 'Moved ENG-13 to Done.' });
+    expect(stateOf('ENG-13')).toBe('Done');
   });
 
   it('names the current owner on the card before taking someone else’s ticket', async () => {

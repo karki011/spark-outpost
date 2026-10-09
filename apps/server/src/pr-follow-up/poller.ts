@@ -18,6 +18,7 @@ import {
   isRateLimited,
   pollProblemOf,
   readFacts,
+  reopenedPull,
   statusChanged,
   trackOpenPull,
   withFacts,
@@ -157,8 +158,11 @@ async function observe(
   settings: PrFollowUpSettings,
 ): Promise<TrackedPull> {
   const { connection, facts } = await readFacts(await connectTo(deps, pull), pull);
-  const seen = withFacts(pull, facts);
-  if (facts.state !== 'open') return endedPull(seen, facts.state);
+  const read = withFacts(pull, facts);
+  if (facts.state !== 'open') {
+    return { ...endedPull(read, facts.state), intervalSeconds: MAX_INTERVAL_SECONDS };
+  }
+  const seen = reopenedPull(read);
   if (busy(pull)) return seen;
   if (settings.enabled && isWatch(seen) && isWatch(pull)) {
     return follow(deps, pull, seen, connection, settings);
@@ -222,7 +226,7 @@ async function poll(deps: FollowUpDeps, pull: TrackedPull): Promise<Polled> {
     rateLimited = isRateLimited(error);
     next = failed(pull, error);
   }
-  const saved = schedule(deps, next);
+  const saved = { ...schedule(deps, next), refreshRequested: false };
   await savePull(deps.db, saved);
   return { pull: saved, rateLimited };
 }

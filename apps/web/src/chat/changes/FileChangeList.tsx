@@ -1,7 +1,7 @@
 import './file-changes.css';
 import type { ChangeEntry } from '@spark-outpost/contracts';
 import { useViewChanges } from '../../tasks/view-changes.ts';
-import { diffStatBar, fileView, formatCount, type FileView } from './change-rules.ts';
+import { diffStatBar, fileView, formatCount, formatTotal, type FileView } from './change-rules.ts';
 
 const CHANGE_TAGS = { added: 'new', deleted: 'deleted', modified: null } as const;
 
@@ -33,6 +33,15 @@ export function Counts({ added, removed }: { added: number | null; removed: numb
     <span className="chf-n">
       <span className="plus">+{formatCount(added)}</span>{' '}
       <span className="minus">−{formatCount(removed)}</span>
+    </span>
+  );
+}
+
+export function LineTotals({ added, removed }: { added: number; removed: number }) {
+  return (
+    <span className="ltot">
+      <span className="plus">+{formatTotal(added)}</span>
+      <span className="minus">−{formatTotal(removed)}</span>
     </span>
   );
 }

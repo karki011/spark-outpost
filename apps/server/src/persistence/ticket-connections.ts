@@ -1,5 +1,7 @@
 import {
+  ticketMoveStatusesSchema,
   ticketStatusMapSchema,
+  type TicketMoveStatuses,
   type TicketSourceId,
   type TicketStatusMap,
 } from '@spark-outpost/contracts';
@@ -14,6 +16,7 @@ export interface TicketConnectionRow {
   moveOnShip: boolean;
   moveOnMerge: boolean;
   statusMap: TicketStatusMap;
+  moveStatuses: TicketMoveStatuses;
   validatedAt: Date;
 }
 
@@ -26,11 +29,13 @@ interface StoredTicketConnection {
   move_on_ship: boolean;
   move_on_merge: boolean;
   status_map: unknown;
+  move_statuses: unknown;
   validated_at: Date;
 }
 
 function toConnection(row: StoredTicketConnection): TicketConnectionRow {
   const statusMap = ticketStatusMapSchema.safeParse(row.status_map);
+  const moveStatuses = ticketMoveStatusesSchema.safeParse(row.move_statuses);
   return {
     source: row.source,
     apiUrl: row.api_url,
@@ -40,6 +45,7 @@ function toConnection(row: StoredTicketConnection): TicketConnectionRow {
     moveOnShip: row.move_on_ship,
     moveOnMerge: row.move_on_merge,
     statusMap: statusMap.success ? statusMap.data : {},
+    moveStatuses: moveStatuses.success ? moveStatuses.data : {},
     validatedAt: row.validated_at,
   };
 }
@@ -117,12 +123,14 @@ export async function updateTicketSettings(
     moveOnShip?: boolean | undefined;
     moveOnMerge?: boolean | undefined;
     statusMap?: TicketStatusMap | undefined;
+    moveStatuses?: TicketMoveStatuses | undefined;
   },
 ): Promise<boolean> {
   const { rowCount } = await db.query(
     `UPDATE ticket_connections SET move_on_ship = COALESCE($3, move_on_ship),
        status_map = COALESCE($4::jsonb, status_map),
-       move_on_merge = COALESCE($5, move_on_merge)
+       move_on_merge = COALESCE($5, move_on_merge),
+       move_statuses = COALESCE($6::jsonb, move_statuses)
      WHERE workspace_id = $1 AND source = $2`,
     [
       workspaceId,
@@ -130,6 +138,7 @@ export async function updateTicketSettings(
       settings.moveOnShip ?? null,
       settings.statusMap ? JSON.stringify(settings.statusMap) : null,
       settings.moveOnMerge ?? null,
+      settings.moveStatuses ? JSON.stringify(settings.moveStatuses) : null,
     ],
   );
   return (rowCount ?? 0) > 0;

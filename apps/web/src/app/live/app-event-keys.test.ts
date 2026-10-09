@@ -35,6 +35,8 @@ const cached: Record<string, QueryKey> = {
   previewA: ['preview', 'chat', A],
   previewB: ['preview', 'chat', B],
   previewProject: ['preview', 'project', A],
+  outpostList: ['outposts', 'list'],
+  outpostDetail: ['outposts', 'detail', A],
 };
 
 async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
@@ -67,6 +69,8 @@ describe('app event invalidation', () => {
         'health',
         'list',
         'outcome',
+        'outpostDetail',
+        'outpostList',
         'previewA',
         'spendToday',
         'spendWeek',
@@ -82,6 +86,14 @@ describe('app event invalidation', () => {
       'previewA',
       'previewB',
       'previewProject',
+    ]);
+  });
+
+  it('an outpost change refreshes the outposts and the sidebar list, where a chat carries its outpost', async () => {
+    expect(await invalidatedBy(event('outpost_changed', null))).toEqual([
+      'list',
+      'outpostDetail',
+      'outpostList',
     ]);
   });
 
@@ -108,6 +120,8 @@ describe('app event invalidation', () => {
       'changesA',
       'detailA',
       'list',
+      'outpostDetail',
+      'outpostList',
       'task',
       'today',
     ]);

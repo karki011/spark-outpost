@@ -3,6 +3,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { shoot, useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { expectNoHeaderPane, toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.CHAT_CLEAN_SHOTS ?? '';
 
@@ -162,14 +163,13 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
 test('Agent TV is there for a plain answer and shows the agent that answered', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await openChats(page);
-  await expect(page.getByRole('button', { name: 'Agent TV' })).toHaveCount(0);
   await page.getByRole('button', { name: 'New chat' }).first().click();
+  await expectNoHeaderPane(page, 'Agent TV');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('What is a worktree?');
   await input.press('Enter');
   await expect(head(page).locator('.mood')).toHaveText('done', { timeout: 20_000 });
-  const button = page.getByRole('button', { name: 'Agent TV' });
-  await button.click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect(tv).toBeVisible();
   await shots(page, 'agent-tv-solo');

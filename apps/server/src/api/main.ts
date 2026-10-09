@@ -49,6 +49,7 @@ import { locateCli } from '../setup/verify.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createNativeRuntime } from '../terminal/native-runtime.ts';
+import { outpostDelivery } from '../outposts/mount.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -84,8 +85,10 @@ const slackSocket = startSlackSocket({
   ...slackDeps,
   runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
 });
+const outposts = outpostDelivery({ db, port: config.API_PORT, apiToken });
 const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
+  outposts.changed(event);
   if (event.kind === 'preview') void previews.sync();
 });
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
@@ -189,6 +192,7 @@ const { app, reconcileRemote } = createAppParts({
   nativeTerminals,
   previews,
   appEvents,
+  outposts,
   activeWork,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
@@ -231,6 +235,7 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
   void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
   void slackSocket.refresh();
+  outposts.start();
   reconcileRemote().catch((error: unknown) => {
     console.error('Could not check Tailscale Serve', (error as Error).message);
   });
@@ -253,6 +258,7 @@ const shutdown = async () => {
   morningBrief?.stop();
   slackSocket.stop();
   await slackNotifier.stop();
+  await outposts.close();
   server.close();
   server.closeAllConnections();
   await listener.close();

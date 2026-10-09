@@ -38,6 +38,7 @@ import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
 import { beginFixRound, startsFixRound } from './fix-rounds.ts';
 import { finalText } from './final-message.ts';
+import { finalReplyOf } from './final-reply.ts';
 import {
   decideBuildStyle,
   NO_PROJECT_STYLE,
@@ -95,6 +96,8 @@ import { coordinationReport } from '../coordinator/report.ts';
 import { skipUnstarted } from '../coordinator/skip.ts';
 import { piecesSummary } from '../coordinator/summary.ts';
 import { lawsNote } from '../laws/review.ts';
+import { userText } from '../outposts/user-asked.ts';
+import { auditOutpostRequest } from '../outposts/request-audit.ts';
 import { ensureEstimate } from '../laws/estimate-history.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
@@ -263,8 +266,15 @@ async function finish(
   const notes = [pieces, escalated, upgraded, fixed, suggested, skipped, laws, stopped, incomplete];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
-  const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
-  const text = withNotes(reply, [...notes, shipped], s.message !== null);
+  const hasMessage = s.message !== null;
+  const compose = (results: Session['results']) =>
+    withNotes(
+      finalText(results, verdict, s.findings, hasMessage, s.checkBodies, summary),
+      [...notes, shipped],
+      hasMessage,
+    );
+  const text = compose(s.results);
+  const finalReply = finalReplyOf(s.message, s.results, compose);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {
@@ -275,7 +285,8 @@ async function finish(
     s.message.text += text;
   }
   if (s.message) {
-    await closeMessage(s.append, { messageId: s.message.id, text: s.message.text }, true);
+    const closed = { messageId: s.message.id, text: s.message.text, finalReply };
+    await closeMessage(s.append, closed, true);
   }
   const identity = s.input.identity;
   if (status === 'succeeded') {
@@ -299,6 +310,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    await auditOutpostRequest(deps.db, lease, input);
     input = await noteProjectMove(deps.db, input, append);
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
@@ -316,7 +328,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     let doing = input.mode === 'do' && input.projectRoots[0] !== undefined;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
-    if (!planTurn && ((solo && !doing) || mainAgentInstruction(input.userRequest, current))) {
+    if (!planTurn && ((solo && !doing) || mainAgentInstruction(userText(input), current))) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
       return;

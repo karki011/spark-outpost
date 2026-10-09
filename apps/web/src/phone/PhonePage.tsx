@@ -10,6 +10,7 @@ import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
+import { PhonePasskey } from './PhonePasskey.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { PhoneSwitches, PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
 
@@ -89,6 +90,7 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
       <PhoneDevices
         devices={devices.data}
         freshAfter={freshAfter}
+        passkeysAllowed={session.switches.passkeys}
         wait={
           <QueryWait query={devices} what="devices">
             <Skeleton label="Loading devices" shape="list" rows={2} />
@@ -130,6 +132,7 @@ function RemotePhonePage({ session }: { session: RemoteSession }) {
           remove it, open Phone on your Mac.
         </p>
       </section>
+      <PhonePasskey session={session} />
       <PhoneSwitchesReadOnly switches={session.switches} />
     </>
   );

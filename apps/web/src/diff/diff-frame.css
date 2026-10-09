@@ -28,14 +28,6 @@
   border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
 }
 
-.dchip .plus {
-  color: var(--success);
-}
-
-.dchip .minus {
-  color: var(--danger);
-}
-
 .dd {
   --dd-w: 1040px;
   position: fixed;

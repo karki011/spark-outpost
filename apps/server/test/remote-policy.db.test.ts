@@ -97,12 +97,30 @@ describe('never from a phone', () => {
     await phone.get('/api/remote/audit').expect(403);
     await phone.send('delete', `/api/remote/devices/${device.id}`).expect(403);
     await phone.send('post', '/api/remote/devices/disconnect-all').expect(403);
+    await phone.send('delete', `/api/remote/devices/${device.id}/passkeys`).expect(403);
+    await phone.send('patch', '/api/remote/switches', { passkeys: true }).expect(403);
     await phone.send('put', '/api/remote/access', { hostname: 'evil.example.com' }).expect(403);
     await phone.get('/api/remote/tailscale').expect(403);
     await phone.send('post', '/api/remote/tailscale/on').expect(403);
     await phone.send('post', '/api/remote/tailscale/off').expect(403);
     await phone.send('post', '/api/setup/git/install').expect(403);
     await phone.send('post', '/API/Terminal/Sessions/').expect(403);
+  });
+
+  it('refuses the A2A endpoint and outpost membership, and lets the outpost page read and post', async () => {
+    const id = crypto.randomUUID();
+    await phone.get(`/api/a2a/chats/${id}/.well-known/agent-card.json`).expect(403);
+    await phone.send('post', `/api/a2a/chats/${id}`).expect(403);
+    await phone.send('post', '/api/outposts', { id, name: 'Orders', members: [] }).expect(403);
+    await phone.send('delete', `/api/outposts/${id}`).expect(403);
+    await phone.send('put', `/api/outposts/${id}/members/${id}`, { handle: 'api' }).expect(403);
+    await phone.send('delete', `/api/outposts/${id}/members/${id}`).expect(403);
+
+    await phone.get('/api/outposts').expect(200, []);
+    await phone.get(`/api/outposts/${id}`).expect(404);
+    await phone.send('patch', `/api/outposts/${id}`, { paused: true }).expect(404);
+    await phone.send('post', `/api/outposts/${id}/posts`, { id, text: 'note' }).expect(404);
+    await phone.send('post', `/api/outposts/${id}/posts/${id}/cancel`).expect(404);
   });
 
   it('refuses terminal creation through shared conversation and ticket routes', async () => {
@@ -125,6 +143,7 @@ describe('never from a phone', () => {
       signIns: true,
       reset: true,
       devices: true,
+      passkeys: true,
     });
     await phone.send('post', '/api/terminal/sessions').expect(403);
     await phone.send('post', '/api/remote/pairings').expect(403);
@@ -144,6 +163,7 @@ describe('switches', () => {
       signIns: true,
       reset: true,
       devices: false,
+      passkeys: true,
     });
   });
 

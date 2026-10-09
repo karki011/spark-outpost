@@ -10,6 +10,7 @@ import {
   send,
   type CrewRepo,
 } from './crew-engine.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.TV_LIST_SHOTS ?? '';
 const ELAPSED = /^(\d+s|\d+m \d\ds|\d+h \d\dm)$/;
@@ -43,7 +44,7 @@ async function listWaiting(page: Page) {
 }
 
 async function openList(page: Page) {
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = tvOf(page);
   await expect(tv).toBeVisible();
   await tv.getByRole('radio', { name: 'List' }).click();
@@ -73,7 +74,7 @@ test('List view shows running agents with a ticking clock, and the choice is rem
   const saved = await page.evaluate(() => localStorage.getItem('spark-outpost.agent-tv'));
   expect(JSON.parse(saved ?? '{}')).toMatchObject({ view: 'list' });
   await page.reload();
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   await expect(tvOf(page).getByRole('radio', { name: 'List' })).toHaveAttribute(
     'aria-checked',
     'true',

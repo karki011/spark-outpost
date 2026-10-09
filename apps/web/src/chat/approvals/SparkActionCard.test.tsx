@@ -198,4 +198,32 @@ describe('SparkActionCard', () => {
     const removing = screen.getByRole('group', { name: /Remove this MCP server\?/ });
     expect(removing.textContent).toContain('Removed with its saved values');
   });
+
+  it('shows the concrete status a ticket moves to and lets the user pick another', async () => {
+    const move: SparkAction = {
+      action: 'transition_ticket',
+      ticket: { source: 'jira', key: 'CP-48243', title: 'Export', url: null },
+      from: 'In Review',
+      status: 'done',
+      to: 'Done',
+      choices: ['To Do', 'In Review', 'Done', 'Rejected'],
+    };
+    const decide = vi.spyOn(approvalsApi, 'decide').mockReturnValue(new Promise(() => undefined));
+    show(card(move, 'Move this ticket? CP-48243 → Done'));
+    const group = screen.getByRole('group', { name: /Move this ticket\?/ });
+
+    expect(within(group).getByRole('button', { name: 'Move to' }).textContent).toBe('Done');
+    fireEvent.click(within(group).getByRole('button', { name: 'Move to' }));
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+      'To Do',
+      'In Review',
+      'Done',
+      'Rejected',
+    ]);
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Rejected' }));
+    fireEvent.click(within(group).getByRole('button', { name: 'Create ticket' }));
+
+    await waitFor(() => expect(decide).toHaveBeenCalled());
+    expect(decide.mock.calls[0]![1]).toMatchObject({ edits: { to: 'Rejected' } });
+  });
 });

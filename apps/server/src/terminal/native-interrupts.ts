@@ -1,6 +1,6 @@
-import { watch } from 'node:fs';
+import { statSync, unwatchFile, watchFile } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { basename, dirname } from 'node:path';
+import { dirname } from 'node:path';
 import { isRecord } from '../agent-config/records.ts';
 
 const INTERRUPT_PREFIX = '[Request interrupted by user';
@@ -9,6 +9,7 @@ const INTERRUPT_TEXTS = [
   '[Request interrupted by user for tool use]',
 ];
 const NEWLINE = 0x0a;
+const POLL_MS = 200;
 
 export interface InterruptWatcher {
   ready: Promise<void>;
@@ -50,7 +51,6 @@ export function interruptedTurns(data: Buffer): { turns: string[]; rest: Buffer 
 }
 
 export const watchClaudeInterrupts: WatchInterrupts = (path, onInterrupt) => {
-  const name = basename(path);
   let offset: number | null = null;
   let rest: Buffer = Buffer.alloc(0);
   let closed = false;
@@ -83,21 +83,19 @@ export const watchClaudeInterrupts: WatchInterrupts = (path, onInterrupt) => {
     chain = chain.then(() => (closed ? undefined : read())).catch(() => undefined);
     return chain;
   };
-  let watcher;
   try {
-    watcher = watch(dirname(path), (_event, changed) => {
-      if (changed === null || changed === name) void queue();
-    });
+    if (!statSync(dirname(path)).isDirectory()) return null;
   } catch {
     return null;
   }
-  watcher.on('error', () => undefined);
+  const onChange = () => void queue();
+  watchFile(path, { interval: POLL_MS, persistent: false }, onChange);
   const ready = queue();
   return {
     ready,
     close() {
       closed = true;
-      watcher.close();
+      unwatchFile(path, onChange);
     },
   };
 };

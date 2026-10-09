@@ -2,6 +2,7 @@ import type { RequestHandler, Router } from 'express';
 import type { Db } from '../persistence/db.ts';
 import { remoteGateway } from './gateway.ts';
 import { Pairings } from './pairing.ts';
+import { PasskeyChallenges } from './passkey-challenges.ts';
 import { remoteRoutes } from './routes.ts';
 import type { RunCommand } from '../setup/command.ts';
 import { DeviceStreams } from './streams.ts';
@@ -41,6 +42,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
       db: deps.db,
       workspaceId: deps.workspaceId,
       pairings: new Pairings(),
+      challenges: new PasskeyChallenges(),
       streams,
       tailscale,
     }),

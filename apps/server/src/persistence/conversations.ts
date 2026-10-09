@@ -40,7 +40,10 @@ import { conversationUsage } from './usage.ts';
 import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
+import { continueOpenRequest } from '../outposts/continuation.ts';
 import {
+  RUN_OUTPOST_COLUMNS,
+  RUN_OUTPOST_JOINS,
   toConversationSummary,
   toMessage,
   toRun,
@@ -101,6 +104,7 @@ const summaryQuery = `
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_plan,
     p.pending_provider, p.pending_pr_feedback,
+    om.outpost_id, ob.name AS outpost_name, om.handle AS outpost_handle,
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
       WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
@@ -109,6 +113,8 @@ const summaryQuery = `
      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
   LEFT JOIN teammates tm ON tm.id = c.teammate_id
+  LEFT JOIN outpost_members om ON om.conversation_id = c.id
+  LEFT JOIN outposts ob ON ob.id = om.outpost_id
   LEFT JOIN LATERAL (
     SELECT id, status, error, finished_at, provider, task_id, interruption_choice FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
@@ -170,7 +176,8 @@ export async function listConversations(
   const { rows } = await db.query<ConversationSummaryRow>(
     `${summaryQuery} WHERE c.workspace_id = $1 AND c.kind = 'chat'
        AND (EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
-         OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id))
+         OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
+         OR om.outpost_id IS NOT NULL)
        AND ($2 = '' OR c.title ILIKE $3 OR EXISTS (
          SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3
        ))
@@ -212,7 +219,8 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
     `DELETE FROM conversations c WHERE c.workspace_id = $1
        AND c.updated_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
-       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)`,
+       AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
+       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)`,
     [workspaceId],
   );
 }
@@ -248,7 +256,11 @@ export async function getConversationDetail(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
       [id],
     ),
-    db.query<RunRow>('SELECT * FROM runs WHERE conversation_id = $1 ORDER BY created_at', [id]),
+    db.query<RunRow>(
+      `SELECT r.*, ${RUN_OUTPOST_COLUMNS} FROM runs r ${RUN_OUTPOST_JOINS}
+       WHERE r.conversation_id = $1 ORDER BY r.created_at`,
+      [id],
+    ),
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name
@@ -334,7 +346,7 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | undefined;
+  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | 'outpost' | undefined;
   startAs?: StartAs;
   continuesRunId?: string;
 };
@@ -412,6 +424,7 @@ export async function sendInTransaction(
       target.modelSwitch ? JSON.stringify(target.modelSwitch) : null,
     ],
   );
+  await continueOpenRequest(client, conversationId, runId);
   if (!terminal) {
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
       newId(),

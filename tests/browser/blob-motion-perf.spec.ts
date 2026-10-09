@@ -7,6 +7,7 @@ import { openChats } from './navigation.ts';
 import { BUSY_MACHINE, frameWork, PRODUCTION, writeReport, type FrameWork } from './perf-probe.ts';
 import { openPhone, resetPhone, setFakeTailscale, startPairing, turnOn } from './phone-support.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 test.use({ trace: 'off' });
 
@@ -193,7 +194,7 @@ test('Agent TV crew blobs do no work on each frame', async ({ page }) => {
     await crewChat(page, repo, 'Ask before edits');
     await send(page, `${CREW_REQUEST} #build #crew`);
     await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
-    await page.getByRole('button', { name: 'Agent TV' }).click();
+    await toggleHeaderPane(page, 'Agent TV');
     const tv = page.getByRole('dialog', { name: 'Agent TV' });
     await expect(tv).toBeVisible();
     await page.mouse.move(40, 880);

@@ -19,6 +19,7 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   signIns: 'can_sign_ins',
   reset: 'can_reset',
   devices: 'can_devices',
+  passkeys: 'can_passkeys',
 };
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];
@@ -102,7 +103,11 @@ export async function deviceByTokenHash(
   tokenHash: string,
 ): Promise<DeviceRow | null> {
   const { rows } = await db.query<DeviceRow>(
-    `SELECT ${DEVICE_COLUMNS} FROM remote_devices WHERE workspace_id = $1 AND token_hash = $2`,
+    `SELECT ${DEVICE_COLUMNS} FROM remote_devices
+     WHERE workspace_id = $1 AND (
+       token_hash = $2
+       OR id = (SELECT device_id FROM remote_device_sessions WHERE token_hash = $2)
+     )`,
     [workspaceId, tokenHash],
   );
   return rows[0] ?? null;
@@ -125,17 +130,29 @@ export async function repairDevice(
   db: Queryable,
   workspaceId: string,
   id: string,
-  device: { name: string; tokenHash: string },
+  device: { name: string; tokenHash: string; carriedHash: string },
 ): Promise<DeviceRow | null> {
   const { rows } = await db.query<DeviceRow>(
-    `UPDATE remote_devices SET name = $3, token_hash = $4, last_seen_at = now()
-     WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL
-       AND last_seen_at >= now() - interval '${REMOTE_DEVICE_IDLE_DAYS} days'
+    `WITH usable AS (
+       SELECT id FROM remote_devices
+       WHERE workspace_id = $1 AND id = $2 AND revoked_at IS NULL
+         AND last_seen_at >= now() - interval '${REMOTE_DEVICE_IDLE_DAYS} days'
+     ), session AS (
+       UPDATE remote_device_sessions SET token_hash = $4
+       WHERE token_hash = $5 AND device_id IN (SELECT id FROM usable)
+     )
+     UPDATE remote_devices SET name = $3, last_seen_at = now(),
+       token_hash = CASE WHEN token_hash = $5 THEN $4 ELSE token_hash END
+     WHERE id IN (SELECT id FROM usable)
      RETURNING ${DEVICE_COLUMNS}`,
-    [workspaceId, id, device.name, device.tokenHash],
+    [workspaceId, id, device.name, device.tokenHash, device.carriedHash],
   );
   return rows[0] ?? null;
 }
+
+const PASSKEYS_GONE = `gone AS (
+  DELETE FROM remote_passkeys WHERE workspace_id = $1 AND device_id = $2
+)`;
 
 export async function markDeviceReplaced(
   db: Queryable,
@@ -144,7 +161,8 @@ export async function markDeviceReplaced(
   replacedBy: string,
 ): Promise<void> {
   await db.query(
-    `UPDATE remote_devices SET replaced_by = $3, revoked_at = COALESCE(revoked_at, now())
+    `WITH ${PASSKEYS_GONE}
+     UPDATE remote_devices SET replaced_by = $3, revoked_at = COALESCE(revoked_at, now())
      WHERE workspace_id = $1 AND id = $2`,
     [workspaceId, id, replacedBy],
   );
@@ -180,7 +198,8 @@ export async function revokeDevice(
   id: string,
 ): Promise<DeviceRow | null> {
   const { rows } = await db.query<DeviceRow>(
-    `UPDATE remote_devices SET revoked_at = COALESCE(revoked_at, now())
+    `WITH ${PASSKEYS_GONE}
+     UPDATE remote_devices SET revoked_at = COALESCE(revoked_at, now())
      WHERE workspace_id = $1 AND id = $2
      RETURNING ${DEVICE_COLUMNS}`,
     [workspaceId, id],
@@ -190,7 +209,8 @@ export async function revokeDevice(
 
 export async function revokeAllDevices(db: Queryable, workspaceId: string): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>(
-    `UPDATE remote_devices SET revoked_at = now()
+    `WITH gone AS (DELETE FROM remote_passkeys WHERE workspace_id = $1)
+     UPDATE remote_devices SET revoked_at = now()
      WHERE workspace_id = $1 AND revoked_at IS NULL RETURNING id`,
     [workspaceId],
   );

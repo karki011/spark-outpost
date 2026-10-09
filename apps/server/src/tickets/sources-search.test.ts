@@ -15,9 +15,10 @@ afterAll(async () => {
   await stubs.close();
 });
 
-const linear = () => linearSource(LINEAR_KEY, {}, fetch, stubs.linearUrl);
+const NO_MOVES = { statusMap: {}, moveStatuses: {} };
+const linear = () => linearSource(LINEAR_KEY, NO_MOVES, fetch, stubs.linearUrl);
 const jira = () =>
-  jiraSource({ siteUrl: stubs.jiraUrl, email: JIRA_EMAIL, apiToken: JIRA_TOKEN }, {}, fetch);
+  jiraSource({ siteUrl: stubs.jiraUrl, email: JIRA_EMAIL, apiToken: JIRA_TOKEN }, NO_MOVES, fetch);
 
 describe('Linear search and assign', () => {
   it('searches every visible ticket and reports its assignee', async () => {

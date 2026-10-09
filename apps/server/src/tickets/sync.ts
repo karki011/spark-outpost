@@ -1,7 +1,9 @@
-import type { TicketRef, TicketStatus, TicketSync } from '@spark-outpost/contracts';
+import type { TicketRef, TicketSync } from '@spark-outpost/contracts';
 import { recordTicketEvent } from '../persistence/ticket-events.ts';
 import { setCachedStatus } from '../persistence/tickets.ts';
 import type { OpenSource, TicketDeps } from './connections.ts';
+import type { MoveRequest } from './move-target.ts';
+import type { TransitionResult } from './source.ts';
 
 type SyncDeps = Pick<TicketDeps, 'db' | 'workspaceId'>;
 
@@ -10,26 +12,31 @@ const failed = (error: unknown): TicketSync => ({
   message: (error as Error).message,
 });
 
+function syncOf(result: TransitionResult): TicketSync {
+  if (result.moved) return { outcome: 'succeeded', message: null };
+  return { outcome: result.stopped === 'blocked' ? 'failed' : 'skipped', message: result.message };
+}
+
 export async function moveTicket(
   deps: SyncDeps,
   open: OpenSource,
   key: string,
-  target: TicketStatus,
+  request: MoveRequest,
   taskId: string | null,
   detail: Record<string, unknown> = {},
 ): Promise<TicketSync> {
   let sync: TicketSync;
+  let move: Record<string, unknown> = {};
   try {
-    const result = await open.source.transition(key, target);
-    sync = result.moved
-      ? { outcome: 'succeeded', message: null }
-      : { outcome: 'skipped', message: result.message };
-    if (result.moved) {
+    const result = await open.source.transition(key, request);
+    sync = syncOf(result);
+    move = { from: result.from, to: result.to, rule: result.rule ?? result.stopped };
+    if (result.moved && result.to && result.status) {
       await setCachedStatus(deps.db, deps.workspaceId, {
         source: open.connection.source,
         key,
-        status: target,
-        statusName: result.statusName,
+        status: result.status,
+        statusName: result.to,
       });
     }
   } catch (error) {
@@ -41,7 +48,12 @@ export async function moveTicket(
     ticketKey: key,
     taskId,
     outcome: sync.outcome,
-    detail: { ...detail, target, message: sync.message },
+    detail: {
+      ...detail,
+      target: 'group' in request ? request.group : request.name,
+      ...move,
+      message: sync.message,
+    },
   });
   return sync;
 }

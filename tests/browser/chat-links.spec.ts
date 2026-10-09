@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { openChats } from './navigation.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const SITE = 'https://example.com/';
 const DOCS = 'https://example.com/docs';
@@ -138,7 +139,7 @@ test('the pane toolbar opens the page that is showing in the default browser', a
   await withDesktopBrowser(page);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page.locator('.head-r').getByRole('button', { name: 'Browser' }).click();
+  await toggleHeaderPane(page, 'Browser');
   const pane = page.getByRole('region', { name: 'Browser' });
   const outside = pane.getByRole('button', { name: 'Open in default browser' });
   await expect(outside).toBeDisabled();

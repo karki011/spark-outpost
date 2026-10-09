@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { TicketStatusMap } from '@spark-outpost/contracts';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../test/fake-jira.ts';
 import { LINEAR_KEY } from '../../test/fake-linear.ts';
 import { startTicketStubs, type TicketStubs } from '../../test/ticket-support.ts';
@@ -16,9 +17,11 @@ afterAll(async () => {
   await stubs.close();
 });
 
-const linear = (key = LINEAR_KEY, map = {}) => linearSource(key, map, fetch, stubs.linearUrl);
-const jira = (token = JIRA_TOKEN, map = {}) =>
-  jiraSource({ siteUrl: stubs.jiraUrl, email: JIRA_EMAIL, apiToken: token }, map, fetch);
+const moves = (statusMap: TicketStatusMap) => ({ statusMap, moveStatuses: {} });
+const linear = (key = LINEAR_KEY, map: TicketStatusMap = {}) =>
+  linearSource(key, moves(map), fetch, stubs.linearUrl);
+const jira = (token = JIRA_TOKEN, map: TicketStatusMap = {}) =>
+  jiraSource({ siteUrl: stubs.jiraUrl, email: JIRA_EMAIL, apiToken: token }, moves(map), fetch);
 
 describe('Linear source', () => {
   it('says who you are and rejects a bad key', async () => {
@@ -70,16 +73,20 @@ describe('Linear source', () => {
 
   it('moves through the workflow, links a PR once and comments', async () => {
     const source = linear();
-    expect(await source.transition('ENG-12', 'in_progress')).toEqual({
+    expect(await source.transition('ENG-12', { group: 'in_progress' })).toMatchObject({
       moved: true,
-      statusName: 'In Progress',
+      from: 'Todo',
+      to: 'In Progress',
+      rule: 'name',
       message: null,
     });
-    expect(await source.transition('ENG-12', 'in_review')).toMatchObject({
+    expect(await source.transition('ENG-12', { group: 'in_review' })).toMatchObject({
       moved: true,
-      statusName: 'In Review',
+      to: 'In Review',
     });
-    expect(await source.transition('ENG-12', 'in_progress')).toMatchObject({ moved: false });
+    expect(await source.transition('ENG-12', { group: 'in_progress' })).toMatchObject({
+      moved: false,
+    });
     await source.linkPullRequest('ENG-12', {
       url: 'https://github.com/acme/widgets/pull/1',
       title: 'acme/widgets#1',
@@ -97,13 +104,13 @@ describe('Linear source', () => {
   });
 
   it('skips a move when the team has no matching state, unless a map names one', async () => {
-    const result = await linear().transition('OPS-4', 'in_review');
-    expect(result).toMatchObject({ moved: false, statusName: 'Todo' });
+    const result = await linear().transition('OPS-4', { group: 'in_review' });
+    expect(result).toMatchObject({ moved: false, from: 'Todo', to: null });
     expect(result.message).toContain('No status maps to In review in OPS');
     const mapped = linear(LINEAR_KEY, { OPS: { in_review: 'Doing' } });
-    expect(await mapped.transition('OPS-4', 'in_review')).toMatchObject({
+    expect(await mapped.transition('OPS-4', { group: 'in_review' })).toMatchObject({
       moved: true,
-      statusName: 'Doing',
+      to: 'Doing',
     });
   });
 });
@@ -158,13 +165,13 @@ describe('Jira source', () => {
 
   it('transitions, links a PR idempotently and comments', async () => {
     const source = jira();
-    expect(await source.transition('WEB-418', 'in_progress')).toMatchObject({
+    expect(await source.transition('WEB-418', { group: 'in_progress' })).toMatchObject({
       moved: true,
-      statusName: 'In Progress',
+      to: 'In Progress',
     });
-    expect(await source.transition('WEB-418', 'in_review')).toMatchObject({
+    expect(await source.transition('WEB-418', { group: 'in_review' })).toMatchObject({
       moved: true,
-      statusName: 'Code Review',
+      to: 'Code Review',
     });
     const pull = { url: 'https://github.com/acme/widgets/pull/2', title: 'acme/widgets#2' };
     await source.linkPullRequest('WEB-418', pull);
@@ -174,16 +181,18 @@ describe('Jira source', () => {
     expect(issue.remoteLinks).toHaveLength(1);
     expect((await source.getTicket('WEB-418')).links).toEqual([pull]);
     expect(issue.comments.at(-1)?.body).toMatchObject({ type: 'doc' });
-    const qa = await source.transition('API-77', 'in_review');
+    const qa = await source.transition('API-77', { group: 'in_review' });
     expect(qa.moved).toBe(false);
     const mapped = jira(JIRA_TOKEN, { API: { in_review: 'Waiting for QA' } });
-    expect(await mapped.transition('API-77', 'in_review')).toMatchObject({ moved: true });
+    expect(await mapped.transition('API-77', { group: 'in_review' })).toMatchObject({
+      moved: true,
+    });
   });
 
   it('explains an unreachable site without a stack of details', async () => {
     const offline = jiraSource(
       { siteUrl: 'http://127.0.0.1:9', email: JIRA_EMAIL, apiToken: JIRA_TOKEN },
-      {},
+      moves({}),
       fetch,
     );
     await expect(offline.whoami()).rejects.toThrow("Couldn't reach Jira");

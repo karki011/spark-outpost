@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ChangeSummary } from '@spark-outpost/contracts';
-import { DiffStat } from '../chat/changes/FileChangeList.tsx';
-import { formatTotal } from '../chat/changes/change-rules.ts';
+import { DiffStat, LineTotals } from '../chat/changes/FileChangeList.tsx';
 import { DIFF_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
-import { TERMINAL_DOCK_ID } from '../terminal/dock/TerminalButton.tsx';
+import { TERMINAL_DOCK_ID } from '../terminal/dock/terminal-pane.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { diffApi, diffKeys } from './diff-api.ts';
 import { matchesDiffShortcut } from './diff-shortcut.ts';
@@ -84,8 +83,7 @@ function DiffChipButton({ summary, open, onToggle }: DiffChipButtonProps) {
         {...tip.triggerProps}
         onClick={onToggle}
       >
-        <span className="plus">+{formatTotal(added)}</span>
-        <span className="minus">−{formatTotal(removed)}</span>
+        <LineTotals added={added} removed={removed} />
         <DiffStat added={added} removed={removed} />
       </button>
       {tip.tooltip}

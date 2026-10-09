@@ -103,6 +103,18 @@ export function FolderIcon() {
   );
 }
 
+export function OutpostIcon() {
+  return <StrokeIcon path="M6 21V4M6 5h11l-2.5 3.5L17 12H6" />;
+}
+
+export function PauseIcon() {
+  return <StrokeIcon path="M9 5v14M15 5v14" />;
+}
+
+export function ResumeIcon() {
+  return <StrokeIcon path="M7 5l12 7-12 7z" />;
+}
+
 export function ParentFolderIcon() {
   return <StrokeIcon path="M12 19V6M6 11l6-6 6 6" />;
 }
@@ -228,6 +240,12 @@ export function ShieldIcon() {
 export function ExternalLinkIcon() {
   return (
     <StrokeIcon path="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  );
+}
+
+export function RefreshIcon() {
+  return (
+    <StrokeIcon path="M20 11a8 8 0 0 0-14.6-3.5M4 4v4h4M4 13a8 8 0 0 0 14.6 3.5M20 20v-4h-4" />
   );
 }
 

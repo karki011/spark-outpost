@@ -1,5 +1,6 @@
 import { markInPlaceMember } from '../persistence/orchestrations.ts';
 import { runAgentTurn } from '../workflow/agent-turn.ts';
+import { writtenMessage } from './final-reply.ts';
 import type { FlowEvent } from './flow-types.ts';
 import { checkAndFix, treeOf } from './land.ts';
 import { labelFor, nameFor } from './member-routes.ts';
@@ -36,7 +37,7 @@ export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
   await ensureParentSnapshot(s);
   const name = await nameFor(s, 'builder');
   const turn = await runAgentTurn(s.deps, s.lease, s.input, s.append, s.control);
-  if (turn.messageId) s.message = { id: turn.messageId, text: turn.text };
+  if (turn.messageId) s.message = writtenMessage(turn);
   const result: MemberResult = {
     role: 'builder',
     runId: s.lease.runId,
@@ -44,6 +45,7 @@ export async function buildFromPlan(s: Session): Promise<MemberOutcome> {
     outcome: turn.outcome,
     error: turn.error,
     text: turn.text,
+    finalReply: turn.finalReply ?? null,
     toolCalls: 0,
     inPlace: true,
     name,

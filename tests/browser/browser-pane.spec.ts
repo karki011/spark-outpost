@@ -3,6 +3,14 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { openChats } from './navigation.ts';
+import {
+  chatMenuButton,
+  chatMenuDot,
+  expectHeaderPane,
+  headerPaneItem,
+  openChatMenu,
+  toggleHeaderPane,
+} from './header-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -18,7 +26,7 @@ interface Box {
 async function openPane(page: Page) {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page.locator('.head-r').getByRole('button', { name: 'Browser' }).click();
+  await toggleHeaderPane(page, 'Browser');
   const pane = page.getByRole('region', { name: 'Browser' });
   await expect(pane).toBeVisible();
   return pane;
@@ -29,11 +37,48 @@ async function chatId(page: Page): Promise<string> {
   return started[0]!.chatId;
 }
 
-test('the web app has no Browser button', async ({ page }) => {
+test('the web app has no Browser item in the chat menu', async ({ page }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(page.locator('.head-r').getByRole('button', { name: 'Terminal' })).toBeVisible();
-  await expect(page.locator('.head-r').getByRole('button', { name: 'Browser' })).toHaveCount(0);
+  const menu = await openChatMenu(page);
+  await expect(menu.getByRole('menuitemcheckbox')).toHaveText([/^Terminal/]);
+  await expect(menu.getByRole('separator')).toHaveCount(1);
+  await expect(
+    page.locator('.head-r').getByRole('button', { name: /Browser|Terminal|Agent TV/ }),
+  ).toHaveCount(0);
+});
+
+test('the Mac app lists Browser and Terminal in the chat menu with their shortcuts', async ({
+  page,
+}) => {
+  await withDesktopBrowser(page);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await chatMenuButton(page).focus();
+  await page.keyboard.press('ArrowDown');
+  const browser = headerPaneItem(page, 'Browser');
+  await expect(browser).toBeFocused();
+  await expect(browser).toHaveAttribute('aria-checked', 'false');
+  await expect(browser).toHaveAttribute('aria-keyshortcuts', /^(Meta|Control)\+Shift\+B$/);
+  await expect(headerPaneItem(page, 'Terminal')).toHaveAttribute('aria-checked', 'false');
+  await expect(chatMenuDot(page)).toHaveCount(0);
+  await page.keyboard.press('ArrowDown');
+  await expect(headerPaneItem(page, 'Terminal')).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.head-r').getByRole('menu')).toHaveCount(0);
+  const pane = page.getByRole('region', { name: 'Browser' });
+  await expect(pane.getByLabel('Address')).toBeFocused();
+  await expectHeaderPane(page, 'Browser', true);
+
+  await page.keyboard.press('ControlOrMeta+Shift+B');
+  await expect(pane).toBeHidden();
+  await expectHeaderPane(page, 'Browser', false);
+  await page.keyboard.press('ControlOrMeta+Shift+B');
+  await expect(pane).toBeVisible();
+  await pane.getByRole('button', { name: 'Hide work panel' }).click();
+  await expect(pane).toBeHidden();
+  await expectHeaderPane(page, 'Browser', false);
 });
 
 test('the Mac app opens the Browser pane and tells the shell where it is', async ({ page }) => {
@@ -341,10 +386,7 @@ test('a chat starts with the pane closed and each chat remembers its own', async
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('');
   await expect(pane).toBeHidden();
-  await expect(page.locator('.head-r').getByRole('button', { name: 'Browser' })).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  );
+  await expectHeaderPane(page, 'Browser', false);
 
   await page.reload();
   await page.getByRole('navigation', { name: 'Chats' }).getByText('First chat').click();
@@ -433,7 +475,7 @@ test('the pane opens with a notice when the agent opens a page', async ({ page }
   ]);
   await expect(pane).toBeHidden();
 
-  await page.locator('.head-r').getByRole('button', { name: 'Browser' }).click();
+  await toggleHeaderPane(page, 'Browser');
   await expect(pane).toBeVisible();
   await expect(notice).toHaveCount(0);
 });

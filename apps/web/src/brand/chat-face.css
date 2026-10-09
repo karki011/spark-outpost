@@ -1,0 +1,27 @@
+.chat-face {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  vertical-align: middle;
+}
+
+.chat-face[data-size='row'] {
+  width: 18px;
+  height: 18px;
+}
+
+.chat-face[data-size='post'] {
+  width: 20px;
+  height: 20px;
+}
+
+.chat-face[data-size='strip'] {
+  width: 28px;
+  height: 28px;
+}
+
+.chat-face > * {
+  display: block;
+  flex: none;
+  max-width: none;
+}

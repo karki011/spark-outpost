@@ -160,33 +160,6 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   font-size: 14px;
   text-align: center;
 }
-.tv-btn {
-  position: relative;
-}
-.tv-btn[aria-pressed='true'] {
-  background: var(--raise);
-  color: var(--text);
-}
-.tv-btn .live {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--panel);
-  opacity: 0;
-  transform: scale(0.3);
-  transition:
-    opacity 0.25s,
-    transform 0.3s var(--spring);
-}
-.tv-btn.live .live {
-  opacity: 1;
-  transform: none;
-  animation: tv-pulse 1.8s ease-in-out infinite;
-}
 .tv.paused *,
 .tv.paused *::before,
 .tv.paused *::after {
@@ -211,8 +184,7 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
   .tv,
   .tv.watch,
   .tv-dim,
-  .tv-live,
-  .tv-btn.live .live {
+  .tv-live {
     animation: none;
   }
 }

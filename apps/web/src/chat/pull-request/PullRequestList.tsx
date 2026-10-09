@@ -16,6 +16,8 @@ import {
   type Tone,
 } from './pull-request-model.ts';
 import { PullDetails } from './PullDetails.tsx';
+import { RefreshPullButton } from './RefreshPullButton.tsx';
+import { usePullRefresh } from './use-pull-refresh.ts';
 import { useWatchContext, type WatchContext } from './use-watch-context.ts';
 import { watchIndicator } from './watch-indicator-model.ts';
 import { WatchDetail } from './WatchIndicator.tsx';
@@ -39,6 +41,7 @@ function PullRequestRow({ watch, context }: PullRequestRowProps) {
   const review = reviewLabel(watch);
   const branch = branchLine(watch);
   const neverRead = watch.unknownReason !== null && watch.title === null;
+  const refresh = usePullRefresh(watch);
   return (
     <li className="prl-item">
       <a className="prl-title" href={watch.url} target="_blank" rel="noopener noreferrer">
@@ -51,7 +54,13 @@ function PullRequestRow({ watch, context }: PullRequestRowProps) {
         {neverRead ? null : <span className="spill">{PULL_STATE_LABELS[state]}</span>}
         <span className={PILLS[CI_TONES[ci]]}>{CI_LABELS[ci]}</span>
         {review && <span>{review}</span>}
+        <RefreshPullButton number={watch.number} refresh={refresh} />
       </p>
+      {refresh.problem && (
+        <p className="prl-note prl-problem" role="alert">
+          {refresh.problem}
+        </p>
+      )}
       {indicator && <WatchDetail indicator={indicator} profile={context.profile} />}
       <PullDetails watch={watch} />
       {watch.unknownReason && indicator?.state !== 'no_access' && (

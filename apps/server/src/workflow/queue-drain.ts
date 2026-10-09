@@ -1,8 +1,15 @@
 import { PERMISSION_DO, type QueuedMessage, type SendNowOutcome } from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { BadRequestError } from '../api/validation.ts';
-import { alreadySent, takeQueued } from '../persistence/chat-queue.ts';
+import {
+  alreadySent,
+  PAUSED_OUTPOST_ITEM,
+  QueueError,
+  takePostedAfterStop,
+  takeQueued,
+} from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
+import { postAttachmentIds } from '../persistence/outpost-posts.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { buildingInPieces } from '../persistence/piece-notes.ts';
 import {
@@ -46,21 +53,29 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
 async function sendQueued(
   db: Queryable,
   conversationId: string,
-  item: Pick<QueuedMessage, 'id' | 'content' | 'continueRunId'>,
+  item: Pick<QueuedMessage, 'id' | 'content' | 'continueRunId' | 'outpostPostId'>,
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
-  await sendInTransaction(
+  const attachmentIds = item.outpostPostId ? await postAttachmentIds(db, item.outpostPostId) : [];
+  const sent = await sendInTransaction(
     db,
     conversationId,
     {
       id: item.id,
       content: item.content,
-      source: 'queue',
+      attachmentIds,
+      source: item.outpostPostId ? 'outpost' : 'queue',
       ...(continuing ? { startAs: 'continue' as const } : {}),
     },
     target,
   );
+  if (item.outpostPostId) {
+    await db.query('UPDATE outpost_posts SET run_id = $2 WHERE id = $1 AND run_id IS NULL', [
+      item.outpostPostId,
+      sent.run.id,
+    ]);
+  }
   if (!item.continueRunId) return;
   await insertMemberMessage(db, {
     id: item.id,
@@ -93,12 +108,24 @@ export async function drainQueue(
       await markMessageSent(client, urgent.id, 'sent', urgent.id);
       return 'sent';
     }
-    if (!(await lastTurnSucceeded(client, conversationId))) return 'paused';
-    const next = await takeQueued(client, conversationId, null);
-    if (!next) return 'empty';
+    const flowing = await lastTurnSucceeded(client, conversationId);
+    const next = flowing
+      ? await takeQueued(client, conversationId, null)
+      : await takePostedAfterStop(client, conversationId);
+    if (!next) return flowing ? 'empty' : 'paused';
     await sendQueued(client, conversationId, next, target);
     return 'sent';
   });
+}
+
+async function refuseOutpostSendNow(db: Queryable, postId: string, busy: boolean): Promise<void> {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM outpost_posts post JOIN outposts o ON o.id = post.outpost_id
+     WHERE post.id = $1 AND o.paused_at IS NOT NULL`,
+    [postId],
+  );
+  if (rowCount === 1) throw new QueueError(409, 'The outpost is paused.');
+  if (busy) throw new QueueError(409, 'A request from an outpost starts when this chat is free.');
 }
 
 export interface SendNowRequest {
@@ -121,11 +148,18 @@ export async function sendNow(
     const content = queued?.content ?? request.content;
     if (content === undefined) return null;
     const running = await activeTurn(client, conversationId);
+    if (queued?.outpostPostId)
+      await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
     if (!running) {
       await sendQueued(
         client,
         conversationId,
-        { id: request.id, content, continueRunId: queued?.continueRunId ?? null },
+        {
+          id: request.id,
+          content,
+          continueRunId: queued?.continueRunId ?? null,
+          outpostPostId: queued?.outpostPostId ?? null,
+        },
         target,
       );
       return 'sent';
@@ -145,7 +179,7 @@ export async function sendNow(
 export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]> {
   const { rows } = await db.query<{ conversation_id: string }>(
     `SELECT DISTINCT c.conversation_id FROM (
-       SELECT conversation_id FROM chat_queue
+       SELECT q.conversation_id FROM chat_queue q WHERE NOT ${PAUSED_OUTPOST_ITEM}
        UNION
        SELECT m.conversation_id FROM member_messages m JOIN runs target ON target.id = m.run_id
        WHERE m.message_id IS NULL

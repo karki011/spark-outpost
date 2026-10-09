@@ -1,6 +1,6 @@
 import type { RemoteSwitch } from '@spark-outpost/contracts';
 
-export type RemoteRule = 'always' | 'never' | 'pairing' | RemoteSwitch;
+export type RemoteRule = 'always' | 'never' | 'pairing' | 'passkey' | RemoteSwitch;
 
 const ALWAYS = `
 GET /{*path}
@@ -68,6 +68,7 @@ GET /api/runs/:id/outcome
 PUT /api/runs/:id/feedback
 GET /api/conversations/:id/pull-requests
 POST /api/conversations/:id/pull-requests/refresh
+POST /api/conversations/:id/pull-requests/:watchId/refresh
 GET /api/project-clones
 GET /api/project-clones/options
 GET /api/projects
@@ -85,6 +86,11 @@ POST /api/conversations/:id/queue/:itemId/send-now
 POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order
 POST /api/runs/:id/messages
+GET /api/outposts
+GET /api/outposts/:id
+PATCH /api/outposts/:id
+POST /api/outposts/:id/posts
+POST /api/outposts/:id/posts/:postId/cancel
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
@@ -130,6 +136,7 @@ GET /api/tickets
 GET /api/tickets/:source/:key
 GET /api/tickets/attention-settings
 GET /api/tickets/connections
+GET /api/tickets/connections/:source/move-options
 GET /api/tickets/inbox
 GET /api/tickets/search
 DELETE /api/tickets/:source/:key/dismiss
@@ -150,6 +157,7 @@ PATCH /api/remote/switches
 GET /api/remote/devices
 PATCH /api/remote/devices/:id
 DELETE /api/remote/devices/:id
+DELETE /api/remote/devices/:id/passkeys
 POST /api/remote/devices/disconnect-all
 GET /api/remote/pairings
 POST /api/remote/pairings
@@ -177,11 +185,22 @@ POST /api/conversations/:id/workspace/open
 GET /api/diagnostics/export
 GET /api/instructions-file
 POST /api/setup/git/install
+POST /api/outposts
+DELETE /api/outposts/:id
+PUT /api/outposts/:id/members/:conversationId
+DELETE /api/outposts/:id/members/:conversationId
+GET /api/a2a/chats/:chatId/.well-known/agent-card.json
+POST /api/a2a/chats/:chatId
 `;
 
 const PAIRING = `
 POST /api/remote/pair
 POST /api/remote/pair/claim
+`;
+
+const PASSKEY_SIGN_IN = `
+POST /api/remote/passkey/sign-in/options
+POST /api/remote/passkey/sign-in
 `;
 
 const BEHIND_SWITCH: Record<RemoteSwitch, string> = {
@@ -257,6 +276,11 @@ DELETE /api/conversations/:id
 DELETE /api/projects/:id
 `,
   devices: '',
+  passkeys: `
+GET /api/remote/passkeys
+POST /api/remote/passkeys/options
+POST /api/remote/passkeys
+`,
 };
 
 export const AGENT_MODE_FIELDS: Record<string, readonly string[]> = {
@@ -277,6 +301,7 @@ export const ROUTE_RULES: ReadonlyMap<string, RemoteRule> = new Map<string, Remo
   ...routesOf(ALWAYS).map((route) => [route, 'always'] as const),
   ...routesOf(NEVER).map((route) => [route, 'never'] as const),
   ...routesOf(PAIRING).map((route) => [route, 'pairing'] as const),
+  ...routesOf(PASSKEY_SIGN_IN).map((route) => [route, 'passkey'] as const),
   ...(Object.entries(BEHIND_SWITCH) as [RemoteSwitch, string][]).flatMap(([name, block]) =>
     routesOf(block).map((route) => [route, name] as const),
   ),

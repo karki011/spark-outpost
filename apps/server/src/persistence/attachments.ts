@@ -131,7 +131,10 @@ export async function pruneUnlinkedAttachments(db: Queryable, workspaceId: strin
   await db.query(
     `DELETE FROM attachments WHERE workspace_id = $1 AND message_id IS NULL
        AND created_at < now() - interval '1 day'
-       AND NOT EXISTS (SELECT 1 FROM browser_screenshots s WHERE s.attachment_id = attachments.id)`,
+       AND NOT EXISTS (SELECT 1 FROM browser_screenshots s WHERE s.attachment_id = attachments.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM outpost_posts p WHERE attachments.id = ANY(p.attachment_ids)
+       )`,
     [workspaceId],
   );
 }

@@ -195,6 +195,31 @@ h2[data-status='https_off'] .ph-dot {
 .ph-device .ph-error {
   flex-basis: 100%;
 }
+.ph-device-passkeys {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.ph-device-passkeys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ph-passkey-switch {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.ph-passkey-save {
+  justify-self: start;
+}
 .ph .btn.danger {
   color: var(--danger);
 }
