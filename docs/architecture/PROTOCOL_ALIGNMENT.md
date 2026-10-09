@@ -4,17 +4,18 @@ Read this before changing persistence or agent integration. Product direction is
 
 ## Pinned versions
 
-| Package                                 | Version                                    | Used for                                                                                          |
-| --------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `@ag-ui/core`                           | 1.0.2 (exact)                              | Event types and Zod schemas for every run event we store and stream                               |
-| `zod`                                   | `^4.6.5` in `package.json`, 4.6.5 resolved | Validation at API, event, and configuration boundaries                                            |
-| `@ag-ui/client`, `rxjs`                 | 1.0.2, 7.8.1 (exact, dev only)             | `verifyEvents` in the db tests (`apps/server/test/agui-conformance.ts`); not in any app bundle    |
-| PostgreSQL                              | 17 (Homebrew `postgresql@17`)              | Source of truth; matches the planned RDS major version                                            |
-| `@agentclientprotocol/sdk`              | 1.5.0                                      | ACP client in the worker ([ACP_AGENTS.md](ACP_AGENTS.md), [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md)) |
-| `@agentclientprotocol/claude-agent-acp` | 0.81.2                                     | Claude adapter, also used for the Z.ai (GLM) provider                                             |
-| `@agentclientprotocol/codex-acp`        | 1.13.1 (patched, [PATCHES.md](PATCHES.md)) | Codex adapter                                                                                     |
+| Package                                 | Version                                    | Used for                                                                                                                                                             |
+| --------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ag-ui/core`                           | 1.0.2 (exact)                              | Event types and Zod schemas for every run event we store and stream                                                                                                  |
+| `zod`                                   | `^4.6.5` in `package.json`, 4.6.5 resolved | Validation at API, event, and configuration boundaries                                                                                                               |
+| `@ag-ui/client`, `rxjs`                 | 1.0.2, 7.8.1 (exact, dev only)             | `verifyEvents` in the db tests (`apps/server/test/agui-conformance.ts`); not in any app bundle                                                                       |
+| PostgreSQL                              | 17 (Homebrew `postgresql@17`)              | Source of truth; matches the planned RDS major version                                                                                                               |
+| `@agentclientprotocol/sdk`              | 1.5.0                                      | ACP client in the worker ([ACP_AGENTS.md](ACP_AGENTS.md), [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md))                                                                    |
+| `@agentclientprotocol/claude-agent-acp` | 0.81.2                                     | Claude adapter, also used for the Z.ai (GLM) provider                                                                                                                |
+| `@agentclientprotocol/codex-acp`        | 1.13.1 (patched, [PATCHES.md](PATCHES.md)) | Codex adapter                                                                                                                                                        |
+| `@a2a-js/sdk`                           | 1.3.0 (exact)                              | Pinned for outposts ([A2A_CHATS.md](A2A_CHATS.md)); imported only by `apps/server/test/a2a-sdk-pin.test.ts`, which checks the package, not Spark; nothing is claimed |
 
-Not installed: `@a2a-js/sdk`, CopilotKit. `@ag-ui/client` is a dev dependency of `apps/server` only, for the conformance check; it brings its own `zod` 3 and a second copy of `@ag-ui/core` 1.0.2 that nothing outside the tests loads.
+Not installed: CopilotKit. `@a2a-js/sdk` is installed in `apps/server` and unused: what the package exports was read and recorded in [A2A_CHATS.md](A2A_CHATS.md#11-what-the-installed-sdk-provides-step-0-october-9-2026), and no A2A capability of Spark is implemented or claimed. `@ag-ui/client` is a dev dependency of `apps/server` only, for the conformance check; it brings its own `zod` 3 and a second copy of `@ag-ui/core` 1.0.2 that nothing outside the tests loads.
 
 ## What is implemented
 
@@ -79,10 +80,11 @@ Native lifecycle writes use a session-generation fence rather than a worker leas
 
 ## Planned, not implemented
 
-| Item                                      | Task    |
-| ----------------------------------------- | ------- |
-| App-wide status stream                    | F-10    |
-| A2A remote agents via `SUBAGENT_*` events | Phase 3 |
+| Item                                                                                                                                                                                                 | Task                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| App-wide status stream                                                                                                                                                                               | F-10                                 |
+| A2A remote agents via `SUBAGENT_*` events                                                                                                                                                            | Phase 3                              |
+| Each outpost chat served as an A2A 1.0 agent on loopback (JSON-RPC: Agent Card, SendMessage, GetTask, CancelTask, streaming). Schema, contracts and ports exist; no endpoint, handler or client does | [A2A_CHATS.md](A2A_CHATS.md), lane C |
 
 Per-launch token authentication (F-9), the ACP client adapter (F-11, F-12), approvals through ACP `session/request_permission` with `CUSTOM` approval events (F-13) and usage and context readings (F-16) are built; their state is in [ACP_AGENTS.md](ACP_AGENTS.md).
 
