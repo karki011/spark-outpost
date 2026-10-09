@@ -1,6 +1,6 @@
 # Agent terminals
 
-Status: design, October 9, 2026. No feature code yet. Nothing here ships until the owner approves the section at the end.
+Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table and the gate are built (see "Built so far"); the runner, the tool, the web rows and the guide pages are not. The owner's decisions are recorded at the end.
 
 Goal: when an agent runs a command, the user can see that a terminal is going on. There is the small terminal in the reply (today) and a tab in the Terminal dock to watch it, check on it and stop it. A long-running command (a dev server, a watcher) keeps running in its tab after the turn ends.
 
@@ -92,7 +92,7 @@ The preview server stays as it is. It is the user's saved command for the projec
 | Event                                  | Mirror tab (agent's own command)                         | Agent terminal (Spark-run)                                                                                |
 | -------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | The turn ends                          | The command has ended or is marked interrupted, as today | Keeps running. The tab stays. The reply's last line says "1 agent terminal still running"                 |
-| The user stops the turn                | Interrupted with the turn, as today                      | Terminals started in that turn stop. Terminals from earlier turns keep running (owner decision 4)         |
+| The user stops the turn                | Interrupted with the turn, as today                      | Terminals started in that turn stop. Terminals from earlier turns keep running (decision 4)               |
 | The user closes the tab                | Tab closes. Nothing else changes                         | Asks: stop it, or keep it running. Keeping it leaves the row in the chat, where it can be opened again    |
 | Window closed, refresh, renderer dies  | Rebuilt from the saved command                           | Keeps running in the local runtime. Reopening shows the kept output and goes on live                      |
 | Quit Spark                             | Nothing to do                                            | Stops, like every managed PTY. Marked "stopped when Spark quit"                                           |
@@ -128,6 +128,8 @@ One tool with an `action`, like `spark_browser_preview`, so the tool list grows 
 Rules of the tool:
 
 - It exists only in a chat with a project folder, in a turn that may run commands. An Ask turn, a read-only mode and a chat with no folder get a refusal in one line.
+- In a crew turn only a solo Builder and the integrator may use it. Pieces and the Coordinator get a refusal in one line (decision 6).
+- There is no cap on how many run at once (decision 7).
 - The command runs in the chat's working folder (the worktree by default), or a folder under a linked root.
 - It runs in the user's login shell, as the preview server does, with Spark's own variables removed from the environment.
 - There is no action that sends input. An agent must not be able to start a shell and then feed it lines the gate never saw. Each `start` is one command and one decision.
@@ -154,7 +156,7 @@ For a command started with `spark_terminal_run`, Spark is the one that runs it, 
 
 1. **Same gate.** The tool builds the same `ApprovalRequest` an agent's own command produces (`kind: 'execute'`, the command, the folder, the linked roots, the agent's current mode) and hands it to the turn's own `PermissionGate.review`. There is no second rule set.
 2. **The agent's mode asks or runs.** It runs at once in Auto, Bypass permissions, Approve for me and Full access. In every other mode an ordinary approval card appears, with the command and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." This is the rule Spark action tools already follow.
-3. **No shortcuts.** The project allowlist and "always allow in this run" do not apply to these commands, and the card offers only Allow once and Reject (owner decision 2). Those shortcuts were given for commands the agent runs in its own sandbox.
+3. **No shortcuts.** The project allowlist and "always allow in this run" do not apply to these commands, and the card offers only Allow once and Reject (decision 2). Those shortcuts were given for commands the agent runs in its own sandbox.
 4. **The safety floor holds in every mode.** Changing, moving or deleting a secret file and changing an agent instruction file ask. Git hooks and git config ask with hold-to-confirm. Force pushes are refused. Writes and deletes outside the linked repos ask, except in the system temp folders. A file in `.sparkignore` asks to read.
 5. **Publish rules apply as for a solo Builder's own `git push` and `gh`.** A push of anything but the chat's own `spark/*` branch is refused. Publishing needs one of the existing grounds (the message asked, Full auto → PR, the mode, a follow-up round). `--no-verify` is refused. A push that holds a value from a secret file asks with hold-to-confirm. Pieces and the Coordinator still never publish.
 6. **Reading then sending.** If the turn read a secret file or other work data, a command that sends off this computer gets the same note and audit entry as today.
@@ -178,7 +180,7 @@ This is stricter than the agent's own commands in one case, on purpose. In Claud
 - User Terminal sessions. The safety floor still does not apply inside them. An agent terminal is not a Terminal session: it runs one gated command and takes no input.
 - The preview server and `spark_browser_preview`.
 - Spark autonomy levels. They still decide only what happens to the result.
-- No budgets. An agent terminal has no time limit and no idle limit. The only limit is how many can be open at once, like the dock's existing limit on shells.
+- No budgets and no caps. An agent terminal has no time limit and no idle limit, and Spark does not limit how many run at once.
 - Nothing merges, and Spark resolves no threads.
 - Phone access. Terminal stays on the Mac.
 
@@ -186,7 +188,7 @@ This is stricter than the agent's own commands in one case, on purpose. In Claud
 
 Phase 1 needs no migration.
 
-Phase 2 needs one table. The next free migration number is `0162`. Do not create it before approval.
+Phase 2 needs one table. It is `0162` (`0161` is held by another branch).
 
 `0162_agent_terminals.sql`, table `agent_terminals`:
 
@@ -195,6 +197,7 @@ Phase 2 needs one table. The next free migration number is `0162`. Do not create
 | `id uuid` primary key                     |                                                                                |
 | `workspace_id`, `conversation_id`         | Not null, cascade on delete                                                    |
 | `run_id`                                  | The run that started it. Set null when the run is deleted                      |
+| `tool_call_id`                            | The tool call that asked. A second start with the same run and id is one row   |
 | `provider`                                | For the tab label                                                              |
 | `name`                                    | Short label, at most 60 characters                                             |
 | `command`                                 | Exact text, at most 4000 characters. Refused earlier if it looks like a secret |
@@ -208,11 +211,11 @@ Phase 2 needs one table. The next free migration number is `0162`. Do not create
 | `text_offset`, `text_before`, `text_held` | Where the row sits in the reply, as in `run_commands`                          |
 | `started_at`, `ended_at`                  |                                                                                |
 
-Indexes: `(conversation_id, started_at, id)` and a partial index on rows with `wanted = 'running'`.
+Indexes: `(conversation_id, started_at, id)`, a partial index on live rows (`starting`, `running`) and a unique partial index on `(run_id, tool_call_id)`. A trigger sends `notify_change('agent_terminal', conversation, run)` on insert, delete and a change of `wanted` or `status`. Saving output does not notify.
 
 Why not reuse a table. `run_commands` rows end with their run: a running row whose run ended reads as interrupted. `preview_servers` rows belong to a project and restart themselves. An agent terminal belongs to a chat, outlives its run and never restarts.
 
-At startup every row still `starting` or `running` becomes `interrupted`, as `terminal_shells` is cleared today.
+At startup every row still `starting` or `running` becomes `interrupted`, as `terminal_shells` is cleared today. Spark never starts one again.
 
 ## Build plan
 
@@ -242,7 +245,64 @@ Lane 2a goes first and is small. The rest run in parallel against it.
 | 2f   | Web          | new `apps/web/src/api/agent-terminals.ts`, new `apps/web/src/chat/commands/AgentTerminalRow.tsx`, dock tab kind `agent` in `shell-store.ts`, close and stop confirm in `TerminalDock.tsx`, the end-of-turn line                                                                          |
 | 2g   | Docs         | `docs/guide/terminals.md`, `spark-tools.md`, `guardrails.md`, `protected-paths.md`, `use-your-phone.md`, `whats-new.md`, `docs/architecture/SPARK_TOOLS.md`, `ACP_AGENTS.md`, `ACP_COVERAGE.md`, `AGENTS.md` (after approval)                                                            |
 
-Seams between lanes: 2c and 2e meet only through the table and its NOTIFY. 2d gives 2e one function, `reviewSparkCommand(scope, command, cwd)`. 2f needs only the 2a schemas and the 2c routes.
+Seams between lanes: 2c and 2e meet only through the table and its NOTIFY. 2d gives 2e one function, `reviewSparkCommand(scope, start)`. 2f needs only the 2a schemas and the 2c routes.
+
+## Built so far
+
+Phase 1 and lanes 2a, 2b and 2d. Nothing here registers the tool or starts a process. Lanes 2c, 2e and 2f build against these.
+
+### Contracts (2a): `packages/contracts/src/agent-terminal.ts`
+
+- Names: `AGENT_TERMINAL_TOOL` (`spark_terminal_run`), `AGENT_TERMINAL_STARTED` (the run event lane 2e appends), `AGENT_TERMINAL_CHANGE` (`agent_terminal`, now an app event kind).
+- `agentTerminalSchema` → `AgentTerminal`: `id`, `conversationId`, `runId`, `provider`, `name`, `command`, `cwd`, `state`, `exitCode`, `decidedBy` (`mode` or `card`), `stoppedBy`, `outputChars`, `startedAt`, `endedAt` and the reply anchor (`textOffset`, `textBefore`, `textHeld`). `agentTerminalListSchema` is the list response.
+- States: `starting`, `running`, `exited`, `stopped`, `failed`, `interrupted`. Stoppers: `user`, `agent`, `turn_stopped`, `quit`, `chat_removed`, `folder_removed`.
+- Tool input: `agentTerminalInputSchema`, a union on `action` (`start` with `command`, optional `name` and `cwd`; `status`; `output` with `id` and optional `lines` up to 200; `stop` with `id`). There is no input action. Tool output: `agentTerminalResultSchema`, with `agentTerminalBriefSchema` for what the agent sees and `untrusted: true` on output.
+- Events: `agentTerminalStartedSchema` (the run event payload) and `agentTerminalChangeSchema` (the NOTIFY payload).
+- Pure helpers: `agentTerminalLive(state)`, `agentTerminalMoves(from, to)`, `agentTerminalEndState({ wanted, exitCode, spawned })`, `agentTerminalBrief(terminal)`, `agentTerminalName(command)`, `agentTerminalStateText(terminal)`, `agentTerminalsRunningLine(terminals)`, `agentTerminalOutputTail(output, lines)`.
+
+### Store (2b): `apps/server/src/persistence/agent-terminals.ts` and `agent-terminal-changes.ts`
+
+```ts
+startAgentTerminal(db, { runId, toolCallId, name, command, cwd, decidedBy, approvalId, textOffset, textBefore, textHeld }): Promise<{ row; created } | null>
+agentTerminalRow(db, id): Promise<AgentTerminalRow | null>
+chatAgentTerminals(db, conversationId): Promise<AgentTerminalRow[]>
+liveAgentTerminals(db, workspaceId): Promise<AgentTerminalRow[]>
+agentTerminalOutput(db, conversationId, id): Promise<{ output; outputChars } | null>
+toAgentTerminal(row): AgentTerminal
+
+askAgentTerminalStop(db, id, by): Promise<AgentTerminalRow | null>
+stopRunAgentTerminals(db, runId, by = 'turn_stopped'): Promise<AgentTerminalRow[]>
+stopChatAgentTerminals(db, conversationId, by = 'chat_removed'): Promise<AgentTerminalRow[]>
+markAgentTerminalRunning(db, id, pid): Promise<boolean>
+saveAgentTerminalOutput(db, id, output, outputChars): Promise<void>
+endAgentTerminal(db, id, { exitCode, spawned, output, outputChars }): Promise<AgentTerminalRow | null>
+endLiveAgentTerminals(db, workspaceId, 'startup' | 'quit'): Promise<AgentTerminalRow[]>
+```
+
+- `startAgentTerminal` takes the workspace, chat and provider from the run. A second call with the same run and tool call id returns the first row with `created: false`. It returns null when the run does not exist.
+- A stop only sets `wanted = 'stopped'` and who asked; the first asker is kept. The runner kills the process and calls `endAgentTerminal`, which ends the row as `stopped` when a stop was asked, `failed` when it never spawned, and `exited` otherwise. An ended row never changes again, so a stale exit after a stop is ignored.
+- `endLiveAgentTerminals(…, 'startup')` marks live rows `interrupted`; `'quit'` marks them `stopped` by `quit`. Neither starts anything.
+- Deleting the chat removes its rows and notifies, so the runner must stop any process whose row is gone. Call `stopChatAgentTerminals` first where the delete is known in advance.
+
+### Gate (2d): `apps/server/src/approvals/spark-command.ts`, `apps/server/src/workflow/command-gate.ts`, `command-scope.ts`
+
+```ts
+reviewSparkCommand(scope: SparkCommandScope, start: { toolCallId; command; cwd }): Promise<SparkCommandReview>
+
+type SparkCommandReview =
+  | { verdict: 'allow'; request; audit; effects }
+  | { verdict: 'ask'; request; card: NewApproval; audit; effects }
+  | { verdict: 'refuse'; reason: string; request; audit }
+
+sparkCommandScope(db, runId, input: RunInput, { modes?, observations? }): Promise<SparkCommandScope>
+sparkCommandAsked(scope, review, approvalId): void
+sparkCommandStarted(scope, review, approvalId | null): void
+```
+
+- The pure part is `decideSparkCommand(turn, request, options)`. It refuses first (no folder, Ask or read-only turn, a piece or the Coordinator, a folder outside the linked roots, a command that looks like it holds a secret), then calls the same `decide` the agent's own commands use, with no run rules and no allowlist, with the turn's own role, piece guard and publish grant. A rail's ask or refusal stands in every mode. An allow stands only where the mode acts without asking; otherwise it becomes an ordinary card, and a mode that skips anything not pre-approved refuses.
+- `audit` holds the redacted command, the folder, the agent's mode, the decision (`mode`, `card` or `refused`), the reason, and `unreviewed`, which is true only when no card stands between the agent and the start. A command that looks like it holds a secret is not kept in the audit facts.
+- `card` is a ready `NewApproval` (kind `execute`, Allow once and Reject, the rail's reason, and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." as `asksBecause`). Lane 2e inserts it, waits and settles it the way the turn's gate does, calls `sparkCommandAsked` when it is raised and `sparkCommandStarted` when the command starts. Those two record the read-then-send note and any secret file read, as the gate does for the agent's own commands.
+- Pass the agent's current mode in `scope.agentMode` when it changed during the turn.
 
 ## Test plan
 
@@ -287,11 +347,11 @@ Not verified by these tests: real adapter behavior. The claim that no adapter ca
 
 ## Owner approval needed
 
-### Proposed AGENTS.md text
+### AGENTS.md text
 
-Add to the permissions paragraph, after the sentence about Spark action tools. Do not add it before phase 2 is approved. Phase 1 needs no AGENTS.md change.
+Add to the permissions paragraph, after the sentence about Spark action tools. It lands with the tool lane (2e), not before: until the tool is registered the sentence would describe something an agent cannot do.
 
-> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Approve for me and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, stops when the user or the agent stops it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac.
+> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn; in a crew turn only a solo Builder and the integrator may, and pieces and the Coordinator are refused: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Approve for me and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands and, unlike the agent's own commands in Bypass permissions, Approve for me and Full access, a hard-rail crossing asks or is refused before the command starts, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, has no time, idle or count limit, stops when the user or the agent stops it, when the user stops the turn that started it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac, and a paired phone sees its state as text only.
 
 And one line for the product list near the Browser pane and phone bullets:
 
@@ -299,13 +359,17 @@ And one line for the product list near the Browser pane and phone bullets:
 
 ### Decisions
 
-1. **Build order.** Recommended: phase 1 (mirror tab) now, phase 2 (`spark_terminal_run`) after this approval. Alternative: phase 1 only, and wait for an adapter that supports client terminals.
-2. **Allowlist and run rules for Spark-run commands.** Recommended: they do not apply; the mode or a card decides. Alternative: pass the gate unchanged, so "always allow" entries start these commands without a card, outside the Codex sandbox.
-3. **Stricter than the agent's own commands in Bypass, Approve for me and Full access.** Recommended: yes. A hard rail asks or refuses before a Spark-run command starts, where the agent's own command would only be flagged. Alternative: flag only, to match.
-4. **Stopping the turn.** Recommended: stop the terminals that turn started and keep earlier ones. Alternatives: keep all running, or stop all of the chat's.
-5. **Typing into an agent tab.** Recommended: no, read-only with Stop. Alternative: let the user type (never the agent). That would make part of the tab a user Terminal session, outside the safety floor.
-6. **Who may use the tool in a crew turn.** Recommended: a solo Builder and the integrator only in the first version; pieces and the Coordinator get a refusal. Alternative: pieces too, under the same gate.
-7. **How many at once.** Recommended: 4 running agent terminals per chat, counted apart from the user's 12 shells. This is a count, not a budget.
-8. **Stop from the phone.** Recommended: no. The phone shows state as text only. Alternative: allow Stop behind a switch on the Phone page.
-9. **Claude live output inside a turn.** Recommended: not now. Later, the AIR `asyncTasks` capability could give live output and per-command Stop for Claude background commands. It needs its own review.
-10. **Tool name.** Recommended: `spark_terminal_run` with `action: start | status | output | stop`. `spark_terminals` stays the read-only list of the user's shells.
+The owner settled these on October 9, 2026.
+
+1. **Build order.** Phase 1 (mirror tab), then phase 2 (`spark_terminal_run`).
+2. **Allowlist and run rules for Spark-run commands.** They do not apply. The agent's mode decides, or an ordinary card with Allow once and Reject.
+3. **Stricter than the agent's own commands in Bypass permissions, Approve for me and Full access.** Yes. A hard rail asks or refuses before a Spark-run command starts, where the agent's own command is only flagged. How the agent's own commands are treated does not change.
+4. **Stopping the turn.** It stops the terminals that turn started and keeps earlier ones.
+5. **Typing into an agent tab.** No. The tab is read-only with Stop.
+6. **Who may use the tool in a crew turn.** A solo Builder and the integrator only. Pieces and the Coordinator get a refusal.
+7. **How many at once.** No cap. Spark does not count or limit how many run at once.
+8. **Stop from the phone.** No. A paired device sees the state as text only, and every route stays Mac-only.
+9. **Claude live output inside a turn.** Not now. Later, the AIR `asyncTasks` capability could give live output and per-command Stop for Claude background commands. It needs its own review.
+10. **Tool name.** `spark_terminal_run` with `action: start | status | output | stop`. `spark_terminals` stays the read-only list of the user's shells.
+
+It runs only in a chat with a project folder and never in an Ask or read-only turn. It stops when the user or the agent stops it, when the chat is removed or when Spark quits. Spark never restarts it.
