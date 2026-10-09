@@ -176,7 +176,7 @@ export function useCreateOutpost() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateOutpostRequest) => outpostsApi.create(body),
-    onSuccess: (detail) => keep(client, detail),
+    onSuccess: ({ outpost, posts }) => keep(client, { outpost, posts }),
     onSettled: (_detail, _error, body) => refreshChats(client, body.members.map(startMemberChatId)),
   });
 }

@@ -61,6 +61,10 @@ export function filesLabel(count: number): string {
   return `${countLabel(count, 'file')} changed`;
 }
 
+export function attachedLabel(count: number): string {
+  return countLabel(count, 'file');
+}
+
 export function pullRequestLabel(url: string): string {
   const number = PULL_NUMBER.exec(url)?.[1];
   return number ? `Pull request #${number}` : 'Pull request';

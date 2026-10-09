@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
+import { seedCreateQueries } from './create/create-fixtures.ts';
 import { OutpostHost } from './OutpostHost.tsx';
 import { outpostKeys } from './outposts-api.ts';
 import { API_CHAT, FE_CHAT, OUTPOST_ID, chat, detail, member, outpost } from './test-fixtures.ts';
@@ -14,6 +15,8 @@ interface Call {
   path: string;
   body: unknown;
 }
+
+const LAZY_SHEET_TIMEOUT = 10_000;
 
 let client: QueryClient;
 let calls: Call[];
@@ -58,6 +61,7 @@ beforeEach(() => {
     chat(API_CHAT, { title: 'Usage endpoint' }),
   ]);
   client.setQueryData(projectKeys.all, []);
+  seedCreateQueries(client);
   client.setQueryData(outpostKeys.list, [outpost({ members: [member(FE_CHAT, 'fe', 1)] })]);
   calls = [];
   vi.stubGlobal(
@@ -88,15 +92,20 @@ describe('OutpostHost', () => {
   it('opens the create sheet with the chat it was asked from, then opens the new outpost', async () => {
     const onOpenOutpost = renderHost();
     fireEvent.click(screen.getByRole('button', { name: 'New from chat' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New outpost' });
+    const dialog = await screen.findByRole(
+      'dialog',
+      { name: 'New outpost' },
+      { timeout: LAZY_SHEET_TIMEOUT },
+    );
     expect(dialog).toBeTruthy();
+    const name = screen.getByRole('textbox', { name: /^Name/ });
+    fireEvent.change(name, { target: { value: 'Orders launch' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
     expect(
       screen.getByRole<HTMLInputElement>('textbox', { name: 'Handle for Usage page' }).value,
     ).toBe('usage-page');
-    fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), {
-      target: { value: 'Orders launch' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Create outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Continue/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Start outpost/ }));
     await waitFor(() => expect(onOpenOutpost).toHaveBeenCalledTimes(1));
     expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/outposts' });
     expect(onOpenOutpost).toHaveBeenCalledWith((calls[0]?.body as { id: string }).id);

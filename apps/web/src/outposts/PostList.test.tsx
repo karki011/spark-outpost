@@ -42,13 +42,13 @@ function heard(): string[] {
 describe('PostList', () => {
   it('draws requests, notes and notices as one list in time order', () => {
     render(
-      list([note(3, { body: 'Third' }), notice(1, '@api joined.'), post(2, { body: 'Second' })]),
+      list([note(3, { body: 'Third' }), notice(1, '@api joined'), post(2, { body: 'Second' })]),
     );
     const items = within(screen.getByRole('list', { name: 'Outpost thread' })).getAllByRole(
       'listitem',
     );
     expect(items.map((item) => item.textContent)).toEqual([
-      '@api joined.',
+      '@api joined',
       expect.stringContaining('Second'),
       expect.stringContaining('Third'),
     ]);
@@ -80,13 +80,13 @@ describe('PostList', () => {
         post(1, { state: 'failed', reason: 'Not delivered: queue full' }),
         note(2, { fromUser: false, fromHandle: 'fe' }),
         post(3, { body: 'Run the tests' }),
-        notice(4, '@docs joined.'),
+        notice(4, '@docs joined'),
       ]),
     );
     expect(heard()).toEqual([
       'Request to @api: Failed. Not delivered: queue full.',
       'You asked @api. Sent.',
-      '@docs joined.',
+      '@docs joined',
     ]);
   });
 

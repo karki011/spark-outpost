@@ -8,9 +8,11 @@ import {
   MoveIcon,
 } from '../ui/icons.tsx';
 import { ChatFace } from '../brand/ChatFace.tsx';
+import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { PostText } from './PostText.tsx';
 import {
   STATE_LABELS,
+  attachedLabel,
   requestFaceState,
   canCancel,
   filesLabel,
@@ -107,6 +109,12 @@ export function RequestPost({
         <time dateTime={post.createdAt}>{postTime(post.createdAt)}</time>
       </div>
       <PostText text={post.body} what="request" />
+      {post.files > 0 && (
+        <p className="op-attached">
+          <FileIcon />
+          {attachedLabel(post.files)}
+        </p>
+      )}
       {post.reason && (
         <p className={state === 'failed' ? 'op-reason bad' : 'op-reason'}>{post.reason}</p>
       )}

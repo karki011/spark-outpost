@@ -51,6 +51,14 @@ describe('RequestPost', () => {
     expect(buttons()).toEqual(actions);
   });
 
+  it('says how many files went with a request, and nothing when there are none', () => {
+    renderRequest(post(1, { files: 2 }));
+    expect(document.querySelector('.op-attached')?.textContent).toBe('2 files');
+    cleanup();
+    renderRequest(post(1));
+    expect(document.querySelector('.op-attached')).toBeNull();
+  });
+
   it('says who asked whom', () => {
     renderRequest(post(1));
     expect(screen.getByRole('listitem').textContent).toContain('Youto@api');
@@ -182,11 +190,44 @@ describe('NoticeLine', () => {
   it('is one line of text', () => {
     render(
       <ol>
-        <NoticeLine post={notice(3, '@api joined. @fe and @api can now ask each other.')} />
+        <NoticeLine post={notice(3, 'Orders launch was paused.')} />
       </ol>,
     );
-    expect(screen.getByRole('listitem').textContent).toBe(
-      '@api joined. @fe and @api can now ask each other.',
+    const item = screen.getByRole('listitem');
+    expect(item.textContent).toBe('Orders launch was paused.');
+    expect(item.querySelector('.chat-face')).toBeNull();
+  });
+
+  it('introduces a member with its face, where it works and the task it was given', () => {
+    const intro = { conversationId: API_CHAT, task: 'Task: Add an optional userId filter.' };
+    render(
+      <ol>
+        <NoticeLine
+          post={{ ...notice(3, '@api joined · api · Codex GPT-5 · Approve for me'), intro }}
+        />
+      </ol>,
     );
+    const item = screen.getByRole('listitem');
+    expect(item.querySelectorAll('.chat-face')).toHaveLength(1);
+    expect(item.querySelector('.op-intro-line')?.textContent).toBe(
+      '@api joined · api · Codex GPT-5 · Approve for me',
+    );
+    expect(item.querySelector('.op-intro-task')?.textContent).toBe(
+      'Task: Add an optional userId filter.',
+    );
+  });
+
+  it('has no task line for a member that was given none', () => {
+    render(
+      <ol>
+        <NoticeLine
+          post={{
+            ...notice(3, '@fe joined · web'),
+            intro: { conversationId: FE_CHAT, task: null },
+          }}
+        />
+      </ol>,
+    );
+    expect(screen.getByRole('listitem').querySelector('.op-intro-task')).toBeNull();
   });
 });

@@ -382,6 +382,37 @@ a.op-res:hover,
   background: var(--line);
 }
 
+.op-intro {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.op-intro-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.op-intro-task {
+  color: var(--faint);
+}
+
+.op-attached {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.op-attached svg {
+  width: 13px;
+  height: 13px;
+}
+
 .op-empty {
   padding-bottom: 8px;
 }
