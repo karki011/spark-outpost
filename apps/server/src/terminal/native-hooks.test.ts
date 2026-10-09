@@ -96,4 +96,32 @@ describe('native terminal observation', () => {
       }),
     ).toEqual({ kind: 'session_start', nativeSessionId: '067f7c50-6ed9-48db-b1ea-683e216e3d35' });
   });
+
+  it('keeps a Claude transcript path only when it is the absolute file of the reported session', () => {
+    const event = { hook_event_name: 'UserPromptSubmit', session_id: 'native-session' };
+    const path = '/home/projects/repo/native-session.jsonl';
+    expect(parseNativeHook('claude', { ...event, transcript_path: path })).toEqual({
+      kind: 'prompt',
+      nativeSessionId: 'native-session',
+      transcriptPath: path,
+    });
+    for (const transcript_path of [
+      'native-session.jsonl',
+      '/home/projects/repo/another-session.jsonl',
+      '/home/projects/repo/../native-session.jsonl',
+      '/home/projects/repo/native-session.jsonl/',
+    ])
+      expect(parseNativeHook('claude', { ...event, transcript_path })).toEqual({
+        kind: 'prompt',
+        nativeSessionId: 'native-session',
+      });
+    expect(parseNativeHook('codex', { ...event, transcript_path: path })).toEqual({
+      kind: 'prompt',
+      nativeSessionId: 'native-session',
+    });
+    expect(parseNativeHook('claude', { hook_event_name: 'Stop', transcript_path: path })).toEqual({
+      kind: 'stop',
+    });
+    expect(parseNativeHook('claude', { ...event, transcript_path: 7 })).toBeNull();
+  });
 });

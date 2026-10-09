@@ -19,7 +19,7 @@ Open an AI terminal. About 1 minute.
 
 Answer questions in the terminal. Pull requests aren't automatic.
 
-**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
+**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
 
 **Hide view** keeps the agent running; **Open terminal** reattaches. **Stop session** asks you to hold before stopping the agent and its commands. Terminal sessions are Mac-only.
 
