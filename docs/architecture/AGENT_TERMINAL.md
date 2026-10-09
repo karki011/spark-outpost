@@ -1,6 +1,6 @@
 # Agent terminals
 
-Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table and the gate are built (see "Built so far"); the runner, the tool, the web rows and the guide pages are not. The owner's decisions are recorded at the end.
+Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table, the gate and the runner with its routes are built (see "Built so far"); the tool, the web rows and the guide pages are not. The owner's decisions are recorded at the end.
 
 Goal: when an agent runs a command, the user can see that a terminal is going on. There is the small terminal in the reply (today) and a tab in the Terminal dock to watch it, check on it and stop it. A long-running command (a dev server, a watcher) keeps running in its tab after the turn ends.
 
@@ -249,7 +249,7 @@ Seams between lanes: 2c and 2e meet only through the table and its NOTIFY. 2d gi
 
 ## Built so far
 
-Phase 1 and lanes 2a, 2b and 2d. Nothing here registers the tool or starts a process. Lanes 2c, 2e and 2f build against these.
+Phase 1 and lanes 2a, 2b, 2c and 2d. Nothing here registers the tool, so no row is inserted yet and the runner has nothing to start. Lanes 2e and 2f build against these.
 
 ### Contracts (2a): `packages/contracts/src/agent-terminal.ts`
 
@@ -303,6 +303,30 @@ sparkCommandStarted(scope, review, approvalId | null): void
 - `audit` holds the redacted command, the folder, the agent's mode, the decision (`mode`, `card` or `refused`), the reason, and `unreviewed`, which is true only when no card stands between the agent and the start. A command that looks like it holds a secret is not kept in the audit facts.
 - `card` is a ready `NewApproval` (kind `execute`, Allow once and Reject, the rail's reason, and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." as `asksBecause`). Lane 2e inserts it, waits and settles it the way the turn's gate does, calls `sparkCommandAsked` when it is raised and `sparkCommandStarted` when the command starts. Those two record the read-then-send note and any secret file read, as the gate does for the agent's own commands.
 - Pass the agent's current mode in `scope.agentMode` when it changed during the turn.
+
+### Runner and routes (2c): `apps/server/src/terminal/agent-terminals.ts`, `agent-terminal-process.ts`, `agent-terminal-output.ts`, `agent-terminal-routes.ts`
+
+- `AgentTerminals` lives in the API process. `main.ts` calls `recover()` at boot (live rows become `interrupted`), `sync()` on every `agent_terminal` app event and `stopAll()` on shutdown and on reset (processes killed, rows `stopped` by `quit`).
+- `sync()` reads `liveAgentTerminals` and, one step at a time: spawns a row that is `starting` and wanted `running` (login shell `-ilc`, the row's folder, `commandEnvironment`, which is the preview environment without `PORT`), then `markAgentTerminalRunning`; kills and ends a row wanted `stopped`; kills a process whose row is no longer live or is gone. A second wake finds the process and does nothing. Nothing is ever started again.
+- A stop signals the process tree and its group with TERM, then KILL after 1.5 s (`killProcessTree` with a first signal; the preview and Terminal still send HUP). The row is ended as soon as the signal is sent.
+- A folder that is missing at start, or a spawn that throws, ends the row as `failed` with the reason as its output. A folder that disappears later stops the terminal as `folder_removed` (checked every 3 s).
+- Output: the open tabs get what the process printed, as printed, and a tab that opens later gets the last 256,000 characters first. The saved tail goes through the output sanitizer and the redaction filter the command recorder uses, with the secret values of the row's folder, and is saved at most once a second and at the end.
+- No count, time or idle limit.
+
+Routes, all under `/api`:
+
+| Route                                                       | Answers                                                                                                                   | Paired phone |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `GET /conversations/:id/agent-terminals`                    | `agentTerminalListSchema`, oldest first                                                                                   | Allowed      |
+| `GET /conversations/:id/agent-terminals/:terminalId/output` | `commandOutputResponseSchema` (`output`, `outputChars`): the saved, redacted tail. 404 when it is not this chat's         | Never        |
+| `POST /conversations/:id/agent-terminals/:terminalId/view`  | 201 `createShellResponseSchema` (`id`, `token`, `cwd`, `label`, `kind`, `note`). 409 when it is not running. 404 as above | Never        |
+| `POST /conversations/:id/agent-terminals/:terminalId/stop`  | The `agentTerminalSchema` row after the stop (`askAgentTerminalStop(…, 'user')`, then a sync). 404 as above               | Never        |
+
+There is no input route. The dock opens `view`, then the existing socket `/api/terminal/sessions/:id/stream?token=…&cols=…&rows=…`, exactly as the Preview tab does. The view replays, goes on live and ends with `{ type: 'ended', reason: 'exited' }` when the process ends or is stopped; what the tab sends as input is dropped, and a resize is applied. Closing the tab ends only the view. A finished terminal has no view: the tab reads `output`.
+
+The list is the one route a paired phone may read, so the chat row can show the command and its state as text. This is the one place the built routes differ from "every new route is Mac-only" above.
+
+Not built in 2c: the `spark/terminal_stop` audit entry for a stop from the user, the folder or quit, and killing a process left behind by a crashed runtime (the row has a pid but no start time to match it against).
 
 ## Test plan
 
