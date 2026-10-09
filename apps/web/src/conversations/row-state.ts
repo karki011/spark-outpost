@@ -1,6 +1,7 @@
 import type { ConversationAttention, ConversationSummary } from '@spark-outpost/contracts';
 import { terminalLabel, terminalMood, terminalNeedsInput } from '../terminal/native-state.ts';
 import { providerName } from '../chat/provider-name.ts';
+import type { ChatFaceState } from '../brand/chat-face.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
 
@@ -110,6 +111,21 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
     default:
       return IDLE;
   }
+}
+
+const FACE_STATES: Record<RowTone, ChatFaceState> = {
+  running: 'working',
+  permission: 'needs_you',
+  asking: 'needs_you',
+  done: 'done',
+  error: 'failed',
+  idle: 'idle',
+};
+
+export function rowFaceState(chat: ConversationSummary, tone: RowTone): ChatFaceState {
+  if (tone === 'idle' && chat.archivedAt) return 'archived';
+  if (tone === 'done' && chat.latestRun?.needsYou) return 'needs_you';
+  return FACE_STATES[tone];
 }
 
 export interface Attention {

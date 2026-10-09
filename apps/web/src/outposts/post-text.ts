@@ -1,4 +1,5 @@
 import type { OutpostPost, RequestState } from '@spark-outpost/contracts';
+import type { ChatFaceState } from '../brand/chat-face.ts';
 import { countLabel } from '../ui/count-label.ts';
 
 export const STATE_LABELS: Record<RequestState, string> = {
@@ -9,6 +10,19 @@ export const STATE_LABELS: Record<RequestState, string> = {
   failed: 'Failed',
   cancelled: 'Cancelled',
 };
+
+const FACE_STATES: Record<RequestState, ChatFaceState> = {
+  sent: 'idle',
+  working: 'working',
+  needs_you: 'needs_you',
+  answered: 'done',
+  failed: 'failed',
+  cancelled: 'idle',
+};
+
+export function requestFaceState(state: RequestState): ChatFaceState {
+  return FACE_STATES[state];
+}
 
 const OPEN_STATES: readonly RequestState[] = ['sent', 'working', 'needs_you'];
 const COLLAPSE_LINES = 3;

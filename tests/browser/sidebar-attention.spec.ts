@@ -140,3 +140,37 @@ test('several waiting chats open into a list, and each one jumps to its chat', a
     }),
   ).toBeVisible();
 });
+
+test('each chat row shows its own blob, the same after a reload, with a face for its state', async ({
+  page,
+}) => {
+  await seedChats([
+    { title: 'Current chat' },
+    { title: 'Quiet chat' },
+    { title: 'Run the suite', run: { status: 'awaiting_approval' }, approval: runTests },
+  ]);
+  await openChats(page);
+  const face = (title: string) => row(page, title).locator('.st .chat-face');
+  const look = async (title: string) => ({
+    drawn: await face(title)
+      .locator('img, svg')
+      .evaluate((blob) => blob.outerHTML),
+    color: await face(title).getAttribute('data-color'),
+    shape: await face(title).getAttribute('data-shape'),
+  });
+
+  await expect(face('Quiet chat')).toBeVisible();
+  await expect(face('Quiet chat')).toHaveAttribute('data-expression', 'idle');
+  await expect(face('Run the suite')).toHaveAttribute('data-expression', 'unsure');
+  await expect(row(page, 'Run the suite').locator('.st .dia')).toBeVisible();
+  const before = { quiet: await look('Quiet chat'), current: await look('Current chat') };
+  expect(before.quiet.drawn).not.toBe(before.current.drawn);
+
+  await page.reload();
+  await expect(face('Quiet chat')).toBeVisible();
+  expect({ quiet: await look('Quiet chat'), current: await look('Current chat') }).toEqual(before);
+  const box = await face('Quiet chat').boundingBox();
+  const waiting = await face('Run the suite').boundingBox();
+  expect([box?.width, box?.height]).toEqual([18, 18]);
+  expect([waiting?.width, waiting?.height]).toEqual([18, 18]);
+});

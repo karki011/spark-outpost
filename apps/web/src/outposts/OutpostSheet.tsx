@@ -1,6 +1,7 @@
 import './outpost-sheet.css';
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { OUTPOST_NAME_MAX, type ConversationSummary } from '@spark-outpost/contracts';
+import { ChatFace } from '../brand/ChatFace.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
@@ -188,6 +189,7 @@ export function OutpostSheet({
                     const problemId = `${ids}p${member.conversationId}`;
                     return (
                       <li key={member.conversationId}>
+                        <ChatFace chatId={member.conversationId} size="strip" />
                         <span className="op-handle-field">
                           <span aria-hidden="true">@</span>
                           <input

@@ -53,7 +53,7 @@ export const teammateFaceSchema = z.object({
 });
 export type TeammateFace = z.infer<typeof teammateFaceSchema>;
 
-function nameHash(name: string): number {
+export function nameHash(name: string): number {
   let hash = 0x811c9dc5;
   for (const char of name.trim().toLowerCase()) {
     hash ^= char.codePointAt(0)!;

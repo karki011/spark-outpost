@@ -78,6 +78,14 @@ export function faceRender(face: TeammateFace): FaceRender {
   };
 }
 
+export function colorHue(color: TeammateColor): number {
+  return COLOR_HUE[color];
+}
+
+export function shapeTrait(shape: TeammateShape): number {
+  return SHAPE_TRAIT[shape];
+}
+
 export function stateExpression(state: TeammateState): BlobExpression {
   return STATE_EXPRESSIONS[state];
 }

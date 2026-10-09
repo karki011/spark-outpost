@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationAttention, ConversationSummary } from '@spark-outpost/contracts';
-import { attention, attentionLine, rowState } from './row-state.ts';
+import { attention, attentionLine, rowFaceState, rowState } from './row-state.ts';
 
 function chat(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
@@ -203,5 +203,29 @@ describe('rowState for a Builder the loop guard stopped', () => {
       sub: 'Bolt was repeating itself',
     });
     expect(attentionLine(ask({ kind: 'stuck' }))).toBe('The Builder was repeating itself');
+  });
+});
+
+describe('rowFaceState', () => {
+  it('gives the blob a face for every row tone', () => {
+    expect(rowFaceState(chat(), 'idle')).toBe('idle');
+    expect(rowFaceState(chat(), 'running')).toBe('working');
+    expect(rowFaceState(chat(), 'asking')).toBe('needs_you');
+    expect(rowFaceState(chat(), 'permission')).toBe('needs_you');
+    expect(rowFaceState(chat(), 'done')).toBe('done');
+    expect(rowFaceState(chat(), 'error')).toBe('failed');
+  });
+
+  it('looks unsure when a finished turn still needs the user', () => {
+    const finished = chat({
+      latestRun: run('succeeded', { needsYou: 'Needs you: which region?' }),
+    });
+    expect(rowFaceState(finished, 'done')).toBe('needs_you');
+  });
+
+  it('sleeps in History unless the chat still has something to say', () => {
+    const archived = chat({ archivedAt: '2026-09-26T10:00:00.000Z' });
+    expect(rowFaceState(archived, 'idle')).toBe('archived');
+    expect(rowFaceState(archived, 'error')).toBe('failed');
   });
 });

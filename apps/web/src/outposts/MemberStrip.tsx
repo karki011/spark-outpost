@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
+import { ChatFace } from '../brand/ChatFace.tsx';
 import { memberDetails, type MemberView } from './member-view.ts';
 
 interface MemberStripProps {
@@ -56,14 +57,17 @@ export function MemberStrip({ members, onOpen }: MemberStripProps) {
             onFocus={() => setFocused(index)}
             onClick={() => onOpen(member.conversationId)}
           >
-            <span className="op-member-top">
-              <b>@{member.handle}</b>
-              <span className={`op-member-state ${member.state}`}>{member.stateLabel}</span>
-            </span>
-            <small>{member.place || member.title}</small>
-            <span className="sr-only">
-              {member.place ? `, ${member.title}` : ''}
-              {member.agent ? `, ${member.agent}` : ''}, open chat
+            <ChatFace chatId={member.conversationId} state={member.state} size="strip" />
+            <span className="op-member-text">
+              <span className="op-member-top">
+                <b>@{member.handle}</b>
+                <span className={`op-member-state ${member.state}`}>{member.stateLabel}</span>
+              </span>
+              <small>{member.place || member.title}</small>
+              <span className="sr-only">
+                {member.place ? `, ${member.title}` : ''}
+                {member.agent ? `, ${member.agent}` : ''}, open chat
+              </span>
             </span>
           </button>
         ))}

@@ -50,8 +50,8 @@
 .dc-blob {
   display: grid;
   place-items: center;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   animation: dc-wiggle 0.24s var(--out);
 }

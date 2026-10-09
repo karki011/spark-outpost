@@ -28,6 +28,18 @@ describe('MemberStrip', () => {
     ]);
   });
 
+  it('draws each chat its own blob, with a face for its state that is not read out', () => {
+    render(<MemberStrip members={MEMBERS} onOpen={vi.fn()} />);
+    const faces = chips().map((chip) => chip.querySelector<HTMLElement>('.chat-face'));
+    expect(faces.map((face) => face?.dataset.expression)).toEqual(['unsure', 'idle', 'sleepy']);
+    expect(faces.map((face) => face?.getAttribute('aria-hidden'))).toEqual([
+      'true',
+      'true',
+      'true',
+    ]);
+    expect(new Set(faces.map((face) => face?.innerHTML)).size).toBe(3);
+  });
+
   it('is one tab stop that the arrow keys move through, wrapping at the ends', () => {
     render(<MemberStrip members={MEMBERS} onOpen={vi.fn()} />);
     const toolbar = screen.getByRole('toolbar');

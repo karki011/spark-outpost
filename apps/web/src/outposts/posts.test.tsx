@@ -61,6 +61,25 @@ describe('RequestPost', () => {
     expect(screen.getByRole('listitem').textContent).toContain('@feto@api');
   });
 
+  it('draws the blob of each chat in the request, the receiver with the request state', () => {
+    renderRequest(
+      post(1, {
+        fromUser: false,
+        fromConversationId: FE_CHAT,
+        fromHandle: 'fe',
+        state: 'working',
+      }),
+    );
+    const faces = [...screen.getByRole('listitem').querySelectorAll<HTMLElement>('.chat-face')];
+    expect(faces.map((face) => face.dataset.expression)).toEqual(['idle', 'thinking']);
+    expect(faces.every((face) => face.getAttribute('aria-hidden') === 'true')).toBe(true);
+  });
+
+  it('draws no blob for the user', () => {
+    renderRequest(post(1));
+    expect(screen.getByRole('listitem').querySelectorAll('.chat-face')).toHaveLength(1);
+  });
+
   it('shows the reason line under the request', () => {
     renderRequest(post(1, { state: 'failed', reason: 'Not delivered: queue full' }));
     expect(screen.getByText('Not delivered: queue full')).toBeTruthy();
@@ -146,11 +165,14 @@ describe('NotePost', () => {
   it('is marked as a note and has no state or actions', () => {
     render(
       <ol>
-        <NotePost post={note(2, { fromUser: false, fromHandle: 'api' })} />
+        <NotePost
+          post={note(2, { fromUser: false, fromConversationId: API_CHAT, fromHandle: 'api' })}
+        />
       </ol>,
     );
     const item = screen.getByRole('listitem');
     expect(item.textContent).toContain('@apinote');
+    expect(item.querySelectorAll('.chat-face')).toHaveLength(1);
     expect(item.textContent).toContain('The contract is settled.');
     expect(screen.queryAllByRole('button')).toEqual([]);
   });

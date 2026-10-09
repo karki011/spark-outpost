@@ -7,9 +7,11 @@ import {
   InfoIcon,
   MoveIcon,
 } from '../ui/icons.tsx';
+import { ChatFace } from '../brand/ChatFace.tsx';
 import { PostText } from './PostText.tsx';
 import {
   STATE_LABELS,
+  requestFaceState,
   canCancel,
   filesLabel,
   postAnchor,
@@ -79,6 +81,9 @@ export function RequestPost({
   const state = post.state ?? 'sent';
   const to = receiverName(post);
   const chatId = post.toConversationId;
+  const receiver = chatId && (
+    <ChatFace chatId={chatId} state={requestFaceState(state)} size="post" />
+  );
   return (
     <li
       id={postAnchor(post.id)}
@@ -86,11 +91,13 @@ export function RequestPost({
       data-post={post.id}
     >
       <div className="op-post-head">
+        {post.fromConversationId && <ChatFace chatId={post.fromConversationId} size="post" />}
         <b>{senderName(post)}</b>
         <span className="op-to">
           <MoveIcon />
           <span className="sr-only">to</span>
         </span>
+        {receiver}
         <b>{to}</b>
         {post.guest && <span className="op-kind">guest</span>}
         <span className={`op-state ${state}`}>
@@ -106,6 +113,7 @@ export function RequestPost({
       {post.answer && (
         <div className="op-reply">
           <div className="op-post-head">
+            {receiver}
             <b>{to}</b>
             <span className="op-mood">
               {state === 'needs_you' ? 'is waiting for you' : 'answered'}

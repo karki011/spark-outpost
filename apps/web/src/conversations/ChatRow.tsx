@@ -7,10 +7,11 @@ import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from 
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { recencyLabel } from './recency.ts';
-import { rowState, type RowTone } from './row-state.ts';
+import { rowFaceState, rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
+import { ChatFace } from '../brand/ChatFace.tsx';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
@@ -166,6 +167,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);
   const [firstTone] = useState(state.tone);
+  const face = <ChatFace chatId={chat.id} state={rowFaceState(chat, state.tone)} size="row" />;
   const classes = [
     'row',
     `st-${state.tone}`,
@@ -206,7 +208,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     <>
       {renaming ? (
         <div className="row-open">
-          <span className="st" />
+          <span className="st">{face}</span>
           <span className="rt">
             <RenameInput
               title={chat.title}
@@ -229,12 +231,18 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           {...pointerListeners}
         >
           <span
-            key={state.tone}
-            className={`st${state.tone !== firstTone ? ' enter' : ''}`}
+            className="st"
             role={state.label ? 'img' : undefined}
             aria-label={state.label || undefined}
           >
-            <StatusMark tone={state.tone} />
+            {face}
+            <span
+              key={state.tone}
+              className={`st-mark${state.tone !== firstTone ? ' enter' : ''}`}
+              aria-hidden="true"
+            >
+              <StatusMark tone={state.tone} />
+            </span>
           </span>
           {chat.teammate && (
             <span className="rface" aria-hidden="true">

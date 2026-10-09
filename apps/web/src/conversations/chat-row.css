@@ -238,20 +238,46 @@
 
 .st {
   position: relative;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
 }
 
-.orb {
-  width: 13px;
-  height: 13px;
+.row {
+  --row-bg: var(--bg);
+}
+
+.row:hover,
+.row.active {
+  --row-bg: var(--raise);
+}
+
+.st-mark {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 20%, var(--accent));
-  -webkit-mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
-  mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
+  background: var(--row-bg);
+  transition: background 0.15s;
+}
+
+.st-mark:empty {
+  display: none;
+}
+
+.orb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 15%, var(--accent));
+  -webkit-mask: radial-gradient(circle, transparent 2.6px, #000 3.1px);
+  mask: radial-gradient(circle, transparent 2.6px, #000 3.1px);
   animation: rot 0.8s linear infinite;
 }
 
@@ -270,10 +296,12 @@
 
 .dchk {
   position: absolute;
+  width: 11px;
+  height: 11px;
   color: var(--accent-text);
 }
 
-.st:not(.enter) .dchk {
+.st-mark:not(.enter) .dchk {
   display: none;
 }
 
@@ -304,10 +332,15 @@
   border: 2px solid var(--warn);
 }
 
-.dia {
+.st-mark .ask {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+}
+
+.dia {
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
   background: var(--warn);
   rotate: 45deg;
 }
@@ -337,14 +370,14 @@
 }
 
 .row .errdot {
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--danger);
   color: var(--panel);
-  font-size: 10px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 700;
   line-height: 1;
