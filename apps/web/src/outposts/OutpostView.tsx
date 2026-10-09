@@ -2,6 +2,7 @@ import './outposts.css';
 import { useMemo, useState } from 'react';
 import { threadItems, type OutpostDetail, type OutpostPost } from '@spark-outpost/contracts';
 import { ApiError } from '../api/client.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { PauseIcon, PenIcon, ResumeIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -11,7 +12,7 @@ import { OutpostComposer } from './OutpostComposer.tsx';
 import { OutpostSheet } from './OutpostSheet.tsx';
 import { PostList } from './PostList.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
-import { memberViews, membersLabel } from './member-view.ts';
+import { chatsOnApproval, memberViews, membersLabel } from './member-view.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
 import { useOutpostChats } from './use-outpost-chats.ts';
 import {
@@ -26,13 +27,19 @@ import {
 
 interface OutpostViewProps {
   id: string;
+  jumpTo?: string | null | undefined;
   onOpenChat: (conversationId: string) => void;
   onGone: () => void;
 }
 
-function answeringOf(posts: readonly OutpostPost[], postId: string | null): Answering | null {
+function answeringOf(
+  posts: readonly OutpostPost[],
+  postId: string | null,
+  approvalChats: ReadonlySet<string>,
+): Answering | null {
   const post = posts.find((candidate) => candidate.id === postId);
   if (!post || post.state !== 'needs_you' || !post.toConversationId) return null;
+  if (approvalChats.has(post.toConversationId)) return null;
   return {
     postId: post.id,
     conversationId: post.toConversationId,
@@ -62,9 +69,10 @@ interface LoadedProps extends OutpostViewProps {
   detail: OutpostDetail;
 }
 
-function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
+function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
   const { outpost, posts } = detail;
   const { chats, projectNames } = useOutpostChats();
+  const { remote } = useRemoteClient();
   const [answeringId, setAnsweringId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const post = usePost(id);
@@ -78,7 +86,8 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
     () => memberViews(outpost.members, chats, projectNames),
     [outpost.members, chats, projectNames],
   );
-  const answering = answeringOf(posts, answeringId);
+  const approvalChats = useMemo(() => chatsOnApproval(chats), [chats]);
+  const answering = answeringOf(posts, answeringId, approvalChats);
   const paused = outpost.pausedAt !== null;
   const problem = cancel.error?.message ?? pause.error?.message ?? null;
 
@@ -107,9 +116,13 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
       <div className="empty op-empty">
         <h2>No chats here yet</h2>
         <p>Add chats, then ask one for work with @ and its handle.</p>
-        <button type="button" className="btn line sm" onClick={() => setEditing(true)}>
-          Add chats
-        </button>
+        {remote ? (
+          <p>Chats are added on your Mac.</p>
+        ) : (
+          <button type="button" className="btn line sm" onClick={() => setEditing(true)}>
+            Add chats
+          </button>
+        )}
       </div>
     ) : (
       <div className="empty op-empty">
@@ -133,7 +146,7 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
         </button>
         <button type="button" className="op-count" onClick={() => setEditing(true)}>
           {membersLabel(members.length)}
-          <span className="sr-only">, edit chats and handles</span>
+          <span className="sr-only">{remote ? ', edit the name' : ', edit chats and handles'}</span>
         </button>
         <div className="head-r">
           <button
@@ -161,6 +174,8 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
       <PostList
         items={items}
         answeringId={answering?.postId ?? null}
+        jumpTo={jumpTo ?? null}
+        approvalChats={approvalChats}
         empty={empty}
         onAnswer={(asked) => setAnsweringId(asked.id)}
         onCancel={(postId) => cancel.mutate(postId)}
@@ -180,6 +195,7 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
           chats={chats}
           projectNames={projectNames}
           outpostId={id}
+          canManage={!remote}
           onStart={saveEdit}
           onDelete={deleteOutpost}
           onClose={() => setEditing(false)}
@@ -189,7 +205,7 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
   );
 }
 
-export function OutpostView({ id, onOpenChat, onGone }: OutpostViewProps) {
+export function OutpostView({ id, jumpTo, onOpenChat, onGone }: OutpostViewProps) {
   const query = useOutpost(id);
   if (isGone(query.error)) return <Gone onGone={onGone} />;
   if (!query.data) {
@@ -201,5 +217,7 @@ export function OutpostView({ id, onOpenChat, onGone }: OutpostViewProps) {
       </main>
     );
   }
-  return <Loaded id={id} detail={query.data} onOpenChat={onOpenChat} onGone={onGone} />;
+  return (
+    <Loaded id={id} detail={query.data} jumpTo={jumpTo} onOpenChat={onOpenChat} onGone={onGone} />
+  );
 }

@@ -129,6 +129,12 @@ describe('OutpostRows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New outpost' }));
     expect(onNew).toHaveBeenCalledTimes(1);
   });
+
+  it('has no New outpost where outposts cannot be created', () => {
+    render(<OutpostRows outposts={[]} openId={null} onOpen={vi.fn()} />);
+    expect(screen.getByText('Outposts')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'New outpost' })).toBeNull();
+  });
 });
 
 describe('Add to outpost in the chat menu', () => {

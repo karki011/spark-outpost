@@ -15,7 +15,7 @@ interface Handlers {
   onOpenChat: ReturnType<typeof vi.fn<(conversationId: string) => void>>;
 }
 
-function renderRequest(request: OutpostPost, answering = false): Handlers {
+function renderRequest(request: OutpostPost, answering = false, answerable = true): Handlers {
   const handlers: Handlers = {
     onAnswer: vi.fn<(post: OutpostPost) => void>(),
     onCancel: vi.fn<(postId: string) => void>(),
@@ -23,7 +23,7 @@ function renderRequest(request: OutpostPost, answering = false): Handlers {
   };
   render(
     <ol>
-      <RequestPost post={request} answering={answering} {...handlers} />
+      <RequestPost post={request} answering={answering} answerable={answerable} {...handlers} />
     </ol>,
   );
   return handlers;
@@ -118,6 +118,15 @@ describe('RequestPost', () => {
     expect(handlers.onAnswer).toHaveBeenCalledWith(request);
     expect(handlers.onCancel).toHaveBeenCalledWith(request.id);
     expect(handlers.onOpenChat).toHaveBeenCalledWith(API_CHAT);
+  });
+
+  it('offers no Answer while the chat waits on an approval card', () => {
+    renderRequest(
+      post(1, { state: 'needs_you', reason: '@api is waiting for your approval' }),
+      false,
+      false,
+    );
+    expect(buttons()).toEqual(['Cancel', 'Open in chat']);
   });
 
   it('shows which request the message box is answering', () => {

@@ -288,7 +288,7 @@ export const ConversationList = memo(function ConversationList({
               outpostSeam.onOpenOutpost(id);
               layout?.closeDrawer();
             }}
-            onNew={() => outpostSeam.onNewOutpost()}
+            onNew={outpostSeam.canManage ? () => outpostSeam.onNewOutpost() : undefined}
           />
         )}
         <div className="sec">
@@ -440,7 +440,7 @@ export const ConversationList = memo(function ConversationList({
           anchor={menu.anchor}
           projects={projectList}
           outposts={
-            outpostSeam
+            outpostSeam?.canManage
               ? {
                   list: outpostSeam.outposts,
                   onAdd: (outpostId, handle) =>

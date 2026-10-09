@@ -37,6 +37,7 @@ function Opener(props: {
   initial?: SheetForm;
   onStart?: Start;
   onDelete?: () => Promise<unknown>;
+  canManage?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -51,6 +52,7 @@ function Opener(props: {
           chats={CHATS}
           projectNames={{ [WEB_PROJECT]: 'web' }}
           outpostId={props.onDelete ? OUTPOST_ID : null}
+          canManage={props.canManage ?? true}
           onStart={props.onStart ?? vi.fn<Start>(() => Promise.resolve())}
           {...(props.onDelete ? { onDelete: props.onDelete } : {})}
           onClose={() => setOpen(false)}
@@ -175,5 +177,17 @@ describe('OutpostSheet', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Hold to delete outpost/ })).toBeTruthy();
     expect(screen.getByText('Deletes this outpost and its thread. The chats stay.')).toBeTruthy();
+  });
+
+  it('only renames on a phone: no handles, no chats to add or remove, no delete', () => {
+    render(<Opener initial={FORM} canManage={false} onDelete={vi.fn(() => Promise.resolve())} />);
+    openSheet();
+    expect(nameInput().value).toBe('Usage by user');
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add a chat' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Hold to delete outpost/ })).toBeNull();
+    expect(screen.getByText(/Chats and handles are changed on your Mac/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 });

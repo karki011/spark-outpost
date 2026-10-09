@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
 import type { Outpost } from '@spark-outpost/contracts';
 import { OutpostSeamContext, type OutpostSeam } from '../chat/outpost/outpost-seam.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useAddMember, useOutposts } from './use-outposts.ts';
 
 const OutpostCreate = lazy(() =>
@@ -22,16 +23,18 @@ interface OutpostHostProps {
 export function OutpostHost({ openOutpostId, onOpenOutpost, children }: OutpostHostProps) {
   const outposts = useOutposts().data ?? NO_OUTPOSTS;
   const addMember = useAddMember().mutateAsync;
+  const { remote } = useRemoteClient();
   const [creating, setCreating] = useState<Creating | null>(null);
   const seam = useMemo<OutpostSeam>(
     () => ({
       outposts,
       openOutpostId,
+      canManage: !remote,
       onOpenOutpost,
       onNewOutpost: (conversationId) => setCreating({ firstChatId: conversationId ?? null }),
       onAddToOutpost: (outpostId, member) => addMember({ outpostId, member }),
     }),
-    [outposts, openOutpostId, onOpenOutpost, addMember],
+    [outposts, openOutpostId, remote, onOpenOutpost, addMember],
   );
   return (
     <OutpostSeamContext value={seam}>

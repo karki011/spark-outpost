@@ -23,6 +23,7 @@ import {
 interface RequestPostProps {
   post: OutpostPost;
   answering: boolean;
+  answerable: boolean;
   onAnswer: (post: OutpostPost) => void;
   onCancel: (postId: string) => void;
   onOpenChat: (conversationId: string) => void;
@@ -67,7 +68,14 @@ function AnswerResults({ answer }: { answer: OutpostAnswer }) {
   );
 }
 
-export function RequestPost({ post, answering, onAnswer, onCancel, onOpenChat }: RequestPostProps) {
+export function RequestPost({
+  post,
+  answering,
+  answerable,
+  onAnswer,
+  onCancel,
+  onOpenChat,
+}: RequestPostProps) {
   const state = post.state ?? 'sent';
   const to = receiverName(post);
   const chatId = post.toConversationId;
@@ -108,7 +116,7 @@ export function RequestPost({ post, answering, onAnswer, onCancel, onOpenChat }:
         </div>
       )}
       <div className="op-actions">
-        {state === 'needs_you' && chatId && (
+        {state === 'needs_you' && chatId && answerable && (
           <button
             type="button"
             className="op-link"

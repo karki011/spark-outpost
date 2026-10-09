@@ -1,8 +1,35 @@
-import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page, type Request } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import {
+  CANCEL_URL,
+  LONG_ASK,
+  MEMBER_URL,
+  NAME,
+  POSTS_URL,
+  TURN_TIMEOUT,
+  addChat,
+  asPairedPhone,
+  box,
+  chip,
+  openOutpost,
+  outpostPage,
+  outpostRow,
+  outpostsSection,
+  post,
+  postNotes,
+  requestsTo,
+  say,
+  seeded,
+  sendButton,
+  sheet,
+  sidebar,
+  stateOf,
+  strip,
+  thread,
+  toast,
+} from './outposts-kit.ts';
 import {
   expectInsideViewport,
   expectNoSidewaysScroll,
@@ -11,87 +38,11 @@ import {
 } from './responsive-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 
-const NAME = 'Orders launch';
-const TURN_TIMEOUT = 45_000;
-const LONG_ASK = Array.from({ length: 220 }, (_, index) => `word${index}`).join(' ');
-const POSTS_URL = /\/api\/outposts\/[^/]+\/posts$/;
-const CANCEL_URL = /\/api\/outposts\/[^/]+\/posts\/[^/]+\/cancel$/;
-const MEMBER_URL = /\/api\/outposts\/[^/]+\/members\/[^/]+$/;
-
-interface Member {
-  conversationId: string;
-  handle: string;
-}
-
 test.beforeEach(async ({ page }) => {
   test.slow();
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1400, height: 900 });
 });
-
-const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
-const outpostsSection = (page: Page) => sidebar(page).getByRole('region', { name: 'Outposts' });
-const outpostRow = (page: Page, name: string) =>
-  outpostsSection(page).getByRole('button', { name: new RegExp(`^${name}`) });
-const outpostPage = (page: Page, name: string) =>
-  page.getByRole('main', { name: `Outpost ${name}` });
-const box = (page: Page) => page.getByRole('combobox', { name: 'Message the outpost' });
-const sendButton = (page: Page) => page.locator('.op-send');
-const thread = (page: Page) => page.getByRole('list', { name: 'Outpost thread' });
-const post = (page: Page, text: string) => thread(page).locator('.op-post', { hasText: text });
-const stateOf = (item: Locator) => item.locator('.op-state');
-const strip = (page: Page) => page.getByRole('toolbar', { name: 'Chats in this outpost' });
-const chip = (page: Page, handle: string) =>
-  strip(page).getByRole('button', { name: new RegExp(`^@${handle}\\b`) });
-const sheet = (page: Page, name: string) => page.getByRole('dialog', { name });
-const toast = (page: Page, text: string) =>
-  sidebar(page).getByRole('status').filter({ hasText: text });
-
-async function seeded(page: Page, handles: ('fe' | 'api')[] = ['fe', 'api']): Promise<void> {
-  const [frontend, api] = await seedChats([
-    { title: 'Frontend' },
-    { title: 'Orders API' },
-    { title: 'Docs site' },
-  ]);
-  if (!frontend || !api) throw new Error('The chats were not seeded.');
-  await openChats(page);
-  const chats = { fe: frontend, api };
-  const members: Member[] = handles.map((handle) => ({ conversationId: chats[handle], handle }));
-  const created = await page.request.post('/api/outposts', {
-    data: { id: randomUUID(), name: NAME, members },
-  });
-  expect(created.ok()).toBe(true);
-  await openChats(page);
-}
-
-async function openOutpost(page: Page, name = NAME): Promise<Locator> {
-  await outpostRow(page, name).click();
-  const main = outpostPage(page, name);
-  await expect(main).toBeVisible();
-  return main;
-}
-
-async function say(page: Page, text: string): Promise<void> {
-  await box(page).fill(text);
-  await box(page).press('Enter');
-}
-
-async function addChat(page: Page, dialog: Locator, title: string): Promise<Locator> {
-  await dialog.getByRole('button', { name: 'Add a chat' }).click();
-  await page
-    .getByRole('menu', { name: 'Add a chat' })
-    .getByRole('menuitemradio', { name: new RegExp(`^${title}`) })
-    .click();
-  return dialog.getByRole('textbox', { name: `Handle for ${title}` });
-}
-
-function requestsTo(page: Page, url: RegExp, method: string): Request[] {
-  const seen: Request[] = [];
-  page.on('request', (request) => {
-    if (request.method() === method && url.test(request.url())) seen.push(request);
-  });
-  return seen;
-}
 
 test('creates an outpost from the sidebar with a name, two chats and their handles', async ({
   page,
@@ -163,6 +114,7 @@ test('typing @ offers the handles and the send button says what will happen', as
 
   await box(page).fill('The orders response is now paged.');
   await expect(sendButton(page)).toHaveText('Post note');
+  await expect(page.locator('.op-hint')).toHaveText('A note starts no work.');
   await box(page).fill('@nobody hello');
   await expect(page.locator('.op-hint')).toHaveText(
     'No chat here is called @nobody. This posts as a note.',
@@ -223,7 +175,7 @@ test('a Needs you request is answered from the main message box', async ({ page 
   await expect(stateOf(request)).toHaveText('Needs you', { timeout: TURN_TIMEOUT });
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(`${NAME}, 1 needs you`);
 
-  await request.getByRole('button', { name: 'Answer' }).click();
+  await request.getByRole('button', { name: 'Answer', exact: true }).click();
   const answerBox = page.getByRole('combobox', { name: 'Answer @api' });
   await expect(answerBox).toBeFocused();
   await expect(page.locator('.op-answering')).toHaveText(/Answering\s*@api/);
@@ -313,12 +265,16 @@ test('the member strip moves with the arrow keys and opens a chat', async ({ pag
 test('a member chat shows the outpost chip and a From you header that opens the post', async ({
   page,
 }) => {
-  await seeded(page);
+  const outpostId = await seeded(page);
   await openOutpost(page);
   await say(page, '@api List the order fields');
   await expect(stateOf(post(page, 'List the order fields'))).toHaveText('Answered', {
     timeout: TURN_TIMEOUT,
   });
+  await postNotes(page, outpostId, 16);
+  await expect(post(page, 'Filler 16')).toBeInViewport();
+  await expect(post(page, 'List the order fields')).not.toBeInViewport();
+  await thread(page).evaluate((list) => list.closest('.thread')?.scrollTo(0, 0));
   await post(page, 'List the order fields')
     .getByRole('button', { name: 'Open @api in chat' })
     .click();
@@ -331,12 +287,22 @@ test('a member chat shows the outpost chip and a From you header that opens the 
   const header = page.locator('.bubble.from', { hasText: 'List the order fields' });
   await expect(header.locator('.from-head b')).toHaveText('From you');
   await expect(header.locator('.from-where')).toContainText(NAME);
-  await expect(page.locator('.msg.me', { hasText: 'List the order fields' })).toHaveCount(0);
+  await expect(page.locator('.msg.me .bubble', { hasText: 'List the order fields' })).toHaveCount(
+    1,
+  );
+  await expect(page.locator('.msg.me .bubble:not(.from)')).toHaveCount(0);
+  await expect(header).not.toContainText('outpost-request');
+  await expect(header).not.toContainText('[From the user');
 
   await header.getByRole('button', { name: 'Open in outpost' }).click();
   await expect(outpostPage(page, NAME)).toBeVisible();
   await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
   await expect(post(page, 'List the order fields')).toBeInViewport();
+  await expect(post(page, 'List the order fields')).toHaveClass(/\bflash\b/);
+  await expect(post(page, 'Filler 16')).not.toBeInViewport();
+  await expect(outpostPage(page, NAME).getByRole('button', { name: 'Jump to latest' })).toHaveClass(
+    /\bshow\b/,
+  );
 
   await chip(page, 'api').click();
   await memberChip.click();
@@ -463,6 +429,33 @@ test('adds a chat to an outpost from its row menu with the keyboard', async ({ p
       .getByRole('menu', { name: 'Options for Docs site' })
       .getByRole('menuitem', { name: 'Add to outpost' }),
   ).toHaveCount(0);
+});
+
+test('a paired phone renames and pauses but cannot create, delete or change the chats', async ({
+  page,
+}) => {
+  await asPairedPhone(page);
+  await seeded(page);
+  await expect(outpostRow(page, NAME)).toBeVisible();
+  await expect(outpostsSection(page).getByRole('button', { name: 'New outpost' })).toHaveCount(0);
+  await sidebar(page).getByRole('button', { name: 'Options for Docs site' }).click();
+  const menu = page.getByRole('menu', { name: 'Options for Docs site' });
+  await expect(menu.getByRole('menuitem').first()).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Add to outpost' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  const main = await openOutpost(page);
+  await expect(main.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await main.getByRole('button', { name: 'Edit outpost' }).click();
+  const dialog = sheet(page, 'Edit outpost');
+  await expect(dialog.getByRole('textbox')).toHaveCount(1);
+  await expect(dialog.getByRole('button', { name: 'Add a chat' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /^Remove / })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Hold to delete outpost' })).toHaveCount(0);
+  await expect(dialog).toContainText('Chats and handles are changed on your Mac.');
+  await dialog.getByRole('textbox', { name: /^Name/ }).fill('Orders relaunch');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(outpostPage(page, 'Orders relaunch')).toBeVisible();
 });
 
 test('an outpost fits a phone with no sideways page scroll', async ({ browser, page }) => {

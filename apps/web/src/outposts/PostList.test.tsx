@@ -19,11 +19,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function list(posts: OutpostPost[], answeringId: string | null = null) {
+function list(posts: OutpostPost[], answeringId: string | null = null, jumpTo?: string) {
   return (
     <PostList
       items={threadItems(posts)}
       answeringId={answeringId}
+      jumpTo={jumpTo}
       empty={<p>Nothing here yet</p>}
       onAnswer={vi.fn()}
       onCancel={vi.fn()}
@@ -107,5 +108,25 @@ describe('PostList', () => {
       .getAllByRole('button', { name: 'Answer' })
       .map((button) => button.getAttribute('aria-pressed'));
     expect(pressed).toEqual(['true', 'false']);
+  });
+
+  it('scrolls to the post it was opened for and flashes it', () => {
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+      scrolled.push(this);
+    };
+    const wanted = post(1, { body: 'First' });
+    render(list([wanted, post(2, { body: 'Second' })], null, wanted.id));
+    const [first, second] = screen.getAllByRole('listitem');
+    expect(scrolled).toEqual([first]);
+    expect(first?.classList.contains('flash')).toBe(true);
+    expect(second?.classList.contains('flash')).toBe(false);
+  });
+
+  it('stays at the latest post when it was not opened for one', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(list([post(1), post(2)]));
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

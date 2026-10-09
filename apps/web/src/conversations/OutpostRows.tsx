@@ -10,7 +10,7 @@ interface OutpostRowsProps {
   outposts: readonly Outpost[];
   openId: string | null;
   onOpen: (outpostId: string) => void;
-  onNew: () => void;
+  onNew?: (() => void) | undefined;
 }
 
 export function OutpostRows({ outposts, openId, onOpen, onNew }: OutpostRowsProps) {
@@ -18,15 +18,17 @@ export function OutpostRows({ outposts, openId, onOpen, onNew }: OutpostRowsProp
     <section aria-label="Outposts">
       <div className="sec">
         <span>Outposts</span>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="New outpost"
-          title="New outpost"
-          onClick={onNew}
-        >
-          <PlusIcon />
-        </button>
+        {onNew && (
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="New outpost"
+            title="New outpost"
+            onClick={onNew}
+          >
+            <PlusIcon />
+          </button>
+        )}
       </div>
       {outposts.length > 0 && (
         <ul className="rows">
