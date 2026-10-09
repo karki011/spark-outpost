@@ -27,6 +27,17 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | **Needs you**         | Spark card        | A card in one of its chats waits.                                      |
 | **Done** / **Failed** | Spark card        | Its latest request finished in the last hour / failed in the last day. |
 
+## Outpost requests
+
+| Status        | Means                                                             |
+| ------------- | ----------------------------------------------------------------- |
+| **Sent**      | The chat is busy, its last turn failed, or the outpost is paused. |
+| **Working**   | Its turn is running.                                              |
+| **Needs you** | The reply ends **Needs you: …**, or an approval card waits.       |
+| **Answered**  | The answer is under the request.                                  |
+| **Failed**    | The turn failed, or **Not delivered: …** says why.                |
+| **Cancelled** | You cancelled it or stopped its turn.                             |
+
 ## Jev on a reply
 
 Hover the chip on a reply.
@@ -80,6 +91,7 @@ Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on,
 | Critic fix rounds                    | 3                                        |
 | PR follow-up rounds per PR           | 3                                        |
 | Terminals open across all chats      | 12, each keeping 5,000 lines             |
+| Chats in an outpost                  | 50                                       |
 | Standing instructions for a Spark    | 2,000 characters                         |
 | Diff shown before **Load full file** | 2,000 lines; files over 1 MB stay folded |
 | Hold-to-confirm                      | 1.5 seconds; undo window 10 seconds      |

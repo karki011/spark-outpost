@@ -21,8 +21,6 @@ Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals
 
 ## Link a project
 
-Link a project so the agent can work on files.
-
 1. Above the message box, select **Choose project**.
 2. Pick a folder under **Recent**, or select **Choose a folder…**, then **Use this folder**.
 3. For another repo, select **Add another repo…**.
@@ -47,6 +45,8 @@ Or paste or drag files into the box.
 ## Share a chat with another chat
 
 Copy its link from **Chat actions → Copy chat link**, then paste into another chat. The agent can [read it](spark-tools.md), never change it.
+
+For several chats in one thread, use an [outpost](outposts.md).
 
 > **Tip:** Select **Talk to…** or type `@` to work with a [Spark](sparks.md).
 

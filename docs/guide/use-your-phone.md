@@ -14,4 +14,6 @@ You'll use Spark on your phone; work stays on the Mac. About 5 minutes. Needs Ta
 
 **Devices** renames or revokes a phone; **Remove old entry** clears a duplicate. **What the phone can do** holds the switches. There, **More** holds Phone and Settings; Map and Mac-only tools are hidden.
 
+Creating or deleting an [outpost](outposts.md) and changing its chats stay on the Mac.
+
 **Next:** [Answer an approval card](answer-approvals.md)
