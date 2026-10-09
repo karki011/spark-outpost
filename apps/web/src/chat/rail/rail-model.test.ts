@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_CONVERSATION_USAGE } from '@spark-outpost/contracts';
+import { EMPTY_CONVERSATION_USAGE, type ConversationDetail } from '@spark-outpost/contracts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { member, orchestration } from '../../crew/test-orchestration.ts';
-import { crewHeading, crewJob, finishedCrew, railRows, type RailFacts } from './rail-model.ts';
+import { tvCrew } from '../../crew/conversation-crew.ts';
+import {
+  crewHeading,
+  crewJob,
+  finishedCrew,
+  railCrew,
+  railRows,
+  type RailFacts,
+} from './rail-model.ts';
 
 const base: RailFacts = {
   repoNames: [],
@@ -175,5 +183,62 @@ describe('the crew of a finished turn', () => {
     const live = orchestration({ status: 'running', crew: [piece] });
     const agents = crewAgents(live);
     expect(finishedCrew(live, agents)).toEqual(agents);
+  });
+});
+
+describe('the crew the rail shows', () => {
+  const BUILD = '00000000-0000-4000-8000-000000000001';
+  const QUESTION = '00000000-0000-4000-8000-000000000009';
+  const bolt = member({ name: 'Bolt' });
+  const hawk = member({
+    name: 'Hawk',
+    role: 'critic',
+    runId: '00000000-0000-4000-8000-0000000000a3',
+  });
+  const pip = (status: 'running' | 'succeeded') =>
+    member({ name: 'Pip', role: 'scout', runId: QUESTION, status });
+
+  function chat(build: 'running' | 'succeeded', question?: 'running' | 'succeeded') {
+    const turns = {
+      [BUILD]: orchestration({ status: build, crew: [bolt, hawk] }),
+      ...(question && {
+        [QUESTION]: orchestration({
+          runId: QUESTION,
+          status: question,
+          depth: 'direct',
+          crew: [pip(question)],
+        }),
+      }),
+    };
+    return {
+      runs: Object.keys(turns).map((id) => ({ id })),
+      orchestrations: turns,
+      activity: {},
+    } as unknown as ConversationDetail;
+  }
+
+  const names = (agents: readonly { name: string }[]) => agents.map((agent) => agent.name);
+
+  it('keeps the crew Agent TV shows after a later question, and while that question runs', () => {
+    for (const question of ['succeeded', 'running'] as const) {
+      const detail = chat('succeeded', question);
+      const view = railCrew(detail, question === 'running');
+      expect(names(view.list)).toEqual(['Jev', 'Bolt', 'Hawk']);
+      expect(names(view.list)).toEqual(names(tvCrew(detail)));
+      expect(view.stage).toEqual([]);
+    }
+  });
+
+  it('puts a crew that is still working on the stage instead of in the list', () => {
+    const view = railCrew(chat('running'), true);
+    expect(names(view.stage)).toEqual(['Jev', 'Bolt', 'Hawk']);
+    expect(view.list).toEqual([]);
+  });
+
+  it('shows the single agent of a chat that never had a crew, and nothing before a reply', () => {
+    const solo = { ...chat('succeeded', 'succeeded'), runs: [{ id: QUESTION }] };
+    expect(names(railCrew(solo as ConversationDetail, false).list)).toEqual(['Jev', 'Pip']);
+    const empty = { runs: [], orchestrations: {}, activity: {} } as unknown as ConversationDetail;
+    expect(railCrew(empty, false)).toEqual({ stage: [], list: [] });
   });
 });

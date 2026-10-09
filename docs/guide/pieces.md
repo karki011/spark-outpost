@@ -16,7 +16,7 @@ You'll watch the agents on a request, message one, and steer big work. About 2 m
 
 Agent TV keeps following its chat while you open another.
 
-After a turn, the context rail keeps its crew: role, model, result and cost.
+After a turn, the context rail keeps Agent TV's crew: role, model, result and cost.
 
 ## Message a crew member
 

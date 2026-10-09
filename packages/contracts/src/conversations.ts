@@ -99,6 +99,7 @@ export const conversationSummarySchema = z.object({
   category: categorySchema.nullable().default(null),
   branch: z.string().nullable().optional(),
   teammate: teammateTagSchema.nullable().optional(),
+  pullRequestMerged: z.boolean().optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 

@@ -94,6 +94,10 @@ const summaryQuery = `
       r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
     ) AS needs_input,
     fl.flag_title,
+    COALESCE((
+      SELECT bool_or(w.pr_state = 'merged') AND NOT bool_or(w.pr_state = 'open')
+      FROM pr_watches w WHERE w.conversation_id = c.id
+    ), false) AS pull_request_merged,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_plan,
     p.pending_provider, p.pending_pr_feedback,

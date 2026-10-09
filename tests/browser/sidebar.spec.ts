@@ -2,9 +2,13 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
+import { useSystemTheme } from './docs-seed.ts';
+import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { openChats } from './navigation.ts';
+
+const REVIEW_SHOTS = process.env.REVIEW_SHOTS ?? '';
 
 let base = '';
 
@@ -260,4 +264,46 @@ test('collapses the sidebar, remembers it, and opens a drawer on small screens',
     .getByRole('button', { name: /^Chats/ })
     .click();
   await expect(page.locator('.chat-title')).toHaveText('Second chat');
+});
+
+test('a chat whose pull request merged shows a merged icon beside its title', async ({ page }) => {
+  await useSystemTheme(page);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await seedPrFollowUp();
+  await openChats(page);
+  const chat = row(page, 'Fix the cents parser');
+  await expect(chat).toBeVisible();
+  const merged = chat.getByRole('img', { name: 'Pull request merged' });
+  await expect(merged).toHaveCount(0);
+
+  const db = openTestDb();
+  try {
+    await db.query(`UPDATE pr_watches SET pr_state = 'merged', phase = 'done'`);
+  } finally {
+    await db.end();
+  }
+  await page.reload();
+  await expect(merged).toBeVisible();
+  const title = (await chat.locator('.tt').boundingBox())!;
+  const icon = (await merged.boundingBox())!;
+  const line = (await chat.boundingBox())!;
+  expect(icon.x).toBeGreaterThanOrEqual(title.x + title.width);
+  expect(icon.x - (title.x + title.width)).toBeLessThanOrEqual(8);
+  expect(icon.x + icon.width).toBeLessThanOrEqual(line.x + line.width);
+  expect(await merged.evaluate((mark) => getComputedStyle(mark).color)).toBe(
+    await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('i'));
+      probe.style.color = 'var(--accent-text)';
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    }),
+  );
+
+  await merged.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Pull request merged');
+  if (REVIEW_SHOTS) {
+    mkdirSync(REVIEW_SHOTS, { recursive: true });
+    await page.screenshot({ path: `${REVIEW_SHOTS}/sidebar-merged-icon.png` });
+  }
 });

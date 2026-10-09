@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { categoryLabel, type ConversationSummary } from '@spark-outpost/contracts';
-import { DotsIcon, GripIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
+import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
+import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowState, type RowTone } from './row-state.ts';
@@ -54,6 +55,26 @@ function StatusMark({ tone }: { tone: RowTone }) {
     );
   }
   return null;
+}
+
+const MERGED_LABEL = 'Pull request merged';
+
+function MergedMark() {
+  const tip = useTooltip(MERGED_LABEL);
+  return (
+    <>
+      <span
+        className="row-merged"
+        role="img"
+        aria-label={MERGED_LABEL}
+        title=""
+        {...tip.triggerProps}
+      >
+        <MergedIcon />
+      </span>
+      {tip.tooltip}
+    </>
+  );
 }
 
 interface RenameInputProps {
@@ -178,6 +199,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
     state.label,
+    chat.pullRequestMerged ? MERGED_LABEL : null,
     recencyLabel(chat.updatedAt),
   ].filter(Boolean);
   const content = (
@@ -232,6 +254,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
                 running={marquee.running}
                 titleRef={marquee.ref}
               />
+              {chat.pullRequestMerged && <MergedMark />}
             </span>
             {state.sub && <small className="sub">{state.sub}</small>}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}

@@ -36,6 +36,7 @@ export const SPEC_GROUPS = {
     'chat-clean',
     'chat-questions',
     'chat-rail',
+    'chat-rail-crew',
     'chat-send',
     'chat-share',
     'chat-ticks',

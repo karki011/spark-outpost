@@ -10,9 +10,8 @@ import type {
   TaskOverview,
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
-import { crewAgents } from '../../crew/crew-projection.ts';
 import { chatModelName } from '../../crew/auto-route.ts';
-import { latestOrchestration, orchestrationsInOrder } from '../../crew/conversation-crew.ts';
+import { orchestrationsInOrder } from '../../crew/conversation-crew.ts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
@@ -29,7 +28,7 @@ import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTasks } from './RailTasks.tsx';
 import { RailTv } from './RailTv.tsx';
-import { finishedCrew, railRows, type RailAction } from './rail-model.ts';
+import { railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
 interface ChatRailProps {
@@ -125,10 +124,7 @@ function OpenRail({
     hasTask: taskId !== null,
   });
   const openTasks = useCallback(() => onTab('tasks'), [onTab]);
-  const orchestration = latestOrchestration(detail);
-  const members = orchestration ? crewAgents(orchestration, detail.activity) : [];
-  const agents = running ? members : [];
-  const crew = running || !orchestration ? [] : finishedCrew(orchestration, members);
+  const crew = railCrew(detail, running);
 
   const act = (action: RailAction) => {
     if (action.kind === 'project') requestProjectMenu(conversationId);
@@ -146,9 +142,11 @@ function OpenRail({
       <RailSummary rows={rows} provider={provider} onAction={act} />
       {task && <RailTasks task={task} onOpen={openTasks} />}
       <AnimatePresence>
-        {agents.length > 0 && <RailTv key="tv" conversationId={conversationId} agents={agents} />}
+        {crew.stage.length > 0 && (
+          <RailTv key="tv" conversationId={conversationId} agents={crew.stage} />
+        )}
       </AnimatePresence>
-      {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} />}
+      {crew.list.length > 0 && <RailCrew conversationId={conversationId} agents={crew.list} />}
     </section>
   );
 }
