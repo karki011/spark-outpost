@@ -9,15 +9,13 @@ import type { PeerAgent } from '../src/outposts/ports.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { LAUNCH_TOKEN, startA2a, type A2aHarness } from './a2a-harness.ts';
 import {
-  linkStartedRun,
-  memberChat,
-  outpostRow,
+  startedRun as runOf,
   postColumns,
   queueRows,
   replyRow,
-  requestRow,
   setRunStatus,
 } from './a2a-fixtures.ts';
+import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -29,8 +27,8 @@ let client: Client;
 beforeEach(async () => {
   t = await createTestDb();
   a2a = await startA2a(t);
-  outpostId = await outpostRow(t);
-  api = await memberChat(t, outpostId, 'api');
+  outpostId = await createOutpostRow(t);
+  api = await addMemberChat(t, outpostId, 'api');
   client = await a2a.client(api);
 });
 
@@ -42,7 +40,7 @@ afterEach(async () => {
 type Stream = AsyncGenerator<StreamResponse, void, undefined>;
 
 function storedRequest(body = 'What does the orders endpoint return?'): Promise<string> {
-  return requestRow(t.db, { outpostId, toConversationId: api, toHandle: 'api', body });
+  return insertRequestRow(t.db, { outpostId, toConversationId: api, toHandle: 'api', body });
 }
 
 function sendParams(postId: string) {
@@ -79,10 +77,8 @@ async function nextStatus(stream: Stream) {
   };
 }
 
-async function startedRun(postId: string): Promise<string> {
-  const runId = await linkStartedRun(t.db, postId);
-  if (runId === null) throw new Error('The request did not start a turn.');
-  return runId;
+function startedRun(postId: string): Promise<string> {
+  return runOf(t.db, postId);
 }
 
 describe('SendStreamingMessage', () => {

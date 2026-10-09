@@ -4,65 +4,8 @@ import { createConversation } from '../src/persistence/conversations.ts';
 import type { Db } from '../src/persistence/db.ts';
 import type { TestDb } from './support.ts';
 
-export async function outpostRow(t: TestDb, name = 'Orders launch'): Promise<string> {
-  const id = randomUUID();
-  await t.db.query('INSERT INTO outposts (id, workspace_id, name) VALUES ($1, $2, $3)', [
-    id,
-    t.workspaceId,
-    name,
-  ]);
-  return id;
-}
-
 export async function chatRow(t: TestDb): Promise<string> {
   return (await createConversation(t.db, t.workspaceId, randomUUID())).id;
-}
-
-export async function memberChat(t: TestDb, outpostId: string, handle: string): Promise<string> {
-  const chatId = await chatRow(t);
-  await t.db.query(
-    `INSERT INTO outpost_members (outpost_id, conversation_id, handle, position)
-     VALUES ($1, $2, $3, (SELECT count(*) FROM outpost_members WHERE outpost_id = $1))`,
-    [outpostId, chatId, handle],
-  );
-  return chatId;
-}
-
-export interface RequestRow {
-  outpostId: string;
-  toConversationId: string;
-  toHandle: string;
-  body?: string;
-  fromUser?: boolean;
-  guest?: boolean;
-}
-
-export async function requestRow(db: Db, request: RequestRow): Promise<string> {
-  const id = randomUUID();
-  await db.query(
-    `INSERT INTO outpost_posts
-       (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id, guest)
-     VALUES ($1, $2, 'request', $3, $4, $5, $6, $7)`,
-    [
-      id,
-      request.outpostId,
-      request.body ?? 'What does the orders endpoint return?',
-      request.fromUser ?? true,
-      request.toHandle,
-      request.toConversationId,
-      request.guest ?? false,
-    ],
-  );
-  return id;
-}
-
-export async function linkStartedRun(db: Db, postId: string): Promise<string | null> {
-  const { rows } = await db.query<{ run_id: string }>(
-    `UPDATE outpost_posts p SET run_id = r.id FROM runs r
-     WHERE p.id = $1 AND r.user_message_id = p.id RETURNING p.run_id`,
-    [postId],
-  );
-  return rows[0]?.run_id ?? null;
 }
 
 export async function setRunStatus(db: Db, runId: string, status: RunStatus): Promise<void> {
@@ -104,4 +47,10 @@ export async function queueRows(db: Db, chatId: string) {
     [chatId],
   );
   return rows;
+}
+
+export async function startedRun(db: Db, postId: string): Promise<string> {
+  const runId = (await postColumns(db, postId))?.run_id ?? null;
+  if (runId === null) throw new Error('The request did not start a turn.');
+  return runId;
 }

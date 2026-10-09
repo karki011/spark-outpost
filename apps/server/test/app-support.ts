@@ -7,6 +7,7 @@ import type { CommandResult, RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
+import { outpostDelivery, type OutpostDelivery } from '../src/outposts/mount.ts';
 import { PreviewServers } from '../src/preview/servers.ts';
 import { fakePreviewRuntime } from './preview-support.ts';
 import type { TestDb } from './support.ts';
@@ -25,6 +26,8 @@ export interface TestAppOptions {
   agentRuntime?: AppOptions['agentRuntime'];
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
+  outposts?: OutpostDelivery;
+  port?: number;
   githubApiUrl?: string;
   githubApp?: AppOptions['githubApp'];
   githubSignInSleep?: AppOptions['githubSignInSleep'];
@@ -58,6 +61,7 @@ export const installedClis: RunCommand = async (file, args) => {
 };
 
 export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOptions {
+  const port = options.port ?? PORT;
   return {
     db: t.db,
     hub: new RunEventHub(),
@@ -65,7 +69,7 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     ...(options.fixedRunProvider === null
       ? {}
       : { fixedRunProvider: options.fixedRunProvider ?? 'fake' }),
-    port: PORT,
+    port,
     allowedOrigins: [ORIGIN],
     apiToken: API_TOKEN,
     secrets: options.secrets ?? memorySecretStore(),
@@ -81,6 +85,7 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     previews:
       options.previews ?? new PreviewServers(t.db, t.workspaceId, fakePreviewRuntime().runtime),
     appEvents: options.appEvents ?? new AppEventFeed(),
+    outposts: options.outposts ?? outpostDelivery({ db: t.db, port, apiToken: API_TOKEN }),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
     githubApiUrl: options.githubApiUrl,

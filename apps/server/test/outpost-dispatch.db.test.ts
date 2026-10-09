@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dispatchUnsent, startDispatcher } from '../src/a2a/dispatcher.ts';
 import type { PeerAgent, SendOutcome } from '../src/outposts/ports.ts';
 import { acceptTask } from '../src/persistence/outpost-tasks.ts';
-import { memberChat, outpostRow, postColumns, requestRow } from './a2a-fixtures.ts';
+import { postColumns } from './a2a-fixtures.ts';
+import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
 import { fakePeerAgent } from './fake-peer-agent.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
@@ -13,8 +14,8 @@ let api: string;
 
 beforeEach(async () => {
   t = await createTestDb();
-  outpostId = await outpostRow(t);
-  api = await memberChat(t, outpostId, 'api');
+  outpostId = await createOutpostRow(t);
+  api = await addMemberChat(t, outpostId, 'api');
 });
 
 afterEach(async () => {
@@ -46,14 +47,14 @@ function deps(peer: PeerAgent) {
 }
 
 function request(body: string, toConversationId = api, toHandle = 'api') {
-  return requestRow(t.db, { outpostId, toConversationId, toHandle, body });
+  return insertRequestRow(t.db, { outpostId, toConversationId, toHandle, body });
 }
 
 const changed: AppEvent = { kind: 'outpost_changed', conversationId: null, runId: null };
 
 describe('sending unsent requests', () => {
   it('sends each unsent request once, oldest first, with its row’s text', async () => {
-    const web = await memberChat(t, outpostId, 'web');
+    const web = await addMemberChat(t, outpostId, 'web');
     const first = await request('first');
     const second = await request('second', web, 'web');
     const third = await request('third');
@@ -71,10 +72,10 @@ describe('sending unsent requests', () => {
   });
 
   it('holds the requests of a paused outpost and sends them once it resumes', async () => {
-    const other = await outpostRow(t, 'Other');
-    const docs = await memberChat(t, other, 'docs');
+    const other = await createOutpostRow(t, 'Other');
+    const docs = await addMemberChat(t, other, 'docs');
     const held = await request('held');
-    const free = await requestRow(t.db, {
+    const free = await insertRequestRow(t.db, {
       outpostId: other,
       toConversationId: docs,
       toHandle: 'docs',
@@ -114,7 +115,7 @@ describe('sending unsent requests', () => {
       `UPDATE outpost_posts SET closed_state = 'cancelled', closed_at = now() WHERE id = $1`,
       [closed],
     );
-    const web = await memberChat(t, outpostId, 'web');
+    const web = await addMemberChat(t, outpostId, 'web');
     await request('orphan', web, 'web');
     await t.db.query('DELETE FROM conversations WHERE id = $1', [web]);
     const peer = acceptingPeer();

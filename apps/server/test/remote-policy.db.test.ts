@@ -105,6 +105,22 @@ describe('never from a phone', () => {
     await phone.send('post', '/API/Terminal/Sessions/').expect(403);
   });
 
+  it('refuses the A2A endpoint and outpost membership, and lets the outpost page read and post', async () => {
+    const id = crypto.randomUUID();
+    await phone.get(`/api/a2a/chats/${id}/.well-known/agent-card.json`).expect(403);
+    await phone.send('post', `/api/a2a/chats/${id}`).expect(403);
+    await phone.send('post', '/api/outposts', { id, name: 'Orders', members: [] }).expect(403);
+    await phone.send('delete', `/api/outposts/${id}`).expect(403);
+    await phone.send('put', `/api/outposts/${id}/members/${id}`, { handle: 'api' }).expect(403);
+    await phone.send('delete', `/api/outposts/${id}/members/${id}`).expect(403);
+
+    await phone.get('/api/outposts').expect(200, []);
+    await phone.get(`/api/outposts/${id}`).expect(404);
+    await phone.send('patch', `/api/outposts/${id}`, { paused: true }).expect(404);
+    await phone.send('post', `/api/outposts/${id}/posts`, { id, text: 'note' }).expect(404);
+    await phone.send('post', `/api/outposts/${id}/posts/${id}/cancel`).expect(404);
+  });
+
   it('refuses terminal creation through shared conversation and ticket routes', async () => {
     await phone
       .send('post', '/api/conversations', { sessionType: 'terminal', title: 'Native' })

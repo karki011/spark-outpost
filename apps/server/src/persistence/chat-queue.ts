@@ -134,3 +134,15 @@ export async function takeQueued(
   );
   return rows[0] ? toQueued(rows[0]) : null;
 }
+
+export async function queuedOutpostPost(
+  db: Queryable,
+  conversationId: string,
+  id: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ outpost_post_id: string | null }>(
+    'SELECT outpost_post_id FROM chat_queue WHERE conversation_id = $1 AND id = $2',
+    [conversationId, id],
+  );
+  return rows[0]?.outpost_post_id ?? null;
+}
