@@ -24,6 +24,11 @@ export const SESSION_CASES = {
     publish: true,
     pull_requests: true,
   },
+  'chat in an outpost, nothing connected': {
+    ...NOTHING_AVAILABLE,
+    outpost: true,
+    outpost_draft: true,
+  },
   'everything connected, Browser pane': EVERYTHING_AVAILABLE,
 } satisfies Record<string, SparkAvailability>;
 

@@ -12,6 +12,13 @@ import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
+import type { StackGit } from '../outposts/ports.ts';
+import type { RequestWakes } from '../outposts/request-wait.ts';
+
+export interface OutpostToolDeps {
+  wakes: RequestWakes;
+  stackGit?: StackGit;
+}
 
 export interface SparkToolDeps {
   db: Db;
@@ -29,6 +36,7 @@ export interface SparkToolDeps {
   now?: () => Date;
   browser?: BrowserHost | undefined;
   shotDir?: string;
+  outposts?: OutpostToolDeps | undefined;
 }
 
 export interface ReplySoFar {
