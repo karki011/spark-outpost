@@ -6,10 +6,8 @@ import {
   type AgentModeOption,
   type ModePosture,
   type Approval,
-  type ApprovalOption,
   type RunEvent,
 } from '@spark-outpost/contracts';
-import { normalizeCommand } from '../approvals/commands.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
@@ -27,7 +25,6 @@ import {
   type ApprovalRequest,
   type DecideOptions,
   type Decision,
-  type RunRule,
   type RunRules,
 } from '../approvals/decide.ts';
 import {
@@ -51,6 +48,14 @@ import { runEvents } from './run-events.ts';
 import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
+import {
+  allowOption,
+  askedOptions,
+  rejectOption,
+  toRule,
+  userNote,
+  type Asking,
+} from './approval-options.ts';
 
 const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -105,77 +110,15 @@ export interface GateDeps {
   publish?: PublishGrant | undefined;
 }
 
-export type Asking = Pick<
-  Extract<Decision, { verdict: 'ask' }>,
-  | 'forcePush'
-  | 'instructionFiles'
-  | 'gitControl'
-  | 'because'
-  | 'observed'
-  | 'sendsTo'
-  | 'secretSend'
-  | 'secretFiles'
->;
-
-function onceOnly(asking: Asking): boolean {
-  return Boolean(
-    asking.forcePush || asking.secretSend || asking.gitControl || asking.instructionFiles,
-  );
-}
-
-const PROTECTED_NAMES: Partial<Record<ApprovalOption['kind'], string>> = {
-  allow_once: 'Allow once',
-  reject_once: 'Deny',
-};
-
-function askedOptions(options: readonly ApprovalOption[], asking: Asking): ApprovalOption[] {
-  if (!onceOnly(asking)) return [...options];
-  const once = options.filter((option) => option.kind !== 'allow_always');
-  if (!asking.instructionFiles) return once;
-  return once.map((option) => ({ ...option, name: PROTECTED_NAMES[option.kind] ?? option.name }));
-}
-
 async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
   const root = request.roots[0]?.path;
   if (!root || !request.command || forcePush(request.command)?.kind !== 'ask') return null;
   return defaultBranch(root).catch(() => null);
 }
 
-function allowOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
-  return (
-    options.find((option) => option.kind === 'allow_once') ??
-    options.find((option) => option.kind === 'allow_always')
-  );
-}
-
 function policyBlocked(answer: GateAnswer): GateAnswer {
   if (answer.outcome !== 'selected') return answer;
   return { ...answer, denial: policyDenial(answer.note) };
-}
-
-function rejectOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
-  return (
-    options.find((option) => option.kind === 'reject_once') ??
-    options.find((option) => option.kind === 'reject_always')
-  );
-}
-
-function toRule(approval: Pick<Approval, 'kind' | 'title' | 'payload'>): RunRule | null {
-  if (approval.kind === 'execute') {
-    return approval.payload.command
-      ? { kind: 'execute', command: normalizeCommand(approval.payload.command) }
-      : null;
-  }
-  if (approval.kind === 'edit') return { kind: 'edit' };
-  return { kind: 'other', title: approval.title };
-}
-
-function userNote(approval: Approval, what: string): string {
-  if (approval.status === 'denied') return `Denied: ${what} (you denied it)`;
-  if (approval.scope === 'run') return `Allowed ${what} (you allowed it for this run)`;
-  if (approval.scope === 'chat') return `Allowed ${what} (you allowed it for this chat)`;
-  if (approval.scope === 'project') return `Allowed ${what} (you always allow it in this project)`;
-  return `Allowed ${what} (you allowed it)`;
 }
 
 export function createApprovalGate(deps: GateDeps): PermissionGate {
