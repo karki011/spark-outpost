@@ -1,6 +1,6 @@
 # Remote control: rename, and Spark to Spark
 
-Status: design only. Nothing here is built. Written 2026-10-09 on `spark/remote-control`.
+Status: Part 1 (the rename) is built, without lane R6; the guide page keeps the file name `use-your-phone.md` because no redirect file exists. Part 2 is design only. Written 2026-10-09 on `spark/remote-control`.
 
 The owner asked for two things:
 

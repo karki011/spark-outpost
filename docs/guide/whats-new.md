@@ -12,11 +12,12 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **Phone** is now **Remote control**. Paired devices stay paired.                                                                    | See [remote control](use-your-phone.md).    |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |
 | The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.           |
 | **Agent TV**, **Browser** and **Terminal** moved into the chat's **…** menu. Its dot means agents or a hidden terminal are running. | No action.                                  |
-| A paired phone can save a passkey and sign in again in another browser.                                                             | See [your phone](use-your-phone.md).        |
+| A paired device can save a passkey and sign in again in another browser.                                                            | See [remote control](use-your-phone.md).    |
 | Ticket moves use the status named Done, never Rejected or Cancelled. An unclear project leaves the ticket and flags it.             | Pick statuses in **Settings → Connectors**. |
 | Scout rests half hidden at the top and comes out when a chat is active. **Spark Island size** adds **Extra large**.                 | See [Spark Island](desktop-companion.md).   |
 | **Make the change** is gone. Replies, your messages and the message box share one centred column; replies sit under the agent name. | Ask for the change in your next message.    |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                           | Answer in your next message.                |
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
 | Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |
-| New chats start on **Auto**. Builders and pieces stay on the chat's provider. **Settings → Models** is a table.                     | See [model routing](model-routing.md).      |
