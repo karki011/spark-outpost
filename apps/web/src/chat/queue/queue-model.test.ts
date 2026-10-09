@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { QueuedMessage } from '@spark-outpost/contracts';
-import { inOrder, movedIds, queueMode, queueNote, queuedItem } from './queue-model.ts';
+import { canEdit, inOrder, movedIds, queueMode, queueNote, queuedItem } from './queue-model.ts';
 
 function item(id: string, position: number): QueuedMessage {
   return { id, content: id, position, continueRunId: null, createdAt: '2026-10-02T10:00:00Z' };
@@ -37,6 +37,12 @@ describe('queue model', () => {
       { ...items[0], position: 2 },
       { ...items[1], position: 3 },
     ]);
+  });
+
+  it('lets the user edit their own queued message and not a request from an outpost', () => {
+    expect(canEdit(item('a', 1))).toBe(true);
+    expect(canEdit({ ...item('a', 1), outpostPostId: null })).toBe(true);
+    expect(canEdit({ ...item('a', 1), outpostPostId: 'post-1' })).toBe(false);
   });
 
   it('adds a new message after the last one', () => {

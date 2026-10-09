@@ -61,8 +61,8 @@ export function MenuItem({
 }
 
 function moveFocus(menu: HTMLElement, key: string): void {
-  const items = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
-  const index = items.indexOf(document.activeElement as HTMLButtonElement);
+  const items = [...menu.querySelectorAll<HTMLElement>('button:not(:disabled), input')];
+  const index = items.indexOf(document.activeElement as HTMLElement);
   const last = items.length - 1;
   const next =
     key === 'Home' ? 0 : key === 'End' ? last : key === 'ArrowDown' ? index + 1 : index - 1;
@@ -93,7 +93,11 @@ export function MenuShell({ anchor, label, page, onClose, onKey, children }: Men
   }, [anchor, page]);
 
   useEffect(() => {
-    menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    const menu = menuRef.current;
+    const first =
+      menu?.querySelector<HTMLElement>('[data-menu-focus]') ??
+      menu?.querySelector<HTMLElement>('button:not(:disabled)');
+    first?.focus();
   }, [page]);
 
   useEffect(() => {

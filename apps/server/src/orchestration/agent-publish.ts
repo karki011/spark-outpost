@@ -1,4 +1,5 @@
 import { publishRequested } from '../approvals/publish-policy.ts';
+import { userText } from '../outposts/user-asked.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
 import { watchPullRequest } from '../persistence/pr-watches.ts';
@@ -34,7 +35,7 @@ export async function agentPublishPlan(s: Session): Promise<PublishPlan | null> 
 }
 
 export function publishAsked(s: Session): boolean {
-  return s.input.followUpRound === true || publishRequested(s.input.userRequest);
+  return s.input.followUpRound === true || publishRequested(userText(s.input));
 }
 
 export interface PublishFacts {

@@ -2,7 +2,7 @@ import './queue.css';
 import { useId, useState, type KeyboardEvent } from 'react';
 import type { QueuedMessage } from '@spark-outpost/contracts';
 import { ArrowDownIcon, ArrowUpIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
-import { queuedCount, queueNote, type QueueMode } from './queue-model.ts';
+import { canEdit, queuedCount, queueNote, type QueueMode } from './queue-model.ts';
 import type { ChatQueue } from './use-chat-queue.ts';
 
 interface QueueStripProps {
@@ -74,12 +74,13 @@ interface ItemProps {
 
 function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
   const label = `Queued message ${index + 1}`;
+  const editable = canEdit(item);
   return (
     <li className="qs-item" aria-label={label}>
       <span className="qs-n" aria-hidden="true">
         {index + 1}
       </span>
-      {editing ? (
+      {editing && editable ? (
         <Editor
           item={item}
           onSave={(content) => {
@@ -92,17 +93,20 @@ function QueueItem({ item, index, count, queue, editing, onEdit }: ItemProps) {
         <>
           <span className="qs-text" title={item.content}>
             {item.continueRunId && <b className="qs-tag">Continue · </b>}
+            {!editable && <b className="qs-tag">Outpost request · </b>}
             {item.content}
           </span>
           <span className="qs-acts">
-            <button
-              type="button"
-              className="qs-btn"
-              aria-label="Edit"
-              onClick={() => onEdit(item.id)}
-            >
-              <PenIcon />
-            </button>
+            {editable && (
+              <button
+                type="button"
+                className="qs-btn"
+                aria-label="Edit"
+                onClick={() => onEdit(item.id)}
+              >
+                <PenIcon />
+              </button>
+            )}
             <button
               type="button"
               className="qs-btn"

@@ -55,6 +55,11 @@ export interface RunRow {
   cached_write_tokens: number | null;
   thought_tokens: number | null;
   cost_source?: CostSource | null;
+  outpost_post_id?: string | null;
+  outpost_id?: string | null;
+  outpost_name?: string | null;
+  outpost_from_handle?: string | null;
+  outpost_from_user?: boolean | null;
   mode?: RunMode | null;
   picked_mode?: RunMode | null;
   start_as?: StartAs | null;
@@ -95,6 +100,9 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   pull_request_merged: boolean;
   title_source: string;
   category: string | null;
+  outpost_id?: string | null;
+  outpost_name?: string | null;
+  outpost_handle?: string | null;
   teammate_id: string | null;
   teammate_name: string | null;
   teammate_role: string | null;
@@ -149,6 +157,28 @@ export function toRun(row: RunRow): Run {
     interruptionChoice: row.interruption_choice ?? null,
     modelSwitch: modelSwitchSchema.safeParse(row.model_switch).data ?? null,
     errorDetails: row.error_details ?? null,
+    ...runOutpost(row),
+  };
+}
+
+export const RUN_OUTPOST_COLUMNS = `post.id AS outpost_post_id, post.outpost_id,
+  room.name AS outpost_name, post.from_handle AS outpost_from_handle,
+  post.from_user AS outpost_from_user`;
+
+export const RUN_OUTPOST_JOINS = `LEFT JOIN outpost_posts post
+    ON r.source = 'outpost' AND post.id = r.user_message_id
+  LEFT JOIN outposts room ON room.id = post.outpost_id`;
+
+function runOutpost(row: RunRow): Pick<Run, 'outpost'> {
+  if (!row.outpost_post_id || !row.outpost_id || typeof row.outpost_name !== 'string') return {};
+  return {
+    outpost: {
+      postId: row.outpost_post_id,
+      outpostId: row.outpost_id,
+      outpostName: row.outpost_name,
+      fromHandle: row.outpost_from_handle ?? null,
+      fromUser: row.outpost_from_user === true,
+    },
   };
 }
 
@@ -210,6 +240,9 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),
     pullRequestMerged: row.pull_request_merged,
+    ...(row.outpost_id && row.outpost_handle && typeof row.outpost_name === 'string'
+      ? { outpost: { id: row.outpost_id, name: row.outpost_name, handle: row.outpost_handle } }
+      : {}),
   };
 }
 

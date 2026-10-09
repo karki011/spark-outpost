@@ -55,6 +55,13 @@ export interface RunInput {
   continuesRunId?: string | null;
   modelSwitch?: ModelSwitch | null;
   followUpRound?: boolean;
+  outpostRequest?: OutpostRequest | null;
+}
+
+export interface OutpostRequest {
+  postId: string;
+  outpostName: string | null;
+  fromUser: boolean;
 }
 
 export interface ChatSeed {
@@ -84,6 +91,9 @@ interface RunRow {
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
   follow_up_round: boolean | null;
+  outpost_run: boolean | null;
+  outpost_from_user: boolean | null;
+  outpost_name: string | null;
   agent_mode: string | null;
   config_values: ConfigValues | null;
   parent_run_id: string | null;
@@ -161,6 +171,9 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider, m.content,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'pr_follow_up' AS follow_up_round,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'outpost' AS outpost_run,
+            op.from_user AS outpost_from_user, o.name AS outpost_name,
             r.model AS run_model, r.effort AS run_effort,
             r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
@@ -195,6 +208,8 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
      FROM runs r
      JOIN messages m ON m.id = r.user_message_id
      JOIN conversations c ON c.id = r.conversation_id
+     LEFT JOIN outpost_posts op ON op.id = r.user_message_id
+     LEFT JOIN outposts o ON o.id = op.outpost_id
      LEFT JOIN provider_connections pc
        ON pc.workspace_id = c.workspace_id AND pc.provider = r.provider
       AND pc.disconnected_at IS NULL
@@ -228,6 +243,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     parentRunId: null,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    outpostRequest: outpostRequestOf(row),
     role: row.run_role,
     copyOf: null,
     askTitle: row.title_source !== 'user',
@@ -265,6 +281,15 @@ async function chatSeed(
   return { text: stored.summary, historyFrom: covered + 1 };
 }
 
+function outpostRequestOf(row: RunRow): OutpostRequest | null {
+  if (row.outpost_run !== true) return null;
+  return {
+    postId: row.user_message_id,
+    outpostName: row.outpost_name,
+    fromUser: row.outpost_from_user === true,
+  };
+}
+
 function settingsOf(row: RunRow): AgentSettings {
   const model = row.run_model ?? usableDefault(row.provider, row.model);
   return {
@@ -299,6 +324,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     parentRunId: row.parent_run_id,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    outpostRequest: outpostRequestOf(row),
     role: row.run_role,
     copyOf: row.worktree_path ? (row.run_name ?? 'Builder') : null,
     askTitle: row.run_role === 'architect' && row.title_source !== 'user',

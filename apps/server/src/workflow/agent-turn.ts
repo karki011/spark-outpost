@@ -53,6 +53,7 @@ import { createCommandRecorder } from './command-recorder.ts';
 import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
+import { asAgentReads } from '../outposts/agent-prompt.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -341,7 +342,8 @@ export async function runAgentTurn(
       input.mode === 'do'
         ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
         : null;
-    turnSession = await turnSessionFor(deps, input);
+    const shown = asAgentReads(input);
+    turnSession = await turnSessionFor(deps, shown);
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
       const counted = session ? await session.usage(output) : output;
@@ -368,7 +370,7 @@ export async function runAgentTurn(
     }
     for await (const output of guardedRun(guard, provider, {
       prompt: withBrowserCheck({
-        prompt: input.prompt,
+        prompt: shown.prompt,
         userRequest: input.userRequest,
         editsFiles: editsFiles(input),
         browserPane: deps.browserPane === true,

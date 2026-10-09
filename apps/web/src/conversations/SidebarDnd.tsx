@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import { chatBlob } from '../brand/ChatFace.tsx';
 import { ChevronIcon, FolderIcon } from '../ui/icons.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 
@@ -64,8 +65,8 @@ function ChatCard({ chat, happy, moodKey }: ChatCardProps) {
     <div className={classes.filter(Boolean).join(' ')}>
       <span key={moodKey} className="dc-blob">
         <Blobatar
-          name={`chat:${chat.id}`}
-          size={16}
+          {...chatBlob(chat.id)}
+          size={22}
           animate="always"
           expression={happy ? expressions.happy : expressions.surprised}
           aria-hidden="true"

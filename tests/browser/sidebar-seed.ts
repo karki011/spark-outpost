@@ -14,6 +14,7 @@ export interface SeedApproval {
 }
 
 export interface SeedChat {
+  id?: string;
   title: string;
   message?: string;
   projectIds?: string[];
@@ -114,7 +115,7 @@ export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
     const workspaceId = await ensureLocalWorkspace(db);
     const ids: string[] = [];
     for (const chat of chats) {
-      const id = randomUUID();
+      const id = chat.id ?? randomUUID();
       const messageId = randomUUID();
       const updated = new Date(Date.now() - (chat.minutesAgo ?? ids.length) * 60_000);
       await db.query(

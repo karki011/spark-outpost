@@ -74,6 +74,7 @@ const RESET_TABLES = [
   'map_repos',
   'map_overrides',
   'teammates',
+  'outposts',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 

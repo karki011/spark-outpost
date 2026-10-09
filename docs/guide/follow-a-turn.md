@@ -3,7 +3,7 @@ title: Follow, stop and queue messages
 section: Chats
 type: how-to
 order: 216
-summary: See what the agent is doing, stop it, queue more messages while it works, and delete a chat even while it runs.
+summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
 ---
 
 You'll follow a running turn, stop it and queue more messages. About 2 minutes.

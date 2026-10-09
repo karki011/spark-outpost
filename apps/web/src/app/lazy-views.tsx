@@ -8,9 +8,13 @@ const loadTickets = () =>
 const loadPhone = () =>
   import('../phone/PhonePage.tsx').then((module) => ({ default: module.PhonePage }));
 
+const loadOutpost = () =>
+  import('../outposts/OutpostView.tsx').then((module) => ({ default: module.OutpostView }));
+
 export const Analytics = lazy(loadAnalytics);
 export const Tickets = lazy(loadTickets);
 export const Phone = lazy(loadPhone);
+export const OutpostView = lazy(loadOutpost);
 
 const VIEW_LOADERS: Partial<Record<AppView, () => Promise<unknown>>> = {
   analytics: loadAnalytics,

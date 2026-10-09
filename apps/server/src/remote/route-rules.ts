@@ -85,6 +85,11 @@ POST /api/conversations/:id/queue/:itemId/send-now
 POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order
 POST /api/runs/:id/messages
+GET /api/outposts
+GET /api/outposts/:id
+PATCH /api/outposts/:id
+POST /api/outposts/:id/posts
+POST /api/outposts/:id/posts/:postId/cancel
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
@@ -177,6 +182,12 @@ POST /api/conversations/:id/workspace/open
 GET /api/diagnostics/export
 GET /api/instructions-file
 POST /api/setup/git/install
+POST /api/outposts
+DELETE /api/outposts/:id
+PUT /api/outposts/:id/members/:conversationId
+DELETE /api/outposts/:id/members/:conversationId
+GET /api/a2a/chats/:chatId/.well-known/agent-card.json
+POST /api/a2a/chats/:chatId
 `;
 
 const PAIRING = `

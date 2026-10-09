@@ -29,6 +29,7 @@ import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
+import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
@@ -54,7 +55,7 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, Phone, preloadView, Tickets } from './lazy-views.tsx';
+import { Analytics, OutpostView, Phone, preloadView, Tickets } from './lazy-views.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -82,6 +83,12 @@ function ChatShell({ entering }: { entering: boolean }) {
   const live = useAppEvents();
   const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [openOutpostId, setOpenOutpostId] = useState<string | null>(null);
+  const [outpostJumpTo, setOutpostJumpTo] = useState<string | null>(null);
+  const selectChat = useCallback((id: string) => {
+    setSelectedId(id);
+    setOpenOutpostId(null);
+  }, []);
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettingsState] = useState<SettingsSection | null>(() =>
     currentProviderRoute() ? 'ai' : null,
@@ -136,7 +143,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const startDraft = useStableCallback(() => {
     const next = newDraftId();
     setDraftId(next);
-    setSelectedId(next);
+    selectChat(next);
     setView('chats');
     return next;
   });
@@ -155,7 +162,14 @@ function ChatShell({ entering }: { entering: boolean }) {
   };
 
   const openChat = useStableCallback((id: string) => {
-    setSelectedId(id);
+    selectChat(id);
+    setView('chats');
+    layout.closeDrawer();
+  });
+
+  const openOutpost = useStableCallback((id: string, postId?: string) => {
+    setOpenOutpostId(id);
+    setOutpostJumpTo(postId ?? null);
     setView('chats');
     layout.closeDrawer();
   });
@@ -219,125 +233,144 @@ function ChatShell({ entering }: { entering: boolean }) {
 
   return (
     <SidebarLayoutProvider value={layout}>
-      <div
-        className={classes.join(' ')}
-        style={layout.width ? ({ '--side-w': `${layout.width}px` } as CSSProperties) : undefined}
-      >
-        <Rail
-          view={view}
-          waiting={waiting}
-          ticketsWaiting={ticketsWaiting}
-          ticketNotices={ticketNotices}
-          mood={mood}
-          onIntent={preloadView}
-          onView={(next) => {
-            setView(next);
-            if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
-          }}
-          onSettings={() => setSettings('spark')}
-          onProfile={() => setSettings('spark')}
-        />
-        <div className="view" hidden={view !== 'chats'}>
-          <FreezeWhileHidden hidden={view !== 'chats'}>
-            <ConversationList
-              selectedId={activeId}
-              onSelect={setSelectedId}
-              onNew={startDraft}
-              onNewInProject={startDraftInProject}
-            />
-            <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
-            {activeId ? (
-              <StableChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
-            ) : (
-              <main className="main" aria-busy="true" />
-            )}
-          </FreezeWhileHidden>
-        </div>
-        {view === 'home' && (
-          <Home
-            chats={chats}
-            loading={conversations.isPending}
+      <OutpostHost openOutpostId={openOutpostId} onOpenOutpost={openOutpost}>
+        <div
+          className={classes.join(' ')}
+          style={layout.width ? ({ '--side-w': `${layout.width}px` } as CSSProperties) : undefined}
+        >
+          <Rail
+            view={view}
+            waiting={waiting}
+            ticketsWaiting={ticketsWaiting}
+            ticketNotices={ticketNotices}
             mood={mood}
-            draftId={homeDraftId}
-            onOpenChat={openAtCard}
-            onRotateDraft={setHomeDraftId}
-            onOpenId={openChat}
-            onChats={() => setView('chats')}
-            onTickets={(itemId) => {
-              setTicketFocus(itemId);
-              setView('tickets');
+            onIntent={preloadView}
+            onView={(next) => {
+              setView(next);
+              if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
             }}
-            onUsage={() => setSettings('usage')}
-            onProviders={() => setSettings('ai')}
+            onSettings={() => setSettings('spark')}
+            onProfile={() => setSettings('spark')}
           />
-        )}
-        {view === 'analytics' && (
-          <Suspense fallback={<AnalyticsSkeleton />}>
-            <Analytics />
-          </Suspense>
-        )}
-        {view === 'tickets' && (
-          <Suspense fallback={<TicketsViewSkeleton />}>
-            <Tickets
-              focusId={ticketFocus}
-              onOpenChat={openChat}
-              onHome={() => {
-                setTicketFocus(null);
-                setView('home');
+          <div className={openOutpostId ? 'view in-outpost' : 'view'} hidden={view !== 'chats'}>
+            <FreezeWhileHidden hidden={view !== 'chats'}>
+              <ConversationList
+                selectedId={openOutpostId ? null : activeId}
+                onSelect={selectChat}
+                onNew={startDraft}
+                onNewInProject={startDraftInProject}
+              />
+              <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
+              <FreezeWhileHidden hidden={openOutpostId !== null}>
+                {activeId ? (
+                  <StableChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
+                ) : (
+                  <main className="main" aria-busy="true" />
+                )}
+              </FreezeWhileHidden>
+              {openOutpostId && (
+                <Suspense
+                  fallback={<main className="main op" aria-label="Outpost" aria-busy="true" />}
+                >
+                  <OutpostView
+                    key={openOutpostId}
+                    id={openOutpostId}
+                    jumpTo={outpostJumpTo}
+                    onOpenChat={openChat}
+                    onGone={() => setOpenOutpostId(null)}
+                  />
+                </Suspense>
+              )}
+            </FreezeWhileHidden>
+          </div>
+          {view === 'home' && (
+            <Home
+              chats={chats}
+              loading={conversations.isPending}
+              mood={mood}
+              draftId={homeDraftId}
+              onOpenChat={openAtCard}
+              onRotateDraft={setHomeDraftId}
+              onOpenId={openChat}
+              onChats={() => setView('chats')}
+              onTickets={(itemId) => {
+                setTicketFocus(itemId);
+                setView('tickets');
               }}
-            />
-          </Suspense>
-        )}
-        {view === 'map' && (
-          <Suspense fallback={<main className="page" aria-label="Project map" aria-busy="true" />}>
-            <MapPage onOpenInChat={chatAboutFile} />
-          </Suspense>
-        )}
-        {view === 'docs' && (
-          <Suspense fallback={<DocsSkeleton />}>
-            <DocsPage />
-          </Suspense>
-        )}
-        {view === 'phone' && (
-          <Suspense fallback={<main className="page" aria-label="Phone" aria-busy="true" />}>
-            <Phone />
-          </Suspense>
-        )}
-        {view === 'chats' && (
-          <AgentTvHost
-            activeId={activeId}
-            onGoTo={(id) => {
-              setSelectedId(id);
-              layout.closeDrawer();
-            }}
-          />
-        )}
-        <StatusCompanion
-          chats={chats}
-          visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
-          onOpenChat={openAtCard}
-          onHome={() => setView('home')}
-        />
-        {live.paused && !connection.lost && <LivePausedHint />}
-        <DefaultLevelNotice
-          onSettings={() => {
-            revealWorkflowOptions();
-            setSettings('spark');
-          }}
-        />
-        <TeammateHost />
-        <MemberChatHost />
-        <AnimatePresence>
-          {settings && (
-            <SettingsDialog
-              key="settings"
-              section={settings}
-              onSection={setSettings}
-              onClose={() => setSettings(null)}
+              onUsage={() => setSettings('usage')}
+              onProviders={() => setSettings('ai')}
             />
           )}
-        </AnimatePresence>
-      </div>
+          {view === 'analytics' && (
+            <Suspense fallback={<AnalyticsSkeleton />}>
+              <Analytics />
+            </Suspense>
+          )}
+          {view === 'tickets' && (
+            <Suspense fallback={<TicketsViewSkeleton />}>
+              <Tickets
+                focusId={ticketFocus}
+                onOpenChat={openChat}
+                onHome={() => {
+                  setTicketFocus(null);
+                  setView('home');
+                }}
+              />
+            </Suspense>
+          )}
+          {view === 'map' && (
+            <Suspense
+              fallback={<main className="page" aria-label="Project map" aria-busy="true" />}
+            >
+              <MapPage onOpenInChat={chatAboutFile} />
+            </Suspense>
+          )}
+          {view === 'docs' && (
+            <Suspense fallback={<DocsSkeleton />}>
+              <DocsPage />
+            </Suspense>
+          )}
+          {view === 'phone' && (
+            <Suspense fallback={<main className="page" aria-label="Phone" aria-busy="true" />}>
+              <Phone />
+            </Suspense>
+          )}
+          {view === 'chats' && (
+            <AgentTvHost
+              activeId={openOutpostId ? null : activeId}
+              onGoTo={(id) => {
+                selectChat(id);
+                layout.closeDrawer();
+              }}
+            />
+          )}
+          <StatusCompanion
+            chats={chats}
+            visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
+            onOpenChat={openAtCard}
+            onHome={() => setView('home')}
+          />
+          {live.paused && !connection.lost && <LivePausedHint />}
+          <DefaultLevelNotice
+            onSettings={() => {
+              revealWorkflowOptions();
+              setSettings('spark');
+            }}
+          />
+          <TeammateHost />
+          <MemberChatHost />
+          <AnimatePresence>
+            {settings && (
+              <SettingsDialog
+                key="settings"
+                section={settings}
+                onSection={setSettings}
+                onClose={() => setSettings(null)}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </OutpostHost>
     </SidebarLayoutProvider>
   );
 }

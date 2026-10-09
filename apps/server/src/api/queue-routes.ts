@@ -14,9 +14,12 @@ import {
   editQueued,
   listQueue,
   QueueError,
+  queuedOutpostPost,
   reorderQueue,
   takeQueued,
 } from '../persistence/chat-queue.ts';
+import { cancelPost } from '../persistence/outpost-tasks.ts';
+import { stopRun } from '../workflow/stop-run.ts';
 import { MemberMessageError, messageMember } from '../workflow/member-message.ts';
 import { drainQueue, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -63,6 +66,16 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
     return body;
   };
 
+  const removeQueued = async (conversationId: string, id: string) => {
+    const postId = await queuedOutpostPost(db, conversationId, id);
+    if (postId === null) {
+      await takeQueued(db, conversationId, id);
+      return;
+    }
+    const outcome = await cancelPost(db, postId);
+    if (outcome.kind === 'stopping') await stopRun(db, outcome.runId);
+  };
+
   router.get('/conversations/:id/queue', async (req, res) => {
     const conversationId = paramId(req);
     await known(conversationId);
@@ -94,7 +107,7 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
 
   router.delete('/conversations/:id/queue/:itemId', async (req, res) => {
     const conversationId = paramId(req);
-    await takeQueued(db, conversationId, itemId(req));
+    await removeQueued(conversationId, itemId(req));
     res.json(await reply(conversationId));
   });
 
