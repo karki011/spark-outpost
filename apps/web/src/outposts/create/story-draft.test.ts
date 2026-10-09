@@ -18,6 +18,7 @@ import {
   pullLabel,
   pullLine,
   stackParent,
+  type PublishFacts,
   storyStartLines,
   unpushedParent,
 } from './story-draft.ts';
@@ -26,6 +27,10 @@ const CHATS = [
   chat(DOCS_CHAT, { title: 'Checkout plan', projectIds: [WEB_PROJECT] }),
   chat(FE_CHAT, { title: 'Usage page', projectIds: [API_PROJECT] }),
 ];
+
+function facts(overrides: Partial<PublishFacts> = {}): PublishFacts {
+  return { chats: CHATS, level: 'full-auto', readsOnly: () => false, ...overrides };
+}
 
 function story() {
   const ids = countingIds();
@@ -71,27 +76,34 @@ describe('the story fields of the create sheet', () => {
 
   it('says what the pull request of a new chat targets', () => {
     const { draft, api, fe, lead } = story();
-    expect(pullLine(draft, api, CHATS, 'full-auto')).toBe('Pull request, parallel');
-    expect(pullLine(draft, fe, CHATS, 'full-auto')).toBe('Pull request, stacked on @api');
-    expect(pullLine(draft, { ...fe, level: 'hands-off' }, CHATS, 'full-auto')).toBe(
-      'No pull request',
-    );
-    expect(pullLine(draft, fe, CHATS, 'hands-off')).toBe('No pull request');
-    expect(pullLine(draft, lead, CHATS, 'full-auto')).toBeNull();
+    expect(pullLine(draft, api, facts())).toBe('Pull request, parallel');
+    expect(pullLine(draft, fe, facts())).toBe('Pull request, stacked on @api');
+    expect(pullLine(draft, { ...fe, level: 'hands-off' }, facts())).toBe('No pull request');
+    expect(pullLine(draft, fe, facts({ level: 'hands-off' }))).toBe('No pull request');
+    expect(pullLine(draft, lead, facts())).toBeNull();
     expect(pullLabel('full-auto', null)).toBe('Pull request, parallel');
     expect(pullHint('full-auto', 'api')).toBe("Full auto → PR: targets @api's branch");
     expect(pullHint('hands-off', 'api')).toBe('Automatic: keeps the changes on its branch');
+  });
+
+  it('promises no pull request from a chat in a read-only mode', () => {
+    const { draft, fe } = story();
+    expect(pullLine(draft, fe, facts({ readsOnly: () => true }))).toBe(
+      'No pull request in a read-only mode',
+    );
   });
 
   it('warns when a stacked chat would push before its parent ever does', () => {
     const { lead, api, fe } = story();
     const quiet = { ...api, level: 'hands-off' as const };
     const draft = storyDraft([lead, quiet, fe], DOCS_CHAT);
-    expect(unpushedParent(draft, fe, CHATS, 'full-auto')).toBe(
-      "@api opens no pull request, so @fe cannot push until @api's branch is pushed.",
-    );
-    expect(unpushedParent(story().draft, fe, CHATS, 'full-auto')).toBeNull();
-    expect(unpushedParent(draft, { ...fe, level: 'hands-off' }, CHATS, 'full-auto')).toBeNull();
+    const warning = "@api opens no pull request, so @fe cannot push until @api's branch is pushed.";
+    expect(unpushedParent(draft, fe, facts())).toBe(warning);
+    expect(unpushedParent(story().draft, fe, facts())).toBeNull();
+    expect(unpushedParent(draft, { ...fe, level: 'hands-off' }, facts())).toBeNull();
+    const parentReads = facts({ readsOnly: (chat) => chat.handle === 'api' });
+    expect(unpushedParent(story().draft, fe, parentReads)).toBe(warning);
+    expect(unpushedParent(draft, fe, facts({ readsOnly: () => true }))).toBeNull();
   });
 
   it('drops the edge of a chat whose parent is removed', () => {

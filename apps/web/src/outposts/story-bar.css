@@ -42,12 +42,11 @@
   width: 12px;
   height: 12px;
   color: var(--muted);
-  transform: rotate(-90deg);
   transition: transform 0.15s;
 }
 
 .op-story[open] > summary > svg {
-  transform: none;
+  transform: rotate(90deg);
 }
 
 .op-story-kind {
@@ -118,6 +117,7 @@
   font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
+  text-decoration: none;
   box-shadow: inset 0 0 0 1px var(--line);
 }
 

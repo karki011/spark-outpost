@@ -1,3 +1,4 @@
+import './story-fields.css';
 import { MemberFace } from '../MemberFace.tsx';
 import { FileIcon } from '../../chat/attachments/attachment-icons.tsx';
 import { CommentIcon, MoveIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
@@ -47,12 +48,6 @@ export function ChatRow({
         </b>
         <small>{view.meta}</small>
       </span>
-      {afterHandle && (
-        <span className="op-chat-mark">
-          <MoveIcon />
-          After @{afterHandle}
-        </span>
-      )}
       {message && (
         <span className="op-chat-mark">
           <CommentIcon />
@@ -81,6 +76,12 @@ export function ChatRow({
       >
         <XIcon />
       </button>
+      {afterHandle && (
+        <p className="op-review-order op-chat-after">
+          <MoveIcon />
+          <span>Starts after @{afterHandle}</span>
+        </p>
+      )}
       {problems.length > 0 && (
         <div id={problemId} className="op-chat-problems">
           {problems.map((problem) => (

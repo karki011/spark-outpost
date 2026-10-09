@@ -1,10 +1,11 @@
 import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
-import { pullHint, pullLabel } from './story-draft.ts';
+import { READ_ONLY_PULL, pullHint, pullLabel } from './story-draft.ts';
 
 interface PullFieldProps {
   level: InvolvementLevel;
   stackedOn: string | null;
+  readOnly: boolean;
   onChange: (level: InvolvementLevel) => void;
 }
 
@@ -15,7 +16,15 @@ function isLevel(id: string): id is InvolvementLevel {
   return INVOLVEMENT_LEVEL_IDS.some((level) => level === id);
 }
 
-export function PullField({ level, stackedOn, onChange }: PullFieldProps) {
+export function PullField({ level, stackedOn, readOnly, onChange }: PullFieldProps) {
+  if (readOnly) {
+    return (
+      <div className="field">
+        <span>{LABEL}</span>
+        <p className="op-sheet-note">{READ_ONLY_PULL}</p>
+      </div>
+    );
+  }
   return (
     <div className="field">
       <span>{LABEL}</span>

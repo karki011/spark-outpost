@@ -68,7 +68,7 @@ function Harness({
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const marks = () =>
   [...document.querySelectorAll('.op-chat-row')].map(
-    (row) => row.querySelector('.op-chat-mark')?.textContent ?? '',
+    (row) => row.querySelector('.op-chat-after')?.textContent ?? '',
   );
 
 function toChats() {
@@ -83,7 +83,7 @@ describe('the create sheet opened from a draft', () => {
       'Orders launch',
     );
     toChats();
-    expect(marks()).toEqual(['', 'First message', 'After @api', 'First message']);
+    expect(marks()).toEqual(['', '', 'Starts after @api', '']);
   });
 
   it('changes what a sub-task starts after and its pull request from the chat form', () => {
@@ -98,7 +98,7 @@ describe('the create sheet opened from a draft', () => {
     fireEvent.click(within(form).getByRole('button', { name: 'Pull request' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: /^No pull request/ }));
     fireEvent.click(within(form).getByRole('button', { name: 'Done' }));
-    expect(marks()[3]).toBe('After @fe');
+    expect(marks()[3]).toBe('Starts after @fe');
 
     fireEvent.click(button(/^Continue/));
     fireEvent.click(button(/^Start outpost/));

@@ -61,6 +61,14 @@ export function orderLine(
     : `${after} · stacked on its branch`;
 }
 
+export interface PublishFacts {
+  chats: readonly ConversationSummary[];
+  level: InvolvementLevel;
+  readsOnly: (chat: ChatDraft) => boolean;
+}
+
+export const READ_ONLY_PULL = 'No pull request in a read-only mode';
+
 export function levelOf(chat: ChatDraft, fallback: InvolvementLevel): InvolvementLevel {
   return chat.level ?? fallback;
 }
@@ -78,28 +86,25 @@ export function pullHint(level: InvolvementLevel, stackedOn: string | null): str
     : `${autonomy}: targets @${stackedOn}'s branch`;
 }
 
-export function pullLine(
-  draft: CreateDraft,
-  chat: ChatDraft,
-  chats: readonly ConversationSummary[],
-  fallback: InvolvementLevel,
-): string | null {
+function publishes(chat: ChatDraft, facts: PublishFacts): boolean {
+  return !facts.readsOnly(chat) && levelOf(chat, facts.level) === 'full-auto';
+}
+
+export function pullLine(draft: CreateDraft, chat: ChatDraft, facts: PublishFacts): string | null {
   if (chat.kind !== 'new') return null;
-  const level = levelOf(chat, fallback);
-  return pullLabel(level, stackParent(draft, chat, chats)?.handle ?? null);
+  if (facts.readsOnly(chat)) return READ_ONLY_PULL;
+  const stackedOn = stackParent(draft, chat, facts.chats)?.handle ?? null;
+  return pullLabel(levelOf(chat, facts.level), stackedOn);
 }
 
 export function unpushedParent(
   draft: CreateDraft,
   chat: ChatDraft,
-  chats: readonly ConversationSummary[],
-  fallback: InvolvementLevel,
+  facts: PublishFacts,
 ): string | null {
-  const parent = stackParent(draft, chat, chats);
+  const parent = stackParent(draft, chat, facts.chats);
   if (parent === null || chat.kind !== 'new' || parent.kind !== 'new') return null;
-  if (levelOf(chat, fallback) !== 'full-auto' || levelOf(parent, fallback) === 'full-auto') {
-    return null;
-  }
+  if (!publishes(chat, facts) || publishes(parent, facts)) return null;
   return `@${parent.handle} opens no pull request, so @${chat.handle} cannot push until @${parent.handle}'s branch is pushed.`;
 }
 

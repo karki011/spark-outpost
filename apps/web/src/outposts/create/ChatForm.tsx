@@ -191,6 +191,7 @@ export function ChatForm(props: ChatFormProps) {
             <PullField
               level={levelOf(chat, data.level)}
               stackedOn={props.stackedOn}
+              readOnly={data.agentOf(chat)?.risk === 'read'}
               onChange={(level) => props.onPatch({ level })}
             />
           )}
