@@ -7,6 +7,15 @@ import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { pickPermission } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import {
+  chatMenuButton,
+  chatMenuDot,
+  closeChatMenu,
+  expectHeaderPane,
+  headerPaneItem,
+  openChatMenu,
+  toggleHeaderPane,
+} from './header-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const SKINS = [
@@ -40,8 +49,6 @@ test.afterEach(() => {
 
 const dock = (page: Page) => page.getByRole('region', { name: 'Terminal' });
 const screenText = (page: Page) => dock(page).locator('.xterm-accessibility');
-const terminalButton = (page: Page) =>
-  page.locator('.head-r').getByRole('button', { name: 'Terminal' });
 
 async function shot(target: Page | Locator, name: string) {
   if (SHOTS) await target.screenshot({ path: path.join(SHOTS, `chat-terminal-${name}.png`) });
@@ -89,14 +96,15 @@ async function runPwd(page: Page, marker: string) {
 test('a chat without a project opens a terminal in the home folder @packaged', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
-  const button = terminalButton(page);
-  await expect(button).toHaveAttribute('aria-keyshortcuts', 'Control+`');
-  await button.hover();
-  await expect(page.getByRole('tooltip')).toContainText('Terminal');
+  const button = chatMenuButton(page);
+  await openChatMenu(page);
+  const item = headerPaneItem(page, 'Terminal');
+  await expect(item).toHaveAttribute('aria-keyshortcuts', 'Control+`');
+  await expect(item).toHaveAttribute('aria-checked', 'false');
+  await expect(item.locator('kbd')).toHaveCount(2);
 
-  await button.click();
+  await item.click();
   await expect(dock(page)).toBeVisible();
-  await expect(button).toHaveAttribute('aria-pressed', 'true');
   await expect(dock(page).getByRole('button', { name: '~', exact: true })).toBeVisible();
   await runPwd(page, 'home');
   await expect(screenText(page)).toContainText(`home:${realpathSync(os.homedir())}`);
@@ -107,6 +115,7 @@ test('a chat without a project opens a terminal in the home folder @packaged', a
   await expect(button).toBeFocused();
   await page.keyboard.press('Control+Backquote');
   await expect(screenText(page)).toContainText('home:');
+  await expectHeaderPane(page, 'Terminal', true);
 });
 
 test('a project chat opens in its folder, keeps tabs while hidden and per chat', async ({
@@ -116,7 +125,7 @@ test('a project chat opens in its folder, keeps tabs while hidden and per chat',
   const root = path.join(base, 'widgets');
   mkdirSync(root);
   await newChatIn(page, root);
-  await terminalButton(page).click();
+  await toggleHeaderPane(page, 'Terminal');
 
   await expect(
     dock(page).getByRole('button', { name: 'my files · widgets', exact: true }),
@@ -138,11 +147,18 @@ test('a project chat opens in its folder, keeps tabs while hidden and per chat',
 
   await dock(page).getByRole('button', { name: 'Hide terminal' }).click();
   await expect(dock(page)).toHaveCount(0);
-  await expect(terminalButton(page)).toHaveClass(/running/);
+  await expect(chatMenuButton(page)).toHaveAccessibleName('Chat actions. Terminal running.');
+  await expect(chatMenuDot(page)).toBeVisible();
+  await openChatMenu(page);
+  await expect(headerPaneItem(page, 'Terminal')).toContainText('Running');
+  await expect(headerPaneItem(page, 'Terminal').locator('.head-menu-dot')).toBeVisible();
+  await closeChatMenu(page);
 
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(terminalButton(page)).toHaveAttribute('aria-pressed', 'false');
-  await terminalButton(page).click();
+  await expect(chatMenuDot(page)).toHaveCount(0);
+  await openChatMenu(page);
+  await expect(headerPaneItem(page, 'Terminal')).toHaveAttribute('aria-checked', 'false');
+  await headerPaneItem(page, 'Terminal').click();
   await expect(dock(page).getByRole('button', { name: '~', exact: true })).toBeVisible();
   await expect(screenText(page)).not.toContainText('project:');
 });
@@ -183,7 +199,7 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
 test('closing a tab that is running something asks first @packaged', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
-  await terminalButton(page).click();
+  await toggleHeaderPane(page, 'Terminal');
   await expect(dock(page).locator('.term-light.open')).toBeVisible();
   const created = createdShellId(page);
   await dock(page).getByRole('button', { name: 'New terminal' }).click();
@@ -214,7 +230,8 @@ test('closing a tab that is running something asks first @packaged', async ({ pa
 
   await tabs.getByRole('button', { name: 'Close ~', exact: true }).click();
   await expect(dock(page)).toHaveCount(0);
-  await expect(terminalButton(page)).not.toHaveClass(/running/);
+  await expect(chatMenuButton(page)).toHaveAccessibleName('Chat actions.');
+  await expect(chatMenuDot(page)).toHaveCount(0);
 });
 
 test('the terminal panel has no serious contrast or ARIA issues in any theme', async ({ page }) => {
@@ -223,7 +240,7 @@ test('the terminal panel has no serious contrast or ARIA issues in any theme', a
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
   const created = createdShellId(page);
-  await terminalButton(page).click();
+  await toggleHeaderPane(page, 'Terminal');
   const id = await created;
   await expect(dock(page).locator('.term-light.open')).toBeVisible();
   await runPwd(page, 'a11y');
@@ -260,7 +277,7 @@ test('at phone width the terminal is a full-height sheet', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
   await page.setViewportSize({ width: 390, height: 780 });
-  await terminalButton(page).click();
+  await toggleHeaderPane(page, 'Terminal');
   await expect(dock(page).locator('.term-light.open')).toBeVisible();
   const box = await dock(page).boundingBox();
   expect(box?.height).toBeGreaterThan(700);

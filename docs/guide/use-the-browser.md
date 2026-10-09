@@ -10,7 +10,7 @@ You'll open a page beside a chat, let the agent check it, and point at an elemen
 
 ## Open a page
 
-1. In a chat, select **Browser** in the header, or press **⌘⇧B**.
+1. In a chat's **…** menu, select **Browser**, or press **⌘⇧B**.
 2. Type an address, such as `localhost:5173`, and press **Enter**.
 3. **+** adds a tab.
 

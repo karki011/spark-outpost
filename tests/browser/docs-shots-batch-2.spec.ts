@@ -12,6 +12,7 @@ import { monoFixture } from './map-fixture.ts';
 import { openMap, tree } from './map-page.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const IMAGES = path.resolve('docs/guide/images');
 
@@ -72,7 +73,7 @@ async function typeInTerminal(page: Page, command: string) {
 async function terminalShots(page: Page, scheme: 'light' | 'dark') {
   await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
   await newDemoChat(page);
-  await page.locator('.head-r').getByRole('button', { name: 'Terminal' }).click();
+  await toggleHeaderPane(page, 'Terminal');
   const tabs = dock(page).getByRole('group', { name: 'Terminals' });
   const first = tabs.getByRole('button', { name: `my files · ${DEMO_PROJECT}`, exact: true });
   await expect(first).toBeVisible();

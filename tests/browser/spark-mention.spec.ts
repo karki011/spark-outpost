@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 
 const SHOTS = process.env.SPARK_MENTION_SHOTS ?? 'test-results/spark-mention';
 const shot = (name: string) => `${SHOTS}/spark-mention-${name}.png`;
@@ -123,7 +124,7 @@ test('a mention runs the Spark as its own labelled turn and skips the main agent
   expect((await scan(page, 'section[data-turn]')).violations).toEqual([]);
   await page.screenshot({ path: shot('turn') });
 
-  await page.getByRole('button', { name: 'Agent TV' }).click();
+  await toggleHeaderPane(page, 'Agent TV');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect(tv).toContainText('Pip');
   await expect(tv).toContainText('Code reviewer');

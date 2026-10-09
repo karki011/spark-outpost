@@ -10,11 +10,11 @@ You'll watch the agents on a request, message one, and steer big work. About 2 m
 
 ## Watch in Agent TV
 
-1. Select **Agent TV** in the chat header, once the first reply starts.
+1. Open the chat's **…** menu and select **Agent TV**, once the first reply starts.
 2. Pick **Stage** to see the agents as blobs, or **List** for each agent's model, time and cost.
 3. Select an agent, then **Go to** to jump to its work. Press **Esc** to close.
 
-Agent TV keeps following its chat while you open another.
+Agent TV keeps following its chat while you open another. A dot on **…** means agents are working.
 
 After a turn, the context rail keeps Agent TV's crew: role, model, result and cost.
 

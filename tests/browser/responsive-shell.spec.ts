@@ -22,6 +22,7 @@ import {
   widerThanItsBox,
 } from './responsive-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { closeChatMenu, headerPaneItem, openChatMenu } from './header-menu.ts';
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -184,16 +185,19 @@ test('shared controls are finger-sized and inputs do not zoom on touch', async (
 
 test('a paired phone hides what only works on the Mac', async ({ browser }) => {
   const page = await openTouch(browser, PHONE, 'chats');
-  await expect(page.getByRole('button', { name: 'Terminal' })).toBeVisible();
+  await openChatMenu(page);
+  await expect(headerPaneItem(page, 'Terminal')).toBeVisible();
   await page.close();
 
   const phone = await openTouch(browser, PHONE, 'chats', (opened) =>
     asRemote(opened, { reset: false }),
   );
   await expect(phone.getByRole('textbox', { name: 'Message' })).toBeVisible();
-  await expect(phone.getByRole('button', { name: 'Chat actions' })).toBeVisible();
-  await expect(phone.getByRole('button', { name: 'Terminal' })).toHaveCount(0);
-  await expect(phone.getByRole('button', { name: /Browser/ })).toHaveCount(0);
+  const menu = await openChatMenu(phone);
+  await expect(menu.getByRole('menuitemcheckbox')).toHaveCount(0);
+  await expect(menu.getByRole('separator')).toHaveCount(0);
+  await closeChatMenu(phone);
+  await expect(phone.getByRole('button', { name: /Terminal|Browser/ })).toHaveCount(0);
 
   await openSettings(phone, true);
   const tabs = phone.getByRole('tablist', { name: 'Settings sections' });

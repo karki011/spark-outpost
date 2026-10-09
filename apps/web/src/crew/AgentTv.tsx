@@ -11,6 +11,7 @@ import {
   type PointerEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { CHAT_MENU_BUTTON_ID } from '../audit/ChatHeaderMenu.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { matchesMedia, PHONE_QUERY, usePhone } from '../ui/breakpoints.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -43,8 +44,6 @@ import type { TvAsk } from './tv-scene.ts';
 import { useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvEvents } from './use-tv-events.ts';
 
-export const TV_BUTTON_ID = 'agent-tv-button';
-
 const CAPTION_THROTTLE_MS = 2500;
 const SIZE_OPTIONS = TV_SIZES.map((id) => ({ id, label: id.toUpperCase() }));
 const VIEW_OPTIONS = [
@@ -73,7 +72,7 @@ function isNarrow(): boolean {
 }
 
 function focusButton() {
-  document.getElementById(TV_BUTTON_ID)?.focus();
+  document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
 }
 
 interface AgentTvProps {
