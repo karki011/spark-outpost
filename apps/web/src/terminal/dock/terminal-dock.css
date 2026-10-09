@@ -101,6 +101,21 @@
   white-space: nowrap;
 }
 
+.term-tab-agent {
+  display: inline-grid;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.term-tab-agent svg {
+  width: 12px;
+  height: 12px;
+}
+
+.term-tab.on .term-tab-agent {
+  color: var(--accent);
+}
+
 .term-tab-skel {
   display: inline-block;
   width: 88px;
@@ -174,6 +189,112 @@
 
 .term-host .xterm-viewport {
   background: transparent !important;
+}
+
+.cmd-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+.cmd-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cmd-tab-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 8px 6px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab.interrupted .run-cmd-mark {
+  color: var(--muted);
+}
+
+.cmd-tab-line {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  background: none;
+  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.cmd-tab-line::before {
+  content: '$ ';
+  color: var(--faint);
+}
+
+.cmd-tab-chip {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.cmd-tab-state {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cmd-tab.failed .cmd-tab-state,
+.cmd-tab-error {
+  color: var(--danger);
+}
+
+.cmd-tab-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.cmd-tab-body .run-cmd-screen {
+  padding: 0;
+}
+
+.cmd-tab-note {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  margin: 0 4px 0 -12px;
+  padding: 6px 6px 2px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab-foot p {
+  margin: 0;
+  min-width: 0;
+}
+
+@media (pointer: coarse) {
+  .cmd-tab-foot .btn {
+    min-height: 44px;
+  }
 }
 
 .term-dock-ended {

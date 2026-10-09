@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| A command in a reply has **Open in terminal**: a read-only dock tab, named for the agent, mirrors it.                               | See [Open a terminal](terminals.md).        |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.           |
 | **Agent TV**, **Browser** and **Terminal** moved into the chat's **…** menu. Its dot means agents or a hidden terminal are running. | No action.                                  |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
 | Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |
 | New chats start on **Auto**. Builders and pieces stay on the chat's provider. **Settings → Models** is a table.                     | See [model routing](model-routing.md).      |
-| A result line replaces the kept card. The status line says what Jev is doing.                                                       | **Ship** is in the **Work** panel.          |

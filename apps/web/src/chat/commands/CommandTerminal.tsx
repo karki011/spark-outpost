@@ -1,49 +1,20 @@
-import { memo, useEffect, useId, useRef, useState } from 'react';
+import { memo, use, useEffect, useId, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { plainOutput } from '@spark-outpost/contracts';
-import { CheckIcon, ChevronIcon, CopyIcon, XIcon } from '../../ui/icons.tsx';
+import { openCommandTab } from '../../terminal/dock/shell-store.ts';
+import { CheckIcon, ChevronIcon, CopyIcon, TerminalIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
-import {
-  commandOutcome,
-  commandSeconds,
-  shownDuration,
-  type CommandView,
-} from './command-model.ts';
+import { CommandDockContext } from './command-dock.ts';
+import { commandOutcome, type CommandView } from './command-model.ts';
 import { CommandScreen } from './CommandScreen.tsx';
+import { Elapsed, stateText, StatusMark } from './CommandStatus.tsx';
 import './command-terminal.css';
 
 const COLLAPSE_AFTER_MS = 1500;
 const KB = 1024;
-
-function Elapsed({ command }: { command: CommandView }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  return <>{shownDuration(commandSeconds(command, now))}</>;
-}
-
-function StatusMark({ command, waiting }: { command: CommandView; waiting: boolean }) {
-  if (command.status === 'running') {
-    return <span className={waiting ? 'run-cmd-wait' : 'spin'} aria-hidden="true" />;
-  }
-  return (
-    <span className="run-cmd-mark" aria-hidden="true">
-      {command.status === 'completed' ? <CheckIcon className="run-cmd-ok" /> : <XIcon />}
-    </span>
-  );
-}
-
-function stateText(command: CommandView): string {
-  if (command.status === 'interrupted') return 'interrupted';
-  const took = shownDuration(commandSeconds(command, Date.now()));
-  if (command.exitCode !== null) return `exit ${command.exitCode} · ${took}`;
-  return `${command.status === 'failed' ? 'failed' : 'done'} · ${took}`;
-}
 
 function sizeNote(command: CommandView, shown: number): string | null {
   if (command.status === 'running' || command.outputChars <= shown + KB) return null;
@@ -106,6 +77,7 @@ export const CommandTerminal = memo(function CommandTerminal({
   waiting = false,
 }: CommandTerminalProps) {
   const bodyId = useId();
+  const dockChatId = use(CommandDockContext);
   const { open, touch, toggle } = useOpenState(command, waiting);
   const [tall, setTall] = useState(false);
   const { state: copyState, copy } = useCopyFeedback();
@@ -184,6 +156,20 @@ export const CommandTerminal = memo(function CommandTerminal({
                 strokeWidth="1.4"
               />
             </svg>
+          </button>
+        )}
+        {dockChatId && (
+          <button
+            type="button"
+            className="icon-btn run-cmd-dock"
+            aria-label="Open in terminal"
+            title="Open in terminal"
+            onClick={() => {
+              touch();
+              openCommandTab(dockChatId, command.runId, command.id);
+            }}
+          >
+            <TerminalIcon />
           </button>
         )}
         <button

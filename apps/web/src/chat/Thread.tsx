@@ -20,6 +20,8 @@ import type { QuotesState } from './quotes/use-quotes.ts';
 import { FollowContext } from './follow-requests.ts';
 import { OutlineTicks } from './outline/OutlineTicks.tsx';
 import { RailContext } from './rail/rail-context.ts';
+import { CommandDockContext } from './commands/command-dock.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { usePendingArrival } from './status/status-context.ts';
 
 function RailSlot() {
@@ -47,6 +49,7 @@ export const Thread = memo(function Thread({
   quotes,
 }: ThreadProps) {
   const voice = useVoice();
+  const { remote } = useRemoteClient();
   const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
@@ -107,19 +110,21 @@ export const Thread = memo(function Thread({
         <RailSlot />
         <div className="col">
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
-          {turns.map(({ run, userMessage, assistantMessage }) => (
-            <TurnSection
-              key={run.id}
-              run={run}
-              userMessage={userMessage}
-              assistantMessage={assistantMessage}
-              detail={detail}
-              repo={repos[0] ?? null}
-              task={taskAfterRun.get(run.id) ?? null}
-              onOpenTask={onOpenTask}
-              onOpenChat={onOpenChat}
-            />
-          ))}
+          <CommandDockContext value={remote ? null : detail.conversation.id}>
+            {turns.map(({ run, userMessage, assistantMessage }) => (
+              <TurnSection
+                key={run.id}
+                run={run}
+                userMessage={userMessage}
+                assistantMessage={assistantMessage}
+                detail={detail}
+                repo={repos[0] ?? null}
+                task={taskAfterRun.get(run.id) ?? null}
+                onOpenTask={onOpenTask}
+                onOpenChat={onOpenChat}
+              />
+            ))}
+          </CommandDockContext>
           <PendingSends sends={sends} />
         </div>
       </div>

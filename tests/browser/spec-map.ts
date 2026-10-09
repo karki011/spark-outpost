@@ -104,6 +104,7 @@ export const SPEC_GROUPS = {
     'chat-terminal',
     'native-terminal',
     'command-terminal',
+    'command-tab',
     'preview',
     'shot-order',
     'sign-in-fill',

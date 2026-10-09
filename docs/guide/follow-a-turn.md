@@ -16,7 +16,7 @@ You'll follow a running turn, stop it and queue more messages. About 2 minutes.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
-Commands show output in a terminal in the reply. Passing ones fold to a line; failed ones stay open. Codex output is live; Claude's appears when the command ends.
+Commands show output in a terminal in the reply. Passing ones fold to a line; failed ones stay open. Codex output is live; Claude's appears when the command ends. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 

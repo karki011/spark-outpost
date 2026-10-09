@@ -4,18 +4,21 @@ import { previewApi } from '../../api/preview.ts';
 import { createShell, runningCommand } from '../terminal-api.ts';
 import { openTerminal, type TerminalConnection } from '../terminal-connection.ts';
 import { endMessages } from '../terminal-messages.ts';
+import { findCommandTab, type MirroredCommand } from './command-tabs.ts';
 
 export type ShellStatus = 'starting' | 'open' | 'ended';
+export type TabKind = 'shell' | 'preview' | 'command';
 
 export interface ShellTab {
   id: string;
   sessionId: string | null;
   label: string | null;
   cwd: string | null;
-  kind: ShellFolderKind | null;
+  folder: ShellFolderKind | null;
   status: ShellStatus;
   notice: string | null;
-  preview: boolean;
+  kind: TabKind;
+  mirror: MirroredCommand | null;
   host: HTMLDivElement;
 }
 
@@ -76,7 +79,7 @@ function started(chatId: string, tabId: string, created: CreateShellResponse) {
     sessionId: created.id,
     label: created.label,
     cwd: created.cwd,
-    kind: created.kind,
+    folder: created.kind,
     status: 'open',
   });
   if (created.note) connections.get(tabId)?.notice(created.note);
@@ -93,7 +96,12 @@ function ended(chatId: string, tabId: string, notice: string, removeTab: boolean
 
 const PREVIEW_ENDED = 'The preview stopped.';
 
-function addTab(chatId: string, preview: boolean, front: boolean): string {
+function addTab(
+  chatId: string,
+  kind: TabKind,
+  front: boolean,
+  mirror: MirroredCommand | null = null,
+): string {
   const id = crypto.randomUUID();
   const host = document.createElement('div');
   host.className = 'term-host';
@@ -101,12 +109,13 @@ function addTab(chatId: string, preview: boolean, front: boolean): string {
   const tab: ShellTab = {
     id,
     sessionId: null,
-    label: preview ? 'Preview' : null,
+    label: kind === 'preview' ? 'Preview' : null,
     cwd: null,
-    kind: null,
+    folder: null,
     status: 'starting',
     notice: null,
-    preview,
+    kind,
+    mirror,
     host,
   };
   const chat = chatOf(chatId);
@@ -117,6 +126,8 @@ function addTab(chatId: string, preview: boolean, front: boolean): string {
     tabs: [...chat.tabs, tab],
     activeId: show ? id : chat.activeId,
   });
+  if (kind === 'command') return id;
+  const preview = kind === 'preview';
   const create = preview ? () => previewApi.terminal(chatId) : () => createShell(chatId);
   const connection = openTerminal(create, host, {
     onOpen: (created) => started(chatId, id, created),
@@ -130,20 +141,45 @@ function addTab(chatId: string, preview: boolean, front: boolean): string {
 }
 
 export function newShell(chatId: string): string {
-  return addTab(chatId, false, true);
+  return addTab(chatId, 'shell', true);
 }
 
 export function showPreviewShell(chatId: string, front = true): void {
   const chat = chatOf(chatId);
-  const existing = chat.tabs.find((tab) => tab.preview && tab.status !== 'ended');
+  const existing = chat.tabs.find((tab) => tab.kind === 'preview' && tab.status !== 'ended');
   if (!existing) {
-    for (const stale of chat.tabs.filter((tab) => tab.preview)) closeShell(chatId, stale.id);
-    addTab(chatId, true, front);
+    for (const stale of chat.tabs.filter((tab) => tab.kind === 'preview')) {
+      closeShell(chatId, stale.id);
+    }
+    addTab(chatId, 'preview', front);
     return;
   }
   if (!front) return;
   focusWanted = existing.id;
   setChat(chatId, { ...chat, open: true, activeId: existing.id });
+}
+
+export function openCommandTab(chatId: string, runId: string, commandId: string): void {
+  const chat = chatOf(chatId);
+  const mirror = { runId, commandId };
+  const existing = findCommandTab(chat.tabs, mirror);
+  if (!existing) {
+    addTab(chatId, 'command', true, mirror);
+    return;
+  }
+  focusWanted = existing.id;
+  setChat(chatId, { ...chat, open: true, activeId: existing.id });
+}
+
+export function syncCommandTab(
+  chatId: string,
+  tabId: string,
+  seen: Pick<ShellTab, 'label' | 'cwd' | 'status'>,
+): void {
+  const tab = chatOf(chatId).tabs.find((other) => other.id === tabId);
+  if (!tab || tab.kind !== 'command') return;
+  if (tab.label === seen.label && tab.cwd === seen.cwd && tab.status === seen.status) return;
+  updateTab(chatId, tabId, seen);
 }
 
 export async function shellCommand(chatId: string, tabId: string): Promise<string | null> {
@@ -199,14 +235,21 @@ export function toggleShells(chatId: string): void {
   else showShells(chatId);
 }
 
-export function attachedShell(tabId: string): void {
+export function attachedShell(tabId: string, host: HTMLElement): void {
   const connection = connections.get(tabId);
   if (focusWanted !== tabId) {
     connection?.fit();
     return;
   }
-  focusWanted = null;
-  connection?.focus();
+  if (connection) {
+    focusWanted = null;
+    connection.focus();
+    return;
+  }
+  host.querySelector<HTMLElement>('[data-mirror-focus]')?.focus();
+  queueMicrotask(() => {
+    if (focusWanted === tabId) focusWanted = null;
+  });
 }
 
 function subscribe(listener: () => void) {
