@@ -77,13 +77,31 @@ export async function say(page: Page, text: string): Promise<void> {
   await box(page).press('Enter');
 }
 
-export async function addChat(page: Page, dialog: Locator, title: string): Promise<Locator> {
-  await dialog.getByRole('button', { name: 'Add a chat' }).click();
+export const NEW_OUTPOST = 'New outpost';
+export const stepNow = (dialog: Locator) =>
+  dialog.getByRole('list', { name: 'Steps' }).locator('[aria-current="step"]');
+export const proceed = (dialog: Locator) => dialog.getByRole('button', { name: /^Continue/ });
+export const startButton = (dialog: Locator) =>
+  dialog.getByRole('button', { name: /^Start outpost/ });
+
+export async function newOutpost(page: Page, name?: string): Promise<Locator> {
+  await outpostsSection(page).getByRole('button', { name: NEW_OUTPOST }).click();
+  const dialog = sheet(page, NEW_OUTPOST);
+  const field = dialog.getByRole('textbox', { name: /^Name/ });
+  await expect(field).toBeFocused();
+  if (name === undefined) return dialog;
+  await field.fill(name);
+  await field.press('Enter');
+  await expect(stepNow(dialog)).toContainText('Chats');
+  return dialog;
+}
+
+export async function pick(page: Page, dialog: Locator, field: string, choice: string) {
+  await dialog.getByRole('button', { name: field, exact: true }).click();
   await page
-    .getByRole('menu', { name: 'Add a chat' })
-    .getByRole('menuitemradio', { name: new RegExp(`^${title}`) })
+    .getByRole('menu', { name: field })
+    .getByRole('menuitemradio', { name: new RegExp(`^${choice}`) })
     .click();
-  return dialog.getByRole('textbox', { name: `Handle for ${title}` });
 }
 
 export function requestsTo(page: Page, url: RegExp, method: string): Request[] {

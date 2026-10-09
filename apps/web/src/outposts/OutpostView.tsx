@@ -190,7 +190,6 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       />
       {editing && (
         <OutpostSheet
-          mode="edit"
           initial={formOf(outpost)}
           chats={chats}
           projectNames={projectNames}

@@ -18,7 +18,6 @@ import {
 } from './sheet-draft.ts';
 
 interface OutpostSheetProps {
-  mode: 'create' | 'edit';
   initial: SheetForm;
   chats: readonly ConversationSummary[];
   projectNames: Readonly<Record<string, string>>;
@@ -45,7 +44,6 @@ function problemFor(
 }
 
 export function OutpostSheet({
-  mode,
   initial,
   chats,
   projectNames,
@@ -135,7 +133,7 @@ export function OutpostSheet({
         onKeyDown={onKeyDown}
       >
         <header className="op-sheet-head">
-          <h2 id={`${ids}title`}>{mode === 'create' ? 'New outpost' : 'Edit outpost'}</h2>
+          <h2 id={`${ids}title`}>Edit outpost</h2>
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
             <XIcon />
           </button>
@@ -269,7 +267,7 @@ export function OutpostSheet({
             Cancel
           </button>
           <button type="submit" className="btn sm primary" disabled={busy}>
-            {mode === 'create' ? 'Create outpost' : 'Save'}
+            Save
           </button>
         </footer>
       </form>

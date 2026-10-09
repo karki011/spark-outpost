@@ -8,6 +8,7 @@ import {
   takeQueued,
 } from '../persistence/chat-queue.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
+import { postAttachmentIds } from '../persistence/outpost-posts.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { buildingInPieces } from '../persistence/piece-notes.ts';
 import {
@@ -55,12 +56,14 @@ async function sendQueued(
   target: RunTarget,
 ): Promise<void> {
   const continuing = item.continueRunId !== null && target.permission === PERMISSION_DO;
+  const attachmentIds = item.outpostPostId ? await postAttachmentIds(db, item.outpostPostId) : [];
   const sent = await sendInTransaction(
     db,
     conversationId,
     {
       id: item.id,
       content: item.content,
+      attachmentIds,
       source: item.outpostPostId ? 'outpost' : 'queue',
       ...(continuing ? { startAs: 'continue' as const } : {}),
     },

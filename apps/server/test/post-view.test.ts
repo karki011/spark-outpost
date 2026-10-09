@@ -27,6 +27,8 @@ const stored: StoredPost = {
   answerSeenAt: null,
   pinnedAt: null,
   createdAt: '2026-10-09T10:00:00.000Z',
+  attachmentIds: [],
+  opening: false,
 };
 
 const facts: RequestFacts = {
@@ -57,6 +59,39 @@ describe('the post the outpost page receives', () => {
       facts: { ...facts, sent: true, runStatus: 'succeeded' },
     };
     expect(toOutpostPost(found, answer)).toMatchObject({ state: 'answered', answer });
+  });
+
+  it('counts the files of a request and carries none of their ids', () => {
+    const found: PostWithFacts = {
+      post: { ...stored, attachmentIds: [stored.id, stored.outpostId] },
+      facts,
+    };
+    const view = toOutpostPost(found, null);
+    expect(view.files).toBe(2);
+    expect(outpostPostSchema.strict().parse(view)).toEqual(view);
+  });
+
+  it('draws a join line from the current facts in place of the stored words', () => {
+    const chatId = '33333333-3333-4333-8333-333333333333';
+    const line: PostWithFacts = {
+      post: {
+        ...stored,
+        kind: 'notice',
+        body: '@api joined',
+        fromUser: false,
+        fromConversationId: chatId,
+        fromHandle: 'api',
+        toHandle: null,
+        toConversationId: null,
+      },
+      facts: null,
+    };
+    const intro = { conversationId: chatId, task: 'Task: Add the filter.' };
+    expect(toOutpostPost(line, null, { body: '@backend joined · api', intro })).toMatchObject({
+      body: '@backend joined · api',
+      intro,
+    });
+    expect(toOutpostPost(line, null)).toMatchObject({ body: '@api joined', intro: null });
   });
 
   it('gives a note no state, reason or answer', () => {

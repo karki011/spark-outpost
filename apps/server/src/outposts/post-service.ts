@@ -1,14 +1,19 @@
 import {
   handleProblem,
   parseAddress,
-  type CreateOutpostRequest,
   type MemberRequest,
   type OutpostMember,
+  type PostAddress,
 } from '@spark-outpost/contracts';
 import { redactText, storableText } from '../audit/redact.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
-import { getPost, insertPosts, rejectWaiting } from '../persistence/outpost-posts.ts';
+import {
+  attachmentsFree,
+  getPost,
+  insertPosts,
+  rejectWaiting,
+} from '../persistence/outpost-posts.ts';
 import {
   addMember,
   createOutpost,
@@ -19,11 +24,15 @@ import {
   removeMember,
   renameHandle,
 } from '../persistence/outposts.ts';
-import { joinNotice } from './handshake.ts';
+import { introLine } from './handshake.ts';
+import { memberFacts } from './member-facts.ts';
 import type { RequestAuthor, StoredOutpost, StoredPost } from './ports.ts';
 import { planPost } from './post-rules.ts';
 
 export const POST_ID_IN_USE = 'That post id is already in use.';
+export const CHAT_NOT_IN_OUTPOST = 'That chat is not in this outpost.';
+export const ATTACHMENT_NOT_FREE =
+  'An attachment is missing or already sent. Remove it and attach the file again.';
 
 export interface PostServiceDeps {
   db: Db;
@@ -36,6 +45,9 @@ export interface PostInput {
   text: string;
   id?: string;
   guestConversationId?: string;
+  toConversationId?: string;
+  attachmentIds?: readonly string[];
+  opening?: boolean;
 }
 
 export interface JoinInput extends MemberRequest {
@@ -46,7 +58,7 @@ function storedBody(body: string): string {
   return storableText(redactText(body));
 }
 
-async function knownOutpost(
+export async function knownOutpost(
   db: Queryable,
   workspaceId: string,
   outpostId: string,
@@ -67,6 +79,18 @@ async function repeatedPost(db: Queryable, input: PostInput): Promise<StoredPost
   return existing;
 }
 
+function addressOf(input: PostInput, members: readonly OutpostMember[]): PostAddress {
+  if (input.toConversationId === undefined) {
+    return parseAddress(
+      input.text,
+      members.map((member) => member.handle),
+    );
+  }
+  const member = members.find((candidate) => candidate.conversationId === input.toConversationId);
+  if (!member) throw new OutpostError(400, CHAT_NOT_IN_OUTPOST);
+  return { kind: 'request', to: member.handle, body: input.text.trim() };
+}
+
 export async function postToOutpost(
   { db, workspaceId }: PostServiceDeps,
   input: PostInput,
@@ -75,10 +99,11 @@ export async function postToOutpost(
     const outpost = await knownOutpost(client, workspaceId, input.outpostId);
     const repeated = await repeatedPost(client, input);
     if (repeated) return [repeated];
-    const address = parseAddress(
-      input.text,
-      outpost.members.map((member) => member.handle),
-    );
+    const address = addressOf(input, outpost.members);
+    const attachmentIds = [...new Set(input.attachmentIds ?? [])];
+    if (!(await attachmentsFree(client, workspaceId, attachmentIds))) {
+      throw new OutpostError(400, ATTACHMENT_NOT_FREE);
+    }
     const plan = planPost(
       input.author,
       address,
@@ -93,6 +118,7 @@ export async function postToOutpost(
         ...post,
         id: index === 0 && input.id !== undefined ? input.id : newId(),
         body: storedBody(post.body),
+        ...(post.kind === 'request' ? { attachmentIds, opening: input.opening ?? false } : {}),
       })),
     );
     await notifyOutpostChanged(client, outpost.id);
@@ -100,7 +126,7 @@ export async function postToOutpost(
   });
 }
 
-async function addWithNotice(
+export async function addWithNotice(
   db: Queryable,
   outpost: StoredOutpost,
   member: MemberRequest,
@@ -109,13 +135,21 @@ async function addWithNotice(
   const problem = handleProblem(member.handle, handles);
   if (problem) throw new OutpostError(400, problem);
   const added = await addMember(db, outpost.id, member);
+  const facts = await memberFacts(db, added.conversationId);
   await insertPosts(db, [
     {
       id: newId(),
       outpostId: outpost.id,
       kind: 'notice',
-      body: joinNotice(added.handle, [...handles, added.handle]),
+      body: introLine({
+        handle: added.handle,
+        project: facts?.project ?? null,
+        agent: facts?.agent ?? null,
+        mode: facts?.mode ?? null,
+      }),
       fromUser: false,
+      fromConversationId: added.conversationId,
+      fromHandle: added.handle,
     },
   ]);
   return added;
@@ -171,23 +205,18 @@ export async function leaveOutpost(
 
 export async function openOutpost(
   { db, workspaceId }: PostServiceDeps,
-  request: CreateOutpostRequest,
-): Promise<{ outpost: StoredOutpost; created: boolean }> {
+  request: { id: string; name: string },
+): Promise<{ created: boolean }> {
   return withTransaction(db, async (client) => {
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [request.id]);
-    const existing = await getOutpost(client, workspaceId, request.id);
-    if (existing) return { outpost: existing, created: false };
-    let outpost = await createOutpost(client, {
+    if (await getOutpost(client, workspaceId, request.id)) return { created: false };
+    await createOutpost(client, {
       id: request.id,
       workspaceId,
       name: request.name,
       members: [],
     });
-    for (const member of request.members) {
-      await addWithNotice(client, outpost, member);
-      outpost = await knownOutpost(client, workspaceId, outpost.id);
-    }
-    await notifyOutpostChanged(client, outpost.id);
-    return { outpost, created: true };
+    await notifyOutpostChanged(client, request.id);
+    return { created: true };
   });
 }

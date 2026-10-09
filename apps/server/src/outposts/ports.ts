@@ -44,6 +44,8 @@ export interface StoredPost {
   answerSeenAt: string | null;
   pinnedAt: string | null;
   createdAt: string;
+  attachmentIds: string[];
+  opening: boolean;
 }
 
 export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'fromUser'> &
@@ -60,6 +62,8 @@ export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'f
       | 'guest'
       | 'batchId'
       | 'observed'
+      | 'attachmentIds'
+      | 'opening'
     >
   >;
 

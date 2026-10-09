@@ -1,0 +1,2688 @@
+<!doctype html>
+<html lang="en" data-skin="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spark Outpost · New outpost (mockup)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Design mockup for creating an outpost, two variants. Static: no product code.
+         The two token blocks are copied verbatim from apps/web/public/theme.css (light and dark).
+         Shell, button, field, menu and dialog rules are the ones in outpost.html; the attachment chip
+         follows apps/web/src/chat/attachments/attachments.css. Blob faces are blobatar 2.7.0 output
+         for the app's provider seeds; see BLOBATAR-LICENSE.txt. */
+      [data-skin='light'] {
+        color-scheme: light;
+        --bg: #f4f5f7;
+        --rail: #eaecf0;
+        --panel: #ffffff;
+        --raise: #eef0f3;
+        --line: #e2e5ea;
+        --line-strong: #85888d;
+        --text: #16191e;
+        --muted: #495160;
+        --faint: #575f6a;
+        --accent: #078470;
+        --accent-ink: #fff;
+        --accent-text: #00715d;
+        --accent-soft: rgba(7, 132, 112, 0.11);
+        --user: #e8f3f0;
+        --user-text: #16191e;
+        --danger: #bb3430;
+        --danger-soft: rgba(187, 52, 48, 0.09);
+        --warn: #8a4a00;
+        --warn-ink: #fff;
+        --success: #007460;
+        --code: #f5f6f8;
+        --scout-eye: #0c0f12;
+        --r: 14px;
+        --r-sm: 8px;
+      }
+      [data-skin='dark'] {
+        color-scheme: dark;
+        --bg: #0c0f12;
+        --rail: #07090b;
+        --panel: #12161a;
+        --raise: #1a1f25;
+        --line: #232a31;
+        --line-strong: #646c74;
+        --text: #e7eaee;
+        --muted: #a3aebc;
+        --faint: #909aa7;
+        --accent: #34c3a3;
+        --accent-ink: #05231c;
+        --accent-text: #34c3a3;
+        --accent-soft: rgba(52, 195, 163, 0.13);
+        --user: #172a2a;
+        --user-text: #e7eaee;
+        --danger: #f06b63;
+        --danger-soft: rgba(240, 107, 99, 0.11);
+        --warn: #e8b04b;
+        --warn-ink: #1b1300;
+        --success: #34c3a3;
+        --code: #0e1215;
+        --scout-eye: #0c0f12;
+        --r: 14px;
+        --r-sm: 8px;
+      }
+      [data-skin] {
+        color: var(--text);
+        --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
+        --composer-line: color-mix(in srgb, var(--line-strong) 35%, var(--line));
+        --composer-focus-line: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+        --composer-focus: 0 0 0 3px var(--accent-soft);
+        --pop-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 0 80px;
+        background: var(--rail);
+        font:
+          15px/1.6 'Geist',
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+        padding: 0;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      svg {
+        flex-shrink: 0;
+        display: block;
+      }
+      h1,
+      h2,
+      p,
+      ul {
+        margin: 0;
+        padding: 0;
+      }
+      ul {
+        list-style: none;
+      }
+      code,
+      .mono {
+        font-family: 'Geist Mono', ui-monospace, monospace;
+      }
+      .sprite {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+      .i {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .chev {
+        stroke-width: 2.4;
+      }
+      .chev.down {
+        transform: rotate(90deg);
+      }
+      .caret {
+        display: inline-block;
+        width: 1.5px;
+        height: 1.15em;
+        margin-left: 1px;
+        vertical-align: -0.2em;
+        background: var(--accent);
+      }
+
+      /* sheet */
+      .sheet-head,
+      .frame {
+        width: 1440px;
+        margin: 0 auto;
+      }
+      .sheet-head h1 {
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      .sheet-head p {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .sheet-head code {
+        font-size: 0.86em;
+      }
+      .frame {
+        margin-top: 40px;
+      }
+      .frame-title {
+        margin-bottom: 10px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .frame-title span {
+        margin-left: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 400;
+      }
+      .win {
+        position: relative;
+        display: flex;
+        width: 1440px;
+        height: 900px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--rail);
+        box-shadow:
+          0 0 0 1px var(--line-strong),
+          0 24px 60px rgba(0, 0, 0, 0.18);
+      }
+
+      /* left bar */
+      .rail {
+        position: relative;
+        width: 70px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 14px 0 12px;
+        background: var(--rail);
+      }
+      .rail-logo {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 10px;
+      }
+      .scout .sc-ant {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 3;
+        stroke-linecap: round;
+      }
+      .scout .sc-spark {
+        fill: var(--warn);
+      }
+      .scout .sc-body {
+        fill: var(--accent);
+      }
+      .scout .sc-eye {
+        fill: var(--scout-eye);
+      }
+      .rail-ind {
+        position: absolute;
+        left: 7px;
+        top: 134px;
+        width: 56px;
+        height: 52px;
+        border-radius: 13px;
+        background: var(--accent-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+      }
+      .rail-ind::before {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 15px;
+        bottom: 15px;
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--accent);
+      }
+      .rail-btn {
+        position: relative;
+        z-index: 1;
+        width: 56px;
+        height: 54px;
+        padding: 8px 0 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border-radius: 13px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.3;
+      }
+      .rail-btn[aria-current='page'] {
+        color: var(--text);
+      }
+      .rail-btn[aria-current='page'] svg {
+        color: var(--accent-text);
+      }
+      .rbadge {
+        position: absolute;
+        top: 3px;
+        right: 9px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--warn);
+        color: var(--warn-ink);
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 700;
+        box-shadow: 0 0 0 2px var(--rail);
+      }
+      .rail-sp {
+        flex: 1;
+      }
+
+      /* sidebar */
+      .view {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+      }
+      .side {
+        width: 300px;
+        flex-shrink: 0;
+        margin: 8px 0;
+        background: var(--bg);
+        border-radius: calc(var(--r) + 4px);
+        box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+      }
+      .side-in {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 10px 10px;
+      }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: var(--r-sm);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .icon-btn.sm {
+        width: 24px;
+        height: 24px;
+      }
+      .icon-btn.on {
+        background: var(--line);
+        color: var(--text);
+      }
+      .side-top {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 32px;
+        padding: 0 4px 10px;
+      }
+      .side-top b {
+        flex: 1;
+        padding-left: 6px;
+        font-weight: 600;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 2px 8px;
+        padding: 7px 10px;
+        border-radius: var(--r-sm);
+        box-shadow: inset 0 0 0 1px var(--line-strong);
+        color: var(--faint);
+        font-size: 14px;
+      }
+      .tabs {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 0 2px 8px;
+        padding: 3px;
+        background: var(--raise);
+        border-radius: var(--r-sm);
+      }
+      .tabs button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 5px 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .tabs button[aria-selected='true'] {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .tabs .cnt {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--faint);
+      }
+      .tab-ind {
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        left: 3px;
+        width: calc((100% - 6px) / 2);
+        border-radius: calc(var(--r-sm) - 2px);
+        background: var(--panel);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+      .list {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .sec {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 24px;
+        padding: 12px 6px 4px 12px;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .sec.bucket {
+        padding-top: 4px;
+      }
+      .sec .icon-btn {
+        width: 24px;
+        height: 24px;
+      }
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .proj {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-right: 4px;
+        border-radius: var(--r-sm);
+      }
+      .proj.active {
+        background: var(--raise);
+      }
+      .proj.active::before,
+      .row.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+      .proj-head {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 6px 7px 10px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .proj-head .chev {
+        color: var(--faint);
+        transform: rotate(90deg);
+      }
+      .proj-head svg:not(.chev) {
+        color: var(--muted);
+      }
+      .proj.active .proj-head {
+        font-weight: 500;
+      }
+      .proj.active .proj-head svg:not(.chev) {
+        color: var(--accent-text);
+      }
+      .proj-head .nm {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .proj-head .c {
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .unread {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 1;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-right: 4px;
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .row.active,
+      .row.hovered {
+        background: var(--raise);
+        color: var(--text);
+      }
+      .row-open {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 4px 6px 32px;
+      }
+      .row-open.loose {
+        padding-left: 35px;
+      }
+      .tt {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .rh {
+        flex-shrink: 0;
+        color: var(--text);
+        font-weight: 500;
+      }
+      .row.st-running .tt {
+        color: var(--text);
+      }
+      .in-outpost {
+        display: grid;
+        flex-shrink: 0;
+        color: var(--faint);
+      }
+      .rename-wrap {
+        flex-shrink: 0;
+        min-width: 78px;
+      }
+      .rename {
+        display: block;
+        border-bottom: 1px solid var(--accent);
+        box-shadow: 0 1px 0 var(--accent);
+        color: var(--text);
+        font-weight: 500;
+      }
+      .chats-rule {
+        height: 1px;
+        margin: 14px 8px 6px;
+        border: 0;
+        background: var(--line);
+      }
+      .side-new {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 8px 2px 0;
+        padding: 8px 10px;
+        border-radius: var(--r-sm);
+        box-shadow: inset 0 0 0 1px var(--line);
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .side-new svg {
+        color: var(--muted);
+      }
+      .side-new > span:not(.keys) {
+        flex: 1;
+      }
+      .keys {
+        display: inline-flex;
+        gap: 3px;
+      }
+      .keys kbd {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        display: grid;
+        place-items: center;
+        border-radius: 4px;
+        background: var(--raise);
+        box-shadow: inset 0 -1px 0 var(--line);
+        color: color-mix(in srgb, var(--muted) 70%, var(--text));
+        font: 500 11.5px/1 ui-sans-serif, system-ui, sans-serif;
+      }
+
+      /* status glyphs */
+      .st {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+      }
+      .orb {
+        display: block;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: conic-gradient(from 40deg, transparent 0 20%, var(--accent));
+        -webkit-mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
+        mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
+      }
+      .orb.sm {
+        width: 11px;
+        height: 11px;
+        -webkit-mask: radial-gradient(circle, transparent 2.8px, #000 3.4px);
+        mask: radial-gradient(circle, transparent 2.8px, #000 3.4px);
+      }
+      .ask {
+        display: block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 2px solid var(--warn);
+      }
+      .ask.sm {
+        width: 8px;
+        height: 8px;
+      }
+      .udot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .errdot {
+        width: 12px;
+        height: 12px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--danger);
+        color: var(--panel);
+        font-size: 9px;
+        font-style: normal;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .cst {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--faint);
+      }
+      .cst.active {
+        color: var(--accent-text);
+      }
+      .cst.waiting {
+        color: var(--warn);
+      }
+      .cst.done {
+        color: var(--muted);
+      }
+
+      /* main panel */
+      .main {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        margin: 8px 8px 8px 4px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--r) + 4px);
+        overflow: hidden;
+        --chat-col: 880px;
+        --chat-gutter: 56px;
+        --chat-measure: 560px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        min-height: 52px;
+        flex-shrink: 0;
+      }
+      .chat-head {
+        position: relative;
+        z-index: 3;
+        box-shadow: 0 1px 0 var(--line);
+      }
+      .head-ico {
+        display: grid;
+        color: var(--accent-text);
+      }
+      .chat-title {
+        font-size: 15px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .crumb {
+        color: var(--muted);
+      }
+      .head .chat-title + .icon-btn {
+        width: 28px;
+        height: 28px;
+        margin-left: -4px;
+        color: var(--faint);
+      }
+      .head-count {
+        margin-left: 2px;
+        padding: 3px 8px;
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .head-r {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+      }
+      .head-r .btn {
+        margin-right: 6px;
+      }
+      .theme-dot circle {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 2.4;
+      }
+      .theme-dot path {
+        fill: var(--accent);
+      }
+      .head-diff {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .add {
+        color: var(--success);
+      }
+      .del {
+        color: var(--danger);
+      }
+      .bars {
+        display: inline-flex;
+        gap: 2px;
+      }
+      .bars i {
+        width: 6px;
+        height: 6px;
+        border-radius: 1px;
+        background: var(--line);
+      }
+      .bars i.a {
+        background: var(--success);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border-radius: var(--r-sm);
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .btn.sm {
+        padding: 6px 12px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .btn.ghost {
+        color: var(--muted);
+      }
+      .btn.line {
+        border: 1px solid var(--line);
+      }
+      .btn.line svg {
+        color: var(--muted);
+      }
+
+      code {
+        font-size: 0.86em;
+        background: var(--raise);
+        padding: 1px 5px;
+        border-radius: 5px;
+      }
+      .hd {
+        color: var(--accent-text);
+        font-weight: 500;
+      }
+      /* composer */
+      .composer-wrap {
+        flex-shrink: 0;
+        padding: 0 var(--chat-gutter) 16px;
+      }
+      .composer {
+        position: relative;
+        z-index: 1;
+        max-width: var(--chat-col);
+        margin: 0 auto;
+        border: 1px solid var(--composer-line);
+        border-radius: var(--r);
+        background: var(--panel);
+      }
+      .ta {
+        padding: 12px 14px 4px;
+      }
+      .ta.placeholder {
+        color: var(--faint);
+      }
+      .comp-bar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 8px 8px;
+      }
+      .hint {
+        flex: 1;
+        margin-left: 6px;
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .send {
+        flex-shrink: 0;
+        margin-left: 6px;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        display: grid;
+        place-items: center;
+      }
+      .send.sm {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+      }
+      .send.idle {
+        opacity: 0.25;
+      }
+      .send svg {
+        stroke-width: 2.4;
+      }
+      .mpop {
+        position: absolute;
+        z-index: 30;
+        padding: 5px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--pop-shadow);
+      }
+      .atpop {
+        bottom: calc(100% + 10px);
+        left: -14px;
+        width: 268px;
+        display: flex;
+        flex-direction: column;
+      }
+      .mgroup {
+        padding: 5px 9px 3px;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .mopt {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 5px 9px;
+        border-radius: var(--r-sm);
+        white-space: nowrap;
+      }
+      .mopt.on {
+        background: var(--raise);
+      }
+      .mopt b {
+        flex-shrink: 0;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .mopt small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .mopt .mi {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .mbtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        padding: 5px 8px 5px 10px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .mbtn .chev {
+        color: var(--faint);
+      }
+      .meter {
+        display: inline-flex;
+        gap: 2px;
+        align-items: flex-end;
+        height: 11px;
+      }
+      .meter i {
+        width: 3px;
+        border-radius: 1px;
+        background: var(--accent);
+      }
+      .pchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 8px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .pchip svg {
+        color: var(--muted);
+      }
+      .ctxbtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .main.free {
+        overflow: visible;
+      }
+      .scrim {
+        border-radius: inherit;
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        background: color-mix(in srgb, var(--text) 28%, transparent);
+      }
+      .dlg {
+        position: absolute;
+        z-index: 6;
+        top: 96px;
+        left: 452px;
+        width: 560px;
+        padding: 18px 20px 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--r) + 2px);
+        box-shadow: var(--pop-shadow);
+      }
+      .dlg-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .dlg-head h2 {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .dlg-lede {
+        margin: 2px 0 14px;
+        color: var(--muted);
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .field {
+        display: block;
+        margin-bottom: 14px;
+      }
+      .field > span:first-child {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .field > span small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 400;
+      }
+      .inp {
+        display: block;
+        width: 100%;
+        padding: 6px 11px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--line-strong);
+        background: var(--bg);
+        font-size: 13.5px;
+        line-height: 20px;
+      }
+      .inp.handle {
+        width: 92px;
+        flex-shrink: 0;
+        padding: 4px 9px;
+        font-weight: 500;
+      }
+      .inp.focus {
+        border-color: var(--accent);
+        box-shadow: var(--focus-ring);
+      }
+      .dms {
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+      }
+      .dm {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 8px 8px 10px;
+      }
+      .dm + .dm {
+        border-top: 1px solid var(--line);
+      }
+      .dm-text {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.35;
+      }
+      .dm-text b {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .dm-text small {
+        display: block;
+        color: var(--faint);
+        font-family: 'Geist Mono', ui-monospace, monospace;
+        font-size: 12px;
+      }
+      .dm.new {
+        background: var(--bg);
+        border-radius: 0 0 var(--r-sm) var(--r-sm);
+      }
+      .dm-plus {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .field-button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--panel);
+        font-size: 13.5px;
+        line-height: 20px;
+      }
+      .field-button svg {
+        color: var(--muted);
+      }
+      .field-value {
+        flex: 1;
+      }
+      .dm-note {
+        flex-basis: 100%;
+        padding-left: 36px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.4;
+      }
+      .dlg-add {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .dlg-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      /* new outpost */
+      .win > .scrim {
+        border-radius: 0;
+      }
+      .win.bare {
+        display: block;
+        width: 720px;
+        height: auto;
+        margin: 0;
+        padding: 28px 40px;
+        background: var(--bg);
+      }
+      .phone {
+        position: relative;
+        width: 390px;
+        height: 844px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow:
+          0 0 0 1px var(--line-strong),
+          0 24px 60px rgba(0, 0, 0, 0.18);
+      }
+      .osheet {
+        position: absolute;
+        z-index: 6;
+        top: 72px;
+        left: calc(50% - 320px);
+        width: 640px;
+        display: flex;
+        flex-direction: column;
+        padding-top: 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--r) + 2px);
+        box-shadow: var(--pop-shadow);
+      }
+      .osheet.page {
+        top: 48px;
+        max-height: 804px;
+      }
+      .osheet.inline {
+        position: static;
+        box-shadow: none;
+      }
+      .osheet.full {
+        inset: 0;
+        width: auto;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .osheet > .dlg-head {
+        padding: 0 16px 0 20px;
+      }
+      .osheet-body {
+        flex: 1;
+        min-height: 0;
+        padding: 14px 20px 18px;
+      }
+      .osheet.page .osheet-body {
+        overflow: hidden;
+      }
+      .osheet-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--line);
+      }
+      .osheet .dlg-lede {
+        margin: 0 0 14px;
+      }
+      .foot-sp {
+        flex: 1;
+      }
+      .foot-note,
+      .foot-sum,
+      .add-note {
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.4;
+      }
+      .foot-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 4px;
+      }
+      .foot-note.bad {
+        color: var(--danger);
+      }
+      .foot-sum {
+        flex: 1;
+        min-width: 0;
+        color: var(--text);
+        font-size: 13px;
+      }
+      .add-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: 4px;
+      }
+      .dlg-add {
+        align-items: center;
+      }
+      .btn[disabled] {
+        opacity: 0.45;
+      }
+      .btn.grow {
+        flex: 1;
+      }
+      .btn .keys {
+        margin-left: 2px;
+      }
+      .btn.primary .keys kbd {
+        background: color-mix(in srgb, var(--accent-ink) 16%, transparent);
+        box-shadow: none;
+        color: var(--accent-ink);
+      }
+      .btn.focusring {
+        border-color: var(--accent);
+        box-shadow: var(--focus-ring);
+      }
+
+      .steps {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 12px 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .step,
+      .step button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+      }
+      .step.on {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .step.done button {
+        color: var(--text);
+      }
+      .step-n {
+        width: 20px;
+        height: 20px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 1px var(--line-strong);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .step.on .step-n {
+        background: var(--accent);
+        box-shadow: none;
+        color: var(--accent-ink);
+      }
+      .step.done .step-n {
+        background: var(--accent-soft);
+        box-shadow: none;
+        color: var(--accent-text);
+      }
+      .step.done .step-n svg {
+        stroke-width: 2.8;
+      }
+      .step-line {
+        width: 28px;
+        height: 1px;
+        background: var(--line-strong);
+        opacity: 0.5;
+      }
+
+      .field.last {
+        margin-bottom: 0;
+      }
+      .field > span:first-child .textbtn {
+        margin-left: 6px;
+        font-weight: 500;
+      }
+      .field-note {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .field-button {
+        min-width: 0;
+      }
+      .field-value {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .field-value small {
+        margin-left: 6px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .field-button .chev {
+        color: var(--faint);
+      }
+      .field-button.bad,
+      .inp.bad {
+        border-color: var(--danger);
+        box-shadow: 0 0 0 3px var(--danger-soft);
+      }
+      .ph {
+        color: var(--faint);
+        font-weight: 400;
+      }
+      .err {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 6px;
+        color: var(--danger);
+        font-size: 12.5px;
+        line-height: 1.4;
+      }
+      .err svg {
+        margin-top: 2px;
+      }
+      .err b {
+        font-weight: 600;
+      }
+      .err .textbtn {
+        padding: 0 2px;
+        font-size: 12.5px;
+        text-decoration: underline;
+      }
+      .err .textbtn:first-of-type {
+        margin-left: 0;
+      }
+      .dm > .err {
+        flex-basis: 100%;
+        margin-top: 0;
+        padding-left: 36px;
+      }
+
+      .dm-text b {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .kind {
+        flex-shrink: 0;
+        padding: 0 7px;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px var(--line);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.5;
+      }
+      .fm-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .fm-mark svg {
+        color: var(--faint);
+      }
+      .fm-files {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        margin-left: 3px;
+      }
+
+      .ed {
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px solid var(--composer-line);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+      }
+      .ed-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .ed-n {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .tabs.seg {
+        width: 248px;
+        margin: 0;
+        background: var(--raise);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+      .tabs.seg.second .tab-ind {
+        left: 50%;
+      }
+      .fgrid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px 12px;
+      }
+      .fgrid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .fgrid.one {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .fgrid.split {
+        grid-template-columns: minmax(0, 1fr) 112px;
+        margin-top: 10px;
+      }
+      .fgrid .field {
+        min-width: 0;
+        margin-bottom: 0;
+      }
+      .fgrid .field > span:first-child {
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .handle-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .handle-line .inp.handle {
+        padding: 5px 9px;
+        background: var(--panel);
+      }
+      .handle-line small {
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.3;
+      }
+      .inp.handle.wide {
+        width: 100%;
+        padding: 5px 9px;
+        background: var(--panel);
+      }
+      .ed-note {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.4;
+      }
+      .ed-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .fm {
+        margin-top: 12px;
+      }
+      .fm-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .fm-head b {
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      .fm-head small {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .fm-head .fm-remove {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 400;
+      }
+      .composer.mini {
+        max-width: none;
+        margin: 0;
+        border-radius: var(--r-sm);
+      }
+      .composer.mini .ta {
+        padding: 8px 12px 2px;
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .composer.mini .comp-bar {
+        padding: 2px 6px 6px;
+      }
+      .composer.mini .hint {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 8px 0;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 4px 4px 4px 8px;
+        border-radius: var(--r-sm);
+        background: var(--raise);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .chip small {
+        color: var(--faint);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .chip svg {
+        color: var(--muted);
+      }
+      .att-name {
+        min-width: 0;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chip-x {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+        color: var(--muted);
+      }
+      .fm-add {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        margin-top: 12px;
+        padding: 7px 10px;
+        border: 1px dashed var(--line-strong);
+        border-radius: var(--r-sm);
+        font-size: 13px;
+        text-align: left;
+      }
+      .fm-add svg {
+        color: var(--muted);
+      }
+      .fm-add span {
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .fm-add small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      .rv-name {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 14px;
+        font-size: 14px;
+      }
+      .rv-label {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .rv-name b {
+        font-weight: 500;
+      }
+      .rv-name .rv-label {
+        width: 52px;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .rv-handle {
+        width: 52px;
+        flex-shrink: 0;
+        color: var(--accent-text);
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .rv-quote {
+        flex-basis: 100%;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        margin-top: -2px;
+        padding-left: 36px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.5;
+      }
+      .rv-quote svg {
+        color: var(--faint);
+      }
+      .rv-quote > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .rv-files {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        margin-left: 4px;
+        font-style: normal;
+        vertical-align: bottom;
+      }
+      .will {
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+      }
+      .will li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 9px 12px;
+      }
+      .will li + li {
+        border-top: 1px solid var(--line);
+      }
+      .will li > svg {
+        margin-top: 3px;
+        color: var(--accent-text);
+      }
+      .will b {
+        display: block;
+        font-size: 13.5px;
+        font-weight: 500;
+        line-height: 1.5;
+      }
+      .will small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.45;
+      }
+
+      .empty {
+        padding: 10px 12px;
+        border: 1px dashed var(--line-strong);
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .picker {
+        margin-top: 10px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+      }
+      .picker.flat {
+        margin-top: 0;
+        padding: 0;
+        border: 0;
+      }
+      .picker .search {
+        margin: 0 0 6px;
+        background: var(--panel);
+      }
+      .picks {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .pick {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 5px 8px;
+        border-radius: var(--r-sm);
+      }
+      .pick.on {
+        background: var(--raise);
+      }
+      .pick.off .blob {
+        opacity: 0.5;
+      }
+      .pick.off b {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .pick .dm-text small {
+        color: var(--muted);
+      }
+      .pick.off .dm-text small {
+        font-family: inherit;
+      }
+      .pick-ico {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .pick-add {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 9px 2px 7px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--panel);
+        color: var(--text);
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      .pick-add svg {
+        color: var(--muted);
+      }
+
+      .card-chev {
+        width: 20px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        margin: 0 -4px 0 -2px;
+        color: var(--faint);
+      }
+      .dm.card.open {
+        background: var(--bg);
+      }
+      .card-body {
+        flex-basis: 100%;
+        min-width: 0;
+        padding: 4px 4px 6px 24px;
+      }
+
+      .osheet.full .steps {
+        margin: 10px 16px 0;
+      }
+      .osheet.full > .dlg-head {
+        padding: 0 10px 0 16px;
+      }
+      .osheet.full .osheet-body {
+        padding: 14px 16px;
+        overflow: hidden;
+      }
+      .osheet.full .osheet-foot {
+        padding: 12px 16px 20px;
+      }
+      .osheet.full .tabs.seg {
+        width: 100%;
+      }
+      .steps {
+        padding-left: 0;
+        list-style: none;
+      }
+      .field > span .field-value small,
+      .field-value small {
+        display: inline;
+      }
+      .osheet .dm-text small {
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 12.5px;
+      }
+      .textbtn {
+        padding: 0 6px;
+        border-radius: 5px;
+        color: var(--accent-text);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .rv-name .rv-label {
+        width: auto;
+        color: var(--text);
+        font-weight: 500;
+      }
+      .rv-name .textbtn {
+        margin-left: -4px;
+      }
+      .foot-sum small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .dm.card.open:last-child {
+        border-radius: 0 0 var(--r-sm) var(--r-sm);
+      }
+
+    </style>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+      <symbol id="i-analytics" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+      <symbol id="i-tickets" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M10 9v6"/></symbol>
+      <symbol id="i-map" viewBox="0 0 24 24"><path d="m5 18 5-9 7 3 2-7"/><circle cx="5" cy="18" r="1.8" fill="currentColor"/><circle cx="10" cy="9" r="1.8" fill="currentColor"/><circle cx="17" cy="12" r="2.2" fill="currentColor"/><circle cx="19" cy="5" r="1.4" fill="currentColor"/></symbol>
+      <symbol id="i-docs" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6M9 10.5h4"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+      <symbol id="i-side" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></symbol>
+      <symbol id="i-railpanel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></symbol>
+      <symbol id="i-newchat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M13 9v6M10 12h6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-branch" viewBox="0 0 24 24"><path d="M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 9a9 9 0 0 1-9 9"/></symbol>
+      <symbol id="i-pr" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V10a4 4 0 0 0-4-4h-2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z"/></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+      <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="m8 3 4 4 4-4"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M7 4v5M7 13v7M17 4v9M17 17v3M4 11h6M14 15h6"/></symbol>
+      <symbol id="i-usage" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-changes" viewBox="0 0 24 24"><path d="M12 5v8M8 9h8M8 18h8"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+      <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+      <symbol id="i-move" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-unlock" viewBox="0 0 24 24"><path d="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 6.8-1.2"/></symbol>
+      <symbol id="i-outpost" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2.5 3.5L17 12H6"/></symbol>
+      <symbol id="b-claude-idle" viewBox="0 0 100 100"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M43.01 48.23C43.04 55.16 42.61 56.13 39.46 56.15C36.32 56.17 35.87 55.2 35.84 48.27C35.8 41.34 36.23 40.37 39.38 40.36C42.53 40.34 42.97 41.31 43.01 48.23Z"/><path d="M62.82 49.24C62.52 55.48 62.07 56.34 59.21 56.2C56.34 56.06 55.98 55.17 56.28 48.92C56.58 42.68 57.03 41.82 59.89 41.96C62.76 42.1 63.12 42.99 62.82 49.24Z"/></g></symbol>
+      <symbol id="b-claude-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M44.03 45.89C44.32 47.95 43.61 48.35 38.25 49.1C32.89 49.85 32.1 49.67 31.81 47.61C31.52 45.55 32.23 45.16 37.59 44.41C42.95 43.65 43.74 43.84 44.03 45.89Z"/><path d="M66.89 46.76C67.19 48.93 66.52 49.33 61.4 50.05C56.28 50.77 55.52 50.57 55.22 48.4C54.91 46.23 55.58 45.83 60.7 45.11C65.82 44.39 66.58 44.59 66.89 46.76Z"/></g></g></symbol>
+      <symbol id="b-claude-unsure" viewBox="0 0 100 100"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M42.52 47.81C43.01 54.86 42.66 55.88 39.68 56.09C36.7 56.3 36.22 55.34 35.72 48.29C35.23 41.24 35.58 40.23 38.56 40.02C41.54 39.81 42.03 40.77 42.52 47.81Z"/><path d="M63.63 47.94C64.51 51.45 64.17 52.06 60.85 52.89C57.53 53.72 56.95 53.34 56.07 49.82C55.19 46.3 55.53 45.7 58.85 44.87C62.17 44.04 62.75 44.42 63.63 47.94Z"/></g></symbol>
+      <symbol id="b-claude-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M43.21 50.65C43.21 52.18 42.71 52.39 39.12 52.39C35.54 52.39 35.03 52.18 35.03 50.65C35.03 49.13 35.54 48.92 39.12 48.92C42.71 48.92 43.21 49.13 43.21 50.65Z"/><path d="M63.44 51.73C63.33 53.29 62.88 53.48 59.73 53.26C56.57 53.04 56.15 52.79 56.26 51.23C56.37 49.67 56.82 49.48 59.97 49.7C63.13 49.92 63.55 50.17 63.44 51.73Z"/></g></g></symbol>
+      <symbol id="b-codex-idle" viewBox="0 0 100 100"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.17 45.74C43.83 52.88 43.83 52.88 41.08 53.14C38.32 53.4 38.32 53.4 37.66 46.26C36.99 39.12 36.99 39.12 39.75 38.86C42.5 38.6 42.5 38.6 43.17 45.74Z"/><path d="M63.13 45.78C63.81 52.1 63.81 52.1 61.56 52.34C59.31 52.58 59.31 52.58 58.62 46.26C57.94 39.94 57.94 39.94 60.19 39.7C62.44 39.46 62.44 39.46 63.13 45.78Z"/></g></symbol>
+      <symbol id="b-codex-unsure" viewBox="0 0 100 100"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M42.74 45.62C43.25 52.91 43.25 52.91 40.62 53.1C38 53.28 38 53.28 37.49 45.99C36.98 38.69 36.98 38.69 39.6 38.5C42.23 38.32 42.23 38.32 42.74 45.62Z"/><path d="M63.79 45.17C64.68 48.74 64.68 48.74 62.07 49.4C59.45 50.05 59.45 50.05 58.56 46.47C57.67 42.89 57.67 42.89 60.28 42.24C62.9 41.59 62.9 41.59 63.79 45.17Z"/></g></symbol>
+      <symbol id="b-codex-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.63 43.84C43.93 45.97 43.93 45.97 39.21 46.63C34.5 47.29 34.5 47.29 34.2 45.16C33.9 43.03 33.9 43.03 38.61 42.37C43.33 41.71 43.33 41.71 43.63 43.84Z"/><path d="M66.41 43.95C66.72 46.16 66.72 46.16 62.68 46.72C58.65 47.29 58.65 47.29 58.34 45.09C58.03 42.88 58.03 42.88 62.06 42.32C66.1 41.75 66.1 41.75 66.41 43.95Z"/></g></g></symbol>
+      <symbol id="b-codex-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.27 48.4C43.27 49.98 43.27 49.98 40.11 49.98C36.96 49.98 36.96 49.98 36.96 48.4C36.96 46.82 36.96 46.82 40.11 46.82C43.27 46.82 43.27 46.82 43.27 48.4Z"/><path d="M63.66 48.59C63.55 50.18 63.55 50.18 61.06 50C58.58 49.83 58.58 49.83 58.69 48.25C58.8 46.66 58.8 46.66 61.29 46.83C63.77 47.01 63.77 47.01 63.66 48.59Z"/></g></g></symbol>
+      <symbol id="b-zai-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M43 54.5C43 55.26 42.73 55.39 41.02 55.39C39.31 55.39 39.04 55.26 39.04 54.5C39.04 53.74 39.31 53.62 41.02 53.62C42.73 53.62 43 53.74 43 54.5Z"/><path d="M56.57 53.83C56.51 54.69 56.27 54.81 54.83 54.71C53.4 54.61 53.18 54.45 53.24 53.6C53.29 52.75 53.54 52.63 54.97 52.73C56.41 52.83 56.63 52.98 56.57 53.83Z"/></g></g></symbol>
+      <symbol id="b-zai-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M42.78 50.19C42.93 51.21 42.54 51.44 39.99 51.8C37.43 52.16 37 52.05 36.86 51.02C36.71 49.99 37.1 49.77 39.65 49.41C42.2 49.05 42.64 49.16 42.78 50.19Z"/><path d="M58.81 49.44C58.98 50.62 58.63 50.86 56.3 51.19C53.96 51.52 53.56 51.38 53.39 50.2C53.23 49.02 53.58 48.77 55.91 48.44C58.24 48.12 58.64 48.25 58.81 49.44Z"/></g></g></symbol>
+      <symbol id="b-zai-idle" viewBox="0 0 100 100"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M43.03 51.79C43.66 55.19 43.52 55.78 42.05 56.06C40.58 56.33 40.24 55.82 39.61 52.42C38.98 49.01 39.11 48.42 40.59 48.15C42.06 47.88 42.4 48.38 43.03 51.79Z"/><path d="M56.09 51C56.8 54.34 56.71 54.92 55.43 55.19C54.15 55.47 53.83 54.97 53.12 51.63C52.41 48.29 52.5 47.71 53.78 47.44C55.06 47.17 55.38 47.66 56.09 51Z"/></g></symbol>
+      <symbol id="b-jev-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#dfd2e4"><circle cx="28.92" cy="44.54" r="16.24"/><circle cx="37.52" cy="37.14" r="14.69"/><circle cx="51.44" cy="34.31" r="16.49"/><circle cx="65.36" cy="37.14" r="17.16"/><circle cx="73.96" cy="44.54" r="17.96"/><path d="M81.45 49.11C82.08 55.93 78.93 66.43 73.93 71.47C68.93 76.52 58.33 79.99 51.44 79.38C44.56 78.77 37.71 72.86 32.63 67.81C27.56 62.77 21.29 55.64 21 49.11C20.7 42.58 25.79 32.82 30.86 28.65C35.94 24.47 44.9 23.76 51.44 24.08C57.99 24.39 65.13 26.36 70.13 30.53C75.13 34.7 80.81 42.28 81.45 49.11Z"/></g><g fill="#130d15"><path d="M46.75 48.83C46.96 50.33 46.71 50.46 42.73 51.02C38.76 51.58 38.47 51.52 38.26 50.03C38.05 48.53 38.31 48.39 42.28 47.83C46.26 47.28 46.54 47.34 46.75 48.83Z"/><path d="M66.07 49.39C66.25 50.62 66.03 50.74 62.59 51.22C59.16 51.7 58.92 51.65 58.74 50.42C58.57 49.19 58.79 49.07 62.22 48.59C65.66 48.11 65.9 48.16 66.07 49.39Z"/></g></g></symbol>
+      <symbol id="b-user" viewBox="0 0 100 100"><g fill="#699700"><path d="M83.75 49.55C83.53 56.26 73.61 64.39 67.03 68.88C60.45 73.38 51.43 77.72 44.29 76.53C37.14 75.33 28.35 68.62 24.16 61.71C19.97 54.81 15.9 42.07 19.14 35.1C22.39 28.13 35.44 20.96 43.64 19.88C51.84 18.81 61.66 23.71 68.35 28.66C75.03 33.6 83.97 42.85 83.75 49.55Z"/></g><g fill="#0d1108"><path d="M43.08 46.39C43.49 50.98 43.33 51.39 40.94 51.6C38.55 51.81 38.32 51.44 37.9 46.85C37.49 42.26 37.66 41.85 40.05 41.64C42.43 41.43 42.67 41.8 43.08 46.39Z"/><path d="M59.73 45.74C60.15 50.57 59.96 51 57.29 51.23C54.62 51.46 54.36 51.07 53.95 46.23C53.54 41.4 53.73 40.97 56.4 40.74C59.06 40.51 59.32 40.9 59.73 45.74Z"/></g></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+      <symbol id="i-msg" viewBox="0 0 24 24"><path d="M5 6h14v9H9l-4 4z"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5M12 8h.01"/></symbol>
+    </svg>
+
+    <header class="sheet-head">
+      <h1>New outpost</h1>
+      <p>
+        Static design mockup: two ways to create an outpost. Variant A is a three-step sheet, Variant B
+        is one page. Sample data only: every name, project and file is made up. Nothing here is built.
+      </p>
+    </header>
+
+    <section class="frame" id="frame-a1">
+      <h2 class="frame-title">A1. Steps: name <span>Variant A. The sheet opens with the name focused. Enter continues.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <ol class="steps" aria-label="Steps"><li class="step on" aria-current="step"><span class="step-n">1</span>Name</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">2</span>Chats</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">3</span>Review</li></ol>
+        <div class="osheet-body">
+          <p class="dlg-lede">A shared room where you ask a chat for work and chats post notes. Each chat keeps its own project, agent, mode and branch.</p>
+          <label class="field last"><span>Name</span><span class="inp focus">Usage by user<i class="caret"></i></span><small class="field-note">You can rename it later.</small></label>
+        </div>
+        <footer class="osheet-foot"><button class="btn sm ghost">Cancel</button><span class="foot-sp"></span><button class="btn sm primary">Continue<span class="keys"><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-a2">
+      <h2 class="frame-title">A2. Steps: adding a new chat <span>One existing chat is in. The second is a new chat: project, agent, mode, a handle suggested from the project, and an optional first message with two files.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <ol class="steps" aria-label="Steps"><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Name</button></li><li class="step-line" aria-hidden="true"></li><li class="step on" aria-current="step"><span class="step-n">2</span>Chats</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">3</span>Review</li></ol>
+        <div class="osheet-body">
+          <div class="field last">
+            <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+            <ul class="dms">
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@fe</span>
+                <span class="dm-text"><b>Usage page: filter by user<span class="kind">Existing</span></b><small>web · Claude · Auto</small></span>
+                
+                <button class="icon-btn sm" aria-label="Edit @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+            </ul>
+            <div class="ed">
+              <div class="ed-head">
+              <div class="tabs seg second" role="tablist" aria-label="Kind of chat">
+                <span class="tab-ind"></span>
+                <button role="tab">Existing chat</button>
+                <button role="tab" aria-selected="true">New chat</button>
+              </div><span class="ed-n">Chat 2</span></div>
+              <div class="fgrid">
+                <label class="field"><span>Project</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="field-value">api</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                <label class="field"><span>Agent</span><span class="field-button" role="button" tabindex="0"><svg class="blob" width="18" height="18" aria-hidden="true"><use href="#b-codex-idle"/></svg><span class="field-value">Codex<small>GPT-5</small></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                <label class="field"><span>Mode</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-shield"/></svg><span class="field-value">Approve for me</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                <label class="field"><span>Handle</span><span class="handle-line"><span class="inp handle focus">@api<i class="caret"></i></span><small>From the project name</small></span></label>
+              </div>
+              <p class="ed-note">It starts on its own spark/ branch when it first runs.</p>
+            <div class="fm">
+              <div class="fm-head"><b>First message</b><small>Optional</small><button class="textbtn fm-remove">Remove</button></div>
+              <div class="composer mini">
+                <div class="chips" role="group" aria-label="Attachments"><span class="chip att-chip"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-file"/></svg><span class="att-name">usage-contract.md</span><small>3.1 KB</small><button class="chip-x" aria-label="Remove usage-contract.md"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-x"/></svg></button></span><span class="chip att-chip"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-file"/></svg><span class="att-name">usage-rows.sql</span><small>1.4 KB</small><button class="chip-x" aria-label="Remove usage-rows.sql"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
+                <div class="ta">Add an optional userId filter to <code>GET /usage</code>. Follow the attached contract: an unknown user returns 404, not an empty list.</div>
+                <div class="comp-bar"><button class="icon-btn" aria-label="Add files and context"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-plus"/></svg></button><span class="hint">Goes to <span class="hd">@api</span> as its first request when the outpost starts</span></div>
+              </div>
+            </div>
+              <div class="ed-foot"><button class="btn sm ghost">Cancel</button><button class="btn sm line">Add chat<span class="keys"><kbd>↵</kbd></span></button></div>
+            </div>
+            <div class="dlg-add"><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add another chat</button></div>
+          </div>
+        </div>
+        <footer class="osheet-foot"><button class="btn sm ghost">Back</button><span class="foot-sp"></span><span class="foot-note">Continue adds the open chat</span><button class="btn sm primary">Continue</button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-a3">
+      <h2 class="frame-title">A3. Steps: three chats <span>The compact list. A handle is edited in place; the pen reopens the form. Focus rests on Add another chat.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <ol class="steps" aria-label="Steps"><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Name</button></li><li class="step-line" aria-hidden="true"></li><li class="step on" aria-current="step"><span class="step-n">2</span>Chats</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">3</span>Review</li></ol>
+        <div class="osheet-body">
+          <div class="field last">
+            <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+            <ul class="dms">
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@fe</span>
+                <span class="dm-text"><b>Usage page: filter by user<span class="kind">Existing</span></b><small>web · Claude · Auto</small></span>
+                
+                <button class="icon-btn sm" aria-label="Edit @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <span class="inp handle">@api</span>
+                <span class="dm-text"><b>New chat in api<span class="kind">New</span></b><small>api · Codex · Approve for me</small></span>
+                <span class="fm-mark" title="Has a first message with 2 files"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg>First message<span class="fm-files"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-file"/></svg>2</span></span>
+                <button class="icon-btn sm" aria-label="Edit @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@docs</span>
+                <span class="dm-text"><b>New chat in handbook<span class="kind">New</span></b><small>handbook · Claude · Accept edits</small></span>
+                <span class="fm-mark" title="Has a first message"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg>First message</span>
+                <button class="icon-btn sm" aria-label="Edit @docs"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @docs"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+            </ul>
+            <div class="dlg-add"><button class="btn sm line focusring"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add another chat</button><span class="add-note">3 chats · 2 new · 2 first messages</span></div>
+          </div>
+        </div>
+        <footer class="osheet-foot"><button class="btn sm ghost">Back</button><span class="foot-sp"></span><button class="btn sm primary">Continue<span class="keys"><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-a4">
+      <h2 class="frame-title">A4. Steps: review <span>What Start does, in three lines, before anything runs.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <ol class="steps" aria-label="Steps"><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Name</button></li><li class="step-line" aria-hidden="true"></li><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Chats</button></li><li class="step-line" aria-hidden="true"></li><li class="step on" aria-current="step"><span class="step-n">3</span>Review</li></ol>
+        <div class="osheet-body">
+          <div class="rv-name"><span class="rv-label">Name</span><b>Usage by user</b><button class="textbtn">Edit</button></div>
+          <div class="field">
+            <span>Chats<button class="textbtn">Edit</button></span>
+            <ul class="dms">
+              <li class="dm rv">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <b class="rv-handle">@fe</b>
+                <span class="dm-text"><b>Usage page: filter by user<span class="kind">Existing</span></b><small>web · Claude · Auto</small></span>
+              </li>
+              <li class="dm rv">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <b class="rv-handle">@api</b>
+                <span class="dm-text"><b>New chat in api<span class="kind">New</span></b><small>api · Codex · Approve for me</small></span><p class="rv-quote"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg><span>Add an optional userId filter to GET /usage. Follow the attached contract… <i class="rv-files"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-file"/></svg>2 files</i></span></p>
+              </li>
+              <li class="dm rv">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <b class="rv-handle">@docs</b>
+                <span class="dm-text"><b>New chat in handbook<span class="kind">New</span></b><small>handbook · Claude · Accept edits</small></span><p class="rv-quote"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg><span>Document the userId filter on the usage page of the API reference.</span></p>
+              </li>
+            </ul>
+          </div>
+          <div class="field last">
+            <span>When you start</span>
+            <ul class="will">
+              <li><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-newchat"/></svg><span><b>Creates 2 new chats</b><small><span class="hd">@api</span> in api and <span class="hd">@docs</span> in handbook. Each starts on its own spark/ branch when it first runs.</small></span></li>
+              <li><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-up"/></svg><span><b>Sends 2 first requests</b><small><span class="hd">@api</span> and <span class="hd">@docs</span> start working on their first message. <span class="hd">@fe</span> waits until you ask it for work.</small></span></li>
+              <li><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-shield"/></svg><span><b>Each chat works under its own mode</b><small><span class="hd">@fe</span> Auto · <span class="hd">@api</span> Approve for me · <span class="hd">@docs</span> Accept edits. An outpost changes no mode.</small></span></li>
+            </ul>
+          </div>
+        </div>
+        <footer class="osheet-foot"><button class="btn sm ghost">Back</button><span class="foot-sp"></span><button class="btn sm primary">Start outpost<span class="keys"><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-b1">
+      <h2 class="frame-title">B1. One page: empty <span>Variant B. Name and chats on one sheet. The chat list is open from the start, so two existing chats are two clicks.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet page" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <div class="osheet-body">
+          <p class="dlg-lede">A shared room where you ask a chat for work and chats post notes. Each chat keeps its own project, agent, mode and branch.</p>
+          <label class="field"><span>Name</span><span class="inp">Usage by user</span></label>
+          <div class="field last">
+            <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+            <p class="empty">No chats yet. Pick the chats that share this room, or start a new one here.</p>
+            <div class="picker">
+              <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search chats by title</span></div>
+              <ul class="picks" role="listbox" aria-label="Chats">
+                <li class="pick on" role="option" aria-selected="true"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-idle"/></svg><span class="dm-text"><b>Usage page: filter by user</b><small>web · spark/usage-user-filter</small></span><span class="pick-add"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-plus"/></svg>Add</span></li>
+                <li class="pick" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-codex-idle"/></svg><span class="dm-text"><b>Rate limit headers</b><small>api · spark/rate-limit-headers</small></span><span class="pick-add"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-plus"/></svg>Add</span></li>
+                <li class="pick" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-idle"/></svg><span class="dm-text"><b>Fix chart legend overflow</b><small>web · spark/chart-legend</small></span><span class="pick-add"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-plus"/></svg>Add</span></li>
+                <li class="pick" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-zai-idle"/></svg><span class="dm-text"><b>Style guide cleanup</b><small>handbook · spark/style-guide</small></span><span class="pick-add"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-plus"/></svg>Add</span></li>
+              </ul>
+            </div>
+            <div class="dlg-add"><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-newchat"/></svg>New chat</button><span class="add-note"><span class="keys"><kbd>↑</kbd><kbd>↓</kbd></span> to move, <span class="keys"><kbd>↵</kbd></span> adds a chat and keeps the list open</span></div>
+          </div>
+        </div>
+        <footer class="osheet-foot"><span class="foot-sum">Add a chat to create the outpost</span><button class="btn sm ghost">Cancel</button><button class="btn sm primary" disabled>Create outpost<span class="keys"><kbd>⌘</kbd><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-b2">
+      <h2 class="frame-title">B2. One page: a new chat open <span>A card opens in place with the new chat fields and its first message. The footer keeps a running summary.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet page" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <div class="osheet-body">
+          <p class="dlg-lede">A shared room where you ask a chat for work and chats post notes. Each chat keeps its own project, agent, mode and branch.</p>
+          <label class="field"><span>Name</span><span class="inp">Usage by user</span></label>
+          <div class="field last">
+            <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+            <ul class="dms">
+              <li class="dm card">
+                <button class="card-chev" aria-expanded="false" aria-label="Open @fe"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></button>
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@fe</span>
+                <span class="dm-text"><b>Usage page: filter by user<span class="kind">Existing</span></b><small>web · Claude · Auto</small></span>
+                
+                <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm card open">
+                <button class="card-chev" aria-expanded="true" aria-label="Close @api"><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></button>
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <span class="inp handle focus">@api<i class="caret"></i></span>
+                <span class="dm-text"><b>New chat in api<span class="kind">New</span></b><small>Handle from the project name</small></span>
+                <button class="icon-btn sm" aria-label="Remove @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+                <div class="card-body">
+                  <div class="fgrid three">
+                    <label class="field"><span>Project</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="field-value">api</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                    <label class="field"><span>Agent</span><span class="field-button" role="button" tabindex="0"><svg class="blob" width="18" height="18" aria-hidden="true"><use href="#b-codex-idle"/></svg><span class="field-value">Codex<small>GPT-5</small></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                    <label class="field"><span>Mode</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-shield"/></svg><span class="field-value">Approve for me</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                  </div>
+                  <p class="ed-note">It starts on its own spark/ branch when it first runs.</p>
+            <div class="fm">
+              <div class="fm-head"><b>First message</b><small>Optional</small><button class="textbtn fm-remove">Remove</button></div>
+              <div class="composer mini">
+                <div class="chips" role="group" aria-label="Attachments"><span class="chip att-chip"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-file"/></svg><span class="att-name">usage-contract.md</span><small>3.1 KB</small><button class="chip-x" aria-label="Remove usage-contract.md"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-x"/></svg></button></span><span class="chip att-chip"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-file"/></svg><span class="att-name">usage-rows.sql</span><small>1.4 KB</small><button class="chip-x" aria-label="Remove usage-rows.sql"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
+                <div class="ta">Add an optional userId filter to <code>GET /usage</code>. Follow the attached contract: an unknown user returns 404, not an empty list.</div>
+                <div class="comp-bar"><button class="icon-btn" aria-label="Add files and context"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-plus"/></svg></button><span class="hint">Goes to <span class="hd">@api</span> as its first request when the outpost starts</span></div>
+              </div>
+            </div>
+                </div>
+              </li>
+            </ul>
+            <div class="dlg-add"><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add existing chat</button><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-newchat"/></svg>New chat</button></div>
+          </div>
+        </div>
+        <footer class="osheet-foot"><span class="foot-sum">2 chats · creates 1 new · sends 1 first request<small>Each chat works under its own mode.</small></span><button class="btn sm ghost">Cancel</button><button class="btn sm primary">Create outpost<span class="keys"><kbd>⌘</kbd><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-b3">
+      <h2 class="frame-title">B3. One page: three chats <span>Cards closed to one row each. The footer line is the review.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn on" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">Rate limit headers</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row"><span class="row-open"><span class="st"></span><span class="tt">Style guide cleanup</span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></span><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></span></span></header>
+        <div class="thread-wrap"></div>
+      </main>
+      </div>
+      <div class="scrim"></div>
+
+      <section class="osheet page" role="dialog" aria-label="New outpost">
+        <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+        <div class="osheet-body">
+          <p class="dlg-lede">A shared room where you ask a chat for work and chats post notes. Each chat keeps its own project, agent, mode and branch.</p>
+          <label class="field"><span>Name</span><span class="inp">Usage by user</span></label>
+          <div class="field last">
+            <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+            <ul class="dms">
+              <li class="dm card">
+                <button class="card-chev" aria-expanded="false" aria-label="Open @fe"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></button>
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@fe</span>
+                <span class="dm-text"><b>Usage page: filter by user<span class="kind">Existing</span></b><small>web · Claude · Auto</small></span>
+                
+                <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm card">
+                <button class="card-chev" aria-expanded="false" aria-label="Open @api"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></button>
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <span class="inp handle">@api</span>
+                <span class="dm-text"><b>New chat in api<span class="kind">New</span></b><small>api · Codex · Approve for me</small></span>
+                <span class="fm-mark" title="Has a first message with 2 files"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg>First message<span class="fm-files"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-file"/></svg>2</span></span>
+                <button class="icon-btn sm" aria-label="Remove @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm card">
+                <button class="card-chev" aria-expanded="false" aria-label="Open @docs"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></button>
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                <span class="inp handle">@docs</span>
+                <span class="dm-text"><b>New chat in handbook<span class="kind">New</span></b><small>handbook · Claude · Accept edits</small></span>
+                <span class="fm-mark" title="Has a first message"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg>First message</span>
+                <button class="icon-btn sm" aria-label="Remove @docs"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+            </ul>
+            <div class="dlg-add"><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add existing chat</button><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-newchat"/></svg>New chat</button></div>
+          </div>
+        </div>
+        <footer class="osheet-foot"><span class="foot-sum">3 chats · creates 2 new · sends 2 first requests<small>Each chat works under its own mode.</small></span><button class="btn sm ghost">Cancel</button><button class="btn sm primary">Create outpost<span class="keys"><kbd>⌘</kbd><kbd>↵</kbd></span></button></footer>
+      </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-phone">
+      <h2 class="frame-title">Phone, 390 wide (Variant A) <span>Steps become full screens. Fields stack, and the first message stays closed until asked for.</span></h2>
+      <div class="phone" data-skin="light">
+        <section class="osheet full" role="dialog" aria-label="New outpost">
+          <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+          <ol class="steps" aria-label="Steps"><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Name</button></li><li class="step-line" aria-hidden="true"></li><li class="step on" aria-current="step"><span class="step-n">2</span>Chats</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">3</span>Review</li></ol>
+          <div class="osheet-body">
+            <div class="field last">
+              <span>Chats <small>Each one gets a short handle used to address it.</small></span>
+              <ul class="dms">
+                <li class="dm">
+                  <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                  <span class="inp handle">@fe</span>
+                  <span class="dm-text"><b>Usage page: filter by user</b><small>web · Claude · Auto</small></span>
+                  <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+                </li>
+              </ul>
+              <div class="ed">
+                <div class="ed-head">
+              <div class="tabs seg second" role="tablist" aria-label="Kind of chat">
+                <span class="tab-ind"></span>
+                <button role="tab">Existing chat</button>
+                <button role="tab" aria-selected="true">New chat</button>
+              </div></div>
+                <div class="fgrid one">
+                  <label class="field"><span>Project</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="field-value">api</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                  <label class="field"><span>Agent</span><span class="field-button" role="button" tabindex="0"><svg class="blob" width="18" height="18" aria-hidden="true"><use href="#b-codex-idle"/></svg><span class="field-value">Codex<small>GPT-5</small></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                </div>
+                <div class="fgrid split">
+                  <label class="field"><span>Mode</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-shield"/></svg><span class="field-value">Approve for me</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                  <label class="field"><span>Handle</span><span class="inp handle wide">@api</span></label>
+                </div>
+            <button class="fm-add"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg><span>Add a first message</span><small>Optional</small></button>
+                <div class="ed-foot"><button class="btn sm ghost">Cancel</button><button class="btn sm line">Add chat</button></div>
+              </div>
+              <div class="dlg-add"><button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add another chat</button></div>
+            </div>
+          </div>
+          <footer class="osheet-foot"><button class="btn line">Back</button><button class="btn primary grow">Continue</button></footer>
+        </section>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-validation">
+      <h2 class="frame-title">Validation <span>A handle used twice, a new chat with no project, and chats that cannot be added. Each message sits beside its field and says what to do.</span></h2>
+      <div class="win bare" data-skin="light">
+        <section class="osheet inline" role="dialog" aria-label="New outpost">
+          <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+          <ol class="steps" aria-label="Steps"><li class="step done"><button><span class="step-n"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg></span>Name</button></li><li class="step-line" aria-hidden="true"></li><li class="step on" aria-current="step"><span class="step-n">2</span>Chats</li><li class="step-line" aria-hidden="true"></li><li class="step"><span class="step-n">3</span>Review</li></ol>
+          <div class="osheet-body">
+            <div class="field last">
+              <span>Chats <small>Each one gets a short handle used to address it. You can rename it later.</small></span>
+              <ul class="dms">
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <span class="inp handle">@api</span>
+                <span class="dm-text"><b>New chat in api<span class="kind">New</span></b><small>api · Codex · Approve for me</small></span>
+                <span class="fm-mark" title="Has a first message with 2 files"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-msg"/></svg>First message<span class="fm-files"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-file"/></svg>2</span></span>
+                <button class="icon-btn sm" aria-label="Edit @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @api"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+              </li>
+              <li class="dm">
+                <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                <span class="inp handle bad">@api</span>
+                <span class="dm-text"><b>Rate limit headers<span class="kind">Existing</span></b><small>api · Codex · Approve for me</small></span>
+                
+                <button class="icon-btn sm" aria-label="Edit @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg></button>
+                <button class="icon-btn sm" aria-label="Remove @fe"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button><p class="err" role="alert"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg><span>Two chats cannot share <b>@api</b>. Try <button class="textbtn">@api2</button> or <button class="textbtn">@limits</button></span></p>
+              </li>
+              </ul>
+              <div class="ed">
+                <div class="ed-head">
+              <div class="tabs seg second" role="tablist" aria-label="Kind of chat">
+                <span class="tab-ind"></span>
+                <button role="tab">Existing chat</button>
+                <button role="tab" aria-selected="true">New chat</button>
+              </div><span class="ed-n">Chat 3</span></div>
+                <div class="fgrid">
+                  <label class="field"><span>Project</span><span class="field-button bad" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="field-value"><span class="ph">Choose a project</span></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span><p class="err" role="alert"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg><span>A new chat needs a project.</span></p></label>
+                  <label class="field"><span>Agent</span><span class="field-button" role="button" tabindex="0"><svg class="blob" width="18" height="18" aria-hidden="true"><use href="#b-claude-idle"/></svg><span class="field-value">Claude<small>Opus</small></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                  <label class="field"><span>Mode</span><span class="field-button" role="button" tabindex="0"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-pen"/></svg><span class="field-value">Accept edits</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></label>
+                  <label class="field"><span>Handle</span><span class="handle-line"><span class="inp handle"><span class="ph">@handle</span></span><small>Comes from the project</small></span></label>
+                </div>
+                <div class="ed-foot"><button class="btn sm ghost">Cancel</button><button class="btn sm line">Add chat<span class="keys"><kbd>↵</kbd></span></button></div>
+              </div>
+              <div class="ed">
+                <div class="ed-head">
+              <div class="tabs seg" role="tablist" aria-label="Kind of chat">
+                <span class="tab-ind"></span>
+                <button role="tab" aria-selected="true">Existing chat</button>
+                <button role="tab">New chat</button>
+              </div><span class="ed-n">Chat 4</span></div>
+                <div class="picker flat">
+                  <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search chats by title</span></div>
+                  <ul class="picks" role="listbox" aria-label="Chats">
+                <li class="pick on" role="option" aria-selected="true"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-idle"/></svg><span class="dm-text"><b>Fix chart legend overflow</b><small>web · spark/chart-legend</small></span><span class="pick-add"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-plus"/></svg>Add</span></li>
+                    <li class="pick off" role="option" aria-disabled="true"><span class="pick-ico"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-terminal"/></svg></span><span class="dm-text"><b>Terminal: Claude in web</b><small>A Terminal session cannot join. Spark cannot send it a request.</small></span></li>
+                    <li class="pick off" role="option" aria-disabled="true"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-codex-sleepy"/></svg><span class="dm-text"><b>Rate limit headers</b><small>Already in this outpost as @api</small></span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <footer class="osheet-foot"><button class="btn sm ghost">Back</button><span class="foot-sp"></span><span class="foot-note bad"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>2 things to fix</span><button class="btn sm primary" disabled>Continue</button></footer>
+        </section>
+      </div>
+    </section>
+  </body>
+</html>

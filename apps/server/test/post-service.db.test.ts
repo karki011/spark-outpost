@@ -10,6 +10,7 @@ import {
   postToOutpost,
   type PostServiceDeps,
 } from '../src/outposts/post-service.ts';
+import { startOutpost } from '../src/outposts/start-outpost.ts';
 import {
   ALL_NOT_AVAILABLE,
   GUESTS_NOT_AVAILABLE,
@@ -31,7 +32,7 @@ beforeEach(async () => {
   events = await outpostEvents();
   [fe, api] = [await newChat(t), await newChat(t)];
   outpostId = randomUUID();
-  await openOutpost(deps, {
+  await startOutpost(deps, {
     id: outpostId,
     name: 'Orders launch',
     members: [
@@ -69,71 +70,33 @@ async function notified(count: number): Promise<void> {
 }
 
 describe('opening an outpost', () => {
-  it('adds each member with one handshake line and tells the app', async () => {
-    expect(await bodies()).toEqual([
-      '@fe joined.',
-      '@api joined. @fe and @api can now ask each other.',
-    ]);
+  it('adds each member with one introduction line and tells the app', async () => {
+    expect(await bodies()).toEqual(['@fe joined', '@api joined']);
     const notices = await listPosts(t.db, outpostId);
     expect(notices.every(({ post: line }) => line.kind === 'notice' && !line.fromUser)).toBe(true);
+    expect(notices.map(({ post: line }) => [line.fromConversationId, line.fromHandle])).toEqual([
+      [fe, 'fe'],
+      [api, 'api'],
+    ]);
     await notified(1);
   });
 
-  it('returns the first outpost and adds nothing when the same id is opened again', async () => {
-    const again = await openOutpost(deps, {
-      id: outpostId,
-      name: 'Renamed',
-      members: [{ conversationId: await newChat(t), handle: 'docs' }],
-    });
+  it('keeps the first name when the same id is opened again', async () => {
+    const again = await openOutpost(deps, { id: outpostId, name: 'Renamed' });
 
     expect(again.created).toBe(false);
-    expect(again.outpost.name).toBe('Orders launch');
-    expect(again.outpost.members.map((member) => member.handle)).toEqual(['fe', 'api']);
+    expect((await getOutpost(t.db, t.workspaceId, outpostId))?.name).toBe('Orders launch');
     expect(await bodies()).toHaveLength(2);
-  });
-
-  it('creates nothing when one member cannot join', async () => {
-    const id = randomUUID();
-    const refused = await refusal(
-      openOutpost(deps, {
-        id,
-        name: 'Second',
-        members: [
-          { conversationId: await newChat(t), handle: 'docs' },
-          { conversationId: fe, handle: 'web' },
-        ],
-      }),
-    );
-
-    expect(refused.status).toBe(409);
-    expect(await getOutpost(t.db, t.workspaceId, id)).toBeNull();
-  });
-
-  it('refuses two members with one handle, with the sentence for the handle', async () => {
-    const refused = await refusal(
-      openOutpost(deps, {
-        id: randomUUID(),
-        name: 'Second',
-        members: [
-          { conversationId: await newChat(t), handle: 'docs' },
-          { conversationId: await newChat(t), handle: 'docs' },
-        ],
-      }),
-    );
-
-    expect(refused).toEqual({ status: 400, message: '@docs is already used in this outpost.' });
   });
 });
 
 describe('joining and leaving', () => {
-  it('adds a later member with a line that names everyone', async () => {
+  it('adds a later member with its own introduction line', async () => {
     const docs = await newChat(t);
     const member = await joinOutpost(deps, { outpostId, conversationId: docs, handle: 'docs' });
 
     expect(member).toMatchObject({ conversationId: docs, handle: 'docs', position: 3 });
-    expect((await bodies()).at(-1)).toBe(
-      '@docs joined. @fe, @api and @docs can now ask each other.',
-    );
+    expect((await bodies()).at(-1)).toBe('@docs joined');
     await notified(2);
   });
 
@@ -233,7 +196,7 @@ describe('posting to an outpost', () => {
 
   it('refuses an id that another outpost already used', async () => {
     const other = randomUUID();
-    await openOutpost(deps, { id: other, name: 'Second', members: [] });
+    await openOutpost(deps, { id: other, name: 'Second' });
     const id = randomUUID();
     await post('A note.', id);
 

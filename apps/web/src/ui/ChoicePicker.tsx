@@ -1,13 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useState,
-  type CSSProperties,
-} from 'react';
+import { useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronIcon } from './icons.tsx';
+import { useMenuPosition } from './use-menu-position.ts';
 import { usePopover } from './use-popover.ts';
 
 export interface PickerChoice {
@@ -26,8 +20,7 @@ interface ChoicePickerProps {
   onChange: (id: string) => void;
 }
 
-const GAP = 6;
-const MENU_MAX_HEIGHT = 320;
+const ROW_HEIGHT = 60;
 
 export function ChoicePicker({
   label,
@@ -40,43 +33,22 @@ export function ChoicePicker({
     HTMLButtonElement,
     HTMLDivElement
   >();
-  const [position, setPosition] = useState<CSSProperties>({});
+  const position = useMenuPosition({
+    open,
+    anchorRef,
+    panelRef,
+    wantedHeight: ROW_HEIGHT * choices.length,
+  });
   const listId = useId();
   const current = choices.find((choice) => choice.id === value);
 
-  const place = useCallback(() => {
-    if (!anchorRef.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
-    const below = window.innerHeight - rect.bottom;
-    const upward = below < Math.min(MENU_MAX_HEIGHT, 60 * choices.length) && rect.top > below;
-    setPosition({
-      left: rect.left,
-      width: rect.width,
-      ...(upward
-        ? { bottom: window.innerHeight - rect.top + GAP, transformOrigin: 'bottom center' }
-        : { top: rect.bottom + GAP, transformOrigin: 'top center' }),
-      maxHeight: Math.min(MENU_MAX_HEIGHT, (upward ? rect.top : below) - GAP * 3),
-    });
-  }, [anchorRef, choices.length]);
-
-  useLayoutEffect(() => {
-    if (open) place();
-  }, [open, place]);
-
   useEffect(() => {
     if (!open) return;
-    panelRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
-    const follow = (event: Event) => {
-      if (event.target instanceof Node && panelRef.current?.contains(event.target)) return;
-      place();
-    };
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', follow, true);
-    return () => {
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', follow, true);
-    };
-  }, [open, panelRef, place]);
+    const panel = panelRef.current;
+    const checked = panel?.querySelector<HTMLButtonElement>('[aria-checked="true"]');
+    const first = panel?.querySelector<HTMLButtonElement>('[role="menuitemradio"]:not(:disabled)');
+    (checked ?? first)?.focus();
+  }, [open, panelRef]);
 
   const moveFocus = (delta: number) => {
     const items = Array.from(

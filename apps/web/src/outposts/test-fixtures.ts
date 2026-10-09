@@ -78,6 +78,8 @@ export function post(number: number, overrides: Partial<OutpostPost> = {}): Outp
     state: 'sent',
     reason: null,
     answer: null,
+    files: 0,
+    intro: null,
     ...overrides,
   };
 }

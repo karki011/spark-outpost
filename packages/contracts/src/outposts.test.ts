@@ -4,6 +4,7 @@ import { conversationSummarySchema } from './conversations.ts';
 import { queuedMessageSchema } from './crew-messages.ts';
 import {
   createOutpostRequestSchema,
+  createOutpostResponseSchema,
   createPostRequestSchema,
   memberRequestSchema,
   outpostDetailSchema,
@@ -13,6 +14,7 @@ import {
   rejectReasonSchema,
   requestFactsSchema,
   requestStateSchema,
+  startMemberChatId,
   updateOutpostRequestSchema,
   type DerivedRequestState,
   type HandleProblem,
@@ -73,6 +75,8 @@ const detail: OutpostDetail = {
         changes: ['src/orders.ts'],
         pullRequests: ['https://github.com/acme/api/pull/7'],
       },
+      files: 0,
+      intro: null,
     },
   ],
 };
@@ -113,6 +117,49 @@ describe('outpost schemas', () => {
     expect(memberRequestSchema.safeParse({ conversationId: 'fe', handle: 'fe' }).success).toBe(
       false,
     );
+  });
+
+  it('takes an existing chat or a new one as a member, each with an optional first message', () => {
+    const existing = { conversationId: FRONTEND, handle: 'fe' };
+    const fresh = {
+      new: {
+        conversationId: BACKEND,
+        projectId: RUN,
+        provider: 'codex',
+        model: null,
+        agentMode: 'agent',
+      },
+      handle: 'api',
+      firstMessage: { id: POST, text: ' Add the filter. ' },
+    };
+    const parsed = createOutpostRequestSchema.parse({
+      id: OUTPOST,
+      name: 'Orders launch',
+      members: [existing, fresh],
+    });
+
+    expect(parsed.members.map(startMemberChatId)).toEqual([FRONTEND, BACKEND]);
+    expect(parsed.members[1]?.firstMessage).toEqual({
+      id: POST,
+      text: 'Add the filter.',
+      attachmentIds: [],
+    });
+    for (const broken of [
+      { ...fresh, new: { ...fresh.new, projectId: undefined } },
+      { ...fresh, new: { ...fresh.new, provider: 'nobody' } },
+      { ...fresh, firstMessage: { id: POST, text: '  ' } },
+      { ...fresh, firstMessage: { text: 'No id' } },
+      { handle: 'api' },
+    ]) {
+      const request = { id: OUTPOST, name: 'Orders launch', members: [broken] };
+      expect(createOutpostRequestSchema.safeParse(request).success).toBe(false);
+    }
+  });
+
+  it('reads a start result with the members that could not be added', () => {
+    expect(createOutpostResponseSchema.parse(detail).failed).toEqual([]);
+    const failed = [{ conversationId: BACKEND, handle: 'api', message: 'Connect this provider.' }];
+    expect(createOutpostResponseSchema.parse({ ...detail, failed }).failed).toEqual(failed);
   });
 
   it('refuses an update that changes nothing', () => {

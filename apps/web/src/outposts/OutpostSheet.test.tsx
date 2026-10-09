@@ -43,11 +43,10 @@ function Opener(props: {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
-        New outpost
+        Edit
       </button>
       {open && (
         <OutpostSheet
-          mode={props.onDelete ? 'edit' : 'create'}
           initial={props.initial ?? EMPTY_FORM}
           chats={CHATS}
           projectNames={{ [WEB_PROJECT]: 'web' }}
@@ -63,7 +62,7 @@ function Opener(props: {
 }
 
 function openSheet(): HTMLElement {
-  const opener = screen.getByRole('button', { name: 'New outpost' });
+  const opener = screen.getByRole('button', { name: 'Edit' });
   opener.focus();
   fireEvent.click(opener);
   return opener;
@@ -77,7 +76,7 @@ describe('OutpostSheet', () => {
   it('opens as a labelled dialog with focus in the name', () => {
     render(<Opener />);
     openSheet();
-    const dialog = screen.getByRole('dialog', { name: 'New outpost' });
+    const dialog = screen.getByRole('dialog', { name: 'Edit outpost' });
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(document.activeElement).toBe(nameInput());
   });
@@ -97,7 +96,7 @@ describe('OutpostSheet', () => {
   it('keeps Tab inside the dialog', () => {
     render(<Opener />);
     openSheet();
-    const create = screen.getByRole('button', { name: 'Create outpost' });
+    const create = screen.getByRole('button', { name: 'Save' });
     create.focus();
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab' });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }));
@@ -108,7 +107,7 @@ describe('OutpostSheet', () => {
     render(<Opener onStart={onStart} />);
     openSheet();
     expect(screen.queryByText('Enter a name.')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Create outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(onStart).not.toHaveBeenCalled();
     expect(screen.getByText('Enter a name.')).toBeTruthy();
     expect(nameInput().getAttribute('aria-invalid')).toBe('true');
@@ -141,12 +140,12 @@ describe('OutpostSheet', () => {
     });
     fireEvent.change(handle, { target: { value: '@FE' } });
     expect(handle.value).toBe('fe');
-    fireEvent.click(screen.getByRole('button', { name: 'Create outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(onStart).not.toHaveBeenCalled();
     expect(screen.getAllByText('@fe is already used in this outpost.')).toHaveLength(2);
     expect(handle.getAttribute('aria-invalid')).toBe('true');
     fireEvent.change(handle, { target: { value: 'api' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(onStart).toHaveBeenCalledWith(FORM));
   });
 
@@ -164,7 +163,7 @@ describe('OutpostSheet', () => {
     );
     render(<Opener initial={FORM} onStart={onStart} />);
     openSheet();
-    fireEvent.click(screen.getByRole('button', { name: 'Create outpost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect((await screen.findByRole('alert')).textContent).toBe('That chat is in another outpost.');
     expect(screen.getByRole('dialog')).toBeTruthy();
   });

@@ -1,5 +1,14 @@
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { runSchema } from '@spark-outpost/contracts';
+import { createOutpostResponseSchema, runSchema } from '@spark-outpost/contracts';
+import { attachmentsForMessages, saveAttachment } from '../src/persistence/attachments.ts';
+import { saveCapabilities } from '../src/persistence/chat-settings.ts';
+import { listConversations } from '../src/persistence/conversations.ts';
+import { FAKE_CODEX_MODES } from '../src/providers/fake.ts';
+import { createProject } from '../src/projects/projects.ts';
 import { OUTPOST_REQUEST_METHOD } from '../src/outposts/request-audit.ts';
 import { chatTurns } from './outpost-fixtures.ts';
 import {
@@ -12,7 +21,7 @@ import {
   type Room,
   type Stack,
 } from './outposts-e2e-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
 let stacks: Stack[];
@@ -235,5 +244,82 @@ describe('a restart', () => {
     expect((await readRoom(again, room.outpostId)).posts.filter((each) => each.state)).toHaveLength(
       1,
     );
+  });
+});
+
+describe('an outpost started with a new chat and a first message', () => {
+  it('creates the chat, sends the message with its file, and shows the answer', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'spark-outpost-start-')));
+    const { project } = await createProject(t.db, t.workspaceId, root);
+    await connectCliProvider(t, 'codex');
+    await saveCapabilities(t.db, t.workspaceId, {
+      provider: 'codex',
+      models: [],
+      efforts: [],
+      defaultModel: null,
+      modes: FAKE_CODEX_MODES,
+    });
+    const file = await saveAttachment(t.db, t.workspaceId, {
+      name: 'usage-contract.md',
+      mediaType: 'text/markdown',
+      data: Buffer.from('# Contract'),
+    });
+    const held = gate();
+    const stack = await start({ held: held.opened });
+    const ids = {
+      outpost: randomUUID(),
+      chat: randomUUID(),
+      empty: randomUUID(),
+      message: randomUUID(),
+    };
+    const newChat = (conversationId: string) => ({
+      conversationId,
+      projectId: project.id,
+      provider: 'codex',
+      model: null,
+      agentMode: null,
+    });
+    const body = {
+      id: ids.outpost,
+      name: 'Usage by user',
+      members: [
+        {
+          new: newChat(ids.chat),
+          handle: 'api',
+          firstMessage: { id: ids.message, text: 'Follow the contract', attachmentIds: [file.id] },
+        },
+        { new: newChat(ids.empty), handle: 'docs' },
+      ],
+    };
+
+    const response = await stack.send('post', '/api/outposts', body).expect(201);
+    const created = createOutpostResponseSchema.parse(response.body);
+    const room = { outpostId: ids.outpost, api: ids.chat, web: ids.empty };
+
+    expect(created.failed).toEqual([]);
+    expect(created.posts.map((post) => [post.kind, post.body, post.intro?.task ?? null])).toEqual([
+      [
+        'notice',
+        `@api joined · ${project.name} · Codex Auto · Approve for me`,
+        'Task: Follow the contract',
+      ],
+      ['notice', `@docs joined · ${project.name} · Codex Auto · Approve for me`, null],
+      ['request', 'Follow the contract', null],
+    ]);
+    expect(created.posts[2]).toMatchObject({ fromUser: true, toHandle: 'api', files: 1 });
+    await reaches(stack, room, ids.message, 'working');
+    held.open();
+    const answered = await reaches(stack, room, ids.message, 'answered');
+    expect(answered.answer?.text).toContain('Follow the contract');
+    expect((await attachmentsForMessages(t.db, [ids.message])).get(ids.message)).toMatchObject([
+      { name: 'usage-contract.md' },
+    ]);
+    expect(await chatTurns(t.db, ids.empty)).toEqual([]);
+    const listed = (await listConversations(t.db, t.workspaceId)).map((chat) => chat.id);
+    expect(listed.sort()).toEqual([ids.chat, ids.empty].sort());
+
+    const repeated = await stack.send('post', '/api/outposts', body).expect(200);
+    expect(createOutpostResponseSchema.parse(repeated.body).posts).toHaveLength(3);
+    await rm(root, { recursive: true, force: true });
   });
 });

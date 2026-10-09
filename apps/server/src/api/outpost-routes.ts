@@ -5,6 +5,7 @@ import {
   createPostRequestSchema,
   needsYouCount,
   updateOutpostRequestSchema,
+  type CreateOutpostResponse,
   type Outpost,
   type OutpostDetail,
   type OutpostPost,
@@ -22,8 +23,10 @@ import {
   setPaused,
 } from '../persistence/outposts.ts';
 import type { PeerAgent, PostWithFacts, StoredOutpost } from '../outposts/ports.ts';
-import { joinOutpost, leaveOutpost, openOutpost, postToOutpost } from '../outposts/post-service.ts';
+import { introViews } from '../outposts/intro-view.ts';
+import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';
+import { startOutpost, type FolderExists } from '../outposts/start-outpost.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export const POST_NOT_FOUND = 'That post does not exist. It may have been deleted.';
@@ -37,6 +40,7 @@ export interface OutpostRouteOptions {
   workspaceId: string;
   peer: PeerAgent;
   drain(conversationId: string): Promise<unknown>;
+  folderExists?: FolderExists;
 }
 
 const handleBodySchema = z.object({ handle: z.string() });
@@ -50,9 +54,10 @@ function conversationParam(req: Request): string {
   return paramId(req, 'conversationId');
 }
 
-export function outpostRoutes({ db, workspaceId, peer, drain }: OutpostRouteOptions): Router {
+export function outpostRoutes(options: OutpostRouteOptions): Router {
+  const { db, workspaceId, peer, drain, folderExists } = options;
   const router = Router();
-  const service = { db, workspaceId };
+  const service = { db, workspaceId, ...(folderExists ? { folderExists } : {}) };
 
   const known = async (id: string): Promise<StoredOutpost> => {
     const outpost = await getOutpost(db, workspaceId, id);
@@ -60,23 +65,20 @@ export function outpostRoutes({ db, workspaceId, peer, drain }: OutpostRouteOpti
     return outpost;
   };
 
-  const postViews = async (posts: PostWithFacts[], answers: boolean): Promise<OutpostPost[]> => {
-    const views: OutpostPost[] = [];
-    for (const found of posts) {
-      const answer = answers ? await requestAnswer(db, workspaceId, found) : null;
-      views.push(toOutpostPost(found, answer));
-    }
-    return views;
-  };
-
   const detail = async (id: string): Promise<OutpostDetail> => {
     const outpost = await known(id);
-    const posts = await postViews(await listPosts(db, id), true);
+    const found = await listPosts(db, id);
+    const intros = await introViews(db, outpost, found);
+    const posts: OutpostPost[] = [];
+    for (const post of found) {
+      const answer = await requestAnswer(db, workspaceId, post);
+      posts.push(toOutpostPost(post, answer, intros.get(post.post.id)));
+    }
     return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts };
   };
 
   const counted = async (outpost: StoredOutpost): Promise<Outpost> => {
-    const posts = await postViews(await listPosts(db, outpost.id), false);
+    const posts = (await listPosts(db, outpost.id)).map((post) => toOutpostPost(post, null));
     return { ...outpost, needsYou: needsYouCount(posts) };
   };
 
@@ -117,8 +119,9 @@ export function outpostRoutes({ db, workspaceId, peer, drain }: OutpostRouteOpti
 
   router.post('/outposts', async (req, res) => {
     const request = parseBody(createOutpostRequestSchema, req);
-    const { created } = await openOutpost(service, request);
-    res.status(created ? 201 : 200).json(await detail(request.id));
+    const { created, failed } = await startOutpost(service, request);
+    const response: CreateOutpostResponse = { ...(await detail(request.id)), failed };
+    res.status(created ? 201 : 200).json(response);
   });
 
   router.get('/outposts/:id', async (req, res) => {
