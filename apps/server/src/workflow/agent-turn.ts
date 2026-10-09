@@ -53,6 +53,8 @@ import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
+import { preambleDeps } from '../outposts/preamble-stores.ts';
+import { withOutpostPreamble } from '../outposts/turn-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -353,7 +355,13 @@ export async function runAgentTurn(
     auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant
       ? ASSISTANT_PREAMBLE
-      : withMoveNote({ ...input, preamble: await withPublishNote(deps.db, input) });
+      : withMoveNote({
+          ...input,
+          preamble: await withPublishNote(
+            deps.db,
+            await withOutpostPreamble(preambleDeps(deps.db, input.workspaceId), input),
+          ),
+        });
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
