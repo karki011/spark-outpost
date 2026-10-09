@@ -161,3 +161,52 @@ describe('draft chats', () => {
     expect(await getConversationDetail(t.db, launched.id)).not.toBeNull();
   });
 });
+
+describe('the pull request state a chat row carries', () => {
+  let pulls = 0;
+
+  async function chatWithPulls(states: readonly string[]) {
+    const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
+    await sendUserMessage(
+      t.db,
+      conversation.id,
+      { id: randomUUID(), content: 'Tidy the notes' },
+      { provider: 'fake' },
+    );
+    for (const state of states) {
+      pulls += 1;
+      await t.db.query(
+        `INSERT INTO pr_watches (id, workspace_id, conversation_id, host, owner, repo, number,
+           url, branch, pr_state)
+         VALUES ($1, $2, $3, 'github.com', 'acme', 'widgets', $4, $5, 'spark/tidy', $6)`,
+        [
+          randomUUID(),
+          t.workspaceId,
+          conversation.id,
+          pulls,
+          `https://github.com/acme/widgets/pull/${pulls}`,
+          state,
+        ],
+      );
+    }
+    return conversation.id;
+  }
+
+  it('says merged once a pull request merged and none is still open', async () => {
+    const none = await chatWithPulls([]);
+    const open = await chatWithPulls(['open']);
+    const merged = await chatWithPulls(['merged']);
+    const closed = await chatWithPulls(['closed']);
+    const mergedAndOpen = await chatWithPulls(['merged', 'open']);
+    const mergedAndClosed = await chatWithPulls(['closed', 'merged']);
+
+    const listed = await listConversations(t.db, t.workspaceId);
+    const state = new Map(listed.map((chat) => [chat.id, chat.pullRequestMerged]));
+    expect(state.get(none)).toBe(false);
+    expect(state.get(open)).toBe(false);
+    expect(state.get(closed)).toBe(false);
+    expect(state.get(mergedAndOpen)).toBe(false);
+    expect(state.get(merged)).toBe(true);
+    expect(state.get(mergedAndClosed)).toBe(true);
+  });
+});

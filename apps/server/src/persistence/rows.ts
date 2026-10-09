@@ -92,6 +92,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   project_order: number | null;
   unread: boolean;
   needs_input: boolean;
+  pull_request_merged: boolean;
   title_source: string;
   category: string | null;
   teammate_id: string | null;
@@ -208,6 +209,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),
+    pullRequestMerged: row.pull_request_merged,
   };
 }
 

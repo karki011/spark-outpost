@@ -113,6 +113,12 @@ export function BranchIcon() {
   );
 }
 
+export function MergedIcon() {
+  return (
+    <StrokeIcon path="M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21V9a9 9 0 0 0 9 9" />
+  );
+}
+
 export function PlusIcon() {
   return <StrokeIcon path="M12 5v14M5 12h14" />;
 }
