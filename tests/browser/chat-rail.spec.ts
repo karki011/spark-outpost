@@ -8,12 +8,14 @@ import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import {
+  COLUMN,
   LONG_TASKS,
   NOTES,
   PROMPTS,
   SHOTS,
   WIDE,
   ask,
+  columnEdges,
   header,
   longChat,
   outline,
@@ -21,6 +23,7 @@ import {
   rail,
   shoot,
   turns,
+  widenSecondReply,
   workPanel,
 } from './chat-rail-kit.ts';
 
@@ -74,7 +77,7 @@ test.describe('plain chats', () => {
     const column = (await page.locator('.col').boundingBox())!;
     const railBox = (await rail(page).boundingBox())!;
     const thread = (await page.locator('.thread').boundingBox())!;
-    expect(column.width).toBeGreaterThan(860);
+    expect(Math.abs(column.width - COLUMN)).toBeLessThan(1);
     expect(railBox.x).toBeGreaterThan(column.x + column.width + 16);
     expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
     expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
@@ -125,14 +128,13 @@ test.describe('plain chats', () => {
           ]);
           return Math.abs(column!.x - composer!.x) + Math.abs(column!.width - composer!.width);
         })
-        .toBeLessThan(34);
+        .toBeLessThan(1);
       await expect
-        .poll(async () => (await page.locator('.col').boundingBox())!.width)
-        .toBeGreaterThanOrEqual(680);
+        .poll(async () => Math.abs((await page.locator('.col').boundingBox())!.width - COLUMN))
+        .toBeLessThan(1);
       const column = (await page.locator('.col').boundingBox())!;
       const railBox = (await rail(page).boundingBox())!;
       const thread = (await page.locator('.thread').boundingBox())!;
-      expect(column.width).toBeGreaterThanOrEqual(680);
       expect(railBox.x).toBeGreaterThanOrEqual(column.x + column.width + 16);
       expect(railBox.x + railBox.width).toBeLessThanOrEqual(thread.x + thread.width);
       expect(thread.x + thread.width - (railBox.x + railBox.width)).toBeLessThanOrEqual(40);
@@ -156,12 +158,13 @@ test.describe('plain chats', () => {
     await hidePanel.click();
     await expect(workPanel(page)).toBeHidden();
     await expect(rail(page)).toHaveCount(0);
-    const columnWidth = async () => (await page.locator('.col').boundingBox())!.width;
-    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    const columnOff = async () =>
+      Math.abs((await page.locator('.col').boundingBox())!.width - COLUMN);
+    await expect.poll(columnOff).toBeLessThan(1);
 
     await page.getByRole('button', { name: 'Hide sidebar' }).click();
     await expect(rail(page)).toBeVisible();
-    await expect.poll(columnWidth).toBeGreaterThanOrEqual(680);
+    await expect.poll(columnOff).toBeLessThan(1);
   });
 
   test('the rail collapses to a small toggle and stays collapsed after a reload', async ({
@@ -179,6 +182,59 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toHaveCount(0);
     await show.click();
     await expect(rail(page)).toBeVisible();
+  });
+
+  test('replies, the bubble and the composer share one centred column at every width', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await longChat(page);
+    await widenSecondReply(page);
+    const sharesEdges = async () => {
+      const edges = await columnEdges(page);
+      const { column } = edges;
+      expect(Math.abs(edges.bubbleRight - column.right)).toBeLessThan(1);
+      for (const part of [edges.prose, edges.head, edges.foot, edges.table, edges.composer]) {
+        expect(Math.abs(part.left - column.left)).toBeLessThan(1);
+        expect(Math.abs(part.right - column.right)).toBeLessThan(1);
+      }
+      expect(await pageScroll(page)).toBe(0);
+      return edges;
+    };
+
+    for (const width of [1920, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(rail(page)).toBeVisible();
+      const { column, thread } = await sharesEdges();
+      expect(Math.abs(column.right - column.left - COLUMN)).toBeLessThan(1);
+      const railBox = (await rail(page).boundingBox())!;
+      const stripLeft = thread.right - railBox.width - 32;
+      expect(Math.abs(column.left - thread.left - (stripLeft - column.right))).toBeLessThan(2);
+    }
+
+    await page.setViewportSize({ width: 1920, height: 900 });
+    await rail(page).getByRole('button', { name: 'Hide context rail' }).click();
+    await expect(rail(page)).toHaveCount(0);
+    for (const width of [1920, 1440, 1024]) {
+      await page.setViewportSize({ width, height: 900 });
+      const { column, thread } = await sharesEdges();
+      expect(Math.abs(column.left + column.right - thread.left - thread.right)).toBeLessThan(2);
+      expect(column.right - column.left).toBeLessThanOrEqual(COLUMN + 1);
+    }
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await header(page).getByRole('button', { name: 'Show work panel' }).click();
+    await expect(workPanel(page)).toBeVisible();
+    await expect
+      .poll(async () => {
+        const [thread, panel] = await Promise.all([
+          page.locator('.thread').boundingBox(),
+          workPanel(page).boundingBox(),
+        ]);
+        return thread!.x + thread!.width - panel!.x;
+      })
+      .toBeLessThanOrEqual(1);
+    await sharesEdges();
   });
 
   test('On wide windows picks the rail, the work panel or an empty margin', async ({ page }) => {

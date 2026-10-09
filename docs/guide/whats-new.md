@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                           | What to do                                          |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Replies, your messages and the message box share one centred column.                                                   | No action.                                          |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |
@@ -27,7 +28,6 @@ What changed recently in Spark, newest first.
 | Spark Island is **Full** by default and opens requests by itself. Tickets show **Development**.                        | See [Spark Island](desktop-companion.md).           |
 | **Phone**, above **Settings**: use Spark from a phone on your tailnet. Pair with a QR code.                            | See [Use Spark from your phone](use-your-phone.md). |
 | A paired phone does what the Mac app does, except Browser, Preview and Terminal. The phone bar has **More**.           | Turn things off under **What the phone can do**.    |
-| **On this chat** is now ticks left of the thread. Narrower text, a chat top bar, a wider right rail.                   | Hover a tick; select it to jump.                    |
+| **On this chat** is now ticks left of the thread. A chat top bar, a wider right rail.                                  | Hover a tick; select it to jump.                    |
 | New chats start at **Full auto → PR**. Budgets are gone: nothing is capped.                                            | See [Spark autonomy](spark-autonomy.md).            |
 | Reading Spark's own chat data or running a local script no longer asks.                                                | No action.                                          |
-| **⌘D** opens **Changes**. A message sent to a running turn shows in the thread.                                        | No action.                                          |
