@@ -42,7 +42,7 @@ Higher effort is slower and costlier.
 | The agent to decide what to ask      | **Auto**               | **Approve for me** |
 | No questions from the agent          | **Bypass permissions** | **Full access**    |
 
-In a read-only mode, select **Make the change** under an answer to run it with changes allowed.
+A read-only mode never changes files: switch modes, then ask for the change.
 
 > **Important:** No mode switches off the [protected paths](protected-paths.md). Modes that never ask are recorded as [ran without review](approvals.md#actions-that-ran-without-review).
 

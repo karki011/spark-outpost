@@ -3,7 +3,6 @@ import { tierName } from './tiers.ts';
 import { findingKind } from '../advisor/finding-questions.ts';
 import { CRITIC_QUIET_NOTICE_MS } from '../advisor/policy.ts';
 import { integratorRoute } from '../coordinator/integrator.ts';
-import { previousReply } from '../advisor/intake-recorder.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
@@ -14,7 +13,7 @@ import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { SubagentAnnounce } from '../workflow/subagent-events.ts';
 import { blindReview } from './critic-recheck.ts';
-import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
+import { checkFixFollowUp, fixFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
 import {
@@ -222,9 +221,6 @@ function followUpFor(
   if (spawn.role !== 'builder') return null;
   if (spawn.reason === 'fix') return fixFollowUp(spawn.note);
   if (spawn.reason === 'first' && opening.handoff) return opening.handoff;
-  if (spawn.reason === 'first' && s.input.startAs === 'change') {
-    return makeChangeFollowUp(previousReply(s.input));
-  }
   if (spawn.reason === 'first' && s.continuesTask) {
     const handback = opening.route.handback;
     return handback ? `${handback}\n\n${s.input.prompt}` : s.input.prompt;

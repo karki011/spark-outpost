@@ -112,7 +112,7 @@ describe('intake decisions', () => {
     expect(decideIntake(null, facts({ request: 'add simple test' })).start).toBe('build');
   });
 
-  it('builds when the user asked for the change with "Make the change"', () => {
+  it('builds when the run starts as a change, whatever Jev reads in the wording', () => {
     const decided = decideIntake(jev({ question: 0.95, planOnly: 0.9 }), facts({ change: true }));
     expect(decided.start).toBe('build');
     expect(decided.calls.change).toMatchObject({ value: true, source: 'user' });

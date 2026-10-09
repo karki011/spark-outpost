@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                           | What to do                                          |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| The **Make the change** button under a reply is gone.                                                                  | Ask for the change in your next message.            |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                        | No action.                                          |
 | **Use Spark workflow** supports direct agents and custom instructions.                                                 | Open **Settings → Spark**.                          |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                            | See [Open a terminal](terminals.md).                |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | **On this chat** is now ticks left of the thread. Narrower text, a chat top bar, a wider right rail.                   | Hover a tick; select it to jump.                    |
 | New chats start at **Full auto → PR**. Budgets are gone: nothing is capped.                                            | See [Spark autonomy](spark-autonomy.md).            |
 | Reading Spark's own chat data or running a local script no longer asks.                                                | No action.                                          |
-| **⌘D** opens **Changes**. A message sent to a running turn shows in the thread.                                        | No action.                                          |

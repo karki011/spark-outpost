@@ -14,7 +14,7 @@ export const CHAT_TOOLS_NOTE =
 const ASK_COMMANDS =
   'Spark Outpost runs read-only commands directly and may ask the user before other commands, so a command may wait or be denied.';
 const ASK_NO_CHANGES =
-  'If the request needs file changes, say so and tell the user to press Make the change.';
+  'If the request needs file changes, say so and tell the user to ask for the change in a message, such as "make the change", or to switch the agent\'s mode when a read-only mode is what blocks it.';
 
 export function projectNote(roots: readonly string[], commands = false): string {
   const [primary, ...others] = roots;

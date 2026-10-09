@@ -5,7 +5,6 @@ import {
   type AgentCommandsResponse,
   type AnnotationInput,
   type MessageAnnotation,
-  type StartAs,
   EMPTY_CONVERSATION_USAGE,
   UNTITLED_CONVERSATION,
   usageSummarySchema,
@@ -150,7 +149,6 @@ export const api = {
     content: string,
     attachmentIds: string[] = [],
     annotations: AnnotationInput[] = [],
-    startAs: StartAs | null = null,
   ): Promise<SendMessageResponse> =>
     request(sendMessageResponseSchema, `/conversations/${conversationId}/messages`, {
       method: 'POST',
@@ -160,7 +158,6 @@ export const api = {
         attachmentIds,
         annotations,
         source: 'ui',
-        ...(startAs ? { startAs } : {}),
       }),
     }).then(saved(conversationId)),
   continueRun: (runId: string, id: string): Promise<SendMessageResponse> =>

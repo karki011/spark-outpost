@@ -12,6 +12,7 @@ import {
   type MessageSource,
   type SendMessageRequest,
   type SendMessageResponse,
+  type StartAs,
   type CreateConversationRequest,
 } from '@spark-outpost/contracts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
@@ -330,6 +331,7 @@ export type SendMessageInput = Omit<
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
   source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | undefined;
+  startAs?: StartAs;
   continuesRunId?: string;
 };
 

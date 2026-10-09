@@ -153,12 +153,12 @@ describe('ACP provider in a project folder', { timeout: 20_000 }, () => {
     const { text, steps } = await collect(`#fswrite ${target}`, root);
     expect(text).toContain(`[write ${target}=err:-32601]`);
     expect(steps).toContain(
-      `Declined: Write \`${target}\` (Ask mode doesn't change files — use Make the change)`,
+      `Declined: Write \`${target}\` (Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode)`,
     );
     const permission = await collect('#write', root);
     expect(permission.text).toContain('permission=no');
     expect(permission.steps).toContain(
-      "Declined: Write notes.txt (Ask mode doesn't change files — use Make the change)",
+      "Declined: Write notes.txt (Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode)",
     );
   });
 

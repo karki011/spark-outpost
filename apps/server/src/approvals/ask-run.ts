@@ -4,7 +4,8 @@ import { isPackageInstall } from './command-kinds.ts';
 import { publishesCode, writesRepo } from './git-commands.ts';
 import { writeTargets } from './write-targets.ts';
 
-export const ASK_RUN_REASON = "Ask mode doesn't change files — use Make the change";
+export const ASK_RUN_REASON =
+  "Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode";
 
 const FILE_CHANGERS = new Set(['mkdir', 'ln', 'chmod', 'chown', 'patch', 'dd', 'rsync']);
 
