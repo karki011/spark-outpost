@@ -6,12 +6,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutpostDetail } from '@spark-outpost/contracts';
 import { mergeInvalidations } from '../app/live/app-event-keys.ts';
 import { outpostKeys } from './outposts-api.ts';
-import { API_CHAT, FE_CHAT, OUTPOST_ID, detail, outpost, post, postId } from './test-fixtures.ts';
+import {
+  API_CHAT,
+  FE_CHAT,
+  OUTPOST_ID,
+  detail,
+  member,
+  outpost,
+  post,
+  postId,
+} from './test-fixtures.ts';
 import {
   optimisticPost,
   useAddMember,
   useAnswer,
   useCancel,
+  useCreateOutpost,
+  useDeleteOutpost,
   useOutpost,
   useOutposts,
   usePause,
@@ -136,7 +147,7 @@ describe('optimisticPost', () => {
 });
 
 describe('usePost', () => {
-  it('shows the post at once, sends it with its id, then refreshes', async () => {
+  it('shows the post at once, sends it with its id, then keeps what the server returned', async () => {
     client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([post(1)]));
     const { result } = renderHook(() => usePost(OUTPOST_ID), { wrapper });
     act(() => result.current.mutate({ id: postId(2), text: '@fe build the page' }));
@@ -147,10 +158,11 @@ describe('usePost', () => {
       path: `/api/outposts/${OUTPOST_ID}/posts`,
       body: { id: postId(2), text: '@fe build the page' },
     });
-    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([post(1), post(2)])));
-    held[0]?.resolve(json({}));
+    const sent = post(2, { state: 'working', reason: null });
+    held[0]?.resolve(json(detail([post(1), sent]), 201));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(client.getQueryState(outpostKeys.detail(OUTPOST_ID))?.isInvalidated).toBe(true);
+    expect(cached()?.posts).toEqual([post(1), sent]);
+    expect(calls).toHaveLength(1);
   });
 
   it('takes the post back out when the server refuses it and reports why', async () => {
@@ -158,6 +170,7 @@ describe('usePost', () => {
     answers.set(`POST /api/outposts/${OUTPOST_ID}/posts`, () =>
       json({ error: 'The outpost was deleted.' }, 404),
     );
+    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([post(1)])));
     const { result } = renderHook(() => usePost(OUTPOST_ID), { wrapper });
     act(() => result.current.mutate({ id: postId(2), text: 'a note' }));
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -175,14 +188,16 @@ describe('usePost', () => {
 });
 
 describe('the other actions', () => {
-  it('cancels a request by id', async () => {
+  it('cancels a request by id and shows the state the server returned', async () => {
+    client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([post(1)]));
+    const cancelled = post(1, { state: 'cancelled' });
+    const path = `/api/outposts/${OUTPOST_ID}/posts/${postId(1)}/cancel`;
+    answers.set(`POST ${path}`, () => json(detail([cancelled])));
     const { result } = renderHook(() => useCancel(OUTPOST_ID), { wrapper });
     act(() => result.current.mutate(postId(1)));
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toMatchObject({
-      method: 'POST',
-      path: `/api/outposts/${OUTPOST_ID}/posts/${postId(1)}/cancel`,
-    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls).toEqual([{ method: 'POST', path, body: {} }]);
+    expect(cached()?.posts).toEqual([cancelled]);
   });
 
   it('pauses at once and asks the server', async () => {
@@ -215,7 +230,9 @@ describe('the other actions', () => {
       `DELETE /api/outposts/${OUTPOST_ID}/members/${API_CHAT}`,
       `PUT /api/outposts/${OUTPOST_ID}/members/${FE_CHAT}`,
     ];
-    for (const path of paths) answers.set(path, () => json({}));
+    const saved = detail([], { name: 'Usage filter', members: [member(FE_CHAT, 'web', 1)] });
+    for (const path of paths) answers.set(path, () => json(saved));
+    client.setQueryData(outpostKeys.list, [outpost()]);
     const { result } = renderHook(() => useSaveOutpost(OUTPOST_ID), { wrapper });
     act(() =>
       result.current.mutate({
@@ -225,11 +242,17 @@ describe('the other actions', () => {
       }),
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual(paths);
-    expect(calls[2]?.body).toEqual({ conversationId: FE_CHAT, handle: 'web' });
+    expect(calls.slice(0, 3).map((call) => `${call.method} ${call.path}`)).toEqual(paths);
+    expect(calls[1]?.body).toBeNull();
+    expect(calls[2]?.body).toEqual({ handle: 'web' });
+    expect(cached()).toEqual(saved);
+    expect(client.getQueryData(outpostKeys.list)).toEqual([saved.outpost]);
   });
 
-  it('adds one chat to an outpost', async () => {
+  it('adds one chat to an outpost and lists the outpost with it', async () => {
+    const joined = detail([], { members: [member(FE_CHAT, 'fe', 1)] });
+    answers.set(`PUT /api/outposts/${OUTPOST_ID}/members/${FE_CHAT}`, () => json(joined));
+    client.setQueryData(outpostKeys.list, [outpost({ members: [] })]);
     const { result } = renderHook(() => useAddMember(), { wrapper });
     act(() =>
       result.current.mutate({
@@ -237,10 +260,36 @@ describe('the other actions', () => {
         member: { conversationId: FE_CHAT, handle: 'fe' },
       }),
     );
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toMatchObject({
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls[0]).toEqual({
       method: 'PUT',
       path: `/api/outposts/${OUTPOST_ID}/members/${FE_CHAT}`,
+      body: { handle: 'fe' },
     });
+    expect(client.getQueryData(outpostKeys.list)).toEqual([joined.outpost]);
+  });
+
+  it('creates an outpost and lists it without asking again', async () => {
+    const created = detail();
+    answers.set('POST /api/outposts', () => json(created, 201));
+    client.setQueryData(outpostKeys.list, []);
+    const { result } = renderHook(() => useCreateOutpost(), { wrapper });
+    act(() => result.current.mutate({ id: OUTPOST_ID, name: 'Usage by user', members: [] }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(cached()).toEqual(created);
+    expect(client.getQueryData(outpostKeys.list)).toEqual([created.outpost]);
+    expect(calls.filter((call) => call.path.startsWith('/api/outposts'))).toHaveLength(1);
+  });
+
+  it('deletes an outpost with no request body and drops it from the list', async () => {
+    answers.set(`DELETE /api/outposts/${OUTPOST_ID}`, () => new Response(null, { status: 204 }));
+    client.setQueryData(outpostKeys.list, [outpost()]);
+    client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail());
+    const { result } = renderHook(() => useDeleteOutpost(OUTPOST_ID), { wrapper });
+    act(() => result.current.mutate());
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls[0]).toEqual({ method: 'DELETE', path: `/api/outposts/${OUTPOST_ID}`, body: null });
+    expect(client.getQueryData(outpostKeys.list)).toEqual([]);
+    expect(cached()).toBeUndefined();
   });
 });

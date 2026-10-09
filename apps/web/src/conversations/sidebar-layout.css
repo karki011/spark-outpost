@@ -1,3 +1,7 @@
+.view.in-outpost > .main:not(.op) {
+  display: none;
+}
+
 .view[hidden] {
   display: none;
 }

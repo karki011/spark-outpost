@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import { OutpostCreate } from './OutpostCreate.tsx';
-import { API_CHAT, FE_CHAT, chat } from './test-fixtures.ts';
+import { API_CHAT, FE_CHAT, chat, detail } from './test-fixtures.ts';
 
 interface Call {
   method: string;
@@ -27,14 +27,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, init?: RequestInit) => {
-      if (init?.method === 'POST') {
-        calls.push({
-          method: 'POST',
-          path: url,
-          body: JSON.parse(String(init.body)) as Call['body'],
-        });
-      }
-      return Promise.resolve(new Response('{}', { status: 200 }));
+      if (init?.method !== 'POST') return Promise.resolve(new Response('[]', { status: 200 }));
+      const body = JSON.parse(String(init.body)) as Call['body'];
+      calls.push({ method: 'POST', path: url, body });
+      const created = detail([], { id: body.id, name: body.name, members: [] });
+      return Promise.resolve(new Response(JSON.stringify(created), { status: 201 }));
     }),
   );
 });

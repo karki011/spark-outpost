@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { threadItems, type OutpostDetail, type OutpostPost } from '@spark-outpost/contracts';
 import { ApiError } from '../api/client.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
-import { PenIcon } from '../ui/icons.tsx';
+import { PauseIcon, PenIcon, ResumeIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { MemberStrip } from './MemberStrip.tsx';
@@ -142,6 +142,7 @@ function Loaded({ id, detail, onOpenChat, onGone }: LoadedProps) {
             aria-pressed={paused}
             onClick={() => pause.mutate(!paused)}
           >
+            {paused ? <ResumeIcon /> : <PauseIcon />}
             {paused ? 'Resume' : 'Pause'}
           </button>
         </div>

@@ -3,6 +3,7 @@ import {
   parseAddress,
   type CreateOutpostRequest,
   type MemberRequest,
+  type Outpost,
   type OutpostDetail,
   type OutpostPost,
 } from '@spark-outpost/contracts';
@@ -64,11 +65,39 @@ function withPaused(detail: OutpostDetail, paused: boolean, now: string): Outpos
   return { ...detail, outpost: { ...detail.outpost, pausedAt: paused ? now : null } };
 }
 
-function refresh(client: QueryClient): Promise<unknown> {
+function keep(client: QueryClient, detail: OutpostDetail): void {
+  const { outpost } = detail;
+  client.setQueryData(outpostKeys.detail(outpost.id), detail);
+  client.setQueryData<Outpost[]>(outpostKeys.list, (list) => {
+    if (!list) return list;
+    if (!list.some((listed) => listed.id === outpost.id)) return [...list, outpost];
+    return list.map((listed) => (listed.id === outpost.id ? outpost : listed));
+  });
+}
+
+function forget(client: QueryClient, id: string): void {
+  client.removeQueries({ queryKey: outpostKeys.detail(id), exact: true });
+  client.setQueryData<Outpost[]>(outpostKeys.list, (list) =>
+    list?.filter((listed) => listed.id !== id),
+  );
+}
+
+function refreshOutposts(client: QueryClient): Promise<void> {
+  return client.invalidateQueries({ queryKey: outpostKeys.all });
+}
+
+function refreshChats(client: QueryClient, conversationIds: readonly string[]): Promise<unknown> {
   return Promise.all([
-    client.invalidateQueries({ queryKey: outpostKeys.all }),
     client.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
+    ...conversationIds.map((id) =>
+      client.invalidateQueries({ queryKey: queryKeys.conversation(id), exact: true }),
+    ),
   ]);
+}
+
+function memberIds(client: QueryClient, id: string): string[] {
+  const detail = client.getQueryData<OutpostDetail>(outpostKeys.detail(id));
+  return detail?.outpost.members.map((member) => member.conversationId) ?? [];
 }
 
 export function useOutposts() {
@@ -91,12 +120,13 @@ export function usePost(id: string) {
         detail ? withPost(detail, optimisticPost(detail, input, now)) : detail,
       );
     },
+    onSuccess: (detail) => keep(client, detail),
     onError: (_error, input) => {
       client.setQueryData<OutpostDetail>(key, (detail) =>
         detail ? withoutPost(detail, input.id) : detail,
       );
+      return client.invalidateQueries({ queryKey: key });
     },
-    onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
 }
 
@@ -117,7 +147,8 @@ export function useCancel(id: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (postId: string) => outpostsApi.cancelPost(id, postId),
-    onSettled: () => client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
+    onSuccess: (detail) => keep(client, detail),
+    onError: () => client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
   });
 }
 
@@ -133,7 +164,8 @@ export function usePause(id: string) {
         detail ? withPaused(detail, paused, now) : detail,
       );
     },
-    onSettled: () => client.invalidateQueries({ queryKey: outpostKeys.all }),
+    onSuccess: (detail) => keep(client, detail),
+    onError: () => refreshOutposts(client),
   });
 }
 
@@ -141,21 +173,38 @@ export function useCreateOutpost() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateOutpostRequest) => outpostsApi.create(body),
-    onSettled: () => refresh(client),
+    onSuccess: (detail) => keep(client, detail),
+    onSettled: (_detail, _error, body) =>
+      refreshChats(
+        client,
+        body.members.map((member) => member.conversationId),
+      ),
   });
 }
 
-async function applyChanges(id: string, changes: SheetChanges): Promise<void> {
-  if (changes.name !== null) await outpostsApi.update(id, { name: changes.name });
-  for (const conversationId of changes.remove) await outpostsApi.removeMember(id, conversationId);
-  for (const member of changes.put) await outpostsApi.putMember(id, member);
+async function applyChanges(id: string, changes: SheetChanges): Promise<OutpostDetail | null> {
+  let latest: OutpostDetail | null = null;
+  if (changes.name !== null) latest = await outpostsApi.update(id, { name: changes.name });
+  for (const conversationId of changes.remove) {
+    latest = await outpostsApi.removeMember(id, conversationId);
+  }
+  for (const member of changes.put) latest = await outpostsApi.putMember(id, member);
+  return latest;
 }
 
 export function useSaveOutpost(id: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (changes: SheetChanges) => applyChanges(id, changes),
-    onSettled: () => refresh(client),
+    onSuccess: (detail) => {
+      if (detail) keep(client, detail);
+    },
+    onError: () => refreshOutposts(client),
+    onSettled: (_detail, _error, changes) =>
+      refreshChats(client, [
+        ...changes.remove,
+        ...changes.put.map((member) => member.conversationId),
+      ]),
   });
 }
 
@@ -164,7 +213,8 @@ export function useAddMember() {
   return useMutation({
     mutationFn: (input: { outpostId: string; member: MemberRequest }) =>
       outpostsApi.putMember(input.outpostId, input.member),
-    onSettled: () => refresh(client),
+    onSuccess: (detail) => keep(client, detail),
+    onSettled: (_detail, _error, input) => refreshChats(client, [input.member.conversationId]),
   });
 }
 
@@ -173,8 +223,9 @@ export function useDeleteOutpost(id: string) {
   return useMutation({
     mutationFn: () => outpostsApi.remove(id),
     onSuccess: () => {
-      client.removeQueries({ queryKey: outpostKeys.detail(id), exact: true });
-      return refresh(client);
+      const members = memberIds(client, id);
+      forget(client, id);
+      return refreshChats(client, members);
     },
   });
 }

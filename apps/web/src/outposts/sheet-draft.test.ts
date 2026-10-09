@@ -199,4 +199,71 @@ describe('sheetChanges', () => {
     });
     expect(hasChanges(changes)).toBe(true);
   });
+
+  it('moves a chat out of the way first when two chats swap handles', () => {
+    const form: SheetForm = {
+      ...FORM,
+      members: [
+        { conversationId: FE_CHAT, handle: 'api' },
+        { conversationId: API_CHAT, handle: 'fe' },
+      ],
+    };
+    expect(sheetChanges(initial, form).put).toEqual([
+      { conversationId: FE_CHAT, handle: 'api2' },
+      { conversationId: API_CHAT, handle: 'fe' },
+      { conversationId: FE_CHAT, handle: 'api' },
+    ]);
+  });
+
+  it('frees a handle before the chat that takes it over', () => {
+    const form: SheetForm = {
+      ...FORM,
+      members: [
+        { conversationId: FE_CHAT, handle: 'web' },
+        { conversationId: API_CHAT, handle: 'api' },
+        { conversationId: DOCS_CHAT, handle: 'fe' },
+      ],
+    };
+    const taker: SheetForm = {
+      ...FORM,
+      members: [
+        { conversationId: DOCS_CHAT, handle: 'fe' },
+        { conversationId: FE_CHAT, handle: 'web' },
+        { conversationId: API_CHAT, handle: 'api' },
+      ],
+    };
+    const expected = [
+      { conversationId: FE_CHAT, handle: 'web' },
+      { conversationId: DOCS_CHAT, handle: 'fe' },
+    ];
+    expect(sheetChanges(initial, form).put).toEqual(expected);
+    expect(sheetChanges(initial, taker).put).toEqual(expected);
+  });
+
+  it('never asks for a handle another chat still holds', () => {
+    const three = formOf(
+      outpost({
+        members: [
+          member(FE_CHAT, 'fe', 1),
+          member(API_CHAT, 'api', 2),
+          member(DOCS_CHAT, 'docs', 3),
+        ],
+      }),
+    );
+    const rotated: SheetForm = {
+      ...three,
+      members: [
+        { conversationId: FE_CHAT, handle: 'api' },
+        { conversationId: API_CHAT, handle: 'docs' },
+        { conversationId: DOCS_CHAT, handle: 'fe' },
+      ],
+    };
+    const held = new Map(three.members.map((entry) => [entry.conversationId, entry.handle]));
+    for (const step of sheetChanges(three, rotated).put) {
+      const others = [...held].filter(([conversationId]) => conversationId !== step.conversationId);
+      expect(others.map(([, handle]) => handle)).not.toContain(step.handle);
+      held.set(step.conversationId, step.handle);
+    }
+    expect([...held.values()]).toEqual(['api', 'docs', 'fe']);
+  });
 });

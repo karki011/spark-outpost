@@ -149,13 +149,50 @@ export function withHandleFor(form: SheetForm, conversationId: string, typed: st
   };
 }
 
+function heldByAnother(held: ReadonlyMap<string, string>, member: SheetMember): boolean {
+  return [...held].some(
+    ([conversationId, handle]) =>
+      conversationId !== member.conversationId && handle === member.handle,
+  );
+}
+
+function parked(
+  member: SheetMember,
+  held: ReadonlyMap<string, string>,
+  waiting: readonly SheetMember[],
+): SheetMember {
+  const taken = [...held.values(), ...waiting.map((other) => other.handle)];
+  return { conversationId: member.conversationId, handle: suggestHandle(member.handle, taken) };
+}
+
+function inSafeOrder(
+  start: ReadonlyMap<string, string>,
+  wanted: readonly SheetMember[],
+): MemberRequest[] {
+  const held = new Map(start);
+  const waiting = [...wanted];
+  const steps: MemberRequest[] = [];
+  for (let blocked = waiting[0]; blocked; blocked = waiting[0]) {
+    const free = waiting.find((member) => !heldByAnother(held, member));
+    const step = free ?? parked(blocked, held, waiting);
+    if (free) waiting.splice(waiting.indexOf(free), 1);
+    held.set(step.conversationId, step.handle);
+    steps.push(step);
+  }
+  return steps;
+}
+
 export function sheetChanges(initial: SheetForm, form: SheetForm): SheetChanges {
   const before = new Map(initial.members.map((member) => [member.conversationId, member.handle]));
   const kept = new Set(form.members.map((member) => member.conversationId));
   const name = form.name.trim();
+  const held = new Map([...before].filter(([conversationId]) => kept.has(conversationId)));
+  const wanted = form.members.filter(
+    (member) => before.get(member.conversationId) !== member.handle,
+  );
   return {
     name: name === initial.name.trim() ? null : name,
-    put: form.members.filter((member) => before.get(member.conversationId) !== member.handle),
+    put: inSafeOrder(held, wanted),
     remove: initial.members
       .map((member) => member.conversationId)
       .filter((conversationId) => !kept.has(conversationId)),
