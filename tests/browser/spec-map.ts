@@ -155,6 +155,7 @@ export const SPEC_GROUPS = {
   outposts: [
     'outpost-answers',
     'outpost-create',
+    'outpost-sidebar',
     'outpost-story-bar',
     'outposts',
     'outposts-agents',

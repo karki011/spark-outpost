@@ -6,16 +6,14 @@ import './chat-menu.css';
 import './sidebar-layout.css';
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { SortableContext } from '@dnd-kit/sortable';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
-import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
-import { PlusIcon } from '../ui/icons.tsx';
 import {
   isFiltering,
   matchesFilter,
@@ -25,21 +23,19 @@ import {
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { AttentionCard } from './AttentionCard.tsx';
-import { ChatMenu } from './ChatMenu.tsx';
+import { ActiveChats } from './ActiveChats.tsx';
+import { ChatRowMenu } from './ChatRowMenu.tsx';
 import { anchorFor, type OpenMenu, type OpenProjectMenu } from './menu-anchor.ts';
 import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
 import { HistoryChats } from './HistoryChats.tsx';
-import { LooseChats } from './LooseChats.tsx';
-import { OutpostRows } from './OutpostRows.tsx';
-import { ProjectGroup } from './ProjectGroup.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
+import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
 import { attention } from './row-state.ts';
-import { activeGroups, movedOrder, pinnedSiblings } from './sidebar-groups.ts';
-import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
+import { activeGroups } from './sidebar-groups.ts';
+import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-order.ts';
 import {
-  isNewChatShortcut,
   LIST_PANEL_ID,
   NewChatButton,
   SearchBox,
@@ -52,15 +48,17 @@ import { TeammateFilter } from './TeammateFilter.tsx';
 import { ToastHost } from './Toast.tsx';
 import { useChatActions } from './use-chat-actions.ts';
 import { useProjectActions } from './use-project-actions.ts';
+import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
-import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
+import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
 import { useMarkRead } from './use-mark-read.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 
 const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
+const NO_OUTPOSTS: readonly Outpost[] = [];
 
 interface ConversationListProps {
   selectedId: string | null;
@@ -143,7 +141,12 @@ export const ConversationList = memo(function ConversationList({
     layout?.closeDrawer();
   };
 
-  const grouped = activeGroups(visible, projectList);
+  const membership = memberships(outpostSeam?.outposts ?? NO_OUTPOSTS);
+  const grouped = activeGroups(outsideOutposts(visible, membership), projectList);
+  useRowFocus(
+    listRef,
+    [...membership].map(([chatId, member]) => `${chatId}:${member.outpostId}`).join(),
+  );
   const projectById = new Map(projectList.map((project) => [project.id, project]));
   const dnd = useSidebarDnd({
     layout: chatLayout(grouped),
@@ -179,21 +182,7 @@ export const ConversationList = memo(function ConversationList({
     onNew();
     closeDrawer?.();
   }, [onNew, closeDrawer]);
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (isNewChatShortcut(event)) {
-        event.preventDefault();
-        startNew();
-        return;
-      }
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
-      event.preventDefault();
-      reveal?.();
-      requestAnimationFrame(() => searchRef.current?.focus());
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [reveal, startNew]);
+  useSidebarShortcuts({ reveal, startNew, searchRef });
 
   const focusBack = menu?.anchor.focusBack ?? null;
   const closeMenu = useCallback(() => {
@@ -226,7 +215,12 @@ export const ConversationList = memo(function ConversationList({
   );
   const handleDelete = useStableCallback((chat: ConversationSummary) => actions.remove(chat));
 
-  const renderRow = (chat: ConversationSummary, sortable: boolean, index: number) => (
+  const renderRow = (
+    chat: ConversationSummary,
+    sortable: boolean,
+    index: number,
+    handle?: string,
+  ) => (
     <ChatRow
       key={chat.id}
       chat={chat}
@@ -236,6 +230,7 @@ export const ConversationList = memo(function ConversationList({
       settling={dnd.busy}
       flash={chat.id === actions.flashId}
       index={index}
+      handle={handle}
       onOpen={handleOpen}
       onMenu={handleMenu}
       onRename={handleRename}
@@ -264,102 +259,6 @@ export const ConversationList = memo(function ConversationList({
     />
   );
 
-  const renderActive = () => {
-    const blocks = dnd.projectIds.flatMap((id) => {
-      const project = projectById.get(id);
-      if (!project) return [];
-      const pinned = rowsIn(pinnedIn(id));
-      const rest = rowsIn(listIn(id));
-      return [{ project, pinned, rest, count: pinned.length + rest.length }];
-    });
-    const shownBlocks = searching ? blocks.filter((block) => block.count > 0) : blocks;
-    const loosePinned = rowsIn(pinnedIn(NO_PROJECT));
-    const looseRest = rowsIn(LOOSE);
-    const looseCount = loosePinned.length + looseRest.length;
-    const nothing = searching && shownBlocks.length === 0 && looseCount === 0;
-    if (nothing) return <p className="pempty wide">No active chats match “{search.trim()}”.</p>;
-    return (
-      <>
-        {outpostSeam && !searching && (
-          <OutpostRows
-            outposts={outpostSeam.outposts}
-            openId={outpostSeam.openOutpostId}
-            onOpen={(id) => {
-              outpostSeam.onOpenOutpost(id);
-              layout?.closeDrawer();
-            }}
-            onNew={outpostSeam.canManage ? () => outpostSeam.onNewOutpost() : undefined}
-          />
-        )}
-        <div className="sec">
-          <span>Projects</span>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Add project"
-            title="Add project"
-            onClick={() => {
-              addProject.reset();
-              setAddingProject(true);
-            }}
-          >
-            <PlusIcon />
-          </button>
-        </div>
-        <SortableContext
-          items={shownBlocks.map((block) => projectDragId(block.project.id))}
-          strategy={listSorting}
-        >
-          {shownBlocks.map(({ project, pinned, rest, count }) => {
-            const open = searching || folds.isOpen(project.id) || over === project.id;
-            return (
-              <ProjectGroup
-                key={project.id}
-                project={project}
-                count={count}
-                open={open}
-                over={over === project.id}
-                landed={dnd.landed?.group === project.id}
-                sortable={canDrag}
-                searching={searching}
-                renaming={renamingProjectId === project.id}
-                onToggle={() => folds.toggle(project.id)}
-                onNewChat={() => onNewInProject(project.id)}
-                onMenu={(element) =>
-                  setProjectMenu({ projectId: project.id, anchor: anchorFor(element, null) })
-                }
-                onRename={(name) => {
-                  setRenamingProjectId(null);
-                  if (name) projectActions.rename(project, name);
-                }}
-              >
-                {renderRows(pinnedIn(project.id), pinned, { sortable: true, enabled: open })}
-                {renderRows(listIn(project.id), rest, { sortable: true, enabled: open })}
-              </ProjectGroup>
-            );
-          })}
-        </SortableContext>
-        {(!searching || looseCount > 0) && (
-          <LooseChats
-            pinned={loosePinned}
-            unpinned={looseRest}
-            empty={
-              chats.length > 0
-                ? 'Drag a chat here to take it out of its project.'
-                : projectList.length > 0
-                  ? null
-                  : 'No chats yet. Start one with New chat.'
-            }
-            searching={searching}
-            over={over === NO_PROJECT}
-            folds={folds}
-            renderRows={renderRows}
-          />
-        )}
-      </>
-    );
-  };
-
   const activeChat = dnd.active?.type === 'chat' ? (byId.get(dnd.active.chatId) ?? null) : null;
   const draggedProject =
     dnd.active?.type === 'project' ? projectById.get(dnd.active.projectId) : undefined;
@@ -371,10 +270,6 @@ export const ConversationList = memo(function ConversationList({
       }
     : null;
   const menuChat = menu ? byId.get(menu.chatId) : undefined;
-  const siblings =
-    menuChat?.pinnedAt && !menuChat.archivedAt ? pinnedSiblings(chats, menuChat) : [];
-  const moveUp = menuChat ? movedOrder(siblings, menuChat.id, -1) : null;
-  const moveDown = menuChat ? movedOrder(siblings, menuChat.id, 1) : null;
   const menuProject = projectList.find((project) => project.id === projectMenu?.projectId);
 
   return (
@@ -419,7 +314,33 @@ export const ConversationList = memo(function ConversationList({
           >
             <div key={tab} className="list-in">
               {tab === 'active' ? (
-                renderActive()
+                <ActiveChats
+                  search={search}
+                  searching={searching}
+                  canDrag={canDrag}
+                  hasChats={chats.length > 0}
+                  hasProjects={projectList.length > 0}
+                  projectById={projectById}
+                  dnd={dnd}
+                  folds={folds}
+                  renamingProjectId={renamingProjectId}
+                  rowsIn={rowsIn}
+                  renderRows={renderRows}
+                  renderRow={renderRow}
+                  members={membersByOutpost(visible, membership)}
+                  onAddProject={() => {
+                    addProject.reset();
+                    setAddingProject(true);
+                  }}
+                  onNewInProject={onNewInProject}
+                  onProjectMenu={(projectId, element) =>
+                    setProjectMenu({ projectId, anchor: anchorFor(element, null) })
+                  }
+                  onProjectRename={(project, name) => {
+                    setRenamingProjectId(null);
+                    if (name) projectActions.rename(project, name);
+                  }}
+                />
               ) : (
                 <HistoryChats
                   chats={visible}
@@ -435,39 +356,15 @@ export const ConversationList = memo(function ConversationList({
       </div>
       <SidebarResizer />
       {menu && menuChat && (
-        <ChatMenu
+        <ChatRowMenu
           chat={menuChat}
           anchor={menu.anchor}
+          chats={outsideOutposts(chats, membership)}
           projects={projectList}
-          outposts={
-            outpostSeam?.canManage
-              ? {
-                  list: outpostSeam.outposts,
-                  onAdd: (outpostId, handle) =>
-                    void outpostSeam
-                      .onAddToOutpost(outpostId, { conversationId: menuChat.id, handle })
-                      .then(
-                        () => toaster.show({ text: `Added ${menuChat.title} as @${handle}` }),
-                        (error: Error) => toaster.show({ text: error.message }),
-                      ),
-                  onNew: () => outpostSeam.onNewOutpost(menuChat.id),
-                }
-              : undefined
-          }
+          actions={actions}
+          toaster={toaster}
           onClose={closeMenu}
           onRename={() => setRenamingId(menuChat.id)}
-          onAutoTitle={(on) => actions.setAutoTitle(menuChat, on)}
-          onPin={() => actions.pin(menuChat)}
-          onCopyLink={() => actions.copyLink(menuChat)}
-          {...(siblings.length > 1
-            ? {
-                onMoveUp: moveUp ? () => actions.reorderPinned(moveUp) : null,
-                onMoveDown: moveDown ? () => actions.reorderPinned(moveDown) : null,
-              }
-            : {})}
-          onMove={(projectId) => actions.move(menuChat, projectId)}
-          onArchive={(archived) => actions.archive(menuChat, archived)}
-          onDelete={() => actions.remove(menuChat)}
         />
       )}
       {projectMenu && menuProject && (
