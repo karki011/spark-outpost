@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
-import { pickPermission, send } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
+import { send, turnDone } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE } from './stub-config.ts';
@@ -66,9 +67,7 @@ async function editAndKeep(page: Page, text: string) {
   await expect(page.getByRole('region', { name: /^Kept · / }).last()).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {
-    timeout: 20_000,
-  });
+  await turnDone(page, 20_000);
 }
 
 async function shipDraft(page: Page) {
@@ -178,7 +177,7 @@ test('a chat that fixes a ticket links itself, shows on the ticket and ships wit
   await editAndKeep(page, 'Fix the session expiry bug in WEB-433 #edit #plan');
   await expect(chip(page, 'WEB-433')).toContainText('Session expires during long uploads');
   await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(
-    /^spark\/web-433-fix-the-session-expiry-bug/,
+    /^spark\/fix-the-session-expiry-bug/,
   );
   await shipDraft(page);
   const [pull] = await pulls(page);
@@ -200,7 +199,7 @@ test('several tickets or a reference only suggest, and Unlink sticks', async ({ 
   await connectTickets(page, ['linear', 'jira']);
   await newChatOn(page, repo.root);
 
-  await send(page, 'Fix WEB-433 and ENG-1210');
+  await editAndKeep(page, 'Fix WEB-433 and ENG-1210 #edit #plan');
   const suggestions = page.getByRole('group', { name: 'Suggested tickets' });
   await expect(suggestions.getByRole('button', { name: /^WEB-433/ })).toBeVisible({
     timeout: 20_000,
@@ -223,7 +222,7 @@ test('several tickets or a reference only suggest, and Unlink sticks', async ({ 
   await expect(page.locator('.head .chat-ticket')).toHaveCount(0);
 
   await newChatOn(page, repo.root);
-  await send(page, 'Similar to WEB-433, fix the signup form');
+  await editAndKeep(page, 'Similar to WEB-433, fix the signup form #edit #plan');
   await expect(page.getByRole('group', { name: 'Suggested tickets' })).toContainText('WEB-433', {
     timeout: 20_000,
   });

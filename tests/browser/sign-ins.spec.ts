@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { crewRepo, linkedChat, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import { chatRepo, type ChatRepo, linkedChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { openTestDb } from './database.ts';
 import { withDesktopBrowser } from './desktop-browser.ts';
 import { SERVER_LOG_DIR, SIGN_IN_FIXTURE } from './stub-config.ts';
@@ -12,14 +12,14 @@ const FAKE_HOST = process.env.SPARK_FAKE_BROWSER === '1';
 const { username: USERNAME, password: PASSWORD } = SIGN_IN_FIXTURE;
 const SPELLINGS = [USERNAME, PASSWORD, encodeURIComponent(USERNAME), encodeURIComponent(PASSWORD)];
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 let name = '';
 
 test.describe.configure({ timeout: 120_000 });
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   name = path.basename(repo.root);
   await page.setViewportSize({ width: 1400, height: 900 });
 });

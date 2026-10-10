@@ -2,15 +2,15 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import type { TaskDetail } from '../../packages/contracts/src/tasks.ts';
 import {
-  CREW_REQUEST,
-  agentBlock,
-  crewChat,
-  crewRepo,
+  BUILD_REQUEST,
+  chatRepo,
+  type ChatRepo,
   keptResult,
-  resetCrew,
+  projectChat,
+  resetWithAgents,
   send,
-  type CrewRepo,
-} from './crew-engine.ts';
+  turnDone,
+} from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -164,27 +164,24 @@ test('the work panel slides open and closed without moving the thread', async ({
   expect(await scrollTop()).toBe(middle);
 });
 
-test.describe('a finished crew', () => {
-  let repo: CrewRepo;
+test.describe('a finished change', () => {
+  let repo: ChatRepo;
 
   test.beforeEach(async ({ page }) => {
-    await resetCrew();
-    repo = crewRepo();
+    await resetWithAgents();
+    repo = chatRepo();
     await page.setViewportSize({ width: 1400, height: 900 });
   });
 
   test.afterEach(() => repo.remove());
 
-  test('Cost groups by agent and the crew turn lists its changed files', async ({ page }) => {
+  test('the kept record lists the changed files and Cost shows the agent', async ({ page }) => {
     test.setTimeout(90_000);
-    await crewChat(page, repo, 'Full auto');
-    await send(page, `${CREW_REQUEST} #build #crew`);
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText(/Done 2 agents/, {
-      timeout: 30_000,
-    });
+    await projectChat(page, repo, 'Full auto');
+    await send(page, `${BUILD_REQUEST} #build`);
+    await turnDone(page, 30_000);
 
     const kept = keptResult(page);
-    await expect(page.locator('.crew-turn > .fchg')).toHaveCount(0);
     await kept.getByRole('button', { name: 'Kept · 1 file' }).click();
     const files = kept.locator('.fchg');
     await expect(files).toContainText('1 file changed+1 −0');
@@ -193,23 +190,16 @@ test.describe('a finished crew', () => {
     await expect(drawer.locator('.cm-content')).toContainText('step 1', { timeout: 30_000 });
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
-    await expect(agentBlock(page, 'Bolt').locator('.fchg')).toHaveCount(0);
 
     const work = panel(page);
-    const crewRow = work.locator('.titem').filter({ has: page.locator('.ti-tag.crew') });
-    await expect(crewRow.first()).toBeVisible();
-    await expect(crewRow.first().getByRole('button')).toContainText('Crew');
     await work.getByRole('tab', { name: 'Cost' }).click();
     const rows = work.getByRole('list', { name: 'Cost by agent' }).getByRole('listitem');
-    await expect(rows).toHaveCount(3);
-    await expect(rows.nth(0)).toContainText('BoltBuilder · Opus 5.5');
-    await expect(rows.last()).toContainText('JevDispatcherestimated');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Claude');
     for (const row of await rows.all()) {
       const height = (await row.boundingBox())!.height;
       expect(height).toBeLessThan(40);
     }
-    await expect(work.getByRole('list', { name: 'Cost by model' })).toContainText('6 Sol');
-    await expect(work.getByRole('img', { name: /^Cost by model: / })).toBeVisible();
     await shot(page, 'cost');
 
     await addEstimatedTurns(page);

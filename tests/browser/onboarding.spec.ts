@@ -116,9 +116,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(page.locator('.onb')).toHaveCount(0);
 });
 
-test('Meet Spark sets the personality and the Spark switch, and the blob reacts', async ({
-  page,
-}) => {
+test('Meet Spark sets the personality, and the blob reacts', async ({ page }) => {
   await page.goto('/');
   await expect(
     dialog(page).getByRole('button', { name: /Step 1 of \d+: Meet Spark/ }),
@@ -136,23 +134,15 @@ test('Meet Spark sets the personality and the Spark switch, and the blob reacts'
     'Warm, a little humour, celebrates your wins.',
   );
 
-  const spark = dialog(page).getByRole('switch', { name: 'Use Spark workflow', exact: true });
-  await expect(spark).toHaveAttribute('aria-checked', 'true');
-  await expect(dialog(page).getByRole('switch')).toHaveCount(1);
-  const saved = page.waitForResponse(
-    (response) => response.url().endsWith('/api/profile') && response.ok(),
-  );
-  await spark.press('Space');
-  await saved;
-  await expect(spark).toHaveAttribute('aria-checked', 'false');
-  await expect(preview.locator('.scout')).toHaveClass(/sleep/);
-  await expect(preview).toContainText('Spark is napping');
+  await expect(dialog(page).getByRole('switch')).toHaveCount(0);
+  await expect
+    .poll(async () => (await (await page.request.get('/api/setup')).json()).profile.personality)
+    .toBe('playful');
 
   const profile = (await (await page.request.get('/api/setup')).json()).profile;
   expect(profile).toMatchObject({
     displayName: 'Sam Rivera',
     personality: 'playful',
-    sparkEnabled: false,
   });
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();

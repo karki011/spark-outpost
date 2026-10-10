@@ -1,6 +1,13 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { card, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
+import {
+  BUILD_REQUEST,
+  card,
+  chatRepo,
+  projectChat,
+  resetWithAgents,
+  send,
+} from './project-chat-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, openIsland } from './island-home-desktop.ts';
 import { openChats } from './navigation.ts';
@@ -187,12 +194,12 @@ test('the boot screen blob runs one transform animation per part', async ({ page
 
 test('Agent TV crew blobs do no work on each frame', async ({ page }) => {
   test.setTimeout(90_000);
-  await resetCrew();
-  const repo = crewRepo();
+  await resetWithAgents();
+  const repo = chatRepo();
   try {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await crewChat(page, repo, 'Ask before edits');
-    await send(page, `${CREW_REQUEST} #build #crew`);
+    await projectChat(page, repo, 'Ask before edits');
+    await send(page, `${BUILD_REQUEST} #build`);
     await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
     await toggleHeaderPane(page, 'Agent TV');
     const tv = page.getByRole('dialog', { name: 'Agent TV' });

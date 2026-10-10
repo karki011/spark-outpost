@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { crewRepo, type CrewRepo } from './crew-engine.ts';
+import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { editedChat } from './edited-chat.ts';
 import { seedChats } from './sidebar-seed.ts';
@@ -30,10 +30,10 @@ const changesChip = (page: Page) =>
   page.getByRole('button', { name: /added, \d+ removed in \d+ files?$/ });
 const workPanel = (page: Page) => page.locator('#work-panel');
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
   await page.setViewportSize(DESKTOP);
   await editedChat(page, repo.root);

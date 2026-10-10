@@ -62,7 +62,7 @@ test('the name saves from Spark settings and Spark greets you by first name', as
   await expect(profile).toBeVisible();
 });
 
-test('Spark toggles and personality save, and the moved settings live in Spark only', async ({
+test('personality and the wait save, and the moved settings live in Spark only', async ({
   page,
 }) => {
   await page.goto('/');
@@ -74,45 +74,20 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   );
   await expect(spark.getByRole('tab', { name: 'Profile' })).toHaveCount(0);
 
-  const sparkSwitch = spark.getByRole('switch', { name: 'Use Spark workflow', exact: true });
-  await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
+  await expect(spark.getByRole('switch', { name: 'Use Spark workflow' })).toHaveCount(0);
   await expect(spark.locator('.spark-options')).not.toHaveAttribute('open');
   await spark.getByText('Workflow options', { exact: true }).click();
-  const switches = spark.getByRole('switch');
-  await expect(switches).toHaveCount(8);
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
-  await expect(sparkSwitch).toHaveAccessibleDescription(
-    'Chat routes and reviews work. Terminal includes Spark tools.',
-  );
-  await sparkSwitch.focus();
-  const saved = page.waitForResponse(
-    (response) => response.url().endsWith('/api/profile') && response.ok(),
-  );
-  await page.keyboard.press('Enter');
-  await saved;
-  await expect(sparkSwitch).toHaveAttribute('aria-checked', 'false');
-  await expect(sparkSwitch).toHaveAccessibleDescription(
-    'Use your agent directly with your custom instructions.',
-  );
-  await expect(spark.locator('.spark-preview .scout')).toHaveClass(/sleep/);
 
   const personality = spark.getByRole('radiogroup', { name: 'Personality' });
   await personality.getByRole('radio', { name: 'Just the facts' }).click();
   await expect(personality).toHaveAccessibleDescription('Short answers, no small talk.');
 
-  const info = spark.getByRole('button', { name: 'More about Use Spark workflow', exact: true });
-  await info.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('tooltip')).toContainText('rules pick the model');
-  await expect(page.getByRole('tooltip').getByRole('listitem')).toHaveText([/^On/, /^Off/]);
-  await page.keyboard.press('Escape');
-  await expect(spark).toBeVisible();
-
   await expect
     .poll(async () => (await (await page.request.get('/api/setup')).json()).profile)
-    .toMatchObject({ sparkEnabled: false, personality: 'facts' });
+    .toMatchObject({ personality: 'facts' });
 
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   const wait = spark.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
@@ -167,8 +142,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await page.getByRole('button', { name: 'Close settings' }).click();
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page.getByRole('button', { name: 'Spark off' }).click();
-  await expect(page.getByRole('dialog', { name: 'Spark' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Spark off' })).toHaveCount(0);
 });
 
 test('settings shows usage per provider', async ({ page }) => {
@@ -232,32 +206,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   }
 });
 
-test('Spark sets what Full auto does when checks still fail, opening the draft PR by default', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByText('Workflow options', { exact: true }).click();
-  const choice = page.getByRole('dialog', { name: 'Spark' }).getByRole('radiogroup', {
-    name: 'When checks still fail in Full auto',
-  });
-  await expect(choice.getByRole('radio', { name: 'Open a draft PR' })).toBeChecked();
-  await expect(choice).toHaveAccessibleDescription(
-    'That PR always opens as a draft marked “Checks failing”, even when PRs open ready for review. Full auto never merges.',
-  );
-  const saved = page.waitForResponse(
-    (response) => response.url().endsWith('/api/profile') && response.ok(),
-  );
-  await choice.getByRole('radio', { name: 'Stop and ask' }).click();
-  await saved;
-  await expect(choice.getByRole('radio', { name: 'Stop and ask' })).toBeChecked();
-  const profile = await page.request.get('/api/setup');
-  expect((await profile.json()).profile.shipFailingChecks).toBe(false);
-});
-
-test('the Jev screen keeps only its own switch and explains it in an info tip', async ({
-  page,
-}) => {
+test('the Jev screen has no settings of its own', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
@@ -268,26 +217,12 @@ test('the Jev screen keeps only its own switch and explains it in an info tip', 
   await expect(providers.getByRole('region', { name: 'Advisor' })).toContainText('Not set up');
   await providers.locator('.ptile[data-prov="jev"]').click();
   const jev = providers.locator('.pconf[data-prov="jev"]');
-  await expandSection(jev, 'Settings');
-  const advisor = jev.getByRole('region', { name: 'Settings' });
+  await expect(jev).toBeVisible();
   await expect(providers).not.toContainText('Full auto');
-  await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
-  await expect(advisor).toContainText('Connect Jev to use this.');
+  await expect(jev.getByRole('switch', { name: 'Check changes with Jev' })).toHaveCount(0);
   await expect(
-    advisor.getByRole('radiogroup', { name: 'Wait before going on without your answer' }),
+    jev.getByRole('radiogroup', { name: 'Wait before going on without your answer' }),
   ).toHaveCount(0);
-
-  const info = advisor.getByRole('button', { name: 'More about Check changes with Jev' });
-  await expect(async () => {
-    await info.focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('tooltip')).toContainText('never blocked or allowed', {
-      timeout: 1_000,
-    });
-  }).toPass({ timeout: 10_000 });
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('tooltip')).toHaveCount(0);
-  await expect(advisor).toBeVisible();
 });
 
 test('a failed test message makes the provider blob wobble and shows the error', async ({

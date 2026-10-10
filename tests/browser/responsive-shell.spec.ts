@@ -193,9 +193,9 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
     asRemote(opened, { reset: false }),
   );
   await expect(phone.getByRole('textbox', { name: 'Message' })).toBeVisible();
-  const menu = await openChatMenu(phone);
-  await expect(menu.getByRole('menuitemcheckbox')).toHaveCount(0);
-  await expect(menu.getByRole('separator')).toHaveCount(0);
+  await openChatMenu(phone);
+  await expect(headerPaneItem(phone, 'Terminal')).toHaveCount(0);
+  await expect(headerPaneItem(phone, 'Browser')).toHaveCount(0);
   await closeChatMenu(phone);
   await expect(phone.getByRole('button', { name: /Terminal|Browser/ })).toHaveCount(0);
 

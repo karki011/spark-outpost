@@ -1,25 +1,24 @@
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  card,
-  CREW_REQUEST,
-  crewChat,
-  crewRepo,
-  allowEdit,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
 import { toggleHeaderPane } from './header-menu.ts';
+import {
+  allowEdit,
+  BUILD_REQUEST,
+  card,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
+  send,
+  turnDone,
+} from './project-chat-kit.ts';
 
-const SHOTS = process.env.TV_LIST_SHOTS ?? '';
 const ELAPSED = /^(\d+s|\d+m \d\ds|\d+h \d\dm)$/;
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.addInitScript(() => {
     if (sessionStorage.getItem('tv-fresh')) return;
@@ -33,12 +32,10 @@ test.afterEach(() => repo.remove());
 const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
 const running = (page: Page) =>
   tvOf(page).getByRole('list', { name: 'Running' }).getByRole('listitem');
-const row = (page: Page, name: RegExp) => running(page).and(page.getByRole('listitem', { name }));
-const BUILDER = / · Builder$/;
 
-async function listWaiting(page: Page) {
-  await crewChat(page, repo, 'Ask before edits');
-  await send(page, `${CREW_REQUEST} #build #crew`);
+async function listWhileWaiting(page: Page) {
+  await projectChat(page, repo, 'Ask before edits');
+  await send(page, `${BUILD_REQUEST} #build`);
   await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
   return openList(page);
 }
@@ -52,21 +49,20 @@ async function openList(page: Page) {
   return tv;
 }
 
-test('List view shows running agents with a ticking clock, and the choice is remembered', async ({
+test('List view shows the running agent with a ticking clock, and the choice is remembered', async ({
   page,
 }) => {
   test.setTimeout(60_000);
-  const tv = await listWaiting(page);
+  const tv = await listWhileWaiting(page);
   await expect(tv.locator('.tv-stage')).toHaveCount(0);
 
-  const builder = row(page, BUILDER);
-  await expect(builder).toBeVisible();
-  await expect(running(page).first()).toContainText('Needs you');
-  await expect(builder).toContainText('Agent');
-  await expect(builder).toContainText('Opus 5.5');
-  await expect(builder.getByRole('button', { name: /^Stop / })).toBeVisible();
+  const row = running(page);
+  await expect(row).toHaveCount(1);
+  await expect(row).toHaveAccessibleName(/^Claude/);
+  await expect(row).toContainText('Needs you');
+  await expect(row.getByRole('button', { name: /^Stop / })).toBeVisible();
 
-  const clock = builder.locator('.tvl-clock');
+  const clock = row.locator('.tvl-clock');
   await expect(clock).toHaveText(ELAPSED);
   const before = await clock.textContent();
   await expect.poll(() => clock.textContent(), { timeout: 4_000 }).not.toBe(before);
@@ -79,12 +75,12 @@ test('List view shows running agents with a ticking clock, and the choice is rem
     'aria-checked',
     'true',
   );
-  await expect(row(page, BUILDER)).toBeVisible();
+  await expect(running(page)).toHaveCount(1);
 });
 
 test('the view toggle works from the keyboard', async ({ page }) => {
   test.setTimeout(60_000);
-  const tv = await listWaiting(page);
+  const tv = await listWhileWaiting(page);
   const list = tv.getByRole('radio', { name: 'List' });
   await list.focus();
   await page.keyboard.press('ArrowLeft');
@@ -97,66 +93,46 @@ test('the view toggle works from the keyboard', async ({ page }) => {
   await expect(tv.locator('.tvl')).toBeVisible();
 });
 
-test('Needs you jumps to the approval, and Finished opens, shows outcomes and clears', async ({
+test('Needs you jumps to the approval, and Finished opens, shows the outcome and clears', async ({
   page,
 }) => {
   test.setTimeout(90_000);
-  const tv = await listWaiting(page);
+  const tv = await listWhileWaiting(page);
   const edit = card(page, /Change a file\?/);
-  const needs = row(page, BUILDER).getByRole('button', { name: 'Needs you' });
+  const needs = running(page).getByRole('button', { name: 'Needs you' });
   await expect(needs).toBeVisible({ timeout: 10_000 });
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
   await needs.click();
   await expect(edit).toBeInViewport();
   await allowEdit(page);
-  await expect(tv.getByRole('button', { name: /^Finished/ })).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.crew-foot').last()).toContainText('Done', { timeout: 30_000 });
+  await turnDone(page);
 
   const toggle = tv.getByRole('button', { name: /^Finished/ });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(tv.getByRole('list', { name: 'Finished' })).toHaveCount(0);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  const finished = tv.getByRole('list', { name: 'Finished' });
-  const builder = finished.getByRole('listitem', { name: BUILDER });
-  await expect(builder).toContainText('Passed');
-  await expect(builder).toContainText(/\d+(\.\d)?s|\dm/);
-  await expect(builder.getByRole('button', { name: /^Stop/ })).toHaveCount(0);
-
-  if (SHOTS) {
-    for (const scheme of ['light', 'dark'] as const) {
-      await page.emulateMedia({ colorScheme: scheme });
-      await page.evaluate((dark) => {
-        if (dark) document.documentElement.dataset.skin = 'graphite';
-        else delete document.documentElement.dataset.skin;
-      }, scheme === 'dark');
-      await page.waitForTimeout(400);
-      await tv.screenshot({ path: path.join(SHOTS, `agent-tv-list-${scheme}.png`) });
-    }
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForTimeout(400);
-    await page.screenshot({ path: path.join(SHOTS, 'agent-tv-list-narrow.png') });
-    await page.setViewportSize({ width: 1400, height: 900 });
-    await page.emulateMedia({ colorScheme: 'light' });
-  }
+  const finished = tv.getByRole('list', { name: 'Finished' }).getByRole('listitem');
+  await expect(finished).toHaveCount(1);
+  await expect(finished).toContainText('Passed');
+  await expect(finished).toContainText(/\d+(\.\d)?s|\dm/);
+  await expect(finished.getByRole('button', { name: /^Stop/ })).toHaveCount(0);
 
   await tv.getByRole('button', { name: 'Clear finished' }).click();
   await expect(toggle).toHaveCount(0);
   await expect(finished).toHaveCount(0);
 });
 
-test('Stop cancels that agent through the existing cancel endpoint', async ({ page }) => {
+test('Stop cancels the turn through the cancel endpoint', async ({ page }) => {
   test.setTimeout(60_000);
-  await listWaiting(page);
-  const builder = row(page, BUILDER);
-  const runId = await builder.getAttribute('data-run');
+  await listWhileWaiting(page);
+  const row = running(page);
+  const runId = await row.getAttribute('data-run');
   expect(runId).toBeTruthy();
   const cancel = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith(`/runs/${runId}/cancel`),
   );
-  await builder.getByRole('button', { name: /^Stop / }).click();
+  await row.getByRole('button', { name: /^Stop / }).click();
   await cancel;
-  await expect(row(page, BUILDER)).toHaveCount(0, {
-    timeout: 15_000,
-  });
+  await expect(running(page)).toHaveCount(0, { timeout: 15_000 });
 });

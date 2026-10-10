@@ -1,13 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { resetCrew, send } from './crew-engine.ts';
+import { resetWithAgents, send } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, resetTicketFakes, slowTicketCreates } from './ticket-seed.ts';
 
 const SHOTS = process.env.SPARK_SHEET_SHOTS;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
+  await resetWithAgents();
   await resetTicketFakes();
   await page.setViewportSize({ width: 1400, height: 900 });
 });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
 const FAKE_TITLE = 'Tidy the fake reply';
@@ -32,9 +32,7 @@ async function openMenu(page: Page, title: string) {
   return page.getByRole('menu', { name: `Options for ${title}` });
 }
 
-test('titles a chat from the agent after its first turn and shows the turn category', async ({
-  page,
-}) => {
+test('titles a chat from the agent after its first turn', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
   await openChats(page);
   await newChat(page, '#title please tidy this');
@@ -42,13 +40,12 @@ test('titles a chat from the agent after its first turn and shows the turn categ
   await expect(row(page, FAKE_TITLE)).toBeVisible();
   await expect(row(page, FAKE_TITLE).getByRole('button').first()).toHaveAttribute(
     'title',
-    new RegExp(`^${FAKE_TITLE} · Renamed by Spark · Bug fix`),
+    new RegExp(`^${FAKE_TITLE} · Renamed by Spark`),
   );
   await expect(page.getByRole('heading', { level: 1, name: FAKE_TITLE })).toHaveAttribute(
     'title',
     'Renamed by Spark',
   );
-  await expect(page.locator('.msg.ai .ai-head .cat-chip')).toHaveText(/^Bug fix/);
   await expect(page.locator('.msg.ai').last()).not.toContainText('Title:');
 });
 
@@ -56,13 +53,9 @@ test('a rename stops auto titles, and the menu can turn them back on', async ({ 
   await resetTestDatabase({ onboarded: true, jev: true });
   await openChats(page);
   await newChat(page, 'hello there');
-  await expect(rowTitles(page)).toHaveText(['Bug fix · hello there']);
+  await expect(rowTitles(page)).toHaveText(['hello there']);
 
-  await (
-    await openMenu(page, 'Bug fix · hello there')
-  )
-    .getByRole('menuitem', { name: 'Rename' })
-    .click();
+  await (await openMenu(page, 'hello there')).getByRole('menuitem', { name: 'Rename' }).click();
   const name = sidebar(page).getByRole('textbox', { name: 'Chat name' });
   await name.fill('My own name');
   await name.press('Enter');
@@ -82,20 +75,31 @@ test('a rename stops auto titles, and the menu can turn them back on', async ({ 
   ).toBeVisible();
 });
 
-test('filters the sidebar by category with is:', async ({ page }) => {
+test('filters the sidebar by the category stored on older chats with is:', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
   await openChats(page);
-  await newChat(page, '#title #debug the divider jumps');
+  await newChat(page, 'the divider jumps');
   await newChat(page, 'fix the header typo');
+  await expect(rowTitles(page)).toHaveCount(2);
+  const db = openTestDb();
+  try {
+    await db.query(
+      `UPDATE runs r SET category = CASE WHEN m.content LIKE '%divider%' THEN 'research' ELSE 'bug_fix' END
+         FROM messages m WHERE m.id = r.user_message_id`,
+    );
+  } finally {
+    await db.end();
+  }
+  await page.reload();
   await expect(rowTitles(page)).toHaveCount(2);
 
   const search = page.getByRole('searchbox', { name: 'Search chats' });
   await search.fill('is:research');
-  await expect(rowTitles(page)).toHaveText([FAKE_TITLE]);
+  await expect(rowTitles(page)).toHaveText([/divider jumps/]);
   await search.fill('is:bug-fix');
-  await expect(rowTitles(page)).toHaveText(['Bug fix · header typo']);
+  await expect(rowTitles(page)).toHaveText([/header typo/]);
   await search.fill('is:bugfix header');
-  await expect(rowTitles(page)).toHaveText(['Bug fix · header typo']);
+  await expect(rowTitles(page)).toHaveText([/header typo/]);
   await search.fill('is:docs');
   await expect(sidebar(page)).toContainText('No active chats match “is:docs”.');
   await search.press('Escape');

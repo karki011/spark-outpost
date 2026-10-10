@@ -3,9 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
-import { pickPermission } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 test.describe.configure({ timeout: 90_000 });
 let base = '';
@@ -42,7 +43,7 @@ async function sendAndKeep(page: Page) {
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+  await turnDone(page, 15_000);
 }
 
 test('a Do chat works on its own branch in a worktree and brings the change in on request', async ({

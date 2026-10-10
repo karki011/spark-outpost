@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { send } from './crew-engine.ts';
+import { send } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import {
   NAME,

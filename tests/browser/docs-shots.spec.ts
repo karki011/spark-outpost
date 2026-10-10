@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { pickerPanel, workPanel } from './crew-engine.ts';
+import { pickerPanel, workPanel } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import {
   assertDemoDatabase,

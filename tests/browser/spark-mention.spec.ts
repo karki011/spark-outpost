@@ -159,10 +159,11 @@ test('the main agent continues with a hand-off note when the message hands the w
   await expect(blocks.first().locator('.agent-role')).toHaveText('Code reviewer', {
     timeout: 20_000,
   });
-  await expect(blocks).toHaveCount(2, { timeout: 30_000 });
-  await expect(blocks.last().locator('.md')).toContainText('Hand-off note from Spark Outpost', {
+  const main = turn.locator('.msg.ai').last();
+  await expect(main.locator('.md')).toContainText('Hand-off note from Spark Outpost', {
     timeout: 30_000,
   });
-  await expect(blocks.last().locator('.agent-role')).not.toHaveText('Code reviewer');
+  await expect(main.locator('.provider-name')).toHaveText('Claude');
+  await expect(blocks).toHaveCount(1);
   await page.screenshot({ path: shot('turn-then-main') });
 });

@@ -4,10 +4,11 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
-import { pickPermission } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 const GITHUB_DESCRIPTION =
   'Ship commits and pushes with your own Git. Opening a pull request needs GitHub.';
@@ -48,7 +49,7 @@ async function keptChange(page: Page, root: string) {
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('region', { name: /^Kept · / })).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+  await turnDone(page, 15_000);
   await expect(page.locator('.col .ship-btn')).toHaveCount(0);
 }
 
@@ -184,7 +185,7 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
 
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
+  await turnDone(page, 30_000);
   await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
   const kept = page.getByRole('region', { name: /^Kept · / });
@@ -195,10 +196,12 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
   );
   await expect(page.locator('.col .lchip')).toHaveCount(0);
   await kept.getByRole('button', { name: /^Kept · 1 file/ }).click();
-  await expect(kept).toContainText(
+  await expect(kept).toContainText('Kept by Full auto → PR.');
+  const reply = page.locator('.msg.ai').last();
+  await expect(reply).toContainText(
     'Opened pull request #1: https://github.com/acme/widgets/pull/1',
   );
-  await expect(kept).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
+  await expect(reply).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
     draft: boolean;
