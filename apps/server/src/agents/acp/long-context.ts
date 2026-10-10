@@ -1,7 +1,6 @@
 import type { ModelCard } from '@spark-outpost/contracts';
 import type { RedirectSettings } from '../../agent-config/redirects.ts';
 import { cardFor, VENDOR_CARDS } from '../../model-cards/cards.ts';
-import { kilo } from '../../orchestration/escalation.ts';
 import type { AgentDefinition } from './agents.ts';
 
 export const LONG_CONTEXT_TOKENS = 1_000_000;
@@ -50,6 +49,11 @@ export function longContextEnv(
       .map((name) => [name, `${card.id}[1m]`] as const),
   );
   return Object.fromEntries(entries);
+}
+
+export function kilo(tokens: number): string {
+  const thousands = Math.round(tokens / 1_000);
+  return thousands < 1_000 ? `${thousands}K` : `${Number((tokens / 1_000_000).toFixed(1))}M`;
 }
 
 export function reportedModel(meta: unknown): string | null {

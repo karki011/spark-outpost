@@ -5,6 +5,7 @@ import {
   HANDOFF_CONTEXT_TOKENS,
   RAISE_EFFORT_AT,
 } from '../advisor/policy.ts';
+import { kilo } from '../agents/acp/long-context.ts';
 import { effortKeepsCache, TIER_RANK } from '../model-cards/cards.ts';
 import {
   contextText,
@@ -170,11 +171,6 @@ export function scoreEscalation(
     handoffUsd: handoffCostUsd(session, target),
   };
   return { score: decision.score, escalation, stayedOn: null };
-}
-
-export function kilo(tokens: number): string {
-  const thousands = Math.round(tokens / 1_000);
-  return thousands < 1_000 ? `${thousands}K` : `${Number((tokens / 1_000_000).toFixed(1))}M`;
 }
 
 function fromLabel(escalation: Escalation): string {

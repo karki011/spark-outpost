@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  chatSummaryPrompt,
-  handbackNote,
-  handoffPrompt,
-  HANDOFF_HEADINGS,
-  HISTORY_TOOL_NOTE,
-  type HandoffContext,
-} from './handoff.ts';
+import { chatSummaryPrompt, HISTORY_TOOL_NOTE } from '../workflow/session-brief.ts';
+import { handbackNote, handoffPrompt, HANDOFF_HEADINGS, type HandoffContext } from './handoff.ts';
 
 const base: HandoffContext = {
   kind: 'brief',

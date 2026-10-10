@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { HANDOFF_HEADINGS, HISTORY_TOOL_NOTE } from '../src/orchestration/handoff.ts';
+import { HANDOFF_HEADINGS } from '../src/orchestration/handoff.ts';
+import { HISTORY_TOOL_NOTE } from '../src/workflow/session-brief.ts';
 import { AGENT_COMPACTED_NOTE } from '../src/compaction/before-turn.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
