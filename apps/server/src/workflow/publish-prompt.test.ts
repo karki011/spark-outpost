@@ -73,4 +73,12 @@ describe('publishPrompt', () => {
       );
     }
   });
+
+  it('names the base of a stacked pull request, and never in a follow-up round', () => {
+    const stacked = publishPrompt({ ...base, pullBase: 'spark/parent-1a2b' }) ?? '';
+    expect(stacked).toContain('`gh pr create --base spark/parent-1a2b`');
+    expect(publishPrompt({ ...base })).not.toContain('--base');
+    const round = publishPrompt({ ...base, reason: 'follow-up', pullBase: 'spark/parent-1a2b' });
+    expect(round).not.toContain('--base');
+  });
 });
