@@ -182,7 +182,6 @@ async function settings({ deps, scope }: SparkToolContext) {
     defaultAutonomy: autonomyLabel(profile.defaultLevel),
     autonomyLevels: AUTONOMY_LEVELS.map((level) => ({ name: level.label, means: level.hint })),
     personality: profile.personality,
-    sparkEnabled: profile.sparkEnabled,
     morningBrief: { on: profile.morningBrief, time: profile.morningBriefTime },
     autoContinueSeconds: profile.autoContinueSeconds,
     contextCompaction: {
@@ -191,8 +190,6 @@ async function settings({ deps, scope }: SparkToolContext) {
       compactAutomatically: profile.autoCompact,
       askAgainAfterKeepGoingAtPercent: reaskPercent(profile.compactAtPercent),
     },
-    jevReviewsDiffs: profile.jevDiffs,
-    shipWithFailingChecks: profile.shipFailingChecks,
     openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
     prFollowUp: {
       on: profile.prFollowUp,
@@ -235,7 +232,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: whether Spark is on, default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), what Full auto does when checks fail, morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),

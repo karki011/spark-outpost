@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import { DISPLAY_NAME_MAX_LENGTH, type Personality } from '@spark-outpost/contracts';
 import { ProfileChoiceSetting } from '../settings/ProfileChoiceSetting.tsx';
-import { ProfileSwitchSetting } from '../settings/ProfileSwitchSetting.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { useDisplayNameSave } from './use-display-name.ts';
 import { PERSONALITY_HINTS } from './voice.ts';
@@ -83,37 +82,6 @@ export function PersonalitySetting({ personality }: { personality: Personality }
       info={PERSONALITY_INFO}
       hint={(value) => PERSONALITY_HINTS[value]}
       toUpdate={(value) => ({ personality: value })}
-    />
-  );
-}
-
-const SPARK_INFO = {
-  items: [
-    {
-      label: 'On',
-      text: 'Jev reads each request, rules pick the model, a Critic reviews and Jev checks the result.',
-    },
-    {
-      label: 'Off',
-      text: 'Chat uses your chosen agent directly. Terminal keeps the native agent and activity tracking without Spark tools or workflow prompts.',
-    },
-  ],
-  footer: 'Approvals and safety rules apply either way.',
-};
-
-export function SparkSwitch({ enabled }: { enabled: boolean }) {
-  return (
-    <ProfileSwitchSetting
-      blob="spark"
-      enabled={enabled}
-      label="Use Spark workflow"
-      info={SPARK_INFO}
-      hint={(on) =>
-        on
-          ? 'Chat routes and reviews work. Terminal includes Spark tools.'
-          : 'Use your agent directly with your custom instructions.'
-      }
-      toUpdate={(value) => ({ sparkEnabled: value })}
     />
   );
 }

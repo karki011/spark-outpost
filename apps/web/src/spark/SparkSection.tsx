@@ -6,13 +6,12 @@ import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
 import { BusyEnterSetting } from '../settings/BusyEnterSetting.tsx';
 import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { DesktopCompanionSetting } from '../settings/DesktopCompanionSetting.tsx';
-import { FailingChecksSetting } from '../settings/FailingChecksSetting.tsx';
 import { WideWindowSetting } from '../settings/WideWindowSetting.tsx';
 import { OpenPullRequestsAsSetting, PrFollowUpSettings } from '../settings/PullRequestSettings.tsx';
 import { CompactionSettings } from './CompactionSettings.tsx';
 import { LevelSetting } from './LevelSetting.tsx';
 import { MorningBriefSetting } from './MorningBriefSetting.tsx';
-import { NameSetting, PersonalitySetting, SparkSwitch } from './SparkSettings.tsx';
+import { NameSetting, PersonalitySetting } from './SparkSettings.tsx';
 import { SparkPreview } from './SparkPreview.tsx';
 
 let optionsRevealPending = false;
@@ -41,11 +40,7 @@ export function SparkSection({ setup }: { setup: SetupState }) {
   }, []);
   return (
     <>
-      <SparkPreview
-        displayName={name}
-        personality={profile.personality}
-        enabled={profile.sparkEnabled}
-      />
+      <SparkPreview displayName={name} personality={profile.personality} />
       <section className="spark-group" aria-labelledby="spark-you">
         <h4 id="spark-you">You and Spark</h4>
         <NameSetting name={name} onName={setName} />
@@ -53,7 +48,6 @@ export function SparkSection({ setup }: { setup: SetupState }) {
       </section>
       <section className="spark-group" aria-labelledby="spark-work">
         <h4 id="spark-work">How Spark works</h4>
-        <SparkSwitch enabled={profile.sparkEnabled} />
         <AgentInstructionsSetting profile={profile} />
       </section>
       <details
@@ -68,7 +62,6 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <section className="spark-group" aria-labelledby="spark-prs">
           <h4 id="spark-prs">Pull requests</h4>
           <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />
-          <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
           <PrFollowUpSettings profile={profile} />
         </section>
       </details>

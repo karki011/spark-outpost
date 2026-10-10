@@ -29,7 +29,6 @@ interface ProviderConfigureProps extends ConnectCallbacks {
   status: TileStatus;
   isDefault: boolean;
   canMakeDefault: boolean;
-  advisorSettings?: ReactNode;
   density: 'compact' | 'roomy';
   onClose: () => void;
 }
@@ -39,7 +38,6 @@ export function ProviderConfigure({
   status,
   isDefault,
   canMakeDefault,
-  advisorSettings,
   density,
   onClose,
   ...callbacks
@@ -151,12 +149,7 @@ export function ProviderConfigure({
         title={'role' in setup ? 'Settings' : 'Defaults for new chats'}
         disclosure={disclosure('defaults', defaultsSummary)}
       >
-        <DefaultsSection
-          setup={setup}
-          isDefault={isDefault}
-          canMakeDefault={canMakeDefault}
-          advisorSettings={advisorSettings}
-        />
+        <DefaultsSection setup={setup} isDefault={isDefault} canMakeDefault={canMakeDefault} />
       </ConfigSection>
       {connection && (
         <ConfigSection

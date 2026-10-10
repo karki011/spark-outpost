@@ -158,7 +158,6 @@ const nativeMcp = await startSparkMcpHost({
     loginPath: loginShellPath(runCommand, loginShell),
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
-  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
   linkScheme: config.SPARK_LINK_SCHEME,
   codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
@@ -224,7 +223,6 @@ const { app, reconcileRemote } = createAppParts({
   slackSignIn,
   slackNotifier,
   slackSocket,
-  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {
     appVersion: config.SPARK_APP_VERSION ?? null,

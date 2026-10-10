@@ -1,7 +1,7 @@
 import '../spark/spark.css';
 import type { Profile } from '@spark-outpost/contracts';
 import { UserBlob } from '../brand/UserBlob.tsx';
-import { NameSetting, PersonalitySetting, SparkSwitch } from '../spark/SparkSettings.tsx';
+import { NameSetting, PersonalitySetting } from '../spark/SparkSettings.tsx';
 import { SparkPreview } from '../spark/SparkPreview.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 
@@ -41,15 +41,10 @@ export function MeetSparkStep({
       )}
       <h1 id="onbTitle">Meet Spark</h1>
       <p className="lede">
-        Spark is your assistant in Spark Outpost. It keeps your AI agents on task, asks when
-        something is unclear and checks the work before you see it.
+        Spark is your assistant in Spark Outpost. It runs your AI agents, asks before anything risky
+        and keeps a record of what they did.
       </p>
-      <SparkPreview
-        displayName={displayName}
-        personality={profile.personality}
-        enabled={profile.sparkEnabled}
-        size={64}
-      />
+      <SparkPreview displayName={displayName} personality={profile.personality} size={64} />
       <NameSetting name={displayName} onName={onDisplayNameChange} autoFocus onEnter={onEnter} />
       <div className={`greet${named ? ' in' : ''}`}>
         {named ? (
@@ -62,7 +57,6 @@ export function MeetSparkStep({
         )}
       </div>
       <PersonalitySetting personality={profile.personality} />
-      <SparkSwitch enabled={profile.sparkEnabled} />
     </>
   );
 }

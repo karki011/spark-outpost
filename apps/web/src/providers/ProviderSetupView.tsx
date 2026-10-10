@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { AnimatePresence, motion, type Variants } from 'motion/react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import type {
@@ -46,7 +46,6 @@ interface ProviderSetupViewProps {
   onOpenChange: (id: ConnectableId | null) => void;
   onVerifyStart?: () => void;
   onVerifyOutcome?: (outcome: 'success' | 'failure') => void;
-  advisorSettings?: ReactNode;
   density: 'compact' | 'roomy';
 }
 
@@ -72,7 +71,6 @@ export function ProviderSetupView({
   onOpenChange,
   onVerifyStart,
   onVerifyOutcome,
-  advisorSettings,
   density,
 }: ProviderSetupViewProps) {
   const [failures, setFailures] = useState<Partial<Record<ConnectableId, VerifyFailure>>>({});
@@ -145,7 +143,6 @@ export function ProviderSetupView({
                 open.setup.connection !== null &&
                 open.setup.id !== defaultProvider
               }
-              advisorSettings={'role' in open.setup ? advisorSettings : undefined}
               onVerifyStart={onVerifyStart}
               onVerifyOutcome={onVerifyOutcome}
               onFailure={(failure) => recordFailure(open.setup.id, failure)}

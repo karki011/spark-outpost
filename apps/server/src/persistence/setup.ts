@@ -36,8 +36,6 @@ interface ProfileRow {
   default_provider: ProviderId | null;
   onboarding_completed_at: Date | null;
   auto_continue_seconds: number | null;
-  jev_diffs: boolean;
-  ship_failing_checks: boolean;
   pr_ready_for_review: boolean;
   pr_follow_up: boolean;
   pr_follow_up_checks: boolean;
@@ -45,7 +43,6 @@ interface ProfileRow {
   pr_follow_up_replies: boolean;
   pr_follow_up_ask: boolean;
   personality: Personality;
-  spark_enabled: boolean;
   agent_instructions: string;
   agent_instructions_file: string;
   default_level: InvolvementLevel;
@@ -98,8 +95,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   ]);
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
-       jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
-       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, spark_enabled, agent_instructions, agent_instructions_file, default_level,
+       pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
+       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
@@ -176,8 +173,6 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     defaultProvider,
     onboardingCompleted: profile.onboarding_completed_at !== null && connected.length > 0,
     autoContinueSeconds: profile.auto_continue_seconds,
-    jevDiffs: profile.jev_diffs,
-    shipFailingChecks: profile.ship_failing_checks,
     prReadyForReview: profile.pr_ready_for_review,
     prFollowUp: profile.pr_follow_up,
     prFollowUpChecks: profile.pr_follow_up_checks,
@@ -185,7 +180,6 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     prFollowUpReplies: profile.pr_follow_up_replies,
     prFollowUpAsk: profile.pr_follow_up_ask,
     personality: profile.personality,
-    sparkEnabled: profile.spark_enabled,
     agentInstructions: profile.agent_instructions,
     agentInstructionsFile: profile.agent_instructions_file,
     agentInstructionsFileSet: profile.agent_instructions_file !== '',
@@ -237,28 +231,25 @@ export async function updateProfile(
        default_provider = COALESCE($3, default_provider),
        onboarding_completed_at = CASE WHEN $4 THEN COALESCE(onboarding_completed_at, now()) ELSE onboarding_completed_at END,
        auto_continue_seconds = CASE WHEN $5 THEN $6::integer ELSE auto_continue_seconds END,
-       jev_diffs = COALESCE($7, jev_diffs),
-       ship_failing_checks = COALESCE($8, ship_failing_checks),
-       personality = COALESCE($9, personality),
-       spark_enabled = COALESCE($10, spark_enabled),
-       default_level = COALESCE($11, default_level),
-       morning_brief = COALESCE($12, morning_brief),
-       morning_brief_time = COALESCE($13::time, morning_brief_time),
-       pr_ready_for_review = COALESCE($14, pr_ready_for_review),
-       pr_follow_up = COALESCE($15, pr_follow_up),
-       pr_follow_up_checks = COALESCE($16, pr_follow_up_checks),
-       pr_follow_up_reviews = COALESCE($17, pr_follow_up_reviews),
-       pr_follow_up_replies = COALESCE($18, pr_follow_up_replies),
-       compact_warn_percent = COALESCE($19, compact_warn_percent),
-       compact_at_percent = COALESCE($20, compact_at_percent),
-       auto_compact = COALESCE($21, auto_compact),
-       heartbeat = COALESCE($22, heartbeat),
-       wide_window = COALESCE($23, wide_window),
-       busy_enter = COALESCE($24, busy_enter),
-       pr_follow_up_ask = COALESCE($25, pr_follow_up_ask),
-       default_level_notice = default_level_notice AND $26,
-       agent_instructions = COALESCE($27, agent_instructions),
-       agent_instructions_file = COALESCE($28, agent_instructions_file),
+       personality = COALESCE($7, personality),
+       default_level = COALESCE($8, default_level),
+       morning_brief = COALESCE($9, morning_brief),
+       morning_brief_time = COALESCE($10::time, morning_brief_time),
+       pr_ready_for_review = COALESCE($11, pr_ready_for_review),
+       pr_follow_up = COALESCE($12, pr_follow_up),
+       pr_follow_up_checks = COALESCE($13, pr_follow_up_checks),
+       pr_follow_up_reviews = COALESCE($14, pr_follow_up_reviews),
+       pr_follow_up_replies = COALESCE($15, pr_follow_up_replies),
+       compact_warn_percent = COALESCE($16, compact_warn_percent),
+       compact_at_percent = COALESCE($17, compact_at_percent),
+       auto_compact = COALESCE($18, auto_compact),
+       heartbeat = COALESCE($19, heartbeat),
+       wide_window = COALESCE($20, wide_window),
+       busy_enter = COALESCE($21, busy_enter),
+       pr_follow_up_ask = COALESCE($22, pr_follow_up_ask),
+       default_level_notice = default_level_notice AND $23,
+       agent_instructions = COALESCE($24, agent_instructions),
+       agent_instructions_file = COALESCE($25, agent_instructions_file),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -268,10 +259,7 @@ export async function updateProfile(
       update.onboardingCompleted ?? false,
       update.autoContinueSeconds !== undefined,
       update.autoContinueSeconds ?? null,
-      update.jevDiffs ?? null,
-      update.shipFailingChecks ?? null,
       update.personality ?? null,
-      update.sparkEnabled ?? null,
       update.defaultLevel ?? null,
       update.morningBrief ?? null,
       update.morningBriefTime ?? null,
@@ -294,12 +282,7 @@ export async function updateProfile(
   );
 }
 
-export async function shipsFailingChecks(db: Queryable, workspaceId: string): Promise<boolean> {
-  return (await ensureProfile(db, workspaceId)).ship_failing_checks;
-}
-
 export interface SparkPreferences extends SparkSessionPrefs {
-  sparkEnabled: boolean;
   instructionsNote: string | null;
 }
 
@@ -315,7 +298,6 @@ export async function sparkPreferences(
   return {
     displayName: profile.display_name,
     personality: profile.personality,
-    sparkEnabled: profile.spark_enabled,
     agentInstructions: instructions.text,
     instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
   };

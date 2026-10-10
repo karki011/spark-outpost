@@ -86,10 +86,9 @@ describe('mapIntro', () => {
 });
 
 describe('sparkMood', () => {
-  it('sleeps when Spark is off and follows the personality when on', () => {
-    expect(sparkMood('playful', false)).toBe('sleep');
-    expect(sparkMood('playful', true)).toBe('happy');
-    expect(sparkMood('friendly', true)).toBeNull();
-    expect(sparkMood('facts', true)).toBe('working');
+  it('follows the personality', () => {
+    expect(sparkMood('playful')).toBe('happy');
+    expect(sparkMood('friendly')).toBeNull();
+    expect(sparkMood('facts')).toBe('working');
   });
 });
