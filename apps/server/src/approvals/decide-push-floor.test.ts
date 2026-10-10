@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import {
-  BUILDER_PUBLISH_REASON,
+  CHAT_PUBLISH_REASON,
   NO_RUN_RULES,
   PUBLISH_ASKED_WHY,
   PUBLISH_FULL_AUTO_WHY,
@@ -32,10 +32,6 @@ const ASKED: PublishGrant = { level: 'hands-off', requested: true };
 const FULL_AUTO: PublishGrant = { level: 'full-auto', requested: false };
 const GRANTS = [NOT_ASKED, ASKED, FULL_AUTO];
 const POSTURES: ModePosture[] = ['asks', 'edits', 'auto', 'full_access', 'read_only', 'unknown'];
-const RUN_KINDS = [
-  ['the chat main agent', false],
-  ['a solo Builder', true],
-] as const;
 
 function run(command: string): ApprovalRequest {
   return {
@@ -55,27 +51,24 @@ function run(command: string): ApprovalRequest {
 }
 
 function decideFor(
-  builder: boolean,
   posture: ModePosture,
   grant: PublishGrant,
   command: string,
   task: TaskBranch | null = TASK,
 ): Decision {
-  const options: DecideOptions = { builder, files, publish: { grant, task } };
+  const options: DecideOptions = { changesProject: true, files, publish: { grant, task } };
   return decide(posture, run(command), NO_RUN_RULES, [command, 'git', 'gh'], options);
 }
 
-function everyDecision(builder: boolean, command: string): Decision[] {
-  return POSTURES.flatMap((posture) =>
-    GRANTS.map((grant) => decideFor(builder, posture, grant, command)),
-  );
+function everyDecision(command: string): Decision[] {
+  return POSTURES.flatMap((posture) => GRANTS.map((grant) => decideFor(posture, grant, command)));
 }
 
 function permitted(posture: ModePosture, grant: PublishGrant): boolean {
   return grant !== NOT_ASKED || posture === 'auto' || posture === 'full_access';
 }
 
-describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, builder) => {
+describe('the push rules of the safety floor for the chat’s run', () => {
   it.each([
     'git push origin main',
     'git push origin some-other-branch',
@@ -93,13 +86,13 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
     'git send-email HEAD~1',
     'sh -c "git push origin main"',
   ])('refuses in every mode and at every level: %s', (command) => {
-    for (const decision of everyDecision(builder, command)) {
+    for (const decision of everyDecision(command)) {
       expect(decision.verdict, command).toBe('reject');
     }
   });
 
   it('names the rail when the run may publish', () => {
-    const refused = (command: string) => decideFor(builder, 'auto', ASKED, command);
+    const refused = (command: string) => decideFor('auto', ASKED, command);
     expect(refused('git push origin main')).toEqual({
       verdict: 'reject',
       reason: otherBranchReason(BRANCH),
@@ -120,7 +113,7 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
 
   it("refuses every push when the run is not on the chat's own branch", () => {
     for (const posture of POSTURES) {
-      expect(decideFor(builder, posture, ASKED, 'git push origin main', null)).toEqual({
+      expect(decideFor(posture, ASKED, 'git push origin main', null)).toEqual({
         verdict: 'reject',
         reason: NO_TASK_BRANCH_REASON,
       });
@@ -132,10 +125,10 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
     (command) => {
       for (const posture of POSTURES) {
         for (const grant of GRANTS) {
-          const decision = decideFor(builder, posture, grant, command);
+          const decision = decideFor(posture, grant, command);
           const expected = permitted(posture, grant)
             ? { verdict: 'allow' }
-            : { verdict: 'reject', reason: BUILDER_PUBLISH_REASON };
+            : { verdict: 'reject', reason: CHAT_PUBLISH_REASON };
           expect(decision, `${posture} ${JSON.stringify(grant)}`).toMatchObject(expected);
         }
       }
@@ -144,17 +137,17 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
 
   it('says why an own-branch push ran', () => {
     const push = `git push origin ${BRANCH}`;
-    expect(decideFor(builder, 'asks', ASKED, push)).toEqual({
+    expect(decideFor('asks', ASKED, push)).toEqual({
       verdict: 'allow',
       by: 'level',
       why: PUBLISH_ASKED_WHY,
     });
-    expect(decideFor(builder, 'asks', FULL_AUTO, push)).toEqual({
+    expect(decideFor('asks', FULL_AUTO, push)).toEqual({
       verdict: 'allow',
       by: 'level',
       why: PUBLISH_FULL_AUTO_WHY,
     });
-    expect(decideFor(builder, 'full_access', NOT_ASKED, push)).toEqual({
+    expect(decideFor('full_access', NOT_ASKED, push)).toEqual({
       verdict: 'allow',
       by: 'level',
     });
@@ -162,7 +155,7 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
 
   it('asks with hold-to-confirm before a lease force push of the own branch', () => {
     const command = `git push --force-with-lease origin ${BRANCH}`;
-    for (const decision of everyDecision(builder, command)) {
+    for (const decision of everyDecision(command)) {
       expect(decision).toEqual({
         verdict: 'ask',
         reason: forcePushReason([BRANCH]),
@@ -185,12 +178,20 @@ describe.each(RUN_KINDS)('the push rules of the safety floor for %s', (_kind, bu
   ])('never refuses a read: %s', (command) => {
     for (const posture of POSTURES) {
       for (const grant of GRANTS) {
-        const options: DecideOptions = { builder, files, publish: { grant, task: TASK } };
+        const options: DecideOptions = {
+          changesProject: true,
+          files,
+          publish: { grant, task: TASK },
+        };
         const decision = decide(posture, run(command), NO_RUN_RULES, [], options);
         expect(decision.verdict, `${posture} ${command}`).not.toBe('reject');
       }
     }
-    const options: DecideOptions = { builder, files, publish: { grant: NOT_ASKED, task: TASK } };
+    const options: DecideOptions = {
+      changesProject: true,
+      files,
+      publish: { grant: NOT_ASKED, task: TASK },
+    };
     for (const posture of ['auto', 'full_access'] as const) {
       expect(decide(posture, run(command), NO_RUN_RULES, [], options).verdict).toBe('allow');
     }
@@ -206,21 +207,9 @@ describe('writes through gh other than opening or editing a pull request', () =>
     'glab mr create',
   ];
 
-  it.each(WRITES)('stay refused for a Builder in every mode: %s', (command) => {
-    for (const decision of everyDecision(true, command)) {
+  it.each(WRITES)('stay refused in every mode: %s', (command) => {
+    for (const decision of everyDecision(command)) {
       expect(decision.verdict, command).toBe('reject');
-    }
-  });
-
-  it.each(WRITES)("follow the agent's mode for the chat main agent: %s", (command) => {
-    for (const grant of GRANTS) {
-      const options: DecideOptions = { builder: false, files, publish: { grant, task: TASK } };
-      const decided = (posture: ModePosture) =>
-        decide(posture, run(command), NO_RUN_RULES, [], options);
-      expect(decided('auto')).toEqual({ verdict: 'allow', by: 'level' });
-      expect(decided('full_access')).toEqual({ verdict: 'allow', by: 'level' });
-      expect(decided('asks')).toEqual({ verdict: 'ask', reason: null });
-      expect(decided('edits')).toEqual({ verdict: 'ask', reason: null });
     }
   });
 });

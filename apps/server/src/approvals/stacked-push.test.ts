@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import { BUILDER_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
+import { CHAT_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { parentNotPushedReason, type PublishGrant, type TaskBranch } from './publish-policy.ts';
 import { pushesBranch, stackedPushRefusal } from './stacked-push.ts';
@@ -87,36 +87,31 @@ describe('decide() for a raw git push of a stacked branch whose parent is not on
   const QUIET: PublishGrant = { level: 'hands-off', requested: false };
   const FULL_AUTO: PublishGrant = { level: 'full-auto', requested: false };
   const PUSH = `git push -u origin ${BRANCH}`;
-  const weigh = (posture: ModePosture, grant: PublishGrant, builder: boolean, onRemote = false) =>
+  const weigh = (posture: ModePosture, grant: PublishGrant, onRemote = false) =>
     decide(posture, run(PUSH), NO_RUN_RULES, [], {
-      builder,
+      changesProject: true,
       files,
       publish: { grant, task: stacked(onRemote) },
     });
 
   it.each([
     ['Manual when the message asked', 'asks', ASKED],
-    ['Manual with no request, before any card', 'asks', QUIET],
     ['Accept edits at Full auto → PR', 'edits', FULL_AUTO],
     ['Auto', 'auto', QUIET],
   ] as const)('refuses the chat’s own agent in %s', (_name, posture, grant) => {
-    expect(weigh(posture, grant, false)).toEqual({ verdict: 'reject', reason: REASON });
+    expect(weigh(posture, grant)).toEqual({ verdict: 'reject', reason: REASON });
   });
 
-  it('refuses a Builder that may publish, and keeps the Builder rule for one that may not', () => {
-    expect(weigh('asks', ASKED, true)).toEqual({ verdict: 'reject', reason: REASON });
-    expect(weigh('asks', QUIET, true)).toEqual({
-      verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
-    });
+  it('keeps the publish rule for a run with no reason to publish', () => {
+    expect(weigh('asks', QUIET)).toEqual({ verdict: 'reject', reason: CHAT_PUBLISH_REASON });
   });
 
   it('decides by the publish rules once the parent branch is on the remote', () => {
-    expect(weigh('asks', ASKED, false, true).verdict).toBe('allow');
-    expect(weigh('asks', QUIET, false, true)).toEqual({
+    expect(weigh('asks', ASKED, true).verdict).toBe('allow');
+    expect(weigh('asks', QUIET, true)).toEqual({
       verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
+      reason: CHAT_PUBLISH_REASON,
     });
-    expect(weigh('auto', QUIET, false, true).verdict).toBe('allow');
+    expect(weigh('auto', QUIET, true).verdict).toBe('allow');
   });
 });

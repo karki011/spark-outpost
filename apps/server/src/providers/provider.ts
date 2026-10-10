@@ -87,12 +87,8 @@ export interface ProviderTurn {
   observe?: (output: ProviderOutput) => void;
   audit?: ProtocolObserver;
   mode?: RunMode;
-  builder?: boolean;
-  coordinated?: boolean;
-  sharesTree?: boolean;
+  changesProject?: boolean;
   publishes?: boolean;
-  chatRun?: boolean;
-  env?: Readonly<Record<string, string>>;
   planning?: boolean;
   plansFirst?: boolean;
   modeRequests?: ModeRequests;

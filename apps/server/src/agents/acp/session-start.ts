@@ -44,23 +44,15 @@ function definedMeta(
   changing: boolean,
   repo: ClaudeRepoOptions | null,
   {
-    builder,
-    coordinated,
-    publishes,
-    chatRun,
+    changesProject,
     planning,
     approvals,
-  }: Pick<
-    ProviderTurn,
-    'builder' | 'coordinated' | 'publishes' | 'chatRun' | 'planning' | 'approvals'
-  >,
+  }: Pick<ProviderTurn, 'changesProject' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) {
-    return (
-      definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes, chatRun) ?? null
-    );
+    return definition.doSessionMeta?.(roots, repo, changesProject) ?? null;
   }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;

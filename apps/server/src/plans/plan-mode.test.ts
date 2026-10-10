@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  crewPlansStayNotes,
-  exitPlanText,
-  isExitPlanAllow,
-  planFileText,
-  plansThisTurn,
-} from './plan-mode.ts';
+import { exitPlanText, isExitPlanAllow, planFileText, plansThisTurn } from './plan-mode.ts';
 
 describe('isExitPlanAllow', () => {
   it('counts every exit-plan choice as approval, including the clear-context ones', () => {
@@ -67,28 +61,6 @@ describe('which turns plan in the native plan mode (B5)', () => {
     );
     expect(plansThisTurn({ ...ask, provider: 'claude', planning: false })).toBe(false);
     expect(plansThisTurn({ ...ask, provider: 'codex', planning: true })).toBe(true);
-  });
-});
-
-describe('crew pieces and plans', () => {
-  const parentRunId = '00000000-0000-4000-8000-000000000001';
-  const ask = { mode: 'ask' as const, provider: 'claude', userRequest: 'Find the cap' };
-
-  it('never puts a research piece or a Critic in plan mode, so neither can raise a plan card', () => {
-    expect(plansThisTurn({ ...ask, parentRunId, role: 'scout' })).toBe(false);
-    expect(plansThisTurn({ ...ask, parentRunId, role: 'critic' })).toBe(false);
-    expect(plansThisTurn({ ...ask, parentRunId: null, role: null })).toBe(true);
-    expect(plansThisTurn({ ...ask, parentRunId, role: 'coordinator' })).toBe(true);
-  });
-
-  it('keeps a piece plan as notes and leaves the turn Builder and the chat their plan card', () => {
-    expect(crewPlansStayNotes({ parentRunId, role: 'scout' })).toBe(true);
-    expect(crewPlansStayNotes({ parentRunId, role: 'builder', piece: { coordinated: true } })).toBe(
-      true,
-    );
-    expect(crewPlansStayNotes({ parentRunId, role: 'builder', piece: null })).toBe(false);
-    expect(crewPlansStayNotes({ parentRunId, role: 'integrator' })).toBe(false);
-    expect(crewPlansStayNotes({ parentRunId: null, role: null })).toBe(false);
   });
 });
 

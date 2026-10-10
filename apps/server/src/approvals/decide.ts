@@ -16,9 +16,7 @@ import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
   publishRefusal,
-  branchRefusal,
   publishVerdict,
-  publishesBranch,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
@@ -82,8 +80,6 @@ export const FS_WRITE_TOOL_KIND = 'write_text_file';
 export const PUSH_REASON = 'Pushing publishes outside this computer';
 export const PUSH_HOOKS_REASON =
   "Pushes never skip this repository's hooks. Read what the hook reports and fix it, or tell the user what it needs";
-export const BUILDER_PUBLISH_REASON =
-  "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
 export const CHAT_PUBLISH_REASON =
   "This chat's agent pushes and opens a pull request only when the user's message asks for it, the chat is at Full auto → PR, or its mode is Auto or Bypass permissions (Full access)";
 export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
@@ -127,8 +123,7 @@ export function guardedTargets(asked: ApprovalRequest): Guarded {
 }
 
 export interface DecideOptions {
-  builder?: boolean;
-  chatRun?: boolean;
+  changesProject?: boolean;
   files?: FileLister;
   askRun?: boolean;
   askAutoWhy?: string | null;
@@ -205,21 +200,7 @@ function ownAgentRefusal(
   published: PublishVerdict | null,
 ): string | null {
   const { command } = request;
-  if (options.builder || !command) return null;
-  if (options.chatRun) return chatRunRefusal(command, options, forced, published);
-  if (!options.publish || !publishesBranch(command)) return null;
-  const rail = branchRefusal(command, options.publish.task);
-  if (rail || published) return rail;
-  return soloLeasePush(command, options, forced) ? null : BUILDER_PUBLISH_REASON;
-}
-
-function chatRunRefusal(
-  command: string,
-  options: DecideOptions,
-  forced: ForcePush | null,
-  published: PublishVerdict | null,
-): string | null {
-  if (!publishesCode(command)) return null;
+  if (!options.changesProject || !command || !publishesCode(command)) return null;
   if (published) return published.kind === 'refuse' ? published.reason : null;
   if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
   return publishRefusal(command, options.publish?.task ?? null);
@@ -233,12 +214,6 @@ function refusal(
   view: ShellView | null,
   published: PublishVerdict | null,
 ): string | null {
-  if (options.builder && request.command && publishesCode(request.command)) {
-    if (published?.kind === 'refuse') return published.reason;
-    if (!published && !soloLeasePush(request.command, options, forced)) {
-      return BUILDER_PUBLISH_REASON;
-    }
-  }
   const ownAgent = ownAgentRefusal(request, options, forced, published);
   if (ownAgent) return ownAgent;
   const stacked = request.command

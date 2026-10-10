@@ -9,7 +9,7 @@ import { executableItems, trustFingerprint } from '../src/agent-config/trust.ts'
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import {
   agentDefinitions,
-  BUILDER_PUBLISH_DENY_RULES,
+  CHAT_RUN_DENY_RULES,
   type AgentDefinition,
 } from '../src/agents/acp/agents.ts';
 import type { ProviderOutput, ProviderTurn } from '../src/providers/provider.ts';
@@ -115,26 +115,23 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
     });
   });
 
-  it('denies gh and remote changes to a Builder session, not to other Do sessions', async () => {
+  it('denies remote changes to the chat’s changing run, never gh or a plain push', async () => {
     const repo = [await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, enabled())];
     const approvals = {
       review: async () => ({ outcome: 'cancelled' as const, note: 'not used' }),
     };
-    const denied = async (builder: boolean) => {
-      const { received } = await session(claude, repo, { mode: 'do', approvals, builder });
+    const denied = async (changesProject: boolean) => {
+      const { received } = await session(claude, repo, { mode: 'do', approvals, changesProject });
       const settings = received.meta!.claudeCode.options.settings as {
         permissions: { deny: string[] };
       };
       return settings.permissions.deny;
     };
-    const builderDenies = await denied(true);
-    expect(builderDenies).toEqual(
-      expect.arrayContaining(
-        BUILDER_PUBLISH_DENY_RULES.filter((rule) => rule !== 'Bash(git push:*)'),
-      ),
-    );
-    expect(builderDenies).not.toContain('Bash(git push:*)');
-    expect(await denied(false)).not.toContain('Bash(gh:*)');
+    const changing = await denied(true);
+    expect(changing).toEqual(expect.arrayContaining([...CHAT_RUN_DENY_RULES]));
+    expect(changing).not.toContain('Bash(git push:*)');
+    expect(changing).not.toContain('Bash(gh:*)');
+    expect(await denied(false)).not.toContain('Bash(git remote add:*)');
   });
 
   it('passes approved hooks through and sends nothing extra when all switches are off', async () => {

@@ -175,7 +175,6 @@ async function runSession(
     const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
     const codex = withCodexSpark(repo?.codex ?? null, turn.spark, spark);
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
-    const builder = turn.builder === true;
     const located = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
     if (definition.repoStyle === 'codex') launchDir = await mkdtemp(join(tmpdir(), 'spark-codex-'));
     const prepared =
@@ -188,9 +187,7 @@ async function runSession(
       home,
       browsing,
       codex,
-      builder && turn.publishes !== true,
-      turn.env,
-      turn.chatRun === true && turn.publishes !== true,
+      turn.changesProject === true && turn.publishes !== true,
     );
     if (definition.repoStyle === 'codex' && !prepared.profiles) {
       push(mapper.note(CODEX_PLAIN_SANDBOX_NOTE));

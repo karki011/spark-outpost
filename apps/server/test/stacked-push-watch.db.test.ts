@@ -2,6 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { CHAT_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { parentNotPushedReason } from '../src/approvals/publish-policy.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { watchedSends } from '../src/observations/send-watch.ts';
@@ -122,13 +123,13 @@ describe('a raw git push of a stacked branch that ran without a permission reque
 });
 
 describe('the same push in a mode that asks', () => {
-  function gate(builder: boolean, requested: boolean) {
+  function gate(requested: boolean) {
     return createApprovalGate({
       db: t.db,
       runId,
       provider: 'claude',
       mode: 'default',
-      builder,
+      changesProject: true,
       append: recordingAppend().append,
       waiters: new ApprovalWaiters(),
       pollMs: 20,
@@ -139,11 +140,10 @@ describe('the same push in a mode that asks', () => {
   }
 
   it.each([
-    ['the chat’s own agent when the message asked', false, true],
-    ['the chat’s own agent with no request, before any card', false, false],
-    ['a Builder when the message asked', true, true],
-  ])('is refused for %s, with the reason spark_push gives', async (_name, builder, requested) => {
-    const answer = await gate(builder, requested).review(
+    ['when the message asked', true, parentNotPushedReason(WEB, { branch: API, owner: '@api' })],
+    ['with no request, by the publish rule, before any card', false, CHAT_PUBLISH_REASON],
+  ])('is refused %s', async (_name, requested, reason) => {
+    const answer = await gate(requested).review(
       commandRequest(webPath, PUSH),
       new AbortController().signal,
     );
@@ -153,12 +153,6 @@ describe('the same push in a mode that asks', () => {
       'SELECT status, decided_by, reason FROM approvals WHERE run_id = $1',
       [runId],
     );
-    expect(rows).toEqual([
-      {
-        status: 'denied',
-        decided_by: 'policy',
-        reason: parentNotPushedReason(WEB, { branch: API, owner: '@api' }),
-      },
-    ]);
+    expect(rows).toEqual([{ status: 'denied', decided_by: 'policy', reason }]);
   });
 });

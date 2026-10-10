@@ -45,7 +45,7 @@ import {
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
-import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
@@ -76,13 +76,9 @@ import type { RunControl, StopReason } from './run-control.ts';
 
 export { startControl, type RunControl, type StopReason } from './run-control.ts';
 
-export function writesCode(role: string | null | undefined): boolean {
-  return role === 'builder' || role === 'integrator';
-}
-
 function editsFiles(input: RunInput): boolean {
   if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
-  return input.role === null || writesCode(input.role);
+  return input.role === null;
 }
 
 async function sessionBrief(db: Db, input: RunInput) {
@@ -118,7 +114,6 @@ export interface TurnOptions {
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
-  chatRun?: boolean;
   keepSnapshot?: RunSnapshot | undefined;
 }
 
@@ -162,7 +157,6 @@ export async function runAgentTurn(
     root: input.projectRoots[0] ?? null,
     taskId: () => tasks.taskId(),
     append,
-    notesOnly: crewPlansStayNotes(input),
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
@@ -267,14 +261,13 @@ export async function runAgentTurn(
       onTimeout: () => control.stop('approval_timeout'),
       observations,
     };
-    const chatRun = options.chatRun === true && input.mode === 'do' && !writesCode(input.role);
+    const changesProject = input.mode === 'do' && input.parentRunId === null;
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
             ...gateOptions,
-            builder: writesCode(input.role),
-            chatRun,
+            changesProject,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
@@ -340,9 +333,8 @@ export async function runAgentTurn(
       },
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
-      ...(writesCode(input.role) ? { builder: true } : {}),
-      ...(chatRun ? { chatRun: true } : {}),
-      ...((writesCode(input.role) || chatRun) && startBasis(input) ? { publishes: true } : {}),
+      ...(changesProject ? { changesProject: true } : {}),
+      ...(changesProject && startBasis(input) ? { publishes: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),

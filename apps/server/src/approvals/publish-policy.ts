@@ -5,7 +5,6 @@ import {
   hostingCommands,
   hostingRead,
   publishesCode,
-  publishesThroughGit,
   pushTargets,
   reachesHosting,
   type PushTarget,
@@ -152,11 +151,6 @@ function writesHosting(program: Program): boolean {
   return !hostingRead(program);
 }
 
-function opensPull(program: Program): boolean {
-  const [, group, verb] = program;
-  return programName(program) === 'gh' && group === 'pr' && GH_PR_WRITES.has(verb ?? '');
-}
-
 function hostingRefusal(
   command: string,
   task: TaskBranch,
@@ -219,14 +213,6 @@ function refusalAmong(
 
 export function publishRefusal(command: string, task: TaskBranch | null): string | null {
   return refusalAmong(command, task, writesHosting);
-}
-
-export function publishesBranch(command: string): boolean {
-  return publishesThroughGit(command) || hostingCommands(command).some(opensPull);
-}
-
-export function branchRefusal(command: string, task: TaskBranch | null): string | null {
-  return refusalAmong(command, task, opensPull);
 }
 
 export function publishVerdict(

@@ -91,7 +91,7 @@ async function planPhase(chosenMode: string) {
     provider: 'claude',
     mode: chosenMode,
     modes: MODES,
-    builder: true,
+    changesProject: true,
     append: recorder.append,
     waiters: new ApprovalWaiters(),
     pollMs: 20,

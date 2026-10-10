@@ -17,7 +17,7 @@ describe('thinking text in a Claude session', () => {
     for (const options of [
       optionsOf(sessionMeta(claude, null, false, null, {})),
       optionsOf(sessionMeta(claude, project, false, null, {})),
-      optionsOf(sessionMeta(claude, project, true, null, { builder: true })),
+      optionsOf(sessionMeta(claude, project, true, null, { changesProject: true })),
     ]) {
       expect(options.extraArgs).toEqual({ 'thinking-display': 'summarized' });
       expect(options).not.toHaveProperty('thinking');
@@ -26,7 +26,7 @@ describe('thinking text in a Claude session', () => {
 
   it('keeps the tools and settings the definition chose', () => {
     const { claude } = agentDefinitions;
-    const shown = optionsOf(sessionMeta(claude, project, true, null, { builder: true }));
+    const shown = optionsOf(sessionMeta(claude, project, true, null, { changesProject: true }));
     expect(shown).toEqual({
       ...optionsOf(claude.doSessionMeta?.([], null, true) ?? null),
       extraArgs: { 'thinking-display': 'summarized' },

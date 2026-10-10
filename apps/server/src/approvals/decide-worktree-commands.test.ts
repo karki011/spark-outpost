@@ -23,7 +23,7 @@ const PAGE = 'libs/ui/explorer/src/pages/index.tsx';
 const HOOK = 'hooks/use-drilldown-tree.ts';
 const BRANCH = 'spark/drilldown-1a2b';
 const files: FileLister = { glob: () => [], walk: () => [], script: () => null };
-const CHAT_RUN: DecideOptions = { chatRun: true };
+const CHAT_RUN: DecideOptions = { changesProject: true };
 const SENSITIVE = ['.env', 'web page https://example.org'];
 const CLAUDE_NOTE = 'This command requires approval';
 
@@ -211,7 +211,7 @@ describe('hard rails with shell variables', () => {
 
   it('refuses pushes that skip hooks, force pushes and other branches', async () => {
     const publish = {
-      builder: true,
+      changesProject: true,
       publish: {
         grant: { level: 'full-auto', requested: true },
         task: { branch: BRANCH, protectedBranches: ['main'] },

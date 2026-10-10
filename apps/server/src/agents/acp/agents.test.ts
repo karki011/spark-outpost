@@ -3,13 +3,11 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  BUILDER_PUBLISH_DENY_RULES,
   supportsDo,
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
   FORCE_PUSH_DENY_RULES,
-  PUBLISH_ASK_RULES,
   secretRules,
 } from './agents.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
@@ -126,63 +124,6 @@ describe('Claude session options', () => {
     expect(agentDefinitions.claude.askMode).toBe('default');
     expect(agentDefinitions.claude.doMode).toBe('default');
     expect(agentDefinitions.codex.askMode).toBe('read-only');
-  });
-
-  it('denies gh and remote changes to Builders, and only to Builders', () => {
-    const builder = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    const deny = builder.settings.permissions.deny as string[];
-    expect(BUILDER_PUBLISH_DENY_RULES).toContain('Bash(git push:*)');
-    expect(deny).not.toContain('Bash(git push:*)');
-    for (const rule of ['Bash(gh:*)', 'Bash(tea:*)', 'Bash(git remote add:*)']) {
-      expect(BUILDER_PUBLISH_DENY_RULES).toContain(rule);
-      expect(deny).toContain(rule);
-      expect(builder.disallowedTools).toContain(rule);
-    }
-    expect(deny).toEqual(expect.arrayContaining(secretRules([])));
-    const plain = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(plain.settings.permissions.deny).not.toContain('Bash(git push:*)');
-    const zai = optionsOf(agentDefinitions.zai.doSessionMeta?.([], null, true));
-    expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
-  });
-
-  it('adds no ask rules for a piece, whether or not it shares its tree', () => {
-    const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    expect(alone.settings.permissions).not.toHaveProperty('ask');
-    const publishing = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
-    );
-    expect(publishing.settings.permissions).not.toHaveProperty('ask');
-  });
-
-  it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
-    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(solo.settings.permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
-  });
-
-  it('lets gh through to the approval gate for a Builder whose run may publish', () => {
-    const publishing = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, false, true),
-    );
-    const deny = publishing.settings.permissions.deny as string[];
-    expect(deny).not.toContain('Bash(gh:*)');
-    for (const rule of ['Bash(hub:*)', 'Bash(glab:*)', 'Bash(git remote set-url:*)']) {
-      expect(deny).toContain(rule);
-    }
-    const coordinated = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
-    );
-    expect(coordinated.settings.permissions.deny).toContain('Bash(gh:*)');
-  });
-
-  it('also denies git state changes to Builders of a coordinated task', () => {
-    const coordinated = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    const deny = coordinated.settings.permissions.deny as string[];
-    for (const rule of ['Bash(git stash:*)', 'Bash(git checkout:*)', 'Bash(git branch -D:*)']) {
-      expect(deny).toContain(rule);
-    }
-    expect(deny).toContain('Bash(git push:*)');
-    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(solo.settings.permissions.deny).not.toContain('Bash(git stash:*)');
   });
 });
 

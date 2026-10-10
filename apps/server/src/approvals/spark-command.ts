@@ -1,6 +1,5 @@
 import {
   isReadOnlyPosture,
-  type AgentRole,
   type ApprovalOption,
   type ModePosture,
   type RunMode,
@@ -30,8 +29,6 @@ export const SPARK_COMMAND_OPTIONS: readonly ApprovalOption[] = [
 export const NO_FOLDER_REASON = 'A Spark terminal needs a chat with a project folder';
 export const READ_ONLY_TURN_REASON =
   "A Spark terminal can't start in an Ask or read-only turn; switch the agent's mode first";
-export const CREW_REASON =
-  'Only a solo Builder and the integrator can start a Spark terminal; pieces and the Coordinator cannot';
 export const OUTSIDE_FOLDER_REASON =
   "A Spark terminal starts in the chat's folder or a folder under a linked project";
 export const SECRET_COMMAND_REASON =
@@ -40,7 +37,6 @@ export const SECRET_COMMAND_REASON =
 export interface SparkCommandTurn {
   runMode: RunMode | null;
   posture: ModePosture;
-  role: AgentRole | null;
   readOnly: boolean;
   roots: readonly RequestRoot[];
   home: string;
@@ -88,11 +84,6 @@ function insideRoots(roots: readonly RequestRoot[], folder: string): boolean {
   return roots.some((root) => root.path === folder) || place(roots, folder).relative !== null;
 }
 
-function crewRefusal(turn: Pick<SparkCommandTurn, 'role'>): string | null {
-  if (turn.role === 'integrator') return null;
-  return turn.role === null || turn.role === 'builder' ? null : CREW_REASON;
-}
-
 export function sparkCommandRefusal(
   turn: SparkCommandTurn,
   request: ApprovalRequest,
@@ -101,8 +92,6 @@ export function sparkCommandRefusal(
   if (turn.runMode !== 'do' || turn.readOnly || isReadOnlyPosture(turn.posture)) {
     return READ_ONLY_TURN_REASON;
   }
-  const crew = crewRefusal(turn);
-  if (crew) return crew;
   if (!request.cwd || !insideRoots(request.roots, request.cwd)) return OUTSIDE_FOLDER_REASON;
   return request.command && commandHoldsSecret(request.command) ? SECRET_COMMAND_REASON : null;
 }
@@ -123,7 +112,7 @@ export function decideSparkCommand(
   if (refused) return { verdict: 'reject', reason: refused };
   const decision = decide(turn.posture, request, NO_RUN_RULES, [], {
     ...options,
-    builder: turn.role === 'builder' || turn.role === 'integrator',
+    changesProject: true,
     askRun: false,
     askAutoWhy: null,
     agentAsks: false,

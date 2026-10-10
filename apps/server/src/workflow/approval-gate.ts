@@ -90,8 +90,7 @@ export interface GateDeps {
   mode: string | null;
   modes?: readonly AgentModeOption[];
   posture?: ModePosture;
-  builder?: boolean;
-  chatRun?: boolean;
+  changesProject?: boolean;
   askRun?: boolean;
   askAuto?: () => Promise<string | null>;
   extraAllowlist?: () => readonly string[];
@@ -368,8 +367,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
     const options: DecideOptions = {
-      builder: deps.builder === true,
-      chatRun: deps.chatRun === true,
+      changesProject: deps.changesProject === true,
       askRun: deps.askRun === true,
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       planningWhy: planningWhy(request),

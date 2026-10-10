@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CREW_REASON,
   NO_FOLDER_REASON,
   OUTSIDE_FOLDER_REASON,
   READ_ONLY_TURN_REASON,
@@ -107,7 +106,6 @@ function commands(db: Db, change: Partial<SparkCommandScope> = {}): SparkCommand
     provider: 'claude',
     agentMode: 'bypassPermissions',
     runMode: 'do',
-    role: null,
     readOnly: false,
     roots: [{ path: root, ignore: [] }],
     home: '/Users/me',
@@ -191,7 +189,6 @@ describe('start: what Spark refuses before anything runs', () => {
       [READ_ONLY_TURN_REASON, { runMode: 'ask' }, {}],
       [READ_ONLY_TURN_REASON, { readOnly: true }, {}],
       [READ_ONLY_TURN_REASON, { agentMode: 'plan' }, {}],
-      [CREW_REASON, { role: 'coordinator' }, {}],
       [OUTSIDE_FOLDER_REASON, {}, { cwd: '/etc' }],
       [OUTSIDE_FOLDER_REASON, {}, { cwd: '../elsewhere' }],
       [NO_SUCH_FOLDER_REASON, {}, { cwd: 'gone' }],

@@ -3,7 +3,6 @@ import {
   modePosture,
   redactText,
   type AgentModeOption,
-  type AgentRole,
   type RunMode,
 } from '@spark-outpost/contracts';
 import {
@@ -44,7 +43,6 @@ export interface SparkCommandScope {
   agentMode: string | null;
   modes?: readonly AgentModeOption[];
   runMode: RunMode | null;
-  role: AgentRole | null;
   readOnly: boolean;
   roots: readonly RequestRoot[];
   home: string;
@@ -96,7 +94,6 @@ function turnOf(scope: SparkCommandScope): SparkCommandTurn {
       scope.agentMode,
       modeKind(scope.modes ?? [], scope.agentMode),
     ),
-    role: scope.role,
     readOnly: scope.readOnly,
     roots: scope.roots,
     home: scope.home,

@@ -75,7 +75,6 @@ export async function openBench() {
           provider: 'claude',
           agentMode: mode,
           runMode: 'do',
-          role: null,
           readOnly: false,
           roots: [{ path: base, ignore: [] }],
           home: homedir(),

@@ -147,8 +147,6 @@ describe("the agent process of the chat's own changing run that may not publish"
       root,
       false,
       null,
-      false,
-      {},
       true,
     );
     const guarded = (...args: string[]) =>
@@ -174,7 +172,7 @@ describe("the approval gate of the chat's own changing run", () => {
         runId,
         provider: 'claude',
         mode: MANUAL,
-        chatRun: true,
+        changesProject: true,
         publish: { level: 'hands-off', requested: false },
         append: recordingAppend().append,
         waiters: new ApprovalWaiters(),

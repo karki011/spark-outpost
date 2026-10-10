@@ -42,8 +42,8 @@ function run(command: string): ApprovalRequest {
 function verdicts(command: string) {
   return POSTURES.flatMap((posture) =>
     GRANTS.flatMap((grant) =>
-      [true, false].map((builder) => {
-        const options: DecideOptions = { builder, files, publish: { grant, task: TASK } };
+      [true, false].map((changesProject) => {
+        const options: DecideOptions = { changesProject, files, publish: { grant, task: TASK } };
         return decide(posture, run(command), NO_RUN_RULES, [], options);
       }),
     ),

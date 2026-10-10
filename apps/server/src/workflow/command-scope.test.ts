@@ -23,8 +23,6 @@ const input = (change: Partial<Parameters<typeof sparkCommandScope>[2]> = {}) =>
   provider: 'claude',
   agentMode: 'default',
   mode: 'do' as const,
-  role: 'builder' as const,
-  piece: null,
   projectRoots: [root],
   level: 'full-auto' as const,
   userRequest: 'start the dev server and push it',
@@ -34,7 +32,7 @@ const input = (change: Partial<Parameters<typeof sparkCommandScope>[2]> = {}) =>
 });
 
 describe('the scope a Spark-run command is judged in', () => {
-  it('carries the turn’s own mode, role, roots with their .sparkignore, and publish grant', async () => {
+  it('carries the turn’s own mode, roots with their .sparkignore, and publish grant', async () => {
     await writeFile(path.join(root, '.sparkignore'), 'private/\n');
     const scope = await sparkCommandScope(db, RUN, input());
     expect(scope).toMatchObject({
@@ -42,7 +40,6 @@ describe('the scope a Spark-run command is judged in', () => {
       provider: 'claude',
       agentMode: 'default',
       runMode: 'do',
-      role: 'builder',
       readOnly: false,
       roots: [{ path: root, ignore: ['private/'] }],
       publish: { level: 'full-auto', requested: true, followUp: null },

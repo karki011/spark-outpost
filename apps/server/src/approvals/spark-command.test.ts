@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentRole } from '@spark-outpost/contracts';
 import { DENIES_REASON } from './decide.ts';
 import {
-  CREW_REASON,
   NO_FOLDER_REASON,
   OUTSIDE_FOLDER_REASON,
   READ_ONLY_TURN_REASON,
@@ -104,25 +102,6 @@ describe('where it may start', () => {
     });
     expect(inside.verdict).toBe('allow');
   });
-});
-
-describe('who may start one in a crew turn', () => {
-  it('lets a solo Builder, the chat’s own agent and the integrator start one', async () => {
-    expect((await decided('pnpm dev', turn({ role: 'builder' }))).verdict).toBe('allow');
-    expect((await decided('pnpm dev', turn({ role: null }))).verdict).toBe('allow');
-    const integrator = turn({ role: 'integrator' });
-    expect((await decided('pnpm dev', integrator)).verdict).toBe('allow');
-  });
-
-  it.each(['coordinator', 'scout', 'architect', 'critic', 'spark'] satisfies AgentRole[])(
-    'refuses the %s',
-    async (role) => {
-      expect(await decided('pnpm dev', turn({ role }))).toEqual({
-        verdict: 'reject',
-        reason: CREW_REASON,
-      });
-    },
-  );
 });
 
 describe('the agent’s mode decides', () => {

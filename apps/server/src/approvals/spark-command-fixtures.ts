@@ -12,7 +12,6 @@ export function turn(change: Partial<SparkCommandTurn> = {}): SparkCommandTurn {
   return {
     runMode: 'do',
     posture: 'full_access',
-    role: null,
     readOnly: false,
     roots: [{ path: ROOT, ignore: [] }],
     home: HOME,

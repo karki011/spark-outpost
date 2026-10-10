@@ -69,7 +69,7 @@ describe('temp folders are scratch space', () => {
     'git worktree add /tmp/x 265e3aa17 && cd /tmp/x && ls; cd -; rm -rf /tmp/x; git worktree prune',
   ])('follows the agent mode for %s', async (command) => {
     expect(await verdicts(command)).toEqual(FOLLOWS_MODE);
-    expect(await verdicts(command, { builder: true })).toEqual(FOLLOWS_MODE);
+    expect(await verdicts(command, { changesProject: true })).toEqual(FOLLOWS_MODE);
   });
 
   it('follows the agent mode for an edit or a delete of a temp file', () => {

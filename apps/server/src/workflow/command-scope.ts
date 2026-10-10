@@ -12,7 +12,6 @@ type ScopeInput = Pick<
   | 'provider'
   | 'agentMode'
   | 'mode'
-  | 'role'
   | 'assistant'
   | 'projectRoots'
   | 'level'
@@ -45,7 +44,6 @@ export async function sparkCommandScope(
     agentMode: input.agentMode,
     ...(extras.modes ? { modes: extras.modes } : {}),
     runMode: input.mode,
-    role: input.role,
     readOnly: input.assistant === true,
     roots,
     home: os.homedir(),

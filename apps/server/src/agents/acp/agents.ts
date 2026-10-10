@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
-import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
@@ -73,10 +73,7 @@ export interface AgentDefinition {
   doSessionMeta?: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
-    builder?: boolean,
-    coordinated?: boolean,
-    publishes?: boolean,
-    chatRun?: boolean,
+    changesProject?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -102,40 +99,17 @@ const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
-function askRules(builder: boolean, coordinated: boolean, chatRun: boolean): string[] {
-  return chatRun || (builder && !coordinated) ? [...PUBLISH_ASK_RULES] : [];
-}
-
 export const FORCE_PUSH_DENY_RULES = [
   'Bash(git push --force:*)',
   'Bash(git push -f:*)',
   'Bash(git push --mirror:*)',
 ];
 
-export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
+const SENT_TO_THE_GATE: readonly string[] = PUBLISH_ASK_RULES;
 
-export const BUILDER_GIT_DENY_RULES = [
-  ...BUILDER_GIT_OPS.filter((op) => op !== 'worktree').map((op) => `Bash(git ${op}:*)`),
-  'Bash(git branch -d:*)',
-  'Bash(git branch -D:*)',
-  'Bash(git branch --delete:*)',
-];
-
-const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
-  (rule) => rule !== 'Bash(git push:*)',
+export const CHAT_RUN_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`).filter(
+  (rule) => !SENT_TO_THE_GATE.includes(rule),
 );
-
-const PUBLISHING_BUILDER_DENY_RULES = SOLO_BUILDER_DENY_RULES.filter(
-  (rule) => rule !== 'Bash(gh:*)',
-);
-
-export const CHAT_RUN_DENY_RULES = PUBLISHING_BUILDER_DENY_RULES;
-
-function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean): string[] {
-  if (!builder) return [];
-  if (coordinated) return [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES];
-  return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
-}
 
 export function secretRules(extraRoots: readonly string[]): string[] {
   const underExtraRoots = extraRoots.flatMap((root) =>
@@ -145,28 +119,23 @@ export function secretRules(extraRoots: readonly string[]): string[] {
   return patterns.map((pattern) => `Edit(${pattern})`);
 }
 
-function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
+function repoTools(repo: ClaudeRepoOptions | null): string[] {
   if (!repo) return [];
-  const agentTool = repo.agentTool && !coordinated;
-  return [...(repo.skillTool ? ['Skill'] : []), ...(agentTool ? ['Agent'] : [])];
+  return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
 }
 
 export function claudeSessionMeta(
   tools: readonly string[],
   extraRoots: readonly string[],
   repo: ClaudeRepoOptions | null = null,
-  builder = false,
+  changesProject = false,
   allowBypass = false,
-  coordinated = false,
-  publishes = false,
-  chatRun = false,
 ): Record<string, unknown> {
-  const guarded = chatRun && !builder;
-  const ask = askRules(builder, coordinated, guarded);
+  const ask = changesProject ? [...PUBLISH_ASK_RULES] : [];
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
-    ...(guarded ? CHAT_RUN_DENY_RULES : builderDeny(builder, coordinated, publishes)),
+    ...(changesProject ? CHAT_RUN_DENY_RULES : []),
   ];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -174,7 +143,7 @@ export function claudeSessionMeta(
     ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
     claudeCode: {
       options: {
-        tools: [...tools, ...repoTools(repo, coordinated)],
+        tools: [...tools, ...repoTools(repo)],
         disallowedTools: deny,
         settingSources: [],
         ...(plugins.length > 0
@@ -274,21 +243,8 @@ const claudeSessions = {
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
-    builder = false,
-    coordinated = false,
-    publishes = false,
-    chatRun = false,
-  ) =>
-    claudeSessionMeta(
-      CLAUDE_DO_TOOLS,
-      extraRoots,
-      repo ?? null,
-      builder,
-      true,
-      coordinated,
-      publishes,
-      chatRun,
-    ),
+    changesProject = false,
+  ) => claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, repo ?? null, changesProject, true),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';

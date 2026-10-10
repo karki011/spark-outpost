@@ -7,7 +7,6 @@ import {
   APPROVAL_REQUESTED,
 } from '@spark-outpost/contracts';
 import {
-  CREW_REASON,
   NO_FOLDER_REASON,
   OUTSIDE_FOLDER_REASON,
   READ_ONLY_TURN_REASON,
@@ -233,7 +232,6 @@ describe('start: refusals', () => {
       [NO_FOLDER_REASON, { roots: [] }, 'pnpm dev', {}],
       [READ_ONLY_TURN_REASON, { runMode: 'ask' }, 'pnpm dev', {}],
       [READ_ONLY_TURN_REASON, { readOnly: true }, 'pnpm dev', {}],
-      [CREW_REASON, { role: 'coordinator' }, 'pnpm dev', {}],
       [OUTSIDE_FOLDER_REASON, {}, 'pnpm dev', { cwd: tmpdir() }],
       [SECRET_COMMAND_REASON, {}, 'API_KEY=sk-ant-abc123def456ghi789jkl012mno pnpm dev', {}],
     ];
@@ -256,7 +254,7 @@ describe('start: refusals', () => {
   });
 
   it('refuses a force push and a push of another branch in full access', async () => {
-    const on = await b.turn('bypassPermissions', { role: 'builder' });
+    const on = await b.turn('bypassPermissions');
     for (const command of ['git push --force origin main', 'git push origin main']) {
       expect(await b.start(on, command), command).toMatchObject({ refused: true });
     }
@@ -270,14 +268,6 @@ describe('start: refusals', () => {
     const answer = await b.start({ ...on, scope });
     expect(answer).toEqual({ action: 'start', refused: true, reason: NO_TURN_REASON });
     expect(await b.rows()).toEqual([]);
-  });
-
-  it('lets the integrator and a solo Builder start one', async () => {
-    const solo = await b.turn('bypassPermissions', { role: 'builder' });
-    expect((await b.start(solo)).terminal?.state).toBe('starting');
-    const integrator = await b.turn('bypassPermissions', { role: 'integrator' });
-    expect((await b.start(integrator, 'pnpm test --watch')).terminal?.state).toBe('starting');
-    expect(await b.rows()).toHaveLength(2);
   });
 });
 

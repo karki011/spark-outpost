@@ -122,11 +122,7 @@ describe('stopping the turn', () => {
       b.chat.runId,
       memberRun,
     ]);
-    const member = await b.turn(
-      'bypassPermissions',
-      { role: 'integrator' },
-      { ...b.chat, runId: memberRun },
-    );
+    const member = await b.turn('bypassPermissions', {}, { ...b.chat, runId: memberRun });
     const terminal = (await b.start(member)).terminal!;
     await stopRun(b.t.db, b.chat.runId);
     expect((await b.rows())[0]).toMatchObject({ id: terminal.id, stoppedBy: 'turn_stopped' });

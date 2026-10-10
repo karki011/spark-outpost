@@ -4,7 +4,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
+import { CHAT_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
 import {
   NO_TASK_BRANCH_REASON,
@@ -90,7 +90,7 @@ function mainAgentGate(chat: LinkedRun, provider: string, mode: string, publish:
     runId: chat.runId,
     provider,
     mode,
-    builder: false,
+    changesProject: true,
     append: recordingAppend().append,
     waiters: new ApprovalWaiters(),
     pollMs: 20,
@@ -122,7 +122,7 @@ async function pendingCard(runId: string) {
   return (await getApproval(t.db, id))!;
 }
 
-describe("the chat's own agent, not a Builder, at the approval gate", () => {
+describe("the chat's own agent at the approval gate", () => {
   it.each(GATE_SEES)(
     'is refused the push rails in %s %s, with or without a request to publish',
     async (provider, mode) => {
@@ -169,7 +169,7 @@ describe("the chat's own agent, not a Builder, at the approval gate", () => {
     expect(await unasked.review(commandRequest(root, push, 'p2'), signal())).toMatchObject({
       allowed: false,
     });
-    expect(await policyDenials(chat.runId)).toEqual([BUILDER_PUBLISH_REASON]);
+    expect(await policyDenials(chat.runId)).toEqual([CHAT_PUBLISH_REASON]);
     const auto = mainAgentGate(chat, 'claude', 'auto', NOT_ASKED);
     expect(await auto.review(commandRequest(root, push, 'p3'), signal())).toMatchObject({
       allowed: true,

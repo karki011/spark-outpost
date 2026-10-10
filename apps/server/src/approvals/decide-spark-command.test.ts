@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { modeSkipsGate, type ModePosture } from '@spark-outpost/contracts';
 import {
-  BUILDER_PUBLISH_REASON,
+  CHAT_PUBLISH_REASON,
   GIT_CONTROL_REASON,
   INSTRUCTION_REASON,
   NO_RUN_RULES,
@@ -17,7 +17,7 @@ import { otherBranchReason, type PublishGrant } from './publish-policy.ts';
 import { railCrossings } from './rail-crossings.ts';
 import { parseShell } from './shell-parse.ts';
 import { SPARK_COMMAND_NOTE } from './spark-command.ts';
-import { ROOT, decided, inPosture, noFiles, request, turn } from './spark-command-fixtures.ts';
+import { ROOT, decided, inPosture, noFiles, request } from './spark-command-fixtures.ts';
 
 const BRANCH = 'spark/fix-dates-1a2b';
 const MANUAL: PublishGrant = { level: 'hands-off', requested: false };
@@ -76,11 +76,13 @@ describe('the safety floor stops a Spark-run command before it starts, in every 
   );
 
   it.each(AT_ONCE)('refuses a force push and a push that skips hooks in %s', async (posture) => {
-    expect(await decided('git push --force', inPosture(posture))).toEqual({
+    const forced = `git push --force origin ${BRANCH}`;
+    expect(await decided(forced, inPosture(posture), publishing(MANUAL))).toEqual({
       verdict: 'reject',
       reason: PLAIN_FORCE_REASON,
     });
-    expect(await decided(`git push --no-verify origin ${BRANCH}`, inPosture(posture))).toEqual({
+    const unhooked = `git push --no-verify origin ${BRANCH}`;
+    expect(await decided(unhooked, inPosture(posture), publishing(MANUAL))).toEqual({
       verdict: 'reject',
       reason: PUSH_HOOKS_REASON,
     });
@@ -122,33 +124,32 @@ describe('the safety floor stops a Spark-run command before it starts, in every 
   });
 });
 
-describe('publish rules, as for a solo Builder’s own git push and gh', () => {
-  const builder = (posture: ModePosture) => turn({ role: 'builder', posture });
+describe('publish rules, as for the chat run’s own git push and gh', () => {
   const PUSH = `git push -u origin ${BRANCH}`;
 
   it('refuses a push of any branch but the chat’s own', async () => {
     expect(
-      await decided('git push origin main', builder('full_access'), publishing(ASKED)),
+      await decided('git push origin main', inPosture('full_access'), publishing(ASKED)),
     ).toEqual({ verdict: 'reject', reason: otherBranchReason(BRANCH) });
   });
 
-  it('refuses a Builder’s publish with none of the grounds', async () => {
-    expect(await decided(PUSH, builder('asks'), publishing(MANUAL))).toEqual({
+  it('refuses a publish with none of the grounds', async () => {
+    expect(await decided(PUSH, inPosture('asks'), publishing(MANUAL))).toEqual({
       verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
+      reason: CHAT_PUBLISH_REASON,
     });
   });
 
   it('runs a push of the chat’s own branch at once when the mode acts without asking', async () => {
     for (const posture of AT_ONCE) {
-      const decision = await decided(PUSH, builder(posture), publishing(MANUAL));
+      const decision = await decided(PUSH, inPosture(posture), publishing(MANUAL));
       expect(decision.verdict).toBe('allow');
     }
   });
 
   it('still cards a push the message asked for or Full auto → PR covers, in an asking mode', async () => {
     for (const grant of [ASKED, FULL_AUTO]) {
-      expect(await decided(PUSH, builder('asks'), publishing(grant))).toEqual({
+      expect(await decided(PUSH, inPosture('asks'), publishing(grant))).toEqual({
         verdict: 'ask',
         reason: null,
         because: SPARK_COMMAND_NOTE,
@@ -157,7 +158,7 @@ describe('publish rules, as for a solo Builder’s own git push and gh', () => {
   });
 
   it('asks with hold-to-confirm when the push holds a value from a secret file', async () => {
-    const decision = await decided(PUSH, builder('full_access'), {
+    const decision = await decided(PUSH, inPosture('full_access'), {
       ...publishing(ASKED),
       secretSend: { kind: 'found', files: ['.env'] },
     });

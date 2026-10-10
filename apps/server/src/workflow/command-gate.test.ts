@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileSource } from '../approvals/file-lister.ts';
 import {
-  CREW_REASON,
   NO_FOLDER_REASON,
   READ_ONLY_TURN_REASON,
   SECRET_COMMAND_REASON,
@@ -54,7 +53,6 @@ function scope(change: Partial<SparkCommandScope> = {}): SparkCommandScope {
     provider: 'claude',
     agentMode: 'bypassPermissions',
     runMode: 'do',
-    role: null,
     readOnly: false,
     roots: [{ path: ROOT, ignore: [] }],
     home: '/Users/me',
@@ -157,7 +155,6 @@ describe('reviewSparkCommand', () => {
       [{ agentMode: 'plan' }, 'pnpm dev', READ_ONLY_TURN_REASON],
       [{ provider: 'codex', agentMode: 'read-only' }, 'pnpm dev', READ_ONLY_TURN_REASON],
       [{ readOnly: true }, 'pnpm dev', READ_ONLY_TURN_REASON],
-      [{ role: 'coordinator' }, 'pnpm dev', CREW_REASON],
       [{}, 'pnpm dev --token=abc123', SECRET_COMMAND_REASON],
     ];
     for (const [change, command, reason] of cases) {

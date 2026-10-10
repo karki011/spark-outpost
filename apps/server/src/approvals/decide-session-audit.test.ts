@@ -34,7 +34,7 @@ const SHELL_EDITS = [
 const NX_ALL =
   'npx nx run-many --target=test --parallel=3 --output-style=static > /tmp/cp48991-test.log 2>&1; tail -5 /tmp/cp48991-test.log';
 
-const SOLO_BUILDER: DecideOptions = { builder: true };
+const SOLO_BUILDER: DecideOptions = { changesProject: true };
 
 function request(command: string, noted: boolean): ApprovalRequest {
   return {

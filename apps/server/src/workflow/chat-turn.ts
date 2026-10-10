@@ -73,7 +73,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     if (!ready) return;
     input = ready;
     const prompted = await withChatPrompt(deps, input);
-    const reply = await runAgentTurn(prompted, lease, input, append, control, { chatRun: true });
+    const reply = await runAgentTurn(prompted, lease, input, append, control);
     const turn = { deps: prompted, lease, input, append, control };
     const result = await afterReply(turn, hooks, reply);
     await finishRun(append, input.identity, result, true);

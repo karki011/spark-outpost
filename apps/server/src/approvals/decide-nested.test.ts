@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDER_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
+import { CHAT_PUBLISH_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
 import { parseShell } from './shell-parse.ts';
@@ -121,9 +121,11 @@ describe('decide() looks inside nested and wrapped commands', () => {
   it('refuses Builder publishing hidden behind eval or find', () => {
     const hidden = ['eval git push', 'find . -maxdepth 0 -exec gh pr create \\;'];
     for (const command of [...hidden, 'while true; do gh pr create; done']) {
-      expect(decide('full_access', run(command), NO_RUN_RULES, [], { builder: true })).toEqual({
+      expect(
+        decide('full_access', run(command), NO_RUN_RULES, [], { changesProject: true }),
+      ).toEqual({
         verdict: 'reject',
-        reason: BUILDER_PUBLISH_REASON,
+        reason: CHAT_PUBLISH_REASON,
       });
     }
   });

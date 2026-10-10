@@ -43,7 +43,7 @@ async function planning(
   const shell = await parseShell(command);
   return decide(posture, run(command), NO_RUN_RULES, [], {
     files: noFiles,
-    builder: true,
+    changesProject: true,
     planningWhy: WHY,
     ...options,
     shell,
@@ -107,14 +107,14 @@ describe('decide() while the agent plans in a chat whose mode runs without askin
   });
 
   it.each(['git push --force origin main', 'git push origin main', 'gh pr merge 4'])(
-    'keeps refusing %s for a Builder',
+    'keeps refusing %s for the chat’s run',
     async (command) => {
       expect((await planning(command)).verdict).toBe('reject');
     },
   );
 
   it('asks before a push when no publish rule covers it', async () => {
-    expect(await planning('git push origin spark/x', { builder: false })).toMatchObject({
+    expect(await planning('git push origin spark/x', { changesProject: false })).toMatchObject({
       verdict: 'ask',
     });
   });

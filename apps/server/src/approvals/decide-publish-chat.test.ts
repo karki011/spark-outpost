@@ -62,7 +62,7 @@ function chatRun(
   command: string,
   task: TaskBranch | null = TASK,
 ): Decision {
-  const options: DecideOptions = { chatRun: true, files, publish: { grant, task } };
+  const options: DecideOptions = { changesProject: true, files, publish: { grant, task } };
   return decide(posture, run(command), NO_RUN_RULES, [command, 'git', 'gh'], options);
 }
 
