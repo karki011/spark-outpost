@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 import {
   handleProblem,
   parseAddress,
+  userAddress,
   type MemberRequest,
   type OutpostMember,
-  type PostAddress,
 } from '@spark-outpost/contracts';
 import { redactText, storableText } from '../audit/redact.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
@@ -29,7 +29,7 @@ import { removeTask } from '../persistence/outpost-stories.ts';
 import { introLine } from './handshake.ts';
 import { memberFacts } from './member-facts.ts';
 import type { NewPost, RequestAuthor, StoredOutpost, StoredPost } from './ports.ts';
-import { planPost, type PlannedPost } from './post-rules.ts';
+import { keptProblem, planPost, type PlanAddress, type PlannedPost } from './post-rules.ts';
 import { labelsOf } from './read-labels.ts';
 
 export const POST_ID_IN_USE = 'That post id is already in use.';
@@ -47,6 +47,7 @@ export interface PostInput {
   author: RequestAuthor;
   text: string;
   id?: string;
+  to?: readonly string[];
   guestConversationId?: string;
   toConversationId?: string;
   attachmentIds?: readonly string[];
@@ -99,12 +100,25 @@ async function repeatedPost(db: Queryable, input: PostInput): Promise<StoredPost
   return existing;
 }
 
-function addressOf(input: PostInput, members: readonly OutpostMember[]): PostAddress {
+function typedByUser(input: PostInput, handles: readonly string[]): PlanAddress {
+  const kept = input.to?.map((handle) => handle.toLowerCase());
+  const problem = kept === undefined ? null : keptProblem(kept, input.text, handles);
+  if (problem) throw new OutpostError(400, problem);
+  const address = userAddress(input.text, handles, kept);
+  if (address.kind === 'note') return address;
+  const [only, ...others] = address.to;
+  if (only !== undefined && others.length === 0) {
+    return { kind: 'request', to: only, body: address.body };
+  }
+  return { kind: 'several', to: address.to, body: address.body };
+}
+
+function addressOf(input: PostInput, members: readonly OutpostMember[]): PlanAddress {
+  const handles = members.map((member) => member.handle);
   if (input.toConversationId === undefined) {
-    return parseAddress(
-      input.text,
-      members.map((member) => member.handle),
-    );
+    return input.author.kind === 'user'
+      ? typedByUser(input, handles)
+      : parseAddress(input.text, handles);
   }
   const member = members.find((candidate) => candidate.conversationId === input.toConversationId);
   if (!member) throw new OutpostError(400, CHAT_NOT_IN_OUTPOST);
@@ -159,8 +173,9 @@ export async function postToOutpost(
     );
     if (plan.kind === 'refusal') throw new OutpostError(400, plan.message);
     const planned: NewPost[] = [];
+    const batchId = plan.posts.length > 1 ? newId() : null;
     for (const [index, plannedPost] of plan.posts.entries()) {
-      const post = { ...plannedPost, body: storedBody(plannedPost.body) };
+      const post = { ...plannedPost, body: storedBody(plannedPost.body), batchId };
       planned.push({
         ...post,
         id: index === 0 && input.id !== undefined ? input.id : newId(),

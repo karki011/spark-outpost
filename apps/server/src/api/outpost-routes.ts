@@ -233,6 +233,7 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       author: { kind: 'user' },
       id: request.id,
       text: request.text,
+      ...(request.to ? { to: request.to } : {}),
       ...(request.guestConversationId ? { guestConversationId: request.guestConversationId } : {}),
     });
     res.status(201).json(await detail(outpostId));

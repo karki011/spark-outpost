@@ -262,6 +262,17 @@ export function answersPreamble(
   ].join('\n');
 }
 
+function listed(names: readonly string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+export function alsoAskedLine(handles: readonly (string | null)[]): string | null {
+  const others = handles.map(handleOf).filter((handle): handle is string => handle !== null);
+  if (others.length === 0) return null;
+  return `The user sent this same message to ${listed(others)} as well. Each chat received it whole and answers for itself.`;
+}
+
 export interface StackLineFacts {
   parentHandle: string;
   parentBranch: string;

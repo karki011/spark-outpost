@@ -78,12 +78,43 @@ describe('threadItems', () => {
     expect(posts.map((given) => given.body)).toEqual(['Post 2', 'Post 1']);
   });
 
-  it('draws requests that share a batch as separate requests', () => {
-    const items = threadItems([
-      request(1, { batchId: BATCH, toHandle: 'fe' }),
-      request(2, { batchId: BATCH, toHandle: 'api' }),
+  it('draws requests that share a batch as one message with a line per chat', () => {
+    const fe = request(1, { batchId: BATCH, toHandle: 'fe', body: '@fe @api sync up' });
+    const api = request(2, { batchId: BATCH, toHandle: 'api', body: '@fe @api sync up' });
+    expect(threadItems([fe, api])).toEqual([
+      {
+        kind: 'batch',
+        batchId: BATCH,
+        body: '@fe @api sync up',
+        createdAt: fe.createdAt,
+        lines: [
+          { post: fe, handle: 'fe' },
+          { post: api, handle: 'api' },
+        ],
+      },
     ]);
-    expect(items.map((item) => item.kind)).toEqual(['request', 'request']);
+  });
+
+  it('places a batch where its first request was written and keeps later posts after it', () => {
+    const note = post(2);
+    const items = threadItems([
+      request(3, { batchId: BATCH, toHandle: 'api' }),
+      note,
+      request(1, { batchId: BATCH, toHandle: 'fe' }),
+      post(4, { kind: 'notice' }),
+    ]);
+    expect(items.map((item) => item.kind)).toEqual(['batch', 'note', 'notice']);
+    const [batch] = items;
+    expect(batch?.kind === 'batch' && batch.lines.map((line) => line.handle)).toEqual([
+      'fe',
+      'api',
+    ]);
+  });
+
+  it('keeps a request with no batch, and one left alone in its batch, as they are', () => {
+    const alone = request(2, { batchId: BATCH, toHandle: 'fe' });
+    const items = threadItems([request(1), alone]);
+    expect(items.map((item) => item.kind)).toEqual(['request', 'batch']);
   });
 
   it('returns nothing for an empty thread', () => {

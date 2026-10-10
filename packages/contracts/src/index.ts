@@ -64,6 +64,7 @@ export * from './chat-queue.ts';
 export * from './outposts.ts';
 export * from './outpost-handles.ts';
 export * from './outpost-address.ts';
+export * from './outpost-addressees.ts';
 export * from './outpost-mode-cap.ts';
 export * from './outpost-state.ts';
 export * from './outpost-thread.ts';

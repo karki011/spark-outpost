@@ -1,8 +1,7 @@
-import type { OutpostMember, PostAddress } from '@spark-outpost/contracts';
+import { addressees, type OutpostMember, type PostAddress } from '@spark-outpost/contracts';
 import type { NewPost, RequestAuthor } from './ports.ts';
 
-export const ALL_NOT_AVAILABLE =
-  '@all is not available yet. Address one chat at a time, for example @api.';
+export const NO_CHATS_TO_ASK = 'There is no chat in this outpost to ask yet.';
 export const GUESTS_NOT_AVAILABLE =
   'Asking a chat outside the outpost is not available yet. Add the chat to the outpost first.';
 
@@ -15,6 +14,25 @@ export const REQUEST_STARTED_TURN =
 
 export function notMemberRefusal(handle: string): string {
   return `@${handle} is not in this outpost.`;
+}
+
+export function notAddressedRefusal(handle: string): string {
+  return `The message does not address @${handle}.`;
+}
+
+export type PlanAddress = PostAddress | { kind: 'several'; to: readonly string[]; body: string };
+
+export function keptProblem(
+  kept: readonly string[],
+  text: string,
+  handles: readonly string[],
+): string | null {
+  const addressed = addressees(text, handles);
+  for (const handle of kept) {
+    if (!handles.includes(handle)) return notMemberRefusal(handle);
+    if (!addressed.includes(handle)) return notAddressedRefusal(handle);
+  }
+  return null;
 }
 
 export type PlannedPost = Omit<NewPost, 'id'>;
@@ -38,31 +56,31 @@ function refusal(message: string): Refusal {
   return { kind: 'refusal', message };
 }
 
-function userRequest(
-  to: string,
+function userRequests(
+  to: readonly string[],
   body: string,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
 ): PostPlan | Refusal {
-  const member = members.find((candidate) => candidate.handle === to);
-  if (!member) return refusal(notMemberRefusal(to));
-  return {
-    kind: 'plan',
-    posts: [
-      {
-        outpostId: outpost.id,
-        kind: 'request',
-        body,
-        fromUser: true,
-        toHandle: member.handle,
-        toConversationId: member.conversationId,
-      },
-    ],
-  };
+  if (to.length === 0) return refusal(NO_CHATS_TO_ASK);
+  const posts: PlannedPost[] = [];
+  for (const handle of to) {
+    const member = members.find((candidate) => candidate.handle === handle);
+    if (!member) return refusal(notMemberRefusal(handle));
+    posts.push({
+      outpostId: outpost.id,
+      kind: 'request',
+      body,
+      fromUser: true,
+      toHandle: member.handle,
+      toConversationId: member.conversationId,
+    });
+  }
+  return { kind: 'plan', posts };
 }
 
 function userPost(
-  address: PostAddress,
+  address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
   guestConversationId: string | null,
@@ -70,9 +88,16 @@ function userPost(
   if (guestConversationId !== null) return refusal(GUESTS_NOT_AVAILABLE);
   switch (address.kind) {
     case 'all':
-      return refusal(ALL_NOT_AVAILABLE);
+      return userRequests(
+        members.map((member) => member.handle),
+        address.body,
+        members,
+        outpost,
+      );
+    case 'several':
+      return userRequests(address.to, address.body, members, outpost);
     case 'request':
-      return userRequest(address.to, address.body, members, outpost);
+      return userRequests([address.to], address.body, members, outpost);
     case 'note':
       return {
         kind: 'plan',
@@ -121,7 +146,7 @@ function chatRequest(
 
 function chatPost(
   author: ChatAuthor,
-  address: PostAddress,
+  address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
   guestConversationId: string | null,
@@ -131,6 +156,7 @@ function chatPost(
   if (!sender) return refusal(AUTHOR_NOT_MEMBER);
   switch (address.kind) {
     case 'all':
+    case 'several':
       return author.startedByRequest
         ? refusal(REQUEST_STARTED_TURN)
         : refusal(CHATS_CANNOT_ASK_ALL);
@@ -153,7 +179,7 @@ function chatPost(
 
 export function planPost(
   author: RequestAuthor,
-  address: PostAddress,
+  address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
   guestConversationId: string | null = null,

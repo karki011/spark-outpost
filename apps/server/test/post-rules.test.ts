@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { OutpostMember, PostAddress } from '@spark-outpost/contracts';
 import type { RequestAuthor } from '../src/outposts/ports.ts';
 import {
-  ALL_NOT_AVAILABLE,
   AUTHOR_NOT_MEMBER,
   CANNOT_ASK_SELF,
   CHATS_CANNOT_ASK_ALL,
   GUESTS_NOT_AVAILABLE,
+  keptProblem,
+  NO_CHATS_TO_ASK,
   OUTPOST_PAUSED,
   planPost,
   REQUEST_STARTED_TURN,
@@ -70,10 +71,44 @@ describe('what the user may post', () => {
     expect(planPost(user, toApi, [], open).kind).toBe('refusal');
   });
 
-  it('refuses @all for now', () => {
-    expect(planPost(user, { kind: 'all', body: 'Rebase on main.' }, members, open)).toEqual({
+  it('turns a message to several chats into one request each, with the same text', () => {
+    const several = { kind: 'several' as const, to: ['api', 'fe'], body: '@api @fe sync up' };
+    const plan = planPost(user, several, members, paused);
+    expect(plan).toEqual({
+      kind: 'plan',
+      posts: [
+        {
+          outpostId: OUTPOST,
+          kind: 'request',
+          body: '@api @fe sync up',
+          fromUser: true,
+          toHandle: 'api',
+          toConversationId: API,
+        },
+        {
+          outpostId: OUTPOST,
+          kind: 'request',
+          body: '@api @fe sync up',
+          fromUser: true,
+          toHandle: 'fe',
+          toConversationId: FE,
+        },
+      ],
+    });
+  });
+
+  it('sends @all to every member and refuses it when nobody is here', () => {
+    const all: PostAddress = { kind: 'all', body: 'Rebase on main.' };
+    const plan = planPost(user, all, members, open);
+    expect(plan.kind === 'plan' && plan.posts.map((post) => post.toHandle)).toEqual(['fe', 'api']);
+    expect(planPost(user, all, [], open)).toEqual({ kind: 'refusal', message: NO_CHATS_TO_ASK });
+  });
+
+  it('refuses the whole message when one of several chats is not a member', () => {
+    const several = { kind: 'several' as const, to: ['api', 'docs'], body: 'Hi both' };
+    expect(planPost(user, several, members, open)).toEqual({
       kind: 'refusal',
-      message: ALL_NOT_AVAILABLE,
+      message: '@docs is not in this outpost.',
     });
   });
 
@@ -84,6 +119,31 @@ describe('what the user may post', () => {
         message: GUESTS_NOT_AVAILABLE,
       });
     }
+  });
+});
+
+describe('the chats the sender kept', () => {
+  const handles = ['fe', 'api'];
+
+  it('have no problem when each is a member the message addresses', () => {
+    expect(keptProblem(['api', 'fe'], 'ask @fe and @api', handles)).toBeNull();
+    expect(keptProblem(['fe'], '@all rebase', handles)).toBeNull();
+    expect(keptProblem([], 'ask @fe and @api', handles)).toBeNull();
+  });
+
+  it('name a handle that is not a member', () => {
+    expect(keptProblem(['api', 'docs'], 'ask @api and @docs', handles)).toBe(
+      '@docs is not in this outpost.',
+    );
+  });
+
+  it('name a member the message does not address', () => {
+    expect(keptProblem(['api'], 'ask @fe about it', handles)).toBe(
+      'The message does not address @api.',
+    );
+    expect(keptProblem(['api'], 'mail someone@api.dev', handles)).toBe(
+      'The message does not address @api.',
+    );
   });
 });
 

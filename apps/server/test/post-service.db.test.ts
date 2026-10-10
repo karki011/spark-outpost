@@ -12,7 +12,6 @@ import {
 } from '../src/outposts/post-service.ts';
 import { startOutpost } from '../src/outposts/start-outpost.ts';
 import {
-  ALL_NOT_AVAILABLE,
   AUTHOR_NOT_MEMBER,
   GUESTS_NOT_AVAILABLE,
   OUTPOST_PAUSED,
@@ -228,11 +227,7 @@ describe('posting to an outpost', () => {
     }
   });
 
-  it('refuses @all and a guest for now, and stores nothing', async () => {
-    expect(await refusal(post('@all rebase on main'))).toEqual({
-      status: 400,
-      message: ALL_NOT_AVAILABLE,
-    });
+  it('refuses a guest for now, and stores nothing', async () => {
     expect(
       await refusal(
         postToOutpost(deps, {
@@ -245,6 +240,82 @@ describe('posting to an outpost', () => {
       ),
     ).toEqual({ status: 400, message: GUESTS_NOT_AVAILABLE });
     expect(await bodies()).toHaveLength(2);
+  });
+
+  it('stores one request per chat the message addresses, as typed and under one batch', async () => {
+    const id = randomUUID();
+    const text = 'Sync up: @api returns the shape and @fe draws it. Thanks @api.';
+    const stored = await post(text, id);
+
+    expect(stored).toHaveLength(2);
+    expect(stored.map((each) => [each.id === id, each.toHandle, each.toConversationId])).toEqual([
+      [true, 'api', api],
+      [false, 'fe', fe],
+    ]);
+    for (const each of stored) {
+      expect(each).toMatchObject({ kind: 'request', body: text, fromUser: true });
+    }
+    expect(stored[0]!.batchId).not.toBeNull();
+    expect(stored[1]!.batchId).toBe(stored[0]!.batchId);
+  });
+
+  it('stores a handle in the middle of a sentence as a request with the whole text', async () => {
+    const [stored, ...rest] = await post('could @api list the order fields?');
+    expect(rest).toEqual([]);
+    expect(stored).toMatchObject({
+      kind: 'request',
+      toHandle: 'api',
+      body: 'could @api list the order fields?',
+      batchId: null,
+    });
+  });
+
+  it('sends @all to every member', async () => {
+    const stored = await post('@all rebase on main');
+    expect(stored.map((each) => each.toHandle)).toEqual(['fe', 'api']);
+    expect(new Set(stored.map((each) => each.batchId)).size).toBe(1);
+  });
+
+  it('asks only the chats the sender kept, and posts a note when none is kept', async () => {
+    const text = '@fe build it with what @api returns';
+    const kept = (to: string[]) =>
+      postToOutpost(deps, { outpostId, author: { kind: 'user' }, id: randomUUID(), text, to });
+
+    const one = await kept(['FE']);
+    expect(one).toHaveLength(1);
+    expect(one[0]).toMatchObject({
+      toHandle: 'fe',
+      body: 'build it with what @api returns',
+      batchId: null,
+    });
+
+    const none = await kept([]);
+    expect(none).toHaveLength(1);
+    expect(none[0]).toMatchObject({ kind: 'note', body: text, toHandle: null });
+  });
+
+  it('refuses a kept chat that is not a member or that the message does not address', async () => {
+    const send = (text: string, to: string[]) =>
+      refusal(postToOutpost(deps, { outpostId, author: { kind: 'user' }, text, to }));
+
+    expect(await send('@api and @docs sync up', ['api', 'docs'])).toEqual({
+      status: 400,
+      message: '@docs is not in this outpost.',
+    });
+    expect(await send('@api list the fields', ['api', 'fe'])).toEqual({
+      status: 400,
+      message: 'The message does not address @fe.',
+    });
+    expect(await bodies()).toHaveLength(2);
+  });
+
+  it('stores nothing more when a message to several chats is posted again', async () => {
+    const id = randomUUID();
+    const [first] = await post('@api and @fe sync up', id);
+    const again = await post('@api and @fe sync up', id);
+
+    expect(again).toEqual([first]);
+    expect(await bodies()).toHaveLength(4);
   });
 
   it('refuses an unknown outpost', async () => {
@@ -306,6 +377,13 @@ describe('a post written by a member chat', () => {
     expect(again?.id).toBe(first?.id);
     expect(new Set([first?.id, other?.id, toFe?.id]).size).toBe(3);
     expect(first).toMatchObject({ waits: false, observed: [] });
+  });
+
+  it('never reads a handle in the middle of what a chat wrote as an address', async () => {
+    const stored = await ask('The shape came from @api and @fe, thanks.');
+
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ kind: 'note', toHandle: null, batchId: null });
   });
 
   it('stores a note from the chat without a hash or labels', async () => {

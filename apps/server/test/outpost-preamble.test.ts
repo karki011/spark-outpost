@@ -374,6 +374,37 @@ describe('what a member chat is told at the start of a turn', () => {
   });
 });
 
+describe('a message the user sent to several chats', () => {
+  const typed = (id: string, handle: string, batchId: string | null, fromUser = true) =>
+    asked(
+      id,
+      { fromUser, batchId, toHandle: handle, fromConversationId: null },
+      { runStatus: null },
+    );
+  const told = (posts: PostWithFacts[]) =>
+    outpostPreamble(
+      depsFor(world({ posts })),
+      turn(API, {
+        outpostRequest: { postId: 'q1', outpostName: 'Orders launch', fromUser: true },
+      }),
+    );
+
+  it('names the other chats that were asked', async () => {
+    const posts = [typed('q1', 'api', 'b1'), typed('q2', 'web', 'b1'), typed('q3', 'docs', 'b1')];
+    expect(await told(posts)).toBe(
+      'The user sent this same message to @web and @docs as well. Each chat received it whole and answers for itself.',
+    );
+  });
+
+  it('says nothing for a request to one chat, another message, or one a chat wrote', async () => {
+    expect(await told([typed('q1', 'api', null), typed('q2', 'web', null)])).toBeNull();
+    expect(await told([typed('q1', 'api', 'b1'), typed('q2', 'web', 'b2')])).toBeNull();
+    expect(
+      await told([typed('q1', 'api', 'b1', false), typed('q2', 'web', 'b1', false)]),
+    ).toBeNull();
+  });
+});
+
 describe('the stack line', () => {
   const parent = storyRow({ handle: 'lead', branch: 'spark/lead-orders', ownsBranch: true });
   const child = (change: Partial<StoryTaskRow> = {}) => storyRow({ dependsOn: LEAD, ...change });

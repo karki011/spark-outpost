@@ -259,6 +259,7 @@ export type UpdateOutpostRequest = z.infer<typeof updateOutpostRequestSchema>;
 export const createPostRequestSchema = z.object({
   id: z.uuid(),
   text: postTextSchema,
+  to: z.array(z.string().min(1).max(64)).max(OUTPOST_MEMBERS_MAX).optional(),
   guestConversationId: z.uuid().optional(),
 });
 export type CreatePostRequest = z.infer<typeof createPostRequestSchema>;
