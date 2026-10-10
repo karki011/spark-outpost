@@ -11,6 +11,7 @@ import {
 import { NOT_FOR_PIECES } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { addMemberChat, createOutpostRow } from './outpost-fixtures.ts';
 import {
+  crewRun,
   linkProject,
   memberWithTurn,
   pieceRun,
@@ -201,6 +202,34 @@ describe('spark_outpost_draft', () => {
     const ops = { conversationId: await addMemberChat(t, outpostId, 'ops'), handle: 'ops' };
     const started = await requestStartedTurn(t, outpostId, ops, 'draft', web);
     expect((await propose(started, [chat('guide')]).result).draft).toBeTruthy();
+  });
+
+  it('saves a Builder’s or an integrator’s proposal for the chat, under the chat’s own turn', async () => {
+    for (const role of ['builder', 'integrator'] as const) {
+      const crew = {
+        conversationId: lead.conversationId,
+        runId: await crewRun(t, lead.runId, role),
+      };
+      const drafted = await propose(crew, [chat(`${role}-api`)]).result;
+      expect(await getDraft(t.db, t.workspaceId, drafted.draft)).toMatchObject({
+        conversationId: lead.conversationId,
+        runId: lead.runId,
+      });
+    }
+  });
+
+  it('refuses the Builder of a turn another chat’s request started, and the Coordinator', async () => {
+    const outpostId = await createOutpostRow(t);
+    const web = await memberWithTurn(t, outpostId, 'web');
+    const api = { conversationId: await addMemberChat(t, outpostId, 'api'), handle: 'api' };
+    const asked = await requestStartedTurn(t, outpostId, api, 'chat', web);
+    const builder = { ...asked, runId: await crewRun(t, asked.runId, 'builder') };
+    await expect(propose(builder, [chat('guide')]).result).rejects.toThrow(DRAFT_FROM_REQUEST);
+    const coordinator = {
+      conversationId: lead.conversationId,
+      runId: await crewRun(t, lead.runId, 'coordinator'),
+    };
+    await expect(propose(coordinator, [chat('api')]).result).rejects.toThrow(NOT_FOR_PIECES);
   });
 
   it('refuses a piece, and a chat with no project that is in no outpost', async () => {
