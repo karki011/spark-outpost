@@ -98,7 +98,7 @@ test('two chats are asked from the middle of one message and answer under it', a
     const own = line(message, handle);
     await expect(stateOf(own)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
     await expect(own.locator('.op-reply')).toContainText('This reply comes from the fake provider');
-    await expect(own.locator('.op-reply .op-post-head')).toContainText(handle);
+    await expect(own.locator('.op-reply .op-post-head')).toHaveCount(0);
     await expect(own.locator('.op-activity')).toHaveCount(0);
   }
   await expect(thread(page).locator('.op-post')).toHaveCount(1);

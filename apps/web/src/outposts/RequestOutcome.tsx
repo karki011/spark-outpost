@@ -27,6 +27,7 @@ interface RequestOutcomeProps extends RequestHandlers {
   answering: boolean;
   answerable: boolean;
   activity?: string | undefined;
+  inBatch?: boolean | undefined;
 }
 
 function StateIcon({ state }: { state: RequestState }) {
@@ -88,6 +89,7 @@ export function RequestOutcome({
   answering,
   answerable,
   activity,
+  inBatch,
   onAnswer,
   onCancel,
   onStartNow,
@@ -97,6 +99,7 @@ export function RequestOutcome({
   const to = receiverName(post);
   const chatId = post.toConversationId;
   const waiting = state === 'needs_you';
+  const lineSaysAnswered = inBatch === true && !waiting;
   const replyText = waiting ? splitQuestion(post.answer?.text ?? '').said : post.answer?.text;
   return (
     <>
@@ -109,11 +112,13 @@ export function RequestOutcome({
       ))}
       {post.answer && (
         <div className="op-reply">
-          <div className="op-post-head">
-            <ReceiverFace post={post} />
-            <b>{to}</b>
-            <span className="op-mood">{waiting ? 'is waiting for you' : 'answered'}</span>
-          </div>
+          {!lineSaysAnswered && (
+            <div className="op-post-head">
+              <ReceiverFace post={post} />
+              <b>{to}</b>
+              <span className="op-mood">{waiting ? 'is waiting for you' : 'answered'}</span>
+            </div>
+          )}
           {replyText && <PostText text={replyText} what="answer" markdown />}
           <AnswerResults answer={post.answer} />
         </div>

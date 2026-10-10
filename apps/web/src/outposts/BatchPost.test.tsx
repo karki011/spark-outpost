@@ -78,6 +78,18 @@ describe('a message sent to several chats', () => {
     expect(within(line('@fe')).getByText('Light or dark?')).toBeTruthy();
   });
 
+  it('names an answered chat once, on its line', () => {
+    const answer = { text: 'Five fields.', branch: null, changes: [], pullRequests: [] };
+    thread([
+      toApi({ state: 'answered', answer }),
+      toFe({ state: 'needs_you', reason: 'Light or dark?', answer }),
+    ]);
+    expect(within(line('@api')).getAllByText('@api')).toHaveLength(1);
+    expect(within(line('@api')).getByText('Answered')).toBeTruthy();
+    expect(within(line('@api')).queryByText('answered')).toBeNull();
+    expect(within(line('@fe')).getByText('is waiting for you')).toBeTruthy();
+  });
+
   it('answers, cancels and opens one chat from its own line', () => {
     const asking = toFe({ state: 'needs_you' });
     const { onAnswer, onCancel, onOpenChat } = thread([toApi({ state: 'working' }), asking]);

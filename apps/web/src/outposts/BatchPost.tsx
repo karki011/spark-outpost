@@ -71,6 +71,7 @@ export function BatchPost({
                 answering={line.post.id === answeringId}
                 answerable={!approvalChats?.has(chatId)}
                 activity={activity?.get(chatId)}
+                inBatch
                 {...handlers}
               />
             </li>
