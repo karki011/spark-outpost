@@ -142,6 +142,22 @@ describe('the worktree of a chat', { timeout: 60_000 }, () => {
     }
   });
 
+  it('is skipped in a repository with no commits, where there is nothing to branch from', async () => {
+    const empty = await realpath(await mkdtemp(join(tmpdir(), 'spark-empty-')));
+    execFileSync('git', ['-C', empty, 'init', '-q']);
+    await writeFile(join(empty, 'notes.txt'), 'start\n');
+    const conversationId = await openChat(t, { root: empty, level: 'hands-off' });
+    const runId = await sendMessage(t, conversationId, 'What is in this folder?', {
+      permission: 'do',
+      agentMode: 'plan',
+    });
+    const { run } = await driveToEnd(t, conversationId, runId);
+    expect(run).toMatchObject({ status: 'succeeded', error: null });
+    expect(await primaryChatWorktree(t.db, conversationId)).toBeNull();
+    expect(existsSync(join(empty, '.spark', 'worktrees'))).toBe(false);
+    await removeRepo(empty);
+  });
+
   it('holds a turn’s changes until they are reverted there', async () => {
     const started = await build('#revert');
     const copy = await chatCopy(started.conversationId);

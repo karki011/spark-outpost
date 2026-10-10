@@ -111,7 +111,7 @@ async function startPoint(
   const head = await headCommit(root);
   const fresh = await upToDateBase(root, head);
   if (fresh) return fresh;
-  if (branches.current) return { from: head ?? branches.current, baseRef: branches.current };
+  if (branches.current && head) return { from: head, baseRef: branches.current };
   const fallback = (await defaultBranch(root)) ?? head;
   return fallback ? { from: fallback, baseRef: fallback } : null;
 }
