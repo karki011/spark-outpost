@@ -91,7 +91,7 @@ async function whereKept(
   return { lines, keptAt };
 }
 
-export async function recordKeptChanges(
+export async function writeKeptRecord(
   deps: KeptRecordDeps,
   run: KeptRun,
   changes: Pick<RunChanges, 'files'>,

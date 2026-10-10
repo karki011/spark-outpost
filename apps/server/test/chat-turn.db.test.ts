@@ -113,11 +113,15 @@ describe('a chat turn', { timeout: 60_000 }, () => {
     );
   });
 
-  it('reads in the project folder in a read-only mode: no worktree, no snapshot', async () => {
+  it('reads in the project folder in Codex Read-only: no worktree, no snapshot', async () => {
     start();
     const conversationId = await openChat(t, { root });
 
-    const { run, runId, replies } = await say(conversationId, 'Where are you? #cwd');
+    const runId = await sendMessage(t, conversationId, 'Where are you? #cwd', {
+      provider: 'codex',
+    });
+    const { run } = await driveToEnd(t, conversationId, runId);
+    const replies = await repliesOf(t, runId);
 
     expect(run).toMatchObject({ status: 'succeeded', mode: 'ask' });
     expect(replies[0]).toContain(`cwd=${root} `);
@@ -245,7 +249,7 @@ describe('a chat turn', { timeout: 60_000 }, () => {
 });
 
 describe('the hooks of a chat turn', { timeout: 60_000 }, () => {
-  it('reports kept changes, then lets the publish step end the reply', async () => {
+  it('lets the publish step end the reply, then reports kept changes', async () => {
     const calls: string[] = [];
     const kept: RunChange[] = [];
     const hooks: ChatTurnHooks = {
@@ -273,7 +277,7 @@ describe('the hooks of a chat turn', { timeout: 60_000 }, () => {
     const { run, replies } = await say(conversationId, `Edit it #fswrite ${file}`, 'do');
 
     expect(run.status).toBe('succeeded');
-    expect(calls).toEqual(['plan', 'kept:do', 'publish']);
+    expect(calls).toEqual(['plan', 'publish', 'kept:do']);
     expect(kept).toMatchObject([{ path: 'notes.txt', change: 'modified' }]);
     expect(replies).toHaveLength(1);
     expect(replies[0]).toMatch(/\n\nPublished\.$/);

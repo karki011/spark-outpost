@@ -1,3 +1,4 @@
+import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -9,15 +10,9 @@ import {
 import { chatTickets } from '../src/persistence/chat-tickets.ts';
 import { saveTicketConnection } from '../src/persistence/ticket-connections.ts';
 import { cacheTickets, ticketsForTask } from '../src/persistence/tickets.ts';
-import { revertRun, runChanges } from '../src/projects/run-changes.ts';
-import { linkTicketForChanges } from '../src/tickets/chat-link.ts';
-import { runAgentTurn, startControl } from '../src/workflow/agent-turn.ts';
-import { finishRun } from '../src/workflow/execute-run.ts';
-import { KEPT_RECORD_TITLE, recordKeptChanges } from '../src/workflow/kept-record-writer.ts';
-import { runAppender } from '../src/workflow/run-appender.ts';
-import { runEvents } from '../src/workflow/run-events.ts';
-import { loadRunInput } from '../src/workflow/run-input.ts';
-import type { RunTurn, Worker } from '../src/workflow/worker.ts';
+import { revertRun } from '../src/projects/run-changes.ts';
+import { KEPT_RECORD_TITLE } from '../src/workflow/kept-record-writer.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import {
   cardsOf,
@@ -29,31 +24,6 @@ import {
   sendMessage,
 } from './turn-support.ts';
 import { connectAgents, startTurnWorker } from './turn-worker.ts';
-
-const keepingTurn: RunTurn = async (deps, lease) => {
-  const input = await loadRunInput(deps.db, lease.runId);
-  const { workspaceId, level, userRequest } = input;
-  const append = runAppender(deps.db, lease);
-  const control = startControl(deps, lease);
-  try {
-    await append(runEvents.started(input.identity), { transition: { status: 'running' } });
-    const result = await runAgentTurn(deps, lease, input, append, control);
-    const changes = await runChanges(deps.db, workspaceId, lease.runId, true);
-    await recordKeptChanges(
-      { db: deps.db, append },
-      { runId: lease.runId, workspaceId, level },
-      changes,
-    );
-    await linkTicketForChanges(
-      deps.db,
-      { workspaceId, conversationId: input.identity.threadId, request: userRequest },
-      changes,
-    );
-    await finishRun(append, input.identity, result, true);
-  } finally {
-    control.dispose();
-  }
-};
 
 const ticket = (key: string, title: string): TicketSummary => ({
   source: 'linear',
@@ -83,7 +53,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: keepingTurn });
+  worker = startTurnWorker(t, { runTurn: runChatTurn });
 });
 
 afterEach(async () => {

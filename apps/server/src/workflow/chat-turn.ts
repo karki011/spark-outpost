@@ -13,6 +13,7 @@ import { runChanges } from '../projects/run-changes.ts';
 import { runAgentTurn, startControl, type TurnResult } from './agent-turn.ts';
 import type { ChatTurnContext, ChatTurnDeps, ChatTurnHooks } from './chat-turn-hooks.ts';
 import { withChatPrompt } from './chat-turn-prompt.ts';
+import { chatTurnSteps } from './chat-turn-steps.ts';
 import { failSafely, finishRun } from './execute-run.ts';
 import { planNote } from './plan-recorder.ts';
 import { noteProjectMove } from './project-move.ts';
@@ -41,11 +42,11 @@ async function afterReply(
 ): Promise<TurnResult> {
   if (reply.outcome !== 'succeeded') return reply;
   const { deps, lease, input } = turn;
-  if (hooks.changesKept && input.mode === 'do') {
-    const changes = await runChanges(deps.db, input.workspaceId, lease.runId, true);
-    if (changes.files.length > 0) await hooks.changesKept(turn, changes.files);
-  }
-  return hooks.publish ? hooks.publish(turn, reply) : reply;
+  const result = hooks.publish ? await hooks.publish(turn, reply) : reply;
+  if (!hooks.changesKept || input.mode !== 'do' || result.outcome === 'lease_lost') return result;
+  const changes = await runChanges(deps.db, input.workspaceId, lease.runId, true);
+  if (changes.files.length > 0) await hooks.changesKept(turn, changes.files);
+  return result;
 }
 
 async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): Promise<void> {
@@ -72,8 +73,9 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     if (!ready) return;
     input = ready;
     const prompted = await withChatPrompt(deps, input);
-    const reply = await runAgentTurn(prompted, lease, input, append, control);
-    const result = await afterReply({ deps, lease, input, append, control }, hooks, reply);
+    const reply = await runAgentTurn(prompted, lease, input, append, control, { chatRun: true });
+    const turn = { deps: prompted, lease, input, append, control };
+    const result = await afterReply(turn, hooks, reply);
     await finishRun(append, input.identity, result, true);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
@@ -90,4 +92,4 @@ export function chatTurnWith(
   return (deps, lease) => runTurn(deps, lease, hooks);
 }
 
-export const runChatTurn = chatTurnWith({});
+export const runChatTurn = chatTurnWith(chatTurnSteps);

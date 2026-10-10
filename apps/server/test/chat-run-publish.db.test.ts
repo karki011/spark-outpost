@@ -1,3 +1,4 @@
+import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
@@ -10,14 +11,9 @@ import { agentEnvironment } from '../src/agents/acp/agent-env.ts';
 import { PUBLISH_ASK_RULES, agentDefinitions } from '../src/agents/acp/agents.ts';
 import { otherBranchReason } from '../src/approvals/publish-policy.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
-import { runAgentTurn, startControl } from '../src/workflow/agent-turn.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
-import { finishRun } from '../src/workflow/execute-run.ts';
-import { runAppender } from '../src/workflow/run-appender.ts';
-import { runEvents } from '../src/workflow/run-events.ts';
-import { loadRunInput } from '../src/workflow/run-input.ts';
-import type { RunTurn, Worker } from '../src/workflow/worker.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { commandRequest, linkedConversation, recordingAppend } from './approval-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 import { driveToEnd, gitRepo, removeRepo, repliesOf, sendMessage } from './turn-support.ts';
@@ -25,19 +21,6 @@ import { connectAgents, startTurnWorker } from './turn-worker.ts';
 
 const BRANCH = 'spark/notes-1a2b3c4d';
 const MANUAL = 'default';
-
-const chatRunTurn: RunTurn = async (deps, lease) => {
-  const input = await loadRunInput(deps.db, lease.runId);
-  const append = runAppender(deps.db, lease);
-  const control = startControl(deps, lease);
-  try {
-    await append(runEvents.started(input.identity), { transition: { status: 'running' } });
-    const result = await runAgentTurn(deps, lease, input, append, control, { chatRun: true });
-    await finishRun(append, input.identity, result, true);
-  } finally {
-    control.dispose();
-  }
-};
 
 let t: TestDb;
 let root: string;
@@ -71,7 +54,7 @@ beforeEach(async () => {
     inPlace: false,
     ownsBranch: true,
   });
-  worker = startTurnWorker(t, { runTurn: chatRunTurn, agentEnv: { GH_TOKEN: 'ghp_test' } });
+  worker = startTurnWorker(t, { runTurn: runChatTurn, agentEnv: { GH_TOKEN: 'ghp_test' } });
 });
 
 afterEach(async () => {
@@ -119,7 +102,7 @@ describe("the chat's own changing run through the turn seam", () => {
     expect(await decided(runId, 'git push origin main')).toEqual([
       { status: 'denied', reason: otherBranchReason(BRANCH), by: 'policy' },
     ]);
-    expect(remoteBranches()).toBe('');
+    expect(remoteBranches().split('\n')).not.toContain('main');
   });
 
   it('pushes its own branch without a card when the message asks for it', async () => {

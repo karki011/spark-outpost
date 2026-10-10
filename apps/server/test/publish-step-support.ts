@@ -1,14 +1,9 @@
+import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { randomUUID } from 'node:crypto';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
-import { runAgentTurn, startControl } from '../src/workflow/agent-turn.ts';
-import { finishRun } from '../src/workflow/execute-run.ts';
-import { publishStep } from '../src/workflow/publish-step.ts';
-import { runAppender } from '../src/workflow/run-appender.ts';
-import { runEvents } from '../src/workflow/run-events.ts';
-import { loadRunInput } from '../src/workflow/run-input.ts';
 import type { RunTurn } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
 import { FAKE_GH, git, repoWithRemote, type TestRepo } from './ship-support.ts';
@@ -18,10 +13,7 @@ import { auditOf } from './turn-support.ts';
 export const CHAT_BRANCH = 'spark/notes-1a2b3c4d';
 
 export function publishingTurn(gitHubApi: () => string): RunTurn {
-  return async (deps, lease) => {
-    const input = await loadRunInput(deps.db, lease.runId);
-    const append = runAppender(deps.db, lease);
-    const control = startControl(deps, lease);
+  return (deps, lease) => {
     const shipAccess = {
       secrets: memorySecretStore(),
       runCommand,
@@ -29,15 +21,7 @@ export function publishingTurn(gitHubApi: () => string): RunTurn {
       apiUrl: gitHubApi(),
       locateGh: async () => FAKE_GH,
     };
-    try {
-      await append(runEvents.started(input.identity), { transition: { status: 'running' } });
-      const reply = await runAgentTurn(deps, lease, input, append, control);
-      const step = { lease, input, append, control, reply };
-      const result = await publishStep({ ...deps, shipAccess }, step);
-      await finishRun(append, input.identity, result, true);
-    } finally {
-      control.dispose();
-    }
+    return runChatTurn({ ...deps, shipAccess }, lease);
   };
 }
 

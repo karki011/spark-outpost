@@ -6,6 +6,7 @@ import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { currentBranch } from '../projects/chat-worktrees.ts';
+import { isGitWorkTree } from '../projects/snapshot.ts';
 import type { Provider } from '../providers/provider.ts';
 import { remotes } from '../ship/git.ts';
 import type { TurnDeps } from './agent-turn.ts';
@@ -16,7 +17,10 @@ async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptP
   const folder = input.projectRoots[0];
   if (!folder) return null;
   const worktree = await chatWorktreeAt(db, folder);
-  const found = await remotes(folder).catch(() => []);
+  const [found, gitRepo] = await Promise.all([
+    remotes(folder).catch(() => []),
+    isGitWorkTree(folder),
+  ]);
   return {
     folder,
     branch: worktree?.branch ?? (await currentBranch(folder).catch(() => null)),
@@ -24,6 +28,7 @@ async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptP
     place: worktree ? 'worktree' : 'checkout',
     linkedRepos: input.projectRoots.slice(1).map((root) => basename(root)),
     hasRemote: found.length > 0,
+    gitRepo,
   };
 }
 
@@ -39,6 +44,7 @@ export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<C
     outpostDraftTool: needs.outpost_draft,
     level: input.level,
     publishAsked: publishRequested(userText(input)),
+    followUpRound: input.followUpRound === true,
     customInstructions: prefs.agentInstructions ?? null,
   };
 }

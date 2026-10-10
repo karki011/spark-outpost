@@ -1,6 +1,6 @@
+import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Worker } from '../src/workflow/worker.ts';
-import { planStandInTurn } from './chat-plan-support.ts';
 import { FAKE_PLAN_COMMAND } from './fake-acp-plans.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import { driveToEnd, gitRepo, openChat, removeRepo, sendMessage } from './turn-support.ts';
@@ -15,7 +15,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: planStandInTurn });
+  worker = startTurnWorker(t, { runTurn: runChatTurn });
   conversationId = await openChat(t, { root });
 });
 
