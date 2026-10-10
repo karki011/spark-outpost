@@ -1,3 +1,4 @@
+import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
@@ -118,6 +119,7 @@ export interface TurnOptions {
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
   chatRun?: boolean;
+  keepSnapshot?: RunSnapshot | undefined;
 }
 
 export interface TurnResult {
@@ -286,6 +288,7 @@ export async function runAgentTurn(
             plans: plans.hooks,
             piece: input.piece ?? undefined,
             publish: publishGrant(input),
+            snapshot: options.keepSnapshot,
           })
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })

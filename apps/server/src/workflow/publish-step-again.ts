@@ -1,7 +1,6 @@
 import type { Db } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
-import { getSnapshot, saveSnapshot } from '../persistence/run-snapshots.ts';
-import { git, SNAPSHOT_REF_PREFIX } from '../projects/snapshot.ts';
+import { getSnapshot } from '../persistence/run-snapshots.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import {
   runAgentTurn,
@@ -74,16 +73,6 @@ async function addEarlierTotals(db: Db, runId: string, earlier: RunTotals, repor
   );
 }
 
-async function restoreSnapshot(db: Db, workspaceId: string, runId: string) {
-  const kept = (await getSnapshot(db, workspaceId, runId))?.snapshot ?? null;
-  return async () => {
-    if (!kept) return;
-    await saveSnapshot(db, runId, kept);
-    if (kept.kind !== 'git' || !kept.ref) return;
-    await git(kept.root, ['update-ref', `${SNAPSHOT_REF_PREFIX}${runId}`, kept.ref]);
-  };
-}
-
 function asSecondPrompt(input: RunInput, prompt: string): RunInput {
   return {
     ...input,
@@ -114,7 +103,7 @@ export async function promptAgain(
   const { db } = deps;
   const { runId } = turn.lease;
   const earlier = await totalsOf(db, runId);
-  const restore = await restoreSnapshot(db, turn.input.workspaceId, runId);
+  const first = await getSnapshot(db, turn.input.workspaceId, runId);
   const reported: Reported = { cost: false, tokens: false };
   const onProduced = (output: ProviderOutput) => {
     if (output.kind === 'tokens') reported.tokens = true;
@@ -128,14 +117,11 @@ export async function promptAgain(
       asSecondPrompt(turn.input, prompt),
       turn.append,
       turn.control,
-      { onProduced },
+      { onProduced, chatRun: true, keepSnapshot: first?.snapshot ?? undefined },
     );
     outcome = result.outcome;
     return result;
   } finally {
-    await restore().catch((error: unknown) =>
-      console.error("Could not keep the run's first snapshot", error),
-    );
     if (earlier && outcome !== null && outcome !== 'lease_lost') {
       await addEarlierTotals(db, runId, earlier, reported).catch((error: unknown) =>
         console.error("Could not add up the run's two prompts", error),

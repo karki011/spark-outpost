@@ -47,8 +47,12 @@ async function allowed(turn: RoleTurn, id: string, command: string): Promise<boo
   return answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
 }
 
+function quoted(arg: string): string {
+  return /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", `'\\''`)}'`;
+}
+
 async function command(turn: RoleTurn, id: string, file: string, args: string[]): Promise<Ran> {
-  const text = [file === FAKE_GH ? 'gh' : file, ...args].join(' ');
+  const text = [file === FAKE_GH ? 'gh' : file, ...args.map(quoted)].join(' ');
   if (!(await allowed(turn, id, text))) {
     await turn.update({ sessionUpdate: 'tool_call_update', toolCallId: id, status: 'failed' });
     return { ok: false, output: 'refused' };

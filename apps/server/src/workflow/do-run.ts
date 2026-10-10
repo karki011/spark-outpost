@@ -40,6 +40,7 @@ export interface DoRunOptions extends AskRunOptions {
   plans?: PlanModeHooks | undefined;
   piece?: PieceGuard | undefined;
   publish?: PublishGrant | undefined;
+  snapshot?: RunSnapshot | undefined;
 }
 
 export async function takeSnapshot(db: Db, runId: string, root: string): Promise<RunSnapshot> {
@@ -89,7 +90,7 @@ export function prepareAskRun(options: AskTurnOptions): PermissionGate {
 export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
   const root = options.projectRoots[0];
   if (!root) return undefined;
-  const snapshot = await takeSnapshot(options.db, options.runId, root);
+  const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
   return createApprovalGate({
     ...gateBasics(options),
     builder: options.builder === true,
