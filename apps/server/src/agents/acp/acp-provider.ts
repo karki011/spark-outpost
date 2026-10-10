@@ -323,6 +323,7 @@ async function converse(
           report,
           annotate,
           mode: () => mapper.currentMode(),
+          shownPlan: () => mapper.shownPlan(),
         }
       : null;
   const doing = workspace.changing ? gated : null;

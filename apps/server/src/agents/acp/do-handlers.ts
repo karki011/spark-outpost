@@ -13,6 +13,7 @@ export interface DoWorkspace {
   report: (name: string) => void;
   annotate: (name: string) => void;
   mode: () => string | null;
+  shownPlan?: () => string | null;
 }
 
 export function runsCommand(params: acp.RequestPermissionRequest): boolean {
@@ -30,6 +31,7 @@ export async function reviewPermission(
     cwd: workspace.cwd,
     home: homedir(),
     mode: workspace.mode(),
+    shownPlan: workspace.shownPlan?.() ?? null,
   });
   const answer = await workspace.gate.review(request, workspace.signal);
   workspace.annotate(answer.note);

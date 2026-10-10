@@ -134,6 +134,7 @@ export interface DecideOptions {
   files?: FileLister;
   askRun?: boolean;
   askAutoWhy?: string | null;
+  planningWhy?: string | null;
   defaultBranch?: string | null;
   observed?: readonly string[];
   own?: OwnRepo | null;
@@ -208,6 +209,16 @@ function ownAgentRefusal(
   if (published) return published.kind === 'refuse' ? published.reason : null;
   if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
   return publishRefusal(command, options.publish?.task ?? null);
+}
+
+function planningRuns(
+  request: ApprovalRequest,
+  view: ShellView | null,
+  options: DecideOptions,
+): Decision | null {
+  if (!options.planningWhy || request.kind !== 'execute' || !request.command) return null;
+  if (unreadable(request, view) || askRunChange(request, view)) return null;
+  return { verdict: 'allow', by: 'level', why: options.planningWhy };
 }
 
 function refusal(
@@ -372,6 +383,8 @@ function byMode(
     if (onlyReads(request, view)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }
+    const planning = planningRuns(request, view, options);
+    if (planning) return planning;
     if (options.askRun && unreadable(request, view)) {
       return { verdict: 'ask', reason: UNREADABLE_REASON };
     }
@@ -405,6 +418,8 @@ function agentAsked(
   if (options.askRun && options.askAutoWhy && !unreadable(request, view)) {
     return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
   }
+  const planning = planningRuns(request, view, options);
+  if (planning) return planning;
   return allowlistCovers(allowlist, request.command) ? { verdict: 'allow', by: 'allowlist' } : ASK;
 }
 

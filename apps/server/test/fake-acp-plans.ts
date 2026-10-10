@@ -10,6 +10,8 @@ export const NATIVE_PLAN_TRIGGER = '#nativeplan';
 export const PLAN_BUILDS_TRIGGER = '#planbuilds';
 export const PLAN_CALL_ONLY_TRIGGER = '#plancallonly';
 export const PLAN_FILE_TRIGGER = '#planinfile';
+export const PLAN_COMMAND_TRIGGER = '#plancommand';
+export const FAKE_PLAN_COMMAND = 'for f in *.txt; do sed -n 1,20p "$f"; done';
 
 export const FAKE_PLAN = [
   '# Add CSV export',
@@ -36,8 +38,37 @@ export const FAKE_PLAN_OPTIONS: acp.PermissionOption[] = [
   { optionId: 'reject', name: 'No, keep planning', kind: 'reject_once' },
 ];
 
+async function commandWhilePlanning(turn: RoleTurn): Promise<void> {
+  const toolCall = {
+    toolCallId: 'plan-command',
+    title: FAKE_PLAN_COMMAND,
+    kind: 'execute' as const,
+    status: 'pending' as const,
+    rawInput: { command: FAKE_PLAN_COMMAND },
+  };
+  await turn.update({ sessionUpdate: 'tool_call', ...toolCall });
+  const answer = await turn.client.request<
+    acp.RequestPermissionResponse,
+    acp.RequestPermissionRequest
+  >(acp.methods.client.session.requestPermission, {
+    sessionId: turn.sessionId,
+    toolCall,
+    options: [
+      { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
+      { optionId: 'no', name: 'No', kind: 'reject_once' },
+    ],
+  });
+  const ran = answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
+  await turn.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: toolCall.toolCallId,
+    status: ran ? 'completed' : 'failed',
+  });
+}
+
 export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<acp.StopReason> {
   await turn.update({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' });
+  if (turn.text.includes(PLAN_COMMAND_TRIGGER)) await commandWhilePlanning(turn);
   const toolCall = {
     toolCallId: 'plan1',
     title: 'Approve Plan',
