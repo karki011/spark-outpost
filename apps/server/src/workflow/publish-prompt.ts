@@ -1,3 +1,4 @@
+import { pullBaseLine } from '../orchestration/context.ts';
 import { oneLine } from './chat-prompt-text.ts';
 
 export type PublishReason = 'full-auto' | 'asked' | 'follow-up';
@@ -7,6 +8,7 @@ export interface PublishPromptFacts {
   unpublishedWork: boolean;
   reason: PublishReason | null;
   draftAsked: boolean;
+  pullBase?: string | null;
 }
 
 export const PUBLISH_PROMPT_HEADING = '## Publish this change';
@@ -30,11 +32,13 @@ function followUpLines(branch: string): string[] {
   ];
 }
 
-function firstPublishLines(branch: string, draftAsked: boolean): string[] {
+function firstPublishLines(branch: string, facts: PublishPromptFacts): string[] {
+  const base = oneLine(facts.pullBase ?? '').replaceAll('`', '');
   return [
     `The work on this task is finished. Publish it now, in this turn, and change nothing else: commit it, ${pushStep(branch)} and open its pull request with \`gh pr create\`, or with \`spark_pull_request\` when you have that tool.`,
     'Open exactly one pull request for the whole change; when one already exists for this branch, push to it and update its description instead of opening another.',
-    ...(draftAsked ? ['Open it as a draft (`gh pr create --draft`, or `draft: true`).'] : []),
+    ...(base ? [pullBaseLine(base)] : []),
+    ...(facts.draftAsked ? ['Open it as a draft (`gh pr create --draft`, or `draft: true`).'] : []),
     `${LIMITS} ${HOOKS}`,
     'If the branch is pushed but no pull request could be opened, say so plainly. End your reply with the pull request link.',
   ];
@@ -45,8 +49,6 @@ export function publishPrompt(facts: PublishPromptFacts): string | null {
   const branch = oneLine(facts.branch).replaceAll('`', '');
   if (!branch) return null;
   const lines =
-    facts.reason === 'follow-up'
-      ? followUpLines(branch)
-      : firstPublishLines(branch, facts.draftAsked);
+    facts.reason === 'follow-up' ? followUpLines(branch) : firstPublishLines(branch, facts);
   return [PUBLISH_PROMPT_HEADING, ...lines].join('\n');
 }

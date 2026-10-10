@@ -29,6 +29,12 @@ export const PUBLISHING_HEADING = 'Publishing';
 export const PUBLISH_FULL_AUTO =
   'When the work is done and checked, push this branch and open a pull request.';
 export const PUBLISH_NO_REMOTE = "There is no remote: commit on this branch; don't try to push.";
+export const PUBLISH_CHECKOUT =
+  "This chat works in your checkout and has no branch of its own to push. Keep the change; don't push.";
+export const PUBLISH_NOT_GIT =
+  "This folder isn't a git repository. Keep the change; there is no pull request.";
+export const PUBLISH_FOLLOW_UP =
+  "This is a follow-up on this chat's open pull request: push fixes to the same branch.";
 export const PUBLISH_NOT_ASKED = "Don't push or open a pull request unless the user asks.";
 export const PUBLISH_ASKED =
   'The user asked you to publish: push this branch and open a pull request when the work is done.';

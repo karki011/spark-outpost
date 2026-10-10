@@ -112,11 +112,41 @@ describe('chatPrompt', () => {
   });
 
   it.each([
-    ['a checkout at Full auto → PR', { place: 'checkout' }, false],
-    ['a checkout when the message asked', { place: 'checkout' }, true],
-    ['a folder with no branch', { branch: null }, false],
-  ] as const)('says nothing about publishing for %s', (_name, project, asked) => {
-    expect(publishing(build({ publishAsked: asked }, project))).toBeUndefined();
+    ['at Full auto → PR', false],
+    ['when the message asked', true],
+  ] as const)('tells a checkout chat %s to keep the change and not push', (_name, asked) => {
+    const prompt = build({ publishAsked: asked }, { place: 'checkout', branch: 'main' });
+    expect(publishing(prompt)).toBe(`- ${text.PUBLISH_CHECKOUT}`);
+  });
+
+  it.each([
+    ['at Full auto → PR', false],
+    ['when the message asked', true],
+  ] as const)('says there is no pull request in a folder without git %s', (_name, asked) => {
+    const prompt = build(
+      { publishAsked: asked, level: asked ? 'hands-off' : 'full-auto' },
+      {
+        gitRepo: false,
+        branch: null,
+        hasRemote: false,
+      },
+    );
+    expect(publishing(prompt)).toBe(`- ${text.PUBLISH_NOT_GIT}`);
+  });
+
+  it('tells a follow-up round to push fixes to the same branch at any level', () => {
+    for (const level of ['hands-off', 'full-auto'] as const) {
+      expect(publishing(build({ level, followUpRound: true }))).toBe(`- ${text.PUBLISH_FOLLOW_UP}`);
+    }
+  });
+
+  it('gives a follow-up round no push line where there is nothing to push to', () => {
+    const noRemote = build({ level: 'hands-off', followUpRound: true }, { hasRemote: false });
+    expect(publishing(noRemote)).toBe(`- ${text.PUBLISH_NOT_ASKED}`);
+  });
+
+  it('says nothing about publishing for a worktree with no branch', () => {
+    expect(publishing(build({}, { branch: null }))).toBeUndefined();
   });
 
   it('appends custom instructions last, verbatim, without touching the lines above', () => {
