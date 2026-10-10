@@ -54,7 +54,7 @@ describe('running a check', () => {
     expect(run.exitCode).toBeNull();
   });
 
-  it('stops when the orchestration is stopped', async () => {
+  it('stops when its signal aborts', async () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 200);
     const run = await runCheck(node('setInterval(() => {}, 1000)'), {

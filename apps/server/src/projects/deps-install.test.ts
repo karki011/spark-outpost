@@ -18,7 +18,6 @@ const ok: CheckRun = {
   durationMs: 1,
   outputTail: '',
   truncated: false,
-  failures: [],
 };
 
 const LOGIN_EXPIRED: CheckRun = {

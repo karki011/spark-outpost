@@ -6,7 +6,7 @@ import { isSensitiveEnvKey, redactText, storableText } from '../audit/redact.ts'
 import { relativeInside } from '../projects/path-policy.ts';
 import { isSecretEnvName } from '../setup/environment.ts';
 import type { CheckCommand } from './detect.ts';
-import { FailureScanner, type EnvironmentProblem } from './failures.ts';
+import { SetupScanner, type EnvironmentProblem } from './failures.ts';
 
 export const CHECK_TIMEOUT_MS = 600_000;
 const KILL_GRACE_MS = 2_000;
@@ -19,7 +19,6 @@ export interface CheckRun {
   durationMs: number;
   outputTail: string;
   truncated: boolean;
-  failures: string[];
   setup?: EnvironmentProblem | null;
 }
 
@@ -87,7 +86,6 @@ export interface RunOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   env?: NodeJS.ProcessEnv;
-  builderEnv?: Readonly<Record<string, string>>;
   registryEnv?: boolean;
 }
 
@@ -95,7 +93,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
   if (!(await insideProject(options.root, options.cwd))) throw new OutsideProjectError();
   const started = Date.now();
   const tail = new OutputTail(CHECK_OUTPUT_TAIL_BYTES);
-  const scanner = new FailureScanner([options.cwd, await realpath(options.cwd)]);
+  const scanner = new SetupScanner();
   const baseEnv = options.registryEnv ? installEnv(options.env) : checkEnv(options.env);
   const timeoutMs = options.timeoutMs ?? CHECK_TIMEOUT_MS;
   return new Promise<CheckRun>((resolve) => {
@@ -104,7 +102,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
     let settled = false;
     const child = spawn(check.argv[0]!, check.argv.slice(1), {
       cwd: options.cwd,
-      env: { ...baseEnv, ...options.builderEnv },
+      env: baseEnv,
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -141,8 +139,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
         durationMs: Date.now() - started,
         outputTail: output.text,
         truncated: output.truncated,
-        failures: exitCode === 0 ? [] : scanner.ids(),
-        setup: exitCode === 0 ? null : scanner.environment(),
+        setup: exitCode === 0 ? null : scanner.problem(),
       });
     };
     child.on('error', (error) => finish(null, `\n${error.message}\n`));
