@@ -7,7 +7,7 @@ export interface AgentTerminalRuntime extends Pick<
   PreviewRuntime,
   'spawn' | 'folderExists' | 'env'
 > {
-  secretValues(cwd: string): Promise<readonly string[]>;
+  secretValues(roots: readonly string[]): Promise<readonly string[]>;
 }
 
 const KILL_AFTER_MS = 1_500;
@@ -24,6 +24,6 @@ export function agentTerminalRuntime(
     env,
     folderExists,
     spawn: spawnInLoginShell(shell, stopWithTerm),
-    secretValues: (cwd) => projectSecretValues([cwd]),
+    secretValues: projectSecretValues,
   };
 }

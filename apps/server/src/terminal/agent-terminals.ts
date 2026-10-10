@@ -13,8 +13,10 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { commandEnvironment } from '../preview/launch.ts';
 import type { PreviewProcess } from '../preview/servers.ts';
+import { recordTerminalStops } from './agent-terminal-audit.ts';
 import { createAgentTerminalRecord, type AgentTerminalRecord } from './agent-terminal-output.ts';
 import type { AgentTerminalRuntime } from './agent-terminal-process.ts';
+import { agentTerminalSecretRoots } from './agent-terminal-roots.ts';
 import type { TerminalView, ViewedOutput } from './sessions.ts';
 
 export interface AgentTerminalTimings {
@@ -72,7 +74,8 @@ export class AgentTerminals {
         live.record.finish();
         await this.saveOutput(live).catch(() => undefined);
       }
-      await endLiveAgentTerminals(this.db, this.workspaceId, 'quit');
+      const ended = await endLiveAgentTerminals(this.db, this.workspaceId, 'quit');
+      await recordTerminalStops(this.db, ended);
     });
   }
 
@@ -129,7 +132,9 @@ export class AgentTerminals {
       await this.fail(row.id, `The folder ${row.cwd} does not exist.`);
       return;
     }
-    const secretValues = await this.runtime.secretValues(row.cwd).catch(() => []);
+    const secretValues = await agentTerminalSecretRoots(this.db, row)
+      .then((roots) => this.runtime.secretValues(roots))
+      .catch(() => []);
     let process: PreviewProcess;
     try {
       process = this.runtime.spawn({
@@ -212,7 +217,8 @@ export class AgentTerminals {
     output: string,
     outputChars: number,
   ): Promise<void> {
-    await endAgentTerminal(this.db, id, { exitCode, spawned, output, outputChars });
+    const ended = await endAgentTerminal(this.db, id, { exitCode, spawned, output, outputChars });
+    if (ended) await recordTerminalStops(this.db, [ended]);
   }
 
   private kill(live: Live): void {
