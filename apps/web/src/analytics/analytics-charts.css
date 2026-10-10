@@ -193,22 +193,6 @@
   stroke: var(--line-strong);
 }
 
-.an-pt {
-  stroke: var(--panel);
-  stroke-width: 1.5;
-}
-
-.an-pt-x {
-  fill: none;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-}
-
-.an-pt-ring {
-  fill: var(--panel);
-  stroke-width: 2;
-}
-
 .an-rates {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
