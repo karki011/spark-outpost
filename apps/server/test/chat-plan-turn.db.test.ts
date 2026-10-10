@@ -1,4 +1,3 @@
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Worker } from '../src/workflow/worker.ts';
@@ -31,7 +30,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: runChatTurn });
+  worker = startTurnWorker(t, {});
   conversationId = await openChat(t, { root });
 });
 

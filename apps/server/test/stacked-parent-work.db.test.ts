@@ -12,24 +12,20 @@ import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { sendDo } from './approval-support.ts';
-import {
-  NORMAL,
-  connectProviders,
-  driveToEnd,
-  jevFetch,
-  startOrchestrator,
-  startScenario,
-  type Harness,
-} from './orchestration-support.ts';
 import { insertRequestRow } from './outpost-fixtures.ts';
 import { carry } from './outpost-store-support.ts';
 import { git, repoWithRemote, type TestRepo } from './ship-support.ts';
 import { dependOn, projectChat } from './stack-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, type TestDb } from './support.ts';
+import { driveToEnd, openChat, sendMessage } from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
+
+const BUILD = 'The divider shows the wrong day after midnight. Fix it. #build';
 
 let t: TestDb;
 let base: string;
-let harness: Harness | null = null;
+let worker: Worker | null = null;
 
 beforeAll(async () => {
   base = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-stacked-work-')));
@@ -41,13 +37,13 @@ afterAll(async () => {
 
 beforeEach(async () => {
   t = await createTestDb({ workPlace: 'worktree' });
-  await connectProviders(t);
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }));
+  await connectAgents(t);
+  worker = startTurnWorker(t);
 });
 
 afterEach(async () => {
-  await harness?.stop();
-  harness = null;
+  await worker?.stop();
+  worker = null;
   await t.cleanup();
 });
 
@@ -73,7 +69,8 @@ interface Story {
 
 async function parentAtAutomatic(name: string, childRoot?: string): Promise<Story> {
   const repo = await repoWithRemote(base, name);
-  const { conversationId: api, runId } = await startScenario(t, repo.root, NORMAL, 'hands-off');
+  const api = await openChat(t, { root: repo.root, level: 'hands-off' });
+  const runId = await sendMessage(t, api, BUILD, { permission: 'do' });
   await driveToEnd(t, api, runId, undefined, 90_000);
   const parent = (await primaryChatWorktree(t.db, api))!;
   const childProject = childRoot

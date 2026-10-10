@@ -6,55 +6,44 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { decideRailFlag } from '../src/projects/rail-flag-decision.ts';
 import { OUTSIDE_FILE } from './fake-acp-rails.ts';
-import {
-  TRIVIAL,
-  connectProviders,
-  driveToEnd,
-  gitRepo,
-  jevFetch,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  type Harness,
-} from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, type TestDb } from './support.ts';
+import { driveToEnd, gitRepo, openChat, removeRepo, sendMessage } from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
+
+const BUILD = 'Fix the typo in the README heading. #build';
 
 let t: TestDb;
 let root: string;
 let store: string;
-let harness: Harness | null = null;
+let worker: Worker | null = null;
 
 beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
-  await connectProviders(t);
+  await connectAgents(t);
 });
 
 afterEach(async () => {
-  await harness?.stop();
-  harness = null;
+  await worker?.stop();
+  worker = null;
   await t.cleanup();
   await removeRepo(root);
   rmSync(store, { recursive: true, force: true });
 });
 
 async function bypassRun(tags: string) {
-  const scenario = { ...TRIVIAL, text: `${TRIVIAL.text} ${tags}` };
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario }), { sessions: store });
-  const sent = await startScenario(
-    t,
-    root,
-    scenario,
-    'hands-off',
-    'auto',
-    'sonnet',
-    'bypassPermissions',
-  );
-  await driveToEnd(t, sent.conversationId, sent.runId);
-  await harness.stop();
-  harness = null;
-  return sent;
+  worker = startTurnWorker(t, { sessions: store });
+  const conversationId = await openChat(t, { root, level: 'hands-off' });
+  const runId = await sendMessage(t, conversationId, `${BUILD} ${tags}`, {
+    permission: 'do',
+    agentMode: 'bypassPermissions',
+  });
+  await driveToEnd(t, conversationId, runId);
+  await worker.stop();
+  worker = null;
+  return { conversationId, runId };
 }
 
 async function unreviewedTitles(conversationId: string): Promise<string[]> {

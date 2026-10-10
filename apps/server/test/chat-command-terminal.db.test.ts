@@ -13,18 +13,12 @@ import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { insertCommand, saveCommandOutput } from '../src/persistence/run-commands.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { FAKE_HUGE_LINES, FAKE_TERMINAL_SECRET } from './fake-acp-terminal.ts';
-import {
-  TRIVIAL,
-  connectProviders,
-  driveToEnd,
-  gitRepo,
-  jevFetch,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  type Harness,
-} from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, type TestDb } from './support.ts';
+import { driveToEnd, gitRepo, openChat, removeRepo, sendMessage } from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
+
+const BUILD = 'Fix the typo in the README heading. #build';
 
 const ESC = '\u001b';
 const ENV_SECRET = 'demo9f3k2m7x1q8z5w4c6v0b';
@@ -32,39 +26,34 @@ const ENV_SECRET = 'demo9f3k2m7x1q8z5w4c6v0b';
 let t: TestDb;
 let root: string;
 let store: string;
-let harness: Harness | null = null;
+let worker: Worker | null = null;
 
 beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
-  await connectProviders(t);
+  await connectAgents(t);
 });
 
 afterEach(async () => {
-  await harness?.stop();
-  harness = null;
+  await worker?.stop();
+  worker = null;
   await t.cleanup();
   await removeRepo(root);
   rmSync(store, { recursive: true, force: true });
 });
 
 async function bypassRun(tags: string) {
-  const scenario = { ...TRIVIAL, text: `${TRIVIAL.text} ${tags}` };
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario }), { sessions: store });
-  const sent = await startScenario(
-    t,
-    root,
-    scenario,
-    'hands-off',
-    'auto',
-    'sonnet',
-    'bypassPermissions',
-  );
-  await driveToEnd(t, sent.conversationId, sent.runId);
-  await harness.stop();
-  harness = null;
-  return sent;
+  worker = startTurnWorker(t, { sessions: store });
+  const conversationId = await openChat(t, { root, level: 'hands-off' });
+  const runId = await sendMessage(t, conversationId, `${BUILD} ${tags}`, {
+    permission: 'do',
+    agentMode: 'bypassPermissions',
+  });
+  await driveToEnd(t, conversationId, runId);
+  await worker.stop();
+  worker = null;
+  return { conversationId, runId };
 }
 
 interface CommandEventRow {
@@ -181,7 +170,8 @@ describe('command output from an ACP agent', { timeout: 120_000 }, () => {
 
 describe('stored command output', () => {
   async function runningCommand() {
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
+    const conversationId = await openChat(t, { root, level: 'hands-off' });
+    const runId = await sendMessage(t, conversationId, BUILD, { permission: 'do' });
     const id = '01990000-0000-7000-8000-000000000001';
     await insertCommand(t.db, runId, {
       id,

@@ -20,7 +20,7 @@ import { headCommit } from '../src/projects/snapshot.ts';
 import { PLAN_SAVE_FAILED, createPlanRecorder } from '../src/workflow/plan-recorder.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { linkedConversation, recordingAppend, sendDo } from './approval-support.ts';
-import { gitRepo, removeRepo } from './orchestration-support.ts';
+import { gitRepo, removeRepo } from './turn-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;

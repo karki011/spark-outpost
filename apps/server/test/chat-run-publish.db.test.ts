@@ -1,4 +1,3 @@
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
@@ -54,7 +53,7 @@ beforeEach(async () => {
     inPlace: false,
     ownsBranch: true,
   });
-  worker = startTurnWorker(t, { runTurn: runChatTurn, agentEnv: { GH_TOKEN: 'ghp_test' } });
+  worker = startTurnWorker(t, { agentEnv: { GH_TOKEN: 'ghp_test' } });
 });
 
 afterEach(async () => {

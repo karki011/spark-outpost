@@ -5,7 +5,6 @@ import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-import { standInTurn } from './turn-stand-in.ts';
 import {
   auditOf,
   cardsOf,
@@ -28,7 +27,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: standInTurn });
+  worker = startTurnWorker(t);
 });
 
 afterEach(async () => {

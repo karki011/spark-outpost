@@ -2,12 +2,7 @@ import type { ProviderId } from '@spark-outpost/contracts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { Provider } from '../src/providers/provider.ts';
-import {
-  startWorker,
-  type RunTurn,
-  type Worker,
-  type WorkerOptions,
-} from '../src/workflow/worker.ts';
+import { startWorker, type Worker, type WorkerOptions } from '../src/workflow/worker.ts';
 import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import type { TestDb } from './support.ts';
@@ -99,7 +94,6 @@ export function fakeAgents(options: FakeAgentOptions = {}): Map<string, Provider
 }
 
 export interface TurnWorkerOptions extends FakeAgentOptions {
-  runTurn?: RunTurn;
   shipAccess?: WorkerOptions['shipAccess'];
   providers?: ReadonlyMap<string, Provider>;
   concurrency?: number;
@@ -115,7 +109,6 @@ export function startTurnWorker(t: TestDb, options: TurnWorkerOptions = {}): Wor
     pollMs: 20,
     cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
-    ...(options.runTurn ? { runTurn: options.runTurn } : {}),
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
   });
 }

@@ -86,9 +86,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
   }
 }
 
-export function chatTurnWith(
-  hooks: ChatTurnHooks,
-): (deps: ChatTurnDeps, lease: Lease) => Promise<void> {
+function chatTurnWith(hooks: ChatTurnHooks): (deps: ChatTurnDeps, lease: Lease) => Promise<void> {
   return (deps, lease) => runTurn(deps, lease, hooks);
 }
 

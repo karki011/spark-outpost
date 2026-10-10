@@ -13,7 +13,6 @@ import { insertTasks } from '../src/persistence/outpost-stories.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { replyText } from '../src/persistence/spark-mentions.ts';
 import { createTeammate } from '../src/persistence/teammates.ts';
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { chatPromptFacts } from '../src/workflow/chat-turn-prompt.ts';
 import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
@@ -40,7 +39,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: runChatTurn });
+  worker = startTurnWorker(t, {});
 });
 
 afterEach(async () => {

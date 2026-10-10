@@ -1,5 +1,4 @@
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
-import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
@@ -21,7 +20,6 @@ import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
 import { ParkedTurns } from './parked-turns.ts';
 import { startWorker } from './worker.ts';
-import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
@@ -42,7 +40,6 @@ const stopLagMonitor = startLagMonitor({ processName: 'worker', work: activeWork
 const approvalWaiters = new ApprovalWaiters();
 const secrets = configuredSecretStore(config);
 const jevDeps: IntakeDeps = { db, secrets, fetch, baseUrl: config.TYPESAFE_BASE_URL };
-const intake = createIntakeRecorder(jevDeps);
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
@@ -79,7 +76,6 @@ const worker = startWorker({
   browserPane: sparkTools.browser,
   activeWork,
   approvalWaiters,
-  intake,
   providers: createProviders(
     config.AGENT_RUNTIME,
     config.FAKE_ACP_AGENT,
@@ -93,10 +89,7 @@ const worker = startWorker({
   },
   concurrency: config.WORKER_CONCURRENCY,
   parked: parkedTurns,
-  codeScan,
   branchPrefix: config.BRANCH_PREFIX,
-  coordinator: config.COORDINATOR_MODE,
-  agentSlots: new Slots(config.PARALLEL_AGENT_LIMIT),
   shipAccess: {
     secrets,
     runCommand,

@@ -12,7 +12,7 @@ import type { Provider } from '../src/providers/provider.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
-import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
+import { AGENT_MODELS, connectAgents } from './turn-worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 export const CONTEXT_SIZE = 200_000;
@@ -38,7 +38,7 @@ function fakeClaude(store: string, commands: readonly string[]): Provider {
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
-      FAKE_ACP_MODELS: JSON.stringify(CLAUDE_MODELS.map((model) => [model.id, model.label])),
+      FAKE_ACP_MODELS: JSON.stringify(AGENT_MODELS.claude.map((model) => [model.id, model.label])),
       FAKE_ACP_SESSION_STORE: store,
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
       FAKE_ACP_COMMANDS: JSON.stringify(commands),
@@ -52,7 +52,7 @@ export async function startCompactionHarness(
 ): Promise<CompactionHarness> {
   const t = await createTestDb();
   const store = mkdtempSync(join(tmpdir(), 'fake-acp-compact-'));
-  await connectProviders(t, false);
+  await connectAgents(t);
   const worker = startWorker({
     db: t.db,
     providers: new Map([['claude', fakeClaude(store, commands)]]),

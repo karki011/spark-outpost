@@ -62,7 +62,6 @@ async function finished(runId: string): Promise<void> {
     leaseSeconds: 30,
     concurrency: 1,
     pollMs: 20,
-    coordinator: 'off',
   });
   await eventually(async () => ((await getRun(t.db, runId))?.finishedAt ? true : null));
 }

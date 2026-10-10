@@ -11,7 +11,6 @@ import { OUTPOST_REQUEST_METHOD } from '../src/outposts/request-audit.ts';
 import { wrapRequest } from '../src/outposts/request-prompt.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { KEPT_RECORD_TITLE } from '../src/workflow/kept-record-writer.ts';
 import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import type { Worker } from '../src/workflow/worker.ts';
@@ -68,7 +67,6 @@ beforeEach(async () => {
   repo = await repoWithRemote(base, `widgets-${repos}`);
   await connectAgents(t);
   worker = startTurnWorker(t, {
-    runTurn: runChatTurn,
     sessions: path.join(base, `sessions-${repos}`),
     shipAccess: {
       secrets: memorySecretStore(),

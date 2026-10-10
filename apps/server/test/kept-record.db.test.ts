@@ -1,4 +1,3 @@
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -53,7 +52,7 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectAgents(t);
-  worker = startTurnWorker(t, { runTurn: runChatTurn });
+  worker = startTurnWorker(t, {});
 });
 
 afterEach(async () => {

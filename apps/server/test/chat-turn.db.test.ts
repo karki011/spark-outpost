@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type RunChange } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { addToQueue, listQueue } from '../src/persistence/chat-queue.ts';
 import { chatWorktreesOf } from '../src/persistence/chat-worktrees.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
@@ -12,8 +12,6 @@ import { claimNextJob } from '../src/persistence/jobs.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
-import { chatTurnWith, runChatTurn } from '../src/workflow/chat-turn.ts';
-import type { ChatTurnHooks } from '../src/workflow/chat-turn-hooks.ts';
 import { OUTCOME_UNKNOWN_MESSAGE } from '../src/workflow/recovery.ts';
 import { runAppender } from '../src/workflow/run-appender.ts';
 import { runEvents } from '../src/workflow/run-events.ts';
@@ -53,7 +51,7 @@ afterEach(async () => {
 });
 
 function start(options: TurnWorkerOptions = {}) {
-  worker = startTurnWorker(t, { runTurn: runChatTurn, sessions: store, ...options });
+  worker = startTurnWorker(t, { sessions: store, ...options });
 }
 
 async function say(conversationId: string, text: string, permission: 'ask' | 'do' = 'ask') {
@@ -245,65 +243,5 @@ describe('a chat turn', { timeout: 60_000 }, () => {
     expect(asked.map((card) => card.kind)).toEqual(['compact']);
     expect(run.status).toBe('succeeded');
     expect((await repliesOf(t, runId))[0]).toContain('prompt=Next step');
-  });
-});
-
-describe('the hooks of a chat turn', { timeout: 60_000 }, () => {
-  it('lets the publish step end the reply, then reports kept changes', async () => {
-    const calls: string[] = [];
-    const kept: RunChange[] = [];
-    const hooks: ChatTurnHooks = {
-      planTurn: async (_db, input) => {
-        calls.push('plan');
-        return input;
-      },
-      changesKept: async (turn, files) => {
-        calls.push(`kept:${turn.input.mode}`);
-        kept.push(...files);
-      },
-      publish: async (turn, reply) => {
-        calls.push('publish');
-        await turn.append(runEvents.textContent(reply.messageId!, '\n\nPublished.'));
-        return { ...reply, text: `${reply.text}\n\nPublished.` };
-      },
-    };
-    start({ runTurn: chatTurnWith(hooks) });
-    const conversationId = await openChat(t, { root });
-    await say(conversationId, 'Where are you? #cwd', 'do');
-    const [worktree] = await chatWorktreesOf(t.db, conversationId);
-    calls.length = 0;
-
-    const file = join(worktree!.path, 'notes.txt');
-    const { run, replies } = await say(conversationId, `Edit it #fswrite ${file}`, 'do');
-
-    expect(run.status).toBe('succeeded');
-    expect(calls).toEqual(['plan', 'publish', 'kept:do']);
-    expect(kept).toMatchObject([{ path: 'notes.txt', change: 'modified' }]);
-    expect(replies).toHaveLength(1);
-    expect(replies[0]).toMatch(/\n\nPublished\.$/);
-  });
-
-  it('skips kept changes when no file changed and both hooks when the turn was stopped', async () => {
-    const calls: string[] = [];
-    const hooks: ChatTurnHooks = {
-      changesKept: async () => void calls.push('kept'),
-      publish: async (_turn, reply) => {
-        calls.push('publish');
-        return reply;
-      },
-    };
-    start({ runTurn: chatTurnWith(hooks) });
-    const conversationId = await openChat(t, { root });
-
-    await say(conversationId, 'Where are you? #cwd', 'do');
-    expect(calls).toEqual(['publish']);
-
-    const runId = await sendMessage(t, conversationId, 'Count #slow', { permission: 'do' });
-    await eventually(async () => (await eventTypes(t.db, runId)).includes('TEXT_MESSAGE_CONTENT'));
-    await requestCancel(t.db, runId);
-    const { run } = await driveToEnd(t, conversationId, runId);
-
-    expect(run.status).toBe('cancelled');
-    expect(calls).toEqual(['publish']);
   });
 });

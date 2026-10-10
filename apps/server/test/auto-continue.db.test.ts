@@ -10,25 +10,15 @@ import {
   insertApproval,
   settleIfDue,
 } from '../src/persistence/approvals.ts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { migrationsDir } from '../src/persistence/migrate.ts';
 import { autoContinueSeconds, updateProfile } from '../src/persistence/setup.ts';
 import { askCheckpoint, compactCard, type CheckpointCard } from '../src/workflow/kept-record.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { doRun, recordingAppend } from './approval-support.ts';
-import {
-  TRIVIAL,
-  answerEverything,
-  connectProviders,
-  driveToEnd,
-  gitRepo,
-  jevFetch,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  type Harness,
-} from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { cardsOf, driveToEnd, gitRepo, openChat, removeRepo, sendMessage } from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
 
 let t: TestDb;
 let root: string;
@@ -231,29 +221,30 @@ describe('auto-continue on a card with a safe default', () => {
   });
 });
 
-describe('auto-continue in a crew run', () => {
+describe('auto-continue in a chat turn', () => {
   let repo: string;
-  let harness: Harness | null = null;
+  let worker: Worker | null = null;
 
   afterEach(async () => {
-    await harness?.stop();
-    harness = null;
+    await worker?.stop();
+    worker = null;
     await removeRepo(repo);
   });
 
-  it('never puts a countdown on an edit or keep card', async () => {
+  it('never puts a countdown on an edit card', async () => {
     repo = await gitRepo();
-    await connectProviders(t);
+    await connectAgents(t);
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
-    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: TRIVIAL }));
-    const { conversationId, runId } = await startScenario(t, repo, TRIVIAL, null);
-    const { orchestration } = await driveToEnd(t, conversationId, runId, answerEverything);
-    expect(orchestration).toMatchObject({ status: 'succeeded' });
-    const detail = await eventually(async () => {
-      const view = await getConversationDetail(t.db, conversationId);
-      return view?.messages.some((message) => message.role === 'assistant') ? view : null;
+    worker = startTurnWorker(t);
+    const conversationId = await openChat(t, { root: repo });
+    const runId = await sendMessage(t, conversationId, 'Fix the typo. #build', {
+      permission: 'do',
+      agentMode: 'default',
     });
-    expect(detail.approvals.length).toBeGreaterThan(0);
-    expect(detail.approvals.every((approval) => !approval.autoContinueAt)).toBe(true);
+    const { run } = await driveToEnd(t, conversationId, runId);
+    expect(run.status).toBe('succeeded');
+    const cards = await cardsOf(t, conversationId);
+    expect(cards.map((card) => card.kind)).toEqual(['edit']);
+    expect(cards.every((card) => !card.autoContinueAt)).toBe(true);
   }, 60_000);
 });

@@ -18,7 +18,8 @@ import { publishScope, startBasis } from '../src/workflow/publish-context.ts';
 import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { linkedConversation, sendDo } from './approval-support.ts';
-import { connectProviders, startOrchestrator, type Harness } from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
 import { postRunId } from './outpost-fixtures.ts';
 import { accept, carry, chatWithTurn, newChat, reply, setRun } from './outpost-store-support.ts';
 import { git, repoWithRemote, type TestRepo } from './ship-support.ts';
@@ -29,7 +30,7 @@ const BRANCH = 'spark/checkout-story-1a2b3c4d';
 let t: TestDb;
 let base: string;
 let repo: TestRepo;
-let harness: Harness | null = null;
+let harness: Worker | null = null;
 let lead: string;
 let api: string;
 let outpostId: string;
@@ -38,7 +39,7 @@ beforeEach(async () => {
   t = await createTestDb();
   base = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-wrap-up-turn-')));
   repo = await repoWithRemote(base, 'shop');
-  await connectProviders(t, false);
+  await connectAgents(t);
   const linked = await linkedConversation(t, repo.root);
   lead = linked.conversationId;
   git(repo.root, 'checkout', '-q', '-b', BRANCH);
@@ -160,7 +161,7 @@ describe('the wrap-up turn in the lead chat', { timeout: 120_000 }, () => {
     'is one read-only reply at %s: no crew, no build, nothing published',
     async (_name, level) => {
       await leadSettings(level, 'acceptEdits');
-      harness = startOrchestrator(t, null);
+      harness = startTurnWorker(t);
       const runId = await wrapUpRun();
 
       const run = await finished(runId);

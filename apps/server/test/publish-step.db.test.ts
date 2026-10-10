@@ -14,7 +14,7 @@ import {
   CHAT_BRANCH,
   chatOnItsBranch,
   promptsOf,
-  publishingTurn,
+  shipAccessTo,
   type BranchChat,
 } from './publish-step-support.ts';
 import { git, startGitHubStub, type GitHubStub } from './ship-support.ts';
@@ -51,7 +51,7 @@ beforeEach(async () => {
   await connectAgents(t);
   chats += 1;
   worker = startTurnWorker(t, {
-    runTurn: publishingTurn(() => stub.url),
+    shipAccess: shipAccessTo(stub.url),
     sessions: path.join(base, `sessions-${chats}`),
   });
 });

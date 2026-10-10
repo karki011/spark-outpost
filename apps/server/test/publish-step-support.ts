@@ -1,10 +1,9 @@
-import { runChatTurn } from '../src/workflow/chat-turn.ts';
 import { randomUUID } from 'node:crypto';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
-import type { RunTurn } from '../src/workflow/worker.ts';
+import type { WorkerOptions } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
 import { FAKE_GH, git, repoWithRemote, type TestRepo } from './ship-support.ts';
 import { pinChatLevel, type TestDb } from './support.ts';
@@ -12,16 +11,13 @@ import { auditOf } from './turn-support.ts';
 
 export const CHAT_BRANCH = 'spark/notes-1a2b3c4d';
 
-export function publishingTurn(gitHubApi: () => string): RunTurn {
-  return (deps, lease) => {
-    const shipAccess = {
-      secrets: memorySecretStore(),
-      runCommand,
-      fetch,
-      apiUrl: gitHubApi(),
-      locateGh: async () => FAKE_GH,
-    };
-    return runChatTurn({ ...deps, shipAccess }, lease);
+export function shipAccessTo(apiUrl: string): NonNullable<WorkerOptions['shipAccess']> {
+  return {
+    secrets: memorySecretStore(),
+    runCommand,
+    fetch,
+    apiUrl,
+    locateGh: async () => FAKE_GH,
   };
 }
 
