@@ -63,7 +63,7 @@ describe('chat problems', () => {
       {
         field: 'handle',
         message: 'Two chats cannot share @api.',
-        suggestions: ['api2', 'rate-limit-heade'],
+        suggestions: ['api2', 'rate-limit'],
       },
     ]);
   });
