@@ -197,6 +197,7 @@ test('the story bar shows stacked pull requests and hands a stack update to the 
 }) => {
   const story = await startStory(page);
   await withPullRequests(page, story);
+  await page.reload();
   await openOutpost(page);
   const summary = stories(page).locator('summary');
   await expect(summary).toContainText('2 PRs · 2 warnings');

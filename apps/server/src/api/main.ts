@@ -50,6 +50,7 @@ import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createNativeRuntime } from '../terminal/native-runtime.ts';
 import { outpostDelivery } from '../outposts/mount.ts';
+import { stackGit } from '../outposts/stack-git.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -193,6 +194,7 @@ const { app, reconcileRemote } = createAppParts({
   previews,
   appEvents,
   outposts,
+  stackGit,
   activeWork,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,

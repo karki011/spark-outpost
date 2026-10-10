@@ -154,10 +154,11 @@ export const SPEC_GROUPS = {
   map: ['project-map', 'project-map-states', 'project-map-views'],
   outposts: [
     'outpost-answers',
-    'outpost-chat-lines',
     'outpost-create',
     'outpost-story-bar',
     'outposts',
+    'outposts-agents',
+    'outposts-story',
   ],
   'island-desktop': [
     'boot-screen',

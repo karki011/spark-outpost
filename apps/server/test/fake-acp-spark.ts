@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { setTimeout as pause } from 'node:timers/promises';
 import type * as acp from '@agentclientprotocol/sdk';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -87,8 +89,10 @@ async function scriptTurn(
 ): Promise<void> {
   for (const [index, step] of steps.entries()) {
     if ('say' in step) await say(step.say);
-    else if ('waitFor' in step) while (!existsSync(step.waitFor)) await pause(25);
-    else {
+    else if ('waitFor' in step) {
+      const gate = path.resolve(tmpdir(), step.waitFor);
+      while (!existsSync(gate)) await pause(25);
+    } else {
       const call = { id: `spark-script-${index}`, tool: step.tool, args: step.args ?? {} };
       await callSpark(endpoint, call, update);
     }
