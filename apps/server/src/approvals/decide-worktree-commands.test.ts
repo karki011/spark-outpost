@@ -12,7 +12,6 @@ import {
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
-import type { PieceGuard } from './piece-guard.ts';
 import { otherBranchReason } from './publish-policy.ts';
 import { OUTSIDE_DELETE_REASON, outsideDeleteReason, outsideWriteReason } from './rails.ts';
 import { parseShell } from './shell-parse.ts';
@@ -24,17 +23,7 @@ const PAGE = 'libs/ui/explorer/src/pages/index.tsx';
 const HOOK = 'hooks/use-drilldown-tree.ts';
 const BRANCH = 'spark/drilldown-1a2b';
 const files: FileLister = { glob: () => [], walk: () => [], script: () => null };
-const OWNED: NonNullable<PieceGuard['owned']> = {
-  key: 'P1',
-  name: 'Bolt',
-  paths: [PAGE, HOOK],
-  globs: ['libs/ui/explorer/**'],
-  others: [{ key: 'P2', name: 'Tack', paths: ['libs/features/pulse/view.tsx'], globs: [] }],
-};
-const SHARED: DecideOptions = {
-  builder: true,
-  piece: { coordinated: true, owned: OWNED },
-};
+const CHAT_RUN: DecideOptions = { chatRun: true };
 const SENSITIVE = ['.env', 'web page https://example.org'];
 const CLAUDE_NOTE = 'This command requires approval';
 
@@ -104,11 +93,11 @@ async function decided(
 }
 
 describe("commands inside the chat's own worktree", () => {
-  it('a shared-folder piece in Bypass permissions gets no card for the whole session', async () => {
+  it('the chat’s run in Bypass permissions gets no card for the whole session', async () => {
     const verdicts: string[] = [];
     for (const command of [...READS, ...CHANGES]) {
       for (const noted of [false, true]) {
-        const options = { ...SHARED, observed: SENSITIVE };
+        const options = { ...CHAT_RUN, observed: SENSITIVE };
         verdicts.push((await decided('full_access', command, options, noted)).verdict);
       }
     }
@@ -116,9 +105,9 @@ describe("commands inside the chat's own worktree", () => {
   });
 
   it.each([...READS, ...CHANGES])(
-    'Auto leaves a piece’s noted command to the mode: %s',
+    'Auto leaves the chat run’s noted command to the mode: %s',
     async (command) => {
-      const decision = await decided('auto', command, { ...SHARED, observed: SENSITIVE }, true);
+      const decision = await decided('auto', command, { ...CHAT_RUN, observed: SENSITIVE }, true);
       expect(decision).toEqual(await decided('auto', command, { observed: SENSITIVE }, true));
     },
   );
@@ -126,18 +115,12 @@ describe("commands inside the chat's own worktree", () => {
   const PROVEN_READS = READS.filter((command) => !command.includes('grep -rn'));
 
   it.each(PROVEN_READS)('a mode that asks still runs the read: %s', async (command) => {
-    expect((await decided('asks', command, SHARED, true)).verdict).toBe('allow');
+    expect((await decided('asks', command, CHAT_RUN, true)).verdict).toBe('allow');
     expect((await decided('asks', command)).verdict).toBe('allow');
   });
 
   it.each(CHANGES)('a reading mode still asks, as the mode does: %s', async (command) => {
     expect(await decided('asks', command)).toEqual({ verdict: 'ask', reason: null });
-  });
-
-  it("lets a change to another piece's file follow the mode", async () => {
-    const command = `R=${WT}; cd $R; P=libs/features/pulse/view.tsx; sed -i '' 's/a/b/' $P`;
-    expect((await decided('full_access', command, SHARED, true)).verdict).toBe('allow');
-    expect((await decided('asks', command, SHARED, true)).verdict).toBe('ask');
   });
 
   it('keeps a run rule the user saved for the command as written', async () => {
@@ -174,7 +157,7 @@ describe('hard rails with shell variables', () => {
     [`F=CLAUDE.md; sed -i '' 's/a/b/' $F`, INSTRUCTION_REASON],
   ])('%s asks in Bypass permissions', async (command, reason) => {
     expect(await decided('full_access', command)).toMatchObject(ask(reason));
-    expect((await decided('full_access', command, SHARED, true)).verdict).not.toBe('allow');
+    expect((await decided('full_access', command, CHAT_RUN, true)).verdict).not.toBe('allow');
   });
 
   it.each([

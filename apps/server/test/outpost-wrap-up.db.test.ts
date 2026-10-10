@@ -2,8 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type { RunStatus } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startDispatcher } from '../src/a2a/dispatcher.ts';
-import { publishAsked } from '../src/orchestration/agent-publish.ts';
-import type { Session } from '../src/orchestration/session.ts';
 import { asAgentReads } from '../src/outposts/agent-prompt.ts';
 import { toOutpostPost } from '../src/outposts/post-view.ts';
 import { queueWrapUps } from '../src/outposts/story-wrap-ups.ts';
@@ -15,6 +13,7 @@ import { createOutpost, removeMember, setPaused } from '../src/persistence/outpo
 import { getRun } from '../src/persistence/runs.ts';
 import { startedByRequest } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
+import { publishReason } from '../src/workflow/publish-step-reason.ts';
 import { drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { acceptingPeer, type AcceptingPeer } from './accepting-peer.ts';
@@ -232,7 +231,7 @@ describe('the wrap-up turn of a story', () => {
     );
     expect(userText(input)).toBe('');
     expect(publishGrant(input).requested).toBe(false);
-    expect(publishAsked({ input } as Session)).toBe(false);
+    expect(publishReason(input)).toBeNull();
   });
 
   it('is written when the story ends with a failed and a cancelled sub-task', async () => {

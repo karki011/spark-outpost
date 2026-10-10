@@ -14,7 +14,6 @@ import {
   type RequestRoot,
 } from '../approvals/decide.ts';
 import { diskFiles, type FileSource } from '../approvals/file-lister.ts';
-import type { PieceGuard } from '../approvals/piece-guard.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { secretReadLabels } from '../approvals/secret-reads.ts';
@@ -46,7 +45,6 @@ export interface SparkCommandScope {
   modes?: readonly AgentModeOption[];
   runMode: RunMode | null;
   role: AgentRole | null;
-  piece: PieceGuard | null;
   readOnly: boolean;
   roots: readonly RequestRoot[];
   home: string;
@@ -99,7 +97,6 @@ function turnOf(scope: SparkCommandScope): SparkCommandTurn {
       modeKind(scope.modes ?? [], scope.agentMode),
     ),
     role: scope.role,
-    piece: scope.piece,
     readOnly: scope.readOnly,
     roots: scope.roots,
     home: scope.home,

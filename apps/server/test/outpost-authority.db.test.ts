@@ -1,12 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { publishAsked } from '../src/orchestration/agent-publish.ts';
-import { mainAgentInstruction } from '../src/orchestration/instruction-turn.ts';
-import type { Session } from '../src/orchestration/session.ts';
-import { userText } from '../src/outposts/user-asked.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { actionFacts, actionPath } from '../src/spark-mcp/actions/action-policy.ts';
 import { publishGrant, startBasis } from '../src/workflow/publish-context.ts';
+import { publishReason } from '../src/workflow/publish-step-reason.ts';
 import { drainQueue, type ResolveTarget } from '../src/workflow/queue-drain.ts';
 import { loadRunInput, type RunInput } from '../src/workflow/run-input.ts';
 import { addMemberChat, createOutpostRow, deliverRequest, postRunId } from './outpost-fixtures.ts';
@@ -19,13 +16,6 @@ let api: string;
 const target: ResolveTarget = async () => ({ provider: 'claude' });
 const OPEN_A_PR = 'Add the endpoint and open a PR.';
 const POST_TO_SLACK = 'Post the result to the #orders Slack channel.';
-const ONLY_PUBLISH = 'open a PR';
-const CURRENT_TASK = {
-  taskId: randomUUID(),
-  previousRequest: 'Add the orders endpoint.',
-  summary: 'Orders endpoint',
-  lastReplyAt: null,
-};
 
 beforeEach(async () => {
   t = await createTestDb();
@@ -74,7 +64,7 @@ async function typedTurn(content: string, chat: Chat) {
   return { runId: sent.run.id, input: await withSettings(sent.run.id, chat) };
 }
 
-const session = (input: RunInput) => ({ input }) as Session;
+const publishAsked = (input: RunInput) => publishReason(input) === 'asked';
 
 const FULL_AUTO: Chat = { level: 'full-auto', agentMode: 'acceptEdits' };
 const ACCEPT_EDITS: Chat = { level: 'hands-off', agentMode: 'acceptEdits' };
@@ -86,27 +76,20 @@ describe('"open a PR" written by another chat', () => {
 
     expect(publishGrant(input)).toMatchObject({ requested: false, level: 'full-auto' });
     expect(startBasis(input)).toBe('full_auto');
-    expect(publishAsked(session(input))).toBe(false);
+    expect(publishAsked(input)).toBe(false);
   });
 
   it('gives no basis to publish at Accept edits without Full auto → PR', async () => {
     const { input } = await requestTurn(OPEN_A_PR, false, ACCEPT_EDITS);
 
     expect(startBasis(input)).toBeNull();
-    expect(publishAsked(session(input))).toBe(false);
+    expect(publishAsked(input)).toBe(false);
   });
 
   it('publishes on the mode basis in Bypass permissions', async () => {
     const { input } = await requestTurn(OPEN_A_PR, false, BYPASS);
 
     expect(startBasis(input)).toBe('mode');
-  });
-
-  it('is not the short publish instruction the main agent handles alone', async () => {
-    const { input } = await requestTurn(ONLY_PUBLISH, false, ACCEPT_EDITS);
-
-    expect(mainAgentInstruction(input.userRequest, CURRENT_TASK)).toBe(true);
-    expect(mainAgentInstruction(userText(input), CURRENT_TASK)).toBe(false);
   });
 
   it('gives a piece of that turn no request either', async () => {
@@ -169,7 +152,7 @@ describe('a request the user typed in the outpost', () => {
 
     expect(publishGrant(input).requested).toBe(true);
     expect(startBasis(input)).toBe('requested');
-    expect(publishAsked(session(input))).toBe(true);
+    expect(publishAsked(input)).toBe(true);
   });
 
   it('counts as the user asking for a Spark action, so no card at Accept edits', async () => {
@@ -180,12 +163,6 @@ describe('a request the user typed in the outpost', () => {
     expect(facts).toEqual({ posture: 'edits', requested: true });
     expect(actionPath(facts)).toBe('perform');
   });
-
-  it('is the short publish instruction when it is one', async () => {
-    const { input } = await requestTurn(ONLY_PUBLISH, true, ACCEPT_EDITS);
-
-    expect(mainAgentInstruction(userText(input), CURRENT_TASK)).toBe(true);
-  });
 });
 
 describe('a message typed in the chat', () => {
@@ -194,8 +171,7 @@ describe('a message typed in the chat', () => {
 
     expect(publish.input.outpostRequest).toBeNull();
     expect(startBasis(publish.input)).toBe('requested');
-    expect(publishAsked(session(publish.input))).toBe(true);
-    expect(mainAgentInstruction(userText(publish.input), CURRENT_TASK)).toBe(false);
+    expect(publishAsked(publish.input)).toBe(true);
   });
 
   it('counts exactly as before for a Spark action', async () => {
@@ -211,6 +187,6 @@ describe('a message typed in the chat', () => {
     const plain = await typedTurn('Add the endpoint.', ACCEPT_EDITS);
 
     expect(startBasis(plain.input)).toBeNull();
-    expect(publishAsked(session(plain.input))).toBe(false);
+    expect(publishAsked(plain.input)).toBe(false);
   });
 });

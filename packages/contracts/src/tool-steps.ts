@@ -10,7 +10,6 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_chat_history: 'Reading chat history',
   spark_attention: 'Checking what needs you',
   spark_run: 'Checking run status',
-  spark_laws: 'Reading the universal laws',
   spark_task: 'Reading the task and plan',
   spark_audit: 'Reading the audit',
   spark_tickets: 'Looking at tickets',

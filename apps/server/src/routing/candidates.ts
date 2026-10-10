@@ -2,7 +2,7 @@ import type { AgentPick, ModelTier } from '@spark-outpost/contracts';
 import type { AdvisorCandidate, AdvisorOption } from '../advisor/advice.ts';
 import { selectableModels } from '../advisor/intake-questions.ts';
 import { ROUTER_TIER_OF_CARD, type RouterTier } from '../advisor/policy.ts';
-import { tierInfo } from '../orchestration/tiers.ts';
+import { tierInfo } from '../model-access/tiers.ts';
 
 export interface RouteCandidate {
   id: string;

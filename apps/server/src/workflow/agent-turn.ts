@@ -29,8 +29,7 @@ import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis, withPublishNote } from './publish-context.ts';
-import { watchUrgentNotes } from './steer-requests.ts';
-import { joinSteering, openMemberInbox } from './member-inbox.ts';
+import { openMemberInbox } from './member-inbox.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
 import { createReplyText } from './reply-text.ts';
@@ -220,11 +219,6 @@ export async function runAgentTurn(
   });
   const modeWatch =
     input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
-  const steerWatch = input.piece?.coordinated
-    ? watchUrgentNotes(deps.db, lease.runId, deps.cancelPollMs ?? 250, () =>
-        control.stop('cancelled'),
-      )
-    : null;
   const inbox = input.assistant
     ? null
     : openMemberInbox(deps.db, {
@@ -233,7 +227,6 @@ export async function runAgentTurn(
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
       });
-  const steering = joinSteering([steerWatch, inbox]);
   const redaction = createRedactionFilter(secretValues);
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
@@ -287,7 +280,6 @@ export async function runAgentTurn(
             copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
-            piece: input.piece ?? undefined,
             publish: publishGrant(input),
             snapshot: options.keepSnapshot,
           })
@@ -350,15 +342,12 @@ export async function runAgentTurn(
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
       ...(chatRun ? { chatRun: true } : {}),
-      ...(input.piece?.coordinated ? { coordinated: true } : {}),
-      ...(input.piece?.sharesTree ? { sharesTree: true } : {}),
       ...((writesCode(input.role) || chatRun) && startBasis(input) ? { publishes: true } : {}),
-      ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
-      ...(steering ? { steering } : {}),
+      ...(inbox ? { steering: inbox } : {}),
       ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
@@ -457,7 +446,6 @@ export async function runAgentTurn(
     return ended(result('failed', failureMessage(error, reason)));
   } finally {
     modeWatch?.dispose();
-    steerWatch?.dispose();
     await inbox
       ?.dispose()
       .catch((error: unknown) => console.error('Could not close the message inbox', error));

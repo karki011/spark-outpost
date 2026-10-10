@@ -296,7 +296,6 @@ describe('the Spark tools server', () => {
       'spark_docs',
       'spark_find',
       'spark_guide',
-      'spark_laws',
       'spark_map',
       'spark_mcp_servers',
       'spark_models',

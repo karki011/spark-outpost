@@ -5,7 +5,6 @@ import {
   type RunMode,
 } from '@spark-outpost/contracts';
 import { objectFields } from '../agents/acp/object-fields.ts';
-import { planOnlyByRule } from '../orchestration/risk-rules.ts';
 
 const SWITCH_MODE_KIND = 'switch_mode';
 export const PLAN_MODE_ID = 'plan';
@@ -87,9 +86,8 @@ export function crewPlansStayNotes(facts: CrewFacts): boolean {
   return Boolean(facts.piece) || READS_FOR_THE_CREW.has(facts.role ?? '');
 }
 
-export function plansThisTurn(facts: PlanningFacts, userModeOnly = false): boolean {
+export function plansThisTurn(facts: PlanningFacts): boolean {
   if (facts.planning !== undefined) return facts.planning;
   if (facts.mode !== 'ask' || crewPlansStayNotes(facts)) return false;
-  const planModeChat = modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
-  return planModeChat || (!userModeOnly && planOnlyByRule(facts.userRequest));
+  return modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
 }

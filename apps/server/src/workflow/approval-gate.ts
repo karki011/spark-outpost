@@ -10,7 +10,6 @@ import {
 } from '@spark-outpost/contracts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
-import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
 import { ownRepoFor } from './send-context.ts';
@@ -79,8 +78,6 @@ export interface ObservedDecision {
 
 export type EditObserver = (request: ApprovalRequest, decision: ObservedDecision) => void;
 
-export const PIECE_PLAN_REASON = 'a piece builds from the approved list, without its own plan card';
-
 export interface PlanModeHooks {
   proposed(request: ApprovalRequest & { plan: string }): Promise<string | null>;
   decided(planId: string, answer: GateAnswer): Promise<void>;
@@ -107,7 +104,6 @@ export interface GateDeps {
   copyOf?: string | null;
   observe?: EditObserver;
   plans?: PlanModeHooks;
-  piece?: PieceGuard;
   observations?: RunObservations | undefined;
   publish?: PublishGrant | undefined;
 }
@@ -359,9 +355,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
-    const pieceRefused = deps.piece ? pieceRefusal(request, deps.piece) : null;
     const covered =
-      pieceRefused === null &&
       request.toolKind === FS_WRITE_TOOL_KIND &&
       request.paths.length > 0 &&
       request.paths.every((target) => grants.has(target));
@@ -386,7 +380,6 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       instructionGrants,
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
-      ...(deps.piece ? { piece: deps.piece } : {}),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
     const { decision, secretReads } = await withPrefetchedFiles(
@@ -438,9 +431,6 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
 
   const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {
     const plan = request.plan;
-    if (plan && deps.piece && !signal.aborted) {
-      return allow(request, `Left plan mode: ${subject(request)} (${PIECE_PLAN_REASON})`);
-    }
     if (!plan || !deps.plans || signal.aborted) return decideRequest(request, signal);
     const planId = await deps.plans.proposed({ ...request, plan });
     const answer = await decideRequest(request, signal);

@@ -10,7 +10,6 @@ import type {
   Risk,
   RunMode,
 } from '@spark-outpost/contracts';
-import { coveredMs } from '../orchestration/active-time.ts';
 import {
   buildOrchestration,
   toCrewMember,
@@ -233,18 +232,6 @@ export async function usedNames(db: Queryable, taskId: string, role: AgentRole):
     [taskId, role],
   );
   return rows.map((row) => row.name);
-}
-
-export async function waitedMs(db: Queryable, runId: string): Promise<number> {
-  const { rows } = await db.query<{ started: number; ended: number }>(
-    `SELECT EXTRACT(EPOCH FROM a.created_at) * 1000 AS started,
-       EXTRACT(EPOCH FROM COALESCE(a.decided_at, now())) * 1000 AS ended
-     FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1)
-       AND (a.status = 'pending' OR a.decided_by IN ('user', 'stop', 'timeout', 'auto'))`,
-    [runId],
-  );
-  return coveredMs(rows.map((row) => [Number(row.started), Number(row.ended)] as const));
 }
 
 const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;

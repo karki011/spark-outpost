@@ -43,17 +43,15 @@ describe('the scope a Spark-run command is judged in', () => {
       agentMode: 'default',
       runMode: 'do',
       role: 'builder',
-      piece: null,
       readOnly: false,
       roots: [{ path: root, ignore: ['private/'] }],
       publish: { level: 'full-auto', requested: true, followUp: null },
     });
   });
 
-  it('marks an assistant turn read-only and keeps a piece’s guard', async () => {
-    const piece = { coordinated: true, owned: null };
-    const scope = await sparkCommandScope(db, RUN, input({ assistant: true, piece }));
-    expect(scope).toMatchObject({ readOnly: true, piece });
+  it('marks an assistant turn read-only', async () => {
+    const scope = await sparkCommandScope(db, RUN, input({ assistant: true }));
+    expect(scope).toMatchObject({ readOnly: true });
   });
 
   it('has no roots when the chat has no folder or the folder is gone', async () => {

@@ -1,6 +1,5 @@
 import type { AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import type { PieceGuard } from '../approvals/piece-guard.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
@@ -38,7 +37,6 @@ export interface DoRunOptions extends AskRunOptions {
   copyOf?: string | null | undefined;
   observe?: EditObserver | undefined;
   plans?: PlanModeHooks | undefined;
-  piece?: PieceGuard | undefined;
   publish?: PublishGrant | undefined;
   snapshot?: RunSnapshot | undefined;
 }
@@ -98,7 +96,6 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
     copyOf: options.copyOf ?? null,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
-    ...(options.piece ? { piece: options.piece } : {}),
     ...(options.publish ? { publish: options.publish } : {}),
     backup: async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);

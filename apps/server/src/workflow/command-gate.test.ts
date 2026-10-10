@@ -55,7 +55,6 @@ function scope(change: Partial<SparkCommandScope> = {}): SparkCommandScope {
     agentMode: 'bypassPermissions',
     runMode: 'do',
     role: null,
-    piece: null,
     readOnly: false,
     roots: [{ path: ROOT, ignore: [] }],
     home: '/Users/me',
@@ -159,7 +158,6 @@ describe('reviewSparkCommand', () => {
       [{ provider: 'codex', agentMode: 'read-only' }, 'pnpm dev', READ_ONLY_TURN_REASON],
       [{ readOnly: true }, 'pnpm dev', READ_ONLY_TURN_REASON],
       [{ role: 'coordinator' }, 'pnpm dev', CREW_REASON],
-      [{ role: 'builder', piece: { coordinated: true, owned: null } }, 'pnpm dev', CREW_REASON],
       [{}, 'pnpm dev --token=abc123', SECRET_COMMAND_REASON],
     ];
     for (const [change, command, reason] of cases) {

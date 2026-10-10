@@ -127,14 +127,6 @@ describe('decide() keeps the publishing rails for a permitted Builder', () => {
     const placed = decideAs('full_access', PUSH, options(MANUAL, { observed: ['.env'], own }));
     expect(placed).toEqual({ verdict: 'allow', by: 'level' });
   });
-
-  it('never lets a coordinated piece publish', () => {
-    const piece = { coordinated: true, owned: null };
-    expect(decideAs('full_access', PUSH, options(FULL_AUTO, { piece }))).toEqual({
-      verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
-    });
-  });
 });
 
 describe('decide() for the chat main agent', () => {

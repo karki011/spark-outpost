@@ -29,7 +29,7 @@ async function readyToWork(start: Start, asked: RunInput): Promise<RunInput | nu
   if (prefs.instructionsNote) await planNote(append, prefs.instructionsNote);
   const input = hooks.planTurn
     ? await hooks.planTurn(deps.db, asked)
-    : { ...asked, planning: plansThisTurn(asked, true) };
+    : { ...asked, planning: plansThisTurn(asked) };
   if (input.mode !== 'do') return input;
   const placed = await placeChatOrStop(deps, input, append, true, lease);
   return placed ? placed.input : null;

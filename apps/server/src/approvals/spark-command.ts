@@ -17,7 +17,6 @@ import {
   type Decision,
   type RequestRoot,
 } from './decide.ts';
-import type { PieceGuard } from './piece-guard.ts';
 import { place } from './request-place.ts';
 
 export const SPARK_COMMAND_TOOL_KIND = 'execute';
@@ -42,7 +41,6 @@ export interface SparkCommandTurn {
   runMode: RunMode | null;
   posture: ModePosture;
   role: AgentRole | null;
-  piece: PieceGuard | null;
   readOnly: boolean;
   roots: readonly RequestRoot[];
   home: string;
@@ -90,9 +88,8 @@ function insideRoots(roots: readonly RequestRoot[], folder: string): boolean {
   return roots.some((root) => root.path === folder) || place(roots, folder).relative !== null;
 }
 
-function crewRefusal(turn: Pick<SparkCommandTurn, 'role' | 'piece'>): string | null {
+function crewRefusal(turn: Pick<SparkCommandTurn, 'role'>): string | null {
   if (turn.role === 'integrator') return null;
-  if (turn.piece?.coordinated || turn.piece?.owned) return CREW_REASON;
   return turn.role === null || turn.role === 'builder' ? null : CREW_REASON;
 }
 
@@ -130,7 +127,6 @@ export function decideSparkCommand(
     askRun: false,
     askAutoWhy: null,
     agentAsks: false,
-    ...(turn.piece ? { piece: turn.piece } : {}),
   });
   if (decision.verdict === 'reject') return decision;
   if (decision.verdict === 'ask') return { ...decision, because: SPARK_COMMAND_NOTE };

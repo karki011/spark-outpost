@@ -16,7 +16,6 @@ import {
 import { usableDefault } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import { latestSparkSeed } from '../persistence/compactions.ts';
-import { builderEnvSchema, pieceGuardSchema, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import { historyLabel, requestAuthor } from '../outposts/request-prompt.ts';
 import type { RunIdentity } from './run-events.ts';
@@ -44,8 +43,6 @@ export interface RunInput {
   resumeKey?: string | null;
   followUp?: string | null;
   preamble?: string | null;
-  piece?: PieceGuard | null;
-  builderEnv?: Record<string, string> | null;
   startAs?: StartAs | null;
   planning?: boolean;
   plansFirst?: boolean;
@@ -118,8 +115,6 @@ interface RunRow extends OutpostRow {
   config_values: ConfigValues | null;
   parent_run_id: string | null;
   run_prompt: string | null;
-  piece_guard: unknown;
-  builder_env: unknown;
   run_role: AgentRole | null;
   run_name: string | null;
   resume_key: string | null;
@@ -221,7 +216,6 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
             r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
-            r.route->'guard' AS piece_guard, r.route->'builderEnv' AS builder_env,
             (SELECT w.path FROM run_worktrees w
              WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
@@ -394,14 +388,6 @@ function childInput(runId: string, row: RunRow): RunInput {
     previousMessageId: null,
     resumeKey: row.resume_key,
     followUp: row.follow_up,
-    piece: pieceGuardSchema
-      .nullable()
-      .catch(null)
-      .parse(row.piece_guard ?? null),
-    builderEnv: builderEnvSchema
-      .nullable()
-      .catch(null)
-      .parse(row.builder_env ?? null),
     chatWorktree: row.in_chat_worktree,
     continuesRunId: row.continues_run_id,
   };

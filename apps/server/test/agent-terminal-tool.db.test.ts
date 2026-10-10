@@ -229,12 +229,10 @@ describe('start in a mode that asks', () => {
 
 describe('start: refusals', () => {
   it('refuses each case with its reason, no card and no terminal', async () => {
-    const piece = { coordinated: true, owned: null };
     const cases: [string, Partial<SparkCommandScope>, string, Record<string, unknown>][] = [
       [NO_FOLDER_REASON, { roots: [] }, 'pnpm dev', {}],
       [READ_ONLY_TURN_REASON, { runMode: 'ask' }, 'pnpm dev', {}],
       [READ_ONLY_TURN_REASON, { readOnly: true }, 'pnpm dev', {}],
-      [CREW_REASON, { role: 'builder', piece }, 'pnpm dev', {}],
       [CREW_REASON, { role: 'coordinator' }, 'pnpm dev', {}],
       [OUTSIDE_FOLDER_REASON, {}, 'pnpm dev', { cwd: tmpdir() }],
       [SECRET_COMMAND_REASON, {}, 'API_KEY=sk-ant-abc123def456ghi789jkl012mno pnpm dev', {}],

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { NO_RUN_RULES, decide, type ApprovalRequest, type DecideOptions } from './decide.ts';
-import { BUILDER_GIT_REASON, type PieceGuard } from './piece-guard.ts';
 import { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON } from './rails.ts';
 import { parseShell } from './shell-parse.ts';
 import { inTempDir, tempRoots } from './temp-dirs.ts';
@@ -14,10 +13,6 @@ const HOME = '/Users/me';
 const NO_FILES = { glob: () => [], walk: () => [], script: () => null };
 const MODES: ModePosture[] = ['asks', 'auto', 'full_access'];
 const FOLLOWS_MODE = ['ask (the mode asks)', 'allow', 'allow'];
-const PIECE: PieceGuard = {
-  coordinated: true,
-  owned: { key: 'P1', name: 'Bolt', paths: ['src/api.ts'], globs: [], others: [] },
-};
 
 function request(overrides: Partial<ApprovalRequest>): ApprovalRequest {
   return {
@@ -154,35 +149,5 @@ describe('a link out of a temp folder', () => {
     expect(roots).not.toContain('/var/folders');
     expect(inTempDir(HOME)).toBe(false);
     expect(inTempDir(tmpdir())).toBe(false);
-  });
-});
-
-describe('scratch worktrees for a piece of a coordinated task', () => {
-  const piece = { builder: true, piece: PIECE };
-
-  it.each([
-    'git worktree add -q /tmp/x 265e3aa17 && cd /tmp/x && pnpm test; cd -; git worktree remove /tmp/x',
-    'git worktree add --detach /tmp/x HEAD',
-    'git worktree remove --force /tmp/x',
-    'git worktree prune',
-    'git worktree list',
-  ])('follows the agent mode for %s', async (command) => {
-    expect(await verdicts(command, piece)).toEqual(FOLLOWS_MODE);
-  });
-
-  it.each([
-    'git worktree add /tmp/x',
-    'git worktree add -b scratch /tmp/x HEAD',
-    'git worktree add --orphan /tmp/x',
-    'git worktree add ../sibling HEAD',
-    'git worktree add "$SCRATCH" HEAD',
-    'git worktree move /tmp/x /tmp/y',
-    'git worktree remove ../sibling',
-    'git worktree add /tmp/x HEAD && git checkout main',
-    'git worktree add /tmp/x HEAD && git commit -am wip',
-  ])('keeps refusing %s', async (command) => {
-    expect(await verdicts(command, piece)).toEqual(
-      MODES.map(() => `refuse (${BUILDER_GIT_REASON})`),
-    );
   });
 });

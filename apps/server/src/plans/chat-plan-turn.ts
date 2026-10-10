@@ -8,6 +8,6 @@ export function startsInPlanMode(input: RunInput): boolean {
 }
 
 export async function chatPlanInput(db: Db, input: RunInput): Promise<RunInput> {
-  if (!startsInPlanMode(input)) return { ...input, planning: plansThisTurn(input, true) };
+  if (!startsInPlanMode(input)) return { ...input, planning: plansThisTurn(input) };
   return markPlanTurn(db, asPlanTurn(input));
 }

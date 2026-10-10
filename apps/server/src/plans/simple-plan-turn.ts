@@ -1,12 +1,4 @@
-import {
-  CATEGORY_CONFIDENCE_FLOOR,
-  modePosture,
-  isReadOnlyPosture,
-  type Category,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
-import type { turnIntent } from '../orchestration/intake.ts';
-import { buildsByRule, planOnlyByRule, questionByRule } from '../orchestration/risk-rules.ts';
+import { modePosture, isReadOnlyPosture, type InvolvementLevel } from '@spark-outpost/contracts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -33,21 +25,6 @@ export function isPlanCommand(input: RunInput): boolean {
 
 export function isPlanModeChat(input: RunInput): boolean {
   return mayPlan(input) && pickedPlanMode(input);
-}
-
-const BUILD_INTENTS: ReadonlySet<Category> = new Set([
-  'bug_fix',
-  'feature',
-  'refactor',
-  'tests',
-  'docs',
-  'config',
-]);
-
-export function asksToBuild(request: string, jev: Parameters<typeof turnIntent>[0]): boolean {
-  const confidence = jev ? (jev.confidences.intent ?? jev.confidence) : 0;
-  if (jev?.intent && confidence >= CATEGORY_CONFIDENCE_FLOOR) return BUILD_INTENTS.has(jev.intent);
-  return buildsByRule(request) && !questionByRule(request) && !planOnlyByRule(request);
 }
 
 function buildingMode(input: RunInput): string | null {

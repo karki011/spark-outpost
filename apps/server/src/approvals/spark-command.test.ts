@@ -110,22 +110,8 @@ describe('who may start one in a crew turn', () => {
   it('lets a solo Builder, the chat’s own agent and the integrator start one', async () => {
     expect((await decided('pnpm dev', turn({ role: 'builder' }))).verdict).toBe('allow');
     expect((await decided('pnpm dev', turn({ role: null }))).verdict).toBe('allow');
-    const integrator = turn({ role: 'integrator', piece: { coordinated: true, owned: null } });
+    const integrator = turn({ role: 'integrator' });
     expect((await decided('pnpm dev', integrator)).verdict).toBe('allow');
-  });
-
-  it('refuses a piece', async () => {
-    const owned = { key: 'a', name: 'Bolt', paths: ['src/a.ts'], globs: [], others: [] };
-    for (const piece of [
-      { coordinated: true, owned },
-      { coordinated: true, owned: null },
-      { coordinated: false, owned },
-    ]) {
-      expect(await decided('pnpm dev', turn({ role: 'builder', piece }))).toEqual({
-        verdict: 'reject',
-        reason: CREW_REASON,
-      });
-    }
   });
 
   it.each(['coordinator', 'scout', 'architect', 'critic', 'spark'] satisfies AgentRole[])(

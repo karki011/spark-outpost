@@ -16,7 +16,7 @@ import { cardFor } from '../model-cards/cards.ts';
 import { noulQuestion, type Description } from './questions.ts';
 import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
 import { parseRatings, ratingQuestions } from './rating-questions.ts';
-import { tierLadder } from '../orchestration/tiers.ts';
+import { tierLadder } from '../model-access/tiers.ts';
 import { NEED_OPTIONS, needQuestion } from './need-question.ts';
 import {
   validChoice,

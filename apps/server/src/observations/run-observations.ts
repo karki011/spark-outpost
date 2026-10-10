@@ -43,7 +43,7 @@ export interface RunObservationsOptions {
 const MAX_LABEL = 200;
 const CHAT_CONTEXT_TOOLS = [
   ...['spark_task', 'spark_chat', 'spark_chat_history'],
-  ...['spark_run', 'spark_laws', 'spark_audit'],
+  ...['spark_run', 'spark_audit'],
 ];
 const RETIRED_LABELS = new Set(CHAT_CONTEXT_TOOLS.map((tool) => `private work data (${tool})`));
 

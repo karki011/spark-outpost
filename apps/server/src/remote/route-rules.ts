@@ -129,8 +129,6 @@ GET /api/tasks/:id/changes/files
 GET /api/tasks/:id/changes/summary
 GET /api/tasks/:id/pieces
 POST /api/tasks/:id/links
-POST /api/tasks/:id/pieces/:key/notes
-POST /api/tasks/:id/steer
 GET /api/teammates
 POST /api/teammate-starters/:starter/dismiss
 POST /api/teammates/:id/home

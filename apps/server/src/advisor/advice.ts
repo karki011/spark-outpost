@@ -1,12 +1,10 @@
 import type {
-  IntakeAnswer,
   InvolvementLevel,
   ModelRouting,
   ModelStat,
   ProviderId,
   RunMode,
 } from '@spark-outpost/contracts';
-import { intentByRule } from '../orchestration/intent-rules.ts';
 
 export interface AdvisorOption {
   id: string;
@@ -46,18 +44,3 @@ export interface IntakeRequest {
 }
 
 export { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';
-
-export function ruleAdvisor(request: IntakeRequest): IntakeAnswer {
-  const doing = request.mode === 'do';
-  return {
-    intent: doing ? intentByRule(request.task, request.mode) : null,
-    complexity: null,
-    risk: doing ? 'edits' : 'read-only',
-    injection: null,
-    depth: doing ? 'execute' : 'direct',
-    provider: request.current.provider,
-    model: request.current.model,
-    modelLabel: request.current.modelLabel,
-    effort: request.current.effort,
-  };
-}

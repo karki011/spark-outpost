@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { HANDOFF_HEADINGS } from '../src/orchestration/handoff.ts';
+import { CHAT_SUMMARY_HEADING } from '../src/workflow/session-brief.ts';
 import { HISTORY_TOOL_NOTE } from '../src/workflow/session-brief.ts';
 import { AGENT_COMPACTED_NOTE } from '../src/compaction/before-turn.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
@@ -73,7 +73,7 @@ describe('compaction at Automatic', { timeout: 60_000 }, () => {
     expect(sessions[0]).toMatchObject({ close_reason: 'compacted' });
     expect(sessions[1]).toMatchObject({ close_reason: null });
     const [seeded] = promptsOf(h, sessions[1]!.session_id);
-    expect(seeded).toContain(HANDOFF_HEADINGS.chat);
+    expect(seeded).toContain(CHAT_SUMMARY_HEADING);
     expect(seeded).toContain(HISTORY_TOOL_NOTE);
     expect(seeded).toContain('Remember PELICAN');
     expect(seeded).toContain('Which word?');

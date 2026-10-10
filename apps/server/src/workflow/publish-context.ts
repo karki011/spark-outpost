@@ -95,10 +95,10 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   return { level: input.level, requested: publishRequested(userText(input)), followUp };
 }
 
-type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode' | 'piece'>;
+type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
 
 export function startBasis(input: StartFacts): PublishBasis | null {
-  if (input.piece?.coordinated || isStoryWrapUp(input)) return null;
+  if (isStoryWrapUp(input)) return null;
   return publishBasis(modePosture(input.provider, input.agentMode), publishGrant(input));
 }
 
@@ -116,7 +116,7 @@ export async function publishScope(
   db: Queryable,
   input: StartFacts & Pick<RunInput, 'projectRoots'>,
 ): Promise<PublishScope | null> {
-  if (input.piece?.coordinated || isStoryWrapUp(input)) return null;
+  if (isStoryWrapUp(input)) return null;
   const root = input.projectRoots[0] ?? null;
   const task = await taskBranch(db, root).catch(() => null);
   if (!root || !task) return null;

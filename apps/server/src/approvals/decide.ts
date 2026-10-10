@@ -12,7 +12,6 @@ import {
   type ForcePush,
 } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
-import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
@@ -97,8 +96,6 @@ export const INSTRUCTION_REASON =
   'Agent instruction files (AGENTS.md, CLAUDE.md, .claude, .cursor/rules, .spark) always ask';
 export const GIT_CONTROL_REASON =
   'Git runs hooks and settings from .git outside Spark on every commit, so changing them always asks';
-export const PIECE_PROTECTED_REASON =
-  "Pieces don't change agent instructions, git hooks or git config mid-story unless the piece owns that exact file";
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
@@ -132,7 +129,6 @@ export function guardedTargets(asked: ApprovalRequest): Guarded {
 export interface DecideOptions {
   builder?: boolean;
   chatRun?: boolean;
-  piece?: PieceGuard;
   files?: FileLister;
   askRun?: boolean;
   askAutoWhy?: string | null;
@@ -177,16 +173,8 @@ function noted(decision: Decision, sent: SentOut | null): Decision {
 }
 
 function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
-  if (forced?.kind !== 'ask' || options.piece?.coordinated) return false;
+  if (forced?.kind !== 'ask') return false;
   return !publishesBesidesPush(command);
-}
-
-function pieceProtected(guarded: Guarded, options: DecideOptions): boolean {
-  const owned = options.piece?.owned;
-  if (!owned) return false;
-  return [...guarded.instructions, ...guarded.gitControl].some(
-    (relative) => !owned.paths.includes(relative),
-  );
 }
 
 function askRunChange(request: ApprovalRequest, view: ShellView | null): string | null {
@@ -261,9 +249,6 @@ function refusal(
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
-  if (pieceProtected(guarded, options)) return PIECE_PROTECTED_REASON;
-  const piece = options.piece ? pieceRefusal(request, options.piece) : null;
-  if (piece) return piece;
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
   }
@@ -444,7 +429,7 @@ function publishing(
   request: ApprovalRequest,
   options: DecideOptions,
 ): PublishVerdict | null {
-  if (!request.command || !options.publish || options.piece?.coordinated) return null;
+  if (!request.command || !options.publish) return null;
   return publishVerdict(request.command, posture, options.publish);
 }
 

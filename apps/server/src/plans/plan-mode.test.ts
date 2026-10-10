@@ -49,7 +49,7 @@ describe('exitPlanText', () => {
 describe('which turns plan in the native plan mode (B5)', () => {
   const ask = { mode: 'ask' as const, userRequest: 'What does divide return for 0?' };
 
-  it('plans every Ask turn of a Claude chat in Plan mode, and Codex Ask turns that ask for a plan', () => {
+  it('plans every Ask turn of a Claude chat in Plan mode, and never reads the wording', () => {
     expect(plansThisTurn({ ...ask, provider: 'claude' })).toBe(true);
     expect(plansThisTurn({ ...ask, provider: 'codex' })).toBe(false);
     expect(
@@ -58,10 +58,10 @@ describe('which turns plan in the native plan mode (B5)', () => {
         provider: 'codex',
         userRequest: 'Make a short plan for input checks. Plan only.',
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('never plans a Do turn by itself, and follows the harness when it says', () => {
+  it('never plans a Do turn by itself, and follows the turn when it says', () => {
     expect(plansThisTurn({ provider: 'claude', mode: 'do', userRequest: 'Plan only.' })).toBe(
       false,
     );

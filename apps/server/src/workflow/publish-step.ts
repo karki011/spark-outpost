@@ -5,7 +5,6 @@ import {
   type PublishPlan,
 } from '../orchestration/agent-publish.ts';
 import { NO_PULL_REQUEST } from '../orchestration/no-pull-request.ts';
-import type { Session } from '../orchestration/session.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
@@ -154,7 +153,7 @@ export async function publishStep(
   const worktree = await chatWorktreeAt(deps.db, root);
   if (!worktree?.ownsBranch) return keptWithout(turn, NO_OWN_BRANCH_LINE);
   if (!(await pickRemote(root, worktree.branch))) return committedLocally(turn);
-  const plan = await agentPublishPlan({ deps: { db: deps.db }, input } as Session);
+  const plan = await agentPublishPlan({ db: deps.db, input });
   if (!plan || !(await unpublishedWork(turn, plan, worktree.baseCommit))) return reply;
   if (plan.stackBase && !plan.stackBase.onRemote) {
     return withLine(step.append, reply, parentNotPushedLine(plan.stackBase));

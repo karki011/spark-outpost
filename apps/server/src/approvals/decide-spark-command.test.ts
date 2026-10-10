@@ -156,14 +156,6 @@ describe('publish rules, as for a solo Builder’s own git push and gh', () => {
     }
   });
 
-  it('never lets the integrator of a crew turn publish', async () => {
-    const integrator = turn({ role: 'integrator', piece: { coordinated: true, owned: null } });
-    expect(await decided(PUSH, integrator, publishing(FULL_AUTO))).toEqual({
-      verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
-    });
-  });
-
   it('asks with hold-to-confirm when the push holds a value from a secret file', async () => {
     const decision = await decided(PUSH, builder('full_access'), {
       ...publishing(ASKED),

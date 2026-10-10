@@ -108,7 +108,6 @@ function commands(db: Db, change: Partial<SparkCommandScope> = {}): SparkCommand
     agentMode: 'bypassPermissions',
     runMode: 'do',
     role: null,
-    piece: null,
     readOnly: false,
     roots: [{ path: root, ignore: [] }],
     home: '/Users/me',
@@ -187,13 +186,11 @@ describe('where the tool is offered', () => {
 
 describe('start: what Spark refuses before anything runs', () => {
   it('answers each refusal in one line and never as an error', async () => {
-    const piece = { coordinated: true, owned: null };
     const cases: [string, Partial<SparkCommandScope>, Record<string, unknown>][] = [
       [NO_FOLDER_REASON, { roots: [] }, {}],
       [READ_ONLY_TURN_REASON, { runMode: 'ask' }, {}],
       [READ_ONLY_TURN_REASON, { readOnly: true }, {}],
       [READ_ONLY_TURN_REASON, { agentMode: 'plan' }, {}],
-      [CREW_REASON, { role: 'builder', piece }, {}],
       [CREW_REASON, { role: 'coordinator' }, {}],
       [OUTSIDE_FOLDER_REASON, {}, { cwd: '/etc' }],
       [OUTSIDE_FOLDER_REASON, {}, { cwd: '../elsewhere' }],
