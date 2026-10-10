@@ -86,6 +86,7 @@ interface AgentHeadProps {
   status: BlockStatus | null;
   liveId?: string | null;
   conversationId?: string;
+  readOnly?: boolean;
 }
 
 export function AgentHead({
@@ -94,6 +95,7 @@ export function AgentHead({
   status,
   liveId = null,
   conversationId,
+  readOnly = false,
 }: AgentHeadProps) {
   const headRef = useLiveHead(liveId);
   return (
@@ -107,7 +109,7 @@ export function AgentHead({
       </span>
       {status && <span className={`agent-state ${status.state}`}>{status.label}</span>}
       <HeadMeta agent={agent} />
-      {conversationId && (
+      {conversationId && !readOnly && (
         <MessageMemberButton
           conversationId={conversationId}
           agent={agent}
@@ -123,6 +125,7 @@ interface BodyProps {
   anchor: string;
   bodyId: string;
   conversationId: string;
+  readOnly: boolean;
   steps: readonly RunStep[];
   text: string;
   shots: readonly BrowserShot[];
@@ -143,6 +146,7 @@ function AgentBody({
   anchor,
   bodyId,
   conversationId,
+  readOnly,
   liveId = null,
   steps,
   text,
@@ -185,6 +189,7 @@ function AgentBody({
         status={status}
         liveId={liveId}
         conversationId={conversationId}
+        readOnly={readOnly}
       />
       <div id={bodyId}>
         <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} runId={agent.id} />
@@ -239,6 +244,7 @@ interface AgentBlockProps {
   settled?: boolean;
   collapsed: boolean;
   still?: boolean;
+  readOnly?: boolean;
   conversationId: string;
   steps: readonly RunStep[];
   text: string;
@@ -271,6 +277,7 @@ export function AgentBlock({
   settled = false,
   collapsed,
   still = false,
+  readOnly = false,
   conversationId,
   after,
   changes,
@@ -280,7 +287,7 @@ export function AgentBlock({
   const [choice, setChoice] = useState<boolean | null>(null);
   const bodyId = useId();
   const open = choice ?? !collapsed;
-  const block = { agent, anchor, bodyId, conversationId, shots };
+  const block = { agent, anchor, bodyId, conversationId, readOnly, shots };
   const className = ['msg ai agent-block', open ? '' : 'folded', still ? 'still' : '']
     .filter(Boolean)
     .join(' ');
