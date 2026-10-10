@@ -40,13 +40,18 @@ function box(): HTMLTextAreaElement {
   return screen.getByRole<HTMLTextAreaElement>('combobox');
 }
 
-function type(text: string): void {
-  fireEvent.change(box(), { target: { value: text } });
+function type(text: string, caret = text.length): void {
+  fireEvent.change(box(), { target: { value: text, selectionStart: caret, selectionEnd: caret } });
+}
+
+function asks(): string[] {
+  const line = screen.queryByRole('group', { name: 'Chats this message asks' });
+  return [...(line?.querySelectorAll('.op-ask') ?? [])].map((chip) => chip.textContent ?? '');
 }
 
 function sendButton(): HTMLButtonElement {
   return screen.getByRole<HTMLButtonElement>('button', {
-    name: /^(Send request|Post note|Send answer|Send to all)$/,
+    name: /^(Send request|Post note|Send answer)$/,
   });
 }
 
@@ -61,7 +66,46 @@ describe('OutpostComposer', () => {
     expect(sendButton().disabled).toBe(false);
     type('@api add the filter');
     expect(sendButton().textContent).toBe('Send request');
-    expect(screen.getByText('Starts a turn in @api')).toBeTruthy();
+    expect(asks()).toEqual(['@api']);
+  });
+
+  it('lists every chat a message will ask, wherever its handle is typed', () => {
+    render(composer());
+    type('could @api list the fields so that @fe can draw them?');
+    expect(asks()).toEqual(['@api', '@fe']);
+    expect(sendButton().textContent).toBe('Send request');
+    type('@all rebase on main');
+    expect(asks()).toEqual(['@fe', '@api']);
+    type('mail someone@api.dev about it');
+    expect(asks()).toEqual([]);
+    expect(sendButton().textContent).toBe('Post note');
+  });
+
+  it('leaves a chat out when its name is removed, and sends who is left', async () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    const text = '@fe draw what @api returns';
+    render(composer({ onSend }));
+    type(text);
+    fireEvent.click(screen.getByRole('button', { name: 'Do not ask @api' }));
+    expect(asks()).toEqual(['@fe']);
+    expect(box().value).toBe(text);
+    expect(document.activeElement).toBe(box());
+    fireEvent.click(sendButton());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'request', to: ['fe'] });
+    expect(onSend.mock.calls[0]?.[1]).toBe(text);
+  });
+
+  it('posts a note once every chat is left out, and asks a chat again when it is typed again', () => {
+    render(composer());
+    type('thanks @api');
+    fireEvent.click(screen.getByRole('button', { name: 'Do not ask @api' }));
+    expect(asks()).toEqual([]);
+    expect(sendButton().textContent).toBe('Post note');
+    expect(screen.getByText('Asks nobody. This posts as a note.')).toBeTruthy();
+    type('thanks');
+    type('thanks @api');
+    expect(asks()).toEqual(['@api']);
   });
 
   it('sends on Enter, clears the box, and keeps a new line on Shift+Enter', async () => {
@@ -72,7 +116,7 @@ describe('OutpostComposer', () => {
     expect(onSend).not.toHaveBeenCalled();
     fireEvent.keyDown(box(), { key: 'Enter' });
     await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
-    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'request', to: 'api' });
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'request', to: ['api'] });
     expect(onSend.mock.calls[0]?.[1]).toBe('@api add the filter');
     expect(box().value).toBe('');
   });
@@ -114,9 +158,31 @@ describe('OutpostComposer', () => {
     expect(box().value).toBe('@a');
   });
 
-  it('does not offer handles in the middle of a note', () => {
+  it('offers handles wherever an @ is typed and completes the one at the caret', () => {
     render(composer());
-    type('tell @');
+    type('tell @ about the shape', 6);
+    expect(screen.getAllByRole('option')).toHaveLength(2);
+    fireEvent.keyDown(box(), { key: 'ArrowUp' });
+    fireEvent.keyDown(box(), { key: 'Enter' });
+    expect(box().value).toBe('tell @api about the shape');
+    expect(box().selectionStart).toBe(10);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(asks()).toEqual(['@api']);
+  });
+
+  it('sends on Enter when the message ends with a whole handle', async () => {
+    const onSend = vi.fn<Send>(() => Promise.resolve());
+    render(composer({ onSend }));
+    type('thanks @fe');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    fireEvent.keyDown(box(), { key: 'Enter' });
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'request', to: ['fe'] });
+  });
+
+  it('offers nothing for an @ inside a word', () => {
+    render(composer());
+    type('mail someone@a');
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 
@@ -135,7 +201,7 @@ describe('OutpostComposer', () => {
     await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
     expect(onSend.mock.calls[0]?.[0]).toMatchObject({
       action: 'answer',
-      to: 'fe',
+      to: ['fe'],
       body: '@api light theme',
     });
     fireEvent.click(screen.getByRole('button', { name: 'Stop answering @fe' }));
@@ -155,20 +221,20 @@ describe('OutpostComposer', () => {
     type('@api add the filter');
     expect(screen.getByText('Paused. @api gets this when you resume.')).toBeTruthy();
     expect(sendButton().disabled).toBe(false);
+    type('@api and @fe add the filter');
+    expect(screen.getByText('Paused. They get this when you resume.')).toBeTruthy();
   });
 
-  it('does not send to everyone at once', async () => {
+  it('sends to everyone at once with @all', async () => {
     const onSend = vi.fn<Send>(() => Promise.resolve());
     render(composer({ onSend }));
     type('@all agree the endpoint');
-    expect(sendButton().disabled).toBe(true);
-    expect(screen.getByText('Address one chat at a time, for example @fe.')).toBeTruthy();
     await act(async () => {
       fireEvent.keyDown(box(), { key: 'Enter' });
       await Promise.resolve();
     });
-    expect(onSend).not.toHaveBeenCalled();
-    expect(box().value).toBe('@all agree the endpoint');
+    expect(onSend.mock.calls[0]?.[0]).toMatchObject({ action: 'request', to: ['fe', 'api'] });
+    expect(box().value).toBe('');
   });
 
   it('takes a message it is handed, focused and ready to send, and takes the next one too', () => {

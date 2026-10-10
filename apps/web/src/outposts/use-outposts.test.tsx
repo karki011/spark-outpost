@@ -17,7 +17,6 @@ import {
   postId,
 } from './test-fixtures.ts';
 import {
-  optimisticPost,
   useAddMember,
   useAnswer,
   useCancel,
@@ -114,38 +113,6 @@ describe('reading outposts', () => {
     }
     expect(client.getQueryState(outpostKeys.list)?.isInvalidated).toBe(true);
     expect(client.getQueryState(outpostKeys.detail(OUTPOST_ID))?.isInvalidated).toBe(true);
-  });
-});
-
-describe('optimisticPost', () => {
-  it('draws a request to a member as Sent before the server has it', () => {
-    const drawn = optimisticPost(detail(), { id: postId(7), text: '@api add the filter' }, 'now');
-    expect(drawn).toMatchObject({
-      id: postId(7),
-      kind: 'request',
-      body: 'add the filter',
-      fromUser: true,
-      toHandle: 'api',
-      toConversationId: API_CHAT,
-      state: 'sent',
-      reason: 'Not sent yet',
-      createdAt: 'now',
-    });
-  });
-
-  it('draws anything else as a note with no state', () => {
-    const drawn = optimisticPost(detail(), { id: postId(7), text: '@nobody hello' }, 'now');
-    expect(drawn).toMatchObject({
-      kind: 'note',
-      body: '@nobody hello',
-      toHandle: null,
-      state: null,
-    });
-  });
-
-  it('says Paused for a request posted to a paused outpost', () => {
-    const paused = detail([], { pausedAt: '2026-10-09T10:30:00.000Z' });
-    expect(optimisticPost(paused, { id: postId(7), text: '@fe go' }, 'now').reason).toBe('Paused');
   });
 });
 

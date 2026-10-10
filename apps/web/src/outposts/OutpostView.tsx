@@ -14,6 +14,7 @@ import { OutpostSheet } from './OutpostSheet.tsx';
 import { PostList } from './PostList.tsx';
 import { StoryBar } from './StoryBar.tsx';
 import type { Answering, ComposerTarget } from './composer-target.ts';
+import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, memberViews, membersLabel } from './member-view.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
 import { useOutpostChats } from './use-outpost-chats.ts';
@@ -92,6 +93,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
     [outpost.members, chats, projectNames],
   );
   const approvalChats = useMemo(() => chatsOnApproval(chats), [chats]);
+  const activity = useMemo(() => chatActivity(chats), [chats]);
   const answering = answeringOf(posts, answeringId, approvalChats);
   const paused = outpost.pausedAt !== null;
   const problem = cancel.error?.message ?? startNow.error?.message ?? pause.error?.message ?? null;
@@ -107,7 +109,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
       setAnsweringId(null);
       return;
     }
-    await post.mutateAsync({ id: crypto.randomUUID(), text });
+    await post.mutateAsync({ id: crypto.randomUUID(), text, to: target.to });
   };
 
   const saveEdit = async (form: SheetForm) => {
@@ -137,7 +139,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
     ) : (
       <div className="empty op-empty">
         <h2>Nothing here yet</h2>
-        <p>Start with @ and a handle to ask a chat for work. Anything else is a note.</p>
+        <p>Use @ and a handle anywhere to ask a chat for work. Anything else is a note.</p>
       </div>
     );
 
@@ -190,6 +192,7 @@ function Loaded({ id, detail, jumpTo, onOpenChat, onGone }: LoadedProps) {
           answeringId={answering?.postId ?? null}
           jumpTo={jumpTo ?? null}
           approvalChats={approvalChats}
+          activity={activity}
           empty={empty}
           onAnswer={(asked) => setAnsweringId(asked.id)}
           onCancel={(postId) => cancel.mutate(postId)}

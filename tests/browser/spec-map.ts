@@ -153,6 +153,7 @@ export const SPEC_GROUPS = {
   'analytics-audit': ['analytics', 'audit'],
   map: ['project-map', 'project-map-states', 'project-map-views'],
   outposts: [
+    'outpost-address',
     'outpost-answers',
     'outpost-create',
     'outpost-sidebar',

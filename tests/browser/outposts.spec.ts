@@ -11,6 +11,7 @@ import {
   POSTS_URL,
   TURN_TIMEOUT,
   asPairedPhone,
+  asksLine,
   box,
   chip,
   openOutpost,
@@ -63,7 +64,7 @@ test('typing @ offers the handles and the send button says what will happen', as
   await box(page).pressSequentially('what is the orders shape?');
   await expect(sendButton(page)).toHaveText('Send request');
   await expect(sendButton(page)).toBeEnabled();
-  await expect(page.locator('.op-hint')).toHaveText('Starts a turn in @api');
+  await expect(asksLine(page)).toHaveText('Asks:@api');
 
   await box(page).fill('The orders response is now paged.');
   await expect(sendButton(page)).toHaveText('Post note');
@@ -173,7 +174,7 @@ test('pause holds a new request and resume sends it', async ({ page }) => {
   await expect(page.locator('.op-hint')).not.toContainText('Paused');
 
   await box(page).fill('@api ping');
-  await expect(page.locator('.op-hint')).toHaveText('Paused. @api gets this when you resume.');
+  await expect(asksLine(page)).toContainText('Paused. @api gets this when you resume.');
   await box(page).press('Enter');
   const request = post(page, 'ping');
   await expect(stateOf(request)).toHaveText('Sent');

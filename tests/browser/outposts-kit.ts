@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, type Request } from '@playwright/test';
 import type { RemoteSession } from '../../packages/contracts/src/remote.ts';
 import { openChats } from './navigation.ts';
@@ -25,6 +26,8 @@ export const outpostPage = (page: Page, name: string) =>
   page.getByRole('main', { name: `Outpost ${name}` });
 export const box = (page: Page) => page.getByRole('combobox', { name: 'Message the outpost' });
 export const sendButton = (page: Page) => page.locator('.op-send');
+export const asksLine = (page: Page) =>
+  page.getByRole('group', { name: 'Chats this message asks' });
 export const thread = (page: Page) => page.getByRole('list', { name: 'Outpost thread' });
 export const post = (page: Page, text: string) =>
   thread(page).locator('.op-post', { hasText: text });
@@ -118,4 +121,34 @@ export async function asPairedPhone(page: Page): Promise<void> {
     const session = (await response.json()) as RemoteSession;
     await route.fulfill({ response, json: { ...session, remote: true } });
   });
+}
+
+const SHOTS = process.env.SPARK_REVIEW_SHOTS;
+const THEMES = [
+  ['light', 'light'],
+  ['dark', 'graphite'],
+] as const;
+
+export async function inBothThemes(
+  page: Page,
+  name: string,
+  check: () => Promise<void>,
+): Promise<void> {
+  const root = page.locator('html');
+  const before = await root.getAttribute('data-skin');
+  for (const [scheme, skin] of THEMES) {
+    await root.evaluate((html, value) => (html.dataset.skin = value), skin);
+    await page.waitForTimeout(300);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}-${name}-${scheme}.png` });
+    await check();
+    const results = await new AxeBuilder({ page })
+      .include('.main.op')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  }
+  await root.evaluate((html, value) => {
+    if (value === null) delete html.dataset.skin;
+    else html.dataset.skin = value;
+  }, before);
 }
