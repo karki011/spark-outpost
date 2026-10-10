@@ -32,10 +32,10 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | Status        | Means                                                                                                           |
 | ------------- | --------------------------------------------------------------------------------------------------------------- |
 | **Sent**      | The chat is busy, its last turn failed or was stopped, the outpost is paused, or it reads **Waiting for @api**. |
-| **Working**   | Its turn is running.                                                                                            |
+| **Working**   | Its turn is running; the line under it says what the chat is doing.                                             |
 | **Needs you** | The reply ends **Needs you: …**, or an approval card waits.                                                     |
 | **Answered**  | The answer is under the request.                                                                                |
-| **Failed**    | The turn failed, or **Not delivered: …** says why.                                                              |
+| **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                                                 |
 | **Cancelled** | You cancelled it or stopped its turn.                                                                           |
 
 ## Jev on a reply

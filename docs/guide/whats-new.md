@@ -13,7 +13,7 @@ What changed recently in Spark, newest first.
 | What changed                                                                                                                                   | What to do                                  |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | Outpost agents ask each other. A chat proposes a **story** of sub-tasks; you start it. Sub-tasks can wait for another and stack pull requests. | See [stories](outpost-stories.md).          |
-| **Outposts**: ask several chats in one thread with `@handle`. The sidebar lists them under the outpost, with different blob faces.             | See [outposts](outposts.md).                |
+| **Outposts**: ask chats with `@handle` anywhere in a message, several at once. The sidebar lists them under the outpost, with different faces. | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request.            | No action.                                  |
 | The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.                 | Press **Refresh** on a stale row.           |
 | **Agent TV**, **Browser** and **Terminal** moved into the chat's **…** menu. Its dot means agents or a hidden terminal are running.            | No action.                                  |

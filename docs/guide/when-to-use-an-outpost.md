@@ -31,9 +31,9 @@ Each answer lands under its request with its branch, files and pull request, so 
 
 ## What it can't do yet
 
-| Not yet                         | Today                                   |
-| ------------------------------- | --------------------------------------- |
-| `@all`, one request to everyone | Address each handle in its own request. |
+| Not yet                           | Today                              |
+| --------------------------------- | ---------------------------------- |
+| Asking a chat that isn't a member | Add the chat to the outpost first. |
 
 Agents can [ask each other](outpost-asks.md), and a chat can [propose a story](outpost-stories.md) of sub-tasks for you to start.
 
