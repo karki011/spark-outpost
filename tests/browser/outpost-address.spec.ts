@@ -194,3 +194,18 @@ test('a long handle wraps in the member strip instead of being cut', async ({ pa
     await expect(handle).toBeVisible();
   });
 });
+
+test('a long message with no line breaks grows the box instead of scrolling inside it', async ({
+  page,
+}) => {
+  await seeded(page);
+  await openOutpost(page);
+  const box = page.getByRole('combobox', { name: 'Message the outpost' });
+  await box.fill(`Could @api list ${'the order fields and their types '.repeat(12)}`);
+  const fit = await box.evaluate((area: HTMLTextAreaElement) => ({
+    hidden: area.scrollHeight - area.clientHeight,
+    scrolled: area.scrollTop,
+  }));
+  expect(fit.hidden).toBeLessThanOrEqual(1);
+  expect(fit.scrolled).toBe(0);
+});

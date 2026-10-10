@@ -35,6 +35,8 @@
   outline: 0;
   background: transparent;
   padding: 12px 14px 4px;
+  field-sizing: content;
+  max-height: calc(var(--composer-rows, 5) * 1lh + 16px);
 }
 
 .comp-bar {
