@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as acp from '@agentclientprotocol/sdk';
-import type { RoleTurn } from './fake-acp-roles.ts';
+import type { FakeTurn } from './fake-acp-build.ts';
 
 const run = promisify(execFile);
 
@@ -28,7 +28,7 @@ async function shell(file: string, args: string[], cwd: string): Promise<Ran> {
   }
 }
 
-async function allowed(turn: RoleTurn, id: string, command: string): Promise<boolean> {
+async function allowed(turn: FakeTurn, id: string, command: string): Promise<boolean> {
   const tool = { toolCallId: id, title: command, kind: 'execute' as const };
   await turn.update({
     sessionUpdate: 'tool_call',
@@ -51,7 +51,7 @@ function quoted(arg: string): string {
   return /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", `'\\''`)}'`;
 }
 
-async function command(turn: RoleTurn, id: string, file: string, args: string[]): Promise<Ran> {
+async function command(turn: FakeTurn, id: string, file: string, args: string[]): Promise<Ran> {
   const text = [file === FAKE_GH ? 'gh' : file, ...args.map(quoted)].join(' ');
   if (!(await allowed(turn, id, text))) {
     await turn.update({ sessionUpdate: 'tool_call_update', toolCallId: id, status: 'failed' });
@@ -67,7 +67,7 @@ async function command(turn: RoleTurn, id: string, file: string, args: string[])
   return ran;
 }
 
-export async function publishTurn(turn: RoleTurn): Promise<acp.StopReason | null> {
+export async function publishTurn(turn: FakeTurn): Promise<acp.StopReason | null> {
   const at = turn.text.lastIndexOf(PUBLISH_HEADING);
   if (at < 0) return null;
   const asked = turn.text.slice(at);
