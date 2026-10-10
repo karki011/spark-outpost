@@ -135,6 +135,18 @@ const GIT_HOOK = /^\.git\/hooks\/[^/]+$/;
 const GIT_CONFIG = '.git/config';
 const SPARK_OWN_DIRS = ['.spark/worktrees/', '.spark/plans/'];
 
+const holdsSparkOwnDir = (prefix: string) => SPARK_OWN_DIRS.some((dir) => dir.startsWith(prefix));
+
+export const EXACT_PROTECTED_GLOBS: readonly string[] = [
+  ...[...INSTRUCTION_NAMES].map((name) => `**/${name}`),
+  ...INSTRUCTION_PREFIXES.filter((prefix) => !holdsSparkOwnDir(prefix)).map(
+    (prefix) => `${prefix}**`,
+  ),
+  ...INSTRUCTION_FILES,
+  '.git/hooks/*',
+  GIT_CONFIG,
+];
+
 export function protectedPath(relative: string): ProtectedKind | null {
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';

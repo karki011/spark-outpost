@@ -8,6 +8,7 @@ import {
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
+  floorAskRules,
   FORCE_PUSH_DENY_RULES,
   PUBLISH_ASK_RULES,
   secretRules,
@@ -26,6 +27,11 @@ type ClaudeOptions = {
 
 const optionsOf = (meta: Record<string, unknown> | undefined) =>
   (meta as { claudeCode: { options: ClaudeOptions } }).claudeCode.options;
+
+const bashAsks = (options: ClaudeOptions) =>
+  ((options.settings.permissions.ask as string[] | undefined) ?? []).filter((rule) =>
+    rule.startsWith('Bash'),
+  );
 
 describe('Claude session options', () => {
   const project = optionsOf(agentDefinitions.claude.projectSessionMeta?.(['/work/lib']));
@@ -91,7 +97,7 @@ describe('Claude session options', () => {
     expect(asking.settings.permissions).not.toHaveProperty('ask');
   });
 
-  it('gives Do runs the edit, shell and todo tools and leaves asking to the agent mode', () => {
+  it('gives Do runs the edit, shell and todo tools and asks only for protected paths', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -104,7 +110,8 @@ describe('Claude session options', () => {
       'EnterPlanMode',
       'ExitPlanMode',
     ]);
-    expect(options.settings.permissions).not.toHaveProperty('ask');
+    expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
+    expect(bashAsks(options)).toEqual([]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
       deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),
@@ -145,18 +152,18 @@ describe('Claude session options', () => {
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
-  it('adds no ask rules for a piece, whether or not it shares its tree', () => {
+  it('adds no command ask rules for a piece, whether or not it shares its tree', () => {
     const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    expect(alone.settings.permissions).not.toHaveProperty('ask');
+    expect(bashAsks(alone)).toEqual([]);
     const publishing = optionsOf(
       agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
     );
-    expect(publishing.settings.permissions).not.toHaveProperty('ask');
+    expect(bashAsks(publishing)).toEqual([]);
   });
 
   it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
     const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(solo.settings.permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
+    expect(bashAsks(solo)).toEqual([...PUBLISH_ASK_RULES]);
   });
 
   it('lets gh through to the approval gate for a Builder whose run may publish', () => {

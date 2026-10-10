@@ -5,6 +5,7 @@ import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
+import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
@@ -133,12 +134,17 @@ function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean)
   return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
 }
 
+function editRules(globs: readonly string[], extraRoots: readonly string[]): string[] {
+  const underExtraRoots = extraRoots.flatMap((root) => globs.map((glob) => `/${root}/${glob}`));
+  return [...globs, ...underExtraRoots].map((pattern) => `Edit(${pattern})`);
+}
+
 export function secretRules(extraRoots: readonly string[]): string[] {
-  const underExtraRoots = extraRoots.flatMap((root) =>
-    SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
-  );
-  const patterns = [...SECRET_GLOBS, ...underExtraRoots];
-  return patterns.map((pattern) => `Edit(${pattern})`);
+  return editRules(SECRET_GLOBS, extraRoots);
+}
+
+export function floorAskRules(tools: readonly string[], extraRoots: readonly string[]): string[] {
+  return tools.includes('Edit') ? editRules(EXACT_PROTECTED_GLOBS, extraRoots) : [];
 }
 
 function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
@@ -156,7 +162,7 @@ export function claudeSessionMeta(
   coordinated = false,
   publishes = false,
 ): Record<string, unknown> {
-  const ask = askRules(builder, coordinated);
+  const ask = [...floorAskRules(tools, extraRoots), ...askRules(builder, coordinated)];
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,

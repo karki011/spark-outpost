@@ -9,7 +9,7 @@ import { rootLaunch, type RepoLaunch } from '../../agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS, type AgentSettingsRow } from '../../agent-config/store.ts';
 import { executableItems, trustFingerprint, type TrustRow } from '../../agent-config/trust.ts';
 import { redirectsFingerprint } from '../../agent-config/redirects.ts';
-import { agentDefinitions, codexConfig } from './agents.ts';
+import { agentDefinitions, codexConfig, floorAskRules } from './agents.ts';
 import { acpMcpServer, namedMcpServers, prepareRepoSession } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 
@@ -60,6 +60,8 @@ async function claudeMeta(launch: RepoLaunch): Promise<Meta> {
   return agentDefinitions.claude.doSessionMeta!([], session.claude) as Meta;
 }
 
+const FLOOR_ONLY = floorAskRules(['Edit'], []);
+
 describe('Claude session meta from repo config', () => {
   it('keeps every repo settings source off and our rules on, whatever the repo says', async () => {
     const { claudeCode } = await claudeMeta(await launchWith());
@@ -67,7 +69,7 @@ describe('Claude session meta from repo config', () => {
     expect(claudeCode.options.strictMcpConfig).toBe(true);
     expect(claudeCode.options.settings.disableSkillShellExecution).toBe(true);
     expect(claudeCode.options.settings.plansDirectory).toBe('.spark/plans');
-    expect(claudeCode.options.settings.permissions).not.toHaveProperty('ask');
+    expect(claudeCode.options.settings.permissions.ask).toEqual(FLOOR_ONLY);
     expect(claudeCode.options.settings.permissions.deny).toContain('Edit(**/.env)');
     expect(JSON.stringify(claudeCode)).not.toContain('bypassPermissions');
     expect(JSON.stringify(claudeCode)).not.toContain('evil.example');
@@ -139,7 +141,7 @@ describe('Claude session meta from repo config', () => {
   it("leaves an enabled MCP server's tools to the agent's mode", async () => {
     const echo = scan.mcpServers.find((server) => server.name === 'echo')!;
     const meta = await claudeMeta(await launchWith({}, { echo: echo.fingerprint }));
-    expect(meta.claudeCode.options.settings.permissions).not.toHaveProperty('ask');
+    expect(meta.claudeCode.options.settings.permissions.ask).toEqual(FLOOR_ONLY);
   });
 });
 
@@ -165,7 +167,7 @@ describe('trusted folder in the Claude session', () => {
     const { settings } = meta.claudeCode.options;
     expect(settings.hooks).toHaveProperty('Stop');
     expect(settings.permissions.allow).toEqual(launch.allowRules);
-    expect(settings.permissions).not.toHaveProperty('ask');
+    expect(settings.permissions.ask).toEqual(FLOOR_ONLY);
     expect(meta.claudeCode.options.settingSources).toEqual([]);
     expect(JSON.stringify(meta)).not.toContain('evil.example');
   });
