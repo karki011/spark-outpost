@@ -247,7 +247,7 @@ spark_settings returns the non-secret settings; spark_projects returns each proj
     keywords: ['analytics', 'spend', 'cost', 'health'],
     text: `Analytics shows Overview and Spend over the last 7, 30 or 90 days, all computed locally from this workspace's own history — nothing is sent anywhere except what you ask "Ask about this view" to explain.
 
-Overview covers turns, runs, cost, outcomes (good/bad/mixed), keep and revert rates and a 0–100 health score. Spend breaks down reported and estimated cost by project, provider and model, cost per task and per good outcome, and Jev's own spend. The spark_analytics tool returns the same reports for a chosen window; its harness report covers only turns stored before Spark's own harness was removed.`,
+Overview covers turns, runs, cost, outcomes (good/bad/mixed), keep and revert rates and a 0–100 health score. Spend breaks down reported and estimated cost by project, provider and model, cost per task and per good outcome, and Jev's own spend. The spark_analytics tool returns the same reports for a chosen window.`,
   },
   {
     id: 'audit-log',
