@@ -1,8 +1,6 @@
 import {
-  analyticsHarnessSchema,
   analyticsOverviewSchema,
   analyticsSpendSchema,
-  type AnalyticsHarness,
   type AnalyticsOverview,
   type AnalyticsRange,
   type AnalyticsSpend,
@@ -16,7 +14,7 @@ export interface RangeChoice {
   to: string;
 }
 
-export type AnalyticsTab = 'overview' | 'spend' | 'harness';
+export type AnalyticsTab = 'overview' | 'spend';
 
 export const analyticsKeys = {
   all: ['analytics'] as const,
@@ -43,6 +41,4 @@ export const analyticsApi = {
     request(analyticsOverviewSchema, `/analytics/overview?${query(choice)}`),
   spend: (choice: RangeChoice): Promise<AnalyticsSpend> =>
     request(analyticsSpendSchema, `/analytics/spend?${query(choice)}`),
-  harness: (choice: RangeChoice): Promise<AnalyticsHarness> =>
-    request(analyticsHarnessSchema, `/analytics/harness?${query(choice)}`),
 };

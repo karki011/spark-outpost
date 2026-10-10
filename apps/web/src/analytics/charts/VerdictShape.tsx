@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { capitalize, RATED_VERDICTS, type RatedVerdict } from '../analytics-model.ts';
+import type { RatedVerdict } from '../analytics-model.ts';
 import { DotPattern, HatchPattern } from './Patterns.tsx';
 
 const COLORS: Record<string, string> = {
@@ -75,20 +75,5 @@ export function VerdictShape({
   }
   return (
     <circle className="an-pt an-pt-ring" cx={x} cy={y} r={r - 0.5} style={{ stroke: color }} />
-  );
-}
-
-export function ShapeLegend() {
-  return (
-    <ul className="an-legend">
-      {RATED_VERDICTS.map((verdict) => (
-        <li key={verdict}>
-          <svg width="14" height="14" aria-hidden="true">
-            <VerdictShape verdict={verdict} x={7} y={7} />
-          </svg>
-          {capitalize(verdict)}
-        </li>
-      ))}
-    </ul>
   );
 }
