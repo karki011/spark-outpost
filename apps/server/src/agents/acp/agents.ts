@@ -75,6 +75,7 @@ export interface AgentDefinition {
     builder?: boolean,
     coordinated?: boolean,
     publishes?: boolean,
+    chatRun?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -100,8 +101,8 @@ const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
-function askRules(builder: boolean, coordinated: boolean): string[] {
-  return builder && !coordinated ? [...PUBLISH_ASK_RULES] : [];
+function askRules(builder: boolean, coordinated: boolean, chatRun: boolean): string[] {
+  return chatRun || (builder && !coordinated) ? [...PUBLISH_ASK_RULES] : [];
 }
 
 export const FORCE_PUSH_DENY_RULES = [
@@ -126,6 +127,8 @@ const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
 const PUBLISHING_BUILDER_DENY_RULES = SOLO_BUILDER_DENY_RULES.filter(
   (rule) => rule !== 'Bash(gh:*)',
 );
+
+export const CHAT_RUN_DENY_RULES = PUBLISHING_BUILDER_DENY_RULES;
 
 function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean): string[] {
   if (!builder) return [];
@@ -155,12 +158,14 @@ export function claudeSessionMeta(
   allowBypass = false,
   coordinated = false,
   publishes = false,
+  chatRun = false,
 ): Record<string, unknown> {
-  const ask = askRules(builder, coordinated);
+  const guarded = chatRun && !builder;
+  const ask = askRules(builder, coordinated, guarded);
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
-    ...builderDeny(builder, coordinated, publishes),
+    ...(guarded ? CHAT_RUN_DENY_RULES : builderDeny(builder, coordinated, publishes)),
   ];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -271,6 +276,7 @@ const claudeSessions = {
     builder = false,
     coordinated = false,
     publishes = false,
+    chatRun = false,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -280,6 +286,7 @@ const claudeSessions = {
       true,
       coordinated,
       publishes,
+      chatRun,
     ),
 } satisfies Partial<AgentDefinition>;
 

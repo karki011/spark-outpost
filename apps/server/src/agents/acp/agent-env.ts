@@ -30,6 +30,16 @@ const HOSTING_TOKENS = [
 ];
 export const NO_PUSH_URL = 'spark-outpost-no-push:///';
 
+export function withoutPushing(env: Record<string, string>): Record<string, string> {
+  const index = Number.parseInt(env.GIT_CONFIG_COUNT ?? '0', 10) || 0;
+  return {
+    ...env,
+    GIT_CONFIG_COUNT: String(index + 1),
+    [`GIT_CONFIG_KEY_${index}`]: `url.${NO_PUSH_URL}.pushInsteadOf`,
+    [`GIT_CONFIG_VALUE_${index}`]: '',
+  };
+}
+
 export function withoutPublishing(
   env: Record<string, string>,
   home: string,
@@ -37,14 +47,7 @@ export function withoutPublishing(
   const kept = Object.fromEntries(
     Object.entries(env).filter(([name]) => !HOSTING_TOKENS.includes(name)),
   );
-  const index = Number.parseInt(kept.GIT_CONFIG_COUNT ?? '0', 10) || 0;
-  return {
-    ...kept,
-    GIT_CONFIG_COUNT: String(index + 1),
-    [`GIT_CONFIG_KEY_${index}`]: `url.${NO_PUSH_URL}.pushInsteadOf`,
-    [`GIT_CONFIG_VALUE_${index}`]: '',
-    GH_CONFIG_DIR: join(home, '.spark-outpost-no-gh'),
-  };
+  return { ...withoutPushing(kept), GH_CONFIG_DIR: join(home, '.spark-outpost-no-gh') };
 }
 
 async function baseEnvironment(
@@ -86,7 +89,9 @@ export async function agentEnvironment(
   repo: CodexRepoOptions | null = null,
   builder = false,
   extra: Readonly<Record<string, string>> = {},
+  chatRun = false,
 ): Promise<Record<string, string>> {
   const env = { ...(await baseEnvironment(options, home, browsing, repo)), ...extra };
-  return builder ? withoutPublishing(env, home) : env;
+  if (builder) return withoutPublishing(env, home);
+  return chatRun ? withoutPushing(env) : env;
 }

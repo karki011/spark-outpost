@@ -7,7 +7,7 @@ import { briefWithFile } from '../projects/instructions-file.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
-import { renewLease, type Lease } from '../persistence/jobs.ts';
+import type { Lease } from '../persistence/jobs.ts';
 import {
   LeaseLostError,
   isCancelRequested,
@@ -71,6 +71,9 @@ import { withBrowserCheck } from './browser-check.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
+import type { RunControl, StopReason } from './run-control.ts';
+
+export { startControl, type RunControl, type StopReason } from './run-control.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
@@ -107,52 +110,6 @@ export interface TurnDeps {
   browserPane?: boolean;
 }
 
-export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';
-
-export interface RunControl {
-  signal: AbortSignal;
-  reason(): StopReason | null;
-  stop(reason: StopReason): void;
-  dispose(): void;
-}
-
-export function startControl(deps: TurnDeps, lease: Lease, stopNow?: AbortSignal): RunControl {
-  const controller = new AbortController();
-  let stopReason: StopReason | null = null;
-  const stop = (reason: StopReason) => {
-    stopReason ??= reason;
-    controller.abort();
-  };
-  const stopFromOutside = () => stop('cancelled');
-  if (stopNow?.aborted) stopFromOutside();
-  else stopNow?.addEventListener('abort', stopFromOutside, { once: true });
-  const renewEveryMs = Math.max(1000, (deps.leaseSeconds * 1000) / 3);
-  const heartbeat = setInterval(() => {
-    renewLease(deps.db, lease, deps.leaseSeconds)
-      .then((held) => {
-        if (!held) stop('lease_lost');
-      })
-      .catch(() => undefined);
-  }, renewEveryMs);
-  const cancelWatch = setInterval(() => {
-    isCancelRequested(deps.db, lease.runId)
-      .then((requested) => {
-        if (requested) stop('cancelled');
-      })
-      .catch(() => undefined);
-  }, deps.cancelPollMs ?? 250);
-  return {
-    signal: controller.signal,
-    reason: () => stopReason,
-    stop,
-    dispose() {
-      clearInterval(heartbeat);
-      clearInterval(cancelWatch);
-      stopNow?.removeEventListener('abort', stopFromOutside);
-    },
-  };
-}
-
 export interface TurnOptions {
   onOutput?: (output: ProviderOutput) => void;
   onProduced?: (output: ProviderOutput) => void;
@@ -160,6 +117,7 @@ export interface TurnOptions {
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
+  chatRun?: boolean;
 }
 
 export interface TurnResult {
@@ -313,12 +271,14 @@ export async function runAgentTurn(
       onTimeout: () => control.stop('approval_timeout'),
       observations,
     };
+    const chatRun = options.chatRun === true && input.mode === 'do' && !writesCode(input.role);
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
             ...gateOptions,
             builder: writesCode(input.role),
+            chatRun,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
@@ -385,9 +345,10 @@ export async function runAgentTurn(
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
+      ...(chatRun ? { chatRun: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(input.piece?.sharesTree ? { sharesTree: true } : {}),
-      ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
+      ...((writesCode(input.role) || chatRun) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),

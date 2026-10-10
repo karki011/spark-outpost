@@ -16,6 +16,7 @@ import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
+  publishRefusal,
   publishVerdict,
   type PublishBasis,
   type PublishContext,
@@ -82,6 +83,8 @@ export const PUSH_HOOKS_REASON =
   "Pushes never skip this repository's hooks. Read what the hook reports and fix it, or tell the user what it needs";
 export const BUILDER_PUBLISH_REASON =
   "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
+export const CHAT_PUBLISH_REASON =
+  "This chat's agent pushes and opens a pull request only when the user's message asks for it, the chat is at Full auto → PR, or its mode is Auto or Bypass permissions (Full access)";
 export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
@@ -126,6 +129,7 @@ export function guardedTargets(asked: ApprovalRequest): Guarded {
 
 export interface DecideOptions {
   builder?: boolean;
+  chatRun?: boolean;
   piece?: PieceGuard;
   files?: FileLister;
   askRun?: boolean;
@@ -193,6 +197,19 @@ function askRunChange(request: ApprovalRequest, view: ShellView | null): string 
   return writes ? ASK_RUN_REASON : null;
 }
 
+function ownAgentRefusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  published: PublishVerdict | null,
+): string | null {
+  const { command } = request;
+  if (options.builder || !options.chatRun || !command || !publishesCode(command)) return null;
+  if (published) return published.kind === 'refuse' ? published.reason : null;
+  if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
+  return publishRefusal(command, options.publish?.task ?? null);
+}
+
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
@@ -207,6 +224,8 @@ function refusal(
       return BUILDER_PUBLISH_REASON;
     }
   }
+  const ownAgent = ownAgentRefusal(request, options, forced, published);
+  if (ownAgent) return ownAgent;
   const stacked = request.command
     ? stackedPushRefusal(request.command, options.publish?.task ?? null)
     : null;
