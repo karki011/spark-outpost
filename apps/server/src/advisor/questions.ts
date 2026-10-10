@@ -1,6 +1,3 @@
-export const MAX_REQUEST_CHARACTERS = 4_000;
-export const MAX_DIFF_CHARACTERS = 24_000;
-
 export type Description = string | Record<string, unknown> | unknown[];
 
 export type NoulCriteria = {
