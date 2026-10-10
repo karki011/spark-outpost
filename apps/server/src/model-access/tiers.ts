@@ -1,4 +1,3 @@
-import { MODEL_TIERS, type ModelTier } from '@spark-outpost/contracts';
 import { cardFor, FRONTIER_RANK, TIER_RANK } from '../model-cards/cards.ts';
 
 export interface TierModel {
@@ -35,11 +34,6 @@ export function modelTier(model: TierModel, provider: string | null = null): num
   return tierInfo(model, provider).tier;
 }
 
-export function tierName(model: TierModel, provider: string | null = null): ModelTier | null {
-  const tier = modelTier(model, provider);
-  return tier === null ? null : (MODEL_TIERS[tier] ?? null);
-}
-
 export function tierLadder<T extends TierModel>(
   models: readonly T[],
   provider: string | null = null,
@@ -50,56 +44,4 @@ export function tierLadder<T extends TierModel>(
     if (tier !== null && tier < FRONTIER_RANK && !byTier.has(tier)) byTier.set(tier, model);
   }
   return [...byTier.entries()].sort(([a], [b]) => a - b).map(([, model]) => model);
-}
-
-export function topTier<T extends TierModel>(
-  models: readonly T[],
-  provider: string | null = null,
-): T | null {
-  return tierLadder(models, provider).at(-1) ?? null;
-}
-
-export function oneTierUp<T extends TierModel>(
-  models: readonly T[],
-  currentId: string | null,
-  provider: string | null = null,
-  pool: readonly T[] = models,
-): T | null {
-  const ladder = tierLadder(pool, provider);
-  const current = models.find((model) => model.id === currentId);
-  const tier = current ? modelTier(current, provider) : null;
-  if (tier === null) return null;
-  return ladder.find((model) => (modelTier(model, provider) ?? -1) > tier) ?? null;
-}
-
-const EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh', 'max'];
-
-function effortRank(effort: string | null): number {
-  return effort === null ? -1 : EFFORT_ORDER.indexOf(effort);
-}
-
-export function strongerEffort(efforts: readonly string[], current: string | null): string | null {
-  const index = effortRank(current);
-  return efforts.find((effort) => effortRank(effort) > index && effort !== 'max') ?? current;
-}
-
-export function highEffort(efforts: readonly string[]): string | null {
-  return efforts.includes('high') ? 'high' : (efforts.at(-1) ?? null);
-}
-
-export function loweredEffort(
-  efforts: readonly string[],
-  current: string | null,
-  target: string,
-): string | null {
-  if (!efforts.includes(target)) return current;
-  return effortRank(current) > effortRank(target) ? target : current;
-}
-
-const ESCALATION_FLOOR = 'medium';
-
-export function escalatedEffort(efforts: readonly string[], current: string | null): string | null {
-  const floor = effortRank(ESCALATION_FLOOR);
-  if (effortRank(current) >= floor) return current;
-  return efforts.find((effort) => effortRank(effort) >= floor) ?? current;
 }

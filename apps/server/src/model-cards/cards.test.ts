@@ -3,14 +3,7 @@ import { measuredSeedSchema, vendorCardsFileSchema } from '@spark-outpost/contra
 import seedJson from './measured-seed.json' with { type: 'json' };
 import vendorJson from './vendor-cards.json' with { type: 'json' };
 import { cardFor, effectiveDefaultModel, usableDefault, VENDOR_CARDS } from './cards.ts';
-import {
-  modelTier,
-  oneTierUp,
-  tierInfo,
-  tierLadder,
-  tierName,
-  topTier,
-} from '../model-access/tiers.ts';
+import { modelTier, tierInfo, tierLadder } from '../model-access/tiers.ts';
 
 const claude = [
   { id: 'default', label: 'Default (recommended)' },
@@ -77,8 +70,7 @@ describe('tiers from cards', () => {
       tier: 1,
       source: 'card',
     });
-    expect(tierName({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')).toBe('mid');
-    expect(tierName({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
+    expect(modelTier({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
   });
 
   it('gives Haiku 5.5 its own small-tier card without taking the haiku alias from Haiku 4.5', () => {
@@ -94,7 +86,7 @@ describe('tiers from cards', () => {
     expect(cardFor({ id: 'haiku', label: 'Haiku 4.5' }, 'claude')?.id).toBe('claude-haiku-4-5');
     expect(cardFor({ id: 'haiku' }, 'claude')?.id).toBe('claude-haiku-4-5');
     expect(cardFor({ id: 'haiku', label: 'GLM-5.3-Flash' }, 'zai')?.id).toBe('glm-5.3-flash');
-    expect(tierName({ id: 'claude-haiku-5-5', label: 'Haiku 5.5' }, 'claude')).toBe('small');
+    expect(modelTier({ id: 'claude-haiku-5-5', label: 'Haiku 5.5' }, 'claude')).toBe(0);
     const afterHaiku45 = new Date('2026-10-20T00:00:00Z');
     expect(usableDefault('claude', 'claude-haiku-5-5', afterHaiku45)).toBe('claude-haiku-5-5');
     expect(usableDefault('claude', 'haiku', afterHaiku45)).toBeNull();
@@ -106,13 +98,10 @@ describe('tiers from cards', () => {
       'sonnet',
       'opus[1m]',
     ]);
-    expect(topTier(claude, 'claude')?.id).toBe('opus[1m]');
     expect(tierLadder(codex, 'codex').map((model) => model.id)).toEqual([
       'gpt-6-luna',
       'gpt-6-sol',
     ]);
-    expect(oneTierUp(codex, 'gpt-6-sol', 'codex')).toBeNull();
-    expect(oneTierUp(claude, 'opus[1m]', 'claude')).toBeNull();
     expect(tierLadder(zai, 'zai').map((model) => model.label)).toEqual([
       'GLM-5.3-Flash',
       'GLM-5.3',

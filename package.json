@@ -42,8 +42,6 @@
     "jev:thresholds": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/jev-thresholds.ts",
     "jev:content-rank": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/jev-content-rank.ts",
     "bench:loop": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/codescan/loop-bench.ts",
-    "routing:labels": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/routing/labels.ts",
-    "routing:ratings": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/routing/ratings-live.ts",
     "coord:shadow": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/coordinator/shadow.ts"
   },
   "devDependencies": {

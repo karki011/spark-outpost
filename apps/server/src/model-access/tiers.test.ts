@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modelTier, tierInfo, tierLadder, tierName, topTier } from './tiers.ts';
+import { modelTier, tierInfo, tierLadder } from './tiers.ts';
 
 const HAIKU = { id: 'haiku', label: 'Haiku 4.5' };
 const SONNET = { id: 'sonnet', label: 'Sonnet 5' };
@@ -15,15 +15,13 @@ describe('model tiers', () => {
     expect(tierInfo({ id: 'mystery', label: 'Mystery' })).toEqual({ tier: null, source: 'none' });
   });
 
-  it('names the tier', () => {
+  it('ranks the tier', () => {
     expect(modelTier(HAIKU, 'claude')).toBe(0);
-    expect(tierName(SONNET, 'claude')).toBe('mid');
-    expect(tierName({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
+    expect(modelTier({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
   });
 
   it('orders one model per tier, lowest first', () => {
     expect(tierLadder([OPUS, HAIKU, SONNET], 'claude')).toEqual([HAIKU, SONNET, OPUS]);
-    expect(topTier([SONNET, OPUS, HAIKU], 'claude')).toEqual(OPUS);
-    expect(topTier([], 'claude')).toBeNull();
+    expect(tierLadder([], 'claude')).toEqual([]);
   });
 });
