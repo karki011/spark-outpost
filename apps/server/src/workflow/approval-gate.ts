@@ -44,6 +44,7 @@ import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
+import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
 import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
@@ -158,6 +159,11 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     if (deps.posture) return deps.posture;
     const mode = modeOf(request);
     return modePosture(deps.provider, mode, modeKind(deps.modes ?? [], mode));
+  };
+
+  const planningWhy = (request: ApprovalRequest) => {
+    if (deps.posture || postureOf(request) !== 'read_only') return null;
+    return chosenModeWhy(deps.provider, deps.mode, deps.modes ?? []);
   };
 
   const allowedWhy = (
@@ -351,6 +357,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       builder: deps.builder === true,
       askRun: deps.askRun === true,
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
+      planningWhy: planningWhy(request),
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
       own: await ownRepoFor(deps.db, deps.runId, request),
