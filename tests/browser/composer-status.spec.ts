@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { agentHead, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
+import { BUILD_REQUEST, chatRepo, projectChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { shoot } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
@@ -204,25 +204,25 @@ test("the line stays away while a short turn's header is in view, and shows unde
   page,
 }) => {
   test.setTimeout(90_000);
-  await resetCrew();
-  const repo = crewRepo();
+  await resetWithAgents();
+  const repo = chatRepo();
   try {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await crewChat(page, repo, 'Auto-edit');
-    await send(page, `${CREW_REQUEST} #build #crew #slowbuild`);
-    const head = agentHead(page, 'Bolt');
-    await expect(head.locator('.agent-state')).toHaveText('working', { timeout: 30_000 });
+    await projectChat(page, repo, 'Auto-edit');
+    await send(page, `${BUILD_REQUEST} #build #slowbuild`);
+    const head = page.locator('.thread .ai-head').last();
+    await expect(head.locator('.mood')).toHaveText('working', { timeout: 30_000 });
     await expect(head).toBeInViewport();
     await expect(shown(page)).toHaveCount(0);
-    await expect(line(page).getByRole('status')).toHaveText(/^(Bolt|Jev|Claude) is /);
-    await shots(page, 'crew-head-in-view');
+    await expect(line(page).getByRole('status')).toHaveText(/^Claude is /);
+    await shots(page, 'head-in-view');
 
     await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
     const thread = page.locator('.thread');
     await thread.evaluate((element) => (element.scrollTop = element.scrollHeight));
     await expect(head).not.toBeInViewport();
-    await expect(shown(page)).toHaveText(/^Bolt is (working|thinking)/);
-    await shots(page, 'crew-head-out-of-view');
+    await expect(shown(page)).toHaveText(/^Claude is (working|thinking)/);
+    await shots(page, 'head-out-of-view');
 
     await thread.evaluate((element) => (element.scrollTop = 0));
     await expect(head).toBeInViewport();
@@ -232,38 +232,9 @@ test("the line stays away while a short turn's header is in view, and shows unde
       element.parentElement!.style.minHeight = '600px';
     });
     await expect(head).toBeInViewport();
-    await expect(shown(page)).toHaveText(/^Bolt is (working|thinking)/);
+    await expect(shown(page)).toHaveText(/^Claude is (working|thinking)/);
     await page.getByRole('button', { name: 'Stop' }).click();
-    await expect(head.locator('.agent-state')).toHaveText('stopped', { timeout: 30_000 });
-  } finally {
-    repo.remove();
-  }
-});
-
-test('during a crew run the line names the crew member at work', async ({ page }) => {
-  test.setTimeout(90_000);
-  await resetCrew();
-  const repo = crewRepo();
-  try {
-    await page.setViewportSize({ width: 1400, height: 900 });
-    await crewChat(page, repo, 'Full auto');
-    await page.evaluate(() => {
-      const seen: string[] = [];
-      Object.assign(window, { statusLines: seen });
-      new MutationObserver(() => {
-        const text = document.querySelector('.cstatus .cs-wrap')?.textContent;
-        if (text && seen.at(-1) !== text) seen.push(text);
-      }).observe(document.body, { subtree: true, childList: true, characterData: true });
-    });
-    await send(page, `${CREW_REQUEST} #build #crew`);
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText(/Done 2 agents/, {
-      timeout: 45_000,
-    });
-    await expect(shown(page)).toHaveText(/^Done · \d/);
-    const seen = await page.evaluate(
-      () => (window as unknown as { statusLines: string[] }).statusLines,
-    );
-    expect(seen.some((text) => /^(Bolt|Jev) is (working|thinking|planning)/.test(text))).toBe(true);
+    await expect(head.locator('.mood')).toHaveText('stopped', { timeout: 30_000 });
   } finally {
     repo.remove();
   }

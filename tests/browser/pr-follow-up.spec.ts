@@ -28,13 +28,10 @@ test('Spark opens PRs ready for review by default and can open drafts instead', 
   const dialog = await openSparkSettings(page);
   const openAs = dialog.getByRole('radiogroup', { name: 'Open pull requests as' });
   await expect(openAs.getByRole('radio', { name: 'Ready for review' })).toBeChecked();
-  await expect(openAs).toHaveAccessibleDescription(
-    'Reviewers are asked right away. A Full auto PR whose checks still fail opens as a draft marked “Checks failing”.',
-  );
-  const failing = dialog.getByRole('radiogroup', { name: 'When checks still fail in Full auto' });
-  await expect(failing).toHaveAccessibleDescription(
-    'That PR always opens as a draft marked “Checks failing”, even when PRs open ready for review. Full auto never merges.',
-  );
+  await expect(openAs).toHaveAccessibleDescription('Reviewers are asked right away.');
+  await expect(
+    dialog.getByRole('radiogroup', { name: 'When checks still fail in Full auto' }),
+  ).toHaveCount(0);
 
   const draft = saved(page);
   await openAs.getByRole('radio', { name: 'Draft' }).click();

@@ -4,10 +4,11 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead } from './connector-cards.ts';
-import { pickPermission } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE } from './stub-config.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 test.describe.configure({ timeout: 90_000 });
 let base = '';
@@ -45,7 +46,7 @@ async function changeInChat(page: Page, root: string, text: string) {
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
+  await turnDone(page, 30_000);
 }
 
 test('flags an instruction file the agent changed without asking, and reverts it', async ({

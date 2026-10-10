@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
-import type { RoleTurn } from './fake-acp-roles.ts';
+import type { FakeTurn } from './fake-acp-build.ts';
 
 export const PLAN_MODE_TRIGGER = '#planmode';
 export const PROPOSED_PLAN_TRIGGER = '#proposedplan';
@@ -27,7 +27,7 @@ export const FAKE_PLAN = [
   '- Use the built-in writer, no new dependency',
 ].join('\n');
 
-export const FAKE_PLAN_OPTIONS: acp.PermissionOption[] = [
+const FAKE_PLAN_OPTIONS: acp.PermissionOption[] = [
   {
     optionId: 'exit-plan-clear-auto',
     name: 'Yes, clear context and use auto mode',
@@ -38,7 +38,7 @@ export const FAKE_PLAN_OPTIONS: acp.PermissionOption[] = [
   { optionId: 'reject', name: 'No, keep planning', kind: 'reject_once' },
 ];
 
-async function commandWhilePlanning(turn: RoleTurn): Promise<void> {
+async function commandWhilePlanning(turn: FakeTurn): Promise<void> {
   const toolCall = {
     toolCallId: 'plan-command',
     title: FAKE_PLAN_COMMAND,
@@ -66,7 +66,7 @@ async function commandWhilePlanning(turn: RoleTurn): Promise<void> {
   });
 }
 
-export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<acp.StopReason> {
+export async function planModeTurn(turn: FakeTurn, lockedMode: string): Promise<acp.StopReason> {
   await turn.update({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' });
   if (turn.text.includes(PLAN_COMMAND_TRIGGER)) await commandWhilePlanning(turn);
   const toolCall = {
@@ -106,7 +106,7 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
   return 'end_turn';
 }
 
-async function silentExitPlan(turn: RoleTurn, inFile: boolean): Promise<acp.StopReason> {
+async function silentExitPlan(turn: FakeTurn, inFile: boolean): Promise<acp.StopReason> {
   await turn.update({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' });
   if (inFile) {
     await turn.update({
@@ -140,7 +140,7 @@ async function silentExitPlan(turn: RoleTurn, inFile: boolean): Promise<acp.Stop
 
 export async function planTurn(
   asked: string,
-  turn: RoleTurn,
+  turn: FakeTurn,
   mode: string,
 ): Promise<acp.StopReason | null> {
   if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(turn, mode);

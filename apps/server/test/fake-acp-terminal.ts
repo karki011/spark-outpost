@@ -1,5 +1,5 @@
 import type * as acp from '@agentclientprotocol/sdk';
-import type { RoleTurn } from './fake-acp-roles.ts';
+import type { FakeTurn } from './fake-acp-build.ts';
 
 const TRIGGER = /#term=([a-z,]+)(?: (\d{1,4})ms)?/;
 export const FAKE_TERMINAL_SECRET = 'ghp_abcdefghijklmnopqrstuvwxyz0123';
@@ -45,7 +45,7 @@ const COMMANDS: Record<string, () => FakeCommand> = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function streamed(turn: RoleTurn, id: string, fake: FakeCommand, gapMs: number) {
+async function streamed(turn: FakeTurn, id: string, fake: FakeCommand, gapMs: number) {
   const { command, chunks, exitCode } = fake;
   await turn.update({
     sessionUpdate: 'tool_call',
@@ -83,7 +83,7 @@ function endContent(fake: FakeCommand): acp.ToolCallContent[] {
   return [{ type: 'content', content: { type: 'text', text } }];
 }
 
-async function atEnd(turn: RoleTurn, id: string, fake: FakeCommand, gapMs: number) {
+async function atEnd(turn: FakeTurn, id: string, fake: FakeCommand, gapMs: number) {
   const meta = { claudeCode: { toolName: 'Bash' } };
   await turn.update({
     sessionUpdate: 'tool_call',
@@ -114,7 +114,7 @@ async function atEnd(turn: RoleTurn, id: string, fake: FakeCommand, gapMs: numbe
   });
 }
 
-export async function terminalCommands(turn: RoleTurn): Promise<void> {
+export async function terminalCommands(turn: FakeTurn): Promise<void> {
   const match = TRIGGER.exec(turn.text);
   if (!match) return;
   const gapMs = match[2] ? Number(match[2]) : 0;

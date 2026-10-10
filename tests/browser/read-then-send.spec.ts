@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
-import { pickMode } from './crew-engine.ts';
+import { pickMode } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 

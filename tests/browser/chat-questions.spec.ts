@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import { chatRepo, type ChatRepo, projectChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -55,11 +55,11 @@ async function setPanel(page: Page, open: boolean) {
 }
 
 test.describe('a waiting card', () => {
-  let repo: CrewRepo;
+  let repo: ChatRepo;
 
   test.beforeEach(async () => {
-    await resetCrew();
-    repo = crewRepo();
+    await resetWithAgents();
+    repo = chatRepo();
   });
 
   test.afterEach(() => repo.remove());
@@ -69,7 +69,7 @@ test.describe('a waiting card', () => {
   }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1280, height: 900 });
-    await crewChat(page, repo, 'Ask before edits');
+    await projectChat(page, repo, 'Ask before edits');
     await send(page, 'Fix the divider #build');
     await expect(waitingCard(page)).toBeVisible({ timeout: 30_000 });
 
@@ -120,7 +120,6 @@ test.describe('one status', () => {
     await send(page, 'Keep going until I stop you #slowbuild');
     const turnHead = thread(page).locator('.ai-head').last();
     await expect(turnHead.locator('.mood')).toHaveText('working');
-    await expect(turnHead.locator('.ai-jev')).toHaveText('Jev not connected');
     await expect(statusLine(page)).toHaveCount(0);
     await expect(thread(page).locator('.dots')).toHaveCount(0);
     await expect(page.locator('.cstatus').getByRole('status')).toHaveText(/is thinking/);

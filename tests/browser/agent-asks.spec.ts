@@ -1,15 +1,16 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { card, crewRepo, linkedChat, pickMode, send, type CrewRepo } from './crew-engine.ts';
+import { pickMode } from './permissions-kit.ts';
+import { card, chatRepo, type ChatRepo, linkedChat, send } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 
 const SHOTS = path.join('test-results', 'auto-mode-prompts');
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async () => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 

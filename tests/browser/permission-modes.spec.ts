@@ -2,25 +2,28 @@ import { expect, test, type Page } from '@playwright/test';
 import { expandSection } from './provider-screen.ts';
 import {
   autonomyChip,
-  card,
-  crewChat,
-  crewRepo,
-  linkedChat,
-  pickAutonomy,
   permissionChip,
+  pickAutonomy,
   pickerPanel,
   pickMode,
-  resetCrew,
-  send,
   workPanel,
-  type CrewRepo,
-} from './crew-engine.ts';
+} from './permissions-kit.ts';
+import {
+  card,
+  chatRepo,
+  type ChatRepo,
+  linkedChat,
+  projectChat,
+  resetWithAgents,
+  send,
+  turnDone,
+} from './project-chat-kit.ts';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 
@@ -196,12 +199,12 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
 
 test('modes and options reported by a live run show up in the picker', async ({ page }) => {
   test.setTimeout(90_000);
-  await linkedChat(page, repo);
+  await projectChat(page, repo, 'Auto-edit');
   await pickerButton(page).click();
   await expect(pickerPanel(page).getByRole('tab', { name: /Options/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await send(page, 'How does notes.txt read? #debug #build');
+  await send(page, 'Add a line to notes.txt #build');
 
   const panel = await openPermissions(page);
   const yolo = panel
@@ -224,7 +227,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
   page,
 }) => {
   test.setTimeout(120_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await projectChat(page, repo, 'Ask before edits');
   const choices: [string, string, RegExp][] = [
     ['Yes', 'yes', /^Chose: Yes\./],
     ["Yes, and don't ask again for npm run lint commands", 'yes-always', /Allowed for this run\./],
@@ -252,9 +255,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
     await expect(page.getByText(`permission=${optionId}`, { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {
-      timeout: 30_000,
-    });
+    await turnDone(page, 30_000);
   }
   await page.reload();
   await expect(card(page, /Run a command\?/).getByRole('status')).toHaveText(

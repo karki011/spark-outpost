@@ -42,18 +42,6 @@ export const LONG_TASKS = [
   'cd /Users/someone/Documents/a-project-with-a-long-name/packages/contracts && pnpm typecheck',
 ];
 
-export const NOTES = [
-  'I’ll start by checking what’s already in the working tree.',
-  'Still mapping the wiring before I edit. Next: the date helpers.',
-  'Found three call sites that format dates on their own.',
-  'Research done; now editing. Moving the formatter into one module.',
-  'Updated the calendar header to read the shared helper.',
-  'Updated the week view and the divider.',
-  'Typecheck passes. Running lint and the two packages’ tests:',
-  'Lint is clean and both test suites pass.',
-  'Everything is in place; handing back.',
-].join('\n\n');
-
 export const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });
 export const outline = (page: Page) => page.getByRole('navigation', { name: 'On this chat' });
 export const ticks = (page: Page) => outline(page).getByRole('button');

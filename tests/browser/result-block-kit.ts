@@ -1,30 +1,12 @@
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
 import type { TestRepo } from '../../apps/server/test/ship-support.ts';
-import { pickPermission, type Level } from './crew-engine.ts';
+import { type Level, pickPermission } from './permissions-kit.ts';
 import { openTestDb } from './database.ts';
 import { openChats } from './navigation.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 export const SHOTS = process.env.SPARK_SHOTS ?? '';
-
-export const CLAIM =
-  "Bolt said the checks pass, but Spark's own run failed: `pnpm run test` exited 1.";
-
-export const OUTSIDE_FILES = [
-  'apps/web/src/table/align.ts',
-  'apps/web/src/table/cell.tsx',
-  'apps/web/src/table/header.tsx',
-  'apps/web/src/table/sort.ts',
-  'apps/web/src/table/table.css',
-];
-
-export const STORED_LAWS = [
-  CLAIM,
-  CLAIM,
-  ...OUTSIDE_FILES.map(
-    (file) => `Changed \`${file}\`, which the request and plan didn't name — check it.`,
-  ),
-];
 
 export async function chatIn(page: Page, repo: TestRepo, level: Level): Promise<void> {
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
@@ -44,45 +26,12 @@ export async function buildNotes(page: Page): Promise<void> {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
-}
-
-export async function storeWorthALook(
-  laws: readonly string[],
-  outsidePlan: readonly string[] = [],
-): Promise<void> {
-  const db = openTestDb();
-  try {
-    await db.query(
-      `UPDATE approvals
-          SET payload = jsonb_set(
-                jsonb_set(payload, '{checkpoint,laws}', $1::jsonb),
-                '{checkpoint,outsidePlan}', $2::jsonb)
-        WHERE kind = 'accept'`,
-      [JSON.stringify(laws), JSON.stringify(outsidePlan)],
-    );
-  } finally {
-    await db.end();
-  }
+  await turnDone(page, 30_000);
 }
 
 export async function shoot(page: Page, name: string): Promise<void> {
   if (!SHOTS) return;
   await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
-}
-
-export async function storeResultFacts(facts: Record<string, unknown>): Promise<void> {
-  const db = openTestDb();
-  try {
-    await db.query(
-      `UPDATE approvals
-          SET payload = jsonb_set(payload, '{checkpoint}', payload->'checkpoint' || $1::jsonb)
-        WHERE kind = 'accept'`,
-      [JSON.stringify(facts)],
-    );
-  } finally {
-    await db.end();
-  }
 }
 
 const SIZES = { desktop: { width: 1400, height: 900 }, phone: { width: 375, height: 812 } };
@@ -107,14 +56,9 @@ export async function shootEverywhere(page: Page, name: string): Promise<void> {
 export async function timeOutLastTurn(asked: string): Promise<void> {
   const db = openTestDb();
   try {
-    await db.query(
-      `UPDATE runs SET status = 'failed', error = 'Approval timed out', finished_at = now()
-        WHERE parent_run_id IS NULL`,
-    );
     const { rows } = await db.query<{ id: string }>(
-      `UPDATE runs SET status = 'failed', error = 'Approval timed out'
-        WHERE id = (SELECT id FROM runs WHERE parent_run_id IS NOT NULL
-                     ORDER BY created_at DESC LIMIT 1)
+      `UPDATE runs SET status = 'failed', error = 'Approval timed out', finished_at = now()
+        WHERE parent_run_id IS NULL
         RETURNING id`,
     );
     await db.query(

@@ -240,8 +240,8 @@ test('a finished turn says whether the change was checked in the browser', async
   writeFileSync(path.join(root, 'notes.txt'), 'Remember the milk\n');
   await withDesktopBrowser(page);
   await editedChat(page, root);
-  const turns = page.locator('.crew-turn');
-  await expect(turns.first().locator('.crew-foot')).toContainText('Done');
+  const turns = page.locator('section[data-turn]');
+  await expect(turns.first().locator('.mood')).toHaveText('done');
   const kept = turns.first().getByRole('region', { name: /^Kept · / });
   await kept.getByRole('button', { name: /^Kept · / }).click();
   await expect(kept.getByRole('region', { name: /Files changed/ })).toBeVisible();
@@ -255,7 +255,7 @@ test('a finished turn says whether the change was checked in the browser', async
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(turns.nth(1).locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
+  await expect(turns.nth(1).locator('.mood')).toHaveText('done', { timeout: 30_000 });
   const second = turns.nth(1).locator('.turn-foot');
   await expect(second.getByText('Not checked in browser')).toBeVisible();
   await expect(turns.first().getByText('Not checked in browser')).toHaveCount(0);

@@ -1,7 +1,8 @@
 import path from 'node:path';
 import { expect, type Locator, type Page } from '@playwright/test';
-import { pickPermission } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { openChats } from './navigation.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 export async function askForEdit(page: Page, root: string): Promise<void> {
   const response = await page.request.post('/api/projects', { data: { rootPath: root } });
@@ -36,5 +37,5 @@ export async function editedChat(page: Page, root: string): Promise<void> {
   await expect(page.locator('.md', { hasText: 'fake-edit=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+  await turnDone(page, 15_000);
 }

@@ -1,20 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expandSection } from './provider-screen.ts';
 import {
-  CREW_REQUEST,
-  agentHead,
-  crewChat,
-  crewRepo,
-  resetCrew,
+  BUILD_REQUEST,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
   send,
-  type CrewRepo,
-} from './crew-engine.ts';
+  turnDone,
+} from './project-chat-kit.ts';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 
@@ -60,12 +60,12 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   await expect(providers).toHaveCount(0);
 }
 
-test('the Claude default effort preselects fresh chats and sets the Builder effort', async ({
+test('the Claude default effort preselects fresh chats and the picked effort runs the turn', async ({
   page,
 }) => {
   test.setTimeout(120_000);
   await chooseClaudeDefault(page);
-  await crewChat(page, repo, 'Full auto');
+  await projectChat(page, repo, 'Full auto');
 
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
@@ -79,7 +79,7 @@ test('the Claude default effort preselects fresh chats and sets the Builder effo
   await expect(panel.getByRole('tab', { name: /Effort/ })).toContainText('high');
   await page.keyboard.press('Escape');
 
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  await expect(agentHead(page, 'Bolt')).toContainText('Builder', { timeout: 30_000 });
-  await expect(agentHead(page, 'Bolt')).toContainText('Opus 5.5low effort');
+  await send(page, `${BUILD_REQUEST} #build`);
+  await turnDone(page, 30_000);
+  await expect(page.locator('.msg.ai .turn-foot').last()).toContainText('high effort');
 });

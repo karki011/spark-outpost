@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { crewRepo, type CrewRepo } from './crew-engine.ts';
+import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { EDIT_AFTER, EDIT_BEFORE, REWRITE_AFTER, REWRITE_BEFORE } from './diff-fixtures.ts';
 import { editedChat } from './edited-chat.ts';
@@ -16,10 +16,10 @@ const FILES = 5000;
 const BIG_LINES = 20_000;
 const SHOTS = 'test-results/diff-drawer';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async () => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 

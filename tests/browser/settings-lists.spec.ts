@@ -109,7 +109,7 @@ test('fifteen projects fit a compact list that filters and opens one at a time',
   const list = dialog.getByRole('list', { name: 'Linked folders' });
   await expect(list.locator('> li')).toHaveCount(15);
   await expect(dialog.locator('.set-projects-bar').getByRole('status')).toHaveText('15 projects');
-  await expect(dialog.getByRole('group', { name: /^Builders in / })).toHaveCount(0);
+  await expect(dialog.getByRole('group', { name: /^Work place in / })).toHaveCount(0);
   const body = dialog.locator('.set-body');
   expect(await body.evaluate((node) => node.scrollHeight)).toBeLessThan(900);
   expect(await body.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
@@ -121,7 +121,7 @@ test('fifteen projects fit a compact list that filters and opens one at a time',
   await page.keyboard.press('Enter');
   await expect(design).toHaveAttribute('aria-expanded', 'true');
   const open = dialog.getByRole('group', { name: 'Settings for design-system' });
-  await expect(open.getByRole('group', { name: 'Builders in design-system' })).toBeVisible();
+  await expect(open.getByRole('group', { name: 'Work place in design-system' })).toBeVisible();
   await expect(open.getByRole('group', { name: 'Browser in design-system' })).toBeVisible();
   await expect(
     open.getByRole('button', { name: 'Set up the preview of design-system' }),
@@ -167,10 +167,10 @@ test('one project starts closed, opens from the keyboard, and a few show no filt
   await api.focus();
   await page.keyboard.press('Space');
   await expect(api).toHaveAttribute('aria-expanded', 'true');
-  await expect(one.getByRole('group', { name: 'Builders in api' })).toBeVisible();
+  await expect(one.getByRole('group', { name: 'Work place in api' })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(api).toHaveAttribute('aria-expanded', 'false');
-  await expect(one.getByRole('group', { name: 'Builders in api' })).toHaveCount(0);
+  await expect(one.getByRole('group', { name: 'Work place in api' })).toHaveCount(0);
   await api.click();
   await expect(api).toHaveAttribute('aria-expanded', 'true');
 
@@ -178,7 +178,7 @@ test('one project starts closed, opens from the keyboard, and a few show no filt
   await linkProjects(page, ['api', 'cli', 'web']);
   const three = await openSection(page, 'Projects');
   await expect(three.getByRole('list', { name: 'Linked folders' }).locator('> li')).toHaveCount(3);
-  await expect(three.getByRole('group', { name: /^Builders in / })).toHaveCount(0);
+  await expect(three.getByRole('group', { name: /^Work place in / })).toHaveCount(0);
   await expect(three.getByRole('searchbox', { name: 'Filter projects' })).toHaveCount(0);
 });
 
