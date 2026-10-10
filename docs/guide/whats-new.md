@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                   | What to do                                  |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| A stacked sub-task starts with its parent's kept changes, committed by Spark. A story whose chats are all refused creates nothing.             | See [stacks](stacked-pull-requests.md).     |
 | Story chats keep draft titles. A building chat can propose a story. Spark's wrap-up only replies. An early stacked push is refused or flagged. | See [stories](outpost-stories.md).          |
 | Outpost agents ask each other. A chat proposes a **story** of sub-tasks; you start it. Sub-tasks can wait for another and stack pull requests. | See [stories](outpost-stories.md).          |
 | **Outposts**: ask chats with `@handle` anywhere, several at once. Handles take 32 characters. The sidebar lists them by outpost; faces differ. | See [outposts](outposts.md).                |
@@ -29,4 +30,3 @@ What changed recently in Spark, newest first.
 | **Use Spark workflow** supports direct agents and custom instructions.                                                                         | Open **Settings → Spark**.                  |
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                                                    | See [Open a terminal](terminals.md).        |
 | Spark Island rests as blobs.                                                                                                                   | Hover or click to open.                     |
-| Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                                      | Answer in your next message.                |
