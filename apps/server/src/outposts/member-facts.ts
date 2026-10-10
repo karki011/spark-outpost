@@ -1,6 +1,7 @@
 import { shortModelLabel } from '@spark-outpost/contracts';
 import { getCapabilities, resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { cardFor } from '../model-cards/cards.ts';
 import { catalogEntry } from '../providers/catalog.ts';
 import { agentLabel, type IntroFacts } from './handshake.ts';
 
@@ -21,6 +22,11 @@ async function chatPlace(
   return row ? { workspaceId: row.workspace_id, project: row.project } : null;
 }
 
+function cardNameOf(modelId: string | null, provider: string): string | null {
+  if (modelId === null) return null;
+  return cardFor({ id: modelId }, provider)?.label ?? modelId;
+}
+
 export async function memberFacts(
   db: Queryable,
   conversationId: string,
@@ -37,7 +43,7 @@ export async function memberFacts(
     project: place.project,
     agent: agentLabel({
       provider: catalogEntry(settings.provider).name,
-      model: model ? shortModelLabel(model.label) : modelId,
+      model: model ? shortModelLabel(model.label) : cardNameOf(modelId, settings.provider),
       auto: settings.routing === 'auto',
     }),
     mode: mode?.label ?? settings.agentMode,

@@ -86,9 +86,9 @@ const summaryQuery = `
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
     CASE WHEN r.status = 'succeeded' THEN (
-      SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$) FROM messages m
+      SELECT CASE WHEN strpos(m.content, '${NEEDS_YOU_PREFIX}') > 0 THEN m.content END FROM messages m
       WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
-    ) END AS latest_run_needs_you,
+    ) END AS latest_run_asking_reply,
     COALESCE(
       r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
       false

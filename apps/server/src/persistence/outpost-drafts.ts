@@ -80,6 +80,15 @@ export const markStarted: DraftStore['markStarted'] = async (db, id, outpostId) 
   return rowCount === 1;
 };
 
+export const releaseStart: DraftStore['releaseStart'] = async (db, id, outpostId, before) => {
+  const { rowCount } = await db.query(
+    `UPDATE outpost_drafts SET started_at = NULL, outpost_id = $3
+     WHERE id = $1 AND outpost_id = $2 AND started_at IS NOT NULL AND reported_at IS NULL`,
+    [id, outpostId, before],
+  );
+  return rowCount === 1;
+};
+
 export const markReported: DraftStore['markReported'] = async (db, id) => {
   const { rowCount } = await db.query(
     `UPDATE outpost_drafts SET reported_at = now()

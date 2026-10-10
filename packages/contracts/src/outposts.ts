@@ -44,6 +44,7 @@ export const requestFactsSchema = z.object({
   chatDeleted: z.boolean(),
   waitingOn: z.string().nullable(),
   waitingOnDeleted: z.boolean().optional(),
+  waitingOnFailed: z.boolean().optional(),
 });
 export type RequestFacts = z.infer<typeof requestFactsSchema>;
 

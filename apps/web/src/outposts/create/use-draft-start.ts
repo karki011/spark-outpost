@@ -5,7 +5,7 @@ import { fromDraft } from '../draft-prefill.ts';
 import { outpostKeys, outpostsApi, type ProposedDraft } from '../outposts-api.ts';
 import { useOutposts } from '../use-outposts.ts';
 import type { CreateDraft, JoinedOutpost } from './create-draft.ts';
-import type { CreateBase } from './use-create-data.ts';
+import { choiceOf, type CreateBase } from './use-create-data.ts';
 
 export const DRAFT_GONE = 'That draft no longer exists.';
 export const LEAD_GONE = 'The chat that proposed this draft was deleted, so it cannot be started.';
@@ -94,7 +94,13 @@ export function useDraftStart(draftId: string, base: CreateBase | null): DraftSt
   const posture = leadPosture(settings, base);
   return {
     status: 'ready',
-    seed: () => fromDraft(proposed, base, { conversationId: leadChatId, posture, outpost: target }),
+    seed: () =>
+      fromDraft(proposed, base, {
+        conversationId: leadChatId,
+        posture,
+        outpost: target,
+        agent: choiceOf(settings),
+      }),
     outpostId: target?.outpostId ?? null,
   };
 }

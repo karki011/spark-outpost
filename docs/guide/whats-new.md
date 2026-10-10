@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                   | What to do                                  |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| A stacked sub-task starts with its parent's kept changes, committed by Spark. A story whose chats are all refused creates nothing.             | See [stacks](stacked-pull-requests.md).     |
 | A crew turn finished before you opened its chat shows no piece list or **Message** button there.                                               | Use **Agent TV** or **Crew**.               |
 | Story chats keep draft titles. A building chat can propose a story. Spark's wrap-up only replies. An early stacked push is refused or flagged. | See [stories](outpost-stories.md).          |
 | Outpost agents ask each other. A chat proposes a **story** of sub-tasks; you start it. Sub-tasks can wait for another and stack pull requests. | See [stories](outpost-stories.md).          |
@@ -27,6 +28,3 @@ What changed recently in Spark, newest first.
 | **Terminal**: Esc in Claude shows **Idle**; Spark's note left your message.                                                                    | No action.                                  |
 | Scout drags up to the notch.                                                                                                                   | See [Spark Island](desktop-companion.md).   |
 | Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                                                | No action.                                  |
-| **Use Spark workflow** supports direct agents and custom instructions.                                                                         | Open **Settings → Spark**.                  |
-| **Terminal** has event-based activity, colors, drops and a borderless view.                                                                    | See [Open a terminal](terminals.md).        |
-| Spark Island rests as blobs.                                                                                                                   | Hover or click to open.                     |

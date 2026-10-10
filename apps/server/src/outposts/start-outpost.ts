@@ -11,17 +11,13 @@ import {
 import { updateChatSettings } from '../persistence/chat-settings.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import { withTransaction, type Queryable } from '../persistence/db.ts';
-import { getDraft, markStarted } from '../persistence/outpost-drafts.ts';
+import { getDraft } from '../persistence/outpost-drafts.ts';
 import { insertTasks } from '../persistence/outpost-stories.ts';
-import {
-  deleteOutpost,
-  getOutpost,
-  notifyOutpostChanged,
-  OutpostError,
-} from '../persistence/outposts.ts';
+import { getOutpost, notifyOutpostChanged, OutpostError } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { chatPosture } from './chat-posture.ts';
 import { modeAboveLead, userChoseMode } from './mode-cap.ts';
+import type { StoredDraft } from './ports.ts';
 import {
   addWithNotice,
   knownOutpost,
@@ -30,6 +26,7 @@ import {
   postToOutpost,
   type PostServiceDeps,
 } from './post-service.ts';
+import { claimDraft, refuseEmptyStart } from './story-claim.ts';
 import { DRAFT_ALREADY_STARTED, planStory, type StoryLead, type StoryPlan } from './story-start.ts';
 
 export const CHAT_ID_IN_USE = 'That chat id is already in use.';
@@ -103,7 +100,7 @@ async function createMemberChat(
 }
 
 interface Story {
-  draftId: string;
+  draft: StoredDraft;
   plan: StoryPlan;
   proposed: readonly DraftChat[];
 }
@@ -182,16 +179,7 @@ async function storyOf(
   if (plan.kind === 'refusal') {
     throw new OutpostError(plan.message === DRAFT_ALREADY_STARTED ? 409 : 400, plan.message);
   }
-  return { draftId, plan, proposed: draft.body.chats };
-}
-
-async function claimDraft(deps: StartDeps, story: Story, outpostId: string, created: boolean) {
-  if (await markStarted(deps.db, story.draftId, outpostId)) return;
-  if (created) {
-    await deleteOutpost(deps.db, deps.workspaceId, outpostId);
-    await notifyOutpostChanged(deps.db, outpostId);
-  }
-  throw new OutpostError(409, DRAFT_ALREADY_STARTED);
+  return { draft, plan, proposed: draft.body.chats };
 }
 
 async function sendFirstMessages(
@@ -262,7 +250,7 @@ export async function startOutpost(
 ): Promise<StartOutcome> {
   const story = await storyOf(deps, request);
   const { created } = await openOutpost(deps, request);
-  if (story) await claimDraft(deps, story, request.id, created);
+  const claim = story ? await claimDraft(deps, story.draft, request.id, created) : null;
   const failed: FailedMember[] = [];
   const left = new Set<string>();
   for (const member of request.members) {
@@ -270,6 +258,9 @@ export async function startOutpost(
     if (refusal === null) continue;
     failed.push(failure(member, refusal));
     left.add(startMemberChatId(member));
+  }
+  if (story && claim?.first && story.plan.tasks.every((task) => left.has(task.conversationId))) {
+    return refuseEmptyStart(deps, claim, failed);
   }
   const unsent = story
     ? await sendStory(deps, story, left)

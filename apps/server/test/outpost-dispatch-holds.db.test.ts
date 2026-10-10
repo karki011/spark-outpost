@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { requestState, type AppEvent, type RunStatus } from '@spark-outpost/contracts';
+import {
+  heldForRequest,
+  requestState,
+  type AppEvent,
+  type RunStatus,
+} from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startDispatcher } from '../src/a2a/dispatcher.ts';
 import { releaseAnswered } from '../src/a2a/hold-release.ts';
@@ -124,13 +129,27 @@ describe('a request that starts after another', () => {
     expect((await stored(held)).post.afterPostId).toBe(first);
   });
 
+  it('stays held when the question is a line of its own and Spark adds a line after it', async () => {
+    await onePass();
+    await parentTurn(
+      'succeeded',
+      'Half done.\nLeft it in the working tree.\nNeeds you: which schema?\n\nChecks for Bolt: tests passed',
+    );
+
+    await onePass();
+
+    expect(sentIds()).toEqual([first]);
+    expect((await stored(held)).post.afterPostId).toBe(first);
+    expect(requestState((await stored(first)).facts!).state).toBe('needs_you');
+  });
+
   it.each([
-    ['failed', 'failed', "@api's turn failed"],
-    ['outcome_unknown', 'failed', "@api's turn was interrupted"],
-    ['cancelled', 'cancelled', null],
+    ['failed', 'failed', "@api's turn failed", "Waiting: @api's turn failed"],
+    ['outcome_unknown', 'failed', "@api's turn was interrupted", "Waiting: @api's turn failed"],
+    ['cancelled', 'cancelled', null, 'Waiting for @api'],
   ] as const)(
-    'stays held and unsent when the other turn ends %s',
-    async (status, state, reason) => {
+    'stays held and unsent, and says why, when the other turn ends %s',
+    async (status, state, reason, waitingLine) => {
       await onePass();
       await parentTurn(status);
 
@@ -139,7 +158,8 @@ describe('a request that starts after another', () => {
       expect(sentIds()).toEqual([first]);
       const waiting = await stored(held);
       expect(waiting.post).toMatchObject({ taskId: null, closedState: null, afterPostId: first });
-      expect(requestState(waiting.facts!)).toEqual({ state: 'sent', reason: 'Waiting for @api' });
+      expect(requestState(waiting.facts!)).toEqual({ state: 'sent', reason: waitingLine });
+      expect(heldForRequest(waiting.facts!)).toBe(true);
       expect(requestState((await stored(first)).facts!)).toEqual({ state, reason });
     },
   );

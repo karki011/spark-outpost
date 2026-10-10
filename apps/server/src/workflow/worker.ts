@@ -9,6 +9,7 @@ import { orchestrate } from '../orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../orchestration/session.ts';
 import { recoverExpiredLeases } from './recovery.ts';
 import { sweepSessions } from './turn-session.ts';
+import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 
 export interface WorkerOptions extends OrchestratorDeps {
@@ -18,6 +19,7 @@ export interface WorkerOptions extends OrchestratorDeps {
   activeWork?: ActiveWork;
   queueTarget?: ResolveTarget;
   runTurn?: RunTurn;
+  parked?: ParkedTurns;
 }
 
 export type RunTurn = (options: WorkerOptions, lease: Lease) => Promise<void>;
@@ -69,8 +71,10 @@ export function startWorker(options: WorkerOptions): Worker {
       };
     });
 
+  const working = () => active.size - (options.parked?.size ?? 0);
+
   const fillSlots = async (db: Db) => {
-    while (!stopped && active.size < options.concurrency) {
+    while (!stopped && working() < options.concurrency) {
       const lease = await claimNextJob(db, options.leaseSeconds);
       if (!lease) return;
       const done = options.activeWork?.begin(`run ${lease.runId}`);
@@ -84,6 +88,8 @@ export function startWorker(options: WorkerOptions): Worker {
       active.add(task);
     }
   };
+
+  options.parked?.onChange(wake);
 
   const loop = (async () => {
     while (!stopped) {

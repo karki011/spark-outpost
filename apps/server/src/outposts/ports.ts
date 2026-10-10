@@ -158,6 +158,12 @@ export interface DraftStore {
   saveDraft(db: Queryable, draft: NewDraft): Promise<StoredDraft>;
   getDraft(db: Queryable, workspaceId: string, id: string): Promise<StoredDraft | null>;
   markStarted(db: Queryable, id: string, outpostId: string): Promise<boolean>;
+  releaseStart(
+    db: Queryable,
+    id: string,
+    outpostId: string,
+    before: string | null,
+  ): Promise<boolean>;
   markReported(db: Queryable, id: string): Promise<boolean>;
   draftsOfChat(db: Queryable, workspaceId: string, conversationId: string): Promise<StoredDraft[]>;
 }

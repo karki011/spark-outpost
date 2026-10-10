@@ -32,7 +32,7 @@ The **Story** bar under the outpost's chats reads, for example, **Checkout · 1 
 
 | You see                  | Means                                                                                                                      |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| **Waiting for @api**     | Held until `@api` reads **Answered**, then it starts by itself. If `@api` failed, select **Start anyway** or **Cancel**.   |
+| **Waiting for @api**     | Held until `@api` is **Answered**, then it starts. **Waiting: @api's turn failed**: pick **Start anyway** or **Cancel**.   |
 | **Update from @api**     | Fills the message box with a merge request for you to send.                                                                |
 | A request from **Spark** | Every sub-task ended. The proposing chat answers once with a wrap-up: a reply that changes no files and publishes nothing. |
 | **Pause**                | Also holds waiting sub-tasks.                                                                                              |

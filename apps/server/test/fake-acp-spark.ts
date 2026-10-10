@@ -31,6 +31,22 @@ function fromAcp(servers: unknown): SparkEndpoint | null {
   return null;
 }
 
+function fromClaudeOptions(meta: unknown): SparkEndpoint | null {
+  const options = (meta as { claudeCode?: { options?: { mcpServers?: unknown } } } | null)
+    ?.claudeCode?.options;
+  const servers = (options?.mcpServers ?? {}) as Record<
+    string,
+    { url?: string; headers?: Record<string, string> }
+  >;
+  for (const [name, server] of Object.entries(servers)) {
+    const authorization = server.headers?.Authorization;
+    if (name.startsWith('spark') && server.url && authorization) {
+      return { name, url: server.url, authorization };
+    }
+  }
+  return null;
+}
+
 function fromCodexConfig(raw: string | undefined): SparkEndpoint | null {
   if (!raw) return null;
   const config = JSON.parse(raw) as {
@@ -101,14 +117,17 @@ async function scriptTurn(
 
 export async function sparkTurn(
   text: string,
-  servers: unknown,
+  session: { meta: unknown; mcpServers: unknown } | null,
   update: Update,
   say: (chunk: string) => Promise<void>,
 ): Promise<acp.StopReason | null> {
   const script = SCRIPT_TRIGGER.exec(text)?.[1];
   const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
   if (!script && !match) return null;
-  const endpoint = fromAcp(servers) ?? fromCodexConfig(process.env.CODEX_CONFIG);
+  const endpoint =
+    fromAcp(session?.mcpServers) ??
+    fromClaudeOptions(session?.meta) ??
+    fromCodexConfig(process.env.CODEX_CONFIG);
   if (!endpoint) {
     await say('spark=missing');
     return 'end_turn';

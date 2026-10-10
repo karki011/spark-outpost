@@ -605,7 +605,7 @@ Read from the code, not run against a provider.
 
 ### 13.3 Claude's tool timeout
 
-Still unverified. Spark sets Codex's limit for the Spark server to 3,600 s (`CODEX_TOOL_TIMEOUT_SEC`, `agents/acp/spark-tools.ts`) and sets nothing for Claude: no environment variable or session option in the repository names a tool timeout for it. A long `wait` against Claude is one of the real-provider checks and is not a claim until it has run.
+Read from the pinned Claude CLI (2.1.280, inside `@anthropic-ai/claude-agent-sdk` 0.3.280) and adapter (`claude-agent-acp` 0.81.2); section 15.1 has the limits and the fix. Spark gives both agents one hour for a Spark tool call: `CODEX_TOOL_TIMEOUT_SEC` and `CLAUDE_TOOL_TIMEOUT_MS` (`agents/acp/spark-tools.ts`). No real provider has run the fix.
 
 ### 13.4 Release 2 as built
 
@@ -625,7 +625,6 @@ All lanes are merged on top of 0.1.0-beta.11.
 
 Not built, and why:
 
-- A held request whose parent failed in another project reads only "Waiting for @a"; the fuller line comes from the `parent_failed` stack warning, which exists for stacked tasks.
 - The island has no "@fe asked @api" or draft-proposed moment; it names a member chat that finished with a Needs you.
 - When the ring check trips after the insert, the stored post keeps `waits = true` although the call did not wait.
 
@@ -663,3 +662,46 @@ Asked for by the owner after real use: one leading handle per message was too na
 - **Inside a batch, a chat is named once.** `RequestOutcome` takes `inBatch` and leaves out the "@api answered" header of the reply, because the line above it already reads "@api Answered". A chat that is waiting for you keeps its header, and a single-chat request is drawn as before.
 
 Not built: addressing a chat that is not a member, and `@all` or several targets for agents.
+
+## 15. Fixes after the first real-provider check (October 10, 2026)
+
+A check with real Claude and Codex sessions found the problems below. Each fix was proven with a failing test on fakes and temp repositories first; none has run against a real provider yet. Problems that exist only because a turn is split into child runs were left for the removal of Spark's own harness.
+
+### 15.1 A waiting ask and Claude's 60 seconds
+
+- **Cause.** The Claude CLI wraps every non-GET request to an HTTP MCP server in a timer that it clears when the response headers arrive. The budget is 60 s unless the server entry has `timeout` (at least 1,000 ms) or `MCP_TOOL_TIMEOUT` is set, and its error text is "The operation timed out.". The Spark host answers a tool call with one JSON body (`enableJsonResponse`, `spark-mcp/host.ts`), so no header leaves before the tool returns. A second watchdog aborts an HTTP tool call that sent no response or progress for 300 s (`CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`), and the wall clock for a call is 100,000,000 ms. The entry's `timeout` raises all three.
+- **Why Spark could not set it.** An ACP `McpServer` has no timeout field, and the adapter copies only `type`, `url` and `headers` from the ACP list. It does pass `_meta.claudeCode.options.mcpServers` to the SDK unchanged, and an ACP entry of the same name replaces it.
+- **Fix.** `withSparkServer` (`agents/acp/spark-tools.ts`, called by `newSessionRequest`) puts the Spark server in `_meta.claudeCode.options.mcpServers` with `timeout: 3,600,000` when the session has Claude options, and in the ACP list otherwise. `withMcpSecretsRedacted` (`audit/protocol-entry.ts`) hides header and env values sent that way. The host is unchanged.
+- **After an hour** the CLI gives up with an error. The host aborts the call when the connection closes, the wait ends, the request goes on, and its answer reaches the asking chat in its next turn's preamble.
+- **Codex** waited over five minutes in the check. Its `exec` cell yields every 10 s and the model calls `wait` again, each time a full request that re-reads the context from cache: 23 polls and 687,123 tokens (660,224 cached) for one 5 minute wait. Spark's tool was called once.
+
+### 15.2 A waiting turn and the worker's slots
+
+`startWorker` started a turn only while fewer than `WORKER_CONCURRENCY` (default 2) were running, and a turn blocked inside `spark_outpost_ask` counted. `ParkedTurns` (`workflow/parked-turns.ts`) is shared by the worker and the Spark tools: `hold` parks the chat's top-level run around `waitForRequest`, the worker counts `active - parked`, and parking wakes it. When the wait ends the turn goes on, so for a moment one more turn than the setting can run.
+
+### 15.3 A stacked sub-chat and its parent's uncommitted work
+
+At Automatic nothing commits a kept change, so a parent's branch tip was still its base when the dependent was released. `releaseAnswered` (`a2a/hold-release.ts`) now asks `parentWorkCommitter` (`outposts/stacked-parent-work.ts`) before it releases a request whose chat is stacked on the awaited chat (`stackParentOf`, parent owns a live `spark/*` branch). For each task of the parent chat it reads `planShip`: files pending on the chat's own branch are committed with `shipTask(..., { mode: 'commit' })`, the same code as Ship's **Commit**, with its audit entry and repository hooks. Nothing is pushed, rebased or forced, and no other branch is touched. While a task is running or the commit fails, the request stays held and the next pass tries again; the thread still reads "Waiting for @a", and **Start anyway** releases it without the commit. A dependent in another project is released as before.
+
+### 15.4 Needs you
+
+The reply in the check read `…tests pass.\nLeft the change in the working tree.\nNeeds you: Ask this chat to publish.\n\nChecks for Bolt: tests passed`: the line followed a single line break. The SQL pattern in `FACTS_QUERY`, its copy in the chat list query and `needsYouLines` all wanted a blank line before it, so the request read Answered and its dependents were released. There is no stored state. `needsYouLines` (contracts) now reads every line that starts with "Needs you: ", and both queries hand it the reply instead of matching in SQL, so the request, the chat's row and the thread agree.
+
+### 15.5 A start in which every chat is refused
+
+`claimDraft` marked the draft started before any chat had joined. `outposts/story-claim.ts` keeps the claim first, so two starts still cannot both win, and `refuseEmptyStart` undoes it when this start made the claim and every story chat was refused: `releaseStart` clears `started_at` and restores `outpost_id`, an outpost this start created is deleted, and the route answers 409 "No chat started, so nothing was created." followed by each chat's reason. A story that already has a started chat, and an outpost that was there before, are left alone.
+
+### 15.6 A pinned Claude model under another id
+
+`pick` (`agents/acp/session-config.ts`) matches a pinned model against the session's choices by exact value or label. The Claude CLI spells a model row as an alias or as a full id depending on what the alias resolves to in that process, so an id from the capability probe can be missing from a turn's session. The adapter resolves such names itself in `session/set_config_option` (`resolveModelPreference`), and never across generations. For an agent with `resolvesModelNames` (Claude only), `applySessionSettings` now sends the pinned value when it matches no choice and reads back what the session reports. If the agent refuses, the turn keeps its note and `watchRanModel` adds "Claude ran this turn on Opus 5.5, not sonnet" from the model the agent reports.
+
+### 15.7 Smaller ones
+
+- The create sheet proposes each sub-chat with the lead chat's agent, model and mode when that agent is connected (`usualAgent`, `draft-prefill.ts`), and shows the draft's title on its row (`storyTitle`).
+- The join notice names a model the capability list lacks by its model card.
+- A held request whose awaited request failed reads "Waiting: @a's turn failed" (`waitingOnFailed` in `requestFactsSchema`), in every project, with **Start anyway** and **Cancel** as before.
+
+### 15.8 Known and not fixed
+
+- A request follows the user's answer to a Needs you (`continueOpenRequest`, `outposts/continuation.ts`), so it moves between Needs you, Working and Answered across turns, and the wrap-up is written when it first reads Answered.
+- **Continue from here** after a crash starts a run with `continues_run_id`, but the request stays on the interrupted run and reads Failed.

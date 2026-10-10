@@ -231,7 +231,7 @@ async function turn(
     );
     return 'end_turn';
   }
-  const sparked = await sparkTurn(text, sessionRequest?.mcpServers, update, say);
+  const sparked = await sparkTurn(text, sessionRequest, update, say);
   if (sparked) return sparked;
   const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
   if (moded) return moded;

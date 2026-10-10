@@ -31,7 +31,7 @@ import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createAppParts } from './app.ts';
 import { takeLaunchToken } from './launch-token.ts';
-import { gitHubDepsOf } from './ship-routes.ts';
+import { gitHubDepsOf, shipDepsOf } from './ship-routes.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
@@ -86,13 +86,6 @@ const slackSocket = startSlackSocket({
   ...slackDeps,
   runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
 });
-const outposts = outpostDelivery({ db, port: config.API_PORT, apiToken });
-const appEvents = new AppEventFeed(undefined, (event) => {
-  slackNotifier.changed(event);
-  outposts.changed(event);
-  if (event.kind === 'preview') void previews.sync();
-});
-const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const endpoints = {
   anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
   openaiBaseUrl: config.OPENAI_BASE_URL,
@@ -102,6 +95,23 @@ const endpoints = {
 };
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
+const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
+const outposts = outpostDelivery({
+  db,
+  port: config.API_PORT,
+  apiToken,
+  ship: shipDepsOf({
+    ...githubDeps,
+    githubApiUrl: config.GITHUB_API_URL,
+    branchPrefix: config.BRANCH_PREFIX,
+  }),
+});
+const appEvents = new AppEventFeed(undefined, (event) => {
+  slackNotifier.changed(event);
+  outposts.changed(event);
+  if (event.kind === 'preview') void previews.sync();
+});
+const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const cloneDeps = {
   db,
   workspaceId,
@@ -117,7 +127,6 @@ const cloneDeps = {
       : null,
   reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
 };
-const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
 const terminals = new TerminalSessions(
   loginShellSpawner(),
   defaultLimits,

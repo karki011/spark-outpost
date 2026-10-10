@@ -336,22 +336,22 @@ describe('starting a story from a draft', () => {
     expect(outcome.failed.map((failed) => failed.handle)).toEqual(['api']);
   });
 
-  it('sends what failed the first time when the user starts again', async () => {
-    const { api, web } = story();
-    const start = request([api, web]);
+  it('starts the draft in a new outpost after a start in which every chat was refused', async () => {
+    const first = story();
     let present = false;
     const flaky = { ...deps, folderExists: () => Promise.resolve(present) };
-    const first = await startOutpost(flaky, start);
-    expect(first.failed.map((failed) => failed.handle)).toEqual(['api', 'web']);
-    expect(await count('outpost_story_tasks')).toBe(0);
+    await refusal(startOutpost(flaky, request([first.api, first.web])));
     present = true;
+    const { api, web } = story();
+    const start = request([api, web]);
 
     const second = await startOutpost(flaky, start);
 
-    expect(second).toEqual({ created: false, failed: [] });
+    expect(second).toEqual({ created: true, failed: [] });
     expect((await requests(start.id)).map((post) => post.toHandle)).toEqual(['api', 'web']);
     expect((await heldRequests(t.db)).map(({ post }) => post.toHandle)).toEqual(['web']);
     expect(await count('outpost_story_tasks')).toBe(2);
+    expect((await getDraft(t.db, t.workspaceId, draftId))?.outpostId).toBe(start.id);
   });
 
   it('does not send a dependent first message when the one before it could not be stored', async () => {

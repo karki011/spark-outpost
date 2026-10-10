@@ -3,6 +3,7 @@ import {
   agentRoleSchema,
   categorySchema,
   modelSwitchSchema,
+  needsYouLines,
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
@@ -91,7 +92,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_step: string | null;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
-  latest_run_needs_you?: string | null;
+  latest_run_asking_reply?: string | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
   pinned_at: Date | null;
@@ -231,7 +232,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
                 ? row.latest_run_progress
                 : null,
             interruptionChoice: row.latest_run_interruption_choice ?? null,
-            needsYou: row.latest_run_needs_you ?? null,
+            needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
           }
         : null,
     archivedAt: iso(row.archived_at),

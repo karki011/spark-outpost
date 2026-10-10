@@ -147,6 +147,26 @@ describe('fromDraft', () => {
     expect(draft.chats[1]).toMatchObject({ provider: 'codex', agentMode: 'agent' });
   });
 
+  it("proposes each chat with the lead chat's agent and model, not the default one", () => {
+    const claude = { provider: 'claude' as const, model: 'claude-sonnet-5-5', agentMode: 'auto' };
+    const chats = [proposed('a'), proposed('b', { agent: 'codex' })];
+    const draft = fromDraft(source(chats), base(), { ...lead('auto'), agent: claude });
+    expect(draft.chats[1]).toMatchObject(claude);
+    expect(draft.chats[2]).toMatchObject({ provider: 'codex', agentMode: 'agent' });
+  });
+
+  it('falls back to the default agent when the lead chat has none connected', () => {
+    const data = { ...base(), providers: createData().providers };
+    const claude = { provider: 'claude' as const, model: null, agentMode: null };
+    const draft = fromDraft(source([proposed('a')]), data, { ...lead('auto'), agent: claude });
+    expect(draft.chats[1]).toMatchObject({ provider: 'codex', agentMode: 'agent' });
+  });
+
+  it('carries the title the lead gave each chat', () => {
+    const draft = fromDraft(source([proposed('api'), proposed('fe')]), base(), lead('auto'));
+    expect(draft.chats.map((row) => row.storyTitle)).toEqual([undefined, 'Build api', 'Build fe']);
+  });
+
   it('leaves the project empty when it no longer exists', () => {
     const gone = '0d000000-0000-4000-8000-000000000099';
     const draft = fromDraft(source([proposed('a', { projectId: gone })]), base(), lead('auto'));
