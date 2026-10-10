@@ -50,6 +50,7 @@ import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
+import { sparkCommandScope } from './command-scope.ts';
 import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
@@ -372,12 +373,14 @@ export async function runAgentTurn(
         ...(input.assistant ? { readOnly: true } : {}),
         observations,
         publish: await publishScope(deps.db, input),
+        commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
         actions: {
           append,
           waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
           signal: control.signal,
           timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
           pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
+          onTimeout: () => control.stop('approval_timeout'),
           audit,
           replySoFar,
         },

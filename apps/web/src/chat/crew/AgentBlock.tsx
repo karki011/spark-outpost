@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import {
   isCheckApproval,
+  type AgentTerminalStarted,
   type Approval,
   type BrowserShot,
   type CommandRun,
@@ -20,7 +21,10 @@ import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
 import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
+import { turnAgentTerminals } from '../commands/agent-terminal-model.ts';
+import { AgentTerminalsRunning } from '../commands/AgentTerminalRow.tsx';
 import { shownCommands, type LiveCommand } from '../commands/command-model.ts';
+import { useChatAgentTerminals } from '../commands/use-agent-terminals.ts';
 import { TurnReply } from '../commands/TurnReply.tsx';
 import { ErrorLine, ModelSwitchNote, type TimedOutFacts } from '../ModelSwitchNote.tsx';
 import { shownSteps, shownText, streamLeads, type RunStep } from '../run-projection.ts';
@@ -140,6 +144,13 @@ interface BodyProps {
 
 const NO_COMMANDS: readonly CommandRun[] = [];
 const NO_STREAMED: readonly LiveCommand[] = [];
+const NO_STARTED: readonly AgentTerminalStarted[] = [];
+
+interface StreamedProps {
+  liveId?: string | null;
+  streamed?: readonly LiveCommand[];
+  started?: readonly AgentTerminalStarted[];
+}
 
 function AgentBody({
   agent,
@@ -153,14 +164,17 @@ function AgentBody({
   shots,
   commands = NO_COMMANDS,
   streamed = NO_STREAMED,
+  started = NO_STARTED,
   error,
   errorDetails = null,
   modelSwitch = null,
   approvals,
   repo,
   waited,
-}: BodyProps & { liveId?: string | null; streamed?: readonly LiveCommand[] }) {
+}: BodyProps & StreamedProps) {
   const busy = agent.state === 'working' || agent.state === 'thinking';
+  const saved = useChatAgentTerminals(conversationId).data;
+  const terminals = turnAgentTerminals(saved, started, [agent.id], agent.id);
   const cards = decidedFirst(
     approvals.filter(
       (approval) =>
@@ -198,6 +212,7 @@ function AgentBody({
           text={text}
           shots={shots}
           commands={shownCommands(commands, streamed, agent.id)}
+          terminals={terminals}
           waiting={cards.pending.length > 0}
         >
           {(part, last) => (
@@ -205,6 +220,7 @@ function AgentBody({
           )}
         </TurnReply>
         {cards.pending.map(approvalCard)}
+        {!busy && <AgentTerminalsRunning terminals={terminals} />}
         {agent.state === 'queued' && !agent.spark && (
           <p className="ai-note">Queued. Starts when Jev hands off.</p>
         )}
@@ -229,6 +245,7 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
       liveId={live && streaming ? id : null}
       steps={steps}
       streamed={stream.commands}
+      started={stream.terminals}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
       modelSwitch={stored.modelSwitch ?? stream.modelSwitch}

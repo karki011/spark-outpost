@@ -4,6 +4,7 @@ import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import type { SparkCommandScope } from '../workflow/command-gate.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -52,6 +53,7 @@ export interface SparkActionHooks {
   signal: AbortSignal;
   timeoutMs: number;
   pollMs: number;
+  onTimeout?: () => void;
   audit?: ProtocolObserver | undefined;
   replySoFar?: () => ReplySoFar;
 }
@@ -64,6 +66,7 @@ export interface SparkScope {
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;
+  commands?: SparkCommandScope;
   beforeToolCall?: () => Promise<void>;
 }
 

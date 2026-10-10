@@ -63,7 +63,8 @@ export function openXterm<T extends TerminalTicket>(
   handlers: TerminalHandlers<T>,
 ): TerminalConnection {
   const abort = new AbortController();
-  const terminal = createTerminal();
+  const readOnly = handlers.readOnly === true;
+  const terminal = createTerminal(readOnly ? { disableStdin: true, cursorBlink: false } : {});
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.loadAddon(new WebLinksAddon((event, uri) => openTerminalLink(event, uri)));
@@ -80,7 +81,7 @@ export function openXterm<T extends TerminalTicket>(
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
   };
   const sendInput = (data: string) => {
-    if (socket?.readyState !== WebSocket.OPEN) return;
+    if (readOnly || socket?.readyState !== WebSocket.OPEN) return;
     socket.send(encoder.encode(data));
     if (data.includes('\r')) handlers.onCommandRun?.();
   };
@@ -106,17 +107,17 @@ export function openXterm<T extends TerminalTicket>(
   resizeObserver.observe(element);
   const unfollowTheme = followTheme(terminal);
   const inputSubscription = terminal.onData(sendInput);
-  const unfollowDrops = followTerminalDrops(
-    element,
-    (text) => {
-      if (socket?.readyState !== WebSocket.OPEN)
-        throw new Error('Reconnect the terminal before dropping files or folders.');
-      terminal.paste(text);
-      terminal.focus();
-    },
-    (message) => handlers.onInputError?.(message),
-  );
+  const dropped = (text: string) => {
+    if (socket?.readyState !== WebSocket.OPEN)
+      throw new Error('Reconnect the terminal before dropping files or folders.');
+    terminal.paste(text);
+    terminal.focus();
+  };
+  const unfollowDrops = readOnly
+    ? () => undefined
+    : followTerminalDrops(element, dropped, (message) => handlers.onInputError?.(message));
   terminal.attachCustomKeyEventHandler((event) => {
+    if (readOnly && event.key === 'Tab') return false;
     const sequence = lineEditingSequence(event);
     if (!sequence) return true;
     if (event.type === 'keydown') sendInput(sequence);
@@ -133,7 +134,7 @@ export function openXterm<T extends TerminalTicket>(
       () => {
         sendResize();
         handlers.onOpen(created);
-        terminal.focus();
+        if (!readOnly) terminal.focus();
       },
       { signal },
     );

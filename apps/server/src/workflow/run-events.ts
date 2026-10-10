@@ -1,9 +1,11 @@
 import {
+  AGENT_TERMINAL_STARTED,
   APPROVAL_DECIDED,
   APPROVAL_REQUESTED,
   EventType,
   FILE_FOCUS_ACTIVITY,
   SPARK_METADATA,
+  type AgentTerminalStarted,
   type Approval,
   type FileFocus,
   type RunEvent,
@@ -120,6 +122,11 @@ export const runEvents = {
       decidedBy: approval.decidedBy,
       decidedAt: approval.decidedAt,
     },
+  }),
+  agentTerminalStarted: (started: AgentTerminalStarted): RunEvent => ({
+    type: EventType.CUSTOM,
+    name: AGENT_TERMINAL_STARTED,
+    value: started,
   }),
   activity: (
     messageId: string,

@@ -36,7 +36,7 @@ These change nothing.
 
 ## Tools that act
 
-The agent proposes, and Spark does it.
+Spark does what the agent proposes.
 
 | Action                                      | Tool                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -47,6 +47,7 @@ The agent proposes, and Spark does it.
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
+| Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
 An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
 
@@ -75,14 +76,20 @@ Any chat with a project gets `spark_outpost_draft`. Pieces get none. What anothe
 
 Change any field, then select the confirm button or **Don't**. The card then shows the result with a link, or why it failed with **Try again**. Every action is audited.
 
-Agents open pull requests themselves.
+## Keep a command running
+
+`spark_terminal_run` runs a command such as a dev server outside the agent's sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
+
+[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns, chats with no project, pieces and the Coordinator are refused.
+
+The agent can read its output and stop it. Stopping the turn or quitting Spark also stops it.
 
 ## What the tools never return
 
 | Never returned               | Instead                                               |
 | ---------------------------- | ----------------------------------------------------- |
 | File contents                | `spark_find` gives files, functions and line numbers. |
-| Terminal output              | A terminal's name, folder and running program.        |
+| Your terminals' output       | A terminal's name, folder and running program.        |
 | Password and card fields     | `[masked]`, and painted over in screenshots.          |
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |

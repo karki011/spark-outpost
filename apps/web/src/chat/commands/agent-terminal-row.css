@@ -1,0 +1,52 @@
+.agent-term-head {
+  flex-wrap: wrap;
+}
+
+.agent-term-line {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 6px 7px 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.agent-term-chip {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.agent-term.stopped .run-cmd-mark svg,
+.agent-term.interrupted .run-cmd-mark svg {
+  color: var(--muted);
+}
+
+.agent-term-stop {
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.agent-term-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0 10px 7px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.agent-term-running {
+  font-size: 13px;
+}
+
+@media (pointer: coarse) {
+  .agent-term-line,
+  .agent-term-stop {
+    min-height: 44px;
+  }
+}

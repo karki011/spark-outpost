@@ -44,6 +44,8 @@ import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { PreviewServers } from '../preview/servers.ts';
+import { agentTerminalRoutes } from '../terminal/agent-terminal-routes.ts';
+import type { AgentTerminals } from '../terminal/agent-terminals.ts';
 import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
 import { A2A_MOUNT_PATH } from '../a2a/agent-card.ts';
@@ -67,6 +69,7 @@ export interface AppOptions
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
+  agentTerminals: AgentTerminals;
   appEvents: AppEventFeed;
   outposts: OutpostDelivery;
   stackGit?: StackGit;
@@ -138,6 +141,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', terminalRoutes(options));
   app.use('/api', nativeTerminalRoutes(options.nativeTerminals));
   app.use('/api', previewRoutes(options));
+  app.use('/api', agentTerminalRoutes(options));
   app.use('/api', signInRoutes(options));
   app.use(
     '/api',
@@ -147,6 +151,7 @@ export function createAppParts(options: AppOptions) {
         await options.nativeTerminals?.stopAll();
         options.terminals.killAll();
         await options.previews.stopAll('reset');
+        await options.agentTerminals.stopAll();
       },
     }),
   );

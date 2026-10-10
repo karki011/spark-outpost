@@ -44,6 +44,7 @@ GET /api/conversations/:id/file-view
 POST /api/conversations/:id/update
 POST /api/spark-assistant
 GET /api/conversations/:id/agent-commands
+GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
 POST /api/conversations/:id/read
@@ -178,6 +179,9 @@ POST /api/conversations/:id/terminal
 DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
 POST /api/terminal/previews
+GET /api/conversations/:id/agent-terminals/:terminalId/output
+POST /api/conversations/:id/agent-terminals/:terminalId/view
+POST /api/conversations/:id/agent-terminals/:terminalId/stop
 GET /api/conversations/:id/preview
 GET /api/projects/:id/preview
 POST /api/conversations/:id/preview/start

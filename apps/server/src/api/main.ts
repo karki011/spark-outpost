@@ -24,6 +24,8 @@ import { stopAllPreviewRows } from '../persistence/preview-servers.ts';
 import { previewRuntime } from '../preview/process.ts';
 import { PreviewServers } from '../preview/servers.ts';
 import { attachTerminalSockets } from '../terminal/websocket.ts';
+import { agentTerminalRuntime } from '../terminal/agent-terminal-process.ts';
+import { AgentTerminals } from '../terminal/agent-terminals.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { probeCapabilities } from '../agents/acp/probe.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
@@ -69,6 +71,8 @@ ensureSpawnHelperExecutable();
 await forgetAllShells(db, workspaceId);
 await stopAllPreviewRows(db, workspaceId);
 const previews = new PreviewServers(db, workspaceId, previewRuntime());
+const agentTerminals = new AgentTerminals(db, workspaceId, agentTerminalRuntime());
+await agentTerminals.recover();
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 
 const secrets = configuredSecretStore(config);
@@ -110,6 +114,7 @@ const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
   outposts.changed(event);
   if (event.kind === 'preview') void previews.sync();
+  if (event.kind === 'agent_terminal') void agentTerminals.sync();
 });
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const cloneDeps = {
@@ -201,6 +206,7 @@ const { app, reconcileRemote } = createAppParts({
   terminals,
   nativeTerminals,
   previews,
+  agentTerminals,
   appEvents,
   outposts,
   stackGit,
@@ -264,6 +270,7 @@ const shutdown = async () => {
   await nativeMcp.close();
   await nativeApprovalListener.close();
   await previews.stopAll('shutdown').catch(() => undefined);
+  await agentTerminals.stopAll().catch(() => undefined);
   stopLagMonitor();
   outcomeSweep.stop();
   morningBrief?.stop();

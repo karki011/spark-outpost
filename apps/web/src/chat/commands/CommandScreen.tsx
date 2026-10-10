@@ -11,6 +11,7 @@ interface CommandScreenProps {
   appended: number;
   epoch: number;
   tall: boolean;
+  fill?: boolean;
   onTouched: () => void;
 }
 
@@ -44,7 +45,19 @@ export function readerText(text: string): string {
   return plainOutput(text.slice(-READER_CHARS * 2)).slice(-READER_CHARS);
 }
 
-export function CommandScreen({ text, appended, epoch, tall, onTouched }: CommandScreenProps) {
+function screenClass(tall: boolean, fill: boolean): string {
+  if (fill) return 'run-cmd-screen fill';
+  return tall ? 'run-cmd-screen tall' : 'run-cmd-screen';
+}
+
+export function CommandScreen({
+  text,
+  appended,
+  epoch,
+  tall,
+  fill = false,
+  onTouched,
+}: CommandScreenProps) {
   const [frame, near] = useNearViewport();
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<OutputView | null>(null);
@@ -81,7 +94,7 @@ export function CommandScreen({ text, appended, epoch, tall, onTouched }: Comman
   return (
     <div
       ref={frame}
-      className={tall ? 'run-cmd-screen tall' : 'run-cmd-screen'}
+      className={screenClass(tall, fill)}
       role="group"
       aria-label="Command output"
       tabIndex={0}

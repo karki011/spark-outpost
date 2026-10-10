@@ -125,8 +125,12 @@ export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;
 }
 
+export interface AuditMarks {
+  unreviewed?: boolean;
+}
+
 export interface ProtocolObserver {
-  message(direction: ProtocolDirection, message: unknown): void;
+  message(direction: ProtocolDirection, message: unknown, marks?: AuditMarks): void;
   stderr(chunk: string): void;
 }
 
