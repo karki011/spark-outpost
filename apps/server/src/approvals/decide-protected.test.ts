@@ -98,6 +98,7 @@ describe('decide() for git hooks and git config', () => {
     [run('chmod +x x && cp hook.sh .git/hooks/pre-push'), ['.git/hooks/pre-push']],
     [run('git config core.hooksPath tools/hooks'), ['.git/config']],
     [run('git config set user.name Spark'), ['.git/config']],
+    [run('git config --global a.b c'), ['global git config']],
   ])('asks to hold before %#, at every level', (input, files) => {
     for (const mode of EVERY_MODE) {
       expect(decide(mode, input, allowAll(input), ['git', 'cp'])).toEqual({
@@ -108,7 +109,7 @@ describe('decide() for git hooks and git config', () => {
     }
   });
 
-  it.each(['git config --get user.name', 'git config user.name', 'git config --global a.b c'])(
+  it.each(['git config --get user.name', 'git config user.name', 'git config --global a.b'])(
     'leaves %s alone',
     (command) => {
       expect(decide('full_access', run(command), NO_RUN_RULES, []).verdict).toBe('allow');

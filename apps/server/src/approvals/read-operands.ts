@@ -1,3 +1,5 @@
+import { gitConfigUse } from './git-config.ts';
+
 const GIT_READS = new Set(['status', 'diff', 'log', 'show', 'branch']);
 const GIT_BRANCH_FLAGS = new Set(['-a', '-r', '-v', '-vv', '--all', '--list', '--show-current']);
 const RECURSIVE_GREP = new Set(['-r', '-R', '--recursive', '--dereference-recursive']);
@@ -57,8 +59,15 @@ function plainOperands(args: readonly string[]): string[] {
   return [...args.filter((arg) => !isFlag(arg)), ...values];
 }
 
+function configOperands(args: readonly string[]): string[] | null {
+  const use = gitConfigUse(args);
+  if (use.writes) return null;
+  return use.file === null ? [] : [use.file];
+}
+
 function gitOperands(args: readonly string[]): string[] | null {
   const [subcommand, ...rest] = args;
+  if (subcommand === 'config') return configOperands(rest);
   if (!subcommand || !GIT_READS.has(subcommand)) return null;
   if (rest.some((arg) => arg === '--output' || arg.startsWith('--output=') || arg.includes(':'))) {
     return null;

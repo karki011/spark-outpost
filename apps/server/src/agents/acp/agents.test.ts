@@ -7,6 +7,8 @@ import {
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
+  floorAskRules,
+  GIT_CONFIG_ASK_RULE,
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
@@ -24,6 +26,11 @@ type ClaudeOptions = {
 
 const optionsOf = (meta: Record<string, unknown> | undefined) =>
   (meta as { claudeCode: { options: ClaudeOptions } }).claudeCode.options;
+
+const bashAsks = (options: ClaudeOptions) =>
+  ((options.settings.permissions.ask as string[] | undefined) ?? []).filter((rule) =>
+    rule.startsWith('Bash'),
+  );
 
 describe('Claude session options', () => {
   const project = optionsOf(agentDefinitions.claude.projectSessionMeta?.(['/work/lib']));
@@ -83,13 +90,13 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Ask turns a shell and leaves asking to the agent', () => {
+  it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
-    expect(asking.settings.permissions).not.toHaveProperty('ask');
+    expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
-  it('gives Do runs the edit, shell and todo tools and leaves asking to the agent mode', () => {
+  it('gives Do runs the edit, shell and todo tools and asks only for the safety floor', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -102,7 +109,8 @@ describe('Claude session options', () => {
       'EnterPlanMode',
       'ExitPlanMode',
     ]);
-    expect(options.settings.permissions).not.toHaveProperty('ask');
+    expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
+    expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
       deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),

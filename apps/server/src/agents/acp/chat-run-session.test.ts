@@ -4,6 +4,7 @@ import { NO_PUSH_URL, agentEnvironment } from './agent-env.ts';
 import {
   CHAT_RUN_DENY_RULES,
   FORCE_PUSH_DENY_RULES,
+  GIT_CONFIG_ASK_RULE,
   PUBLISH_ASK_RULES,
   agentDefinitions,
 } from './agents.ts';
@@ -25,11 +26,12 @@ function permissionsOf(meta: Record<string, unknown> | null): Permissions {
 }
 
 describe("a Claude session for the chat's own changing run", () => {
-  it('sends git push and gh to the approval gate', () => {
+  it('sends git push and gh to the approval gate, after the safety floor rules', () => {
     const permissions = permissionsOf(
       sessionMeta(claude, project, true, null, { changesProject: true }),
     );
-    expect(permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
+    const commands = (permissions.ask ?? []).filter((rule) => rule.startsWith('Bash('));
+    expect(commands).toEqual([GIT_CONFIG_ASK_RULE, ...PUBLISH_ASK_RULES]);
   });
 
   it('never denies gh or a plain push outright, so reads through gh reach the gate', () => {
@@ -57,12 +59,13 @@ describe("a Claude session for the chat's own changing run", () => {
     }
   });
 
-  it('adds no ask rules to a question, a chat without a project or a run without the flag', () => {
+  it('adds no publish ask rules to a question, a chat without a project or a run without the flag', () => {
     const question = sessionMeta(claude, project, false, null, { changesProject: true });
     const noProject = sessionMeta(claude, null, true, null, { changesProject: true });
     const plain = sessionMeta(claude, project, true, null, {});
     for (const meta of [question, noProject, plain]) {
-      expect(permissionsOf(meta)).not.toHaveProperty('ask');
+      const asks = permissionsOf(meta).ask ?? [];
+      for (const rule of PUBLISH_ASK_RULES) expect(asks).not.toContain(rule);
     }
   });
 });

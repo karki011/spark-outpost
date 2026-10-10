@@ -7,6 +7,7 @@ import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
 import { railCrossings } from './fake-acp-rails.ts';
+import { floorTurn } from './fake-acp-floor.ts';
 import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
@@ -235,6 +236,7 @@ async function turn(
   if (moded) return moded;
   const fakeTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
   await railCrossings(fakeTurn).then(() => terminalCommands(fakeTurn));
+  await floorTurn(fakeTurn, sessionRequest?.meta, config.mode ?? '');
   const published = await publishTurn(fakeTurn);
   if (published) return published;
   const asked = currentRequest(params.prompt);

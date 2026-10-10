@@ -5,6 +5,7 @@ import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
+import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
@@ -111,12 +112,22 @@ export const CHAT_RUN_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${com
   (rule) => !SENT_TO_THE_GATE.includes(rule),
 );
 
+function editRules(globs: readonly string[], extraRoots: readonly string[]): string[] {
+  const underExtraRoots = extraRoots.flatMap((root) => globs.map((glob) => `/${root}/${glob}`));
+  return [...globs, ...underExtraRoots].map((pattern) => `Edit(${pattern})`);
+}
+
 export function secretRules(extraRoots: readonly string[]): string[] {
-  const underExtraRoots = extraRoots.flatMap((root) =>
-    SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
-  );
-  const patterns = [...SECRET_GLOBS, ...underExtraRoots];
-  return patterns.map((pattern) => `Edit(${pattern})`);
+  return editRules(SECRET_GLOBS, extraRoots);
+}
+
+export const GIT_CONFIG_ASK_RULE = 'Bash(git config:*)';
+
+export function floorAskRules(tools: readonly string[], extraRoots: readonly string[]): string[] {
+  return [
+    ...(tools.includes('Edit') ? editRules(EXACT_PROTECTED_GLOBS, extraRoots) : []),
+    ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : []),
+  ];
 }
 
 function repoTools(repo: ClaudeRepoOptions | null): string[] {
@@ -131,7 +142,7 @@ export function claudeSessionMeta(
   changesProject = false,
   allowBypass = false,
 ): Record<string, unknown> {
-  const ask = changesProject ? [...PUBLISH_ASK_RULES] : [];
+  const ask = [...floorAskRules(tools, extraRoots), ...(changesProject ? PUBLISH_ASK_RULES : [])];
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
