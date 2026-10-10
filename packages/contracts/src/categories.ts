@@ -14,8 +14,6 @@ export const categorySchema = z.enum([
 ]);
 export type Category = z.infer<typeof categorySchema>;
 
-export const CATEGORY_CONFIDENCE_FLOOR = 0.5;
-
 const CATEGORY_LABELS: Record<Category, string> = {
   question: 'Question',
   research: 'Research',

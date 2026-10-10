@@ -1,8 +1,6 @@
 import { z } from 'zod';
 
 export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
-export const CONVERSATION_SUBAGENT = 'conversation';
-
 export const memberMessageStatusSchema = z.enum([
   'queued',
   'delivered',

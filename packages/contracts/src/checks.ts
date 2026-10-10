@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-export const CHECK_COMMANDS_MAX = 5;
-export const CHECK_COMMAND_MAX_LENGTH = 300;
 export const CHECK_OUTPUT_TAIL_BYTES = 8 * 1024;
-
-export const checkCommandsSchema = z
-  .array(z.string().trim().min(1).max(CHECK_COMMAND_MAX_LENGTH))
-  .max(CHECK_COMMANDS_MAX);
 
 export const checkKindSchema = z.enum(['typecheck', 'lint', 'test', 'custom']);
 export type CheckKind = z.infer<typeof checkKindSchema>;
@@ -15,8 +9,6 @@ export const checkCauseSchema = z.enum(['change', 'baseline', 'unknown', 'timeou
 export type CheckCause = z.infer<typeof checkCauseSchema>;
 
 export const checkScopeSchema = z.object({ whole: z.string(), label: z.string() });
-export type CheckScope = z.infer<typeof checkScopeSchema>;
-
 export const checkBaselineSchema = z.object({
   base: z.string(),
   outcome: z.enum(['passed', 'failed', 'timed_out', 'unavailable']),
@@ -66,11 +58,6 @@ export function checkCause(result: CheckResult): CheckCause | null {
   return result.cause ?? 'change';
 }
 
-export function checkStatusOf(results: readonly CheckResult[]): CheckStatus {
-  if (results.some((result) => checkCause(result) === 'change')) return 'failed';
-  return results.some((result) => result.outcome === 'passed') ? 'passed' : 'skipped';
-}
-
 const KIND_NAMES: Record<CheckKind, string | null> = {
   typecheck: 'typecheck',
   lint: 'lint',
@@ -109,18 +96,6 @@ export function checkLine(body: CheckBody): string {
 
 export function failingChecks(body: CheckBody): CheckResult[] {
   return body.results.filter((result) => checkCause(result) === 'change');
-}
-
-export function unsettledChecks(body: CheckBody): CheckResult[] {
-  return body.results.filter((result) => {
-    const cause = checkCause(result);
-    return cause !== null && cause !== 'change';
-  });
-}
-
-export function unrelatedFailures(result: CheckResult): string[] {
-  const blamed = new Set(result.blamed ?? []);
-  return (result.failures ?? []).filter((id) => !blamed.has(id));
 }
 
 const UNKNOWN_DETAIL =

@@ -89,13 +89,6 @@ export function samePlan(a: readonly PlanEntry[], b: readonly PlanEntry[]): bool
   );
 }
 
-export function planProgress(entries: readonly PlanEntry[]): { done: number; total: number } {
-  return {
-    done: entries.filter((entry) => entry.status === 'completed').length,
-    total: entries.length,
-  };
-}
-
 export interface ArtifactVersionRecord {
   version: number;
   body: unknown;

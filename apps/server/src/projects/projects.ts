@@ -19,9 +19,6 @@ export interface ProjectRow {
   root_path: string;
   created_at: Date;
   command_allowlist: string[];
-  check_commands: string[] | null;
-  parallel_pieces: boolean;
-  piece_slots: number;
   work_place: string;
   browser_keep_sign_ins: boolean;
   preview: unknown;
@@ -29,7 +26,7 @@ export interface ProjectRow {
 }
 
 export const PROJECT_COLUMNS =
-  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place, browser_keep_sign_ins, preview';
+  'id, name, root_path, created_at, command_allowlist, work_place, browser_keep_sign_ins, preview';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -57,9 +54,6 @@ export function toProject(row: ProjectRow, home: string): Project {
     createdAt: row.created_at.toISOString(),
     ...(row.last_used_at ? { lastUsedAt: row.last_used_at.toISOString() } : {}),
     commandAllowlist: row.command_allowlist,
-    checkCommands: row.check_commands,
-    parallelPieces: row.parallel_pieces,
-    pieceSlots: row.piece_slots,
     workPlace: workPlaceSchema.catch(DEFAULT_WORK_PLACE).parse(row.work_place),
     browserKeepSignIns: row.browser_keep_sign_ins,
     preview: storedPreview(row.preview),

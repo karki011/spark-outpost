@@ -1,7 +1,6 @@
 import {
   CONVERSATION_PROJECTS_MAX,
   DEFAULT_WORK_PLACE,
-  PIECE_SLOTS_MAX,
   type Project,
   type RemovedProject,
 } from '@spark-outpost/contracts';
@@ -78,9 +77,9 @@ async function insertProject(
 ): Promise<ProjectRow> {
   const inserted = await client.query<ProjectRow>(
     `INSERT INTO projects
-       (id, workspace_id, name, root_path, created_at, command_allowlist, check_commands,
-        parallel_pieces, piece_slots, work_place, browser_keep_sign_ins, preview)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+       (id, workspace_id, name, root_path, created_at, command_allowlist, work_place,
+        browser_keep_sign_ins, preview)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
      ON CONFLICT DO NOTHING RETURNING ${PROJECT_COLUMNS}`,
     [
       project.id,
@@ -89,9 +88,6 @@ async function insertProject(
       root,
       project.createdAt,
       project.commandAllowlist,
-      project.checkCommands ?? null,
-      project.parallelPieces ?? true,
-      project.pieceSlots ?? PIECE_SLOTS_MAX,
       project.workPlace ?? DEFAULT_WORK_PLACE,
       project.browserKeepSignIns ?? true,
       project.preview ? JSON.stringify(project.preview) : null,

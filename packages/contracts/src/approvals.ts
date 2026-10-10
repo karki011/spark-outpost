@@ -1,9 +1,8 @@
 import { z } from 'zod';
-import { checkCommandsSchema } from './checks.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
 import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
-import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
+import { projectNameSchema } from './projects.ts';
 import {
   SPARK_ACTION_KIND,
   sparkActionEditsSchema,
@@ -187,9 +186,6 @@ export const updateProjectRequestSchema = z
   .object({
     name: projectNameSchema.optional(),
     commandAllowlist: commandAllowlistSchema.optional(),
-    checkCommands: checkCommandsSchema.nullable().optional(),
-    parallelPieces: z.boolean().optional(),
-    pieceSlots: pieceSlotsSchema.optional(),
     workPlace: workPlaceSchema.optional(),
     browserKeepSignIns: z.boolean().optional(),
   })

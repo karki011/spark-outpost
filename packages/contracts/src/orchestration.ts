@@ -51,11 +51,7 @@ export const decisionKindSchema = z.enum([
   'verify',
   'finding',
 ]);
-export type DecisionKind = z.infer<typeof decisionKindSchema>;
-
 export const decisionAppliedSchema = z.enum(['jev', 'rules', 'asked', 'pinned']);
-export type DecisionApplied = z.infer<typeof decisionAppliedSchema>;
-
 export const orchestrationDecisionSchema = z.object({
   id: z.uuid(),
   kind: decisionKindSchema,
@@ -155,8 +151,6 @@ export const jevAskSchema = z.object({
   kind: z.enum(['models', 'check']),
   pieces: z.number().int().positive().nullable(),
 });
-export type JevAsk = z.infer<typeof jevAskSchema>;
-
 export const orchestrationSchema = z.object({
   runId: z.uuid(),
   conversationId: z.uuid(),

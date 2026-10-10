@@ -14,9 +14,6 @@ const PROJECT: Project = {
   displayPath: '~/work/app',
   createdAt: '2026-09-30T00:00:00.000Z',
   commandAllowlist: [],
-  checkCommands: null,
-  parallelPieces: true,
-  pieceSlots: 3,
   workPlace: 'worktree',
 };
 
