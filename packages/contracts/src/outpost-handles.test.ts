@@ -67,6 +67,26 @@ describe('suggestHandle', () => {
     expect(suggestHandle('abcdefghijklmnopqrstuvwxyz', [])).toBe('abcdefghijklmnop');
   });
 
+  it('cuts a long name at the last hyphen that fits, never inside a word', () => {
+    expect(suggestHandle('feature-dashboards', [])).toBe('feature');
+    expect(suggestHandle('spark-outpost-website', [])).toBe('spark-outpost');
+    expect(suggestHandle('web-app-frontends', [])).toBe('web-app');
+    expect(suggestHandle('customer-orders--service', [])).toBe('customer-orders');
+  });
+
+  it('keeps a name that ends exactly at the limit', () => {
+    expect(suggestHandle('customer-orders1-api', [])).toBe('customer-orders1');
+  });
+
+  it('cuts a single long word, or a first word too short to stand alone, at the limit', () => {
+    expect(suggestHandle('a-bcdefghijklmnopqrstuvwxyz', [])).toBe('a-bcdefghijklmno');
+  });
+
+  it('numbers a long name after the word it was cut at', () => {
+    expect(suggestHandle('feature-dashboards', ['feature'])).toBe('feature2');
+    expect(suggestHandle('spark-outpost-web', ['spark-outpost'])).toBe('spark-outpost2');
+  });
+
   it('falls back when the name gives fewer than two usable characters', () => {
     expect(suggestHandle('', [])).toBe('chat');
     expect(suggestHandle('x', [])).toBe('chat');
