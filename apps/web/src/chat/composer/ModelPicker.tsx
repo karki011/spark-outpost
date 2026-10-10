@@ -6,7 +6,6 @@ import {
   combinationLine,
   modeKind,
   type ChatSettings,
-  type Orchestration,
   type ProviderId,
   type ProviderSetup,
 } from '@spark-outpost/contracts';
@@ -24,7 +23,6 @@ import { ModeOptions } from './ModeOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
-import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionState } from './mode-summary.ts';
@@ -49,7 +47,6 @@ interface ModelPickerProps {
   settings: ChatSettings;
   providers: ProviderSetup[];
   hasRepos: boolean;
-  orchestration: Orchestration | null;
 }
 
 export function ModelPicker({
@@ -58,7 +55,6 @@ export function ModelPicker({
   settings,
   providers,
   hasRepos,
-  orchestration,
 }: ModelPickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef, returnFocusRef } = usePopover<
     HTMLDivElement,
@@ -120,10 +116,7 @@ export function ModelPicker({
   const pinnedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
   const auto = settings.routing === 'auto';
-  const thisTurn = autoThisTurn(orchestration, capabilities?.models);
-  const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
-  const would = autoWouldHaveUsed(orchestration);
-  const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
+  const modelName = auto ? 'Auto' : pinnedName;
 
   const effort = efforts.find((option) => option.id === settings.effort);
 
@@ -278,7 +271,6 @@ export function ModelPicker({
                           onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
                           routing={settings.routing ?? 'pinned'}
                           onAuto={() => update.mutate({ routing: 'auto' })}
-                          hint={hint}
                         />
                       )}
                       {activeSection === 'effort' && (

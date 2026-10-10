@@ -28,9 +28,10 @@ export interface CrewAgent {
   turns?: number;
   sameProvider?: boolean;
   routeNote?: string;
-  title?: string;
   spark?: { id: string; role: string };
 }
+
+export const CHAT_AGENT_ROLE = 'agent';
 
 export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';
 
@@ -72,12 +73,9 @@ export function isBusy(state: CrewState): boolean {
   return state === 'working' || state === 'thinking';
 }
 
-export function isDispatcher(member: Pick<CrewAgent, 'role'>): boolean {
-  return member.role === 'jev';
-}
-
 export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider' | 'spark'>): string {
   if (member.role === 'jev') return 'Dispatcher';
+  if (member.role === CHAT_AGENT_ROLE) return 'Agent';
   if (member.spark?.role) return member.spark.role;
   const role = agentRoleSchema.safeParse(member.role);
   const label = role.success ? agentRoleLabel(role.data) : member.role;

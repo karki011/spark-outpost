@@ -10,8 +10,7 @@ import type {
   TaskOverview,
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
-import { chatModelName } from '../../crew/auto-route.ts';
-import { orchestrationsInOrder } from '../../crew/conversation-crew.ts';
+import { storedCrew } from '../../crew/conversation-crew.ts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
@@ -108,12 +107,7 @@ function OpenRail({
     repoNames: repos.map((repo) => repo.name),
     branch: branch ? { name: branch.branch, worktree: branch.worktree } : null,
     provider: providerName(provider),
-    model: chatModelName(
-      settings.routing,
-      picked ? shortLabel(picked.label) : null,
-      orchestrationsInOrder(detail),
-      capabilities.data?.models,
-    ),
+    model: settings.routing === 'auto' ? 'Auto' : picked ? shortLabel(picked.label) : null,
     mode: permissionState(settings, capabilities.data).label,
     autonomy,
     changes: changes.data ?? null,
@@ -122,6 +116,7 @@ function OpenRail({
     usage: detail.usageTotals,
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,
+    hasStoredCrew: storedCrew(detail) !== null,
   });
   const openTasks = useCallback(() => onTab('tasks'), [onTab]);
   const crew = railCrew(detail, running);

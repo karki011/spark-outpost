@@ -22,88 +22,6 @@
   gap: 6px;
   padding: 8px 0 14px;
 }
-.appr.ck.accept {
-  overflow: clip;
-}
-.ck-top {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: inherit;
-  border-bottom: 1px solid var(--line);
-}
-.ck-top .appr-acts {
-  padding-bottom: 12px;
-}
-.ck-changes {
-  padding: 4px 0 14px;
-}
-.ck-sum {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin: 10px 14px 0;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-.ck-sum .ck-view {
-  margin: 0;
-}
-.ck-more {
-  margin: 6px 14px 0;
-  font-size: 12.5px;
-}
-.ck-more summary {
-  width: fit-content;
-  cursor: pointer;
-  color: var(--muted);
-}
-.ck-more .ck-files {
-  margin: 6px 0 0;
-  max-height: 240px;
-  overflow-y: auto;
-}
-.ck-files {
-  list-style: none;
-  margin: 10px 14px 0;
-  padding: 0;
-  font-size: 12.5px;
-}
-.ck-view {
-  margin: 6px 14px 0;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--accent-text);
-}
-.ck-view:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.ck-files li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  min-width: 0;
-}
-.ck-files code {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ck-change {
-  font-size: 12px;
-  color: var(--muted);
-}
-.ck-change.added {
-  color: var(--accent-text);
-}
-.ck-change.deleted {
-  color: var(--danger);
-}
 .ck-said {
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -122,36 +40,6 @@
   .appr.ck.flash {
     animation: none;
   }
-}
-.ck-conflicts {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-}
-.ck-conflicts > li + li {
-  margin-top: 10px;
-}
-.ck-sides {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 8px;
-  margin-top: 6px;
-}
-.ck-side {
-  min-width: 0;
-}
-.ck-side-h {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.ck-diff {
-  margin: 0;
-  padding: 8px;
-  overflow-x: auto;
-  font-size: 12px;
-  background: var(--code);
-  border-radius: var(--r-sm);
 }
 .ck .ck-wait {
   color: var(--warn);

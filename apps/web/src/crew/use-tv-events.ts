@@ -1,26 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  nextChatter,
-  sceneChanges,
-  trimChatter,
-  type Chatter,
-  type Handoff,
-  type TvScene,
-} from './tv-chatter.ts';
-
-export interface Packet extends Handoff {
-  key: string;
-}
-
-export interface TvEvents {
-  chatter: Chatter | null;
-  packets: Packet[];
-  landed(key: string): void;
-}
+import { useEffect, useState } from 'react';
+import type { CrewAgent } from './crew-model.ts';
+import { nextChatter, sceneChatter, trimChatter, type Chatter } from './tv-chatter.ts';
 
 interface TvEventOptions {
   muted: boolean;
-  reduced: boolean;
   paused: boolean;
   asking: readonly string[];
 }
@@ -30,35 +13,26 @@ const GAP_MS = 900;
 const NEXT_MS = 60;
 const QUEUE_LIMIT = 3;
 
-function sceneKey(scene: TvScene): string {
-  const agents = scene.agents.map((agent) => `${agent.id}:${agent.state}:${agent.line}`);
-  return `${agents.join('|')}#${scene.decision ?? ''}`;
+function sceneKey(agents: readonly CrewAgent[]): string {
+  return agents.map((agent) => `${agent.id}:${agent.state}:${agent.line}`).join('|');
 }
 
-export function useTvEvents(
-  scene: TvScene,
-  { muted, reduced, paused, asking }: TvEventOptions,
-): TvEvents {
-  const key = sceneKey(scene);
+export function useTvChatter(
+  agents: readonly CrewAgent[],
+  { muted, paused, asking }: TvEventOptions,
+): Chatter | null {
+  const key = sceneKey(agents);
   const askingKey = asking.join(' ');
-  const [seen, setSeen] = useState({ key, scene });
-  const [packets, setPackets] = useState<Packet[]>([]);
+  const [seen, setSeen] = useState({ key, agents });
   const [queue, setQueue] = useState<Chatter[]>([]);
   const [current, setCurrent] = useState<Chatter | null>(null);
   const [cooling, setCooling] = useState(false);
 
   if (seen.key !== key) {
-    const changes = sceneChanges(seen.scene, scene);
-    setSeen({ key, scene });
-    if (!paused && !reduced && changes.handoffs.length > 0) {
-      const fresh = changes.handoffs.map((handoff) => ({
-        ...handoff,
-        key: `${key}/${handoff.agentId}/${handoff.direction}`,
-      }));
-      setPackets((existing) => [...existing, ...fresh]);
-    }
-    if (!paused && !muted && changes.chatter.length > 0) {
-      setQueue((existing) => trimChatter([...existing, ...changes.chatter], QUEUE_LIMIT));
+    const chatter = sceneChatter(seen.agents, agents);
+    setSeen({ key, agents });
+    if (!paused && !muted && chatter.length > 0) {
+      setQueue((existing) => trimChatter([...existing, ...chatter], QUEUE_LIMIT));
     }
   }
   if (muted && queue.length > 0) setQueue([]);
@@ -88,10 +62,5 @@ export function useTvEvents(
     return () => clearTimeout(timer);
   }, [cooling]);
 
-  const landed = useCallback(
-    (done: string) => setPackets((existing) => existing.filter((packet) => packet.key !== done)),
-    [],
-  );
-
-  return { chatter: muted ? null : current, packets: reduced ? [] : packets, landed };
+  return muted ? null : current;
 }

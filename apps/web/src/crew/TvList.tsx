@@ -1,5 +1,4 @@
 import './tv-list.css';
-import './piece-state.css';
 import { useId, useRef, useState } from 'react';
 import { connectableIdSchema } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
@@ -30,7 +29,6 @@ interface TvListProps {
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
   onClear(keys: readonly string[]): void;
-  onMessage?: ((runId: string) => void) | undefined;
 }
 
 function RowBlob({ item }: { item: TvRow }) {
@@ -52,7 +50,7 @@ function StopButton({
   stopping: boolean;
   onStop(runId: string): void;
 }) {
-  const label = item.dispatcher ? 'Stop the whole turn' : `Stop ${item.name}`;
+  const label = item.lead ? 'Stop the whole turn' : `Stop ${item.name}`;
   const tip = useTooltip(label);
   return (
     <>
@@ -79,7 +77,6 @@ function Row({
   onPick,
   onAsk,
   onStop,
-  onMessage,
 }: {
   item: TvRow;
   finished: boolean;
@@ -87,7 +84,6 @@ function Row({
   onPick(agentId: string): void;
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
-  onMessage?: ((runId: string) => void) | undefined;
 }) {
   const asking = !finished && needsYou(item);
   const outcome = outcomeOf(item.state);
@@ -130,18 +126,7 @@ function Row({
           {finished && <span className={`tvl-out ${outcome}`}>{outcomeWord(outcome)}</span>}
         </div>
         <div className="tvl-meta">
-          <span>{item.dispatcher ? 'Dispatcher' : 'Agent'}</span>
-          {item.piece && <span className="tvl-piece">{item.piece.label}</span>}
-          {item.piece && (
-            <span className="piece-state" data-state={item.piece.state}>
-              {item.piece.state}
-            </span>
-          )}
-          {item.piece && item.piece.notes > 0 && (
-            <span className="tvl-notes">
-              {item.piece.notes} {item.piece.notes === 1 ? 'note' : 'notes'} queued
-            </span>
-          )}
+          <span>Agent</span>
           {finished ? (
             item.durationMs !== null && <span>{formatDuration(item.durationMs)}</span>
           ) : item.startedAt !== null ? (
@@ -156,48 +141,29 @@ function Row({
         </div>
         <div className="tvl-act">
           <span className="tvl-line">{activityText(item)}</span>
-          {onMessage && item.messageable && (
-            <button
-              type="button"
-              className="tvl-open"
-              aria-label={`Message ${item.name}`}
-              onClick={() => onMessage(item.runId)}
-            >
-              Message
-            </button>
-          )}
           <button
             type="button"
             className="tvl-open"
             aria-label={`Open ${item.name} in the chat`}
-            onClick={() => onPick(item.agentId)}
+            onClick={() => onPick(item.runId)}
           >
             Open
           </button>
         </div>
       </div>
-      {!finished && item.runId && <StopButton item={item} stopping={stopping} onStop={onStop} />}
+      {!finished && <StopButton item={item} stopping={stopping} onStop={onStop} />}
     </li>
   );
 }
 
-export function TvList({
-  rows,
-  cleared,
-  stopping,
-  onPick,
-  onAsk,
-  onStop,
-  onClear,
-  onMessage,
-}: TvListProps) {
+export function TvList({ rows, cleared, stopping, onPick, onAsk, onStop, onClear }: TvListProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const runningId = useId();
   const finishedId = useId();
   const clearTip = useTooltip('Clear finished');
   const finished = rows.finished.filter((item) => !cleared.has(item.key));
-  const common = { onPick, onAsk, onStop, onMessage };
+  const common = { onPick, onAsk, onStop };
 
   const clear = () => {
     onClear(finished.map((item) => item.key));

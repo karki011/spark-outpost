@@ -8,7 +8,7 @@ import {
   type PrChecks,
   type PrWatch,
 } from '@spark-outpost/contracts';
-import { tvOrchestration } from '../../crew/conversation-crew.ts';
+import { castAgents, isSparkLed, tvCast } from '../../crew/conversation-crew.ts';
 import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { turnState } from '../../crew/tv-list.ts';
@@ -54,6 +54,7 @@ export interface RailFacts {
   usage: ConversationUsage;
   contextPercent: number | null;
   hasTask: boolean;
+  hasStoredCrew?: boolean;
 }
 
 const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
@@ -138,7 +139,7 @@ export function railRows(facts: RailFacts): RailRow[] {
     text: agent,
     detail: facts.mode,
     label: `Agent ${agent}, mode ${facts.mode}`,
-    action: facts.hasTask ? { kind: 'tab', tab: 'crew' } : null,
+    action: facts.hasTask && facts.hasStoredCrew ? { kind: 'tab', tab: 'crew' } : null,
   });
   if (facts.autonomy) {
     const level = autonomyLabel(facts.autonomy);
@@ -195,11 +196,15 @@ interface RailCrewView {
 }
 
 export function railCrew(detail: ConversationDetail, running: boolean): RailCrewView {
-  const orchestration = tvOrchestration(detail);
-  if (!orchestration) return { stage: [], list: [] };
-  const members = crewAgents(orchestration, detail.activity);
-  if (running && !isTerminalRunStatus(orchestration.status)) return { stage: members, list: [] };
-  return { stage: [], list: finishedCrew(orchestration, members) };
+  const cast = tvCast(detail);
+  if (!cast) return { stage: [], list: [] };
+  const stored = detail.orchestrations?.[cast.run.id];
+  if (stored && !isSparkLed(stored)) {
+    return { stage: [], list: finishedCrew(stored, crewAgents(stored, detail.activity)) };
+  }
+  const members = castAgents(cast);
+  if (running && !isTerminalRunStatus(cast.run.status)) return { stage: members, list: [] };
+  return { stage: [], list: members };
 }
 
 export function crewHeading(agents: readonly CrewAgent[]): string {

@@ -1,10 +1,9 @@
 import './crew-turn.css';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
   needsYouLines,
-  type Approval,
   type ConversationDetail,
   type Orchestration,
   type Project,
@@ -12,9 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
-import { betweenAgents, crewAgents, runAgent } from '../../crew/crew-projection.ts';
-import { doingPhrase, jevDoing } from '../../crew/jev-doing.ts';
-import { PieceBoard } from '../../crew/PieceBoard.tsx';
+import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { BrowserCheckMeta } from '../../browser/BrowserCheckMeta.tsx';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
@@ -35,8 +32,6 @@ import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { AgreedReplyLine } from '../plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
 import type { RunStep } from '../run-projection.ts';
-import { useLiveReport } from '../status/status-context.ts';
-import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
 import { blockStatus } from './block-status.ts';
 import {
@@ -50,9 +45,7 @@ import {
   turnApprovals,
   type CrewItem,
 } from './crew-items.ts';
-import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
-import { useStoredTurn } from './stored-turn.ts';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
@@ -70,33 +63,11 @@ interface CrewTurnProps {
   orchestration: Orchestration;
   repo: Project | null;
   taskCard: ReactNode;
-  continued: boolean;
-}
-
-interface BodyProps extends CrewTurnProps {
-  liveApprovals: readonly Approval[];
-  readOnly: boolean;
-}
-
-function newer(live: Orchestration | null, stored: Orchestration): Orchestration {
-  return live && live.updatedAt > stored.updatedAt ? live : stored;
 }
 
 const NO_STEPS: RunStep[] = [];
 
-function CrewTurnBody({
-  run,
-  detail,
-  orchestration,
-  repo,
-  taskCard,
-  continued,
-  liveApprovals,
-  readOnly,
-}: BodyProps) {
-  const [alreadyShown] = useState(
-    () => new Set(continued ? orchestration.crew.map((member) => member.runId) : []),
-  );
+export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTurnProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
@@ -110,7 +81,7 @@ function CrewTurnBody({
   const lastReply = detail.messages.findLast(
     (message) => message.role === 'assistant' && message.runId === run.id,
   );
-  const approvals = turnApprovals(crewRunIds, detail.approvals, liveApprovals);
+  const approvals = turnApprovals(crewRunIds, detail.approvals, []);
   const checkpoints = mergeCheckpoints(
     orchestration.checkpoints,
     orchestration.pendingCheckpoint ? [orchestration.pendingCheckpoint] : [],
@@ -128,16 +99,6 @@ function CrewTurnBody({
       )),
     ]);
   const finished = isTerminalRunStatus(orchestration.status);
-  const deciding = !finished && betweenAgents(orchestration, agents.slice(1));
-  const leadId = `lead:${run.id}`;
-  const planLine = detail.plans?.lines.find((line) => line.runId === run.id);
-  const plannedPieces = planLine?.unit === 'pieces' && planLine.items > 0 ? planLine.items : null;
-  const doing = doingPhrase(jevDoing(orchestration, plannedPieces));
-  useLiveReport(
-    { id: leadId, name: jev.name, provider: jev.provider, kind: 'lead', doing },
-    deciding,
-    NO_STEPS,
-  );
   const jevStatus =
     jev.state === 'done'
       ? null
@@ -176,8 +137,6 @@ function CrewTurnBody({
         live={!isTerminalRunStatus(member.status)}
         settled={member.runId === run.id && handedOffAt !== null}
         collapsed={collapsible && agent.state === 'done'}
-        still={alreadyShown.has(member.runId)}
-        readOnly={readOnly}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
@@ -227,22 +186,13 @@ function CrewTurnBody({
 
   return (
     <div className="crew-turn">
-      <div className={continued ? 'msg ai agent-block jev still' : 'msg ai agent-block jev'}>
+      <div className="msg ai agent-block jev">
         <AgentHead
           agent={jev}
           anchor={agentAnchor(orchestration.runId, 'jev')}
           status={jevStatus}
-          liveId={deciding ? leadId : null}
-        />
-        <DispatchLine
-          orchestration={orchestration}
-          advice={detail.advice?.[run.id]}
-          category={run.category}
         />
         {taskCard}
-        {orchestration.pieces && !readOnly && (
-          <PieceBoard list={orchestration.pieces} crew={orchestration.crew} />
-        )}
       </div>
       {steeredAfter(-1)}
       {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}
@@ -308,19 +258,5 @@ function CrewTurnBody({
         {run.mode === 'do' && run.snapshot && finished && !kept && <RevertRun run={run} compact />}
       </div>
     </div>
-  );
-}
-
-export function CrewTurn(props: CrewTurnProps) {
-  const live = !isTerminalRunStatus(props.run.status);
-  const stream = useRunStream(props.run.id, props.detail.conversation.id, live);
-  const readOnly = useStoredTurn(props.run);
-  return (
-    <CrewTurnBody
-      {...props}
-      readOnly={readOnly}
-      orchestration={newer(stream.orchestration, props.orchestration)}
-      liveApprovals={stream.approvals}
-    />
   );
 }

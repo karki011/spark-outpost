@@ -163,14 +163,6 @@
 .ai-task:hover {
   color: var(--text);
 }
-.ai-jev {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--faint);
-  font-size: 12px;
-}
 .ai-following {
   min-width: 0;
   margin-left: auto;

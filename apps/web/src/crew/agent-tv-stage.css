@@ -12,7 +12,7 @@
 .tv-spot {
   position: absolute;
   top: 0;
-  width: calc(var(--jev) * 3.4);
+  width: calc(var(--lead) * 3.4);
   translate: -50% 0;
   clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
   background: linear-gradient(
@@ -24,8 +24,8 @@
 }
 .tv-floor {
   position: absolute;
-  width: calc(var(--jev) * 3.4);
-  height: calc(var(--jev) * 0.62);
+  width: calc(var(--lead) * 3.4);
+  height: calc(var(--lead) * 0.62);
   translate: -50% -50%;
   border-radius: 50%;
   background: radial-gradient(
@@ -59,27 +59,6 @@
   to {
     stroke-dashoffset: -11;
   }
-}
-.tv-pk {
-  position: absolute;
-  z-index: 3;
-  left: 0;
-  top: 0;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border-radius: 50%;
-  background: var(--lc);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--lc) 25%, transparent),
-    0 0 14px 3px var(--lc);
-  offset-rotate: 0deg;
-  pointer-events: none;
-  animation: tv-go 0.95s var(--out) forwards;
-}
-.tv-pk.in {
-  animation-duration: 1.1s;
-  background: color-mix(in srgb, var(--lc) 55%, var(--panel));
 }
 @keyframes tv-go {
   from {
@@ -188,7 +167,7 @@
   color: var(--faint);
   font-size: 0.8em;
 }
-.tv-n.jev {
+.tv-n.lead {
   z-index: 1;
   width: calc(var(--lw) * 1.4);
 }
@@ -217,20 +196,20 @@
 .tv-n.queued .tv-b {
   opacity: 0.7;
 }
-.tv-n.done:not(.jev) {
+.tv-n.done:not(.lead) {
   translate: calc(var(--ox) * 9px) calc(var(--oy) * 9px);
 }
-.tv-n.done:not(.jev) .tv-b {
+.tv-n.done:not(.lead) .tv-b {
   scale: 0.9;
   opacity: 0.74;
   filter: saturate(0.7);
 }
-.tv-n.done:not(.jev):hover .tv-b,
+.tv-n.done:not(.lead):hover .tv-b,
 .tv-n.done.sel .tv-b {
   opacity: 1;
   filter: none;
 }
-.tv-n.done:not(.jev, .sel, :hover) b,
+.tv-n.done:not(.lead, .sel, :hover) b,
 .tv-n.queued b,
 .tv-n.stopped b {
   color: var(--muted);
@@ -423,9 +402,6 @@
 .tv.still .tv-b {
   transition: none;
 }
-.tv.still .tv-pk {
-  display: none;
-}
 .tv.still .tv-ring {
   scale: 1.1;
   opacity: 0.9;
@@ -439,8 +415,5 @@
   .tv-bub,
   .tv-n.failed .tv-b {
     animation: none;
-  }
-  .tv-pk {
-    display: none;
   }
 }

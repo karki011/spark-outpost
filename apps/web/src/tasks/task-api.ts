@@ -1,10 +1,7 @@
 import {
-  steerResponseSchema,
   taskDetailSchema,
   taskLinkSchema,
   type AddTaskLinkRequest,
-  type SteerRequest,
-  type SteerResponse,
   type TaskDetail,
   type TaskLink,
 } from '@spark-outpost/contracts';
@@ -21,9 +18,4 @@ export const taskApi = {
   addLink: (id: string, link: AddTaskLinkRequest): Promise<TaskLink> =>
     request(taskLinkSchema, `/tasks/${id}/links`, { method: 'POST', body: JSON.stringify(link) }),
   markdownUrl: (id: string, kind: 'plan') => `/api/tasks/${id}/artifacts/${kind}.md`,
-  steer: (id: string, steer: SteerRequest): Promise<SteerResponse> =>
-    request(steerResponseSchema, `/tasks/${id}/steer`, {
-      method: 'POST',
-      body: JSON.stringify(steer),
-    }),
 };

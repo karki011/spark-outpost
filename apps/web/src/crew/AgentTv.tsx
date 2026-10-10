@@ -38,11 +38,10 @@ import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
-import type { PieceTag } from './tv-coordinator.ts';
-import { clampToViewport, hubStage, STAGES, watchStage } from './tv-layout.ts';
+import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
 import { useThrottledText, useViewport } from './use-tv-env.ts';
-import { useTvEvents } from './use-tv-events.ts';
+import { useTvChatter } from './use-tv-events.ts';
 
 const CAPTION_THROTTLE_MS = 2500;
 const SIZE_OPTIONS = TV_SIZES.map((id) => ({ id, label: id.toUpperCase() }));
@@ -78,30 +77,22 @@ function focusButton() {
 interface AgentTvProps {
   members: readonly CrewAgent[];
   asks: Record<string, TvAsk>;
-  decision: string | null;
-  remark: string | null;
   rows: TvRows;
-  tags?: Record<string, PieceTag> | null;
   stopping: string | null;
   onPick(id: string): void;
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
-  onMessage?: (runId: string) => void;
   branch?: string | null;
 }
 
 export function AgentTv({
   members,
   asks,
-  decision,
-  remark,
   rows,
-  tags = null,
   stopping,
   onPick,
   onAsk,
   onStop,
-  onMessage,
   branch = null,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
@@ -111,16 +102,12 @@ export function AgentTv({
   const hidden = usePageHidden();
   const viewport = useViewport();
   const gaze = useMemo(() => (reduced ? null : new StageGaze()), [reduced]);
-  const events = useTvEvents(
-    { agents: members, decision: remark },
-    { muted, reduced, paused: hidden, asking: Object.keys(asks) },
-  );
+  const chatter = useTvChatter(members, { muted, paused: hidden, asking: Object.keys(asks) });
   const caption = tvCaption(members);
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
   const narrow = usePhone();
-  const baseMetrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
-  const metrics = tags ? hubStage(baseMetrics) : baseMetrics;
+  const metrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
@@ -302,25 +289,19 @@ export function AgentTv({
             onAsk={onAsk}
             onStop={onStop}
             onClear={clearTvFinished}
-            onMessage={onMessage}
           />
         ) : (
           <AgentTvStage
             members={members}
             metrics={metrics}
             asks={asks}
-            decision={decision}
-            chatter={events.chatter}
-            packets={events.packets}
+            chatter={chatter}
             gaze={gaze}
-            tags={tags}
             reduced={reduced}
             selected={selected}
             onSelect={setSelected}
-            onLanded={events.landed}
             onPick={onPick}
             onAsk={onAsk}
-            onMessage={onMessage}
           />
         )}
         {view === 'stage' && (

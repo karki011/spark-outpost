@@ -1,9 +1,6 @@
 import type { ReactNode } from 'react';
-import type { AdviceSummary, Category } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
-import { AdviceChip } from './AdviceChip.tsx';
-import { jevLine } from './jev-line.ts';
 import { followingLine } from './project/agent-setup.ts';
 import { providerName } from './provider-name.ts';
 import { useLiveHead } from './status/status-context.ts';
@@ -22,8 +19,6 @@ interface AiTurnProps {
   provider: string;
   label: string;
   state: TurnState;
-  category?: Category | null | undefined;
-  advice?: AdviceSummary | undefined;
   following?: readonly string[] | null | undefined;
   status?: ReactNode;
   liveId?: string | null;
@@ -34,8 +29,6 @@ export function AiTurn({
   provider,
   label,
   state,
-  category,
-  advice,
   following,
   status,
   liveId = null,
@@ -43,7 +36,6 @@ export function AiTurn({
 }: AiTurnProps) {
   const headRef = useLiveHead(liveId);
   const followed = followingLine(following ?? []);
-  const jev = jevLine(advice);
   return (
     <div className="msg ai">
       <div className="ai-head" ref={headRef}>
@@ -64,12 +56,6 @@ export function AiTurn({
             </span>
             {status}
           </>
-        )}
-        <AdviceChip category={category} advice={advice} />
-        {jev && (
-          <span className="ai-jev" title={jev}>
-            {jev}
-          </span>
         )}
         {followed && (
           <span className="ai-following" title={followed}>

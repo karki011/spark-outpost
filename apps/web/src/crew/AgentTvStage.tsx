@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useId, type CSSProperties } from 'react';
-import { isBusy, isDispatcher, type CrewAgent } from './crew-model.ts';
+import { isBusy, type CrewAgent } from './crew-model.ts';
 import { AskBubble, ChatBubble, DetailBubble } from './TvBubble.tsx';
 import { TvNode } from './TvNode.tsx';
 import type { Chatter } from './tv-chatter.ts';
 import type { StageGaze, GazeAim } from './tv-gaze.ts';
-import type { PieceTag } from './tv-coordinator.ts';
 import {
   bubbleBox,
   handoffPath,
-  hubLayout,
   textWidth,
   stageLayout,
   type Seat,
@@ -16,13 +14,11 @@ import {
   type StageMetrics,
 } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
-import type { Packet } from './use-tv-events.ts';
 
 const PROVIDER_COLORS: Record<string, string> = {
   claude: 'var(--c-claude)',
   codex: 'var(--c-codex)',
   zai: 'var(--c-zai)',
-  jev: 'var(--c-jev)',
 };
 
 function lineColor(provider: string): CSSProperties {
@@ -31,7 +27,7 @@ function lineColor(provider: string): CSSProperties {
 
 function gazeAim(agent: CrewAgent, focus: string | null): GazeAim {
   if (agent.state === 'waiting') return 'rest';
-  if (isBusy(agent.state) && !isDispatcher(agent)) return null;
+  if (isBusy(agent.state)) return null;
   return focus && focus !== agent.id ? { blob: focus } : null;
 }
 
@@ -39,33 +35,27 @@ export interface StageProps {
   members: readonly CrewAgent[];
   metrics: StageMetrics;
   asks: Record<string, TvAsk>;
-  decision: string | null;
   chatter: Chatter | null;
-  packets: readonly Packet[];
   gaze: StageGaze | null;
-  tags: Record<string, PieceTag> | null;
   reduced: boolean;
   selected: string | null;
   onSelect(id: string | null): void;
-  onLanded(key: string): void;
   onPick(id: string): void;
   onAsk(approvalId: string): void;
-  onMessage?: ((runId: string) => void) | undefined;
 }
 
 function seatOf(layout: StageLayout, crew: readonly CrewAgent[], id: string): Seat {
   const index = crew.findIndex((agent) => agent.id === id);
-  return index < 0 ? layout.jev : layout.seats[index]!;
+  return index < 0 ? layout.lead : layout.seats[index]!;
 }
 
 export function AgentTvStage(props: StageProps) {
-  const { members, metrics, asks, chatter, gaze, tags, reduced, selected } = props;
+  const { members, metrics, asks, chatter, gaze, reduced, selected } = props;
   const bubbleId = useId();
-  const jev = members.find(isDispatcher);
-  const crew = members.filter((member) => !isDispatcher(member));
-  const layout = tags ? hubLayout(crew.length, metrics) : stageLayout(crew.length, metrics);
-  const focus = crew.find((member) => isBusy(member.state))?.id ?? null;
-  const sizeOf = (id: string) => (jev?.id === id ? metrics.jevSize : metrics.crewSize);
+  const [lead, ...crew] = members;
+  const layout = stageLayout(crew.length, metrics);
+  const focus = members.find((member) => isBusy(member.state))?.id ?? null;
+  const sizeOf = (id: string) => (lead?.id === id ? metrics.leadSize : metrics.crewSize);
 
   const attach = useCallback(
     (id: string, svg: SVGSVGElement | null) => {
@@ -92,7 +82,7 @@ export function AgentTvStage(props: StageProps) {
       seatOf(layout, crew, id),
       sizeOf(id),
       metrics,
-      id === jev?.id,
+      id === lead?.id,
       text ? textWidth(text, metrics.fontSize) : undefined,
     );
   const selectedAgent = members.find((member) => member.id === selected);
@@ -106,7 +96,7 @@ export function AgentTvStage(props: StageProps) {
       seat={seat}
       size={sizeOf(agent.id)}
       index={index}
-      tag={tags?.[agent.id] ?? null}
+      lead={agent.id === lead?.id}
       selected={selected === agent.id}
       reduced={reduced}
       bubbleId={bubbleId}
@@ -119,14 +109,14 @@ export function AgentTvStage(props: StageProps) {
 
   return (
     <div
-      className={tags ? 'tv-stage hub' : 'tv-stage'}
+      className="tv-stage"
       style={
         {
           width: metrics.width,
           height: metrics.height,
           '--lw': `${metrics.labelWidth}px`,
           '--fs': `${metrics.fontSize}px`,
-          '--jev': `${metrics.jevSize}px`,
+          '--lead': `${metrics.leadSize}px`,
         } as CSSProperties
       }
       onPointerMove={(event) => {
@@ -138,12 +128,12 @@ export function AgentTvStage(props: StageProps) {
       <i
         className="tv-spot"
         aria-hidden="true"
-        style={{ left: layout.jev.x, height: layout.jev.y + metrics.jevSize * 0.42 }}
+        style={{ left: layout.lead.x, height: layout.lead.y + metrics.leadSize * 0.42 }}
       />
       <i
         className="tv-floor"
         aria-hidden="true"
-        style={{ left: layout.jev.x, top: layout.jev.y + metrics.jevSize * 0.42 }}
+        style={{ left: layout.lead.x, top: layout.lead.y + metrics.leadSize * 0.42 }}
       />
       <svg
         className="tv-wires"
@@ -157,26 +147,11 @@ export function AgentTvStage(props: StageProps) {
             key={member.id}
             className={`tv-l${isBusy(member.state) ? ' on' : ''}${member.state === 'queued' ? ' q' : ''}`}
             style={lineColor(member.provider)}
-            d={handoffPath(layout.jev, layout.seats[index]!)}
+            d={handoffPath(layout.lead, layout.seats[index]!)}
           />
         ))}
       </svg>
-      {props.packets.map((packet) => {
-        const agent = crew.find((member) => member.id === packet.agentId);
-        if (!agent) return null;
-        const seat = seatOf(layout, crew, agent.id);
-        const [from, to] = packet.direction === 'out' ? [layout.jev, seat] : [seat, layout.jev];
-        return (
-          <i
-            key={packet.key}
-            className={`tv-pk ${packet.direction}`}
-            aria-hidden="true"
-            style={{ ...lineColor(agent.provider), offsetPath: `path('${handoffPath(from, to)}')` }}
-            onAnimationEnd={() => props.onLanded(packet.key)}
-          />
-        );
-      })}
-      {jev && renderNode(jev, layout.jev, 0)}
+      {lead && renderNode(lead, layout.lead, 0)}
       {crew.map((member, index) => renderNode(member, layout.seats[index]!, index + 1))}
       {members
         .filter((member) => asks[member.id] && member.id !== selected)
@@ -201,11 +176,9 @@ export function AgentTvStage(props: StageProps) {
           id={bubbleId}
           box={box(selectedAgent.id)}
           agent={selectedAgent}
-          decision={isDispatcher(selectedAgent) ? props.decision : null}
           ask={asks[selectedAgent.id]}
           onGo={() => go(selectedAgent.id)}
           onAsk={props.onAsk}
-          onMessage={props.onMessage && (() => props.onMessage?.(selectedAgent.id))}
         />
       )}
     </div>

@@ -19,7 +19,6 @@ import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
-import { MemberChatHost } from '../crew/MemberChatHost.tsx';
 import { JUMP_TRIES, scrollToAnchor, scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
@@ -362,7 +361,6 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
           <PasskeyOffer />
           <TeammateHost />
-          <MemberChatHost />
           <AnimatePresence>
             {settings && (
               <SettingsDialog

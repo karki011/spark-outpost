@@ -29,11 +29,11 @@ function show(status: Run['status']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (current: ReturnType<typeof crewTurn>) => (
     <QueryClientProvider client={client}>
-      <CrewTurn {...current} repo={null} taskCard={null} continued={false} />
+      <CrewTurn {...current} repo={null} taskCard={null} />
     </QueryClientProvider>
   );
   const view = render(tree(turn));
-  return { view, rerender: (next: Run['status']) => view.rerender(tree(crewTurn(next))) };
+  return { view };
 }
 
 const board = () => screen.queryByRole('region', { name: 'Pieces' });
@@ -41,11 +41,12 @@ const messageButtons = () => screen.queryAllByRole('button', { name: /^Message /
 const parallel = (word: string) =>
   screen.getByRole('group', { name: `${word} in parallel: Bolt and Rivet` });
 
-describe('a crew turn that was finished when the chat opened', () => {
-  it('shows no piece board and no Message button on any helper', () => {
-    show('succeeded');
+describe('a stored crew turn', () => {
+  it('shows no piece board, no Message button on any helper and no dispatch line', () => {
+    const { view } = show('succeeded');
     expect(board()).toBeNull();
     expect(messageButtons()).toEqual([]);
+    expect(view.container.querySelector('.jevline')).toBeNull();
   });
 
   it("keeps the transcript: each helper's reply, model and cost, and the turn total", () => {
@@ -65,7 +66,6 @@ describe('a crew turn that was finished when the chat opened', () => {
     expect(view.container.querySelector('.crew-foot')?.textContent).toBe(
       'Done 3 agents · 38.1K tokens · $0.09 · Jev ~<$0.001',
     );
-    expect(view.container.querySelector('.jevline')?.textContent).toContain('Plan, then build');
   });
 
   it('opens a helper to its reply, model and cost, still with no Message button', () => {
@@ -89,26 +89,5 @@ describe('a crew turn that was finished when the chat opened', () => {
     const { view } = show('succeeded');
     fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
     expect(view.container.querySelector('.par-body')?.textContent).toContain('Which store?');
-  });
-});
-
-describe('a crew turn that is running when the chat opens', () => {
-  it('shows the piece board and a Message button for each working helper, as before', () => {
-    show('running');
-    expect(within(board()!).getAllByRole('listitem')).toHaveLength(2);
-    expect(messageButtons().map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Message Bolt',
-      'Message Rivet',
-    ]);
-  });
-
-  it('keeps the piece board and Message when the turn finishes while it is on screen', () => {
-    const { rerender } = show('running');
-    rerender('succeeded');
-    expect(board()).not.toBeNull();
-    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
-    expect(messageButtons().map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Message Bolt',
-    ]);
   });
 });

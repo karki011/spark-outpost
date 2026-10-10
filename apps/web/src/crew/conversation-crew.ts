@@ -1,6 +1,14 @@
-import type { ConversationDetail, Orchestration, TaskOverview } from '@spark-outpost/contracts';
+import type {
+  ConversationDetail,
+  CrewMember,
+  Orchestration,
+  Run,
+  TaskOverview,
+} from '@spark-outpost/contracts';
+import { topLevelRuns } from '../chat/turns.ts';
+import { chatAgent } from './chat-agent.ts';
 import type { CrewAgent } from './crew-model.ts';
-import { crewAgents } from './crew-projection.ts';
+import { crewAgents, runAgent } from './crew-projection.ts';
 
 export function latestOrchestration(detail: ConversationDetail | undefined): Orchestration | null {
   const orchestrations = detail?.orchestrations;
@@ -9,9 +17,12 @@ export function latestOrchestration(detail: ConversationDetail | undefined): Orc
   return run ? orchestrations[run.id]! : null;
 }
 
-export function orchestrationsInOrder(detail: ConversationDetail): Orchestration[] {
-  const orchestrations = detail.orchestrations ?? {};
-  return detail.runs.flatMap((run) => orchestrations[run.id] ?? []);
+export function sparkMembers(orchestration: Orchestration | null | undefined): CrewMember[] {
+  return orchestration?.crew.filter((member) => member.role === 'spark') ?? [];
+}
+
+export function isSparkLed(orchestration: Orchestration | null | undefined): boolean {
+  return orchestration?.depthSource === 'user' && sparkMembers(orchestration).length > 0;
 }
 
 export function isCrewTurn(orchestration: Orchestration | null | undefined): boolean {
@@ -21,32 +32,58 @@ export function isCrewTurn(orchestration: Orchestration | null | undefined): boo
   return planned || child || orchestration.crew.length > 1;
 }
 
+export function storedCrewTurn(orchestration: Orchestration | null | undefined): boolean {
+  return isCrewTurn(orchestration) && !isSparkLed(orchestration);
+}
+
 export function crewOrchestration(detail: ConversationDetail | undefined): Orchestration | null {
   const orchestration = latestOrchestration(detail);
   return isCrewTurn(orchestration) ? orchestration : null;
 }
 
-export function lastCrewOrchestration(
-  detail: ConversationDetail | undefined,
-): Orchestration | null {
-  const orchestrations = detail?.orchestrations;
-  if (!detail || !orchestrations) return null;
-  const run = detail.runs.findLast((candidate) => isCrewTurn(orchestrations[candidate.id]));
-  return run ? orchestrations[run.id]! : null;
-}
-
-export function tvOrchestration(detail: ConversationDetail | undefined): Orchestration | null {
-  return lastCrewOrchestration(detail) ?? latestOrchestration(detail);
-}
-
-export function tvCrew(detail: ConversationDetail | undefined): CrewAgent[] {
-  const orchestration = tvOrchestration(detail);
-  return orchestration ? crewAgents(orchestration, detail?.activity) : [];
-}
-
 export function conversationCrew(detail: ConversationDetail | undefined): CrewAgent[] {
   const orchestration = crewOrchestration(detail);
   return orchestration ? crewAgents(orchestration, detail?.activity) : [];
+}
+
+export function storedCrew(detail: ConversationDetail | undefined): Orchestration | null {
+  const orchestration = latestOrchestration(detail);
+  return storedCrewTurn(orchestration) ? orchestration : null;
+}
+
+export interface TvSpark {
+  member: CrewMember;
+  agent: CrewAgent;
+}
+
+export interface TvCast {
+  run: Run;
+  lead: CrewAgent;
+  sparks: TvSpark[];
+}
+
+export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
+  const run = detail ? topLevelRuns(detail).at(-1) : undefined;
+  if (!detail || !run) return null;
+  const orchestration = detail.orchestrations?.[run.id];
+  const asking = detail.approvals.some(
+    (approval) => approval.status === 'pending' && approval.runId === run.id,
+  );
+  const sparks = orchestration
+    ? sparkMembers(orchestration).map((member) => ({
+        member,
+        agent: runAgent(member, orchestration, detail.activity[member.runId] ?? []),
+      }))
+    : [];
+  return { run, lead: chatAgent(run, detail.activity[run.id] ?? [], asking), sparks };
+}
+
+export function castAgents(cast: TvCast | null): CrewAgent[] {
+  return cast ? [cast.lead, ...cast.sparks.map((spark) => spark.agent)] : [];
+}
+
+export function tvCrew(detail: ConversationDetail | undefined): CrewAgent[] {
+  return castAgents(tvCast(detail));
 }
 
 export function agentAnchor(orchestrationRunId: string, agentId: string): string {

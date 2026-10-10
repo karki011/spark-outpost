@@ -25,7 +25,6 @@ interface ModelListProps {
   onSelect: (model: string) => void;
   routing?: ModelRouting;
   onAuto?: (() => void) | null;
-  hint?: string | null;
 }
 
 function AutoOption({ checked, onSelect }: { checked: boolean; onSelect: () => void }) {
@@ -33,7 +32,7 @@ function AutoOption({ checked, onSelect }: { checked: boolean; onSelect: () => v
     <button type="button" className="mopt" role="radio" aria-checked={checked} onClick={onSelect}>
       <span>
         <b>Auto</b>
-        <small>Rules pick the size: smaller for trivial edits, top for destructive work.</small>
+        <small>The agent’s default model.</small>
       </span>
       <TickIcon />
     </button>
@@ -48,7 +47,6 @@ export function ModelList({
   onSelect,
   routing = 'pinned',
   onAuto = null,
-  hint = null,
 }: ModelListProps) {
   const [showRetiring, setShowRetiring] = useState(false);
   const now = new Date();
@@ -105,7 +103,6 @@ export function ModelList({
           Show retiring models
         </button>
       )}
-      {hint && <p className="mhint">{hint}</p>}
     </>
   );
 }

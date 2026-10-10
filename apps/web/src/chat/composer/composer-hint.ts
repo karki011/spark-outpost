@@ -16,7 +16,6 @@ export function composerHint(
 }
 
 interface PlaceholderFacts {
-  steering: boolean;
   queueing: boolean;
   preferred: BusyEnterAction;
   hasRepos: boolean;
@@ -24,7 +23,6 @@ interface PlaceholderFacts {
 }
 
 export function composerPlaceholder(facts: PlaceholderFacts): string {
-  if (facts.steering) return 'Steer the pieces while they run';
   if (facts.queueing && facts.preferred === 'now') return 'Send a message to the running turn';
   if (facts.queueing) return 'Queue a message for when this turn ends';
   if (facts.hasRepos && facts.hasSparks) {

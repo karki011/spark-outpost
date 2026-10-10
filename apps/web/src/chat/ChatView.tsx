@@ -18,12 +18,11 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { DiffChip } from '../diff/DiffChip.tsx';
 import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
-import { useSteer } from '../crew/use-steer.ts';
 import {
   belongsTo,
   conversationCrew,
-  crewOrchestration,
   latestOrchestration,
+  storedCrew,
   tvCrew,
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
@@ -169,11 +168,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
-  const steer = useSteer(conversationId, running ? orchestration : null);
   const openTask = useStableCallback(panel.openTask);
   const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
-  const crewRun = crewOrchestration(detail.data);
+  const crewRun = storedCrew(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
   const [auditOpen, setAuditOpen] = useState(false);
   const [panelTab, setPanelTab] = useState<WorkTab>('tasks');
@@ -421,7 +419,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                       return queue.sendFirst(content);
                     }}
                     busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
-                    steer={steer}
                     above={
                       <PrCard
                         conversationId={conversationId}
