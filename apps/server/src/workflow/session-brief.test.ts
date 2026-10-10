@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { HISTORY_TOOL_NOTE, SESSION_HANDOFF_HEADING, sessionHandoffPrompt } from './handoff.ts';
+import {
+  HISTORY_TOOL_NOTE,
+  SESSION_HANDOFF_HEADING,
+  sessionHandoffPrompt,
+} from './session-brief.ts';
 
 const history = Array.from({ length: 10 }, (_, index) => ({
   role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),

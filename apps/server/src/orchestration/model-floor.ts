@@ -1,8 +1,9 @@
 import type { AgentPick } from '@spark-outpost/contracts';
 import { retirementOf, retirementText, type Retirement } from '../model-cards/cards.ts';
-import { modelTier, tierLadder, type TierModel } from './tiers.ts';
+import { builderModels, FLOOR_TIER } from '../model-access/floor-model.ts';
+import { modelTier, type TierModel } from './tiers.ts';
 
-const FLOOR_TIER = 1;
+export { builderModels, floorModel, harnessModels } from '../model-access/floor-model.ts';
 
 export const FLOOR_REASON = "Builders don't run on the fast tier";
 
@@ -51,32 +52,6 @@ function pickRetiring(pick: AgentPick, now: Date = new Date()): Retirement | nul
 export function belowFloor(pick: AgentPick, now: Date = new Date()): boolean {
   const tier = pickTier(pick);
   return (tier !== null && tier < FLOOR_TIER) || pickRetiring(pick, now) !== null;
-}
-
-export function harnessModels<T extends TierModel>(
-  models: readonly T[],
-  provider: string,
-  now: Date = new Date(),
-): T[] {
-  return models.filter((model) => retirementOf(model, provider, now) === null);
-}
-
-export function builderModels<T extends TierModel>(
-  models: readonly T[],
-  provider: string,
-  now: Date,
-): T[] {
-  return tierLadder(harnessModels(models, provider, now), provider).filter(
-    (model) => (modelTier(model, provider) ?? -1) >= FLOOR_TIER,
-  );
-}
-
-export function floorModel<T extends TierModel>(
-  models: readonly T[],
-  provider: string,
-  now: Date = new Date(),
-): T | null {
-  return builderModels(models, provider, now)[0] ?? null;
 }
 
 function unknownTier<T extends TierModel>(models: readonly T[], provider: string): T[] {

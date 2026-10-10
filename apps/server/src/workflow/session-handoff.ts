@@ -1,4 +1,4 @@
-import { openIssues, sessionHandoffPrompt, taskDiff } from '../orchestration/handoff.ts';
+import { openIssues, sessionHandoffPrompt, taskDiff } from './session-brief.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { currentPieceList } from '../persistence/pieces.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';

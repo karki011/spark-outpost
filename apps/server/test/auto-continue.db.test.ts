@@ -13,11 +13,7 @@ import {
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { migrationsDir } from '../src/persistence/migrate.ts';
 import { autoContinueSeconds, updateProfile } from '../src/persistence/setup.ts';
-import {
-  askCheckpoint,
-  compactCard,
-  type CheckpointCard,
-} from '../src/orchestration/checkpoint.ts';
+import { askCheckpoint, compactCard, type CheckpointCard } from '../src/workflow/kept-record.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { doRun, recordingAppend } from './approval-support.ts';
 import {

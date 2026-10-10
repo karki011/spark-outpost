@@ -1,6 +1,6 @@
 import type { Db } from '../persistence/db.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
-import { chatSummaryPrompt, openIssues, taskDiff } from '../orchestration/handoff.ts';
+import { chatSummaryPrompt, openIssues, taskDiff } from '../workflow/session-brief.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 
 async function latestTaskId(db: Db, conversationId: string): Promise<string | null> {

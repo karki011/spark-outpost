@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SessionEvent } from '@spark-outpost/contracts';
 import { FRESH_REASONS, handoffNote } from '../src/agents/acp/session-open.ts';
-import { SESSION_HANDOFF_HEADING } from '../src/orchestration/handoff.ts';
+import { SESSION_HANDOFF_HEADING } from '../src/workflow/session-brief.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { sweepSessions } from '../src/workflow/turn-session.ts';
 import { linkedConversation } from './approval-support.ts';
