@@ -8,7 +8,6 @@ import { insertAdvice, loadIntakeContext, type IntakeContext } from '../persiste
 import { recordRunCategory } from '../persistence/auto-title.ts';
 import type { Db } from '../persistence/db.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
-import type { SecretStore } from '../setup/secrets.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { runEvents } from '../workflow/run-events.ts';
@@ -21,14 +20,9 @@ import {
   type IntakeQuestions,
 } from './intake-questions.ts';
 import { askSystemOne, JEV_TIMEOUT_MS, jevUsage, requestModel } from './jev.ts';
+import type { IntakeDeps } from './jev-types.ts';
 
-export interface IntakeDeps {
-  db: Db;
-  secrets: SecretStore;
-  fetch: typeof fetch;
-  baseUrl: string;
-  timeoutMs?: number;
-}
+export type { IntakeDeps } from './jev-types.ts';
 
 export interface IntakeRecorder {
   deps: IntakeDeps;

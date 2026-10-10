@@ -1,10 +1,6 @@
 import type { OrchestrationPhase } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
-import {
-  validChoice,
-  type IntakeQuestions,
-  type SystemOneResponse,
-} from '../advisor/intake-questions.ts';
+import { validChoice, type IntakeQuestions, type SystemOneResponse } from '../advisor/jev-types.ts';
 import { capped } from '../advisor/questions.ts';
 
 export type ChatState = 'not_started' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'stopped';

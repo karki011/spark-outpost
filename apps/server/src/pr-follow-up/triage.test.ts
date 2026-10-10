@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SystemOneResponse } from '../advisor/intake-questions.ts';
+import type { SystemOneResponse } from '../advisor/jev-types.ts';
 import type { Gathered } from './gather.ts';
 import { readTriage, triageByRules, triageQuestions } from './triage.ts';
 

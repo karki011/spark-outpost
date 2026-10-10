@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SystemOneResponse } from '../advisor/intake-questions.ts';
+import type { SystemOneResponse } from '../advisor/jev-types.ts';
 import { estimateTokens } from '../codescan/jev-state.ts';
 import { areaEvidence } from './label-evidence.ts';
 import { describeArea, labelQuestions, nameCandidates, parseLabel } from './label-questions.ts';

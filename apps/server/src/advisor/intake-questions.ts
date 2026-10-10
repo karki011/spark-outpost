@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import {
   categorySchema,
   type CardCategory,
@@ -19,6 +18,20 @@ import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
 import { parseRatings, ratingQuestions } from './rating-questions.ts';
 import { tierLadder } from '../orchestration/tiers.ts';
 import { NEED_OPTIONS, needQuestion } from './need-question.ts';
+import {
+  validChoice,
+  validNoul,
+  type IntakeQuestions,
+  type SystemOneResponse,
+} from './jev-types.ts';
+
+export {
+  systemOneResponseSchema,
+  validChoice,
+  validNoul,
+  type IntakeQuestions,
+  type SystemOneResponse,
+} from './jev-types.ts';
 
 export const MAX_TASK_CHARACTERS = 8_000;
 export const MAX_UNTRUSTED_CHARACTERS = 8_000;
@@ -26,53 +39,6 @@ export const MAX_PREVIOUS_REQUEST_CHARACTERS = 2_000;
 export const MAX_TASK_SUMMARY_CHARACTERS = 1_000;
 export const MAX_PREVIOUS_REPLY_CHARACTERS = 4_000;
 const AGENT_DEFAULT_MODEL = 'default';
-
-const choiceAnswerSchema = z.object({
-  type: z.literal('choice'),
-  choice: z.string(),
-  probabilities: z.record(z.string(), z.number()),
-  confidence: z.number(),
-});
-
-const scoreAnswerSchema = z.object({
-  type: z.literal('score'),
-  score: z.number(),
-  confidence: z.number(),
-});
-
-const noulAnswerSchema = z.object({ type: z.literal('noul'), noul: z.number() });
-
-export const systemOneResponseSchema = z.object({
-  model: z.string(),
-  answers: z.record(
-    z.string(),
-    z.discriminatedUnion('type', [choiceAnswerSchema, noulAnswerSchema, scoreAnswerSchema]),
-  ),
-  usage: z.object({ input_tokens: z.number(), output_tokens: z.number().optional() }).optional(),
-});
-export type SystemOneResponse = z.infer<typeof systemOneResponseSchema>;
-
-const unit = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1;
-
-export function validNoul(response: SystemOneResponse | null, key: string): number | null {
-  const answer = response?.answers[key];
-  if (answer?.type !== 'noul' || !unit(answer.noul)) return null;
-  return answer.noul;
-}
-
-export function validChoice<T extends string>(
-  response: SystemOneResponse | null,
-  key: string,
-  offered: readonly T[],
-): { value: T; confidence: number; probabilities: Record<string, number> } | null {
-  const answer = response?.answers[key];
-  if (answer?.type !== 'choice' || !unit(answer.confidence)) return null;
-  if (!Object.values(answer.probabilities).every(unit)) return null;
-  const value = offered.find((option) => option === answer.choice);
-  return value === undefined
-    ? null
-    : { value, confidence: answer.confidence, probabilities: answer.probabilities };
-}
 
 export const CATEGORY_QUESTION = 'What is the main goal of `task`? Pick one.';
 
@@ -254,11 +220,6 @@ function previousIsPlanQuestion(): Record<string, unknown> {
 
 function tail(text: string, limit: number): string {
   return text.length > limit ? text.slice(text.length - limit) : text;
-}
-
-export interface IntakeQuestions {
-  state: Record<string, unknown>;
-  questions: Record<string, Record<string, unknown>>;
 }
 
 export function selectableModels(candidate: AdvisorCandidate): AdvisorOption[] {

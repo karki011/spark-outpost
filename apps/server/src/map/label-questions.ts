@@ -4,8 +4,8 @@ import {
   type MapCategory,
   type MapKind,
 } from '@spark-outpost/contracts';
-import type { IntakeQuestions, SystemOneResponse } from '../advisor/intake-questions.ts';
-import { validChoice } from '../advisor/intake-questions.ts';
+import type { IntakeQuestions, SystemOneResponse } from '../advisor/jev-types.ts';
+import { validChoice } from '../advisor/jev-types.ts';
 import type { Description } from '../advisor/questions.ts';
 import { redactText, redactValue } from '../audit/redact.ts';
 import { ROOT_AREA } from './areas.ts';
