@@ -20,10 +20,7 @@ import {
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
 
-export type BuilderSettings = Pick<
-  UpdateProjectRequest,
-  'pieceSlots' | 'workPlace' | 'browserKeepSignIns' | 'checkCommands'
->;
+export type ProjectSettings = Pick<UpdateProjectRequest, 'workPlace' | 'browserKeepSignIns'>;
 
 export interface FolderPick {
   files: 'instructions' | null;
@@ -79,7 +76,7 @@ export const projectsApi = {
       method: 'POST',
       body: JSON.stringify(removed),
     }),
-  updateBuilders: (projectId: string, change: BuilderSettings): Promise<Project> =>
+  updateSettings: (projectId: string, change: ProjectSettings): Promise<Project> =>
     request(projectSchema, `/projects/${projectId}`, {
       method: 'PATCH',
       body: JSON.stringify(change),

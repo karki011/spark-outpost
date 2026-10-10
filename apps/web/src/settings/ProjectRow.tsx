@@ -3,10 +3,9 @@ import type { Project, ProjectTrust } from '@spark-outpost/contracts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { ProjectBrowser } from './ProjectBrowser.tsx';
-import { ProjectBuilders } from './ProjectBuilders.tsx';
-import { ProjectChecks } from './ProjectChecks.tsx';
 import { ProjectPreview } from './ProjectPreview.tsx';
 import { ProjectSignIns } from './ProjectSignIns.tsx';
+import { ProjectWorkPlace } from './ProjectWorkPlace.tsx';
 
 function trustLabel(trust: ProjectTrust | undefined): string {
   if (!trust) return 'Not asked yet';
@@ -19,20 +18,11 @@ interface ProjectRowProps {
   trust: ProjectTrust | undefined;
   open: boolean;
   busy: boolean;
-  parallelAvailable: boolean;
   onToggle: () => void;
   onRevoke: () => void;
 }
 
-export function ProjectRow({
-  project,
-  trust,
-  open,
-  busy,
-  parallelAvailable,
-  onToggle,
-  onRevoke,
-}: ProjectRowProps) {
+export function ProjectRow({ project, trust, open, busy, onToggle, onRevoke }: ProjectRowProps) {
   const bodyId = useId();
   const { remote } = useRemoteClient();
   return (
@@ -72,8 +62,7 @@ export function ProjectRow({
           aria-label={`Settings for ${project.name}`}
         >
           <p className="set-project-root">{project.rootPath}</p>
-          <ProjectBuilders project={project} available={parallelAvailable} />
-          <ProjectChecks project={project} />
+          <ProjectWorkPlace project={project} />
           {!remote && <ProjectBrowser project={project} />}
           <ProjectSignIns project={project} />
           {!remote && <ProjectPreview project={project} />}
