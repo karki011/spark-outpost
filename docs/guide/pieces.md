@@ -25,6 +25,8 @@ After a turn, the context rail keeps Agent TV's crew: role, model, result and co
 
 The chat shows it; the agent reads it next. A finished Builder shows **Continue** _name_ and resumes in a new turn.
 
+Turns finished before the chat opened show no **Message** there.
+
 ## Steer the pieces
 
 Spark may split a big plan into [pieces](spark-crew.md#pieces), one Builder each.
