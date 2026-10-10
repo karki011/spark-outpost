@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { splitCommandLine } from '../../approvals/commands.ts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
-import { exitPlanText } from '../../plans/plan-mode.ts';
+import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -18,6 +18,7 @@ export interface RequestContext {
   cwd: string;
   home: string;
   mode?: string | null;
+  shownPlan?: string | null;
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
@@ -114,7 +115,9 @@ export function approvalRequestFrom(
   const cwdInput = rawInput.cwd;
   const cwd = typeof cwdInput === 'string' && path.isAbsolute(cwdInput) ? cwdInput : context.cwd;
   const diffs = diffsOf(toolCall.content, cwd);
-  const plan = exitPlanText(toolKind, toolCall.rawInput, toolCall.content);
+  const plan =
+    exitPlanText(toolKind, toolCall.rawInput, toolCall.content) ??
+    (isExitPlanKind(toolKind) ? (context.shownPlan ?? null) : null);
   const options = approvalOptions(params.options);
   const mcpServer = mcpServerOf(params, title);
   const agentReason = agentReasonOf(params);
