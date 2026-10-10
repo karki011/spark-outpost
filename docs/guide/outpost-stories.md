@@ -30,12 +30,12 @@ A proposed chat's mode asks at least as often as the proposing chat's. Change **
 
 The **Story** bar under the outpost's chats reads, for example, **Checkout · 1 of 3 answered · 2 PRs**. Open it for each sub-task's order, state, pull request and warnings.
 
-| You see                  | Means                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| **Waiting for @api**     | Held until `@api` reads **Answered**, then it starts by itself. If `@api` failed, select **Start anyway** or **Cancel**. |
-| **Update from @api**     | Fills the message box with a merge request for you to send.                                                              |
-| A request from **Spark** | Every sub-task ended. The proposing chat answers once with a wrap-up; it starts no new work.                             |
-| **Pause**                | Also holds waiting sub-tasks.                                                                                            |
+| You see                  | Means                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Waiting for @api**     | Held until `@api` reads **Answered**, then it starts by itself. If `@api` failed, select **Start anyway** or **Cancel**.   |
+| **Update from @api**     | Fills the message box with a merge request for you to send.                                                                |
+| A request from **Spark** | Every sub-task ended. The proposing chat answers once with a wrap-up: a reply that changes no files and publishes nothing. |
+| **Pause**                | Also holds waiting sub-tasks.                                                                                              |
 
 On a [paired phone](use-your-phone.md) the draft reads **Review and start on your Mac**.
 

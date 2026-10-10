@@ -88,7 +88,8 @@ import { coordinationReport } from '../coordinator/report.ts';
 import { skipUnstarted } from '../coordinator/skip.ts';
 import { piecesSummary } from '../coordinator/summary.ts';
 import { lawsNote } from '../laws/review.ts';
-import { userText } from '../outposts/user-asked.ts';
+import { isStoryWrapUp, userText } from '../outposts/user-asked.ts';
+import { replyToWrapUp } from '../outposts/wrap-up-turn.ts';
 import { auditOutpostRequest } from '../outposts/request-audit.ts';
 import { ensureEstimate } from '../laws/estimate-history.ts';
 import { TASK_SESSION_CLOSED, closeTaskSessions, ensureTask } from './turn-task.ts';
@@ -283,6 +284,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     if (!placed) return;
     const prepared = await prepareTurn(deps, lease, placed.input, append, control);
     if (!prepared) return;
+    if (isStoryWrapUp(prepared)) return await replyToWrapUp(deps, lease, prepared, append, control);
     const handed = await handToSparks({ deps, lease, input: prepared, append, control });
     if (handed === 'finished') return;
     input = handed;

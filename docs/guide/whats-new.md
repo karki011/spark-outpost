@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                   | What to do                                  |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Story chats keep draft titles. A building chat can propose a story. Spark's wrap-up only replies. An early stacked push is refused or flagged. | See [stories](outpost-stories.md).          |
 | Outpost agents ask each other. A chat proposes a **story** of sub-tasks; you start it. Sub-tasks can wait for another and stack pull requests. | See [stories](outpost-stories.md).          |
 | **Outposts**: ask several chats in one thread with `@handle`. The sidebar lists them under the outpost, with different blob faces.             | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request.            | No action.                                  |
@@ -29,4 +30,3 @@ What changed recently in Spark, newest first.
 | **Terminal** has event-based activity, colors, drops and a borderless view.                                                                    | See [Open a terminal](terminals.md).        |
 | Spark Island rests as blobs.                                                                                                                   | Hover or click to open.                     |
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                                      | Answer in your next message.                |
-| A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                                  | See [Plan before building](plan-card.md).   |
