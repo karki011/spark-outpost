@@ -28,7 +28,10 @@ afterEach(async () => {
 interface Session {
   meta: {
     claudeCode: {
-      options: { settings: { permissions: { ask?: string[]; allow?: string[] } } };
+      options: {
+        settings: { permissions: { ask?: string[]; allow?: string[] } };
+        mcpServers?: Record<string, { url: string; headers: { Authorization: string } }>;
+      };
     };
     systemPrompt?: { append: string };
   } | null;
@@ -94,9 +97,14 @@ describe('Spark tools in agent sessions', { timeout: 30_000 }, () => {
   it('gives Claude the Spark server over HTTP, allowed without an approval ask', async () => {
     const received = await session(claude);
 
-    const spark = received.mcpServers.find((server) => server.name === 'spark');
-    expect(spark?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
-    expect(spark?.headers?.[0]?.name).toBe('Authorization');
+    const spark = received.meta!.claudeCode.options.mcpServers?.spark;
+    expect(spark).toMatchObject({
+      type: 'http',
+      url: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/),
+      headers: { Authorization: expect.stringMatching(/^Bearer /) },
+      timeout: 3_600_000,
+    });
+    expect(received.mcpServers).toEqual([]);
     const permissions = received.meta!.claudeCode.options.settings.permissions;
     expect(permissions.allow).toContain('mcp__spark');
     expect(permissions.ask ?? []).not.toContain('mcp__spark');
@@ -114,12 +122,12 @@ describe('Spark tools in agent sessions', { timeout: 30_000 }, () => {
 
   it('revokes the session token when the turn ends', async () => {
     const received = await session(claude);
-    const spark = received.mcpServers.find((server) => server.name === 'spark')!;
+    const spark = received.meta!.claudeCode.options.mcpServers!.spark!;
 
-    const response = await fetch(spark.url!, {
+    const response = await fetch(spark.url, {
       method: 'POST',
       headers: {
-        Authorization: spark.headers![0]!.value,
+        Authorization: spark.headers.Authorization,
         'Content-Type': 'application/json',
         Accept: 'application/json, text/event-stream',
       },
@@ -132,7 +140,8 @@ describe('Spark tools in agent sessions', { timeout: 30_000 }, () => {
   it('renames a user MCP server called spark so it never takes the allowed name', async () => {
     const received = await session(claude, { userMcp: [githubMcp] });
 
-    expect(received.mcpServers.map((server) => server.name)).toEqual(['spark_spark', 'spark']);
+    expect(received.mcpServers.map((server) => server.name)).toEqual(['spark_spark']);
+    expect(Object.keys(received.meta!.claudeCode.options.mcpServers ?? {})).toEqual(['spark']);
     expect(received.meta!.claudeCode.options.settings.permissions.allow).toEqual(['mcp__spark']);
   });
 

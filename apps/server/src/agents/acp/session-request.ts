@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk';
 import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
+import { withSparkServer } from './spark-tools.ts';
 
 export interface SessionRequestInput {
   agentName: string;
@@ -9,6 +10,7 @@ export interface SessionRequestInput {
   meta: Record<string, unknown> | null;
   init: acp.InitializeResponse;
   mcpServers?: readonly NamedMcpServer[];
+  spark?: NamedMcpServer | null;
 }
 
 export interface SessionRequestPlan {
@@ -40,11 +42,10 @@ function mcpPlan(input: SessionRequestInput) {
 
 export function newSessionRequest(input: SessionRequestInput): SessionRequestPlan {
   const mcp = mcpPlan(input);
-  const request: acp.NewSessionRequest = {
-    cwd: input.cwd,
-    mcpServers: mcp.servers,
-    _meta: input.meta,
-  };
+  const request = withSparkServer(
+    { cwd: input.cwd, mcpServers: mcp.servers, _meta: input.meta },
+    input.spark ?? null,
+  );
   if (input.extraRoots.length === 0) return { request, notes: mcp.notes };
   if (!supportsAdditionalDirectories(input.init)) {
     return { request, notes: [...mcp.notes, oneRepoNote(input.agentName, input.cwd)] };

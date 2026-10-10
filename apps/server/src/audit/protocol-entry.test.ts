@@ -144,6 +144,34 @@ describe('protocol entries', () => {
     expect(text).toContain('gh-mcp');
   });
 
+  it('hides the header and env values of servers sent in Claude options when a session opens', () => {
+    const recorder = createProtocolRecorder();
+    const spark = { type: 'http', url: 'http://127.0.0.1:1/mcp', timeout: 3_600_000 };
+    const mcpServers = {
+      spark: { ...spark, headers: { Authorization: 'Bearer tok-123' } },
+      gh: { type: 'stdio', command: 'gh-mcp', env: { PLAIN: 'abc123' } },
+    };
+    const request = {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'session/resume',
+      params: {
+        cwd: '/work',
+        sessionId: 's1',
+        mcpServers: [],
+        _meta: { claudeCode: { options: { tools: ['Read'], mcpServers } } },
+      },
+    };
+    const entry = recorder.entry('to_agent', request, at);
+    const text = JSON.stringify(entry.payload);
+    expect(text).not.toContain('tok-123');
+    expect(text).not.toContain('abc123');
+    expect(text).toContain('"Authorization"');
+    expect(text).toContain('"PLAIN"');
+    expect(text).toContain('"timeout":3600000');
+    expect(text).toContain('"tools":["Read"]');
+  });
+
   it('redacts the kept head of a huge edit quickly and never stores the rest', () => {
     const recorder = createProtocolRecorder();
     const filler = 'const value = compute(input);\n'.repeat(70_000);

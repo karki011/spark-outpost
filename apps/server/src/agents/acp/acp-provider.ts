@@ -383,7 +383,8 @@ async function converse(
       extraRoots: extraRoots(policy),
       meta: sessionMeta(definition, policy, doing !== null, claude, turn),
       init,
-      mcpServers: spark ? [...workspace.mcpServers, spark] : workspace.mcpServers,
+      mcpServers: workspace.mcpServers,
+      spark,
     });
     const opened = await openSession(
       ctx,
@@ -437,6 +438,7 @@ async function converse(
         commandsAllowed: gated !== null,
         toolsAvailable:
           plan.request.mcpServers.length > 0 ||
+          spark !== null ||
           (definition.repoStyle === 'codex' && workspace.spark !== null),
       };
       const sent = afterOpening(turn, continued);

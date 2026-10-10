@@ -6,6 +6,7 @@ import {
   sparkAcpServer,
   sparkReserved,
   withCodexSparkServer,
+  withSparkServer,
 } from './spark-tools.ts';
 
 const scope = { workspaceId: 'w', conversationId: 'c', runId: 'r' };
@@ -15,6 +16,27 @@ const withHttp = {
   agentCapabilities: { mcpCapabilities: { http: true } },
 } as acp.InitializeResponse;
 const withoutHttp = { agentCapabilities: {} } as acp.InitializeResponse;
+const HOUR_MS = 3_600_000;
+const FIVE_MINUTES_MS = 300_000;
+
+interface ClaudeHttpServer {
+  timeout?: number;
+}
+
+function pinnedClaudeLimits({ timeout }: ClaudeHttpServer) {
+  const own = timeout !== undefined && timeout >= 1_000 ? timeout : undefined;
+  const wallMs = own ?? 100_000_000;
+  return {
+    firstByteMs: Math.max(own === undefined ? 60_000 : Math.max(own, 60_000), 30_000),
+    silentMs: Math.min(Math.max(300_000, own ?? 0), wallMs),
+    wallMs,
+  };
+}
+
+function claudeServers(request: acp.NewSessionRequest): Record<string, ClaudeHttpServer> {
+  const meta = request._meta as { claudeCode: { options: { mcpServers?: object } } } | null;
+  return (meta?.claudeCode.options.mcpServers ?? {}) as Record<string, ClaudeHttpServer>;
+}
 
 describe('Spark tools for agent sessions', () => {
   it('opens only with a host and a scope, and steps aside from a Codex server called spark', async () => {
@@ -68,5 +90,51 @@ describe('Spark tools for agent sessions', () => {
       },
     });
     expect(withCodexSparkServer(env, null)).toBe(env);
+  });
+
+  it('gives a Claude tool call an hour before the pinned CLI gives up, where it had 60 seconds', async () => {
+    const tools = await openSparkTools(access, scope, []);
+    const meta = { claudeCode: { options: { tools: ['Read'], strictMcpConfig: true } } };
+    const request = withSparkServer(
+      { cwd: '/work/app', mcpServers: [], _meta: meta },
+      sparkAcpServer(tools, agentDefinitions.claude, withHttp),
+    );
+    const sent = claudeServers(request);
+    expect(sent).toEqual({
+      spark: {
+        type: 'http',
+        url: grant.url,
+        headers: { Authorization: 'Bearer tok-123' },
+        timeout: HOUR_MS,
+      },
+    });
+    expect(request.mcpServers).toEqual([]);
+    expect(request._meta?.claudeCode).toMatchObject({
+      options: { tools: ['Read'], strictMcpConfig: true },
+    });
+    expect(pinnedClaudeLimits({})).toMatchObject({ firstByteMs: 60_000, silentMs: 300_000 });
+    const limits = pinnedClaudeLimits(sent.spark!);
+    expect(limits).toEqual({ firstByteMs: HOUR_MS, silentMs: HOUR_MS, wallMs: HOUR_MS });
+    expect(Math.min(...Object.values(limits))).toBeGreaterThan(FIVE_MINUTES_MS);
+  });
+
+  it('keeps the other Claude servers and sends an agent without Claude options the plain server', async () => {
+    const tools = await openSparkTools(access, scope, []);
+    const spark = sparkAcpServer(tools, agentDefinitions.claude, withHttp);
+    const notes = { type: 'http', url: 'https://notes.example/mcp' };
+    const meta = { claudeCode: { options: { mcpServers: { notes } } } };
+    const kept = withSparkServer({ cwd: '/work/app', mcpServers: [], _meta: meta }, spark);
+    expect(Object.keys(claudeServers(kept))).toEqual(['notes', 'spark']);
+    const plain = withSparkServer({ cwd: '/work/app', mcpServers: [], _meta: null }, spark);
+    expect(plain.mcpServers).toEqual([
+      {
+        type: 'http',
+        name: 'spark',
+        url: grant.url,
+        headers: [{ name: 'Authorization', value: 'Bearer tok-123' }],
+      },
+    ]);
+    const request = { cwd: '/work/app', mcpServers: [], _meta: meta };
+    expect(withSparkServer(request, null)).toBe(request);
   });
 });

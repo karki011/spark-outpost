@@ -3,7 +3,8 @@ import type { SparkScope } from '../../spark-mcp/deps.ts';
 import type { SparkGrant, SparkMcpHost } from '../../spark-mcp/host.ts';
 import { SPARK_MCP_NAME } from '../../spark-mcp/server.ts';
 import { agentDefinitions, type AgentDefinition } from './agents.ts';
-import { supportsTransport, type NamedMcpServer } from './repo-session.ts';
+import { objectFields } from './object-fields.ts';
+import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
 
 export type SparkToolsAccess = Pick<SparkMcpHost, 'grant'> & Partial<Pick<SparkMcpHost, 'browser'>>;
 
@@ -21,6 +22,7 @@ export function sparkToolsOffered(runtime: AgentRuntime, provider: string): bool
 
 const FALLBACK_NAME = 'spark_outpost';
 const CODEX_TOOL_TIMEOUT_SEC = 3_600;
+const CLAUDE_TOOL_TIMEOUT_MS = CODEX_TOOL_TIMEOUT_SEC * 1_000;
 
 export async function openSparkTools(
   access: SparkToolsAccess | undefined,
@@ -58,6 +60,30 @@ export function sparkAcpServer(
       headers: { Authorization: authorization(tools.grant) },
       fingerprint: SPARK_MCP_NAME,
     },
+  };
+}
+
+export function withSparkServer(
+  request: acp.NewSessionRequest,
+  spark: NamedMcpServer | null,
+): acp.NewSessionRequest {
+  if (!spark) return request;
+  const meta = objectFields(request._meta);
+  if (meta.claudeCode === undefined) {
+    return { ...request, mcpServers: [...request.mcpServers, acpMcpServer(spark)] };
+  }
+  const claudeCode = objectFields(meta.claudeCode);
+  const options = objectFields(claudeCode.options);
+  const server = {
+    type: spark.config.transport,
+    url: spark.config.url,
+    headers: spark.config.headers,
+    timeout: CLAUDE_TOOL_TIMEOUT_MS,
+  };
+  const mcpServers = { ...objectFields(options.mcpServers), [spark.name]: server };
+  return {
+    ...request,
+    _meta: { ...meta, claudeCode: { ...claudeCode, options: { ...options, mcpServers } } },
   };
 }
 
