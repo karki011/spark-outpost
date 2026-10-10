@@ -72,7 +72,7 @@ export function ProjectBrowser({ project }: { project: Project }) {
   const available = desktopBrowser() !== null;
   const save = useMutation({
     mutationFn: (keep: boolean) =>
-      projectsApi.updateBuilders(project.id, { browserKeepSignIns: keep }),
+      projectsApi.updateSettings(project.id, { browserKeepSignIns: keep }),
     onSuccess: (updated) => {
       queryClient.setQueryData<Project[]>(projectKeys.all, (projects) =>
         projects?.map((candidate) => (candidate.id === updated.id ? updated : candidate)),

@@ -124,13 +124,6 @@ describe('renaming a project', () => {
     expect(projects.find((candidate) => candidate.id === appRepo.id)?.workPlace).toBe('checkout');
   });
 
-  it('tells the settings whether the server runs Builders in parallel', async () => {
-    const setup = (options: { parallelBuilders?: boolean }) =>
-      request(createTestApp(t, options)).get('/api/setup').set(LOCAL_HEADERS).expect(200);
-    expect((await setup({})).body.parallelBuilders).toBe(false);
-    expect((await setup({ parallelBuilders: true })).body.parallelBuilders).toBe(true);
-  });
-
   it('has no build style to set', async () => {
     const appRepo = await project(folders.app);
     const path = `/api/projects/${appRepo.id}`;

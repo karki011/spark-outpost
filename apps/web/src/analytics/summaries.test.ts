@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  AnalyticsHarness,
-  AnalyticsSpend,
-  HealthScore,
-  OverviewDay,
-} from '@spark-outpost/contracts';
-import { categoryName, depthName, duration, signedScore, shortDate } from './analytics-model.ts';
-import { disagreementSummary, flowSummary } from './harness-summaries.ts';
+import type { AnalyticsSpend, HealthScore, OverviewDay } from '@spark-outpost/contracts';
+import { signedScore, shortDate } from './analytics-model.ts';
 import { taskCostSummary } from './spend-summaries.ts';
 import { activitySummary, healthSummary, spendSummary } from './summaries.ts';
 
@@ -21,15 +15,6 @@ const day = (date: string, turns: number, costUsd: number): OverviewDay => ({
   unclear: 0,
   kept: 0,
   reverted: 0,
-});
-
-const tally = (turns: number, meanScore: number | null) => ({
-  turns,
-  meanScore,
-  good: turns,
-  bad: 0,
-  mixed: 0,
-  unclear: 0,
 });
 
 describe('analytics text alternatives', () => {
@@ -63,42 +48,6 @@ describe('analytics text alternatives', () => {
     );
   });
 
-  it('summarises the routing flow and the rule-vs-Jev comparison', () => {
-    const harness = {
-      turns: 5,
-      flow: [
-        {
-          category: 'bug_fix',
-          depth: 'execute',
-          crew: 'Builder',
-          model: 'Sonnet 5',
-          provider: 'claude',
-          outcome: 'good',
-          turns: 3,
-        },
-        {
-          category: 'question',
-          depth: 'direct',
-          crew: 'Solo',
-          model: 'Haiku 4.5',
-          provider: 'claude',
-          outcome: 'bad',
-          turns: 2,
-        },
-      ],
-      agreement: [
-        { key: 'same', ...tally(3, 0.5) },
-        { key: 'differs', ...tally(2, -0.25) },
-        { key: 'no_jev', ...tally(0, null) },
-      ],
-      disagreements: [],
-    } as unknown as AnalyticsHarness;
-    expect(flowSummary(harness)).toBe(
-      '5 turns. Most were bug fix requests (3), most ran at execute depth (3) with a crew of Builder (3), and Sonnet 5 did the most work (3). 60% ended with a good outcome.',
-    );
-    expect(disagreementSummary(harness)).toMatch(/^They disagreed on 2 turns \(mean -0\.25\)/);
-  });
-
   it('formats labels', () => {
     expect([
       shortDate('2026-03-01'),
@@ -106,12 +55,6 @@ describe('analytics text alternatives', () => {
       signedScore(-0.1),
       signedScore(null),
     ]).toEqual(['Mar 1', '+0.46', '-0.10', '—']);
-    expect([categoryName('bug_fix'), categoryName('mystery'), depthName('plan_execute')]).toEqual([
-      'Bug fix',
-      'Uncategorised',
-      'Plan → execute',
-    ]);
-    expect([duration(null), duration(42_000), duration(125_000)]).toEqual(['—', '42s', '2m 5s']);
   });
 
   it('describes cost per finished turn even when no turn has a mean cost', () => {

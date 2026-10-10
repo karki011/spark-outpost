@@ -16,7 +16,7 @@ export function AnalyticsSkeleton() {
           </header>
           <div className="an-tabs-row">
             <div className="an-tabs" aria-hidden="true">
-              {[74, 56, 52].map((width) => (
+              {[74, 56].map((width) => (
                 <span key={width} className="an-skel" style={{ width, height: 28 }} />
               ))}
             </div>

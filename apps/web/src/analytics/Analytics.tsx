@@ -9,8 +9,6 @@ import {
   type AnalyticsTab,
   type RangeChoice,
 } from './analytics-api.ts';
-import { HarnessSkeleton } from './HarnessSkeleton.tsx';
-import { HarnessTab } from './HarnessTab.tsx';
 import { OverviewSkeleton } from './OverviewSkeleton.tsx';
 import { OverviewTab } from './OverviewTab.tsx';
 import { addIsoDays, localToday } from './calendar/date-math.ts';
@@ -21,7 +19,6 @@ import { SpendTab } from './SpendTab.tsx';
 const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'spend', label: 'Spend' },
-  { id: 'harness', label: 'Spark' },
 ];
 
 function usable(choice: RangeChoice): boolean {
@@ -67,12 +64,6 @@ export function Analytics() {
     enabled: enabled('spend'),
     ...options,
   });
-  const harness = useQuery({
-    queryKey: analyticsKeys.tab('harness', choice),
-    queryFn: () => analyticsApi.harness(choice),
-    enabled: enabled('harness'),
-    ...options,
-  });
 
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     const index = TABS.findIndex((entry) => entry.id === tab);
@@ -89,7 +80,7 @@ export function Analytics() {
     document.getElementById(`an-tab-${TABS[next]!.id}`)?.focus();
   };
 
-  const activeQuery = { overview, spend, harness }[tab];
+  const activeQuery = { overview, spend }[tab];
   const coldLoading = activeQuery.isFetching && !activeQuery.data;
   const updating = activeQuery.isFetching && Boolean(activeQuery.data);
 
@@ -149,13 +140,6 @@ export function Analytics() {
                 query={spend}
                 skeleton={<SpendSkeleton />}
                 render={(data) => <SpendTab data={data} />}
-              />
-            )}
-            {tab === 'harness' && (
-              <Panel
-                query={harness}
-                skeleton={<HarnessSkeleton />}
-                render={(data) => <HarnessTab data={data} />}
               />
             )}
           </div>

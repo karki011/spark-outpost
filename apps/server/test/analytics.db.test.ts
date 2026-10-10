@@ -6,6 +6,8 @@ import {
   analyticsSpendSchema,
   rollupReportSchema,
 } from '@spark-outpost/contracts';
+import { harnessReport } from '../src/analytics/report.ts';
+import { resolveWindow } from '../src/analytics/window.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { seedAnalyticsTurn, seedProjectChat, type AnalyticsTurn } from './analytics-seed.ts';
 import { seedRealisticAnalytics } from './analytics-realistic.ts';
@@ -270,8 +272,9 @@ describe('analytics spend', () => {
 describe('analytics harness', () => {
   it('builds the routing flow, gate points, disagreements and quality slices', async () => {
     await seedScenario();
-    const response = await get('/api/analytics/harness?range=30d&tz=UTC').expect(200);
-    const harness = analyticsHarnessSchema.parse(response.body);
+    const harness = analyticsHarnessSchema.parse(
+      await harnessReport(t.db, t.workspaceId, resolveWindow({ range: '30d' }, 'UTC')!),
+    );
     expect(harness.flow).toContainEqual({
       category: 'bug_fix',
       depth: 'plan_execute_review',
@@ -340,14 +343,12 @@ describe('analytics harness', () => {
     const seeded = await seedRealisticAnalytics(t.db, t.workspaceId, { days: 90 });
     expect(seeded).toBeGreaterThan(200);
     const started = performance.now();
-    const [overview, spend, harness] = await Promise.all([
+    const [overview, spend] = await Promise.all([
       get('/api/analytics/overview?range=90d').expect(200),
       get('/api/analytics/spend?range=90d').expect(200),
-      get('/api/analytics/harness?range=90d').expect(200),
     ]);
     expect(performance.now() - started).toBeLessThan(5_000);
     expect(analyticsOverviewSchema.parse(overview.body).health.score).not.toBeNull();
     expect(analyticsSpendSchema.parse(spend.body).leaves.length).toBeGreaterThan(5);
-    expect(analyticsHarnessSchema.parse(harness.body).flow.length).toBeGreaterThan(10);
   }, 60_000);
 });

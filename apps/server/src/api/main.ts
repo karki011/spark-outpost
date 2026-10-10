@@ -223,7 +223,6 @@ const { app, reconcileRemote } = createAppParts({
   slackSignIn,
   slackNotifier,
   slackSocket,
-  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   diagnostics: {
     appVersion: config.SPARK_APP_VERSION ?? null,

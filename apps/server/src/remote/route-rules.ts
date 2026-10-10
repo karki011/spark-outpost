@@ -9,7 +9,6 @@ GET /api/events
 GET /api/remote/switches
 GET /api/remote/session
 GET /api/agent-config/trust
-GET /api/analytics/harness
 GET /api/analytics/overview
 GET /api/analytics/rollups
 GET /api/analytics/spend

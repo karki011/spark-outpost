@@ -282,19 +282,6 @@
 .set-builders .set-row {
   padding: 10px 0;
 }
-.set-checks {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding-bottom: 12px;
-}
-.set-checks .field,
-.set-checks textarea {
-  width: 100%;
-}
-.set-checks textarea {
-  resize: vertical;
-}
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .set-project-title button {
     flex-wrap: wrap;

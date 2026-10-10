@@ -13,7 +13,6 @@ import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { SparkSection } from '../spark/SparkSection.tsx';
 import { SparksSection } from '../teammates/SparksSection.tsx';
-import { JevSettings } from './JevSettings.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
@@ -290,14 +289,6 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                       defaultProvider={setup.data.profile.defaultProvider}
                       openId={routedProvider}
                       onOpenChange={routeToProvider}
-                      advisorSettings={
-                        <JevSettings
-                          profile={setup.data.profile}
-                          jevConnected={setup.data.advisors.some(
-                            (advisor) => advisor.id === 'jev' && advisor.connection,
-                          )}
-                        />
-                      }
                     />
                   </>
                 )}

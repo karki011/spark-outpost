@@ -38,7 +38,7 @@ export function OpenPullRequestsAsSetting({ ready }: { ready: boolean }) {
       doc={{ page: 'ship-and-pull-requests', heading: 'ready-for-review-or-draft' }}
       hint={(value) =>
         value
-          ? 'Reviewers are asked right away. A Full auto PR whose checks still fail opens as a draft marked “Checks failing”.'
+          ? 'Reviewers are asked right away.'
           : 'PRs open as drafts; mark them ready on GitHub when you are.'
       }
       toUpdate={(value) => ({ prReadyForReview: value })}

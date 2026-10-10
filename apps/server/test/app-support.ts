@@ -38,7 +38,6 @@ export interface TestAppOptions {
   slackSignIn?: AppOptions['slackSignIn'];
   slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
-  parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
   previews?: PreviewServers;
@@ -102,7 +101,6 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     slackSignIn: options.slackSignIn,
     ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
-    parallelBuilders: options.parallelBuilders,
     ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),

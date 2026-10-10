@@ -72,8 +72,7 @@ export const PERSONALITY_HINTS: Record<Personality, string> = {
   facts: 'Short answers, no small talk.',
 };
 
-export function sparkMood(personality: Personality, enabled: boolean): ScoutMood {
-  if (!enabled) return 'sleep';
+export function sparkMood(personality: Personality): ScoutMood {
   if (personality === 'playful') return 'happy';
   if (personality === 'facts') return 'working';
   return null;

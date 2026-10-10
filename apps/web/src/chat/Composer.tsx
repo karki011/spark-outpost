@@ -32,7 +32,6 @@ import { pasteContext } from './attachments/paste-context.ts';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
-import { SparkOffChip } from '../spark/SparkOffChip.tsx';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { SteerTarget } from '../crew/SteerTarget.tsx';
@@ -452,7 +451,6 @@ export function Composer({
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'} title={hint}>
             {hint}
           </span>
-          <SparkOffChip />
           {settings && (
             <ModelPicker
               openRequest={picker.request}

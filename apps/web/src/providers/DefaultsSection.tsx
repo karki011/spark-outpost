@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AdvisorSetup, ProviderSetup } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
@@ -6,7 +5,7 @@ import { Detail } from './Detail.tsx';
 import { ProviderDefaults } from './ProviderDefaults.tsx';
 
 const JEV_SENDS =
-  'Your request, the previous request and a short summary of the task it may continue, and the text of files you attach (only to check it for instructions aimed at the agent). With code diffs on, also the diff of each proposed edit and the final diff. Never keys or tool output. TypeSafe does not train on it.';
+  'Your request, the previous request and a short summary of the task it may continue, and the text of files you attach (only to check it for instructions aimed at the agent). Never keys or tool output. TypeSafe does not train on it.';
 
 function DefaultChoice({
   provider,
@@ -41,7 +40,7 @@ function DefaultChoice({
   );
 }
 
-function AdvisorDefaults({ advisor, settings }: { advisor: AdvisorSetup; settings: ReactNode }) {
+function AdvisorDefaults({ advisor }: { advisor: AdvisorSetup }) {
   const connection = advisor.connection;
   return (
     <>
@@ -49,16 +48,9 @@ function AdvisorDefaults({ advisor, settings }: { advisor: AdvisorSetup; setting
         <Detail term="Model">
           {connection?.model ? <code>{connection.model}</code> : <span className="muted">—</span>}
         </Detail>
-        <Detail term="Role">
-          {advisor.role}
-          <small className="note">
-            On Auto, its ratings feed a score that code uses to pick the model. The rules decide
-            whenever Jev is unsure.
-          </small>
-        </Detail>
+        <Detail term="Role">{advisor.role}</Detail>
         <Detail term="Sends">{JEV_SENDS}</Detail>
       </dl>
-      {settings}
     </>
   );
 }
@@ -67,16 +59,10 @@ interface DefaultsSectionProps {
   setup: ProviderSetup | AdvisorSetup;
   isDefault: boolean;
   canMakeDefault: boolean;
-  advisorSettings?: ReactNode;
 }
 
-export function DefaultsSection({
-  setup,
-  isDefault,
-  canMakeDefault,
-  advisorSettings,
-}: DefaultsSectionProps) {
-  if ('role' in setup) return <AdvisorDefaults advisor={setup} settings={advisorSettings} />;
+export function DefaultsSection({ setup, isDefault, canMakeDefault }: DefaultsSectionProps) {
+  if ('role' in setup) return <AdvisorDefaults advisor={setup} />;
   if (!setup.connection) {
     return (
       <p className="pconf-muted">

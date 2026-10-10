@@ -4,7 +4,7 @@ import {
   rollupQuerySchema,
   type AnalyticsWindow,
 } from '@spark-outpost/contracts';
-import { harnessReport, overviewReport, rollupReport, spendReport } from '../analytics/report.ts';
+import { overviewReport, rollupReport, spendReport } from '../analytics/report.ts';
 import { resolveWindow } from '../analytics/window.ts';
 import type { Db } from '../persistence/db.ts';
 import { timeZoneParam } from './time-zone-param.ts';
@@ -36,10 +36,6 @@ export function analyticsRoutes({ db, workspaceId }: AnalyticsRouteDeps): Router
 
   router.get('/analytics/spend', async (req, res) => {
     res.json(await spendReport(db, workspaceId, requestWindow(req)));
-  });
-
-  router.get('/analytics/harness', async (req, res) => {
-    res.json(await harnessReport(db, workspaceId, requestWindow(req)));
   });
 
   router.get('/analytics/rollups', async (req, res) => {
