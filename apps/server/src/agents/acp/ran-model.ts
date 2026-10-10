@@ -25,7 +25,7 @@ function optionFor(
 export function watchRanModel(
   provider: string,
   agentName: string,
-  live: Pick<SettingsSession, 'options'>,
+  live: Pick<SettingsSession, 'options'> & Partial<Pick<SettingsSession, 'unpinnedModel'>>,
   note: (name: string) => ProviderOutput[],
 ): RanModelWatch {
   let noted: string | null = null;
@@ -38,7 +38,13 @@ export function watchRanModel(
       if (!ran || !reported || ran === noted) return [];
       const ranCard = cardFor({ id: ran }, provider);
       const reportedCard = cardFor({ id: reported }, provider);
-      if (!ranCard || !reportedCard || ranCard.id === reportedCard.id) return [];
+      if (!ranCard || ranCard.id === reportedCard?.id) return [];
+      if (!reportedCard) {
+        const unpinned = live.unpinnedModel?.() ?? null;
+        if (unpinned === null) return [];
+        noted = ran;
+        return note(`${agentName} ran this turn on ${ranCard.label}, not ${unpinned}`);
+      }
       noted = ran;
       return [
         {

@@ -51,6 +51,17 @@ describe('the model a turn really ran on', () => {
     ]);
   });
 
+  it('names the model that ran when the pinned one was not offered and the session stayed on the default', () => {
+    const mapper = createUpdateMapper('Claude');
+    const live = { options: () => reporting('default'), unpinnedModel: () => 'sonnet' };
+    const watch = watchRanModel('claude', 'Claude', live, mapper.note);
+    expect(watch.see(usage('claude-opus-5-5'))).toEqual([
+      { kind: 'step_started', name: 'Claude ran this turn on Opus 5.5, not sonnet' },
+      { kind: 'step_finished', name: 'Claude ran this turn on Opus 5.5, not sonnet' },
+    ]);
+    expect(watch.see(usage('claude-opus-5-5'))).toEqual([]);
+  });
+
   it('says it once a turn', () => {
     const watch = watching('sonnet');
     watch.see(usage('claude-opus-5-5'));

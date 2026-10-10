@@ -50,6 +50,7 @@ export interface AgentDefinition {
   estimatesCost?: boolean;
   longContext?: boolean;
   summarizesThinking?: boolean;
+  resolvesModelNames?: boolean;
   streamsCommandOutput?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
@@ -304,6 +305,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     ...claudeSessions,
     longContext: true,
     summarizesThinking: true,
+    resolvesModelNames: true,
     reportsModelAccess: true,
   },
   codex: {

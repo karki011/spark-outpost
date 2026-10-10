@@ -90,11 +90,14 @@ export interface SettingsSession {
   adopt(options: readonly acp.SessionConfigOption[]): void;
   setMode(mode: string): Promise<void>;
   setValue(configId: string, value: string | boolean): Promise<void>;
+  leaveUnpinned(model: string): void;
+  unpinnedModel(): string | null;
 }
 
 function settingsSession(ctx: Requester, session: SessionHandle): SettingsSession {
   let configOptions = [...(session.newSessionResponse.configOptions ?? [])];
   let legacy = legacyOptions(session.newSessionResponse);
+  let unpinned: string | null = null;
   const all = () => withLegacy(configOptions, legacy);
   const setLegacyMode = async (mode: string) => {
     await ctx.request(acp.methods.agent.session.setMode, {
@@ -121,6 +124,10 @@ function settingsSession(ctx: Requester, session: SessionHandle): SettingsSessio
       configOptions = [...options];
     },
     setValue,
+    leaveUnpinned(model) {
+      unpinned = model;
+    },
+    unpinnedModel: () => unpinned,
     async setMode(mode) {
       const option = findOption(all(), 'mode');
       if (!option) throw new ProviderError('The agent has no modes.');
@@ -181,7 +188,9 @@ export async function applySessionSettings(
   for (const wish of wishes) {
     const plan = planConfig(live.options(), [wish], resumed && reasserted(live.options(), wish));
     if (plan.unmatched.length > 0) {
+      if (await resolvedByAgent(live, definition, wish)) continue;
       notes.push(defaultNote(wish, "isn't offered by the agent"));
+      if (wish.category === 'model') live.leaveUnpinned(wish.label ?? wish.value ?? '');
       continue;
     }
     for (const change of plan.changes) await applyChange(live, wish, change, notes, defaultNote);
@@ -213,6 +222,24 @@ export async function applySessionSettings(
     using: usingLabel(options, definition.name),
     live,
   };
+}
+
+async function resolvedByAgent(
+  live: SettingsSession,
+  definition: AgentDefinition,
+  wish: ConfigWish,
+): Promise<boolean> {
+  const option = findOption(live.options(), wish.category);
+  if (!definition.resolvesModelNames || wish.category !== 'model' || wish.value === null) {
+    return false;
+  }
+  if (!option || option.id === LEGACY_MODEL_OPTION) return false;
+  try {
+    await live.setValue(option.id, wish.value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function reasserted(options: readonly acp.SessionConfigOption[], wish: ConfigWish): boolean {
