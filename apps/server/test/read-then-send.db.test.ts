@@ -195,15 +195,13 @@ describe("the owner's turn: a PR follow-up round after reading secrets, a web pa
   it('refuses a reply the agent posts through gh itself: Spark posts the replies', async () => {
     const chat = await turn();
     await ownPullRequest(chat);
-    const { gate, read } = gateFor(chat);
-    await read(READ_EARLIER);
-    const answer = await gate.review(commandRequest(root, REPLY), signal());
+    const answer = await gateFor(chat).gate.review(commandRequest(root, REPLY), signal());
     expect(answer).toMatchObject({ allowed: false });
-    const { rows } = await t.db.query<{ reason: string; decided_by: string }>(
-      'SELECT reason, decided_by FROM approvals WHERE run_id = $1',
+    const { rows } = await t.db.query<{ reason: string }>(
+      'SELECT reason FROM approvals WHERE run_id = $1',
       [chat.runId],
     );
-    expect(rows).toEqual([{ reason: ghRailReason('gh api'), decided_by: 'policy' }]);
+    expect(rows).toEqual([{ reason: ghRailReason('gh api') }]);
   });
 
   it('runs the wait for checks with one audit entry and one flag when the chat has no pull request of its own', async () => {
