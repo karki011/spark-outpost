@@ -128,7 +128,7 @@ One tool with an `action`, like `spark_browser_preview`, so the tool list grows 
 Rules of the tool:
 
 - It exists only in a chat with a project folder, in a turn that may run commands. An Ask turn, a read-only mode and a chat with no folder get a refusal in one line.
-- In a crew turn only a solo Builder and the integrator may use it. Pieces and the Coordinator get a refusal in one line (decision 6).
+- The chat's own turn uses it. There are no crew turns any more (decision 6 is void; see [SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md)).
 - There is no cap on how many run at once (decision 7).
 - The command runs in the chat's working folder (the worktree by default), or a folder under a linked root.
 - It runs in the user's login shell, as the preview server does, with Spark's own variables removed from the environment.
@@ -158,7 +158,7 @@ For a command started with `spark_terminal_run`, Spark is the one that runs it, 
 2. **The agent's mode asks or runs.** It runs at once in Auto, Bypass permissions, Approve for me and Full access. In every other mode an ordinary approval card appears, with the command and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." This is the rule Spark action tools already follow.
 3. **No shortcuts.** The project allowlist and "always allow in this run" do not apply to these commands, and the card offers only Allow once and Reject (decision 2). Those shortcuts were given for commands the agent runs in its own sandbox.
 4. **The safety floor holds in every mode.** Changing, moving or deleting a secret file and changing an agent instruction file ask. Git hooks and git config ask with hold-to-confirm. Force pushes are refused. Writes and deletes outside the linked repos ask, except in the system temp folders. A file in `.sparkignore` asks to read.
-5. **Publish rules apply as for a solo Builder's own `git push` and `gh`.** A push of anything but the chat's own `spark/*` branch is refused. Publishing needs one of the existing grounds (the message asked, Full auto → PR, the mode, a follow-up round). `--no-verify` is refused. A push that holds a value from a secret file asks with hold-to-confirm. Pieces and the Coordinator still never publish.
+5. **Publish rules apply as for the chat agent's own `git push` and `gh`.** A push of anything but the chat's own `spark/*` branch is refused. Publishing needs one of the existing grounds (the message asked, Full auto → PR, the mode, a follow-up round). `--no-verify` is refused. A push that holds a value from a secret file asks with hold-to-confirm.
 6. **Reading then sending.** If the turn read a secret file or other work data, a command that sends off this computer gets the same note and audit entry as today.
 7. **A refusal is an answer, not an error.** The tool returns the gate's reason in one line so the agent can tell the user.
 
@@ -299,7 +299,7 @@ sparkCommandAsked(scope, review, approvalId): void
 sparkCommandStarted(scope, review, approvalId | null): void
 ```
 
-- The pure part is `decideSparkCommand(turn, request, options)`. It refuses first (no folder, Ask or read-only turn, a piece or the Coordinator, a folder outside the linked roots, a command that looks like it holds a secret), then calls the same `decide` the agent's own commands use, with no run rules and no allowlist, with the turn's own role, piece guard and publish grant. A rail's ask or refusal stands in every mode. An allow stands only where the mode acts without asking; otherwise it becomes an ordinary card, and a mode that skips anything not pre-approved refuses.
+- The pure part is `decideSparkCommand(turn, request, options)`. It refuses first (no folder, Ask or read-only turn, a folder outside the linked roots, a command that looks like it holds a secret), then calls the same `decide` the agent's own commands use, with no run rules and no allowlist, with the turn's own publish grant. A rail's ask or refusal stands in every mode. An allow stands only where the mode acts without asking; otherwise it becomes an ordinary card, and a mode that skips anything not pre-approved refuses.
 - `audit` holds the redacted command, the folder, the agent's mode, the decision (`mode`, `card` or `refused`), the reason, and `unreviewed`, which is true only when no card stands between the agent and the start. A command that looks like it holds a secret is not kept in the audit facts.
 - `card` is a ready `NewApproval` (kind `execute`, Allow once and Reject, the rail's reason, and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." as `asksBecause`). Lane 2e inserts it, waits and settles it the way the turn's gate does, calls `sparkCommandAsked` when it is raised and `sparkCommandStarted` when the command starts. Those two record the read-then-send note and any secret file read, as the gate does for the agent's own commands.
 - Pass the agent's current mode in `scope.agentMode` when it changed during the turn.
@@ -332,7 +332,7 @@ Not built in 2c: killing a process left behind by a crashed runtime (the row has
 
 ### Tool (2e): `apps/server/src/spark-mcp/tools/terminal-run-tool.ts`, `terminal-run-start.ts`, `terminal-run-folder.ts`
 
-- Registered as `spark_terminal_run` with `needs: 'project'` and `acts: true`, so a plain chat and a read-only session are never offered it. An Ask turn, a piece and the Coordinator are offered it and refused by the gate. A Terminal session has no command scope, so it is refused too.
+- Registered as `spark_terminal_run` with `needs: 'project'` and `acts: true`, so a plain chat and a read-only session are never offered it. An Ask turn is offered it and refused by the gate. A Terminal session has no command scope, so it is refused too.
 - The turn passes its `SparkCommandScope` as `sparkScope.commands` (`workflow/agent-turn.ts`). The tool swaps in the mode the session is in now (`runs.used_mode`).
 - `start` answers `{ action, terminal }`, or `{ action, refused: true, reason }` for every refusal: the gate's, a folder that does not exist or leads outside the project through a link, a card that was rejected, timed out, cancelled or closed by a restart, and a turn that ended. The card is raised with `createApprovalGate(...).raise`, the gate's own insert, wait and settle.
 - The tool call id is the MCP request id plus a hash of the command and folder. A second `start` with the same id returns the terminal while it is still live.
@@ -397,7 +397,7 @@ Not verified by these tests: real adapter behavior. The claim that no adapter ca
 
 Add to the permissions paragraph, after the sentence about Spark action tools. It lands with the tool lane (2e), not before: until the tool is registered the sentence would describe something an agent cannot do.
 
-> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn; in a crew turn only a solo Builder and the integrator may, and pieces and the Coordinator are refused: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Approve for me and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands and, unlike the agent's own commands in Bypass permissions, Approve for me and Full access, a hard-rail crossing asks or is refused before the command starts, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, has no time, idle or count limit, stops when the user or the agent stops it, when the user stops the turn that started it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac, and a paired phone sees its state as text only.
+> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Approve for me and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands and, unlike the agent's own commands in Bypass permissions, Approve for me and Full access, a hard-rail crossing asks or is refused before the command starts, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, has no time, idle or count limit, stops when the user or the agent stops it, when the user stops the turn that started it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac, and a paired phone sees its state as text only.
 
 And one line for the product list near the Browser pane and phone bullets:
 
@@ -412,7 +412,7 @@ The owner settled these on October 9, 2026.
 3. **Stricter than the agent's own commands in Bypass permissions, Approve for me and Full access.** Yes. A hard rail asks or refuses before a Spark-run command starts, where the agent's own command is only flagged. How the agent's own commands are treated does not change.
 4. **Stopping the turn.** It stops the terminals that turn started and keeps earlier ones.
 5. **Typing into an agent tab.** No. The tab is read-only with Stop.
-6. **Who may use the tool in a crew turn.** A solo Builder and the integrator only. Pieces and the Coordinator get a refusal.
+6. **Who may use the tool in a crew turn.** Void since October 10, 2026: crew turns are removed and the chat's own turn uses the tool. Was: a solo Builder and the integrator only.
 7. **How many at once.** No cap. Spark does not count or limit how many run at once.
 8. **Stop from the phone.** No. A paired device sees the state as text only, and every route stays Mac-only.
 9. **Claude live output inside a turn.** Not now. Later, the AIR `asyncTasks` capability could give live output and per-command Stop for Claude background commands. It needs its own review.

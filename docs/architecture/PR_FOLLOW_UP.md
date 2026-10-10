@@ -22,7 +22,7 @@ Webhooks would replace most polling; they need a public endpoint or the GitHub A
 | Source                        | Code                                                       | Notes                                                                                                                                                          |
 | ----------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The agent's `gh pr create`    | `tasks/agent-pull-request.ts`                              | Always tracked; followed up only when the repository is the chat's and the head is the chat's own branch. Audited as `ship/agent_pr`.                          |
-| The publish turn              | `orchestration/agent-publish.ts`                           | Spark asks GitHub for a pull request with the branch as head after the turn and records it.                                                                    |
+| The publish step              | `workflow/publish-step.ts`                                 | Spark asks GitHub for a pull request with the branch as head after the turn and records it.                                                                    |
 | A tool in a chat terminal tab | `terminal/pull-request-scan.ts`, `pr-tracking/terminal.ts` | Output is scanned for github.com pull request links; a link counts only when GitHub confirms its head is a branch of the chat or the user opened it meanwhile. |
 | Discovery                     | `pr-tracking/discover.ts`                                  | Pull requests whose head is the chat's own branch, or the branch checked out in its worktree. Runs on chat open, focus and run start or finish, once a minute. |
 
@@ -48,7 +48,7 @@ States: disagreements → `needs_user` (always the user's call); addressed/infor
 
 ## Rounds
 
-When items are queued, the round limit (3 per PR) is not reached, and the branch is in sync, Spark sends one chat message (`source = 'pr_follow_up'`, `startAs = 'change'`) so the normal orchestration runs a Builder turn in the chat's worktree with the chat's pinned model, routing, checks and spend cap, continuing the Builder's stored session. A Full auto chat runs this turn at Automatic, so the orchestration's own publish step doesn't open or rewrite a pull request.
+When items are queued, the round limit (3 per PR) is not reached, and the branch is in sync, Spark sends one chat message (`source = 'pr_follow_up'`, `startAs = 'change'`) so an ordinary chat turn runs in the chat's worktree on the chat's own session and model. The turn's publish step uses the follow-up prompt: push fixes to the same branch, no new pull request, no replies and no resolved threads.
 
 Before a round starts (`round.ts`, `rounds.ts`):
 

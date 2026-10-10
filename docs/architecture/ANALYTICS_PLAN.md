@@ -1,5 +1,7 @@
 # Analytics and harness optimizer plan
 
+> **Changed (October 10, 2026).** New turns write no orchestration rows, routes, Jev advice, check rounds or Critic runs ([SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md)). The Harness report can only show turns stored before that; Overview and Spend are unchanged.
+
 The goal is an Analytics page that shows where time, money and quality go, and an "Optimize workflow" button that tunes this user's harness from what actually worked for them. Both rest on one thing the harness did not have before: an outcome-quality signal per task. [HARNESS_PLAN.md](HARNESS_PLAN.md) describes the harness itself, and [JEV.md](JEV.md) describes Jev.
 
 ## Ground rules

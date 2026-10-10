@@ -1,5 +1,7 @@
 # Jev
 
+> **Changed (October 10, 2026).** Jev is no longer called inside a turn. Intake, routing ratings, piece counts, the verdict on a diff, Critic findings and the edit policy are removed with Spark's own harness ([SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md)). Jev stays for the Map, pull request feedback sorting and the companion; the sections below about the other calls are history.
+
 Checked against the TypeSafe docs (https://docs.typesafe.ai/llms.txt), last re-read in full on September 27, 2026. This file is the current design and the open items; earlier rounds are in git history.
 
 ## What it is

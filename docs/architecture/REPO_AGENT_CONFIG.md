@@ -79,7 +79,7 @@ MCP env values like `${HOME}` are expanded from the server's environment with se
 
 ## Launch
 
-`workflow/agent-turn.ts` calls `loadRepoLaunch` with the chat's project roots. Settings are matched to roots by the chat's project order, so a Builder worktree in place of the first root uses the first project's switches; its MCP servers and hooks still have to match the approved fingerprints. `acp-provider.ts` turns the launch into Claude `_meta` (`claudeSessionMeta`) or Codex `CODEX_CONFIG` (`codexConfig`) and the `mcpServers` list.
+`workflow/agent-turn.ts` calls `loadRepoLaunch` with the chat's project roots. Settings are matched to roots by the chat's project order, so a chat worktree in place of the first root uses the first project's switches; its MCP servers and hooks still have to match the approved fingerprints. `acp-provider.ts` turns the launch into Claude `_meta` (`claudeSessionMeta`) or Codex `CODEX_CONFIG` (`codexConfig`) and the `mcpServers` list.
 
 ## UI
 
@@ -112,7 +112,7 @@ Checked September 28, 2026 with the marker technique above: a temporary `HOME` a
 | Codex  | Same, plus one ACP server (unpatched codex-acp)                                             | **Yes**: the ACP servers replaced the `CODEX_CONFIG` table. Fixed by patch part 6. |
 | Codex  | ACP server with the same name as a user-level one                                           | codex-acp drops ours and runs the user's (its dedupe filter).                      |
 
-So Claude was already consistent; Codex was not. Now, for every Codex process (chats, Builders, the capability probe), `agent-env.ts` reads the names under `[mcp_servers]` in `$CODEX_HOME/config.toml` (default `~/.codex`) and sets each to `enabled = false` in `CODEX_CONFIG`; codex-acp keeps those entries next to the ACP servers ([PATCHES.md](PATCHES.md) part 6). A Spark server whose name clashes with one of them is renamed `<name>_spark`, so it is never dropped or merged with the user's entry. `APP_SERVER_LOGS` is removed from Codex's environment because codex-acp logs the full `thread/start` config there. We kept the user's `CODEX_HOME` rather than a harness-managed copy: Codex rotates refresh tokens in `auth.json` and keeps session rollouts there, so a copy would break sign-in and resume.
+So Claude was already consistent; Codex was not. Now, for every Codex process (chats, the capability probe), `agent-env.ts` reads the names under `[mcp_servers]` in `$CODEX_HOME/config.toml` (default `~/.codex`) and sets each to `enabled = false` in `CODEX_CONFIG`; codex-acp keeps those entries next to the ACP servers ([PATCHES.md](PATCHES.md) part 6). A Spark server whose name clashes with one of them is renamed `<name>_spark`, so it is never dropped or merged with the user's entry. `APP_SERVER_LOGS` is removed from Codex's environment because codex-acp logs the full `thread/start` config there. We kept the user's `CODEX_HOME` rather than a harness-managed copy: Codex rotates refresh tokens in `auth.json` and keeps session rollouts there, so a copy would break sign-in and resume.
 
 ### Adding servers
 
@@ -142,7 +142,7 @@ Settings → Test connection starts the server through the MCP SDK client with a
 
 ## Spark's own tools (`spark` MCP server)
 
-Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in MCP server named `spark`, read-only except for actions the user confirms on a card, so agents can answer questions about Spark itself.
+Every agent session Spark launches (chat, Ask, Do; Claude, Z.ai and Codex) gets a built-in MCP server named `spark`, read-only except for actions the user confirms on a card, so agents can answer questions about Spark itself.
 
 - **Tools**: `spark_providers`, `spark_connectors`, `spark_settings`, `spark_projects`, `spark_map`, `spark_find`, `spark_chats`, `spark_chat`, `spark_audit`, `spark_tickets`, `spark_analytics`, `spark_activity`, `spark_brief` (`apps/server/src/spark-mcp/tools/`). Each reuses the functions behind the matching API route. These read tools carry `readOnlyHint: true` and change nothing, except that `spark_tickets` refreshes the same ticket cache the Tickets page refreshes.
 - **Action tools**: `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket` (Jira and Linear through Spark's connectors) (pull requests need no card: an authorized agent calls `spark_push` and runs `gh pr create`, or `spark_pull_request` when `gh` is not signed in, and Spark records the PR from the output). They never act on their own: each inserts a `spark_action` approval with a preview of exactly what will change (source, project or ticket, current status or assignee, branch, base and files), the call waits for the user's answer, and only a confirm runs it. The user can edit the text fields first (title, description or comment, type, priority, labels, target status); edits are validated against the action's editable fields and stored in `approvals.edits` (migration 0073). There is no "Always allow", the scope is always once, levels never decide these cards, and assigning shows the current owner so taking someone else's ticket is explicit. Results go back to the agent (key and URL, PR URL and number, or "declined"), each action is written to the run's protocol log as `spark/<action>` (redacted), and ticket actions also to `ticket_events` (new action `create`). Sessions without a run to show the card in refuse these tools. Codex gets `tool_timeout_sec = 3600` for the Spark server so a waiting card doesn't time the call out.
@@ -166,4 +166,4 @@ Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Co
 - Removing and restoring a project drops its agent settings and MCP approvals.
 - Instructions text is capped at 48 KB per session (24 KB per file).
 - A hook's change list line shows the first 200 characters of its command; a change past that shows as the hook being changed with the same text.
-- Trust follows a project by its order in the chat, so a Builder worktree is trusted only while its executable config matches the fingerprint the user trusted.
+- Trust follows a project by its order in the chat, so a chat worktree is trusted only while its executable config matches the fingerprint the user trusted.

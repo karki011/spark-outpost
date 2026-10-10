@@ -1,10 +1,10 @@
 # Chat compaction
 
-Since October 1, 2026 (`apps/server/src/compaction/`, migration `0088_compactions.sql`). The chat's own resumable session (Scout or a plain chat, agent keys `chat:*`) is the one that grows; Builders start small task sessions, and coordinator pieces and Builder child runs are never compacted by this path.
+Since October 1, 2026 (`apps/server/src/compaction/`, migration `0088_compactions.sql`). The chat's own resumable session (agent keys `chat:*`) is the one that grows, and the only one a chat has since Spark's own harness was removed ([SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md)).
 
 ## When
 
-- Checked only between turns: before a chat turn starts (`prepareTurn` in `orchestrate`, before intake), never mid-turn, and never while any approval card in the chat is pending.
+- Checked only between turns: before a chat turn starts (`prepareTurn` in the chat turn), never mid-turn, and never while any approval card in the chat is pending.
 - The reading is the context the agent reported on the session's last turn (`provider_sessions.context_used` / `context_size`, written when the turn finishes). Only a session the coming turn would resume counts.
 - Thresholds are settings (Settings → Spark → Context compaction, `profiles.compact_warn_percent`, `compact_at_percent`, `auto_compact`, migration `0090_compaction_settings.sql`), read by `compactionThresholds` before each turn:
   - **Warn when context is** (default 60%, range 30–90): the ring turns amber and shows a quiet note.
@@ -19,7 +19,7 @@ Since October 1, 2026 (`apps/server/src/compaction/`, migration `0088_compaction
 ## How
 
 1. **The agent's own `/compact`** when the session advertised the command (`provider_sessions.available_commands`): Spark resumes that session and sends `/compact` as its own turn through the normal slash-command path, with the same model, mode, repo config and MCP servers as the chat, so the session and its cache prefix are kept. It counts only when the agent reports usage below 80% of the reading before (`COMPACT_AGENT_WORKED`). The user's message then goes to the same session with a one-line note that the context was compacted and that `spark_chat_history` exists.
-2. **Spark's summary** when the agent has no `/compact`, the turn failed, or usage didn't drop: `chatSummaryPrompt` (`orchestration/handoff.ts`, kind `chat`) builds it from the transcript in Postgres: the first request, every request (latest 30), the agreed plan, the last 12 turns verbatim (4,000 characters each), files changed and the diff against HEAD, and open issues (failing checks, open review findings). Stale tool output never enters it. The chat's sessions close with reason `compacted`; the next session starts fresh with the summary as its preamble and only the turns after the compaction as history (`RunInput.seed`).
+2. **Spark's summary** when the agent has no `/compact`, the turn failed, or usage didn't drop: `chatSummaryPrompt` (`workflow/session-brief.ts`, kind `chat`) builds it from the transcript in Postgres: the first request, every request (latest 30), the agreed plan, the last 12 turns verbatim (4,000 characters each), files changed and the diff against HEAD, and open issues (failing checks, open review findings). Stale tool output never enters it. The chat's sessions close with reason `compacted`; the next session starts fresh with the summary as its preamble and only the turns after the compaction as history (`RunInput.seed`).
 3. **Start a fresh chat with a summary** creates a chat in the same projects with the same settings, titled "… (continued)", seeds it with the summary, sends your message there and closes the old chat's sessions. Each chat links to the other ("Continued in a fresh chat", "Started from a summary of …").
 
 Every compaction is a row in `compactions`: chat, run, session, method (`agent`, `spark`, `agent-auto`), tokens before and after, summary, the last message it covers and, for a fresh chat, where it came from. The chat shows a divider above the turn ("Compacted · 180K → 16K tokens") with View summary. For `agent` and `spark` rows the "after" value is the context the next reply reports (system prompt and tools included), written when that reply ends (`settleTokensAfter`); until then the divider shows only the tokens before. The agent's own `/compact` reply size, which leaves out the system prompt and tools, only appears in the work-log step ("Compacted the chat: 180K tokens → a ~2K summary; the size with the system prompt and tools shows after the next reply"; since October 1, 2026).
@@ -34,7 +34,7 @@ The full transcript stays in `messages`. `spark_chat_history` returns any range 
 
 ## Testing
 
-- Unit: `contracts/compaction.test.ts` (validation, ring levels, the re-ask point), `compaction/policy.test.ts` (thresholds, autonomy, off, drop detection), `orchestration/handoff.test.ts` (the chat summary).
+- Unit: `contracts/compaction.test.ts` (validation, ring levels, the re-ask point), `compaction/policy.test.ts` (thresholds, autonomy, off, drop detection), `workflow/session-brief.test.ts` (the chat summary).
 - DB: `test/compaction.db.test.ts`, `test/compaction-card.db.test.ts`, `test/compaction-settings.db.test.ts` (custom thresholds, off, validation), `test/spark-mcp-history.db.test.ts`. The fake ACP agent reports usage when `FAKE_ACP_CONTEXT_SIZE` is set (`#ctx90` in a message sets 90%, `/compact` drops to 8%, `#selfcompact` to 10%) and advertises `/compact` through `FAKE_ACP_COMMANDS`.
 - Browser: `tests/browser/compaction.spec.ts` uses the in-process fake provider: a chat containing `#ctxNN` gets a resumable session, reports NN% and advertises `/compact`; `#nocompact` leaves the command out. `tests/browser/settings.spec.ts` changes the thresholds.
 
@@ -47,7 +47,6 @@ Not run as part of the suites; never against real work. Use a throwaway repo and
 
 ## Gaps
 
-- Builder task sessions are not compacted by the threshold path: their follow-ups already escalate through the compact handoff at 100K+ (`escalation.ts`), and the adapters compact them on their own (recorded as `agent-auto`).
 - The `/compact` turn's tokens are billed to the run through the session's cumulative cost where the agent reports one (Claude); agents that report only tokens don't count it.
 - Attachments of the moved message are not carried into a fresh chat.
 - There is no Spark action to request compaction from an agent; the user decides on the card or by the autonomy level.

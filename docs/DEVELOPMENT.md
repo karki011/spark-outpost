@@ -49,7 +49,7 @@ apps/desktop  Electron desktop shell
 packages/contracts  Runtime-validated API and run-event contracts shared by both
 infra/local   Native PostgreSQL cluster scripts
 docs          Plan, architecture, design kit, user guide, benchmarks
-scripts       Bench, e2e-live, codescan, contrast, routing, verifier, coordinator, and jev tools
+scripts       Checks (source, guide, contrast, ACP coverage), test selection, codescan and benchmark tools
 tests/browser Playwright tests
 ```
 

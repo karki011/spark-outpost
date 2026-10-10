@@ -1,5 +1,7 @@
 # Universal laws
 
+> **Superseded (October 10, 2026).** Spark's own harness is removed: one chat is one agent session, with no Coordinator, pieces, Builder or Critic child runs, intake, per-role routing, Spark-run checks, laws or Jev call inside a turn. [SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md) describes what runs now. This file is kept as history; the code and scripts it names may no longer exist.
+
 Four guardrails Spark applies around every Builder, approved October 1, 2026 (policy `laws-1-universal-laws`). Each one is a small rule in `apps/server/src/laws/`, every threshold is a named constant in `advisor/policy.ts` (`LAW_*`), and agents read everything through the `spark_laws` tool. Decisions are stored as `run_advice` rows with purpose `law` (migration 0089): one `estimate` and one `findings` record per run (older runs may also hold a `budget` record from the removed Parkinson budget, which nothing reads).
 
 | Law                | What Spark does                                                                                        | Where it shows                                                   |
