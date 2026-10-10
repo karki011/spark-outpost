@@ -4,7 +4,7 @@ import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
-import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
+import { currentTaskContext } from '../persistence/tasks.ts';
 import { revertRun } from '../projects/run-changes.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
 import { runAgentTurn, startControl } from '../workflow/agent-turn.ts';
@@ -19,7 +19,6 @@ import { loadRunInput } from '../workflow/run-input.ts';
 import { placeChatOrFailure, placeChatOrStop } from './chat-place.ts';
 import { linkTicketForBuild } from '../tickets/chat-link.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
-import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import {
   correctnessFindings,
@@ -32,7 +31,7 @@ import { KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
-import { readOnlyStart, type CurrentTask } from './intake.ts';
+import { readOnlyStart } from './intake.ts';
 import { mainAgentInstruction } from './instruction-turn.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
@@ -53,14 +52,7 @@ import { escalatedHighStakes, wantsCritic } from './critic-rule.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
 import { autoKeep, publishWhenAsked, shipFullAuto } from './full-auto-ship.ts';
 import { keepWithoutPullRequest } from './no-pull-request.ts';
-import {
-  saveActiveTime,
-  builderKey,
-  publish,
-  save,
-  type OrchestratorDeps,
-  type Session,
-} from './session.ts';
+import { saveActiveTime, publish, save, type OrchestratorDeps, type Session } from './session.ts';
 import { ESCALATED_NOTE } from './cascade.ts';
 import {
   asPlanTurn,
@@ -99,32 +91,7 @@ import { lawsNote } from '../laws/review.ts';
 import { userText } from '../outposts/user-asked.ts';
 import { auditOutpostRequest } from '../outposts/request-audit.ts';
 import { ensureEstimate } from '../laws/estimate-history.ts';
-
-const TASK_SESSION_CLOSED = 'task session closed';
-const NEW_TASK_STARTED = 'a new task started';
-
-async function ensureTask(s: Session, current: CurrentTask | null): Promise<void> {
-  if (s.taskId) return;
-  if (current && !s.continuesTask) {
-    const started = await startNewTask(s.deps.db, s.lease.runId, s.input.userRequest);
-    s.taskId = started.taskId;
-    if (started.closed) await closeTaskSessions(s, started.closed, NEW_TASK_STARTED);
-    await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: true }));
-    return;
-  }
-  const joined = await taskForWorkingRun(s.deps.db, s.lease.runId, s.input.userRequest);
-  s.taskId = joined.task.taskId;
-  await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: joined.opened }));
-}
-
-async function closeTaskSessions(s: Session, taskId: string, reason: string): Promise<void> {
-  await closeKeyedSessions(
-    s.deps.db,
-    s.input.identity.threadId,
-    `key:${builderKey(taskId)}`,
-    reason,
-  ).catch(() => undefined);
-}
+import { TASK_SESSION_CLOSED, closeTaskSessions, ensureTask } from './turn-task.ts';
 
 async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEvent> {
   const { result } = outcome;
