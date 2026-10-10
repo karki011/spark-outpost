@@ -124,30 +124,16 @@ export async function linkProject(
   );
 }
 
-export type CrewRole = 'builder' | 'integrator' | 'coordinator' | 'critic' | 'scout';
-
-export async function crewRun(
-  t: TestDb,
-  parentRunId: string,
-  role: CrewRole,
-  route: Record<string, unknown> = {},
-): Promise<string> {
+export async function sparkRun(t: TestDb, parentRunId: string): Promise<string> {
   const id = randomUUID();
   await t.db.query(
     `INSERT INTO runs
        (id, conversation_id, user_message_id, provider, status, parent_run_id, role, route)
-     SELECT $1, conversation_id, user_message_id, provider, 'running', id, $3, $4::jsonb
+     SELECT $1, conversation_id, user_message_id, provider, 'running', id, 'spark', '{}'::jsonb
      FROM runs WHERE id = $2`,
-    [id, parentRunId, role, JSON.stringify(route)],
+    [id, parentRunId],
   );
   return id;
-}
-
-export function pieceRun(t: TestDb, parentRunId: string): Promise<string> {
-  return crewRun(t, parentRunId, 'builder', {
-    pieceKey: 'P1',
-    guard: { coordinated: true, owned: null },
-  });
 }
 
 export type TurnStarter = 'user' | 'chat' | 'draft';

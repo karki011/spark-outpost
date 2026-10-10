@@ -1,9 +1,4 @@
-import {
-  EventType,
-  OUTPOST_DRAFT_ACTIVITY,
-  isApprovalEvent,
-  type RunEvent,
-} from '@spark-outpost/contracts';
+import { isApprovalEvent } from '@spark-outpost/contracts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import {
@@ -19,17 +14,10 @@ import { runAppender } from './run-appender.ts';
 import { runEvents, type RunIdentity } from './run-events.ts';
 import { subagentBracket, type SubagentAnnounce } from './subagent-events.ts';
 
-function shownInTheChat(event: RunEvent): boolean {
-  if (isApprovalEvent(event)) return true;
-  return (
-    event.type === EventType.ACTIVITY_SNAPSHOT && event.activityType === OUTPOST_DRAFT_ACTIVITY
-  );
-}
-
 function mirroringApprovals(own: Append, parent: Append): Append {
   return async (event, options) => {
     const seq = await own(event, options);
-    if (shownInTheChat(event)) await parent(event);
+    if (isApprovalEvent(event)) await parent(event);
     return seq;
   };
 }

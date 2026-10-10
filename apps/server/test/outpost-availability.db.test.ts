@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { outpostNeeds } from '../src/outposts/outpost-availability.ts';
 import { createOutpostRow } from './outpost-fixtures.ts';
-import {
-  crewRun,
-  linkProject,
-  memberWithTurn,
-  pieceRun,
-  projectRow,
-} from './outpost-tool-support.ts';
+import { linkProject, memberWithTurn, sparkRun, projectRow } from './outpost-tool-support.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -37,49 +31,13 @@ describe('which outpost tools a session is offered', () => {
     expect(await outpostNeeds(t.db, chat)).toEqual({ outpost: false, outpost_draft: false });
   });
 
-  it('offers neither to a piece of a member chat', async () => {
+  it('offers neither to a Spark a member chat handed a job to', async () => {
     const web = await memberWithTurn(t, await createOutpostRow(t), 'web');
-    const runId = await pieceRun(t, web.runId);
+    const runId = await sparkRun(t, web.runId);
     expect(await outpostNeeds(t.db, { conversationId: web.conversationId, runId })).toEqual({
       outpost: false,
       outpost_draft: false,
     });
-  });
-
-  it('offers both groups to a solo Builder and to the integrator of a crew turn', async () => {
-    const web = await memberWithTurn(t, await createOutpostRow(t), 'web');
-    for (const role of ['builder', 'integrator'] as const) {
-      const runId = await crewRun(t, web.runId, role);
-      expect(await outpostNeeds(t.db, { conversationId: web.conversationId, runId })).toEqual({
-        outpost: true,
-        outpost_draft: true,
-      });
-    }
-  });
-
-  it('offers the draft tool to the Builder of a chat with a project', async () => {
-    const chat = await startChat(t, 'split this story into sub-chats');
-    await linkProject(t, chat.conversationId, await projectRow(t, 'shop'));
-    const runId = await crewRun(t, chat.runId, 'builder');
-    expect(await outpostNeeds(t.db, { conversationId: chat.conversationId, runId })).toEqual({
-      outpost: false,
-      outpost_draft: true,
-    });
-  });
-
-  it('offers neither to the Coordinator, a Critic or a research piece', async () => {
-    const web = await memberWithTurn(t, await createOutpostRow(t), 'web');
-    const others = [
-      await crewRun(t, web.runId, 'coordinator'),
-      await crewRun(t, web.runId, 'critic'),
-      await crewRun(t, web.runId, 'scout', { pieceKey: 'P2' }),
-    ];
-    for (const runId of others) {
-      expect(await outpostNeeds(t.db, { conversationId: web.conversationId, runId })).toEqual({
-        outpost: false,
-        outpost_draft: false,
-      });
-    }
   });
 
   it('offers neither to a Terminal session', async () => {

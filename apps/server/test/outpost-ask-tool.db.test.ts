@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { turnObservations } from '../src/persistence/observations.ts';
 import { getPost, listPosts } from '../src/persistence/outpost-posts.ts';
 import { outpostAskTool } from '../src/spark-mcp/tools/outpost-ask-tool.ts';
-import { NOT_FOR_PIECES, NOT_IN_OUTPOST } from '../src/spark-mcp/tools/outpost-turn.ts';
+import { NOT_THE_CHATS_TURN, NOT_IN_OUTPOST } from '../src/spark-mcp/tools/outpost-turn.ts';
 import {
   CANNOT_ASK_SELF,
   CHATS_CANNOT_ASK_ALL,
@@ -15,8 +15,7 @@ import {
   chatAsk,
   memberWithTurn,
   outpostChanged,
-  crewRun,
-  pieceRun,
+  sparkRun,
   requestStartedTurn,
   toolHarness,
   type MemberTurn,
@@ -174,29 +173,10 @@ describe('spark_outpost_ask', () => {
     expect(await requests()).toHaveLength(0);
   });
 
-  it('sends a Builder’s request as the chat, from the chat’s own turn', async () => {
-    const builder = { ...web, runId: await crewRun(t, web.runId, 'builder') };
-    const asked = await ask(builder, { to: 'api', text: QUESTION, wait: false }).result;
-    expect((await getPost(t.db, asked.request))!.post).toMatchObject({
-      fromConversationId: web.conversationId,
-      fromHandle: 'web',
-      fromRunId: web.runId,
-    });
-  });
-
-  it('refuses the Builder of a turn another chat’s request started', async () => {
-    const docs = { conversationId: await addMemberChat(t, outpostId, 'docs'), handle: 'docs' };
-    const turn = await requestStartedTurn(t, outpostId, docs, 'chat', web);
-    const builder = { ...turn, runId: await crewRun(t, turn.runId, 'builder') };
-    await expect(ask(builder, { to: 'api', text: QUESTION, wait: false }).result).rejects.toThrow(
-      REQUEST_STARTED_TURN,
-    );
-  });
-
-  it('refuses a piece of a member chat and a chat that is in no outpost', async () => {
-    const piece = { conversationId: web.conversationId, runId: await pieceRun(t, web.runId) };
-    await expect(ask(piece, { to: 'api', text: QUESTION, wait: false }).result).rejects.toThrow(
-      NOT_FOR_PIECES,
+  it('refuses a Spark the member chat handed a job to, and a chat that is in no outpost', async () => {
+    const spark = { conversationId: web.conversationId, runId: await sparkRun(t, web.runId) };
+    await expect(ask(spark, { to: 'api', text: QUESTION, wait: false }).result).rejects.toThrow(
+      NOT_THE_CHATS_TURN,
     );
     const outside = await startChat(t, 'elsewhere');
     await expect(ask(outside, { to: 'api', text: QUESTION, wait: false }).result).rejects.toThrow(

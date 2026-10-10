@@ -4,13 +4,13 @@ import { turnObservations } from '../src/persistence/observations.ts';
 import { getPost, insertPosts, listPosts } from '../src/persistence/outpost-posts.ts';
 import { outpostNoteTool, NOTE_IS_ADDRESSED } from '../src/spark-mcp/tools/outpost-note-tool.ts';
 import { outpostTool, REQUEST_NOT_HERE } from '../src/spark-mcp/tools/outpost-tool.ts';
-import { NOT_FOR_PIECES, NOT_IN_OUTPOST } from '../src/spark-mcp/tools/outpost-turn.ts';
+import { NOT_THE_CHATS_TURN, NOT_IN_OUTPOST } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { addMemberChat, createOutpostRow, finishRun } from './outpost-fixtures.ts';
 import { carry, userRequest } from './outpost-store-support.ts';
 import {
   chatAsk,
   memberWithTurn,
-  pieceRun,
+  sparkRun,
   requestStartedTurn,
   toolHarness,
   type MemberTurn,
@@ -128,9 +128,9 @@ describe('spark_outpost', () => {
     await expect(read(web, { request: post!.id })).rejects.toThrow(REQUEST_NOT_HERE);
   });
 
-  it('refuses a piece of a member chat and a chat that is in no outpost', async () => {
-    const piece = { conversationId: web.conversationId, runId: await pieceRun(t, web.runId) };
-    await expect(read(piece)).rejects.toThrow(NOT_FOR_PIECES);
+  it('refuses a Spark the member chat handed a job to, and a chat that is in no outpost', async () => {
+    const spark = { conversationId: web.conversationId, runId: await sparkRun(t, web.runId) };
+    await expect(read(spark)).rejects.toThrow(NOT_THE_CHATS_TURN);
     await expect(read(await startChat(t, 'elsewhere'))).rejects.toThrow(NOT_IN_OUTPOST);
   });
 });
