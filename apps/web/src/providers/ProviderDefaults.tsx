@@ -78,9 +78,9 @@ export function defaultIssue(
 }
 
 const MODEL_NOTE =
-  "New chats start on Auto, which picks the model. Chats that aren't on Auto and have no model of their own use this one.";
+  "New chats start on Auto, which runs this model, or the agent's own default when none is picked here.";
 const PER_CHAT = 'per-chat';
-const PER_CHAT_NOTE = 'Each chat keeps its own effort, and Do-task Builders follow it.';
+const PER_CHAT_NOTE = 'Each chat keeps its own effort.';
 
 function effortOptions(
   provider: ProviderSetup,
@@ -198,7 +198,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
               value={effort?.id ?? PER_CHAT}
               onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
             />
-            {effort && <small className="note">Do-task Builders always use this effort.</small>}
+            {effort && <small className="note">New chats start at this effort.</small>}
           </dd>
         </div>
       </dl>

@@ -62,11 +62,11 @@ test('Models is one table per provider and a row opens for the details', async (
     'Out',
   ]);
   await expect(table.getByRole('rowheader')).toHaveText([
-    'Spark picks from these',
+    'Everyday and complex work',
     /^Sonnet 5(?!\.)/,
     /^Sonnet 5\.5/,
     /^Opus 5\.5/,
-    'Only when you pick it',
+    'Other models',
     /^Haiku 5\.5/,
     /^Haiku 4\.5/,
     /^Fable 5\.1/,
@@ -85,7 +85,7 @@ test('Models is one table per provider and a row opens for the details', async (
     /^\d+\/\d+/,
   ]);
   const details = sonnet.getByRole('button', { name: /^Sonnet 5 / });
-  await expect(details).toHaveText('Sonnet 5Everyday Builder, Critic, answers');
+  await expect(details).toHaveText('Sonnet 5Everyday work and answers');
   await expect(details).toHaveAttribute('aria-expanded', 'false');
   const measured = table.getByRole('table', { name: 'Measured on our benchmark' });
   await expect(measured).toBeHidden();

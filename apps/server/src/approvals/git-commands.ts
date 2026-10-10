@@ -222,7 +222,7 @@ export function publishesBesidesPush(command: string): boolean {
   );
 }
 
-export const BUILDER_GIT_OPS = [
+export const GIT_STATE_OPS = [
   'stash',
   'checkout',
   'switch',
@@ -247,7 +247,7 @@ export function changesGitState(
 ): boolean {
   return gitSubcommands(command).some(
     (sub) =>
-      (BUILDER_GIT_OPS.includes(sub.name) && !harmless(sub)) ||
+      (GIT_STATE_OPS.includes(sub.name) && !harmless(sub)) ||
       (sub.name === 'branch' && sub.rest.some((token) => BRANCH_DELETE.has(token))),
   );
 }

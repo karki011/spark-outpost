@@ -143,7 +143,7 @@ test('a default the sign-in cannot use is flagged on the provider screen with a 
 
   await expandSection(codex, 'Defaults for new chats');
   await expect(codex.getByRole('region', { name: 'Defaults for new chats' })).toContainText(
-    "New chats start on Auto, which picks the model. Chats that aren't on Auto and have no model of their own use this one.",
+    "New chats start on Auto, which runs this model, or the agent's own default when none is picked here.",
   );
   const notice = codex.getByRole('status').filter({ hasText: 'default model' });
   await expect(notice).toContainText(

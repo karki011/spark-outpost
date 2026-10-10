@@ -28,8 +28,8 @@ export function ProjectsSection() {
   return (
     <>
       <p className="lede">
-        Folders you linked, whether you trust their hooks, allow rules and MCP servers, and how
-        Builders work in them. To trust a folder, open Agent setup in a chat that uses it.
+        Folders you linked, whether you trust their hooks, allow rules and MCP servers, and where
+        Spark works in them. To trust a folder, open Agent setup in a chat that uses it.
       </p>
       {error && (
         <p className="set-hint" role="alert">

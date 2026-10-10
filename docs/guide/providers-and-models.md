@@ -33,11 +33,11 @@ Changes apply to new chats; **Model** only to chats off **Auto**. **Per chat** e
 
 ![Settings → Models with one row per model](images/providers-model-cards-light.png)
 
-| Group                      | Spark uses it for            |
-| -------------------------- | ---------------------------- |
-| **Spark picks from these** | The job named on each row    |
-| **Only when you pick it**  | Nothing, unless you pin it   |
-| **No card yet**            | Its tier comes from its name |
+| Group                         | What it holds                         |
+| ----------------------------- | ------------------------------------- |
+| **Everyday and complex work** | Current mid and top models            |
+| **Other models**              | Small, frontier and retiring models   |
+| **No card yet**               | Models whose tier comes from the name |
 
 ## Connect Jev
 

@@ -114,7 +114,7 @@ describe('dependencies for a copy whose lockfile differs from the checkout', () 
     const prep = await prepareDependencies(main, copy, { root: main, platform: 'darwin', run });
     expect(prep).toMatchObject({ method: 'clone', lockfileMatched: false, stale: true });
     expect(prep?.note).toBe(
-      'Dependencies in this chat’s copy are out of date and installing them failed: your package registry login is missing or has expired; run `npm login` (or your registry’s sign-in). Checks that need them are reported as not run.',
+      'Dependencies in this chat’s copy are out of date and installing them failed: your package registry login is missing or has expired; run `npm login` (or your registry’s sign-in).',
     );
     expect(knownDeps(copy)?.stale).toBe(prep?.note);
     const later = recorder();

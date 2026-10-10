@@ -18,13 +18,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { DiffChip } from '../diff/DiffChip.tsx';
 import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
-import {
-  belongsTo,
-  conversationCrew,
-  latestOrchestration,
-  storedCrew,
-  tvCrew,
-} from '../crew/conversation-crew.ts';
+import { belongsTo, conversationCrew, storedCrew, tvCrew } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { ChatLinks } from '../browser/ChatLinks.tsx';
@@ -167,7 +161,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     turns: detail.data?.runs.length ?? 0,
   });
   const crew = conversationCrew(detail.data);
-  const orchestration = latestOrchestration(detail.data);
   const openTask = useStableCallback(panel.openTask);
   const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
@@ -394,7 +387,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     settings={settings}
                     providers={connected}
                     runs={detail.data?.runs ?? []}
-                    orchestration={orchestration}
                     usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
                     busy={running !== null}
                     sending={sends.sending}

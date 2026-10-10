@@ -193,9 +193,6 @@ function AgentBody({
         </TurnReply>
         {cards.pending.map(approvalCard)}
         {!busy && <AgentTerminalsRunning terminals={terminals} />}
-        {agent.state === 'queued' && !agent.spark && (
-          <p className="ai-note">Queued. Starts when Jev hands off.</p>
-        )}
         <ModelSwitchNote change={modelSwitch} />
         <ErrorLine error={error} details={errorDetails} change={modelSwitch} waited={waited} />
       </div>

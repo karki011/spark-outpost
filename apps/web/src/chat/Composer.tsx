@@ -18,7 +18,6 @@ import {
   type BusyEnterAction,
   type ChatSettings,
   type ConversationUsage,
-  type Orchestration,
   type Project,
   type ProviderSetup,
   type RepoDefinition,
@@ -76,7 +75,6 @@ interface ComposerProps {
   settings: ChatSettings | null;
   providers: ProviderSetup[];
   runs: Run[];
-  orchestration?: Orchestration | null;
   usageTotals: ConversationUsage;
   busy: boolean;
   stopping?: boolean;
@@ -114,7 +112,6 @@ export function Composer({
   settings,
   providers,
   runs,
-  orchestration = null,
   usageTotals,
   busy,
   stopping = false,
@@ -452,7 +449,6 @@ export function Composer({
             runs={runs}
             provider={settings?.provider ?? null}
             usageTotals={usageTotals}
-            orchestration={orchestration}
             {...(onAudit ? { onAudit } : {})}
           />
           <SendButton

@@ -5,6 +5,7 @@ import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import {
+  cardsNote,
   ALL_PROVIDERS,
   readSavedProvider,
   shownProvider,
@@ -76,12 +77,11 @@ export function ModelsSection() {
   return (
     <div className="mc">
       <p className="lede">
-        The models each agent offers and when Spark uses them. Open one for cost and benchmark
-        results.
+        The models each agent offers. Open one for cost and benchmark results.
         <InfoTip
           topic="model cards"
           doc={{ page: 'providers-and-models', heading: 'read-the-model-cards' }}
-          text={`Vendor facts checked ${cards.data.checkedAt}. The rules pick models; Jev only reads these cards.`}
+          text={cardsNote(cards.data.checkedAt)}
         />
       </p>
       <ProviderChips providers={providers} value={selected} onChange={choose} />

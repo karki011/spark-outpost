@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Orchestration, Run } from '@spark-outpost/contracts';
+import type { Run } from '@spark-outpost/contracts';
 import {
   compactCost,
   contextPercent,
@@ -7,7 +7,6 @@ import {
   costTip,
   formatCost,
   latestContext,
-  taskContext,
   runUsageLine,
   tokenBreakdown,
   usageLine,
@@ -140,27 +139,5 @@ describe('latestContext', () => {
       size: 1000,
     });
     expect(latestContext([], null)).toBeNull();
-  });
-});
-
-describe('taskContext', () => {
-  const member = (role: string, contextUsed: number | null) => ({
-    role,
-    name: role === 'builder' ? 'Bolt' : 'Scout',
-    contextUsed,
-    contextSize: contextUsed === null ? null : 1000,
-  });
-  const orchestration = (status: string, crew: ReturnType<typeof member>[]) =>
-    ({ status, crew }) as unknown as Orchestration;
-
-  it('reads the latest Builder while the task runs', () => {
-    const active = orchestration('running', [member('builder', 340), member('critic', 900)]);
-    expect(taskContext(active)).toEqual({ name: 'Bolt', used: 340, size: 1000 });
-  });
-
-  it('gives the ring back to the chat once the task is idle or has no reading', () => {
-    expect(taskContext(orchestration('succeeded', [member('builder', 340)]))).toBeNull();
-    expect(taskContext(orchestration('running', [member('builder', null)]))).toBeNull();
-    expect(taskContext(null)).toBeNull();
   });
 });

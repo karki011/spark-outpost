@@ -46,14 +46,12 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   await expect(items.first()).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(effort).toHaveText('Per chat');
-  await expect(claude).toContainText(
-    'Each chat keeps its own effort, and Do-task Builders follow it.',
-  );
+  await expect(claude).toContainText('Each chat keeps its own effort.');
 
   await effort.click();
   await menu.getByRole('menuitemradio', { name: /^low/ }).click();
   await expect(effort).toHaveText('low');
-  await expect(claude).toContainText('Do-task Builders always use this effort.');
+  await expect(claude).toContainText('New chats start at this effort.');
   await page.keyboard.press('Escape');
   await expect(providers.locator('.ptile[data-prov="claude"]')).toBeFocused();
   await page.keyboard.press('Escape');
