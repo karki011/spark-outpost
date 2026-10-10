@@ -21,6 +21,7 @@ import {
   type PublishContext,
   type PublishVerdict,
 } from './publish-policy.ts';
+import { stackedPushRefusal } from './stacked-push.ts';
 import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
@@ -206,6 +207,10 @@ function refusal(
       return BUILDER_PUBLISH_REASON;
     }
   }
+  const stacked = request.command
+    ? stackedPushRefusal(request.command, options.publish?.task ?? null)
+    : null;
+  if (stacked) return stacked;
   if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;

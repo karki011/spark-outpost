@@ -47,6 +47,7 @@ const secretRead: RunObservations = {
   labels: async () => ['a secret file'],
   egressAsked: () => undefined,
   sentOut: (note) => void sentNotes.push(note),
+  crossed: async () => undefined,
   later: () => undefined,
   settled: async () => undefined,
 };

@@ -1,4 +1,4 @@
-import { publishRequested } from '../approvals/publish-policy.ts';
+import { publishRequested, type StackBase } from '../approvals/publish-policy.ts';
 import { userText } from '../outposts/user-asked.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
@@ -24,6 +24,12 @@ export interface PublishPlan {
   root: string;
   branch: string;
   base: string | null;
+  pullBase: string | null;
+  stackBase: StackBase | null;
+}
+
+export function parentNotPushedLine(stack: Pick<StackBase, 'branch' | 'owner'>): string {
+  return `Not published: this chat's branch is built on ${stack.owner}'s branch ${stack.branch}, which is not on the remote yet.\n\nNeeds you: ${stack.owner}'s branch is not pushed.`;
 }
 
 export async function agentPublishPlan(s: Session): Promise<PublishPlan | null> {
@@ -31,7 +37,9 @@ export async function agentPublishPlan(s: Session): Promise<PublishPlan | null> 
   if (!scope || scope.task.protectedBranches.includes(scope.task.branch)) return null;
   if (!(await pickRemote(scope.root, scope.task.branch))) return null;
   const worktree = await chatWorktreeAt(s.deps.db, scope.root);
-  return { root: scope.root, branch: scope.task.branch, base: worktree?.baseBranch ?? null };
+  const { branch, pullBase = null, stackBase = null } = scope.task;
+  const base = pullBase ?? worktree?.baseBranch ?? null;
+  return { root: scope.root, branch, base, pullBase, stackBase };
 }
 
 export function publishAsked(s: Session): boolean {
@@ -86,12 +94,14 @@ export async function publishByAgent(
   plan: PublishPlan,
   facts: PublishFacts,
 ): Promise<string> {
+  if (plan.stackBase && !plan.stackBase.onRemote) return parentNotPushedLine(plan.stackBase);
   const draft = facts.failing || (await opensDraftPullRequests(s.deps.db, s.input.workspaceId));
   const followUp = publishTurnPrompt({
     branch: plan.branch,
     draft,
     titlePrefix: facts.titlePrefix,
     notes: facts.notes,
+    ...(plan.pullBase ? { base: plan.pullBase } : {}),
     ...(facts.followUp ? { followUp: true } : {}),
     ...(facts.unrelatedFailures ? { unrelatedFailures: true } : {}),
   });

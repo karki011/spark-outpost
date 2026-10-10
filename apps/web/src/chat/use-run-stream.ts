@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  BROWSER_SCREENSHOT_ACTIVITY,
-  EventType,
-  MEMBER_MESSAGE_ACTIVITY,
-  ORCHESTRATION_ACTIVITY,
   isApprovalEvent,
   isTaskActivity,
   isTerminalRunEvent,
@@ -13,16 +9,8 @@ import {
 } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { taskKeys } from '../tasks/task-api.ts';
+import { refreshesChat } from './run-refresh.ts';
 import { applyRunEvent, initialRunProjection, type RunProjection } from './run-projection.ts';
-
-function isOrchestrationActivity(event: RunEvent): boolean {
-  return (
-    event.type === EventType.ACTIVITY_SNAPSHOT &&
-    (event.activityType === ORCHESTRATION_ACTIVITY ||
-      event.activityType === MEMBER_MESSAGE_ACTIVITY ||
-      event.activityType === BROWSER_SCREENSHOT_ACTIVITY)
-  );
-}
 
 interface StreamState {
   runId: string;
@@ -56,7 +44,7 @@ export function useRunStream(runId: string, conversationId: string, live = true)
       if (!event || !Number.isInteger(seq)) return;
       queued.push([seq, event]);
       frame ||= requestAnimationFrame(apply);
-      if (isTaskActivity(event) || isOrchestrationActivity(event) || isApprovalEvent(event)) {
+      if (refreshesChat(event)) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
       }
       if (isTaskActivity(event) || isTerminalRunEvent(event) || isApprovalEvent(event)) {

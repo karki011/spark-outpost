@@ -48,6 +48,7 @@ import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
 import { A2A_MOUNT_PATH } from '../a2a/agent-card.ts';
 import { outpostRouters, type OutpostDelivery } from '../outposts/mount.ts';
+import type { StackGit } from '../outposts/ports.ts';
 
 export interface AppOptions
   extends
@@ -68,6 +69,7 @@ export interface AppOptions
   previews: PreviewServers;
   appEvents: AppEventFeed;
   outposts: OutpostDelivery;
+  stackGit?: StackGit;
   port: number;
   allowedOrigins: readonly string[];
   apiToken: string;

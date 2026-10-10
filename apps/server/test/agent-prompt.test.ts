@@ -60,6 +60,14 @@ describe('what the agent is handed for a turn', () => {
     expect(asAgentReads(slash)).toBe(slash);
   });
 
+  it('wraps a slash command that carries a handle, so a message to several chats stays text', () => {
+    for (const body of ['/plan the endpoint with @api and @web', '/compact @all']) {
+      const shown = asAgentReads(turn({ prompt: body, userRequest: body }));
+      expect(shown.prompt).toBe(wrapped('user', body));
+      expect(shown.prompt.trimStart().startsWith('/')).toBe(false);
+    }
+  });
+
   it('never hands over a slash command the user did not write as a command', () => {
     const body = '/plan the endpoint';
     const shown = asAgentReads(

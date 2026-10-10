@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
-  parseAddress,
   startMemberChatId,
   type CreateOutpostRequest,
   type MemberRequest,
@@ -9,60 +8,23 @@ import {
   type OutpostPost,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { isChatDraftsKey } from '../chat/outpost/chat-drafts.ts';
+import { optimisticPosts, type NewPost } from './optimistic-posts.ts';
 import { outpostKeys, outpostsApi } from './outposts-api.ts';
 import type { SheetChanges } from './sheet-draft.ts';
-
-interface NewPost {
-  id: string;
-  text: string;
-}
 
 interface NewAnswer {
   conversationId: string;
   text: string;
 }
 
-export function optimisticPost(detail: OutpostDetail, input: NewPost, now: string): OutpostPost {
-  const members = detail.outpost.members;
-  const address = parseAddress(
-    input.text,
-    members.map((member) => member.handle),
-  );
-  const to = address.kind === 'request' ? address.to : null;
-  const paused = detail.outpost.pausedAt !== null;
-  return {
-    id: input.id,
-    outpostId: detail.outpost.id,
-    kind: to ? 'request' : 'note',
-    body: address.body,
-    fromUser: true,
-    fromConversationId: null,
-    fromHandle: null,
-    toConversationId: members.find((member) => member.handle === to)?.conversationId ?? null,
-    toHandle: to,
-    guest: false,
-    waits: false,
-    batchId: null,
-    taskId: null,
-    runId: null,
-    pinnedAt: null,
-    createdAt: now,
-    state: to ? 'sent' : null,
-    reason: to ? (paused ? 'Paused' : 'Not sent yet') : null,
-    answer: null,
-    exchanges: [],
-    files: 0,
-    intro: null,
-  };
+function withPosts(detail: OutpostDetail, posts: readonly OutpostPost[]): OutpostDetail {
+  const known = new Set(detail.posts.map((existing) => existing.id));
+  return { ...detail, posts: [...detail.posts, ...posts.filter((post) => !known.has(post.id))] };
 }
 
-function withPost(detail: OutpostDetail, post: OutpostPost): OutpostDetail {
-  if (detail.posts.some((existing) => existing.id === post.id)) return detail;
-  return { ...detail, posts: [...detail.posts, post] };
-}
-
-function withoutPost(detail: OutpostDetail, postId: string): OutpostDetail {
-  return { ...detail, posts: detail.posts.filter((post) => post.id !== postId) };
+function withoutPosts(detail: OutpostDetail, postIds: readonly string[]): OutpostDetail {
+  return { ...detail, posts: detail.posts.filter((post) => !postIds.includes(post.id)) };
 }
 
 function withPaused(detail: OutpostDetail, paused: boolean, now: string): OutpostDetail {
@@ -99,6 +61,10 @@ function refreshChats(client: QueryClient, conversationIds: readonly string[]): 
   ]);
 }
 
+function refreshChatDrafts(client: QueryClient): Promise<unknown> {
+  return client.invalidateQueries({ predicate: (query) => isChatDraftsKey(query.queryKey) });
+}
+
 function memberIds(client: QueryClient, id: string): string[] {
   const detail = client.getQueryData<OutpostDetail>(outpostKeys.detail(id));
   return detail?.outpost.members.map((member) => member.conversationId) ?? [];
@@ -119,15 +85,17 @@ export function usePost(id: string) {
     mutationFn: (input: NewPost) => outpostsApi.post(id, input),
     onMutate: async (input) => {
       await client.cancelQueries({ queryKey: key });
-      const now = new Date().toISOString();
-      client.setQueryData<OutpostDetail>(key, (detail) =>
-        detail ? withPost(detail, optimisticPost(detail, input, now)) : detail,
-      );
+      const detail = client.getQueryData<OutpostDetail>(key);
+      if (!detail) return { drawn: [input.id] };
+      const posts = optimisticPosts(detail, input, new Date().toISOString());
+      client.setQueryData<OutpostDetail>(key, withPosts(detail, posts));
+      return { drawn: posts.map((post) => post.id) };
     },
     onSuccess: (detail) => keep(client, detail),
-    onError: (_error, input) => {
+    onError: (_error, input, context) => {
+      const drawn = context?.drawn ?? [input.id];
       client.setQueryData<OutpostDetail>(key, (detail) =>
-        detail ? withoutPost(detail, input.id) : detail,
+        detail ? withoutPosts(detail, drawn) : detail,
       );
       return client.invalidateQueries({ queryKey: key });
     },
@@ -156,6 +124,15 @@ export function useCancel(id: string) {
   });
 }
 
+export function useStartNow(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => outpostsApi.startNow(id, postId),
+    onSuccess: (detail) => keep(client, detail),
+    onError: () => client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
+  });
+}
+
 export function usePause(id: string) {
   const client = useQueryClient();
   const key = outpostKeys.detail(id);
@@ -177,8 +154,12 @@ export function useCreateOutpost() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateOutpostRequest) => outpostsApi.create(body),
-    onSuccess: ({ outpost, posts }) => keep(client, { outpost, posts }),
-    onSettled: (_detail, _error, body) => refreshChats(client, body.members.map(startMemberChatId)),
+    onSuccess: ({ outpost, posts, stories }) => keep(client, { outpost, posts, stories }),
+    onSettled: (_detail, _error, body) =>
+      Promise.all([
+        refreshChats(client, body.members.map(startMemberChatId)),
+        ...(body.draftId ? [refreshChatDrafts(client)] : []),
+      ]),
   });
 }
 

@@ -4,6 +4,7 @@ import type { OutpostPost, ThreadItem } from '@spark-outpost/contracts';
 import { useStickToBottom } from '../chat/use-stick-to-bottom.ts';
 import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
+import { BatchPost } from './BatchPost.tsx';
 import { NotePost } from './NotePost.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
 import { RequestPost } from './RequestPost.tsx';
@@ -15,9 +16,11 @@ interface PostListProps {
   answeringId: string | null;
   jumpTo?: string | null | undefined;
   approvalChats?: ReadonlySet<string> | undefined;
+  activity?: ReadonlyMap<string, string> | undefined;
   empty: ReactNode;
   onAnswer: (post: OutpostPost) => void;
   onCancel: (postId: string) => void;
+  onStartNow?: ((postId: string) => void) | undefined;
   onOpenChat: (conversationId: string) => void;
 }
 
@@ -40,9 +43,11 @@ export function PostList({
   answeringId,
   jumpTo,
   approvalChats,
+  activity,
   empty,
   onAnswer,
   onCancel,
+  onStartNow,
   onOpenChat,
 }: PostListProps) {
   const { scrollerRef, away, unfollow, jumpToLatest } = useStickToBottom();
@@ -66,15 +71,29 @@ export function PostList({
                     post={item.post}
                     answering={item.post.id === answeringId}
                     answerable={!approvalChats?.has(item.post.toConversationId ?? '')}
+                    activity={activity?.get(item.post.toConversationId ?? '')}
                     onAnswer={onAnswer}
                     onCancel={onCancel}
+                    onStartNow={onStartNow}
                     onOpenChat={onOpenChat}
                   />
                 );
               }
               if (item.kind === 'note') return <NotePost key={item.post.id} post={item.post} />;
               if (item.kind === 'notice') return <NoticeLine key={item.post.id} post={item.post} />;
-              return null;
+              return (
+                <BatchPost
+                  key={item.batchId}
+                  item={item}
+                  answeringId={answeringId}
+                  approvalChats={approvalChats}
+                  activity={activity}
+                  onAnswer={onAnswer}
+                  onCancel={onCancel}
+                  onStartNow={onStartNow}
+                  onOpenChat={onOpenChat}
+                />
+              );
             })}
           </ol>
         </div>

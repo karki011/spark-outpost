@@ -88,9 +88,11 @@ PUT /api/conversations/:id/queue/order
 POST /api/runs/:id/messages
 GET /api/outposts
 GET /api/outposts/:id
+GET /api/conversations/:id/outpost-drafts
 PATCH /api/outposts/:id
 POST /api/outposts/:id/posts
 POST /api/outposts/:id/posts/:postId/cancel
+POST /api/outposts/:id/posts/:postId/start-now
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
@@ -186,6 +188,7 @@ GET /api/diagnostics/export
 GET /api/instructions-file
 POST /api/setup/git/install
 POST /api/outposts
+GET /api/outposts/drafts/:id
 DELETE /api/outposts/:id
 PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId

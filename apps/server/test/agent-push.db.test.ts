@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { withdrawTrust } from '../src/agent-config/trust-store.ts';
+import { parentNotPushedReason } from '../src/approvals/publish-policy.ts';
 import { agentEnvironment } from '../src/agents/acp/agent-env.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { insertFinishedRunEntries } from '../src/persistence/audit-log.ts';
@@ -259,6 +260,33 @@ describe(
       });
       expect(refused.outcome).toBe('refused');
       expect(remoteBranches()).not.toContain(BRANCH);
+    });
+
+    it("refuses a branch built on another chat's branch until that branch is on the remote", async () => {
+      const parent = 'spark/orders-endpoint-9f8e7d6c';
+      git('branch', parent, 'main');
+      const stacked: PublishScope = {
+        ...scope(),
+        task: {
+          branch: BRANCH,
+          protectedBranches: ['main', 'master', parent],
+          stackBase: { branch: parent, owner: '@api', onRemote: true },
+          pullBase: parent,
+        },
+      };
+      const { audit, entries } = auditLog();
+      const refused = await pushForAgent(deps(), stacked, { audit });
+      expect(refused).toMatchObject({
+        outcome: 'refused',
+        remote: 'origin',
+        message: parentNotPushedReason(BRANCH, { branch: parent, owner: '@api' }),
+      });
+      expect(remoteBranches()).not.toContain(BRANCH);
+      expect(entries).toHaveLength(1);
+      git('push', '-q', '--no-verify', 'origin', parent);
+      const pushed = await pushForAgent(deps(), stacked);
+      expect(pushed.outcome).toBe('pushed');
+      expect(remoteBranches()).toContain(BRANCH);
     });
   },
 );

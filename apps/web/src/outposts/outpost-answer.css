@@ -21,3 +21,11 @@
 .op-asked .op-post-head ~ .op-post-head {
   margin-top: 6px;
 }
+
+.op-activity {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

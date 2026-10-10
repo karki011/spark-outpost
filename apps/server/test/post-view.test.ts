@@ -29,6 +29,8 @@ const stored: StoredPost = {
   createdAt: '2026-10-09T10:00:00.000Z',
   attachmentIds: [],
   opening: false,
+  afterPostId: null,
+  userStarted: false,
 };
 
 const facts: RequestFacts = {
@@ -42,6 +44,7 @@ const facts: RequestFacts = {
   paused: false,
   held: null,
   chatDeleted: false,
+  waitingOn: null,
 };
 
 const answer = { text: 'A list of orders.', branch: null, changes: [], pullRequests: [] };
@@ -59,6 +62,42 @@ describe('the post the outpost page receives', () => {
       facts: { ...facts, sent: true, runStatus: 'succeeded' },
     };
     expect(toOutpostPost(found, answer)).toMatchObject({ state: 'answered', answer });
+  });
+
+  it('says why a turn failed in one plain line after whose turn it was', () => {
+    const failed: PostWithFacts = {
+      post: { ...stored, taskId: stored.id, runId: stored.id },
+      facts: { ...facts, sent: true, runStatus: 'failed' },
+      runError: '\n  The agent stopped:   no reply for a while.\nstack line two',
+    };
+    expect(toOutpostPost(failed, null)).toMatchObject({
+      state: 'failed',
+      reason: "@api's turn failed: The agent stopped: no reply for a while.",
+    });
+  });
+
+  it('keeps the short line when no reason was stored for the failed turn', () => {
+    const failed: PostWithFacts = {
+      post: { ...stored, taskId: stored.id, runId: stored.id },
+      facts: { ...facts, sent: true, runStatus: 'failed' },
+    };
+    expect(toOutpostPost(failed, null).reason).toBe("@api's turn failed");
+    expect(toOutpostPost({ ...failed, runError: '  \n ' }, null).reason).toBe("@api's turn failed");
+  });
+
+  it('adds no run error to a request that did not fail in its turn', () => {
+    const rejected: PostWithFacts = {
+      post: stored,
+      facts: { ...facts, closedState: 'rejected', closedReason: 'queue_full', runStatus: 'failed' },
+      runError: 'Something else.',
+    };
+    expect(toOutpostPost(rejected, null).reason).toBe('Not delivered: queue full');
+    const interrupted: PostWithFacts = {
+      post: stored,
+      facts: { ...facts, sent: true, runStatus: 'outcome_unknown' },
+      runError: 'Something else.',
+    };
+    expect(toOutpostPost(interrupted, null).reason).toBe("@api's turn was interrupted");
   });
 
   it('counts the files of a request and carries none of their ids', () => {
@@ -121,5 +160,42 @@ describe('the post the outpost page receives', () => {
       answer: null,
       exchanges: [],
     });
+  });
+
+  it('says which turn of which chat wrote a request, and whether the user started it', () => {
+    const runId = '44444444-4444-4444-8444-444444444444';
+    const asked: PostWithFacts = {
+      post: { ...stored, fromUser: false, fromHandle: 'fe', fromRunId: runId, userStarted: true },
+      facts,
+    };
+
+    expect(toOutpostPost(asked, null)).toMatchObject({
+      fromRunId: runId,
+      userStarted: true,
+      fromSpark: false,
+    });
+    expect(toOutpostPost({ post: stored, facts }, null)).toMatchObject({
+      fromRunId: null,
+      userStarted: false,
+      fromSpark: false,
+    });
+  });
+
+  it('marks a wrap-up as written by Spark', () => {
+    const wrapUp: PostWithFacts = { post: { ...stored, fromUser: false }, facts, wrapUp: true };
+
+    expect(toOutpostPost(wrapUp, null).fromSpark).toBe(true);
+  });
+
+  it('is held only while it waits for another request and the outpost is running', () => {
+    const waiting = { ...facts, waitingOn: 'api' };
+    const held = (found: RequestFacts) => toOutpostPost({ post: stored, facts: found }, null).held;
+
+    expect(held(waiting)).toBe(true);
+    expect(held({ ...facts, waitingOnDeleted: true })).toBe(true);
+    expect(held(facts)).toBe(false);
+    expect(held({ ...waiting, paused: true })).toBe(false);
+    expect(held({ ...waiting, closedState: 'cancelled' })).toBe(false);
+    expect(held({ ...waiting, sent: true })).toBe(false);
   });
 });

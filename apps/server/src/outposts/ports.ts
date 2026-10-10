@@ -2,10 +2,12 @@ import type {
   ClosedState,
   MemberRequest,
   Outpost,
+  OutpostDraft,
   OutpostMember,
   OutpostPostKind,
   RequestFacts,
   RequestState,
+  StoryPullState,
 } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import type { Observation } from '../persistence/observations.ts';
@@ -46,6 +48,8 @@ export interface StoredPost {
   createdAt: string;
   attachmentIds: string[];
   opening: boolean;
+  afterPostId: string | null;
+  userStarted: boolean;
 }
 
 export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'fromUser'> &
@@ -64,12 +68,16 @@ export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'f
       | 'observed'
       | 'attachmentIds'
       | 'opening'
+      | 'afterPostId'
+      | 'userStarted'
     >
   >;
 
 export interface PostWithFacts {
   post: StoredPost;
   facts: RequestFacts | null;
+  wrapUp?: boolean;
+  runError?: string;
 }
 
 export type StoredOutpost = Omit<Outpost, 'needsYou'>;
@@ -119,6 +127,88 @@ export interface PostStore {
   ): Promise<boolean>;
   setPinned(db: Queryable, postId: string, pinned: boolean): Promise<boolean>;
   unsentRequests(db: Queryable): Promise<StoredPost[]>;
+  heldRequests(db: Queryable): Promise<HeldRequest[]>;
+  releaseHold(db: Queryable, postId: string): Promise<boolean>;
+  markAnswersSeen(db: Queryable, postIds: readonly string[]): Promise<string[]>;
+}
+
+export interface HeldRequest {
+  post: StoredPost;
+  after: PostWithFacts;
+}
+
+export interface StoredDraft {
+  id: string;
+  workspaceId: string;
+  conversationId: string | null;
+  runId: string | null;
+  outpostId: string | null;
+  title: string;
+  body: OutpostDraft;
+  startedAt: string | null;
+  reportedAt: string | null;
+  createdAt: string;
+}
+
+export type NewDraft = Pick<StoredDraft, 'id' | 'workspaceId' | 'runId' | 'outpostId' | 'body'> & {
+  conversationId: string;
+};
+
+export interface DraftStore {
+  saveDraft(db: Queryable, draft: NewDraft): Promise<StoredDraft>;
+  getDraft(db: Queryable, workspaceId: string, id: string): Promise<StoredDraft | null>;
+  markStarted(db: Queryable, id: string, outpostId: string): Promise<boolean>;
+  markReported(db: Queryable, id: string): Promise<boolean>;
+  draftsOfChat(db: Queryable, workspaceId: string, conversationId: string): Promise<StoredDraft[]>;
+}
+
+export interface StoredStoryTask {
+  conversationId: string;
+  outpostId: string;
+  draftId: string | null;
+  leadConversationId: string | null;
+  title: string;
+  position: number;
+  dependsOnConversationId: string | null;
+  openingPostId: string | null;
+  createdAt: string;
+}
+
+export type NewStoryTask = Omit<StoredStoryTask, 'createdAt'>;
+
+export interface StoryPullRow {
+  number: number;
+  url: string;
+  state: StoryPullState;
+  draft: boolean;
+  base: string | null;
+  headSha: string | null;
+}
+
+export interface StoryTaskRow {
+  task: StoredStoryTask;
+  handle: string;
+  storyTitle: string | null;
+  leadHandle: string | null;
+  projectId: string | null;
+  repoRoot: string | null;
+  branch: string | null;
+  baseBranch: string | null;
+  ownsBranch: boolean;
+  pull: StoryPullRow | null;
+  opening: PostWithFacts | null;
+}
+
+export interface StoryStore {
+  insertTasks(db: Queryable, tasks: NewStoryTask[]): Promise<StoredStoryTask[]>;
+  storiesOf(db: Queryable, outpostId: string): Promise<StoryTaskRow[]>;
+  storyTaskOf(db: Queryable, conversationId: string): Promise<StoryTaskRow | null>;
+  removeTask(db: Queryable, conversationId: string): Promise<boolean>;
+}
+
+export interface StackGit {
+  isAncestor(repoRoot: string, ancestor: string, descendant: string): Promise<boolean>;
+  branchOnRemote(repoRoot: string, branch: string): Promise<boolean>;
 }
 
 export interface OutboundRequest {

@@ -63,6 +63,8 @@ const REFUSALS: Record<AcceptRefusal, () => Error> = {
   too_long: () => new RequestMalformedError('The request text is too long.'),
   closed: () =>
     new UnsupportedOperationError('That request was closed before it reached this chat.'),
+  held: () =>
+    new UnsupportedOperationError('That request is waiting for another request to be answered.'),
 };
 
 function isUuid(value: string): boolean {

@@ -4,7 +4,8 @@ import {
   type FirstMessage,
   type StartMember,
 } from '@spark-outpost/contracts';
-import { listedChats, type ChatDraft, type CreateDraft } from './create-draft.ts';
+import { listedChats, memberId, type ChatDraft, type CreateDraft } from './create-draft.ts';
+import { parentOf } from './story-draft.ts';
 
 const EXCERPT_MAX = 120;
 
@@ -25,9 +26,15 @@ export function messageExcerpt(chat: ChatDraft): string | null {
   return message ? clipAtWord(message.text.replace(/\s+/g, ' '), EXCERPT_MAX) : null;
 }
 
-function startMember(chat: ChatDraft): StartMember | null {
+function startMember(chat: ChatDraft, draft: CreateDraft): StartMember | null {
   const message = firstMessageOf(chat);
-  const shared = { handle: chat.handle, ...(message ? { firstMessage: message } : {}) };
+  const parent = parentOf(draft, chat);
+  const dependsOn = parent ? memberId(parent) : null;
+  const shared = {
+    handle: chat.handle,
+    ...(message ? { firstMessage: message } : {}),
+    ...(dependsOn ? { dependsOn } : {}),
+  };
   if (chat.kind === 'existing') {
     return chat.chatId === null ? null : { conversationId: chat.chatId, ...shared };
   }
@@ -39,6 +46,7 @@ function startMember(chat: ChatDraft): StartMember | null {
       provider: chat.provider,
       model: chat.model,
       agentMode: chat.agentMode,
+      ...(chat.level ? { level: chat.level } : {}),
     },
     ...shared,
   };
@@ -49,8 +57,9 @@ export function buildCreateRequest(outpostId: string, draft: CreateDraft): Creat
     id: outpostId,
     name: draft.name.trim(),
     members: listedChats(draft)
-      .map(startMember)
+      .map((chat) => startMember(chat, draft))
       .filter((member): member is StartMember => member !== null),
+    ...(draft.origin ? { draftId: draft.origin.draftId } : {}),
   };
 }
 

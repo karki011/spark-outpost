@@ -1,4 +1,9 @@
-import { isApprovalEvent } from '@spark-outpost/contracts';
+import {
+  EventType,
+  OUTPOST_DRAFT_ACTIVITY,
+  isApprovalEvent,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import type { IntakeRecorder } from '../advisor/intake-recorder.ts';
@@ -19,10 +24,17 @@ export interface ExecuteRunDeps extends TurnDeps {
   intake?: IntakeRecorder;
 }
 
+function shownInTheChat(event: RunEvent): boolean {
+  if (isApprovalEvent(event)) return true;
+  return (
+    event.type === EventType.ACTIVITY_SNAPSHOT && event.activityType === OUTPOST_DRAFT_ACTIVITY
+  );
+}
+
 function mirroringApprovals(own: Append, parent: Append): Append {
   return async (event, options) => {
     const seq = await own(event, options);
-    if (isApprovalEvent(event)) await parent(event);
+    if (shownInTheChat(event)) await parent(event);
     return seq;
   };
 }

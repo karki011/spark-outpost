@@ -12,6 +12,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   publish: false,
   pull_request_create: false,
   browser: false,
+  outpost: false,
+  outpost_draft: false,
 };
 
 export const SESSION_CASES = {
@@ -21,6 +23,12 @@ export const SESSION_CASES = {
     project: true,
     publish: true,
     pull_requests: true,
+    outpost_draft: true,
+  },
+  'chat in an outpost, nothing connected': {
+    ...NOTHING_AVAILABLE,
+    outpost: true,
+    outpost_draft: true,
   },
   'everything connected, Browser pane': EVERYTHING_AVAILABLE,
 } satisfies Record<string, SparkAvailability>;

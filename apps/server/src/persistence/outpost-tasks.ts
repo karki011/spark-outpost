@@ -35,7 +35,8 @@ export type AcceptRefusal =
   | 'id_taken'
   | 'empty'
   | 'too_long'
-  | 'closed';
+  | 'closed'
+  | 'held';
 
 export type AcceptOutcome =
   | { kind: 'accepted'; postId: string; taskId: string; queued: boolean }
@@ -64,6 +65,7 @@ interface PostRow {
   task_id: string | null;
   run_id: string | null;
   closed_state: string | null;
+  after_post_id: string | null;
 }
 
 interface DeliveryFacts {
@@ -73,7 +75,7 @@ interface DeliveryFacts {
 }
 
 const POST_COLUMNS =
-  'id, outpost_id, kind, body, to_conversation_id, guest, task_id, run_id, closed_state';
+  'id, outpost_id, kind, body, to_conversation_id, guest, task_id, run_id, closed_state, after_post_id';
 
 export function deliveryProblem(facts: DeliveryFacts): RejectReason | null {
   if (!facts.mayReceive) return 'not_member';
@@ -245,6 +247,7 @@ export function acceptTask(
       return { kind: 'accepted', postId: post.id, taskId: post.task_id, queued: false };
     }
     if (post.closed_state !== null) return { kind: 'refused', why: 'closed' };
+    if (post.after_post_id !== null) return { kind: 'refused', why: 'held' };
     const outcome = await deliver(client, post, chatId, chat.archived);
     await notifyOutpostChanged(client, post.outpost_id);
     return outcome;

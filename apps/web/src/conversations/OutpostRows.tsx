@@ -1,19 +1,33 @@
 import './outpost-rows.css';
+import type { ReactNode } from 'react';
 import type { Outpost } from '@spark-outpost/contracts';
-import { OutpostIcon, PlusIcon } from '../ui/icons.tsx';
+import { PlusIcon } from '../ui/icons.tsx';
+import { OutpostGroup } from './OutpostGroup.tsx';
+import type { MemberChat, OutpostMembers } from './outpost-members.ts';
 
-export function needsYouLabel(count: number): string {
-  return count === 1 ? '1 needs you' : `${count} need you`;
-}
+const NO_MEMBERS: readonly MemberChat[] = [];
 
 interface OutpostRowsProps {
   outposts: readonly Outpost[];
+  members: OutpostMembers;
   openId: string | null;
+  isOpen: (outpostId: string) => boolean;
+  onToggle: (outpostId: string) => void;
   onOpen: (outpostId: string) => void;
   onNew?: (() => void) | undefined;
+  renderMembers: (outpostId: string, members: readonly MemberChat[]) => ReactNode;
 }
 
-export function OutpostRows({ outposts, openId, onOpen, onNew }: OutpostRowsProps) {
+export function OutpostRows({
+  outposts,
+  members,
+  openId,
+  isOpen,
+  onToggle,
+  onOpen,
+  onNew,
+  renderMembers,
+}: OutpostRowsProps) {
   return (
     <section aria-label="Outposts">
       <div className="sec">
@@ -32,32 +46,22 @@ export function OutpostRows({ outposts, openId, onOpen, onNew }: OutpostRowsProp
       </div>
       {outposts.length > 0 && (
         <ul className="rows">
-          {outposts.map((outpost) => (
-            <li
-              key={outpost.id}
-              className={outpost.id === openId ? 'proj op-row active' : 'proj op-row'}
-            >
-              <button
-                type="button"
-                className="proj-head"
-                aria-label={
-                  outpost.needsYou > 0
-                    ? `${outpost.name}, ${needsYouLabel(outpost.needsYou)}`
-                    : undefined
-                }
-                aria-current={outpost.id === openId ? 'page' : undefined}
-                onClick={() => onOpen(outpost.id)}
+          {outposts.map((outpost) => {
+            const listed = members.get(outpost.id) ?? NO_MEMBERS;
+            return (
+              <OutpostGroup
+                key={outpost.id}
+                outpost={outpost}
+                current={outpost.id === openId}
+                open={isOpen(outpost.id)}
+                count={listed.length}
+                onOpen={() => onOpen(outpost.id)}
+                onToggle={() => onToggle(outpost.id)}
               >
-                <OutpostIcon />
-                <span className="nm">{outpost.name}</span>
-                {outpost.needsYou > 0 && (
-                  <span className="op-needs" title={`Needs you: ${outpost.needsYou}`}>
-                    {outpost.needsYou}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
+                {renderMembers(outpost.id, listed)}
+              </OutpostGroup>
+            );
+          })}
         </ul>
       )}
     </section>

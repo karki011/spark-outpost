@@ -80,6 +80,7 @@ describe('the facts a request state is derived from', () => {
       paused: false,
       held: null,
       chatDeleted: false,
+      waitingOn: null,
     });
     expect(requestState(found!.facts!)).toEqual({ state: 'sent', reason: 'Not sent yet' });
   });

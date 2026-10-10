@@ -253,3 +253,5 @@ export function useChatActions({
     remove,
   };
 }
+
+export type ChatActions = ReturnType<typeof useChatActions>;

@@ -21,6 +21,7 @@ interface ChatRowProps {
   settling: boolean;
   flash: boolean;
   index: number;
+  handle?: string | undefined;
   onOpen: (id: string) => void;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
@@ -145,7 +146,8 @@ function HistoryActions({
 }
 
 export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
-  const { chat, selected, renaming, sortable, settling, flash, onOpen, onMenu, onRename } = props;
+  const { chat, selected, renaming, sortable, settling, flash, handle } = props;
+  const { onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
   const slide = useSortableMotion();
@@ -196,6 +198,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   };
   const tooltip = [
     chat.title,
+    handle ? `@${handle}` : null,
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
@@ -258,7 +261,14 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
               />
               {chat.pullRequestMerged && <MergedMark />}
             </span>
-            {state.sub && <small className="sub">{state.sub}</small>}
+            {handle ? (
+              <span className="row-member">
+                <span className="row-handle">@{handle}</span>
+                {state.sub && <small className="sub">{state.sub}</small>}
+              </span>
+            ) : (
+              state.sub && <small className="sub">{state.sub}</small>
+            )}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>
         </button>

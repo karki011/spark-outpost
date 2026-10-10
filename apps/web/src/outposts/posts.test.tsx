@@ -13,6 +13,7 @@ interface Handlers {
   onAnswer: ReturnType<typeof vi.fn<(post: OutpostPost) => void>>;
   onCancel: ReturnType<typeof vi.fn<(postId: string) => void>>;
   onOpenChat: ReturnType<typeof vi.fn<(conversationId: string) => void>>;
+  onStartNow: ReturnType<typeof vi.fn<(postId: string) => void>>;
 }
 
 function renderRequest(request: OutpostPost, answering = false, answerable = true): Handlers {
@@ -20,6 +21,7 @@ function renderRequest(request: OutpostPost, answering = false, answerable = tru
     onAnswer: vi.fn<(post: OutpostPost) => void>(),
     onCancel: vi.fn<(postId: string) => void>(),
     onOpenChat: vi.fn<(conversationId: string) => void>(),
+    onStartNow: vi.fn<(postId: string) => void>(),
   };
   render(
     <ol>
@@ -66,7 +68,43 @@ describe('RequestPost', () => {
 
   it('names the asking chat for a request another chat wrote', () => {
     renderRequest(post(1, { fromUser: false, fromConversationId: FE_CHAT, fromHandle: 'fe' }));
-    expect(screen.getByRole('listitem').textContent).toContain('@feto@api');
+    expect(screen.getByRole('listitem').textContent).toContain('@fenot from youto@api');
+    expect(document.querySelectorAll('.op-post-head .chat-face')).toHaveLength(2);
+  });
+
+  it('does not mark a request the user wrote', () => {
+    renderRequest(post(1));
+    expect(screen.queryByText('not from you')).toBeNull();
+  });
+
+  it('offers Start anyway on a request that waits for another chat', () => {
+    const waiting = post(1, { reason: 'Waiting for @fe', held: true });
+    const handlers = renderRequest(waiting);
+    expect(screen.getByText('Waiting for @fe')).toBeTruthy();
+    expect(buttons()).toEqual(['Start anyway', 'Cancel', 'Open in chat']);
+    fireEvent.click(screen.getByRole('button', { name: 'Start the request to @api anyway' }));
+    expect(handlers.onStartNow).toHaveBeenCalledWith(waiting.id);
+  });
+
+  it('offers Start anyway when the chat it waits for was deleted', () => {
+    renderRequest(post(1, { reason: 'Waiting for a deleted chat', held: true }));
+    expect(buttons()).toContain('Start anyway');
+  });
+
+  it.each([
+    ['Not sent yet', 'sent'],
+    ['Paused', 'sent'],
+    ["Waiting: @api's last turn failed", 'sent'],
+    ['Waiting for @fe', 'sent'],
+  ] as const)('does not offer Start anyway for "%s" while %s and not held', (reason, state) => {
+    renderRequest(post(1, { reason, state }));
+    expect(buttons()).not.toContain('Start anyway');
+  });
+
+  it('names Spark as the writer of a story wrap-up, and still says it is not from you', () => {
+    renderRequest(post(1, { fromUser: false, fromSpark: true }));
+    expect(screen.getByRole('listitem').textContent).toContain('Sparknot from youto@api');
+    expect(document.querySelectorAll('.op-post-head .chat-face')).toHaveLength(1);
   });
 
   it('draws the blob of each chat in the request, the receiver with the request state', () => {

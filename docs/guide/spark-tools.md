@@ -50,6 +50,19 @@ The agent proposes, and Spark does it.
 
 An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
 
+## Outpost tools
+
+A chat in an [outpost](outposts.md) gets these. None shows a card.
+
+| The agent wants to                               | Tool                  |
+| ------------------------------------------------ | --------------------- |
+| Read the outpost: members, requests, answers     | `spark_outpost`       |
+| Ask another chat, and wait for its answer or not | `spark_outpost_ask`   |
+| Leave a note for the other chats                 | `spark_outpost_note`  |
+| Propose sub-task chats that you review and start | `spark_outpost_draft` |
+
+Any chat with a project gets `spark_outpost_draft`. Pieces get none. What another chat wrote is never your message.
+
 ## When actions ask first
 
 | Agent mode                                                              | Spark                                                    |

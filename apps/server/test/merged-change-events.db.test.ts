@@ -62,11 +62,33 @@ describe('change events after every migration', () => {
     await saw('outpost_changed', (event) => event.outpostId === outpostId);
   });
 
+  it('announces the outpost when a member chat pull request changes base', async () => {
+    seen.length = 0;
+    await t.db.query(`UPDATE pr_watches SET base = 'spark/parent' WHERE conversation_id = $1`, [
+      chat.conversationId,
+    ]);
+    await saw('outpost_changed', (event) => event.outpostId === outpostId);
+  });
+
+  it('announces the outpost when a pull request is first seen and when a story task is added', async () => {
+    seen.length = 0;
+    await agentOpens(t, chat, 'https://github.com/acme/widgets/pull/8');
+    await saw('outpost_changed', (event) => event.outpostId === outpostId);
+    seen.length = 0;
+    await t.db.query(
+      `INSERT INTO outpost_story_tasks (conversation_id, outpost_id, title, position)
+       VALUES ($1, $2, 'Orders endpoint', 0)`,
+      [chat.conversationId, outpostId],
+    );
+    await saw('outpost_changed', (event) => event.outpostId === outpostId);
+  });
+
   it('keeps both sets of triggers', async () => {
     const { rows } = await t.db.query<{ tgname: string }>(
       `SELECT tgname FROM pg_trigger
         WHERE NOT tgisinternal
-          AND tgrelid IN ('pr_watches'::regclass, 'runs'::regclass, 'outpost_posts'::regclass)`,
+          AND tgrelid IN ('pr_watches'::regclass, 'runs'::regclass, 'outpost_posts'::regclass,
+            'outpost_story_tasks'::regclass)`,
     );
     expect(rows.map((row) => row.tgname)).toEqual(
       expect.arrayContaining([
@@ -75,6 +97,9 @@ describe('change events after every migration', () => {
         'runs_status_outpost_change',
         'outpost_posts_insert_change',
         'outpost_posts_state_change',
+        'pr_watches_insert_outpost_change',
+        'pr_watches_state_outpost_change',
+        'outpost_story_tasks_insert_change',
       ]),
     );
   });

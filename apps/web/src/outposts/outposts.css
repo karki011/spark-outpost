@@ -65,15 +65,15 @@
 
 .op-member-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  column-gap: 8px;
   min-width: 0;
 }
 
 .op-member-top b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13.5px;
   font-weight: 500;
 }

@@ -72,7 +72,53 @@
   margin-left: auto;
 }
 
+.op-asks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+  color: var(--faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.op-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  max-width: 100%;
+  padding-left: 8px;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--raise);
+  overflow-wrap: anywhere;
+}
+
+.op-ask-skip {
+  position: relative;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.op-ask-skip:hover {
+  color: var(--text);
+  background: var(--line);
+}
+
+.op-ask-skip .xic {
+  width: 11px;
+  height: 11px;
+  color: inherit;
+}
+
 @media (pointer: coarse) {
+  .op-ask-skip::before,
   .op-answering-stop::before {
     content: '';
     position: absolute;
@@ -88,4 +134,8 @@
   .op-composer .comp-bar {
     flex-wrap: wrap;
   }
+}
+
+.op-composer textarea {
+  --composer-rows: 8;
 }

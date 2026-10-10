@@ -10,6 +10,9 @@ import {
   PUBLISH_LATER_RULE,
   PUBLISH_TURN_HEADING,
   publishTurnPrompt,
+  mainAgentPublishNote,
+  publishRule,
+  pullBaseLine,
   PATCH_LIMIT,
   LATEST_REQUEST_RULE,
   PLAN_FOLLOW_RULE,
@@ -87,6 +90,31 @@ describe('context assembly', () => {
     expect(prompt).toContain('- Jev could not verify this change');
     expect(prompt).toMatch(/Never force-push, push any other branch or the base branch/);
     expect(prompt).toMatch(/no `--no-verify`/);
+  });
+
+  it("names the pull request base only for a chat built on another chat's branch", () => {
+    const turn = { branch: 'spark/web-5e', draft: false, titlePrefix: null, notes: [] };
+    expect(publishTurnPrompt(turn)).not.toContain('--base');
+    const stacked = publishTurnPrompt({ ...turn, base: 'spark/api-1a' });
+    expect(stacked).toContain(pullBaseLine('spark/api-1a'));
+    expect(stacked).toContain('`gh pr create --base spark/api-1a`');
+    expect(stacked).toContain('Leave the base of a pull request that already exists as it is');
+    expect(stacked).toMatch(/Never force-push/);
+    const followUp = publishTurnPrompt({ ...turn, base: 'spark/api-1a', followUp: true });
+    expect(followUp).not.toContain('--base');
+  });
+
+  it('names that base wherever the agent is told it may open the pull request itself', () => {
+    expect(mainAgentPublishNote('spark/web-5e')).not.toContain('--base');
+    expect(mainAgentPublishNote('spark/web-5e', 'spark/api-1a')).toContain(
+      pullBaseLine('spark/api-1a'),
+    );
+    const brief = { basis: 'mode', branch: 'spark/web-5e' } as const;
+    expect(publishRule(brief)).not.toContain('--base');
+    expect(publishRule({ ...brief, base: 'spark/api-1a' })).toContain(pullBaseLine('spark/api-1a'));
+    expect(publishRule({ basis: 'full_auto', branch: 'spark/web-5e', base: 'spark/api-1a' })).toBe(
+      PUBLISH_LATER_RULE,
+    );
   });
 
   it('asks a follow-up round only to push the fix to the existing pull request', () => {

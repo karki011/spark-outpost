@@ -8,6 +8,12 @@ export interface PlaceFacts {
   local: readonly string[];
   remote: ReadonlyMap<string, string>;
   checkedOutElsewhere: boolean;
+  stackOn?: StackOn | null;
+}
+
+export interface StackOn {
+  branch: string;
+  owner: string;
 }
 
 export type PlaceDecision =
@@ -33,7 +39,24 @@ function missing(requested: string, preference: WorkPlace): PlaceDecision {
   return { kind: 'new', from: null, note };
 }
 
+function stackedOn(facts: PlaceFacts): StackOn | null {
+  const stackOn = facts.stackOn ?? null;
+  if (!stackOn || !facts.local.includes(stackOn.branch)) return null;
+  if (facts.requested) return facts.requested === stackOn.branch ? stackOn : null;
+  return facts.preference === 'checkout' ? null : stackOn;
+}
+
+function onStack(stackOn: StackOn): PlaceDecision {
+  return {
+    kind: 'new',
+    from: stackOn.branch,
+    note: `This chat's branch starts from ${stackOn.owner}'s branch ${stackOn.branch}, and its pull request targets that branch.`,
+  };
+}
+
 export function decidePlace(facts: PlaceFacts): PlaceDecision {
+  const stackOn = stackedOn(facts);
+  if (stackOn) return onStack(stackOn);
   const requested = facts.requested;
   if (requested) {
     if (requested === facts.current) {

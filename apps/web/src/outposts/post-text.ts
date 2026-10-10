@@ -36,6 +36,7 @@ export function postAnchor(postId: string): string {
 
 export function senderName(post: OutpostPost): string {
   if (post.fromUser) return 'You';
+  if (post.fromSpark) return 'Spark';
   return post.fromHandle ? `@${post.fromHandle}` : 'A removed chat';
 }
 

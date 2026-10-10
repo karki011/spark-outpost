@@ -1,11 +1,10 @@
 import type { AppEvent } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dispatchUnsent, startDispatcher } from '../src/a2a/dispatcher.ts';
-import type { PeerAgent, SendOutcome } from '../src/outposts/ports.ts';
-import { acceptTask } from '../src/persistence/outpost-tasks.ts';
+import type { PeerAgent } from '../src/outposts/ports.ts';
 import { postColumns } from './a2a-fixtures.ts';
 import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
-import { fakePeerAgent } from './fake-peer-agent.ts';
+import { acceptingPeer as sharedPeer } from './accepting-peer.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -23,23 +22,7 @@ afterEach(async () => {
 });
 
 function acceptingPeer() {
-  const failing = new Set<string>();
-  const peer = fakePeerAgent({
-    async send(request): Promise<SendOutcome> {
-      if (failing.has(request.postId)) throw new Error('connection refused');
-      const outcome = await acceptTask(t.db, request.toConversationId, {
-        messageId: request.postId,
-        contextId: request.outpostId,
-        text: request.body,
-      });
-      if (outcome.kind === 'refused') throw new Error(outcome.why);
-      return {
-        accepted: outcome.kind === 'accepted',
-        task: { taskId: outcome.taskId, state: 'sent', reason: null },
-      };
-    },
-  });
-  return Object.assign(peer, { failing });
+  return sharedPeer(t);
 }
 
 function deps(peer: PeerAgent) {

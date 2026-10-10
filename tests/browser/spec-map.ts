@@ -152,7 +152,16 @@ export const SPEC_GROUPS = {
   home: ['companion', 'digest', 'home', 'live-updates', 'today'],
   'analytics-audit': ['analytics', 'audit'],
   map: ['project-map', 'project-map-states', 'project-map-views'],
-  outposts: ['outpost-answers', 'outpost-create', 'outposts'],
+  outposts: [
+    'outpost-address',
+    'outpost-answers',
+    'outpost-create',
+    'outpost-sidebar',
+    'outpost-story-bar',
+    'outposts',
+    'outposts-agents',
+    'outposts-story',
+  ],
   'island-desktop': [
     'boot-screen',
     'desktop-companion',

@@ -142,8 +142,20 @@ function publishSteps(branch: string): string {
 const PUBLISH_REPORT_RULE =
   'Spark records the pull request from the command output, so give the user its link. If the branch is pushed but no pull request could be opened, say so plainly. Say a card is waiting only when a tool returned waiting_for_user.';
 
-export function mainAgentPublishNote(branch: string): string {
-  return `The user asked for this to be pushed or opened as a pull request. Do it yourself: ${publishSteps(branch)} ${PUBLISH_REPORT_RULE}`;
+export function pullBaseLine(base: string): string {
+  return `Open the pull request against ${base}: \`gh pr create --base ${base}\` (\`spark_pull_request\` already uses that base). Leave the base of a pull request that already exists as it is.`;
+}
+
+function baseLines(base: string | null | undefined): string[] {
+  return base ? [pullBaseLine(base)] : [];
+}
+
+export function mainAgentPublishNote(branch: string, base: string | null = null): string {
+  return [
+    `The user asked for this to be pushed or opened as a pull request. Do it yourself: ${publishSteps(branch)}`,
+    ...baseLines(base),
+    PUBLISH_REPORT_RULE,
+  ].join(' ');
 }
 
 export const PUBLISH_LATER_RULE =
@@ -152,7 +164,10 @@ export const PUBLISH_LATER_RULE =
 export function publishRule(publish: PublishBrief | null | undefined): string {
   if (!publish) return SHIP_RULE;
   if (publish.basis !== 'mode') return PUBLISH_LATER_RULE;
-  return `Leave the change in the working tree unless the user asks you to publish it. If they ask, ${publishSteps(publish.branch)}`;
+  return [
+    `Leave the change in the working tree unless the user asks you to publish it. If they ask, ${publishSteps(publish.branch)}`,
+    ...baseLines(publish.base),
+  ].join(' ');
 }
 
 export const PUBLISH_TURN_HEADING = '## Publish this change';
@@ -164,6 +179,7 @@ export interface PublishTurn {
   notes: readonly string[];
   followUp?: boolean;
   unrelatedFailures?: boolean;
+  base?: string | null;
 }
 
 export const UNRELATED_FAILURES_RULE =
@@ -184,6 +200,7 @@ export function publishTurnPrompt(turn: PublishTurn): string {
     `The work on this task is finished and checked. Publish it now, in this turn, and change nothing else: ${publishSteps(turn.branch)}`,
     'Open exactly one pull request for the whole change; when one already exists for this branch, push to it and update its description instead of opening another.',
   ];
+  lines.push(...baseLines(turn.base));
   if (turn.draft) lines.push('Open it as a draft (`gh pr create --draft`, or `draft: true`).');
   if (turn.titlePrefix) lines.push(`Start the pull request title with "${turn.titlePrefix}".`);
   if (turn.unrelatedFailures && !turn.titlePrefix) lines.push(UNRELATED_FAILURES_RULE);

@@ -1,10 +1,10 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import {
   NAME,
   TURN_TIMEOUT,
+  inBothThemes,
   openOutpost,
   outpostRow,
   post,
@@ -13,40 +13,15 @@ import {
   stateOf,
 } from './outposts-kit.ts';
 
-const SHOTS = process.env.SPARK_REVIEW_SHOTS;
 const NOTES_PATH =
   '/private/tmp/claude-501/-Users-example-Documents-spark-outpost/a4615ee5-3825-46d0-81c0-2f27f5a5f811/scratchpad/real-outposts/api/NOTES.md';
 const COMMENTARY = 'I will read the message before I answer.';
-const THEMES = [
-  ['light', 'light'],
-  ['dark', 'graphite'],
-] as const;
 
 test.beforeEach(async ({ page }) => {
   test.slow();
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1400, height: 900 });
 });
-
-async function inBothThemes(page: Page, name: string, check: () => Promise<void>): Promise<void> {
-  const root = page.locator('html');
-  const before = await root.getAttribute('data-skin');
-  for (const [scheme, skin] of THEMES) {
-    await root.evaluate((html, value) => (html.dataset.skin = value), skin);
-    await page.waitForTimeout(300);
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}-${name}-${scheme}.png` });
-    await check();
-    const results = await new AxeBuilder({ page })
-      .include('.main.op')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .analyze();
-    expect(results.violations.map((violation) => violation.id)).toEqual([]);
-  }
-  await root.evaluate((html, value) => {
-    if (value === null) delete html.dataset.skin;
-    else html.dataset.skin = value;
-  }, before);
-}
 
 test('an answer is drawn as Markdown and is the final reply, without the commentary', async ({
   page,

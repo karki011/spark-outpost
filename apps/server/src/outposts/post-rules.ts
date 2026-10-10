@@ -1,14 +1,38 @@
-import type { OutpostMember, PostAddress } from '@spark-outpost/contracts';
+import { addressees, type OutpostMember, type PostAddress } from '@spark-outpost/contracts';
 import type { NewPost, RequestAuthor } from './ports.ts';
 
-export const ONLY_USER_POSTS = 'Only you can post in an outpost for now.';
-export const ALL_NOT_AVAILABLE =
-  '@all is not available yet. Address one chat at a time, for example @api.';
+export const NO_CHATS_TO_ASK = 'There is no chat in this outpost to ask yet.';
 export const GUESTS_NOT_AVAILABLE =
   'Asking a chat outside the outpost is not available yet. Add the chat to the outpost first.';
 
+export const CHATS_CANNOT_ASK_ALL = 'A chat cannot ask @all. Address one chat, for example @api.';
+export const AUTHOR_NOT_MEMBER = 'This chat is not in that outpost.';
+export const CANNOT_ASK_SELF = 'A chat cannot send a request to itself.';
+export const OUTPOST_PAUSED = 'The outpost is paused. Requests wait until the user resumes it.';
+export const REQUEST_STARTED_TURN =
+  "This turn was started by another chat's request, so it cannot send requests. Answer in your reply.";
+
 export function notMemberRefusal(handle: string): string {
   return `@${handle} is not in this outpost.`;
+}
+
+export function notAddressedRefusal(handle: string): string {
+  return `The message does not address @${handle}.`;
+}
+
+export type PlanAddress = PostAddress | { kind: 'several'; to: readonly string[]; body: string };
+
+export function keptProblem(
+  kept: readonly string[],
+  text: string,
+  handles: readonly string[],
+): string | null {
+  const addressed = addressees(text, handles);
+  for (const handle of kept) {
+    if (!handles.includes(handle)) return notMemberRefusal(handle);
+    if (!addressed.includes(handle)) return notAddressedRefusal(handle);
+  }
+  return null;
 }
 
 export type PlannedPost = Omit<NewPost, 'id'>;
@@ -32,31 +56,31 @@ function refusal(message: string): Refusal {
   return { kind: 'refusal', message };
 }
 
-function userRequest(
-  to: string,
+function userRequests(
+  to: readonly string[],
   body: string,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
 ): PostPlan | Refusal {
-  const member = members.find((candidate) => candidate.handle === to);
-  if (!member) return refusal(notMemberRefusal(to));
-  return {
-    kind: 'plan',
-    posts: [
-      {
-        outpostId: outpost.id,
-        kind: 'request',
-        body,
-        fromUser: true,
-        toHandle: member.handle,
-        toConversationId: member.conversationId,
-      },
-    ],
-  };
+  if (to.length === 0) return refusal(NO_CHATS_TO_ASK);
+  const posts: PlannedPost[] = [];
+  for (const handle of to) {
+    const member = members.find((candidate) => candidate.handle === handle);
+    if (!member) return refusal(notMemberRefusal(handle));
+    posts.push({
+      outpostId: outpost.id,
+      kind: 'request',
+      body,
+      fromUser: true,
+      toHandle: member.handle,
+      toConversationId: member.conversationId,
+    });
+  }
+  return { kind: 'plan', posts };
 }
 
 function userPost(
-  address: PostAddress,
+  address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
   guestConversationId: string | null,
@@ -64,9 +88,16 @@ function userPost(
   if (guestConversationId !== null) return refusal(GUESTS_NOT_AVAILABLE);
   switch (address.kind) {
     case 'all':
-      return refusal(ALL_NOT_AVAILABLE);
+      return userRequests(
+        members.map((member) => member.handle),
+        address.body,
+        members,
+        outpost,
+      );
+    case 'several':
+      return userRequests(address.to, address.body, members, outpost);
     case 'request':
-      return userRequest(address.to, address.body, members, outpost);
+      return userRequests([address.to], address.body, members, outpost);
     case 'note':
       return {
         kind: 'plan',
@@ -75,9 +106,80 @@ function userPost(
   }
 }
 
+type ChatAuthor = Extract<RequestAuthor, { kind: 'chat' }>;
+
+function chatOrigin(author: ChatAuthor, handle: string) {
+  return {
+    fromUser: false,
+    fromConversationId: author.conversationId,
+    fromHandle: handle,
+    fromRunId: author.runId,
+  };
+}
+
+function chatRequest(
+  author: ChatAuthor,
+  sender: OutpostMember,
+  address: Extract<PostAddress, { kind: 'request' }>,
+  members: readonly OutpostMember[],
+  outpost: PlanOutpost,
+): PostPlan | Refusal {
+  if (author.startedByRequest) return refusal(REQUEST_STARTED_TURN);
+  if (outpost.paused) return refusal(OUTPOST_PAUSED);
+  const member = members.find((candidate) => candidate.handle === address.to);
+  if (!member) return refusal(notMemberRefusal(address.to));
+  if (member.conversationId === sender.conversationId) return refusal(CANNOT_ASK_SELF);
+  return {
+    kind: 'plan',
+    posts: [
+      {
+        outpostId: outpost.id,
+        kind: 'request',
+        body: address.body,
+        ...chatOrigin(author, sender.handle),
+        toHandle: member.handle,
+        toConversationId: member.conversationId,
+      },
+    ],
+  };
+}
+
+function chatPost(
+  author: ChatAuthor,
+  address: PlanAddress,
+  members: readonly OutpostMember[],
+  outpost: PlanOutpost,
+  guestConversationId: string | null,
+): PostPlan | Refusal {
+  if (guestConversationId !== null) return refusal(GUESTS_NOT_AVAILABLE);
+  const sender = members.find((member) => member.conversationId === author.conversationId);
+  if (!sender) return refusal(AUTHOR_NOT_MEMBER);
+  switch (address.kind) {
+    case 'all':
+    case 'several':
+      return author.startedByRequest
+        ? refusal(REQUEST_STARTED_TURN)
+        : refusal(CHATS_CANNOT_ASK_ALL);
+    case 'request':
+      return chatRequest(author, sender, address, members, outpost);
+    case 'note':
+      return {
+        kind: 'plan',
+        posts: [
+          {
+            outpostId: outpost.id,
+            kind: 'note',
+            body: address.body,
+            ...chatOrigin(author, sender.handle),
+          },
+        ],
+      };
+  }
+}
+
 export function planPost(
   author: RequestAuthor,
-  address: PostAddress,
+  address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
   guestConversationId: string | null = null,
@@ -86,6 +188,6 @@ export function planPost(
     case 'user':
       return userPost(address, members, outpost, guestConversationId);
     case 'chat':
-      return refusal(ONLY_USER_POSTS);
+      return chatPost(author, address, members, outpost, guestConversationId);
   }
 }

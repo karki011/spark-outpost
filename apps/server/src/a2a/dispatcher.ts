@@ -1,7 +1,9 @@
 import type { AppEvent } from '@spark-outpost/contracts';
 import type { PeerAgent } from '../outposts/ports.ts';
+import { queueWrapUps } from '../outposts/story-wrap-ups.ts';
 import type { Db } from '../persistence/db.ts';
 import { unsentRequests } from '../persistence/outpost-posts.ts';
+import { releaseAnswered } from './hold-release.ts';
 
 export interface DispatchDeps {
   db: Db;
@@ -15,6 +17,14 @@ export interface Dispatcher {
 
 function errorName(error: unknown): string {
   return error instanceof Error ? error.name : 'unknown error';
+}
+
+async function attempt(failure: string, step: () => Promise<unknown>): Promise<void> {
+  try {
+    await step();
+  } catch (error) {
+    console.error(`${failure} (${errorName(error)}).`);
+  }
 }
 
 export async function dispatchUnsent(db: Db, peer: PeerAgent): Promise<number> {
@@ -44,11 +54,9 @@ export function startDispatcher(deps: DispatchDeps): Dispatcher {
   async function passes(): Promise<void> {
     do {
       again = false;
-      try {
-        await dispatchUnsent(deps.db, deps.peer);
-      } catch (error) {
-        console.error(`Outpost requests were not sent (${errorName(error)}).`);
-      }
+      await attempt('Held outpost requests were not released', () => releaseAnswered(deps.db));
+      await attempt('Story wrap-ups were not written', () => queueWrapUps(deps.db));
+      await attempt('Outpost requests were not sent', () => dispatchUnsent(deps.db, deps.peer));
     } while (again && !closed);
     running = null;
   }

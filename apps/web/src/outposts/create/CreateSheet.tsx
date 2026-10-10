@@ -57,9 +57,10 @@ export function CreateSheet(props: CreateSheetProps) {
   const ids = useId();
   const nameRef = useRef<HTMLInputElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
-  const [step, setStep] = useState(NAME);
+  const into = draft.into ?? null;
+  const [step, setStep] = useState(into ? CHATS : NAME);
   const [nameTried, setNameTried] = useState(false);
-  const [chatsFocus, setChatsFocus] = useState(0);
+  const [chatsFocus, setChatsFocus] = useState(into ? 1 : 0);
   const [discarding, setDiscarding] = useState(false);
   const block = continueBlock(draft, data.chats);
   const finished = (chat: ChatDraft, current: CreateDraft) => isFinished(chat, current, data.chats);
@@ -150,7 +151,7 @@ export function CreateSheet(props: CreateSheetProps) {
         onKeyDown={onKeyDown}
       >
         <header className="op-sheet-head">
-          <h2 id={`${ids}title`}>New outpost</h2>
+          <h2 id={`${ids}title`}>{into ? `Add chats to ${into.name}` : 'New outpost'}</h2>
           <button type="button" className="icon-btn" aria-label="Close" onClick={requestClose}>
             <XIcon />
           </button>
@@ -164,6 +165,7 @@ export function CreateSheet(props: CreateSheetProps) {
                 inputRef={nameRef}
                 name={draft.name}
                 problem={nameTried ? nameProblem(draft.name) : null}
+                locked={into !== null}
                 onName={(name) => onChange((current) => ({ ...current, name }))}
               />
             )}
@@ -196,6 +198,7 @@ export function CreateSheet(props: CreateSheetProps) {
           block={block}
           addsOpenChat={openFinished}
           discarding={discarding}
+          adding={into !== null}
           onBack={() => (step === NAME ? requestClose() : goTo(step - 1))}
           onPrimary={primary}
           onOpenOutpost={props.onOpenOutpost}

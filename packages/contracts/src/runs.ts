@@ -81,6 +81,8 @@ export const runSchema = z.object({
       outpostName: z.string(),
       fromHandle: z.string().nullable(),
       fromUser: z.boolean(),
+      fromSpark: z.boolean().default(false),
+      userStarted: z.boolean().default(false),
     })
     .optional(),
 });
@@ -98,3 +100,12 @@ export const interruptionSchema = z.object({
   blocked: interruptionBlockSchema.nullable(),
 });
 export type Interruption = z.infer<typeof interruptionSchema>;
+
+export const OUTPOST_DRAFT_ACTIVITY = 'outpost_draft';
+
+export const outpostDraftActivitySchema = z.object({
+  draftId: z.uuid(),
+  chats: z.number().int().positive(),
+  stacked: z.number().int().nonnegative(),
+});
+export type OutpostDraftActivity = z.infer<typeof outpostDraftActivitySchema>;

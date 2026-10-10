@@ -1,8 +1,8 @@
 import type { OutpostPost, ThreadItem } from '@spark-outpost/contracts';
 import { STATE_LABELS, receiverName, senderName } from './post-text.ts';
 
-function postOf(item: ThreadItem): OutpostPost | null {
-  return item.kind === 'batch' ? null : item.post;
+function postsOf(item: ThreadItem): OutpostPost[] {
+  return item.kind === 'batch' ? item.lines.map((line) => line.post) : [item.post];
 }
 
 function stateLine(post: OutpostPost): string {
@@ -27,14 +27,9 @@ export function announcements(
 ): string[] {
   if (before === null) return [];
   const known = new Map<string, OutpostPost>();
-  for (const item of before) {
-    const post = postOf(item);
-    if (post) known.set(post.id, post);
-  }
+  for (const post of before.flatMap(postsOf)) known.set(post.id, post);
   const lines: string[] = [];
-  for (const item of after) {
-    const post = postOf(item);
-    if (!post) continue;
+  for (const post of after.flatMap(postsOf)) {
     const earlier = known.get(post.id);
     const line = earlier ? change(earlier, post) : arrival(post);
     if (line) lines.push(line);

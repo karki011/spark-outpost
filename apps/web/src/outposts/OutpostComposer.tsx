@@ -1,111 +1,109 @@
 import '../chat/composer.css';
 import './outpost-composer.css';
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { XIcon } from '../ui/icons.tsx';
+import { AsksLine } from './AsksLine.tsx';
 import { HandlePicker, handleOptionId } from './HandlePicker.tsx';
-import {
-  composerTarget,
-  handleQuery,
-  matchingHandles,
-  withHandle,
-  type Answering,
-  type ComposerTarget,
-} from './composer-target.ts';
+import { asked, composerTarget, type Answering, type ComposerTarget } from './composer-target.ts';
 import type { MemberView } from './member-view.ts';
+import { useHandlePicker } from './use-handle-picker.ts';
 
 interface OutpostComposerProps {
   members: readonly MemberView[];
   answering: Answering | null;
   paused: boolean;
-  allowAll?: boolean;
+  fill?: ComposerFill | null;
   onCancelAnswer: () => void;
   onSend: (target: ComposerTarget, text: string) => Promise<unknown>;
 }
 
-const MAX_ROWS = 8;
-
-function shownHint(target: ComposerTarget, paused: boolean, allowAll: boolean): string {
-  if (target.action === 'all' && !allowAll) return 'Address one chat at a time, for example @fe.';
-  if (target.action === 'request' && paused) {
-    return `Paused. @${target.to} gets this when you resume.`;
-  }
-  return target.hint;
+export interface ComposerFill {
+  id: number;
+  text: string;
 }
+
+const MAX_ROWS = 8;
+const NOTHING_TYPED = { text: '', caret: 0 };
 
 export function OutpostComposer({
   members,
   answering,
   paused,
-  allowAll = false,
+  fill = null,
   onCancelAnswer,
   onSend,
 }: OutpostComposerProps) {
   const listId = useId();
   const hintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [text, setText] = useState('');
-  const [active, setActive] = useState(0);
-  const [dismissed, setDismissed] = useState(false);
+  const caretToPlace = useRef<number | null>(null);
+  const [typed, setTyped] = useState(NOTHING_TYPED);
+  const [skipped, setSkipped] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
+  const [filled, setFilled] = useState(fill?.id ?? null);
   const handles = members.map((member) => member.handle);
-  const target = composerTarget(text, handles, answering);
-  const options = answering || dismissed ? [] : matchingHandles(handleQuery(text), members);
-  const picking = options.length > 0;
-  const current = Math.min(active, options.length - 1);
-  const sendable = target.ready && (target.action !== 'all' || allowAll);
+  const picker = useHandlePicker(typed, members, answering === null);
+  const fillId = fill?.id ?? null;
+  if (fill && fill.id !== filled) {
+    setFilled(fill.id);
+    setTyped({ text: fill.text, caret: fill.text.length });
+    setSkipped([]);
+    picker.close();
+  }
+  const { text } = typed;
+  const target = composerTarget(text, handles, answering, skipped);
+  const picking = picker.options.length > 0;
   const answeringId = answering?.postId ?? null;
 
   useEffect(() => {
     if (answeringId) textareaRef.current?.focus();
   }, [answeringId]);
 
-  const change = (next: string) => {
-    setText(next);
-    setActive(0);
-    setDismissed(false);
+  useEffect(() => {
+    if (fillId !== null) textareaRef.current?.focus();
+  }, [fillId]);
+
+  useLayoutEffect(() => {
+    const caret = caretToPlace.current;
+    if (caret === null) return;
+    caretToPlace.current = null;
+    textareaRef.current?.setSelectionRange(caret, caret);
+  }, [typed]);
+
+  const change = (next: string, caret: number) => {
+    setTyped({ text: next, caret });
+    setSkipped((left) => left.filter((handle) => asked(next, handles, []).includes(handle)));
+    picker.reset();
   };
 
   const pick = (member: MemberView) => {
-    change(withHandle(member.handle));
+    const next = picker.filled(member);
+    if (!next) return;
+    caretToPlace.current = next.caret;
+    change(next.text, next.caret);
     textareaRef.current?.focus();
   };
 
   const send = async () => {
-    if (!sendable) return;
+    if (!target.ready) return;
     const sent = text;
-    setText('');
+    setTyped(NOTHING_TYPED);
+    setSkipped([]);
     setProblem(null);
     try {
       await onSend(target, sent);
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'That could not be sent.');
-      setText((typed) => (typed === '' ? sent : typed));
+      setTyped((now) => (now.text === '' ? { text: sent, caret: sent.length } : now));
     }
-  };
-
-  const onPickerKey = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
-    if (!picking) return false;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      setActive((current + step + options.length) % options.length);
-      return true;
-    }
-    if (event.key === 'Enter' || event.key === 'Tab') {
-      const member = options[current];
-      if (member) pick(member);
-      return true;
-    }
-    if (event.key === 'Escape') {
-      setDismissed(true);
-      return true;
-    }
-    return false;
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
-    if (onPickerKey(event)) {
+    const picked = picker.onKey(event);
+    if (picked !== null) {
       event.preventDefault();
+      if (picked !== 'handled') pick(picked);
       return;
     }
     if (event.key === 'Escape' && answering) {
@@ -130,9 +128,9 @@ export function OutpostComposer({
         {picking && (
           <HandlePicker
             listId={listId}
-            options={options}
-            active={current}
-            onActive={setActive}
+            options={picker.options}
+            active={picker.current}
+            onActive={picker.setActive}
             onPick={pick}
           />
         )}
@@ -164,18 +162,34 @@ export function OutpostComposer({
           aria-autocomplete="list"
           aria-expanded={picking}
           aria-controls={picking ? listId : undefined}
-          aria-activedescendant={picking ? handleOptionId(listId, current) : undefined}
-          onChange={(event) => change(event.target.value)}
+          aria-activedescendant={picking ? handleOptionId(listId, picker.current) : undefined}
+          onChange={(event) => change(event.target.value, event.target.selectionStart)}
+          onSelect={(event) => {
+            const caret = event.currentTarget.selectionStart;
+            setTyped((now) => (now.caret === caret ? now : { ...now, caret }));
+          }}
           onKeyDown={onKeyDown}
         />
         <div className="comp-bar">
-          <span id={hintId} className="hint shown op-hint">
-            {shownHint(target, paused, allowAll)}
-          </span>
+          {target.action === 'request' ? (
+            <AsksLine
+              id={hintId}
+              handles={target.to}
+              paused={paused}
+              onSkip={(handle) => {
+                setSkipped((left) => [...left, handle]);
+                textareaRef.current?.focus();
+              }}
+            />
+          ) : (
+            <span id={hintId} className="hint shown op-hint">
+              {target.hint}
+            </span>
+          )}
           <button
             type="button"
             className="btn primary sm op-send"
-            disabled={!sendable}
+            disabled={!target.ready}
             onClick={() => void send()}
           >
             {target.label}

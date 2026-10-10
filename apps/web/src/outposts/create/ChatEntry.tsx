@@ -6,6 +6,7 @@ import type { ChatView } from './create-labels.ts';
 import type { ChatProblem } from './create-problems.ts';
 import { ChatForm, type ChatFormActions } from './ChatForm.tsx';
 import { ChatRow } from './ChatRow.tsx';
+import type { AfterChoice } from './story-draft.ts';
 import type { CreateData } from './use-create-data.ts';
 
 interface ChatEntryProps extends ChatFormActions {
@@ -14,6 +15,9 @@ interface ChatEntryProps extends ChatFormActions {
   view: ChatView;
   data: CreateData;
   taken: ReadonlySet<string>;
+  after: readonly AfterChoice[] | null;
+  stackedOn: string | null;
+  afterHandle: string | null;
   problems: readonly ChatProblem[];
   finished: boolean;
   focusOnMount: boolean;
@@ -21,7 +25,7 @@ interface ChatEntryProps extends ChatFormActions {
   onEdit: () => void;
 }
 
-export function ChatEntry({ onFiles, onEdit, ...props }: ChatEntryProps) {
+export function ChatEntry({ onFiles, onEdit, afterHandle, ...props }: ChatEntryProps) {
   const attachments = useAttachments();
   const { uploaded } = attachments;
   const pending = attachments.uploading || attachments.failed;
@@ -38,6 +42,7 @@ export function ChatEntry({ onFiles, onEdit, ...props }: ChatEntryProps) {
         <ChatRow
           chat={props.chat}
           view={props.view}
+          afterHandle={afterHandle}
           problems={props.problems}
           onHandle={props.onHandle}
           onEdit={onEdit}
