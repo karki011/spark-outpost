@@ -20,6 +20,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_spend: 'Checking spend',
   spark_models: 'Reading model cards',
   spark_terminals: 'Checking terminals',
+  spark_terminal_run: 'Running a command in a Spark terminal',
   spark_sparks: 'Looking at Sparks',
   spark_guide: 'Reading the Spark guide',
   spark_docs: 'Reading the user guide',

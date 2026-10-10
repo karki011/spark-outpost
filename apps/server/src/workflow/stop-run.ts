@@ -3,6 +3,7 @@ import { withTransaction, type Db } from '../persistence/db.ts';
 import { insertRunEvent } from '../persistence/run-events.ts';
 import { getRun, requestCancel } from '../persistence/runs.ts';
 import { runEvents } from './run-events.ts';
+import { stopTurnTerminals } from './stop-terminals.ts';
 
 export type StopOutcome = 'stopping' | 'stopped' | 'already_finished';
 
@@ -16,6 +17,7 @@ export async function stopRun(db: Db, runId: string): Promise<StopResult | null>
   if (!before) return null;
   if (isTerminalRunStatus(before.status)) return { run: before, outcome: 'already_finished' };
   await requestCancel(db, runId);
+  await stopTurnTerminals(db, runId);
   await cancelUnclaimed(db, runId);
   const run = (await getRun(db, runId)) ?? before;
   return { run, outcome: isTerminalRunStatus(run.status) ? 'stopped' : 'stopping' };

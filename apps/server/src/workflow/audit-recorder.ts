@@ -116,11 +116,12 @@ export function createAuditRecorder(options: AuditRecorderOptions): AuditRecorde
   };
 
   return {
-    message(direction, message) {
+    message(direction, message, marks) {
       if (stopped) return;
       if (isToolCall(direction, message)) toolCalls += 1;
       const entry = protocol.entry(direction, message, now());
-      enqueue(unreviewedFrom(direction, message) ? { ...entry, unreviewed: true } : entry);
+      const unreviewed = unreviewedFrom(direction, message) || marks?.unreviewed === true;
+      enqueue(unreviewed ? { ...entry, unreviewed: true } : entry);
     },
     stderr(chunk) {
       if (stopped) return;

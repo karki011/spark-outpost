@@ -6,10 +6,8 @@ import {
   type AgentModeOption,
   type ModePosture,
   type Approval,
-  type ApprovalOption,
   type RunEvent,
 } from '@spark-outpost/contracts';
-import { normalizeCommand } from '../approvals/commands.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
@@ -27,7 +25,6 @@ import {
   type ApprovalRequest,
   type DecideOptions,
   type Decision,
-  type RunRule,
   type RunRules,
 } from '../approvals/decide.ts';
 import {
@@ -46,6 +43,7 @@ import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 import type { Append } from './agent-turn.ts';
+import { allowOption, askedOptions, rejectOption, toRule, userNote } from './approval-choices.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { runEvents } from './run-events.ts';
 import { approvalPayload, displayTitle, subject } from './approval-payload.ts';
@@ -117,35 +115,10 @@ export type Asking = Pick<
   | 'secretFiles'
 >;
 
-function onceOnly(asking: Asking): boolean {
-  return Boolean(
-    asking.forcePush || asking.secretSend || asking.gitControl || asking.instructionFiles,
-  );
-}
-
-const PROTECTED_NAMES: Partial<Record<ApprovalOption['kind'], string>> = {
-  allow_once: 'Allow once',
-  reject_once: 'Deny',
-};
-
-function askedOptions(options: readonly ApprovalOption[], asking: Asking): ApprovalOption[] {
-  if (!onceOnly(asking)) return [...options];
-  const once = options.filter((option) => option.kind !== 'allow_always');
-  if (!asking.instructionFiles) return once;
-  return once.map((option) => ({ ...option, name: PROTECTED_NAMES[option.kind] ?? option.name }));
-}
-
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
   const root = request.roots[0]?.path;
   if (!root || !request.command || forcePush(request.command)?.kind !== 'ask') return null;
   return defaultBranch(root).catch(() => null);
-}
-
-function allowOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
-  return (
-    options.find((option) => option.kind === 'allow_once') ??
-    options.find((option) => option.kind === 'allow_always')
-  );
 }
 
 function policyBlocked(answer: GateAnswer): GateAnswer {
@@ -153,32 +126,16 @@ function policyBlocked(answer: GateAnswer): GateAnswer {
   return { ...answer, denial: policyDenial(answer.note) };
 }
 
-function rejectOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
-  return (
-    options.find((option) => option.kind === 'reject_once') ??
-    options.find((option) => option.kind === 'reject_always')
-  );
+export interface ApprovalGate extends PermissionGate {
+  raise(
+    card: NewApproval,
+    request: ApprovalRequest,
+    signal: AbortSignal,
+    asked: (approvalId: string) => void,
+  ): Promise<GateAnswer>;
 }
 
-function toRule(approval: Pick<Approval, 'kind' | 'title' | 'payload'>): RunRule | null {
-  if (approval.kind === 'execute') {
-    return approval.payload.command
-      ? { kind: 'execute', command: normalizeCommand(approval.payload.command) }
-      : null;
-  }
-  if (approval.kind === 'edit') return { kind: 'edit' };
-  return { kind: 'other', title: approval.title };
-}
-
-function userNote(approval: Approval, what: string): string {
-  if (approval.status === 'denied') return `Denied: ${what} (you denied it)`;
-  if (approval.scope === 'run') return `Allowed ${what} (you allowed it for this run)`;
-  if (approval.scope === 'chat') return `Allowed ${what} (you allowed it for this chat)`;
-  if (approval.scope === 'project') return `Allowed ${what} (you always allow it in this project)`;
-  return `Allowed ${what} (you allowed it)`;
-}
-
-export function createApprovalGate(deps: GateDeps): PermissionGate {
+export function createApprovalGate(deps: GateDeps): ApprovalGate {
   const grants = new Set<string>();
   let waiting = 0;
 
@@ -344,23 +301,14 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     };
   };
 
-  const ask = async (
+  const raise = async (
+    card: NewApproval,
     request: ApprovalRequest,
-    reason: string | null,
     signal: AbortSignal,
-    asking: Asking,
+    asked: (approvalId: string) => void,
   ): Promise<GateAnswer> => {
-    const pending = await insertApproval(deps.db, newApproval(request, reason, asking));
-    observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
-    if (asking.observed) {
-      deps.observations?.egressAsked({
-        approvalId: pending.id,
-        subject: subject(request),
-        reason,
-        observed: asking.observed,
-        sendsTo: asking.sendsTo,
-      });
-    }
+    const pending = await insertApproval(deps.db, card);
+    asked(pending.id);
     waiting += 1;
     let result: WaitResult;
     try {
@@ -371,7 +319,26 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     } finally {
       waiting -= 1;
     }
-    const answer = await settle(pending, result, request);
+    return settle(pending, result, request);
+  };
+
+  const ask = async (
+    request: ApprovalRequest,
+    reason: string | null,
+    signal: AbortSignal,
+    asking: Asking,
+  ): Promise<GateAnswer> => {
+    const answer = await raise(newApproval(request, reason, asking), request, signal, (id) => {
+      observe(request, { verdict: 'ask', by: null, approvalId: id });
+      if (!asking.observed) return;
+      deps.observations?.egressAsked({
+        approvalId: id,
+        subject: subject(request),
+        reason,
+        observed: asking.observed,
+        sendsTo: asking.sendsTo,
+      });
+    });
     const secretAllowed = asking.secretFiles !== undefined && answer.outcome === 'selected';
     return secretAllowed ? readSecrets(answer, secretLabels(request)) : answer;
   };
@@ -477,5 +444,5 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     return answer;
   };
 
-  return { review };
+  return { review, raise };
 }

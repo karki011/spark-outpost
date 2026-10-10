@@ -1,6 +1,6 @@
 # Agent terminals
 
-Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is in progress: the contracts, the table, the gate and the runner with its routes are built (see "Built so far"); the tool, the web rows and the guide pages are not. The owner's decisions are recorded at the end.
+Status: approved by the owner, October 9, 2026. Phase 1 (the mirror tab) is built. Phase 2 is built except the rest of the guide pages: the contracts, the table, the gate, the runner with its routes, the tool and the web rows are in (see "Built so far"). The owner's decisions are recorded at the end.
 
 Goal: when an agent runs a command, the user can see that a terminal is going on. There is the small terminal in the reply (today) and a tab in the Terminal dock to watch it, check on it and stop it. A long-running command (a dev server, a watcher) keeps running in its tab after the turn ends.
 
@@ -249,7 +249,7 @@ Seams between lanes: 2c and 2e meet only through the table and its NOTIFY. 2d gi
 
 ## Built so far
 
-Phase 1 and lanes 2a, 2b, 2c and 2d. Nothing here registers the tool, so no row is inserted yet and the runner has nothing to start. Lanes 2e and 2f build against these.
+Phase 1 and lanes 2a to 2f. The tool is registered and inserts the row, the runner starts it, and the reply row and the dock tab show it.
 
 ### Contracts (2a): `packages/contracts/src/agent-terminal.ts`
 
@@ -310,7 +310,7 @@ sparkCommandStarted(scope, review, approvalId | null): void
 - `sync()` reads `liveAgentTerminals` and, one step at a time: spawns a row that is `starting` and wanted `running` (login shell `-ilc`, the row's folder, `commandEnvironment`, which is the preview environment without `PORT`), then `markAgentTerminalRunning`; kills and ends a row wanted `stopped`; kills a process whose row is no longer live or is gone. A second wake finds the process and does nothing. Nothing is ever started again.
 - A stop signals the process tree and its group with TERM, then KILL after 1.5 s (`killProcessTree` with a first signal; the preview and Terminal still send HUP). The row is ended as soon as the signal is sent.
 - A folder that is missing at start, or a spawn that throws, ends the row as `failed` with the reason as its output. A folder that disappears later stops the terminal as `folder_removed` (checked every 3 s).
-- Output: the open tabs get what the process printed, as printed, and a tab that opens later gets the last 256,000 characters first. The saved tail goes through the output sanitizer and the redaction filter the command recorder uses, with the secret values of the row's folder, and is saved at most once a second and at the end.
+- Output: the open tabs get what the process printed, as printed, and a tab that opens later gets the last 256,000 characters first. The saved tail goes through the output sanitizer and the redaction filter the command recorder uses, with the secret values of the chat's linked project roots, its worktrees and the row's folder (`agent-terminal-roots.ts`), and is saved at most once a second and at the end.
 - No count, time or idle limit.
 
 Routes, all under `/api`:
@@ -326,7 +326,29 @@ There is no input route. The dock opens `view`, then the existing socket `/api/t
 
 The list is the one route a paired phone may read, so the chat row can show the command and its state as text. This is the one place the built routes differ from "every new route is Mac-only" above.
 
-Not built in 2c: the `spark/terminal_stop` audit entry for a stop from the user, the folder or quit, and killing a process left behind by a crashed runtime (the row has a pid but no start time to match it against).
+The runner writes the `spark/terminal_stop` audit entry for a stop by `user`, `folder_removed` and `quit` with `recordTerminalStop` (`agent-terminal-audit.ts`), once, when the row ends. A chat that is removed takes its runs and their audit with it, so `chat_removed` has no entry.
+
+Not built in 2c: killing a process left behind by a crashed runtime (the row has a pid but no start time to match it against).
+
+### Tool (2e): `apps/server/src/spark-mcp/tools/terminal-run-tool.ts`, `terminal-run-start.ts`, `terminal-run-folder.ts`
+
+- Registered as `spark_terminal_run` with `needs: 'project'` and `acts: true`, so a plain chat and a read-only session are never offered it. An Ask turn, a piece and the Coordinator are offered it and refused by the gate. A Terminal session has no command scope, so it is refused too.
+- The turn passes its `SparkCommandScope` as `sparkScope.commands` (`workflow/agent-turn.ts`). The tool swaps in the mode the session is in now (`runs.used_mode`).
+- `start` answers `{ action, terminal }`, or `{ action, refused: true, reason }` for every refusal: the gate's, a folder that does not exist or leads outside the project through a link, a card that was rejected, timed out, cancelled or closed by a restart, and a turn that ended. The card is raised with `createApprovalGate(...).raise`, the gate's own insert, wait and settle.
+- The tool call id is the MCP request id plus a hash of the command and folder. A second `start` with the same id returns the terminal while it is still live.
+- `output` returns the facts as JSON and the lines in a second `<terminal_output>` block, so the tail is never clipped from the wrong end.
+- It appends the `agent_terminal_started` run event (`runEvents.agentTerminalStarted`) and writes the `spark/terminal_start` audit entry and, for `agent`, `spark/terminal_stop` (`workflow/terminal-audit.ts`).
+- Stopping a turn calls `stopTurnTerminals` (`workflow/stop-terminals.ts`) from `stopRun`: the run and its member runs. It writes `spark/terminal_stop` for `turn_stopped`. The entries for `user`, `quit` and `folder_removed` are written by the runner with the same `recordTerminalStop`.
+
+### Web (2f): `apps/web/src/api/agent-terminals.ts`, `chat/commands/AgentTerminalRow.tsx`, `terminal/dock/AgentTab.tsx`
+
+- The chat's list (`GET …/agent-terminals`) is one TanStack query, refreshed by the `agent_terminal` app event. The reply row, the end-of-turn line and the dock tab all read it. The `agent_terminal_started` run event only makes the row appear, as `starting`, before the list arrives (`chat/commands/agent-terminal-model.ts`).
+- The row sits in the reply at its anchor like a command (`reply-parts.ts`): the command, the chip "Agent terminal", the state with `agentTerminalStateText` and the time, **Open in terminal** and, while it is live, **Stop**. After the turn, `agentTerminalsRunningLine` is the reply's last line for the terminals that turn started.
+- The dock tab kind is `agent` (`shell-store.ts`). It opens `view` and the terminal stream socket only once the tab is shown, with xterm read-only: nothing typed, pasted or dropped is sent. Stop calls the stop route. Closing the tab ends the view and never stops the command. A terminal that had ended shows the saved tail from `output` and how it ended.
+- When no view can open (the 12 views shared with Preview tabs are taken), the tab says so, keeps Stop and offers Try again.
+- Tabs live in memory. After a reload `useRestoredAgentTabs` adds a tab for each terminal still running, without opening the dock. A tab the user closed stays closed until **Open in terminal** is used again.
+- A paired device gets the row with its state as text: no Open in terminal, no Stop, no dock.
+- Stop is a plain button in the row and the tab, not hold-to-stop, and closing a tab does not ask: the owner chose "closing the tab never stops the command" for this lane.
 
 ## Test plan
 
