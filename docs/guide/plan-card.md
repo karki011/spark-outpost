@@ -14,6 +14,8 @@ You'll have the agent plan before it changes anything. About 1 minute.
 
 The card is the agent's own. A mode that never asks, such as **Full access**, approves it at once.
 
+While the agent plans, a chat set to **Auto** or **Bypass permissions** runs commands that change no files without a card. A command that changes files still asks.
+
 In a **Plan** chat a question is answered as usual. Only `/plan` or a request to build starts a plan.
 
 ## The plan line

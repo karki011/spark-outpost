@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| After `/plan` in an **Auto** or **Bypass permissions** chat, reads run without a card.                                              | See [plans](plan-card.md).                  |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |
 | The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.           |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                           | Answer in your next message.                |
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
 | Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |
-| New chats start on **Auto**. Builders and pieces stay on the chat's provider. **Settings → Models** is a table.                     | See [model routing](model-routing.md).      |
