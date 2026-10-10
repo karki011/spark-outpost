@@ -1,17 +1,13 @@
 import { resolveCommandPath } from './commands.ts';
 import { gitSubcommands, type GitSub } from './git-commands.ts';
-import { inTempDir, withTempVariable } from './temp-dirs.ts';
+import { withTempVariable } from './temp-dirs.ts';
 
 const ADD_VALUE_FLAGS = new Set(['-b', '-B', '--reason']);
-const BRANCH_FLAGS = new Set(['-b', '-B', '--orphan']);
-const READ_VERBS = new Set(['list', 'prune']);
 const UNKNOWN_WORD = /\$|`/;
 
 interface WorktreeUse {
   verb: string;
   path: string | null;
-  commit: string | null;
-  makesBranch: boolean;
 }
 
 function operands(args: readonly string[]): string[] {
@@ -28,13 +24,8 @@ function worktreeUse(sub: GitSub): WorktreeUse | null {
   if (sub.name !== 'worktree') return null;
   const [verb, ...args] = sub.rest;
   if (!verb) return null;
-  const [target, commit] = operands(args);
-  return {
-    verb,
-    path: target === undefined ? null : withTempVariable(target),
-    commit: commit ?? null,
-    makesBranch: args.some((arg) => BRANCH_FLAGS.has(arg)),
-  };
+  const [target] = operands(args);
+  return { verb, path: target === undefined ? null : withTempVariable(target) };
 }
 
 function uses(command: string): WorktreeUse[] {
@@ -53,20 +44,4 @@ export function worktreeAdds(command: string, cwd: string, home: string): string
 
 export function worktreeRemoves(command: string, cwd: string, home: string): string[] | null {
   return targets(command, 'remove', cwd, home);
-}
-
-function scratchPath(use: WorktreeUse, cwd: string, home: string): boolean {
-  if (use.path === null || UNKNOWN_WORD.test(use.path)) return false;
-  return inTempDir(resolveCommandPath(use.path, cwd, home));
-}
-
-export function scratchWorktree(cwd: string, home: string): (sub: GitSub) => boolean {
-  return (sub) => {
-    const use = worktreeUse(sub);
-    if (!use) return false;
-    if (READ_VERBS.has(use.verb)) return true;
-    if (use.verb === 'remove') return scratchPath(use, cwd, home);
-    if (use.verb !== 'add') return false;
-    return use.commit !== null && !use.makesBranch && scratchPath(use, cwd, home);
-  };
 }

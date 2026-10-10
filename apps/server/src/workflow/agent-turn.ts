@@ -270,7 +270,6 @@ export async function runAgentTurn(
             changesProject,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
-            copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
             publish: publishGrant(input),

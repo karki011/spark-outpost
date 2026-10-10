@@ -155,36 +155,3 @@ export async function markMessageSent(
     messageId,
   ]);
 }
-
-export interface CrewNote {
-  name: string;
-  body: string;
-}
-
-export async function deliveredToCrew(
-  db: Queryable,
-  orchestrationRunId: string,
-): Promise<CrewNote[]> {
-  const { rows } = await db.query<{ name: string | null; body: string }>(
-    `SELECT r.route->>'name' AS name, m.body FROM member_messages m
-     JOIN runs r ON r.id = m.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1) AND m.status = 'delivered'
-     ORDER BY m.created_at, m.id`,
-    [orchestrationRunId],
-  );
-  return rows.map((row) => ({ name: row.name ?? 'the agent', body: row.body }));
-}
-
-export async function claimChatMessages(db: Queryable, topRunId: string): Promise<MemberMessage[]> {
-  const { rows } = await db.query<MemberMessageRow>(
-    `UPDATE member_messages SET status = 'delivered', delivered_at = now(), delivered_run_id = $1
-     WHERE status = 'queued' AND run_id = $1 AND urgency = 'next'
-     RETURNING *`,
-    [topRunId],
-  );
-  return inOrder(rows);
-}
-
-export async function setMessageReader(db: Queryable, id: string, runId: string): Promise<void> {
-  await db.query('UPDATE member_messages SET delivered_run_id = $2 WHERE id = $1', [id, runId]);
-}

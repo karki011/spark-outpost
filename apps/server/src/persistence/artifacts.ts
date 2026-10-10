@@ -125,16 +125,3 @@ export async function planVersions(db: Queryable, taskId: string): Promise<PlanV
     ];
   });
 }
-
-export async function nextArtifactVersion(
-  db: Queryable,
-  taskId: string,
-  kind: ArtifactKind,
-): Promise<number> {
-  const { rows } = await db.query<{ version: number }>(
-    `SELECT COALESCE(MAX(version), 0) + 1 AS version FROM run_artifacts
-     WHERE task_id = $1 AND kind = $2`,
-    [taskId, kind],
-  );
-  return rows[0]?.version ?? 1;
-}

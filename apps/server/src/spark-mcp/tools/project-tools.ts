@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  PIECE_SLOTS_MAX,
-  type MapNeighbor,
-  type Project,
-  type WorkPlace,
-} from '@spark-outpost/contracts';
+import type { MapNeighbor, Project, WorkPlace } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
 import { groupBy } from '../../analytics/tally.ts';
 import { fileNeighbors } from '../../map/neighbors.ts';
@@ -15,13 +10,6 @@ import { listProjects } from '../../projects/projects.ts';
 import type { SparkScope } from '../deps.ts';
 import { page } from '../format.ts';
 import { limitInput, sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
-
-const AT_ONCE =
-  'Pieces of a big plan run at the same time, up to this many. Change it in Settings → Projects → Builders at once.';
-const IN_ORDER =
-  'Pieces of a big plan run one at a time, in order. Change it in Settings → Projects → Builders at once.';
-const SERVER_IN_ORDER =
-  "Spark's server is set to run pieces one at a time (COORDINATOR_MODE), so Builders work in order whatever the project setting says.";
 
 interface ProjectFactsRow {
   id: string;
@@ -74,12 +62,6 @@ function whereSparkWorks(place: WorkPlace | undefined) {
     : 'Each chat in its own worktree (a git worktree on its own branch; the checkout stays as it is)';
 }
 
-function buildersAtOnce(project: Project, parallel: boolean) {
-  if (!parallel) return { value: 1, note: SERVER_IN_ORDER };
-  const value = project.parallelPieces === false ? 1 : (project.pieceSlots ?? PIECE_SLOTS_MAX);
-  return { value, note: value === 1 ? IN_ORDER : AT_ONCE };
-}
-
 async function projects({ deps, scope }: SparkToolContext, limit: number) {
   const [all, facts, linked] = await Promise.all([
     listProjects(deps.db, scope.workspaceId),
@@ -101,10 +83,8 @@ async function projects({ deps, scope }: SparkToolContext, limit: number) {
         inThisChat: linked.includes(project.id),
         defaultBranch: branch,
         whereSparkWorks: whereSparkWorks(project.workPlace),
-        buildersAtOnce: buildersAtOnce(project, deps.parallelBuilders !== false),
         liveChatWorktrees: fact?.live_worktrees ?? 0,
         chats: fact?.chats ?? 0,
-        checkCommands: project.checkCommands ?? null,
         allowedCommands: project.commandAllowlist.length,
         lastUsedAt: project.lastUsedAt ?? null,
         map: map
@@ -203,7 +183,7 @@ export const projectTools = [
     name: 'spark_projects',
     title: 'Projects',
     description:
-      'Projects linked in Spark: name, path, default branch, Settings → Projects choices (Where Spark works: each chat in its own worktree or in my files; Builders at once: 1 at a time in order, or up to 2 or 3 in parallel), chat count, check commands and Map status.',
+      'Projects linked in Spark: name, path, default branch, where Spark works (each chat in its own worktree or in my files), chat count and Map status.',
     input: { limit: limitInput(30, 100) },
     run: (args, context) => projects(context, args.limit),
   }),
