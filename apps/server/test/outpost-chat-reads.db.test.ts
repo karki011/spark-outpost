@@ -85,6 +85,7 @@ describe('the runs of a member chat', () => {
       outpostName: 'Orders launch',
       fromHandle: null,
       fromUser: true,
+      fromSpark: false,
       userStarted: false,
     });
   });
