@@ -292,7 +292,6 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/projects/', groups: ['sidebar-projects', 'ship-pr', 'approvals'] },
   { prefix: 'apps/server/src/remote/', groups: ['phone'] },
   { prefix: 'apps/server/src/reset/', groups: ['settings-providers'] },
-  { prefix: 'apps/server/src/routing/', groups: ['chat', 'settings-providers'] },
   { prefix: 'apps/server/src/setup/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/ship/', groups: ['ship-pr', 'tickets'] },
   { prefix: 'apps/server/src/slack/', groups: ['slack'] },
