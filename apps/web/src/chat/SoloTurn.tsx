@@ -25,7 +25,8 @@ import { runCommands, shownCommands } from './commands/command-model.ts';
 import { useChatAgentTerminals } from './commands/use-agent-terminals.ts';
 import { TurnReply } from './commands/TurnReply.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
-import { mergeCheckpoints, shownApprovals } from './crew/crew-items.ts';
+import { turnCheckpoints } from './checkpoints/turn-checkpoints.ts';
+import { shownApprovals } from './crew/crew-items.ts';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
@@ -167,9 +168,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished ? (interrupted ? null : run.error) : stream.error;
-  const checkpoints = finished
-    ? mergeCheckpoints(detail.orchestrations?.[run.id]?.checkpoints ?? [])
-    : [];
+  const checkpoints = finished ? turnCheckpoints(run.id, detail) : [];
   const revertible = finished
     ? [run, child].find(
         (candidate): candidate is Run => candidate?.mode === 'do' && candidate.snapshot !== null,

@@ -111,7 +111,9 @@ describe('the record of kept changes on a chat turn', { timeout: 60_000 }, () =>
       decision_option_id: CHECKPOINT_OPTION.keep,
     });
     expect(await shownInRun(runId)).toEqual([records[0]!.id]);
-    expect(await cardsOf(t, conversationId)).toEqual([]);
+    expect(await cardsOf(t, conversationId)).toMatchObject([
+      { id: records[0]!.id, runId, kind: 'accept', status: 'allowed', decidedBy: 'level' },
+    ]);
     expect(records[0]!.payload.checkpoint).toMatchObject({
       files: [{ path: 'notes.txt', change: 'modified' }],
       lines: { added: 1, removed: 1 },

@@ -414,7 +414,9 @@ export async function shownApprovalsForConversation(
     `SELECT a.* FROM approvals a JOIN runs r ON r.id = a.run_id
      WHERE r.conversation_id = $1
        AND (a.status = 'pending' OR a.decided_by IN ('user', 'timeout')
-         OR (a.kind = $2 AND a.payload ? 'sparkResult'))
+         OR (a.kind = $2 AND a.payload ? 'sparkResult')
+         OR (a.kind = 'accept' AND a.decided_by = 'level'
+           AND NOT EXISTS (SELECT 1 FROM orchestrations o WHERE o.run_id = a.run_id)))
      ORDER BY a.created_at`,
     [conversationId, SPARK_ACTION_KIND],
   );

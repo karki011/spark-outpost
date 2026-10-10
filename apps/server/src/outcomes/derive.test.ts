@@ -37,6 +37,8 @@ describe('outcome kind', () => {
   it('is an answer for a direct turn that changed nothing', () => {
     expect(outcomeKind(facts({ depth: 'direct', changedFiles: false }))).toBe('answer');
     expect(outcomeKind(facts({ depth: 'direct', status: 'failed' }))).toBe('other');
+    expect(outcomeKind(facts({ depth: null, changedFiles: false }))).toBe('answer');
+    expect(outcomeKind(facts({ depth: null, changedFiles: true }))).toBe('other');
   });
 });
 
