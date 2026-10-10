@@ -164,6 +164,7 @@ export type SparkSessionPrefs = Pick<
 > & {
   sparkEnabled?: boolean;
   teammate?: TeammateBrief | null;
+  chatPrompt?: string | null;
 };
 
 export const setupStateSchema = z.object({

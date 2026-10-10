@@ -48,8 +48,10 @@ export function sparkInstructions(
   sparkTools = false,
   browser = false,
 ): string {
-  const custom = prefs.agentInstructions?.trim();
+  const chat = prefs.chatPrompt?.trim();
+  const custom = chat ? '' : prefs.agentInstructions?.trim();
   const standing = [
+    chat ?? '',
     custom ? `# Custom instructions from the user\n${custom}` : '',
     prefs.teammate ? teammateBriefText(prefs.teammate) : '',
   ]
