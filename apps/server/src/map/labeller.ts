@@ -2,7 +2,7 @@ import type { MapCategory, MapKind } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import type { IntakeQuestions } from '../advisor/jev-types.ts';
 import { requestModel } from '../advisor/jev.ts';
-import { callJev, type JevAccess, type JevCall } from '../orchestration/jev-calls.ts';
+import { callJev, type JevAccess, type JevCall } from '../advisor/jev-calls.ts';
 import { answerCacheKey, cachedAnswers, storeAnswers, type CachedAnswers } from './answer-cache.ts';
 import { areaEvidence, type ReadContent } from './label-evidence.ts';
 import {

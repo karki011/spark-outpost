@@ -45,9 +45,7 @@ export interface IntakeRequest {
   fourWay?: boolean;
 }
 
-export class AdvisorError extends Error {}
-
-export class AdvisorTimeoutError extends AdvisorError {}
+export { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';
 
 export function ruleAdvisor(request: IntakeRequest): IntakeAnswer {
   const doing = request.mode === 'do';

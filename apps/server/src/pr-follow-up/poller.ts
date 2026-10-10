@@ -24,7 +24,7 @@ import {
   withFacts,
 } from '../pr-tracking/status.ts';
 import { discussionDetails } from '../pr-tracking/details.ts';
-import type { JevAccess } from '../orchestration/jev-calls.ts';
+import type { JevAccess } from '../advisor/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
 import { readChecks, readComments } from './gather.ts';

@@ -1,5 +1,6 @@
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -39,12 +40,8 @@ const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'worker', work: activeWork });
 const approvalWaiters = new ApprovalWaiters();
 const secrets = configuredSecretStore(config);
-const intake = createIntakeRecorder({
-  db,
-  secrets,
-  fetch,
-  baseUrl: config.TYPESAFE_BASE_URL,
-});
+const jevDeps: IntakeDeps = { db, secrets, fetch, baseUrl: config.TYPESAFE_BASE_URL };
+const intake = createIntakeRecorder(jevDeps);
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
@@ -111,7 +108,7 @@ const worker = startWorker({
 const projectMap = startMapScheduler({
   db,
   scanner: codeScan,
-  jev: intake.deps,
+  jev: jevDeps,
   rootPrefix: config.MAP_ROOT_PREFIX ?? null,
 });
 const prFollowUp = startPrFollowUp({
@@ -127,7 +124,7 @@ const prFollowUp = startPrFollowUp({
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
   branchPrefix: config.BRANCH_PREFIX,
-  jev: intake.deps,
+  jev: jevDeps,
 });
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
 const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => {

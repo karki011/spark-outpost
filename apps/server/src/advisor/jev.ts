@@ -1,6 +1,6 @@
 import type { AdviceUsage } from '@spark-outpost/contracts';
-import { AdvisorError, AdvisorTimeoutError } from './advice.ts';
-import { systemOneResponseSchema, type SystemOneResponse } from './intake-questions.ts';
+import { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';
+import { systemOneResponseSchema, type SystemOneResponse } from './jev-types.ts';
 import { breakerFor, JEV_PAUSED, type JevBreaker } from './jev-breaker.ts';
 import { JEV_CALLS_IN_FLIGHT, JevLimiter } from './jev-limiter.ts';
 
