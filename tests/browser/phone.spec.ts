@@ -105,7 +105,7 @@ test('sits above Settings in the left bar and asks to turn phone access on', asy
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button')
     .allTextContents();
-  expect(labels.slice(-2)).toEqual(['Remote control', 'Settings']);
+  expect(labels.slice(-2)).toEqual(['Remote', 'Settings']);
   await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
   await expect(main.locator('.ph-scene .scout')).toHaveClass(/sleep/);

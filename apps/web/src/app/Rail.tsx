@@ -245,13 +245,15 @@ export function Rail({
             type="button"
             className="rail-btn"
             data-view="phone"
+            aria-label="Remote control"
+            title="Remote control"
             aria-current={view === 'phone' ? 'page' : undefined}
             onPointerEnter={() => onIntent('phone')}
             onFocus={() => onIntent('phone')}
             onClick={() => onView('phone')}
           >
             {REMOTE_ICON}
-            Remote control
+            Remote
           </button>
           <button type="button" className="rail-btn" onClick={onSettings}>
             {SETTINGS_ICON}

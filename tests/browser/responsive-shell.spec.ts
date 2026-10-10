@@ -241,7 +241,7 @@ test('the desktop rail keeps all eight entries', async ({ page }) => {
     /^Tickets/,
     /^Map/,
     /^Docs/,
-    /^Remote control/,
+    /^Remote$/,
     /^Settings/,
   ]);
   await shot(page, 'rail');
