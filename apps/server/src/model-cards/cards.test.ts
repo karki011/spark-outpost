@@ -10,7 +10,7 @@ import {
   tierLadder,
   tierName,
   topTier,
-} from '../orchestration/tiers.ts';
+} from '../model-access/tiers.ts';
 
 const claude = [
   { id: 'default', label: 'Default (recommended)' },

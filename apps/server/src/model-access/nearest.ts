@@ -1,6 +1,6 @@
 import type { ModelAvailability } from '@spark-outpost/contracts';
 import { cardFor, FRONTIER_RANK, retirementOf } from '../model-cards/cards.ts';
-import { tierInfo, type TierModel } from '../orchestration/tiers.ts';
+import { tierInfo, type TierModel } from './tiers.ts';
 
 export interface RankedModel extends TierModel {
   availability?: ModelAvailability | undefined;

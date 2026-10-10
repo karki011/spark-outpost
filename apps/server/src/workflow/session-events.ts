@@ -1,7 +1,7 @@
 import type { SessionEvent } from '@spark-outpost/contracts';
 import { PROMPT_CACHE_TTL_MS } from '../advisor/policy.ts';
 import { HISTORY_BUDGET_BYTES } from '../agents/acp/conversation-prompt.ts';
-import { switchCostUsd } from '../orchestration/cache-switch.ts';
+import { switchCostUsd } from '../model-access/switch-cost.ts';
 import { cardPriceFor } from '../usage/prices.ts';
 
 export const FIRST_SESSION = 'first session';
