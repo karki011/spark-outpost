@@ -51,6 +51,15 @@ describe('how a chat is shown in the list', () => {
     });
   });
 
+  it('shows a chat proposed in a draft by the title the draft gave it', () => {
+    const draft = { ...fresh(countingIds(), API_PROJECT, 'api'), storyTitle: 'Orders endpoint' };
+    expect(chatView(draft, { ...CONTEXT, agent: null })).toMatchObject({
+      title: 'Orders endpoint',
+      tag: 'New',
+      meta: 'api',
+    });
+  });
+
   it('shows an existing chat by its title and project', () => {
     const draft = existing(countingIds(), FE_CHAT, 'fe');
     expect(chatView(draft, { ...CONTEXT, agent: null })).toEqual({

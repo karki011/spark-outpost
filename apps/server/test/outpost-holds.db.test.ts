@@ -142,7 +142,7 @@ describe('a request held until another is answered', () => {
     expect(waiting?.post.id).toBe(held);
     expect(requestState(waiting!.after.facts!).state).toBe('failed');
     expect(await heldIds()).toEqual([held]);
-    expect(await reasonOf(held)).toEqual({ state: 'sent', reason: 'Waiting for @api' });
+    expect(await reasonOf(held)).toEqual({ state: 'sent', reason: "Waiting: @api's turn failed" });
   });
 
   it('is neither sent nor released while the outpost is paused, and reads Paused', async () => {

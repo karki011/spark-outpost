@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { requestState } from './outpost-state.ts';
+import { heldForRequest, requestState } from './outpost-state.ts';
 import { requestStateSchema, type RequestFacts } from './outposts.ts';
 import { runStatusSchema } from './runs.ts';
 
@@ -213,6 +213,17 @@ describe('requestState for a request that waits for another', () => {
       state: 'sent',
       reason: 'Waiting for @api',
     });
+  });
+
+  it('says that the chat it waits for failed, and stays held for Start anyway or Cancel', () => {
+    const waiting = facts({
+      toHandle: 'web',
+      sent: false,
+      waitingOn: 'api',
+      waitingOnFailed: true,
+    });
+    expect(requestState(waiting)).toEqual({ state: 'sent', reason: "Waiting: @api's turn failed" });
+    expect(heldForRequest(waiting)).toBe(true);
   });
 
   it('says so when the chat it waits for was deleted', () => {

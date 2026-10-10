@@ -120,7 +120,7 @@ async function inBothThemes(page: Page, name: string, area: string): Promise<voi
 }
 
 const newChatRows = (dialog: Locator) =>
-  dialog.getByRole('listitem').filter({ hasText: 'New chat in shop' });
+  dialog.getByRole('listitem').filter({ hasText: /Usage (endpoint|page|docs)/ });
 
 async function reviewAndStart(page: Page): Promise<void> {
   const line = page.locator('section[data-turn] .op-line');
@@ -143,7 +143,7 @@ async function reviewAndStart(page: Page): Promise<void> {
   await expect(newChatRows(dialog).nth(1)).toContainText('Starts after @api');
   await expect(newChatRows(dialog).nth(2)).toContainText('Starts after @fe');
 
-  await dialog.getByRole('button', { name: 'Edit New chat in shop' }).first().click();
+  await dialog.getByRole('button', { name: 'Edit Usage endpoint' }).click();
   await expect(dialog.getByText('No pull request in a read-only mode')).toBeVisible();
   await dialog.getByRole('button', { name: 'Permissions: Plan' }).click();
   await page

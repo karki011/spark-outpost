@@ -141,7 +141,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedLead('read-only');
     open();
     fireEvent.keyDown(await screen.findByRole('textbox', { name: /^Name/ }), { key: 'Enter' });
-    fireEvent.click(button('Edit New chat in api'));
+    fireEvent.click(button('Edit Build api'));
     fireEvent.click(button('Permissions: Read-only'));
     fireEvent.click(screen.getByRole('radio', { name: 'Approve for me' }));
     fireEvent.click(button('Done'));

@@ -60,6 +60,7 @@ interface FactsRow extends PostRow {
   run_asking_reply: string | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
+  waiting_failed: boolean;
   wrap_up: boolean;
 }
 
@@ -94,11 +95,17 @@ const FACTS_QUERY = `
     ) END AS run_asking_reply,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
+    COALESCE(
+      w.closed_state IN ('failed', 'rejected')
+        OR (w.closed_state IS NULL AND wr.status IN ('failed', 'outcome_unknown')),
+      false
+    ) AS waiting_failed,
     EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = p.id) AS wrap_up
   FROM outpost_posts p
   JOIN outposts o ON o.id = p.outpost_id
   LEFT JOIN runs r ON r.id = p.run_id
-  LEFT JOIN outpost_posts w ON w.id = p.after_post_id AND p.task_id IS NULL`;
+  LEFT JOIN outpost_posts w ON w.id = p.after_post_id AND p.task_id IS NULL
+  LEFT JOIN runs wr ON wr.id = w.run_id`;
 
 function toPost(row: PostRow): StoredPost {
   return {
@@ -147,6 +154,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
     chatDeleted: row.to_conversation_id === null,
     waitingOn: row.waiting_handle,
     ...(row.waiting_deleted ? { waitingOnDeleted: true } : {}),
+    ...(row.waiting_failed ? { waitingOnFailed: true } : {}),
   };
 }
 

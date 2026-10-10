@@ -32,6 +32,7 @@ export interface ChatDraft extends AgentChoice {
   filesPending: boolean;
   dependsOn: string | null;
   level: InvolvementLevel | null;
+  storyTitle?: string;
 }
 
 export interface DraftOrigin {

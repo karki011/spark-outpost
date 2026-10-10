@@ -82,7 +82,7 @@ export function chatView(
   const newTitle = project ? `New chat in ${project}` : 'New chat';
   return {
     faceId: faceIds([chat])[0]!,
-    title: chat.kind === 'new' ? newTitle : (picked?.title ?? 'Choose a chat'),
+    title: chat.kind === 'new' ? (chat.storyTitle ?? newTitle) : (picked?.title ?? 'Choose a chat'),
     tag: chat.kind === 'new' ? 'New' : 'Existing',
     meta: [project, agent?.agent, agent?.mode].filter(Boolean).join(' · '),
   };

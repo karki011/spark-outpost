@@ -31,6 +31,7 @@ export interface DraftLead {
   conversationId: string;
   posture: ModePosture;
   outpost: JoinedOutpost | null;
+  agent?: AgentChoice;
 }
 
 type PrefillBase = Pick<
@@ -62,20 +63,27 @@ export function cappedMode(
   return allowed.find((mode) => mode.rank === highest)?.id ?? wanted;
 }
 
-function agentFor(chat: DraftChat, base: PrefillBase, lead: ModePosture): AgentChoice {
+function usualAgent(base: PrefillBase, lead: DraftLead): AgentChoice {
+  const own = lead.agent;
+  const connected = base.providers.some((provider) => provider.id === own?.provider);
+  return own && connected ? own : base.defaults;
+}
+
+function agentFor(chat: DraftChat, base: PrefillBase, lead: DraftLead): AgentChoice {
+  const usually = usualAgent(base, lead);
   const connected = base.providers.some((provider) => provider.id === chat.agent);
-  const provider = connected && chat.agent ? chat.agent : base.defaults.provider;
+  const provider = connected && chat.agent ? chat.agent : usually.provider;
   if (provider === null) return { provider: null, model: null, agentMode: null };
-  const usual = provider === base.defaults.provider ? base.defaults : null;
+  const usual = [usually, base.defaults].find((choice) => choice.provider === provider);
   const wanted = chat.agentMode ?? usual?.agentMode ?? null;
   return {
     provider,
     model: usual?.model ?? null,
-    agentMode: cappedMode(provider, wanted, base.capabilitiesOf(provider), lead),
+    agentMode: cappedMode(provider, wanted, base.capabilitiesOf(provider), lead.posture),
   };
 }
 
-function newChat(chat: DraftChat, base: PrefillBase, lead: ModePosture, newId?: NewId): ChatDraft {
+function newChat(chat: DraftChat, base: PrefillBase, lead: DraftLead, newId?: NewId): ChatDraft {
   const known = base.projects.some((project) => project.id === chat.projectId);
   return {
     ...emptyChat(agentFor(chat, base, lead), newId),
@@ -88,6 +96,7 @@ function newChat(chat: DraftChat, base: PrefillBase, lead: ModePosture, newId?: 
     handleTyped: true,
     messageOpen: true,
     text: chat.task,
+    storyTitle: chat.title,
   };
 }
 
@@ -121,7 +130,7 @@ export function fromDraft(
 ): CreateDraft {
   const proposed = draft.body.chats;
   const chats = withEdges(
-    proposed.map((chat) => newChat(chat, base, lead.posture, newId)),
+    proposed.map((chat) => newChat(chat, base, lead, newId)),
     proposed,
   );
   const name = (draft.body.name ?? draft.body.title).slice(0, OUTPOST_NAME_MAX);
