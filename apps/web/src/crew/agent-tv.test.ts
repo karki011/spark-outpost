@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseSavedTv } from './agent-tv-store.ts';
-import { crewAgents } from './crew-projection.ts';
-import { member, orchestration } from './test-orchestration.ts';
+import { chatAgent } from './chat-agent.ts';
+import { run } from './test-run.ts';
 import { tvCaption } from './tv-caption.ts';
 import {
   bubbleBox,
@@ -14,19 +14,19 @@ import {
 } from './tv-layout.ts';
 
 describe('Agent TV stage layout', () => {
-  it('puts Jev on the floor and a lone agent straight above him', () => {
+  it('puts the agent of the chat on the floor and a lone Spark straight above it', () => {
     const layout = stageLayout(1, STAGES.s);
-    expect(layout.jev).toEqual({ x: 150, y: 160 });
+    expect(layout.lead).toEqual({ x: 150, y: 160 });
     expect(layout.seats).toEqual([{ x: 150, y: 160 - layout.radius, outX: 0, outY: -1 }]);
     expect(stageLayout(0, STAGES.s).seats).toEqual([]);
   });
 
-  it('seats the crew in a symmetric arc above Jev', () => {
-    const { jev, seats } = stageLayout(3, STAGES.m);
-    expect(seats[1]!.x).toBe(jev.x);
-    expect(seats[0]!.x + seats[2]!.x).toBe(jev.x * 2);
+  it('seats the Sparks in a symmetric arc above the agent of the chat', () => {
+    const { lead, seats } = stageLayout(3, STAGES.m);
+    expect(seats[1]!.x).toBe(lead.x);
+    expect(seats[0]!.x + seats[2]!.x).toBe(lead.x * 2);
     expect(seats[0]!.y).toBe(seats[2]!.y);
-    expect(seats.every((seat) => seat.y < jev.y)).toBe(true);
+    expect(seats.every((seat) => seat.y < lead.y)).toBe(true);
   });
 
   it('keeps every seat and label on stage for a large crew in every size', () => {
@@ -58,7 +58,7 @@ describe('Agent TV stage layout', () => {
     const watch = watchStage({ width: 1440, height: 900 });
     expect(watch.width).toBe(1100);
     expect(watch.height).toBe(680);
-    expect(watch.jevSize).toBeGreaterThan(STAGES.l.jevSize);
+    expect(watch.leadSize).toBeGreaterThan(STAGES.l.leadSize);
     expect(watch.crewSize).toBeGreaterThan(STAGES.l.crewSize);
     expect(watchStage({ width: 360, height: 500 }).width).toBe(320);
   });
@@ -71,8 +71,8 @@ describe('Agent TV stage layout', () => {
   it('keeps speech bubbles inside the stage and points the tail at the speaker', () => {
     const edge = bubbleBox({ x: 20, y: 40 }, 34, STAGES.s);
     expect(edge).toMatchObject({ left: 8, width: 240, arrow: 12, below: true });
-    const jev = bubbleBox({ x: 150, y: 160 }, 50, STAGES.s, true, 120);
-    expect(jev).toMatchObject({ left: 90, width: 120, arrow: 60, below: false, edge: 121 });
+    const centre = bubbleBox({ x: 150, y: 160 }, 50, STAGES.s, true, 120);
+    expect(centre).toMatchObject({ left: 90, width: 120, arrow: 60, below: false, edge: 121 });
   });
 
   it('keeps a dragged panel inside the viewport', () => {
@@ -112,24 +112,26 @@ describe('Agent TV saved settings', () => {
 });
 
 describe('Agent TV caption', () => {
-  it('names the active handoff', () => {
-    const building = member({ status: 'running', toolCalls: 1, planStep: 'Write the test' });
-    expect(tvCaption(crewAgents(orchestration({ crew: [building] })))).toEqual({
-      lead: 'Jev → Builder',
-      text: 'write the test',
-    });
+  it('names the agent that is working and what it is doing', () => {
+    const working = chatAgent(run({ status: 'running' }), [
+      { name: 'Edit notes.txt', done: false },
+    ]);
+    expect(tvCaption([working])).toEqual({ lead: 'Claude', text: 'edit notes.txt' });
   });
 
-  it('falls back to what Jev is doing', () => {
-    const done = orchestration({ status: 'succeeded', phase: 'finished', crew: [member()] });
-    expect(tvCaption(crewAgents(done))).toEqual({ lead: 'Jev', text: 'ready for you' });
+  it('falls back to how the chat’s agent ended', () => {
+    expect(tvCaption([chatAgent(run({ status: 'succeeded' }))])).toEqual({
+      lead: 'Claude',
+      text: 'done',
+    });
+    expect(tvCaption([])).toEqual({ lead: null, text: 'No agents yet' });
   });
 });
 
 describe('dockStage', () => {
   it('keeps the base size when the rail is narrow or not measured yet', () => {
     expect(dockStage(0)).toEqual(dockStage(200));
-    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, jevSize: 34, fontSize: 11 });
+    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, leadSize: 34, fontSize: 11 });
   });
 
   it('grows every part with the rail and stops at the cap', () => {
@@ -137,7 +139,7 @@ describe('dockStage', () => {
     expect(wide).toEqual({
       width: 300,
       height: 192,
-      jevSize: 51,
+      leadSize: 51,
       crewSize: 39,
       labelWidth: 93,
       fontSize: 13,

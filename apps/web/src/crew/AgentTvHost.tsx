@@ -1,16 +1,14 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
+import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
-import { openMemberChat } from './member-chat-store.ts';
 import { AgentTv } from './AgentTv.tsx';
-import { agentAnchor, approvalAnchor, tvCrew, tvOrchestration } from './conversation-crew.ts';
+import { agentAnchor, approvalAnchor, castAgents, tvCast } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
-import { JEV_ID } from './crew-projection.ts';
-import { coordinatorScene } from './tv-coordinator.ts';
 import { tvListRows } from './tv-list.ts';
-import { lastDecisionLine, pendingAsks, spokenDecisionLine } from './tv-scene.ts';
+import { pendingAsks } from './tv-scene.ts';
 
 interface AgentTvHostProps {
   activeId: string | null;
@@ -26,12 +24,11 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     enabled: sourceId !== null,
   });
   const source = sourceId ? detail.data : undefined;
-  const agents = tvCrew(source);
-  const orchestration = tvOrchestration(source);
-  const waiting = orchestration?.pendingCheckpoint ?? null;
+  const cast = tvCast(source);
+  const members = castAgents(cast);
   const elsewhere = sourceId !== null && sourceId !== activeId;
-  const asking = agents.some((agent) => agent.state === 'waiting');
-  const idle = busyCount(agents) === 0 && !waiting && !asking;
+  const asking = members.some((agent) => agent.state === 'waiting');
+  const idle = busyCount(members) === 0 && !asking;
   const stop = useMutation({
     mutationFn: (runId: string) => api.cancelRun(runId),
     onSettled: () =>
@@ -45,32 +42,26 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     if (elsewhere && idle && source) closeAgentTv();
   }, [elsewhere, idle, source]);
 
-  if (!sourceId || !orchestration || agents.length === 0) return null;
+  if (!sourceId || !cast) return null;
 
   const jump = (anchor: string) => {
     if (elsewhere) onGoTo(sourceId);
     scrollToAnchor(anchor);
   };
 
-  const scene = coordinatorScene(orchestration, agents, source?.activity);
-  const members = scene?.members ?? agents;
-  const asks = pendingAsks(source, orchestration, members);
-  const runIds = new Set(orchestration.crew.map((member) => member.runId));
-  const anchored = (agentId: string) => (runIds.has(agentId) ? agentId : JEV_ID);
+  const asks = pendingAsks(source, members);
+  const anchorOf = (agentId: string) =>
+    agentId === cast.run.id ? turnAnchor(cast.run.id) : agentAnchor(cast.run.id, agentId);
 
   return (
     <AgentTv
       members={members}
       asks={asks}
-      tags={scene?.tags ?? null}
-      rows={tvListRows(source, orchestration, members, asks)}
+      rows={tvListRows(cast, asks)}
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
-      onMessage={(runId) => openMemberChat(sourceId, runId)}
-      decision={lastDecisionLine(orchestration)}
-      remark={spokenDecisionLine(orchestration)}
       branch={source?.conversation.branch ?? null}
-      onPick={(agentId) => jump(agentAnchor(orchestration.runId, anchored(agentId)))}
+      onPick={(agentId) => jump(anchorOf(agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />
   );

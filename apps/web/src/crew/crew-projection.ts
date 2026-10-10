@@ -1,8 +1,6 @@
 import {
-  depthLabel,
   isTerminalRunStatus,
   type ActivityStep,
-  type AdviceSummary,
   type CrewMember,
   type Orchestration,
 } from '@spark-outpost/contracts';
@@ -34,7 +32,11 @@ const PHASE_LINES: Record<Orchestration['phase'], string> = {
   finished: 'ready for you',
 };
 
-function stepLine(name: string): string {
+export function runState(status: CrewMember['status']): CrewState {
+  return RUN_STATES[status];
+}
+
+export function stepLine(name: string): string {
   const plain = name.replaceAll('`', '').trim();
   return plain.charAt(0).toLowerCase() + plain.slice(1);
 }
@@ -95,10 +97,6 @@ export function runAgent(
   };
 }
 
-function busy(crew: readonly CrewAgent[]): boolean {
-  return crew.some((agent) => agent.state === 'working' || agent.state === 'thinking');
-}
-
 function haltedState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState | null {
   const crewWaiting = crew.some((agent) => agent.state === 'waiting');
   if (
@@ -117,11 +115,6 @@ function haltedState(orchestration: Orchestration, crew: readonly CrewAgent[]): 
 
 function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState {
   return haltedState(orchestration, crew) ?? (orchestration.jevAsk ? 'working' : 'done');
-}
-
-export function betweenAgents(orchestration: Orchestration, crew: readonly CrewAgent[]): boolean {
-  if (haltedState(orchestration, crew) !== null) return false;
-  return Boolean(orchestration.jevAsk) || !busy(crew);
 }
 
 function jevLine(orchestration: Orchestration, state: CrewState): string {
@@ -190,27 +183,4 @@ export function crewAgents(
   }
   const crew = [...byName.values()];
   return [jevAgent(orchestration, crew), ...crew];
-}
-
-const COMPLEXITY = ['trivial', 'simple', 'normal', 'complex'];
-
-function complexityWord(value: number | null | undefined): string | null {
-  if (value === null || value === undefined) return null;
-  return COMPLEXITY[Math.max(0, Math.min(3, Math.round(value)))] ?? null;
-}
-
-function intakeAnswer(orchestration: Orchestration): Record<string, unknown> {
-  return orchestration.decisions.find((decision) => decision.kind === 'intake')?.answer ?? {};
-}
-
-export function dispatchParts(
-  orchestration: Orchestration,
-  advice: AdviceSummary | undefined,
-): string[] {
-  const answer = intakeAnswer(orchestration);
-  const complexity =
-    advice?.jev?.complexity ?? (typeof answer.complexity === 'number' ? answer.complexity : null);
-  return [complexityWord(complexity), depthLabel(orchestration.depth)].filter(
-    (part): part is string => Boolean(part),
-  );
 }

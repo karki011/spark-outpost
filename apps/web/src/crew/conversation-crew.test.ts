@@ -1,47 +1,77 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationDetail } from '@spark-outpost/contracts';
-import {
-  crewOrchestration,
-  lastCrewOrchestration,
-  tvCrew,
-  tvOrchestration,
-} from './conversation-crew.ts';
+import type { ConversationDetail, Orchestration } from '@spark-outpost/contracts';
+import { storedCrew, tvCast, tvCrew } from './conversation-crew.ts';
 import { member, orchestration } from './test-orchestration.ts';
+import { RUN_ID, run } from './test-run.ts';
 
-const CREW_RUN = '00000000-0000-4000-8000-000000000001';
-const SOLO_RUN = '00000000-0000-4000-8000-000000000009';
+const SPARK_RUN = '00000000-0000-4000-8000-0000000000b1';
 
-function detail(): ConversationDetail {
-  const crew = orchestration({ status: 'succeeded', crew: [member({ name: 'Bolt' })] });
-  const solo = orchestration({
-    runId: SOLO_RUN,
-    depth: 'direct',
-    crew: [member({ runId: SOLO_RUN, role: 'scout', name: 'Wren' })],
-  });
+function detail(orchestrations: Record<string, Orchestration> = {}): ConversationDetail {
   return {
-    runs: [{ id: CREW_RUN }, { id: SOLO_RUN }],
-    orchestrations: { [CREW_RUN]: crew, [SOLO_RUN]: solo },
+    runs: [run({ status: 'running', finishedAt: null })],
+    orchestrations,
+    approvals: [],
     activity: {},
   } as unknown as ConversationDetail;
 }
 
-describe('the crew Agent TV shows', () => {
-  it('keeps showing the last crew while a solo answer follows it', () => {
-    expect(crewOrchestration(detail())).toBeNull();
-    expect(lastCrewOrchestration(detail())?.runId).toBe(CREW_RUN);
-    expect(tvCrew(detail()).map((agent) => agent.name)).toEqual(['Jev', 'Bolt']);
+const sparkJob = orchestration({
+  depth: 'direct',
+  depthSource: 'user',
+  crew: [
+    member({
+      runId: SPARK_RUN,
+      role: 'spark',
+      name: 'Quill',
+      status: 'running',
+      toolCalls: 2,
+      spark: { id: '00000000-0000-4000-8000-0000000000b2', role: 'Reviewer', only: false },
+    }),
+  ],
+});
+
+const oldCrew = orchestration({
+  status: 'succeeded',
+  crew: [member({ name: 'Bolt' }), member({ name: 'Hawk', role: 'critic', runId: SPARK_RUN })],
+});
+
+describe('who Agent TV shows', () => {
+  it("shows the chat's one agent for a turn with no helpers", () => {
+    expect(tvCrew(detail()).map((agent) => [agent.name, agent.state])).toEqual([
+      ['Claude', 'thinking'],
+    ]);
   });
 
-  it('shows the single agent in a chat that never had a crew', () => {
-    const solo = { ...detail(), runs: [{ id: SOLO_RUN }] } as unknown as ConversationDetail;
-    expect(lastCrewOrchestration(solo)).toBeNull();
-    expect(tvOrchestration(solo)?.runId).toBe(SOLO_RUN);
-    expect(tvCrew(solo).map((agent) => agent.name)).toEqual(['Jev', 'Wren']);
+  it('adds a Spark that was handed a job, after the agent', () => {
+    const cast = tvCast(detail({ [RUN_ID]: sparkJob }))!;
+    expect(cast.lead.id).toBe(RUN_ID);
+    expect(cast.sparks.map((spark) => [spark.agent.name, spark.agent.spark?.role])).toEqual([
+      ['Quill', 'Reviewer'],
+    ]);
   });
 
-  it('shows nothing before the first reply', () => {
-    const empty = { ...detail(), runs: [], orchestrations: {} } as unknown as ConversationDetail;
-    expect(tvCrew(empty)).toEqual([]);
+  it('shows no Coordinator, Critic or Jev for a stored crew turn', () => {
+    expect(tvCrew(detail({ [RUN_ID]: oldCrew })).map((agent) => agent.name)).toEqual(['Claude']);
+  });
+
+  it('marks the agent as waiting while one of its cards is open', () => {
+    const asking = {
+      ...detail(),
+      approvals: [{ id: 'a', runId: RUN_ID, status: 'pending' }],
+    } as unknown as ConversationDetail;
+    expect(tvCrew(asking)[0]!.state).toBe('waiting');
+  });
+
+  it('shows nothing before the first message', () => {
+    expect(tvCrew({ ...detail(), runs: [] })).toEqual([]);
     expect(tvCrew(undefined)).toEqual([]);
+  });
+});
+
+describe('the stored crew the Crew tab lists', () => {
+  it('is a crew turn from before, never a Spark job or a plain turn', () => {
+    expect(storedCrew(detail({ [RUN_ID]: oldCrew }))?.runId).toBe(RUN_ID);
+    expect(storedCrew(detail({ [RUN_ID]: sparkJob }))).toBeNull();
+    expect(storedCrew(detail())).toBeNull();
   });
 });

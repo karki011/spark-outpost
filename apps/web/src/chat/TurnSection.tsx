@@ -1,4 +1,4 @@
-import { memo, use, useState } from 'react';
+import { memo, use } from 'react';
 import {
   isTerminalRunStatus,
   type ConversationDetail,
@@ -6,7 +6,7 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
-import { isCrewTurn } from '../crew/conversation-crew.ts';
+import { isCrewTurn, isSparkLed, sparkMembers } from '../crew/conversation-crew.ts';
 import { crewAgents } from '../crew/crew-projection.ts';
 import { TaskCard, TaskCount } from '../tasks/TaskCard.tsx';
 import { showsTaskCard } from '../tasks/task-card-shown.ts';
@@ -14,7 +14,7 @@ import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
-import { SparkJobs, isSparkLed, mainAgentRan, sparkMembers } from './crew/SparkJobs.tsx';
+import { SparkJobs, mainAgentRan } from './crew/SparkJobs.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
@@ -86,7 +86,6 @@ export const TurnSection = memo(function TurnSection({
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
-  const [startedSolo] = useState(crew === null);
   const handedTo = sparkMembers(orchestration);
   const inRail = use(RailTaskContext) === task?.id;
   const shownTask = onOpenTask && task && !inRail && showsTaskCard(task) ? task : null;
@@ -152,14 +151,7 @@ export const TurnSection = memo(function TurnSection({
       )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
-        <CrewTurn
-          run={run}
-          detail={detail}
-          orchestration={crew}
-          repo={repo}
-          taskCard={taskCard}
-          continued={startedSolo}
-        />
+        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
       ) : (
         <>
           <SoloTurn

@@ -1,6 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { CheckpointPayload } from '@spark-outpost/contracts';
-import { WorthALook } from '../outcomes/WorthALook.tsx';
 import { autoLabel, offers, type CheckpointApproval } from './checkpoint-model.ts';
 import type { Countdown } from './use-auto-continue.ts';
 
@@ -106,17 +105,6 @@ export function Action({
   );
 }
 
-export function CheckpointNotes({
-  payload,
-  pending,
-}: {
-  payload: CheckpointPayload;
-  pending: boolean;
-}) {
-  return (
-    <>
-      {payload.estimate && <p className="ck-estimate">{payload.estimate}</p>}
-      <WorthALook payload={payload} pending={pending} />
-    </>
-  );
+export function CheckpointNotes({ payload }: { payload: CheckpointPayload }) {
+  return payload.estimate ? <p className="ck-estimate">{payload.estimate}</p> : null;
 }

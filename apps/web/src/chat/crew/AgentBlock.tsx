@@ -10,10 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
-import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
-import '../../crew/member-chat.css';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
-import { COORDINATOR_DOING } from '../../crew/jev-doing.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
@@ -89,18 +86,9 @@ interface AgentHeadProps {
   anchor: string;
   status: BlockStatus | null;
   liveId?: string | null;
-  conversationId?: string;
-  readOnly?: boolean;
 }
 
-export function AgentHead({
-  agent,
-  anchor,
-  status,
-  liveId = null,
-  conversationId,
-  readOnly = false,
-}: AgentHeadProps) {
+export function AgentHead({ agent, anchor, status, liveId = null }: AgentHeadProps) {
   const headRef = useLiveHead(liveId);
   return (
     <div className="agent-head" id={anchor} ref={headRef}>
@@ -113,13 +101,6 @@ export function AgentHead({
       </span>
       {status && <span className={`agent-state ${status.state}`}>{status.label}</span>}
       <HeadMeta agent={agent} />
-      {conversationId && !readOnly && (
-        <MessageMemberButton
-          conversationId={conversationId}
-          agent={agent}
-          className="icon-btn agent-msg"
-        />
-      )}
     </div>
   );
 }
@@ -129,7 +110,6 @@ interface BodyProps {
   anchor: string;
   bodyId: string;
   conversationId: string;
-  readOnly: boolean;
   steps: readonly RunStep[];
   text: string;
   shots: readonly BrowserShot[];
@@ -157,7 +137,6 @@ function AgentBody({
   anchor,
   bodyId,
   conversationId,
-  readOnly,
   liveId = null,
   steps,
   text,
@@ -197,14 +176,7 @@ function AgentBody({
   );
   return (
     <>
-      <AgentHead
-        agent={agent}
-        anchor={anchor}
-        status={status}
-        liveId={liveId}
-        conversationId={conversationId}
-        readOnly={readOnly}
-      />
+      <AgentHead agent={agent} anchor={anchor} status={status} liveId={liveId} />
       <div id={bodyId}>
         <WorkLog steps={[...steps]} state={TURN_STATES[status.state]} runId={agent.id} />
         {cards.decided.map(approvalCard)}
@@ -236,9 +208,8 @@ function StreamedBody({ live, ...stored }: BodyProps & { live: boolean }) {
   const leads = streamLeads(stream, !live);
   const steps = shownSteps(stream, stored.steps, leads);
   const streaming = stream.status === 'connecting' || stream.status === 'running';
-  const { id, name, provider, role } = stored.agent;
-  const doing = role === 'coordinator' ? { doing: COORDINATOR_DOING } : {};
-  useLiveReport({ id, name, provider, kind: 'crew', ...doing }, live && streaming, steps);
+  const { id, name, provider } = stored.agent;
+  useLiveReport({ id, name, provider, kind: 'crew' }, live && streaming, steps);
   return (
     <AgentBody
       {...stored}
@@ -260,8 +231,6 @@ interface AgentBlockProps {
   live: boolean;
   settled?: boolean;
   collapsed: boolean;
-  still?: boolean;
-  readOnly?: boolean;
   conversationId: string;
   steps: readonly RunStep[];
   text: string;
@@ -293,8 +262,6 @@ export function AgentBlock({
   live,
   settled = false,
   collapsed,
-  still = false,
-  readOnly = false,
   conversationId,
   after,
   changes,
@@ -304,10 +271,8 @@ export function AgentBlock({
   const [choice, setChoice] = useState<boolean | null>(null);
   const bodyId = useId();
   const open = choice ?? !collapsed;
-  const block = { agent, anchor, bodyId, conversationId, readOnly, shots };
-  const className = ['msg ai agent-block', open ? '' : 'folded', still ? 'still' : '']
-    .filter(Boolean)
-    .join(' ');
+  const block = { agent, anchor, bodyId, conversationId, shots };
+  const className = open ? 'msg ai agent-block' : 'msg ai agent-block folded';
   if (!open) {
     return (
       <div className={className} data-agent={agent.id}>

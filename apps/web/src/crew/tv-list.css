@@ -144,10 +144,6 @@ button.tvl-ask:hover {
   margin-right: 5px;
   color: var(--faint);
 }
-.tvl-notes {
-  color: var(--text);
-  font-weight: 600;
-}
 .tvl-clock {
   color: var(--text);
 }

@@ -193,8 +193,6 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       label={working && !waiting && !log && !text ? 'thinking' : label}
       state={state}
       liveId={working && !waiting ? run.id : null}
-      category={run.category}
-      advice={detail.advice?.[run.id]}
       following={child?.following ?? run.following}
       status={
         log || taskCount ? (

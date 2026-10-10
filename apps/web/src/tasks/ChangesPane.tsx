@@ -1,14 +1,28 @@
 import './changes-pane.css';
 import { useQuery } from '@tanstack/react-query';
-import { isTerminalRunStatus, type ChangeRunSummary, type TaskRun } from '@spark-outpost/contracts';
+import {
+  isTerminalRunStatus,
+  runRole,
+  type ChangeRunSummary,
+  type TaskRun,
+} from '@spark-outpost/contracts';
 import { filesLabel } from '../chat/changes/change-rules.ts';
 import { Counts, DiffStat, FileChangeList } from '../chat/changes/FileChangeList.tsx';
 import { diffApi, diffKeys } from '../diff/diff-api.ts';
 import { CoreImpactNote } from '../map/CoreImpactNote.tsx';
 import { ShipControl } from '../ship/ShipControl.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
-import { crewNames } from './CrewPane.tsx';
 import { useViewChanges } from './view-changes.ts';
+
+function crewNames(runs: readonly TaskRun[]): string[] {
+  const seen = new Map<string, number>();
+  return runs.map((run) => {
+    const role = runRole(run.mode ?? null);
+    const count = (seen.get(role) ?? 0) + 1;
+    seen.set(role, count);
+    return count > 1 ? `${role} ${count}` : role;
+  });
+}
 
 function runName(run: ChangeRunSummary, names: ReadonlyMap<string, string>): string {
   if (run.name) return `${run.name}${run.copy ? '’s copy' : ''}`;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { memberNeedsYou } from '../chat/outpost/member-moment.ts';
 import type { Voice } from '../spark/voice.ts';
-import { dayKey, greetingDue, greetingLine } from './crew-voice.ts';
+import { dayKey, greetingDue, greetingLine } from './greeting.ts';
 import {
   newMoments,
   nextStreak,

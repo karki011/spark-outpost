@@ -11,7 +11,6 @@ import { reveal } from '../../ui/transitions.tsx';
 import { usePageHidden } from '../../ui/use-page-hidden.ts';
 
 const NO_ASKS = {};
-const NO_PACKETS: never[] = [];
 const ignore = () => undefined;
 
 interface RailTvProps {
@@ -61,15 +60,11 @@ export function RailTv({ conversationId, agents }: RailTvProps) {
           members={agents}
           metrics={metrics}
           asks={NO_ASKS}
-          decision={null}
           chatter={null}
-          packets={NO_PACKETS}
           gaze={null}
-          tags={null}
           reduced={reduced}
           selected={null}
           onSelect={ignore}
-          onLanded={ignore}
           onPick={ignore}
           onAsk={ignore}
         />

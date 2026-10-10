@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PrWatch } from '@spark-outpost/contracts';
-import { checksFact, keptAtLine, keptLine, pullReferences } from './result-model.ts';
+import { keptAtLine, keptLine, pullReferences } from './result-model.ts';
 
 const watch = (number: number, via: PrWatch['opened']['via'], at: string, draft = false) =>
   ({
@@ -28,22 +28,6 @@ describe('result line', () => {
     ]);
     expect(pulls.map((pull) => pull.number)).toEqual([4, 3]);
     expect(pulls.map((pull) => pull.state)).toEqual(['Draft', 'Merged']);
-  });
-
-  it('puts the checks in a few words, failures first', () => {
-    expect(checksFact(null)).toBeNull();
-    expect(checksFact({ passed: 3, failed: 0, unsettled: 0 })).toEqual({
-      text: '3 checks passed',
-      tone: 'ok',
-    });
-    expect(checksFact({ passed: 2, failed: 1, unsettled: 1 })).toEqual({
-      text: '1 check failing',
-      tone: 'bad',
-    });
-    expect(checksFact({ passed: 2, failed: 0, unsettled: 1 })).toEqual({
-      text: '1 check not settled',
-      tone: 'plain',
-    });
   });
 
   it('names the branch and the commit, or says the change is not committed', () => {

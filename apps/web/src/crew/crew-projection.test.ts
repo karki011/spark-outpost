@@ -7,7 +7,7 @@ import {
   roleLabel,
   totalsLine,
 } from './crew-model.ts';
-import { crewAgents, dispatchParts, runAgent } from './crew-projection.ts';
+import { crewAgents, runAgent } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
 
 const decision = {
@@ -148,13 +148,5 @@ describe('crew agents', () => {
     const [jev] = crewAgents(building);
     expect(jev).toMatchObject({ state: 'waiting', line: 'waiting on you' });
     expect(crewStateWord(jev!.state)).toBe('Waiting for you');
-  });
-
-  it('describes the dispatch as complexity and depth, leaving the category to its chip', () => {
-    expect(dispatchParts(orchestration({ decisions: [decision] }), undefined)).toEqual([
-      'normal',
-      'plan → execute',
-    ]);
-    expect(dispatchParts(orchestration({ depth: 'direct' }), undefined)).toEqual(['direct']);
   });
 });

@@ -34,8 +34,6 @@ import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
-import { SteerTarget } from '../crew/SteerTarget.tsx';
-import type { SteerControl } from '../crew/use-steer.ts';
 import {
   blockedMessage,
   clientCommand,
@@ -96,7 +94,6 @@ interface ComposerProps {
   onSendNow?: (content: string) => Promise<void>;
   busyEnter?: BusyEnterAction;
   notice?: string | null;
-  steer?: SteerControl | null;
   above?: ReactNode;
   onAudit?: () => void;
   onStartFresh?: () => void;
@@ -130,7 +127,6 @@ export function Composer({
   onSendNow,
   busyEnter = DEFAULT_BUSY_ENTER,
   notice = null,
-  steer = null,
   above = null,
   onAudit,
   onStartFresh,
@@ -227,8 +223,7 @@ export function Composer({
   );
   useDraftRequests(conversationId, setDraft, textareaRef, quotes?.focusRequest ?? 0);
 
-  const steering = busy ? steer : null;
-  const queueing = busy && steering === null && onQueue !== undefined;
+  const queueing = busy && onQueue !== undefined;
   const hasText = draft.trim().length > 0;
   const quoteItems = quotes?.items ?? [];
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
@@ -236,7 +231,7 @@ export function Composer({
   const canSend =
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
-    (!busy || (steering !== null && hasText) || canQueue) &&
+    (!busy || canQueue) &&
     !attachments.uploading &&
     !attachments.failed;
 
@@ -261,11 +256,6 @@ export function Composer({
     lastChoice.current = choice;
     if (!canSend || secrets.blocks(draft)) return;
     const draftText = draft;
-    if (steering) {
-      setDraft('');
-      await steering.send(draftText).catch(() => setDraft(draftText));
-      return;
-    }
     const typed = outgoing();
     if (typed === null) return;
     const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
@@ -328,7 +318,6 @@ export function Composer({
             conversationId={conversationId}
             sparks={sparks}
             draft={draft}
-            enabled={steering === null}
             onApply={(text) => {
               setDraft(text);
               textareaRef.current?.focus();
@@ -347,9 +336,9 @@ export function Composer({
         <p className="composer-notice" role="status">
           {attachments.notice}
         </p>
-        {(steering?.status ?? notice) && (
+        {notice && (
           <p className="composer-notice" role="status">
-            {steering?.status ?? notice}
+            {notice}
           </p>
         )}
         {typedNote && !slash.open && (
@@ -415,7 +404,6 @@ export function Composer({
           value={draft}
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
           placeholder={composerPlaceholder({
-            steering: steering !== null,
             queueing,
             preferred: busyEnter,
             hasRepos,
@@ -458,7 +446,6 @@ export function Composer({
               settings={settings}
               providers={providers}
               hasRepos={hasRepos}
-              orchestration={orchestration}
             />
           )}
           <ContextRing
@@ -468,9 +455,6 @@ export function Composer({
             orchestration={orchestration}
             {...(onAudit ? { onAudit } : {})}
           />
-          {steering && (
-            <SteerTarget control={steering} ready={canSend} onSend={() => void submit()} />
-          )}
           <SendButton
             busy={busy}
             stopping={stopping}
