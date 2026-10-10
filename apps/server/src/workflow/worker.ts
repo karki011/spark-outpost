@@ -17,7 +17,10 @@ export interface WorkerOptions extends OrchestratorDeps {
   recoveryEveryMs?: number;
   activeWork?: ActiveWork;
   queueTarget?: ResolveTarget;
+  runTurn?: RunTurn;
 }
+
+export type RunTurn = (options: WorkerOptions, lease: Lease) => Promise<void>;
 
 export interface Worker {
   wake(): void;
@@ -27,7 +30,7 @@ export interface Worker {
 
 async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
   if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
-  await orchestrate(options, lease);
+  await (options.runTurn ?? orchestrate)(options, lease);
   await sendNextQueued(options, lease.runId);
 }
 
