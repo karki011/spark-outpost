@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   NEEDS_YOU_PREFIX,
+  needsYouLines,
   type ClosedState,
   type OutpostAnswer,
   type OutpostPostKind,
@@ -56,7 +57,7 @@ interface FactsRow extends PostRow {
   held: RequestFacts['held'];
   run_status: RunStatus | null;
   run_error: string | null;
-  run_needs_you: string | null;
+  run_asking_reply: string | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
   wrap_up: boolean;
@@ -87,10 +88,10 @@ const FACTS_QUERY = `
     r.status AS run_status,
     r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
-      SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$)
+      SELECT CASE WHEN strpos(m.content, '${NEEDS_YOU_PREFIX}') > 0 THEN m.content END
       FROM messages m
       WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
-    ) END AS run_needs_you,
+    ) END AS run_asking_reply,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
     EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = p.id) AS wrap_up
@@ -140,7 +141,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
     sent: row.task_id !== null,
     queued: row.queued,
     runStatus: row.run_status,
-    runNeedsYou: row.run_needs_you,
+    runNeedsYou: needsYouLines(row.run_asking_reply ?? '')[0] ?? null,
     paused: row.paused,
     held: row.held,
     chatDeleted: row.to_conversation_id === null,

@@ -196,7 +196,7 @@ export function needsYouLine(reason: string): string {
 
 export function needsYouLines(reply: string): string[] {
   return reply
-    .split('\n\n')
-    .map((part) => part.trim())
-    .filter((part) => part.startsWith(NEEDS_YOU_PREFIX));
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith(NEEDS_YOU_PREFIX));
 }
