@@ -125,9 +125,10 @@ function effectiveSettings(
   const connection = connections.get(provider)!;
   const chosen = row.overrides[provider] ?? {};
   const agentMode = chosen.agentMode ?? connection.agentMode ?? defaultModeFor(provider);
+  const pinned = row.model_routing === 'auto' ? undefined : chosen.model;
   return {
     provider,
-    model: chosen.model ?? connection.model,
+    model: pinned ?? connection.model,
     effort: chosen.effort ?? connection.effort,
     permission: permissionFor(provider, agentMode, connection.modes),
     agentMode,
@@ -188,12 +189,12 @@ export async function updateChatSettings(
   else if (update.level !== undefined) choices.level = update.level;
   if (update.options) choices.options = { ...choices.options, ...update.options };
   const overrides: Overrides = { ...row.overrides, [provider]: choices };
-  const routing = update.routing ?? row.model_routing;
+  const routing = update.routing ?? (update.model ? 'pinned' : row.model_routing);
   await db.query(
     `UPDATE conversations SET provider = $2, overrides = $3,
        model_routing = COALESCE($4, model_routing)
      WHERE id = $1`,
-    [conversationId, provider, JSON.stringify(overrides), update.routing ?? null],
+    [conversationId, provider, JSON.stringify(overrides), routing ?? null],
   );
   return effectiveSettings(
     {

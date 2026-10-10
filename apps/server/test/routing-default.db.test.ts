@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { migrationsDir } from '../src/persistence/migrate.ts';
+import { resolveRunTarget } from '../src/api/run-target.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
@@ -67,5 +68,24 @@ describe('model routing default', () => {
       .expect(200);
     expect(picked.body.routing).toBe('pinned');
     expect(await routingOf(after)).toBe('pinned');
+  });
+
+  it('runs an Auto chat on the agent’s default model whatever was picked before', async () => {
+    await connectCliProvider(t, 'claude');
+    const [fresh, id] = [await newChat(), await newChat()];
+    const client = localClient(createTestApp(t, { fixedRunProvider: null }));
+    const path = `/api/conversations/${id}/settings`;
+    const usedModel = async (chat: string) =>
+      (await resolveRunTarget({ db: t.db, workspaceId: t.workspaceId }, chat)).model;
+    const agentDefault = await usedModel(fresh);
+
+    const picked = await client.send('patch', path, { model: 'opus' }).expect(200);
+    expect(picked.body).toMatchObject({ model: 'opus', routing: 'pinned' });
+    expect(await usedModel(id)).toBe('opus');
+
+    const auto = await client.send('patch', path, { routing: 'auto' }).expect(200);
+    expect(auto.body.routing).toBe('auto');
+    expect(auto.body.model).not.toBe('opus');
+    expect(await usedModel(id)).toBe(agentDefault);
   });
 });
