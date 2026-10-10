@@ -64,6 +64,42 @@ describe('the post the outpost page receives', () => {
     expect(toOutpostPost(found, answer)).toMatchObject({ state: 'answered', answer });
   });
 
+  it('says why a turn failed in one plain line after whose turn it was', () => {
+    const failed: PostWithFacts = {
+      post: { ...stored, taskId: stored.id, runId: stored.id },
+      facts: { ...facts, sent: true, runStatus: 'failed' },
+      runError: '\n  The agent stopped:   no reply for a while.\nstack line two',
+    };
+    expect(toOutpostPost(failed, null)).toMatchObject({
+      state: 'failed',
+      reason: "@api's turn failed: The agent stopped: no reply for a while.",
+    });
+  });
+
+  it('keeps the short line when no reason was stored for the failed turn', () => {
+    const failed: PostWithFacts = {
+      post: { ...stored, taskId: stored.id, runId: stored.id },
+      facts: { ...facts, sent: true, runStatus: 'failed' },
+    };
+    expect(toOutpostPost(failed, null).reason).toBe("@api's turn failed");
+    expect(toOutpostPost({ ...failed, runError: '  \n ' }, null).reason).toBe("@api's turn failed");
+  });
+
+  it('adds no run error to a request that did not fail in its turn', () => {
+    const rejected: PostWithFacts = {
+      post: stored,
+      facts: { ...facts, closedState: 'rejected', closedReason: 'queue_full', runStatus: 'failed' },
+      runError: 'Something else.',
+    };
+    expect(toOutpostPost(rejected, null).reason).toBe('Not delivered: queue full');
+    const interrupted: PostWithFacts = {
+      post: stored,
+      facts: { ...facts, sent: true, runStatus: 'outcome_unknown' },
+      runError: 'Something else.',
+    };
+    expect(toOutpostPost(interrupted, null).reason).toBe("@api's turn was interrupted");
+  });
+
   it('counts the files of a request and carries none of their ids', () => {
     const found: PostWithFacts = {
       post: { ...stored, attachmentIds: [stored.id, stored.outpostId] },

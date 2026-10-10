@@ -77,6 +77,7 @@ export interface PostWithFacts {
   post: StoredPost;
   facts: RequestFacts | null;
   wrapUp?: boolean;
+  runError?: string;
 }
 
 export type StoredOutpost = Omit<Outpost, 'needsYou'>;

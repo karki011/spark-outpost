@@ -55,6 +55,7 @@ interface FactsRow extends PostRow {
   queued: boolean;
   held: RequestFacts['held'];
   run_status: RunStatus | null;
+  run_error: string | null;
   run_needs_you: string | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
@@ -84,6 +85,7 @@ const FACTS_QUERY = `
       ORDER BY last.created_at DESC LIMIT 1
     ) AS held,
     r.status AS run_status,
+    r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$)
       FROM messages m
@@ -148,7 +150,12 @@ function toFacts(row: FactsRow): RequestFacts | null {
 }
 
 function withFacts(row: FactsRow): PostWithFacts {
-  return { post: toPost(row), facts: toFacts(row), ...(row.wrap_up ? { wrapUp: true } : {}) };
+  return {
+    post: toPost(row),
+    facts: toFacts(row),
+    ...(row.wrap_up ? { wrapUp: true } : {}),
+    ...(row.run_error ? { runError: row.run_error } : {}),
+  };
 }
 
 async function existingPost(db: Queryable, post: NewPost): Promise<StoredPost | null> {
