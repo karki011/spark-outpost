@@ -1,6 +1,6 @@
 import './outpost-chat.css';
+import type { ChatDraft } from '@spark-outpost/contracts';
 import { ChevronIcon, OutpostIcon } from '../../ui/icons.tsx';
-import type { ChatDraft } from './chat-drafts.ts';
 import { draftLabel } from './chat-lines.ts';
 
 interface DraftLineProps {

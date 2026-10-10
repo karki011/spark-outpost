@@ -9,7 +9,7 @@ import { outpostRoutes } from '../api/outpost-routes.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import type { Db } from '../persistence/db.ts';
 import { drainQueue } from '../workflow/queue-drain.ts';
-import type { PeerAgent } from './ports.ts';
+import type { PeerAgent, StackGit } from './ports.ts';
 
 export interface OutpostDelivery {
   wakes: TaskWakes;
@@ -54,15 +54,17 @@ export interface OutpostRouterOptions {
   fixedRunProvider?: string;
   port: number;
   outposts: OutpostDelivery;
+  stackGit?: StackGit;
 }
 
 export function outpostRouters(options: OutpostRouterOptions): { api: Router; a2a: Router } {
-  const { db, workspaceId, fixedRunProvider, outposts } = options;
+  const { db, workspaceId, fixedRunProvider, outposts, stackGit } = options;
   return {
     api: outpostRoutes({
       db,
       workspaceId,
       peer: outposts.peer,
+      ...(stackGit ? { stackGit } : {}),
       drain: (conversationId) =>
         drainQueue(db, conversationId, (id) =>
           resolveRunTarget({ db, workspaceId, fixedRunProvider }, id),

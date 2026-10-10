@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isStacked,
+  stackedCount,
   storyOrder,
   storyProblems,
   type StoryChat,
@@ -390,5 +391,29 @@ describe('isStacked', () => {
     expect(isStacked({ projectId: PROJECT }, null)).toBe(false);
     expect(isStacked({ projectId: null }, { projectId: null })).toBe(false);
     expect(isStacked({ projectId: PROJECT }, { projectId: null })).toBe(false);
+  });
+});
+
+describe('stackedCount', () => {
+  const chat = (handle: string, projectId: string, dependsOn?: string) => ({
+    handle,
+    projectId,
+    ...(dependsOn ? { dependsOn } : {}),
+  });
+
+  it('counts the chats that start from another chat in the same project', () => {
+    expect(
+      stackedCount([
+        chat('api', PROJECT),
+        chat('web', PROJECT, 'api'),
+        chat('docs', DRAFT, 'api'),
+        chat('qa', PROJECT, 'web'),
+      ]),
+    ).toBe(2);
+  });
+
+  it('counts none for parallel chats or a parent that is not in the draft', () => {
+    expect(stackedCount([chat('api', PROJECT), chat('web', PROJECT)])).toBe(0);
+    expect(stackedCount([chat('web', PROJECT, 'api')])).toBe(0);
   });
 });

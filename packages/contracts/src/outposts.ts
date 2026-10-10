@@ -284,6 +284,19 @@ export const outpostDraftSchema = z.object({
 });
 export type OutpostDraft = z.infer<typeof outpostDraftSchema>;
 
+export const chatDraftSchema = z.object({
+  id: z.uuid(),
+  runId: z.uuid().nullable(),
+  chats: z.number().int().positive(),
+  stacked: z.number().int().nonnegative(),
+  outpostId: z.uuid().nullable(),
+  startedAt: z.string().nullable(),
+});
+export type ChatDraft = z.infer<typeof chatDraftSchema>;
+
+export const chatDraftsSchema = z.object({ drafts: z.array(chatDraftSchema) });
+export type ChatDrafts = z.infer<typeof chatDraftsSchema>;
+
 export type PostAddress =
   | { kind: 'request'; to: string; body: string }
   | { kind: 'all'; body: string }

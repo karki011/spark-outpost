@@ -1,20 +1,13 @@
 import { stat } from 'node:fs/promises';
 import {
-  modeKind,
-  modePosture,
   startMemberChatId,
   type CreateOutpostRequest,
   type DraftChat,
   type FailedMember,
-  type ModePosture,
   type NewMemberChat,
   type StartMember,
 } from '@spark-outpost/contracts';
-import {
-  getCapabilities,
-  resolveChatSettings,
-  updateChatSettings,
-} from '../persistence/chat-settings.ts';
+import { updateChatSettings } from '../persistence/chat-settings.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import { withTransaction, type Queryable } from '../persistence/db.ts';
 import { getDraft, markStarted } from '../persistence/outpost-drafts.ts';
@@ -26,6 +19,7 @@ import {
   OutpostError,
 } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
+import { chatPosture } from './chat-posture.ts';
 import { aboveLeadMode, modeAboveLead, userChoseMode } from './mode-cap.ts';
 import {
   addWithNotice,
@@ -117,26 +111,14 @@ function proposedMode(story: Story, member: StartMember): string | null {
   return story.proposed.find((chat) => chat.handle === member.handle)?.agentMode ?? null;
 }
 
-async function postureOf(
-  db: Queryable,
-  workspaceId: string,
-  conversationId: string,
-): Promise<ModePosture> {
-  const settings = await resolveChatSettings(db, conversationId);
-  if (!settings.provider) return 'unknown';
-  const capabilities = await getCapabilities(db, workspaceId, settings.provider);
-  const kind = modeKind(capabilities?.modes ?? [], settings.agentMode);
-  return modePosture(settings.provider, settings.agentMode, kind);
-}
-
 async function holdToLeadMode(
   db: Queryable,
   workspaceId: string,
   lead: StoryLead,
   member: StartMember,
 ): Promise<void> {
-  const leadPosture = await postureOf(db, workspaceId, lead.conversationId);
-  const posture = await postureOf(db, workspaceId, startMemberChatId(member));
+  const { posture: leadPosture } = await chatPosture(db, workspaceId, lead.conversationId);
+  const { posture } = await chatPosture(db, workspaceId, startMemberChatId(member));
   if (aboveLeadMode(leadPosture, posture)) {
     throw new OutpostError(400, modeAboveLead(member.handle, lead.handle));
   }

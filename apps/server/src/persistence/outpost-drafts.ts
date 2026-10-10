@@ -42,6 +42,15 @@ export const getDraft: DraftStore['getDraft'] = async (db, workspaceId, id) => {
   return rows[0] ? toDraft(rows[0]) : null;
 };
 
+export const draftsOfChat: DraftStore['draftsOfChat'] = async (db, workspaceId, conversationId) => {
+  const { rows } = await db.query<DraftRow>(
+    `SELECT ${DRAFT_COLUMNS} FROM outpost_drafts
+     WHERE workspace_id = $1 AND conversation_id = $2 ORDER BY created_at, id`,
+    [workspaceId, conversationId],
+  );
+  return rows.flatMap((row) => toDraft(row) ?? []);
+};
+
 export const saveDraft: DraftStore['saveDraft'] = async (db, draft) => {
   await db.query(
     `INSERT INTO outpost_drafts (id, workspace_id, conversation_id, run_id, outpost_id, title, body)

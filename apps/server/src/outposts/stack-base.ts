@@ -21,7 +21,7 @@ export function ownerName(handle: string | null): string {
   return handle ? `@${handle}` : UNNAMED_OWNER;
 }
 
-function liveBranch(parent: StoryTaskRow): string | null {
+export function liveBranch(parent: StoryTaskRow): string | null {
   const ended = parent.pull !== null && parent.pull.state !== 'open';
   return parent.ownsBranch && !ended ? parent.branch : null;
 }

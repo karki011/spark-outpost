@@ -1,6 +1,5 @@
-import type { OutpostPost, Run } from '@spark-outpost/contracts';
+import type { ChatDraft, OutpostPost, Run } from '@spark-outpost/contracts';
 import { countLabel } from '../../ui/count-label.ts';
-import type { ChatDraft } from './chat-drafts.ts';
 
 export type TurnWindow = Pick<Run, 'id'> & { parentRunId?: Run['parentRunId'] };
 

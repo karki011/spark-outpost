@@ -158,6 +158,7 @@ export interface DraftStore {
   getDraft(db: Queryable, workspaceId: string, id: string): Promise<StoredDraft | null>;
   markStarted(db: Queryable, id: string, outpostId: string): Promise<boolean>;
   markReported(db: Queryable, id: string): Promise<boolean>;
+  draftsOfChat(db: Queryable, workspaceId: string, conversationId: string): Promise<StoredDraft[]>;
 }
 
 export interface StoredStoryTask {

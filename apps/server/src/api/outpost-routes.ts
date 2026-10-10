@@ -4,7 +4,9 @@ import {
   createOutpostRequestSchema,
   createPostRequestSchema,
   needsYouCount,
+  stackedCount,
   updateOutpostRequestSchema,
+  type ChatDrafts,
   type CreateOutpostResponse,
   type Outpost,
   type OutpostDetail,
@@ -12,7 +14,7 @@ import {
   type OutpostPost,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { getDraft } from '../persistence/outpost-drafts.ts';
+import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
 import { requestExchanges } from '../persistence/outpost-exchanges.ts';
 import {
   cancelUnsent,
@@ -164,6 +166,21 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       body: draft.body,
       startedAt: draft.startedAt,
       createdAt: draft.createdAt,
+    };
+    res.json(view);
+  });
+
+  router.get('/conversations/:id/outpost-drafts', async (req, res) => {
+    const found = await draftsOfChat(db, workspaceId, paramId(req));
+    const view: ChatDrafts = {
+      drafts: found.map((draft) => ({
+        id: draft.id,
+        runId: draft.runId,
+        chats: draft.body.chats.length,
+        stacked: stackedCount(draft.body.chats),
+        outpostId: draft.outpostId,
+        startedAt: draft.startedAt,
+      })),
     };
     res.json(view);
   });

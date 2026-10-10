@@ -88,6 +88,7 @@ PUT /api/conversations/:id/queue/order
 POST /api/runs/:id/messages
 GET /api/outposts
 GET /api/outposts/:id
+GET /api/conversations/:id/outpost-drafts
 PATCH /api/outposts/:id
 POST /api/outposts/:id/posts
 POST /api/outposts/:id/posts/:postId/cancel

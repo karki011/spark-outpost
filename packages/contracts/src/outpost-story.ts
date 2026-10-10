@@ -146,3 +146,15 @@ export const storyOrder: StoryOrder = <Item extends StoryOrderItem>(tasks: reado
 
 export const isStacked: IsStacked = (task, parent) =>
   parent !== null && task.projectId !== null && task.projectId === parent.projectId;
+
+export interface StackedChat extends StackSide {
+  handle: string;
+  dependsOn?: string | undefined;
+}
+
+export function stackedCount(chats: readonly StackedChat[]): number {
+  const byHandle = new Map(chats.map((chat) => [chat.handle, chat]));
+  return chats.filter((chat) =>
+    isStacked(chat, chat.dependsOn === undefined ? null : (byHandle.get(chat.dependsOn) ?? null)),
+  ).length;
+}

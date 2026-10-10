@@ -397,6 +397,22 @@ describe('the stack line', () => {
     expect(await told({ [API]: child() })).toBeNull();
   });
 
+  it('says nothing once the parent chat’s pull request is merged or closed', async () => {
+    const pull = { number: 7, url: 'https://github.com/acme/shop/pull/7', draft: false };
+    const ended = (state: 'merged' | 'closed') => ({
+      ...parent,
+      pull: { ...pull, state, base: 'main', headSha: 'abc' },
+    });
+    const stacked = child({ baseBranch: 'spark/lead-orders' });
+    expect(await told({ [API]: stacked, [LEAD]: ended('merged') })).toBeNull();
+    expect(await told({ [API]: stacked, [LEAD]: ended('closed') })).toBeNull();
+    const open = {
+      ...parent,
+      pull: { ...pull, state: 'open' as const, base: 'main', headSha: 'a' },
+    };
+    expect(await told({ [API]: stacked, [LEAD]: open })).not.toBeNull();
+  });
+
   it('says nothing when the chat was started from another base', async () => {
     expect(await told({ [API]: child({ baseBranch: 'main' }), [LEAD]: parent })).toBeNull();
   });

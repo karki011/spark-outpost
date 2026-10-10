@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   handleProblem,
   isStacked,
+  stackedCount,
   OUTPOST_DRAFT_ACTIVITY,
   OUTPOST_MEMBERS_MAX,
   OUTPOST_NAME_MAX,
@@ -174,7 +175,7 @@ async function draft(context: SparkToolContext, args: DraftArgs) {
   await showDraftLine(context, {
     draftId: saved.id,
     chats: lines.length,
-    stacked: lines.filter((line) => line.stacked).length,
+    stacked: stackedCount(body.chats),
   });
   return { draft: saved.id, chats: lines, next: NEXT };
 }

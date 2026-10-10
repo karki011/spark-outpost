@@ -1,4 +1,4 @@
-import { requestState, type OutpostAnswer } from '@spark-outpost/contracts';
+import { isStacked, requestState, type OutpostAnswer } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import type { OutpostStore, PostStore, PostWithFacts, StoryStore } from './ports.ts';
@@ -10,6 +10,7 @@ import {
   type PreambleAnswer,
   type PreambleNote,
 } from './request-prompt.ts';
+import { liveBranch } from './stack-base.ts';
 
 export interface PreambleStores {
   outpostOf: OutpostStore['outpostOf'];
@@ -129,10 +130,11 @@ async function stackNote(deps: PreambleDeps, chatId: string): Promise<string | n
   const parentId = own?.task.dependsOnConversationId ?? null;
   if (!own || parentId === null) return null;
   const parent = await deps.stores.storyTaskOf(deps.db, parentId);
-  if (!parent?.branch || !parent.ownsBranch) return null;
-  if (parent.projectId === null || parent.projectId !== own.projectId) return null;
-  if (own.baseBranch !== null && own.baseBranch !== parent.branch) return null;
-  return stackLine({ parentHandle: parent.handle, parentBranch: parent.branch });
+  if (!parent || !isStacked(own, parent)) return null;
+  const branch = liveBranch(parent);
+  if (branch === null) return null;
+  if (own.baseBranch !== null && own.baseBranch !== branch) return null;
+  return stackLine({ parentHandle: parent.handle, parentBranch: branch });
 }
 
 export async function outpostPreamble(

@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createOutpostResponseSchema, outpostDetailSchema } from '@spark-outpost/contracts';
+import {
+  chatDraftsSchema,
+  createOutpostResponseSchema,
+  outpostDetailSchema,
+} from '@spark-outpost/contracts';
 import {
   ONLY_REQUESTS_START,
   outpostErrorStatus,
@@ -169,6 +173,32 @@ describe('GET /api/outposts/drafts/:id', () => {
     expect(missing.status).toBe(404);
     expect(missing.body).toEqual({ error: DRAFT_NOT_FOUND });
     expect((await request(app).get('/api/outposts/drafts/nope')).status).toBe(400);
+  });
+});
+
+describe('GET /api/conversations/:id/outpost-drafts', () => {
+  const drafts = (chatId: string) =>
+    request(app).get(`/api/conversations/${chatId}/outpost-drafts`);
+
+  it('lists what the chat proposed, with how many chats and how many stacked', async () => {
+    const before = await drafts(lead);
+
+    expect(before.status).toBe(200);
+    expect(chatDraftsSchema.parse(before.body)).toEqual({
+      drafts: [
+        { id: draftId, runId: null, chats: 2, stacked: 1, outpostId: null, startedAt: null },
+      ],
+    });
+
+    await start();
+    const [started] = chatDraftsSchema.parse((await drafts(lead)).body).drafts;
+    expect(started).toMatchObject({ id: draftId, outpostId });
+    expect(started?.startedAt).toEqual(expect.any(String));
+  });
+
+  it('is empty for a chat that proposed nothing, and 400 for an id that is not one', async () => {
+    expect((await drafts(randomUUID())).body).toEqual({ drafts: [] });
+    expect((await drafts('nope')).status).toBe(400);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { ChatDraft } from '@spark-outpost/contracts';
 import { API_CHAT, FE_CHAT, note, post } from '../../outposts/test-fixtures.ts';
-import type { ChatDraft } from './chat-drafts.ts';
 import { draftLabel, draftsInTurn, firstLine, sentInTurn, type TurnWindow } from './chat-lines.ts';
 
 const RUN_ID = '0e000000-0000-4000-8000-000000000001';

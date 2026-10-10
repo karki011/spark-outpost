@@ -11,7 +11,8 @@ import {
   outpost,
   post,
 } from '../../outposts/test-fixtures.ts';
-import { chatDraftsQuery, type ChatDraft } from './chat-drafts.ts';
+import type { ChatDraft } from '@spark-outpost/contracts';
+import { chatDraftsQuery } from './chat-drafts.ts';
 import type { TurnWindow } from './chat-lines.ts';
 import { OutpostSeamContext, type OutpostSeam } from './outpost-seam.ts';
 import { TurnOutpostLines } from './TurnOutpostLines.tsx';
