@@ -15,7 +15,7 @@ const run = promisify(execFile);
 const GIT_TIMEOUT_MS = 60_000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
-export const SNAPSHOT_REF_PREFIX = 'refs/spark-outpost/runs/';
+const SNAPSHOT_REF_PREFIX = 'refs/spark-outpost/runs/';
 
 export async function git(
   root: string,
@@ -246,8 +246,4 @@ export async function gitDiffBetween(
     git(root, ['diff', ...range]),
   ]);
   return { stats: parseNumstat(numstat), patch };
-}
-
-export async function commitTree(root: string, commit: string): Promise<string> {
-  return (await git(root, ['rev-parse', `${commit}^{tree}`])).trim();
 }

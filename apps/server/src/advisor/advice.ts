@@ -42,5 +42,3 @@ export interface IntakeRequest {
   previousReply?: string | null;
   fourWay?: boolean;
 }
-
-export { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';

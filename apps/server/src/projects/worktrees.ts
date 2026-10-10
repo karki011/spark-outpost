@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { appendFile, mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { SNAPSHOT_REF_PREFIX, commitWorkingTree, git, headCommit } from './snapshot.ts';
+import { commitWorkingTree, git, headCommit } from './snapshot.ts';
 
 const run = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
@@ -71,10 +71,6 @@ export async function commitWorktree(
   await git(root, ['update-ref', `refs/heads/${branch}`, commit]);
   await git(root, ['update-ref', `${RESULT_REF_PREFIX}${runId}`, commit]);
   return commit;
-}
-
-export async function pinSnapshot(root: string, runId: string, commit: string): Promise<void> {
-  await git(root, ['update-ref', `${SNAPSHOT_REF_PREFIX}${runId}`, commit]);
 }
 
 export async function removeWorktree(root: string, target: string, branch: string): Promise<void> {
@@ -148,13 +144,4 @@ export async function takeFileFrom(root: string, commit: string, file: string): 
     return;
   }
   await rm(path.join(top, file), { force: true });
-}
-
-export async function fileDiff(
-  root: string,
-  from: string,
-  to: string,
-  file: string,
-): Promise<string> {
-  return git(root, ['diff', '--no-renames', from, to, '--', `:(top,literal)${file}`]);
 }
