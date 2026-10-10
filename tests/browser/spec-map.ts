@@ -105,6 +105,7 @@ export const SPEC_GROUPS = {
     'native-terminal',
     'command-terminal',
     'command-tab',
+    'agent-terminal',
     'preview',
     'shot-order',
     'sign-in-fill',

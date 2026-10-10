@@ -384,3 +384,22 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+.agent-tab .cmd-tab-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-tab-screen {
+  flex: 1;
+  min-height: 0;
+}
+
+.agent-tab.stopped .run-cmd-mark svg,
+.agent-tab.interrupted .run-cmd-mark svg {
+  color: var(--muted);
+}
+
+.agent-tab .cmd-tab-note .btn {
+  margin-left: 6px;
+}

@@ -5,6 +5,7 @@ import type * as Xterm from './xterm-terminal.ts';
 export interface TerminalHandlers<T extends TerminalTicket> {
   onOpen(created: T): void;
   preserveSession?: boolean;
+  readOnly?: boolean;
   onDisconnected?(): void;
   onCommandRun?(): void;
   onHint?(hint: TerminalHint): void;

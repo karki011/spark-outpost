@@ -23,6 +23,7 @@ import { RailContext } from './rail/rail-context.ts';
 import { CommandDockContext } from './commands/command-dock.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { usePendingArrival } from './status/status-context.ts';
+import { useRestoredAgentTabs } from '../terminal/dock/use-agent-tabs.ts';
 
 function RailSlot() {
   const rail = use(RailContext);
@@ -50,6 +51,7 @@ export const Thread = memo(function Thread({
 }: ThreadProps) {
   const voice = useVoice();
   const { remote } = useRemoteClient();
+  useRestoredAgentTabs(remote ? null : detail.conversation.id);
   const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));

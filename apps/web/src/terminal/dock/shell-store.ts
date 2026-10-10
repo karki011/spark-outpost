@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { CreateShellResponse, ShellFolderKind } from '@spark-outpost/contracts';
+import { agentTerminalsApi } from '../../api/agent-terminals.ts';
 import { previewApi } from '../../api/preview.ts';
 import { createShell, runningCommand } from '../terminal-api.ts';
 import { openTerminal, type TerminalConnection } from '../terminal-connection.ts';
@@ -7,7 +8,7 @@ import { endMessages } from '../terminal-messages.ts';
 import { findCommandTab, type MirroredCommand } from './command-tabs.ts';
 
 export type ShellStatus = 'starting' | 'open' | 'ended';
-export type TabKind = 'shell' | 'preview' | 'command';
+export type TabKind = 'shell' | 'preview' | 'command' | 'agent';
 
 export interface ShellTab {
   id: string;
@@ -19,6 +20,7 @@ export interface ShellTab {
   notice: string | null;
   kind: TabKind;
   mirror: MirroredCommand | null;
+  agentTerminalId: string | null;
   host: HTMLDivElement;
 }
 
@@ -33,6 +35,7 @@ const EMPTY: ChatShells = { open: false, tabs: [], activeId: null };
 let chats: ReadonlyMap<string, ChatShells> = new Map();
 const connections = new Map<string, TerminalConnection>();
 const listeners = new Set<() => void>();
+const closedAgentTerminals = new Set<string>();
 let park: HTMLDivElement | null = null;
 let focusWanted: string | null = null;
 
@@ -101,6 +104,7 @@ function addTab(
   kind: TabKind,
   front: boolean,
   mirror: MirroredCommand | null = null,
+  agentTerminalId: string | null = null,
 ): string {
   const id = crypto.randomUUID();
   const host = document.createElement('div');
@@ -116,6 +120,7 @@ function addTab(
     notice: null,
     kind,
     mirror,
+    agentTerminalId,
     host,
   };
   const chat = chatOf(chatId);
@@ -126,7 +131,7 @@ function addTab(
     tabs: [...chat.tabs, tab],
     activeId: show ? id : chat.activeId,
   });
-  if (kind === 'command') return id;
+  if (kind === 'command' || kind === 'agent') return id;
   const preview = kind === 'preview';
   const create = preview ? () => previewApi.terminal(chatId) : () => createShell(chatId);
   const connection = openTerminal(create, host, {
@@ -171,20 +176,64 @@ export function openCommandTab(chatId: string, runId: string, commandId: string)
   setChat(chatId, { ...chat, open: true, activeId: existing.id });
 }
 
+function agentTab(chatId: string, terminalId: string): ShellTab | null {
+  return chatOf(chatId).tabs.find((tab) => tab.agentTerminalId === terminalId) ?? null;
+}
+
+export function openAgentTab(chatId: string, terminalId: string): void {
+  closedAgentTerminals.delete(terminalId);
+  const existing = agentTab(chatId, terminalId);
+  if (!existing) {
+    addTab(chatId, 'agent', true, null, terminalId);
+    return;
+  }
+  focusWanted = existing.id;
+  setChat(chatId, { ...chatOf(chatId), open: true, activeId: existing.id });
+}
+
+export function restoreAgentTabs(chatId: string, runningIds: readonly string[]): void {
+  for (const terminalId of runningIds) {
+    if (closedAgentTerminals.has(terminalId) || agentTab(chatId, terminalId)) continue;
+    addTab(chatId, 'agent', false, null, terminalId);
+  }
+}
+
+export function connectAgentTab(chatId: string, tabId: string, screen: HTMLElement): void {
+  const tab = chatOf(chatId).tabs.find((other) => other.id === tabId);
+  if (!tab?.agentTerminalId || connections.has(tabId)) return;
+  const terminalId = tab.agentTerminalId;
+  const failed = (notice: string) => {
+    connections.get(tabId)?.dispose();
+    connections.delete(tabId);
+    updateTab(chatId, tabId, { sessionId: null, notice });
+  };
+  const connection = openTerminal(() => agentTerminalsApi.view(chatId, terminalId), screen, {
+    readOnly: true,
+    onOpen: (created) => updateTab(chatId, tabId, { sessionId: created.id, notice: null }),
+    onEnded: () => undefined,
+    onError: failed,
+  });
+  connections.set(tabId, connection);
+}
+
+export function retryAgentTab(chatId: string, tabId: string): void {
+  updateTab(chatId, tabId, { notice: null });
+}
+
 export function syncCommandTab(
   chatId: string,
   tabId: string,
   seen: Pick<ShellTab, 'label' | 'cwd' | 'status'>,
 ): void {
   const tab = chatOf(chatId).tabs.find((other) => other.id === tabId);
-  if (!tab || tab.kind !== 'command') return;
+  if (!tab || (tab.kind !== 'command' && tab.kind !== 'agent')) return;
   if (tab.label === seen.label && tab.cwd === seen.cwd && tab.status === seen.status) return;
   updateTab(chatId, tabId, seen);
 }
 
 export async function shellCommand(chatId: string, tabId: string): Promise<string | null> {
   const tab = chatOf(chatId).tabs.find((other) => other.id === tabId);
-  if (tab?.status !== 'open' || !tab.sessionId) return null;
+  if (tab?.status !== 'open' || !tab.sessionId || tab.kind === 'agent') return null;
   try {
     return await runningCommand(tab.sessionId);
   } catch {
@@ -197,6 +246,7 @@ export function closeShell(chatId: string, tabId: string, focusNext = false): vo
   const index = chat.tabs.findIndex((tab) => tab.id === tabId);
   if (index === -1) return;
   const tab = chat.tabs[index]!;
+  if (tab.agentTerminalId) closedAgentTerminals.add(tab.agentTerminalId);
   connections.get(tabId)?.dispose();
   connections.delete(tabId);
   tab.host.remove();
@@ -241,12 +291,14 @@ export function attachedShell(tabId: string, host: HTMLElement): void {
     connection?.fit();
     return;
   }
-  if (connection) {
+  const pane = host.querySelector<HTMLElement>('[data-mirror-focus]');
+  if (connection && !pane) {
     focusWanted = null;
     connection.focus();
     return;
   }
-  host.querySelector<HTMLElement>('[data-mirror-focus]')?.focus();
+  connection?.fit();
+  pane?.focus();
   queueMicrotask(() => {
     if (focusWanted === tabId) focusWanted = null;
   });

@@ -3,6 +3,7 @@ import '../terminal.css';
 import './terminal-dock.css';
 import { PlusIcon, SparkleIcon, XIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { AgentTab } from './AgentTab.tsx';
 import { AGENT_TAB_WORDS } from './command-tabs.ts';
 import { CommandTab } from './CommandTab.tsx';
 import { DockResizer } from './DockResizer.tsx';
@@ -55,7 +56,7 @@ function DockTab({
   onClose: () => void;
 }) {
   const classes = ['term-tab', active ? 'on' : '', tab.status === 'ended' ? 'ended' : ''];
-  const agents = tab.kind === 'command';
+  const agents = tab.kind === 'command' || tab.kind === 'agent';
   return (
     <div className={classes.filter(Boolean).join(' ')}>
       <button
@@ -100,6 +101,17 @@ export function TerminalDock({ chatId }: { chatId: string }) {
     <>
       {shells.tabs.map(
         (tab) => tab.kind === 'command' && <CommandTab key={tab.id} chatId={chatId} tab={tab} />,
+      )}
+      {shells.tabs.map(
+        (tab) =>
+          tab.kind === 'agent' && (
+            <AgentTab
+              key={tab.id}
+              chatId={chatId}
+              tab={tab}
+              shown={shells.open && shells.activeId === tab.id}
+            />
+          ),
       )}
       {shells.open && <OpenDock chatId={chatId} shells={shells} />}
     </>
@@ -230,7 +242,7 @@ function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
-      {active?.status === 'ended' && active.kind !== 'command' && (
+      {active?.status === 'ended' && active.kind !== 'command' && active.kind !== 'agent' && (
         <p className="term-dock-ended" role="status">
           <span>{active.notice}</span>
           <button

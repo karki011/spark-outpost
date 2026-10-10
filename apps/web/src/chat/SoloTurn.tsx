@@ -19,7 +19,10 @@ import { RevertRun } from './approvals/RevertRun.tsx';
 import { askedBeforeTimeout, isLatestTurn, timedOut, WAITED_LABEL } from './approvals/timed-out.ts';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
+import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
+import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
+import { useChatAgentTerminals } from './commands/use-agent-terminals.ts';
 import { TurnReply } from './commands/TurnReply.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints, shownApprovals } from './crew/crew-items.ts';
@@ -155,6 +158,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
     stream.commands,
     streamRunId,
   );
+  const terminals = turnAgentTerminals(
+    useChatAgentTerminals(detail.conversation.id).data,
+    stream.terminals,
+    [run.id, member?.runId],
+    streamRunId,
+  );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished ? (interrupted ? null : run.error) : stream.error;
@@ -215,12 +224,14 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
         text={text}
         shots={turnShots(detail, run.id)}
         commands={commands}
+        terminals={terminals}
         waiting={waiting}
       >
         {(part, last) => <Markdown text={part} streaming={last && leads && active} />}
       </TurnReply>
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
+      {finished && <AgentTerminalsRunning terminals={terminals} />}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       <ModelSwitchNote change={finished ? shown.modelSwitch : stream.modelSwitch} />
       <ErrorLine

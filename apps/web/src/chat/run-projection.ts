@@ -8,9 +8,11 @@ import {
   type Approval,
   type ModelSwitch,
   type Orchestration,
+  type AgentTerminalStarted,
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { applyApprovalEvent } from './approvals/approval-events.ts';
+import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
 import { applyCommandEvent, type LiveCommand } from './commands/command-model.ts';
 
 export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
@@ -119,6 +121,7 @@ export interface RunProjection {
   orchestration: Orchestration | null;
   modelSwitch: ModelSwitch | null;
   commands: readonly LiveCommand[];
+  terminals: readonly AgentTerminalStarted[];
 }
 
 export const initialRunProjection: RunProjection = {
@@ -131,6 +134,7 @@ export const initialRunProjection: RunProjection = {
   orchestration: null,
   modelSwitch: null,
   commands: [],
+  terminals: [],
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
@@ -167,6 +171,7 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
         ...next,
         approvals: applyApprovalEvent(state.approvals, event),
         commands: applyCommandEvent(state.commands, event),
+        terminals: applyAgentTerminalEvent(state.terminals, event),
       };
     default:
       return next;
