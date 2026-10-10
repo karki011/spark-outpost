@@ -19,6 +19,7 @@ import type { ProtocolObserver } from '../providers/provider.ts';
 import { subject } from '../workflow/approval-payload.ts';
 import { ownRepoFor } from '../workflow/send-context.ts';
 import type { RunObservations } from './run-observations.ts';
+import { observedStackedPush } from './stacked-push-watch.ts';
 
 export interface SendWatchOptions {
   db: Queryable;
@@ -71,7 +72,10 @@ export function watchedSends(inner: ProtocolObserver, options: SendWatchOptions)
     for (const label of await observedSecretReads(request, shell)) {
       options.observations.record({ source: 'secret_file', label });
     }
-    if (ran) await note(request);
+    if (!ran) return;
+    const stacked = await observedStackedPush(options.db, request);
+    if (stacked) await options.observations.crossed(stacked);
+    await note(request);
   };
 
   const watch = (message: unknown) => {

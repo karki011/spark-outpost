@@ -4,7 +4,7 @@ import {
   turnObservations,
   type Observation,
 } from '../persistence/observations.ts';
-import { flagAgentName, insertRailFlag } from '../persistence/rail-flags.ts';
+import { flagAgentName, insertRailFlag, type NewRailFlag } from '../persistence/rail-flags.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
 export interface EgressAsk {
@@ -28,6 +28,7 @@ export interface RunObservations {
   labels(): Promise<string[]>;
   egressAsked(ask: EgressAsk): void;
   sentOut(note: SentOutNote): void;
+  crossed(flag: NewRailFlag): Promise<void>;
   later(work: () => Promise<void>): void;
   settled(): Promise<void>;
 }
@@ -60,16 +61,9 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
     }
   };
 
-  const flag = async (note: SentOutNote) => {
+  const crossed = async (flag: NewRailFlag) => {
     const agent = await flagAgentName(options.db, options.runId);
-    const saved = await insertRailFlag(options.db, options.runId, agent, {
-      toolCallId: note.toolCallId,
-      rail: 'sent_out',
-      paths: [note.target],
-      inside: false,
-      originals: [],
-      read: note.observed,
-    });
+    const saved = await insertRailFlag(options.db, options.runId, agent, flag);
     if (!saved) return;
     audit('spark/rail_crossed', {
       flagId: saved.id,
@@ -78,6 +72,16 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       paths: saved.paths,
     });
   };
+
+  const flag = (note: SentOutNote) =>
+    crossed({
+      toolCallId: note.toolCallId,
+      rail: 'sent_out',
+      paths: [note.target],
+      inside: false,
+      originals: [],
+      read: note.observed,
+    });
 
   const later = (work: () => Promise<void>) => {
     writes = writes
@@ -130,6 +134,7 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       flagged.add(note.target);
       later(() => flag(note));
     },
+    crossed,
     later,
     async settled() {
       let awaited: Promise<void> | null = null;

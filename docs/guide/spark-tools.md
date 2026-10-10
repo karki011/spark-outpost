@@ -61,7 +61,7 @@ A chat in an [outpost](outposts.md) gets these. None shows a card.
 | Leave a note for the other chats                 | `spark_outpost_note`  |
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 
-Any chat with a project gets `spark_outpost_draft`. What another chat wrote is never your message.
+Any chat with a project gets `spark_outpost_draft`. Pieces get none. What another chat wrote is never your message.
 
 ## When actions ask first
 

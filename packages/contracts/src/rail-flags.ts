@@ -9,6 +9,7 @@ export const railKindSchema = z.enum([
   'instructions',
   'sent_out',
   'other_piece',
+  'stacked_push',
 ]);
 export type RailKind = z.infer<typeof railKindSchema>;
 
@@ -46,6 +47,7 @@ const RAIL_VERBS: Record<RailKind, string> = {
   instructions: 'changed agent instructions',
   sent_out: 'sent data out',
   other_piece: 'changed a file another piece owns',
+  stacked_push: 'pushed a branch whose parent branch is not on the remote',
 };
 
 const SHOWN_PATHS = 3;

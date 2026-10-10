@@ -114,7 +114,10 @@ export interface PushTarget {
   remote: string | null;
   branches: (string | null)[];
   widens: boolean;
+  head: boolean;
 }
+
+const HEAD_SOURCE = /^\+?(HEAD|@)(:|$)/;
 
 const WIDENING_PUSH_FLAGS = new Set(['--delete', '--prune', '--repo']);
 
@@ -131,6 +134,7 @@ export function pushTargetOf(args: readonly string[]): PushTarget {
       refspec.replace(/^\+/, '').startsWith(':') ? null : destination(refspec),
     ),
     widens: shape.mirror || shape.everyRef || args.some(widensPush),
+    head: shape.refspecs.length === 0 || shape.refspecs.some((spec) => HEAD_SOURCE.test(spec)),
   };
 }
 

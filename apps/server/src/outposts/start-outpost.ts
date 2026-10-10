@@ -108,6 +108,15 @@ interface Story {
   proposed: readonly DraftChat[];
 }
 
+async function titleFromStory(db: Queryable, story: Story, conversationId: string): Promise<void> {
+  const title = story.plan.tasks.find((task) => task.conversationId === conversationId)?.title;
+  if (!title) return;
+  await db.query(`UPDATE conversations SET title = $2, title_source = 'user' WHERE id = $1`, [
+    conversationId,
+    title,
+  ]);
+}
+
 function proposedMode(story: Story, member: StartMember): string | null {
   return story.proposed.find((chat) => chat.handle === member.handle)?.agentMode ?? null;
 }
@@ -138,6 +147,7 @@ function joinStartMember(
     if (outpost.members.some((joined) => joined.conversationId === conversationId)) return;
     if ('new' in member) {
       await createMemberChat(client, workspaceId, member.new, folderExists);
+      if (story) await titleFromStory(client, story, conversationId);
       if (story && !userChoseMode(proposedMode(story, member), member.new.agentMode)) {
         await holdToLeadMode(client, workspaceId, story.plan.lead, member);
       }

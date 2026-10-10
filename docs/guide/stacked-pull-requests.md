@@ -22,11 +22,11 @@ The proposing chat picks parallel or stacked; you can change it before you [star
 
 The **Story** bar shows each pull request as a chip, such as **#124 → #123** or **#124 → main**, with warnings as text.
 
-| Warning or line                             | Do                                                                                                  |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| "@api has commits that @fe does not have"   | Select **Update from @api** and send the request. `@fe` merges that branch.                         |
-| "Merging this now would not reach main"     | Select **Update from the default branch**, so `@fe`'s pull request targets it.                      |
-| **Needs you: @api's branch is not pushed.** | Have `@api` push first. Until then Spark refuses `@fe`'s push, because it carries `@api`'s commits. |
+| Warning or line                             | Do                                                                                                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "@api has commits that @fe does not have"   | Select **Update from @api** and send the request. `@fe` merges that branch.                                                                                          |
+| "Merging this now would not reach main"     | Select **Update from the default branch**, so `@fe`'s pull request targets it.                                                                                       |
+| **Needs you: @api's branch is not pushed.** | Have `@api` push first. Until then Spark refuses `@fe`'s push, because it carries `@api`'s commits. A mode that runs without review gets a [flag](cards.md) instead. |
 
 ## What stays the same
 
