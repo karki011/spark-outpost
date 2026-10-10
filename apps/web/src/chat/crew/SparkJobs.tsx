@@ -11,6 +11,7 @@ import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { runAgent } from '../../crew/crew-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock } from './AgentBlock.tsx';
+import { useStoredTurn } from './stored-turn.ts';
 
 const NO_TEXT = '';
 
@@ -35,6 +36,7 @@ interface SparkJobsProps {
 
 export function SparkJobs({ run, detail, orchestration, repo }: SparkJobsProps) {
   const live = !isTerminalRunStatus(run.status);
+  const readOnly = useStoredTurn(run);
   const stream = useRunStream(run.id, detail.conversation.id, live);
   const current =
     stream.orchestration && stream.orchestration.updatedAt > orchestration.updatedAt
@@ -49,6 +51,7 @@ export function SparkJobs({ run, detail, orchestration, repo }: SparkJobsProps) 
           anchor={agentAnchor(current.runId, member.runId)}
           live={!isTerminalRunStatus(member.status)}
           collapsed={false}
+          readOnly={readOnly}
           conversationId={detail.conversation.id}
           steps={detail.activity[member.runId] ?? []}
           text={NO_TEXT}

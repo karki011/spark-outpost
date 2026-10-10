@@ -52,6 +52,7 @@ import {
 } from './crew-items.ts';
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
+import { useStoredTurn } from './stored-turn.ts';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
@@ -74,6 +75,7 @@ interface CrewTurnProps {
 
 interface BodyProps extends CrewTurnProps {
   liveApprovals: readonly Approval[];
+  readOnly: boolean;
 }
 
 function newer(live: Orchestration | null, stored: Orchestration): Orchestration {
@@ -90,6 +92,7 @@ function CrewTurnBody({
   taskCard,
   continued,
   liveApprovals,
+  readOnly,
 }: BodyProps) {
   const [alreadyShown] = useState(
     () => new Set(continued ? orchestration.crew.map((member) => member.runId) : []),
@@ -174,6 +177,7 @@ function CrewTurnBody({
         settled={member.runId === run.id && handedOffAt !== null}
         collapsed={collapsible && agent.state === 'done'}
         still={alreadyShown.has(member.runId)}
+        readOnly={readOnly}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}
@@ -236,7 +240,7 @@ function CrewTurnBody({
           category={run.category}
         />
         {taskCard}
-        {orchestration.pieces && (
+        {orchestration.pieces && !readOnly && (
           <PieceBoard list={orchestration.pieces} crew={orchestration.crew} />
         )}
       </div>
@@ -310,9 +314,11 @@ function CrewTurnBody({
 export function CrewTurn(props: CrewTurnProps) {
   const live = !isTerminalRunStatus(props.run.status);
   const stream = useRunStream(props.run.id, props.detail.conversation.id, live);
+  const readOnly = useStoredTurn(props.run);
   return (
     <CrewTurnBody
       {...props}
+      readOnly={readOnly}
       orchestration={newer(stream.orchestration, props.orchestration)}
       liveApprovals={stream.approvals}
     />
