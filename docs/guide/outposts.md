@@ -41,6 +41,6 @@ Without a handle, **Post note** starts no work.
 
 A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `/plan` runs as a command. Why: [What an outpost request may do](outpost-permissions.md).
 
-Agents can't ask each other yet. On a [paired phone](use-your-phone.md) you can read, post, cancel, pause and rename; the rest stays on the Mac.
+Agents can [ask each other](outpost-asks.md) and [propose sub-tasks](outpost-stories.md). On a [paired phone](use-your-phone.md) you can read, post, cancel, pause and rename; the rest stays on the Mac.
 
 **Next:** [Choose where a chat works](where-spark-works.md)
