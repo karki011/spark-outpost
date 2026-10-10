@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Agents can keep one command running after the turn. Spark checks it first and asks on a card unless the mode acts.                  | See [Spark tools](spark-tools.md).          |
+| Agents can keep one command running after the turn, shown as **Agent terminal** with **Stop**. A card asks unless the mode acts.    | See [Spark tools](spark-tools.md).          |
 | A command in a reply has **Open in terminal**: a read-only dock tab, named for the agent, mirrors it.                               | See [Open a terminal](terminals.md).        |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |

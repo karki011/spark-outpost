@@ -11,7 +11,7 @@ import {
   type AgentTerminalRow,
 } from '../src/persistence/agent-terminals.ts';
 import { listProtocolLog } from '../src/persistence/audit-log.ts';
-import { TERMINAL_STOP_AUDIT } from '../src/terminal/agent-terminal-audit.ts';
+import { TERMINAL_STOP_AUDIT } from '../src/workflow/terminal-audit.ts';
 import { agentTerminalRuntime } from '../src/terminal/agent-terminal-process.ts';
 import { AgentTerminals } from '../src/terminal/agent-terminals.ts';
 import {

@@ -148,6 +148,24 @@ test('it keeps running after the turn, its tab comes back after a reload and Sto
   await expect(status(page)).toHaveText('How it ended: stopped by you.');
 });
 
+test('stopping the turn stops the terminal that turn started, and the row and the tab say so', async ({
+  page,
+}) => {
+  await ask(page, 'Dev server #terminal=hang 20ms');
+  await expect(page.getByRole('region', { name: 'Command: pnpm dev' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await seedAgentTerminal(work.folder, SERVE);
+  await expect(rowState(page, SERVE)).toHaveText(/^running · /);
+  await openButton(row(page, SERVE)).click();
+  await expect(live(page)).toContainText('tick 2');
+
+  await page.locator('button.send.busy').click();
+  await expect(rowState(page, SERVE)).toHaveText(/^stopped with the turn · /, { timeout: 15_000 });
+  await expect(status(page)).toHaveText('How it ended: stopped with the turn.');
+  await expect(stopButton(pane(page))).toHaveCount(0);
+});
+
 test('an ended terminal shows its saved output and how it ended', async ({ page }) => {
   await finishedChat(page, 'Build notes');
   await seedAgentTerminal(work.folder, BUILD);
