@@ -1,7 +1,5 @@
 import { basename } from 'node:path';
-import { publishRequested } from '../approvals/publish-policy.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
-import { userText } from '../outposts/user-asked.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
@@ -43,7 +41,6 @@ export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<C
     project,
     outpostDraftTool: needs.outpost_draft,
     level: input.level,
-    publishAsked: publishRequested(userText(input)),
     followUpRound: input.followUpRound === true,
     customInstructions: prefs.agentInstructions ?? null,
   };

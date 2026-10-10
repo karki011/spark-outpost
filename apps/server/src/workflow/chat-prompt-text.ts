@@ -27,7 +27,7 @@ export const REPORTING = [
 
 export const PUBLISHING_HEADING = 'Publishing';
 export const PUBLISH_FULL_AUTO =
-  'When the work is done and checked, push this branch and open a pull request.';
+  'Spark will ask you to publish when the work is done; you may also push this branch and open a pull request yourself.';
 export const PUBLISH_NO_REMOTE = "There is no remote: commit on this branch; don't try to push.";
 export const PUBLISH_CHECKOUT =
   "This chat works in your checkout and has no branch of its own to push. Keep the change; don't push.";
@@ -36,8 +36,6 @@ export const PUBLISH_NOT_GIT =
 export const PUBLISH_FOLLOW_UP =
   "This is a follow-up on this chat's open pull request: push fixes to the same branch.";
 export const PUBLISH_NOT_ASKED = "Don't push or open a pull request unless the user asks.";
-export const PUBLISH_ASKED =
-  'The user asked you to publish: push this branch and open a pull request when the work is done.';
 
 export const SETTINGS_HEADING = "From the user's settings:";
 

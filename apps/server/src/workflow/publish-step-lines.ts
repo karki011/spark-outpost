@@ -9,6 +9,12 @@ export function followUpLine(published: Published): string {
   return published.pushed ? `Pushed the fix${pull}.` : 'The fix was not pushed.';
 }
 
+export function notPublishedLine(said: Pick<TurnResult, 'outcome' | 'error'>): string {
+  if (said.outcome === 'cancelled') return 'Not published: the publish step was stopped.';
+  const why = said.error ? ` ${said.error}` : '';
+  return `Not published: the publish step failed.${why}`;
+}
+
 export function committedLine(result: ShipResult, why: string | null): string {
   const commit = result.commit ? ` ${result.commit.slice(0, 7)}` : '';
   return `Committed${commit} on ${result.branch}, not pushed.${why ? ` ${why}` : ''}`;

@@ -24,7 +24,7 @@ import { closeMessage } from './execute-run.ts';
 import { publishPrompt, type PublishReason } from './publish-prompt.ts';
 import { promptAgain } from './publish-step-again.ts';
 import { commitWithoutRemote } from './publish-step-commit.ts';
-import { followUpLine, withLine } from './publish-step-lines.ts';
+import { followUpLine, notPublishedLine, withLine } from './publish-step-lines.ts';
 import { publishReason } from './publish-step-reason.ts';
 import { recordPullRequest } from './publish-step-record.ts';
 import { branchWork, notPushed, pushedInFull } from './publish-step-work.ts';
@@ -123,7 +123,11 @@ async function publishedByAgent(
   if (!prompt) return turn.reply;
   await closeMessage(turn.append, turn.reply, true);
   const said = await promptAgain(deps, turn, prompt);
-  if (said.outcome !== 'succeeded') return said;
+  if (said.outcome === 'lease_lost') return said;
+  if (said.outcome !== 'succeeded') {
+    const kept: TurnResult = { ...said, outcome: 'succeeded', error: null };
+    return withLine(turn.append, kept, notPublishedLine(said));
+  }
   const published = await publishedState(turn.ship, plan.root, plan.branch, plan.base);
   const chat = {
     workspaceId,
@@ -149,6 +153,7 @@ export async function publishStep(
   const turn: Publishing = { ...step, reason, ship: shipDeps(deps, input.workspaceId) };
   const root = input.projectRoots[0] ?? null;
   if (!root) return reply;
+  if (reason === 'full-auto' && !(await changedFiles(turn))) return reply;
   if (!(await isGitWorkTree(root))) return keptWithout(turn, NO_PULL_REQUEST.notGit);
   const worktree = await chatWorktreeAt(deps.db, root);
   if (!worktree?.ownsBranch) return keptWithout(turn, NO_OWN_BRANCH_LINE);

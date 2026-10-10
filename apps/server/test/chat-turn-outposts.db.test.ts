@@ -13,7 +13,7 @@ import { insertTasks } from '../src/persistence/outpost-stories.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { replyText } from '../src/persistence/spark-mentions.ts';
 import { createTeammate } from '../src/persistence/teammates.ts';
-import { chatPromptFacts } from '../src/workflow/chat-turn-prompt.ts';
+import { publishGrant } from '../src/workflow/publish-context.ts';
 import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import type { Worker } from '../src/workflow/worker.ts';
@@ -162,8 +162,7 @@ describe('a chat turn started by an outpost request', { timeout: 60_000 }, () =>
     expect(await requestAudit(runId)).toMatchObject([
       { payload: { params: { postId, fromUser: true, textLength: body.length } } },
     ]);
-    const facts = await chatPromptFacts(t.db, await loadRunInput(t.db, runId));
-    expect(facts.publishAsked).toBe(true);
+    expect(publishGrant(await loadRunInput(t.db, runId)).requested).toBe(true);
     expect(await loadOrchestration(t.db, runId)).toBeNull();
   });
 
@@ -183,8 +182,7 @@ describe('a chat turn started by an outpost request', { timeout: 60_000 }, () =>
     expect(await requestAudit(runId)).toMatchObject([
       { payload: { params: { postId, fromUser: false } } },
     ]);
-    const facts = await chatPromptFacts(t.db, await loadRunInput(t.db, runId));
-    expect(facts.publishAsked).toBe(false);
+    expect(publishGrant(await loadRunInput(t.db, runId)).requested).toBe(false);
   });
 
   async function settledStory(lead: string): Promise<string> {

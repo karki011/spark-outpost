@@ -15,7 +15,6 @@ export interface ChatPromptFacts {
   project: ChatPromptProject | null;
   outpostDraftTool: boolean;
   level: InvolvementLevel;
-  publishAsked: boolean;
   followUpRound?: boolean;
   customInstructions: string | null;
 }
@@ -51,12 +50,11 @@ function publishingLine(facts: ChatPromptFacts): string | null {
   const ownBranch = project.place === 'worktree' && project.branch !== null;
   const canPush = ownBranch && project.hasRemote && project.gitRepo !== false;
   if (facts.followUpRound && canPush) return text.PUBLISH_FOLLOW_UP;
-  if (!facts.publishAsked && facts.level === 'hands-off') return text.PUBLISH_NOT_ASKED;
+  if (facts.level === 'hands-off') return text.PUBLISH_NOT_ASKED;
   if (project.gitRepo === false) return text.PUBLISH_NOT_GIT;
   if (project.place === 'checkout') return text.PUBLISH_CHECKOUT;
   if (!ownBranch) return null;
-  if (!project.hasRemote) return text.PUBLISH_NO_REMOTE;
-  return facts.publishAsked ? text.PUBLISH_ASKED : text.PUBLISH_FULL_AUTO;
+  return project.hasRemote ? text.PUBLISH_FULL_AUTO : text.PUBLISH_NO_REMOTE;
 }
 
 export function chatPrompt(facts: ChatPromptFacts): string {

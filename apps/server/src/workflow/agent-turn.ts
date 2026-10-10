@@ -28,7 +28,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
-import { publishGrant, publishScope, startBasis, withPublishNote } from './publish-context.ts';
+import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
@@ -306,10 +306,9 @@ export async function runAgentTurn(
       ? ASSISTANT_PREAMBLE
       : withMoveNote({
           ...input,
-          preamble: await withPublishNote(
-            deps.db,
-            await withOutpostPreamble(preambleDeps(deps.db, input.workspaceId), input),
-          ),
+          preamble:
+            (await withOutpostPreamble(preambleDeps(deps.db, input.workspaceId), input)).preamble ??
+            null,
         });
 
     if (input.modelSwitch) {

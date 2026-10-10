@@ -8,6 +8,7 @@ import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { PUSHED_WITHOUT_PR } from '../src/ship/published.ts';
+import { KEPT_RECORD_TITLE } from '../src/workflow/kept-record-writer.ts';
 import { PUBLISH_PROMPT_HEADING } from '../src/workflow/publish-prompt.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import {
@@ -156,6 +157,41 @@ describe('the publish step after the agent’s reply', { timeout: 120_000 }, () 
     expect(replies).toHaveLength(1);
     expect(replies[0]).not.toMatch(/pull request/i);
     expect(onRemote(chat)).toBe(false);
+  });
+
+  it('leaves work an earlier turn kept unpublished when this turn changed nothing', async () => {
+    const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
+    await turn(chat, BUILD, 'hands-off');
+    const { replies, prompts } = await turn(chat, 'What changed?', 'full-auto');
+
+    expect(prompts).toBe(1);
+    expect(replies).toHaveLength(1);
+    expect(stub.github.pulls).toEqual([]);
+    expect(onRemote(chat)).toBe(false);
+  });
+
+  it('ends the run as succeeded, with the change kept and one line, when the publish prompt fails', async () => {
+    await worker.stop();
+    worker = startTurnWorker(t, {
+      shipAccess: shipAccessTo(stub.url),
+      sessions: path.join(base, `sessions-${chats}-failing`),
+      agentEnv: { FAKE_ACP_PUBLISH_FAILS: '1' },
+    });
+    const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
+    const { runId, replies, prompts } = await turn(chat, BUILD, 'full-auto');
+
+    expect(prompts).toBe(2);
+    expect(replies[0]).not.toContain('Not published');
+    expect(replies.at(-1)).toMatch(/Not published: the publish step failed\./);
+    expect(stub.github.pulls).toEqual([]);
+    const kept = await t.db.query(
+      `SELECT 1 FROM approvals WHERE run_id = $1 AND kind = 'accept' AND title = $2`,
+      [runId, KEPT_RECORD_TITLE],
+    );
+    expect(kept.rowCount).toBe(1);
+    expect(await changesOf(t, runId)).toMatchObject({
+      files: [{ path: 'notes.txt', change: 'modified' }],
+    });
   });
 
   it('sends nothing more once the branch is pushed and its pull request is open', async () => {

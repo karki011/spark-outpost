@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AdvisorError, AdvisorTimeoutError } from './advice.ts';
+import { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';
 import { askSystemOne, jevCostUsd, jevUsage, type JevOptions } from './jev.ts';
 
 const FAKE_KEY = 'fake-jev-key-for-tests';

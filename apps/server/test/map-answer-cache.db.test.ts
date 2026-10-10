@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { IntakeQuestions } from '../src/advisor/intake-questions.ts';
+import type { IntakeQuestions } from '../src/advisor/jev-types.ts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import {
   ANSWER_CACHE_TTL_DAYS,

@@ -15,7 +15,6 @@ const base: ChatPromptFacts = {
   project: worktree,
   outpostDraftTool: true,
   level: 'full-auto',
-  publishAsked: false,
   customInstructions: null,
 };
 
@@ -58,13 +57,13 @@ describe('chatPrompt', () => {
         "- End with what you skipped or didn't check, and any risk.",
         '',
         'Publishing',
-        '- When the work is done and checked, push this branch and open a pull request.',
+        '- Spark will ask you to publish when the work is done; you may also push this branch and open a pull request yourself.',
       ].join('\n'),
     );
   });
 
   it('leaves out the folder line and Publishing when the chat has no project', () => {
-    const prompt = chatPrompt({ ...base, project: null, publishAsked: true });
+    const prompt = chatPrompt({ ...base, project: null });
     expect(prompt).not.toContain('Folder:');
     expect(prompt).not.toContain(text.PUBLISHING_HEADING);
     expect(prompt.split('\n\n')[0]).toBe(text.INTRO);
@@ -91,46 +90,32 @@ describe('chatPrompt', () => {
   });
 
   it.each([
-    ['full-auto', false, true, text.PUBLISH_FULL_AUTO],
-    ['full-auto', false, false, text.PUBLISH_NO_REMOTE],
-    ['hands-off', false, true, text.PUBLISH_NOT_ASKED],
-    ['hands-off', false, false, text.PUBLISH_NOT_ASKED],
-    ['hands-off', true, true, text.PUBLISH_ASKED],
-    ['full-auto', true, true, text.PUBLISH_ASKED],
-    ['hands-off', true, false, text.PUBLISH_NO_REMOTE],
-  ] as const)(
-    'at %s, asked %s, remote %s the Publishing line is "%s"',
-    (level, asked, remote, line) => {
-      const prompt = build({ level, publishAsked: asked }, { hasRemote: remote });
-      expect(publishing(prompt)).toBe(`- ${line}`);
-    },
-  );
+    ['full-auto', true, text.PUBLISH_FULL_AUTO],
+    ['full-auto', false, text.PUBLISH_NO_REMOTE],
+    ['hands-off', true, text.PUBLISH_NOT_ASKED],
+    ['hands-off', false, text.PUBLISH_NOT_ASKED],
+  ] as const)('at %s, remote %s the Publishing line is "%s"', (level, remote, line) => {
+    const prompt = build({ level }, { hasRemote: remote });
+    expect(publishing(prompt)).toBe(`- ${line}`);
+  });
+
+  it('never names what one message asked, so the line holds for every later turn', () => {
+    expect(build({ level: 'hands-off' })).not.toMatch(/asked you to publish/);
+    expect(build({})).not.toMatch(/asked you to publish/);
+  });
 
   it('tells a checkout chat at Automatic not to publish', () => {
     const prompt = build({ level: 'hands-off' }, { place: 'checkout', branch: 'main' });
     expect(publishing(prompt)).toBe(`- ${text.PUBLISH_NOT_ASKED}`);
   });
 
-  it.each([
-    ['at Full auto → PR', false],
-    ['when the message asked', true],
-  ] as const)('tells a checkout chat %s to keep the change and not push', (_name, asked) => {
-    const prompt = build({ publishAsked: asked }, { place: 'checkout', branch: 'main' });
+  it('tells a checkout chat at Full auto → PR to keep the change and not push', () => {
+    const prompt = build({}, { place: 'checkout', branch: 'main' });
     expect(publishing(prompt)).toBe(`- ${text.PUBLISH_CHECKOUT}`);
   });
 
-  it.each([
-    ['at Full auto → PR', false],
-    ['when the message asked', true],
-  ] as const)('says there is no pull request in a folder without git %s', (_name, asked) => {
-    const prompt = build(
-      { publishAsked: asked, level: asked ? 'hands-off' : 'full-auto' },
-      {
-        gitRepo: false,
-        branch: null,
-        hasRemote: false,
-      },
-    );
+  it('says there is no pull request in a folder without git at Full auto → PR', () => {
+    const prompt = build({}, { gitRepo: false, branch: null, hasRemote: false });
     expect(publishing(prompt)).toBe(`- ${text.PUBLISH_NOT_GIT}`);
   });
 
@@ -192,7 +177,7 @@ describe('chatPrompt', () => {
   });
 
   it('holds no safety rules, role names or planning instructions', () => {
-    const prompt = build({ publishAsked: true, customInstructions: null });
+    const prompt = build({ customInstructions: null });
     expect(prompt).not.toMatch(/\b(coordinator|builder|critic|pieces?|integrator|reader)\b/iu);
     expect(prompt).not.toMatch(/\bplan(s|ning|ned)?\b/iu);
     expect(prompt).not.toMatch(/secret|force|--no-verify|hook|approval|permission|\.sparkignore/iu);

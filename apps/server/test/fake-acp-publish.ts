@@ -73,6 +73,7 @@ export async function publishTurn(turn: RoleTurn): Promise<acp.StopReason | null
   const asked = turn.text.slice(at);
   const branch = BRANCH.exec(asked)?.[1];
   if (!branch) return null;
+  if (process.env.FAKE_ACP_PUBLISH_FAILS) throw new Error('The publish prompt failed.');
   await shell('git', ['add', '-A'], turn.cwd);
   await shell('git', [...AUTHOR, 'commit', '-qm', 'Publish the change'], turn.cwd);
   if (turn.text.includes('#nopush')) {

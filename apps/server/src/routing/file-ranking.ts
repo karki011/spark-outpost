@@ -1,4 +1,4 @@
-import type { IntakeQuestions } from '../advisor/intake-questions.ts';
+import type { IntakeQuestions } from '../advisor/jev-types.ts';
 import { RANK_PREDICTED_FILES } from '../advisor/policy.ts';
 import { evidenceBlock, indexLine, namedSymbolsLines } from '../codescan/jev-state.ts';
 import type { RankedFile } from '../codescan/rank.ts';
