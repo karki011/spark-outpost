@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { gitSubcommand } from './git-commands.ts';
+import { gitConfigUse } from './git-config.ts';
 import { inTempDir } from './temp-dirs.ts';
 import { LISTERS, readOperands } from './read-operands.ts';
 import { DYNAMIC, type ShellCommand, type ShellRedirect, type ShellWord } from './shell-parse.ts';
@@ -81,6 +82,9 @@ function gitReads(args: readonly ShellWord[]): boolean {
   if (!sub) return false;
   const globals = texts.slice(0, texts.length - sub.rest.length - 1);
   if (!globals.every((flag) => GIT_SAFE_GLOBALS.has(flag))) return false;
+  if (sub.name === 'config') {
+    return !args.some((word) => word.dynamic) && !gitConfigUse(sub.rest).writes;
+  }
   if (sub.rest.some((arg) => GIT_REFUSED_ARGS.test(arg))) return false;
   if (GIT_READS.has(sub.name)) return true;
   const listing = GIT_LISTS[sub.name];
@@ -89,6 +93,12 @@ function gitReads(args: readonly ShellWord[]): boolean {
   return sub.rest.every(
     (arg) => listing.has(arg) || GIT_LIST_VALUE.test(arg) || (patterns && !arg.startsWith('-')),
   );
+}
+
+function configFileInside(args: readonly ShellWord[], place: PartPlace): boolean {
+  const sub = gitSubcommand(args.map((word) => word.text));
+  const file = sub?.name === 'config' ? gitConfigUse(sub.rest).file : null;
+  return file === null || place.inside(resolvePart(file, place));
 }
 
 function operandsSafe(
@@ -122,7 +132,11 @@ function readsOnly(command: ShellCommand, place: PartPlace): boolean {
     return target !== undefined && !target.dynamic && place.inside(resolvePart(target.text, place));
   }
   if (program === 'git') {
-    return gitReads(args) && args.every((word) => word.dynamic || !secretWord(word.text, place));
+    return (
+      gitReads(args) &&
+      configFileInside(args, place) &&
+      args.every((word) => word.dynamic || !secretWord(word.text, place))
+    );
   }
   if (program === 'rg') return ripgrepReads(args, place);
   const texts = args.map((word) => word.text.replaceAll(DYNAMIC, '$'));

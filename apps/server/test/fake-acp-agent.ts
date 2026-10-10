@@ -238,7 +238,7 @@ async function turn(
   if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
   await railCrossings(roleTurn).then(() => terminalCommands(roleTurn));
-  await floorTurn(roleTurn, sessionRequest?.meta);
+  await floorTurn(roleTurn, sessionRequest?.meta, config.mode ?? '');
   const published = await publishTurn(roleTurn);
   if (published) return published;
   const asked = currentRequest(params.prompt);

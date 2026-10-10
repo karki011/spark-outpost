@@ -60,7 +60,7 @@ async function claudeMeta(launch: RepoLaunch): Promise<Meta> {
   return agentDefinitions.claude.doSessionMeta!([], session.claude) as Meta;
 }
 
-const FLOOR_ONLY = floorAskRules(['Edit'], []);
+const FLOOR_ONLY = floorAskRules(['Edit', 'Bash'], []);
 
 describe('Claude session meta from repo config', () => {
   it('keeps every repo settings source off and our rules on, whatever the repo says', async () => {

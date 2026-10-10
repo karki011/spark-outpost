@@ -1,126 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Approval } from '@spark-outpost/contracts';
+import { describe, expect, it } from 'vitest';
 import { GIT_CONTROL_REASON, INSTRUCTION_REASON } from '../src/approvals/decide.ts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { HOOK_APPEND, ORDINARY_COMMAND, RULES_APPEND } from './fake-acp-floor.ts';
-import {
-  TRIVIAL,
-  answerEverything,
-  connectProviders,
-  driveToEnd,
-  gitRepo,
-  jevFetch,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  type Answerer,
-  type Harness,
-} from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { HOOK_APPEND, ORDINARY_COMMAND, ORDINARY_GIT, RULES_APPEND } from './fake-acp-floor.ts';
+import { RULES, floorCard, floorRuns } from './floor-support.ts';
 
-const CLAUDE_MODES = JSON.stringify([
-  ['default', 'Manual', null, 'standard'],
-  ['acceptEdits', 'Accept edits', null, 'standard'],
-  ['auto', 'Auto', null, 'auto_review'],
-  ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
-]);
-const RULES = '# Rules\n';
-
-let t: TestDb;
-let root: string;
-let store: string;
-let harness: Harness | null = null;
-
-beforeEach(async () => {
-  t = await createTestDb();
-  root = await gitRepo();
-  writeFileSync(join(root, 'AGENTS.md'), RULES);
-  const git = (...args: string[]) =>
-    execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
-  git('add', 'AGENTS.md');
-  git('commit', '-qm', 'rules');
-  store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
-  await connectProviders(t);
-});
-
-afterEach(async () => {
-  await harness?.stop();
-  harness = null;
-  await t.cleanup();
-  await removeRepo(root);
-  rmSync(store, { recursive: true, force: true });
-});
-
-const floorCard = (approval: Approval) =>
-  (approval.payload.instructionFiles ?? approval.payload.gitControl) !== undefined;
-
-const denyFloorCards: Answerer = (approval) => {
-  if (!floorCard(approval)) return answerEverything(approval);
-  const reject = approval.options.find((option) => option.kind === 'reject_once');
-  return reject ? { optionId: reject.optionId } : null;
-};
-
-async function run(mode: string, tags: string) {
-  const scenario = { ...TRIVIAL, text: `${TRIVIAL.text} ${tags}` };
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario }), {
-    sessions: store,
-    agentEnv: { FAKE_ACP_MODES: CLAUDE_MODES },
-  });
-  const sent = await startScenario(t, root, scenario, 'hands-off', 'auto', 'sonnet', mode);
-  const { asked } = await driveToEnd(t, sent.conversationId, sent.runId, denyFloorCards);
-  await harness.stop();
-  harness = null;
-  const detail = await getConversationDetail(t.db, sent.conversationId);
-  const status = await t.db.query<{ status: string }>('SELECT status FROM runs WHERE id = $1', [
-    sent.runId,
-  ]);
-  const modes = await t.db.query<{ used_mode: string }>(
-    `SELECT DISTINCT used_mode FROM runs
-     WHERE conversation_id = $1 AND mode = 'do' AND used_mode IS NOT NULL`,
-    [sent.conversationId],
-  );
-  const usedModes = modes.rows.map((row) => row.used_mode);
-  return { ...sent, asked, detail: detail!, status: status.rows[0]!.status, usedModes };
-}
-
-async function userCards(conversationId: string): Promise<string[]> {
-  const { rows } = await t.db.query<{ title: string }>(
-    `SELECT a.title FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.conversation_id = $1
-       AND (a.status = 'pending' OR a.decided_by NOT IN ('level', 'allowlist', 'run_rule'))
-       AND a.kind IN ('edit', 'execute')`,
-    [conversationId],
-  );
-  return rows.map((row) => row.title);
-}
-
-async function ranWithoutReview(conversationId: string): Promise<string[]> {
-  const { rows } = await t.db.query<{ title: string | null }>(
-    `SELECT (SELECT s.payload #>> '{params,update,title}' FROM run_protocol_log s
-             WHERE s.run_id = l.run_id
-               AND s.payload #>> '{params,update,toolCallId}' = l.payload #>> '{params,update,toolCallId}'
-               AND s.payload #>> '{params,update,title}' IS NOT NULL
-             ORDER BY s.seq LIMIT 1) AS title
-     FROM run_protocol_log l JOIN runs r ON r.id = l.run_id
-     WHERE r.conversation_id = $1 AND l.unreviewed`,
-    [conversationId],
-  );
-  return rows.map((row) => row.title ?? '');
-}
-
-async function railAudits(conversationId: string): Promise<string[]> {
-  const { rows } = await t.db.query<{ rail: string }>(
-    `SELECT l.payload #>> '{params,rail}' AS rail FROM run_protocol_log l
-     JOIN runs r ON r.id = l.run_id
-     WHERE r.conversation_id = $1 AND l.method = 'spark/rail_crossed'`,
-    [conversationId],
-  );
-  return rows.map((row) => row.rail).sort();
-}
+const { root, run, userCards, gateRecords, ranWithoutReview, railAudits } = floorRuns();
 
 describe.each(['auto', 'bypassPermissions', 'acceptEdits'])(
   'the safety floor in %s, where the agent runs most tools without asking',
@@ -137,7 +22,7 @@ describe.each(['auto', 'bypassPermissions', 'acceptEdits'])(
           payload: expect.objectContaining({ instructionFiles: ['AGENTS.md'] }),
         }),
       ]);
-      expect(readFileSync(join(root, 'AGENTS.md'), 'utf8')).toBe(RULES);
+      expect(readFileSync(join(root(), 'AGENTS.md'), 'utf8')).toBe(RULES);
       expect((detail.railFlags ?? []).map((flag) => flag.rail)).toEqual([]);
     });
 
@@ -151,7 +36,7 @@ describe.each(['auto', 'bypassPermissions', 'acceptEdits'])(
           payload: expect.objectContaining({ gitControl: ['.git/hooks/pre-commit'] }),
         }),
       ]);
-      expect(existsSync(join(root, '.git/hooks/pre-commit'))).toBe(false);
+      expect(existsSync(join(root(), '.git/hooks/pre-commit'))).toBe(false);
     });
   },
 );
@@ -160,15 +45,16 @@ describe.each(['auto', 'bypassPermissions'])(
   'ordinary work in %s',
   { timeout: 120_000 },
   (mode) => {
-    it('raises no card and no flag for an edit, a command and a read', async () => {
+    it('raises no card and no flag for an edit, a command, a read and everyday git', async () => {
       const { conversationId, detail, status, usedModes } = await run(mode, '#floorordinary');
       expect([status, usedModes]).toEqual(['succeeded', [mode]]);
-      expect(readFileSync(join(root, 'notes.txt'), 'utf8')).toContain('changed\n');
+      expect(readFileSync(join(root(), 'notes.txt'), 'utf8')).toContain('changed\n');
       expect(await userCards(conversationId)).toEqual([]);
       expect(detail.railFlags ?? []).toEqual([]);
       expect(await ranWithoutReview(conversationId)).toEqual(
-        expect.arrayContaining(['Edit notes.txt', ORDINARY_COMMAND]),
+        expect.arrayContaining(['Edit notes.txt', ORDINARY_COMMAND, ...ORDINARY_GIT]),
       );
+      expect(await gateRecords(conversationId)).toEqual([]);
     });
   },
 );

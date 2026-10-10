@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, matchesGlob, relative } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
+import { runCommand } from './fake-acp-floor-commands.ts';
 
 interface FloorTurn {
   text: string;
@@ -87,9 +88,26 @@ async function ranUnasked(
 export const HOOK_APPEND = "printf 'exit 0\\n' >> .git/hooks/pre-push";
 export const RULES_APPEND = 'echo more >> AGENTS.md';
 export const ORDINARY_COMMAND = 'pnpm vitest run src';
+export const ORDINARY_GIT = ['git status', 'git log --oneline -5', 'git diff', 'git commit -m x'];
+export const CONFIG_WRITE = 'git config user.email floor@example.test';
+export const CONFIG_READS = ['git config --get user.email', 'git config --list'];
+export const CONFIG_WRITES_ELSEWHERE = [
+  'git -C . config user.email dir@example.test',
+  'git --git-dir=.git config user.name Dir',
+];
 
-export async function floorTurn(turn: FloorTurn, meta: unknown): Promise<void> {
+export async function floorTurn(turn: FloorTurn, meta: unknown, mode: string): Promise<void> {
   const rules = sessionAskRules(meta);
+  const session = { rules, mode };
+  const commands = async (tag: string, list: readonly string[], executes = false) => {
+    if (!turn.text.includes(tag)) return;
+    for (const [index, command] of list.entries()) {
+      await runCommand(turn, session, `floor-${tag.slice(1)}-${index}`, command, executes);
+    }
+  };
+  await commands('#floorconfigwrite', [CONFIG_WRITE], true);
+  await commands('#floorconfigread', CONFIG_READS, true);
+  await commands('#floorconfigdir', CONFIG_WRITES_ELSEWHERE, true);
   if (turn.text.includes('#floorrules')) {
     await editFile(turn, rules, 'AGENTS.md', '# Changed by the agent\n');
   }
@@ -108,6 +126,7 @@ export async function floorTurn(turn: FloorTurn, meta: unknown): Promise<void> {
       kind: 'read',
       locations: [{ path: join(turn.cwd, 'notes.txt') }],
     });
+    await commands('#floorordinary', ORDINARY_GIT);
   }
   if (turn.text.includes('#floorshell')) {
     await writeFile(join(turn.cwd, 'AGENTS.md'), '# Rules\nmore\n');

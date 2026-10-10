@@ -8,9 +8,10 @@ import {
   publishesBesidesPush,
   publishesCode,
   skipsPushHooks,
-  setsGitConfig,
+  gitConfigUses,
   type ForcePush,
 } from './git-commands.ts';
+import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
@@ -111,17 +112,34 @@ function writtenPaths(request: ApprovalRequest): string[] {
   return writeTargets(request.command, commandCwd(request), request.home) ?? [];
 }
 
+function configTargets(request: ApprovalRequest): { files: string[]; labels: string[] } {
+  const writes = request.command ? gitConfigUses(request.command).filter((use) => use.writes) : [];
+  const cwd = commandCwd(request);
+  const places = new Set(writes.map((use) => use.where));
+  return {
+    files: writes.flatMap((use) =>
+      use.file === null ? [] : [resolveCommandPath(use.file, cwd, request.home)],
+    ),
+    labels: [
+      ...(places.has('repo') ? [REPO_GIT_CONFIG] : []),
+      ...(places.has('global') ? [GLOBAL_GIT_CONFIG] : []),
+      ...(places.has('system') ? [SYSTEM_GIT_CONFIG] : []),
+    ],
+  };
+}
+
 export function guardedTargets(asked: ApprovalRequest): Guarded {
   const request = withResolvedVariables(asked);
-  const relatives = writtenPaths(request).flatMap((target) => {
+  const config = configTargets(request);
+  const relatives = [...writtenPaths(request), ...config.files].flatMap((target) => {
     const { relative } = place(request.roots, target);
     return relative === null ? [] : [relative];
   });
-  if (request.command && setsGitConfig(request.command)) relatives.push('.git/config');
   const unique = [...new Set(relatives)];
+  const control = unique.filter((relative) => protectedPath(relative) === 'git_control');
   return {
     instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: unique.filter((relative) => protectedPath(relative) === 'git_control'),
+    gitControl: [...new Set([...control, ...config.labels])],
   };
 }
 

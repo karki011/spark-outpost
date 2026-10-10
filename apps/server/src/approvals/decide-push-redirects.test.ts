@@ -74,7 +74,6 @@ describe('decide() reads a git command the same with and without a redirection',
     'git remote set-url origin https://evil.example/r',
     'git remote -v',
     'git config core.hooksPath /dev/null',
-    'git config user.name',
     'git commit -m x',
   ])('%s', (command) => {
     const plain = verdicts(command);

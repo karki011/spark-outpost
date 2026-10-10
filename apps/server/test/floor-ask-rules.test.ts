@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { agentDefinitions } from '../src/agents/acp/agents.ts';
+import { GIT_CONFIG_ASK_RULE, agentDefinitions } from '../src/agents/acp/agents.ts';
 import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
+import { railCrossings } from '../src/approvals/rail-crossings.ts';
 import { protectedPath } from '../src/projects/path-policy.ts';
 import { asksBeforeEditing, sessionAskRules } from './fake-acp-floor.ts';
+import { asksBeforeRunning } from './fake-acp-floor-commands.ts';
 
 const ROOT = '/work/app';
 const EXTRA = '/work/lib';
@@ -57,8 +59,55 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
     }
   });
 
-  it('name paths only: no rule makes a whole tool or a command ask', () => {
-    for (const rule of doRules([EXTRA])) expect(rule).toMatch(/^Edit\([^()]*[/.][^()]*\)$/);
+  it('name paths and one command: no rule makes a whole tool or any other command ask', () => {
+    const rules = doRules([EXTRA]);
+    const commands = rules.filter((rule) => !rule.startsWith('Edit('));
+    expect(commands).toEqual([GIT_CONFIG_ASK_RULE]);
+    for (const rule of rules.filter((candidate) => candidate.startsWith('Edit('))) {
+      expect(rule).toMatch(/^Edit\([^()]*[/.][^()]*\)$/);
+    }
+  });
+
+  it.each([
+    'git config user.email x',
+    'git config --global user.email x',
+    'git config --get user.email',
+    'git config --list',
+    'git config',
+    'pnpm test && git config user.email x',
+    'cd lib; git config core.hooksPath hooks',
+    'git config --list | grep user',
+  ])('send %s to the approval gate', (command) => {
+    expect(asksBeforeRunning(doRules(), command)).toBe(true);
+  });
+
+  it.each([
+    'git status',
+    'git log --oneline -5',
+    'git diff',
+    'git commit -m x',
+    'git commit -m "git config"',
+    'git add -A',
+    'git checkout -b spark/x',
+    'git configure',
+    'pnpm vitest run src',
+    'ls -la',
+    'cat .git/config',
+  ])('leave %s to the mode of the agent', (command) => {
+    expect(asksBeforeRunning(doRules(), command)).toBe(false);
+  });
+
+  it.each([
+    'git -C packages/web config user.email x',
+    'git --git-dir=.git config user.email x',
+    'git -c core.editor=vi config -e',
+    '/usr/bin/git config user.email x',
+    'sh -c "git config user.email x"',
+    'echo x >> .git/config',
+  ])('cannot see %s, which is flagged afterwards instead', async (command) => {
+    expect(asksBeforeRunning(doRules(), command)).toBe(false);
+    const crossings = await railCrossings(commandRequest(command));
+    expect(crossings).toContainEqual({ rail: 'git_control', paths: ['.git/config'] });
   });
 
   it('cover the same paths in every other linked repo', () => {
@@ -72,19 +121,21 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
   });
 
   it('are the same for Z.ai, a Builder and a piece', () => {
-    const plain = doRules();
+    const plain = doRules().filter((rule) => rule.startsWith('Edit('));
     const edits = (meta: Record<string, unknown> | undefined) =>
       sessionAskRules(meta).filter((rule) => rule.startsWith('Edit('));
     expect(edits(agentDefinitions.zai.doSessionMeta?.([]))).toEqual(plain);
     expect(edits(agentDefinitions.claude.doSessionMeta?.([], null, true))).toEqual(plain);
     expect(edits(agentDefinitions.claude.doSessionMeta?.([], null, true, true))).toEqual(plain);
+    expect(sessionAskRules(agentDefinitions.zai.doSessionMeta?.([]))).toEqual(doRules());
   });
 
-  it('are not given to sessions without the Edit tool', () => {
+  it('give a session only the rules for the tools it has', () => {
     expect(sessionAskRules(agentDefinitions.claude.conversationSessionMeta?.())).toEqual([]);
+    expect(sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([]))).toEqual([]);
     expect(
       sessionAskRules(agentDefinitions.claude.projectSessionMeta?.([], null, true, true)),
-    ).toEqual([]);
+    ).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
   it('leave .spark to the flag after the fact, since a glob there would also catch plan files', () => {
@@ -93,21 +144,36 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
   });
 });
 
+const REQUEST = {
+  toolCallId: 't1',
+  rpcId: null,
+  diffs: [],
+  options: [],
+  roots: [{ path: ROOT, ignore: [] }],
+  home: '/Users/me',
+};
+
 function editRequest(relative: string): ApprovalRequest {
-  const target = `${ROOT}/${relative}`;
   return {
-    toolCallId: 't1',
-    rpcId: null,
+    ...REQUEST,
     kind: 'edit',
     toolKind: 'edit',
     title: `Edit ${relative}`,
     command: null,
     cwd: null,
-    paths: [target],
-    diffs: [],
-    options: [],
-    roots: [{ path: ROOT, ignore: [] }],
-    home: '/Users/me',
+    paths: [`${ROOT}/${relative}`],
+  };
+}
+
+function commandRequest(command: string): ApprovalRequest {
+  return {
+    ...REQUEST,
+    kind: 'execute',
+    toolKind: 'execute',
+    title: command,
+    command,
+    cwd: ROOT,
+    paths: [],
   };
 }
 

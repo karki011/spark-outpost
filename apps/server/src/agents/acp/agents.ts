@@ -143,8 +143,13 @@ export function secretRules(extraRoots: readonly string[]): string[] {
   return editRules(SECRET_GLOBS, extraRoots);
 }
 
+export const GIT_CONFIG_ASK_RULE = 'Bash(git config:*)';
+
 export function floorAskRules(tools: readonly string[], extraRoots: readonly string[]): string[] {
-  return tools.includes('Edit') ? editRules(EXACT_PROTECTED_GLOBS, extraRoots) : [];
+  return [
+    ...(tools.includes('Edit') ? editRules(EXACT_PROTECTED_GLOBS, extraRoots) : []),
+    ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : []),
+  ];
 }
 
 function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {

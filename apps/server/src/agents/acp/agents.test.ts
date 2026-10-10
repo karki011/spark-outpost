@@ -9,6 +9,7 @@ import {
   agentDefinitions,
   claudeSessionMeta,
   floorAskRules,
+  GIT_CONFIG_ASK_RULE,
   FORCE_PUSH_DENY_RULES,
   PUBLISH_ASK_RULES,
   secretRules,
@@ -91,13 +92,13 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Ask turns a shell and leaves asking to the agent', () => {
+  it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
-    expect(asking.settings.permissions).not.toHaveProperty('ask');
+    expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
-  it('gives Do runs the edit, shell and todo tools and asks only for protected paths', () => {
+  it('gives Do runs the edit, shell and todo tools and asks only for the safety floor', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -111,7 +112,7 @@ describe('Claude session options', () => {
       'ExitPlanMode',
     ]);
     expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
-    expect(bashAsks(options)).toEqual([]);
+    expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
       deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),
@@ -152,18 +153,18 @@ describe('Claude session options', () => {
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
-  it('adds no command ask rules for a piece, whether or not it shares its tree', () => {
+  it('adds no command ask rule but git config for a piece, whether or not it shares its tree', () => {
     const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    expect(bashAsks(alone)).toEqual([]);
+    expect(bashAsks(alone)).toEqual([GIT_CONFIG_ASK_RULE]);
     const publishing = optionsOf(
       agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
     );
-    expect(bashAsks(publishing)).toEqual([]);
+    expect(bashAsks(publishing)).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
   it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
     const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(bashAsks(solo)).toEqual([...PUBLISH_ASK_RULES]);
+    expect(bashAsks(solo)).toEqual([GIT_CONFIG_ASK_RULE, ...PUBLISH_ASK_RULES]);
   });
 
   it('lets gh through to the approval gate for a Builder whose run may publish', () => {

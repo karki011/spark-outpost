@@ -12,7 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Every agent is refused other-branch pushes and remote changes. Claude asks before editing instruction files and git hooks.          | See [protected paths](protected-paths.md).  |
+| Every agent is refused other-branch pushes and remote changes. Claude asks before changing instruction files, git hooks and config. | See [protected paths](protected-paths.md).  |
 | After `/plan` in an **Auto** or **Bypass permissions** chat, reads run without a card.                                              | See [plans](plan-card.md).                  |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |
