@@ -9,6 +9,7 @@
         "scripts/e2e-live/stub.ts",
         "scripts/e2e-live/final/{conform,doing,drop,ex,mk,scn,shot,sql,up,watch}.ts",
         "scripts/routing/live.ts",
+        "scripts/turn-tasks/{runner,report,scratch-repo}/cli.ts",
         "tests/browser/*.spec.ts",
         "tests/browser/provider-stub.ts",
         "tests/browser/ensure-database.ts",
