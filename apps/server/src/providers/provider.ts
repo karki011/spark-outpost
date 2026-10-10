@@ -91,6 +91,7 @@ export interface ProviderTurn {
   coordinated?: boolean;
   sharesTree?: boolean;
   publishes?: boolean;
+  chatRun?: boolean;
   env?: Readonly<Record<string, string>>;
   planning?: boolean;
   plansFirst?: boolean;

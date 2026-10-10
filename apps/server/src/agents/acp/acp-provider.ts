@@ -189,6 +189,7 @@ async function runSession(
       codex,
       builder && turn.publishes !== true,
       turn.env,
+      turn.chatRun === true && turn.publishes !== true,
     );
     if (definition.repoStyle === 'codex' && !prepared.profiles) {
       push(mapper.note(CODEX_PLAIN_SANDBOX_NOTE));

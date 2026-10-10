@@ -117,6 +117,7 @@ export interface TurnOptions {
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
+  chatRun?: boolean;
 }
 
 export interface TurnResult {
@@ -270,12 +271,14 @@ export async function runAgentTurn(
       onTimeout: () => control.stop('approval_timeout'),
       observations,
     };
+    const chatRun = options.chatRun === true && input.mode === 'do' && !writesCode(input.role);
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
             ...gateOptions,
             builder: writesCode(input.role),
+            chatRun,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
@@ -342,9 +345,10 @@ export async function runAgentTurn(
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
+      ...(chatRun ? { chatRun: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(input.piece?.sharesTree ? { sharesTree: true } : {}),
-      ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
+      ...((writesCode(input.role) || chatRun) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),

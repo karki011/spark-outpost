@@ -88,6 +88,7 @@ export interface GateDeps {
   modes?: readonly AgentModeOption[];
   posture?: ModePosture;
   builder?: boolean;
+  chatRun?: boolean;
   askRun?: boolean;
   askAuto?: () => Promise<string | null>;
   extraAllowlist?: () => readonly string[];
@@ -406,6 +407,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
     const options: DecideOptions = {
       builder: deps.builder === true,
+      chatRun: deps.chatRun === true,
       askRun: deps.askRun === true,
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       defaultBranch: await forcePushDefault(request),

@@ -47,14 +47,20 @@ function definedMeta(
     builder,
     coordinated,
     publishes,
+    chatRun,
     planning,
     approvals,
-  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'publishes' | 'planning' | 'approvals'>,
+  }: Pick<
+    ProviderTurn,
+    'builder' | 'coordinated' | 'publishes' | 'chatRun' | 'planning' | 'approvals'
+  >,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) {
-    return definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes) ?? null;
+    return (
+      definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes, chatRun) ?? null
+    );
   }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
