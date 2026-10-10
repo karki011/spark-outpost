@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { IntakeDeps } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { headCommit, workingChanges } from '../codescan/git.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db, Queryable } from '../persistence/db.ts';

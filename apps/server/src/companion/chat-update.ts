@@ -1,5 +1,5 @@
 import type { ChatUpdate, JevStatus } from '@spark-outpost/contracts';
-import type { IntakeDeps } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { callJev, type JevAccess, type JevCall } from '../orchestration/jev-calls.ts';
 import type { Queryable } from '../persistence/db.ts';

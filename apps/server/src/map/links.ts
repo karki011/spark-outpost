@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { validChoice } from '../advisor/intake-questions.ts';
+import { validChoice } from '../advisor/jev-types.ts';
 import { redactText, storableText } from '../audit/redact.ts';
 import type { Endpoint } from '../codescan/endpoints.ts';
 import { evidenceBlock } from '../codescan/jev-state.ts';
