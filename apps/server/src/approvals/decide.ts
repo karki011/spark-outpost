@@ -17,7 +17,9 @@ import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
   publishRefusal,
+  branchRefusal,
   publishVerdict,
+  publishesBranch,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
@@ -198,19 +200,6 @@ function askRunChange(request: ApprovalRequest, view: ShellView | null): string 
   return writes ? ASK_RUN_REASON : null;
 }
 
-function ownAgentRefusal(
-  request: ApprovalRequest,
-  options: DecideOptions,
-  forced: ForcePush | null,
-  published: PublishVerdict | null,
-): string | null {
-  const { command } = request;
-  if (options.builder || !options.chatRun || !command || !publishesCode(command)) return null;
-  if (published) return published.kind === 'refuse' ? published.reason : null;
-  if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
-  return publishRefusal(command, options.publish?.task ?? null);
-}
-
 function planningRuns(
   request: ApprovalRequest,
   view: ShellView | null,
@@ -219,6 +208,33 @@ function planningRuns(
   if (!options.planningWhy || request.kind !== 'execute' || !request.command) return null;
   if (unreadable(request, view) || askRunChange(request, view)) return null;
   return { verdict: 'allow', by: 'level', why: options.planningWhy };
+}
+
+function ownAgentRefusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  published: PublishVerdict | null,
+): string | null {
+  const { command } = request;
+  if (options.builder || !command) return null;
+  if (options.chatRun) return chatRunRefusal(command, options, forced, published);
+  if (!options.publish || !publishesBranch(command)) return null;
+  const rail = branchRefusal(command, options.publish.task);
+  if (rail || published) return rail;
+  return soloLeasePush(command, options, forced) ? null : BUILDER_PUBLISH_REASON;
+}
+
+function chatRunRefusal(
+  command: string,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  published: PublishVerdict | null,
+): string | null {
+  if (!publishesCode(command)) return null;
+  if (published) return published.kind === 'refuse' ? published.reason : null;
+  if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
+  return publishRefusal(command, options.publish?.task ?? null);
 }
 
 function refusal(

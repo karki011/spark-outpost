@@ -111,9 +111,12 @@ describe('decide() for a raw git push of a stacked branch whose parent is not on
     });
   });
 
-  it('decides as before once the parent branch is on the remote', () => {
+  it('decides by the publish rules once the parent branch is on the remote', () => {
     expect(weigh('asks', ASKED, false, true).verdict).toBe('allow');
-    expect(weigh('asks', QUIET, false, true).verdict).toBe('ask');
+    expect(weigh('asks', QUIET, false, true)).toEqual({
+      verdict: 'reject',
+      reason: BUILDER_PUBLISH_REASON,
+    });
     expect(weigh('auto', QUIET, false, true).verdict).toBe('allow');
   });
 });

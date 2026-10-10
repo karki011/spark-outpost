@@ -196,8 +196,12 @@ function publishes(command: string, publishing: readonly string[]): boolean {
   return hosting || gitPublishes(command, publishing);
 }
 
+export function publishesThroughGit(command: string): boolean {
+  return gitPublishes(command, GIT_PUBLISHES);
+}
+
 export function reachesHosting(command: string): boolean {
-  return hostingCommands(command).length > 0 || gitPublishes(command, GIT_PUBLISHES);
+  return hostingCommands(command).length > 0 || publishesThroughGit(command);
 }
 
 export function gitPublishesBesidesPush(command: string): boolean {

@@ -130,17 +130,11 @@
   text-align: left;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
-}
-@media (max-width: 1100px) {
-  .md th,
-  .md td {
-    overflow-wrap: break-word;
-  }
+  overflow-wrap: break-word;
 }
 .md th {
   font-weight: 600;
   background: var(--raise);
-  overflow-wrap: break-word;
 }
 .md tr:last-child td {
   border-bottom: 0;

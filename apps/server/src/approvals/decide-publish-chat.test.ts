@@ -6,7 +6,6 @@ import {
   PUBLISH_ASKED_WHY,
   PUBLISH_FOLLOW_UP_WHY,
   PUBLISH_FULL_AUTO_WHY,
-  PUSH_REASON,
   decide,
   forcePushReason,
   type ApprovalRequest,
@@ -178,15 +177,5 @@ describe("decide() for the chat's own changing run", () => {
         );
       }
     }
-  });
-});
-
-describe('decide() for a run that is neither the chat run nor a Builder', () => {
-  it('is not given the chat run rules', () => {
-    const options: DecideOptions = { files, publish: { grant: NOT_ASKED, task: TASK } };
-    expect(decide('asks', run(PUSH), NO_RUN_RULES, [], options)).toEqual({
-      verdict: 'ask',
-      reason: PUSH_REASON,
-    });
   });
 });

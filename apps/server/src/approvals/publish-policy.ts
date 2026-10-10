@@ -5,6 +5,7 @@ import {
   hostingCommands,
   hostingRead,
   publishesCode,
+  publishesThroughGit,
   pushTargets,
   reachesHosting,
   type PushTarget,
@@ -145,9 +146,24 @@ function ghRefusal(args: readonly string[], task: TaskBranch): string | null {
   return allowed && ownPullTarget(rest, task) ? null : ghRailReason(ghSubcommand(args));
 }
 
-function hostingRefusal(command: string, task: TaskBranch): string | null {
+type Program = readonly string[];
+
+function writesHosting(program: Program): boolean {
+  return !hostingRead(program);
+}
+
+function opensPull(program: Program): boolean {
+  const [, group, verb] = program;
+  return programName(program) === 'gh' && group === 'pr' && GH_PR_WRITES.has(verb ?? '');
+}
+
+function hostingRefusal(
+  command: string,
+  task: TaskBranch,
+  judged: (program: Program) => boolean,
+): string | null {
   for (const program of hostingCommands(command)) {
-    if (hostingRead(program)) continue;
+    if (!judged(program)) continue;
     const refused =
       programName(program) === 'gh' ? ghRefusal(program.slice(1), task) : REMOTE_RAIL_REASON;
     if (refused) return refused;
@@ -175,16 +191,42 @@ function pushRefusal(push: PushTarget, task: TaskBranch): string | null {
   return null;
 }
 
-export function publishRefusal(command: string, task: TaskBranch | null): string | null {
+export function otherBranchPushes(command: string, task: TaskBranch | null): string[] | null {
+  const own = task && !task.protectedBranches.includes(task.branch) ? task.branch : null;
+  const pushes = pushTargets(command);
+  const named = pushes
+    .flatMap((push) => push.branches)
+    .filter((name): name is string => name !== null && name !== own);
+  if (named.length > 0) return [...new Set(named)];
+  return own === null && pushes.length > 0 ? [] : null;
+}
+
+function refusalAmong(
+  command: string,
+  task: TaskBranch | null,
+  judged: (program: Program) => boolean,
+): string | null {
   if (gitPublishesBesidesPush(command)) return REMOTE_RAIL_REASON;
   if (!task) return NO_TASK_BRANCH_REASON;
-  const hosting = hostingRefusal(command, task);
+  const hosting = hostingRefusal(command, task, judged);
   if (hosting) return hosting;
   for (const push of pushTargets(command)) {
     const refused = pushRefusal(push, task);
     if (refused) return refused;
   }
   return null;
+}
+
+export function publishRefusal(command: string, task: TaskBranch | null): string | null {
+  return refusalAmong(command, task, writesHosting);
+}
+
+export function publishesBranch(command: string): boolean {
+  return publishesThroughGit(command) || hostingCommands(command).some(opensPull);
+}
+
+export function branchRefusal(command: string, task: TaskBranch | null): string | null {
+  return refusalAmong(command, task, opensPull);
 }
 
 export function publishVerdict(
