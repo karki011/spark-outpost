@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import type { SecretStore } from '../../setup/secrets.ts';
 import {
@@ -11,6 +11,7 @@ import {
   type ProviderTurn,
 } from '../../providers/provider.ts';
 import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
+import { noFolderAccessNote, primaryOnlyNote } from './folder-notes.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { longContextEnv } from './long-context.ts';
@@ -272,10 +273,6 @@ function openedRoots(
   return turn.mode === 'do' && definition.doPrimaryRootOnly ? linked.slice(0, 1) : linked;
 }
 
-export function primaryOnlyNote(definition: AgentDefinition, primary: string): string {
-  return `${definition.name} changes only ${basename(primary)} in Do; the other linked repos aren't opened`;
-}
-
 function assertCanChange(definition: AgentDefinition, turn: ProviderTurn): void {
   if (!supportsDo(definition)) {
     throw new ProviderError(`${definition.name} can't make changes in Do mode yet.`);
@@ -294,10 +291,6 @@ interface Workspace {
   repo: RepoSession | null;
   mcpServers: NamedMcpServer[];
   spark: SparkTools | null;
-}
-
-export function noFolderAccessNote(definition: AgentDefinition): string {
-  return `${definition.name} can't browse project folders; attach files with @ instead`;
 }
 
 async function converse(

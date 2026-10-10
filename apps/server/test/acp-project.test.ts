@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createAcpProvider, noFolderAccessNote } from '../src/agents/acp/acp-provider.ts';
+import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
+import { noFolderAccessNote } from '../src/agents/acp/folder-notes.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
