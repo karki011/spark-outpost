@@ -5,12 +5,15 @@ import { startDispatcher } from '../src/a2a/dispatcher.ts';
 import { publishAsked } from '../src/orchestration/agent-publish.ts';
 import type { Session } from '../src/orchestration/session.ts';
 import { asAgentReads } from '../src/outposts/agent-prompt.ts';
+import { toOutpostPost } from '../src/outposts/post-view.ts';
 import { queueWrapUps } from '../src/outposts/story-wrap-ups.ts';
 import { userText } from '../src/outposts/user-asked.ts';
 import { markStarted, saveDraft } from '../src/persistence/outpost-drafts.ts';
 import { getPost, insertPosts, listPosts } from '../src/persistence/outpost-posts.ts';
 import { insertTasks } from '../src/persistence/outpost-stories.ts';
 import { createOutpost, removeMember, setPaused } from '../src/persistence/outposts.ts';
+import { getRun } from '../src/persistence/runs.ts';
+import { startedByRequest } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { publishGrant } from '../src/workflow/publish-context.ts';
 import { drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
@@ -212,6 +215,11 @@ describe('the wrap-up turn of a story', () => {
     await drainQueue(t.db, lead, async () => ({ provider: 'claude' }));
 
     const runId = (await postRunId(t.db, story.draftId))!;
+    const run = (await getRun(t.db, runId))!;
+    expect(run.outpost).toMatchObject({ fromUser: false, fromSpark: true, fromHandle: null });
+    expect(startedByRequest(run)).toBe(true);
+    const shown = (await listPosts(t.db, outpostId)).map((post) => toOutpostPost(post, null));
+    expect(shown.filter((post) => post.fromSpark).map((post) => post.id)).toEqual([story.draftId]);
     await t.db.query(`UPDATE runs SET mode = 'do', level = 'hands-off' WHERE id = $1`, [runId]);
     const input = await loadRunInput(t.db, runId);
     expect(input.outpostRequest).toMatchObject({

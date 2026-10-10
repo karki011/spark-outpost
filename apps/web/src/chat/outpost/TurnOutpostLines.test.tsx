@@ -18,13 +18,7 @@ import { TurnOutpostLines } from './TurnOutpostLines.tsx';
 
 const RUN_ID = '0e000000-0000-4000-8000-000000000001';
 const DRAFT_ID = '0f000000-0000-4000-8000-000000000001';
-const RUN: TurnWindow = {
-  id: RUN_ID,
-  createdAt: '2026-10-09T10:00:00.000Z',
-  startedAt: '2026-10-09T10:00:00.000Z',
-  finishedAt: '2026-10-09T10:30:00.000Z',
-  parentRunId: null,
-};
+const RUN: TurnWindow = { id: RUN_ID, parentRunId: null };
 const MEMBER = { id: FE_CHAT, outpost: { id: OUTPOST_ID, name: 'Usage by user', handle: 'fe' } };
 
 let client: QueryClient;
@@ -94,6 +88,7 @@ describe('TurnOutpostLines', () => {
     const sent = post(5, {
       fromUser: false,
       fromConversationId: FE_CHAT,
+      fromRunId: RUN_ID,
       fromHandle: 'fe',
       body: 'Which fields does the order have?',
       state: 'working',

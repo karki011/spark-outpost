@@ -76,6 +76,7 @@ export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'f
 export interface PostWithFacts {
   post: StoredPost;
   facts: RequestFacts | null;
+  wrapUp?: boolean;
 }
 
 export type StoredOutpost = Omit<Outpost, 'needsYou'>;

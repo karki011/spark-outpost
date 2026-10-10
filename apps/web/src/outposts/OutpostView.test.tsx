@@ -206,7 +206,7 @@ describe('OutpostView', () => {
   });
 
   it('starts a request that waits for another chat when asked to', async () => {
-    show(detail([post(1, { reason: 'Waiting for @fe' })]));
+    show(detail([post(1, { reason: 'Waiting for @fe', held: true })]));
     view();
     fireEvent.click(screen.getByRole('button', { name: 'Start the request to @api anyway' }));
     await waitFor(() => expect(calls).toHaveLength(1));

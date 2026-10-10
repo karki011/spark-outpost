@@ -78,7 +78,7 @@ describe('RequestPost', () => {
   });
 
   it('offers Start anyway on a request that waits for another chat', () => {
-    const waiting = post(1, { reason: 'Waiting for @fe' });
+    const waiting = post(1, { reason: 'Waiting for @fe', held: true });
     const handlers = renderRequest(waiting);
     expect(screen.getByText('Waiting for @fe')).toBeTruthy();
     expect(buttons()).toEqual(['Start anyway', 'Cancel', 'Open in chat']);
@@ -87,7 +87,7 @@ describe('RequestPost', () => {
   });
 
   it('offers Start anyway when the chat it waits for was deleted', () => {
-    renderRequest(post(1, { reason: 'Waiting for a deleted chat' }));
+    renderRequest(post(1, { reason: 'Waiting for a deleted chat', held: true }));
     expect(buttons()).toContain('Start anyway');
   });
 
@@ -95,10 +95,16 @@ describe('RequestPost', () => {
     ['Not sent yet', 'sent'],
     ['Paused', 'sent'],
     ["Waiting: @api's last turn failed", 'sent'],
-    ['Waiting for @fe', 'working'],
-  ] as const)('does not offer Start anyway for "%s" while %s', (reason, state) => {
+    ['Waiting for @fe', 'sent'],
+  ] as const)('does not offer Start anyway for "%s" while %s and not held', (reason, state) => {
     renderRequest(post(1, { reason, state }));
     expect(buttons()).not.toContain('Start anyway');
+  });
+
+  it('names Spark as the writer of a story wrap-up, and still says it is not from you', () => {
+    renderRequest(post(1, { fromUser: false, fromSpark: true }));
+    expect(screen.getByRole('listitem').textContent).toContain('Sparknot from youto@api');
+    expect(document.querySelectorAll('.op-post-head .chat-face')).toHaveLength(1);
   });
 
   it('draws the blob of each chat in the request, the receiver with the request state', () => {

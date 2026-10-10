@@ -36,17 +36,12 @@ export function postAnchor(postId: string): string {
 
 export function senderName(post: OutpostPost): string {
   if (post.fromUser) return 'You';
+  if (post.fromSpark) return 'Spark';
   return post.fromHandle ? `@${post.fromHandle}` : 'A removed chat';
 }
 
 export function receiverName(post: OutpostPost): string {
   return `@${post.toHandle ?? 'chat'}`;
-}
-
-const HELD_REASON = /^Waiting for (@[a-z][a-z0-9-]*|a deleted chat)$/;
-
-export function isHeld(post: OutpostPost): boolean {
-  return post.state === 'sent' && post.reason !== null && HELD_REASON.test(post.reason);
 }
 
 export function canCancel(post: OutpostPost): boolean {

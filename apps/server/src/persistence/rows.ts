@@ -61,6 +61,7 @@ export interface RunRow {
   outpost_from_handle?: string | null;
   outpost_from_user?: boolean | null;
   outpost_user_started?: boolean | null;
+  outpost_from_spark?: boolean | null;
   mode?: RunMode | null;
   picked_mode?: RunMode | null;
   start_as?: StartAs | null;
@@ -164,7 +165,8 @@ export function toRun(row: RunRow): Run {
 
 export const RUN_OUTPOST_COLUMNS = `post.id AS outpost_post_id, post.outpost_id,
   room.name AS outpost_name, post.from_handle AS outpost_from_handle,
-  post.from_user AS outpost_from_user, post.user_started AS outpost_user_started`;
+  post.from_user AS outpost_from_user, post.user_started AS outpost_user_started,
+  EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = post.id) AS outpost_from_spark`;
 
 export const RUN_OUTPOST_JOINS = `LEFT JOIN outpost_posts post
     ON r.source = 'outpost' AND post.id = r.user_message_id
@@ -179,6 +181,7 @@ function runOutpost(row: RunRow): Pick<Run, 'outpost'> {
       outpostName: row.outpost_name,
       fromHandle: row.outpost_from_handle ?? null,
       fromUser: row.outpost_from_user === true,
+      fromSpark: row.outpost_from_spark === true,
       userStarted: row.outpost_user_started === true,
     },
   };

@@ -6,10 +6,14 @@ import { ChevronIcon, OutpostIcon } from '../../ui/icons.tsx';
 
 export type RunOutpost = NonNullable<Run['outpost']>;
 
-type Sender = Pick<RunOutpost, 'fromUser' | 'fromHandle'> & { userStarted?: boolean };
+type Sender = Pick<RunOutpost, 'fromUser' | 'fromHandle'> & {
+  userStarted?: boolean;
+  fromSpark?: boolean;
+};
 
 export function requestSender(outpost: Sender): string {
   if (outpost.fromUser) return 'From you';
+  if (outpost.fromSpark) return 'From Spark';
   const kind = outpost.userStarted ? 'Task from' : 'From';
   return outpost.fromHandle ? `${kind} @${outpost.fromHandle}` : `${kind} another chat`;
 }

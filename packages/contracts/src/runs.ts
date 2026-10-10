@@ -81,6 +81,7 @@ export const runSchema = z.object({
       outpostName: z.string(),
       fromHandle: z.string().nullable(),
       fromUser: z.boolean(),
+      fromSpark: z.boolean().default(false),
       userStarted: z.boolean().default(false),
     })
     .optional(),

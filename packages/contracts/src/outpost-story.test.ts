@@ -235,6 +235,7 @@ describe('outpost story', () => {
     };
     expect(runSchema.shape.outpost.parse({ ...from, userStarted: true })).toEqual({
       ...from,
+      fromSpark: false,
       userStarted: true,
     });
     expect(runSchema.shape.outpost.parse(from)?.userStarted).toBe(false);

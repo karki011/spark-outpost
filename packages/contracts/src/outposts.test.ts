@@ -56,8 +56,12 @@ const detail: OutpostDetail = {
       kind: 'request',
       body: 'What does the orders response look like?',
       fromUser: false,
+      fromSpark: false,
       fromConversationId: FRONTEND,
+      fromRunId: null,
       fromHandle: 'fe',
+      userStarted: false,
+      held: false,
       toConversationId: BACKEND,
       toHandle: 'api',
       guest: false,
@@ -249,6 +253,7 @@ describe('outpost fields on existing contracts', () => {
       outpostName: 'Orders launch',
       fromHandle: null,
       fromUser: true,
+      fromSpark: false,
       userStarted: false,
     };
     expect(runSchema.shape.outpost.parse(from)).toEqual(from);

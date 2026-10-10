@@ -2,16 +2,7 @@ import type { OutpostPost, Run } from '@spark-outpost/contracts';
 import { countLabel } from '../../ui/count-label.ts';
 import type { ChatDraft } from './chat-drafts.ts';
 
-export type TurnWindow = Pick<Run, 'id' | 'createdAt' | 'startedAt' | 'finishedAt'> & {
-  parentRunId?: Run['parentRunId'];
-};
-
-function during(run: TurnWindow, time: string): boolean {
-  const at = Date.parse(time);
-  const from = Date.parse(run.startedAt ?? run.createdAt);
-  const until = run.finishedAt ? Date.parse(run.finishedAt) : Number.POSITIVE_INFINITY;
-  return at >= from && at <= until;
-}
+export type TurnWindow = Pick<Run, 'id'> & { parentRunId?: Run['parentRunId'] };
 
 export function sentInTurn(
   posts: readonly OutpostPost[],
@@ -24,7 +15,7 @@ export function sentInTurn(
       post.kind === 'request' &&
       !post.fromUser &&
       post.fromConversationId === chatId &&
-      during(run, post.createdAt),
+      post.fromRunId === run.id,
   );
 }
 

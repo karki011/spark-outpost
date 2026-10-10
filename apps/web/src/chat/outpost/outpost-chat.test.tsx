@@ -21,6 +21,7 @@ function request(from: Partial<RunOutpost>): RunOutpost {
     outpostName: 'Orders launch',
     fromHandle: 'fe',
     fromUser: false,
+    fromSpark: false,
     userStarted: false,
     ...from,
   };
@@ -78,6 +79,12 @@ describe('RequestHeader', () => {
     expect(requestSender({ fromUser: true, fromHandle: null })).toBe('From you');
     expect(requestSender({ fromUser: true, fromHandle: 'fe' })).toBe('From you');
     expect(requestSender({ fromUser: false, fromHandle: null })).toBe('From another chat');
+    expect(requestSender({ fromUser: false, fromHandle: null, fromSpark: true })).toBe(
+      'From Spark',
+    );
+    expect(requestNote({ fromUser: false, fromHandle: null, fromSpark: true })).toBe(
+      'not from you',
+    );
   });
 
   it('says a request another chat wrote is not the user’s, and a draft task was only started by them', () => {

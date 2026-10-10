@@ -58,6 +58,7 @@ interface FactsRow extends PostRow {
   run_needs_you: string | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
+  wrap_up: boolean;
 }
 
 const observedSchema = z.array(
@@ -89,7 +90,8 @@ const FACTS_QUERY = `
       WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
     ) END AS run_needs_you,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
-    (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted
+    (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
+    EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = p.id) AS wrap_up
   FROM outpost_posts p
   JOIN outposts o ON o.id = p.outpost_id
   LEFT JOIN runs r ON r.id = p.run_id
@@ -146,7 +148,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
 }
 
 function withFacts(row: FactsRow): PostWithFacts {
-  return { post: toPost(row), facts: toFacts(row) };
+  return { post: toPost(row), facts: toFacts(row), ...(row.wrap_up ? { wrapUp: true } : {}) };
 }
 
 async function existingPost(db: Queryable, post: NewPost): Promise<StoredPost | null> {

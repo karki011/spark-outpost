@@ -125,4 +125,41 @@ describe('the post the outpost page receives', () => {
       exchanges: [],
     });
   });
+
+  it('says which turn of which chat wrote a request, and whether the user started it', () => {
+    const runId = '44444444-4444-4444-8444-444444444444';
+    const asked: PostWithFacts = {
+      post: { ...stored, fromUser: false, fromHandle: 'fe', fromRunId: runId, userStarted: true },
+      facts,
+    };
+
+    expect(toOutpostPost(asked, null)).toMatchObject({
+      fromRunId: runId,
+      userStarted: true,
+      fromSpark: false,
+    });
+    expect(toOutpostPost({ post: stored, facts }, null)).toMatchObject({
+      fromRunId: null,
+      userStarted: false,
+      fromSpark: false,
+    });
+  });
+
+  it('marks a wrap-up as written by Spark', () => {
+    const wrapUp: PostWithFacts = { post: { ...stored, fromUser: false }, facts, wrapUp: true };
+
+    expect(toOutpostPost(wrapUp, null).fromSpark).toBe(true);
+  });
+
+  it('is held only while it waits for another request and the outpost is running', () => {
+    const waiting = { ...facts, waitingOn: 'api' };
+    const held = (found: RequestFacts) => toOutpostPost({ post: stored, facts: found }, null).held;
+
+    expect(held(waiting)).toBe(true);
+    expect(held({ ...facts, waitingOnDeleted: true })).toBe(true);
+    expect(held(facts)).toBe(false);
+    expect(held({ ...waiting, paused: true })).toBe(false);
+    expect(held({ ...waiting, closedState: 'cancelled' })).toBe(false);
+    expect(held({ ...waiting, sent: true })).toBe(false);
+  });
 });

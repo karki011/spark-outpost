@@ -19,7 +19,6 @@ import {
   requestFaceState,
   canCancel,
   filesLabel,
-  isHeld,
   postAnchor,
   postTime,
   pullRequestLabel,
@@ -152,7 +151,7 @@ export function RequestPost({
             Answer
           </button>
         )}
-        {onStartNow && isHeld(post) && (
+        {onStartNow && post.held && (
           <button
             type="button"
             className="op-link"

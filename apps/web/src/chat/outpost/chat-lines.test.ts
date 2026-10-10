@@ -8,14 +8,7 @@ const OTHER_RUN = '0e000000-0000-4000-8000-000000000002';
 const DRAFT_ID = '0f000000-0000-4000-8000-000000000001';
 
 function turn(overrides: Partial<TurnWindow> = {}): TurnWindow {
-  return {
-    id: RUN_ID,
-    createdAt: '2026-10-09T10:00:00.000Z',
-    startedAt: '2026-10-09T10:01:00.000Z',
-    finishedAt: '2026-10-09T10:10:00.000Z',
-    parentRunId: null,
-    ...overrides,
-  };
+  return { id: RUN_ID, parentRunId: null, ...overrides };
 }
 
 function fromFe(number: number, overrides: Parameters<typeof post>[1] = {}) {
@@ -23,6 +16,7 @@ function fromFe(number: number, overrides: Parameters<typeof post>[1] = {}) {
     fromUser: false,
     fromConversationId: FE_CHAT,
     fromHandle: 'fe',
+    fromRunId: RUN_ID,
     ...overrides,
   });
 }
@@ -40,10 +34,10 @@ function draft(overrides: Partial<ChatDraft> = {}): ChatDraft {
 }
 
 describe('sentInTurn', () => {
-  it('keeps the requests this chat sent while the turn ran', () => {
-    const posts = [fromFe(0), fromFe(1), fromFe(5), fromFe(10), fromFe(11)];
+  it('keeps the requests this turn of the chat sent', () => {
+    const posts = [fromFe(0), fromFe(1, { fromRunId: OTHER_RUN }), fromFe(5)];
     expect(sentInTurn(posts, FE_CHAT, turn()).map((sent) => sent.id)).toEqual(
-      [posts[1], posts[2], posts[3]].map((sent) => sent?.id),
+      [posts[0], posts[2]].map((sent) => sent?.id),
     );
   });
 
@@ -51,26 +45,14 @@ describe('sentInTurn', () => {
     const posts = [
       post(2),
       fromFe(3, { fromConversationId: API_CHAT, fromHandle: 'api' }),
-      note(4, { fromUser: false, fromConversationId: FE_CHAT }),
+      note(4, { fromUser: false, fromConversationId: FE_CHAT, fromRunId: RUN_ID }),
     ];
     expect(sentInTurn(posts, FE_CHAT, turn())).toEqual([]);
   });
 
-  it('counts from when the turn was created until it finishes when it has not started or ended', () => {
-    const open = turn({ startedAt: null, finishedAt: null });
-    expect(sentInTurn([fromFe(0), fromFe(30)], FE_CHAT, open)).toHaveLength(2);
-  });
-
-  it('gives a request to one turn only when turns follow each other', () => {
-    const later = turn({
-      id: OTHER_RUN,
-      createdAt: '2026-10-09T10:20:00.000Z',
-      startedAt: '2026-10-09T10:20:00.000Z',
-      finishedAt: null,
-    });
-    const posts = [fromFe(5), fromFe(15), fromFe(25)];
-    expect(sentInTurn(posts, FE_CHAT, turn()).map((sent) => sent.id)).toEqual([posts[0]?.id]);
-    expect(sentInTurn(posts, FE_CHAT, later).map((sent) => sent.id)).toEqual([posts[2]?.id]);
+  it('leaves out a story’s first messages, which the user started and no turn sent', () => {
+    const started = fromFe(5, { fromRunId: null, userStarted: true });
+    expect(sentInTurn([started], FE_CHAT, turn())).toEqual([]);
   });
 
   it('shows nothing under a run that is part of another turn', () => {

@@ -79,6 +79,11 @@ function unsentReason(facts: RequestFacts): string {
   return 'Not sent yet';
 }
 
+export function heldForRequest(facts: RequestFacts): boolean {
+  if (facts.closedState !== null || facts.chatDeleted || facts.paused || facts.sent) return false;
+  return facts.waitingOn !== null || facts.waitingOnDeleted === true;
+}
+
 function waitingRequest(facts: RequestFacts): DerivedRequestState {
   if (facts.paused) return { state: 'sent', reason: 'Paused' };
   if (!facts.sent) return { state: 'sent', reason: unsentReason(facts) };
