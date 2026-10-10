@@ -123,7 +123,7 @@ One migration, `0154_outposts.sql`, in step 0. All 15 decisions are confirmed, s
 
 **`outposts`**: `id` uuid PK (client-generated, so create is idempotent), `workspace_id`, `name` (1–60), `paused_at`, `created_at`, `updated_at`.
 
-**`outpost_members`**: `outpost_id` FK cascade, `conversation_id` FK cascade and **unique** (one outpost per chat, decision 9), `handle` (lower case, `[a-z][a-z0-9-]{1,15}`, unique per outpost, `all` reserved), `position`, `joined_at`.
+**`outpost_members`**: `outpost_id` FK cascade, `conversation_id` FK cascade and **unique** (one outpost per chat, decision 9), `handle` (lower case, `[a-z][a-z0-9-]{1,31}` since `0164`, unique per outpost, `all` reserved), `position`, `joined_at`.
 
 **`outpost_posts`** (requests, notes and notices; answers are not stored)
 
@@ -658,6 +658,8 @@ Asked for by the owner after real use: one leading handle per message was too na
 - **Agents.** Unchanged. `spark_outpost_ask` names one member, and text a chat writes goes through `parseAddress`, which still reads one leading handle only, so a handle inside an agent's note addresses nobody.
 - **Slash commands.** `asAgentReads` hands over a bare command only when the user's request starts with `/` and carries no handle standing alone. `@api /plan` is stored as `/plan` and runs; `@api @web /plan` and `/plan @api @web` are wrapped and sent as text. Limit: `@api /assign @someone` is also sent as text, because the stored row does not say which form it came from.
 - **Live activity and the failed reason.** A Working line shows the sidebar row's own text for that chat (`chatActivity` reads `rowState`, from the conversations query the page already has). A request whose run failed shows the first line of `runs.error` after "@api's turn failed" (`shownReason` in `post-view.ts`); the reason given to other chats and to story rows is unchanged.
-- **Handles.** `suggestHandle` cuts a long name at the last hyphen that fits. The limit is still 16: raising it to 32 needs a migration, because `outpost_members.handle` carries `CHECK (handle ~ '^[a-z][a-z0-9-]{1,15}$')`.
+- **Handles.** A handle has 2 to 32 characters. Migration `0164_outpost_handle_length.sql` replaces the `outpost_members.handle` CHECK from `0154_outposts.sql` (`{1,15}` becomes `{1,31}`); existing handles are untouched. `HANDLE_MAX` (`outpost-handles.ts`) and `OUTPOST_HANDLE_PATTERN` (`outposts.ts`) carry the same limit, and `suggestHandle` still cuts a longer name at the last hyphen that fits.
+
+- **Inside a batch, a chat is named once.** `RequestOutcome` takes `inBatch` and leaves out the "@api answered" header of the reply, because the line above it already reads "@api Answered". A chat that is waiting for you keeps its header, and a single-chat request is drawn as before.
 
 Not built: addressing a chat that is not a member, and `@all` or several targets for agents.
