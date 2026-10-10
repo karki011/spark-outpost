@@ -76,11 +76,11 @@ Any chat with a project gets `spark_outpost_draft`. Pieces get none. What anothe
 
 Change any field, then select the confirm button or **Don't**. The card then shows the result with a link, or why it failed with **Try again**. Every action is audited.
 
-## Keep a command running
+## Commands after the turn
 
 `spark_terminal_run` runs a command such as a dev server outside the agent's sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
-[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns, chats with no project, pieces and the Coordinator are refused.
+[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns, turns with no project, pieces and the Coordinator are refused.
 
 The agent can read its output and stop it. Stopping the turn or quitting Spark also stops it.
 

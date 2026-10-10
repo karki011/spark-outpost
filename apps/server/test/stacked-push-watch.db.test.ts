@@ -106,13 +106,18 @@ describe('a raw git push of a stacked branch that ran without a permission reque
     expect(await seen.flags()).toEqual([]);
   });
 
-  it('is not flagged for a push the gate was asked about, another branch or another command', async () => {
+  it('is not flagged for a push the gate was asked about or another command', async () => {
     const seen = watch();
     seen.asked('gated');
     seen.command('gated', PUSH);
-    seen.command('other', `git push origin ${API}`);
     seen.command('status', `git status && git log origin/${WEB}`);
     expect(await seen.flags()).toEqual([]);
+  });
+
+  it('leaves a push of another branch to the other branch flag', async () => {
+    const seen = watch();
+    seen.command('other', `git push origin ${API}`);
+    expect((await seen.flags()).map((flag) => flag.rail)).toEqual(['other_push']);
   });
 });
 
