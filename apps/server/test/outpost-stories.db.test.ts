@@ -294,4 +294,12 @@ describe('story tasks', () => {
     ]);
     expect(rows[0]?.opening?.facts).toMatchObject({ waitingOn: null, waitingOnDeleted: true });
   });
+
+  it('writes the tasks of a story together or not at all', async () => {
+    const tasks = [task(api, 0), task(web, 1, { dependsOnConversationId: web })];
+
+    await expect(insertTasks(t.db, tasks)).rejects.toThrow();
+
+    expect(await storiesOf(t.db, outpostId)).toEqual([]);
+  });
 });

@@ -67,6 +67,7 @@ export interface OutpostRequest {
   fromHandle?: string | null;
   fromTitle?: string | null;
   userStarted?: boolean;
+  wrapUp?: boolean;
 }
 
 export interface TurnTimes {
@@ -90,6 +91,7 @@ interface OutpostRow {
   outpost_from_handle: string | null;
   outpost_from_title: string | null;
   outpost_user_started: boolean | null;
+  outpost_wrap_up: boolean | null;
   outpost_name: string | null;
 }
 
@@ -207,6 +209,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
               = 'outpost' AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
             op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
+            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
             (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
               AS outpost_from_title,
             r.created_at AS started_at,
@@ -267,6 +270,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             ) AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
             op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
+            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
             (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
               AS outpost_from_title
      FROM messages m
@@ -345,6 +349,7 @@ function outpostRequestOf(row: OutpostRow, postId: string): OutpostRequest | nul
     fromHandle: row.outpost_from_handle,
     fromTitle: row.outpost_from_title,
     userStarted: row.outpost_user_started === true,
+    wrapUp: row.outpost_wrap_up === true,
   };
 }
 

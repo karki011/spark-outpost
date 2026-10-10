@@ -119,28 +119,27 @@ async function withOpenings(db: Queryable, rows: StoryRow[]): Promise<StoryTaskR
 }
 
 export const insertTasks: StoryStore['insertTasks'] = async (db, tasks) => {
-  for (const task of tasks) {
-    await db.query(
-      `INSERT INTO outpost_story_tasks AS t (conversation_id, outpost_id, draft_id,
-         lead_conversation_id, title, position, depends_on_conversation_id, opening_post_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (conversation_id) DO UPDATE
-         SET opening_post_id = COALESCE(t.opening_post_id, EXCLUDED.opening_post_id)
-         WHERE t.outpost_id = EXCLUDED.outpost_id
-           AND t.draft_id IS NOT DISTINCT FROM EXCLUDED.draft_id`,
-      [
-        task.conversationId,
-        task.outpostId,
-        task.draftId,
-        task.leadConversationId,
-        task.title,
-        task.position,
-        task.dependsOnConversationId,
-        task.openingPostId,
-      ],
-    );
-  }
   if (tasks.length === 0) return [];
+  await db.query(
+    `INSERT INTO outpost_story_tasks AS t (conversation_id, outpost_id, draft_id,
+       lead_conversation_id, title, position, depends_on_conversation_id, opening_post_id)
+     SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::uuid[], $4::uuid[], $5::text[], $6::int[],
+       $7::uuid[], $8::uuid[])
+     ON CONFLICT (conversation_id) DO UPDATE
+       SET opening_post_id = COALESCE(t.opening_post_id, EXCLUDED.opening_post_id)
+       WHERE t.outpost_id = EXCLUDED.outpost_id
+         AND t.draft_id IS NOT DISTINCT FROM EXCLUDED.draft_id`,
+    [
+      tasks.map((task) => task.conversationId),
+      tasks.map((task) => task.outpostId),
+      tasks.map((task) => task.draftId),
+      tasks.map((task) => task.leadConversationId),
+      tasks.map((task) => task.title),
+      tasks.map((task) => task.position),
+      tasks.map((task) => task.dependsOnConversationId),
+      tasks.map((task) => task.openingPostId),
+    ],
+  );
   const { rows } = await db.query<TaskRow>(
     `SELECT ${TASK_COLUMNS} FROM outpost_story_tasks
      WHERE conversation_id = ANY($1::uuid[]) ORDER BY created_at, position, conversation_id`,

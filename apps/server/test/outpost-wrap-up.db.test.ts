@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startDispatcher } from '../src/a2a/dispatcher.ts';
 import { publishAsked } from '../src/orchestration/agent-publish.ts';
 import type { Session } from '../src/orchestration/session.ts';
+import { asAgentReads } from '../src/outposts/agent-prompt.ts';
 import { queueWrapUps } from '../src/outposts/story-wrap-ups.ts';
 import { userText } from '../src/outposts/user-asked.ts';
 import { markStarted, saveDraft } from '../src/persistence/outpost-drafts.ts';
@@ -213,7 +214,14 @@ describe('the wrap-up turn of a story', () => {
     const runId = (await postRunId(t.db, story.draftId))!;
     await t.db.query(`UPDATE runs SET mode = 'do', level = 'hands-off' WHERE id = $1`, [runId]);
     const input = await loadRunInput(t.db, runId);
-    expect(input.outpostRequest).toMatchObject({ fromUser: false, userStarted: false });
+    expect(input.outpostRequest).toMatchObject({
+      fromUser: false,
+      userStarted: false,
+      wrapUp: true,
+    });
+    expect(asAgentReads(input).prompt.split('\n')[0]).toBe(
+      '[Story wrap-up, written by Spark in the outpost "Orders launch". This is not from the user.]',
+    );
     expect(userText(input)).toBe('');
     expect(publishGrant(input).requested).toBe(false);
     expect(publishAsked({ input } as Session)).toBe(false);
