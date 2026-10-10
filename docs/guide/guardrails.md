@@ -1,38 +1,34 @@
 ---
-title: Guardrails and estimates
+title: Guardrails
 section: Understand Spark
 type: concept
 order: 520
-summary: The Worth a look list Spark adds to kept changes, the estimate for a build, and model demotions.
+summary: What Spark enforces itself in every chat and agent mode, what it leaves to the agent, and why nothing is capped.
 ---
 
-A guardrail is a rule Spark enforces itself, in every chat and agent mode. Guardrails never block you: they point out what's worth a look. Outposts have their own rules: [requests](outpost-permissions.md) and [stacked pull requests](stacked-pull-requests.md).
+A guardrail is a rule Spark enforces itself, in every chat and agent mode. Everything else is the agent's work: Spark moderates, it doesn't review.
 
-## Worth a look
+## What Spark enforces
 
-The result line and the final reply list flags under **Worth a look**. At **Full auto → PR** the list is in the PR description too.
+| Guardrail                                                     | Means                                                                                                                       |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [Protected paths](protected-paths.md)                         | Secret files, agent instructions, git hooks and files outside the project ask or are refused.                               |
+| [Publish rules](protected-paths.md#when-an-agent-may-publish) | The agent pushes only the chat's own branch, and only with a reason. Otherwise it's refused.                                |
+| Nothing merges                                                | You merge pull requests yourself. Spark never approves or dismisses a review.                                               |
+| The audit                                                     | Every action is recorded; one no card covered is marked [ran without review](approvals.md#actions-that-ran-without-review). |
+| Revert                                                        | **Revert to before this run** undoes a run's own edits.                                                                     |
 
-![A kept result with its Worth a look list](images/guardrails-keep-card-light.png)
+Outposts add their own: [requests](outpost-permissions.md) and [stacked pull requests](stacked-pull-requests.md).
 
-| Flag                                                 | Means                                                                              |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| "Removed `helperTotals` … — why?"                    | A file, function, export, test or safety check was removed without a reason.       |
-| "… said the checks pass. Spark's own run differs: …" | Names the command and what failed. Spark's own run counts.                         |
-| Weakened tests                                       | A test gained `skip` or `only`, lost assertions or got a looser matcher.           |
-| Updated snapshots                                    | Check that they match the behaviour you want.                                      |
-| Check config                                         | Lint, typecheck, test or CI config, or a `test`, `lint` or `build` script changed. |
-| Files nobody named                                   | A changed file that the request, the plan and the Builder never mentioned.         |
+## What Spark leaves to the agent
 
-If a flag is expected, say so in your request, such as "update the snapshots".
+| Not done by Spark            | Instead                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| Running your tests and lint  | The agent runs them. Hooks and CI run on a push; Spark never skips them. |
+| Reviewing the diff           | Read it in [**Changes**](review-changes.md), or ask another chat.        |
+| Retrying on a stronger model | Stop the turn, then redirect it or pick another model.                   |
+| Asking before a build        | Use `/plan` or **Plan** mode to [approve a plan first](plan-card.md).    |
 
-## Estimates
+## No budgets
 
-A build records a **Rough estimate** of time and cost with the turn's decisions. After 5 similar finished runs it shows a **Learned estimate**, from your own history.
-
-An estimate is only information. Spark sets no budget on time, tool calls or cost: a task runs until it finishes or you stop it.
-
-## Model demotions
-
-On **Auto**, Spark stops sending a kind of task to a model whose recent pass rate falls well behind its tier, after at least 10 finished runs.
-
-The Builder's header says why. A pinned model stays.
+Spark sets no budget on time, tool calls, tokens or cost. Usage is measured and shown; a turn runs until it finishes or you stop it.

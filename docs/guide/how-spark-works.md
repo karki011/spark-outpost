@@ -3,31 +3,36 @@ title: How Spark works
 section: Understand Spark
 type: concept
 order: 510
-summary: What Spark adds around Claude, Codex and Z.ai, and the path a request takes from the message box to a pull request.
+summary: What Spark adds around Claude, Codex and Z.ai, and the path a message takes from the message box to a pull request.
 ---
 
-Claude Code, Codex and Z.ai read and write code. Spark picks who works, checks results and ships changes with your approval.
+One chat is one agent session: Claude Code, Codex or Z.ai. Your message goes to the agent as you typed it, and Spark moderates around it: approvals, a worktree, the audit and publishing.
 
 ## What happens to a message
 
-Most requests skip most steps. A question stops after step 1.
+| Step       | What happens                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Place   | In a mode that can change files, the chat gets its own [worktree](where-spark-works.md) and branch.                             |
+| 2. Plan    | Only when you ask: `/plan` or **Plan** mode has the agent [plan first](plan-card.md).                                           |
+| 3. Work    | The agent answers or changes code. Every action passes the [approval gate](approvals.md) and the audit.                         |
+| 4. Keep    | Changed files are kept, with a **Changes kept** record you can [revert](review-changes.md).                                     |
+| 5. Publish | You [ship](ship-and-pull-requests.md), or the agent pushes and opens the PR. Spark then [handles PR feedback](pr-follow-up.md). |
 
-| Step      | What happens                                                                                                                                 | Without Jev             |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1. Read   | Spark names the kind of request, shown as a chip such as **Bug fix**. Questions get an answer.                                               | Rules read the wording. |
-| 2. Plan   | A build's plan is saved and shown as [one line](plan-card.md). Nothing waits; `/plan` has the agent ask first.                               | Same                    |
-| 3. Build  | A [Builder](spark-crew.md) changes code in the chat's [worktree](where-spark-works.md), on your model or one [Auto picks](model-routing.md). | Rules rate the request. |
-| 4. Check  | Spark runs your tests and lint itself. The Builder gets up to 2 turns to fix failures.                                                       | Same                    |
-| 5. Review | [Jev](jev.md) checks the diff. A Critic reviews bigger or riskier changes.                                                                   | No Jev check            |
-| 6. Keep   | Spark keeps the change and lists concerns under [**Worth a look**](guardrails.md#worth-a-look). You can revert.                              | Same                    |
-| 7. Ship   | You [ship](ship-and-pull-requests.md), or **Full auto → PR** opens the PR. Spark then [handles PR feedback](pr-follow-up.md).                | Rules sort comments.    |
+Spark adds nothing to the reply except a line about publishing.
 
-![A crew turn: the dispatch line, the Builder and the result line](images/prompt-flow-crew-turn-light.png)
+## How work is split
 
-Hover the line above the crew to see how Spark handled each step. For where a card can stop a request, see [Cards](cards.md).
+The agent decides. Spark never splits a turn into roles.
 
-## With Spark off
+| Work                                                | Who does it                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| A small change                                      | The agent itself.                                                                    |
+| Independent parts in one repo and branch            | The agent's own sub-agents. Their steps show as the agent's, gated and audited.      |
+| Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent proposes and you start. |
+| A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                        |
 
-Turn off **Use Spark workflow** in **Settings → Spark** for direct Chat agents or Terminal without Spark tools and workflow prompts. Custom instructions still apply. Approvals remain; Terminal activity tracking stays on.
+## What Spark leaves to the agent
 
-Start a new session to remove earlier instructions from its history.
+Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; your repository's hooks and CI run on a push. For a second opinion, ask another chat.
+
+Open the chat's **…** menu and select **Agent TV** to [watch the agent](follow-a-turn.md#see-whats-happening). Chats from before this change still show their crew, read-only.

@@ -18,11 +18,8 @@ const SETTING_LABELS = [
   'Personality',
   'How much Spark does alone',
   'Wait before going on without your answer',
-  'When checks still fail in Full auto',
   'Morning brief',
   'Status companion',
-  'Check changes with Jev',
-  'Builders at once',
   'Where Spark works',
   'Keep my API keys',
   'Send anonymous heartbeat',
@@ -98,18 +95,6 @@ describe('guideTool', () => {
   it('keeps the whole index well under 20,000 characters', () => {
     const totalChars = guideSections.reduce((sum, section) => sum + section.text.length, 0);
     expect(totalChars).toBeLessThan(20_000);
-  });
-
-  it('answers how to make Builders run one at a time from the Builders at once section', async () => {
-    for (const query of [
-      'How do I make Builders run one at a time?',
-      'builders at once',
-      'run builders serial instead of parallel',
-      'parallel builder slots',
-    ]) {
-      const result = (await guideTool.run({ query }, context)) as { matches: { id: string }[] };
-      expect(result.matches[0]?.id, query).toBe('builders-at-once');
-    }
   });
 
   it.each([

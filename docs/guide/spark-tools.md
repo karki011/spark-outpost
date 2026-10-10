@@ -18,7 +18,7 @@ These change nothing.
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                                           |
 | Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                                           |
-| A running task: crew, pieces, estimate, Jev's decisions    | `spark_run`, `spark_task`                                                                                                                   |
+| A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                                                   |
 | Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                                           |
 | Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                                                     |
 | Providers, models, connectors, settings, projects          | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                                                   |
@@ -62,7 +62,7 @@ A chat in an [outpost](outposts.md) gets these. None shows a card.
 | Leave a note for the other chats                 | `spark_outpost_note`  |
 | Propose sub-task chats that you review and start | `spark_outpost_draft` |
 
-Any chat with a project gets `spark_outpost_draft`. Pieces get none. What another chat wrote is never your message.
+Any chat with a project gets `spark_outpost_draft`. A Spark handed a job gets none. What another chat wrote is never your message.
 
 ## When actions ask first
 
@@ -80,7 +80,7 @@ Change any field, then select the confirm button or **Don't**. The card then sho
 
 `spark_terminal_run` runs a command such as a dev server outside the agent's sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
 
-[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns, turns with no project, pieces and the Coordinator are refused.
+[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
 
 The agent can read its output and stop it. Stopping the turn or quitting Spark also stops it.
 

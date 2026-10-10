@@ -3,18 +3,17 @@ title: When to use an outpost
 section: Understand Spark
 type: concept
 order: 515
-summary: What an outpost is for, how it differs from one chat and from a crew, an example, and what it can't do yet.
+summary: What an outpost is for, how it differs from one chat, an example, and what it can't do yet.
 ---
 
 An outpost is one thread where you direct several chats that each do their own work. Use it when a job spans repos or roles and you want every answer in one place.
 
-## Outpost, one thread or crew
+## Outpost or one chat
 
-| Use                     | When                                                                           | You get                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| One chat                | The work lives in one project.                                                 | One branch and one pull request.                                                   |
-| A [crew](spark-crew.md) | One big build in one project. Spark splits it into pieces in one working tree. | One pull request. Spark coordinates the pieces.                                    |
-| An outpost              | The work spans repos or roles, such as frontend, API and docs.                 | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
+| Use        | When                                                                 | You get                                                                            |
+| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| One chat   | The work lives in one project. The agent may use its own sub-agents. | One branch and one pull request.                                                   |
+| An outpost | The work spans repos or roles, such as frontend, API and docs.       | Each chat keeps its own project, agent, mode, branch and pull request. You direct. |
 
 ## An example
 

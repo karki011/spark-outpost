@@ -8,7 +8,7 @@ summary: Let each chat work in its own git worktree, start it from another branc
 
 You'll choose whether a chat works in its own copy of the project or in your files. About 1 minute.
 
-By default each chat that changes code gets its own git worktree on a new branch, so your checkout stays as it is.
+By default each chat in a mode that can change files gets its own git worktree on a new branch with its first message, so your checkout stays as it is.
 
 ## For one chat
 

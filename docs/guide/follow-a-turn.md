@@ -12,7 +12,8 @@ You'll follow a running turn, stop it and queue more messages. About 2 minutes.
 
 1. Read the reply's header, such as **Reading api.ts · 3 steps**, or the line above the message box.
 2. Select the step count, then **Thinking** to read it.
-3. Select **Show work panel** in the chat header for the plan, crew, files and cost.
+3. Select **Show work panel** for the plan, files and cost.
+4. Select **Agent TV** in the chat's **…** menu.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
