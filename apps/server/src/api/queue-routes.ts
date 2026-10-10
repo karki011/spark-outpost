@@ -129,7 +129,7 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
 
   router.post('/runs/:id/messages', async (req, res) => {
     const request = parseBody(memberMessageRequestSchema, req);
-    res.status(202).json(await messageMember(db, paramId(req), request, resolveTarget));
+    res.status(202).json(await messageMember(db, paramId(req), request));
   });
 
   return router;

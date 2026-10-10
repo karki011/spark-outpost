@@ -11,8 +11,6 @@ describe('routes that get the message body bound', () => {
       `/api/conversations/${ID}/queue/send-now`,
       `/api/conversations/${ID}/queue/${ID}`,
       `/api/runs/${ID}/messages`,
-      `/api/tasks/${ID}/steer`,
-      `/api/tasks/${ID}/pieces/P2/notes`,
     ]) {
       expect(carriesMessageText(path), path).toBe(true);
     }
@@ -23,7 +21,7 @@ describe('routes that get the message body bound', () => {
       '/api/conversations',
       `/api/conversations/${ID}`,
       `/api/conversations/${ID}/settings`,
-      `/api/tasks/${ID}/pieces`,
+      `/api/tasks/${ID}`,
       '/api/remote/pair',
     ]) {
       expect(carriesMessageText(path), path).toBe(false);

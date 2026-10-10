@@ -8,8 +8,6 @@ const MESSAGE_PATHS = [
   /^\/api\/conversations\/[^/]+\/messages$/,
   /^\/api\/conversations\/[^/]+\/queue(?:\/[^/]+)?$/,
   /^\/api\/runs\/[^/]+\/messages$/,
-  /^\/api\/tasks\/[^/]+\/steer$/,
-  /^\/api\/tasks\/[^/]+\/pieces\/[^/]+\/notes$/,
 ];
 
 const MESSAGE_TOO_LARGE =
