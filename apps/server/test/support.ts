@@ -167,7 +167,6 @@ export function chatTurnInput(
     parentRunId: null,
     userRequest: 'next',
     role: null,
-    copyOf: null,
     askTitle: false,
     previousMessageId,
   };
@@ -202,15 +201,6 @@ export async function eventTypes(db: Db, runId: string): Promise<string[]> {
   return rows.map((row) => row.type);
 }
 
-export async function activityTypesOf(db: Db, runId: string): Promise<string[]> {
-  const { rows } = await db.query<{ type: string }>(
-    `SELECT payload->>'activityType' AS type FROM run_events
-     WHERE run_id = $1 AND type = 'ACTIVITY_SNAPSHOT' ORDER BY seq`,
-    [runId],
-  );
-  return rows.map((row) => row.type);
-}
-
 export async function pinChatLevel(
   db: Db,
   conversationId: string,
@@ -222,5 +212,3 @@ export async function pinChatLevel(
     JSON.stringify(pinned),
   ]);
 }
-
-export const BUILDER_SESSION_KEYS = 'chat:%';

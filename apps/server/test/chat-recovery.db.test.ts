@@ -5,7 +5,7 @@ import {
   insertOrchestration,
   loadOrchestration,
 } from '../src/persistence/orchestrations.ts';
-import { currentPieceList, insertPieceList, type NewPiece } from '../src/persistence/pieces.ts';
+import { currentPieceList } from '../src/persistence/pieces.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { taskForWorkingRun } from '../src/persistence/tasks.ts';
 import {
@@ -17,6 +17,7 @@ import { runAppender } from '../src/workflow/run-appender.ts';
 import { runEvents } from '../src/workflow/run-events.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { expireLeases, untilStatus } from './interruption-support.ts';
+import { storePieceList, type StoredPiece } from './stored-crew-turn.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import {
   driveToEnd,
@@ -47,23 +48,8 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-function piece(key: string, file: string): NewPiece {
-  return {
-    key,
-    title: `Piece ${key}`,
-    goal: `Change ${file}`,
-    owns: [file],
-    reads: [],
-    dependsOn: [],
-    contract: null,
-    acceptance: [],
-    checks: [],
-    research: false,
-    sizeEstimate: 1_000,
-    placement: 'shared',
-    provider: 'claude',
-    model: 'sonnet',
-  };
+function piece(key: string, file: string): StoredPiece {
+  return { key, title: `Piece ${key}`, owns: [file], provider: 'claude', model: 'sonnet' };
 }
 
 async function crewTurnMidBuild(conversationId: string) {
@@ -98,22 +84,15 @@ async function crewTurnMidBuild(conversationId: string) {
     30,
   );
   const { task } = await taskForWorkingRun(t.db, runId, BUILD);
-  const list = await insertPieceList(t.db, {
+  await storePieceList(t.db, {
     taskId: task.taskId,
     orchestrationRunId: runId,
-    planDocumentId: null,
-    planVersion: null,
-    piecesHash: 'hash',
-    placement: 'shared',
     placementReason: 'pieces share one tree',
-    integration: null,
-    approvedBy: 'level',
-    pieces: [piece('P1', 'src/dates.ts'), piece('P2', 'src/divider.ts')],
+    pieces: [
+      { ...piece('P1', 'src/dates.ts'), status: 'running', builderRunId: builder.runId },
+      piece('P2', 'src/divider.ts'),
+    ],
   });
-  await t.db.query(`UPDATE task_pieces SET status = 'running', builder_run_id = $2 WHERE id = $1`, [
-    list.pieces[0]!.id,
-    builder.runId,
-  ]);
   return { runId, builderRunId: builder.runId, taskId: task.taskId };
 }
 

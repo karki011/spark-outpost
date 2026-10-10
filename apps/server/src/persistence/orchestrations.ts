@@ -93,35 +93,6 @@ export interface MemberFields {
   route: StoredRoute;
 }
 
-export async function markInPlaceMember(
-  db: Queryable,
-  runId: string,
-  member: MemberFields,
-): Promise<void> {
-  await db.query(
-    `UPDATE runs SET role = $2, step_index = $3, attempt = $4, agent_label = $5, model = $6,
-       effort = $7, route = $8
-     WHERE id = $1`,
-    [
-      runId,
-      member.role,
-      member.stepIndex,
-      member.attempt,
-      member.agentLabel,
-      member.model,
-      member.effort,
-      JSON.stringify(member.route),
-    ],
-  );
-}
-
-export async function mergeRoute(db: Queryable, runId: string, route: StoredRoute): Promise<void> {
-  await db.query(`UPDATE runs SET route = COALESCE(route, '{}'::jsonb) || $2 WHERE id = $1`, [
-    runId,
-    JSON.stringify(route),
-  ]);
-}
-
 export interface NewChild extends MemberFields {
   parentRunId: string;
   mode: RunMode;
@@ -223,15 +194,6 @@ export async function insertDecision(db: Queryable, decision: NewDecision): Prom
       decision.policyVersion ?? null,
     ],
   );
-}
-
-export async function usedNames(db: Queryable, taskId: string, role: AgentRole): Promise<string[]> {
-  const { rows } = await db.query<{ name: string }>(
-    `SELECT DISTINCT route->>'name' AS name FROM runs
-     WHERE task_id = $1 AND role = $2 AND route->>'name' IS NOT NULL`,
-    [taskId, role],
-  );
-  return rows.map((row) => row.name);
 }
 
 const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;

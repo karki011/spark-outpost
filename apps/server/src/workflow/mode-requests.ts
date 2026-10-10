@@ -25,7 +25,7 @@ export async function requestModeChange(
        requested_mode = CASE WHEN status = 'queued' THEN requested_mode ELSE $3 END
      WHERE conversation_id = $1 AND provider = $2 AND mode = 'do'
        AND status IN ('queued', 'running', 'awaiting_approval')
-       AND (role IS NULL OR role = 'builder')`,
+       AND role IS NULL`,
     [conversationId, provider, mode],
   );
 }

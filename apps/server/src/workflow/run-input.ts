@@ -37,7 +37,6 @@ export interface RunInput {
   parentRunId: string | null;
   userRequest: string;
   role: AgentRole | null;
-  copyOf: string | null;
   askTitle: boolean;
   previousMessageId?: string | null;
   resumeKey?: string | null;
@@ -116,10 +115,8 @@ interface RunRow extends OutpostRow {
   parent_run_id: string | null;
   run_prompt: string | null;
   run_role: AgentRole | null;
-  run_name: string | null;
   resume_key: string | null;
   follow_up: string | null;
-  worktree_path: string | null;
   in_chat_worktree: boolean;
   title_source: string;
   assistant: boolean;
@@ -214,10 +211,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             r.model AS run_model, r.effort AS run_effort,
             r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
-            r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
-            (SELECT w.path FROM run_worktrees w
-             WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
             COALESCE(r.continues_run_id, (
               SELECT p.continues_run_id FROM runs p WHERE p.id = r.parent_run_id
@@ -298,7 +292,6 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
       previousStartedAt: row.previous_started_at?.toISOString() ?? null,
     },
     role: row.run_role,
-    copyOf: null,
     askTitle: row.title_source !== 'user',
     assistant: row.assistant,
     previousMessageId: history.rows.at(-1)?.id ?? null,
@@ -372,9 +365,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     provider: row.provider,
     history: [],
     settings: settingsOf(row),
-    projectRoots: row.worktree_path
-      ? [row.worktree_path, ...row.project_roots.slice(1)]
-      : row.project_roots,
+    projectRoots: row.project_roots,
     mode: row.run_mode,
     level: row.run_level ?? UNSET_RUN_LEVEL,
     agentMode: row.agent_mode,
@@ -383,8 +374,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     followUpRound: row.follow_up_round === true,
     outpostRequest: outpostRequestOf(row, row.user_message_id),
     role: row.run_role,
-    copyOf: row.worktree_path ? (row.run_name ?? 'Builder') : null,
-    askTitle: row.run_role === 'architect' && row.title_source !== 'user',
+    askTitle: false,
     previousMessageId: null,
     resumeKey: row.resume_key,
     followUp: row.follow_up,

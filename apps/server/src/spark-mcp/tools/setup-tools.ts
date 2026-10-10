@@ -182,7 +182,6 @@ async function settings({ deps, scope }: SparkToolContext) {
     defaultAutonomy: autonomyLabel(profile.defaultLevel),
     autonomyLevels: AUTONOMY_LEVELS.map((level) => ({ name: level.label, means: level.hint })),
     personality: profile.personality,
-    sparkEnabled: profile.sparkEnabled,
     morningBrief: { on: profile.morningBrief, time: profile.morningBriefTime },
     autoContinueSeconds: profile.autoContinueSeconds,
     contextCompaction: {
@@ -191,8 +190,6 @@ async function settings({ deps, scope }: SparkToolContext) {
       compactAutomatically: profile.autoCompact,
       askAgainAfterKeepGoingAtPercent: reaskPercent(profile.compactAtPercent),
     },
-    jevReviewsDiffs: profile.jevDiffs,
-    shipWithFailingChecks: profile.shipFailingChecks,
     openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
     prFollowUp: {
       on: profile.prFollowUp,

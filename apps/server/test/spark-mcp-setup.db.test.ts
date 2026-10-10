@@ -223,34 +223,21 @@ describe('spark_projects and spark_map', () => {
         name: project.name,
         defaultBranch: 'main',
         whereSparkWorks: expect.stringMatching(/^In my files/),
-        buildersAtOnce: { value: 3, note: expect.stringContaining('Builders at once') },
         map: 'not built',
       }),
     ]);
   });
 
-  it('shows one Builder at a time when the project or the server runs pieces in order', async () => {
+  it('says a project set to worktrees gives each chat its own', async () => {
     const { project } = await createProject(t.db, t.workspaceId, root);
-    await t.db.query(`UPDATE projects SET piece_slots = 1, work_place = 'worktree' WHERE id = $1`, [
-      project.id,
-    ]);
+    await t.db.query(`UPDATE projects SET work_place = 'worktree' WHERE id = $1`, [project.id]);
 
-    const inOrder = (await (await open()).call('spark_projects')).json<{
+    const body = (await (await open()).call('spark_projects')).json<{
       items: Record<string, unknown>[];
     }>();
-    expect(inOrder.items[0]).toMatchObject({
+
+    expect(body.items[0]).toMatchObject({
       whereSparkWorks: expect.stringMatching(/^Each chat in its own worktree/),
-      buildersAtOnce: { value: 1, note: expect.stringContaining('one at a time') },
-    });
-
-    await tools?.close();
-    await t.db.query('UPDATE projects SET piece_slots = 2 WHERE id = $1', [project.id]);
-    tools = await startSparkTools(t, {}, { parallelBuilders: false });
-    const serverInOrder = (await tools.call('spark_projects')).json<{
-      items: Record<string, unknown>[];
-    }>();
-    expect(serverInOrder.items[0]).toMatchObject({
-      buildersAtOnce: { value: 1, note: expect.stringContaining('COORDINATOR_MODE') },
     });
   });
 

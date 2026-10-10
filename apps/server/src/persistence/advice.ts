@@ -37,14 +37,6 @@ export async function insertAdvice(db: Queryable, runId: string, body: AdviceBod
   );
 }
 
-export async function runAdvice(db: Queryable, runId: string): Promise<AdviceBody | null> {
-  const { rows } = await db.query<{ body: AdviceBody }>(
-    `SELECT body FROM run_advice WHERE run_id = $1 AND purpose = 'intake'`,
-    [runId],
-  );
-  return rows[0]?.body ?? null;
-}
-
 export interface JevUsageRow {
   calls: number;
   input_tokens: number;
