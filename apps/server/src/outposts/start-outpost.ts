@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises';
 import {
+  aboveLeadMode,
   startMemberChatId,
   type CreateOutpostRequest,
   type DraftChat,
@@ -20,7 +21,7 @@ import {
 } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { chatPosture } from './chat-posture.ts';
-import { aboveLeadMode, modeAboveLead, userChoseMode } from './mode-cap.ts';
+import { modeAboveLead, userChoseMode } from './mode-cap.ts';
 import {
   addWithNotice,
   knownOutpost,

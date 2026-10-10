@@ -1,5 +1,7 @@
 import {
   OUTPOST_NAME_MAX,
+  chatModeRank,
+  leadModeLimit,
   modeKind,
   modePosture,
   type DraftChat,
@@ -36,24 +38,12 @@ type PrefillBase = Pick<
   'chats' | 'projects' | 'projectNames' | 'providers' | 'defaults' | 'capabilitiesOf'
 >;
 
-const CHAT_RANK: Readonly<Record<ModePosture, number>> = {
-  read_only: 0,
-  asks: 1,
-  denies: 1,
-  edits: 2,
-  auto: 3,
-  full_access: 4,
-  unknown: 4,
-};
-
-const LEAD_RANK: Readonly<Record<ModePosture, number>> = { ...CHAT_RANK, unknown: 1 };
-
 function rankOf(
   provider: ProviderId,
   mode: string | null,
   capabilities: ProviderCapabilities | undefined,
 ): number {
-  return CHAT_RANK[modePosture(provider, mode, modeKind(capabilities?.modes ?? [], mode))];
+  return chatModeRank(modePosture(provider, mode, modeKind(capabilities?.modes ?? [], mode)));
 }
 
 export function cappedMode(
@@ -62,7 +52,7 @@ export function cappedMode(
   capabilities: ProviderCapabilities | undefined,
   lead: ModePosture,
 ): string | null {
-  const limit = LEAD_RANK[lead];
+  const limit = leadModeLimit(lead);
   const effective = wanted ?? defaultMode(provider, capabilities);
   if (rankOf(provider, effective, capabilities) <= limit) return wanted;
   const allowed = (capabilities?.modes ?? [])
