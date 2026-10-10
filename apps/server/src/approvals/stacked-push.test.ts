@@ -44,6 +44,8 @@ describe("pushesBranch() recognises a push of the chat's own branch", () => {
     `pnpm test && git push origin ${BRANCH}`,
     'git push',
     'git push -u origin',
+    'git push -u origin HEAD',
+    'git push origin @:refs/heads/elsewhere',
   ])('%s', (command) => {
     expect(pushesBranch(command, BRANCH)).toBe(true);
   });
@@ -52,6 +54,7 @@ describe("pushesBranch() recognises a push of the chat's own branch", () => {
     'git push origin main',
     `git push origin ${PARENT}`,
     `git push origin --delete ${BRANCH}`,
+    'git push origin :spark/old-branch',
     'git push --all origin',
     'git status',
     `git log origin/${BRANCH}`,

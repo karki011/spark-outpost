@@ -3,7 +3,7 @@ import { parentNotPushedReason, type TaskBranch } from './publish-policy.ts';
 
 export function pushesBranch(command: string, branch: string): boolean {
   return pushTargets(command).some(
-    (push) => !push.widens && (push.branches.length === 0 || push.branches.includes(branch)),
+    (push) => !push.widens && (push.head || push.branches.includes(branch)),
   );
 }
 
