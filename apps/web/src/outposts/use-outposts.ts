@@ -39,6 +39,7 @@ function keep(client: QueryClient, detail: OutpostDetail): void {
     if (!list.some((listed) => listed.id === outpost.id)) return [...list, outpost];
     return list.map((listed) => (listed.id === outpost.id ? outpost : listed));
   });
+  void client.invalidateQueries({ queryKey: outpostKeys.detail(outpost.id), exact: true });
 }
 
 function forget(client: QueryClient, id: string): void {

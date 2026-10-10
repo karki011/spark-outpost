@@ -135,6 +135,20 @@ describe('usePost', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('asks again after the answer, since a turn may have started while it was on its way', async () => {
+    const sent = post(1, { state: 'sent', reason: null });
+    const working = post(1, { state: 'working', reason: null });
+    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([sent])));
+    const shown = renderHook(() => useOutpost(OUTPOST_ID), { wrapper });
+    await waitFor(() => expect(shown.result.current.data?.posts).toEqual([sent]));
+    answers.set(`POST /api/outposts/${OUTPOST_ID}/posts`, () => json(detail([sent]), 201));
+    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([working])));
+    const { result } = renderHook(() => usePost(OUTPOST_ID), { wrapper });
+    act(() => result.current.mutate({ id: postId(1), text: '@fe build the page' }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(shown.result.current.data?.posts).toEqual([working]));
+  });
+
   it('takes the post back out when the server refuses it and reports why', async () => {
     client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([post(1)]));
     answers.set(`POST /api/outposts/${OUTPOST_ID}/posts`, () =>
