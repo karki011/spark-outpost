@@ -121,7 +121,7 @@ function cardFor(scope: SparkCommandScope, request: ApprovalRequest, asked: Aske
     toolCallId: request.toolCallId,
     rpcId: null,
     kind: 'execute',
-    title: displayTitle(request, null),
+    title: displayTitle(request),
     payload: approvalPayload(request, asked),
     options: [...SPARK_COMMAND_OPTIONS],
     reason: asked.reason,

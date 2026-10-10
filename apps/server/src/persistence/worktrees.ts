@@ -105,10 +105,3 @@ export async function worktreesForRuns(
   );
   return new Map(rows.map((row) => [row.run_id, { ...toRecord(row), name: row.name }]));
 }
-
-export async function saveDepsWait(db: Queryable, runId: string, waitedMs: number): Promise<void> {
-  await db.query('UPDATE run_worktrees SET deps_waited_ms = $2 WHERE run_id = $1', [
-    runId,
-    waitedMs,
-  ]);
-}

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { AuditRunSummary } from '@spark-outpost/contracts';
 import { groupBy } from '../../analytics/tally.ts';
-import { harnessReport, overviewReport } from '../../analytics/report.ts';
+import { approvalWaitReport, overviewReport } from '../../analytics/report.ts';
 import { conversationAuditRuns, summarizeAudit } from '../../persistence/audit-summary.ts';
 import type { Queryable } from '../../persistence/db.ts';
 import { loadActivity } from '../../persistence/digests.ts';
@@ -165,19 +165,16 @@ async function chatAudit(
 async function rangeAudit({ deps, scope }: SparkToolContext, days: number) {
   const window = lastDays(deps, days);
   const since = new Date(Date.parse(`${window.from}T00:00:00Z`) - 86_400_000);
-  const [overview, harness, activity] = await Promise.all([
+  const [overview, approvals, activity] = await Promise.all([
     overviewReport(deps.db, scope.workspaceId, window),
-    harnessReport(deps.db, scope.workspaceId, window),
+    approvalWaitReport(deps.db, scope.workspaceId, window),
     loadActivity(deps.db, scope.workspaceId, since),
   ]);
   return {
     window: { from: window.from, to: window.to, timeZone: window.timeZone },
     totals: overview.totals,
     health: overview.health,
-    approvals: harness.approvals,
-    checks: harness.checks,
-    loops: harness.loops,
-    critic: harness.critic,
+    approvals,
     chats: activity
       .toSorted((a, b) => (b.costUsd ?? 0) - (a.costUsd ?? 0))
       .map((chat) => ({
@@ -198,7 +195,7 @@ export const auditTool = sparkTool({
   name: 'spark_audit',
   title: 'Audit',
   description:
-    "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, tool calls that ran without review (no permission request, as in Bypass or Full access), and approval cards with who decided them. With days and no chat or run: harness totals, approvals, checks, Critic and loops for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong and how to tune Spark.",
+    "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, tool calls that ran without review (no permission request, as in Bypass or Full access), and approval cards with who decided them. With days and no chat or run: totals, a health score and approval waits for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong.",
   input: {
     chat: chatIdInput,
     run: uuidInput.optional().describe('One run (and its sub-runs) instead of the whole chat.'),

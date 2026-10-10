@@ -33,7 +33,6 @@ export interface DoRunOptions extends AskRunOptions {
   changesProject?: boolean | undefined;
   projectRoots: readonly string[];
   backupAlsoFor?: string | undefined;
-  copyOf?: string | null | undefined;
   observe?: EditObserver | undefined;
   plans?: PlanModeHooks | undefined;
   publish?: PublishGrant | undefined;
@@ -91,7 +90,6 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
   return createApprovalGate({
     ...gateBasics(options),
     changesProject: options.changesProject === true,
-    copyOf: options.copyOf ?? null,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
     ...(options.publish ? { publish: options.publish } : {}),

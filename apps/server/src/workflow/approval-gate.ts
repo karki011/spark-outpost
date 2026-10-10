@@ -37,7 +37,6 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
-import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
@@ -100,7 +99,6 @@ export interface GateDeps {
   timeoutMs?: number;
   onTimeout: () => void;
   backup: (paths: readonly string[]) => Promise<void>;
-  copyOf?: string | null;
   observe?: EditObserver;
   plans?: PlanModeHooks;
   observations?: RunObservations | undefined;
@@ -140,7 +138,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     toolCallId: request.toolCallId,
     rpcId: request.rpcId,
     kind: request.kind,
-    title: displayTitle(request, deps.copyOf ?? null),
+    title: displayTitle(request),
     payload: approvalPayload(request, asking),
     options: askedOptions(request.options, asking),
     reason,
@@ -353,7 +351,6 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     const what = subject(request);
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
-    if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
     const covered =
       request.toolKind === FS_WRITE_TOOL_KIND &&
       request.paths.length > 0 &&

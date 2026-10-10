@@ -5,7 +5,7 @@ import { Detail } from './Detail.tsx';
 import { ProviderDefaults } from './ProviderDefaults.tsx';
 
 const JEV_SENDS =
-  'Your request, the previous request and a short summary of the task it may continue, and the text of files you attach (only to check it for instructions aimed at the agent). Never keys or tool output. TypeSafe does not train on it.';
+  "Pull request comments and check names, short facts about a chat's latest turn, and some file contents for the Map. Never keys, tool output or your chat history. TypeSafe does not train on it.";
 
 function DefaultChoice({
   provider,

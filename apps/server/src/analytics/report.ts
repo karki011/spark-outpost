@@ -1,8 +1,8 @@
 import type {
-  AnalyticsHarness,
   AnalyticsOverview,
   AnalyticsSpend,
   AnalyticsWindow,
+  ApprovalWaits,
   OutcomeVerdict,
   OverviewDay,
   RollupGroupBy,
@@ -19,21 +19,9 @@ import {
   spendLeaves,
   type DailySpend,
 } from '../persistence/analytics-spend.ts';
-import { observationSummaries } from '../persistence/analytics-observations.ts';
 import { approvalWaits } from '../persistence/analytics-waits.ts';
 import { turnCost, type TurnFact } from './facts.ts';
-import {
-  agreement,
-  checkSummary,
-  confidencePoints,
-  criticSummary,
-  disagreements,
-  flowPaths,
-  leanRows,
-  loopSummary,
-  routingCost,
-  waitSummary,
-} from './harness.ts';
+import { checkSummary, loopSummary, waitSummary } from './summaries.ts';
 import { healthScore } from './health.ts';
 import { resumeSavings } from './resume.ts';
 import { rollups } from './rollups.ts';
@@ -192,29 +180,10 @@ export async function spendReport(
   };
 }
 
-export async function harnessReport(
+export async function approvalWaitReport(
   db: Queryable,
   workspaceId: string,
   window: AnalyticsWindow,
-): Promise<AnalyticsHarness> {
-  const [facts, waits, observation] = await Promise.all([
-    turnFacts(db, workspaceId, window),
-    approvalWaits(db, workspaceId, window),
-    observationSummaries(db, workspaceId, window),
-  ]);
-  return {
-    window,
-    turns: facts.length,
-    flow: flowPaths(facts),
-    confidence: confidencePoints(facts),
-    disagreements: disagreements(facts),
-    agreement: agreement(facts),
-    lean: leanRows(facts),
-    critic: criticSummary(facts),
-    checks: checkSummary(facts),
-    loops: loopSummary(facts),
-    approvals: waitSummary(waits),
-    routingCost: routingCost(facts),
-    observation,
-  };
+): Promise<ApprovalWaits> {
+  return waitSummary(await approvalWaits(db, workspaceId, window));
 }

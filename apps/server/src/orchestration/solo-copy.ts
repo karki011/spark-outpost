@@ -1,10 +1,8 @@
 import type { Db } from '../persistence/db.ts';
 import { markRemoved, orphanedWorktrees, type WorktreeRecord } from '../persistence/worktrees.ts';
-import { settleDepsPrep } from '../projects/deps-prep.ts';
 import { removeWorktree, worktreePath } from '../projects/worktrees.ts';
 
 async function removeCopy(db: Db, record: WorktreeRecord): Promise<void> {
-  await settleDepsPrep(record.runId);
   await removeWorktree(record.repoRoot, worktreePath(record.repoRoot, record.runId), record.branch);
   await markRemoved(db, record.runId);
 }

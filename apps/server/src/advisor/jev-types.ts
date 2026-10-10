@@ -29,12 +29,6 @@ export type SystemOneResponse = z.infer<typeof systemOneResponseSchema>;
 
 const unit = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1;
 
-export function validNoul(response: SystemOneResponse | null, key: string): number | null {
-  const answer = response?.answers[key];
-  if (answer?.type !== 'noul' || !unit(answer.noul)) return null;
-  return answer.noul;
-}
-
 export function validChoice<T extends string>(
   response: SystemOneResponse | null,
   key: string,

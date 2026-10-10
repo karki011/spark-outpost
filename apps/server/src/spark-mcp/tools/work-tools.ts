@@ -9,7 +9,7 @@ import {
   ticketSourceIdSchema,
   type InboxTicket,
 } from '@spark-outpost/contracts';
-import { harnessReport, overviewReport, spendReport } from '../../analytics/report.ts';
+import { overviewReport, spendReport } from '../../analytics/report.ts';
 import { computeDigestStats } from '../../digest/stats.ts';
 import { digestState } from '../../digest/service.ts';
 import { attentionSnapshot } from '../../persistence/attention-settings.ts';
@@ -112,7 +112,7 @@ async function tickets(context: SparkToolContext, args: TicketsArgs) {
   };
 }
 
-const REPORTS = ['overview', 'spend', 'harness', 'outcomes'] as const;
+const REPORTS = ['overview', 'spend', 'outcomes'] as const;
 
 async function analytics(
   { deps, scope }: SparkToolContext,
@@ -126,15 +126,11 @@ async function analytics(
     const { days: daily, ...rest } = await overviewReport(deps.db, scope.workspaceId, window);
     return { ...rest, busiestDays: daily.filter((day) => day.turns > 0 || day.runs > 0) };
   }
-  if (report === 'spend') {
-    const { days: daily, ...rest } = await spendReport(deps.db, scope.workspaceId, window);
-    return {
-      ...rest,
-      daysWithSpend: daily.filter((day) => day.reportedUsd + day.estimatedUsd > 0),
-    };
-  }
-  const { confidence, ...rest } = await harnessReport(deps.db, scope.workspaceId, window);
-  return { ...rest, confidencePoints: confidence.length };
+  const { days: daily, ...rest } = await spendReport(deps.db, scope.workspaceId, window);
+  return {
+    ...rest,
+    daysWithSpend: daily.filter((day) => day.reportedUsd + day.estimatedUsd > 0),
+  };
 }
 
 async function activity({ deps, scope }: SparkToolContext, hours: number, limit: number) {
@@ -220,7 +216,7 @@ export const workTools = [
     name: 'spark_analytics',
     title: 'Analytics',
     description:
-      'Spark analytics for the last N days. overview: turns, runs, cost, outcomes (good, bad, mixed), keep and revert rates, checks and a health score. spend: reported and estimated cost by project, provider and model, cost per task and per good outcome, Jev spend, top cost drivers. harness: flow paths, Jev and rule agreement, Critic, checks, loops, approval waits and routing cost. outcomes: how turns turned out (good, bad, mixed, unclear, score), thumbs up and down from feedback, kept, reverted, committed and corrected, grouped by groupBy.',
+      'Spark analytics for the last N days. overview: turns, runs, cost, outcomes (good, bad, mixed), keep and revert rates, checks and a health score. spend: reported and estimated cost by project, provider and model, cost per task and per good outcome, Jev spend, top cost drivers. outcomes: how turns turned out (good, bad, mixed, unclear, score), thumbs up and down from feedback, kept, reverted, committed and corrected, grouped by groupBy.',
     input: {
       report: z.enum(REPORTS).default('overview'),
       days: z.number().int().min(1).max(90).default(7),

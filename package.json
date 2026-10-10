@@ -39,8 +39,7 @@
     "db:migrate": "pnpm --filter @spark-outpost/server db:migrate",
     "acp:coverage": "tsx scripts/acp-coverage.ts",
     "bench:ingest": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/bench-ingest.ts",
-    "bench:loop": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/codescan/loop-bench.ts",
-    "coord:shadow": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/coordinator/shadow.ts"
+    "bench:loop": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/codescan/loop-bench.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

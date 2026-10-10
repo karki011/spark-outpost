@@ -6,8 +6,6 @@
       "entry": [
         "scripts/*.ts",
         "scripts/codescan/{bench,load,loop-bench,requests}.ts",
-        "scripts/e2e-live/stub.ts",
-        "scripts/e2e-live/final/{conform,doing,drop,ex,mk,scn,shot,sql,up,watch}.ts",
         "scripts/turn-tasks/{runner,report,scratch-repo}/cli.ts",
         "tests/browser/*.spec.ts",
         "tests/browser/provider-stub.ts",
@@ -19,13 +17,7 @@
         "infra/heartbeat-worker/src/worker.ts"
       ],
       "project": ["scripts/**/*.ts", "tests/**/*.ts", "infra/**/*.ts"],
-      "ignore": [
-        "scripts/bench/fixture/**",
-        "scripts/e2e-live/dev-day/fixtures/**",
-        "scripts/e2e-live/story/fixture/**",
-        "scripts/e2e-live/story/hidden/**",
-        "scripts/e2e-live/story/reference/**"
-      ]
+      "ignore": ["scripts/bench/fixture/**"]
     },
     "apps/server": {
       "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],

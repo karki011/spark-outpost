@@ -134,7 +134,7 @@ export const advisorCatalog: readonly AdvisorEntry[] = [
     keyHint:
       "Create one in the TypeSafe console under API keys. It's stored in your system keychain.",
     keyLink: { text: 'TypeSafe console', url: 'https://console.typesafe.ai/keys' },
-    role: 'Rates requests for intake and routing, answers piece routing questions, triages PR feedback, checks changes and labels Map areas. It never runs chats or grants permissions.',
+    role: "Labels Map areas, sorts pull request feedback and picks what a chat's island update says. It is never asked during a turn and never runs chats or grants permissions.",
     defaultModel: 'jev-latest',
   },
 ];
