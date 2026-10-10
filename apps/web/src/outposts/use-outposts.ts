@@ -9,6 +9,7 @@ import {
   type OutpostPost,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { isChatDraftsKey } from '../chat/outpost/chat-drafts.ts';
 import { outpostKeys, outpostsApi } from './outposts-api.ts';
 import type { SheetChanges } from './sheet-draft.ts';
 
@@ -103,6 +104,10 @@ function refreshChats(client: QueryClient, conversationIds: readonly string[]): 
   ]);
 }
 
+function refreshChatDrafts(client: QueryClient): Promise<unknown> {
+  return client.invalidateQueries({ predicate: (query) => isChatDraftsKey(query.queryKey) });
+}
+
 function memberIds(client: QueryClient, id: string): string[] {
   const detail = client.getQueryData<OutpostDetail>(outpostKeys.detail(id));
   return detail?.outpost.members.map((member) => member.conversationId) ?? [];
@@ -191,7 +196,11 @@ export function useCreateOutpost() {
   return useMutation({
     mutationFn: (body: CreateOutpostRequest) => outpostsApi.create(body),
     onSuccess: ({ outpost, posts, stories }) => keep(client, { outpost, posts, stories }),
-    onSettled: (_detail, _error, body) => refreshChats(client, body.members.map(startMemberChatId)),
+    onSettled: (_detail, _error, body) =>
+      Promise.all([
+        refreshChats(client, body.members.map(startMemberChatId)),
+        ...(body.draftId ? [refreshChatDrafts(client)] : []),
+      ]),
   });
 }
 

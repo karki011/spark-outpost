@@ -3,7 +3,7 @@ import { cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { API_CHAT, OUTPOST_ID, chat } from '../outposts/test-fixtures.ts';
-import { useMoments } from './use-island-moments.ts';
+import { momentLine, useMoments } from './use-island-moments.ts';
 
 const RUN_ID = '0e000000-0000-4000-8000-000000000001';
 
@@ -45,5 +45,18 @@ describe('useMoments', () => {
     hook.rerender({ chats: [member('succeeded', null)] });
     expect(hook.result.current.moment?.kind).toBe('done');
     expect(hook.result.current.memberLine).toBeNull();
+  });
+});
+
+describe('momentLine', () => {
+  it('says the chat is done or could not finish', () => {
+    expect(momentLine('done', 'Orders endpoint', null)).toBe('Orders endpoint is done.');
+    expect(momentLine('failed', 'Orders endpoint', null)).toBe('Orders endpoint couldn’t finish.');
+  });
+
+  it('says a member chat needs the user in place of saying it is done', () => {
+    expect(momentLine('done', 'Orders endpoint', '@api needs you in Orders launch.')).toBe(
+      '@api needs you in Orders launch.',
+    );
   });
 });

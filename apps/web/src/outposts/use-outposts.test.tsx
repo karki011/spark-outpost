@@ -30,6 +30,8 @@ import {
   useSaveOutpost,
   useStartNow,
 } from './use-outposts.ts';
+import { chatDraftsQuery } from '../chat/outpost/chat-drafts.ts';
+import { STORY_DRAFT_ID } from './create/create-fixtures.ts';
 
 interface Call {
   method: string;
@@ -291,6 +293,26 @@ describe('the other actions', () => {
     expect(cached()).toEqual(created);
     expect(client.getQueryData(outpostKeys.list)).toEqual([created.outpost]);
     expect(calls.filter((call) => call.path.startsWith('/api/outposts'))).toHaveLength(1);
+  });
+
+  it('marks the proposing chat’s drafts stale once a draft is started', async () => {
+    const draftsKey = chatDraftsQuery(FE_CHAT).queryKey;
+    const draft = { id: STORY_DRAFT_ID, runId: null, chats: 2, stacked: 1 };
+    client.setQueryData(draftsKey, { drafts: [{ ...draft, outpostId: null, startedAt: null }] });
+    answers.set('POST /api/outposts', () => json(detail(), 201));
+    const { result } = renderHook(() => useCreateOutpost(), { wrapper });
+
+    act(() =>
+      result.current.mutate({
+        id: OUTPOST_ID,
+        name: 'Usage by user',
+        members: [],
+        draftId: STORY_DRAFT_ID,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(client.getQueryState(draftsKey)?.isInvalidated).toBe(true));
   });
 
   it('deletes an outpost with no request body and drops it from the list', async () => {

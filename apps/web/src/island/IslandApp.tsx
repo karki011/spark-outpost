@@ -58,7 +58,7 @@ import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
 import { coreRects, flatRowRects, minuteOf, useHoverIntent, zoneRects } from './island-hover.ts';
 import { useIslandData } from './use-island-data.ts';
-import { useGreeting, useMoments } from './use-island-moments.ts';
+import { momentLine, useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 
 const NOTE_MS = 1_500;
@@ -106,7 +106,7 @@ export function IslandApp() {
   const [followUp, setFollowUp] = useState<ConversationSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [now, setNow] = useState(() => minuteOf(Date.now()));
-  const { moment, dismiss } = useMoments(data.chats, data.loaded);
+  const { moment, memberLine, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
   const running = useMemo(
     () =>
@@ -181,7 +181,7 @@ export function IslandApp() {
   const viewAnnouncement = cardChat
     ? `Spark needs you: ${cardChat.title}.`
     : moment && momentTitle
-      ? `${momentTitle} ${moment.kind === 'done' ? 'is done' : 'couldn’t finish'}.`
+      ? momentLine(moment.kind, momentTitle, memberLine)
       : '';
 
   const openPanel = (next: Panel, by: Opener = 'user') => {

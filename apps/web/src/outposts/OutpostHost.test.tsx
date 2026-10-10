@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
-import { useOutpostSeam, type OutpostSeam } from '../chat/outpost/outpost-seam.ts';
+import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { STORY_DRAFT_ID, seedCreateQueries } from './create/create-fixtures.ts';
 import { OutpostHost } from './OutpostHost.tsx';
 import { outpostKeys } from './outposts-api.ts';
@@ -15,8 +15,6 @@ interface Call {
   path: string;
   body: unknown;
 }
-
-type DraftSeam = OutpostSeam & { onOpenDraft: (draftId: string) => void };
 
 const LAZY_SHEET_TIMEOUT = 10_000;
 const LAZY_TEST_TIMEOUT = 20_000;
@@ -34,7 +32,7 @@ function Probe() {
       <button type="button" onClick={() => seam.onNewOutpost(FE_CHAT)}>
         New from chat
       </button>
-      <button type="button" onClick={() => (seam as DraftSeam).onOpenDraft(STORY_DRAFT_ID)}>
+      <button type="button" onClick={() => seam.onOpenDraft?.(STORY_DRAFT_ID)}>
         Review draft
       </button>
       <button

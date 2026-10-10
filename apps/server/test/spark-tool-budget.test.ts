@@ -26,7 +26,10 @@ describe('the size of the Spark tool list a session is sent', () => {
     const linked = await advertisedSize(SESSION_CASES['linked project, GitHub connected']);
     const everything = await advertisedSize(SESSION_CASES['everything connected, Browser pane']);
     expect(linked.chars - plain.chars).toBe(
-      linked.groups.project! + linked.groups.publish! + linked.groups.pull_requests!,
+      linked.groups.project! +
+        linked.groups.publish! +
+        linked.groups.pull_requests! +
+        linked.groups.outpost_draft!,
     );
     expect(everything.tools).toBeGreaterThan(linked.tools);
     expect(everything.groups.other).toBe(plain.groups.other);

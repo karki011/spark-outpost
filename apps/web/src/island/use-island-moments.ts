@@ -70,6 +70,15 @@ export function useMoments(chats: readonly ConversationSummary[], loaded: boolea
   return { moment, memberLine, streak, dismiss };
 }
 
+export function momentLine(
+  kind: 'done' | 'failed',
+  title: string,
+  memberLine: string | null,
+): string {
+  if (memberLine) return memberLine;
+  return `${title} ${kind === 'done' ? 'is done' : 'couldn’t finish'}.`;
+}
+
 export function useGreeting(voice: Voice, ready: boolean): string | null {
   const [start] = useState(() => new Date());
   const [due] = useState(() => {

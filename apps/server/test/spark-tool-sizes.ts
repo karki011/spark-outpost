@@ -23,6 +23,7 @@ export const SESSION_CASES = {
     project: true,
     publish: true,
     pull_requests: true,
+    outpost_draft: true,
   },
   'chat in an outpost, nothing connected': {
     ...NOTHING_AVAILABLE,
