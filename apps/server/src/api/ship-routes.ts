@@ -59,12 +59,12 @@ export function gitHubDepsOf(deps: GitHubRouteDeps): GitHubDeps {
   };
 }
 
-function shipDeps(deps: ShipRouteDeps): ShipDeps {
+export function shipDepsOf(deps: ShipRouteDeps): ShipDeps {
   return { ...gitHubDepsOf(deps), branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX };
 }
 
 export function shipRoutes(routeDeps: ShipRouteDeps): Router {
-  const deps = shipDeps(routeDeps);
+  const deps = shipDepsOf(routeDeps);
   const router = Router();
 
   router.get('/tasks/:id/ship', async (req, res) => {

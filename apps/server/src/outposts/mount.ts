@@ -8,8 +8,10 @@ import { TaskWakes } from '../a2a/task-wakes.ts';
 import { outpostRoutes } from '../api/outpost-routes.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import type { Db } from '../persistence/db.ts';
+import type { ShipDeps } from '../ship/prepare.ts';
 import { drainQueue } from '../workflow/queue-drain.ts';
 import type { PeerAgent, StackGit } from './ports.ts';
+import { parentWorkCommitter } from './stacked-parent-work.ts';
 
 export interface OutpostDelivery {
   wakes: TaskWakes;
@@ -23,9 +25,12 @@ export interface OutpostDeliveryOptions {
   db: Db;
   port: number;
   apiToken: string;
+  ship?: ShipDeps;
 }
 
-export function outpostDelivery({ db, port, apiToken }: OutpostDeliveryOptions): OutpostDelivery {
+export function outpostDelivery(options: OutpostDeliveryOptions): OutpostDelivery {
+  const { db, port, apiToken, ship } = options;
+  const parentWork = ship ? parentWorkCommitter(ship) : undefined;
   const wakes = new TaskWakes();
   const peer = loopbackPeer(a2aBaseUrl(port), apiToken);
   let dispatcher: Dispatcher | null = null;
@@ -39,7 +44,7 @@ export function outpostDelivery({ db, port, apiToken }: OutpostDeliveryOptions):
     },
     start() {
       if (closed) return;
-      dispatcher ??= startDispatcher({ db, peer });
+      dispatcher ??= startDispatcher({ db, peer, ...(parentWork ? { parentWork } : {}) });
     },
     async close() {
       closed = true;

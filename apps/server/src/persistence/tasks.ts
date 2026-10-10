@@ -44,6 +44,14 @@ async function latestTask(db: Queryable, conversationId: string): Promise<TaskRe
   return rows[0] ?? null;
 }
 
+export async function chatTaskIds(db: Queryable, conversationId: string): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    'SELECT id FROM tasks WHERE conversation_id = $1 ORDER BY created_at, id',
+    [conversationId],
+  );
+  return rows.map((row) => row.id);
+}
+
 async function currentPlanVersion(db: Queryable, taskId: string): Promise<number | null> {
   const { rows } = await db.query<{ version: number | null }>(
     `SELECT MAX(version) AS version FROM run_artifacts WHERE task_id = $1 AND kind = 'plan'`,
