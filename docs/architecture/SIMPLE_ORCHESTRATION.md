@@ -170,6 +170,59 @@ There is no orchestration row, no child run, no retry and no Spark text added to
 | Critic, Coordinator, piece, fix, escalation and mid-build prompts                                                                                                      | Child runs                                     | Gone                                                                                                                       |
 | "Needs you: …", "Stopped after 2 retries", upgrade and review notes                                                                                                    | Appended to the reply                          | Gone                                                                                                                       |
 
+### The prompt
+
+Spark appends one block to the agent's system prompt for a chat turn. It is built by `chatPrompt(facts)` in `apps/server/src/workflow/chat-prompt.ts` (wording in `chat-prompt-text.ts`) from plain facts, with no I/O. `publishPrompt(facts)` in `publish-prompt.ts` builds the second prompt of the publish step. Neither is wired into a turn yet: that is lane B1 and B3's work. The owner approved this wording on October 9, 2026:
+
+```
+You are working for the user in Spark Outpost.
+Folder: <path> · Branch: <branch> (a worktree of <repo>)
+
+How to split work
+- Small or single-area change: do it yourself.
+- Independent parts inside this repo and branch (searching, reviewing, edits to separate files): use your own sub-agents.
+- Work that spans repos, needs separate branches or pull requests, or is big enough that the user should steer each part: propose sub-chats with spark_outpost_draft and say why. The user starts them; you don't.
+- If the request is unclear, ask one question and stop.
+
+Engineering
+- The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.
+- Read the code your change touches before deciding anything.
+- Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.
+- Never cut: validation at trust boundaries, data-loss handling, security, accessibility.
+- Logic with a branch, loop, parser, money or security in it gets one small test.
+- Small, coherent changes that match the surrounding code. No unrelated cleanup.
+- Run the checks that cover what you changed.
+
+Reporting
+- Lead with the result: what changed, what you verified.
+- End with what you skipped or didn't check, and any risk.
+
+Publishing
+- <one line from the chat's autonomy and state>
+```
+
+The block holds no safety rules, no role names and nothing about when to plan. It grants nothing: the gate and the publish rules decide, and the Publishing line only tells the agent what to expect.
+
+| Case                                                              | What the block says                                                                                          |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| No project                                                        | No Folder line and no Publishing section                                                                     |
+| The run does not have `spark_outpost_draft`                       | The sub-chats bullet is left out                                                                             |
+| The chat works in the user's checkout                             | "(the user's checkout of `<repo>`)" in place of "(a worktree of `<repo>`)"                                   |
+| No branch, or no repo name                                        | The Folder alone, or the place without "of `<repo>`"                                                         |
+| Linked extra repos                                                | A second line, "Linked repos: a, b"                                                                          |
+| Automatic and the message did not ask                             | "Don't push or open a pull request unless the user asks."                                                    |
+| The chat's own branch, a remote, the message asked                | "The user asked you to publish: push this branch and open a pull request when the work is done."             |
+| The chat's own branch, a remote, Full auto → PR                   | "When the work is done and checked, push this branch and open a pull request."                               |
+| The chat's own branch, no remote, Full auto → PR or asked         | "There is no remote: commit on this branch; don't try to push."                                              |
+| A checkout or a folder with no branch, at Full auto → PR or asked | No Publishing section: none of the four approved lines is true there, and the owner has not approved a fifth |
+| Custom instructions                                               | Appended last, unchanged, under "From the user's settings:". They are added after the block, never merged in |
+
+Paths, branch names and repo names are data: line breaks and control characters in them become a space, so they stay on their own line.
+
+`publishPrompt` returns null unless there is unpublished work and a reason (Full auto → PR, the message asked, or a follow-up round). It keeps the wording the publish rules rely on: the chat's own branch only, never a force push, another branch, the base branch or a remote change, nothing merges, never `--no-verify`, exactly one pull request, and in a follow-up round no new pull request, no replies and no resolved threads. It asks for a draft only when the user asked for drafts (decision 2); "a draft when checks still fail", the title prefix and the notes about failing checks are gone because Spark no longer runs the checks. That wording needs the owner's confirmation.
+
+Credit: the engineering ladder ("stop at the first of these that works") is adapted, in our own words, from Ponytail (https://github.com/DietrichGebert/ponytail, MIT).
+
 ### 2.3 How each rule holds without roles
 
 The gate is built per run in `runAgentTurn` and decides in `approvals/decide.ts`. Almost every rule is already role-free. The exceptions are in bold.
