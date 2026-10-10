@@ -192,7 +192,7 @@ test('the boot screen blob runs one transform animation per part', async ({ page
   expect.soft(work.busy, 'boot main thread percent').toBeLessThan(BUSY_LIMIT * 2);
 });
 
-test('Agent TV crew blobs do no work on each frame', async ({ page }) => {
+test('the Agent TV blob does no work on each frame', async ({ page }) => {
   test.setTimeout(90_000);
   await resetWithAgents();
   const repo = chatRepo();
