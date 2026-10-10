@@ -3,7 +3,7 @@ import { OUTPOST_HANDLE_PATTERN, type HandleProblem, type SuggestHandle } from '
 export const RESERVED_HANDLES: readonly string[] = ['all'];
 
 const HANDLE_MIN = 2;
-const HANDLE_MAX = 16;
+const HANDLE_MAX = 32;
 const FALLBACK_HANDLE = 'chat';
 
 function isUnavailable(handle: string, taken: readonly string[]): boolean {

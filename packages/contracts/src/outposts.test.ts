@@ -110,11 +110,11 @@ describe('outpost schemas', () => {
     expect(requestStateSchema.safeParse('rejected').success).toBe(false);
   });
 
-  it('accepts handles of two to sixteen lower-case characters that start with a letter', () => {
-    for (const handle of ['fe', 'api', 'docs-2', 'a234567890123456']) {
+  it('accepts handles of two to 32 lower-case characters that start with a letter', () => {
+    for (const handle of ['fe', 'api', 'docs-2', 'a234567890123456', `a${'2'.repeat(31)}`]) {
       expect(outpostHandleSchema.safeParse(handle).success, handle).toBe(true);
     }
-    for (const handle of ['', 'a', 'FE', '2fe', '-fe', 'fe_1', '@fe', 'a2345678901234567']) {
+    for (const handle of ['', 'a', 'FE', '2fe', '-fe', 'fe_1', '@fe', `a${'2'.repeat(32)}`]) {
       expect(outpostHandleSchema.safeParse(handle).success, handle).toBe(false);
     }
   });
