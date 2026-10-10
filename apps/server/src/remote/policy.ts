@@ -119,5 +119,5 @@ export function cardSwitch(payload: unknown): RemoteSwitch | null {
 }
 
 export function switchRefusal(name: RemoteSwitch): string {
-  return `Turned off for phones on your Mac: ${REMOTE_SWITCH_LABELS[name]}.`;
+  return `Turned off for remote control on your Mac: ${REMOTE_SWITCH_LABELS[name]}.`;
 }

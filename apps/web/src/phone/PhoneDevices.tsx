@@ -202,9 +202,9 @@ function PasskeySwitch({ allowed }: { allowed: boolean }) {
         <SwitchRow id="passkeys" checked={allowed} label={PASSKEY_SWITCH} />
       </ul>
       <p className="ph-note">
-        A paired phone can save a passkey and use it to sign in again in another browser, without
-        coming back to this Mac. A passkey never pairs a new phone. If this Mac&apos;s Tailscale
-        name changes, saved passkeys stop matching and each phone pairs again.
+        A paired device can save a passkey and use it to sign in again in another browser, without
+        coming back to this Mac. A passkey never pairs a new device. If this Mac&apos;s Tailscale
+        name changes, saved passkeys stop matching and each device pairs again.
       </p>
     </div>
   );
@@ -229,7 +229,7 @@ export function PhoneDevices({ devices, freshAfter, passkeysAllowed, wait }: Pho
       <h2 id="ph-devices-title">Devices</h2>
       {devices === undefined && wait}
       {devices !== undefined && active.length === 0 && (
-        <p className="ph-empty">No phone is paired yet.</p>
+        <p className="ph-empty">No device is paired yet.</p>
       )}
       {active.length > 0 && (
         <>

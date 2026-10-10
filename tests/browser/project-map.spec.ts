@@ -250,7 +250,7 @@ test('on a phone a saved Map view opens Home and the Map is not offered', async 
   await expect(nav.getByRole('button', { name: 'Map' })).toHaveCount(0);
   await nav.getByRole('button', { name: 'More' }).click();
   const more = page.getByRole('group', { name: 'More destinations' });
-  await expect(more.getByRole('button', { name: 'Phone' })).toBeVisible();
+  await expect(more.getByRole('button', { name: 'Remote control' })).toBeVisible();
   await expect(more.getByRole('button', { name: 'Map' })).toHaveCount(0);
   await expect(page.locator('.map-stage')).toHaveCount(0);
   await expect(outline(page)).toHaveCount(0);

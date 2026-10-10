@@ -147,13 +147,13 @@ export function PairScene({
         {line}
       </p>
 
-      {stage.kind === 'ready' && startButton('Pair a phone')}
+      {stage.kind === 'ready' && startButton('Pair a device')}
 
       {stage.kind === 'code' && hostname && (
         <div className="ph-code">
           <QrCode
             text={pairingLink(hostname, stage.pairing.code)}
-            label="QR code that opens the pairing page on your phone"
+            label="QR code that opens the pairing page on another device"
           />
           <div className="ph-code-side">
             <span className="ph-code-label" id="ph-code-label">

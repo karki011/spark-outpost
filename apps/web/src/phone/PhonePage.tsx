@@ -55,8 +55,8 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
 
   if (!tailscale.data) {
     return (
-      <QueryWait query={tailscale} what="phone access">
-        <Skeleton label="Loading phone access" shape="cards" rows={3} />
+      <QueryWait query={tailscale} what="remote control">
+        <Skeleton label="Loading remote control" shape="cards" rows={3} />
       </QueryWait>
     );
   }
@@ -101,8 +101,8 @@ function MacPhonePage({ session }: { session: RemoteSession }) {
       <PhoneActivity
         entries={audit.data}
         wait={
-          <QueryWait query={audit} what="phone activity">
-            <Skeleton label="Loading phone activity" shape="list" rows={3} />
+          <QueryWait query={audit} what="remote activity">
+            <Skeleton label="Loading remote activity" shape="list" rows={3} />
           </QueryWait>
         }
       />
@@ -128,8 +128,8 @@ function RemotePhonePage({ session }: { session: RemoteSession }) {
       <section className="ph-card" aria-labelledby="ph-device-title">
         <h2 id="ph-device-title">This device</h2>
         <p className="ph-note">
-          {session.device ? <b>{session.device.name}</b> : 'This phone'} is paired. To rename or
-          remove it, open Phone on your Mac.
+          {session.device ? <b>{session.device.name}</b> : 'This device'} is paired. To rename or
+          remove it, open Remote control on your Mac.
         </p>
       </section>
       <PhonePasskey session={session} />
@@ -145,14 +145,14 @@ export function PhonePage() {
       <div className="ph-scroll">
         <div className="ph-wrap">
           <header className="ph-head">
-            <h1 id="ph-title">Phone</h1>
+            <h1 id="ph-title">Remote control</h1>
             <p>
-              Use Spark Outpost from your phone while the work stays on{' '}
+              Use Spark Outpost from another device while the work stays on{' '}
               {session.data?.remote ? 'your' : 'this'} Mac.
             </p>
           </header>
-          <QueryWait query={session} what="phone settings">
-            <Skeleton label="Loading phone settings" shape="cards" rows={3} />
+          <QueryWait query={session} what="remote control">
+            <Skeleton label="Loading remote control" shape="cards" rows={3} />
           </QueryWait>
           {session.data &&
             (session.data.remote ? (

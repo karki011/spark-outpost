@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { RemoteSwitch } from '@spark-outpost/contracts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
-export const PHONE_SWITCH_OFF = 'Turned off for phones on your Mac';
+export const PHONE_SWITCH_OFF = 'Turned off for remote control on your Mac';
 
 const SESSION_FRESH_MS = 60_000;
 

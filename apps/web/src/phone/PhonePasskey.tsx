@@ -69,7 +69,9 @@ export function PhonePasskey({ session }: { session: RemoteSession }) {
   return (
     <section className="ph-card" aria-labelledby="ph-passkey-title">
       <h2 id="ph-passkey-title">Passkey</h2>
-      <p className="ph-note">{PASSKEY_PURPOSE} To remove a passkey, open Phone on your Mac.</p>
+      <p className="ph-note">
+        {PASSKEY_PURPOSE} To remove a passkey, open Remote control on your Mac.
+      </p>
       {session.switches.passkeys ? <SavedPasskeys /> : <p className="ph-note">{PASSKEY_OFF}</p>}
     </section>
   );

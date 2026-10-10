@@ -22,7 +22,7 @@ test.describe.configure({ timeout: 120_000 });
 
 const SIGN_IN = 'Sign in with a passkey';
 const PAIR_HEADING = 'Pair this device';
-const SAVE = 'Save a passkey for this phone';
+const SAVE = 'Save a passkey for this device';
 
 let network: PhoneNetwork;
 
@@ -66,7 +66,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
   await openPairingPage(second);
   const button = second.getByRole('button', { name: SIGN_IN });
   await expect(button).toBeVisible();
-  await expect(second.getByText('Paired this phone before?')).toBeVisible();
+  await expect(second.getByText('Paired this device before?')).toBeVisible();
   const axe = await new AxeBuilder({ page: second })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
@@ -84,7 +84,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
   await second.reload();
   expect(await signedInAs(second)).toBe('Kitchen phone');
   await expect(rows).toHaveCount(1);
-  const activity = main.getByRole('region', { name: 'Recent phone activity' });
+  const activity = main.getByRole('region', { name: 'Recent remote activity' });
   await expect(activity.getByText('Kitchen phone signed in with a passkey')).toBeVisible({
     timeout: 15_000,
   });
@@ -103,7 +103,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
   await main.getByRole('switch', { name: 'Allow passkey sign-in' }).click();
   await expect(main.getByRole('switch', { name: 'Allow passkey sign-in' })).toBeChecked();
   await devices.getByRole('button', { name: 'Revoke Kitchen phone' }).click();
-  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+  await expect(devices.getByText('No device is paired yet.')).toBeVisible();
   await openPairingPage(third);
   await third.getByRole('button', { name: SIGN_IN }).click();
   await expect(third.getByRole('status')).toHaveText(
@@ -152,9 +152,9 @@ test('the phone app offers a passkey once and the Mac can remove it @packaged', 
   const phone = await pairPhone(main, browser, 'Kitchen phone');
   await addAuthenticator(browser, phone);
 
-  const offer = phone.getByRole('complementary', { name: 'Passkey for this phone' });
+  const offer = phone.getByRole('complementary', { name: 'Passkey for this device' });
   await expect(offer).toContainText(
-    'Lets this phone sign in again in another browser without going back to your Mac.',
+    'Lets this device sign in again in another browser without going back to your Mac.',
     { timeout: 20_000 },
   );
   await offer.getByRole('button', { name: SAVE }).click();

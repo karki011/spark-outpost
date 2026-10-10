@@ -1,5 +1,7 @@
 # Phone remote: plan
 
+The app now calls this feature **Remote control** and what connects a **paired device**; a phone is one kind. See [REMOTE_CONTROL.md](REMOTE_CONTROL.md) for the rename and the names that stay.
+
 Status: T1 and T2 built. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
 
 ## Goal

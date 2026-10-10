@@ -105,15 +105,15 @@ test('sits above Settings in the left bar and asks to turn phone access on', asy
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button')
     .allTextContents();
-  expect(labels.slice(-2)).toEqual(['Phone', 'Settings']);
-  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
+  expect(labels.slice(-2)).toEqual(['Remote', 'Settings']);
+  await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
   await expect(main.locator('.ph-scene .scout')).toHaveClass(/sleep/);
   await expectAccessible(page);
   await shoot(page, 'phone-1-off');
 
   setFakeTailscale({ backendState: 'NeedsLogin' });
-  await main.getByRole('switch', { name: 'Phone access' }).click();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
   await expect(main.getByRole('heading', { name: 'Tailscale is not signed in' })).toBeVisible();
   await expect(main.getByRole('button', { name: 'Check again' })).toBeVisible();
   await shoot(page, 'phone-1-signed-out', [WIDE]);
@@ -131,13 +131,13 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await turnOn(page);
   await expect(main.getByText(PHONE_ADDRESS)).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
-  await expect(main.getByRole('button', { name: 'Pair a phone' })).toBeFocused();
+  await expect(main.getByRole('button', { name: 'Pair a device' })).toBeFocused();
 
   const code = await startPairing(page);
   await expect(main.getByRole('img', { name: /QR code/ })).toBeVisible();
   await expect(main.locator('.ph-ring-text')).toHaveText(/[12]:\d\d$/);
   await expect(main.getByRole('button', { name: 'Get a new code' })).toBeFocused();
-  await expect(main.getByRole('status').first()).toHaveText(/Scan this with your phone/);
+  await expect(main.getByRole('status').first()).toHaveText(/Scan this with a phone/);
   const quiet = await main.locator('.ph-qr').evaluate((svg) => {
     const paper = getComputedStyle(svg.querySelector('.ph-qr-paper')!).fill;
     const ink = getComputedStyle(svg.querySelector('.ph-qr-ink')!).fill;
@@ -190,7 +190,7 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
   await shoot(page, 'phone-5-devices', LAYOUT_SIZES);
   await expect(
-    main.getByRole('region', { name: 'Recent phone activity' }).getByText('Kitchen phone paired'),
+    main.getByRole('region', { name: 'Recent remote activity' }).getByText('Kitchen phone paired'),
   ).toBeVisible({ timeout: 10_000 });
 
   await row.getByRole('button', { name: 'Rename Kitchen phone' }).click();
@@ -198,10 +198,10 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await devices.getByLabel('New name for Kitchen phone').press('Enter');
   await expect(devices.getByText('Hall phone')).toBeVisible();
   await devices.getByRole('button', { name: 'Revoke Hall phone' }).click();
-  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+  await expect(devices.getByText('No device is paired yet.')).toBeVisible();
 
-  await main.getByRole('switch', { name: 'Phone access' }).click();
-  await expect(main.getByRole('heading', { name: 'Phone access is off' })).toBeVisible();
+  await main.getByRole('switch', { name: 'Remote control' }).click();
+  await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
 });
 
@@ -254,7 +254,7 @@ test('denies a phone, then lets a code run out', async ({ page, browser }) => {
 test('keeps what the phone can do across reloads', async ({ page }) => {
   const main = await openPhone(page);
   await turnOn(page);
-  const switches = main.getByRole('region', { name: 'What the phone can do' });
+  const switches = main.getByRole('region', { name: 'What paired devices can do' });
   await expect(switches.getByRole('switch')).toHaveCount(7);
   await expect(switches.getByText('stay on the Mac')).toBeVisible();
   const reset = switches.getByRole('switch', { name: 'Reset or delete data' });
@@ -276,8 +276,8 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   ).toHaveAttribute('aria-checked', 'true');
   await expect(
     page
-      .getByRole('region', { name: 'Recent phone activity' })
-      .getByText('What the phone can do was changed'),
+      .getByRole('region', { name: 'Recent remote activity' })
+      .getByText('What paired devices can do was changed'),
   ).toBeVisible();
 });
 
@@ -372,7 +372,7 @@ test('disconnects every device after a hold', async ({ page, browser }) => {
   await expect(devices.getByText('Hold phone')).toBeVisible();
   await hold.focus();
   await page.keyboard.down('Space');
-  await expect(devices.getByText('No phone is paired yet.')).toBeVisible();
+  await expect(devices.getByText('No device is paired yet.')).toBeVisible();
   await page.keyboard.up('Space');
   await expect(hold).toHaveCount(0);
 });

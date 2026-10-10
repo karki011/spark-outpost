@@ -130,17 +130,17 @@ export async function openPhonePage(page: Page): Promise<Locator> {
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Phone' })
+    .getByRole('button', { name: 'Remote control' })
     .click();
-  await page.getByRole('switch', { name: 'Phone access' }).click();
-  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible({
+  await page.getByRole('switch', { name: 'Remote control' }).click();
+  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
     timeout: 20_000,
   });
   return page.getByRole('main');
 }
 
 export async function pairPhone(main: Locator, phone: BrowserContext, name: string): Promise<Page> {
-  const code = await startPairing(main.page(), /Pair a phone|Get a new code|Pair another/);
+  const code = await startPairing(main.page(), /Pair a device|Get a new code|Pair another/);
   const { page } = await arriveFromElsewhere(phone, `${PHONE_ADDRESS}/#code=${code}`);
   await expect(page.getByLabel('Pairing code')).toHaveValue(code);
   await page.getByLabel('Device name').fill(name);

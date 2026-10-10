@@ -2,11 +2,11 @@ import type { RemoteAuditEntry, RemotePasskey, TailscaleState } from '@spark-out
 import { countLabel } from '../ui/count-label.ts';
 
 export const PASSKEY_PURPOSE =
-  'Lets this phone sign in again in another browser without going back to your Mac.';
-export const PASSKEY_SAVE = 'Save a passkey for this phone';
+  'Lets this device sign in again in another browser without going back to your Mac.';
+export const PASSKEY_SAVE = 'Save a passkey for this device';
 export const PASSKEY_SAVED = 'Passkey saved. In another browser, choose Sign in with a passkey.';
 export const PASSKEY_NOT_SAVED = 'No passkey was saved. Try again when you are ready.';
-export const PASSKEY_EXISTS = 'This phone already has a passkey there.';
+export const PASSKEY_EXISTS = 'This device already has a passkey there.';
 export const PASSKEY_UNSUPPORTED = 'This browser cannot save passkeys.';
 export const PASSKEY_OFF = 'Passkey sign-in is turned off on your Mac.';
 
@@ -42,7 +42,7 @@ export function statusCopy(state: TailscaleState): StatusCopy {
     case 'not_installed':
       return {
         title: 'Tailscale is not installed',
-        step: 'Install Tailscale on this Mac and on your phone, and sign in to both with the same account.',
+        step: 'Install Tailscale on this Mac and on the other device, and sign in to both with the same account.',
         link: { label: 'Get Tailscale', href: 'https://tailscale.com/download' },
       };
     case 'signed_out':
@@ -58,21 +58,21 @@ export function statusCopy(state: TailscaleState): StatusCopy {
       };
     case 'off':
       return {
-        title: 'Phone access is off',
+        title: 'Remote control is off',
         step:
           state.message ??
           'Turn it on to reach Spark Outpost from devices on your own tailnet. Nothing is public.',
       };
     case 'on':
-      return { title: 'Phone access is on', step: null };
+      return { title: 'Remote control is on', step: null };
     case 'error':
-      return { title: 'Phone access needs a look', step: state.message };
+      return { title: 'Remote control needs a look', step: state.message };
   }
 }
 
 function named(entry: RemoteAuditEntry): string {
   const fromDetail = entry.detail.deviceName;
-  return entry.deviceName ?? (typeof fromDetail === 'string' ? fromDetail : 'A phone');
+  return entry.deviceName ?? (typeof fromDetail === 'string' ? fromDetail : 'A device');
 }
 
 function pairingPageLine(entry: RemoteAuditEntry): string {
@@ -82,9 +82,9 @@ function pairingPageLine(entry: RemoteAuditEntry): string {
     case 'unused':
       return `${named(entry)} asked to pair again (not used for 30 days)`;
     case 'unknown':
-      return 'A phone that was paired before asked to pair again (this Mac does not know its sign-in)';
+      return 'A device that was paired before asked to pair again (this Mac does not know its sign-in)';
     default:
-      return 'A phone with no sign-in opened the pairing page';
+      return 'A device with no sign-in opened the pairing page';
   }
 }
 
@@ -105,9 +105,9 @@ export function activityLine(entry: RemoteAuditEntry): string {
   const device = named(entry);
   switch (entry.action) {
     case 'hostname_changed':
-      return entry.detail.on === true ? 'Phone access turned on' : 'Phone access turned off';
+      return entry.detail.on === true ? 'Remote control turned on' : 'Remote control turned off';
     case 'switches_changed':
-      return 'What the phone can do was changed';
+      return 'What paired devices can do was changed';
     case 'pairing_started':
       return 'Pairing started on this Mac';
     case 'pairing_submitted':

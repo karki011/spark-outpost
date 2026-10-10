@@ -30,10 +30,10 @@ const FUNNEL_ON =
 const TAKEN =
   'Tailscale Serve already shares something else at this address. Remove it in Tailscale, then try again.';
 const DRIFTED =
-  'Tailscale Serve is no longer pointing at Spark Outpost. Turn phone access off, then on again.';
+  'Tailscale Serve is no longer pointing at Spark Outpost. Turn remote control off, then on again.';
 const NOT_APPLIED = 'Tailscale Serve did not start sharing Spark Outpost. Try again.';
 const STOPPED_AT_START =
-  'Phone access was turned off because Tailscale Serve stopped pointing at Spark Outpost.';
+  'Remote control was turned off because Tailscale Serve stopped pointing at Spark Outpost.';
 
 function addressOf(hostname: string): string {
   return `https://${hostname}`;

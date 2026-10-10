@@ -37,6 +37,6 @@ The **Story** bar under the outpost's chats reads, for example, **Checkout · 1 
 | A request from **Spark** | Every sub-task ended. The proposing chat answers once with a wrap-up: a reply that changes no files and publishes nothing. |
 | **Pause**                | Also holds waiting sub-tasks.                                                                                              |
 
-On a [paired phone](use-your-phone.md) the draft reads **Review and start on your Mac**.
+On a [paired device](use-your-phone.md) the draft reads **Review and start on your Mac**.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

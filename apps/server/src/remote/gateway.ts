@@ -155,7 +155,7 @@ export function remoteGateway(deps: GatewayDeps) {
     });
     res.once('finish', () => {
       setRemoteAuditStatus(db, id, res.statusCode).catch((error: unknown) => {
-        console.error('Could not record a phone request status', (error as Error).message);
+        console.error('Could not record a remote request status', (error as Error).message);
       });
     });
   };
