@@ -73,7 +73,13 @@ async function hold(
   if (await closesRing(context, turn, target)) {
     return { found: sent, waited: false, note: deadlockNote(target.handle) };
   }
-  const found = await waitForRequest(context.deps.db, wakes, sent.post.id, stopSignal(context));
+  const resume = context.deps.outposts?.parked?.park(turn.run.id);
+  const found = await waitForRequest(
+    context.deps.db,
+    wakes,
+    sent.post.id,
+    stopSignal(context),
+  ).finally(resume);
   if (found === null) throw new SparkToolError(REQUEST_REMOVED);
   return { found, waited: true, ...(stillOpen(found) ? { note: STOPPED_NOTE } : {}) };
 }

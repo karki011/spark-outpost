@@ -18,6 +18,7 @@ import { createProviders } from './providers.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
+import { ParkedTurns } from './parked-turns.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
@@ -50,6 +51,7 @@ const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const desktopBrowser = connectDesktopBrowser(process.env, process);
 const outpostWakes = new TaskWakes();
+const parkedTurns = new ParkedTurns();
 const sparkDeps: SparkToolDeps = {
   db,
   secrets,
@@ -70,7 +72,7 @@ const sparkDeps: SparkToolDeps = {
   linkScheme: config.SPARK_LINK_SCHEME,
   codeScan,
   browser: desktopBrowser?.host,
-  outposts: { wakes: outpostWakes, stackGit },
+  outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);
@@ -93,6 +95,7 @@ const worker = startWorker({
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
   concurrency: config.WORKER_CONCURRENCY,
+  parked: parkedTurns,
   codeScan,
   branchPrefix: config.BRANCH_PREFIX,
   coordinator: config.COORDINATOR_MODE,
