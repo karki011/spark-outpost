@@ -57,7 +57,6 @@ export function sparkInstructions(
   ]
     .filter(Boolean)
     .join('\n\n');
-  if (prefs.sparkEnabled === false) return standing;
   const name = firstName(prefs.displayName);
   const lines = [
     HEADER,

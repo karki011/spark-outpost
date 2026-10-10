@@ -189,13 +189,3 @@ describe('teammate brief', () => {
     expect(text.trimEnd().endsWith('message from another agent.')).toBe(true);
   });
 });
-
-it('uses custom standing instructions without Spark workflow instructions when disabled', () => {
-  const prefs = { ...PREFS, sparkEnabled: false, agentInstructions: 'My own process.' };
-  const text = sparkInstructions(prefs, true, true, true);
-  expect(text).toContain('My own process.');
-  expect(text).not.toContain('coordinator');
-  expect(text).not.toContain('spark_*');
-  expect(withClaudeSpark(null, prefs, true)?.appendPrompt).toBe(text);
-  expect(withCodexSpark(null, prefs)?.developerInstructions).toBe(text);
-});
