@@ -15,6 +15,8 @@ You'll have one chat split a job across several, and start them yourself. About 
 3. Check each chat's **Agent**, **Permissions**, first message and the two fields below.
 4. Select **Continue**, then **Start outpost**. When the proposing chat is already in an outpost, the sheet reads **Add chats to …** and the button **Start chats**.
 
+New chats take the draft's titles; rename them any time.
+
 | Field            | Choose                                                                                                                      |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | **Starts after** | **Nothing**, or a handle such as `@api`: the chat waits until `@api` has answered.                                          |
