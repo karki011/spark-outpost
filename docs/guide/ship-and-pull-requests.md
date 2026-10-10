@@ -19,13 +19,17 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 ## When the agent publishes
 
-Ask for a pull request in your message, or set **Full auto → PR**. After the checks, the agent pushes the branch and opens the PR. In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
+Ask for a pull request in your message, or set **Full auto → PR**. After its reply, Spark asks the agent once to push the branch and open the PR; at **Full auto → PR** only when the turn changed files.
 
-| The chat says                                               | Meaning                    |
-| ----------------------------------------------------------- | -------------------------- |
-| **Opened pull request #12**                                 | Spark tracks it.           |
-| "The branch was pushed, but no pull request was opened."    | Use the link to create it. |
-| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.        |
+In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
+
+| The chat says                                               | Meaning                                           |
+| ----------------------------------------------------------- | ------------------------------------------------- |
+| **Opened pull request #12**                                 | Spark tracks it.                                  |
+| "The branch was pushed, but no pull request was opened."    | Use the link to create it.                        |
+| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                               |
+| "Not published: …"                                          | Kept, not pushed. Ask again, or ship it yourself. |
+| "Committed … not pushed."                                   | The project has no remote.                        |
 
 The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
 
@@ -33,15 +37,6 @@ Every pull request from the chat or its terminal shows above the message box (st
 
 ## Ready for review or draft
 
-In **Settings → Spark**, set **Open pull requests as** to **Ready for review** (the default) or **Draft**.
-
-## When checks still fail in Full auto
-
-**When checks still fail in Full auto** in **Settings → Spark** decides what happens:
-
-| Choice                        | Result                                           |
-| ----------------------------- | ------------------------------------------------ |
-| **Open a draft PR** (default) | The PR opens as a draft marked "Checks failing". |
-| **Stop and ask**              | Spark stops before publishing and asks you.      |
+In **Settings → Spark**, set **Open pull requests as** to **Ready for review** (the default) or **Draft**. You can also ask for a draft in your message.
 
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)

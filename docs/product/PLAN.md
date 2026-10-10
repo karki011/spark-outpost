@@ -1,13 +1,13 @@
 # Spark Outpost — product and implementation plan
 
-Date: 2026-09-24, revised 2026-09-25 (protocol stack, database portability, desktop shell, mockup alignment)
+Date: 2026-09-24, revised 2026-09-25 (protocol stack, database portability, desktop shell, mockup alignment) and 2026-10-10 (one agent session per chat; Spark's own coordinator, specialists, reviewer and checks are removed, see [SIMPLE_ORCHESTRATION.md](../architecture/SIMPLE_ORCHESTRATION.md))
 Working tagline: A home base for autonomous work.
 
 ## 1. Product
 
-Spark Outpost is a local-first workspace where people give a goal to a team of AI agents, follow meaningful progress, make decisions when needed, and receive results with verification evidence.
+Spark Outpost is a local-first workspace where people give a goal to an AI agent, follow meaningful progress, make decisions when needed, and receive results with the agent's own evidence.
 
-The application owns the workflow. Providers supply intelligence and execution capabilities. A conversation is a durable user record; a provider session is one replaceable execution resource within it.
+The application owns run state, approvals, worktrees and publishing. The agent owns the work: it plans, delegates and checks as it sees fit. Providers supply intelligence and execution capabilities. A conversation is a durable user record; a provider session is one replaceable execution resource within it.
 
 Start with repository-based software tasks because changes, tests, and independent review provide concrete acceptance criteria. Keep the product direction broader than coding, but add other workflows only when there is a real caller.
 
@@ -43,14 +43,14 @@ Provider authentication methods, terms, model options, and supported capabilitie
 
 1. Open the app, connect an available provider, and choose a project or a standalone conversation.
 2. Enter a goal, desired outcome, and any permission limits.
-3. The coordinator asks only necessary questions and creates a bounded plan for work that needs delegation. Simple questions take a direct path.
-4. Specialists execute permitted work. Independent steps can run concurrently within configured limits.
-5. The conversation streams useful text and activity summaries. The user can inspect details, steer the work, cancel, or respond to an approval request.
-6. Checks run against the resulting artifacts. A separate reviewer examines the work and evidence.
-7. The coordinator repairs actionable findings within the authorized scope and retry rounds, or asks for a decision.
-8. The user receives the result, changed artifacts, validation evidence, unresolved concerns, and any pending publication action.
+3. The message goes to the chat's agent as typed. The agent asks what it needs, plans when asked to (`/plan` or its Plan mode), and decides whether to use its own sub-agents or propose sub-chats in an outpost, which the user starts.
+4. The agent executes permitted work in the chat's worktree. Every tool call, a sub-agent's included, passes the same approval gate and audit.
+5. The conversation streams useful text and activity summaries. The user can inspect details, queue or send a message, cancel, or respond to an approval request.
+6. The agent runs the project's checks itself. Spark runs none; the repository's hooks and CI run on a push. A second opinion is another chat the user asks.
+7. Changed files are kept with a record that can be reverted. At Full auto → PR, on request or in a follow-up round, Spark sends the agent one publish prompt.
+8. The user receives the result, changed files, what the agent verified or skipped, and any publication result.
 
-All conversations enter the same harness boundary for policy and persistence. Not every message invokes a planner, specialist team, or reviewer.
+All conversations pass the same boundary for policy and persistence. No message invokes a planner, specialist team, or reviewer of Spark's own.
 
 Implementation gates and current protocol status: [Protocol alignment](../architecture/PROTOCOL_ALIGNMENT.md).
 
@@ -88,7 +88,7 @@ Each protocol has one job. None of them supplies our scheduler, permissions, dur
 
 The application stays provider-agnostic through our own contract in `packages/contracts` (capability snapshots, normalized events, approvals, receipts), not through any one wire protocol. ACP messages convert to AG-UI events almost one-to-one; A2A task updates convert to `SUBAGENT_*` and `ACTIVITY_*` events.
 
-A2A is not used internally between our own coordinator and specialists. Do not use `@ag-ui/a2a-middleware`: it exposes A2A calls as a tool the model decides to call, which gives delegation decisions to the LLM instead of the harness.
+A2A is used between outpost chats, not inside a chat. Delegation inside a chat belongs to the agent (its own sub-agents); delegation across chats is proposed by the agent as a draft and started by the user. Do not use `@ag-ui/a2a-middleware`: it exposes A2A calls as a tool the model may call by itself, which would let a model start work in another chat without the user.
 
 ACP limits to plan around:
 
@@ -109,20 +109,20 @@ Show real delegation messages, task updates, and shared artifacts in a compact c
 
 Provide an Agents connection screen for user-supplied endpoints, verified Agent Cards, authentication, and per-workflow sharing scope. Agent Card capabilities are self-reported and do not imply trust. Spark serves each outpost chat as an A2A agent on loopback only, behind the launch token, never to a paired phone or through Tailscale ([A2A_CHATS.md](../architecture/A2A_CHATS.md)). A remote endpoint remains deferred and must be opt-in with authentication and scoped access.
 
-## 5. Harness behavior
+## 5. What Spark does in a turn
 
-- Intake: capture the goal, constraints, context references, and acceptance criteria.
-- Planning: create only necessary steps, dependencies, responsible agents, and expected artifacts.
-- Execution: authorize each attempt, allocate a workspace, enforce resource limits, and collect events and receipts.
-- Coordination: pass bounded, relevant artifacts between agents rather than every agent's entire transcript.
-- Review: inspect exact artifact revisions using a distinct reviewer execution with separate context.
-- Completion: distinguish provider-reported success, passed executable checks, independent review, and human acceptance.
+- Place: one worktree and `spark/*` branch per chat, created on the first turn in a mode that can change files.
+- Execution: one run on the chat's own session. The prompt is the user's message. Spark authorizes each tool call through the approval gate and collects events, the audit and usage.
+- Planning: the agent's own. `/plan` and a Plan-mode chat start the turn in the agent's plan mode; a plan the user approves is saved as the chat's agreed plan.
+- Result: changed files are kept with a record that can be reverted; a ticket named in the user's text is linked.
+- Publishing: one publish prompt to the same session when the publish rules give a reason and the chat's branch has unpublished work.
+- Completion: provider-reported success and human acceptance are kept distinct. Spark makes no verification claim of its own.
 
-Suggested step states are queued, running, awaiting input, awaiting approval, succeeded, failed, cancelled, and outcome unknown. Derive overall run status from its steps and policy. A provider transport error is not automatically user cancellation.
+Run states are queued, running, awaiting input, awaiting approval, succeeded, failed, cancelled, and outcome unknown. A provider transport error is not automatically user cancellation.
 
-Bind events and decisions to workflow, step, attempt, and revision identities. Ignore stale decisions after cancellation or revised instructions. Enforce retry, time, and concurrency limits. Token or monetary limits are exact only to the extent providers expose timely usage; show unavailable or delayed usage honestly.
+Bind events and decisions to run and revision identities. Ignore stale decisions after cancellation or revised instructions. There are no retry, time, tool-call or cost limits: usage is measured and shown, exact only to the extent providers expose it; show unavailable or delayed usage honestly.
 
-For code tasks, serialize writes to a shared checkout or isolate simultaneous writers in worktrees. Do not allow multiple agents to overwrite the same files without coordination. Independent review and checks refer to an immutable commit or content identity; subsequent edits invalidate the affected verdict.
+For code tasks, each chat writes in its own worktree, so chats never overwrite each other's files. Inside one session the agent owns what its sub-agents change.
 
 ## 6. Human control
 
@@ -199,11 +199,11 @@ Where supported, improve prompt-cache reuse with stable prefixes, deterministic 
 
 ## 10. Jev's optional role
 
-Use code for exact rules and permissions. Evaluate Jev for bounded semantic choices such as routing among available specialists, selecting relevant context, or ranking activity updates when deterministic rules are insufficient.
+Use code for exact rules and permissions. Jev is not called inside a turn. It is used for bounded semantic choices outside turns: labelling Map areas, sorting pull request feedback, and the companion's updates, each with rules as the fallback.
 
 Retrieve a bounded candidate set first. Validate returned IDs and reject stale answers. Use a no-match or escalation path. A generative provider writes plans, explanations, and final responses; Jev supplies typed judgments.
 
-Begin with deterministic behavior and an explicit provider selection. Evaluate optional Jev decisions in observation mode against representative examples before allowing them to affect dispatch. Measure quality, latency, and cost. Failure or absence of Jev must not prevent normal operation.
+Begin with deterministic behavior and an explicit provider selection. Evaluate an optional Jev decision in observation mode against representative examples before allowing it to affect anything. Measure quality, latency, and cost. Failure or absence of Jev must not prevent normal operation.
 
 ## 11. Interface requirements
 
@@ -306,12 +306,12 @@ Status note: this table is the original forward plan and is not kept current pha
 | 0 — Foundation                     | Repo, AGENTS.md, web/server, native local PostgreSQL cluster, migrations with events, runs, and jobs tables, `packages/contracts` with AG-UI and custom event types, theme, CI, fake ACP agent, SSE replay from cursor, chat view ported from the mockup | Clean startup and restart; validated persistence; no secret leakage; reconnect replays without duplicates; basic browser checks                             |
 | 1 — One complete workflow          | Claude via ACP, durable conversation, streaming, one tool action, approval card, cancellation, reconnect, app-wide status stream                                                                                                                         | A real bounded task completes; reconnect replays events without duplicating execution; a crash produces recovery or an honest uncertain outcome             |
 | 2 — Provider independence          | Codex via ACP, capability cache from config options, background refresh, session recovery with `session/load`                                                                                                                                            | New/reopened conversations reuse metadata; provider changes preserve drafts; unsupported capabilities are handled honestly                                  |
-| 3 — Coordinated work               | Coordinator, specialist, independent reviewer, bounded retries, artifact identity, one A2A service boundary (candidate: a remote reviewer)                                                                                                               | A real code task produces a reviewed artifact; stale review is invalidated after edits; unavailable agents do not silently lose work                        |
+| 3 — Coordinated work               | Built as a coordinator with specialists and a reviewer, then removed (2026-10-10). What remains: the agent's own sub-agents, and outposts of chats over one A2A boundary on loopback                                                                     | Several chats work on one job, each in its own worktree with its own gate; unavailable agents do not silently lose work                                     |
 | 4 — Product quality                | Long history, relevant activities, context panel, project organization, accessibility, cost reporting; CopilotKit headless-hook evaluation                                                                                                               | Responsive operation with 5–10 long conversations; scrolling and focus survive streaming and failure cases                                                  |
 | 5 — Optional decisions and desktop | Jev evaluation; Electron shell with embedded PostgreSQL, tray, auto-update, keychain, signing; secure local-service lifecycle                                                                                                                            | Jev improves measured decisions or stays disabled; packaged app passes startup, close/reopen, update with migration, approval, signing, and recovery checks |
 | Later — Hosted execution           | Hybrid local runner first, then cloud sandboxes; AWS containers, RDS or Aurora, S3, account isolation, operational monitoring                                                                                                                            | Explicit threat model, cost model, deployment and migration plan; local paths and credentials remain correctly scoped                                       |
 
-The first useful milestone is one complete, recoverable task with visible evidence, not a large collection of settings and empty agent roles. Add independent review and the second provider before claiming the autonomous multi-agent MVP is complete.
+The first useful milestone is one complete, recoverable task with visible evidence, not a large collection of settings and empty agent roles. Add the second provider before claiming the MVP is complete.
 
 ## 15. Acceptance and measurement
 

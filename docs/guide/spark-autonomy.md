@@ -16,10 +16,10 @@ You'll choose what Spark does with finished work. About 1 minute.
 
 ![The Work panel with the Spark autonomy levels](images/chats-and-modes-autonomy-light.png)
 
-| Level                        | What Spark does                                      |
-| ---------------------------- | ---------------------------------------------------- |
-| **Automatic**                | Keeps changes. You ship.                             |
-| **Full auto → PR** (default) | Works in a worktree copy, then opens a pull request. |
+| Level                        | What Spark does                                        |
+| ---------------------------- | ------------------------------------------------------ |
+| **Automatic**                | Keeps changes. You ship.                               |
+| **Full auto → PR** (default) | Keeps changes, then has the agent open a pull request. |
 
 Neither level waits on a plan. The agent's [Plan mode](plan-card.md) does.
 

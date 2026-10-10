@@ -21,7 +21,7 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 ## Keep or revert
 
-Spark keeps changes by itself. The turn ends in one result line that needs no answer: **Kept**, files, checks, commit and pull request, plus a [**Worth a look**](guardrails.md#worth-a-look) list. Expand it for files and branch.
+Spark keeps changes by itself. The turn ends in a **Changes kept** record that needs no answer: files, lines, commit and pull request. Expand it for files and branch.
 
 | To                                   | Select                                         |
 | ------------------------------------ | ---------------------------------------------- |
@@ -29,28 +29,12 @@ Spark keeps changes by itself. The turn ends in one result line that needs no an
 | Copy kept changes into your checkout | **Bring changes into** _branch_, expanded      |
 | Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md) |
 
-A **Keep these changes?** card waits, with **Keep**, **Fix** and **Revert**, only when Spark won't decide alone:
-
-| Autonomy           | The card waits when                                             |
-| ------------------ | --------------------------------------------------------------- |
-| **Automatic**      | A risky migration was made in your own checkout, not a worktree |
-| **Full auto → PR** | Checks fail and you chose **Stop and ask**                      |
-
-Select **Fix**, type what should change, and select **Ask for a fix**.
+No card asks whether to keep a change. To change it, say what should change in your next message.
 
 Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch.
 
-## Checks after a change
+## Checks
 
-After a Builder's turn, Spark runs checks and adds a **Checks** row to **Tasks**.
-
-| Row                                             | Meaning                        |
-| ----------------------------------------------- | ------------------------------ |
-| **failed**                                      | From the change. One fix turn. |
-| **already failing before this change**          | Not the change. No fix turn.   |
-| **failed before this change or can't tell**     | Cause unclear. No fix turn.    |
-| **could not finish in time**, **could not run** | Not counted; says why.         |
-
-Choose commands, or **Off**, in **Settings → Projects**.
+Spark runs no tests or lint itself. The agent runs your project's checks and says in its reply what it verified and what it skipped. Ask it to run a command if it didn't.
 
 **Next:** [Manage a long chat](compaction.md)
