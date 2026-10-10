@@ -10,17 +10,17 @@ You'll ask several chats for work from one thread. About 3 minutes. See also [Wh
 
 ## Create an outpost
 
-1. In the sidebar, select **New outpost** (**+**) beside **Outposts** and enter a **Name**.
+1. Select **New outpost** (**+**) beside **Outposts** and enter a **Name**.
 2. Add each **Existing chat**, or a **New chat** with a **Project**, **Agent** and **Permissions**. Check its handle, such as `api`.
-3. Optionally select **Add a first message** and attach files. It is sent as your first request.
+3. Optionally select **Add a first message** and attach files: your first request.
 4. Select **Continue**, check the review, then **Start outpost**. The thread introduces each chat.
 
-Or select **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't.
+Or select **Add to outpost** in a chat's row menu. A chat joins one outpost and is listed under it, not its project; Terminal sessions can't.
 
 ## Send a request
 
 1. Type `@api` and your request, then select **Send request**.
-2. The chat's final reply lands under it with its [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
+2. The chat's final reply lands under it with [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
 3. **Needs you**: the chat has a question or an approval card. Select **Answer**, then **Send answer**; both stay under the request. For a card, **Open in chat**.
 
 Without a handle, **Post note** starts no work.

@@ -455,7 +455,7 @@ test('two chats with the same blob colour look different in their outpost, not i
   await openOutpost(page);
 
   const rowFace = (title: string) =>
-    sidebar(page).getByRole('listitem').filter({ hasText: title }).locator('.chat-face');
+    sidebar(page).locator('.row').filter({ hasText: title }).locator('.chat-face');
   await expect(rowFace('Web client')).toHaveAttribute('data-color', 'gold');
   await expect(rowFace('Mobile client')).toHaveAttribute('data-color', 'gold');
   await expect(chip(page, 'web').locator('.chat-face')).toHaveAttribute('data-color', 'gold');

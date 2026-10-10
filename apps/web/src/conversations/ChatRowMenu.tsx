@@ -28,7 +28,8 @@ export function ChatRowMenu({
   onRename,
 }: ChatRowMenuProps) {
   const outpostSeam = useOutpostSeam();
-  const siblings = chat.pinnedAt && !chat.archivedAt ? pinnedSiblings(chats, chat) : [];
+  const pinned = chat.pinnedAt && !chat.archivedAt ? pinnedSiblings(chats, chat) : [];
+  const siblings = pinned.includes(chat.id) ? pinned : [];
   const moveUp = movedOrder(siblings, chat.id, -1);
   const moveDown = movedOrder(siblings, chat.id, 1);
   return (

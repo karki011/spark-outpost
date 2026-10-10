@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+import type { ComponentProps } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import { ChatMenu } from './ChatMenu.tsx';
+import type { MemberChat } from './outpost-members.ts';
 import { OutpostRows } from './OutpostRows.tsx';
 
 afterEach(cleanup);
@@ -76,16 +78,35 @@ function renderMenu(options: { chat?: ConversationSummary; list?: Outpost[] | nu
   return { ...actions, onClose };
 }
 
+type RowsProps = ComponentProps<typeof OutpostRows>;
+
+function renderOutposts(props: Partial<RowsProps> & Pick<RowsProps, 'outposts'>) {
+  return render(
+    <OutpostRows
+      members={new Map()}
+      openId={null}
+      isOpen={() => true}
+      onToggle={vi.fn()}
+      onOpen={vi.fn()}
+      renderMembers={(_id, members: readonly MemberChat[]) => (
+        <ul aria-label="Member chats">
+          {members.map((member) => (
+            <li key={member.chat.id}>
+              {member.chat.title} @{member.handle}
+            </li>
+          ))}
+        </ul>
+      )}
+      {...props}
+    />,
+  );
+}
+
 describe('OutpostRows', () => {
   it('lists each outpost by name with its Needs you count as text', () => {
-    render(
-      <OutpostRows
-        outposts={[outpost(ORDERS, 'Orders launch', 2), outpost(USAGE, 'Usage by user', 0)]}
-        openId={null}
-        onOpen={vi.fn()}
-        onNew={vi.fn()}
-      />,
-    );
+    renderOutposts({
+      outposts: [outpost(ORDERS, 'Orders launch', 2), outpost(USAGE, 'Usage by user', 0)],
+    });
     const section = within(screen.getByRole('region', { name: 'Outposts' }));
     expect(section.getAllByRole('listitem')).toHaveLength(2);
     expect(section.getByRole('button', { name: 'Orders launch, 2 need you' })).toBeTruthy();
@@ -93,27 +114,17 @@ describe('OutpostRows', () => {
   });
 
   it('counts one request in the singular', () => {
-    render(
-      <OutpostRows
-        outposts={[outpost(ORDERS, 'Orders launch', 1)]}
-        openId={null}
-        onOpen={vi.fn()}
-        onNew={vi.fn()}
-      />,
-    );
+    renderOutposts({ outposts: [outpost(ORDERS, 'Orders launch', 1)] });
     expect(screen.getByRole('button', { name: 'Orders launch, 1 needs you' })).toBeTruthy();
   });
 
   it('opens an outpost and marks the open one as current', () => {
     const onOpen = vi.fn();
-    render(
-      <OutpostRows
-        outposts={[outpost(ORDERS, 'Orders launch', 0), outpost(USAGE, 'Usage by user', 0)]}
-        openId={USAGE}
-        onOpen={onOpen}
-        onNew={vi.fn()}
-      />,
-    );
+    renderOutposts({
+      outposts: [outpost(ORDERS, 'Orders launch', 0), outpost(USAGE, 'Usage by user', 0)],
+      openId: USAGE,
+      onOpen,
+    });
     const open = screen.getByRole('button', { name: 'Usage by user' });
     expect(open.getAttribute('aria-current')).toBe('page');
     const other = screen.getByRole('button', { name: 'Orders launch' });
@@ -124,16 +135,57 @@ describe('OutpostRows', () => {
 
   it('offers New outpost when there are none', () => {
     const onNew = vi.fn();
-    render(<OutpostRows outposts={[]} openId={null} onOpen={vi.fn()} onNew={onNew} />);
+    renderOutposts({ outposts: [], onNew });
     expect(screen.queryByRole('list')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'New outpost' }));
     expect(onNew).toHaveBeenCalledTimes(1);
   });
 
   it('has no New outpost where outposts cannot be created', () => {
-    render(<OutpostRows outposts={[]} openId={null} onOpen={vi.fn()} />);
+    renderOutposts({ outposts: [] });
     expect(screen.getByText('Outposts')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'New outpost' })).toBeNull();
+  });
+
+  it('lists the member chats of each outpost under it and nothing under one without chats', () => {
+    const members = new Map([
+      [
+        ORDERS,
+        [
+          { chat: chat({ id: CHAT, title: 'Frontend' }), handle: 'fe' },
+          { chat: chat({ id: PROJECT, title: 'Orders API' }), handle: 'api' },
+        ],
+      ],
+    ]);
+    renderOutposts({
+      outposts: [outpost(ORDERS, 'Orders launch', 0), outpost(USAGE, 'Usage by user', 0)],
+      members,
+    });
+    const listed = within(screen.getByRole('list', { name: 'Member chats' }));
+    expect(listed.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Frontend @fe',
+      'Orders API @api',
+    ]);
+    expect(screen.getAllByRole('button', { name: /chats? in / })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Orders launch' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Usage by user' })).toBeTruthy();
+  });
+
+  it('asks whether each outpost is open and toggles the one whose arrow is pressed', () => {
+    const onToggle = vi.fn();
+    const onOpen = vi.fn();
+    renderOutposts({
+      outposts: [outpost(ORDERS, 'Orders launch', 0)],
+      members: new Map([[ORDERS, [{ chat: chat(), handle: 'fe' }]]]),
+      isOpen: (id) => id !== ORDERS,
+      onToggle,
+      onOpen,
+    });
+    const fold = screen.getByRole('button', { name: '1 chat in Orders launch' });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(fold);
+    expect(onToggle).toHaveBeenCalledWith(ORDERS);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
 

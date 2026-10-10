@@ -7,8 +7,9 @@ import './sidebar-layout.css';
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
@@ -30,6 +31,7 @@ import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
 import { HistoryChats } from './HistoryChats.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
+import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
 import { attention } from './row-state.ts';
 import { activeGroups } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-order.ts';
@@ -46,6 +48,7 @@ import { TeammateFilter } from './TeammateFilter.tsx';
 import { ToastHost } from './Toast.tsx';
 import { useChatActions } from './use-chat-actions.ts';
 import { useProjectActions } from './use-project-actions.ts';
+import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
@@ -55,6 +58,7 @@ import { useStableCallback } from '../ui/use-stable-callback.ts';
 
 const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
+const NO_OUTPOSTS: readonly Outpost[] = [];
 
 interface ConversationListProps {
   selectedId: string | null;
@@ -71,6 +75,7 @@ export const ConversationList = memo(function ConversationList({
 }: ConversationListProps) {
   const client = useQueryClient();
   const layout = useSidebarLayout();
+  const outpostSeam = useOutpostSeam();
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
@@ -136,7 +141,12 @@ export const ConversationList = memo(function ConversationList({
     layout?.closeDrawer();
   };
 
-  const grouped = activeGroups(visible, projectList);
+  const membership = memberships(outpostSeam?.outposts ?? NO_OUTPOSTS);
+  const grouped = activeGroups(outsideOutposts(visible, membership), projectList);
+  useRowFocus(
+    listRef,
+    [...membership].map(([chatId, member]) => `${chatId}:${member.outpostId}`).join(),
+  );
   const projectById = new Map(projectList.map((project) => [project.id, project]));
   const dnd = useSidebarDnd({
     layout: chatLayout(grouped),
@@ -205,7 +215,12 @@ export const ConversationList = memo(function ConversationList({
   );
   const handleDelete = useStableCallback((chat: ConversationSummary) => actions.remove(chat));
 
-  const renderRow = (chat: ConversationSummary, sortable: boolean, index: number) => (
+  const renderRow = (
+    chat: ConversationSummary,
+    sortable: boolean,
+    index: number,
+    handle?: string,
+  ) => (
     <ChatRow
       key={chat.id}
       chat={chat}
@@ -215,6 +230,7 @@ export const ConversationList = memo(function ConversationList({
       settling={dnd.busy}
       flash={chat.id === actions.flashId}
       index={index}
+      handle={handle}
       onOpen={handleOpen}
       onMenu={handleMenu}
       onRename={handleRename}
@@ -310,6 +326,8 @@ export const ConversationList = memo(function ConversationList({
                   renamingProjectId={renamingProjectId}
                   rowsIn={rowsIn}
                   renderRows={renderRows}
+                  renderRow={renderRow}
+                  members={membersByOutpost(visible, membership)}
                   onAddProject={() => {
                     addProject.reset();
                     setAddingProject(true);
@@ -341,7 +359,7 @@ export const ConversationList = memo(function ConversationList({
         <ChatRowMenu
           chat={menuChat}
           anchor={menu.anchor}
-          chats={chats}
+          chats={outsideOutposts(chats, membership)}
           projects={projectList}
           actions={actions}
           toaster={toaster}
