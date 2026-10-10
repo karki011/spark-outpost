@@ -6,7 +6,6 @@ import {
   PUBLISH_ASKED_WHY,
   PUBLISH_FULL_AUTO_WHY,
   PUSH_HOOKS_REASON,
-  PUSH_REASON,
   decide,
   forcePushReason,
   type ApprovalRequest,
@@ -149,8 +148,11 @@ describe('decide() for the chat main agent', () => {
     });
   });
 
-  it('asks as before in Manual without a request', () => {
-    expect(decideAs('asks', PUSH, main(MANUAL))).toEqual({ verdict: 'ask', reason: PUSH_REASON });
+  it('refuses in Manual without a request, as for a Builder', () => {
+    expect(decideAs('asks', PUSH, main(MANUAL))).toEqual({
+      verdict: 'reject',
+      reason: BUILDER_PUBLISH_REASON,
+    });
   });
 });
 
@@ -185,9 +187,9 @@ describe('decide() when the agent publishes for itself', () => {
       by: 'level',
       sent: { observed: PRIVATE, target: 'to collect.example.net' },
     });
-    expect(decideAs('auto', 'git push origin main', read)).toMatchObject({
-      verdict: 'allow',
-      sent: { target: 'out through `git push`' },
+    expect(decideAs('auto', 'git push origin main', read)).toEqual({
+      verdict: 'reject',
+      reason: otherBranchReason(BRANCH),
     });
   });
 

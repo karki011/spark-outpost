@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
-import { PUSH_HOOKS_REASON, PUSH_REASON } from '../src/approvals/decide.ts';
+import { BUILDER_PUBLISH_REASON, PUSH_HOOKS_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { ApprovalInputError, decideApproval, getApproval } from '../src/persistence/approvals.ts';
@@ -437,18 +437,18 @@ describe('a push that holds a value from a secret file', () => {
     expect(own).toMatchObject({ allowed: true });
   });
 
-  it('asks before a push in Manual at Automatic as before, without a note', async () => {
+  it('refuses a push in Manual at Automatic when the message did not ask, without a card', async () => {
     const chat = await turn('hands-off');
     await ownPullRequest(chat);
-    const { gate, waiters, read } = gateFor(chat, 'default', false, 'hands-off');
+    const { gate, read } = gateFor(chat, 'default', false, 'hands-off');
     await read();
-    const push = gate.review(commandRequest(root, `git push origin ${BRANCH}`), signal());
-    const card = await pendingFor(chat.runId);
-    expect(card.reason).toBe(PUSH_REASON);
-    expect(card.payload.observed).toBeUndefined();
-    await decideApproval(t.db, t.workspaceId, card.id, { optionId: 'reject', scope: 'once' });
-    waiters.notify(card.id);
-    expect(await push).toMatchObject({ allowed: false });
+    const push = await gate.review(commandRequest(root, `git push origin ${BRANCH}`), signal());
+    expect(push).toMatchObject({ allowed: false });
+    const { rows } = await t.db.query<{ reason: string; decided_by: string }>(
+      'SELECT reason, decided_by FROM approvals WHERE run_id = $1',
+      [chat.runId],
+    );
+    expect(rows).toEqual([{ reason: BUILDER_PUBLISH_REASON, decided_by: 'policy' }]);
   });
 });
 

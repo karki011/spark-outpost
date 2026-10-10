@@ -16,7 +16,9 @@ import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
+  branchRefusal,
   publishVerdict,
+  publishesBranch,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
@@ -203,6 +205,19 @@ function planningRuns(
   return { verdict: 'allow', by: 'level', why: options.planningWhy };
 }
 
+function ownAgentRefusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  published: PublishVerdict | null,
+): string | null {
+  const { command } = request;
+  if (options.builder || !options.publish || !command || !publishesBranch(command)) return null;
+  const rail = branchRefusal(command, options.publish.task);
+  if (rail || published) return rail;
+  return soloLeasePush(command, options, forced) ? null : BUILDER_PUBLISH_REASON;
+}
+
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
@@ -217,6 +232,8 @@ function refusal(
       return BUILDER_PUBLISH_REASON;
     }
   }
+  const ownAgent = ownAgentRefusal(request, options, forced, published);
+  if (ownAgent) return ownAgent;
   if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;

@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                        | What to do                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Every agent of a chat is refused pushes of other branches and remote changes. An unreviewed one is flagged.                         | See [protected paths](protected-paths.md).  |
 | After `/plan` in an **Auto** or **Bypass permissions** chat, reads run without a card.                                              | See [plans](plan-card.md).                  |
 | **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
 | Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |
@@ -30,4 +31,3 @@ What changed recently in Spark, newest first.
 | Spark Island rests as blobs.                                                                                                        | Hover or click to open.                     |
 | Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                           | Answer in your next message.                |
 | A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
-| Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |

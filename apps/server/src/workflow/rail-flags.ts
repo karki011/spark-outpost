@@ -4,7 +4,8 @@ import path from 'node:path';
 import type { RailKind } from '@spark-outpost/contracts';
 import { isSecretPath, protectedPath } from '../projects/path-policy.ts';
 import type { Db } from '../persistence/db.ts';
-import { flagAgentName, insertRailFlag, type NewRailFlag } from '../persistence/rail-flags.ts';
+import type { NewRailFlag } from '../persistence/rail-flags.ts';
+import { raiseRailFlag } from '../observations/raise-flag.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { runGit } from '../ship/git.ts';
 
@@ -132,18 +133,10 @@ async function approvedPaths(db: Db, runId: string): Promise<Set<string>> {
 
 export async function startRailFlags(options: RailFlagsOptions): Promise<RailFlagRecorder> {
   const { db, runId, audit } = options;
-  const agent = await flagAgentName(db, runId);
   const roots = (await Promise.all(options.projectRoots.map(rootState))).filter(
     (state): state is RootState => state !== null,
   );
-  const record = async (flag: NewRailFlag) => {
-    const saved = await insertRailFlag(db, runId, agent, flag);
-    if (!saved) return;
-    audit.message('harness', {
-      method: 'spark/rail_crossed',
-      params: { flagId: saved.id, rail: saved.rail, title: saved.title, paths: saved.paths },
-    });
-  };
+  const record = (flag: NewRailFlag) => raiseRailFlag(db, runId, audit, flag);
   return {
     record,
     async finish() {

@@ -4,7 +4,7 @@ import {
   turnObservations,
   type Observation,
 } from '../persistence/observations.ts';
-import { flagAgentName, insertRailFlag } from '../persistence/rail-flags.ts';
+import { raiseRailFlag } from './raise-flag.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
 export interface EgressAsk {
@@ -60,9 +60,8 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
     }
   };
 
-  const flag = async (note: SentOutNote) => {
-    const agent = await flagAgentName(options.db, options.runId);
-    const saved = await insertRailFlag(options.db, options.runId, agent, {
+  const flag = (note: SentOutNote) =>
+    raiseRailFlag(options.db, options.runId, options.audit, {
       toolCallId: note.toolCallId,
       rail: 'sent_out',
       paths: [note.target],
@@ -70,14 +69,6 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       originals: [],
       read: note.observed,
     });
-    if (!saved) return;
-    audit('spark/rail_crossed', {
-      flagId: saved.id,
-      rail: saved.rail,
-      title: saved.title,
-      paths: saved.paths,
-    });
-  };
 
   const later = (work: () => Promise<void>) => {
     writes = writes
