@@ -2,6 +2,18 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.12
+
+- One chat is one agent session. Your message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents or propose sub-chats. Crews, pieces, the Critic and Spark's own checks are gone, along with their settings. Older chats keep their crew, replies, costs and plans, read-only.
+- Publishing is one request to the agent after its reply. A pull request is a draft only if you ask or Settings says so, and "push, no PR" only pushes.
+- Outposts: a chat can propose sub-chats as a draft you start, in parallel or stacked on one another, each with its own branch and pull request. A story bar follows them to a wrap-up. Chats can ask each other, and you can address several chats in one message with @ anywhere in it. Member chats sit under their outpost in the sidebar.
+- Agent terminal: an agent can keep a command running after its turn, with Stop. Open in terminal on a reply's command mirrors it in a read-only tab.
+- Phone is now Remote control. Paired devices stay paired.
+- Safety: an agent can push only the chat's own branch and cannot change remotes. Claude asks before changing instruction files, git hooks and git config in every mode, worktrees included. Chats started by Spark get no account connectors.
+- Plans: Spark saves a plan only when you approve the agent's. Codex /plan is read-only and shows a proposed plan.
+- Models: Auto means the provider's default model, and the chat names the model that ran. Jev works only on the Map, PR feedback and Spark Island.
+- Fixes: Allowed cards no longer appear after /plan in Bypass permissions, tables no longer break words mid-label, and the message box grows with wrapped text.
+
 ## 0.1.0-beta.11
 
 - Outposts: put several chats in one outpost and ask each for work from one thread with @ and its handle. Each request shows its state (Sent, Working, Needs you, Answered, Failed, Cancelled), and the answer lands under it with its branch, files and pull request. Notes start no work. Pause holds requests that have not started.
