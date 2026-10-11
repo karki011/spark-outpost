@@ -97,7 +97,7 @@ export async function nativeTurnContext(
       scope.readOnly = mode === null || modePosture(input.provider, mode) === 'read_only';
       scope.publish = mode ? await publishScope(db, { ...input, agentMode: mode }) : null;
       const effective = mode ?? (input.provider === 'claude' ? 'plan' : 'read-only');
-      await db.query('UPDATE runs SET used_mode = $2 WHERE id = $1', [runId, effective]);
+      await db.query('UPDATE runs SET used_mode = $2 WHERE id = $1', [runId, mode]);
       audit.message('harness', {
         method: 'native/mode',
         params: {

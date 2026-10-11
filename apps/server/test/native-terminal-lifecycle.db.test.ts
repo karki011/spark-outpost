@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { nativeTerminalRow } from '../src/persistence/native-terminals.ts';
+import { actionFacts, actionPath } from '../src/spark-mcp/actions/action-policy.ts';
 import { nativeRuntimeFixture, type NativeRuntimeFixture } from './native-terminal-fixture.ts';
 
 let f: NativeRuntimeFixture;
@@ -85,5 +86,29 @@ describe('native terminal provider session lifecycle', () => {
     expect((await row()).updated_at.getTime()).toBe(rowBefore);
     expect(await f.hook('PermissionRequest')).toBe(204);
     expect(await updatedAt()).toBeGreaterThan(before);
+  });
+
+  it('records no mode as used until a hook reports one, and Spark actions ask until then', async () => {
+    await f.t.db.query(
+      `UPDATE conversations SET overrides = '{"claude":{"agentMode":"auto","level":"hands-off"}}'::jsonb`,
+    );
+    await f.launch();
+    const runId = (await f.t.db.query<{ id: string }>('SELECT id FROM runs')).rows[0]!.id;
+    const recorded = async () =>
+      (
+        await f.t.db.query<{ agent_mode: string; used_mode: string | null }>(
+          'SELECT agent_mode, used_mode FROM runs WHERE id = $1',
+          [runId],
+        )
+      ).rows[0]!;
+    const path = async () => actionPath(await actionFacts(f.t.db, runId, 'create_ticket'));
+
+    expect(f.inputs[0]!.agentMode).toBe('auto');
+    expect(await recorded()).toEqual({ agent_mode: 'auto', used_mode: null });
+    expect(await path()).toBe('confirm');
+
+    expect(await f.hook('SessionStart', { permission_mode: 'auto' })).toBe(204);
+    expect(await recorded()).toEqual({ agent_mode: 'auto', used_mode: 'auto' });
+    expect(await path()).toBe('perform');
   });
 });
