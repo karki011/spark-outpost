@@ -15,7 +15,7 @@ import {
   type AppendOptions,
 } from '../persistence/run-events.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
-import { createTitleFilter } from '../titles/title-line.ts';
+import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
 import {
@@ -198,7 +198,7 @@ export async function runAgentTurn(
 
   const reply = createReplyText(append);
   const say = reply.say;
-  const titles = input.askTitle ? createTitleFilter() : null;
+  const titles = hidesTitleLine(input) ? createTitleFilter() : null;
   let turnSession: TurnSession | null = null;
   const ended = async (settled: TurnResult) => {
     await turnSession
@@ -408,7 +408,9 @@ export async function runAgentTurn(
     if (titles) {
       const ending = titles.finish();
       await say(ending.text);
-      if (ending.title) await recordSuggestedTitle(deps.db, lease.runId, ending.title);
+      if (ending.title && input.askTitle) {
+        await recordSuggestedTitle(deps.db, lease.runId, ending.title);
+      }
     }
 
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTitle, createTitleFilter, splitTitle } from './title-line.ts';
+import { cleanTitle, createTitleFilter, hidesTitleLine, splitTitle } from './title-line.ts';
 
 function streamed(deltas: readonly string[]) {
   const filter = createTitleFilter();
@@ -129,5 +129,15 @@ describe('title filter', () => {
       text: 'The Title: field is required.',
       title: 'Explain form validation',
     });
+  });
+});
+
+describe('hiding the title line', () => {
+  it("applies to every reply of the chat's own run, asked for a title or not", () => {
+    expect(hidesTitleLine({ parentRunId: null })).toBe(true);
+  });
+
+  it('leaves the reply of a run handed a job as it is', () => {
+    expect(hidesTitleLine({ parentRunId: '00000000-0000-4000-8000-000000000001' })).toBe(false);
   });
 });
