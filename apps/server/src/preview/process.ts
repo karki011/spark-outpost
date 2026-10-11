@@ -8,6 +8,7 @@ const CONNECT_TIMEOUT_MS = 400;
 const ANSWER_TIMEOUT_MS = 2_000;
 const LOOPBACK = ['127.0.0.1', '::1'];
 const SIZE = { cols: 120, rows: 30 };
+const NO_STARTUP_PROMPTS = { DISABLE_AUTO_UPDATE: 'true', DISABLE_UPDATE_PROMPT: 'true' };
 
 function listening(host: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -49,7 +50,7 @@ export function spawnInLoginShell(shell: string, kill: (pid: number) => void = k
       name: 'xterm-256color',
       ...SIZE,
       cwd,
-      env,
+      env: { ...env, ...NO_STARTUP_PROMPTS },
     });
     return {
       pid: pty.pid,
