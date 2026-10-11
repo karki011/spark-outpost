@@ -15,7 +15,7 @@ import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
 import { RailFlags } from './approvals/RailFlags.tsx';
-import { RevertRun } from './approvals/RevertRun.tsx';
+import { RevertChanged } from './approvals/RevertChanged.tsx';
 import { askedBeforeTimeout, isLatestTurn, timedOut, WAITED_LABEL } from './approvals/timed-out.ts';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
@@ -312,7 +312,9 @@ export function SoloTurn({
           conversationId={detail.conversation.id}
         />
       )}
-      {revertible && !kept && <RevertRun run={revertible} />}
+      {revertible && !kept && (
+        <RevertChanged run={revertible} taskId={changeTask?.id ?? null} runIds={changeRunIds} />
+      )}
     </AiTurn>
   );
 }
