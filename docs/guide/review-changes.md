@@ -23,11 +23,11 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 Spark keeps changes by itself. The turn ends in a **Changes kept** record that needs no answer: files, lines, commit and pull request. Expand it for files and branch.
 
-| To                                   | Select                                         |
-| ------------------------------------ | ---------------------------------------------- |
-| Undo a run                           | **Revert to before this run** on the turn      |
-| Copy kept changes into your checkout | **Bring changes into** _branch_, expanded      |
-| Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md) |
+| To                                   | Select                                                      |
+| ------------------------------------ | ----------------------------------------------------------- |
+| Undo a run                           | **Revert to before this run**, on a turn that changed files |
+| Copy kept changes into your checkout | **Bring changes into** _branch_, expanded                   |
+| Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md)              |
 
 No card asks whether to keep a change. To change it, say what should change in your next message.
 
