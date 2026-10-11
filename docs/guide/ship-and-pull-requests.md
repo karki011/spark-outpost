@@ -25,17 +25,18 @@ The result shows under the reply.
 
 In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
 
-| The chat says                                               | Meaning                                           |
-| ----------------------------------------------------------- | ------------------------------------------------- |
-| **Opened pull request #12**                                 | Spark tracks it.                                  |
-| "The branch was pushed, but no pull request was opened."    | Use the link to create it.                        |
-| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                               |
-| "Not published: …"                                          | Kept, not pushed. Ask again, or ship it yourself. |
-| "Committed … not pushed."                                   | The project has no remote.                        |
+| The chat says                                               | Meaning                                  |
+| ----------------------------------------------------------- | ---------------------------------------- |
+| **Opened pull request #12**                                 | Spark tracks it.                         |
+| "The branch was pushed, but no pull request was opened."    | Use the link to create it.               |
+| "Pushed …"                                                  | You asked for the push only.             |
+| **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                      |
+| "Not published: …"                                          | Kept, not pushed. Ask again, or ship it. |
+| "Committed … not pushed."                                   | The project has no remote.               |
 
 The push uses your shell's logins; tokens never reach the agent. Without `gh`, the PR opens through your GitHub sign-in.
 
-Every pull request from the chat or its terminal shows above the message box (state, number, repository, lines changed) and under **Links** with checks, reviews and comments. **Refresh** re-reads one from GitHub. A reopened one shows **Open** again.
+Every pull request from the chat or its terminal shows above the message box and under **Links** with checks, reviews and comments. **Refresh** re-reads one from GitHub. A reopened one shows **Open** again.
 
 ## Ready for review or draft
 
