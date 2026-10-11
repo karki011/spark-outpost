@@ -21,7 +21,7 @@ const target: ResolveTarget = async () => ({ provider: 'fake' });
 const recording: Provider = {
   name: 'fake',
   async *run(turn) {
-    preambles.push(turn.preamble);
+    preambles.push(turn.turnPreamble);
     yield { kind: 'text_delta', delta: 'Done.' };
   },
 };

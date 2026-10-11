@@ -98,6 +98,7 @@ export interface ProviderTurn {
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
+  turnPreamble?: string;
   repo?: RepoLaunch;
   userMcp?: readonly UserMcpLaunch[];
   spark?: SparkSessionPrefs;

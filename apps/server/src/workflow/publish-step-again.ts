@@ -117,7 +117,7 @@ export async function promptAgain(
       asSecondPrompt(turn.input, prompt),
       turn.append,
       turn.control,
-      { onProduced, keepSnapshot: first?.snapshot ?? undefined },
+      { onProduced, keepSnapshot: first?.snapshot ?? undefined, secondPrompt: true },
     );
     outcome = result.outcome;
     return result;
