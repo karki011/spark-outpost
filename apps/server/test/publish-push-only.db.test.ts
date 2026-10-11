@@ -79,6 +79,17 @@ async function pullCommands(runId: string) {
   return rows;
 }
 
+async function streamedReplies(runId: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ id: string; delta: string }>(
+    `SELECT payload->>'messageId' AS id, payload->>'delta' AS delta FROM run_events
+     WHERE run_id = $1 AND payload->>'type' = 'TEXT_MESSAGE_CONTENT' ORDER BY seq`,
+    [runId],
+  );
+  const texts = new Map<string, string>();
+  for (const row of rows) texts.set(row.id, (texts.get(row.id) ?? '') + row.delta);
+  return [...texts.values()];
+}
+
 describe(
   'a message that asks for the push and declines the pull request',
   { timeout: 120_000 },
@@ -91,8 +102,23 @@ describe(
       expect(stub.github.pulls).toEqual([]);
       expect(await pullCommands(runId)).toEqual([]);
       const replies = await repliesOf(t, runId);
-      expect(replies.at(-1)).toContain(`Pushed ${CHAT_BRANCH}. No pull request was asked for.`);
-      expect(replies.at(-1)).not.toContain('Create it');
+      expect(replies.at(-1)).toBe(
+        `Pushed ${CHAT_BRANCH}. No pull request was asked for.\n\npublished=pushed`,
+      );
+      expect(await streamedReplies(runId)).toEqual(replies);
+    });
+
+    it('still prompts once when the agent pushed before it committed: the change is not on the remote', async () => {
+      git(chat.repo.root, 'push', '-q', 'origin', CHAT_BRANCH);
+      const pushedFirst = git(chat.repo.bare, 'rev-parse', CHAT_BRANCH);
+      const runId = await turn(PUSH_ONLY);
+
+      expect(await promptsOf(t, runId)).toBe(2);
+      expect(git(chat.repo.bare, 'rev-parse', CHAT_BRANCH)).not.toBe(pushedFirst);
+      const publish = (await repliesOf(t, runId)).at(-1)!;
+      expect(publish.startsWith(`Pushed ${CHAT_BRANCH}. No pull request was asked for.`)).toBe(
+        true,
+      );
     });
 
     it('gives the gate and the publish tools the push and not the pull request', async () => {

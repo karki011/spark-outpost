@@ -24,6 +24,7 @@ import { closeMessage } from './execute-run.ts';
 import { publishPrompt, type PublishReason } from './publish-prompt.ts';
 import { promptAgain } from './publish-step-again.ts';
 import { commitWithoutRemote } from './publish-step-commit.ts';
+import { holdReplyText } from './publish-step-lead.ts';
 import {
   followUpLine,
   notPublishedLine,
@@ -135,11 +136,12 @@ async function publishedByAgent(
   });
   if (!prompt) return turn.reply;
   await closeMessage(turn.append, await withWorkMessage(turn.append, turn.reply), true);
-  const said = await promptAgain(deps, turn, prompt);
+  const held = holdReplyText(turn.append);
+  const said = await promptAgain(deps, { ...turn, append: held.append }, prompt);
   if (said.outcome === 'lease_lost') return said;
   if (said.outcome !== 'succeeded') {
     const kept: TurnResult = { ...said, outcome: 'succeeded', error: null };
-    return withLine(turn.append, kept, notPublishedLine(said));
+    return held.ledBy(kept, notPublishedLine(said));
   }
   const published = await publishedState(turn.ship, plan.root, plan.branch, plan.base);
   const chat = {
@@ -150,7 +152,7 @@ async function publishedByAgent(
   await recordPullRequest(turn.ship, chat, plan, published).catch((error: unknown) =>
     console.error('Could not record the pull request the agent opened', error),
   );
-  return withLine(turn.append, said, resultLine(turn.reason, published, plan.branch));
+  return held.ledBy(said, resultLine(turn.reason, published, plan.branch));
 }
 
 export async function publishStep(
