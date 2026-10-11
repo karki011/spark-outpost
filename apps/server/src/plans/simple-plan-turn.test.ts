@@ -68,6 +68,28 @@ describe('asPlanTurn', () => {
     });
   });
 
+  it('is a read-only turn with the message as typed when the agent has no plan mode of its own', () => {
+    const codex = input({
+      provider: 'codex',
+      agentMode: 'agent-full-access',
+      settings: {
+        method: 'cli',
+        model: 'gpt-6-sol',
+        modelLabel: null,
+        effort: null,
+        mode: 'agent-full-access',
+      },
+    });
+    const turn = asPlanTurn(codex);
+    expect(turn).toMatchObject({
+      prompt: '/plan Add CSV export',
+      userRequest: '/plan Add CSV export',
+      mode: 'ask',
+      planning: true,
+    });
+    expect(turn.plansFirst).toBeUndefined();
+  });
+
   it('keeps a bare /plan as the message', () => {
     expect(asPlanTurn(input({ prompt: '/plan', userRequest: '/plan' })).userRequest).toBe('/plan');
   });

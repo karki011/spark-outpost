@@ -197,4 +197,21 @@ describe('a turn that is not a plan turn', { timeout: 120_000 }, () => {
     ]);
     expect(lines).toEqual([]);
   });
+
+  it('runs /plan for Codex as a read-only turn with the message as typed: no file changes, no Plan saved', async () => {
+    const runId = await sendMessage(t, conversationId, '/plan Add CSV export #build', {
+      provider: 'codex',
+      permission: 'do',
+      agentMode: 'agent-full-access',
+    });
+    const { run } = await driveToEnd(t, conversationId, runId);
+
+    expect(run.status).toBe('succeeded');
+    expect(await runMode(t, runId)).toBe('ask');
+    expect(execFileSync('git', ['-C', root, 'status', '--porcelain']).toString()).toBe('');
+    const requests = await sentToAgent(t, runId);
+    const prompt = requests.find((request) => request.method === 'session/prompt')!;
+    expect(JSON.stringify(prompt.payload)).toContain('/plan Add CSV export');
+    expect((await plansOf(t, conversationId)).lines).toEqual([]);
+  });
 });
