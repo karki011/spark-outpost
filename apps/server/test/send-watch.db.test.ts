@@ -109,6 +109,21 @@ describe('sends that ran without a permission request', () => {
     ]);
   });
 
+  it('flags a tool of an MCP server that Codex called without asking', async () => {
+    const chat = await doRun(t, root, 'work', 'full-auto');
+    const watch = watchFor(chat);
+    watch.observations.record({ source: 'secret_file', label: '.env' });
+    watch.ran('apps', {
+      kind: 'execute',
+      title: 'mcp.codex_apps.github.create_issue',
+      rawInput: { server: 'codex_apps', tool: 'github.create_issue', arguments: {} },
+      _meta: { is_mcp_tool_call: true },
+    });
+    expect(await watch.titles()).toEqual([
+      'Fake provider sent data out through the codex_apps MCP server after reading .env',
+    ]);
+  });
+
   it('does not watch a turn that only answers', async () => {
     const chat = await doRun(t, root, 'work', 'full-auto');
     const watch = watchFor(chat, 'ask');

@@ -142,7 +142,12 @@ describe('Codex launch', () => {
     const chat = agentDefinitions.codex.conversationEnv?.('/tmp/run') ?? {};
     expect(chat).toMatchObject({ INITIAL_AGENT_MODE: 'read-only', TMPDIR: '/tmp/run' });
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
-      features: { shell_tool: false, unified_exec: false, skill_mcp_dependency_install: false },
+      features: {
+        shell_tool: false,
+        unified_exec: false,
+        skill_mcp_dependency_install: false,
+        apps: false,
+      },
       web_search: 'disabled',
       default_permissions: 'read-only',
       permissions: codexPermissionProfiles(),

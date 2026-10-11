@@ -75,12 +75,20 @@ function pathsOf(
 
 const MCP_TITLE = /^mcp__(.+?)__/;
 
+function unaskedMcpServer(toolCall: acp.ToolCallUpdate): string | null {
+  if (objectFields(toolCall._meta).is_mcp_tool_call !== true) return null;
+  const server = objectFields(toolCall.rawInput).server;
+  return typeof server === 'string' && server.trim() ? server.trim() : null;
+}
+
 function mcpServerOf(params: acp.RequestPermissionRequest, title: string): string | null {
   const claude = objectFields(objectFields(params.toolCall._meta).claudeCode).mcpServer;
   const claudeName = objectFields(claude).name;
   if (typeof claudeName === 'string' && claudeName.trim()) return claudeName.trim();
   const titled = MCP_TITLE.exec(title)?.[1];
   if (titled) return titled;
+  const called = unaskedMcpServer(params.toolCall);
+  if (called) return called;
   if (objectFields(params._meta).is_mcp_tool_approval !== true) return null;
   const serverName = objectFields(params.toolCall.rawInput).serverName;
   return typeof serverName === 'string' && serverName.trim() ? serverName.trim() : 'unknown';

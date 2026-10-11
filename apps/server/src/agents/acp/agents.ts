@@ -181,6 +181,7 @@ export function claudeSessionMeta(
             : {}),
           ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
           disableSkillShellExecution: true,
+          disableClaudeAiConnectors: true,
           plansDirectory: PLANS_DIR,
           permissions: {
             deny,
@@ -202,7 +203,12 @@ export function codexConfig(
   profiles = true,
 ): object {
   return {
-    features: { shell_tool: browsing, unified_exec: false, skill_mcp_dependency_install: false },
+    features: {
+      shell_tool: browsing,
+      unified_exec: false,
+      skill_mcp_dependency_install: false,
+      apps: false,
+    },
     web_search: 'disabled',
     ...(profiles
       ? { default_permissions: CODEX_READ_ONLY_MODE, permissions: codexPermissionProfiles() }
