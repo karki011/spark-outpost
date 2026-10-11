@@ -48,7 +48,7 @@ function fitsAfterTitle(lines: readonly string[]): boolean {
   );
 }
 
-export function splitTitle(reply: string): SplitReply {
+function splitClosing(reply: string): SplitReply {
   const lines = reply.split('\n');
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     const after = lines.slice(index + 1);
@@ -57,6 +57,13 @@ export function splitTitle(reply: string): SplitReply {
     if (title) return { text: [...lines.slice(0, index), ...after].join('\n').trimEnd(), title };
   }
   return { text: reply, title: null };
+}
+
+export function splitTitle(reply: string): SplitReply {
+  const filter = createTitleFilter();
+  const shown = filter.push(reply);
+  const ending = filter.finish();
+  return { text: shown + ending.text, title: ending.title };
 }
 
 function endsReply(held: string, line: string, end: number): boolean {
@@ -91,26 +98,67 @@ function holdFrom(held: string, atLineStart: boolean): number {
 
 export interface TitleFilter {
   push(delta: string): string;
+  startMessage(onItsWay: number): void;
   finish(): SplitReply;
   pending(): number;
+}
+
+interface MessageOpening {
+  at: number;
+  taken: boolean;
 }
 
 export function createTitleFilter(): TitleFilter {
   let held = '';
   let atLineStart = true;
+  let opening: MessageOpening | null = { at: 0, taken: false };
+  let openingTitle: string | null = null;
+
+  const startsLine = (at: number) => (at === 0 ? atLineStart : held[at - 1] === '\n');
+
+  const takeOpeningTitle = () => {
+    while (opening !== null && opening.at <= held.length) {
+      const { at, taken } = opening;
+      const end = held.indexOf('\n', at);
+      const line = held.slice(at, end === -1 ? held.length : end);
+      const blank = line.trim() === '';
+      const whole = startsLine(at);
+      if (end === -1) {
+        if (!blank && !(whole && !taken && mayBecomeTitle(line))) opening = null;
+        return;
+      }
+      const title = whole && !taken && !blank ? titleOfLine(line) : null;
+      if (title !== null) openingTitle = title;
+      if (title !== null || (blank && taken)) {
+        held = held.slice(0, at) + held.slice(end + 1);
+        opening = { at, taken: true };
+      } else if (blank) {
+        opening = { at: end + 1, taken };
+      } else {
+        opening = null;
+      }
+    }
+  };
+
   return {
     push(delta) {
       held += delta;
+      takeOpeningTitle();
       const cut = holdFrom(held, atLineStart);
       const shown = held.slice(0, cut);
       held = held.slice(cut);
       if (shown) atLineStart = shown.endsWith('\n');
+      if (opening !== null) opening = { ...opening, at: opening.at - cut };
       return shown;
+    },
+    startMessage(onItsWay) {
+      opening = { at: held.length + onItsWay, taken: false };
     },
     finish() {
       const rest = held;
       held = '';
-      return splitTitle(rest);
+      const ending = splitClosing(rest);
+      return { text: ending.text, title: ending.title ?? openingTitle };
     },
     pending: () => held.length,
   };

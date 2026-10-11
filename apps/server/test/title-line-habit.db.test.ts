@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { updateConversation } from '../src/persistence/conversation-actions.ts';
 import { getSummary } from '../src/persistence/conversations.ts';
-import type { Provider } from '../src/providers/provider.ts';
+import type { Provider, ProviderOutput } from '../src/providers/provider.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import type { Worker } from '../src/workflow/worker.ts';
@@ -29,11 +29,23 @@ let worker: Worker;
 let repos = 0;
 let titled = 0;
 
+let opensWithTitle = false;
+
+async function* planWithOpeningTitle(): AsyncGenerator<ProviderOutput> {
+  yield { kind: 'text_delta', delta: '\n\nI will read the code, then plan.', phase: 'commentary' };
+  yield {
+    kind: 'text_delta',
+    delta: '\n\nTitle: Plan the mean function\n\n# Plan\nAdd mean to sum.js with a test.',
+    phase: 'final',
+  };
+}
+
 function withTitleHabit(agent: Provider): Provider {
   return {
     name: agent.name,
     async *run(turn) {
       yield* agent.run(turn);
+      if (opensWithTitle) return yield* planWithOpeningTitle();
       titled += 1;
       yield { kind: 'text_delta', delta: `\n\nTitle: Habit title ${titled}` };
     },
@@ -57,6 +69,7 @@ beforeEach(async () => {
   await writeFile(path.join(base, 'gh-state'), 'octo-cli');
   repos += 1;
   titled = 0;
+  opensWithTitle = false;
   repo = await repoWithRemote(base, `widgets-${repos}`);
   await connectAgents(t);
   const agents = fakeAgents({ sessions: path.join(base, `sessions-${repos}`) });
@@ -120,5 +133,19 @@ describe('an agent that ends every reply with a title line, asked or not', () =>
       title: 'My name',
       titleSource: 'user',
     });
+  });
+
+  it('has a title line that opens the final message hidden, after the commentary before it', async () => {
+    opensWithTitle = true;
+    const conversationId = await openChat(t, { root: repo.root, level: 'hands-off' });
+    const runId = await sendMessage(t, conversationId, 'Plan a mean function.');
+    await driveToEnd(t, conversationId, runId);
+
+    const [reply] = await repliesOf(t, runId);
+    expect(reply).not.toContain('Title: Plan the mean function');
+    expect(reply).toMatch(
+      /I will read the code, then plan\.\n\n# Plan\nAdd mean to sum\.js with a test\.$/,
+    );
+    expect(await suggestedTitle(runId)).toBe('Plan the mean function');
   });
 });

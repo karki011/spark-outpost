@@ -406,7 +406,8 @@ export async function runAgentTurn(
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }
       if (output.kind === 'text_delta') {
-        reply.mark(output.phase, replySoFar().held);
+        const finalStarts = reply.mark(output.phase, replySoFar().held);
+        if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }
       await commands.observe(output);
