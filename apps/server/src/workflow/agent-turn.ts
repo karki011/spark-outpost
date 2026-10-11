@@ -69,6 +69,7 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
+import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
@@ -181,10 +182,20 @@ export async function runAgentTurn(
   if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
     observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
   }
+  const edits =
+    input.mode === 'do'
+      ? createObservedEdits({
+          db: deps.db,
+          workspaceId: input.workspaceId,
+          runId: lease.runId,
+          alsoFor: options.backupAlsoFor,
+        })
+      : null;
   let auditSettled = false;
   const settleAudit = async () => {
     if (auditSettled) return;
     auditSettled = true;
+    await edits?.settled();
     await observations.settled();
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
@@ -324,6 +335,7 @@ export async function runAgentTurn(
       signal: control.signal,
       observe: (output) => {
         if (output.kind === 'session') session?.noteSession(output);
+        edits?.see(output);
         options.onProduced?.(output);
       },
       audit: observer,
