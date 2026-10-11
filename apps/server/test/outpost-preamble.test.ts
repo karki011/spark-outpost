@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { PostWithFacts, StoredPost, StoryTaskRow } from '../src/outposts/ports.ts';
 import type { ReadLabels } from '../src/outposts/read-labels.ts';
 import {
-  outpostPreamble,
-  withOutpostPreamble,
+  answersDelivered,
+  outpostPreamble as turnPreamble,
   type PreambleDeps,
   type PreambleTurn,
 } from '../src/outposts/turn-preamble.ts';
@@ -209,6 +209,9 @@ const turn = (chatId: string, change: Partial<PreambleTurn> = {}): PreambleTurn 
   ...change,
 });
 
+const outpostPreamble = async (deps: PreambleDeps, about: PreambleTurn) =>
+  (await turnPreamble(deps, about)).text;
+
 const answerText = (text: string): OutpostAnswer => ({
   text,
   branch: null,
@@ -280,25 +283,35 @@ describe('what a member chat is told at the start of a turn', () => {
     expect(byUser.recorded).toEqual([]);
   });
 
-  it('hands a late answer to the chat that asked, once', async () => {
+  it('hands a late answer to the chat that asked, and marks it seen once it was delivered', async () => {
     const w = world({
       posts: [asked('q1')],
       answers: { q1: answerText('It returns a list.') },
     });
-    const first = await outpostPreamble(depsFor(w), turn(LEAD));
-    expect(first).toContain('Answers since your last turn');
-    expect(first).toContain('@api · answered');
-    expect(first).toContain('It returns a list.');
-    expect(w.posts[0]?.post.answerSeenAt).not.toBeNull();
+    const first = await turnPreamble(depsFor(w), turn(LEAD));
+    expect(first.text).toContain('Answers since your last turn');
+    expect(first.text).toContain('@api · answered');
+    expect(first.text).toContain('It returns a list.');
+    expect(w.posts[0]?.post.answerSeenAt).toBeNull();
 
+    await answersDelivered(depsFor(w), first);
+    expect(w.posts[0]?.post.answerSeenAt).not.toBeNull();
     expect(await outpostPreamble(depsFor(w), turn(LEAD))).toBeNull();
   });
 
-  it('hands over nothing another turn already claimed', async () => {
+  it('hands the answer over again when the turn that carried it never delivered it', async () => {
     const w = world({ posts: [asked('q1')], answers: { q1: answerText('done') } });
-    const deps = depsFor(w);
-    deps.stores.markAnswersSeen = async () => [];
-    expect(await outpostPreamble(deps, turn(LEAD))).toBeNull();
+    await turnPreamble(depsFor(w), turn(LEAD));
+    expect(await outpostPreamble(depsFor(w), turn(LEAD))).toContain('done');
+  });
+
+  it('keeps everything for the next turn when the message is a command', async () => {
+    const w = world({
+      posts: [asked('q1'), note('n1', 20)],
+      answers: { q1: answerText('done') },
+    });
+    const sent = await turnPreamble(depsFor(w), turn(LEAD, { prompt: '/compact' }));
+    expect(sent).toEqual({ text: null, answerIds: [] });
     expect(w.recorded).toEqual([]);
   });
 
@@ -446,25 +459,5 @@ describe('the stack line', () => {
 
   it('says nothing when the chat was started from another base', async () => {
     expect(await told({ [API]: child({ baseBranch: 'main' }), [LEAD]: parent })).toBeNull();
-  });
-});
-
-describe('the preamble a turn is given', () => {
-  it('is the same input when the outpost adds nothing', async () => {
-    const input = { ...turn(API), preamble: 'Agreed plan.' };
-    expect(await withOutpostPreamble(depsFor(world()), input)).toBe(input);
-  });
-
-  it('comes after what the turn already had', async () => {
-    const w = world({ posts: [note('n1', 20)] });
-    const shown = await withOutpostPreamble(depsFor(w), { ...turn(API), preamble: 'Agreed plan.' });
-    expect(shown.preamble?.startsWith('Agreed plan.\n\nOutpost notes since your last turn')).toBe(
-      true,
-    );
-    const alone = await withOutpostPreamble(depsFor(w), {
-      ...turn(API),
-      preamble: null as string | null,
-    });
-    expect(alone.preamble?.startsWith('Outpost notes since your last turn')).toBe(true);
   });
 });

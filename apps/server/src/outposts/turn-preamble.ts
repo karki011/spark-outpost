@@ -30,7 +30,19 @@ export interface PreambleDeps {
 
 export type PreambleTurn = Pick<RunInput, 'parentRunId' | 'outpostRequest' | 'turnTimes'> & {
   identity: Pick<RunInput['identity'], 'runId' | 'threadId'>;
+  prompt?: string;
 };
+
+export interface TurnPreamble {
+  text: string | null;
+  answerIds: readonly string[];
+}
+
+const NOTHING: TurnPreamble = { text: null, answerIds: [] };
+
+function runsAsCommand(turn: PreambleTurn): boolean {
+  return turn.prompt?.trimStart().startsWith('/') === true;
+}
 
 type Finished = PreambleAnswer['state'];
 
@@ -106,16 +118,8 @@ async function newAnswers(
   posts: readonly PostWithFacts[],
   turn: PreambleTurn,
 ): Promise<PreambleAnswer[]> {
-  const unseen = unseenAnswers(posts, turn.identity.threadId);
-  if (unseen.length === 0) return [];
-  const claimed = new Set(
-    await deps.stores.markAnswersSeen(
-      deps.db,
-      unseen.map((found) => found.post.id),
-    ),
-  );
   const answers: PreambleAnswer[] = [];
-  for (const found of unseen.filter((each) => claimed.has(each.post.id))) {
+  for (const found of unseenAnswers(posts, turn.identity.threadId)) {
     const answer = await answerFor(deps, found);
     if (!answer) continue;
     answers.push(answer);
@@ -151,12 +155,13 @@ async function stackNote(deps: PreambleDeps, chatId: string): Promise<string | n
 export async function outpostPreamble(
   deps: PreambleDeps,
   turn: PreambleTurn,
-): Promise<string | null> {
-  if (turn.parentRunId !== null) return null;
+): Promise<TurnPreamble> {
+  if (turn.parentRunId !== null) return NOTHING;
   await carryRequestLabels(deps, turn);
+  if (runsAsCommand(turn)) return NOTHING;
   const chatId = turn.identity.threadId;
   const found = await deps.stores.outpostOf(deps.db, chatId);
-  if (!found) return null;
+  if (!found) return NOTHING;
   const posts = await deps.stores.listPosts(deps.db, found.outpost.id);
   const notes = notesSince(posts, turn, found.member.joinedAt);
   const answers = await newAnswers(deps, posts, turn);
@@ -172,14 +177,12 @@ export async function outpostPreamble(
     notesPreamble(notes),
     answersPreamble(answers),
   ].filter((part): part is string => part !== null);
-  return parts.length > 0 ? parts.join('\n\n') : null;
+  return {
+    text: parts.length > 0 ? parts.join('\n\n') : null,
+    answerIds: answers.map((answer) => answer.postId),
+  };
 }
 
-export async function withOutpostPreamble<T extends PreambleTurn & Pick<RunInput, 'preamble'>>(
-  deps: PreambleDeps,
-  input: T,
-): Promise<T> {
-  const added = await outpostPreamble(deps, input);
-  if (added === null) return input;
-  return { ...input, preamble: [input.preamble, added].filter(Boolean).join('\n\n') };
+export async function answersDelivered(deps: PreambleDeps, sent: TurnPreamble): Promise<void> {
+  await deps.stores.markAnswersSeen(deps.db, sent.answerIds);
 }

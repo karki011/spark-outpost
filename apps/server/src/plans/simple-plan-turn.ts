@@ -1,4 +1,10 @@
-import { modePosture, isReadOnlyPosture, type InvolvementLevel } from '@spark-outpost/contracts';
+import {
+  isReadOnlyPosture,
+  modeForLegacy,
+  modePosture,
+  PERMISSION_ASK,
+  type InvolvementLevel,
+} from '@spark-outpost/contracts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -32,7 +38,12 @@ function buildingMode(input: RunInput): string | null {
   return isReadOnlyPosture(modePosture(input.provider, mode)) ? null : mode;
 }
 
+function agentHoldsThePlan(provider: string): boolean {
+  return modeForLegacy(provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
+}
+
 export function asPlanTurn(input: RunInput): RunInput {
+  if (!agentHoldsThePlan(input.provider)) return { ...input, mode: 'ask', planning: true };
   const asked = planCommandText(input.userRequest);
   const request = asked === null || asked === '' ? input.userRequest : asked;
   return {
@@ -49,8 +60,8 @@ export function asPlanTurn(input: RunInput): RunInput {
 export async function markPlanTurn(db: Db, input: RunInput): Promise<RunInput> {
   const chat = await resolveChatSettings(db, input.identity.threadId);
   const { rows } = await db.query<{ level: InvolvementLevel }>(
-    `UPDATE runs SET mode = 'do', level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
-    [input.identity.runId, chat.level],
+    `UPDATE runs SET mode = $3, level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
+    [input.identity.runId, chat.level, input.mode],
   );
   return { ...input, level: rows[0]?.level ?? input.level };
 }

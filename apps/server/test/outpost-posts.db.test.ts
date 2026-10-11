@@ -371,10 +371,9 @@ describe('requests waiting to be sent', () => {
 });
 
 describe('the answer to a request', () => {
-  it('is the last reply of the receiving run, with secrets redacted', async () => {
+  it('is the work reply of the receiving run, with secrets redacted', async () => {
     const postId = await request();
     const runId = await receivingRun(postId, 'succeeded');
-    await reply(t, runId, 'Looking.');
     await reply(
       t,
       runId,

@@ -55,7 +55,7 @@ import { createLiveCost } from '../usage/live-cost.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
 import { preambleDeps } from '../outposts/preamble-stores.ts';
-import { withOutpostPreamble } from '../outposts/turn-preamble.ts';
+import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -69,6 +69,7 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
+import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
@@ -115,6 +116,7 @@ export interface TurnOptions {
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
   keepSnapshot?: RunSnapshot | undefined;
+  secondPrompt?: boolean;
 }
 
 export interface TurnResult {
@@ -180,10 +182,20 @@ export async function runAgentTurn(
   if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
     observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
   }
+  const edits =
+    input.mode === 'do'
+      ? createObservedEdits({
+          db: deps.db,
+          workspaceId: input.workspaceId,
+          runId: lease.runId,
+          alsoFor: options.backupAlsoFor,
+        })
+      : null;
   let auditSettled = false;
   const settleAudit = async () => {
     if (auditSettled) return;
     auditSettled = true;
+    await edits?.settled();
     await observations.settled();
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
@@ -301,14 +313,10 @@ export async function runAgentTurn(
       teammate: await sessionBrief(deps.db, input),
     };
     auditSparkHandoff(audit, input, spark.teammate);
-    const preamble = input.assistant
-      ? ASSISTANT_PREAMBLE
-      : withMoveNote({
-          ...input,
-          preamble:
-            (await withOutpostPreamble(preambleDeps(deps.db, input.workspaceId), input)).preamble ??
-            null,
-        });
+    const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
+    const outposts = preambleDeps(deps.db, input.workspaceId);
+    const outpost =
+      input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
@@ -327,6 +335,7 @@ export async function runAgentTurn(
       signal: control.signal,
       observe: (output) => {
         if (output.kind === 'session') session?.noteSession(output);
+        edits?.see(output);
         options.onProduced?.(output);
       },
       audit: observer,
@@ -341,6 +350,7 @@ export async function runAgentTurn(
       ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
+      ...(outpost?.text ? { turnPreamble: outpost.text } : {}),
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
@@ -416,6 +426,7 @@ export async function runAgentTurn(
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);
     await settleAudit();
     if (control.reason() === 'lease_lost') return result('lease_lost');
+    if (outpost && !control.signal.aborted) await answersDelivered(outposts, outpost);
     const { text } = reply.result();
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);

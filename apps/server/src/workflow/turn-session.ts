@@ -264,7 +264,8 @@ export async function prepareTurnSession(
       context = readingOf(output.contextUsed, output.contextSize) ?? context;
       if (output.costUsd === null) return output;
       if (rowId) await recordReportedCost(db, rowId, output.costUsd);
-      return { ...output, costUsd: Math.max(0, output.costUsd - costBaseline) };
+      if (output.costUsd < costBaseline) costBaseline = 0;
+      return { ...output, costUsd: output.costUsd - costBaseline };
     },
     async finished(result) {
       if (!rowId) return;

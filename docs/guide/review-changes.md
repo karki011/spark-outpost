@@ -13,7 +13,7 @@ You'll read what the agent changed and keep or undo it. About 2 minutes.
 1. Select the changed-lines chip in the chat header, or press **⌘D**.
 2. Pick a file on the left, or type in **Filter files**.
 3. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** to search.
-4. Press **Esc** to close the **Changes** drawer.
+4. Press **Esc** to close the drawer.
 
 ![The Changes drawer with the file list and a diff](images/chats-and-modes-diff-drawer-light.png)
 
@@ -29,9 +29,9 @@ Spark keeps changes by itself. The turn ends in a **Changes kept** record that n
 | Copy kept changes into your checkout | **Bring changes into** _branch_, expanded                   |
 | Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md)              |
 
-No card asks whether to keep a change. To change it, say what should change in your next message.
+No card asks whether to keep a change. To change it, say so in your next message.
 
-Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch.
+Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch. In a folder without git, only what its edit tools changed counts; a command's changes go unseen.
 
 ## Checks
 
