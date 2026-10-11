@@ -18,7 +18,7 @@ let runId: string;
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
 
-const audit = { message: () => undefined };
+const audit = { message: () => undefined, stderr: () => undefined };
 
 beforeEach(async () => {
   t = await createTestDb();
