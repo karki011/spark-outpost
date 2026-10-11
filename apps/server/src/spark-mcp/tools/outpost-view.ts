@@ -79,6 +79,7 @@ export async function requestResult(
           changes: answer.changes,
           branch: answer.branch,
           pullRequests: answer.pullRequests,
+          ...(answer.publish ? { sparkRecord: answer.publish } : {}),
         }
       : {}),
     untrusted: CHAT_SHARE_UNTRUSTED_NOTE,

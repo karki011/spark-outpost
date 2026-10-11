@@ -27,6 +27,7 @@ import { commitWithoutRemote } from './publish-step-commit.ts';
 import { holdReplyText } from './publish-step-lead.ts';
 import {
   followUpLine,
+  notePublish,
   notPublishedLine,
   pushedLine,
   withLine,
@@ -141,6 +142,7 @@ async function publishedByAgent(
   if (said.outcome === 'lease_lost') return said;
   if (said.outcome !== 'succeeded') {
     const kept: TurnResult = { ...said, outcome: 'succeeded', error: null };
+    await notePublish(turn.append, notPublishedLine(said));
     return held.ledBy(kept, notPublishedLine(said));
   }
   const published = await publishedState(turn.ship, plan.root, plan.branch, plan.base);
@@ -152,7 +154,9 @@ async function publishedByAgent(
   await recordPullRequest(turn.ship, chat, plan, published).catch((error: unknown) =>
     console.error('Could not record the pull request the agent opened', error),
   );
-  return held.ledBy(said, resultLine(turn.reason, published, plan.branch));
+  const line = resultLine(turn.reason, published, plan.branch);
+  await notePublish(turn.append, published.pull ? null : line);
+  return held.ledBy(said, line);
 }
 
 export async function publishStep(

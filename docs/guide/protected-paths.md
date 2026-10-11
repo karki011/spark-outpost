@@ -32,7 +32,7 @@ Claude can't edit secret files or force push even in **Bypass permissions**. Rea
 - Plain `--force`, `+refspec`, mirror and default-branch force pushes.
 - Changing remotes.
 - Merging a pull request.
-- Your ChatGPT or Claude account's own apps and connectors, in a chat. Add the MCP server in Spark instead.
+- Your ChatGPT or Claude account's own apps and connectors, in a chat; a [Terminal session](terminals.md) keeps them. Add the MCP server in Spark instead.
 - Changing things with hosting tools, except `gh pr create` and `gh pr edit` on the chat's own pull request. Reading with `gh` follows the agent's mode.
 
 A blocked step says "Spark's policy blocked", so you can tell it from your own **Deny**. A push Spark never saw, in a mode that doesn't ask, is [flagged](approvals.md#actions-that-ran-without-review) instead.

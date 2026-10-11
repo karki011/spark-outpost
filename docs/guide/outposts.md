@@ -20,7 +20,7 @@ Or select **Add to outpost** in a chat's row menu. A chat joins one outpost and 
 ## Send a request
 
 1. Type a request with `@api` anywhere, several handles or `@all`. **Asks:** lists them; remove one to only mention it. Then **Send request**.
-2. Each final reply lands under it with [state](statuses-and-limits.md#outpost-requests), branch, files and pull request.
+2. Each final reply lands under it with [state](statuses-and-limits.md#outpost-requests), branch, files, **Pushed**, pull request.
 3. **Needs you**: the chat has a question or an approval card. Select **Answer**, then **Send answer**; both stay there. For a card, **Open in chat**.
 
 No handle: **Post note** starts no work.

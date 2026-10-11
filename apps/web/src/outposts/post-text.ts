@@ -1,4 +1,4 @@
-import type { OutpostPost, RequestState } from '@spark-outpost/contracts';
+import type { AnswerPublish, OutpostPost, RequestState } from '@spark-outpost/contracts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
 import { countLabel } from '../ui/count-label.ts';
 
@@ -60,6 +60,14 @@ export function postTime(iso: string): string {
 
 export function filesLabel(count: number): string {
   return `${countLabel(count, 'file')} changed`;
+}
+
+export function publishLabels(publish: AnswerPublish | null | undefined): string[] {
+  if (!publish) return [];
+  return [
+    ...(publish.committed === null ? [] : [publish.committed ? 'Committed' : 'Not committed']),
+    ...(publish.pushed === null ? [] : [publish.pushed ? 'Pushed' : 'Not pushed']),
+  ];
 }
 
 export function attachedLabel(count: number): string {

@@ -103,6 +103,7 @@ export const interruptionSchema = z.object({
 export type Interruption = z.infer<typeof interruptionSchema>;
 
 export const OUTPOST_DRAFT_ACTIVITY = 'outpost_draft';
+export const PUBLISH_NOTE_ACTIVITY = 'publish_note';
 
 export const outpostDraftActivitySchema = z.object({
   draftId: z.uuid(),

@@ -75,3 +75,59 @@ describe('the wrap-up text', () => {
     );
   });
 });
+
+describe("Spark's own facts in a wrap-up", () => {
+  const facts = { files: 2, branch: 'spark/range-1a2b', committed: true, pushed: true };
+
+  it('states files, commit, push and pull request per sub-task, whatever its reply said', () => {
+    const body = wrapUpBody('Helpers', [
+      task('range', {
+        facts: { ...facts, notPublished: null },
+        pullRequest: 'https://github.com/acme/web/pull/7',
+      }),
+      task('span', {
+        afterHandle: 'range',
+        facts: {
+          files: 1,
+          branch: 'spark/span-3c4d',
+          committed: true,
+          pushed: true,
+          notPublished:
+            'The branch was pushed, but no pull request was opened. Create it: https://x',
+        },
+      }),
+    ]);
+    const lines = body.split('\n');
+    expect(lines[1]).toBe(
+      '@range (Build range): answered · 2 files changed · committed on spark/range-1a2b · pushed · pull request https://github.com/acme/web/pull/7',
+    );
+    expect(lines[2]).toBe(
+      '@span (Build span): answered · 1 file changed · committed on spark/span-3c4d · pushed · The branch was pushed, but no pull request was opened. Create it: https://x · started after @range',
+    );
+    expect(lines[3]).toContain("Spark's own record of that chat's branch");
+    expect(lines).toHaveLength(5);
+  });
+
+  it('says not committed and not pushed, with the reason publishing gave', () => {
+    const line = wrapUpBody('Helpers', [
+      task('range', {
+        facts: {
+          ...facts,
+          committed: false,
+          pushed: false,
+          notPublished: 'Not published: the publish step failed.\nexit 1',
+        },
+      }),
+    ]).split('\n')[1];
+    expect(line).toBe(
+      '@range (Build range): answered · 2 files changed · not committed · not pushed · Not published: the publish step failed. exit 1',
+    );
+  });
+
+  it('leaves out what Spark does not know, and the record line when no sub-task has facts', () => {
+    const unknown = { files: 0, branch: null, committed: null, pushed: null, notPublished: null };
+    const body = wrapUpBody('Helpers', [task('range', { facts: unknown }), task('span')]);
+    expect(body.split('\n')[1]).toBe('@range (Build range): answered');
+    expect(wrapUpBody('Helpers', [task('span')])).not.toContain("Spark's own record");
+  });
+});

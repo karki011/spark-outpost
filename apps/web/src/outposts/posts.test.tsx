@@ -153,6 +153,52 @@ describe('RequestPost', () => {
     expect(links[0]?.getAttribute('href')).toBe('https://github.com/acme/api/pull/2241');
   });
 
+  it('shows what Spark knows of the branch under the answer: committed, pushed, and why no pull request', () => {
+    const answer = {
+      text: 'Added range. I have not committed or pushed anything.',
+      branch: 'spark/add-range',
+      changes: ['src/range.js'],
+      pullRequests: [],
+    };
+    renderRequest(
+      post(1, {
+        state: 'answered',
+        answer: {
+          ...answer,
+          publish: {
+            committed: true,
+            pushed: true,
+            reason: 'The branch was pushed, but no pull request was opened.',
+          },
+        },
+      }),
+    );
+    expect(screen.getByText('Committed')).toBeTruthy();
+    expect(screen.getByText('Pushed')).toBeTruthy();
+    expect(screen.getByText('The branch was pushed, but no pull request was opened.')).toBeTruthy();
+    cleanup();
+
+    renderRequest(
+      post(1, {
+        state: 'answered',
+        answer: { ...answer, publish: { committed: false, pushed: false, reason: null } },
+      }),
+    );
+    expect(screen.getByText('Not committed')).toBeTruthy();
+    expect(screen.getByText('Not pushed')).toBeTruthy();
+    expect(screen.queryByText('Committed')).toBeNull();
+  });
+
+  it('says nothing about commits for an answer Spark has no record for', () => {
+    renderRequest(
+      post(1, {
+        state: 'answered',
+        answer: { text: 'It returns a list.', branch: null, changes: [], pullRequests: [] },
+      }),
+    );
+    expect(screen.queryByText(/committed|pushed/i)).toBeNull();
+  });
+
   it('collapses a long request and opens it on demand', () => {
     renderRequest(post(1, { body: 'one\ntwo\nthree\nfour\nfive' }));
     const text = screen.getByText(/one/);

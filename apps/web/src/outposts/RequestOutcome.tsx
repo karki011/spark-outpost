@@ -9,6 +9,7 @@ import {
   STATE_LABELS,
   canCancel,
   filesLabel,
+  publishLabels,
   pullRequestLabel,
   receiverName,
   requestFaceState,
@@ -64,6 +65,11 @@ function AnswerResults({ answer }: { answer: OutpostAnswer }) {
           {answer.branch}
         </span>
       )}
+      {publishLabels(answer.publish).map((label) => (
+        <span key={label} className="op-res">
+          {label}
+        </span>
+      ))}
       {links.map((url) => (
         <a key={url} className="op-res" href={webLink(url)} target="_blank" rel="noreferrer">
           <ExternalLinkIcon />
@@ -81,6 +87,16 @@ function AnswerResults({ answer }: { answer: OutpostAnswer }) {
         </details>
       )}
     </div>
+  );
+}
+
+function AnswerRecord({ answer }: { answer: OutpostAnswer }) {
+  const reason = answer.publish?.reason ?? null;
+  return (
+    <>
+      <AnswerResults answer={answer} />
+      {reason && <p className="op-reason">{reason}</p>}
+    </>
   );
 }
 
@@ -120,7 +136,7 @@ export function RequestOutcome({
             </div>
           )}
           {replyText && <PostText text={replyText} what="answer" markdown />}
-          <AnswerResults answer={post.answer} />
+          <AnswerRecord answer={post.answer} />
         </div>
       )}
       <div className="op-actions">

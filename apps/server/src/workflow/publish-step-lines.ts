@@ -1,4 +1,4 @@
-import type { ShipResult } from '@spark-outpost/contracts';
+import { PUBLISH_NOTE_ACTIVITY, type ShipResult } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
 import type { Published } from '../ship/published.ts';
 import type { Append, TurnResult } from './agent-turn.ts';
@@ -31,6 +31,11 @@ export function notCommittedLine(error: unknown): string {
   return `The change is kept but was not committed: ${reason}`;
 }
 
+export async function notePublish(append: Append, line: string | null): Promise<void> {
+  if (!line) return;
+  await append(runEvents.activity(PUBLISH_NOTE_ACTIVITY, PUBLISH_NOTE_ACTIVITY, { reason: line }));
+}
+
 export async function withWorkMessage(append: Append, reply: TurnResult): Promise<TurnResult> {
   if (reply.messageId) return reply;
   const messageId = newId();
@@ -44,6 +49,7 @@ export async function withLine(
   line: string | null,
 ): Promise<TurnResult> {
   if (!line) return reply;
+  await notePublish(append, line);
   const messageId = reply.messageId ?? newId();
   if (!reply.messageId) await append(runEvents.textStart(messageId));
   const delta = reply.text.trim() ? `\n\n${line}` : line;

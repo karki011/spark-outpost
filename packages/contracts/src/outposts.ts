@@ -75,11 +75,19 @@ export type Outpost = z.infer<typeof outpostSchema>;
 export const outpostPostKindSchema = z.enum(['request', 'note', 'notice']);
 export type OutpostPostKind = z.infer<typeof outpostPostKindSchema>;
 
+export const answerPublishSchema = z.object({
+  committed: z.boolean().nullable(),
+  pushed: z.boolean().nullable(),
+  reason: z.string().nullable(),
+});
+export type AnswerPublish = z.infer<typeof answerPublishSchema>;
+
 export const outpostAnswerSchema = z.object({
   text: z.string(),
   branch: z.string().nullable(),
   changes: z.array(z.string()),
   pullRequests: z.array(z.string()),
+  publish: answerPublishSchema.nullable().optional(),
 });
 export type OutpostAnswer = z.infer<typeof outpostAnswerSchema>;
 

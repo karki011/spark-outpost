@@ -18,6 +18,8 @@ You'll choose the model, effort and permissions for one chat. About 1 minute.
 
 Models your sign-in can't use are left out; a pinned one shows **Unavailable** and **Switch to …**.
 
+A pinned name such as `sonnet` runs the agent's current model of that name; the button shows the model that ran.
+
 A new chat starts on **Auto**; earlier chats keep their setting. The agent picks models for its own sub-agents.
 
 ## Set the effort

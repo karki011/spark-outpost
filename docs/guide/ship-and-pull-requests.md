@@ -21,7 +21,7 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 Ask for a pull request in your message, or set **Full auto → PR**. After its reply, Spark asks the agent once to push the branch and open the PR; at **Full auto → PR** only when the turn changed files.
 
-The result shows under the reply.
+Spark's result line leads under the reply.
 
 In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
 

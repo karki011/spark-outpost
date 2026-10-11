@@ -1,12 +1,14 @@
-import { requestState, storyOrder } from '@spark-outpost/contracts';
+import { requestState, storyOrder, type OutpostAnswer } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { markReported } from '../persistence/outpost-drafts.ts';
+import { requestAnswer } from '../persistence/outpost-answers.ts';
 import { insertPosts } from '../persistence/outpost-posts.ts';
 import { storiesOf } from '../persistence/outpost-stories.ts';
 import type { NewPost, StoryTaskRow } from './ports.ts';
-import { storySettled, wrapUpBody, type WrapUpTask } from './story-wrap-up.ts';
+import { storySettled, wrapUpBody, type WrapUpFacts, type WrapUpTask } from './story-wrap-up.ts';
 
 interface OpenStory {
+  workspaceId: string;
   draftId: string;
   title: string;
   outpostId: string;
@@ -15,6 +17,7 @@ interface OpenStory {
 }
 
 interface OpenStoryRow {
+  workspace_id: string;
   id: string;
   title: string;
   outpost_id: string;
@@ -24,7 +27,8 @@ interface OpenStoryRow {
 
 async function unreportedStories(db: Queryable): Promise<OpenStory[]> {
   const { rows } = await db.query<OpenStoryRow>(
-    `SELECT d.id, d.title, d.outpost_id, lead.conversation_id AS lead_conversation_id,
+    `SELECT o.workspace_id, d.id, d.title, d.outpost_id,
+       lead.conversation_id AS lead_conversation_id,
        lead.handle AS lead_handle
      FROM outpost_drafts d
      JOIN outposts o ON o.id = d.outpost_id AND o.paused_at IS NULL
@@ -34,6 +38,7 @@ async function unreportedStories(db: Queryable): Promise<OpenStory[]> {
      ORDER BY d.started_at, d.id`,
   );
   return rows.map((row) => ({
+    workspaceId: row.workspace_id,
     draftId: row.id,
     title: row.title,
     outpostId: row.outpost_id,
@@ -53,20 +58,50 @@ function inOrder(rows: readonly StoryTaskRow[]): StoryTaskRow[] {
   ).flatMap((item) => byChat.get(item.conversationId) ?? []);
 }
 
-function toWrapUpTasks(rows: readonly StoryTaskRow[]): WrapUpTask[] {
+function factsOf(answer: OutpostAnswer | null): WrapUpFacts | null {
+  if (!answer?.publish) return null;
+  return {
+    files: answer.changes.length,
+    branch: answer.branch,
+    committed: answer.publish.committed,
+    pushed: answer.publish.pushed,
+    notPublished: answer.publish.reason,
+  };
+}
+
+async function toWrapUpTasks(
+  db: Queryable,
+  workspaceId: string,
+  rows: readonly StoryTaskRow[],
+): Promise<WrapUpTask[]> {
   const handles = new Map(rows.map((row) => [row.task.conversationId, row.handle]));
-  return inOrder(rows).map((row) => {
+  const tasks: WrapUpTask[] = [];
+  for (const row of inOrder(rows)) {
     const derived = row.opening?.facts ? requestState(row.opening.facts) : null;
     const parentId = row.task.dependsOnConversationId;
-    return {
+    const answer =
+      row.opening && derived?.state === 'answered'
+        ? await requestAnswer(db, workspaceId, row.opening).catch(() => null)
+        : null;
+    tasks.push({
       handle: row.handle,
       title: row.task.title,
       state: derived?.state ?? null,
       reason: derived?.reason ?? null,
       afterHandle: parentId === null ? null : (handles.get(parentId) ?? null),
-      pullRequest: row.pull?.url ?? null,
-    };
-  });
+      pullRequest: row.pull?.url ?? answer?.pullRequests[0] ?? null,
+      facts: factsOf(answer),
+    });
+  }
+  return tasks;
+}
+
+function settled(rows: readonly StoryTaskRow[]): boolean {
+  return storySettled(
+    rows.map((row) => ({
+      state: row.opening?.facts ? requestState(row.opening.facts).state : null,
+    })),
+  );
 }
 
 function wrapUpPost(story: OpenStory, tasks: readonly WrapUpTask[]): NewPost {
@@ -95,8 +130,9 @@ export async function queueWrapUps(db: Db): Promise<number> {
   for (const story of await unreportedStories(db)) {
     const rows = rowsByOutpost.get(story.outpostId) ?? (await storiesOf(db, story.outpostId));
     rowsByOutpost.set(story.outpostId, rows);
-    const tasks = toWrapUpTasks(rows.filter((row) => row.task.draftId === story.draftId));
-    if (!storySettled(tasks)) continue;
+    const own = rows.filter((row) => row.task.draftId === story.draftId);
+    if (!settled(own)) continue;
+    const tasks = await toWrapUpTasks(db, story.workspaceId, own);
     if (await claimAndWrite(db, wrapUpPost(story, tasks))) written += 1;
   }
   return written;
