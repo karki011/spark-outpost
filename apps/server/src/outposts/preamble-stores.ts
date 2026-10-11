@@ -1,10 +1,6 @@
 import type { Queryable } from '../persistence/db.ts';
-import {
-  getPost,
-  listPosts,
-  markAnswersSeen,
-  requestAnswer,
-} from '../persistence/outpost-posts.ts';
+import { requestAnswer } from '../persistence/outpost-answers.ts';
+import { getPost, listPosts, markAnswersSeen } from '../persistence/outpost-posts.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
 import { outpostOf } from '../persistence/outposts.ts';
 import { readLabels } from './read-labels.ts';

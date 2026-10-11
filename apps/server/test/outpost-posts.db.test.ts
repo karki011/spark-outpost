@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requestState, type RunStatus } from '@spark-outpost/contracts';
+import { requestAnswer } from '../src/persistence/outpost-answers.ts';
 import {
   cancelUnsent,
   closePost,
@@ -8,7 +9,6 @@ import {
   insertPosts,
   listPosts,
   rejectWaiting,
-  requestAnswer,
   unsentRequests,
 } from '../src/persistence/outpost-posts.ts';
 import { listConversations } from '../src/persistence/conversations.ts';

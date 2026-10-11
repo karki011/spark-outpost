@@ -3,7 +3,8 @@ import { CHAT_SHARE_UNTRUSTED_NOTE } from '../../chat-share/digest.ts';
 import type { PostWithFacts } from '../../outposts/ports.ts';
 import { labelsOf, recordCarried, recordOutpostRead } from '../../outposts/read-labels.ts';
 import { stillOpen } from '../../outposts/request-wait.ts';
-import { markAnswersSeen, requestAnswer } from '../../persistence/outpost-posts.ts';
+import { requestAnswer } from '../../persistence/outpost-answers.ts';
+import { markAnswersSeen } from '../../persistence/outpost-posts.ts';
 import type { SparkToolContext } from '../tool.ts';
 import type { ChatTurn } from './outpost-turn.ts';
 

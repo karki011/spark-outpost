@@ -16,13 +16,8 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
 import { requestExchanges } from '../persistence/outpost-exchanges.ts';
-import {
-  cancelUnsent,
-  getPost,
-  listPosts,
-  releaseHold,
-  requestAnswer,
-} from '../persistence/outpost-posts.ts';
+import { requestAnswer } from '../persistence/outpost-answers.ts';
+import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
 import { storiesOf } from '../persistence/outpost-stories.ts';
 import {
   deleteOutpost,

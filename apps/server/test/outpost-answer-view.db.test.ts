@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requestExchanges } from '../src/persistence/outpost-exchanges.ts';
-import { getPost, requestAnswer } from '../src/persistence/outpost-posts.ts';
+import { requestAnswer } from '../src/persistence/outpost-answers.ts';
+import { getPost } from '../src/persistence/outpost-posts.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { FAKE_COMMENTARY } from '../src/providers/fake-phases.ts';
 import { drainQueue, type ResolveTarget } from '../src/workflow/queue-drain.ts';
