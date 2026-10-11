@@ -16,20 +16,27 @@ function lines(output: string | null): string[] {
   return (output ?? '').split('\n').filter((line) => line !== '');
 }
 
-async function sharedRefExclusions(root: string): Promise<string[]> {
+async function sharedRefExclusions(root: string, stacked: readonly string[]): Promise<string[]> {
   const branch = await maybe(root, ['symbolic-ref', '-q', '--short', 'HEAD']);
-  if (!branch) return ['--remotes', '--branches', '--tags'];
-  return [`--exclude=*/${branch}`, '--remotes', `--exclude=${branch}`, '--branches', '--tags'];
+  const own = branch ? [branch, ...stacked] : [...stacked];
+  return [
+    ...own.map((name) => `--exclude=*/${name}`),
+    '--remotes',
+    ...own.map((name) => `--exclude=${name}`),
+    '--branches',
+    '--tags',
+  ];
 }
 
 async function newestImportedCommit(
   root: string,
   start: string,
   head: string,
+  stacked: readonly string[],
 ): Promise<string | null> {
   const arrived = lines(await maybe(root, ['rev-list', '--topo-order', head, '--not', start]));
   if (arrived.length === 0) return null;
-  const shared = await sharedRefExclusions(root);
+  const shared = await sharedRefExclusions(root, stacked);
   const own = new Set(lines(await maybe(root, ['rev-list', head, '--not', start, ...shared])));
   return arrived.find((commit) => !own.has(commit)) ?? null;
 }
@@ -66,25 +73,35 @@ async function startWorkOnto(
   }
 }
 
-async function runBase(root: string, snapshot: string, head: string | null): Promise<string> {
+async function runBase(
+  root: string,
+  snapshot: string,
+  head: string | null,
+  stacked: readonly string[],
+): Promise<string> {
   if (!head) return snapshot;
   const start = await maybe(root, ['rev-parse', '--verify', '-q', `${snapshot}^1`]);
   if (!start || start === head) return snapshot;
-  const imported = await newestImportedCommit(root, start, head);
+  const imported = await newestImportedCommit(root, start, head, stacked);
   if (!imported) return snapshot;
   return startWorkOnto(root, start, snapshot, imported);
 }
 
-export async function liveRunBase(root: string, snapshot: string): Promise<string> {
-  return runBase(root, snapshot, await headCommit(root));
+export async function liveRunBase(
+  root: string,
+  snapshot: string,
+  stacked: readonly string[] = [],
+): Promise<string> {
+  return runBase(root, snapshot, await headCommit(root), stacked);
 }
 
 export async function runBaseUntil(
   root: string,
   snapshot: string,
   until: string | null,
+  stacked: readonly string[] = [],
 ): Promise<string> {
-  if (!until) return liveRunBase(root, snapshot);
+  if (!until) return liveRunBase(root, snapshot, stacked);
   const head = await maybe(root, ['rev-parse', '--verify', '-q', `${until}^1`]);
-  return runBase(root, snapshot, head);
+  return runBase(root, snapshot, head, stacked);
 }

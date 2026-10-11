@@ -1,6 +1,7 @@
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
 import type { ChangedFile, RunChange, TaskChanges } from '@spark-outpost/contracts';
+import { branchesStackedOn } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { getSnapshot, listBackups, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
@@ -111,7 +112,7 @@ async function gitListed(
   const signature = listings ? await rangeSignature(range) : null;
   const known = signature === null ? undefined : listings?.get(signature);
   if (known) return known;
-  const base = await runBaseUntil(gitRoot, ref, until);
+  const base = await runBaseUntil(gitRoot, ref, until, await branchesStackedOn(db, root));
   const files = await changesWhilePresent(gitRoot, async () =>
     gitRangeFiles({ root: gitRoot, from: base, to: until ?? (await workingTree(gitRoot)) }),
   );

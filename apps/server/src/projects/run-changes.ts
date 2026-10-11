@@ -7,6 +7,7 @@ import {
   type RunChange,
   type RunChanges,
 } from '@spark-outpost/contracts';
+import { branchesStackedOn } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import {
   clearReverted,
@@ -165,18 +166,19 @@ export async function runChanges(
   });
   const { ref } = snapshot;
   const source = await snapshotSource(db, runId, snapshot.root);
+  const stacked = await branchesStackedOn(db, snapshot.root);
   if (source.gone) {
     const end = source.end;
     if (snapshot.kind !== 'git' || !ref || !end) return removed([]);
     const files = await changesWhilePresent(source.gitRoot, async () =>
-      gitChanges(source.gitRoot, await runBaseUntil(source.gitRoot, ref, end), end),
+      gitChanges(source.gitRoot, await runBaseUntil(source.gitRoot, ref, end, stacked), end),
     );
     return removed(files ?? []);
   }
   const files =
     snapshot.kind === 'git' && ref
       ? await changesWhilePresent(snapshot.root, async () =>
-          gitChanges(snapshot.root, await liveRunBase(snapshot.root, ref)),
+          gitChanges(snapshot.root, await liveRunBase(snapshot.root, ref, stacked)),
         )
       : (await backupChanges(await listBackups(db, runId), snapshot.root)).map((c) => c.change);
   if (files === null) return removed([]);
@@ -205,7 +207,8 @@ export async function revertRun(
   if (!revertedAt) throw new RevertConflictError('This run was already reverted.');
   try {
     if (snapshot.kind === 'git' && snapshot.ref) {
-      const base = await liveRunBase(snapshot.root, snapshot.ref);
+      const stacked = await branchesStackedOn(db, snapshot.root);
+      const base = await liveRunBase(snapshot.root, snapshot.ref, stacked);
       await revertGitChanges(snapshot.root, base, changes.files);
     } else {
       await restoreBackups(await backupChanges(await listBackups(db, runId), snapshot.root));

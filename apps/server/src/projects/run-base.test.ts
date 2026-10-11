@@ -40,8 +40,8 @@ async function landUpstream(): Promise<void> {
   await commitAll(upstream, 'newer main');
 }
 
-async function changedPaths(ref: string): Promise<string[]> {
-  const base = await liveRunBase(clone, ref);
+async function changedPaths(ref: string, stacked: string[] = []): Promise<string[]> {
+  const base = await liveRunBase(clone, ref, stacked);
   return (await gitChanges(clone, base)).map((change) => `${change.change} ${change.path}`).sort();
 }
 
@@ -104,6 +104,20 @@ describe(
       git(clone, 'push', '-q', 'origin', 'spark/chat');
       git(clone, 'fetch', '-q', 'origin');
       expect(await changedPaths(ref)).toEqual(['added feature.ts']);
+    });
+
+    it('still counts its own commit after a branch known to be stacked on it starts from it', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-parent');
+      await write(clone, 'feature.ts', 'export const feature = 1;\n');
+      await commitAll(clone, 'agent work');
+      git(clone, 'push', '-q', 'origin', 'spark/chat');
+      git(clone, 'checkout', '-q', '-b', 'spark/stacked');
+      await write(clone, 'later.ts', 'export const later = 2;\n');
+      await commitAll(clone, 'stacked work');
+      git(clone, 'push', '-q', 'origin', 'spark/stacked');
+      git(clone, 'checkout', '-q', 'spark/chat');
+      expect(await changedPaths(ref)).toEqual([]);
+      expect(await changedPaths(ref, ['spark/stacked'])).toEqual(['added feature.ts']);
     });
 
     it('counts everything against the snapshot when the branch did not move', async () => {
