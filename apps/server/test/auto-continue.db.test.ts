@@ -244,7 +244,7 @@ describe('auto-continue in a chat turn', () => {
     const { run } = await driveToEnd(t, conversationId, runId);
     expect(run.status).toBe('succeeded');
     const cards = await cardsOf(t, conversationId);
-    expect(cards.map((card) => card.kind)).toEqual(['edit']);
+    expect(cards.map((card) => card.kind)).toEqual(['edit', 'accept']);
     expect(cards.every((card) => !card.autoContinueAt)).toBe(true);
   }, 60_000);
 });

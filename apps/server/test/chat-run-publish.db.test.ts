@@ -7,7 +7,11 @@ import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHAT_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { agentEnvironment } from '../src/agents/acp/agent-env.ts';
-import { PUBLISH_ASK_RULES, agentDefinitions } from '../src/agents/acp/agents.ts';
+import {
+  GIT_CONFIG_ASK_RULE,
+  PUBLISH_ASK_RULES,
+  agentDefinitions,
+} from '../src/agents/acp/agents.ts';
 import { otherBranchReason } from '../src/approvals/publish-policy.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
@@ -122,7 +126,10 @@ describe("the chat's own changing run through the turn seam", () => {
         meta: { claudeCode: { options: { settings: { permissions: Permissions } } } };
       }
     ).meta.claudeCode.options.settings;
-    expect(permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
+    expect((permissions.ask ?? []).filter((rule) => rule.startsWith('Bash('))).toEqual([
+      GIT_CONFIG_ASK_RULE,
+      ...PUBLISH_ASK_RULES,
+    ]);
     expect(permissions.deny).not.toContain('Bash(gh:*)');
     expect(permissions.deny).toContain('Bash(git remote add:*)');
   });

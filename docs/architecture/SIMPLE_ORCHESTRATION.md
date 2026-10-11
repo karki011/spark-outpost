@@ -426,6 +426,37 @@ D6 and D10 both touch `packages/contracts/src/`; D6 owns `setup.ts` and D10 ever
 
 Done for phase D: `pnpm check` is green, including unused files and guide rules; `pnpm test:db`, `pnpm test:browser` and `pnpm test:browser:packaged` pass; `pnpm docs:screenshots` has been run; the tool budget test still passes.
 
+**Phase D as built (October 10, 2026).** Eight lanes ran on their own branches (`spark/so-d1`, `-d3`, `-d5`, `-d6`, `-d7`, `-d9`, `-d11`, `-d12`) and were merged here with one conflict (`knip.json`). The merge then removed what the lanes had left for each other and merged `spark/floor-auto`.
+
+| Part                              | What was done                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routing, checks (D1, D2)          | `routing/` and `scripts/routing/` are gone. `checks/` keeps `detect`, `failures` and `run-check`, cut to what dependency installs call. Auto runs the agent's default model                                                                                                                                                                         |
+| Jev in turns, plans (D3, D4)      | `advisor/` keeps the Jev client only (`jev`, `jev-calls`, `jev-errors`, `jev-breaker`, `jev-limiter`, `jev-types`, `questions`, `policy`). The plan agreement by Jev and the checkout-copy helpers are gone; `cleanOrphanedCopies` stays                                                                                                            |
+| Persistence, API, tools (D5)      | Writers of harness rows, the piece and steer routes and the crew fields of `spark_run` are gone. Readers stay. The harness analytics report (`harnessReport`, its route and `spark_analytics` report) is gone; the check, loop and wait summaries that feed the Overview health score stay in `analytics/summaries.ts`                              |
+| Settings, analytics (D6, D8)      | **Use Spark workflow**, **Check changes with Jev**, the failing-checks choice, **Builders at once**, **Checks after a change**, the Spark-off chip and the Analytics **Spark** tab are gone. The columns stay (section 5.1)                                                                                                                         |
+| Web (D7)                          | One agent in replies, Agent TV, the rail, the Work panel and the model picker. Stored crew turns render read-only                                                                                                                                                                                                                                   |
+| Browser specs (D9)                | The specs run on the one-agent turn; the crew engine and the fake agent's role branches are gone                                                                                                                                                                                                                                                    |
+| Contracts (D10)                   | The steer contract, piece drafts and the piece board, the intake write schema, crew name pools, check tallies and the project check and Builder fields are gone. Every read schema of section 5.1 stays; `packages/contracts/src/stored-crew-turn.test.ts` parses a crew turn written with the contracts of 0.1.0-beta.11 and gets every field back |
+| Guide and docs (D11)              | Three guide pages are gone and the rest follow the one agent. `AGENTS.md` is rewritten for the chat's agent                                                                                                                                                                                                                                         |
+| Scripts (D12)                     | `scripts/turn-tasks/` holds scratch tasks for the single-session turn. `scripts/e2e-live/`, `scripts/coordinator/`, `scripts/jev/`, `scripts/verifier/` and the routing and context benchmarks are gone                                                                                                                                             |
+| Safety floor (`spark/floor-auto`) | `floorAskRules` in `agents/acp/agents.ts` depends only on the session's tools, so the rules hold for the chat's run in every mode                                                                                                                                                                                                                   |
+
+Gaps the browser specs exposed, each fixed with a test:
+
+- **The kept record never showed for a new turn.** `shownApprovalsForConversation` now returns the kept record of a run with no orchestration row, and `chat/checkpoints/turn-checkpoints.ts` reads it for `SoloTurn` (`kept-record.db`, `turn-checkpoints.test.ts`).
+- **A plain answer was not an answer for feedback.** `outcomeKind` treats a succeeded turn with no orchestration row and no changed files as an answer (`outcomes/derive.test.ts`).
+- **A repository with no commits.** A chat there works in the folder, because there is nothing to branch from (`chat-worktree.db`). A Plan-mode question still makes a worktree in a repository that has commits: the session's folder is fixed when the session starts, so the worktree cannot wait for the first change without replacing the session after the plan is approved. Decision 16 stands.
+- **An outpost request stayed on Sent.** A mutation's answer could overwrite a newer state that an event had already announced. The outpost is now asked again after every mutation's answer (`use-outposts.test.tsx`).
+- **`shot-order.spec.ts:209`** fails the same way on `main` (a screenshot taken right after a line of text is anchored before that line). Not caused by this work and not fixed here.
+
+What remains:
+
+- `pnpm docs:screenshots` has not been run; the images named in the lane D11 report are stale.
+- The browser suite was not run after the merge, except a smoke set of 14 spec files (73 cases, all passing). `pnpm test:browser:packaged` was not run.
+- Dead columns (section 5.1) are dropped in a later release.
+- The model cards page still groups models by tier, and the measured rows still say "as Builder" and "as Critic", because that is how the benchmark rounds were recorded.
+- Phase E: the pass with real providers.
+
 ### Phase E: release
 
 One release where everybody gets it. Before it: a manual pass with real Claude and Codex sign-ins over cases (a) to (f), a publish at Full auto → PR, a follow-up round, an old chat with crew turns opened and continued, and an update installed while a turn is running.
@@ -462,7 +493,7 @@ About 55,000 removed and 1,200 added. The earlier simplification estimated 10,80
 
 ### 5.3 Optional evidence, not a step
 
-A before and after measurement can be taken with the task harness on `spark/zai-direct-plan` (`scripts/zai-direct/`: a scratch repository, ten tasks, executable checkers, a report). It compares two `PathDriver`s on the same tasks. To use it here, the baseline driver would run the released 0.1.0-beta.11 build and the other this branch, for Claude and Codex. Three things in it are specific to Z.ai and would need generalising: the provider and model setup in `driver.ts`, the key and endpoint checks under `checks/`, and the dry-run key. This is not a gate for the release.
+A before and after measurement can be taken with `scripts/turn-tasks/` (a scratch repository, ten tasks, executable checkers, a report), which drives the single-session turn for Claude, Codex and Z.ai. `docs/DEVELOPMENT.md` has the commands. This is not a gate for the release.
 
 ### 5.4 Tests
 

@@ -54,6 +54,7 @@ export const SPEC_GROUPS = {
     'send-or-queue',
     'slash-commands',
     'start-fresh',
+    'stored-crew-turn',
     'stream-scroll',
     'thinking-step',
     'titles',

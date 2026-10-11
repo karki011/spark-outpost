@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
-import { conversationSeatKey } from '../src/workflow/conversation-session.ts';
 import { prepareTurnSession, type TurnEnd } from '../src/workflow/turn-session.ts';
 import { chatTurnInput, createTestDb, SESSION_LIMITS, type TestDb } from './support.ts';
 
@@ -32,21 +31,9 @@ async function reply(content: string) {
   return id;
 }
 
-const builder = (): RunInput => ({
-  ...chatTurnInput(t, chat, null),
-  parentRunId: randomUUID(),
-  mode: 'do',
-  role: 'builder',
-  resumeKey: 'task-1:builder',
-});
+const builder = (): RunInput => ({ ...chatTurnInput(t, chat, null), mode: 'do' });
 
-const reader = (): RunInput => ({
-  ...chatTurnInput(t, chat, null),
-  parentRunId: randomUUID(),
-  mode: 'ask',
-  role: 'scout',
-  resumeKey: conversationSeatKey('task-1'),
-});
+const reader = (): RunInput => ({ ...chatTurnInput(t, chat, null), mode: 'ask' });
 
 interface Turn {
   reported: readonly number[];
