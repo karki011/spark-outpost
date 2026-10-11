@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
-import type { Approval } from '@spark-outpost/contracts';
+import type { Approval, WorkPlace } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import {
@@ -48,14 +48,14 @@ export interface GateRecord {
   decidedBy: string | null;
 }
 
-export function floorRuns() {
+export function floorRuns(place: { workPlace?: WorkPlace } = {}) {
   let t: TestDb;
   let root: string;
   let store: string;
   let worker: Worker | null = null;
 
   beforeEach(async () => {
-    t = await createTestDb();
+    t = await createTestDb(place);
     root = await gitRepo();
     writeFileSync(join(root, 'AGENTS.md'), RULES);
     const git = (...args: string[]) =>

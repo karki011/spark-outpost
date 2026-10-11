@@ -1,5 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, matchesGlob, relative } from 'node:path';
+import { dirname, join, matchesGlob, relative, resolve } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { runCommand } from './fake-acp-floor-commands.ts';
 
@@ -48,7 +49,7 @@ async function editFile(
   relativePath: string,
   newText: string,
 ): Promise<void> {
-  const target = join(turn.cwd, relativePath);
+  const target = resolve(turn.cwd, relativePath);
   const toolCallId = `floor-edit-${relativePath}`;
   const call = {
     toolCallId,
@@ -85,6 +86,14 @@ async function ranUnasked(
   await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
 }
 
+export const REAL_HOOK = '#!/bin/sh\nexit 0\n';
+export const REAL_CONFIG = '[user]\n\tname = Changed By The Agent\n';
+
+function realGitDir(cwd: string): string {
+  const args = ['-C', cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir'];
+  return execFileSync('git', args, { encoding: 'utf8' }).trim();
+}
+
 export const HOOK_APPEND = "printf 'exit 0\\n' >> .git/hooks/pre-push";
 export const RULES_APPEND = 'echo more >> AGENTS.md';
 export const ORDINARY_COMMAND = 'pnpm vitest run src';
@@ -113,6 +122,15 @@ export async function floorTurn(turn: FloorTurn, meta: unknown, mode: string): P
   }
   if (turn.text.includes('#floorhook')) {
     await editFile(turn, rules, '.git/hooks/pre-commit', '#!/bin/sh\nexit 0\n');
+  }
+  if (turn.text.includes('#floorrealhook')) {
+    await editFile(turn, rules, join(realGitDir(turn.cwd), 'hooks/pre-commit'), REAL_HOOK);
+  }
+  if (turn.text.includes('#floorrealconfig')) {
+    await editFile(turn, rules, join(realGitDir(turn.cwd), 'config'), REAL_CONFIG);
+  }
+  if (turn.text.includes('#floornotes')) {
+    await editFile(turn, rules, 'notes.txt', 'changed\n');
   }
   if (turn.text.includes('#floorordinary')) {
     await editFile(turn, rules, 'notes.txt', 'changed\n');

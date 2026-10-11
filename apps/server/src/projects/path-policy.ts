@@ -32,9 +32,15 @@ export interface ResolvedPath {
   relative: string;
 }
 
+export interface GitDirs {
+  common: string;
+  own: string;
+}
+
 export interface ProjectRoot {
   path: string;
   ignore: readonly string[];
+  gitDirs?: GitDirs | null;
 }
 
 export interface PathPolicy {

@@ -75,6 +75,7 @@ export interface AgentDefinition {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     changesProject?: boolean,
+    gitControlGlobs?: readonly string[],
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -123,11 +124,19 @@ export function secretRules(extraRoots: readonly string[]): string[] {
 
 export const GIT_CONFIG_ASK_RULE = 'Bash(git config:*)';
 
-export function floorAskRules(tools: readonly string[], extraRoots: readonly string[]): string[] {
-  return [
-    ...(tools.includes('Edit') ? editRules(EXACT_PROTECTED_GLOBS, extraRoots) : []),
-    ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : []),
-  ];
+function absoluteEditRules(globs: readonly string[]): string[] {
+  return globs.map((glob) => `Edit(/${glob})`);
+}
+
+export function floorAskRules(
+  tools: readonly string[],
+  extraRoots: readonly string[],
+  gitControlGlobs: readonly string[] = [],
+): string[] {
+  const edits = tools.includes('Edit')
+    ? [...editRules(EXACT_PROTECTED_GLOBS, extraRoots), ...absoluteEditRules(gitControlGlobs)]
+    : [];
+  return [...edits, ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : [])];
 }
 
 function repoTools(repo: ClaudeRepoOptions | null): string[] {
@@ -141,8 +150,12 @@ export function claudeSessionMeta(
   repo: ClaudeRepoOptions | null = null,
   changesProject = false,
   allowBypass = false,
+  gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
-  const ask = [...floorAskRules(tools, extraRoots), ...(changesProject ? PUBLISH_ASK_RULES : [])];
+  const ask = [
+    ...floorAskRules(tools, extraRoots, gitControlGlobs),
+    ...(changesProject ? PUBLISH_ASK_RULES : []),
+  ];
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
@@ -255,7 +268,16 @@ const claudeSessions = {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     changesProject = false,
-  ) => claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, repo ?? null, changesProject, true),
+    gitControlGlobs: readonly string[] = [],
+  ) =>
+    claudeSessionMeta(
+      CLAUDE_DO_TOOLS,
+      extraRoots,
+      repo ?? null,
+      changesProject,
+      true,
+      gitControlGlobs,
+    ),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';

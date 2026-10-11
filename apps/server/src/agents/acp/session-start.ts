@@ -1,4 +1,5 @@
-import type { PathPolicy } from '../../projects/path-policy.ts';
+import { gitControlGlobs, readGitDirs } from '../../approvals/git-dirs.ts';
+import type { PathPolicy, ProjectRoot } from '../../projects/path-policy.ts';
 import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { excludeSparkDir } from '../../projects/worktrees.ts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
@@ -10,7 +11,8 @@ export async function openProject(
   roots: readonly string[],
 ): Promise<PathPolicy> {
   try {
-    const policy = await projectPolicy(roots);
+    const opened = await projectPolicy(roots);
+    const policy = { ...opened, roots: await Promise.all(opened.roots.map(withGitDirs)) };
     if (definition.repoStyle === 'claude') await keepPlansUntracked(policy);
     return policy;
   } catch (error) {
@@ -19,6 +21,10 @@ export async function openProject(
       `${definition.name} can't open the project folder ${root}. Check that it still exists, or link the project again.`,
     );
   }
+}
+
+async function withGitDirs(root: ProjectRoot): Promise<ProjectRoot> {
+  return { ...root, gitDirs: await readGitDirs(root.path) };
 }
 
 async function keepPlansUntracked(policy: PathPolicy): Promise<void> {
@@ -52,7 +58,8 @@ function definedMeta(
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) {
-    return definition.doSessionMeta?.(roots, repo, changesProject) ?? null;
+    const gitControl = gitControlGlobs(policy.roots);
+    return definition.doSessionMeta?.(roots, repo, changesProject, gitControl) ?? null;
   }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;

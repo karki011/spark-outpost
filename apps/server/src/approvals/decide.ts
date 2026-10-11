@@ -1,5 +1,5 @@
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import { protectedPath, refusalFor } from '../projects/path-policy.ts';
+import { protectedPath, refusalFor, type GitDirs } from '../projects/path-policy.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
 import {
@@ -12,6 +12,7 @@ import {
   type ForcePush,
 } from './git-commands.ts';
 import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
+import { gitControlLabel } from './git-dirs.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
@@ -37,6 +38,7 @@ import { onlyReads, partRequests, shellView, type ShellView } from './shell-view
 export interface RequestRoot {
   path: string;
   ignore: readonly string[];
+  gitDirs?: GitDirs | null;
 }
 
 export interface ApprovalRequest {
@@ -129,15 +131,17 @@ function configTargets(request: ApprovalRequest): { files: string[]; labels: str
 export function guardedTargets(asked: ApprovalRequest): Guarded {
   const request = withResolvedVariables(asked);
   const config = configTargets(request);
-  const relatives = [...writtenPaths(request), ...config.files].flatMap((target) => {
+  const targets = [...writtenPaths(request), ...config.files];
+  const relatives = targets.flatMap((target) => {
     const { relative } = place(request.roots, target);
     return relative === null ? [] : [relative];
   });
   const unique = [...new Set(relatives)];
   const control = unique.filter((relative) => protectedPath(relative) === 'git_control');
+  const realGitDir = targets.flatMap((target) => gitControlLabel(request.roots, target) ?? []);
   return {
     instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: [...new Set([...control, ...config.labels])],
+    gitControl: [...new Set([...control, ...realGitDir, ...config.labels])],
   };
 }
 
