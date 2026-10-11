@@ -73,7 +73,7 @@ describe('tiers from cards', () => {
     expect(modelTier({ id: 'mystery', label: 'Mystery' }, 'claude')).toBeNull();
   });
 
-  it('gives Haiku 5.5 its own small-tier card without taking the haiku alias from Haiku 4.5', () => {
+  it('gives Haiku 5.5 its own small-tier card, apart from Haiku 4.5', () => {
     const byId = cardFor({ id: 'claude-haiku-5-5' }, 'claude');
     expect(byId?.id).toBe('claude-haiku-5-5');
     expect(byId?.price).toMatchObject({
@@ -84,12 +84,22 @@ describe('tiers from cards', () => {
     });
     expect(cardFor({ id: 'haiku', label: 'Haiku 5.5' }, 'claude')?.id).toBe('claude-haiku-5-5');
     expect(cardFor({ id: 'haiku', label: 'Haiku 4.5' }, 'claude')?.id).toBe('claude-haiku-4-5');
-    expect(cardFor({ id: 'haiku' }, 'claude')?.id).toBe('claude-haiku-4-5');
     expect(cardFor({ id: 'haiku', label: 'GLM-5.3-Flash' }, 'zai')?.id).toBe('glm-5.3-flash');
     expect(modelTier({ id: 'claude-haiku-5-5', label: 'Haiku 5.5' }, 'claude')).toBe(0);
     const afterHaiku45 = new Date('2026-10-20T00:00:00Z');
     expect(usableDefault('claude', 'claude-haiku-5-5', afterHaiku45)).toBe('claude-haiku-5-5');
-    expect(usableDefault('claude', 'haiku', afterHaiku45)).toBeNull();
+    expect(usableDefault('claude', 'claude-haiku-4-5', afterHaiku45)).toBeNull();
+  });
+
+  it('never reads an alias as one generation: only its label or a full id names a card', () => {
+    for (const id of ['sonnet', 'opus', 'haiku', 'default', 'opus[1m]', 'sonnet[1m]']) {
+      expect(cardFor({ id }, 'claude')).toBeNull();
+    }
+    expect(cardFor({ id: 'sonnet', label: 'Sonnet 5.5' }, 'claude')?.id).toBe('claude-sonnet-5-5');
+    expect(cardFor({ id: 'claude-sonnet-5-5' }, 'claude')?.id).toBe('claude-sonnet-5-5');
+    expect(cardFor({ id: 'claude-sonnet-5' }, 'claude')?.id).toBe('claude-sonnet-5');
+    expect(cardFor({ id: 'claude-opus-5-5[1m]' }, 'claude')?.id).toBe('claude-opus-5-5');
+    expect(usableDefault('claude', 'haiku', new Date('2026-10-20T00:00:00Z'))).toBe('haiku');
   });
 
   it('keeps frontier models off the ladder, so Opus stays top and Codex tops out at 6 Sol', () => {
@@ -127,7 +137,7 @@ describe('effective default model', () => {
     expect(effectiveDefaultModel('claude', claude, 'haiku', earlier)).toBe('opus[1m]');
     const onlyRetiring = [{ id: 'gpt-5.5', label: 'GPT-5.5' }, ...codex];
     expect(effectiveDefaultModel('codex', onlyRetiring, 'gpt-5.5', today)).toBe('gpt-6-sol');
-    expect(usableDefault('claude', 'haiku', today)).toBeNull();
+    expect(usableDefault('claude', 'claude-haiku-4-5', today)).toBeNull();
     expect(usableDefault('claude', 'sonnet', today)).toBe('sonnet');
     expect(usableDefault('zai', 'haiku', today)).toBe('haiku');
     expect(usableDefault('claude', null, today)).toBeNull();

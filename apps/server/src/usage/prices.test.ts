@@ -105,14 +105,15 @@ describe('price estimates', () => {
 });
 
 describe('card prices', () => {
-  it('finds a price for any provider from the model cards, including aliases', () => {
-    expect(cardPriceFor('claude', 'sonnet')).toMatchObject({
+  it('finds a price for any provider from the model cards, and none for an alias', () => {
+    expect(cardPriceFor('claude', 'sonnet')).toBeNull();
+    expect(cardPriceFor('claude', 'claude-sonnet-5')).toMatchObject({
       model: 'claude-sonnet-5',
       inputPerMillion: 2,
       cacheWritePerMillion: 2.5,
       cacheOutsideInput: true,
     });
-    expect(cardPriceFor('claude', 'opus[1m]')?.model).toBe('claude-opus-5-5');
+    expect(cardPriceFor('claude', 'claude-opus-5-5[1m]')?.model).toBe('claude-opus-5-5');
     expect(cardPriceFor('codex', 'gpt-6-sol/high')).not.toHaveProperty('cacheWritePerMillion');
     expect(cardPriceFor('claude', 'unknown')).toBeNull();
     expect(cardPriceFor('claude', null)).toBeNull();

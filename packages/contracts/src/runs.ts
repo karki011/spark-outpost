@@ -56,6 +56,7 @@ export const runSchema = z.object({
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
   model: z.string().nullable(),
+  usedModel: z.string().nullable().optional(),
   effort: z.string().nullable(),
   usage: runUsageSchema.nullable(),
   mode: runModeSchema.nullable(),

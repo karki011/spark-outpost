@@ -14,11 +14,13 @@ const OFFERED = [
   },
   { value: 'claude-sonnet-5-5', displayName: 'Sonnet', description: 'Sonnet 5.5 for daily work' },
   { value: 'claude-haiku-5-5', displayName: 'Haiku', description: 'Haiku 5.5, the fastest' },
+  { value: 'claude-sonnet-5', displayName: 'Sonnet 5', description: 'The earlier Sonnet' },
 ];
 const NAMES: Record<string, string> = {
   default: 'Default (recommended)',
   'claude-sonnet-5-5': 'Sonnet 5.5',
   'claude-haiku-5-5': 'Haiku 5.5',
+  'claude-sonnet-5': 'Sonnet 5',
 };
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
 
@@ -92,6 +94,39 @@ describe('a pinned model the session lists under another id', () => {
       model === 'haiku' ? 'claude-haiku-5-5' : 'claude-sonnet-5-5',
     );
     expect(applied.notes).toEqual([]);
+  });
+
+  it('sends an alias as typed and shows the model the agent resolved it to', async () => {
+    const { ctx, session, asked } = pinnedClaudeAgent();
+    const applied = await applySessionSettings(ctx, session, agentDefinitions.claude, {
+      ...settings,
+      model: 'sonnet',
+    });
+    expect(asked).toContain('sonnet');
+    expect(asked).not.toContain('claude-sonnet-5');
+    expect(applied.current.model).toBe('claude-sonnet-5-5');
+    expect(applied.using).toBe('Using Sonnet 5.5');
+  });
+
+  it('runs the earlier generation only when its full id is pinned', async () => {
+    const { ctx, session } = pinnedClaudeAgent();
+    const applied = await applySessionSettings(ctx, session, agentDefinitions.claude, {
+      ...settings,
+      model: 'claude-sonnet-5',
+    });
+    expect(applied.current.model).toBe('claude-sonnet-5');
+    expect(applied.using).toBe('Using Sonnet 5');
+  });
+
+  it('picks the listed model by the label the alias had when it was chosen', async () => {
+    const { ctx, session, asked } = pinnedClaudeAgent();
+    const applied = await applySessionSettings(ctx, session, agentDefinitions.claude, {
+      ...settings,
+      model: 'sonnet',
+      modelLabel: 'Sonnet 5.5',
+    });
+    expect(asked).toEqual(['claude-sonnet-5-5']);
+    expect(applied.current.model).toBe('claude-sonnet-5-5');
   });
 
   it('never lands on another generation of the pinned model', async () => {

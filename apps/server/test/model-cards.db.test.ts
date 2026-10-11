@@ -70,7 +70,7 @@ describe('measured model stats', () => {
         {
           role: 'agent',
           provider: 'claude',
-          model: 'haiku',
+          model: 'claude-haiku-4-5',
           effort: null,
           costUsd: 0.02,
           costSource: 'reported',

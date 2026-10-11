@@ -1,6 +1,6 @@
 import type { SessionConfigOption, SessionUpdate } from '@agentclientprotocol/sdk';
 import type { ModelCard } from '@spark-outpost/contracts';
-import { cardFor } from '../../model-cards/cards.ts';
+import { aliasFamily, cardFor } from '../../model-cards/cards.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import type { SettingsSession } from './apply-settings.ts';
 import { currentValues } from './capabilities.ts';
@@ -39,23 +39,24 @@ export function watchRanModel(
       const ranCard = cardFor({ id: ran }, provider);
       const reportedCard = cardFor({ id: reported }, provider);
       if (!ranCard || ranCard.id === reportedCard?.id) return [];
-      if (!reportedCard) {
+      const family = reportedCard ? [] : aliasFamily(reported, provider);
+      if (!reportedCard && family.length === 0) {
         const unpinned = live.unpinnedModel?.() ?? null;
         if (unpinned === null) return [];
         noted = ran;
         return note(`${agentName} ran this turn on ${ranCard.label}, not ${unpinned}`);
       }
       noted = ran;
-      return [
-        {
-          kind: 'session_settings',
-          model: optionFor(options, ranCard, provider) ?? ran,
-          effort: currentValue(options, 'thought_level'),
-          mode: currentValue(options, 'mode'),
-          options: currentValues(options),
-        },
-        ...note(`${agentName} ran this turn on ${ranCard.label}, not ${reportedCard.label}`),
-      ];
+      const ranOn: ProviderOutput = {
+        kind: 'session_settings',
+        model: optionFor(options, ranCard, provider) ?? ran,
+        effort: currentValue(options, 'thought_level'),
+        mode: currentValue(options, 'mode'),
+        options: currentValues(options),
+      };
+      if (family.includes(ranCard)) return [ranOn];
+      const expected = reportedCard?.label ?? reported;
+      return [ranOn, ...note(`${agentName} ran this turn on ${ranCard.label}, not ${expected}`)];
     },
   };
 }

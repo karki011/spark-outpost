@@ -40,13 +40,15 @@ describe('settingsHash', () => {
   });
 
   it('keeps a keyed session across an effort change only where the cache survives it', () => {
-    const opus = { ...settings, model: 'opus[1m]', keyed: true };
+    const opus = { ...settings, model: 'claude-opus-5-5[1m]', keyed: true };
     expect(settingsHash({ ...opus, effort: 'high' })).toBe(settingsHash(opus));
     expect(settingsHash({ ...opus, keyed: false, effort: 'high' })).not.toBe(
       settingsHash({ ...opus, keyed: false }),
     );
     const sonnet = { ...settings, keyed: true };
     expect(settingsHash({ ...sonnet, effort: 'high' })).not.toBe(settingsHash(sonnet));
+    const alias = { ...settings, model: 'opus', keyed: true };
+    expect(settingsHash({ ...alias, effort: 'high' })).not.toBe(settingsHash(alias));
   });
 
   it('changes when the primary repo changes', () => {

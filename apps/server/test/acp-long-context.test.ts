@@ -37,16 +37,16 @@ async function run(env: Record<string, string>) {
 }
 
 describe('Claude long context against the fake agent', { timeout: 20_000 }, () => {
-  it('starts the agent with the 1M variants of the long-context aliases', async () => {
+  it('starts the agent without pointing an alias at a model: the agent resolves its own aliases', async () => {
     const { report, usage, notes } = await run({});
-    expect(report).toMatchObject({ opus: 'claude-opus-5-5[1m]', sonnet: 'claude-sonnet-5[1m]' });
+    expect(report).toMatchObject({ opus: null, sonnet: null, haiku: null });
     expect(usage).toMatchObject({ contextSize: 1_000_000 });
     expect(notes).not.toContain(SHORT_NOTE);
   });
 
-  it('leaves a gateway setup alone', async () => {
-    const { report } = await run({ ANTHROPIC_BASE_URL: 'https://gateway.example' });
-    expect(report).toMatchObject({ opus: null, sonnet: null });
+  it('leaves an alias the user pointed at a model as they set it', async () => {
+    const { report } = await run({ ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-sonnet-5-5' });
+    expect(report).toMatchObject({ opus: null, sonnet: 'claude-sonnet-5-5' });
   });
 
   it('keeps going on the smaller window with a note when the account has no 1M', async () => {

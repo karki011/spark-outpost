@@ -73,6 +73,7 @@ export interface RunRow {
   role?: AgentRole | null;
   step_index?: number | null;
   agent_label?: string | null;
+  used_model?: string | null;
   category?: string | null;
   followed_instructions?: string[] | null;
   continues_run_id?: string | null;
@@ -142,6 +143,7 @@ export function toRun(row: RunRow): Run {
     startedAt: iso(row.started_at),
     finishedAt: iso(row.finished_at),
     model: row.model,
+    usedModel: row.used_model ?? null,
     effort: row.effort,
     usage: toRunUsage(row),
     mode: row.mode ?? null,

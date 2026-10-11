@@ -14,7 +14,6 @@ import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts'
 import { noFolderAccessNote, primaryOnlyNote } from './folder-notes.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
-import { longContextEnv } from './long-context.ts';
 import { cliEnvironment, type CliLocator } from './agent-cli.ts';
 import { CODEX_PLAIN_SANDBOX_NOTE, codexConfigFailed, prepareCodexLaunch } from './codex-launch.ts';
 import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
@@ -193,7 +192,7 @@ async function runSession(
       push(mapper.note(CODEX_PLAIN_SANDBOX_NOTE));
     }
     const env = withCodexSparkServer(
-      { ...launchEnv, ...longContextEnv(definition, launchEnv, repo?.claude?.redirects), ...cli },
+      { ...launchEnv, ...cli },
       definition.repoStyle === 'codex' ? spark : null,
     );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);

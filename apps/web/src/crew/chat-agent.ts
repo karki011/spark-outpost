@@ -31,7 +31,8 @@ function agentLine(run: Run, state: CrewState, steps: readonly ActivityStep[]): 
 }
 
 function modelOf(run: Run): string | null {
-  return run.model && run.model !== AGENT_DEFAULT ? prettyModelId(run.model) : null;
+  const ran = run.usedModel ?? run.model;
+  return ran && ran !== AGENT_DEFAULT ? prettyModelId(ran) : null;
 }
 
 function durationMs(run: Run): number | null {

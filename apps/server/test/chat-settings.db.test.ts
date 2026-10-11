@@ -112,7 +112,7 @@ describe('chat settings', () => {
     expect(fresh.body.settings.provider).toBe('claude');
   });
 
-  it('sends the default model from the capability snapshot when the chat has none', async () => {
+  it('sends the default model when the chat has none, and a pin Claude no longer lists as typed', async () => {
     await connectCliProvider(t, 'claude');
     await send('get', '/api/providers/claude/capabilities').expect(200);
     const id = randomUUID();
@@ -128,7 +128,7 @@ describe('chat settings', () => {
       id: randomUUID(),
       content: 'Again',
     }).expect(201);
-    expect(retired.body.run.model).toBe('fast');
+    expect(retired.body.run).toMatchObject({ model: 'retired', modelSwitch: null });
   });
 
   it('lets a CLI provider pick a default model from its capability snapshot', async () => {

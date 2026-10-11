@@ -442,6 +442,7 @@ export function Composer({
               conversationId={conversationId}
               settings={settings}
               providers={providers}
+              runs={runs}
               hasRepos={hasRepos}
             />
           )}

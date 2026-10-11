@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
+import {
+  createConversation,
+  getConversationDetail,
+  sendUserMessage,
+} from '../src/persistence/conversations.ts';
 import { recordSessionSettings } from '../src/workflow/run-metadata.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -46,25 +50,43 @@ async function ranOn(runId: string, model: string | null) {
 describe("a run's label after the agent reports the model it ran on", () => {
   it('names the model that ran when it is not the chosen one', async () => {
     const runId = await builderRun('sonnet', 'Sonnet 5', 'Bolt · Builder · Sonnet 5 · medium');
-    expect(await ranOn(runId, 'opus')).toEqual({
+    expect(await ranOn(runId, 'claude-opus-5-5')).toEqual({
       agent_label: 'Bolt · Builder · Opus 5.5 · medium',
-      used_model: 'opus',
+      used_model: 'claude-opus-5-5',
     });
   });
 
   it('replaces a raw model id with the name on its card', async () => {
     const runId = await builderRun('opus', null, 'Bolt · Builder · opus · medium');
-    expect((await ranOn(runId, 'opus'))?.agent_label).toBe('Bolt · Builder · Opus 5.5 · medium');
+    expect((await ranOn(runId, 'claude-opus-5-5'))?.agent_label).toBe(
+      'Bolt · Builder · Opus 5.5 · medium',
+    );
   });
 
-  it('keeps the label when the chosen model ran or the model has no card', async () => {
+  it('keeps the label when the chosen model ran, or an alias or a model with no card is reported', async () => {
     const same = await builderRun('sonnet', 'Sonnet 5', 'Bolt · Builder · Sonnet 5 · medium');
     expect((await ranOn(same, 'claude-sonnet-5'))?.agent_label).toBe(
       'Bolt · Builder · Sonnet 5 · medium',
     );
-    const unknown = await builderRun('sonnet', 'Sonnet 5', 'Bolt · Builder · Sonnet 5 · medium');
-    expect((await ranOn(unknown, 'default'))?.agent_label).toBe(
-      'Bolt · Builder · Sonnet 5 · medium',
+    for (const alias of ['default', 'opus', 'sonnet']) {
+      const run = await builderRun('sonnet', 'Sonnet 5', 'Bolt · Builder · Sonnet 5 · medium');
+      expect((await ranOn(run, alias))?.agent_label).toBe('Bolt · Builder · Sonnet 5 · medium');
+    }
+  });
+
+  it('gives the chat the model that ran beside the one it was pinned to', async () => {
+    const runId = await builderRun('sonnet', null, 'Claude');
+    const { rows } = await t.db.query<{ conversation_id: string }>(
+      'SELECT conversation_id FROM runs WHERE id = $1',
+      [runId],
     );
+    const runsOf = async () =>
+      (await getConversationDetail(t.db, rows[0]!.conversation_id))!.runs.map((run) => ({
+        model: run.model,
+        usedModel: run.usedModel,
+      }));
+    expect(await runsOf()).toEqual([{ model: 'sonnet', usedModel: null }]);
+    await ranOn(runId, 'claude-sonnet-5-5');
+    expect(await runsOf()).toEqual([{ model: 'sonnet', usedModel: 'claude-sonnet-5-5' }]);
   });
 });

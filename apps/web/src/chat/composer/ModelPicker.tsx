@@ -8,6 +8,7 @@ import {
   type ChatSettings,
   type ProviderId,
   type ProviderSetup,
+  type Run,
 } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../../api/client.ts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
@@ -26,6 +27,7 @@ import { ExitingInert } from './ExitingInert.tsx';
 import { buttonLabel, currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionState } from './mode-summary.ts';
+import { unlistedPinName } from './shown-model.ts';
 import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
 import { FreezeWhileHidden } from '../../ui/FreezeWhileHidden.tsx';
@@ -46,6 +48,7 @@ interface ModelPickerProps {
   conversationId: string;
   settings: ChatSettings;
   providers: ProviderSetup[];
+  runs: readonly Run[];
   hasRepos: boolean;
 }
 
@@ -54,6 +57,7 @@ export function ModelPicker({
   conversationId,
   settings,
   providers,
+  runs,
   hasRepos,
 }: ModelPickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef, returnFocusRef } = usePopover<
@@ -113,7 +117,8 @@ export function ModelPicker({
     : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
   const unusable = unusableChoice(settings.model, capabilities) !== null;
-  const pinnedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const listedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const pinnedLabel = unlistedPinName(settings, capabilities, runs) ?? listedLabel;
   const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
   const auto = settings.routing === 'auto';
   const modelName = auto ? 'Auto' : pinnedName;

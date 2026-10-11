@@ -34,6 +34,18 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
     expect(crewJob(agent)).toBe('Agent · Sonnet 5 · medium');
   });
 
+  it('names the model the session reported running, not the id the chat was pinned to', () => {
+    expect(crewJob(chatAgent(run({ model: 'sonnet', usedModel: 'claude-sonnet-5-5' })))).toBe(
+      'Agent · Sonnet 5.5 · medium',
+    );
+    expect(crewJob(chatAgent(run({ model: 'sonnet', usedModel: null })))).toBe(
+      'Agent · Sonnet · medium',
+    );
+    expect(crewJob(chatAgent(run({ model: 'default', usedModel: 'claude-opus-5-5[1m]' })))).toBe(
+      'Agent · Opus 5.5 · medium',
+    );
+  });
+
   it('follows the run: thinking, its open step, waiting for the user, stopped, failed', () => {
     const running = run({ status: 'running', finishedAt: null });
     expect(chatAgent(running)).toMatchObject({ state: 'thinking', line: 'thinking' });

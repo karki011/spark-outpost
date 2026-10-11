@@ -151,7 +151,12 @@ describe('home digest', () => {
       `SELECT r.id, r.role, r.mode, r.model, r.effort FROM runs r
        JOIN digests d ON d.run_id = r.id`,
     );
-    expect(rows[0]).toMatchObject({ role: 'digest', mode: 'chat', model: 'sonnet', effort: 'low' });
+    expect(rows[0]).toMatchObject({
+      role: 'digest',
+      mode: 'chat',
+      model: 'claude-sonnet-5',
+      effort: 'low',
+    });
     expect((await getRun(t.db, rows[0]!.id))?.status).toBe('succeeded');
     const listed = await listConversations(t.db, t.workspaceId);
     expect(listed.map((entry) => entry.title).sort()).toEqual([
