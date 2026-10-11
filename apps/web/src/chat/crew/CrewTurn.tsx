@@ -35,6 +35,7 @@ import type { RunStep } from '../run-projection.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
 import { blockStatus } from './block-status.ts';
 import {
+  closingReply,
   crewItems,
   groupParallel,
   handOffAt,
@@ -77,7 +78,7 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
   const shots = turnShots(detail, run.id);
   const memberRunIds = new Set(orchestration.crew.map((member) => member.runId));
   const otherShots = shots.filter((shot) => !memberRunIds.has(shot.runId));
-  const summary = orchestration.crew.length === 0 ? (textByRun.get(run.id) ?? '') : '';
+  const summary = closingReply(detail.messages, orchestration.crew, run.id);
   const lastReply = detail.messages.findLast(
     (message) => message.role === 'assistant' && message.runId === run.id,
   );

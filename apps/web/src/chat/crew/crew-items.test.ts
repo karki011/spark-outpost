@@ -3,6 +3,7 @@ import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
 import {
   crewItems,
   groupParallel,
+  closingReply,
   handOffAt,
   itemStartedAt,
   memberTexts,
@@ -83,6 +84,28 @@ describe('memberTexts', () => {
     const texts = memberTexts(messages, 'root', handOffAt(crew, 'root'));
     expect(texts.get('root')).toBe('Which report?\n\nSpend, then.');
     expect(texts.get('bolt')).toBe('Done. fake-edit=allowed');
+  });
+
+  it("reads the turn's closing reply: what the turn said after it handed the work off", () => {
+    const messages = [
+      reply('root', 'Which report?', 2),
+      reply('bolt', 'Built the report.', 5),
+      reply('root', 'Done: the spend report is built. Checks passed.', 6),
+    ];
+    expect(closingReply(messages, crew, 'root')).toBe(
+      'Done: the spend report is built. Checks passed.',
+    );
+  });
+
+  it('reads the closing reply of a turn whose helpers stored no start time', () => {
+    const helpers = [{ runId: 'bolt', startedAt: null }] as CrewMember[];
+    const messages = [reply('bolt', 'Built it.', 2), reply('root', 'Done: built.', 3)];
+    expect(closingReply(messages, helpers, 'root')).toBe('Done: built.');
+  });
+
+  it('has no closing reply when the turn itself was the only agent', () => {
+    const messages = [reply('root', 'Answer', 3)];
+    expect(closingReply(messages, crew.slice(0, 1), 'root')).toBe('');
   });
 
   it('uses the latest root reply when nothing was handed off', () => {

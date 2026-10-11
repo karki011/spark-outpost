@@ -14,6 +14,7 @@ const ATLAS = '00000000-0000-4000-8000-0000000000a0';
 const BOLT = '00000000-0000-4000-8000-0000000000a1';
 const RIVET = '00000000-0000-4000-8000-0000000000a2';
 const ANSWER = '00000000-0000-4000-8000-0000000000a3';
+export const CLOSING_REPLY = 'Done: the store and the view are in. Checks passed.';
 const STEER = '00000000-0000-4000-8000-0000000000e1';
 
 function piece(key: string, title: string, builderRunId: string): TaskPiece {
@@ -170,6 +171,7 @@ export function crewTurn(status: Run['status']) {
       reply('m0', ATLAS, 'Here is the split.', '2026-09-26T10:02:40.000Z'),
       reply('m1', BOLT, 'Store built with a Map.', '2026-09-26T10:03:38.000Z'),
       reply('m2', RIVET, 'View renders the store.', '2026-09-26T10:03:38.000Z'),
+      reply('m3', TURN, CLOSING_REPLY, '2026-09-26T10:04:00.000Z'),
     ],
     runs: [run],
     activity: {},
@@ -177,6 +179,7 @@ export function crewTurn(status: Run['status']) {
     approvals: [],
     orchestrations: { [TURN]: stored },
     plans: {
+      saved: [],
       lines: [{ runId: TURN, unit: 'pieces', items: 2, planId: null, version: null }],
     },
     memberMessages: [STEERED],
