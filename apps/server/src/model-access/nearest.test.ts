@@ -61,4 +61,15 @@ describe('the nearest usable model', () => {
   it('still picks a model when the rejected one has no known tier', () => {
     expect(nearest({ id: 'mystery-9', label: 'Mystery 9' }, [LUNA, SOL])).toBe('gpt-6-luna');
   });
+
+  it('keeps the same model when the list now reports it under another id', () => {
+    const pinned = { id: 'sonnet', label: 'Sonnet 5.5' };
+    const pool = [
+      model('claude-sonnet-5', 'Sonnet 5', 'usable'),
+      model('claude-sonnet-5-5', 'Sonnet 5.5', 'unknown'),
+      model('claude-opus-5-5', 'Opus 5.5', 'usable'),
+    ];
+    expect(nearestUsable(pinned, pool, 'claude', NOW)?.id).toBe('claude-sonnet-5-5');
+    expect(nearestUsable(pinned, [...pool].reverse(), 'claude', NOW)?.id).toBe('claude-sonnet-5-5');
+  });
 });

@@ -20,8 +20,14 @@ function sharesFamily(a: TierModel, b: TierModel): boolean {
   return familyWords(`${b.label} ${b.id}`).some((word) => words.has(word) && word !== 'gpt');
 }
 
+function sameModel(a: TierModel, b: TierModel, provider: string): boolean {
+  const card = cardFor(a, provider);
+  return card !== null && card.id === cardFor(b, provider)?.id;
+}
+
 interface Scored<T> {
   model: T;
+  same: number;
   known: number;
   distance: number;
   below: number;
@@ -30,7 +36,7 @@ interface Scored<T> {
   order: number;
 }
 
-const SCORE_KEYS = ['known', 'distance', 'below', 'carded', 'family', 'order'] as const;
+const SCORE_KEYS = ['same', 'known', 'distance', 'below', 'carded', 'family', 'order'] as const;
 
 function compare<T>(a: Scored<T>, b: Scored<T>): number {
   for (const key of SCORE_KEYS) {
@@ -60,6 +66,7 @@ export function nearestUsable<T extends RankedModel>(
     const measurable = wanted !== null && tier !== null;
     return {
       model,
+      same: sameModel(target, model, provider) ? 0 : 1,
       known: model.availability === 'usable' ? 0 : 1,
       distance: measurable ? Math.abs(tier - wanted) : UNKNOWN_DISTANCE,
       below: measurable && tier > wanted ? 1 : 0,
