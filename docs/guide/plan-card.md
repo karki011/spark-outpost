@@ -24,6 +24,8 @@ Spark has no plan card of its own and saves no plan of its own. Without `/plan` 
 
 The plan you approve becomes the chat's agreed plan. The thread shows one line, **Plan saved**. Select it to open the plan in the **Work** panel. A revised plan you approve is saved as a new version.
 
-Codex shows the line only when its own plan approval happens. Older chats keep lines such as **Plan saved · 4 pieces**.
+Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line. Send your next message to build.
+
+Older chats keep lines such as **Plan saved · 4 pieces**.
 
 **Next:** [Review, keep or revert changes](review-changes.md)
