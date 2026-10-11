@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { runModeSchema, type RunMode } from './approvals.ts';
+import { runModeSchema } from './approvals.ts';
 import { categorySchema } from './categories.ts';
 import { routeSourceSchema } from './checkpoints.ts';
 import { modelTierSchema } from './model-cards.ts';
@@ -31,10 +31,6 @@ export function mergeCostSource(
   if (next === null) return current;
   if (current === null || current === next) return next;
   return 'mixed';
-}
-
-export function runRole(mode: RunMode | null): string {
-  return mode === 'do' ? 'Builder' : 'Reader';
 }
 
 export const protocolLogEntrySchema = z.object({

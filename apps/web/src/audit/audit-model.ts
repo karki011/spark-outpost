@@ -1,8 +1,17 @@
-import type { AuditRunSummary, ProtocolLogEntry } from '@spark-outpost/contracts';
+import {
+  providerLabel,
+  type AuditRunSummary,
+  type ProtocolLogEntry,
+} from '@spark-outpost/contracts';
 
 export interface AuditTurn {
   userMessageId: string;
   runs: AuditRunSummary[];
+}
+
+export function runLabel(run: Pick<AuditRunSummary, 'role' | 'provider'>): string {
+  const agent = providerLabel(run.provider);
+  return run.role === agent ? agent : `${run.role} · ${agent}`;
 }
 
 export function auditTurns(runs: readonly AuditRunSummary[]): AuditTurn[] {

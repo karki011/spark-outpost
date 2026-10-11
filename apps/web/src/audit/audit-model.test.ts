@@ -5,6 +5,7 @@ import {
   entrySummary,
   formatDuration,
   jsonTokens,
+  runLabel,
   tickLabel,
   waterfall,
 } from './audit-model.ts';
@@ -195,5 +196,12 @@ describe('jsonTokens', () => {
     expect(tokens.map((token) => token.text).join('')).toBe(JSON.stringify(value, null, 2));
     expect(tokens.filter((token) => token.kind !== 'plain').length).toBeLessThan(200);
     expect(tokens.at(-1)?.kind).toBe('plain');
+  });
+});
+
+describe('runLabel', () => {
+  it('names a plain run by its agent once, and a stored helper by its role and agent', () => {
+    expect(runLabel({ role: 'Claude', provider: 'claude' })).toBe('Claude');
+    expect(runLabel({ role: 'Critic', provider: 'codex' })).toBe('Critic · Codex');
   });
 });
