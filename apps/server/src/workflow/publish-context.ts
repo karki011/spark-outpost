@@ -2,8 +2,9 @@ import { modePosture } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { reachesHosting } from '../approvals/git-commands.ts';
 import {
+  asksPushOnly,
   publishBasis,
-  publishRequested,
+  requestedBy,
   type FollowUpRound,
   type PublishBasis,
   type PublishBrief,
@@ -92,7 +93,7 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   const followUp = input.followUpRound
     ? { workspaceId: input.workspaceId, conversationId: input.identity.threadId }
     : null;
-  return { level: input.level, requested: publishRequested(userText(input)), followUp };
+  return { level: input.level, ...requestedBy(userText(input)), followUp };
 }
 
 type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
@@ -109,7 +110,8 @@ export async function withPublishNote(db: Queryable, input: NoteFacts): Promise<
   if (input.role !== null || input.mode !== 'do') return own;
   const brief = await publishBrief(db, input);
   if (brief?.basis !== 'requested') return own;
-  return [own, mainAgentPublishNote(brief.branch, brief.base)].filter(Boolean).join('\n\n');
+  const note = mainAgentPublishNote(brief.branch, brief.base, asksPushOnly(publishGrant(input)));
+  return [own, note].filter(Boolean).join('\n\n');
 }
 
 export async function publishScope(
@@ -121,8 +123,11 @@ export async function publishScope(
   const task = await taskBranch(db, root).catch(() => null);
   if (!root || !task) return null;
   const grant = await effectiveGrant(db, publishGrant(input), task);
-  const basis = publishBasis(modePosture(input.provider, input.agentMode), grant);
-  return basis ? { basis, task, root } : null;
+  const posture = modePosture(input.provider, input.agentMode);
+  const basis = publishBasis(posture, grant, ['push']);
+  if (!basis) return null;
+  const opensPull = publishBasis(posture, grant, ['pull']) !== null;
+  return { basis, task, root, opensPull, pushOnly: asksPushOnly(grant) };
 }
 
 export async function publishBrief(

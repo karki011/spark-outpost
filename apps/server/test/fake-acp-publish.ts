@@ -9,6 +9,7 @@ const run = promisify(execFile);
 const PUBLISH_HEADING = '## Publish this change';
 const BRANCH = /`git push origin ([^`\s]+)`/;
 const PULL_BASE = /`gh pr create --base ([^`\s]+)`/;
+const PULL_STEP = '`gh pr create`';
 const FOLLOW_UP = "Don't open another pull request";
 const FAKE_GH = path.resolve(import.meta.dirname, '../../../tests/browser/bin/gh');
 const AUTHOR = ['-c', 'user.email=agent@example.test', '-c', 'user.name=Fake Agent'];
@@ -85,7 +86,7 @@ export async function publishTurn(turn: FakeTurn): Promise<acp.StopReason | null
     await turn.say(`published=no push=${pushed.output.trim().split('\n').at(-1)}`);
     return 'end_turn';
   }
-  if (asked.includes(FOLLOW_UP) || turn.text.includes('#nopr')) {
+  if (asked.includes(FOLLOW_UP) || !asked.includes(PULL_STEP) || turn.text.includes('#nopr')) {
     await turn.say('published=pushed');
     return 'end_turn';
   }

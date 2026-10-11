@@ -17,6 +17,8 @@ export interface PublishScope {
   basis: PublishBasis;
   task: TaskBranch;
   root: string;
+  opensPull: boolean;
+  pushOnly: boolean;
 }
 
 export type AgentPushOutcome = 'pushed' | 'failed' | 'cancelled' | 'timed_out' | 'refused';

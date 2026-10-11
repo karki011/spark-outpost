@@ -123,6 +123,10 @@ export function requestedBy(text: string): Pick<PublishGrant, 'requested' | 'ask
   return { requested: asked.push, asked };
 }
 
+export function asksPushOnly(grant: Pick<PublishGrant, 'level' | 'requested' | 'asked'>): boolean {
+  return grant.requested && grant.asked?.pull === false && grant.level !== 'full-auto';
+}
+
 const GH_PR_WRITES = new Set(['create', 'edit']);
 const PR_SELECTOR = /^(#?\d+|https?:\/\/.*)$/i;
 const NAMES_REPO = /^(?:-R|--repo(?:=|$))/;

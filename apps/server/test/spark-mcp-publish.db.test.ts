@@ -9,7 +9,7 @@ import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import type { PublishScope } from '../src/ship/agent-push.ts';
 import { sparkAvailability } from '../src/spark-mcp/availability.ts';
 import { callSparkTool } from '../src/spark-mcp/server.ts';
-import { NOT_AUTHORIZED, publishTools } from '../src/spark-mcp/tools/publish-tools.ts';
+import { NOT_AUTHORIZED, PUSH_ONLY, publishTools } from '../src/spark-mcp/tools/publish-tools.ts';
 import { linkedConversation } from './approval-support.ts';
 import { FAKE_GH, git, repoWithRemote, startGitHubStub, type GitHubStub } from './ship-support.ts';
 import { toolDeps } from './spark-mcp-support.ts';
@@ -72,6 +72,8 @@ const publish = (): PublishScope => ({
   basis: 'requested',
   task: { branch: BRANCH, protectedBranches: ['main', 'master'] },
   root,
+  opensPull: true,
+  pushOnly: false,
 });
 
 const NO_GH = {
@@ -161,6 +163,17 @@ describe('the publish tools an agent is given', { timeout: 60_000 }, () => {
     await call('spark_push', {}, stacked);
     await call('spark_pull_request', { title: 'Orders page' }, stacked);
     expect(stub.github.pulls[0]).toMatchObject({ head: BRANCH, base: parent });
+  });
+
+  it('push and open no pull request when the message asked for the push alone', async () => {
+    await connectGitHub();
+    const pushOnly: PublishScope = { ...publish(), opensPull: false, pushOnly: true };
+    const pushed = JSON.parse((await call('spark_push', {}, pushOnly)).text) as { next: string };
+    expect(pushed).toMatchObject({ pushed: true, branch: BRANCH });
+    expect(pushed.next).toContain('Do not open a pull request');
+    const opened = await call('spark_pull_request', { title: 'Tidy the notes' }, pushOnly);
+    expect(opened).toEqual({ text: PUSH_ONLY, isError: true });
+    expect(stub.github.pulls).toEqual([]);
   });
 
   it('say plainly when GitHub is not connected', async () => {

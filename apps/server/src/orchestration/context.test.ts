@@ -11,6 +11,15 @@ describe('context assembly', () => {
     expect(stacked).toMatch(/Never force-push/);
   });
 
+  it('asks for the push alone when the user asked for the push and no pull request', () => {
+    const note = mainAgentPublishNote('spark/web-5e', 'spark/api-1a', true);
+    expect(note).toContain('`git push origin spark/web-5e`');
+    expect(note).toContain('Do not open a pull request');
+    expect(note).not.toContain('gh pr create');
+    expect(note).not.toContain('spark_pull_request');
+    expect(note).toMatch(/Never force-push/);
+  });
+
   it('shows the end of each failing check’s output', () => {
     const failures = checkFailureText([
       { command: 'npm test', outcome: 'failed', exitCode: 1, outputTail: `${'x'.repeat(5000)}END` },

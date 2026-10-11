@@ -42,4 +42,17 @@ describe('publishReason', () => {
     const wrapUp = { ...fromAnotherChat, fromUser: true, wrapUp: true };
     expect(publishReason({ ...turn, level: 'full-auto', outpostRequest: wrapUp })).toBeNull();
   });
+
+  it('is a push-only ask when the message asks for the push and not the pull request', () => {
+    const pushOnly = 'Push this branch, but do not open a pull request';
+    expect(publishReason({ ...turn, userRequest: pushOnly })).toBe('asked-push');
+    expect(publishReason({ ...turn, userRequest: 'Fix it and push it' })).toBe('asked-push');
+    expect(publishReason({ ...turn, userRequest: 'Push it and open a PR' })).toBe('asked');
+  });
+
+  it('keeps the pull request at Full auto → PR when the message asks only for the push', () => {
+    expect(publishReason({ ...turn, level: 'full-auto', userRequest: 'Fix it and push it' })).toBe(
+      'asked',
+    );
+  });
 });

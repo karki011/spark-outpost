@@ -102,6 +102,8 @@ const scope = (): PublishScope => ({
   basis: 'requested',
   task: { branch: BRANCH, protectedBranches: ['main', 'master'] },
   root,
+  opensPull: true,
+  pushOnly: false,
 });
 
 function auditLog() {

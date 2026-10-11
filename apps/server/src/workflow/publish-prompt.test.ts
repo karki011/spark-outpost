@@ -81,4 +81,17 @@ describe('publishPrompt', () => {
     const round = publishPrompt({ ...base, reason: 'follow-up', pullBase: 'spark/parent-1a2b' });
     expect(round).not.toContain('--base');
   });
+
+  it('asks for the push alone when the message asked for the push and no pull request', () => {
+    const prompt = publishPrompt({ ...base, reason: 'asked-push', draftAsked: true }) ?? '';
+    expect(prompt.startsWith(`${PUBLISH_PROMPT_HEADING}\n`)).toBe(true);
+    expect(prompt).toContain('`git push origin spark/add-export`');
+    expect(prompt).toContain('`spark_push`');
+    expect(prompt).toContain('Do not open a pull request');
+    expect(prompt).not.toContain('gh pr create');
+    expect(prompt).not.toContain('spark_pull_request');
+    expect(prompt).not.toMatch(/draft/iu);
+    expect(prompt).toContain('Never force-push, push any other branch or the base branch');
+    expect(prompt).toContain('Never skip hooks (no `--no-verify`)');
+  });
 });

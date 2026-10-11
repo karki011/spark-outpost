@@ -18,13 +18,13 @@ import { memorySecretStore } from '../setup/secrets.ts';
 import { pickRemote } from '../ship/git.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { ShipDeps } from '../ship/prepare.ts';
-import { publishedLine, publishedState } from '../ship/published.ts';
+import { publishedLine, publishedState, type Published } from '../ship/published.ts';
 import type { Append, RunControl, TurnDeps, TurnResult } from './agent-turn.ts';
 import { closeMessage } from './execute-run.ts';
 import { publishPrompt, type PublishReason } from './publish-prompt.ts';
 import { promptAgain } from './publish-step-again.ts';
 import { commitWithoutRemote } from './publish-step-commit.ts';
-import { followUpLine, notPublishedLine, withLine } from './publish-step-lines.ts';
+import { followUpLine, notPublishedLine, pushedLine, withLine } from './publish-step-lines.ts';
 import { publishReason } from './publish-step-reason.ts';
 import { recordPullRequest } from './publish-step-record.ts';
 import { branchWork, notPushed, pushedInFull } from './publish-step-work.ts';
@@ -103,8 +103,15 @@ async function unpublishedWork(
 ): Promise<boolean> {
   const work = await branchWork(plan.root, plan.branch, baseCommit);
   if (notPushed(work)) return true;
-  if (turn.reason === 'follow-up' || !pushedInFull(work)) return false;
+  if (turn.reason !== 'full-auto' && turn.reason !== 'asked') return false;
+  if (!pushedInFull(work)) return false;
   return !(await hasOpenPull(turn, plan));
+}
+
+function resultLine(reason: PublishReason, published: Published, branch: string): string {
+  if (reason === 'follow-up') return followUpLine(published);
+  if (reason === 'asked-push') return pushedLine(published, branch);
+  return publishedLine(published, branch);
 }
 
 async function publishedByAgent(
@@ -137,9 +144,7 @@ async function publishedByAgent(
   await recordPullRequest(turn.ship, chat, plan, published).catch((error: unknown) =>
     console.error('Could not record the pull request the agent opened', error),
   );
-  const followUp = turn.reason === 'follow-up';
-  const line = followUp ? followUpLine(published) : publishedLine(published, plan.branch);
-  return withLine(turn.append, said, line);
+  return withLine(turn.append, said, resultLine(turn.reason, published, plan.branch));
 }
 
 export async function publishStep(

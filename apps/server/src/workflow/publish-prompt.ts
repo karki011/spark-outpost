@@ -1,7 +1,7 @@
 import { pullBaseLine } from '../orchestration/context.ts';
 import { oneLine } from './chat-prompt-text.ts';
 
-export type PublishReason = 'full-auto' | 'asked' | 'follow-up';
+export type PublishReason = 'full-auto' | 'asked' | 'asked-push' | 'follow-up';
 
 export interface PublishPromptFacts {
   branch: string;
@@ -32,6 +32,15 @@ function followUpLines(branch: string): string[] {
   ];
 }
 
+function pushOnlyLines(branch: string): string[] {
+  return [
+    `The work on this task is finished. The user asked for the push only: now, in this turn, commit it and ${pushStep(branch)}, and change nothing else.`,
+    'Do not open a pull request.',
+    `${LIMITS} ${HOOKS}`,
+    'End your reply by saying whether the branch was pushed.',
+  ];
+}
+
 function firstPublishLines(branch: string, facts: PublishPromptFacts): string[] {
   const base = oneLine(facts.pullBase ?? '').replaceAll('`', '');
   return [
@@ -44,11 +53,15 @@ function firstPublishLines(branch: string, facts: PublishPromptFacts): string[] 
   ];
 }
 
+function promptLines(branch: string, facts: PublishPromptFacts): string[] {
+  if (facts.reason === 'follow-up') return followUpLines(branch);
+  if (facts.reason === 'asked-push') return pushOnlyLines(branch);
+  return firstPublishLines(branch, facts);
+}
+
 export function publishPrompt(facts: PublishPromptFacts): string | null {
   if (!facts.unpublishedWork || facts.reason === null) return null;
   const branch = oneLine(facts.branch).replaceAll('`', '');
   if (!branch) return null;
-  const lines =
-    facts.reason === 'follow-up' ? followUpLines(branch) : firstPublishLines(branch, facts);
-  return [PUBLISH_PROMPT_HEADING, ...lines].join('\n');
+  return [PUBLISH_PROMPT_HEADING, ...promptLines(branch, facts)].join('\n');
 }
