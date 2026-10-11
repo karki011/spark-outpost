@@ -4,20 +4,41 @@ export interface Turn {
   run: Run;
   userMessage: Message | null;
   assistantMessage: Message | null;
+  laterMessages: readonly Message[];
+}
+
+const NO_MESSAGES: readonly Message[] = [];
+
+function repliesByRun(messages: readonly Message[]): Map<string, Message[]> {
+  const byRun = new Map<string, Message[]>();
+  for (const message of messages) {
+    if (message.role !== 'assistant' || !message.runId) continue;
+    const replies = byRun.get(message.runId);
+    if (replies) replies.push(message);
+    else byRun.set(message.runId, [message]);
+  }
+  return byRun;
 }
 
 export function buildTurns(detail: Pick<ConversationDetail, 'messages' | 'runs'>): Turn[] {
   const byId = new Map(detail.messages.map((message) => [message.id, message]));
-  const byRun = new Map(
-    detail.messages
-      .filter((message) => message.role === 'assistant' && message.runId)
-      .map((message) => [message.runId, message]),
-  );
-  return topLevelRuns(detail).map((run) => ({
-    run,
-    userMessage: byId.get(run.userMessageId) ?? null,
-    assistantMessage: byRun.get(run.id) ?? null,
-  }));
+  const byRun = repliesByRun(detail.messages);
+  return topLevelRuns(detail).map((run) => {
+    const [reply = null, ...later] = byRun.get(run.id) ?? [];
+    return {
+      run,
+      userMessage: byId.get(run.userMessageId) ?? null,
+      assistantMessage: reply,
+      laterMessages: later.length > 0 ? later : NO_MESSAGES,
+    };
+  });
+}
+
+export function latestReplyId(
+  detail: Pick<ConversationDetail, 'messages' | 'runs'>,
+): string | null {
+  const replied = buildTurns(detail).findLast((turn) => turn.assistantMessage !== null);
+  return replied?.assistantMessage?.id ?? null;
 }
 
 export function topLevelRuns(detail: Pick<ConversationDetail, 'runs'>): Run[] {

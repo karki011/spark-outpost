@@ -1,6 +1,10 @@
 export const TITLE_REQUEST =
   'End your reply with one last line in the form "Title: <3 to 6 words>" that names what the user asked for in this chat, not your reply or whether you could do it, in sentence case, with no quotes and no trailing period, for example "Title: Fix off-by-one in date divider". Spark Outpost hides that line from the user.';
 
+export function hidesTitleLine(run: { parentRunId: string | null }): boolean {
+  return run.parentRunId === null;
+}
+
 const TITLE_LINE = /^[\s*_>#-]*title[\s*_]*:[\s*_]*(.*?)[\s*_]*$/i;
 const TITLE_START = /^title[\s*_]*(?::.*)?$/i;
 const LEADING_MARKUP = /^[\s*_>#-]*/;

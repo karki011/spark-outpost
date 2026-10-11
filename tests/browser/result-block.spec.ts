@@ -220,3 +220,43 @@ test.describe('result block screenshots', () => {
     await shootEverywhere(page, 'with-pr-expanded');
   });
 });
+
+test('a Full auto → PR turn shows the work reply, then the publish result, under one agent header', async ({
+  page,
+}) => {
+  await fullAutoPr(page);
+  const turn = page.locator('section[data-turn]').last();
+  const publish = turn.getByRole('group', { name: 'Publish result' });
+  const shown = async () => {
+    await expect(turn.locator('.ai-head')).toHaveCount(1);
+    await expect(turn.locator('.msg.ai > .md').first()).toContainText('fake-edit=allowed');
+    await expect(publish).toContainText('published=');
+    await expect(publish).not.toContainText('fake-edit=allowed');
+    const work = (await turn.locator('.msg.ai > .md').first().boundingBox())!;
+    const result = (await publish.boundingBox())!;
+    expect(work.y + work.height).toBeLessThanOrEqual(result.y);
+  };
+  await shown();
+  await page.reload();
+  await shown();
+  const violations = await new AxeBuilder({ page })
+    .include('.publish-result')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(violations.violations.map((violation) => violation.id)).toEqual([]);
+
+  if (!SHOTS) return;
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate((skin) => {
+      document.documentElement.dataset.skin = skin === 'light' ? 'light' : 'graphite';
+    }, scheme);
+    await turn.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    await turn.screenshot({ path: `${SHOTS}/release-fix-publish-turn-${scheme}.png` });
+    await page
+      .getByRole('region', { name: 'Chat context' })
+      .screenshot({ path: `${SHOTS}/release-fix-rail-${scheme}.png` });
+  }
+});

@@ -65,7 +65,7 @@ import { QueueStrip } from './queue/QueueStrip.tsx';
 import { sendNowStatus } from './queue/send-choice.ts';
 import { queueMode } from './queue/queue-model.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
-import { activeRun } from './turns.ts';
+import { activeRun, latestReplyId } from './turns.ts';
 import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
@@ -114,9 +114,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   );
   const sends = useChatSend(conversationId, savedIds, refresh);
   const attachments = useAttachments();
-  const latestReplyId =
-    detail.data?.messages.findLast((message) => message.role === 'assistant')?.id ?? null;
-  const quotes = useQuotes(conversationId, latestReplyId);
+  const latestReply = useMemo(
+    () => (detail.data ? latestReplyId(detail.data) : null),
+    [detail.data],
+  );
+  const quotes = useQuotes(conversationId, latestReply);
   const drop = useFileDrop(attachments.add);
   const stop = useStop(conversationId, detail.data, refresh);
   const startFresh = useMutation({

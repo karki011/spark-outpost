@@ -124,6 +124,8 @@ test('a crew turn stored by an earlier version opens read-only, and the chat goe
   await expect(stored.getByRole('button', { name: `Bolt Builder ${BUILT} $0.40` })).toBeVisible();
   await expect(stored.getByText(REVIEWED)).toBeVisible();
   await expect(stored.locator('.agent-who').filter({ hasText: 'Hawk' })).toBeVisible();
+  await expect(stored.locator('.crew-summary')).toHaveText(FINAL);
+  await expect(stored.getByText(FINAL)).toHaveCount(1);
   await expect(stored.getByRole('button', { name: /^Plan saved · 2 pieces/ })).toBeVisible();
   await expect(stored.locator('.crew-foot')).toContainText('2 agents');
   await expect(stored.locator('.crew-foot')).toContainText('$0.50');

@@ -266,8 +266,9 @@ test.describe('working chats', () => {
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
     expect(after.width).toBe(before.width);
-    const crew = rail(page).getByRole('region', { name: 'Crew' });
-    const members = crew.getByRole('list', { name: 'Crew members' }).getByRole('listitem');
+    const crew = rail(page).getByRole('region', { name: 'Agent' });
+    await expect(crew.getByRole('heading')).toHaveText(/^Claude · /);
+    const members = crew.getByRole('list', { name: 'Agent' }).getByRole('listitem');
     await expect(members).toHaveCount(1);
     await expect(members).toContainText('Claude');
     await expect(members).toContainText('Done');

@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Run } from '@spark-outpost/contracts';
 import { CrewTurn } from './CrewTurn.tsx';
-import { crewTurn } from './stored-turn-fixture.ts';
+import { orchestrationSchema } from '@spark-outpost/contracts';
+import released from '../../../../../packages/contracts/src/stored-crew-turn.fixture.json' with { type: 'json' };
+import { CLOSING_REPLY, crewTurn } from './stored-turn-fixture.ts';
 
 class QuietEventSource {
   onmessage: ((message: MessageEvent<string>) => void) | null = null;
@@ -83,6 +85,27 @@ describe('a stored crew turn', () => {
     const steered = view.container.querySelector('.msg.me.steered')!;
     expect(steered.textContent).toContain('Use a Map for the store');
     expect(view.container.textContent).toContain('Plan saved · 2 pieces');
+  });
+
+  it("shows the turn's own closing reply once, after the helpers", () => {
+    const { view } = show('succeeded');
+    const closing = view.container.querySelector('.crew-summary');
+    expect(closing?.textContent).toBe(CLOSING_REPLY);
+    const text = view.container.textContent ?? '';
+    expect(text.split(CLOSING_REPLY)).toHaveLength(2);
+    expect(text.indexOf('Here is the split.')).toBeLessThan(text.indexOf(CLOSING_REPLY));
+  });
+
+  it('shows the closing reply of a turn the released version stored', () => {
+    const turn = crewTurn('succeeded');
+    const stored = orchestrationSchema.parse(released.orchestration);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <CrewTurn {...turn} orchestration={stored} repo={null} taskCard={null} />
+      </QueryClientProvider>,
+    );
+    expect(view.container.querySelector('.crew-summary')?.textContent).toBe(CLOSING_REPLY);
   });
 
   it('keeps a card the user already answered', () => {

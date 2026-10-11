@@ -103,12 +103,13 @@ function OpenRail({
   const branch = workspace.data?.current ?? null;
   const reading = latestContext(detail.runs, settings.provider);
   const picked = currentModel(settings, capabilities.data);
+  const mode = permissionState(settings, capabilities.data).label;
   const rows = railRows({
     repoNames: repos.map((repo) => repo.name),
     branch: branch ? { name: branch.branch, worktree: branch.worktree } : null,
     provider: providerName(provider),
     model: settings.routing === 'auto' ? 'Auto' : picked ? shortLabel(picked.label) : null,
-    mode: permissionState(settings, capabilities.data).label,
+    mode,
     autonomy,
     changes: changes.data ?? null,
     watch,
@@ -141,7 +142,9 @@ function OpenRail({
           <RailTv key="tv" conversationId={conversationId} agents={crew.stage} />
         )}
       </AnimatePresence>
-      {crew.list.length > 0 && <RailCrew conversationId={conversationId} agents={crew.list} />}
+      {crew.list.length > 0 && (
+        <RailCrew conversationId={conversationId} agents={crew.list} mode={mode} />
+      )}
     </section>
   );
 }

@@ -113,12 +113,13 @@ export const Thread = memo(function Thread({
         <div className="col">
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
-            {turns.map(({ run, userMessage, assistantMessage }) => (
+            {turns.map(({ run, userMessage, assistantMessage, laterMessages }) => (
               <TurnSection
                 key={run.id}
                 run={run}
                 userMessage={userMessage}
                 assistantMessage={assistantMessage}
+                laterMessages={laterMessages}
                 detail={detail}
                 repo={repos[0] ?? null}
                 task={taskAfterRun.get(run.id) ?? null}
