@@ -207,8 +207,14 @@ export function railCrew(detail: ConversationDetail, running: boolean): RailCrew
   return { stage: [], list: members };
 }
 
-export function crewHeading(agents: readonly CrewAgent[]): string {
+export function crewHeading(agents: readonly CrewAgent[], mode: string): string {
+  const only = agents.length === 1 ? agents[0] : undefined;
+  if (only) return [only.name, mode].filter(Boolean).join(' · ');
   return `Crew · ${countLabel(agents.length, 'agent')}`;
+}
+
+export function crewSectionLabel(agents: readonly CrewAgent[]): string {
+  return agents.length === 1 ? 'Agent' : 'Crew';
 }
 
 export function crewJob(agent: CrewAgent): string {

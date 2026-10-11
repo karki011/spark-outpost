@@ -8,6 +8,7 @@ import { RUN_ID, run } from '../../crew/test-run.ts';
 const HAWK = '00000000-0000-4000-8000-0000000000a3';
 import {
   crewHeading,
+  crewSectionLabel,
   crewJob,
   finishedCrew,
   railCrew,
@@ -167,7 +168,7 @@ describe('the crew of a finished turn', () => {
       ['Bolt', 'done'],
       ['Hawk', 'failed'],
     ]);
-    expect(crewHeading(crew)).toBe('Crew · 3 agents');
+    expect(crewHeading(crew, 'Auto')).toBe('Crew · 3 agents');
     expect(crewJob(crew[1]!)).toBe('Builder · Sonnet 5 · medium · 2 turns');
     expect(crewJob(crew[2]!)).toBe('Critic · Sonnet 5 · medium');
     expect(crewJob(crew[0]!)).toBe('Dispatcher · router');
@@ -179,7 +180,7 @@ describe('the crew of a finished turn', () => {
     const crew = finishedCrew(stopped, crewAgents(stopped));
     expect(crew.map((agent) => agent.state)).toEqual(['stopped', 'done', 'stopped']);
     const solo = orchestration({ status: 'succeeded', depth: 'direct', crew: [builder] });
-    expect(crewHeading(finishedCrew(solo, crewAgents(solo)))).toBe('Crew · 2 agents');
+    expect(crewHeading(finishedCrew(solo, crewAgents(solo)), 'Auto')).toBe('Crew · 2 agents');
   });
 
   it('leaves a turn that is still going as it is', () => {
@@ -203,7 +204,9 @@ describe('the crew the rail shows', () => {
     const view = railCrew(chat('succeeded'), false);
     expect(view.stage).toEqual([]);
     expect(names(view.list)).toEqual(['Claude']);
-    expect(crewHeading(view.list)).toBe('Crew · 1 agent');
+    expect(crewHeading(view.list, 'Auto')).toBe('Claude · Auto');
+    expect(crewHeading(view.list, '')).toBe('Claude');
+    expect(crewSectionLabel(view.list)).toBe('Agent');
     expect(crewJob(view.list[0]!)).toBe('Agent · Sonnet 5 · medium');
     expect(names(view.list)).toEqual(names(tvCrew(chat('succeeded'))));
   });
@@ -221,6 +224,8 @@ describe('the crew the rail shows', () => {
     });
     const view = railCrew(chat('succeeded', { [RUN_ID]: stored }), false);
     expect(names(view.list)).toEqual(['Jev', 'Bolt', 'Hawk']);
+    expect(crewHeading(view.list, 'Auto')).toBe('Crew · 3 agents');
+    expect(crewSectionLabel(view.list)).toBe('Crew');
   });
 
   it('shows nothing before the first message', () => {
