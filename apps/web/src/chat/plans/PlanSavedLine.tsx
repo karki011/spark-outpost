@@ -1,8 +1,7 @@
 import './save-plan.css';
 import { createContext, useContext } from 'react';
-import type { ConversationDetail } from '@spark-outpost/contracts';
+import { planSavedText, type ConversationDetail } from '@spark-outpost/contracts';
 import { CheckIcon } from '../../ui/icons.tsx';
-import { planLineText } from './plan-line-text.ts';
 
 export const OpenPlanContext = createContext<(() => void) | null>(null);
 
@@ -15,7 +14,7 @@ export function PlanSavedLine({ detail, runId }: PlanSavedLineProps) {
   const openPlan = useContext(OpenPlanContext);
   const line = detail.plans?.lines.find((candidate) => candidate.runId === runId);
   if (!line) return null;
-  const text = planLineText(line);
+  const text = planSavedText(line);
   return (
     <p className="saveplan saved plan-line">
       <CheckIcon />

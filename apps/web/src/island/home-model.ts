@@ -86,7 +86,7 @@ export function finishedLine(
   runId: string | undefined,
 ): string | null {
   if (!detail || !runId) return null;
-  const reply = detail.messages.findLast(
+  const reply = detail.messages.find(
     (message) => message.role === 'assistant' && message.runId === runId,
   );
   const sentence = reply ? firstSentence(hideSecrets(reply.content)) : '';

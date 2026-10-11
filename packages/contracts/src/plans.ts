@@ -48,15 +48,9 @@ export const PLAN_SAVED_OPTION: Record<PlanLineUnit, string> = {
   steps: 'build_steps',
 };
 
-const UNIT_WORDS: Record<PlanLineUnit, [string, string]> = {
-  pieces: ['piece', 'pieces'],
-  steps: ['step', 'steps'],
-};
-
 export function planSavedText(line: Pick<PlanLine, 'items' | 'unit'>): string {
-  if (line.items === 0) return 'Plan saved';
-  const [one, many] = UNIT_WORDS[line.unit];
-  return `Plan saved · ${line.items} ${line.items === 1 ? one : many}`;
+  if (line.items === 0 || line.unit !== 'pieces') return 'Plan saved';
+  return `Plan saved · ${line.items} ${line.items === 1 ? 'piece' : 'pieces'}`;
 }
 
 export const conversationPlansSchema = z.object({

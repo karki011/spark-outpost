@@ -12,6 +12,7 @@ import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import { notifyOutpostChanged } from './outposts.ts';
 import { requestCancel } from './runs.ts';
+import { workReply } from './work-reply.ts';
 
 export interface ChatFacts {
   conversationId: string;
@@ -274,12 +275,8 @@ async function closeCancelled(db: Queryable, postId: string): Promise<CancelOutc
 }
 
 async function asksTheUser(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'
-     ORDER BY created_at DESC LIMIT 1`,
-    [runId],
-  );
-  return rows[0] !== undefined && needsYouLines(rows[0].content).length > 0;
+  const { rows } = await db.query<{ text: string }>(workReply('$1', 'm.content'), [runId]);
+  return rows[0] !== undefined && needsYouLines(rows[0].text).length > 0;
 }
 
 async function cancelCarried(db: Queryable, post: PostRow): Promise<CancelOutcome> {

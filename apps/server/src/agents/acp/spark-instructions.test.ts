@@ -26,6 +26,12 @@ const PREFS: SparkSessionPrefs = {
 const SPARK = { name: 'spark', browser: false };
 
 describe('sparkInstructions', () => {
+  it('points Spark questions at the spark tools without naming the removed crew or Jev picks', () => {
+    const text = sparkInstructions(PREFS, true, true);
+    expect(text).toContain('chats, runs, plans, files changed');
+    expect(text).not.toMatch(/\bcrew\b|Jev picks/i);
+  });
+
   it('asks for coordinator work, the first name and the friendly tone by default', () => {
     const text = sparkInstructions(PREFS, true);
     expect(text).toContain('act as a coordinator');

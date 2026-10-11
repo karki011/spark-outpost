@@ -51,6 +51,7 @@ import {
   type MessageRow,
   type RunRow,
 } from './rows.ts';
+import { workReply } from './work-reply.ts';
 
 const LOCAL_WORKSPACE_SLUG = 'local';
 const TERMINAL_RUN_LEVEL: InvolvementLevel = 'hands-off';
@@ -86,8 +87,8 @@ const summaryQuery = `
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
     CASE WHEN r.status = 'succeeded' THEN (
-      SELECT CASE WHEN strpos(m.content, '${NEEDS_YOU_PREFIX}') > 0 THEN m.content END FROM messages m
-      WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
+      SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
+      FROM (${workReply('r.id', 'm.content')}) work
     ) END AS latest_run_asking_reply,
     COALESCE(
       r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),

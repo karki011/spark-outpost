@@ -20,6 +20,7 @@ import type {
 import { taskChanges } from '../projects/task-changes.ts';
 import { postedAfterStop } from './chat-queue.ts';
 import type { Queryable } from './db.ts';
+import { workReply } from './work-reply.ts';
 
 interface PostRow {
   id: string;
@@ -71,11 +72,6 @@ const observedSchema = z.array(
   }),
 );
 
-function workReply(run: string): string {
-  return `SELECT COALESCE(m.final_reply, m.content) AS text FROM messages m
-    WHERE m.run_id = ${run}.id AND m.role = 'assistant' ORDER BY m.created_at, m.id LIMIT 1`;
-}
-
 const FACTS_QUERY = `
   SELECT p.*,
     (o.paused_at IS NOT NULL) AS paused,
@@ -95,7 +91,7 @@ const FACTS_QUERY = `
     r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
-      FROM (${workReply('r')}) work
+      FROM (${workReply('r.id')}) work
     ) END AS run_asking_reply,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
@@ -423,7 +419,7 @@ export async function requestAnswer(
        SELECT child.id FROM runs child JOIN family ON child.parent_run_id = family.id
      )
      SELECT r.task_id, r.conversation_id,
-       (${workReply('r')}) AS reply,
+       (${workReply('r.id')}) AS reply,
        (SELECT w.branch FROM chat_worktrees w
         WHERE w.conversation_id = r.conversation_id AND w.removed_at IS NULL
         ORDER BY w.created_at LIMIT 1) AS branch,
