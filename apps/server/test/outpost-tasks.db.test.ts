@@ -12,6 +12,7 @@ import {
   taskPost,
   type AcceptOutcome,
 } from '../src/persistence/outpost-tasks.ts';
+import { releaseHold } from '../src/persistence/outpost-posts.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import {
   chatRow,
@@ -221,6 +222,22 @@ describe('accepting a task', () => {
       closed_state: 'cancelled',
       task_id: null,
     });
+  });
+
+  it('refuses a request that is held until another is answered, and takes it once released', async () => {
+    const first = await storedRequest();
+    const held = await storedRequest();
+    await t.db.query('UPDATE outpost_posts SET after_post_id = $2 WHERE id = $1', [held, first]);
+
+    expect(await acceptTask(t.db, api, fromWireFor(held))).toEqual({
+      kind: 'refused',
+      why: 'held',
+    });
+    expect(await queueRows(t.db, api)).toEqual([]);
+    expect(await postColumns(t.db, held)).toMatchObject({ task_id: null, closed_state: null });
+
+    expect(await releaseHold(t.db, held)).toBe(true);
+    expect(accepted(await acceptTask(t.db, api, fromWireFor(held))).queued).toBe(true);
   });
 
   it('orders the reasons a request is not delivered', () => {

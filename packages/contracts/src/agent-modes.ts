@@ -123,6 +123,10 @@ function knownPosture(provider: string | null, mode: string): ModePosture | unde
   return Object.values(PROVIDER_MODES).find((other) => other.postures[mode])?.postures[mode];
 }
 
+export function providerModeIds(provider: string | null): string[] {
+  return Object.keys(providerModes(provider)?.postures ?? {});
+}
+
 export function modePosture(
   provider: string | null,
   mode: string | null,

@@ -3,7 +3,7 @@ import {
   systemOneResponseSchema,
   type IntakeQuestions,
   type SystemOneResponse,
-} from '../advisor/intake-questions.ts';
+} from '../advisor/jev-types.ts';
 import { redactValue } from '../audit/redact.ts';
 import type { Queryable } from '../persistence/db.ts';
 

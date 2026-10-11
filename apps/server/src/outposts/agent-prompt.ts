@@ -1,11 +1,12 @@
+import { mentionsSomeone } from '@spark-outpost/contracts';
 import { REQUEST_LIMIT } from '../orchestration/context.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import { wrapRequest } from './request-prompt.ts';
+import { requestAuthor, wrapRequest } from './request-prompt.ts';
 
 type AgentText = Pick<RunInput, 'prompt' | 'followUp' | 'userRequest' | 'outpostRequest'>;
 
 function isSlashCommand(text: string): boolean {
-  return text.trimStart().startsWith('/');
+  return text.trimStart().startsWith('/') && !mentionsSomeone(text);
 }
 
 function onItsOwnLines(text: string, start: number, end: number): boolean {
@@ -45,11 +46,12 @@ export function asAgentReads<T extends AgentText>(input: T): T {
   const body = input.userRequest;
   if (!request || body.length === 0) return input;
   if (request.fromUser && isSlashCommand(body)) return input;
+  const author = requestAuthor(request);
   const wrap = (kept: string) =>
     wrapRequest({
       postId: request.postId,
       outpostName: request.outpostName,
-      author: { kind: request.fromUser ? 'user' : 'other' },
+      author,
       body: kept,
     });
   const prompt = withRequestLabelled(input.prompt, body, wrap);

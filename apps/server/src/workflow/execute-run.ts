@@ -1,7 +1,6 @@
 import { isApprovalEvent } from '@spark-outpost/contracts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
-import type { IntakeRecorder } from '../advisor/intake-recorder.ts';
 import {
   runAgentTurn,
   startControl,
@@ -14,10 +13,6 @@ import { loadRunInput } from './run-input.ts';
 import { runAppender } from './run-appender.ts';
 import { runEvents, type RunIdentity } from './run-events.ts';
 import { subagentBracket, type SubagentAnnounce } from './subagent-events.ts';
-
-export interface ExecuteRunDeps extends TurnDeps {
-  intake?: IntakeRecorder;
-}
 
 function mirroringApprovals(own: Append, parent: Append): Append {
   return async (event, options) => {
@@ -34,7 +29,7 @@ export interface ChildRunOptions extends TurnOptions {
 const UNFINISHED = { outcome: 'failed', error: null } as const;
 
 export async function executeChildRun(
-  deps: ExecuteRunDeps,
+  deps: TurnDeps,
   lease: Lease,
   { announce, ...options }: ChildRunOptions = {},
   parentAppend?: Append,

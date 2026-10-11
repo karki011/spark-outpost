@@ -150,3 +150,22 @@ export function memberTexts(
   }
   return texts;
 }
+
+export function closingReply(
+  messages: readonly Message[],
+  crew: readonly CrewMember[],
+  rootRunId: string,
+): string {
+  const handedOffAt = handOffAt(crew, rootRunId);
+  const own = messages.filter(
+    (message) => message.role === 'assistant' && message.runId === rootRunId,
+  );
+  if (handedOffAt !== null) {
+    return own
+      .filter((message) => message.createdAt >= handedOffAt)
+      .map((message) => message.content)
+      .join('\n\n');
+  }
+  if (crew.some((member) => member.runId === rootRunId)) return '';
+  return own.at(-1)?.content ?? '';
+}

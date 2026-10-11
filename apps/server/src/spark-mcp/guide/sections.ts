@@ -10,9 +10,9 @@ export const guideSections: GuideSection[] = [
     id: 'overview',
     title: 'What Spark Outpost is',
     keywords: ['spark', 'outpost', 'overview', 'what', 'product'],
-    text: `Spark Outpost is a local-first workspace where you give a goal to a team of AI agents, follow meaningful progress, make decisions when needed, and get results with verification evidence. The application owns the workflow; providers (Claude, Codex, Z.ai) supply intelligence and execution.
+    text: `Spark Outpost is a local-first workspace where you give a goal to an AI agent, follow meaningful progress, make decisions when needed, and get results. One chat is one agent session (Claude, Codex or Z.ai): the user's message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents, or propose sub-chats in an outpost that the user starts.
 
-A conversation is a durable record; a provider session is one replaceable execution resource inside it. Every chat enters the same harness for policy and persistence, but not every message needs a planner, a team of specialists or a reviewer — simple questions take a direct path.`,
+Spark moderates around the agent: the approval gate and safety floor, the audit, a worktree and branch per chat, the publish step, pull request follow-up and its own tools. Spark splits no turn into roles, runs no checks of its own and picks no model. A conversation is a durable record; a provider session is one replaceable execution resource inside it.`,
   },
   {
     id: 'providers',
@@ -25,10 +25,10 @@ Connect Claude and Codex with your existing CLI login (\`claude\` / \`codex\`), 
   {
     id: 'jev',
     title: "Jev, Spark's advisor",
-    keywords: ['jev', 'advisor', 'typesafe', 'system one', 'judgment', 'check changes'],
+    keywords: ['jev', 'advisor', 'typesafe', 'system one', 'judgment'],
     text: `Jev (TypeSafe's "System One") is an optional decision service, not a chat or coding model — it doesn't generate text, stream, call tools or edit files. It answers typed questions (Choice, Score, Noul) with calibrated probabilities over a short state you send it.
 
-Spark uses Jev for a handful of concrete judgments per Do turn: whether a message is a question or a change, whether it's vague enough to need clarifying, whether it looks destructive, whether a Critic review is warranted, and a verifier check on the finished diff. Code always owns the policy and the act line for each question; Jev's answer only decides at high confidence, and low-confidence answers fall back to plain rules. With Spark off, Jev is never called. Answers below the confidence band never grant anything by themselves. Settings → AI providers → Jev → Check changes with Jev lets Jev verify finished diffs and read short redacted previews of the likeliest files to compare file rankings (never used for training).`,
+Jev is never called inside a turn. Spark uses it outside turns: labelling the Map's areas, sorting pull request feedback, and picking what a chat's short update on Spark Island says. Code always owns the policy and the act line for each question; Jev's answer only decides at high confidence, and low-confidence answers fall back to plain rules, as does everything when Jev is not connected. Answers never grant anything by themselves. What is sent is redacted first and never used for training.`,
   },
   {
     id: 'ask-vs-do',
@@ -50,7 +50,7 @@ Spark uses Jev for a handful of concrete judgments per Do turn: whether a messag
 
 Ask: the agent reads the folders and runs read-only commands directly, loops and $(…) included. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — for Do work, ask for the change in a message, or leave a read-only mode. Do: the agent may also edit files and run commands.
 
-Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
+Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. Spark autonomy is a separate choice.`,
   },
   {
     id: 'autonomy-levels',
@@ -65,9 +65,9 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
     ],
     text: `Alongside the agent's own mode, Spark has two autonomy levels. Default for new chats: Settings → Spark → How much Spark does alone; each chat can pick its own. To review each step, pick an agent mode that asks (Manual, Plan).
 
-Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept, Critic findings fixed in a loop, risky work runs in a worktree copy, Revert is always there. No Spark plan card: a build's plan is saved as the agreed plan and shown as one line ("Plan saved · 4 pieces"); nothing waits. To approve a plan first, use /plan or Plan mode.
+Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept ("Changes kept"); Revert is always there. Spark has no plan card and saves no plan of its own: to approve a plan first, use /plan or Plan mode; the approved plan shows as one line ("Plan saved"). In a Plan-mode chat every message plans first.
 
-Full auto → PR (default): the same in a worktree copy; then the agent pushes the branch and opens a PR (Open pull requests as: ready or draft). Nothing merges. When checks still fail in Full auto: a draft PR marked "Checks failing", or Stop and ask. The level never makes a Spark action skip its card.
+Full auto → PR (default): the same; then, when the turn changed files, Spark sends the agent one publish prompt and the agent pushes the chat's branch and opens a PR (a draft only when you ask or Open pull requests as says so). Nothing merges. A failed or stopped publish keeps the change and says "Not published: …". The level never makes a Spark action skip its card.
 
 The safety floor holds at every level.`,
   },
@@ -116,54 +116,17 @@ No run budgets: Spark never caps time, tool calls or cost; usage is only measure
     ],
     text: `Each project has a "Where Spark works" setting (Settings → Projects, also remembered from a chat's place picker): Each chat in its own worktree (recommended, the default) or In my files.
 
-In its own worktree, a chat's first build turn creates a git worktree under .spark/worktrees on a new spark/<title>-<id> branch, reused by every later turn, so chats work side by side and your folder stays as it is. Answers, plans and reviews don't create one. The keep card offers Bring changes into your branch, Ship, or leaving the work on the chat branch. The worktree is released on archive, delete (unpushed work stays on the branch), merge and Reset.
+In its own worktree, a chat's first turn in a mode that can change files creates a git worktree under .spark/worktrees on a new spark/<title>-<id> branch, reused by every later turn, so chats work side by side and your folder stays as it is. A turn in a read-only mode doesn't create one; a Plan-mode chat does, even for a question. The kept record offers Bring changes into your branch; Ship is in the Work panel. The worktree is released on archive, delete (unpushed work stays on the branch), merge and Reset.
 
-In my files, new chats edit the folder directly. Spark still uses a private worktree copy for Full auto → PR, a second task in the same repo, and destructive or risky work; the copy merges back after each turn, with a card if your files changed meanwhile.`,
-  },
-  {
-    id: 'coordinator',
-    title: 'The coordinator and pieces',
-    keywords: ['coordinator', 'pieces', 'integrator', 'shared tree', 'piece list', 'split'],
-    text: `Small and medium work takes the lean path: one Builder, checks with fix turns, and a Critic by rule. For a story too big for one Builder, or one you ask to split, the coordinator plans it into Builder-sized pieces with declared file ownership. Independent pieces run at the same time (up to the project's Builders at once), dependents wait. Pieces of a git project run in one shared tree, the chat's worktree; outside git, in order. A change to another piece's file is kept, flagged and sent to its owner. Jev picks each piece's model.
-
-Builders never stash, checkout, reset, commit, merge or rebase; the full checks run once after every piece has landed, before the Critic.`,
-  },
-  {
-    id: 'builders-at-once',
-    title: 'Builders at once: one at a time or in parallel',
-    keywords: [
-      'builders at once',
-      'at once',
-      'one at a time',
-      'in order',
-      'serial',
-      'sequential',
-      'parallel',
-      'slots',
-      'concurrent',
-      'builder',
-    ],
-    text: `Settings → Projects → Builders at once sets, per project, how many Builders a big plan's pieces may use at the same time: 1 at a time, in order; Up to 2 at once; or Up to 3 at once (the default, so pieces run in parallel by default). More at once finishes sooner and spends faster.
-
-To make Builders run one at a time, open Settings → Projects and pick "1 at a time, in order" for that project.
-
-Spark drops to one at a time on its own while the provider is rate limited. If the server runs with COORDINATOR_MODE set to anything but parallel (the default), every project builds in order and the setting is unavailable. spark_projects shows each project's current value as buildersAtOnce.`,
-  },
-  {
-    id: 'critic-checks',
-    title: 'Critic and checks',
-    keywords: ['critic', 'check', 'review', 'verify', 'checks failed'],
-    text: `After a Builder's project checks pass, a "verified cascade" asks Jev whether the change plausibly meets the request; an unsupported answer reruns once with a stronger model, and a declined one asks you.
-
-A Critic review — from a different provider when one is connected — runs for destructive work, a migration, an explicit review request, a large diff (400+ changed lines or 10+ files), a build from an agreed plan, or a feature spanning several files or areas; never for a one-liner. Concerns with concrete correctness findings trigger a resumed fix turn, checks run again, and the Critic reviews again, up to three fix rounds. Every check round is recorded as an artifact on the task with each command's outcome, exit code and output.`,
+In my files, new chats edit the folder directly. Such a chat has no branch of its own: at Full auto → PR the change is kept, nothing is pushed and the reply says so in one line.`,
   },
   {
     id: 'ship',
     title: 'Ship: commit, push, open a PR',
     keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
-    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a Full auto PR whose checks still fail is always a draft marked "Checks failing". Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
+    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a pull request is a draft only when that setting says so or you ask for one. Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
 
-A turn ends in a result line (files, checks, branch, PR) that needs no answer; expanded, it offers "Bring changes into <your branch>". Ship is in the Work panel's Changes tab. At Full auto → PR, or when you ask for a PR, the agent publishes in one publish turn after the checks: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark checks GitHub and gives the link, or says no PR was opened.`,
+A turn that changed files ends in a "Changes kept" record (files, lines, branch, PR) that needs no answer; expanded, it offers "Bring changes into <your branch>". Ship is in the Work panel's Changes tab. At Full auto → PR when the turn changed files, or when you ask for a PR, Spark sends the agent one publish prompt after its reply: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark runs no checks first; hooks and CI do. Spark checks GitHub and gives the link, or says no PR was opened. A push with no reason is refused, not asked about.`,
   },
   {
     id: 'pr-follow-up',
@@ -177,7 +140,7 @@ A turn ends in a result line (files, checks, branch, PR) that needs no answer; e
     keywords: ['ticket', 'jira', 'linear', 'inbox', 'attention', 'link', 'unlink', 'priority'],
     text: `Tickets groups your Jira and Linear tickets by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; side views filter. Rows show a status badge, Spark progress, priority, assignee, chat and PR links; the detail adds reporter, created date and pull requests. Failing PR checks are a badge in In review, never Needs you. Search covers every ticket.
 
-A build turn that names exactly one ticket links the chat to it; other mentions only suggest. Linked chats show a "KEY · title" chip (Unlink, Undo), their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
+A turn that changes files and names exactly one ticket in your own text links the chat to it. Linked chats show a "KEY · title" chip (Unlink, Undo), and Ship puts the key in the PR title. Mentions never move a ticket's status.
 
 spark_tickets: live data; sort=priority for most urgent, action=read for one in full, action=search for any ticket.`,
   },
@@ -195,7 +158,7 @@ The morning brief (Settings → Spark → Morning brief, with a time) is written
     keywords: ['map', 'project map', 'areas', 'repo map', 'core impact', 'unmatched'],
     text: `The Map page draws each linked repository as a sky of files grouped into areas, with links between areas and between repositories (front end to back end, shared packages, env keys). Filter areas by category (Core, Shared, Feature), files by kind, and links between projects; open a file for Jev's label, a preview, what depends on it, its imports and its history. With 2+ projects it lists unmatched API: routes nothing calls and calls that reach no route.
 
-The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact on the keep card, the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
+The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact in the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
   },
   {
     id: 'mcp-servers',
@@ -227,9 +190,9 @@ Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, sp
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Run, crew, pieces, Jev picks: spark_run. Plan, files changed: spark_task. Chats, messages, queue: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
-Spend: spark_spend. Trends, outcomes: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. PR follow-up: spark_pr_follow_up. Estimates: spark_laws. Sparks, @Spark jobs, replies: spark_sparks, spark_chat. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins.`,
+    text: `Needs me? spark_attention. Run, model, cost: spark_run. Plan, files changed: spark_task. Chats, queue: spark_chats, spark_chat. Old turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend. Trends: spark_analytics. Models: spark_models.
+Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, file impact: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks, @Spark jobs, replies: spark_sparks. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
   },
   {
     id: 'compaction',
@@ -242,7 +205,6 @@ Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: sp
     title: 'Settings → Spark',
     keywords: [
       'settings',
-      'spark switch',
       'personality',
       'name',
       'companion',
@@ -251,9 +213,9 @@ Agents: spark_providers. Connectors: spark_connectors. Slack threads, search: sp
       'switch',
       'toggle',
     ],
-    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Wait before going on without your answer: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
+    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (How much Spark does alone, Wait before going on without your answer: 30s/60s/2 min/5 min/Never/Custom); Pull requests (Open pull requests as: Ready for review or Draft, PR follow-up: fix failing checks, handle review comments, reply on GitHub); Around the app (Morning brief and its time, Status companion: Scout shows what needs you; in the Mac app, Show Spark Island and its Quick chat and Sessions shortcuts).
 
-The Spark switch on: Jev reads each request, routing picks models, a Critic reviews bigger changes and Jev checks finished work. Off: chats go straight to the agent you pick. Approvals and safety apply either way.`,
+There is no switch between a Spark workflow and a direct agent: every chat goes straight to the agent you pick, and approvals and safety always apply.`,
   },
   {
     id: 'settings-sections',
@@ -269,9 +231,9 @@ The Spark switch on: Jev reads each request, routing picks models, a Critic revi
       'projects',
       'connectors',
     ],
-    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear, Slack); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
+    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust and Where Spark works); Connectors (GitHub, Jira, Linear, Slack); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
 
-spark_settings returns the non-secret settings; spark_projects returns each project's Builders at once and Where Spark works.`,
+spark_settings returns the non-secret settings; spark_projects returns each project's Where Spark works.`,
   },
   {
     id: 'today-so-far',
@@ -282,16 +244,16 @@ spark_settings returns the non-secret settings; spark_projects returns each proj
   {
     id: 'analytics',
     title: 'Analytics and spend',
-    keywords: ['analytics', 'spend', 'cost', 'health', 'harness report'],
-    text: `Analytics shows Overview, Spend and Harness tabs over the last 7, 30 or 90 days, all computed locally from this workspace's own history — nothing is sent anywhere except what you ask "Ask about this view" to explain.
+    keywords: ['analytics', 'spend', 'cost', 'health'],
+    text: `Analytics shows Overview and Spend over the last 7, 30 or 90 days, all computed locally from this workspace's own history — nothing is sent anywhere except what you ask "Ask about this view" to explain.
 
-Overview covers turns, runs, cost, outcomes (good/bad/mixed), keep and revert rates, checks and a 0–100 health score. Spend breaks down reported and estimated cost by project, provider and model, cost per task and per good outcome, and Jev's own spend. Harness shows routing paths, how often Jev and the deterministic rules agree, Critic activity, checks, retry loops, and approval wait times. The spark_analytics tool returns the same three reports for a chosen window.`,
+Overview covers turns, runs, cost, outcomes (good/bad/mixed), keep and revert rates and a 0–100 health score. Spend breaks down reported and estimated cost by project, provider and model, cost per task and per good outcome, and Jev's own spend. The spark_analytics tool returns the same reports for a chosen window.`,
   },
   {
     id: 'audit-log',
     title: 'The audit log',
     keywords: ['audit', 'audit log', 'protocol log', 'hash chain', 'verify'],
-    text: `Every agent run's full protocol traffic — every JSON-RPC message to and from the agent, redacted — is recorded to a per-run, hash-chained audit log, along with harness entries like check results and Ship attempts. Secrets (API keys, tokens, passwords, secret-file contents) are redacted before anything is stored.
+    text: `Every agent run's full protocol traffic — every JSON-RPC message to and from the agent, redacted — is recorded to a per-run, hash-chained audit log, along with Spark's own entries like approvals and Ship attempts. Secrets (API keys, tokens, passwords, secret-file contents) are redacted before anything is stored.
 
 The chain lets Spark detect tampering: verifying it walks every row and reports the first broken one. Logs are retained 90 days by default and can be exported per conversation as JSONL or CSV. spark_audit reads a run's log for troubleshooting a specific run.`,
   },

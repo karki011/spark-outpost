@@ -2,6 +2,7 @@ import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { setupStateSchema } from '@spark-outpost/contracts';
 import type { Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import { migrationsDir, runMigrations } from '../src/persistence/migrate.ts';
@@ -40,7 +41,7 @@ describe('the Spark migration', () => {
     await rm(before, { recursive: true, force: true });
   });
 
-  it('gives existing profiles Friendly and Spark on', async () => {
+  it('gives existing profiles Friendly', async () => {
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Hazel')`, [
       workspaceId,
@@ -49,11 +50,7 @@ describe('the Spark migration', () => {
     await runMigrations(db);
 
     const { profile } = await getSetupState(db, workspaceId);
-    expect(profile).toMatchObject({
-      displayName: 'Hazel',
-      personality: 'friendly',
-      sparkEnabled: true,
-    });
+    expect(profile).toMatchObject({ displayName: 'Hazel', personality: 'friendly' });
     await expect(
       db.query(`UPDATE profiles SET personality = 'grumpy' WHERE workspace_id = $1`, [workspaceId]),
     ).rejects.toThrow();
@@ -73,17 +70,39 @@ describe('Spark preferences', () => {
 
   it('saves them through the profile API and rejects an unknown personality', async () => {
     const { get, send } = localClient(createTestApp(t));
-    const { body } = await send('patch', '/api/profile', {
-      personality: 'playful',
-      sparkEnabled: false,
-    }).expect(200);
-    expect(body.profile).toMatchObject({
-      personality: 'playful',
-      sparkEnabled: false,
-    });
+    const { body } = await send('patch', '/api/profile', { personality: 'playful' }).expect(200);
+    expect(body.profile.personality).toBe('playful');
     await send('patch', '/api/profile', { personality: 'grumpy' }).expect(400);
     const { body: after } = await get('/api/setup').expect(200);
     expect(after.profile.personality).toBe('playful');
+  });
+
+  it('loads and saves a profile whose stored row still holds the removed settings', async () => {
+    const { get, send } = localClient(createTestApp(t));
+    await get('/api/setup').expect(200);
+    await t.db.query(
+      `UPDATE profiles SET spark_enabled = false, jev_diffs = false, ship_failing_checks = false
+       WHERE workspace_id = $1`,
+      [t.workspaceId],
+    );
+    const { body: loaded } = await get('/api/setup').expect(200);
+    expect(setupStateSchema.parse(loaded).profile.personality).toBe('friendly');
+    expect(loaded.profile).not.toHaveProperty('sparkEnabled');
+    expect(loaded.profile).not.toHaveProperty('jevDiffs');
+    expect(loaded.profile).not.toHaveProperty('shipFailingChecks');
+    expect(loaded).not.toHaveProperty('parallelBuilders');
+    const { body: saved } = await send('patch', '/api/profile', {
+      displayName: 'Hazel',
+      sparkEnabled: true,
+      jevDiffs: true,
+      shipFailingChecks: true,
+    }).expect(200);
+    expect(saved.profile.displayName).toBe('Hazel');
+    const { rows } = await t.db.query(
+      'SELECT spark_enabled, jev_diffs, ship_failing_checks FROM profiles WHERE workspace_id = $1',
+      [t.workspaceId],
+    );
+    expect(rows[0]).toEqual({ spark_enabled: false, jev_diffs: false, ship_failing_checks: false });
   });
 
   it('remembers the wide-window layout and refuses an unknown one', async () => {

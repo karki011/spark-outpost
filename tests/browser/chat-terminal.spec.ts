@@ -4,7 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
-import { pickPermission } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import {
@@ -16,6 +16,7 @@ import {
   openChatMenu,
   toggleHeaderPane,
 } from './header-menu.ts';
+import { turnDone } from './project-chat-kit.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const SKINS = [
@@ -177,7 +178,7 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+  await turnDone(page, 15_000);
   const branch = (await page.locator('.ctxbar .chat-branch .ctx-branch-name').textContent()) ?? '';
   expect(branch).toMatch(/^spark\//);
 

@@ -10,20 +10,13 @@ interface SparkSuggestionProps {
   conversationId: string;
   sparks: readonly TeammateView[];
   draft: string;
-  enabled: boolean;
   onApply: (draft: string) => void;
 }
 
-export function SparkSuggestion({
-  conversationId,
-  sparks,
-  draft,
-  enabled,
-  onApply,
-}: SparkSuggestionProps) {
+export function SparkSuggestion({ conversationId, sparks, draft, onApply }: SparkSuggestionProps) {
   const [dismissedIn, setDismissedIn] = useState<string | null>(null);
   if (dismissedIn !== null && draft.trim() === '') setDismissedIn(null);
-  const quiet = !enabled || dismissedIn === conversationId;
+  const quiet = dismissedIn === conversationId;
   const spark = quiet ? null : suggestSpark(draft, sparks);
   const tip = useTooltip(SPARK_MENTION_HINT, { side: 'top' });
   if (!spark) return null;

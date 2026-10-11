@@ -5,18 +5,20 @@ import { isDigestRun } from '../persistence/digests.ts';
 import { claimNextJob, type Lease } from '../persistence/jobs.ts';
 import { cleanOrphanedCopies } from '../orchestration/solo-copy.ts';
 import { sweepChatWorktrees } from '../projects/chat-worktree-cleanup.ts';
-import { orchestrate } from '../orchestration/orchestrator.ts';
-import type { OrchestratorDeps } from '../orchestration/session.ts';
+import { runChatTurn } from './chat-turn.ts';
+import type { ChatTurnDeps } from './chat-turn-hooks.ts';
 import { recoverExpiredLeases } from './recovery.ts';
 import { sweepSessions } from './turn-session.ts';
+import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 
-export interface WorkerOptions extends OrchestratorDeps {
+export interface WorkerOptions extends ChatTurnDeps {
   concurrency: number;
   pollMs?: number;
   recoveryEveryMs?: number;
   activeWork?: ActiveWork;
   queueTarget?: ResolveTarget;
+  parked?: ParkedTurns;
 }
 
 export interface Worker {
@@ -27,7 +29,7 @@ export interface Worker {
 
 async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
   if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
-  await orchestrate(options, lease);
+  await runChatTurn(options, lease);
   await sendNextQueued(options, lease.runId);
 }
 
@@ -66,8 +68,10 @@ export function startWorker(options: WorkerOptions): Worker {
       };
     });
 
+  const working = () => active.size - (options.parked?.size ?? 0);
+
   const fillSlots = async (db: Db) => {
-    while (!stopped && active.size < options.concurrency) {
+    while (!stopped && working() < options.concurrency) {
       const lease = await claimNextJob(db, options.leaseSeconds);
       if (!lease) return;
       const done = options.activeWork?.begin(`run ${lease.runId}`);
@@ -81,6 +85,8 @@ export function startWorker(options: WorkerOptions): Worker {
       active.add(task);
     }
   };
+
+  options.parked?.onChange(wake);
 
   const loop = (async () => {
     while (!stopped) {

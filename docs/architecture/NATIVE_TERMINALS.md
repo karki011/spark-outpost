@@ -1,6 +1,6 @@
 # Native Terminal sessions
 
-Terminal sessions run the installed Claude Code or Codex interactive CLI in a Spark-owned PTY. Chat sessions continue through ACP. Terminal sessions do not start Coordinator/Builder workflows and cannot switch a live Chat conversation into a native terminal.
+Terminal sessions run the installed Claude Code or Codex interactive CLI in a Spark-owned PTY. Chat sessions continue through ACP. Terminal sessions do not start chat runs and cannot switch a live Chat conversation into a native terminal.
 
 ## Ownership and lifecycle
 

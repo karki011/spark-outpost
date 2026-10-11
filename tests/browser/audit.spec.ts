@@ -68,12 +68,6 @@ test('the audit view summarises, times, lists, and exports a session @packaged',
 
   await expect(page.locator('.run-usage')).toContainText('~$0.004');
   const panel = page.getByRole('complementary', { name: 'Work panel' });
-  await panel.getByRole('tab', { name: 'Crew' }).click();
-  const crew = panel.getByRole('list', { name: 'Crew' });
-  await expect(crew).toContainText('Reader');
-  await expect(crew).toContainText('gpt-6-sol · high');
-  await expect(crew).toContainText('~$0.004');
-  await shot(page, 'crew');
   await panel.getByRole('tab', { name: 'Cost' }).click();
   await expect(panel.locator('.cost-est')).toHaveText('estimated');
   await shot(page, 'cost');
@@ -85,7 +79,8 @@ test('the audit view summarises, times, lists, and exports a session @packaged',
   await expect(dialog.locator('.set-head .chain')).toHaveText('Hash chain verified · 4 events');
   await expect(dialog.locator('.astat').first()).toContainText('~$0.004');
   const byRun = dialog.getByRole('region', { name: 'By run' });
-  await expect(byRun).toContainText('Reader');
+  await expect(byRun).toContainText('Fake provider');
+  await expect(byRun).not.toContainText('Reader');
   await expect(byRun.locator('.srctag.est')).toHaveAttribute('title', /list price/);
   await shot(page, 'summary');
 

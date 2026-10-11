@@ -43,23 +43,47 @@ async function sendMessage(send: ReturnType<typeof client>, conversationId: stri
   return response.body.run as { model: string | null; modelSwitch: unknown };
 }
 
-describe('a pinned model across an app restart', () => {
-  it('keeps the pinned model when a later session lists it under another alias', async () => {
-    await saveCapabilities(
-      t.db,
-      t.workspaceId,
-      snapshot([DEFAULT_CHOICE, { id: 'opus', label: 'Opus 5.5', description: null }, SONNET]),
-    );
-    const before = client();
-    const id = randomUUID();
-    await createConversation(t.db, t.workspaceId, id);
-    await before('patch', `/api/conversations/${id}/settings`, {
-      model: 'opus',
-      routing: 'pinned',
-    }).expect(200);
-    const kept = await sendMessage(before, id);
-    expect(kept).toMatchObject({ model: 'opus', modelSwitch: null });
+const BEFORE_FIRST_SESSION = [
+  DEFAULT_CHOICE,
+  { id: 'opus', label: 'Opus 5.5', description: null },
+  { id: 'sonnet', label: 'Sonnet 5.5', description: null },
+];
+const AFTER_FIRST_SESSION = [
+  DEFAULT_CHOICE,
+  { id: 'claude-opus-5-5', label: 'Opus 5.5', description: null },
+  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5', description: null },
+  { id: 'claude-sonnet-5', label: 'Sonnet 5', description: null },
+];
 
+async function pinnedChat(send: ReturnType<typeof client>, model: string, provider = 'claude') {
+  const id = randomUUID();
+  await createConversation(t.db, t.workspaceId, id);
+  await send('patch', `/api/conversations/${id}/settings`, {
+    provider,
+    model,
+    routing: 'pinned',
+  }).expect(200);
+  return id;
+}
+
+describe('a pinned model across an app restart', () => {
+  it.each(['sonnet', 'opus', 'haiku'])(
+    'sends the alias %s as typed after the agent lists its models under full ids',
+    async (alias) => {
+      await saveCapabilities(t.db, t.workspaceId, snapshot(BEFORE_FIRST_SESSION));
+      const send = client();
+      const id = await pinnedChat(send, alias);
+      expect(await sendMessage(send, id)).toMatchObject({ model: alias, modelSwitch: null });
+
+      await saveCapabilities(t.db, t.workspaceId, snapshot(AFTER_FIRST_SESSION));
+      expect(await sendMessage(client(), id)).toMatchObject({ model: alias, modelSwitch: null });
+    },
+  );
+
+  it('sends an alias as typed when a later session lists it with a context suffix', async () => {
+    await saveCapabilities(t.db, t.workspaceId, snapshot(BEFORE_FIRST_SESSION));
+    const send = client();
+    const id = await pinnedChat(send, 'opus');
     await saveCapabilities(
       t.db,
       t.workspaceId,
@@ -69,26 +93,57 @@ describe('a pinned model across an app restart', () => {
         SONNET,
       ]),
     );
-    const after = client();
-    expect((await sendMessage(after, id)).model).toBe('opus[1m]');
+    expect(await sendMessage(client(), id)).toMatchObject({ model: 'opus', modelSwitch: null });
   });
 
-  it('still falls back to the default for a pin the agent no longer offers at all', async () => {
-    await saveCapabilities(t.db, t.workspaceId, snapshot([DEFAULT_CHOICE, SONNET]));
+  it('keeps a full id on the same model when the agent lists it with a context suffix', async () => {
+    const fable = { id: 'claude-fable-5-1', label: 'Fable 5.1', description: null };
+    await saveCapabilities(t.db, t.workspaceId, snapshot([DEFAULT_CHOICE, fable]));
     const send = client();
-    const id = randomUUID();
-    await createConversation(t.db, t.workspaceId, id);
-    await send('patch', `/api/conversations/${id}/settings`, {
-      model: 'opus',
-      routing: 'pinned',
-    }).expect(200);
+    const id = await pinnedChat(send, 'claude-fable-5-1');
+    await saveCapabilities(
+      t.db,
+      t.workspaceId,
+      snapshot([DEFAULT_CHOICE, { ...fable, id: 'claude-fable-5-1[1m]' }]),
+    );
+    expect((await sendMessage(client(), id)).model).toBe('claude-fable-5-1[1m]');
+  });
+
+  it('sends Claude a pin it no longer lists, for Claude to resolve, and never another generation', async () => {
+    await saveCapabilities(t.db, t.workspaceId, snapshot(AFTER_FIRST_SESSION));
+    const send = client();
+    const id = await pinnedChat(send, 'claude-sonnet-5-5');
+    await saveCapabilities(
+      t.db,
+      t.workspaceId,
+      snapshot(AFTER_FIRST_SESSION.filter((model) => model.id !== 'claude-sonnet-5-5')),
+    );
+    expect(await sendMessage(client(), id)).toMatchObject({
+      model: 'claude-sonnet-5-5',
+      modelSwitch: null,
+    });
+  });
+
+  it('still falls back to the default, with a note, where the agent does not resolve names', async () => {
+    await connectCliProvider(t, 'codex');
+    const luna = { id: 'gpt-6-luna', label: '6 Luna', description: null };
+    const sol = { id: 'gpt-6-sol', label: '6 Sol', description: null };
+    const codex = (models: CapabilitySnapshot['models']): CapabilitySnapshot => ({
+      provider: 'codex',
+      models,
+      efforts: [],
+      defaultModel: 'gpt-6-sol',
+    });
+    await saveCapabilities(t.db, t.workspaceId, codex([sol, luna]));
+    const send = client();
+    const id = await pinnedChat(send, 'gpt-6-luna', 'codex');
+    await saveCapabilities(t.db, t.workspaceId, codex([sol]));
     const run = await sendMessage(send, id);
-    expect(run.model).toBe('default');
-    expect(run.modelSwitch).toEqual({
-      provider: 'claude',
-      signIn: 'Claude sign-in',
-      from: { id: 'opus', label: 'opus' },
-      to: { id: 'default', label: 'Default (recommended)' },
+    expect(run.model).toBe('gpt-6-sol');
+    expect(run.modelSwitch).toMatchObject({
+      provider: 'codex',
+      from: { id: 'gpt-6-luna', label: 'gpt-6-luna' },
+      to: { id: 'gpt-6-sol', label: '6 Sol' },
       learned: false,
     });
   });

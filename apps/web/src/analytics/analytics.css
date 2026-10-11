@@ -201,8 +201,7 @@
 }
 
 .an-flag,
-.an-chip,
-.an-win {
+.an-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -222,17 +221,6 @@
   background: var(--raise);
   color: var(--text);
   font-variant-numeric: tabular-nums;
-}
-
-.an-win {
-  padding: 1px 6px;
-  background: var(--raise);
-  color: var(--muted);
-}
-
-.an-win.decided {
-  background: color-mix(in srgb, var(--accent-soft) 100%, var(--panel));
-  color: var(--accent-text);
 }
 
 .an-toggle {
@@ -281,10 +269,6 @@
   color: var(--muted);
   font-size: 13px;
   text-align: center;
-}
-
-.an-muted {
-  color: var(--muted);
 }
 
 .an-kpi {

@@ -29,11 +29,6 @@
   stroke-width: 1;
 }
 
-.an-zero {
-  stroke: var(--line-strong);
-  stroke-width: 1;
-}
-
 .an-mark {
   cursor: default;
   outline: none;
@@ -93,19 +88,6 @@
 
 .an-legend-line span:last-child {
   margin-left: 4px;
-}
-
-.an-legend-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px 16px;
-}
-
-.an-legend-row .an-legend,
-.an-legend-row .an-note {
-  margin-top: 8px;
 }
 
 .an-heat-track {
@@ -185,14 +167,6 @@
   stroke-linecap: round;
 }
 
-.an-score-pos {
-  fill: var(--success);
-}
-
-.an-score-neg {
-  fill: var(--danger);
-}
-
 .an-tree-group {
   fill: none;
   stroke: var(--line);
@@ -217,70 +191,6 @@
 
 .an-mark:hover .an-tile {
   stroke: var(--line-strong);
-}
-
-.an-link {
-  fill: color-mix(in srgb, var(--muted) 18%, transparent);
-  transition: opacity 0.15s var(--out);
-}
-
-.an-link.on {
-  fill: color-mix(in srgb, var(--accent) 42%, transparent);
-}
-
-.an-link.dim {
-  opacity: 0.35;
-}
-
-.an-node {
-  stroke-width: 1.5;
-}
-
-.an-node-label {
-  fill: var(--text);
-  font-size: 12px;
-  paint-order: stroke;
-  stroke: var(--panel);
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-
-.an-stage {
-  fill: var(--muted);
-  font-weight: 600;
-}
-
-.an-gate {
-  stroke: var(--line-strong);
-  stroke-width: 1.2;
-  stroke-dasharray: 4 3;
-}
-
-.an-gate-label {
-  fill: var(--muted);
-}
-
-.an-calib {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-
-.an-pt {
-  stroke: var(--panel);
-  stroke-width: 1.5;
-}
-
-.an-pt-x {
-  fill: none;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-}
-
-.an-pt-ring {
-  fill: var(--panel);
-  stroke-width: 2;
 }
 
 .an-rates {

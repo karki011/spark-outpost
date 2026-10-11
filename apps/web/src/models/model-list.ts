@@ -33,12 +33,16 @@ export function shownProvider(saved: string, providers: readonly string[]): stri
 const TIER_ORDER: Record<ModelTier, number> = { small: 0, mid: 1, top: 2, frontier: 3 };
 
 const ROLES: Partial<Record<ModelTier, string>> = {
-  mid: 'Everyday Builder, Critic, answers',
+  mid: 'Everyday work and answers',
   top: 'Complex and risky work',
 };
 
 const RETIREMENT_SHOWN_DAYS = 90;
 const DAY_MS = 86_400_000;
+
+export function cardsNote(checkedAt: string): string {
+  return `Vendor facts checked ${checkedAt}. Spark picks no model: a chat on Auto runs the agent's default.`;
+}
 
 export function usedBySpark(view: ModelCardView): boolean {
   return ROLES[view.card.tier] !== undefined && !view.staleness.retiring;
@@ -105,10 +109,10 @@ export function groupModels(
 ): ModelGroup[] {
   const ordered = sortModels(orderModels(models), sort);
   const groups: ModelGroup[] = [
-    { id: 'spark', title: 'Spark picks from these', models: ordered.filter(usedBySpark) },
+    { id: 'spark', title: 'Everyday and complex work', models: ordered.filter(usedBySpark) },
     {
       id: 'manual',
-      title: 'Only when you pick it',
+      title: 'Other models',
       models: ordered.filter((view) => !usedBySpark(view)),
     },
   ];

@@ -132,8 +132,6 @@ export const profileSchema = z.object({
   defaultProvider: providerIdSchema.nullable(),
   onboardingCompleted: z.boolean(),
   autoContinueSeconds: autoContinueSecondsSchema.default(DEFAULT_AUTO_CONTINUE_SECONDS),
-  jevDiffs: z.boolean().default(true),
-  shipFailingChecks: z.boolean().default(true),
   prReadyForReview: z.boolean().default(true),
   prFollowUp: z.boolean().default(true),
   prFollowUpChecks: z.boolean().default(true),
@@ -141,7 +139,6 @@ export const profileSchema = z.object({
   prFollowUpReplies: z.boolean().default(true),
   prFollowUpAsk: z.boolean().default(false),
   personality: personalitySchema.default(DEFAULT_PERSONALITY),
-  sparkEnabled: z.boolean().default(true),
   agentInstructions: z.string().max(8000).optional(),
   agentInstructionsFile: z.string().max(4096).optional(),
   agentInstructionsFileSet: z.boolean().optional(),
@@ -162,15 +159,14 @@ export type SparkSessionPrefs = Pick<
   Profile,
   'displayName' | 'personality' | 'agentInstructions'
 > & {
-  sparkEnabled?: boolean;
   teammate?: TeammateBrief | null;
+  chatPrompt?: string | null;
 };
 
 export const setupStateSchema = z.object({
   profile: profileSchema,
   providers: z.array(providerSetupSchema),
   advisors: z.array(advisorSetupSchema),
-  parallelBuilders: z.boolean().optional(),
 });
 export type SetupState = z.infer<typeof setupStateSchema>;
 
@@ -180,8 +176,6 @@ export const updateProfileRequestSchema = z
     defaultProvider: providerIdSchema,
     onboardingCompleted: z.literal(true),
     autoContinueSeconds: autoContinueSecondsSchema,
-    jevDiffs: z.boolean(),
-    shipFailingChecks: z.boolean(),
     prReadyForReview: z.boolean(),
     prFollowUp: z.boolean(),
     prFollowUpChecks: z.boolean(),
@@ -189,7 +183,6 @@ export const updateProfileRequestSchema = z
     prFollowUpReplies: z.boolean(),
     prFollowUpAsk: z.boolean(),
     personality: personalitySchema,
-    sparkEnabled: z.boolean(),
     agentInstructions: z.string().max(8000),
     agentInstructionsFile: z.string().max(4096),
     defaultLevel: involvementLevelSchema,

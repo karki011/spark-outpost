@@ -6,6 +6,7 @@ import {
   clockTime,
   formatDuration,
   isLive,
+  runLabel,
   tickLabel,
   waterfall,
   type AuditTurn,
@@ -57,9 +58,7 @@ const TurnWaterfall = memo(function TurnWaterfall({
           <div className="wf-row" key={bar.run.runId}>
             <div className="wf-lab">
               <ProviderDot provider={bar.run.provider} />
-              <span>
-                {bar.run.role} · {providerLabel(bar.run.provider)}
-              </span>
+              <span>{runLabel(bar.run)}</span>
               {bar.run.unreviewedCount ? (
                 <span className="unrev">{bar.run.unreviewedCount} ran without review</span>
               ) : null}

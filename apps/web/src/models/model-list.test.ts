@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModelCard, ModelCardView, ModelStat } from '@spark-outpost/contracts';
 import {
+  cardsNote,
   ALL_PROVIDERS,
   benchmarkBadge,
   contextLine,
@@ -91,6 +92,14 @@ const view = (cardOverrides: Partial<ModelCard>, stats: ModelStat[] = []): Model
 });
 
 describe('model list', () => {
+  it('says that Spark picks no model', () => {
+    const note = cardsNote('2026-10-01');
+    expect(note).toBe(
+      "Vendor facts checked 2026-10-01. Spark picks no model: a chat on Auto runs the agent's default.",
+    );
+    expect(note).not.toMatch(/rules pick|Jev/);
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -114,7 +123,7 @@ describe('model list', () => {
     ]);
     expect(usedBySpark(retiring)).toBe(false);
     expect(roleLine(retiring)).toBeNull();
-    expect(roleLine(view({}))).toBe('Everyday Builder, Critic, answers');
+    expect(roleLine(view({}))).toBe('Everyday work and answers');
     expect(roleLine(view({ tier: 'top' }))).toBe('Complex and risky work');
     expect(roleLine(view({ tier: 'small' }))).toBeNull();
   });
@@ -131,14 +140,14 @@ describe('model list', () => {
     expect(
       groups.map((group) => [group.title, group.models.map((model) => model.card.id)]),
     ).toEqual([
-      ['Spark picks from these', ['mid', 'top']],
-      ['Only when you pick it', ['old', 'frontier']],
+      ['Everyday and complex work', ['mid', 'top']],
+      ['Other models', ['old', 'frontier']],
     ]);
     expect(groupModels([view({ tier: 'small' })]).map((group) => group.id)).toEqual(['manual']);
   });
 
   it('gives each row one line of purpose: the job Spark uses it for, else its first strength', () => {
-    expect(purposeLine(view({}))).toBe('Everyday Builder, Critic, answers');
+    expect(purposeLine(view({}))).toBe('Everyday work and answers');
     expect(purposeLine(view({ tier: 'small', strengths: ['Cheap and fast', 'Other'] }))).toBe(
       'Cheap and fast',
     );

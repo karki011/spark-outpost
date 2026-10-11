@@ -4,7 +4,6 @@ import {
   GIT_CONTROL_REASON,
   INSTRUCTION_REASON,
   NO_RUN_RULES,
-  PIECE_PROTECTED_REASON,
   decide,
   ruleFor,
   type ApprovalRequest,
@@ -99,6 +98,7 @@ describe('decide() for git hooks and git config', () => {
     [run('chmod +x x && cp hook.sh .git/hooks/pre-push'), ['.git/hooks/pre-push']],
     [run('git config core.hooksPath tools/hooks'), ['.git/config']],
     [run('git config set user.name Spark'), ['.git/config']],
+    [run('git config --global a.b c'), ['global git config']],
   ])('asks to hold before %#, at every level', (input, files) => {
     for (const mode of EVERY_MODE) {
       expect(decide(mode, input, allowAll(input), ['git', 'cp'])).toEqual({
@@ -109,7 +109,7 @@ describe('decide() for git hooks and git config', () => {
     }
   });
 
-  it.each(['git config --get user.name', 'git config user.name', 'git config --global a.b c'])(
+  it.each(['git config --get user.name', 'git config user.name', 'git config --global a.b'])(
     'leaves %s alone',
     (command) => {
       expect(decide('full_access', run(command), NO_RUN_RULES, []).verdict).toBe('allow');
@@ -121,41 +121,5 @@ describe('decide() for git hooks and git config', () => {
       verdict: 'reject',
       reason: "Files inside .git can't be changed",
     });
-  });
-});
-
-describe('decide() for coordinated pieces', () => {
-  const owning = (paths: string[], globs: string[] = []) => ({
-    piece: {
-      coordinated: true,
-      owned: { key: 'P1', name: 'Bolt', paths, globs, others: [] },
-    },
-  });
-
-  it('refuses instruction files and git hooks the piece does not own exactly', () => {
-    for (const input of [
-      edit('AGENTS.md'),
-      edit('docs/CLAUDE.md'),
-      edit('.git/hooks/pre-commit'),
-    ]) {
-      expect(
-        decide('full_access', input, NO_RUN_RULES, [], owning(['src/a.ts'], ['docs/**'])),
-      ).toEqual({ verdict: 'reject', reason: PIECE_PROTECTED_REASON });
-    }
-    const shell = run('echo x >> AGENTS.md');
-    expect(decide('full_access', shell, NO_RUN_RULES, [], owning([])).verdict).toBe('reject');
-  });
-
-  it('sends a file the piece owns exactly to the card', () => {
-    expect(
-      decide('full_access', edit('AGENTS.md'), NO_RUN_RULES, [], owning(['AGENTS.md'])),
-    ).toEqual({ verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: ['AGENTS.md'] });
-  });
-
-  it('lets the integrator, which owns no piece, ask through the card', () => {
-    const integrator = { piece: { coordinated: true, owned: null } };
-    expect(decide('full_access', edit('AGENTS.md'), NO_RUN_RULES, [], integrator).verdict).toBe(
-      'ask',
-    );
   });
 });

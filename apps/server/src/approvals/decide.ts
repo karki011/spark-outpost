@@ -1,5 +1,5 @@
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import { protectedPath, refusalFor } from '../projects/path-policy.ts';
+import { protectedPath, refusalFor, type GitDirs } from '../projects/path-policy.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
 import {
@@ -8,19 +8,23 @@ import {
   publishesBesidesPush,
   publishesCode,
   skipsPushHooks,
-  setsGitConfig,
+  gitConfigUses,
   type ForcePush,
 } from './git-commands.ts';
+import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
+import { gitControlLabel } from './git-dirs.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
-import { pieceRefusal, type PieceGuard } from './piece-guard.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
+  onlyRepliesOnOwnPull,
+  publishRefusal,
   publishVerdict,
   type PublishBasis,
   type PublishContext,
   type PublishVerdict,
 } from './publish-policy.ts';
+import { stackedPushRefusal } from './stacked-push.ts';
 import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
@@ -34,6 +38,7 @@ import { onlyReads, partRequests, shellView, type ShellView } from './shell-view
 export interface RequestRoot {
   path: string;
   ignore: readonly string[];
+  gitDirs?: GitDirs | null;
 }
 
 export interface ApprovalRequest {
@@ -79,8 +84,8 @@ export const FS_WRITE_TOOL_KIND = 'write_text_file';
 export const PUSH_REASON = 'Pushing publishes outside this computer';
 export const PUSH_HOOKS_REASON =
   "Pushes never skip this repository's hooks. Read what the hook reports and fix it, or tell the user what it needs";
-export const BUILDER_PUBLISH_REASON =
-  "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
+export const CHAT_PUBLISH_REASON =
+  "This chat's agent pushes and opens a pull request only when the user's message asks for it, the chat is at Full auto → PR, or its mode is Auto or Bypass permissions (Full access)";
 export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
@@ -91,8 +96,6 @@ export const INSTRUCTION_REASON =
   'Agent instruction files (AGENTS.md, CLAUDE.md, .claude, .cursor/rules, .spark) always ask';
 export const GIT_CONTROL_REASON =
   'Git runs hooks and settings from .git outside Spark on every commit, so changing them always asks';
-export const PIECE_PROTECTED_REASON =
-  "Pieces don't change agent instructions, git hooks or git config mid-story unless the piece owns that exact file";
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
@@ -109,26 +112,45 @@ function writtenPaths(request: ApprovalRequest): string[] {
   return writeTargets(request.command, commandCwd(request), request.home) ?? [];
 }
 
+function configTargets(request: ApprovalRequest): { files: string[]; labels: string[] } {
+  const writes = request.command ? gitConfigUses(request.command).filter((use) => use.writes) : [];
+  const cwd = commandCwd(request);
+  const places = new Set(writes.map((use) => use.where));
+  return {
+    files: writes.flatMap((use) =>
+      use.file === null ? [] : [resolveCommandPath(use.file, cwd, request.home)],
+    ),
+    labels: [
+      ...(places.has('repo') ? [REPO_GIT_CONFIG] : []),
+      ...(places.has('global') ? [GLOBAL_GIT_CONFIG] : []),
+      ...(places.has('system') ? [SYSTEM_GIT_CONFIG] : []),
+    ],
+  };
+}
+
 export function guardedTargets(asked: ApprovalRequest): Guarded {
   const request = withResolvedVariables(asked);
-  const relatives = writtenPaths(request).flatMap((target) => {
+  const config = configTargets(request);
+  const targets = [...writtenPaths(request), ...config.files];
+  const relatives = targets.flatMap((target) => {
     const { relative } = place(request.roots, target);
     return relative === null ? [] : [relative];
   });
-  if (request.command && setsGitConfig(request.command)) relatives.push('.git/config');
   const unique = [...new Set(relatives)];
+  const control = unique.filter((relative) => protectedPath(relative) === 'git_control');
+  const realGitDir = targets.flatMap((target) => gitControlLabel(request.roots, target) ?? []);
   return {
     instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: unique.filter((relative) => protectedPath(relative) === 'git_control'),
+    gitControl: [...new Set([...control, ...realGitDir, ...config.labels])],
   };
 }
 
 export interface DecideOptions {
-  builder?: boolean;
-  piece?: PieceGuard;
+  changesProject?: boolean;
   files?: FileLister;
   askRun?: boolean;
   askAutoWhy?: string | null;
+  planningWhy?: string | null;
   defaultBranch?: string | null;
   observed?: readonly string[];
   own?: OwnRepo | null;
@@ -169,16 +191,8 @@ function noted(decision: Decision, sent: SentOut | null): Decision {
 }
 
 function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
-  if (forced?.kind !== 'ask' || options.piece?.coordinated) return false;
+  if (forced?.kind !== 'ask') return false;
   return !publishesBesidesPush(command);
-}
-
-function pieceProtected(guarded: Guarded, options: DecideOptions): boolean {
-  const owned = options.piece?.owned;
-  if (!owned) return false;
-  return [...guarded.instructions, ...guarded.gitControl].some(
-    (relative) => !owned.paths.includes(relative),
-  );
 }
 
 function askRunChange(request: ApprovalRequest, view: ShellView | null): string | null {
@@ -192,6 +206,30 @@ function askRunChange(request: ApprovalRequest, view: ShellView | null): string 
   return writes ? ASK_RUN_REASON : null;
 }
 
+function planningRuns(
+  request: ApprovalRequest,
+  view: ShellView | null,
+  options: DecideOptions,
+): Decision | null {
+  if (!options.planningWhy || request.kind !== 'execute' || !request.command) return null;
+  if (unreadable(request, view) || askRunChange(request, view)) return null;
+  return { verdict: 'allow', by: 'level', why: options.planningWhy };
+}
+
+function ownAgentRefusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  published: PublishVerdict | null,
+): string | null {
+  const { command } = request;
+  if (!options.changesProject || !command || !publishesCode(command)) return null;
+  if (published) return published.kind === 'refuse' ? published.reason : null;
+  if (onlyRepliesOnOwnPull(command, options.own ?? null)) return null;
+  if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
+  return publishRefusal(command, options.publish?.task ?? null);
+}
+
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
@@ -200,19 +238,16 @@ function refusal(
   view: ShellView | null,
   published: PublishVerdict | null,
 ): string | null {
-  if (options.builder && request.command && publishesCode(request.command)) {
-    if (published?.kind === 'refuse') return published.reason;
-    if (!published && !soloLeasePush(request.command, options, forced)) {
-      return BUILDER_PUBLISH_REASON;
-    }
-  }
+  const ownAgent = ownAgentRefusal(request, options, forced, published);
+  if (ownAgent) return ownAgent;
+  const stacked = request.command
+    ? stackedPushRefusal(request.command, options.publish?.task ?? null)
+    : null;
+  if (stacked) return stacked;
   if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
-  if (pieceProtected(guarded, options)) return PIECE_PROTECTED_REASON;
-  const piece = options.piece ? pieceRefusal(request, options.piece) : null;
-  if (piece) return piece;
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
   }
@@ -348,6 +383,8 @@ function byMode(
     if (onlyReads(request, view)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }
+    const planning = planningRuns(request, view, options);
+    if (planning) return planning;
     if (options.askRun && unreadable(request, view)) {
       return { verdict: 'ask', reason: UNREADABLE_REASON };
     }
@@ -381,6 +418,8 @@ function agentAsked(
   if (options.askRun && options.askAutoWhy && !unreadable(request, view)) {
     return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
   }
+  const planning = planningRuns(request, view, options);
+  if (planning) return planning;
   return allowlistCovers(allowlist, request.command) ? { verdict: 'allow', by: 'allowlist' } : ASK;
 }
 
@@ -389,8 +428,8 @@ function publishing(
   request: ApprovalRequest,
   options: DecideOptions,
 ): PublishVerdict | null {
-  if (!request.command || !options.publish || options.piece?.coordinated) return null;
-  return publishVerdict(request.command, posture, options.publish);
+  if (!request.command || !options.publish) return null;
+  return publishVerdict(request.command, posture, options.publish, options.own ?? null);
 }
 
 export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';

@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { CrewMember, OrchestrationDecision } from '@spark-outpost/contracts';
-import { mergeConflictCard } from './checkpoint.ts';
-import { finalText } from './final-message.ts';
 import { buildOrchestration, orchestrationTotals, type OrchestrationRow } from './view.ts';
 
 const member = (
@@ -126,107 +124,5 @@ describe('the run that answers a question during a build', () => {
 
   it('adds no answers list to a turn without one', () => {
     expect(buildOrchestration(row, [builder], [], [])).not.toHaveProperty('answers');
-  });
-});
-
-describe('checkpoint cards', () => {
-  it('offers no reconciling Builder for a copy that collides with your files', () => {
-    const card = mergeConflictCard({ first: 'your version', second: 'Bolt', files: [] }, 'x');
-    expect(card.options.map((option) => option.name)).toEqual([
-      'Keep your version',
-      "Keep Bolt's",
-      'Stop',
-    ]);
-  });
-});
-
-describe('the final reply', () => {
-  const result = (role: 'scout' | 'builder' | 'critic', text: string, inPlace = false) => ({
-    role,
-    runId: 'r',
-    label: `${role} label`,
-    outcome: 'succeeded' as const,
-    error: null,
-    text,
-    toolCalls: 0,
-    inPlace,
-    name: role,
-    loop: null,
-  });
-
-  it('adds nothing for a single in-place agent', () => {
-    expect(finalText([result('builder', 'Done', true)], null, [], true)).toBe('');
-  });
-
-  it("shows the last Builder's reply and the AI review", () => {
-    const text = finalText(
-      [result('builder', 'Built it'), result('critic', 'Verdict: concerns')],
-      'concerns',
-      ['Missing test'],
-      false,
-    );
-    expect(text).toBe('Built it\n\nAI review by critic label: concerns.\n- Missing test');
-  });
-
-  it('leads a split run with the piece summary instead of the last Builder', () => {
-    const text = finalText(
-      [result('builder', 'Fixed the limit: 0 bug'), result('critic', 'Verdict: looks good')],
-      'looks_good',
-      [],
-      false,
-      [],
-      'Built in 2 pieces:\n- P1 · CSV\n- P2 · Limiter',
-    );
-    expect(text).toBe(
-      'Built in 2 pieces:\n- P1 · CSV\n- P2 · Limiter\n\nAI review by critic label: looks good.',
-    );
-  });
-
-  it('describes the whole change across fix rounds, with one line for the fixes (C)', () => {
-    const turn = (reason: 'first' | 'fix' | 'escalate', text: string) => ({
-      ...result('builder', text),
-      reason,
-    });
-    const built =
-      'I made all three changes.\n\n- `src/csv-export.ts`: uploadsToCsv.\n- `src/rate-limit.ts`: RateLimiter.\n- README lists both.';
-    const text = finalText(
-      [
-        turn('first', built),
-        result('critic', 'Verdict: concerns'),
-        turn('fix', 'Out-of-order calls no longer reopen a spent window. Added a test.'),
-        result('critic', 'Verdict: concerns'),
-        turn('fix', '- A call in an earlier window now counts against that window.'),
-        result('critic', 'Verdict: looks good'),
-      ],
-      'looks_good',
-      [],
-      false,
-    );
-    expect(text).toBe(
-      `${built}\n\nFixes after review and checks: Out-of-order calls no longer reopen a spent window. A call in an earlier window now counts against that window.\n\nAI review by critic label: looks good.`,
-    );
-  });
-
-  it('never leads with a recheck turn (H)', () => {
-    const text = finalText(
-      [
-        { ...result('builder', 'Added the export.'), reason: 'first' as const },
-        {
-          ...result('builder', 'I checked again and found nothing missing.'),
-          reason: 'escalate' as const,
-        },
-      ],
-      null,
-      [],
-      false,
-    );
-    expect(text.startsWith('Added the export.')).toBe(true);
-  });
-
-  it('answers a review-only request with the Critic’s own findings (dev-day s07)', () => {
-    const review =
-      'Findings:\n- `plural()` now says "1 runs" is fine but returns the singular for 0\n- `median()` sorts in place\nVerdict: concerns';
-    const text = finalText([result('critic', review)], 'concerns', ['plural', 'median'], false);
-    expect(text).toBe(`${review}\n\nAI review by critic label: concerns.`);
   });
 });

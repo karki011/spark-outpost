@@ -10,6 +10,12 @@ describe('the Needs you line of a reply', () => {
     ]);
   });
 
+  it('is found on a line of its own inside a paragraph, as an agent writes it', () => {
+    const reply =
+      'Added shout(name).\nLeft the change in the working tree.\nNeeds you: Ask this chat to publish.\n\nChecks for Bolt: tests passed';
+    expect(needsYouLines(reply)).toEqual(['Needs you: Ask this chat to publish.']);
+  });
+
   it('is absent from an ordinary reply', () => {
     expect(needsYouLines('Done. Nobody needs you: it works.')).toEqual([]);
   });

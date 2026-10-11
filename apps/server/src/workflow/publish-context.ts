@@ -2,8 +2,9 @@ import { modePosture } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { reachesHosting } from '../approvals/git-commands.ts';
 import {
+  asksPushOnly,
   publishBasis,
-  publishRequested,
+  requestedBy,
   type FollowUpRound,
   type PublishBasis,
   type PublishBrief,
@@ -17,7 +18,9 @@ import { watchesForConversation } from '../persistence/pr-watches.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
-import { userText } from '../outposts/user-asked.ts';
+import { stackGit } from '../outposts/stack-git.ts';
+import { publishStackOf } from '../outposts/stack-publish.ts';
+import { isStoryWrapUp, userText } from '../outposts/user-asked.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
@@ -31,7 +34,8 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
     (branch): branch is string => Boolean(branch),
   );
   const pull = await openPullNumber(db, record.conversationId, record.branch).catch(() => null);
-  return { branch: record.branch, protectedBranches: [...new Set(named)], pull };
+  const stack = await publishStackOf(db, stackGit, record);
+  return { branch: record.branch, protectedBranches: [...new Set(named)], pull, ...stack };
 }
 
 async function openPullNumber(
@@ -89,13 +93,13 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   const followUp = input.followUpRound
     ? { workspaceId: input.workspaceId, conversationId: input.identity.threadId }
     : null;
-  return { level: input.level, requested: publishRequested(userText(input)), followUp };
+  return { level: input.level, ...requestedBy(userText(input)), followUp };
 }
 
-type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode' | 'piece'>;
+type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
 
 export function startBasis(input: StartFacts): PublishBasis | null {
-  if (input.piece?.coordinated) return null;
+  if (isStoryWrapUp(input)) return null;
   return publishBasis(modePosture(input.provider, input.agentMode), publishGrant(input));
 }
 
@@ -106,20 +110,24 @@ export async function withPublishNote(db: Queryable, input: NoteFacts): Promise<
   if (input.role !== null || input.mode !== 'do') return own;
   const brief = await publishBrief(db, input);
   if (brief?.basis !== 'requested') return own;
-  return [own, mainAgentPublishNote(brief.branch)].filter(Boolean).join('\n\n');
+  const note = mainAgentPublishNote(brief.branch, brief.base, asksPushOnly(publishGrant(input)));
+  return [own, note].filter(Boolean).join('\n\n');
 }
 
 export async function publishScope(
   db: Queryable,
   input: StartFacts & Pick<RunInput, 'projectRoots'>,
 ): Promise<PublishScope | null> {
-  if (input.piece?.coordinated) return null;
+  if (isStoryWrapUp(input)) return null;
   const root = input.projectRoots[0] ?? null;
   const task = await taskBranch(db, root).catch(() => null);
   if (!root || !task) return null;
   const grant = await effectiveGrant(db, publishGrant(input), task);
-  const basis = publishBasis(modePosture(input.provider, input.agentMode), grant);
-  return basis ? { basis, task, root } : null;
+  const posture = modePosture(input.provider, input.agentMode);
+  const basis = publishBasis(posture, grant, ['push']);
+  if (!basis) return null;
+  const opensPull = publishBasis(posture, grant, ['pull']) !== null;
+  return { basis, task, root, opensPull, pushOnly: asksPushOnly(grant) };
 }
 
 export async function publishBrief(
@@ -127,5 +135,7 @@ export async function publishBrief(
   input: StartFacts & Pick<RunInput, 'projectRoots'>,
 ): Promise<PublishBrief | null> {
   const scope = await publishScope(db, input);
-  return scope ? { basis: scope.basis, branch: scope.task.branch } : null;
+  if (!scope) return null;
+  const { branch, pullBase } = scope.task;
+  return { basis: scope.basis, branch, ...(pullBase ? { base: pullBase } : {}) };
 }

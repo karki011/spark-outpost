@@ -137,9 +137,36 @@ function hiddenValues(list: unknown): unknown {
   });
 }
 
+function hiddenFields(named: unknown): unknown {
+  const fields = asRecord(named);
+  if (!fields) return named;
+  return Object.fromEntries(Object.keys(fields).map((name) => [name, redacted('mcp_secret')]));
+}
+
+function withOptionServersRedacted(meta: unknown): unknown {
+  const fields = asRecord(meta);
+  const claudeCode = asRecord(fields?.claudeCode);
+  const options = asRecord(claudeCode?.options);
+  const servers = asRecord(options?.mcpServers);
+  if (!fields || !servers) return meta;
+  const mcpServers = Object.fromEntries(
+    Object.entries(servers).map(([name, server]) => {
+      const entry = asRecord(server);
+      if (!entry) return [name, server];
+      const env = 'env' in entry ? { env: hiddenFields(entry.env) } : {};
+      const headers = 'headers' in entry ? { headers: hiddenFields(entry.headers) } : {};
+      return [name, { ...entry, ...env, ...headers }];
+    }),
+  );
+  return { ...fields, claudeCode: { ...claudeCode, options: { ...options, mcpServers } } };
+}
+
 function withMcpSecretsRedacted(message: Message): Message {
-  const params = asRecord(message.params);
-  if (!params || !Array.isArray(params.mcpServers)) return message;
+  const opened = asRecord(message.params);
+  if (!opened) return message;
+  const params =
+    '_meta' in opened ? { ...opened, _meta: withOptionServersRedacted(opened._meta) } : opened;
+  if (!Array.isArray(params.mcpServers)) return { ...message, params };
   const mcpServers = params.mcpServers.map((server) => {
     const entry = asRecord(server);
     if (!entry) return server;

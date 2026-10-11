@@ -7,14 +7,14 @@ const minutesAgo = (minutes: number) => new Date(NOW.getTime() - minutes * 60_00
 const facts = {
   provider: 'claude',
   agentKey: 'chat:do',
-  model: 'sonnet',
+  model: 'claude-sonnet-5',
   previous: null,
   seedChars: 8_000,
   handoff: false,
   now: NOW,
 };
 const previous = {
-  model: 'sonnet',
+  model: 'claude-sonnet-5',
   agentMode: 'acceptEdits',
   contextUsed: 200_000,
   lastUsedAt: minutesAgo(2),
@@ -91,16 +91,21 @@ describe('sessionEvent', () => {
 
 describe('modelChange', () => {
   it('is silent while the model stays the same', () => {
-    expect(modelChange({ ...facts, previous }, 's1', { model: 'sonnet', mode: 'plan' })).toBeNull();
-    expect(modelChange(facts, 's1', { model: 'opus[1m]', mode: null })).toBeNull();
+    expect(
+      modelChange({ ...facts, previous }, 's1', { model: 'claude-sonnet-5', mode: 'plan' }),
+    ).toBeNull();
+    expect(modelChange(facts, 's1', { model: 'claude-opus-5-5[1m]', mode: null })).toBeNull();
   });
 
   it('prices a switch on the same session with the re-read estimate', () => {
-    const event = modelChange({ ...facts, previous }, 's1', { model: 'opus[1m]', mode: 'default' });
+    const event = modelChange({ ...facts, previous }, 's1', {
+      model: 'claude-opus-5-5[1m]',
+      mode: 'default',
+    });
     expect(event).toMatchObject({
       event: 'model_change',
-      fromModel: 'sonnet',
-      model: 'opus[1m]',
+      fromModel: 'claude-sonnet-5',
+      model: 'claude-opus-5-5[1m]',
       fromMode: 'acceptEdits',
       mode: 'default',
       carriedTokens: 200_000,

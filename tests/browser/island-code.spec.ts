@@ -2,7 +2,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { crewRepo, pickPermission, type CrewRepo } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
+import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import {
   fakeHomeDesktop,
@@ -17,10 +18,10 @@ import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_CODE_SHOTS ?? '';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async () => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 

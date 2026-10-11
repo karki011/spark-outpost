@@ -20,7 +20,7 @@ import {
 import { statusForError } from '../src/api/routes.ts';
 import { closePost } from '../src/persistence/outpost-posts.ts';
 import { OUTPOST_NOT_FOUND } from '../src/persistence/outposts.ts';
-import { ALL_NOT_AVAILABLE, GUESTS_NOT_AVAILABLE } from '../src/outposts/post-rules.ts';
+import { GUESTS_NOT_AVAILABLE } from '../src/outposts/post-rules.ts';
 import type { TaskRef, TaskView } from '../src/outposts/ports.ts';
 import { fakePeerAgent, type FakePeerAgent } from './fake-peer-agent.ts';
 import {
@@ -318,18 +318,13 @@ describe('posts', () => {
     expect(posts[0]).toMatchObject({ id, fromUser: true, toHandle: 'api', answer: null });
   });
 
-  it('refuses @all and a guest for now with a sentence', async () => {
-    const all = await send('post', `/api/outposts/${outpostId}/posts`, {
-      id: randomUUID(),
-      text: '@all rebase on main',
-    });
+  it('refuses a guest for now with a sentence', async () => {
     const guest = await send('post', `/api/outposts/${outpostId}/posts`, {
       id: randomUUID(),
       text: '@docs look',
       guestConversationId: await newChat(t),
     });
 
-    expect(all).toMatchObject({ status: 400, body: { error: ALL_NOT_AVAILABLE } });
     expect(guest).toMatchObject({ status: 400, body: { error: GUESTS_NOT_AVAILABLE } });
   });
 

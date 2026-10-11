@@ -84,7 +84,7 @@ export async function shipTaskFacts(db: Queryable, taskId: string): Promise<Ship
     db.query<{ content: string }>(
       `SELECT m.content FROM messages m JOIN runs r ON r.id = m.run_id
        WHERE r.task_id = $1 AND m.role = 'assistant' AND m.content <> ''
-       ORDER BY m.created_at DESC LIMIT 1`,
+       ORDER BY r.created_at DESC, r.id DESC, m.created_at, m.id LIMIT 1`,
       [taskId],
     ),
     db.query<{ id: string }>(

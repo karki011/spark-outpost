@@ -1,7 +1,7 @@
 {
   "name": "Spark Outpost",
   "short_name": "Spark",
-  "description": "Spark Outpost on your phone, with the work staying on your Mac.",
+  "description": "Spark Outpost on another device, with the work staying on your Mac.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

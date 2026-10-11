@@ -5,7 +5,9 @@ import { objectFields } from '../agents/acp/object-fields.ts';
 import { sparkReserved } from '../agents/acp/spark-tools.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
+import { isGitPush } from '../approvals/git-commands.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
+import { otherBranchPushes } from '../approvals/publish-policy.ts';
 import { observedSecretReads } from '../approvals/secret-reads.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
 import { sentOut } from '../approvals/taint.ts';
@@ -17,8 +19,11 @@ import {
 import type { Queryable } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { subject } from '../workflow/approval-payload.ts';
+import { taskBranch } from '../workflow/publish-context.ts';
 import { ownRepoFor } from '../workflow/send-context.ts';
+import { raiseRailFlag } from './raise-flag.ts';
 import type { RunObservations } from './run-observations.ts';
+import { observedStackedPush } from './stacked-push-watch.ts';
 
 export interface SendWatchOptions {
   db: Queryable;
@@ -66,12 +71,30 @@ export function watchedSends(inner: ProtocolObserver, options: SendWatchOptions)
     });
   };
 
+  const pushedElsewhere = async (request: ApprovalRequest) => {
+    if (!request.command || !isGitPush(request.command)) return;
+    const task = await taskBranch(options.db, cwd);
+    const branches = otherBranchPushes(request.command, task);
+    if (!branches) return;
+    await raiseRailFlag(options.db, options.runId, inner, {
+      toolCallId: request.toolCallId,
+      rail: 'other_push',
+      paths: branches,
+      inside: false,
+      originals: [],
+    });
+  };
+
   const readThenSent = async (request: ApprovalRequest, ran: boolean) => {
     const shell = request.kind === 'execute' ? await parseShell(request.command) : null;
     for (const label of await observedSecretReads(request, shell)) {
       options.observations.record({ source: 'secret_file', label });
     }
-    if (ran) await note(request);
+    if (!ran) return;
+    const stacked = await observedStackedPush(options.db, request);
+    if (stacked) await options.observations.crossed(stacked);
+    await note(request);
+    await pushedElsewhere(request);
   };
 
   const watch = (message: unknown) => {

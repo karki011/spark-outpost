@@ -72,16 +72,12 @@ export const agentPickSchema = z.object({
 });
 export type AgentPick = z.infer<typeof agentPickSchema>;
 
-export const CONFLICT_TEXT_MAX_BYTES = 64 * 1024;
-
 export const conflictSideSchema = z.object({
   name: z.string(),
   runId: z.uuid().nullable(),
   diff: z.string(),
   text: z.string().nullable(),
 });
-export type ConflictSide = z.infer<typeof conflictSideSchema>;
-
 export const mergeConflictSchema = z.object({
   first: z.string(),
   second: z.string(),
@@ -94,8 +90,6 @@ export const mergeConflictSchema = z.object({
     }),
   ),
 });
-export type MergeConflict = z.infer<typeof mergeConflictSchema>;
-
 export const checkpointQuestionSchema = z.object({
   question: z.string(),
   options: z.array(z.string()).default([]),

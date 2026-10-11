@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { Category } from './categories.ts';
 
 export const PLAN_DOCUMENT_MAX_LENGTH = 40_000;
 
@@ -49,15 +48,9 @@ export const PLAN_SAVED_OPTION: Record<PlanLineUnit, string> = {
   steps: 'build_steps',
 };
 
-const UNIT_WORDS: Record<PlanLineUnit, [string, string]> = {
-  pieces: ['piece', 'pieces'],
-  steps: ['step', 'steps'],
-};
-
 export function planSavedText(line: Pick<PlanLine, 'items' | 'unit'>): string {
-  if (line.items === 0) return 'Plan saved';
-  const [one, many] = UNIT_WORDS[line.unit];
-  return `Plan saved · ${line.items} ${line.items === 1 ? one : many}`;
+  if (line.items === 0 || line.unit !== 'pieces') return 'Plan saved';
+  return `Plan saved · ${line.items} ${line.items === 1 ? 'piece' : 'pieces'}`;
 }
 
 export const conversationPlansSchema = z.object({
@@ -72,14 +65,3 @@ export const PLAN_SOURCE_LABELS: Record<PlanDocumentSource, string> = {
   chat: 'agreed in chat',
   user: 'saved by you',
 };
-
-const NUMBERED_STEP = /^\s{0,3}\d+[.)]\s+\S/;
-const PLAN_HEADING = /^\s{0,3}#{1,4}\s.*\b(plan|steps|approach)\b/im;
-const ANSWER_CATEGORIES: ReadonlySet<Category> = new Set(['question', 'research', 'review']);
-
-export function looksLikePlan(text: string, category?: Category | null): boolean {
-  if (PLAN_HEADING.test(text)) return true;
-  if (category && ANSWER_CATEGORIES.has(category)) return false;
-  const steps = text.split('\n').filter((line) => NUMBERED_STEP.test(line));
-  return steps.length >= 3;
-}

@@ -4,7 +4,8 @@ import {
   turnObservations,
   type Observation,
 } from '../persistence/observations.ts';
-import { flagAgentName, insertRailFlag } from '../persistence/rail-flags.ts';
+import type { NewRailFlag } from '../persistence/rail-flags.ts';
+import { raiseRailFlag } from './raise-flag.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 
 export interface EgressAsk {
@@ -28,6 +29,7 @@ export interface RunObservations {
   labels(): Promise<string[]>;
   egressAsked(ask: EgressAsk): void;
   sentOut(note: SentOutNote): void;
+  crossed(flag: NewRailFlag): Promise<void>;
   later(work: () => Promise<void>): void;
   settled(): Promise<void>;
 }
@@ -41,7 +43,7 @@ export interface RunObservationsOptions {
 const MAX_LABEL = 200;
 const CHAT_CONTEXT_TOOLS = [
   ...['spark_task', 'spark_chat', 'spark_chat_history'],
-  ...['spark_run', 'spark_laws', 'spark_audit'],
+  ...['spark_run', 'spark_audit'],
 ];
 const RETIRED_LABELS = new Set(CHAT_CONTEXT_TOOLS.map((tool) => `private work data (${tool})`));
 
@@ -60,9 +62,11 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
     }
   };
 
-  const flag = async (note: SentOutNote) => {
-    const agent = await flagAgentName(options.db, options.runId);
-    const saved = await insertRailFlag(options.db, options.runId, agent, {
+  const crossed = (flag: NewRailFlag) =>
+    raiseRailFlag(options.db, options.runId, options.audit, flag);
+
+  const flag = (note: SentOutNote) =>
+    crossed({
       toolCallId: note.toolCallId,
       rail: 'sent_out',
       paths: [note.target],
@@ -70,14 +74,6 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       originals: [],
       read: note.observed,
     });
-    if (!saved) return;
-    audit('spark/rail_crossed', {
-      flagId: saved.id,
-      rail: saved.rail,
-      title: saved.title,
-      paths: saved.paths,
-    });
-  };
 
   const later = (work: () => Promise<void>) => {
     writes = writes
@@ -130,6 +126,7 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
       flagged.add(note.target);
       later(() => flag(note));
     },
+    crossed,
     later,
     async settled() {
       let awaited: Promise<void> | null = null;

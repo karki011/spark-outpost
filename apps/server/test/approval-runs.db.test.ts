@@ -67,14 +67,6 @@ async function waitingApproval(conversationId: string): Promise<Approval> {
   });
 }
 
-async function builderRunId(runId: string): Promise<string> {
-  const { rows } = await t.db.query<{ id: string }>(
-    `SELECT id FROM runs WHERE parent_run_id = $1 AND role = 'builder' ORDER BY created_at`,
-    [runId],
-  );
-  return rows[0]!.id;
-}
-
 const api = () => createTestApp(t);
 const post = (path: string, body: object = {}) =>
   request(api()).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
@@ -91,7 +83,7 @@ describe('Do runs with approvals', () => {
       attention: {
         kind: 'permission',
         title: `run ${FAKE_COMMAND}`,
-        agentName: 'Bolt',
+        agentName: null,
         provider: 'fake',
         approvalId: approval.id,
       },
@@ -112,9 +104,8 @@ describe('Do runs with approvals', () => {
         decisionOptionId: 'allow',
       }),
     ]);
-    const builder = await builderRunId(runId);
-    expect(approval.runId).toBe(builder);
-    expect(detail?.activity[builder]?.map((step) => step.name)).toContain(
+    expect(approval.runId).toBe(runId);
+    expect(detail?.activity[runId]?.map((step) => step.name)).toContain(
       `Allowed \`${FAKE_COMMAND}\` (you allowed it)`,
     );
     expect(detail?.runs[0]).toMatchObject({ mode: 'do', level: 'hands-off', snapshot: 'files' });
@@ -170,17 +161,16 @@ describe('Do runs with approvals', () => {
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.approvals).toEqual([]);
     await expectConformantRun(t.db, runId);
-    const builder = await builderRunId(runId);
     const { rows } = await t.db.query<{ type: string; interrupted: string | null }>(
       `SELECT type, payload #>> '{metadata,spark,interrupted}' AS interrupted FROM run_events
        WHERE run_id = $1 ORDER BY seq DESC LIMIT 2`,
-      [builder],
+      [runId],
     );
     expect(rows).toEqual([
       { type: 'RUN_FINISHED', interrupted: null },
       { type: 'STEP_FINISHED', interrupted: 'true' },
     ]);
-    expect(detail?.activity[builder]?.at(-1)?.done).toBe(false);
+    expect(detail?.activity[runId]?.at(-1)?.done).toBe(false);
   });
 
   it('fails the run when nobody answers in time', async () => {
@@ -188,9 +178,7 @@ describe('Do runs with approvals', () => {
     const { runId } = await doRun(t, root, '#approve');
     const run = await settled(runId);
     expect(run).toMatchObject({ status: 'failed', error: APPROVAL_TIMEOUT_MESSAGE });
-    const { rows } = await t.db.query('SELECT status FROM approvals WHERE run_id = $1', [
-      await builderRunId(runId),
-    ]);
+    const { rows } = await t.db.query('SELECT status FROM approvals WHERE run_id = $1', [runId]);
     expect(rows).toEqual([{ status: 'expired' }]);
     await expectConformantRun(t.db, runId);
   });
@@ -225,7 +213,7 @@ async function askRun(level: InvolvementLevel) {
     {
       provider: 'fake',
       permission: 'ask',
-      agentMode: modeForLegacy('claude', 'ask', level),
+      agentMode: modeForLegacy('codex', 'ask', level),
       level,
     },
   );

@@ -95,24 +95,6 @@ describe('native terminal launch', () => {
   });
 
   it.each(['claude', 'codex'] as const)(
-    'keeps %s lifecycle hooks when Spark workflow tools are disabled',
-    async (provider) => {
-      const launch = await prepareNativeLaunch({
-        ...(await input(provider)),
-        workflowEnabled: false,
-      });
-      expect(launch.observation).toBe('hooks');
-      expect(launch.args).not.toContain('--mcp-config');
-      expect(launch.args.join(' ')).not.toContain('mcp_servers.');
-      expect(launch.env).toEqual({});
-      if (provider === 'claude') {
-        const path = launch.args[launch.args.indexOf('--settings') + 1]!;
-        expect(JSON.parse(await readFile(path, 'utf8')).hooks.Stop).toHaveLength(1);
-      } else expect(launch.args.some((arg) => arg.startsWith('hooks.Stop='))).toBe(true);
-    },
-  );
-
-  it.each(['claude', 'codex'] as const)(
     'applies %s custom instructions to new and resumed sessions without replaying a user prompt',
     async (provider) => {
       const request = await input(provider);

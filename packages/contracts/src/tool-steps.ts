@@ -10,7 +10,6 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_chat_history: 'Reading chat history',
   spark_attention: 'Checking what needs you',
   spark_run: 'Checking run status',
-  spark_laws: 'Reading the universal laws',
   spark_task: 'Reading the task and plan',
   spark_audit: 'Reading the audit',
   spark_tickets: 'Looking at tickets',
@@ -20,6 +19,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_spend: 'Checking spend',
   spark_models: 'Reading model cards',
   spark_terminals: 'Checking terminals',
+  spark_terminal_run: 'Running a command in a Spark terminal',
   spark_sparks: 'Looking at Sparks',
   spark_guide: 'Reading the Spark guide',
   spark_docs: 'Reading the user guide',
@@ -51,6 +51,10 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_browser_sign_in: 'Signing in with a saved sign-in',
   spark_slack: 'Reading Slack',
   spark_slack_post: 'Posting to Slack',
+  spark_outpost: 'Reading the outpost',
+  spark_outpost_ask: 'Asking another chat',
+  spark_outpost_note: 'Leaving a note in the outpost',
+  spark_outpost_draft: 'Proposing sub-task chats',
 };
 
 const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {

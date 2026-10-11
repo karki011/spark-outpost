@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { setTimeout as pause } from 'node:timers/promises';
 import type * as acp from '@agentclientprotocol/sdk';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -25,6 +27,22 @@ function fromAcp(servers: unknown): SparkEndpoint | null {
     if (!('url' in server) || !server.name.startsWith('spark')) continue;
     const header = server.headers.find((entry) => entry.name === 'Authorization');
     if (header) return { name: server.name, url: server.url, authorization: header.value };
+  }
+  return null;
+}
+
+function fromClaudeOptions(meta: unknown): SparkEndpoint | null {
+  const options = (meta as { claudeCode?: { options?: { mcpServers?: unknown } } } | null)
+    ?.claudeCode?.options;
+  const servers = (options?.mcpServers ?? {}) as Record<
+    string,
+    { url?: string; headers?: Record<string, string> }
+  >;
+  for (const [name, server] of Object.entries(servers)) {
+    const authorization = server.headers?.Authorization;
+    if (name.startsWith('spark') && server.url && authorization) {
+      return { name, url: server.url, authorization };
+    }
   }
   return null;
 }
@@ -87,8 +105,10 @@ async function scriptTurn(
 ): Promise<void> {
   for (const [index, step] of steps.entries()) {
     if ('say' in step) await say(step.say);
-    else if ('waitFor' in step) while (!existsSync(step.waitFor)) await pause(25);
-    else {
+    else if ('waitFor' in step) {
+      const gate = path.resolve(tmpdir(), step.waitFor);
+      while (!existsSync(gate)) await pause(25);
+    } else {
       const call = { id: `spark-script-${index}`, tool: step.tool, args: step.args ?? {} };
       await callSpark(endpoint, call, update);
     }
@@ -97,14 +117,17 @@ async function scriptTurn(
 
 export async function sparkTurn(
   text: string,
-  servers: unknown,
+  session: { meta: unknown; mcpServers: unknown } | null,
   update: Update,
   say: (chunk: string) => Promise<void>,
 ): Promise<acp.StopReason | null> {
   const script = SCRIPT_TRIGGER.exec(text)?.[1];
   const match = [...text.matchAll(SPARK_TRIGGER)].at(-1);
   if (!script && !match) return null;
-  const endpoint = fromAcp(servers) ?? fromCodexConfig(process.env.CODEX_CONFIG);
+  const endpoint =
+    fromAcp(session?.mcpServers) ??
+    fromClaudeOptions(session?.meta) ??
+    fromCodexConfig(process.env.CODEX_CONFIG);
   if (!endpoint) {
     await say('spark=missing');
     return 'end_turn';

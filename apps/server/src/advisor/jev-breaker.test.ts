@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AdvisorError, AdvisorTimeoutError } from './advice.ts';
+import { AdvisorError, AdvisorTimeoutError } from './jev-errors.ts';
 import {
   breakerFor,
   JEV_PAUSE_AFTER,

@@ -1,20 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import {
-  card,
-  crewChat,
-  crewRepo,
-  failingCheck,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { chatRepo, type ChatRepo, projectChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 
@@ -34,8 +26,7 @@ async function twoEarlierTurns(page: Page): Promise<void> {
 }
 
 async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
-  await crewChat(page, repo, 'Auto-edit');
-  await failingCheck(page, repo.root);
+  await projectChat(page, repo, 'Auto-edit');
   if (choice === 'Keep') await twoEarlierTurns(page);
   await send(page, 'Fix the divider #build');
   await expect(keepCard(page)).toHaveAccessibleName(/^Kept · /, { timeout: 60_000 });
@@ -138,32 +129,4 @@ test('keeps the thumbs in the token row, nudging only from the third turn', asyn
   await feedback.getByRole('textbox', { name: 'Comment (optional)' }).fill('Too vague');
   await feedback.getByRole('button', { name: 'Save' }).click();
   await expect(feedback.getByRole('status')).toHaveText('Saved');
-});
-
-test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
-  test.setTimeout(240_000);
-  repo.commit('check.mjs', "console.log('ok');\n");
-  await crewChat(page, repo, 'Auto-edit');
-  await twoEarlierTurns(page);
-  const listed = await page.request.get('/api/projects');
-  const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
-    (candidate) => candidate.rootPath === repo.root,
-  );
-  const saved = await page.request.patch(`/api/projects/${project!.id}`, {
-    data: { checkCommands: [`${process.execPath} check.mjs`] },
-  });
-  expect(saved.ok()).toBe(true);
-  await send(page, 'Fix the divider #build');
-  const check = card(page, /^Run a check\?/).filter({
-    has: page.getByRole('button', { name: 'Deny' }),
-  });
-  await check.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 30_000 });
-  await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
-
-  const good = keepCard(page).getByRole('button', { name: 'Good result' });
-  await expect(good).toBeVisible({ timeout: 15_000 });
-  await expect(keepCard(page).locator('.fb-q')).toHaveCount(0);
-  await good.click();
-  await expect(good).toHaveAttribute('aria-pressed', 'true');
 });

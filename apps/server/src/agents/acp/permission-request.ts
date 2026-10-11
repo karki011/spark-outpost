@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { splitCommandLine } from '../../approvals/commands.ts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
-import { exitPlanText } from '../../plans/plan-mode.ts';
+import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -18,6 +18,7 @@ export interface RequestContext {
   cwd: string;
   home: string;
   mode?: string | null;
+  shownPlan?: string | null;
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
@@ -74,12 +75,20 @@ function pathsOf(
 
 const MCP_TITLE = /^mcp__(.+?)__/;
 
+function unaskedMcpServer(toolCall: acp.ToolCallUpdate): string | null {
+  if (objectFields(toolCall._meta).is_mcp_tool_call !== true) return null;
+  const server = objectFields(toolCall.rawInput).server;
+  return typeof server === 'string' && server.trim() ? server.trim() : null;
+}
+
 function mcpServerOf(params: acp.RequestPermissionRequest, title: string): string | null {
   const claude = objectFields(objectFields(params.toolCall._meta).claudeCode).mcpServer;
   const claudeName = objectFields(claude).name;
   if (typeof claudeName === 'string' && claudeName.trim()) return claudeName.trim();
   const titled = MCP_TITLE.exec(title)?.[1];
   if (titled) return titled;
+  const called = unaskedMcpServer(params.toolCall);
+  if (called) return called;
   if (objectFields(params._meta).is_mcp_tool_approval !== true) return null;
   const serverName = objectFields(params.toolCall.rawInput).serverName;
   return typeof serverName === 'string' && serverName.trim() ? serverName.trim() : 'unknown';
@@ -114,7 +123,9 @@ export function approvalRequestFrom(
   const cwdInput = rawInput.cwd;
   const cwd = typeof cwdInput === 'string' && path.isAbsolute(cwdInput) ? cwdInput : context.cwd;
   const diffs = diffsOf(toolCall.content, cwd);
-  const plan = exitPlanText(toolKind, toolCall.rawInput, toolCall.content);
+  const plan =
+    exitPlanText(toolKind, toolCall.rawInput, toolCall.content) ??
+    (isExitPlanKind(toolKind) ? (context.shownPlan ?? null) : null);
   const options = approvalOptions(params.options);
   const mcpServer = mcpServerOf(params, title);
   const agentReason = agentReasonOf(params);

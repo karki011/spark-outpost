@@ -1,12 +1,10 @@
 import {
-  CATEGORY_CONFIDENCE_FLOOR,
-  modePosture,
   isReadOnlyPosture,
-  type Category,
+  modeForLegacy,
+  modePosture,
+  PERMISSION_ASK,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
-import type { turnIntent } from '../orchestration/intake.ts';
-import { buildsByRule, planOnlyByRule, questionByRule } from '../orchestration/risk-rules.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -35,27 +33,17 @@ export function isPlanModeChat(input: RunInput): boolean {
   return mayPlan(input) && pickedPlanMode(input);
 }
 
-const BUILD_INTENTS: ReadonlySet<Category> = new Set([
-  'bug_fix',
-  'feature',
-  'refactor',
-  'tests',
-  'docs',
-  'config',
-]);
-
-export function asksToBuild(request: string, jev: Parameters<typeof turnIntent>[0]): boolean {
-  const confidence = jev ? (jev.confidences.intent ?? jev.confidence) : 0;
-  if (jev?.intent && confidence >= CATEGORY_CONFIDENCE_FLOOR) return BUILD_INTENTS.has(jev.intent);
-  return buildsByRule(request) && !questionByRule(request) && !planOnlyByRule(request);
-}
-
 function buildingMode(input: RunInput): string | null {
   const mode = input.settings.mode ?? null;
   return isReadOnlyPosture(modePosture(input.provider, mode)) ? null : mode;
 }
 
+function agentHoldsThePlan(provider: string): boolean {
+  return modeForLegacy(provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
+}
+
 export function asPlanTurn(input: RunInput): RunInput {
+  if (!agentHoldsThePlan(input.provider)) return { ...input, mode: 'ask', planning: true };
   const asked = planCommandText(input.userRequest);
   const request = asked === null || asked === '' ? input.userRequest : asked;
   return {
@@ -72,8 +60,8 @@ export function asPlanTurn(input: RunInput): RunInput {
 export async function markPlanTurn(db: Db, input: RunInput): Promise<RunInput> {
   const chat = await resolveChatSettings(db, input.identity.threadId);
   const { rows } = await db.query<{ level: InvolvementLevel }>(
-    `UPDATE runs SET mode = 'do', level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
-    [input.identity.runId, chat.level],
+    `UPDATE runs SET mode = $3, level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
+    [input.identity.runId, chat.level, input.mode],
   );
   return { ...input, level: rows[0]?.level ?? input.level };
 }

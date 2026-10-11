@@ -64,8 +64,12 @@ export function post(number: number, overrides: Partial<OutpostPost> = {}): Outp
     kind: 'request',
     body: 'Add an optional userId filter.',
     fromUser: true,
+    fromSpark: false,
     fromConversationId: null,
+    fromRunId: null,
     fromHandle: null,
+    userStarted: false,
+    held: false,
     toConversationId: API_CHAT,
     toHandle: 'api',
     guest: false,
@@ -108,7 +112,7 @@ export function notice(number: number, body: string): OutpostPost {
 }
 
 export function detail(posts: OutpostPost[] = [], overrides: Partial<Outpost> = {}): OutpostDetail {
-  return { outpost: outpost(overrides), posts };
+  return { outpost: outpost(overrides), posts, stories: [] };
 }
 
 export function memberView(

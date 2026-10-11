@@ -11,6 +11,7 @@ interface SheetFooterProps {
   block: string | null;
   addsOpenChat: boolean;
   discarding: boolean;
+  adding?: boolean;
   onBack: () => void;
   onPrimary: () => void;
   onOpenOutpost: () => void;
@@ -19,6 +20,7 @@ interface SheetFooterProps {
 }
 
 const ADDS_OPEN_CHAT = 'Continue adds the open chat';
+const ADD_CHATS = 'Start chats';
 const ENTER = ['↵'] as const;
 const COMMAND_ENTER = MAC ? (['⌘', '↵'] as const) : (['Ctrl', '↵'] as const);
 
@@ -36,6 +38,7 @@ export function SheetFooter({
   block,
   addsOpenChat,
   discarding,
+  adding = false,
   onBack,
   onPrimary,
   onOpenOutpost,
@@ -55,7 +58,7 @@ export function SheetFooter({
     return (
       <footer className="op-sheet-foot op-create-foot" role="alertdialog" aria-labelledby={ids}>
         <span id={ids} className="op-foot-ask">
-          Discard this outpost?
+          {adding ? 'Discard these chats?' : 'Discard this outpost?'}
         </span>
         <button ref={keepRef} type="button" className="btn sm ghost" onClick={onKeep}>
           Keep editing
@@ -89,7 +92,7 @@ export function SheetFooter({
         aria-describedby={hint ? `${ids}hint` : undefined}
         onClick={onPrimary}
       >
-        {starting ? 'Starting…' : PRIMARY[step]}
+        {starting ? 'Starting…' : adding && step === 'review' ? ADD_CHATS : PRIMARY[step]}
         {!starting && <Keys keys={step === 'chats' ? COMMAND_ENTER : ENTER} />}
       </button>
     </footer>

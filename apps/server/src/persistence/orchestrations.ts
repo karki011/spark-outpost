@@ -10,7 +10,6 @@ import type {
   Risk,
   RunMode,
 } from '@spark-outpost/contracts';
-import { coveredMs } from '../orchestration/active-time.ts';
 import {
   buildOrchestration,
   toCrewMember,
@@ -92,35 +91,6 @@ export interface MemberFields {
   model: string | null;
   effort: string | null;
   route: StoredRoute;
-}
-
-export async function markInPlaceMember(
-  db: Queryable,
-  runId: string,
-  member: MemberFields,
-): Promise<void> {
-  await db.query(
-    `UPDATE runs SET role = $2, step_index = $3, attempt = $4, agent_label = $5, model = $6,
-       effort = $7, route = $8
-     WHERE id = $1`,
-    [
-      runId,
-      member.role,
-      member.stepIndex,
-      member.attempt,
-      member.agentLabel,
-      member.model,
-      member.effort,
-      JSON.stringify(member.route),
-    ],
-  );
-}
-
-export async function mergeRoute(db: Queryable, runId: string, route: StoredRoute): Promise<void> {
-  await db.query(`UPDATE runs SET route = COALESCE(route, '{}'::jsonb) || $2 WHERE id = $1`, [
-    runId,
-    JSON.stringify(route),
-  ]);
 }
 
 export interface NewChild extends MemberFields {
@@ -224,27 +194,6 @@ export async function insertDecision(db: Queryable, decision: NewDecision): Prom
       decision.policyVersion ?? null,
     ],
   );
-}
-
-export async function usedNames(db: Queryable, taskId: string, role: AgentRole): Promise<string[]> {
-  const { rows } = await db.query<{ name: string }>(
-    `SELECT DISTINCT route->>'name' AS name FROM runs
-     WHERE task_id = $1 AND role = $2 AND route->>'name' IS NOT NULL`,
-    [taskId, role],
-  );
-  return rows.map((row) => row.name);
-}
-
-export async function waitedMs(db: Queryable, runId: string): Promise<number> {
-  const { rows } = await db.query<{ started: number; ended: number }>(
-    `SELECT EXTRACT(EPOCH FROM a.created_at) * 1000 AS started,
-       EXTRACT(EPOCH FROM COALESCE(a.decided_at, now())) * 1000 AS ended
-     FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1)
-       AND (a.status = 'pending' OR a.decided_by IN ('user', 'stop', 'timeout', 'auto'))`,
-    [runId],
-  );
-  return coveredMs(rows.map((row) => [Number(row.started), Number(row.ended)] as const));
 }
 
 const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;

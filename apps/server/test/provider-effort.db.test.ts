@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
@@ -66,7 +65,7 @@ describe('provider default effort', () => {
     expect(await storedEffort()).toBe('xhigh');
   });
 
-  it('preselects the default in fresh chats and hands it to the Builder route', async () => {
+  it("preselects the default in fresh chats and keeps a chat's own pick", async () => {
     await connectClaude();
     await send('get', '/api/providers/claude/capabilities').expect(200);
     await setEffort('xhigh').expect(200);
@@ -76,8 +75,7 @@ describe('provider default effort', () => {
     await createConversation(t.db, t.workspaceId, id);
     const own = await send('patch', `/api/conversations/${id}/settings`, { effort: 'low' });
     expect(own.body.effort).toBe('low');
-    const context = await loadIntakeContext(t.db, t.workspaceId, id);
-    expect(context.defaultEfforts).toEqual({ claude: 'xhigh' });
+    expect(await storedEffort()).toBe('xhigh');
   });
 
   it('keeps the choice across reconnects and clears it on request', async () => {

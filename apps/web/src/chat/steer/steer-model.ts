@@ -4,12 +4,34 @@ import {
   type MemberMessage,
   type Run,
 } from '@spark-outpost/contracts';
-import { messageState, messageTone } from '../../crew/member-model.ts';
 import { providerName } from '../provider-name.ts';
 import { turnRunIds } from '../turn-props.ts';
 import { activeRun } from '../turns.ts';
 
 export type SteerTone = 'wait' | 'ok' | 'miss';
+
+function messageState(message: MemberMessage, live: boolean, name: string): string {
+  switch (message.status) {
+    case 'queued':
+      return live ? `${name} reads this at its next step` : `${name} finished before reading this`;
+    case 'delivered':
+      return `${name} has it`;
+    case 'interrupting':
+      return 'Stopping the turn to send this first';
+    case 'sent':
+      return 'Sent as your next message';
+    case 'missed':
+      return `${name} finished before reading this`;
+    case 'continued':
+      return `${name} picked this up in a new turn`;
+  }
+}
+
+function messageTone(message: MemberMessage, live: boolean): SteerTone {
+  if (message.status === 'missed' || (message.status === 'queued' && !live)) return 'miss';
+  if (message.status === 'queued' || message.status === 'interrupting') return 'wait';
+  return 'ok';
+}
 
 export interface SteerStatus {
   text: string;

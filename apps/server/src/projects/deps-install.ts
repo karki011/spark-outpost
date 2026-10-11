@@ -65,7 +65,7 @@ function reason(argv: readonly string[], run: CheckRun): string {
 }
 
 export function installFailure(argv: readonly string[], run: CheckRun): string {
-  return `Dependencies in this chat’s copy are out of date and installing them failed: ${reason(argv, run)}. Checks that need them are reported as not run.`;
+  return `Dependencies in this chat’s copy are out of date and installing them failed: ${reason(argv, run)}.`;
 }
 
 interface KnownDeps {

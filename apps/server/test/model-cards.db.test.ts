@@ -3,9 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ModelCardsResponse, ModelStat } from '@spark-outpost/contracts';
 import { ingestRound, MEASURED_SEED, seedModelStats } from '../src/model-cards/ingest.ts';
-import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
-import { createConversation } from '../src/persistence/conversations.ts';
 import { listModelStats } from '../src/persistence/model-stats.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
@@ -72,7 +70,7 @@ describe('measured model stats', () => {
         {
           role: 'agent',
           provider: 'claude',
-          model: 'haiku',
+          model: 'claude-haiku-4-5',
           effort: null,
           costUsd: 0.02,
           costSource: 'reported',
@@ -123,14 +121,9 @@ describe('model cards API', () => {
     expect(body.providers.find((p) => p.provider.provider === 'claude')?.connected).toBe(false);
   });
 
-  it('hands the stats to Jev with each candidate and has no frontier switch', async () => {
-    await seedModelStats(t.db);
+  it('has no frontier switch', async () => {
     await connectCodex();
     await send('put', '/api/model-cards/frontier/codex', { allowed: true }).expect(404);
-    const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
-    const context = await loadIntakeContext(t.db, t.workspaceId, conversation.id);
-    expect(context.candidates[0]).toMatchObject({ provider: 'codex' });
-    expect(context.candidates[0]!.stats!.length).toBe(MEASURED_SEED.stats.length);
   });
 });
 

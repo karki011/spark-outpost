@@ -45,4 +45,4 @@ In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?
 2. Change what you need and select **Save**.
 3. To delete it, select **Delete** in **Settings → Crew**, then hold **Hold to delete**. You get 10 seconds to **Undo**. Its chats stay.
 
-**Next:** [Watch and steer the crew](pieces.md)
+**Next:** [Choose where a chat works](where-spark-works.md)

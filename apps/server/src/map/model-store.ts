@@ -1,7 +1,7 @@
 import type { MapCategory, MapKind } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
-import type { JevCall } from '../orchestration/jev-calls.ts';
+import type { JevCall } from '../advisor/jev-calls.ts';
 import type { MapModel } from './model.ts';
 
 const ROW_BATCH = 2_000;

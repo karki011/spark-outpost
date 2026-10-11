@@ -18,6 +18,7 @@ import {
   notice,
   post,
 } from './test-fixtures.ts';
+import { stackedStory } from './story-fixtures.ts';
 
 interface Call {
   method: string;
@@ -202,6 +203,40 @@ describe('OutpostView', () => {
       `PATCH /api/outposts/${OUTPOST_ID}`,
     ]);
     expect(calls[1]?.body).toEqual({ paused: true });
+  });
+
+  it('starts a request that waits for another chat when asked to', async () => {
+    show(detail([post(1, { reason: 'Waiting for @fe', held: true })]));
+    view();
+    fireEvent.click(screen.getByRole('button', { name: 'Start the request to @api anyway' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(
+      `POST /api/outposts/${OUTPOST_ID}/posts/${post(1).id}/start-now`,
+    );
+  });
+
+  it('shows no story bar for an outpost without a story', () => {
+    show(detail([post(1)]));
+    view();
+    expect(screen.queryByRole('region', { name: 'Stories' })).toBeNull();
+  });
+
+  it('lists a story under the chats and hands a stack update to the message box', () => {
+    show({ ...detail([post(1)]), stories: [stackedStory()] });
+    const onOpenChat = vi.fn<(id: string) => void>();
+    view(onOpenChat);
+    const stories = screen.getByRole('region', { name: 'Stories' });
+    expect(within(stories).getByText('1 of 2 answered · 2 PRs · 2 warnings')).toBeTruthy();
+    fireEvent.click(within(stories).getByRole('button', { name: 'Open @fe in chat' }));
+    expect(onOpenChat).toHaveBeenCalledWith(FE_CHAT);
+
+    fireEvent.click(within(stories).getByRole('button', { name: 'Update from @api' }));
+    const box = screen.getByRole<HTMLTextAreaElement>('combobox');
+    expect(box.value).toBe(
+      '@fe merge spark/api-1 into your branch, fix any conflicts and run the checks.',
+    );
+    expect(document.activeElement).toBe(box);
+    expect(calls).toEqual([]);
   });
 
   it('says it is paused and offers Resume', () => {

@@ -1,26 +1,16 @@
-import {
-  isTerminalRunStatus,
-  pieceBoard,
-  placementLabel,
-  type ConversationDetail,
-  type Orchestration,
-  type TotalCostSource,
-} from '@spark-outpost/contracts';
+import type { Orchestration, TotalCostSource } from '@spark-outpost/contracts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { formatCost } from '../usage/format.ts';
-import { isBusy, isDispatcher, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
-import { JEV_ID, jevAgent, runAgent } from './crew-projection.ts';
-import { pieceTag, waitingAgent, type PieceTag } from './tv-coordinator.ts';
+import type { TvCast } from './conversation-crew.ts';
+import { isBusy, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
 import { roleSubtitle, type TvAsk } from './tv-scene.ts';
-import { messageable } from './member-model.ts';
 
 type TvOutcome = 'passed' | 'failed' | 'stopped';
 
 export interface TvRow {
   key: string;
   runId: string;
-  agentId: string;
   name: string;
   role: string | null;
   provider: string;
@@ -35,14 +25,8 @@ export interface TvRow {
   finishedAt: number | null;
   durationMs: number | null;
   ask: TvAsk | null;
-  dispatcher: boolean;
-  messageable: boolean;
-  piece: TvRowPiece | null;
+  lead: boolean;
   order: number;
-}
-
-export interface TvRowPiece extends PieceTag {
-  label: string;
 }
 
 export interface TvRows {
@@ -65,19 +49,18 @@ function wallMs(startedAt: number | null, finishedAt: number | null, fallback: n
   return fallback;
 }
 
-function row(
-  agent: CrewAgent,
-  extra: Pick<
-    TvRow,
-    'key' | 'runId' | 'toolCalls' | 'startedAt' | 'finishedAt' | 'order' | 'piece'
-  > & {
-    ask: TvAsk | undefined;
-  },
-): TvRow {
+interface RowTimes {
+  toolCalls: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+function row(agent: CrewAgent, order: number, times: RowTimes, ask: TvAsk | undefined): TvRow {
+  const startedAt = time(times.startedAt);
+  const finishedAt = time(times.finishedAt);
   return {
-    key: extra.key,
-    runId: extra.runId,
-    agentId: agent.id,
+    key: agent.id,
+    runId: agent.id,
     name: agent.name,
     role: roleSubtitle(agent),
     provider: agent.provider,
@@ -87,97 +70,30 @@ function row(
     tokens: agent.tokens,
     costUsd: agent.costUsd,
     costSource: agent.costSource,
-    toolCalls: extra.toolCalls,
-    startedAt: extra.startedAt,
-    finishedAt: extra.finishedAt,
-    durationMs: wallMs(extra.startedAt, extra.finishedAt, agent.durationMs),
-    ask: extra.ask ?? null,
-    dispatcher: agent.role === 'jev',
-    messageable: messageable(agent),
-    piece: extra.piece,
-    order: extra.order,
+    toolCalls: times.toolCalls,
+    startedAt,
+    finishedAt,
+    durationMs: wallMs(startedAt, finishedAt, agent.durationMs),
+    ask: ask ?? null,
+    lead: order === 0,
+    order,
   };
 }
 
-export function tvListRows(
-  detail: ConversationDetail | undefined,
-  orchestration: Orchestration,
-  agents: readonly CrewAgent[],
-  asks: Record<string, TvAsk>,
-): TvRows {
-  const activity = detail?.activity ?? {};
-  const pieces = rowPieces(orchestration);
-  const crew = orchestration.crew.map((member, index) =>
-    row(runAgent(member, orchestration, activity[member.runId] ?? []), {
-      key: member.runId,
-      runId: member.runId,
-      toolCalls: member.toolCalls,
-      startedAt: time(member.startedAt),
-      finishedAt: time(member.finishedAt),
-      order: index + 1,
-      piece: (member.pieceKey && pieces.get(member.pieceKey)) || null,
-      ask: asks[member.runId],
-    }),
-  );
-  const parent = detail?.runs.find((run) => run.id === orchestration.runId);
-  const turnActive = !isTerminalRunStatus(orchestration.status);
-  const jevBase = agents.find(isDispatcher) ?? jevAgent(orchestration, []);
-  const jev = row(
-    { ...jevBase, state: turnActive ? jevBase.state : turnState(orchestration.status) },
-    {
-      key: `jev:${orchestration.runId}`,
-      runId: orchestration.runId,
-      toolCalls: null,
-      startedAt: time(parent?.startedAt),
-      finishedAt: turnActive ? null : time(parent?.finishedAt),
-      order: 0,
-      piece: null,
-      ask: asks.jev,
-    },
-  );
-  const running: TvRow[] = [];
-  const finished: TvRow[] = [];
-  if (turnActive) running.push(jev);
-  else finished.push(jev);
-  for (const item of crew) (FINISHED.has(item.state) ? finished : running).push(item);
-  running.push(...unstartedRows(orchestration, pieces, crew.length + 1));
+export function tvListRows(cast: TvCast, asks: Record<string, TvAsk>): TvRows {
+  const { run, lead, sparks } = cast;
+  const rows = [
+    row(
+      lead,
+      0,
+      { toolCalls: null, startedAt: run.startedAt, finishedAt: run.finishedAt },
+      asks[lead.id],
+    ),
+    ...sparks.map(({ member, agent }, index) => row(agent, index + 1, member, asks[agent.id])),
+  ];
+  const running = rows.filter((item) => !FINISHED.has(item.state));
+  const finished = rows.filter((item) => FINISHED.has(item.state));
   return { running: sortRunning(running), finished: sortFinished(finished) };
-}
-
-function rowPieces(orchestration: Orchestration): Map<string, TvRowPiece> {
-  const pieces = orchestration.pieces?.pieces ?? [];
-  return new Map(
-    pieces.map((piece) => [
-      piece.key,
-      { ...pieceTag(piece), label: `${piece.key} · ${piece.title} · ${placementLabel(piece)}` },
-    ]),
-  );
-}
-
-function unstartedRows(
-  orchestration: Orchestration,
-  pieces: ReadonlyMap<string, TvRowPiece>,
-  firstOrder: number,
-): TvRow[] {
-  const list = orchestration.pieces;
-  if (!list) return [];
-  const started = new Set(orchestration.crew.map((member) => member.pieceKey));
-  const board = pieceBoard(list);
-  return list.pieces.flatMap((piece, index) => {
-    if (started.has(piece.key)) return [];
-    const agent = waitingAgent(piece, board[index]!.status);
-    const item = row(agent, {
-      key: agent.id,
-      runId: '',
-      toolCalls: null,
-      startedAt: null,
-      finishedAt: null,
-      order: firstOrder + index,
-      piece: pieces.get(piece.key) ?? null,
-      ask: undefined,
-    });
-    return [{ ...item, agentId: JEV_ID }];
-  });
 }
 
 export function turnState(status: Orchestration['status']): CrewState {
@@ -186,8 +102,8 @@ export function turnState(status: Orchestration['status']): CrewState {
   return 'failed';
 }
 
-export function needsYou(item: Pick<TvRow, 'ask' | 'state' | 'dispatcher'>): boolean {
-  return item.ask !== null || (item.state === 'waiting' && !item.dispatcher);
+export function needsYou(item: Pick<TvRow, 'ask' | 'state'>): boolean {
+  return item.ask !== null || item.state === 'waiting';
 }
 
 function rank(item: TvRow): number {
@@ -207,7 +123,7 @@ export function sortRunning(rows: readonly TvRow[]): TvRow[] {
   return [...rows].sort(
     (a, b) =>
       rank(a) - rank(b) ||
-      Number(b.dispatcher) - Number(a.dispatcher) ||
+      Number(b.lead) - Number(a.lead) ||
       nullsLast(a.startedAt, b.startedAt, 1) ||
       a.order - b.order,
   );

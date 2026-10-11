@@ -5,12 +5,13 @@ import {
   digestStatsByRun,
   finishDigest,
 } from '../persistence/digests.ts';
-import { executeChildRun, type ExecuteRunDeps } from '../workflow/execute-run.ts';
+import type { TurnDeps } from '../workflow/agent-turn.ts';
+import { executeChildRun } from '../workflow/execute-run.ts';
 import { parseDigestReply } from './parse.ts';
 
 const FAILED = 'The digest could not be written. Try again.';
 
-export async function executeDigest(deps: ExecuteRunDeps, lease: Lease): Promise<void> {
+export async function executeDigest(deps: TurnDeps, lease: Lease): Promise<void> {
   const result = await executeChildRun(deps, lease);
   if (result.outcome === 'lease_lost') return;
   if (result.outcome !== 'succeeded') {

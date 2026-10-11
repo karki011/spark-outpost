@@ -79,7 +79,6 @@ const round = (followUpRound = true) => ({
   identity: { threadId: conversationId },
   provider: 'claude',
   agentMode: 'default',
-  piece: null,
   projectRoots: [root],
 });
 
@@ -105,7 +104,7 @@ function request(command: string): ApprovalRequest {
 async function verdict(command: string, followUpRound = true) {
   const asked = request(command);
   const context = await publishContext(t.db, publishGrant(round(followUpRound)), asked);
-  return decide('asks', asked, NO_RUN_RULES, [], { builder: true, files, ...context });
+  return decide('asks', asked, NO_RUN_RULES, [], { changesProject: true, files, ...context });
 }
 
 describe('pushing a follow-up fix at Automatic in an asking mode', () => {

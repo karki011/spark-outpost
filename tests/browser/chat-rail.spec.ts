@@ -2,7 +2,14 @@ import { mkdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
-import { CREW_REQUEST, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import {
+  BUILD_REQUEST,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
+  send,
+} from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
@@ -10,7 +17,6 @@ import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import {
   COLUMN,
   LONG_TASKS,
-  NOTES,
   PROMPTS,
   SHOTS,
   WIDE,
@@ -67,7 +73,7 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeHidden();
     const rows = rail(page).getByRole('list', { name: 'This chat' });
     await expect(rows.getByRole('button', { name: 'Not linked. Choose project' })).toBeVisible();
-    await expect(rows).toContainText('Opus 5.5');
+    await expect(rows).toContainText('Claude · Auto');
     await expect(rows).toContainText('tokens');
     await expect(outline(page)).toHaveCount(0);
     await shoot(page, 'short-2000');
@@ -213,24 +219,24 @@ test.describe('plain chats', () => {
 });
 
 test.describe('working chats', () => {
-  let repo: CrewRepo | null = null;
+  let repo: ChatRepo | null = null;
 
   test.afterEach(() => {
     repo?.remove();
     repo = null;
   });
 
-  test('Agent TV docks in the rail while a turn runs, opens the full TV and leaves the crew listed when it ends', async ({
+  test('Agent TV docks in the rail while a turn runs, opens the full TV and leaves the agent listed when it ends', async ({
     page,
   }) => {
     test.setTimeout(180_000);
-    await resetCrew();
+    await resetWithAgents();
     await useSystemTheme(page);
     await page.emulateMedia({ colorScheme: 'light' });
-    repo = crewRepo();
+    repo = chatRepo();
     await page.setViewportSize(WIDE);
-    await crewChat(page, repo, 'Full auto');
-    await send(page, `${CREW_REQUEST} #build #crew`);
+    await projectChat(page, repo, 'Full auto');
+    await send(page, `${BUILD_REQUEST} #build`);
 
     const dock = rail(page).locator('.crail-tv');
     await expect(dock).toBeVisible({ timeout: 30_000 });
@@ -244,7 +250,7 @@ test.describe('working chats', () => {
       'Full auto → PR',
     );
     await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
-    await shoot(page, 'crew-run-2000');
+    await shoot(page, 'agent-run-2000');
 
     const before = (await page.locator('.col').boundingBox())!;
     await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
@@ -260,13 +266,12 @@ test.describe('working chats', () => {
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
     expect(after.width).toBe(before.width);
-    const crew = rail(page).getByRole('region', { name: 'Crew' });
-    const members = crew.getByRole('list', { name: 'Crew members' }).getByRole('listitem');
-    await expect(crew.getByRole('heading')).toHaveText('Crew · 3 agents');
-    await expect(members).toHaveCount(3);
-    await expect(members.nth(0)).toContainText('JevDoneDispatcher');
-    await expect(members.nth(1)).toContainText('BoltDoneBuilder · Opus 5.5');
-    await expect(members.nth(2)).toContainText(/Hawk(Done|Failed)Critic/);
+    const crew = rail(page).getByRole('region', { name: 'Agent' });
+    await expect(crew.getByRole('heading')).toHaveText(/^Claude · /);
+    const members = crew.getByRole('list', { name: 'Agent' }).getByRole('listitem');
+    await expect(members).toHaveCount(1);
+    await expect(members).toContainText('Claude');
+    await expect(members).toContainText('Done');
     expect(
       await crew.evaluate(
         (section) =>
@@ -280,61 +285,25 @@ test.describe('working chats', () => {
       rows.every((row) => row.scrollWidth <= row.clientWidth),
     );
     expect(fits).toBe(true);
-    await shoot(page, 'crew-done-2000');
-    if (RAIL_SHOTS) await page.screenshot({ path: `${RAIL_SHOTS}/rail-finished-crew-light.png` });
+    await shoot(page, 'agent-done-2000');
+    if (RAIL_SHOTS) await page.screenshot({ path: `${RAIL_SHOTS}/rail-finished-agent-light.png` });
     await crew.getByRole('button', { name: 'Open Agent TV' }).click();
     await expect(tv).toBeVisible();
     await tv.getByRole('button', { name: 'Close Agent TV' }).click();
     await page.reload();
-    await expect(members).toHaveCount(3);
-    await expect(members.nth(1)).toContainText('BoltDoneBuilder');
-    await expect(members.nth(2)).toContainText('Critic');
-
-    await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
-      if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
-      const detail = (await response.json()) as ConversationDetail;
-      const members = Object.values(detail.orchestrations ?? {}).flatMap((entry) => entry.crew);
-      const notes = members.map((member, index) => ({
-        ...detail.messages[0]!,
-        id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
-        role: 'assistant' as const,
-        runId: member.runId,
-        content: NOTES,
-      }));
-      const kept = detail.messages.filter(
-        (message) => !members.some((member) => member.runId === message.runId),
-      );
-      await route.fulfill({ response, json: { ...detail, messages: [...kept, ...notes] } });
-    });
-    await page.reload();
-    const notes = page
-      .locator('.agent-block .md')
-      .filter({ hasText: 'Still mapping the wiring' })
-      .first()
-      .locator('> p');
-    await expect(notes).toHaveCount(9);
-    const gaps = await notes.evaluateAll((all) =>
-      all.slice(1).map((note, index) => {
-        const above = all[index]!.getBoundingClientRect();
-        return Math.round((note.getBoundingClientRect().top - above.bottom) * 100) / 100;
-      }),
-    );
-    expect(new Set(gaps)).toEqual(new Set([8.25]));
-    expect(await notes.first().evaluate((note) => getComputedStyle(note).lineHeight)).toBe('24px');
-    await shoot(page, 'crew-notes-2000');
+    await expect(members).toHaveCount(1);
   });
 
   test('tasks read as a plain list: one row per step with its state, the current one marked, no filled rows', async ({
     page,
   }) => {
     test.setTimeout(120_000);
-    await resetCrew();
+    await resetWithAgents();
     await useSystemTheme(page);
     await page.emulateMedia({ colorScheme: 'light' });
-    repo = crewRepo();
+    repo = chatRepo();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await crewChat(page, repo, 'Ask before edits');
+    await projectChat(page, repo, 'Ask before edits');
     await send(page, 'Fix the divider #build');
     await expect(page.getByRole('group', { name: /Change a file\?/ })).toBeVisible({
       timeout: 30_000,

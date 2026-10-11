@@ -176,7 +176,7 @@
       "id": "claude-haiku-4-5",
       "label": "Haiku 4.5",
       "match": {
-        "ids": ["haiku", "claude-haiku-4-5", "claude-haiku-4-5-20251001"],
+        "ids": ["claude-haiku-4-5", "claude-haiku-4-5-20251001"],
         "labels": ["Haiku 4.5"]
       },
       "tier": "small",
@@ -229,7 +229,7 @@
       "id": "claude-sonnet-5",
       "label": "Sonnet 5",
       "match": {
-        "ids": ["sonnet", "claude-sonnet-5"],
+        "ids": ["claude-sonnet-5"],
         "labels": ["Sonnet 5"]
       },
       "tier": "mid",
@@ -342,7 +342,7 @@
       "id": "claude-opus-5-5",
       "label": "Opus 5.5",
       "match": {
-        "ids": ["opus[1m]", "opus", "claude-opus-5-5"],
+        "ids": ["claude-opus-5-5"],
         "labels": ["Opus 5.5"]
       },
       "tier": "top",

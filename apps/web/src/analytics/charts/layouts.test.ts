@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { calendarLayout, weekdayIndex } from './calendar-layout.ts';
-import { linkPath, OTHER, sankeyLayout } from './sankey-layout.ts';
 import { movingAverage, niceMax } from './scale.ts';
 import { squarify, treemap } from './treemap-layout.ts';
 
@@ -57,45 +56,6 @@ describe('treemap layout', () => {
       expect(placed.x).toBeGreaterThanOrEqual(app.x);
       expect(placed.y).toBeGreaterThan(app.y);
     }
-  });
-});
-
-describe('sankey layout', () => {
-  const options = { width: 400, height: 200, nodeWidth: 10, gap: 10, maxPerStage: 3 };
-
-  it('sums flows per node and stacks links without gaps', () => {
-    const layout = sankeyLayout(
-      [
-        { stages: ['fix', 'good'], value: 3 },
-        { stages: ['fix', 'bad'], value: 1 },
-        { stages: ['feature', 'good'], value: 2 },
-      ],
-      { ...options, order: (stage) => (stage === 1 ? ['good', 'bad'] : null) },
-    );
-    const byId = new Map(layout.nodes.map((node) => [node.id, node]));
-    expect(byId.get('0:fix')!.value).toBe(4);
-    expect(byId.get('1:good')!.value).toBe(5);
-    expect(byId.get('1:good')!.y).toBeLessThan(byId.get('1:bad')!.y);
-    const fromFix = layout.links.filter((link) => link.source.id === '0:fix');
-    const total = fromFix.reduce((sum, link) => sum + link.w, 0);
-    expect(total).toBeCloseTo(byId.get('0:fix')!.h, 6);
-    expect(byId.get('1:good')!.paths).toEqual([0, 2]);
-    expect(linkPath(layout.links[0]!, 10)).toMatch(/^M10,/);
-  });
-
-  it('folds small values into Other', () => {
-    const layout = sankeyLayout(
-      ['a', 'b', 'c', 'd'].map((key, index) => ({ stages: [key, 'x'], value: 4 - index })),
-      options,
-    );
-    expect(
-      layout.nodes.filter((node) => node.stage === 0).map((node) => [node.label, node.value]),
-    ).toEqual([
-      ['a', 4],
-      ['b', 3],
-      [OTHER, 3],
-    ]);
-    expect(sankeyLayout([], options)).toEqual({ nodes: [], links: [] });
   });
 });
 

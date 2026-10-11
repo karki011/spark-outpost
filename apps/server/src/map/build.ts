@@ -2,7 +2,7 @@ import { basename } from 'node:path';
 import { textReader } from '../codescan/file-stats.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db } from '../persistence/db.ts';
-import type { JevAccess } from '../orchestration/jev-calls.ts';
+import type { JevAccess } from '../advisor/jev-calls.ts';
 import { sendable } from './label-evidence.ts';
 import { labelAreas } from './labeller.ts';
 import { computePairLinks, saveLinks, stalePairs, type LinkSide } from './links.ts';

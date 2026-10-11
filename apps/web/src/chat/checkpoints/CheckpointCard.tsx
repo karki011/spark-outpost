@@ -7,15 +7,11 @@ import {
   crewTitle,
   type ApprovalDecidedValue,
   type CheckpointPayload,
-  type ConflictSide,
-  type MergeConflict,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { queryKeys } from '../../api/client.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
-import { useViewChanges } from '../../tasks/view-changes.ts';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
-import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
 import { CrewHint } from '../crew/CrewHint.tsx';
 import { FollowContext } from '../follow-requests.ts';
@@ -26,7 +22,6 @@ import { AskedList, ClarifyBody } from './ClarifyBody.tsx';
 import {
   asksQuestions,
   checkpointQuestion,
-  changesSummary,
   checkpointResult,
   checkpointTitle,
   offers,
@@ -37,74 +32,6 @@ import {
   type CheckpointApproval,
 } from './checkpoint-model.ts';
 import { useAutoContinue } from './use-auto-continue.ts';
-
-function FileList({ files }: { files: CheckpointPayload['files'] }) {
-  return (
-    <ul className="ck-files" aria-label="Changed files">
-      {files.map((file) => (
-        <li key={file.path}>
-          <code>{file.path}</code>
-          <span className={`ck-change ${file.change}`}>{file.change}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ChangesSummary({ payload }: { payload: CheckpointPayload }) {
-  const viewChanges = useViewChanges();
-  if (payload.files.length === 0) return null;
-  return (
-    <div className="ck-changes">
-      <p className="ck-sum">
-        <span>{changesSummary(payload)}</span>
-        {viewChanges && (
-          <button type="button" className="ck-view" onClick={() => viewChanges()}>
-            View changes
-          </button>
-        )}
-      </p>
-      <details className="ck-more">
-        <summary>Show files</summary>
-        <FileList files={payload.files} />
-      </details>
-    </div>
-  );
-}
-
-function AcceptActions({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
-  const [fixing, setFixing] = useState(false);
-  if (fixing) {
-    return (
-      <NoteForm
-        label="What should be fixed?"
-        initial=""
-        submit="Ask for a fix"
-        busy={decide.busy}
-        onSubmit={(note) => decide(CHECKPOINT_OPTION.fix, note)}
-        onCancel={() => setFixing(false)}
-      />
-    );
-  }
-  return (
-    <div className="appr-acts">
-      <Action id={CHECKPOINT_OPTION.keep} approval={approval} decide={decide} kind="primary">
-        Keep
-      </Action>
-      <Action id={CHECKPOINT_OPTION.fixFindings} approval={approval} decide={decide}>
-        {optionName(approval, CHECKPOINT_OPTION.fixFindings)}
-      </Action>
-      {offers(approval, CHECKPOINT_OPTION.fix) && (
-        <button type="button" className="btn line sm" onClick={() => setFixing(true)}>
-          Fix
-        </button>
-      )}
-      <Action id={CHECKPOINT_OPTION.revert} approval={approval} decide={decide} kind="stop">
-        Revert
-      </Action>
-    </div>
-  );
-}
 
 function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
   const [revising, setRevising] = useState(false);
@@ -154,64 +81,6 @@ function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: 
   );
 }
 
-function ConflictSideView({
-  path,
-  base,
-  side,
-}: {
-  path: string;
-  base: string | null;
-  side: ConflictSide;
-}) {
-  return (
-    <div className="ck-side">
-      <p className="ck-side-h">{side.name}’s change</p>
-      {side.text !== null ? (
-        <DiffView diff={{ path, oldText: base, newText: side.text }} />
-      ) : (
-        <pre className="ck-diff">{side.diff}</pre>
-      )}
-    </div>
-  );
-}
-
-function ConflictFiles({ conflict }: { conflict: MergeConflict }) {
-  return (
-    <ul className="ck-conflicts" aria-label="Conflicting changes">
-      {conflict.files.map((file) => (
-        <li key={file.path}>
-          <code>{file.path}</code>
-          <div className="ck-sides">
-            <ConflictSideView path={file.path} base={file.base} side={file.first} />
-            <ConflictSideView path={file.path} base={file.base} side={file.second} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function MergeConflictBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
-  const conflict = approval.payload.checkpoint.conflict;
-  if (!conflict) return null;
-  return (
-    <>
-      <ConflictFiles conflict={conflict} />
-      <div className="appr-acts">
-        <Action id={CHECKPOINT_OPTION.keepFirst} approval={approval} decide={decide} kind="primary">
-          Keep {conflict.first}
-        </Action>
-        <Action id={CHECKPOINT_OPTION.keepSecond} approval={approval} decide={decide}>
-          Keep {conflict.second}’s
-        </Action>
-        <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-          Stop
-        </Action>
-      </div>
-    </>
-  );
-}
-
 function PendingBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
   const checkpoint = approval.payload.checkpoint;
   switch (checkpoint.kind) {
@@ -220,8 +89,6 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'plan':
     case 'pieces':
       return <PlanBody approval={approval} decide={decide} />;
-    case 'accept':
-      return <ChangesSummary payload={checkpoint} />;
     case 'retry':
       return (
         <div className="appr-acts">
@@ -233,8 +100,6 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           </Action>
         </div>
       );
-    case 'merge_conflict':
-      return <MergeConflictBody approval={approval} decide={decide} />;
     case 'stuck':
       return (
         <div className="appr-acts">
@@ -306,6 +171,8 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           ))}
         </div>
       );
+    case 'accept':
+    case 'merge_conflict':
     case 'budget':
       return null;
   }
@@ -360,7 +227,6 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
   const stopped =
     approval.decisionOptionId === CHECKPOINT_OPTION.stop || approval.status !== 'allowed';
 
-  const actionsFirst = pending && checkpoint.kind === 'accept';
   const title = checkpointTitle(checkpoint);
   const questions = asksQuestions(checkpoint);
   const said = saidNote(approval);
@@ -378,17 +244,14 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
         aria-labelledby={headingId}
         id={approvalAnchor(approval.id)}
       >
-        <div className={actionsFirst ? 'ck-top' : undefined}>
-          <div className="appr-h">
-            <span className="ic" aria-hidden="true">
-              <i className={pending ? 'appr-dia' : 'appr-dia still'} />
-            </span>
-            <span id={headingId}>
-              <CheckpointHeading payload={checkpoint} title={title} />{' '}
-              {checkpointQuestion(checkpoint)}
-            </span>
-          </div>
-          {actionsFirst && <AcceptActions approval={approval} decide={decide} />}
+        <div className="appr-h">
+          <span className="ic" aria-hidden="true">
+            <i className={pending ? 'appr-dia' : 'appr-dia still'} />
+          </span>
+          <span id={headingId}>
+            <CheckpointHeading payload={checkpoint} title={title} />{' '}
+            {checkpointQuestion(checkpoint)}
+          </span>
         </div>
         {subtitle && <p className="ck-lead">{subtitle}</p>}
         {pending && checkpoint.waitsFor && (
@@ -397,7 +260,7 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
           </p>
         )}
         {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
-        <CheckpointNotes payload={checkpoint} pending={pending} />
+        <CheckpointNotes payload={checkpoint} />
         {questions && !pending && <AskedList approval={approval} />}
         {pending ? (
           <PendingBody approval={approval} decide={decide} />

@@ -1,44 +1,17 @@
 import './task-panes.css';
-import { runRole, type RunStatus, type TaskRun } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
-import { formatDuration } from '../audit/audit-model.ts';
-import { formatTokens } from '../chat/composer/model-options.ts';
-import { CostText } from '../usage/CostText.tsx';
 import { CrewMemberRow } from '../crew/CrewMemberRow.tsx';
-import { MessageMemberButton } from '../crew/MessageMemberButton.tsx';
 import { modelLabel, roleLabel, type CrewAgent } from '../crew/crew-model.ts';
-
-const statusWords: Record<RunStatus, { word: string; tone: string }> = {
-  queued: { word: 'Queued', tone: 'pending' },
-  running: { word: 'Working', tone: 'active' },
-  awaiting_approval: { word: 'Waiting', tone: 'waiting' },
-  succeeded: { word: 'Done', tone: 'done' },
-  failed: { word: 'Failed', tone: 'failed' },
-  cancelled: { word: 'Stopped', tone: 'failed' },
-  outcome_unknown: { word: 'Unknown', tone: 'failed' },
-};
-
-export function crewNames(runs: readonly TaskRun[]): string[] {
-  const seen = new Map<string, number>();
-  return runs.map((run) => {
-    const role = runRole(run.mode ?? null);
-    const count = (seen.get(role) ?? 0) + 1;
-    seen.set(role, count);
-    return count > 1 ? `${role} ${count}` : role;
-  });
-}
 
 function jobLine(agent: CrewAgent, piece: string | undefined): string {
   return [piece ?? roleLabel(agent), modelLabel(agent)].join(' · ');
 }
 
-interface OrchestratedCrewProps {
+interface CrewPaneProps {
   agents: readonly CrewAgent[];
   labels: ReadonlyMap<string, string>;
-  conversationId: string | null;
 }
 
-function OrchestratedCrew({ agents, labels, conversationId }: OrchestratedCrewProps) {
+export function CrewPane({ agents, labels }: CrewPaneProps) {
   return (
     <div className="wsec">
       <div className="wsec-h">
@@ -49,68 +22,9 @@ function OrchestratedCrew({ agents, labels, conversationId }: OrchestratedCrewPr
       </div>
       <ul className="tlist" aria-label="Crew">
         {agents.map((agent) => (
-          <CrewMemberRow key={agent.id} agent={agent} job={jobLine(agent, labels.get(agent.id))}>
-            {conversationId && (
-              <MessageMemberButton conversationId={conversationId} agent={agent} />
-            )}
-          </CrewMemberRow>
+          <CrewMemberRow key={agent.id} agent={agent} job={jobLine(agent, labels.get(agent.id))} />
         ))}
       </ul>
-    </div>
-  );
-}
-
-interface CrewPaneProps {
-  runs: readonly TaskRun[];
-  agents?: readonly CrewAgent[];
-  labels?: ReadonlyMap<string, string> | undefined;
-  conversationId?: string;
-}
-
-export function CrewPane({ runs, agents = [], labels = new Map(), conversationId }: CrewPaneProps) {
-  if (agents.length > 0) {
-    return (
-      <OrchestratedCrew agents={agents} labels={labels} conversationId={conversationId ?? null} />
-    );
-  }
-  const names = crewNames(runs);
-  return (
-    <div className="wsec">
-      <div className="wsec-h">
-        <h3>Crew</h3>
-        <span className="r">
-          {runs.length} {runs.length === 1 ? 'agent' : 'agents'}
-        </span>
-      </div>
-      <ul className="tlist" aria-label="Crew">
-        {runs.map((run, index) => {
-          const status = statusWords[run.status];
-          return (
-            <li key={run.id} className="crow">
-              <AgentBlob provider={run.provider} size={30} />
-              <span className="nm">
-                <b>
-                  {names[index]}
-                  <span className={`cst ${status.tone}`}>{status.word}</span>
-                </b>
-                <small>
-                  {[run.model ?? 'default model', run.effort].filter(Boolean).join(' · ')}
-                </small>
-              </span>
-              <span className="num">
-                {run.tokens === null ? '—' : `${formatTokens(run.tokens)} tok`}
-                <small>
-                  <CostText usd={run.costUsd} source={run.costSource} empty="no cost" /> ·{' '}
-                  {formatDuration(run.durationMs ?? null)}
-                </small>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="wnote">
-        One row per agent run: answers are Readers, changes are Builders, and reviews are Critics.
-      </p>
     </div>
   );
 }

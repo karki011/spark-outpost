@@ -5,7 +5,6 @@ import { MODEL_SWITCH_ACTIVITY, type ProviderCapabilities } from '@spark-outpost
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { loadAccess, markModelRejected, recordAccount } from '../src/model-access/store.ts';
-import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import {
   createConversation,
@@ -268,7 +267,7 @@ describe('what the picker, the default and routing see', { timeout: 60_000 }, ()
     expect((await capabilities()).defaultModel).toBe('gpt-6-luna');
   });
 
-  it('keeps an unlisted model out of routing while a confirmed one exists', async () => {
+  it('keeps an unlisted model from being the default while a confirmed one exists', async () => {
     await saveCapabilities(t.db, t.workspaceId, {
       provider: 'codex',
       models: MODELS,
@@ -279,23 +278,6 @@ describe('what the picker, the default and routing see', { timeout: 60_000 }, ()
     const caps = await capabilities();
     expect(availability(caps)[SOL_61]).toBe('unknown');
     expect(caps.defaultModel).toBe('gpt-6-sol');
-    const context = await loadIntakeContext(t.db, t.workspaceId, randomUUID());
-    expect(context.candidates[0]?.models.map((model) => model.id)).toEqual([
-      'gpt-6-luna',
-      'gpt-6-sol',
-    ]);
-  });
-
-  it('gives routing only usable models and names what was left out', async () => {
-    startCodex();
-    await send('Hello there');
-    const context = await loadIntakeContext(t.db, t.workspaceId, randomUUID());
-    expect(context.candidates[0]?.models.map((model) => model.id)).toEqual([
-      'gpt-6-luna',
-      'gpt-6-sol',
-    ]);
-    expect(context.leftOut?.codex).toEqual([{ id: SOL_61, label: 'GPT-6.1 Sol' }]);
-    expect(context.defaultModels.codex).toBe('gpt-6-sol');
   });
 
   it('records availability as unknown for a provider that reports none', async () => {

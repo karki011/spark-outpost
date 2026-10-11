@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import {
-  BUILDER_PUBLISH_REASON,
+  CHAT_PUBLISH_REASON,
   OUTSIDE_DELETE_REASON,
   PUSH_REASON,
   SAFE_READ_WHY,
@@ -195,25 +195,25 @@ describe('decide() refuses publishing from a Builder in every mode', () => {
         allowing(ruleFor(run(command))!),
         [command, 'git'],
         {
-          builder: true,
+          changesProject: true,
         },
       );
-      expect(decision).toEqual({ verdict: 'reject', reason: BUILDER_PUBLISH_REASON });
-      expect(decide(level, run(command), NO_RUN_RULES, [], { builder: true })).toEqual({
+      expect(decision).toEqual({ verdict: 'reject', reason: CHAT_PUBLISH_REASON });
+      expect(decide(level, run(command), NO_RUN_RULES, [], { changesProject: true })).toEqual({
         verdict: 'reject',
-        reason: BUILDER_PUBLISH_REASON,
+        reason: CHAT_PUBLISH_REASON,
       });
     }
   });
 
   it('leaves read-only git and other commands alone', () => {
     for (const command of ['git status', 'git remote -v', 'git log --oneline', 'git diff HEAD']) {
-      expect(decide('full_access', run(command), NO_RUN_RULES, [], { builder: true }).verdict).toBe(
-        'allow',
-      );
+      expect(
+        decide('full_access', run(command), NO_RUN_RULES, [], { changesProject: true }).verdict,
+      ).toBe('allow');
     }
     expect(
-      decide('full_access', run('pnpm test'), NO_RUN_RULES, [], { builder: true }).verdict,
+      decide('full_access', run('pnpm test'), NO_RUN_RULES, [], { changesProject: true }).verdict,
     ).toBe('allow');
   });
 });
@@ -391,9 +391,9 @@ describe('decide() for the other postures', () => {
       verdict: 'ask',
       secretFiles: expect.any(Array),
     });
-    expect(decide('auto', run('git push'), NO_RUN_RULES, [], { builder: true })).toEqual({
+    expect(decide('auto', run('git push'), NO_RUN_RULES, [], { changesProject: true })).toEqual({
       verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
+      reason: CHAT_PUBLISH_REASON,
     });
   });
 

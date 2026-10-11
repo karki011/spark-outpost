@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   createOutpostResponseSchema,
+  outpostDraftSchema,
   outpostDetailSchema,
   outpostSchema,
   type CreateOutpostRequest,
@@ -17,7 +18,17 @@ export const outpostKeys = {
   all: ['outposts'] as const,
   list: ['outposts', 'list'] as const,
   detail: (id: string) => ['outposts', 'detail', id] as const,
+  draft: (id: string) => ['outposts', 'draft', id] as const,
 };
+
+export const proposedDraftSchema = z.object({
+  id: z.uuid(),
+  conversationId: z.uuid().nullable(),
+  outpostId: z.uuid().nullable(),
+  body: outpostDraftSchema,
+  startedAt: z.string().nullable(),
+});
+export type ProposedDraft = z.infer<typeof proposedDraftSchema>;
 
 const outpostPaths = {
   list: '/outposts',
@@ -25,6 +36,8 @@ const outpostPaths = {
   member: (id: string, conversationId: string) => `/outposts/${id}/members/${conversationId}`,
   posts: (id: string) => `/outposts/${id}/posts`,
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
+  startNow: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/start-now`,
+  draft: (id: string) => `/outposts/drafts/${id}`,
 };
 
 function changed(path: string, init: RequestInit): Promise<OutpostDetail> {
@@ -54,4 +67,8 @@ export const outpostsApi = {
     changed(outpostPaths.posts(id), { method: 'POST', body: JSON.stringify(body) }),
   cancelPost: (id: string, postId: string): Promise<OutpostDetail> =>
     changed(outpostPaths.cancelPost(id, postId), { method: 'POST', body: '{}' }),
+  startNow: (id: string, postId: string): Promise<OutpostDetail> =>
+    changed(outpostPaths.startNow(id, postId), { method: 'POST', body: '{}' }),
+  getDraft: (id: string): Promise<ProposedDraft> =>
+    request(proposedDraftSchema, outpostPaths.draft(id)),
 };

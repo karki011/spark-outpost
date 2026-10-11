@@ -35,7 +35,10 @@ function heldProvider(held: Promise<void>): Provider {
   return {
     name: fake.name,
     async *run(turn) {
-      await held;
+      const stopped = new Promise<void>((resolve) => {
+        turn.signal.addEventListener('abort', () => resolve(), { once: true });
+      });
+      await Promise.race([held, stopped]);
       yield* fake.run(turn);
     },
   };

@@ -12,13 +12,21 @@ export interface AskTurnPlace {
 
 const LETS_THROUGH = new Set(['auto', 'full_access']);
 
+export function chosenModeWhy(
+  provider: string,
+  mode: string | null,
+  modes: readonly AgentModeOption[],
+): string | null {
+  if (!mode || !LETS_THROUGH.has(modePosture(provider, mode, modeKind(modes, mode)))) return null;
+  const label = modes.find((option) => option.id === mode)?.label ?? mode;
+  return `${label} mode`;
+}
+
 export async function askTurnAutoWhy(place: AskTurnPlace): Promise<string | null> {
   const settings = await resolveChatSettings(place.db, place.conversationId).catch(() => null);
   if (!settings) return null;
   const mode = settings.provider === place.provider ? settings.agentMode : null;
-  if (mode && LETS_THROUGH.has(modePosture(place.provider, mode, modeKind(place.modes, mode)))) {
-    const label = place.modes.find((option) => option.id === mode)?.label ?? mode;
-    return `${label} mode`;
-  }
+  const chosen = chosenModeWhy(place.provider, mode, place.modes);
+  if (chosen) return chosen;
   return settings.level ? ASK_AUTO_WHY : null;
 }

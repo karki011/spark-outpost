@@ -4,6 +4,7 @@ import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import type { SparkCommandScope } from '../workflow/command-gate.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -12,6 +13,15 @@ import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
+import type { StackGit } from '../outposts/ports.ts';
+import type { RequestWakes } from '../outposts/request-wait.ts';
+import type { ParkedTurns } from '../workflow/parked-turns.ts';
+
+export interface OutpostToolDeps {
+  wakes: RequestWakes;
+  parked?: Pick<ParkedTurns, 'park'>;
+  stackGit?: StackGit;
+}
 
 export interface SparkToolDeps {
   db: Db;
@@ -21,7 +31,6 @@ export interface SparkToolDeps {
   slackApiUrl?: string | undefined;
   slackSignIn?: SlackSignInConfig | null | undefined;
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
-  parallelBuilders?: boolean;
   codeScan?: Pick<CodeScanner, 'scan'>;
   branchPrefix?: string;
   linkScheme?: string | undefined;
@@ -29,6 +38,7 @@ export interface SparkToolDeps {
   now?: () => Date;
   browser?: BrowserHost | undefined;
   shotDir?: string;
+  outposts?: OutpostToolDeps | undefined;
 }
 
 export interface ReplySoFar {
@@ -42,6 +52,7 @@ export interface SparkActionHooks {
   signal: AbortSignal;
   timeoutMs: number;
   pollMs: number;
+  onTimeout?: () => void;
   audit?: ProtocolObserver | undefined;
   replySoFar?: () => ReplySoFar;
 }
@@ -54,6 +65,7 @@ export interface SparkScope {
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;
+  commands?: SparkCommandScope;
   beforeToolCall?: () => Promise<void>;
 }
 

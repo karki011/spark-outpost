@@ -1,9 +1,9 @@
 import type { FeedbackTriage } from '@spark-outpost/contracts';
-import { validChoice, type IntakeQuestions } from '../advisor/intake-questions.ts';
-import type { SystemOneResponse } from '../advisor/intake-questions.ts';
+import { validChoice, type IntakeQuestions } from '../advisor/jev-types.ts';
+import type { SystemOneResponse } from '../advisor/jev-types.ts';
 import { capped } from '../advisor/questions.ts';
 import { redactText } from '../audit/redact.ts';
-import { callJev, type JevAccess } from '../orchestration/jev-calls.ts';
+import { callJev, type JevAccess } from '../advisor/jev-calls.ts';
 import type { Gathered } from './gather.ts';
 
 export const TRIAGE_QUESTION =

@@ -98,7 +98,7 @@ export function PairPhone({ tailscale, activation, onPaired }: PairPhoneProps) {
 
   return (
     <section className="ph-card" aria-labelledby="ph-pair-title">
-      <h2 id="ph-pair-title">Pair a phone</h2>
+      <h2 id="ph-pair-title">Pair a device</h2>
       <PairScene
         stage={stage}
         activation={activation}

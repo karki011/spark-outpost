@@ -88,7 +88,7 @@ describe('chat settings', () => {
       agentMode: 'agent',
       level: 'full-auto',
       options: {},
-      routing: 'auto',
+      routing: 'pinned',
     });
 
     const effort = await send('patch', `/api/conversations/${id}/settings`, {
@@ -112,7 +112,7 @@ describe('chat settings', () => {
     expect(fresh.body.settings.provider).toBe('claude');
   });
 
-  it('sends the default model from the capability snapshot when the chat has none', async () => {
+  it('sends the default model when the chat has none, and a pin Claude no longer lists as typed', async () => {
     await connectCliProvider(t, 'claude');
     await send('get', '/api/providers/claude/capabilities').expect(200);
     const id = randomUUID();
@@ -128,7 +128,7 @@ describe('chat settings', () => {
       id: randomUUID(),
       content: 'Again',
     }).expect(201);
-    expect(retired.body.run.model).toBe('fast');
+    expect(retired.body.run).toMatchObject({ model: 'retired', modelSwitch: null });
   });
 
   it('lets a CLI provider pick a default model from its capability snapshot', async () => {
@@ -166,7 +166,7 @@ describe('chat settings', () => {
       agentMode: 'agent',
       level: 'hands-off',
       options: {},
-      routing: 'auto',
+      routing: 'pinned',
     });
     const codexAsk = await send('patch', path, { agentMode: 'read-only' }).expect(200);
     expect(codexAsk.body).toMatchObject({
@@ -183,7 +183,7 @@ describe('chat settings', () => {
       agentMode: 'acceptEdits',
       level: 'full-auto',
       options: {},
-      routing: 'auto',
+      routing: 'pinned',
     });
     const again = await send('patch', path, { provider: 'codex' }).expect(200);
     expect(again.body).toMatchObject({ model: 'gpt-6-sol', effort: 'high' });

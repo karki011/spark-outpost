@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentConfigApi, agentConfigKey, projectTrustKey } from '../api/agent-config.ts';
-import { setupApi, setupKey } from '../api/setup.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { countLabel, filterProjects } from './project-filter.ts';
 import { ProjectRow } from './ProjectRow.tsx';
@@ -12,7 +11,6 @@ export function ProjectsSection() {
   const queryClient = useQueryClient();
   const projects = useProjects();
   const trust = useQuery({ queryKey: projectTrustKey, queryFn: agentConfigApi.trustList });
-  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const [filter, setFilter] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const revoke = useMutation({
@@ -30,8 +28,8 @@ export function ProjectsSection() {
   return (
     <>
       <p className="lede">
-        Folders you linked, whether you trust their hooks, allow rules and MCP servers, and how
-        Builders work in them. To trust a folder, open Agent setup in a chat that uses it.
+        Folders you linked, whether you trust their hooks, allow rules and MCP servers, and where
+        Spark works in them. To trust a folder, open Agent setup in a chat that uses it.
       </p>
       {error && (
         <p className="set-hint" role="alert">
@@ -65,7 +63,6 @@ export function ProjectsSection() {
             trust={byProject.get(project.id)}
             open={project.id === openId}
             busy={revoke.isPending}
-            parallelAvailable={setup.data?.parallelBuilders ?? true}
             onToggle={() => setOpenId(project.id === openId ? null : project.id)}
             onRevoke={() => revoke.mutate(project.id)}
           />

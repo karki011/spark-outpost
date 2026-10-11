@@ -54,7 +54,6 @@ async function turnPrompt(content: string, mode: 'do' | 'ask', browserPane: bool
     leaseSeconds: 30,
     concurrency: 1,
     pollMs: 20,
-    coordinator: 'off',
     browserPane,
   });
   await eventually(async () => ((await getRun(t.db, sent.run.id))?.finishedAt ? true : null));

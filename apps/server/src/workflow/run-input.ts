@@ -16,8 +16,8 @@ import {
 import { usableDefault } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import { latestSparkSeed } from '../persistence/compactions.ts';
-import { builderEnvSchema, pieceGuardSchema, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
+import { historyLabel, requestAuthor } from '../outposts/request-prompt.ts';
 import type { RunIdentity } from './run-events.ts';
 import { withInterruptionNote } from './continue-note.ts';
 import { usableSettings } from './model-guard.ts';
@@ -37,14 +37,11 @@ export interface RunInput {
   parentRunId: string | null;
   userRequest: string;
   role: AgentRole | null;
-  copyOf: string | null;
   askTitle: boolean;
   previousMessageId?: string | null;
   resumeKey?: string | null;
   followUp?: string | null;
   preamble?: string | null;
-  piece?: PieceGuard | null;
-  builderEnv?: Record<string, string> | null;
   startAs?: StartAs | null;
   planning?: boolean;
   plansFirst?: boolean;
@@ -56,12 +53,22 @@ export interface RunInput {
   modelSwitch?: ModelSwitch | null;
   followUpRound?: boolean;
   outpostRequest?: OutpostRequest | null;
+  turnTimes?: TurnTimes | null;
 }
 
 export interface OutpostRequest {
   postId: string;
   outpostName: string | null;
   fromUser: boolean;
+  fromHandle?: string | null;
+  fromTitle?: string | null;
+  userStarted?: boolean;
+  wrapUp?: boolean;
+}
+
+export interface TurnTimes {
+  startedAt: string;
+  previousStartedAt: string | null;
 }
 
 export interface ChatSeed {
@@ -74,7 +81,17 @@ export interface ProjectMove {
   to: string;
 }
 
-interface RunRow {
+interface OutpostRow {
+  outpost_run: boolean | null;
+  outpost_from_user: boolean | null;
+  outpost_from_handle: string | null;
+  outpost_from_title: string | null;
+  outpost_user_started: boolean | null;
+  outpost_wrap_up: boolean | null;
+  outpost_name: string | null;
+}
+
+interface RunRow extends OutpostRow {
   user_message_id: string;
   conversation_id: string;
   workspace_id: string;
@@ -91,27 +108,22 @@ interface RunRow {
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
   follow_up_round: boolean | null;
-  outpost_run: boolean | null;
-  outpost_from_user: boolean | null;
-  outpost_name: string | null;
+  started_at: Date;
+  previous_started_at: Date | null;
   agent_mode: string | null;
   config_values: ConfigValues | null;
   parent_run_id: string | null;
   run_prompt: string | null;
-  piece_guard: unknown;
-  builder_env: unknown;
   run_role: AgentRole | null;
-  run_name: string | null;
   resume_key: string | null;
   follow_up: string | null;
-  worktree_path: string | null;
   in_chat_worktree: boolean;
   title_source: string;
   assistant: boolean;
   continues_run_id: string | null;
 }
 
-interface HistoryRow {
+interface HistoryRow extends OutpostRow {
   id: string;
   role: 'user' | 'assistant';
   content: string;
@@ -125,6 +137,17 @@ const toTurnAttachment = ({ name, mediaType, kind, data }: AttachmentFile): Turn
   kind,
   data,
 });
+
+function asStored(row: HistoryRow): string {
+  const request = row.role === 'user' ? outpostRequestOf(row, row.id) : null;
+  if (!request) return row.content;
+  return historyLabel({
+    postId: request.postId,
+    outpostName: request.outpostName,
+    author: requestAuthor(request),
+    body: row.content,
+  });
+}
 
 function withEarlierMentions(content: string, attachments: readonly Attachment[]): string {
   if (attachments.length === 0) return content;
@@ -157,11 +180,14 @@ async function loadHistory(
     if (resentFiles) {
       return {
         role: row.role,
-        content: row.content,
+        content: asStored(row),
         attachments: resentFiles.map(toTurnAttachment),
       };
     }
-    return { role: row.role, content: withEarlierMentions(row.content, earlier.get(row.id) ?? []) };
+    return {
+      role: row.role,
+      content: withEarlierMentions(asStored(row), earlier.get(row.id) ?? []),
+    };
   });
   return { history, attachments: (files.get(currentMessageId) ?? []).map(toTurnAttachment) };
 }
@@ -174,14 +200,18 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
+            op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
+            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
+            (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
+              AS outpost_from_title,
+            r.created_at AS started_at,
+            (SELECT max(p.created_at) FROM runs p
+             WHERE p.conversation_id = r.conversation_id AND p.parent_run_id IS NULL
+               AND p.id <> r.id AND p.created_at <= r.created_at) AS previous_started_at,
             r.model AS run_model, r.effort AS run_effort,
             r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
-            r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
-            r.route->'guard' AS piece_guard, r.route->'builderEnv' AS builder_env,
-            (SELECT w.path FROM run_worktrees w
-             WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
             COALESCE(r.continues_run_id, (
               SELECT p.continues_run_id FROM runs p WHERE p.id = r.parent_run_id
@@ -220,10 +250,23 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   if (!row) throw new Error(`Run ${runId} was not found.`);
   if (row.parent_run_id) return withUsableModel(db, childInput(runId, row));
   const history = await db.query<HistoryRow>(
-    `SELECT id, role, content FROM messages
-     WHERE conversation_id = $1
-       AND created_at < (SELECT created_at FROM messages WHERE id = $2)
-     ORDER BY created_at, id`,
+    `SELECT m.id, m.role, m.content,
+            EXISTS (
+              SELECT 1 FROM runs hr
+              WHERE hr.user_message_id = m.id AND hr.parent_run_id IS NULL
+                AND hr.source = 'outpost'
+            ) AS outpost_run,
+            op.from_user AS outpost_from_user, o.name AS outpost_name,
+            op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
+            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
+            (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
+              AS outpost_from_title
+     FROM messages m
+     LEFT JOIN outpost_posts op ON op.id = m.id
+     LEFT JOIN outposts o ON o.id = op.outpost_id
+     WHERE m.conversation_id = $1
+       AND m.created_at < (SELECT created_at FROM messages WHERE id = $2)
+     ORDER BY m.created_at, m.id`,
     [row.conversation_id, row.user_message_id],
   );
   const turns = await loadHistory(db, history.rows, row.user_message_id);
@@ -243,9 +286,12 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     parentRunId: null,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
-    outpostRequest: outpostRequestOf(row),
+    outpostRequest: outpostRequestOf(row, row.user_message_id),
+    turnTimes: {
+      startedAt: row.started_at.toISOString(),
+      previousStartedAt: row.previous_started_at?.toISOString() ?? null,
+    },
     role: row.run_role,
-    copyOf: null,
     askTitle: row.title_source !== 'user',
     assistant: row.assistant,
     previousMessageId: history.rows.at(-1)?.id ?? null,
@@ -281,12 +327,16 @@ async function chatSeed(
   return { text: stored.summary, historyFrom: covered + 1 };
 }
 
-function outpostRequestOf(row: RunRow): OutpostRequest | null {
+function outpostRequestOf(row: OutpostRow, postId: string): OutpostRequest | null {
   if (row.outpost_run !== true) return null;
   return {
-    postId: row.user_message_id,
+    postId,
     outpostName: row.outpost_name,
     fromUser: row.outpost_from_user === true,
+    fromHandle: row.outpost_from_handle,
+    fromTitle: row.outpost_from_title,
+    userStarted: row.outpost_user_started === true,
+    wrapUp: row.outpost_wrap_up === true,
   };
 }
 
@@ -315,30 +365,19 @@ function childInput(runId: string, row: RunRow): RunInput {
     provider: row.provider,
     history: [],
     settings: settingsOf(row),
-    projectRoots: row.worktree_path
-      ? [row.worktree_path, ...row.project_roots.slice(1)]
-      : row.project_roots,
+    projectRoots: row.project_roots,
     mode: row.run_mode,
     level: row.run_level ?? UNSET_RUN_LEVEL,
     agentMode: row.agent_mode,
     parentRunId: row.parent_run_id,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
-    outpostRequest: outpostRequestOf(row),
+    outpostRequest: outpostRequestOf(row, row.user_message_id),
     role: row.run_role,
-    copyOf: row.worktree_path ? (row.run_name ?? 'Builder') : null,
-    askTitle: row.run_role === 'architect' && row.title_source !== 'user',
+    askTitle: false,
     previousMessageId: null,
     resumeKey: row.resume_key,
     followUp: row.follow_up,
-    piece: pieceGuardSchema
-      .nullable()
-      .catch(null)
-      .parse(row.piece_guard ?? null),
-    builderEnv: builderEnvSchema
-      .nullable()
-      .catch(null)
-      .parse(row.builder_env ?? null),
     chatWorktree: row.in_chat_worktree,
     continuesRunId: row.continues_run_id,
   };

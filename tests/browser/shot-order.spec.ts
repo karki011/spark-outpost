@@ -3,16 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import {
-  agentBlock,
-  CREW_REQUEST,
-  crewChat,
-  crewRepo,
-  linkedChat,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { chatRepo, type ChatRepo, linkedChat, resetWithAgents, send } from './project-chat-kit.ts';
 import { withDesktopBrowser } from './desktop-browser.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
@@ -25,7 +16,7 @@ const REPLY = [FIRST, SHOT, SECOND, SHOT, THIRD];
 const THUMB = 'Open screenshot of Fixture login';
 const IMAGES = '**/api/attachments/*/content';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 let gates: string;
 
 test.describe.configure({ timeout: 180_000 });
@@ -33,8 +24,8 @@ test.use({ hasTouch: true });
 
 test.beforeEach(async ({ page }) => {
   test.skip(!FAKE_HOST, 'Run with SPARK_FAKE_BROWSER=1 to give the worker a fake browser host.');
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   gates = mkdtempSync(path.join(os.tmpdir(), 'spark-shot-gates-'));
   await page.setViewportSize({ width: 1400, height: 900 });
   await withDesktopBrowser(page);
@@ -268,21 +259,4 @@ test('at phone width the order holds, thumbnails wrap, and a tap zooms and close
   await page.touchscreen.tap(195, 8);
   await expect(page.locator('dialog.lightbox')).toHaveCount(0);
   await expect(thumbs.first()).toBeFocused();
-});
-
-test('a crew member shows its screenshots inside its own reply, in order', async ({ page }) => {
-  await crewChat(page, repo, 'Full auto');
-  await send(page, `${CREW_REQUEST} #build #crew #sparkscript ${script()}`);
-  const turn = page.locator('.crew-turn');
-  await expect(turn.locator('.crew-foot')).toContainText('Done', { timeout: 90_000 });
-  const builder = agentBlock(page, 'Bolt');
-  await expect(builder.getByRole('button', { name: THUMB })).toHaveCount(2);
-  expect(await order(builder)).toEqual(REPLY);
-  await expect(turn.getByRole('button', { name: THUMB })).toHaveCount(2);
-  await expect(turn.getByRole('button', { name: /^Checked in browser/ })).toBeAttached();
-  await shoot(page, 'shot-order-crew');
-
-  await page.reload();
-  await expect(builder.getByRole('button', { name: THUMB })).toHaveCount(2);
-  await expect.poll(() => order(builder)).toEqual(REPLY);
 });

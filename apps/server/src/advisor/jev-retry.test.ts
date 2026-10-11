@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdvisorError } from './advice.ts';
+import { AdvisorError } from './jev-errors.ts';
 import {
   askSystemOne,
   noteJevVersion,

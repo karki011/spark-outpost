@@ -9,6 +9,8 @@ import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
 import { outpostDelivery, type OutpostDelivery } from '../src/outposts/mount.ts';
 import { PreviewServers } from '../src/preview/servers.ts';
+import { AgentTerminals } from '../src/terminal/agent-terminals.ts';
+import { fakeAgentTerminalRuntime } from './agent-terminal-support.ts';
 import { fakePreviewRuntime } from './preview-support.ts';
 import type { TestDb } from './support.ts';
 
@@ -36,10 +38,10 @@ export interface TestAppOptions {
   slackSignIn?: AppOptions['slackSignIn'];
   slackNotifier?: AppOptions['slackNotifier'];
   locateGh?: () => Promise<string | null>;
-  parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
   previews?: PreviewServers;
+  agentTerminals?: AgentTerminals;
   diagnostics?: AppOptions['diagnostics'];
   deleteSettleMs?: number;
   cloneTest?: AppOptions['cloneTest'];
@@ -84,6 +86,9 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     terminals: options.terminals ?? new TerminalSessions(loginShellSpawner('/bin/sh')),
     previews:
       options.previews ?? new PreviewServers(t.db, t.workspaceId, fakePreviewRuntime().runtime),
+    agentTerminals:
+      options.agentTerminals ??
+      new AgentTerminals(t.db, t.workspaceId, fakeAgentTerminalRuntime().runtime),
     appEvents: options.appEvents ?? new AppEventFeed(),
     outposts: options.outposts ?? outpostDelivery({ db: t.db, port, apiToken: API_TOKEN }),
     loginShell: '/bin/zsh',
@@ -96,7 +101,6 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
     slackSignIn: options.slackSignIn,
     ...(options.slackNotifier ? { slackNotifier: options.slackNotifier } : {}),
     locateGh: options.locateGh ?? (async () => null),
-    parallelBuilders: options.parallelBuilders,
     ...(options.deleteSettleMs === undefined ? {} : { deleteSettleMs: options.deleteSettleMs }),
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
     ...(options.cloneTest ? { cloneTest: options.cloneTest } : {}),

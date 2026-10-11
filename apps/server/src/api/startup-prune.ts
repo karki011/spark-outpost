@@ -20,7 +20,7 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
     ['unlinked attachments', () => pruneUnlinkedAttachments(db, workspaceId)],
     ['old audit entries', () => pruneProtocolLog(db, options.auditRetentionDays)],
     ['old Slack log rows', () => pruneSlackLog(db, options.auditRetentionDays)],
-    ['old phone access entries', () => pruneRemoteAudit(db, options.auditRetentionDays)],
+    ['old remote control entries', () => pruneRemoteAudit(db, options.auditRetentionDays)],
   ];
   for (const [name, prune] of steps) {
     await prune().catch((error: unknown) => report(`Could not prune ${name} at startup`, error));

@@ -3,8 +3,12 @@ import { EMPTY_CONVERSATION_USAGE, type ConversationDetail } from '@spark-outpos
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { member, orchestration } from '../../crew/test-orchestration.ts';
 import { tvCrew } from '../../crew/conversation-crew.ts';
+import { RUN_ID, run } from '../../crew/test-run.ts';
+
+const HAWK = '00000000-0000-4000-8000-0000000000a3';
 import {
   crewHeading,
+  crewSectionLabel,
   crewJob,
   finishedCrew,
   railCrew,
@@ -164,7 +168,7 @@ describe('the crew of a finished turn', () => {
       ['Bolt', 'done'],
       ['Hawk', 'failed'],
     ]);
-    expect(crewHeading(crew)).toBe('Crew · 3 agents');
+    expect(crewHeading(crew, 'Auto')).toBe('Crew · 3 agents');
     expect(crewJob(crew[1]!)).toBe('Builder · Sonnet 5 · medium · 2 turns');
     expect(crewJob(crew[2]!)).toBe('Critic · Sonnet 5 · medium');
     expect(crewJob(crew[0]!)).toBe('Dispatcher · router');
@@ -176,7 +180,7 @@ describe('the crew of a finished turn', () => {
     const crew = finishedCrew(stopped, crewAgents(stopped));
     expect(crew.map((agent) => agent.state)).toEqual(['stopped', 'done', 'stopped']);
     const solo = orchestration({ status: 'succeeded', depth: 'direct', crew: [builder] });
-    expect(crewHeading(finishedCrew(solo, crewAgents(solo)))).toBe('Crew · 2 agents');
+    expect(crewHeading(finishedCrew(solo, crewAgents(solo)), 'Auto')).toBe('Crew · 2 agents');
   });
 
   it('leaves a turn that is still going as it is', () => {
@@ -187,57 +191,44 @@ describe('the crew of a finished turn', () => {
 });
 
 describe('the crew the rail shows', () => {
-  const BUILD = '00000000-0000-4000-8000-000000000001';
-  const QUESTION = '00000000-0000-4000-8000-000000000009';
-  const bolt = member({ name: 'Bolt' });
-  const hawk = member({
-    name: 'Hawk',
-    role: 'critic',
-    runId: '00000000-0000-4000-8000-0000000000a3',
-  });
-  const pip = (status: 'running' | 'succeeded') =>
-    member({ name: 'Pip', role: 'scout', runId: QUESTION, status });
-
-  function chat(build: 'running' | 'succeeded', question?: 'running' | 'succeeded') {
-    const turns = {
-      [BUILD]: orchestration({ status: build, crew: [bolt, hawk] }),
-      ...(question && {
-        [QUESTION]: orchestration({
-          runId: QUESTION,
-          status: question,
-          depth: 'direct',
-          crew: [pip(question)],
-        }),
-      }),
-    };
-    return {
-      runs: Object.keys(turns).map((id) => ({ id })),
-      orchestrations: turns,
-      activity: {},
-    } as unknown as ConversationDetail;
-  }
-
   const names = (agents: readonly { name: string }[]) => agents.map((agent) => agent.name);
+  const chat = (status: 'running' | 'succeeded', orchestrations = {}) =>
+    ({
+      runs: [run({ status })],
+      orchestrations,
+      approvals: [],
+      activity: {},
+    }) as unknown as ConversationDetail;
 
-  it('keeps the crew Agent TV shows after a later question, and while that question runs', () => {
-    for (const question of ['succeeded', 'running'] as const) {
-      const detail = chat('succeeded', question);
-      const view = railCrew(detail, question === 'running');
-      expect(names(view.list)).toEqual(['Jev', 'Bolt', 'Hawk']);
-      expect(names(view.list)).toEqual(names(tvCrew(detail)));
-      expect(view.stage).toEqual([]);
-    }
+  it("lists one row for a finished turn: the chat's agent with its model", () => {
+    const view = railCrew(chat('succeeded'), false);
+    expect(view.stage).toEqual([]);
+    expect(names(view.list)).toEqual(['Claude']);
+    expect(crewHeading(view.list, 'Auto')).toBe('Claude · Auto');
+    expect(crewHeading(view.list, '')).toBe('Claude');
+    expect(crewSectionLabel(view.list)).toBe('Agent');
+    expect(crewJob(view.list[0]!)).toBe('Agent · Sonnet 5 · medium');
+    expect(names(view.list)).toEqual(names(tvCrew(chat('succeeded'))));
   });
 
-  it('puts a crew that is still working on the stage instead of in the list', () => {
+  it('puts the agent on the stage instead of in the list while it works', () => {
     const view = railCrew(chat('running'), true);
-    expect(names(view.stage)).toEqual(['Jev', 'Bolt', 'Hawk']);
+    expect(names(view.stage)).toEqual(['Claude']);
     expect(view.list).toEqual([]);
   });
 
-  it('shows the single agent of a chat that never had a crew, and nothing before a reply', () => {
-    const solo = { ...chat('succeeded', 'succeeded'), runs: [{ id: QUESTION }] };
-    expect(names(railCrew(solo as ConversationDetail, false).list)).toEqual(['Jev', 'Pip']);
+  it('keeps the rows of a stored crew turn', () => {
+    const stored = orchestration({
+      status: 'succeeded',
+      crew: [member({ name: 'Bolt' }), member({ name: 'Hawk', role: 'critic', runId: HAWK })],
+    });
+    const view = railCrew(chat('succeeded', { [RUN_ID]: stored }), false);
+    expect(names(view.list)).toEqual(['Jev', 'Bolt', 'Hawk']);
+    expect(crewHeading(view.list, 'Auto')).toBe('Crew · 3 agents');
+    expect(crewSectionLabel(view.list)).toBe('Crew');
+  });
+
+  it('shows nothing before the first message', () => {
     const empty = { runs: [], orchestrations: {}, activity: {} } as unknown as ConversationDetail;
     expect(railCrew(empty, false)).toEqual({ stage: [], list: [] });
   });

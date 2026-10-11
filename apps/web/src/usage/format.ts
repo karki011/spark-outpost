@@ -1,6 +1,4 @@
 import {
-  isTerminalRunStatus,
-  type Orchestration,
   type Run,
   type RunUsage,
   type TokenUsage,
@@ -100,21 +98,4 @@ export function latestContext(
   provider: string | null,
 ): ContextReading | null {
   return lastReading(runs, (run) => run.provider === provider) ?? lastReading(runs, () => true);
-}
-
-export interface TaskContext extends ContextReading {
-  name: string;
-}
-
-export function taskContext(orchestration: Orchestration | null | undefined): TaskContext | null {
-  if (!orchestration || isTerminalRunStatus(orchestration.status)) return null;
-  for (let index = orchestration.crew.length - 1; index >= 0; index--) {
-    const member = orchestration.crew[index];
-    if (member?.role !== 'builder') continue;
-    const { contextUsed, contextSize } = member;
-    if (contextUsed != null && contextSize != null) {
-      return { name: member.name, used: contextUsed, size: contextSize };
-    }
-  }
-  return null;
 }

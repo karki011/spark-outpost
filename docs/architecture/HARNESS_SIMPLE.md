@@ -1,5 +1,7 @@
 # The harness
 
+> **Superseded (October 10, 2026).** Spark's own harness is removed: one chat is one agent session, with no Coordinator, pieces, Builder or Critic child runs, intake, per-role routing, Spark-run checks, laws or Jev call inside a turn. [SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md) describes what runs now. This file is kept as history; the code and scripts it names may no longer exist.
+
 What runs around every agent turn today: how a message is read, who works on it, what is checked, what is saved, and what the user is asked. This is the only harness. It began on October 6, 2026 as a proposal for a simpler second path behind a `HARNESS` switch; the switch and the older path were deleted on the branch `feat/harness-simple`, and the short [History](#16-history) at the end says what was planned, what was built and what was dropped. Older documents ([HARNESS_PLAN.md](HARNESS_PLAN.md), [COORDINATOR_PLAN.md](COORDINATOR_PLAN.md), [ROUTING_PLAN.md](ROUTING_PLAN.md)) still describe the parts this harness reuses; where they disagree with this file about plans, cards or sessions, this file is right.
 
 Paths without a prefix are under `apps/server/src/`. External facts were read through a summarising fetch tool on October 6, 2026; re-read a page before quoting it elsewhere.

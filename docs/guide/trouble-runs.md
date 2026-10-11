@@ -42,8 +42,8 @@ Still stuck? Ask in any chat: "Why did my last run fail?". The agent reads your 
 - **Fix:** open **Settings → Connectors → GitHub** and select **Test**.
 - **Still stuck:** run the shown command in a terminal, or create the PR from the link.
 
-## A reply ends with Needs you
+## A change wasn't published
 
-- **You see:** **Needs you: …** at the end of a reply.
-- **Why:** the request was unclear, a step failed twice, or Jev could not confirm the change.
-- **Fix:** answer in your next message.
+- **You see:** "Not published: …" at the end of a reply, or no pull request at **Full auto → PR**.
+- **Why:** the publish step failed or was stopped. A later turn that changes no files doesn't try again.
+- **Fix:** ask the agent to push and open the pull request, or [ship](ship-and-pull-requests.md) it yourself.

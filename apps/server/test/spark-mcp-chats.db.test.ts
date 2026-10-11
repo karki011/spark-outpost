@@ -398,7 +398,6 @@ describe('spark_analytics, spark_activity and spark_brief', () => {
       totals: { costUsd: number };
     }>();
     const spend = await harness.call('spark_analytics', { report: 'spend', days: 30 });
-    const harnessReport = await harness.call('spark_analytics', { report: 'harness' });
     const activity = (await harness.call('spark_activity', { hours: 2 })).json<{
       chats: { id: string; costUsd: number }[];
     }>();
@@ -410,7 +409,6 @@ describe('spark_analytics, spark_activity and spark_brief', () => {
     expect(overview.window.days).toBe(7);
     expect(overview.totals.costUsd).toBeCloseTo(0.4);
     expect(spend.isError).toBe(false);
-    expect(harnessReport.isError).toBe(false);
     expect(activity.chats).toEqual([expect.objectContaining({ id: chat.conversationId })]);
     expect(brief).toMatchObject({ brief: null, flaggedTickets: [] });
   });

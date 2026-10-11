@@ -1,6 +1,7 @@
 import type { QueryKey } from '@tanstack/react-query';
 import type { AppEvent } from '@spark-outpost/contracts';
 import { analyticsKeys } from '../../analytics/analytics-api.ts';
+import { agentTerminalKeys } from '../../api/agent-terminals.ts';
 import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
 import { previewKeys } from '../../api/preview.ts';
@@ -32,6 +33,7 @@ export const LIVE_ROOTS: readonly string[] = [
   ticketKeys.all[0],
   previewKeys.all[0],
   outpostKeys.all[0],
+  agentTerminalKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -114,6 +116,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
       return [list, outposts];
+    case 'agent_terminal':
+      return event.conversationId
+        ? [{ queryKey: agentTerminalKeys.chat(event.conversationId), exact: true }]
+        : [{ queryKey: agentTerminalKeys.all }];
   }
 }
 

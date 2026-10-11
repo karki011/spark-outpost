@@ -5,6 +5,7 @@ export interface SparkToolContext {
   deps: SparkToolDeps;
   scope: SparkScope;
   signal?: AbortSignal;
+  callId?: string;
 }
 
 export type SparkBlock =
@@ -19,7 +20,15 @@ export class SparkBlocks {
 }
 
 export type SparkToolNeed =
-  'tickets' | 'slack' | 'pull_requests' | 'project' | 'publish' | 'pull_request_create' | 'browser';
+  | 'tickets'
+  | 'slack'
+  | 'pull_requests'
+  | 'project'
+  | 'publish'
+  | 'pull_request_create'
+  | 'browser'
+  | 'outpost'
+  | 'outpost_draft';
 
 export interface SparkTool {
   name: string;

@@ -13,9 +13,8 @@ import {
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { BringChanges } from './BringChanges.tsx';
 import type { KeepCardHost } from './feedback-host.ts';
-import { checksFact, keptAtLine, keptLine, pullReferences } from './result-model.ts';
+import { keptAtLine, keptLine, pullReferences } from './result-model.ts';
 import { TurnFeedback } from './TurnFeedback.tsx';
-import { WorthALook } from './WorthALook.tsx';
 
 interface ResultBlockProps {
   approval: CheckpointApproval;
@@ -78,7 +77,6 @@ export function ResultBlock({
   const kept = variant === 'kept';
   const line = keptLine(checkpoint);
   const who = checkpointResult(approval);
-  const checks = checksFact(checkpoint.checks);
   const where = keptAtLine(checkpoint.keptAt);
   const commit = checkpoint.keptAt?.commit ?? null;
   const said = saidNote(approval);
@@ -98,7 +96,6 @@ export function ResultBlock({
             <span>{line}</span>
           </button>
         )}
-        {kept && checks && <span className={`result-fact ${checks.tone}`}>{checks.text}</span>}
         {kept && commit && <code className="result-fact">{commit}</code>}
         {kept && <PullReferences conversationId={conversationId} />}
         <TurnFeedback key={variant} runId={runId} variant={variant} />
@@ -133,7 +130,6 @@ export function ResultBlock({
           <BringChanges conversationId={conversationId} />
         </div>
       )}
-      {kept && <WorthALook payload={checkpoint} />}
     </section>
   );
 }

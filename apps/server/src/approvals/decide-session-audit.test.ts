@@ -9,7 +9,6 @@ import {
   type ApprovalRequest,
   type DecideOptions,
 } from './decide.ts';
-import type { PieceGuard } from './piece-guard.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
@@ -35,18 +34,7 @@ const SHELL_EDITS = [
 const NX_ALL =
   'npx nx run-many --target=test --parallel=3 --output-style=static > /tmp/cp48991-test.log 2>&1; tail -5 /tmp/cp48991-test.log';
 
-const OWNED: NonNullable<PieceGuard['owned']> = {
-  key: 'P1',
-  name: 'Bolt',
-  paths: [],
-  globs: ['libs/ui/**'],
-  others: [{ key: 'P2', name: 'Tack', paths: [], globs: ['libs/features/**'] }],
-};
-const SOLO_BUILDER: DecideOptions = { builder: true };
-const SHARED_PIECE: DecideOptions = {
-  builder: true,
-  piece: { coordinated: true, owned: OWNED },
-};
+const SOLO_BUILDER: DecideOptions = { changesProject: true };
 
 function request(command: string, noted: boolean): ApprovalRequest {
   return {
@@ -126,23 +114,4 @@ describe('the Builder commands from the reported session', () => {
       });
     },
   );
-
-  it.each(BUILDER_CARDS)('follows the mode in a shared folder in Auto: %s', async (command) => {
-    expect(await decided('auto', command, SHARED_PIECE)).toEqual({ verdict: 'allow', by: 'level' });
-    expect(await decided('auto', command, SHARED_PIECE, true)).toEqual(
-      await decided('auto', command, SOLO_BUILDER, true),
-    );
-  });
-
-  it('refuses the whole-workspace nx run inside a piece, in every mode', async () => {
-    for (const posture of ['asks', 'auto', 'full_access'] as const) {
-      expect(await decided(posture, NX_ALL, SHARED_PIECE)).toEqual({
-        verdict: 'reject',
-        reason: 'Inside a piece, the coordinator runs the full checks after integration',
-      });
-    }
-    const narrowed = 'npx nx run-many --target=test --projects=ui > /tmp/cp48991-test.log 2>&1';
-    expect((await decided('auto', narrowed, SHARED_PIECE)).verdict).toBe('allow');
-    expect((await decided('auto', 'npx nx test ui', SHARED_PIECE)).verdict).toBe('allow');
-  });
 });

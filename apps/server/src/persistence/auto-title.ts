@@ -1,4 +1,4 @@
-import { categorySchema, type Category, type TitleSource } from '@spark-outpost/contracts';
+import { categorySchema, type TitleSource } from '@spark-outpost/contracts';
 import { decideAutoTitle, type AutoTitle } from '../titles/auto-title.ts';
 import type { Queryable } from './db.ts';
 
@@ -8,14 +8,6 @@ export async function recordSuggestedTitle(
   title: string,
 ): Promise<void> {
   await db.query('UPDATE runs SET suggested_title = $2 WHERE id = $1', [runId, title]);
-}
-
-export async function recordRunCategory(
-  db: Queryable,
-  runId: string,
-  category: Category | null,
-): Promise<void> {
-  await db.query('UPDATE runs SET category = $2 WHERE id = $1', [runId, category]);
 }
 
 interface TitleRow {

@@ -36,7 +36,7 @@ import {
   untilFinished,
   untilStatus,
 } from './interruption-support.ts';
-import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
+import { AGENT_MODELS, connectAgents } from './turn-worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const TARGET = {
@@ -60,7 +60,7 @@ function fakeClaude(): Provider {
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
-      FAKE_ACP_MODELS: JSON.stringify(CLAUDE_MODELS.map((model) => [model.id, model.label])),
+      FAKE_ACP_MODELS: JSON.stringify(AGENT_MODELS.claude.map((model) => [model.id, model.label])),
       FAKE_ACP_SESSION_STORE: store,
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
     },
@@ -82,7 +82,7 @@ function start(recoveryEveryMs = 40): void {
 beforeEach(async () => {
   t = await createTestDb();
   store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
-  await connectProviders(t, false);
+  await connectAgents(t);
 });
 
 afterEach(async () => {

@@ -1,5 +1,7 @@
 # Outposts: chats that work together
 
+> **Read with [SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md) (October 10, 2026).** Spark's own harness is removed. Where this file names a crew, a piece, a Builder, a Coordinator, an integrator, a Scout, intake or a publish turn, read: the chat's own turn is the only run that acts for a chat, a child run (a Spark handed a job) gets no outpost tools, and publishing is the publish step of the chat turn. The lane tables in sections 9 to 11 are a record of how the releases were built.
+
 Status: release 1 is built and not released (section 12 says what was built and where it differs from this plan). Releases 2 to 5 are not built. Revised October 9, 2026 against `main` at `88f6eb54` after the owner answered the 15 decisions (section 8). Existing mechanisms are cited by path. Anything not confirmed in code or in the pinned SDK is marked **Assumption**. What the installed SDK really provides is in section 11, which wins over section 2 where they differ.
 
 ## 1. What an outpost is
@@ -11,13 +13,13 @@ An outpost is a shared room for several chats, for example a frontend chat, a ba
 | Outpost | The room: a name, its members, one thread of requests and notes. Can be paused                                                                                 |
 | Member  | A chat that belongs to the outpost. A chat belongs to at most one. Terminal sessions cannot be members                                                         |
 | Handle  | A member's short name in the room, such as `@fe` or `@api`. Unique in the outpost, renameable                                                                  |
-| Request | A message addressed to one handle. It starts a turn in that chat and has a state. Its answer threads under it                                                  |
+| Request | Work asked of one handle; a message with several handles makes one each. It starts a turn in that chat and has a state. Its answer threads under it            |
 | Note    | An unaddressed message. It starts nothing. Members read it at their next turn. The user can pin one                                                            |
 | Guest   | A chat that is not a member, addressed by the user from the outpost with `@`. It sees only that request, works under its own mode and does not join            |
 | Answer  | The receiving chat's reply to a request: the final message of the turn the request started, with the branch, changed files and pull request that turn produced |
 | Pause   | Stops requests from starting work in every member. Running turns finish. It is a convenience, not a safety rule                                                |
 
-**Why it exists, and when to use one.** One chat serves work in one project. A crew splits one build in one working tree into one pull request, and Spark coordinates it. An outpost is for work that spans repos or roles: each member chat keeps its own project, agent, mode, branch and pull request, and the user directs them from one thread. Example: for a usage page the user posts "@api add GET /usage and open a PR", "@fe build the page against the new endpoint" and "@docs describe the page", and reads the three answers under their requests. Release 1 does not let agents ask each other and has no `@all`; both are planned for later releases (section 9.1). The guide says this in `docs/guide/when-to-use-an-outpost.md`.
+**Why it exists, and when to use one.** One chat serves work in one project, with the agent's own sub-agents for independent parts. An outpost is for work that spans repos or roles: each member chat keeps its own project, agent, mode, branch and pull request, and the user directs them from one thread. Example: for a usage page the user posts "@api add GET /usage and open a PR", "@fe build the page against the new endpoint" and "@docs describe the page", and reads the three answers under their requests. Release 1 does not let agents ask each other and has no `@all`; both are planned for later releases (section 9.1). The guide says this in `docs/guide/when-to-use-an-outpost.md`.
 
 **Why the authority rule is what it is.** A request another chat wrote is a colleague's suggestion, not the user asking, so "open a PR" inside it does not publish and a chat at Automatic keeps the change without pushing. A request the user types in the outpost is the user asking, exactly as if typed in that chat. A chat the user set to Full auto → PR still opens its pull request for work a request started, because that is the setting the user chose for that chat. What never changes: nothing merges, no force pushes, a chat pushes only its own branch, and a request cannot raise the receiving chat's mode. Section 6 has the detail; the guide says it in `docs/guide/outpost-permissions.md`.
 
@@ -68,16 +70,16 @@ Mounted under `/api/a2a` on the existing server, which listens on `127.0.0.1` on
 
 ### 2.3 States
 
-| Shown as  | A2A task state (`TaskState`) | When                                                                                                                               |
-| --------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Sent      | `TASK_STATE_SUBMITTED`       | Accepted; waiting in the receiving chat's queue, or its run is `queued`                                                            |
-| Working   | `TASK_STATE_WORKING`         | Run `running`                                                                                                                      |
-| Needs you | `TASK_STATE_INPUT_REQUIRED`  | Run `awaiting_approval`, or `succeeded` with a `Needs you:` paragraph (`needsYouLines`, `packages/contracts/src/orchestration.ts`) |
-| Answered  | `TASK_STATE_COMPLETED`       | Run `succeeded` without one                                                                                                        |
-| Failed    | `TASK_STATE_FAILED`          | Run `failed` or `outcome_unknown`, or the receiving chat was deleted                                                               |
-| Failed    | `TASK_STATE_REJECTED`        | Never ran: queue full, chat archived, no longer a member. Shown as Failed with a "Not delivered: …" line; no seventh word is added |
-| Cancelled | `TASK_STATE_CANCELED`        | Run `cancelled`, the user cancelled the request, or removed it from the queue strip                                                |
-| —         | `TASK_STATE_AUTH_REQUIRED`   | Never produced                                                                                                                     |
+| Shown as  | A2A task state (`TaskState`) | When                                                                                                                                                                                                                                           |
+| --------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sent      | `TASK_STATE_SUBMITTED`       | Accepted; waiting in the receiving chat's queue, or its run is `queued`                                                                                                                                                                        |
+| Working   | `TASK_STATE_WORKING`         | Run `running`                                                                                                                                                                                                                                  |
+| Needs you | `TASK_STATE_INPUT_REQUIRED`  | Run `awaiting_approval`, or `succeeded` with a `Needs you:` paragraph (`needsYouLines`, `packages/contracts/src/orchestration.ts`); Spark itself no longer writes such a paragraph except for a stacked push whose parent is not on the remote |
+| Answered  | `TASK_STATE_COMPLETED`       | Run `succeeded` without one                                                                                                                                                                                                                    |
+| Failed    | `TASK_STATE_FAILED`          | Run `failed` or `outcome_unknown`, or the receiving chat was deleted                                                                                                                                                                           |
+| Failed    | `TASK_STATE_REJECTED`        | Never ran: queue full, chat archived, no longer a member. Shown as Failed with a "Not delivered: …" line; no seventh word is added                                                                                                             |
+| Cancelled | `TASK_STATE_CANCELED`        | Run `cancelled`, the user cancelled the request, or removed it from the queue strip                                                                                                                                                            |
+| —         | `TASK_STATE_AUTH_REQUIRED`   | Never produced                                                                                                                                                                                                                                 |
 
 Needs you maps to `TASK_STATE_INPUT_REQUIRED` in both directions. An approval card counts as input required, not `TASK_STATE_AUTH_REQUIRED`: the user decides in the receiving chat, and the caller is not asked for credentials.
 
@@ -123,7 +125,7 @@ One migration, `0154_outposts.sql`, in step 0. All 15 decisions are confirmed, s
 
 **`outposts`**: `id` uuid PK (client-generated, so create is idempotent), `workspace_id`, `name` (1–60), `paused_at`, `created_at`, `updated_at`.
 
-**`outpost_members`**: `outpost_id` FK cascade, `conversation_id` FK cascade and **unique** (one outpost per chat, decision 9), `handle` (lower case, `[a-z][a-z0-9-]{1,15}`, unique per outpost, `all` reserved), `position`, `joined_at`.
+**`outpost_members`**: `outpost_id` FK cascade, `conversation_id` FK cascade and **unique** (one outpost per chat, decision 9), `handle` (lower case, `[a-z][a-z0-9-]{1,31}` since `0164`, unique per outpost, `all` reserved), `position`, `joined_at`.
 
 **`outpost_posts`** (requests, notes and notices; answers are not stored)
 
@@ -154,7 +156,7 @@ Contracts (`packages/contracts/src/outposts.ts`): schemas for outpost, member, p
 
 ## 4. Delivery
 
-**Posting.** `POST /api/outposts/:id/posts` (user) and the agent tools call one service, which decides what the text is (request, `@all`, note), checks it against the rules for its author, inserts the rows and wakes the dispatcher. A note inserts a row and nothing else.
+**Posting.** `POST /api/outposts/:id/posts` (user) and the agent tools call one service, which decides what the text is (a request to one or several chats, or a note), checks it against the rules for its author, inserts the rows and wakes the dispatcher. A note inserts a row and nothing else. Section 14 has the address rules.
 
 **Sending.** The dispatcher calls `PeerAgent.send` for each request with no `task_id` and no `closed_state`, in `created_at` order, unless the outpost is paused. The receiving handler, in one transaction, sets `task_id` and inserts a `chat_queue` row carrying `outpost_post_id`, or closes the post as `rejected`. Then it calls `drainQueue` (`apps/server/src/workflow/queue-drain.ts`).
 
@@ -191,7 +193,7 @@ Ordering: one chat runs one top-level turn at a time, so requests and the user's
 
 ## 5. Agent tools and what the receiving agent sees
 
-Registered only for a top-level chat turn of a member, through a new `SparkToolNeed` `'outpost'` (`apps/server/src/spark-mcp/tool.ts`, `availability.ts`). Pieces never get them. **Assumption:** tool selection can tell a piece from a top-level turn.
+Registered only for a top-level chat turn of a member, through a new `SparkToolNeed` `'outpost'` (`apps/server/src/spark-mcp/tool.ts`, `availability.ts`). A child run never gets them (`r.parent_run_id IS NULL` in `outposts/outpost-availability.ts`).
 
 | Tool                  | Input                                                                               | Result                                                                                                                                                                                                                                                                                   | `acts` |
 | --------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -262,8 +264,8 @@ Nothing else in the floor moves: no new protected path, no new push target, no m
 A new feature folder `apps/web/src/outposts/`, with shared semantic colours from `apps/web/public/theme.css`. The UI talks to `/api/outposts` only; it never calls the A2A endpoint.
 
 - **Sidebar.** A foldable **Outposts** section above the project groups. Member chats are listed under their outpost and nowhere else (decision 10). Each chat row has its own blob face with a fixed colour and an expression for its state; projects keep the folder icon (decision 13). The outpost row shows the name and a Needs you count.
-- **Outpost thread.** One row at the top holds the name, the member strip and Pause. Posts below in time order. A request shows `@handle`, the text (collapsed after three lines), its state as text, cost of the receiving run, Cancel while open, Open in chat. The answer threads under it with branch, changed files and pull request link. A note has no state. One message box at the bottom: text starting with a handle is a request, anything else is a note; the send button reads "Send request" or "Post note".
-- **`@all`** (decision 12) draws one post with a line per member, each with its own state, answer and Cancel. It is stored as one request per member sharing a `batch_id`.
+- **Outpost thread.** One row at the top holds the name, the member strip and Pause. Posts below in time order. A request shows `@handle`, the text (collapsed after three lines), its state as text, cost of the receiving run, Cancel while open, Open in chat. The answer threads under it with branch, changed files and pull request link. A note has no state. One message box at the bottom: text with a member handle anywhere is a request to that chat, anything else is a note; the send button reads "Send request" or "Post note" (section 14).
+- **Several chats, and `@all`** (decision 12) draw one post with a line per chat, each with its own state, answer and Cancel. They are stored as one request per chat sharing a `batch_id` (built, section 14).
 - **Introduction** (decision 2). When a chat joins, the thread gets one non-blocking line that Spark writes from facts, with the chat's blob: "@api joined · api · Codex GPT-5 · Approve for me" (handle, project, agent, mode), and under it "Task: …" with the start of the first message the chat was given, when there is one. It is a stored `notice`, not a card, and nothing waits on it. One line per join; section 12 has the details.
 - **Distinct blobs** (decision 16). Members of one outpost always show distinct blobs inside it. A chat keeps its own blob in the sidebar and in its own chat; where two members would share a colour, the one that joined later is drawn with the first unused colour in that outpost, and once the eight colours are taken members differ by shape. `memberFaces` (`apps/web/src/outposts/member-faces.ts`) orders members by join time, then position, then id, so removing a member never changes the members who joined before it. Every outpost surface draws through `MemberFace` (`MemberFace.tsx`): the strip, posts, introductions, the handle picker, the edit and create sheets, and the request header in a member chat. The create sheet previews in list order, which is the order members join on Start.
 - **Member strip.** One chip per member: face, handle, state, and on hover or focus the repo, branch, agent and mode. Activating a chip opens that chat.
@@ -579,3 +581,130 @@ Smaller differences, all in what release 1 shows:
 - Members of one outpost always show distinct blobs inside it (decision 16, section 7).
 - The sidebar section's button is **New outpost**; the last step's button is **Start outpost**.
 - On a paired phone the page still shows create, delete and member controls, which the gateway refuses ([PHONE_REMOTE.md](PHONE_REMOTE.md#policy)).
+
+## 13. Release 2 (October 9, 2026)
+
+Release 2 (agents ask each other, the story flow, stacked pull requests) is built. Sections 13.1 to 13.3 record step 0, which landed schema and interfaces only; section 13.4 describes the behaviour as built. No real provider has run any of it: every claim here rests on unit, database and browser tests with fakes.
+
+### 13.1 What step 0 adds
+
+- **Migration `0161_outpost_stories.sql`.** Tables `outpost_drafts` (a chat's proposal, with `started_at` and `reported_at`) and `outpost_story_tasks` (one row per sub-task chat, with `depends_on_conversation_id` and `opening_post_id`); columns `outpost_posts.after_post_id` (a request waits until that post is Answered) and `outpost_posts.user_started`; `outpost_changed` when a story task is added and when a member chat's pull request is first seen or changes `pr_state`, `base`, `draft` or `head_sha`. The plan named it `0157`; `0157`–`0159` were taken.
+- **Contracts.** `outpostDraftSchema` is now `{ name?, title, chats: [{ handle, title, projectId, agent?, agentMode?, task, dependsOn? }] }`, where `dependsOn` is a handle in the same draft and `agentMode` is the mode the lead proposes (section 13.4). A start request takes `draftId`, a `dependsOn` chat id per member and a `level` per new chat. `outpostDetailSchema` carries `stories` (`outpostStorySchema`, `storyTaskSchema`, `stackWarningSchema`), `requestFactsSchema` carries `waitingOn`, a run's `outpost` carries `userStarted`, and `OUTPOST_DRAFT_ACTIVITY` with `outpostDraftActivitySchema` (`draftId`, `chats`, `stacked`) is the draft line's run activity. `outpost-story.ts` holds the signatures of the pure rules: `StoryProblems`, `StoryOrder`, `IsStacked`, `StackWarnings`, `PrBase`.
+- **Ports** (`apps/server/src/outposts/ports.ts`). `DraftStore`, `StoryStore`, `StackGit`, and `afterPostId` and `userStarted` on `StoredPost`.
+- **Tool needs.** `'outpost'` and `'outpost_draft'` in `SparkToolNeed`. Step 0 answered false for both; section 13.4 says who gets them now.
+
+The story schemas live in `outposts.ts`, not `outpost-story.ts`, because `outpostDetailSchema` needs them and `outpost-story.ts` needs the request states: one of the two files has to import the other.
+
+### 13.2 Does a piece's grant carry its own run id?
+
+Read from the code, not run against a provider.
+
+- A grant is opened once per provider turn (`openSparkTools` in `agents/acp/acp-provider.ts`) with the scope `runAgentTurn` builds: `runId` is the lease's run id (`workflow/agent-turn.ts`).
+- A piece, and every other crew member that gets its own run, runs under the lease `insertChildRun` returns (`orchestration/members.ts`). So its grant carries its own run id, and that run has `parent_run_id` set. A check of `runs.parent_run_id IS NULL` for the scope's run id tells a top-level turn from a piece.
+- One member does not: a Scout that runs in place (`runInPlace`) uses the top-level lease, so its grant carries the top-level run id and looks like a top-level turn. `markInPlaceMember` sets that run's `role` to `scout`, which a call-time check can read.
+- A Terminal session's grant is built separately (`terminal/native-runtime.ts`); section 5 gives it no outpost tools.
+- The scope's run id is fixed for the life of a grant, so "was this turn started by a request" can be read from that run's post at call time.
+
+### 13.3 Claude's tool timeout
+
+Read from the pinned Claude CLI (2.1.280, inside `@anthropic-ai/claude-agent-sdk` 0.3.280) and adapter (`claude-agent-acp` 0.81.2); section 15.1 has the limits and the fix. Spark gives both agents one hour for a Spark tool call: `CODEX_TOOL_TIMEOUT_SEC` and `CLAUDE_TOOL_TIMEOUT_MS` (`agents/acp/spark-tools.ts`). No real provider has run the fix.
+
+### 13.4 Release 2 as built
+
+All lanes are merged on top of 0.1.0-beta.11.
+
+- **A draft outlives its lead chat.** `outpost_drafts.conversation_id` is nullable with `ON DELETE SET NULL`, so deleting the lead chat keeps the draft, the story's title and the `draft_id` that groups its tasks; `lead_conversation_id` on the tasks goes null and the story continues. A draft whose lead chat is gone can no longer be started (`LEAD_CHAT_GONE`, `story-start.ts`). `outpostStorySchema` still allows a null `draftId` and `title`, for a draft row that is itself removed (its workspace is deleted).
+- **`waitingOn` and `stories` are real.** `toFacts` in `persistence/outpost-posts.ts` answers `waitingOn` with the handle of the chat an unsent request waits for (`after_post_id`), and `waitingOnDeleted` when that chat has left the row; `GET /api/outposts/:id` answers `stories` from `storiesOf` through `toStories` (`story-view.ts`). The state line reads, in this order: "Paused", then "Waiting for @a" (or "Waiting for a deleted chat"), then "Waiting: @a's last turn failed" or "was stopped" (`held` is `'failed' | 'stopped' | null`, and a request the user posted after a stop is not held).
+- **Start anyway.** `POST /api/outposts/:id/posts/:postId/start-now` clears `after_post_id` and sends `outpost_changed` itself. On a paired phone it is allowed like cancel; `GET /api/outposts/drafts/:id` is Mac only (`remote/route-rules.ts`).
+- **The mode cap limits what the lead chat proposes, not what the user chooses.** A draft chat may carry `agentMode`. `proposalAboveLead` (`outposts/mode-cap.ts`) is the check for the save path: the draft tool (lane E, `outpost-draft-tool.ts`) must resolve the lead's posture and each proposed mode's posture and refuse a draft for which it returns a line, before `saveDraft`. At start, `startOutpost` compares each new chat's mode with the draft's proposal for that handle (`userChoseMode`): the same mode, or no mode on both sides (the agent's default), is still held to the lead's posture (`modeAboveLead`), and a mode that differs is the user's choice in the sheet and is accepted.
+- **The turn preamble is wired.** `runAgentTurn` adds `withOutpostPreamble` (stores bound in `outposts/preamble-stores.ts`) before the publish note, so a member chat's top-level turn is told the notes since its last turn, the unseen answers to requests it sent (marked seen once) and its stack line.
+- **The dispatcher releases and wraps up.** Each pass (on start and on every `outpost_changed`) runs three isolated steps: `releaseAnswered` (`a2a/hold-release.ts`), `queueWrapUps` (`outposts/story-wrap-ups.ts`) and `dispatchUnsent`. `released` (`outposts/dependency-release.ts`) is true only for an unsent, open, held request whose awaited post reads Answered in an outpost that is not paused; Needs you, failed, cancelled and a deleted chat keep it held until the user picks Start anyway or Cancel. `acceptTask` refuses a held post (`held`), so a direct A2A `SendMessage` cannot skip the hold.
+- **One wrap-up per story.** A story is settled when it has at least one task and every opening post is answered, failed or cancelled (a task with no opening post counts as ended). One transaction calls `markReported` and inserts one request to the lead chat whose id is the draft's id, with `from_user = false`, `user_started = false` and no author chat. It is delivered like any request, so the lead's turn is request-started and cannot ask or propose, and it runs as one read-only reply (section 13.5). `request-prompt.ts` gives it its own author kind (`spark`): the header reads `[Story wrap-up, written by Spark in the outpost "…". This is not from the user.]`. No wrap-up is written while the lead is not a member or the outpost is paused. `insertTasks` writes a story's tasks in one statement, so no pass sees half a story.
+- **Spark's record under an answer and in the wrap-up (October 11, 2026).** `requestAnswer` (`persistence/outpost-answers.ts`) returns, beside the work reply, the branch, the files the run changed, the recorded pull requests and `publish`: `committed` and `pushed` read from the chat's own worktree when the thread is read (`branchWork`), and `reason`, the result line the publish step wrote when the run ended without a pull request (a `publish_note` activity event on the run; no table). The thread shows them as **Committed** / **Not committed**, **Pushed** / **Not pushed** and the reason line; `spark_outpost` reads return them as `sparkRecord`. `queueWrapUps` reads the same answer for every answered sub-task, and `wrapUpBody` states files, commit, push, reason and pull request per task with one line saying it is Spark's record, so the lead reports publishing from that and not from a sub-chat's work reply. A run's own commit stays in its changed files after a chat stacked on its branch starts from it: `branchesStackedOn` names those branches and `run-base.ts` no longer reads them as where the commit came from.
+- **Agent tools** (`spark-mcp/tools/outpost-*.ts`). `spark_outpost` (read; recorded as reading private work data), `spark_outpost_ask` (acts, no card; refused from a request-started turn, to itself, to a non-member, to `all` and while paused; `wait` checks for a ring before and after the insert with `wouldDeadlock`), `spark_outpost_note` (refuses addressed text, so a note starts no work) and `spark_outpost_draft` (saves a draft and shows the draft line; creates nothing; enforces `proposalAboveLead`). `outpost` is offered to a member chat and `outpost_draft` to a chat with a project or a membership, in the chat's own turn, in a solo Builder's run and in the integrator's run of a crew turn (section 13.5); pieces, the Coordinator, other crew members and Terminal sessions get neither, and every tool checks again at call time.
+- **Waiting needs the worker's wake.** The worker listens on `changes` and feeds a `TaskWakes` to `SparkToolDeps.outposts` (`workflow/main.ts`); without it `spark_outpost_ask` sends, does not wait and says so.
+- **Stacked pull requests.** `decidePlace` takes `stackOn`, so a sub-task that depends on a chat in the same project gets its own `spark/*` branch from that chat's branch (`outposts/stack-base.ts`, `orchestration/chat-place.ts`). The publish turn, the Builder's publish note and `spark_pull_request` name the base from `prBase`; `spark_push` and the approval gate refuse the push while the parent branch has no remote-tracking ref (`publishStackOf`, `parentNotPushedReason`), and at Full auto → PR the reply ends "Needs you: @a's branch is not pushed." Updating is a merge in a turn; nothing rebases. The outpost detail and `spark_outpost` read `behind_parent` and `parent_not_pushed` from the real `StackGit` (`outposts/stack-git.ts`); a git failure reads as unknown and shows no warning.
+- **What the web shows.** A post carries `fromRunId`, `userStarted`, `held` and `fromSpark`, and a run's `outpost` carries `fromSpark`. `GET /api/conversations/:id/outpost-drafts` lists a chat's drafts for the draft line under the turn that proposed them; the same folder holds the sent line (matched by `fromRunId`) and the "not from you" heading. The create sheet opens prefilled from `GET /api/outposts/drafts/:id` through `onOpenDraft` on the outpost seam.
+
+Not built, and why:
+
+- The island has no "@fe asked @api" or draft-proposed moment; it names a member chat that finished with a Needs you.
+- When the ring check trips after the insert, the stored post keeps `waits = true` although the call did not wait.
+
+### 13.5 Four fixes after integration (October 9, 2026)
+
+Built on the release 2 tip, with unit and database tests on fakes and temp repositories; no real provider has run them.
+
+- **A Builder proposes for the chat (history; removed October 10, 2026).** There are no Builder or integrator child runs any more: the outpost tools are offered to, and accepted from, the chat's own top-level run only, and any child run is refused with "Only the chat's own turn can use outpost tools." What follows describes the rule while child runs existed. A message Spark reads as a build runs in a child run, and the outpost tools were offered only to a run with no parent. `chatRunId` (`outposts/outpost-availability.ts`) is now the one rule for both the offer and the call-time check: a run acts for the chat when it has no parent, when its role is `integrator`, or when its role is `builder` and its route has no `pieceKey`. `chatTurn` (`spark-mcp/tools/outpost-turn.ts`) then reads the chat's own top-level run, so the request-started rule, the author's `from_run_id` and the draft's `run_id` are the turn's, and read labels still cover the whole turn (`turnObservations` joins on the parent). `executeChildRun` mirrors the draft activity to the parent's events, as it does approval events, so the draft line appears while the Builder is still working.
+- **A sub-chat takes its story title.** `startOutpost` sets a new chat's title to its story task's title (the draft's title for that handle, or the first line of its first message) with `title_source = 'user'`, the only source auto-titling leaves alone. A rename still works, and the chat's branch is named after it. A chat created without a draft is titled as before.
+- **A stacked push before its parent is on the remote.** `stackedPushRefusal` (`approvals/stacked-push.ts`) recognises a push of the chat's own branch (named, pushed as `HEAD`, or a push that names no branch) while `stackBase.onRemote` is false. `decide` refuses it for any run with the reason `spark_push` gives; before, only a Builder with a basis to publish was refused, and the chat's own agent got an ordinary push card or, in Auto, no refusal. When the same push ran without a permission request, `watchedSends` records the new rail kind `stacked_push` through `RunObservations.crossed`: a flag row (the card and the island notice) and a `spark/rail_crossed` audit entry, once per run, with no revert. Nothing stops.
+- **The wrap-up is a reply.** (`orchestrate`, intake and the publish turn named here are gone; the chat turn hands a wrap-up to `replyToWrapUp` and `publishReason` answers null for it.) Intake read the wrap-up text as a build, or as a small change that continues the lead's task, so the lead ran a Builder and, at Full auto → PR, a publish turn. `orchestrate` now hands a wrap-up to `replyToWrapUp` (`outposts/wrap-up-turn.ts`) before Sparks and intake: one `runAgentTurn` in `ask` mode, with no orchestration row, crew or publish turn. `startBasis` and `publishScope` answer null for a wrap-up at every level and mode, so `spark_push` and `spark_pull_request` refuse, and the ask-run gate refuses `git push` and `gh pr create` like any other change.
+
+Known limits:
+
+- "On the remote" is the local remote-tracking ref (`remoteHasBranch`, `ship/git.ts`); nothing fetches. A ref that is missing locally refuses or flags a push that would be fine until someone fetches, and a ref that exists says nothing about whether the parent's newest commits are pushed.
+- Every turn is the chat's own top-level run, so a question turn has the outpost tools.
+- A wrap-up reply that uses a tool joins or opens a task like any other reply turn.
+
+## 14. A handle anywhere, several chats per message (October 9, 2026)
+
+Asked for by the owner after real use: one leading handle per message was too narrow, and a handle in the middle of a sentence silently made a note.
+
+- **The rule** (`packages/contracts/src/outpost-addressees.ts`, pure). `addressees(text, handles)` returns every member handle that stands alone in the text, in the order typed, once each; `@all` anywhere adds every member. A handle stands alone when it follows the start, white space or an opening bracket or quote, and is followed by the end, white space or closing punctuation, so `someone@api.dev`, `foo@api`, `@api's` and `@api/fe` address nobody. `userAddress(text, handles, kept?)` is a request to those chats, or a note when there are none or the text says nothing but handles.
+- **What each chat receives.** The whole message as typed, handles in place. One exception keeps release 1 as it was: a message to one chat that starts with that chat's handle is stored without it (`@api add the endpoint` is "add the endpoint"), which is also what keeps `@api /plan` a command.
+- **Who else was asked.** `outpostPreamble` adds one line to a turn a batch started: "The user sent this same message to @web and @docs as well. Each chat received it whole and answers for itself." (`alsoAskedLine` in `request-prompt.ts`).
+- **Storage.** One `outpost_posts` request per addressed chat with the same `body` and a shared `batch_id`; a message to one chat has no `batch_id`. The first row takes the id the client sent, so posting the same id again returns that row and inserts nothing. No migration: `batch_id` has been in `0154_outposts.sql` since step 0. Each row is its own A2A task, queue item and run, so state, answer, Needs you, cancel and Start anyway are per chat with no new code.
+- **The request.** `createPostRequestSchema` takes an optional `to: string[]`, the handles the sender kept. The server checks each against the members (`@docs is not in this outpost.`) and against the text (`The message does not address @web.`) in `keptProblem` (`post-rules.ts`) and refuses the whole message with 400; `to: []` is a note whatever the text says. Without `to` the server reads the text. `planPost` turns the list into one planned request each (`several`); the service gives them the batch id.
+- **Thread.** `threadItems` groups the requests of a batch into one `batch` item at the place of the first. `BatchPost.tsx` draws the message once, then a line per chat; `RequestOutcome.tsx` (moved out of `RequestPost.tsx`) draws the reason, the rounds, the answer and the actions for both. **Cancel all** calls the cancel route for each open line.
+- **Composer.** The picker opens for an `@` at the caret anywhere in the text (`handleQuery(text, caret)`), and closes once the only match is typed in full so Enter sends. `AsksLine.tsx` lists who will be asked beside the send button; removing a name keeps the text and leaves that chat out of `to`, and it comes back when the handle is typed again.
+- **Agents.** Unchanged. `spark_outpost_ask` names one member, and text a chat writes goes through `parseAddress`, which still reads one leading handle only, so a handle inside an agent's note addresses nobody.
+- **Slash commands.** `asAgentReads` hands over a bare command only when the user's request starts with `/` and carries no handle standing alone. `@api /plan` is stored as `/plan` and runs; `@api @web /plan` and `/plan @api @web` are wrapped and sent as text. Limit: `@api /assign @someone` is also sent as text, because the stored row does not say which form it came from.
+- **Live activity and the failed reason.** A Working line shows the sidebar row's own text for that chat (`chatActivity` reads `rowState`, from the conversations query the page already has). A request whose run failed shows the first line of `runs.error` after "@api's turn failed" (`shownReason` in `post-view.ts`); the reason given to other chats and to story rows is unchanged.
+- **Handles.** A handle has 2 to 32 characters. Migration `0164_outpost_handle_length.sql` replaces the `outpost_members.handle` CHECK from `0154_outposts.sql` (`{1,15}` becomes `{1,31}`); existing handles are untouched. `HANDLE_MAX` (`outpost-handles.ts`) and `OUTPOST_HANDLE_PATTERN` (`outposts.ts`) carry the same limit, and `suggestHandle` still cuts a longer name at the last hyphen that fits.
+
+- **Inside a batch, a chat is named once.** `RequestOutcome` takes `inBatch` and leaves out the "@api answered" header of the reply, because the line above it already reads "@api Answered". A chat that is waiting for you keeps its header, and a single-chat request is drawn as before.
+
+Not built: addressing a chat that is not a member, and `@all` or several targets for agents.
+
+## 15. Fixes after the first real-provider check (October 10, 2026)
+
+A check with real Claude and Codex sessions found the problems below. Each fix was proven with a failing test on fakes and temp repositories first; none has run against a real provider yet. Problems that exist only because a turn is split into child runs were left for the removal of Spark's own harness, which is now done ([SIMPLE_ORCHESTRATION.md](SIMPLE_ORCHESTRATION.md)).
+
+### 15.1 A waiting ask and Claude's 60 seconds
+
+- **Cause.** The Claude CLI wraps every non-GET request to an HTTP MCP server in a timer that it clears when the response headers arrive. The budget is 60 s unless the server entry has `timeout` (at least 1,000 ms) or `MCP_TOOL_TIMEOUT` is set, and its error text is "The operation timed out.". The Spark host answers a tool call with one JSON body (`enableJsonResponse`, `spark-mcp/host.ts`), so no header leaves before the tool returns. A second watchdog aborts an HTTP tool call that sent no response or progress for 300 s (`CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`), and the wall clock for a call is 100,000,000 ms. The entry's `timeout` raises all three.
+- **Why Spark could not set it.** An ACP `McpServer` has no timeout field, and the adapter copies only `type`, `url` and `headers` from the ACP list. It does pass `_meta.claudeCode.options.mcpServers` to the SDK unchanged, and an ACP entry of the same name replaces it.
+- **Fix.** `withSparkServer` (`agents/acp/spark-tools.ts`, called by `newSessionRequest`) puts the Spark server in `_meta.claudeCode.options.mcpServers` with `timeout: 3,600,000` when the session has Claude options, and in the ACP list otherwise. `withMcpSecretsRedacted` (`audit/protocol-entry.ts`) hides header and env values sent that way. The host is unchanged.
+- **After an hour** the CLI gives up with an error. The host aborts the call when the connection closes, the wait ends, the request goes on, and its answer reaches the asking chat in its next turn's preamble.
+- **Codex** waited over five minutes in the check. Its `exec` cell yields every 10 s and the model calls `wait` again, each time a full request that re-reads the context from cache: 23 polls and 687,123 tokens (660,224 cached) for one 5 minute wait. Spark's tool was called once.
+
+### 15.2 A waiting turn and the worker's slots
+
+`startWorker` started a turn only while fewer than `WORKER_CONCURRENCY` (default 2) were running, and a turn blocked inside `spark_outpost_ask` counted. `ParkedTurns` (`workflow/parked-turns.ts`) is shared by the worker and the Spark tools: `hold` parks the chat's top-level run around `waitForRequest`, the worker counts `active - parked`, and parking wakes it. When the wait ends the turn goes on, so for a moment one more turn than the setting can run.
+
+### 15.3 A stacked sub-chat and its parent's uncommitted work
+
+At Automatic nothing commits a kept change, so a parent's branch tip was still its base when the dependent was released. `releaseAnswered` (`a2a/hold-release.ts`) now asks `parentWorkCommitter` (`outposts/stacked-parent-work.ts`) before it releases a request whose chat is stacked on the awaited chat (`stackParentOf`, parent owns a live `spark/*` branch). For each task of the parent chat it reads `planShip`: files pending on the chat's own branch are committed with `shipTask(..., { mode: 'commit' })`, the same code as Ship's **Commit**, with its audit entry and repository hooks. Nothing is pushed, rebased or forced, and no other branch is touched. While a task is running or the commit fails, the request stays held and the next pass tries again; the thread still reads "Waiting for @a", and **Start anyway** releases it without the commit. A dependent in another project is released as before.
+
+### 15.4 Needs you
+
+The reply in the check read `…tests pass.\nLeft the change in the working tree.\nNeeds you: Ask this chat to publish.\n\nChecks for Bolt: tests passed`: the line followed a single line break. The SQL pattern in `FACTS_QUERY`, its copy in the chat list query and `needsYouLines` all wanted a blank line before it, so the request read Answered and its dependents were released. There is no stored state. `needsYouLines` (contracts) now reads every line that starts with "Needs you: ", and both queries hand it the reply instead of matching in SQL, so the request, the chat's row and the thread agree.
+
+### 15.5 A start in which every chat is refused
+
+`claimDraft` marked the draft started before any chat had joined. `outposts/story-claim.ts` keeps the claim first, so two starts still cannot both win, and `refuseEmptyStart` undoes it when this start made the claim and every story chat was refused: `releaseStart` clears `started_at` and restores `outpost_id`, an outpost this start created is deleted, and the route answers 409 "No chat started, so nothing was created." followed by each chat's reason. A story that already has a started chat, and an outpost that was there before, are left alone.
+
+### 15.6 A pinned Claude model under another id
+
+`pick` (`agents/acp/session-config.ts`) matches a pinned model against the session's choices by exact value or label. The Claude CLI spells a model row as an alias or as a full id depending on what the alias resolves to in that process, so an id from the capability probe can be missing from a turn's session. The adapter resolves such names itself in `session/set_config_option` (`resolveModelPreference`), and never across generations. For an agent with `resolvesModelNames` (Claude only), `applySessionSettings` now sends the pinned value when it matches no choice and reads back what the session reports. If the agent refuses, the turn keeps its note and `watchRanModel` adds "Claude ran this turn on Opus 5.5, not sonnet" from the model the agent reports.
+
+### 15.7 Smaller ones
+
+- The create sheet proposes each sub-chat with the lead chat's agent, model and mode when that agent is connected (`usualAgent`, `draft-prefill.ts`), and shows the draft's title on its row (`storyTitle`).
+- The join notice names a model the capability list lacks by its model card.
+- A held request whose awaited request failed reads "Waiting: @a's turn failed" (`waitingOnFailed` in `requestFactsSchema`), in every project, with **Start anyway** and **Cancel** as before.
+
+### 15.8 Known and not fixed
+
+- A request follows the user's answer to a Needs you (`continueOpenRequest`, `outposts/continuation.ts`), so it moves between Needs you, Working and Answered across turns, and the wrap-up is written when it first reads Answered.
+- **Continue from here** after a crash starts a run with `continues_run_id`, but the request stays on the interrupted run and reads Failed.

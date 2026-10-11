@@ -3,8 +3,9 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { ProviderId } from '@spark-outpost/contracts';
-import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
+import { EXACT_PROTECTED_GLOBS } from '../../projects/path-policy.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
@@ -50,6 +51,7 @@ export interface AgentDefinition {
   estimatesCost?: boolean;
   longContext?: boolean;
   summarizesThinking?: boolean;
+  resolvesModelNames?: boolean;
   streamsCommandOutput?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
@@ -72,9 +74,8 @@ export interface AgentDefinition {
   doSessionMeta?: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
-    builder?: boolean,
-    coordinated?: boolean,
-    publishes?: boolean,
+    changesProject?: boolean,
+    gitControlGlobs?: readonly string[],
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -100,67 +101,65 @@ const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
 export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
 
-function askRules(builder: boolean, coordinated: boolean): string[] {
-  return builder && !coordinated ? [...PUBLISH_ASK_RULES] : [];
-}
-
 export const FORCE_PUSH_DENY_RULES = [
   'Bash(git push --force:*)',
   'Bash(git push -f:*)',
   'Bash(git push --mirror:*)',
 ];
 
-export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
+const SENT_TO_THE_GATE: readonly string[] = PUBLISH_ASK_RULES;
 
-export const BUILDER_GIT_DENY_RULES = [
-  ...BUILDER_GIT_OPS.filter((op) => op !== 'worktree').map((op) => `Bash(git ${op}:*)`),
-  'Bash(git branch -d:*)',
-  'Bash(git branch -D:*)',
-  'Bash(git branch --delete:*)',
-];
-
-const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
-  (rule) => rule !== 'Bash(git push:*)',
+export const CHAT_RUN_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`).filter(
+  (rule) => !SENT_TO_THE_GATE.includes(rule),
 );
 
-const PUBLISHING_BUILDER_DENY_RULES = SOLO_BUILDER_DENY_RULES.filter(
-  (rule) => rule !== 'Bash(gh:*)',
-);
-
-function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean): string[] {
-  if (!builder) return [];
-  if (coordinated) return [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES];
-  return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
+function editRules(globs: readonly string[], extraRoots: readonly string[]): string[] {
+  const underExtraRoots = extraRoots.flatMap((root) => globs.map((glob) => `/${root}/${glob}`));
+  return [...globs, ...underExtraRoots].map((pattern) => `Edit(${pattern})`);
 }
 
 export function secretRules(extraRoots: readonly string[]): string[] {
-  const underExtraRoots = extraRoots.flatMap((root) =>
-    SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
-  );
-  const patterns = [...SECRET_GLOBS, ...underExtraRoots];
-  return patterns.map((pattern) => `Edit(${pattern})`);
+  return editRules(SECRET_GLOBS, extraRoots);
 }
 
-function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
+export const GIT_CONFIG_ASK_RULE = 'Bash(git config:*)';
+
+function absoluteEditRules(globs: readonly string[]): string[] {
+  return globs.map((glob) => `Edit(/${glob})`);
+}
+
+export function floorAskRules(
+  tools: readonly string[],
+  extraRoots: readonly string[],
+  gitControlGlobs: readonly string[] = [],
+): string[] {
+  const edits = tools.includes('Edit')
+    ? [...editRules(EXACT_PROTECTED_GLOBS, extraRoots), ...absoluteEditRules(gitControlGlobs)]
+    : [];
+  return [...edits, ...(tools.includes('Bash') ? [GIT_CONFIG_ASK_RULE] : [])];
+}
+
+function repoTools(repo: ClaudeRepoOptions | null): string[] {
   if (!repo) return [];
-  const agentTool = repo.agentTool && !coordinated;
-  return [...(repo.skillTool ? ['Skill'] : []), ...(agentTool ? ['Agent'] : [])];
+  return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
 }
 
 export function claudeSessionMeta(
   tools: readonly string[],
   extraRoots: readonly string[],
   repo: ClaudeRepoOptions | null = null,
-  builder = false,
+  changesProject = false,
   allowBypass = false,
-  coordinated = false,
-  publishes = false,
+  gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
-  const ask = askRules(builder, coordinated);
+  const ask = [
+    ...floorAskRules(tools, extraRoots, gitControlGlobs),
+    ...(changesProject ? PUBLISH_ASK_RULES : []),
+  ];
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
-    ...builderDeny(builder, coordinated, publishes),
+    ...(changesProject ? CHAT_RUN_DENY_RULES : []),
   ];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -168,7 +167,7 @@ export function claudeSessionMeta(
     ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
     claudeCode: {
       options: {
-        tools: [...tools, ...repoTools(repo, coordinated)],
+        tools: [...tools, ...repoTools(repo)],
         disallowedTools: deny,
         settingSources: [],
         ...(plugins.length > 0
@@ -182,6 +181,7 @@ export function claudeSessionMeta(
             : {}),
           ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
           disableSkillShellExecution: true,
+          disableClaudeAiConnectors: true,
           plansDirectory: PLANS_DIR,
           permissions: {
             deny,
@@ -203,7 +203,12 @@ export function codexConfig(
   profiles = true,
 ): object {
   return {
-    features: { shell_tool: browsing, unified_exec: false, skill_mcp_dependency_install: false },
+    features: {
+      shell_tool: browsing,
+      unified_exec: false,
+      skill_mcp_dependency_install: false,
+      apps: false,
+    },
     web_search: 'disabled',
     ...(profiles
       ? { default_permissions: CODEX_READ_ONLY_MODE, permissions: codexPermissionProfiles() }
@@ -268,18 +273,16 @@ const claudeSessions = {
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
-    builder = false,
-    coordinated = false,
-    publishes = false,
+    changesProject = false,
+    gitControlGlobs: readonly string[] = [],
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
       extraRoots,
       repo ?? null,
-      builder,
+      changesProject,
       true,
-      coordinated,
-      publishes,
+      gitControlGlobs,
     ),
 } satisfies Partial<AgentDefinition>;
 
@@ -304,6 +307,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     ...claudeSessions,
     longContext: true,
     summarizesThinking: true,
+    resolvesModelNames: true,
     reportsModelAccess: true,
   },
   codex: {

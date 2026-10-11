@@ -1,15 +1,4 @@
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  allowEdit,
-  card,
-  CREW_REQUEST,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
 import {
   chatMenuButton,
   chatMenuDot,
@@ -18,14 +7,21 @@ import {
   openChatMenu,
   toggleHeaderPane,
 } from './header-menu.ts';
+import {
+  BUILD_REQUEST,
+  card,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
+  send,
+} from './project-chat-kit.ts';
 
-const SHOTS = process.env.TV_SHOTS ?? '';
-
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.addInitScript(() => {
     if (sessionStorage.getItem('tv-fresh')) return;
@@ -37,29 +33,18 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(() => repo.remove());
 
 const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
-const blob = (page: Page, role: string) => tvOf(page).locator(`.tv-n[data-role="${role}"]`).last();
+const agent = (page: Page) => tvOf(page).locator('.tv-n[data-role="agent"]');
 const details = (page: Page) => tvOf(page).getByRole('group', { name: / details$/ });
-
-async function blockOf(page: Page, role: string) {
-  const id = await blob(page, role).getAttribute('data-agent');
-  return page.locator(`[id="agent-${id}"]`);
-}
+const turn = (page: Page) => page.locator('.msg.ai').last();
+const savedTv = (page: Page) =>
+  page.evaluate(
+    () => JSON.parse(localStorage.getItem('spark-outpost.agent-tv') ?? '{}') as unknown,
+  );
 
 async function scrollThread(page: Page, to: 'top' | 'bottom') {
   await page
     .locator('.thread')
     .evaluate((element, end) => (element.scrollTop = end === 'top' ? 0 : element.scrollHeight), to);
-}
-
-async function editWaiting(page: Page) {
-  await crewChat(page, repo, 'Ask before edits');
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  const edit = card(page, /Change a file\?/);
-  await expect(edit).toBeVisible({ timeout: 30_000 });
-  await toggleHeaderPane(page, 'Agent TV');
-  await expect(tvOf(page)).toBeVisible();
-  await settled(page);
-  return edit;
 }
 
 async function settled(page: Page) {
@@ -68,39 +53,65 @@ async function settled(page: Page) {
   );
 }
 
-async function shot(page: Page, name: string) {
-  if (!SHOTS) return;
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: path.join(SHOTS, `tv-${name}.png`) });
+async function waitingAgent(page: Page) {
+  await projectChat(page, repo, 'Ask before edits');
+  await send(page, `${BUILD_REQUEST} #build`);
+  const edit = card(page, /Change a file\?/);
+  await expect(edit).toBeVisible({ timeout: 30_000 });
+  return edit;
 }
 
-test('clicking a blob bounces it and shows its status, Go to scrolls, Esc steps back', async ({
-  page,
-}) => {
+async function tvWhileWaiting(page: Page) {
+  const edit = await waitingAgent(page);
+  await toggleHeaderPane(page, 'Agent TV');
+  await expect(tvOf(page)).toBeVisible();
+  await settled(page);
+  return edit;
+}
+
+test('the chat menu says one agent is working and opens Agent TV', async ({ page }) => {
   test.setTimeout(60_000);
-  const edit = await editWaiting(page);
+  await projectChat(page, repo, 'Auto-edit');
+  await send(page, `${BUILD_REQUEST} #build #slowbuild`);
+  await expect(chatMenuButton(page)).toHaveAccessibleName('Chat actions. 1 agent working.', {
+    timeout: 30_000,
+  });
+  await expect(chatMenuDot(page)).toHaveClass(/live/);
+  await openChatMenu(page);
+  await expect(headerPaneItem(page, 'Agent TV')).toHaveAttribute('aria-checked', 'false');
+  await expect(headerPaneItem(page, 'Agent TV')).toContainText('1 working');
+  await headerPaneItem(page, 'Agent TV').click();
+  await expect(tvOf(page)).toBeVisible();
+  await expectHeaderPane(page, 'Agent TV', true);
+  await expect(agent(page)).toHaveCount(1);
+  await tvOf(page).getByRole('button', { name: 'Close Agent TV' }).click();
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(chatMenuButton(page)).toHaveAccessibleName('Chat actions.', { timeout: 30_000 });
+});
+
+test('clicking the agent shows its status, Go to scrolls, and Esc steps back', async ({ page }) => {
+  test.setTimeout(60_000);
+  const edit = await tvWhileWaiting(page);
   const tv = tvOf(page);
 
-  await blob(page, 'builder').click();
+  await agent(page).click();
   const bubble = details(page);
   await expect(bubble).toBeVisible();
-  await expect(bubble).toContainText('Builder');
-  await expect(bubble).toContainText('Opus 5.5 · high');
-  await expect(blob(page, 'builder')).toHaveAttribute('aria-expanded', 'true');
+  await expect(bubble).toContainText('Claude');
+  await expect(agent(page)).toHaveAttribute('aria-expanded', 'true');
 
   await scrollThread(page, 'top');
   await bubble.getByRole('button', { name: 'Go to' }).click();
   await expect(bubble).toBeHidden();
-  await expect(await blockOf(page, 'builder')).toBeInViewport();
+  await expect(turn(page).locator('.ai-head')).toBeInViewport();
 
-  await blob(page, 'jev').click();
-  await expect(bubble).toContainText(/Dispatcher(Picked|Sent \w+:|Noted:) /);
-  await expect(bubble).toContainText('router');
+  await agent(page).click();
+  await expect(bubble).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(bubble).toBeHidden();
   await expect(tv).toBeVisible();
 
-  const ask = tv.getByRole('button', { name: /Needs you: change notes\.txt\?/ });
+  const ask = tv.getByRole('button', { name: /change notes\.txt\?/i });
   await expect(ask).toBeVisible();
   await scrollThread(page, 'top');
   await ask.click();
@@ -111,49 +122,22 @@ test('clicking a blob bounces it and shows its status, Go to scrolls, Esc steps 
   await expect(chatMenuButton(page)).toBeFocused();
 });
 
-test('keyboard: Tab reaches the blobs, Enter opens the bubble, Enter again goes to the agent', async ({
-  page,
-}) => {
+test('keyboard: Enter opens the bubble and Enter again goes to the agent', async ({ page }) => {
   test.setTimeout(60_000);
-  await editWaiting(page);
-  const builder = blob(page, 'builder');
-  await builder.focus();
-  await page.keyboard.press('Shift+Tab');
-  await expect(blob(page, 'jev')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(builder).toBeFocused();
+  await tvWhileWaiting(page);
+  await agent(page).focus();
   await page.keyboard.press('Enter');
   await expect(details(page)).toBeVisible();
   await scrollThread(page, 'top');
   await page.keyboard.press('Enter');
-  await expect(await blockOf(page, 'builder')).toBeInViewport();
+  await expect(turn(page).locator('.ai-head')).toBeInViewport();
 });
 
-test('a dispatch sends a packet and a line of chatter', async ({ page }) => {
+test('the header controls explain themselves on keyboard focus, and mute is remembered', async ({
+  page,
+}) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Auto-edit');
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  await expect(chatMenuButton(page)).toHaveAccessibleName(/^Chat actions\. \d+ agents? working\.$/);
-  await expect(chatMenuDot(page)).toHaveClass(/live/);
-  await openChatMenu(page);
-  await expect(headerPaneItem(page, 'Agent TV')).toHaveAttribute('aria-checked', 'false');
-  await expect(headerPaneItem(page, 'Agent TV')).toContainText(/\d+ working/);
-  await headerPaneItem(page, 'Agent TV').click();
-  const tv = tvOf(page);
-  await expect(tv).toBeVisible();
-  await expectHeaderPane(page, 'Agent TV', true);
-
-  await expect(tv.locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
-  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {
-    timeout: 15_000,
-  });
-  await expect(tv.locator('.tv-pk.out')).toHaveCount(0, { timeout: 5_000 });
-  await shot(page, 'chatter');
-});
-
-test('the header controls explain themselves on keyboard focus', async ({ page }) => {
-  test.setTimeout(60_000);
-  await editWaiting(page);
+  await tvWhileWaiting(page);
   const tv = tvOf(page);
   const tooltip = page.getByRole('tooltip');
   await tv.getByRole('button', { name: 'Watch mode' }).focus();
@@ -165,6 +149,7 @@ test('the header controls explain themselves on keyboard focus', async ({ page }
   await page.keyboard.press('Enter');
   await expect(mute).toHaveAttribute('aria-pressed', 'true');
   await expect(tooltip).toHaveText('Show speech bubbles');
+  expect(await savedTv(page)).toMatchObject({ muted: true });
   await page.keyboard.press('Shift+Tab');
   await expect(tooltip).toHaveText('Small / Medium / Large TV');
   await page.keyboard.press('Tab');
@@ -177,40 +162,18 @@ test('the header controls explain themselves on keyboard focus', async ({ page }
   await expect(tooltip).toHaveCount(0);
 });
 
-test('muted chatter stays quiet, and the choice is remembered', async ({ page }) => {
-  test.setTimeout(60_000);
-  await editWaiting(page);
-  const mute = tvOf(page).getByRole('button', { name: 'Mute speech bubbles' });
-  await mute.click();
-  await expect(mute).toHaveAttribute('aria-pressed', 'true');
-  await allowEdit(page);
-  await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
-  await expect(tvOf(page).locator('.tv-bub.tv-chat')).toHaveCount(0);
-  const saved = await page.evaluate(() => localStorage.getItem('spark-outpost.agent-tv'));
-  expect(JSON.parse(saved ?? '{}')).toMatchObject({ muted: true });
-});
-
-test('with reduced motion there are no packets or bounces, only still faces and text', async ({
-  page,
-}) => {
+test('with reduced motion the face holds still', async ({ page }) => {
   test.setTimeout(60_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await editWaiting(page);
-  const tv = tvOf(page);
-  await expect(tv).toHaveClass(/\bstill\b/);
-  const bob = await blob(page, 'jev')
+  await tvWhileWaiting(page);
+  await expect(tvOf(page)).toHaveClass(/\bstill\b/);
+  const bob = await agent(page)
     .locator('.tv-b')
     .evaluate((element) => getComputedStyle(element).animationName);
   expect(bob).toBe('none');
-
-  await allowEdit(page);
-  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {
-    timeout: 15_000,
-  });
-  await expect(tv.locator('.tv-pk')).toHaveCount(0);
-  await blob(page, 'builder').click();
+  await agent(page).click();
   await expect(details(page)).toBeVisible();
-  const animations = await blob(page, 'builder')
+  const animations = await agent(page)
     .locator('.tv-sq')
     .evaluate((element) => element.getAnimations().length);
   expect(animations).toBe(0);
@@ -218,35 +181,27 @@ test('with reduced motion there are no packets or bounces, only still faces and 
 
 test('sizes and watch mode grow the stage, and the size is remembered', async ({ page }) => {
   test.setTimeout(60_000);
-  await editWaiting(page);
+  await tvWhileWaiting(page);
   const tv = tvOf(page);
   const stageWidth = () =>
     tv.locator('.tv-stage').evaluate((element) => (element as HTMLElement).offsetWidth);
   expect(await stageWidth()).toBe(300);
   await tv.getByRole('radio', { name: 'L', exact: true }).click();
   await expect.poll(stageWidth).toBe(460);
-  await shot(page, 'large');
 
   await tv.getByRole('button', { name: 'Watch mode' }).click();
   await expect(tv).toHaveClass(/\bwatch\b/);
   await expect.poll(stageWidth).toBeGreaterThan(900);
-  const jevSize = await blob(page, 'jev')
-    .locator('svg')
-    .evaluate((element) => element.getBoundingClientRect().width);
-  expect(jevSize).toBeGreaterThan(100);
-  await shot(page, 'watch');
   await page.keyboard.press('Escape');
   await expect(tv).not.toHaveClass(/\bwatch\b/);
   await expect(tv).toBeVisible();
   await expect.poll(stageWidth).toBe(460);
-
-  const saved = await page.evaluate(() => localStorage.getItem('spark-outpost.agent-tv'));
-  expect(JSON.parse(saved ?? '{}')).toMatchObject({ size: 'l' });
+  expect(await savedTv(page)).toMatchObject({ size: 'l' });
 });
 
 test('dragging moves the TV and the position survives a reload', async ({ page }) => {
   test.setTimeout(60_000);
-  await editWaiting(page);
+  await tvWhileWaiting(page);
   const header = tvOf(page).locator('.tv-h');
   const start = (await header.boundingBox())!;
   await page.mouse.move(start.x + 40, start.y + 10);
@@ -254,8 +209,7 @@ test('dragging moves the TV and the position survives a reload', async ({ page }
   await page.mouse.move(start.x - 300, start.y - 200, { steps: 6 });
   await page.mouse.up();
   const moved = (await tvOf(page).boundingBox())!;
-  const saved = await page.evaluate(() => localStorage.getItem('spark-outpost.agent-tv'));
-  const { position } = JSON.parse(saved ?? '{}') as { position: { x: number; y: number } };
+  const { position } = (await savedTv(page)) as { position: { x: number; y: number } };
   expect(Math.round(moved.x)).toBe(Math.round(position.x));
 
   await page.reload();
@@ -266,46 +220,22 @@ test('dragging moves the TV and the position survives a reload', async ({ page }
   expect(Math.round(again.y)).toBe(Math.round(moved.y));
 });
 
-test('recording of a full run with handoffs', async ({ browser }) => {
-  test.skip(!SHOTS, 'Set TV_SHOTS to a folder to capture screenshots and a recording.');
-  test.setTimeout(180_000);
-  const size = { width: 1400, height: 900 };
-  const context = await browser.newContext({
-    viewport: size,
-    recordVideo: { dir: SHOTS, size },
-  });
-  const page = await context.newPage();
-  await crewChat(page, repo, 'Ask before edits');
-  await toggleHeaderPane(page, 'Agent TV');
-  await tvOf(page).getByRole('radio', { name: 'M', exact: true }).click();
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
-  await page.waitForTimeout(350);
-  await page.screenshot({ path: path.join(SHOTS, 'tv-handoff.png') });
-  await blob(page, 'jev').click();
-  await shot(page, 'jev-bubble');
-  await page.keyboard.press('Escape');
-  for (let step = 1; step <= 1; step += 1) {
-    const edit = card(page, /Change a file\?/).filter({
-      has: page.getByRole('button', { name: 'Deny' }),
-    });
-    await expect(edit).toBeVisible({ timeout: 30_000 });
-    if (step === 1) await shot(page, 'waiting');
-    await page.waitForTimeout(1200);
-    await edit.getByRole('button', { name: 'Allow', exact: true }).click();
-  }
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await shot(page, 'review');
-  await tvOf(page).getByRole('button', { name: 'Watch mode' }).click();
-  await shot(page, 'watch');
-  await page.keyboard.press('Escape');
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
-  await page.waitForTimeout(2500);
-  await shot(page, 'done');
-  const video = page.video();
-  await context.close();
-  await video?.saveAs(path.join(SHOTS, 'tv-run.webm'));
-  await video?.delete();
+test('Agent TV keeps following its chat while you look at another one', async ({ page }) => {
+  test.setTimeout(90_000);
+  const edit = await tvWhileWaiting(page);
+  const tv = tvOf(page);
+  await tv.getByRole('radio', { name: 'List' }).click();
+  const row = tv.getByRole('list', { name: 'Running' }).getByRole('listitem');
+  await expect(row).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveAttribute(
+    'placeholder',
+    /^Ask anything/,
+  );
+  await expect(tv).toBeVisible();
+  await expect(row).toHaveCount(1);
+  await row.getByRole('button', { name: /^Open .+ in the chat$/ }).click();
+  await expect(edit).toBeVisible();
+  await expect(tv).toBeVisible();
 });

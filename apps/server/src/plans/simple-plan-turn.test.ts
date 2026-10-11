@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RunInput } from '../workflow/run-input.ts';
 import { isExitPlanAllow, plansThisTurn } from './plan-mode.ts';
-import {
-  asPlanTurn,
-  asksToBuild,
-  isPlanCommand,
-  isPlanModeChat,
-  planCommandText,
-} from './simple-plan-turn.ts';
+import { asPlanTurn, isPlanCommand, isPlanModeChat, planCommandText } from './simple-plan-turn.ts';
 
 const input = (extra: Partial<RunInput> = {}): RunInput =>
   ({
@@ -46,14 +40,6 @@ describe('what starts a plan turn', () => {
     expect(isPlanModeChat(input({ userRequest: 'Add CSV export' }))).toBe(false);
     expect(isPlanModeChat({ ...planChat, projectRoots: [] })).toBe(false);
   });
-
-  it('reads a build request by rule, and leaves a question a question', () => {
-    expect(asksToBuild('Add CSV export to the reports page', null)).toBe(true);
-    expect(asksToBuild('Fix the crash when the file is empty', null)).toBe(true);
-    expect(asksToBuild('What does parseDate do?', null)).toBe(false);
-    expect(asksToBuild('Write a plan for CSV export', null)).toBe(false);
-    expect(asksToBuild('Check the site', null)).toBe(false);
-  });
 });
 
 describe('asPlanTurn', () => {
@@ -82,6 +68,28 @@ describe('asPlanTurn', () => {
     });
   });
 
+  it('is a read-only turn with the message as typed when the agent has no plan mode of its own', () => {
+    const codex = input({
+      provider: 'codex',
+      agentMode: 'agent-full-access',
+      settings: {
+        method: 'cli',
+        model: 'gpt-6-sol',
+        modelLabel: null,
+        effort: null,
+        mode: 'agent-full-access',
+      },
+    });
+    const turn = asPlanTurn(codex);
+    expect(turn).toMatchObject({
+      prompt: '/plan Add CSV export',
+      userRequest: '/plan Add CSV export',
+      mode: 'ask',
+      planning: true,
+    });
+    expect(turn.plansFirst).toBeUndefined();
+  });
+
   it('keeps a bare /plan as the message', () => {
     expect(asPlanTurn(input({ prompt: '/plan', userRequest: '/plan' })).userRequest).toBe('/plan');
   });
@@ -94,10 +102,9 @@ describe('plan mode chosen by wording', () => {
     userRequest: "Plan only: don't change files yet",
   };
 
-  it("is never set from the wording when only the user's mode counts", () => {
-    expect(plansThisTurn(codexAsk)).toBe(true);
-    expect(plansThisTurn(codexAsk, true)).toBe(false);
-    expect(plansThisTurn({ ...codexAsk, provider: 'claude' }, true)).toBe(true);
+  it("is never set from the wording: only the user's mode counts", () => {
+    expect(plansThisTurn(codexAsk)).toBe(false);
+    expect(plansThisTurn({ ...codexAsk, provider: 'claude' })).toBe(true);
   });
 });
 

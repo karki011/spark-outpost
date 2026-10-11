@@ -5,10 +5,12 @@ export const railKindSchema = z.enum([
   'outside_delete',
   'secret',
   'force_push',
+  'other_push',
   'git_control',
   'instructions',
   'sent_out',
   'other_piece',
+  'stacked_push',
 ]);
 export type RailKind = z.infer<typeof railKindSchema>;
 
@@ -42,10 +44,12 @@ const RAIL_VERBS: Record<RailKind, string> = {
   outside_delete: 'deleted outside the project',
   secret: 'touched a secret file',
   force_push: 'force-pushed',
+  other_push: "pushed a branch that isn't this chat's own",
   git_control: 'changed git hooks or config',
   instructions: 'changed agent instructions',
   sent_out: 'sent data out',
   other_piece: 'changed a file another piece owns',
+  stacked_push: 'pushed a branch whose parent branch is not on the remote',
 };
 
 const SHOWN_PATHS = 3;

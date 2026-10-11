@@ -113,6 +113,26 @@ export async function chatWorktreeAt(db: Queryable, path: string): Promise<ChatW
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
+export async function branchesStackedOn(db: Queryable, path: string): Promise<string[]> {
+  const { rows } = await db.query<{ branch: string }>(
+    `WITH RECURSIVE stacked AS (
+       SELECT child.repo_root, child.branch
+       FROM chat_worktrees parent
+       JOIN chat_worktrees child
+         ON child.repo_root = parent.repo_root AND child.base_branch = parent.branch
+        AND child.branch <> parent.branch
+       WHERE parent.path = $1 AND parent.owns_branch AND NOT parent.in_place
+       UNION
+       SELECT next.repo_root, next.branch
+       FROM stacked JOIN chat_worktrees next
+         ON next.repo_root = stacked.repo_root AND next.base_branch = stacked.branch
+     )
+     SELECT DISTINCT branch FROM stacked ORDER BY branch`,
+    [path],
+  );
+  return rows.map((row) => row.branch);
+}
+
 export async function chatWorktreesOf(
   db: Queryable,
   conversationId: string,

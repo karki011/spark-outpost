@@ -18,14 +18,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { DiffChip } from '../diff/DiffChip.tsx';
 import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
-import { useSteer } from '../crew/use-steer.ts';
-import {
-  belongsTo,
-  conversationCrew,
-  crewOrchestration,
-  latestOrchestration,
-  tvCrew,
-} from '../crew/conversation-crew.ts';
+import { belongsTo, conversationCrew, storedCrew, tvCrew } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { BrowserPane } from '../browser/BrowserPane.tsx';
 import { ChatLinks } from '../browser/ChatLinks.tsx';
@@ -72,7 +65,7 @@ import { QueueStrip } from './queue/QueueStrip.tsx';
 import { sendNowStatus } from './queue/send-choice.ts';
 import { queueMode } from './queue/queue-model.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
-import { activeRun } from './turns.ts';
+import { activeRun, latestReplyId } from './turns.ts';
 import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
@@ -121,9 +114,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   );
   const sends = useChatSend(conversationId, savedIds, refresh);
   const attachments = useAttachments();
-  const latestReplyId =
-    detail.data?.messages.findLast((message) => message.role === 'assistant')?.id ?? null;
-  const quotes = useQuotes(conversationId, latestReplyId);
+  const latestReply = useMemo(
+    () => (detail.data ? latestReplyId(detail.data) : null),
+    [detail.data],
+  );
+  const quotes = useQuotes(conversationId, latestReply);
   const drop = useFileDrop(attachments.add);
   const stop = useStop(conversationId, detail.data, refresh);
   const startFresh = useMutation({
@@ -168,12 +163,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     turns: detail.data?.runs.length ?? 0,
   });
   const crew = conversationCrew(detail.data);
-  const orchestration = latestOrchestration(detail.data);
-  const steer = useSteer(conversationId, running ? orchestration : null);
   const openTask = useStableCallback(panel.openTask);
   const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
-  const crewRun = crewOrchestration(detail.data);
+  const crewRun = storedCrew(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
   const [auditOpen, setAuditOpen] = useState(false);
   const [panelTab, setPanelTab] = useState<WorkTab>('tasks');
@@ -396,7 +389,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     settings={settings}
                     providers={connected}
                     runs={detail.data?.runs ?? []}
-                    orchestration={orchestration}
                     usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
                     busy={running !== null}
                     sending={sends.sending}
@@ -421,7 +413,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                       return queue.sendFirst(content);
                     }}
                     busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
-                    steer={steer}
                     above={
                       <PrCard
                         conversationId={conversationId}

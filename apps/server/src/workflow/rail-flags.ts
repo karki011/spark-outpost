@@ -2,9 +2,12 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RailKind } from '@spark-outpost/contracts';
-import { isSecretPath, protectedPath } from '../projects/path-policy.ts';
+import { readGitDirs, WORKTREE_CONFIG_LABEL } from '../approvals/git-dirs.ts';
+import { REPO_GIT_CONFIG } from '../approvals/git-config.ts';
+import { isSecretPath, protectedPath, type GitDirs } from '../projects/path-policy.ts';
 import type { Db } from '../persistence/db.ts';
-import { flagAgentName, insertRailFlag, type NewRailFlag } from '../persistence/rail-flags.ts';
+import type { NewRailFlag } from '../persistence/rail-flags.ts';
+import { raiseRailFlag } from '../observations/raise-flag.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { runGit } from '../ship/git.ts';
 
@@ -17,7 +20,7 @@ interface GitControlFile {
 
 interface RootState {
   root: string;
-  gitDir: string;
+  dirs: GitDirs;
   control: Map<string, GitControlFile>;
   dirty: Set<string>;
 }
@@ -41,11 +44,10 @@ async function readControl(file: string): Promise<GitControlFile | null> {
   return text === null ? null : { hash: hashOf(text), text };
 }
 
-async function readConfig(gitDir: string): Promise<GitControlFile | null> {
-  const file = path.join(gitDir, 'config');
+async function readConfig(file: string): Promise<GitControlFile | null> {
   const text = await readFile(file, 'utf8').catch(() => null);
   if (text === null) return null;
-  const listed = await runGit(gitDir, ['config', '--file', file, '--list']);
+  const listed = await runGit(path.dirname(file), ['config', '--file', file, '--list']);
   const settings = listed.stdout
     .split('\n')
     .filter((line) => line && !line.startsWith('branch.'))
@@ -53,13 +55,16 @@ async function readConfig(gitDir: string): Promise<GitControlFile | null> {
   return { hash: hashOf(settings.join('\n')), text };
 }
 
-async function controlFiles(gitDir: string): Promise<Map<string, GitControlFile>> {
+async function controlFiles(dirs: GitDirs): Promise<Map<string, GitControlFile>> {
   const files = new Map<string, GitControlFile>();
-  const config = await readConfig(gitDir);
-  if (config) files.set('.git/config', config);
-  const hooks = await readdir(path.join(gitDir, 'hooks')).catch(() => [] as string[]);
+  const config = await readConfig(path.join(dirs.common, 'config'));
+  if (config) files.set(REPO_GIT_CONFIG, config);
+  const own =
+    dirs.own === dirs.common ? null : await readConfig(path.join(dirs.own, 'config.worktree'));
+  if (own) files.set(WORKTREE_CONFIG_LABEL, own);
+  const hooks = await readdir(path.join(dirs.common, 'hooks')).catch(() => [] as string[]);
   for (const name of hooks.filter((hook) => !hook.endsWith('.sample'))) {
-    const hook = await readControl(path.join(gitDir, 'hooks', name));
+    const hook = await readControl(path.join(dirs.common, 'hooks', name));
     if (hook) files.set(`.git/hooks/${name}`, hook);
   }
   return files;
@@ -77,10 +82,9 @@ async function dirtyPaths(root: string): Promise<Set<string>> {
 }
 
 async function rootState(root: string): Promise<RootState | null> {
-  const common = await runGit(root, ['rev-parse', '--path-format=absolute', '--git-common-dir']);
-  if (common.code !== 0) return null;
-  const gitDir = common.stdout.trim();
-  return { root, gitDir, control: await controlFiles(gitDir), dirty: await dirtyPaths(root) };
+  const dirs = await readGitDirs(root);
+  if (!dirs) return null;
+  return { root, dirs, control: await controlFiles(dirs), dirty: await dirtyPaths(root) };
 }
 
 function changedControl(before: RootState, after: Map<string, GitControlFile>): NewRailFlag | null {
@@ -132,24 +136,16 @@ async function approvedPaths(db: Db, runId: string): Promise<Set<string>> {
 
 export async function startRailFlags(options: RailFlagsOptions): Promise<RailFlagRecorder> {
   const { db, runId, audit } = options;
-  const agent = await flagAgentName(db, runId);
   const roots = (await Promise.all(options.projectRoots.map(rootState))).filter(
     (state): state is RootState => state !== null,
   );
-  const record = async (flag: NewRailFlag) => {
-    const saved = await insertRailFlag(db, runId, agent, flag);
-    if (!saved) return;
-    audit.message('harness', {
-      method: 'spark/rail_crossed',
-      params: { flagId: saved.id, rail: saved.rail, title: saved.title, paths: saved.paths },
-    });
-  };
+  const record = (flag: NewRailFlag) => raiseRailFlag(db, runId, audit, flag);
   return {
     record,
     async finish() {
       const approved = await approvedPaths(db, runId);
       for (const before of roots) {
-        const control = changedControl(before, await controlFiles(before.gitDir));
+        const control = changedControl(before, await controlFiles(before.dirs));
         const found = [
           ...(control ? [control] : []),
           ...changedProtected(before, await dirtyPaths(before.root)),

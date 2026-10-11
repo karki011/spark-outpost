@@ -7,7 +7,7 @@ import { diffApi, diffKeys } from '../diff/diff-api.ts';
 import { CoreImpactNote } from '../map/CoreImpactNote.tsx';
 import { ShipControl } from '../ship/ShipControl.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
-import { crewNames } from './CrewPane.tsx';
+import { runNames } from './run-names.ts';
 import { useViewChanges } from './view-changes.ts';
 
 function runName(run: ChangeRunSummary, names: ReadonlyMap<string, string>): string {
@@ -42,7 +42,7 @@ export function ChangesPane({ taskId, conversationId, runs }: ChangesPaneProps) 
     queryKey: diffKeys.summary(taskId),
     queryFn: () => diffApi.summary(taskId),
   });
-  const names = new Map(crewNames(runs).map((name, index) => [runs[index]!.id, name]));
+  const names = new Map(runNames(runs).map((name, index) => [runs[index]!.id, name]));
   const data = summary.data;
   const groups = data?.runs ?? [];
   const settled = runs.length > 0 && runs.every((run) => isTerminalRunStatus(run.status));

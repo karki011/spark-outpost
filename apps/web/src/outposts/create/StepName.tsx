@@ -5,10 +5,11 @@ interface StepNameProps {
   inputRef: Ref<HTMLInputElement>;
   name: string;
   problem: string | null;
+  locked?: boolean;
   onName: (name: string) => void;
 }
 
-export function StepName({ inputRef, name, problem, onName }: StepNameProps) {
+export function StepName({ inputRef, name, problem, locked = false, onName }: StepNameProps) {
   const ids = useId();
   return (
     <section className="op-step" aria-label="Name">
@@ -23,6 +24,7 @@ export function StepName({ inputRef, name, problem, onName }: StepNameProps) {
           className="inp"
           value={name}
           maxLength={OUTPOST_NAME_MAX}
+          readOnly={locked}
           aria-invalid={problem !== null}
           aria-describedby={problem ? `${ids}problem` : `${ids}hint`}
           onChange={(event) => onName(event.target.value)}
@@ -33,7 +35,9 @@ export function StepName({ inputRef, name, problem, onName }: StepNameProps) {
           </small>
         ) : (
           <small id={`${ids}hint`} className="op-field-hint">
-            You can rename it later.
+            {locked
+              ? 'The new chats join this outpost. Rename it from its page.'
+              : 'You can rename it later.'}
           </small>
         )}
       </label>

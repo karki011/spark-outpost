@@ -27,7 +27,7 @@ import { closeChatMenu, headerPaneItem, openChatMenu } from './header-menu.ts';
 test.describe.configure({ timeout: 120_000 });
 
 const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
-const UNDER_MORE = ['Phone'];
+const UNDER_MORE = ['Remote control'];
 const SECTIONS = [
   'Spark',
   'Crew',
@@ -193,9 +193,9 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
     asRemote(opened, { reset: false }),
   );
   await expect(phone.getByRole('textbox', { name: 'Message' })).toBeVisible();
-  const menu = await openChatMenu(phone);
-  await expect(menu.getByRole('menuitemcheckbox')).toHaveCount(0);
-  await expect(menu.getByRole('separator')).toHaveCount(0);
+  await openChatMenu(phone);
+  await expect(headerPaneItem(phone, 'Terminal')).toHaveCount(0);
+  await expect(headerPaneItem(phone, 'Browser')).toHaveCount(0);
   await closeChatMenu(phone);
   await expect(phone.getByRole('button', { name: /Terminal|Browser/ })).toHaveCount(0);
 
@@ -207,16 +207,16 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
   await expect(phone.getByRole('region', { name: 'Full Disk Access' })).toHaveCount(0);
   await expect(phone.getByRole('button', { name: 'Export diagnostics' })).toHaveCount(0);
   await tabs.getByRole('tab', { name: 'Reset' }).click();
-  await expect(phone.getByRole('note')).toHaveText('Turned off for phones on your Mac');
+  await expect(phone.getByRole('note')).toHaveText('Turned off for remote control on your Mac');
   await shot(phone, 'remote-settings-reset-off');
   await phone.keyboard.press('Escape');
 
   await navButton(phone, 'More').click();
-  await navButton(phone, 'Phone').click();
+  await navButton(phone, 'Remote control').click();
   await expect(phone.getByRole('heading', { name: 'Connected to your Mac' })).toBeVisible();
   await expect(phone.getByText('Maya’s iPhone')).toBeVisible();
   await expect(phone.getByText('https://mac.tail.test')).toBeVisible();
-  await expect(phone.getByRole('button', { name: 'Pair a phone' })).toHaveCount(0);
+  await expect(phone.getByRole('button', { name: 'Pair a device' })).toHaveCount(0);
   await expect(phone.getByRole('switch')).toHaveCount(0);
   await expect(phone.getByText(/Change these on your Mac/)).toBeVisible();
   await shot(phone, 'remote-phone-page');
@@ -241,7 +241,7 @@ test('the desktop rail keeps all eight entries', async ({ page }) => {
     /^Tickets/,
     /^Map/,
     /^Docs/,
-    /^Phone/,
+    /^Remote$/,
     /^Settings/,
   ]);
   await shot(page, 'rail');

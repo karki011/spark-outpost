@@ -3,10 +3,7 @@ import {
   checkCause,
   checkDetails,
   checkLine,
-  checkStatusOf,
   failingChecks,
-  unrelatedFailures,
-  unsettledChecks,
   type CheckBody,
   type CheckResult,
 } from './checks.ts';
@@ -55,8 +52,6 @@ describe('check lines', () => {
       "Checks for Rivet's copy: lint passed · typecheck already failing before this change · tests failed",
     );
     expect(failingChecks(round).map((check) => check.command)).toEqual(['npm test']);
-    expect(unsettledChecks(round).map((check) => check.command)).toEqual(['npm run typecheck']);
-    expect(checkStatusOf(round.results)).toBe('failed');
   });
 
   it('never counts a timeout, a setup problem or an old failure against the change', () => {
@@ -71,8 +66,6 @@ describe('check lines', () => {
       }),
     ];
     expect(results.map(checkCause)).toEqual(['timeout', 'environment', 'baseline']);
-    expect(checkStatusOf(results)).toBe('skipped');
-    expect(checkStatusOf([...results, result({ command: 'x', kind: 'custom' })])).toBe('passed');
     expect(checkLine(body('skipped', results))).toBe(
       'Checks for Rivet: tests could not finish in time · lint could not run · typecheck already failing before this change',
     );
@@ -96,7 +89,6 @@ describe('check lines', () => {
       },
     });
     const round = body('skipped', [unsure]);
-    expect(checkStatusOf(round.results)).toBe('skipped');
     expect(failingChecks(round)).toEqual([]);
     expect(checkLine(round)).toBe(
       "Checks for Rivet: tests failed before this change or can't tell",
@@ -104,7 +96,6 @@ describe('check lines', () => {
     expect(checkDetails(round)[0]).toBe(
       '`npm test` · exit 1 in 1.2 s · passes before this change (01234567, remembered result, not relied on) · nothing ties this to the change: it fails in files the change does not touch, and no comparable run on the base commit passed',
     );
-    expect(unrelatedFailures(unsure)).toEqual(['task dates:test']);
   });
 
   it('says in one phrase when a fix turn left the same failure for the user', () => {

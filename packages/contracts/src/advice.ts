@@ -1,15 +1,8 @@
 import { z } from 'zod';
 import { involvementLevelSchema } from './involvement-levels.ts';
-import {
-  categorySchema,
-  titleOriginSchema,
-  upgradeLegacyCategory,
-  type Category,
-} from './categories.ts';
+import { categorySchema, titleOriginSchema, upgradeLegacyCategory } from './categories.ts';
 
 export const intentSchema = z.preprocess(upgradeLegacyCategory, categorySchema);
-export type Intent = Category;
-
 export const riskSchema = z.enum(['read-only', 'edits', 'multi-file', 'destructive']);
 export type Risk = z.infer<typeof riskSchema>;
 
@@ -17,8 +10,6 @@ export const depthSchema = z.enum(['direct', 'execute', 'plan_execute', 'plan_ex
 export type Depth = z.infer<typeof depthSchema>;
 
 export const gateDecisionSchema = z.enum(['act', 'ask', 'fallback']);
-export type GateDecision = z.infer<typeof gateDecisionSchema>;
-
 export const modelRoutingSchema = z.enum(['pinned', 'auto']);
 export type ModelRouting = z.infer<typeof modelRoutingSchema>;
 
@@ -42,44 +33,20 @@ export const intakeAnswerSchema = z.object({
   modelLabel: z.string().nullable(),
   effort: z.string().nullable(),
 });
-export type IntakeAnswer = z.infer<typeof intakeAnswerSchema>;
-
 export const scopeSchema = z.enum(['one_spot', 'one_module', 'few_modules', 'codebase']);
-export type Scope = z.infer<typeof scopeSchema>;
-
-const SCOPE_LABELS: Record<Scope, string> = {
-  one_spot: 'one spot',
-  one_module: 'one module',
-  few_modules: 'a few modules',
-  codebase: 'across the codebase',
-};
-
-export function scopeLabel(scope: Scope): string {
-  return SCOPE_LABELS[scope];
-}
-
 export const routeTierSchema = z.enum(['small', 'mid', 'top']);
-export type RouteTier = z.infer<typeof routeTierSchema>;
-
 const noul = z.number().min(0).max(1);
-
-export const RATING_KEYS = ['complexity', 'ambiguity', 'stakes', 'contextDependence'] as const;
-export type RatingKey = (typeof RATING_KEYS)[number];
 
 export const ratingSchema = z.object({
   value: z.number().int().min(1).max(5),
   confidence: z.number().min(0).max(1),
 });
-export type Rating = z.infer<typeof ratingSchema>;
-
 export const ratingsSchema = z.object({
   complexity: ratingSchema.optional(),
   ambiguity: ratingSchema.optional(),
   stakes: ratingSchema.optional(),
   contextDependence: ratingSchema.optional(),
 });
-export type Ratings = z.infer<typeof ratingsSchema>;
-
 export const jevIntakeSchema = intakeAnswerSchema.extend({
   scope: scopeSchema.nullable().optional(),
   reviewExisting: noul.optional(),
@@ -106,8 +73,6 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   routeConfidence: z.number().min(0).max(1).nullable(),
   confidences: z.record(z.string(), z.number()),
 });
-export type JevIntake = z.infer<typeof jevIntakeSchema>;
-
 export const gateSchema = z.object({
   decision: gateDecisionSchema,
   confidence: z.number(),
@@ -117,8 +82,6 @@ export const gateSchema = z.object({
   askAt: z.number(),
   clarifyBelow: z.number().nullable(),
 });
-export type Gate = z.infer<typeof gateSchema>;
-
 export const mechanicalNoteSchema = z.object({
   mechanical: z.boolean(),
   source: z.enum(['jev', 'rules']),
@@ -126,8 +89,6 @@ export const mechanicalNoteSchema = z.object({
   rule: z.boolean(),
   summary: z.string(),
 });
-export type MechanicalNote = z.infer<typeof mechanicalNoteSchema>;
-
 export const adviceUsageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
@@ -169,13 +130,6 @@ export const adviceSummarySchema = z.object({
 });
 export type AdviceSummary = z.infer<typeof adviceSummarySchema>;
 
-export const adviceBodySchema = adviceSummarySchema.extend({
-  state: z.record(z.string(), z.unknown()).nullable(),
-  questions: z.record(z.string(), z.unknown()).nullable(),
-  answers: z.record(z.string(), z.unknown()).nullable(),
-});
-export type AdviceBody = z.infer<typeof adviceBodySchema>;
-
 export const advisorUsageSchema = z.object({
   advisor: z.string(),
   calls: z.number().int().nonnegative(),
@@ -193,12 +147,6 @@ const DEPTH_LABELS: Record<Depth, string> = {
 
 export function depthLabel(depth: Depth): string {
   return DEPTH_LABELS[depth];
-}
-
-const COMPARED_FIELDS = ['provider', 'model', 'effort', 'depth', 'risk'] as const;
-
-export function adviceDifferences(rules: IntakeAnswer, jev: IntakeAnswer): string[] {
-  return COMPARED_FIELDS.filter((field) => rules[field] !== jev[field]);
 }
 
 const ADVISOR_LABELS: Record<string, string> = { jev: 'Jev' };

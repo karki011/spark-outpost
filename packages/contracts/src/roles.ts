@@ -41,29 +41,12 @@ const ROLE_DUTIES: Record<AgentRole, string> = {
   spark: 'does the job you handed it',
 };
 
-export const JEV_NAME = 'Jev';
-
 export function agentRoleLabel(role: AgentRole): string {
   return ROLE_LABELS[role];
 }
 
 export function agentName(role: AgentRole, ordinal = 1): string {
   return ordinal > 1 ? `${ROLE_LABELS[role]} ${ordinal}` : ROLE_LABELS[role];
-}
-
-export function crewName(role: AgentRole, index: number): string {
-  const pool = CREW_NAMES[role];
-  const name = pool[index % pool.length]!;
-  const round = Math.floor(index / pool.length);
-  return round > 0 ? `${name} ${round + 1}` : name;
-}
-
-export function nextCrewName(role: AgentRole, used: Iterable<string>): string {
-  const taken = new Set(used);
-  for (let index = 0; ; index += 1) {
-    const name = crewName(role, index);
-    if (!taken.has(name)) return name;
-  }
 }
 
 export function agentLabel(

@@ -8,39 +8,7 @@ import {
   type PieceViolation,
   type TaskPiece,
 } from '@spark-outpost/contracts';
-import { withTransaction, type Db, type Queryable } from './db.ts';
-import { newId } from './ids.ts';
-
-export interface NewPiece {
-  key: string;
-  title: string;
-  goal: string;
-  owns: readonly string[];
-  reads: readonly string[];
-  dependsOn: readonly string[];
-  contract: string | null;
-  acceptance: readonly string[];
-  checks: readonly string[];
-  research: boolean;
-  sizeEstimate: number;
-  placement: PiecePlacement;
-  provider: string | null;
-  model: string | null;
-  pickNote?: string | null;
-}
-
-export interface NewPieceList {
-  taskId: string;
-  orchestrationRunId: string;
-  planDocumentId: string | null;
-  planVersion: number | null;
-  piecesHash: string;
-  placement: ListPlacement;
-  placementReason: string;
-  integration: string | null;
-  approvedBy: 'user' | 'level' | null;
-  pieces: readonly NewPiece[];
-}
+import type { Queryable } from './db.ts';
 
 interface ListRow {
   id: string;
@@ -159,72 +127,6 @@ async function piecesOf(db: Queryable, listIds: readonly string[]): Promise<Piec
   return rows;
 }
 
-export async function insertPieceList(db: Db, list: NewPieceList): Promise<PieceList> {
-  const id = newId();
-  await withTransaction(db, async (client) => {
-    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [list.taskId]);
-    await client.query(
-      `UPDATE piece_lists SET status = 'superseded'
-       WHERE task_id = $1 AND status IN ('proposed', 'approved')`,
-      [list.taskId],
-    );
-    await client.query(
-      `INSERT INTO piece_lists (id, task_id, orchestration_run_id, version, plan_document_id,
-         plan_version, pieces_hash, placement, placement_reason, integration, status, approved_by)
-       SELECT $1, $2, $3, COALESCE(MAX(version), 0) + 1, $4, $5, $6, $7, $8, $9, $10, $11
-       FROM piece_lists WHERE task_id = $2`,
-      [
-        id,
-        list.taskId,
-        list.orchestrationRunId,
-        list.planDocumentId,
-        list.planVersion,
-        list.piecesHash,
-        list.placement,
-        list.placementReason,
-        list.integration,
-        list.approvedBy ? 'approved' : 'proposed',
-        list.approvedBy,
-      ],
-    );
-    for (const [position, piece] of list.pieces.entries()) {
-      await client.query(
-        `INSERT INTO task_pieces (id, piece_list_id, position, key, title, goal, owns, reads,
-           depends_on, contract, acceptance, checks, research, size_estimate, placement,
-           provider, model, pick_note, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-           $18, 'pending')`,
-        [
-          newId(),
-          id,
-          position,
-          piece.key,
-          piece.title,
-          piece.goal,
-          piece.owns,
-          piece.reads,
-          piece.dependsOn,
-          piece.contract,
-          piece.acceptance,
-          piece.checks,
-          piece.research,
-          piece.sizeEstimate,
-          piece.placement,
-          piece.provider,
-          piece.model,
-          piece.pickNote ?? null,
-        ],
-      );
-    }
-  });
-  return (await pieceListById(db, id))!;
-}
-
-export async function pieceListById(db: Queryable, id: string): Promise<PieceList | null> {
-  const { rows } = await db.query<ListRow>('SELECT * FROM piece_lists WHERE id = $1', [id]);
-  return rows[0] ? toList(rows[0], await piecesOf(db, [id])) : null;
-}
-
 export async function currentPieceList(db: Queryable, taskId: string): Promise<PieceList | null> {
   const { rows } = await db.query<ListRow>(
     `SELECT * FROM piece_lists WHERE task_id = $1 AND status IN ('proposed', 'approved')
@@ -249,60 +151,6 @@ export async function pieceListsForRuns(
     rows.map((row) => row.id),
   );
   return new Map(rows.map((row) => [row.orchestration_run_id, toList(row, pieces)]));
-}
-
-export interface PiecePatch {
-  builderRunId?: string;
-  owns?: readonly string[];
-  provider?: string;
-  model?: string | null;
-  attempts?: number;
-  fixTurns?: number;
-  filesChanged?: readonly string[];
-  violations?: readonly PieceViolation[];
-  check?: PieceCheck;
-  note?: string | null;
-  pickNote?: string | null;
-}
-
-const PATCH_COLUMNS: Record<keyof PiecePatch, string> = {
-  builderRunId: 'builder_run_id',
-  owns: 'owns',
-  provider: 'provider',
-  model: 'model',
-  attempts: 'attempts',
-  fixTurns: 'fix_turns',
-  filesChanged: 'files_changed',
-  violations: 'violations',
-  check: 'check_status',
-  note: 'note',
-  pickNote: 'pick_note',
-};
-
-function patchValue(key: keyof PiecePatch, value: unknown): unknown {
-  return key === 'violations' ? JSON.stringify(value) : value;
-}
-
-export async function movePiece(
-  db: Queryable,
-  pieceId: string,
-  from: readonly PieceStatus[],
-  to: PieceStatus,
-  patch: PiecePatch = {},
-): Promise<boolean> {
-  const entries = Object.entries(patch).filter(([, value]) => value !== undefined) as [
-    keyof PiecePatch,
-    unknown,
-  ][];
-  const sets = entries.map(([key], index) => `${PATCH_COLUMNS[key]} = $${index + 4}`);
-  const { rowCount } = await db.query(
-    `UPDATE task_pieces SET status = $2,
-       landed_at = CASE WHEN $2 = 'landed' THEN now() ELSE landed_at END
-       ${sets.length > 0 ? `, ${sets.join(', ')}` : ''}
-     WHERE id = $1 AND status = ANY($3::text[])`,
-    [pieceId, to, from, ...entries.map(([key, value]) => patchValue(key, value))],
-  );
-  return rowCount === 1;
 }
 
 export async function failRunningPieces(db: Queryable, note: string): Promise<number> {

@@ -8,7 +8,6 @@ import {
   type ContextLevel,
   type AdvisorUsage,
   type ConversationUsage,
-  type Orchestration,
   type Run,
 } from '@spark-outpost/contracts';
 import { usePopover } from '../../ui/use-popover.ts';
@@ -18,10 +17,8 @@ import {
   contextPercent,
   costTip,
   latestContext,
-  taskContext,
   usageLine,
   type ContextReading,
-  type TaskContext,
 } from '../../usage/format.ts';
 import '../../usage/usage.css';
 import { setupApi, setupKey } from '../../api/setup.ts';
@@ -57,19 +54,13 @@ interface ContextRingProps {
   runs: Run[];
   provider: string | null;
   usageTotals: ConversationUsage;
-  orchestration: Orchestration | null;
   onAudit?: () => void;
 }
 
-function ringLabel(
-  task: TaskContext | null,
-  reading: ContextReading | null,
-  percent: number,
-): string {
+function ringLabel(reading: ContextReading | null, percent: number): string {
   const used = reading?.used ?? 0;
   const size = reading?.size ?? 0;
   const tokens = `${formatTokens(used)} of ${formatTokens(size)} tokens`;
-  if (task) return `Task · ${task.name} · ${percent}% context, ${tokens}`;
   if (reading) return `Context window: ${percent}% used, ${tokens}`;
   return 'Context window: no usage reported yet';
 }
@@ -94,26 +85,19 @@ function advisorLine(entry: AdvisorUsage): string {
   return [calls, usageLine(entry.inputTokens, entry.costUsd, 'estimated')].join(' · ');
 }
 
-export function ContextRing({
-  runs,
-  provider,
-  usageTotals,
-  orchestration,
-  onAudit,
-}: ContextRingProps) {
+export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRingProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
   >();
   const panelId = useId();
-  const task = taskContext(orchestration);
-  const reading = task ?? latestContext(runs, provider);
+  const reading = latestContext(runs, provider);
   const used = reading?.used ?? 0;
   const size = reading?.size ?? 0;
   const percent = contextPercent(used, size);
   const thresholds = useThresholds();
   const level = contextLevel(percent, thresholds);
-  const label = ringLabel(task, reading, percent);
+  const label = ringLabel(reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
 
@@ -151,7 +135,7 @@ export function ContextRing({
         aria-label="Context window"
       >
         <div className="ctx-h">
-          <b>{task ? `Task · ${task.name}` : 'Context window'}</b>
+          <b>Context window</b>
           <span>
             {reading
               ? `${formatTokens(used)} of ${formatTokens(size)} tokens (${percent}%)`
@@ -164,7 +148,7 @@ export function ContextRing({
         <div className="ctx-legend">
           <div>
             <i className="used" />
-            <span>{task ? 'Used by the task session' : 'Used by the last reply'}</span>
+            <span>Used by the last reply</span>
             <b>{formatTokens(used)}</b>
           </div>
           <div className="free">

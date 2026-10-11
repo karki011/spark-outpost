@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertWorktree } from '../src/persistence/worktrees.ts';
 import { addWorktree, branchName, worktreePath } from '../src/projects/worktrees.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
-import { gitRepo, removeRepo } from './orchestration-support.ts';
+import { gitRepo, removeRepo } from './turn-support.ts';
 import { postReset, seedRun } from './reset-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 

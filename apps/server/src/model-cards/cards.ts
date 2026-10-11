@@ -52,6 +52,17 @@ export function cardFor(
   return byId;
 }
 
+export function aliasFamily(
+  id: string,
+  provider: string,
+  cards: readonly ModelCard[] = VENDOR_CARDS.cards,
+): ModelCard[] {
+  const alias = bareId(id).toLowerCase();
+  return cards.filter(
+    (card) => card.provider === provider && card.id.split(/[^a-z0-9]+/).includes(alias),
+  );
+}
+
 export function cardById(id: string): ModelCard | null {
   return VENDOR_CARDS.cards.find((card) => card.id === id) ?? null;
 }

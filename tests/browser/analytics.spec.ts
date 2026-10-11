@@ -94,23 +94,9 @@ test.describe('with three months of history', () => {
       'per good outcome',
     );
 
-    await page.getByRole('tab', { name: 'Spark' }).click();
-    const flow = main.getByRole('region', { name: 'Routing flow' });
-    await expect(
-      flow
-        .getByRole('group', { name: /Routing flow/ })
-        .getByRole('img')
-        .first(),
-    ).toHaveAttribute('aria-label', /^Request: /);
-    await expect(main.getByRole('region', { name: 'Jev confidence and outcome' })).toContainText(
-      '0.90 act',
-    );
-    await expect(
-      main.getByRole('table', { name: /Where the rules and Jev picked differently/ }),
-    ).toBeVisible();
-
+    await page.getByRole('tab', { name: 'Overview' }).click();
     await page.getByRole('radio', { name: '7 days' }).click();
-    await expect(main.locator('.an-sum').first()).toContainText('turn');
+    await expect(activity.locator('.an-sum')).toContainText('turn');
   });
 
   for (const theme of ['apricot', 'aurora'] as const) {
@@ -120,7 +106,7 @@ test.describe('with three months of history', () => {
       await openAnalytics(page);
       await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
       const found = [];
-      for (const tab of ['Overview', 'Spend', 'Spark']) {
+      for (const tab of ['Overview', 'Spend']) {
         await page.getByRole('tab', { name: tab }).click();
         await expect(page.locator('.an-card').first()).toBeVisible();
         const toggles = page.getByRole('button', { name: 'Show data table' });
@@ -200,7 +186,7 @@ test.describe('with three months of history', () => {
   test('fits a phone without horizontal page scroll', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await openAnalytics(page);
-    for (const tab of ['Overview', 'Spend', 'Spark']) {
+    for (const tab of ['Overview', 'Spend']) {
       await page.getByRole('tab', { name: tab }).click();
       await expect(page.locator('.an-card').first()).toBeVisible();
       const overflow = await page.evaluate(() => {

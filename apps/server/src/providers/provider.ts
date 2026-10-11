@@ -87,11 +87,8 @@ export interface ProviderTurn {
   observe?: (output: ProviderOutput) => void;
   audit?: ProtocolObserver;
   mode?: RunMode;
-  builder?: boolean;
-  coordinated?: boolean;
-  sharesTree?: boolean;
+  changesProject?: boolean;
   publishes?: boolean;
-  env?: Readonly<Record<string, string>>;
   planning?: boolean;
   plansFirst?: boolean;
   modeRequests?: ModeRequests;
@@ -101,6 +98,7 @@ export interface ProviderTurn {
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
+  turnPreamble?: string;
   repo?: RepoLaunch;
   userMcp?: readonly UserMcpLaunch[];
   spark?: SparkSessionPrefs;
@@ -124,8 +122,12 @@ export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;
 }
 
+export interface AuditMarks {
+  unreviewed?: boolean;
+}
+
 export interface ProtocolObserver {
-  message(direction: ProtocolDirection, message: unknown): void;
+  message(direction: ProtocolDirection, message: unknown, marks?: AuditMarks): void;
   stderr(chunk: string): void;
 }
 

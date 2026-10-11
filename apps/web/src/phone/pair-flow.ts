@@ -41,7 +41,7 @@ export interface PairFlowInput {
 
 export const ENDING_REASONS: Record<PairEnding, string> = {
   denied: 'You said no, so nothing was paired.',
-  expired: 'That code ran out before a phone used it.',
+  expired: 'That code ran out before a device used it.',
   failed: 'Pairing did not start.',
 };
 
@@ -74,7 +74,7 @@ export function turnFailure(
   answer: { status: TailscaleStatus; message: string | null } | undefined,
 ): string | null {
   if (error instanceof Error) return error.message;
-  if (answer?.status === 'error') return answer.message ?? 'Phone access needs a look.';
+  if (answer?.status === 'error') return answer.message ?? 'Remote control needs a look.';
   return null;
 }
 
@@ -83,9 +83,9 @@ export function activationOf(
   state: { status: TailscaleStatus; message: string | null },
 ): Activation {
   if (turn.pending) return { kind: 'pending', to: turn.pending };
-  if (turn.failed) return { kind: 'failed', reason: `Phone access did not turn ${turn.failed}.` };
+  if (turn.failed) return { kind: 'failed', reason: `Remote control did not turn ${turn.failed}.` };
   if (state.status === 'error') {
-    return { kind: 'failed', reason: state.message ?? 'Phone access needs a look.' };
+    return { kind: 'failed', reason: state.message ?? 'Remote control needs a look.' };
   }
   return null;
 }
@@ -128,21 +128,21 @@ export function motionMood(motion: PairMotion): ScoutMood {
 
 export function stageLine(stage: PairStage, activation: Activation = null): string {
   if (activation?.kind === 'pending') {
-    return activation.to === 'on' ? 'Turning phone access on…' : 'Turning phone access off…';
+    return activation.to === 'on' ? 'Turning remote control on…' : 'Turning remote control off…';
   }
   switch (stage.kind) {
     case 'setup':
       return activation?.kind === 'failed'
         ? activation.reason
-        : 'Turn phone access on to pair a phone.';
+        : 'Turn remote control on to pair a device.';
     case 'ready':
       return 'Ready when you are.';
     case 'code':
       return stage.expiring
         ? 'This code is about to run out.'
-        : 'Scan this with your phone, or type the code.';
+        : 'Scan this with a phone, or open the address on the other device and type the code.';
     case 'found':
-      return `${stage.request.deviceName} wants to pair. Same code on your phone?`;
+      return `${stage.request.deviceName} wants to pair. Same code on the device?`;
     case 'paired':
       return `${stage.deviceName} is paired.`;
     case 'ended':

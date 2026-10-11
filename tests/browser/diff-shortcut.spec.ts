@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { crewRepo, type CrewRepo } from './crew-engine.ts';
+import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { allowEdit, askForEdit, editedChat } from './edited-chat.ts';
 import { openChats } from './navigation.ts';
 
 test.use({ trace: 'off' });
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async () => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 

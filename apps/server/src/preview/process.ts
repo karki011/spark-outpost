@@ -8,6 +8,7 @@ const CONNECT_TIMEOUT_MS = 400;
 const ANSWER_TIMEOUT_MS = 2_000;
 const LOOPBACK = ['127.0.0.1', '::1'];
 const SIZE = { cols: 120, rows: 30 };
+const NO_STARTUP_PROMPTS = { DISABLE_AUTO_UPDATE: 'true', DISABLE_UPDATE_PROMPT: 'true' };
 
 function listening(host: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -36,13 +37,20 @@ export async function answers(url: string): Promise<boolean> {
   }
 }
 
-function spawnInLoginShell(shell: string) {
+export function folderExists(folder: string): Promise<boolean> {
+  return stat(folder).then(
+    (info) => info.isDirectory(),
+    () => false,
+  );
+}
+
+export function spawnInLoginShell(shell: string, kill: (pid: number) => void = killProcessTree) {
   return ({ command, cwd, env }: PreviewSpawn): PreviewProcess => {
     const pty = spawnNodePty(shell, ['-ilc', command], {
       name: 'xterm-256color',
       ...SIZE,
       cwd,
-      env,
+      env: { ...env, ...NO_STARTUP_PROMPTS },
     });
     return {
       pid: pty.pid,
@@ -54,7 +62,7 @@ function spawnInLoginShell(shell: string) {
       onExit: (listener) => {
         pty.onExit(({ exitCode }) => listener({ exitCode }));
       },
-      kill: () => killProcessTree(pty.pid),
+      kill: () => kill(pty.pid),
     };
   };
 }
@@ -68,10 +76,6 @@ export function previewRuntime(
     portFree,
     answers,
     env,
-    folderExists: (folder) =>
-      stat(folder).then(
-        (info) => info.isDirectory(),
-        () => false,
-      ),
+    folderExists,
   };
 }

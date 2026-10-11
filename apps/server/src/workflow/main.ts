@@ -1,5 +1,5 @@
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
-import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -18,8 +18,8 @@ import { createProviders } from './providers.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
+import { ParkedTurns } from './parked-turns.ts';
 import { startWorker } from './worker.ts';
-import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
@@ -27,6 +27,9 @@ import { startPrFollowUp } from '../pr-follow-up/poller.ts';
 import { pollNowForApproval } from '../persistence/pr-watches.ts';
 import { POLL_CHANNEL } from '../pr-tracking/refresh.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
+import { parseAppEvent } from '@spark-outpost/contracts';
+import { TaskWakes } from '../a2a/task-wakes.ts';
+import { stackGit } from '../outposts/stack-git.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
@@ -36,16 +39,13 @@ const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'worker', work: activeWork });
 const approvalWaiters = new ApprovalWaiters();
 const secrets = configuredSecretStore(config);
-const intake = createIntakeRecorder({
-  db,
-  secrets,
-  fetch,
-  baseUrl: config.TYPESAFE_BASE_URL,
-});
+const jevDeps: IntakeDeps = { db, secrets, fetch, baseUrl: config.TYPESAFE_BASE_URL };
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const desktopBrowser = connectDesktopBrowser(process.env, process);
+const outpostWakes = new TaskWakes();
+const parkedTurns = new ParkedTurns();
 const sparkDeps: SparkToolDeps = {
   db,
   secrets,
@@ -61,11 +61,11 @@ const sparkDeps: SparkToolDeps = {
     loginPath: loginShellPath(runCommand, loginShell),
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
-  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
   linkScheme: config.SPARK_LINK_SCHEME,
   codeScan,
   browser: desktopBrowser?.host,
+  outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);
@@ -75,7 +75,6 @@ const worker = startWorker({
   browserPane: sparkTools.browser,
   activeWork,
   approvalWaiters,
-  intake,
   providers: createProviders(
     config.AGENT_RUNTIME,
     config.FAKE_ACP_AGENT,
@@ -88,10 +87,8 @@ const worker = startWorker({
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
   concurrency: config.WORKER_CONCURRENCY,
-  codeScan,
+  parked: parkedTurns,
   branchPrefix: config.BRANCH_PREFIX,
-  coordinator: config.COORDINATOR_MODE,
-  agentSlots: new Slots(config.PARALLEL_AGENT_LIMIT),
   shipAccess: {
     secrets,
     runCommand,
@@ -106,7 +103,7 @@ const worker = startWorker({
 const projectMap = startMapScheduler({
   db,
   scanner: codeScan,
-  jev: intake.deps,
+  jev: jevDeps,
   rootPrefix: config.MAP_ROOT_PREFIX ?? null,
 });
 const prFollowUp = startPrFollowUp({
@@ -122,7 +119,7 @@ const prFollowUp = startPrFollowUp({
     loginEnv: loginShellEnv(runCommand, loginShell),
   },
   branchPrefix: config.BRANCH_PREFIX,
-  jev: intake.deps,
+  jev: jevDeps,
 });
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
 const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => {
@@ -135,6 +132,10 @@ const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => 
     .catch(() => undefined);
 });
 const prPollListener = await listen(config.DATABASE_URL, POLL_CHANNEL, () => prFollowUp.wake());
+const outpostListener = await listen(config.DATABASE_URL, 'changes', (payload) => {
+  const event = parseAppEvent(payload);
+  if (event) outpostWakes.changed(event);
+});
 console.log(
   `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
 );
@@ -144,6 +145,7 @@ const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
   await prPollListener.close();
+  await outpostListener.close();
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();

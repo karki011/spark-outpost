@@ -1,4 +1,4 @@
-import type { IntakeDeps } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';

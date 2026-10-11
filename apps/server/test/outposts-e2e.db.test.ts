@@ -224,8 +224,8 @@ describe('cancelling a request that is working', () => {
     await stack
       .send('post', `/api/outposts/${room.outpostId}/posts/${first.id}/cancel`)
       .expect(200);
-    held.open();
     await reaches(stack, room, first.id, 'cancelled');
+    held.open();
     const second = await post(stack, room.outpostId, '@api and the refund fields');
 
     await reaches(stack, room, second.id, 'answered');

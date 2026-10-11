@@ -14,13 +14,12 @@ import {
   planDocuments,
   rejectPlanDocument,
 } from '../src/persistence/plan-documents.ts';
-import { saveAgreedMessage } from '../src/plans/agreed-plans.ts';
 import { staleFiles } from '../src/plans/plan-staleness.ts';
 import { headCommit } from '../src/projects/snapshot.ts';
 import { PLAN_SAVE_FAILED, createPlanRecorder } from '../src/workflow/plan-recorder.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { linkedConversation, recordingAppend, sendDo } from './approval-support.ts';
-import { gitRepo, removeRepo } from './orchestration-support.ts';
+import { gitRepo, removeRepo } from './turn-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -136,7 +135,7 @@ describe('stale agreed plans', () => {
   });
 });
 
-describe('a reply agreed as the plan', () => {
+describe('a reply saved as the plan', () => {
   let root: string;
   let app: ReturnType<typeof createTestApp>;
 
@@ -158,21 +157,19 @@ describe('a reply agreed as the plan', () => {
     return { id: messageId, conversationId, content, runId, taskId: null };
   }
 
-  it('is saved once, and shows in the task detail', async () => {
+  it('shows in the task detail with the files that changed since', async () => {
     await trackedDoc(root);
     const { conversationId } = await linkedConversation(t, root);
     const message = await reply(conversationId, '## Plan\n1. Edit docs/notes.txt');
-    const agreement = { root, approvedRunId: message.runId };
-    const saved = await saveAgreedMessage(t.db, message, agreement);
-    expect(saved).toMatchObject({
-      status: 'approved',
-      source: 'chat',
-      approvedBy: 'jev',
+    const saved = await insertPlanDocument(t.db, {
+      conversationId,
+      taskId: null,
+      source: 'user',
+      body: message.content,
+      sourceRunId: message.runId,
       sourceMessageId: message.id,
-      approvedCommit: await headCommit(root),
+      approval: { by: 'user', option: null, runId: null, commit: await headCommit(root) },
     });
-    const again = await saveAgreedMessage(t.db, message, agreement);
-    expect(again.id).toBe(saved.id);
 
     const taskId = randomUUID();
     await t.db.query(`INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, 'Plan')`, [

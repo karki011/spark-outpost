@@ -42,8 +42,8 @@ function run(command: string): ApprovalRequest {
 function verdicts(command: string) {
   return POSTURES.flatMap((posture) =>
     GRANTS.flatMap((grant) =>
-      [true, false].map((builder) => {
-        const options: DecideOptions = { builder, files, publish: { grant, task: TASK } };
+      [true, false].map((changesProject) => {
+        const options: DecideOptions = { changesProject, files, publish: { grant, task: TASK } };
         return decide(posture, run(command), NO_RUN_RULES, [], options);
       }),
     ),
@@ -74,7 +74,6 @@ describe('decide() reads a git command the same with and without a redirection',
     'git remote set-url origin https://evil.example/r',
     'git remote -v',
     'git config core.hooksPath /dev/null',
-    'git config user.name',
     'git commit -m x',
   ])('%s', (command) => {
     const plain = verdicts(command);

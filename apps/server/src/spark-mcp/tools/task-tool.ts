@@ -27,23 +27,37 @@ function currentPlan(task: TaskDetail) {
   };
 }
 
-function planDocument(documents: readonly PlanDocument[], staleFiles: readonly string[]) {
-  const shown =
-    documents.findLast((document) => document.status === 'approved') ?? documents.at(-1);
-  if (!shown) return null;
-  const body =
-    shown.body.length > PLAN_CHARS
-      ? `${shown.body.slice(0, PLAN_CHARS)}… (${shown.body.length} chars)`
-      : shown.body;
+function planBody(plan: PlanDocument): string {
+  return plan.body.length > PLAN_CHARS
+    ? `${plan.body.slice(0, PLAN_CHARS)}… (${plan.body.length} chars)`
+    : plan.body;
+}
+
+function agreedPlan(documents: readonly PlanDocument[], staleFiles: readonly string[]) {
+  const approved = documents.findLast((document) => document.status === 'approved');
+  if (!approved) return null;
   return {
-    version: shown.version,
-    status: shown.status,
-    source: shown.source,
-    approvedBy: shown.approvedBy,
-    approvedAt: shown.approvedAt,
+    version: approved.version,
+    status: approved.status,
+    source: approved.source,
+    approvedBy: approved.approvedBy,
+    approvedAt: approved.approvedAt,
     versions: documents.length,
     ...(staleFiles.length > 0 ? { changedSinceAgreed: staleFiles } : {}),
-    body,
+    body: planBody(approved),
+  };
+}
+
+function proposedPlan(documents: readonly PlanDocument[]) {
+  const latest = documents.at(-1);
+  if (latest?.status !== 'proposed') return {};
+  return {
+    proposedPlan: {
+      version: latest.version,
+      status: latest.status,
+      source: latest.source,
+      body: planBody(latest),
+    },
   };
 }
 
@@ -100,7 +114,8 @@ async function taskView(
       costUsd: round(task.costUsd),
     },
     plan: currentPlan(task),
-    agreedPlan: planDocument(agreed.documents, agreed.staleFiles),
+    agreedPlan: agreedPlan(agreed.documents, agreed.staleFiles),
+    ...proposedPlan(agreed.documents),
     checklist: task.items.map((item) => ({
       item: item.label,
       state: item.state,
@@ -115,7 +130,7 @@ export const taskTool = sparkTool({
   name: 'spark_task',
   title: 'Task, plan and changes',
   description:
-    "The task behind a chat (default: this chat's latest): its current plan version and steps, the agreed plan document (version, who approved it, files changed since), the checklist, every file changed per run (path, added/modified/deleted, lines added and removed, whether the run was reverted; never file contents) and linked PRs.",
+    "The task behind a chat (default: this chat's latest): its current plan version and steps, the agreed plan document (version, who approved it, files changed since) or a plan proposed and not approved, the checklist, every file changed per run (path, added/modified/deleted, lines added and removed, whether the run was reverted; never file contents) and linked PRs.",
   input: runLookupInput,
   run: (args, context) => taskView(context, args),
 });

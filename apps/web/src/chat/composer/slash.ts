@@ -58,7 +58,7 @@ function clientCommands(context: SlashContext): ClientItem[] {
       description: 'Ask for a review of the changes',
       hint: 'what to review',
       detail:
-        'Example: /review the parser changes. In Do, a Critic reviews the changes as they land.',
+        'Example: /review the parser changes. The agent reviews them and reports what it finds.',
     },
     {
       name: 'mcp',

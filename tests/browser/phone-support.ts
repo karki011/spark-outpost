@@ -109,20 +109,20 @@ export async function openPhone(page: Page) {
   await page.goto('/');
   await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Phone' })
+    .getByRole('button', { name: 'Remote control' })
     .click();
-  await expect(page.getByRole('heading', { name: 'Phone', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Remote control', level: 1 })).toBeVisible();
   return page.getByRole('main');
 }
 
 export async function turnOn(page: Page) {
-  await page.getByRole('switch', { name: 'Phone access' }).click();
-  await expect(page.getByRole('heading', { name: 'Phone access is on' })).toBeVisible();
+  await page.getByRole('switch', { name: 'Remote control' }).click();
+  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible();
 }
 
 export async function startPairing(
   page: Page,
-  button: string | RegExp = 'Pair a phone',
+  button: string | RegExp = 'Pair a device',
 ): Promise<string> {
   const code = page.locator('.ph-code-text');
   const limited = page.locator('.ph-scene-line', { hasText: 'Too many pairing attempts' });

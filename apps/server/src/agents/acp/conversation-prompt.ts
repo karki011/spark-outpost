@@ -235,9 +235,8 @@ export function promptText(
   continued: boolean,
 ): string {
   const asked = continued ? slash.text : request;
-  const primed =
-    !continued && turn.preamble && slash.kind !== 'command'
-      ? `${turn.preamble}\n\n${asked}`
-      : asked;
-  return turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
+  if (slash.kind === 'command') return asked;
+  const before = [continued ? null : turn.preamble, turn.turnPreamble].filter(Boolean);
+  const primed = [...before, asked].join('\n\n');
+  return turn.askTitle ? `${primed}\n\n${TITLE_REQUEST}` : primed;
 }

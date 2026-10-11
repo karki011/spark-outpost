@@ -8,13 +8,13 @@ This folder is the single source for the user guide. The app bundles these pages
 
 `welcome.md`, the Docs landing page, lists at most 12 tasks in four groups. Every other page is reached from the sidebar, search or a link.
 
-| Reader                                  | Top tasks                                                                     | Starts in                    |
-| --------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------- |
-| New user setting up                     | Connect a provider, send a first message, connect GitHub or a tracker         | Get started                  |
-| Daily user working in chats             | Start a chat, set the mode, answer cards, review changes, open a PR           | Chats, Projects and shipping |
-| Power user running crews and Full auto  | Set autonomy, steer pieces, message the crew, PR feedback, Sparks, the island | Chats, Mac app and providers |
-| Someone worried about safety or privacy | See what always asks, what leaves the computer, what Jev reads                | Understand Spark, Reference  |
-| Someone fixing a problem                | Match a symptom to a fix, send diagnostics, start over                        | Help                         |
+| Reader                                    | Top tasks                                                                       | Starts in                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------- |
+| New user setting up                       | Connect a provider, send a first message, connect GitHub or a tracker           | Get started                  |
+| Daily user working in chats               | Start a chat, set the mode, answer cards, review changes, open a PR             | Chats, Projects and shipping |
+| Power user running outposts and Full auto | Set autonomy, plan first, outposts and stories, PR feedback, Sparks, the island | Chats, Mac app and providers |
+| Someone worried about safety or privacy   | See what always asks, what leaves the computer, what Jev reads                  | Understand Spark, Reference  |
+| Someone fixing a problem                  | Match a symptom to a fix, send diagnostics, start over                          | Help                         |
 
 ## Page types
 
@@ -37,15 +37,15 @@ Words are counted without frontmatter, table rules, image syntax and link target
 
 Sections are the seven groups in the Docs sidebar. `order` sorts pages; the hundreds digit groups a section, and sections appear in the order of their first page.
 
-| Section               | Orders | Holds                                                               |
-| --------------------- | ------ | ------------------------------------------------------------------- |
-| Get started           | 100s   | The landing page, setup, connecting a provider                      |
-| Chats                 | 200s   | Working in a chat: model and mode, cards, changes, terminals, crew  |
-| Projects and shipping | 300s   | Worktrees, `.sparkignore`, the Map, Ship, PR follow-up, tickets     |
-| Mac app and providers | 400s   | Spark Island, updates, Mac privacy, providers, models and Jev's key |
-| Understand Spark      | 500s   | Concepts                                                            |
-| Reference             | 600s   | Tables                                                              |
-| Help                  | 700s   | Troubleshooting and What's new                                      |
+| Section               | Orders | Holds                                                                |
+| --------------------- | ------ | -------------------------------------------------------------------- |
+| Get started           | 100s   | The landing page, setup, connecting a provider                       |
+| Chats                 | 200s   | Working in a chat: model and mode, cards, changes, terminals, Sparks |
+| Projects and shipping | 300s   | Worktrees, `.sparkignore`, the Map, Ship, PR follow-up, tickets      |
+| Mac app and providers | 400s   | Spark Island, updates, Mac privacy, providers, models and Jev's key  |
+| Understand Spark      | 500s   | Concepts                                                             |
+| Reference             | 600s   | Tables                                                               |
+| Help                  | 700s   | Troubleshooting and What's new                                       |
 
 ## How a page is written
 

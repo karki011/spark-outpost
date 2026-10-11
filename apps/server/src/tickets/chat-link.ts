@@ -1,4 +1,4 @@
-import type { ChatTickets, LinkChatTicketRequest } from '@spark-outpost/contracts';
+import type { ChatTickets, LinkChatTicketRequest, RunChanges } from '@spark-outpost/contracts';
 import {
   chatTickets,
   chatTicketStates,
@@ -46,6 +46,16 @@ export async function linkTicketForBuild(db: Queryable, turn: BuildTurn): Promis
     if (stateOf(ticket) !== undefined) continue;
     await saveChatTicket(db, workspaceId, conversationId, ticket, 'suggested', 'message');
   }
+}
+
+export type ChangedTurn = Omit<BuildTurn, 'builds'>;
+
+export function linkTicketForChanges(
+  db: Queryable,
+  turn: ChangedTurn,
+  changes: Pick<RunChanges, 'files'>,
+): Promise<void> {
+  return linkTicketForBuild(db, { ...turn, builds: changes.files.length > 0 });
 }
 
 export async function ticketBranchTitle(

@@ -1,5 +1,7 @@
 # Phone remote: plan
 
+The app now calls this feature **Remote control** and what connects a **paired device**; a phone is one kind. See [REMOTE_CONTROL.md](REMOTE_CONTROL.md) for the rename and the names that stay.
+
 Status: T1 and T2 built. Order chosen by the owner on 2026-10-05: Tailscale first, then a Cloudflare relay with end-to-end encryption. The same web UI runs on the phone in both.
 
 ## Goal
@@ -144,6 +146,8 @@ Added with outposts ([A2A_CHATS.md](A2A_CHATS.md), October 9, 2026), with no new
 - Always allowed: `GET /api/outposts`, `GET /api/outposts/:id`, `PATCH /api/outposts/:id` (rename, pause and resume share this route), `POST /api/outposts/:id/posts` (a request or a note) and `POST /api/outposts/:id/posts/:postId/cancel`. A request posted from a phone starts a turn in the receiving chat under that chat's own mode and autonomy, as `POST /api/conversations/:id/messages` does, and a Needs you is answered through that existing route.
 - Never from a phone: `POST /api/outposts` (create), `DELETE /api/outposts/:id`, and `PUT` and `DELETE /api/outposts/:id/members/:conversationId` (add a chat, change a handle, remove a chat). These stay on the Mac until the owner decides otherwise.
 - Never from a phone: both A2A routes, `GET /api/a2a/chats/:chatId/.well-known/agent-card.json` and `POST /api/a2a/chats/:chatId`. A paired phone has no A2A endpoint, and a remote request never passes the launch-token check those routes need.
+- Added with release 2 of outposts, always allowed: `POST /api/outposts/:id/posts/:postId/start-now` (Start anyway on a held request, like cancel) and `GET /api/conversations/:id/outpost-drafts` (the draft line under a turn; counts and ids only).
+- Never from a phone: `GET /api/outposts/drafts/:id`, the draft the create sheet opens from. Starting a story is `POST /api/outposts`, which is create and membership and stays on the Mac; on a phone the draft line reads "Review and start on your Mac".
 - The web app does not yet hide **New outpost**, **Add to outpost**, the chat list of the edit sheet or **Hold to delete outpost** on a phone; the gateway refuses the request.
 
 What a phone is shown differently (`apps/server/src/remote/redaction.ts`):

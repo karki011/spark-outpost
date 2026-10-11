@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import type { Asking } from './approval-gate.ts';
+import type { Asking } from './approval-options.ts';
 
 const DIFF_BUDGET = 64 * 1024;
 
@@ -15,17 +15,12 @@ function relativeLabel(request: ApprovalRequest, target: string): string {
   return target;
 }
 
-export function displayTitle(request: ApprovalRequest, copyOf: string | null): string {
+export function displayTitle(request: ApprovalRequest): string {
   const title = request.title.trim() || 'an action';
-  const shown = request.paths.reduce(
+  return request.paths.reduce(
     (text, target) => text.replaceAll(target, relativeLabel(request, target)),
     title,
   );
-  return copyOf ? `${shown} · ${copyLabel(copyOf)}` : shown;
-}
-
-export function copyLabel(name: string): string {
-  return `${name}'s copy`;
 }
 
 export function subject(request: ApprovalRequest): string {

@@ -35,6 +35,12 @@ The shell starts in the chat's worktree, checkout or home folder. Closing a busy
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
+## Watch an agent's command
+
+1. On a command in a reply, select **Open in terminal**.
+
+The read-only tab is named for the agent, such as **Claude · pnpm dev**. **Stop turn** stops the whole turn. Claude and Z.ai output shows when the command ends.
+
 ## Close and recover
 
 Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents; outside terminals are unaffected.

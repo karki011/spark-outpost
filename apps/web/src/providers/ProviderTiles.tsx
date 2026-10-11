@@ -54,7 +54,7 @@ export function ProviderTiles({ providers, advisors, focusId, onOpen }: Provider
             Jev reads each request, asks when it’s unclear and checks finished changes.
             <InfoTip
               topic="Jev"
-              text="It never answers chats or approves anything. The rules pick the model."
+              text="It never answers chats or approves anything, and is never asked during a turn."
               doc={{ page: 'jev' }}
             />
           </p>

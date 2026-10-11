@@ -4,11 +4,6 @@
 .agent-block.folded + .agent-block.folded {
   margin-top: 4px;
 }
-.agent-block.still,
-.agent-block.still .appr,
-.agent-block.still .agent-state {
-  animation: none;
-}
 .agent-head {
   display: flex;
   align-items: center;
@@ -77,21 +72,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
-}
-.jevline {
-  margin: -4px 0 0 38px;
-  font-size: 12.5px;
-  color: var(--faint);
-}
-.jevline .cat-chip {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font-size: inherit;
-}
-.jevline .run-usage {
-  display: inline-block;
 }
 .agent-fold {
   display: flex;
@@ -241,19 +221,6 @@
 .par-body {
   margin-top: 8px;
 }
-
-.agent-head .agent-msg {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  margin-left: auto;
-  opacity: 0.7;
-}
-.agent-head .agent-msg:hover,
-.agent-head .agent-msg:focus-visible {
-  opacity: 1;
-}
-
 .agent-block .md > p + p {
   margin-top: -0.25em;
 }

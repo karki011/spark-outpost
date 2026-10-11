@@ -12,29 +12,28 @@ import { createTeammate, deleteTeammate } from '../src/persistence/teammates.ts'
 import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { SPARK_HANDOFF_METHOD } from '../src/workflow/spark-audit.ts';
-import {
-  assistantReplies,
-  connectProviders,
-  gitRepo,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  type Harness,
-  type Scenario,
-} from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
+import {
+  gitRepo,
+  openChat,
+  removeRepo,
+  repliesOf as assistantReplies,
+  sendMessage,
+} from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
 
 let t: TestDb;
 let root: string;
-let harness: Harness | null = null;
+let harness: Worker | null = null;
 
 const INSTRUCTIONS = 'Always name the file and line you mean.';
 
 beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
-  await connectProviders(t, false);
-  harness = startOrchestrator(t, null);
+  await connectAgents(t);
+  harness = startTurnWorker(t);
 });
 
 afterEach(async () => {
@@ -58,8 +57,27 @@ function spark(name: string, extra: Record<string, unknown> = {}) {
   });
 }
 
-const ask = (text: string): Scenario => ({ id: 'spark', text, mode: 'ask' });
-const change = (text: string): Scenario => ({ id: 'spark', text, mode: 'do' });
+interface Scenario {
+  text: string;
+  mode: 'ask' | 'do';
+}
+
+const ask = (text: string): Scenario => ({ text, mode: 'ask' });
+const change = (text: string): Scenario => ({ text, mode: 'do' });
+
+async function startScenario(
+  scenario: Scenario,
+  agentMode?: string,
+  prepare?: (id: string) => Promise<void>,
+) {
+  const conversationId = await openChat(t, { root, level: 'hands-off' });
+  await prepare?.(conversationId);
+  const runId = await sendMessage(t, conversationId, scenario.text, {
+    permission: scenario.mode,
+    ...(agentMode === undefined ? {} : { agentMode }),
+  });
+  return { conversationId, runId };
+}
 
 interface ChildRow {
   id: string;
@@ -88,16 +106,7 @@ async function run(
   agentMode?: string,
   prepare?: (id: string) => Promise<void>,
 ) {
-  const started = await startScenario(
-    t,
-    root,
-    scenario,
-    scenario.mode === 'do' ? 'hands-off' : null,
-    'pinned',
-    'sonnet',
-    agentMode,
-    prepare,
-  );
+  const started = await startScenario(scenario, agentMode, prepare);
   await eventually(
     async () => ((await getRun(t.db, started.runId))?.finishedAt ? true : null),
     60_000,
@@ -308,13 +317,7 @@ describe('a message that mentions a Spark', () => {
 
   it('stops the Spark when the turn is stopped', async () => {
     await spark('Pip');
-    const started = await startScenario(
-      t,
-      root,
-      ask('@Pip review parseDate #slow'),
-      null,
-      'pinned',
-    );
+    const started = await startScenario(ask('@Pip review parseDate #slow'));
     const child = await eventually(async () => {
       const [found] = await children(started.runId);
       return found?.status === 'running' ? found : null;

@@ -252,12 +252,12 @@ describe('the finished line', () => {
   const detail = (messages: ReturnType<typeof message>[]) =>
     ({ messages }) as unknown as ConversationDetail;
 
-  it('is the first plain sentence of the run’s last reply', () => {
+  it('is the first plain sentence of the run’s work reply, not of its publish reply', () => {
     const messages = [
       message('user', 'Fix the totals.', null),
-      message('assistant', 'Looking now.'),
-      message('assistant', '**Fixed** the `total()` rounding. Tests pass.\n\n- details'),
       message('assistant', 'From another turn.', 'other-run'),
+      message('assistant', '**Fixed** the `total()` rounding. Tests pass.\n\n- details'),
+      message('assistant', 'Opened pull request #4.'),
     ];
     expect(finishedLine(detail(messages), RUN)).toBe('Fixed the total() rounding.');
   });

@@ -5,17 +5,14 @@ import { hello, sparkMood } from './voice.ts';
 interface SparkPreviewProps {
   displayName: string;
   personality: Personality;
-  enabled: boolean;
   size?: number;
 }
 
-export function SparkPreview({ displayName, personality, enabled, size = 44 }: SparkPreviewProps) {
-  const line = enabled
-    ? hello({ personality, name: firstName(displayName) })
-    : 'Spark is napping. Chats go straight to your agent.';
+export function SparkPreview({ displayName, personality, size = 44 }: SparkPreviewProps) {
+  const line = hello({ personality, name: firstName(displayName) });
   return (
-    <div className="spark-preview" data-enabled={enabled || undefined}>
-      <BlobScout size={size} mood={sparkMood(personality, enabled)} />
+    <div className="spark-preview">
+      <BlobScout size={size} mood={sparkMood(personality)} />
       <p className="spark-bubble" aria-live="polite">
         {line}
       </p>

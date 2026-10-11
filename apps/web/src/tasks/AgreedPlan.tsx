@@ -60,7 +60,7 @@ export function AgreedPlan({ plans }: { plans: AgreedPlans }) {
   return (
     <section className="wsec agreed" aria-labelledby={headingId}>
       <div className="wsec-h">
-        <h3 id={headingId}>Agreed plan</h3>
+        <h3 id={headingId}>{current.status === 'approved' ? 'Agreed plan' : 'Proposed plan'}</h3>
         <StatusBadge status={current.status} />
         <span className="vbadge">v{current.version}</span>
         <span>{meta(current)}</span>

@@ -242,7 +242,7 @@ describe('audit API', () => {
       'estimated',
       'not_reported',
     ]);
-    expect(rows.map((row) => cell(row, 'role'))).toEqual(['Reader', 'Reader', 'Reader']);
+    expect(rows.map((row) => cell(row, 'role'))).toEqual(['Claude', 'Codex', 'Codex']);
     expect(cell(rows[0]!, 'cost_usd')).toBe('0.02');
     expect(cell(rows[2]!, 'cost_usd')).toBe('');
     expect(cell(rows[1]!, 'thinking_tokens')).toBe('500');
@@ -272,7 +272,7 @@ describe('audit API', () => {
 
     const response = await get(`/api/conversations/${conversation.id}/audit/summary`);
     const run = auditSummarySchema.parse(response.body).runs[0]!;
-    expect(run).toMatchObject({ role: 'Builder', runMode: 'do', methods: ['session/prompt'] });
+    expect(run).toMatchObject({ role: 'Claude', runMode: 'do', methods: ['session/prompt'] });
     expect(run.startedAt).not.toBeNull();
     expect(run.finishedAt).not.toBeNull();
     expect(run.approvalWaits).toHaveLength(1);

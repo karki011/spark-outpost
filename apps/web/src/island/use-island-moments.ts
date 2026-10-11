@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
+import { memberNeedsYou } from '../chat/outpost/member-moment.ts';
 import type { Voice } from '../spark/voice.ts';
-import { dayKey, greetingDue, greetingLine } from './crew-voice.ts';
+import { dayKey, greetingDue, greetingLine } from './greeting.ts';
 import {
   newMoments,
   nextStreak,
@@ -64,7 +65,18 @@ export function useMoments(chats: readonly ConversationSummary[], loaded: boolea
   }, [chats, loaded]);
 
   const dismiss = useCallback(() => setMoments((list) => list.slice(1)), []);
-  return { moment: moments[0] ?? null, streak, dismiss };
+  const moment = moments[0] ?? null;
+  const memberLine = moment ? memberNeedsYou(moment, chats) : null;
+  return { moment, memberLine, streak, dismiss };
+}
+
+export function momentLine(
+  kind: 'done' | 'failed',
+  title: string,
+  memberLine: string | null,
+): string {
+  if (memberLine) return memberLine;
+  return `${title} ${kind === 'done' ? 'is done' : 'couldn’t finish'}.`;
 }
 
 export function useGreeting(voice: Voice, ready: boolean): string | null {

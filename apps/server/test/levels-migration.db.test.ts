@@ -64,7 +64,6 @@ describe('removing Hands-on', () => {
     });
     const setup = await getSetupState(db, workspaceId);
     expect(setup.profile.defaultLevel).toBe('full-auto');
-    expect(setup.profile.shipFailingChecks).toBe(true);
     await expect(
       db.query(`UPDATE runs SET level = 'hands-on' WHERE id = $1`, [runId]),
     ).rejects.toThrow(/runs_level_check/);
@@ -227,13 +226,5 @@ describe('modes and autonomy through the API', () => {
     const review = await patch(url, { level: 'balanced' }).expect(200);
     expect(review.body).toMatchObject({ permission: 'do', level: 'hands-off' });
     await patch(url, { permission: 'do' }).expect(400);
-  });
-
-  it('saves the "open a draft PR when checks fail" setting', async () => {
-    const put = (body: object) =>
-      request(app).patch('/api/profile').set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
-    const saved = await put({ shipFailingChecks: false });
-    expect([200, 204]).toContain(saved.status);
-    expect((await getSetupState(t.db, t.workspaceId)).profile.shipFailingChecks).toBe(false);
   });
 });

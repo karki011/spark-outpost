@@ -16,26 +16,9 @@ const stored = {
 const input = { stored, continuing: false };
 
 describe('usesConversationSession', () => {
-  it('covers chat turns and the solo Builder, and nothing else', () => {
-    expect(usesConversationSession({ parentRunId: null, role: null })).toBe(true);
-    expect(
-      usesConversationSession({ parentRunId: 'p', role: 'builder', resumeKey: 'task:builder' }),
-    ).toBe(true);
-    expect(
-      usesConversationSession({ parentRunId: 'p', role: 'builder', resumeKey: 'task:escalated' }),
-    ).toBe(false);
-    expect(
-      usesConversationSession({
-        parentRunId: 'p',
-        role: 'builder',
-        resumeKey: 'task:piece:P1',
-        piece: {},
-      }),
-    ).toBe(false);
-    expect(
-      usesConversationSession({ parentRunId: 'p', role: 'critic', resumeKey: 'task:critic' }),
-    ).toBe(false);
-    expect(usesConversationSession({ parentRunId: 'p', role: 'scout' })).toBe(false);
+  it("covers the chat's own run and no child run", () => {
+    expect(usesConversationSession({ parentRunId: null })).toBe(true);
+    expect(usesConversationSession({ parentRunId: 'p' })).toBe(false);
   });
 
   it('keys the session by provider only', () => {

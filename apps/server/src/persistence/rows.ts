@@ -3,6 +3,7 @@ import {
   agentRoleSchema,
   categorySchema,
   modelSwitchSchema,
+  needsYouLines,
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
@@ -60,6 +61,8 @@ export interface RunRow {
   outpost_name?: string | null;
   outpost_from_handle?: string | null;
   outpost_from_user?: boolean | null;
+  outpost_user_started?: boolean | null;
+  outpost_from_spark?: boolean | null;
   mode?: RunMode | null;
   picked_mode?: RunMode | null;
   start_as?: StartAs | null;
@@ -70,6 +73,7 @@ export interface RunRow {
   role?: AgentRole | null;
   step_index?: number | null;
   agent_label?: string | null;
+  used_model?: string | null;
   category?: string | null;
   followed_instructions?: string[] | null;
   continues_run_id?: string | null;
@@ -89,7 +93,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_step: string | null;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
-  latest_run_needs_you?: string | null;
+  latest_run_asking_reply?: string | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
   pinned_at: Date | null;
@@ -139,6 +143,7 @@ export function toRun(row: RunRow): Run {
     startedAt: iso(row.started_at),
     finishedAt: iso(row.finished_at),
     model: row.model,
+    usedModel: row.used_model ?? null,
     effort: row.effort,
     usage: toRunUsage(row),
     mode: row.mode ?? null,
@@ -163,7 +168,8 @@ export function toRun(row: RunRow): Run {
 
 export const RUN_OUTPOST_COLUMNS = `post.id AS outpost_post_id, post.outpost_id,
   room.name AS outpost_name, post.from_handle AS outpost_from_handle,
-  post.from_user AS outpost_from_user`;
+  post.from_user AS outpost_from_user, post.user_started AS outpost_user_started,
+  EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = post.id) AS outpost_from_spark`;
 
 export const RUN_OUTPOST_JOINS = `LEFT JOIN outpost_posts post
     ON r.source = 'outpost' AND post.id = r.user_message_id
@@ -178,6 +184,8 @@ function runOutpost(row: RunRow): Pick<Run, 'outpost'> {
       outpostName: row.outpost_name,
       fromHandle: row.outpost_from_handle ?? null,
       fromUser: row.outpost_from_user === true,
+      fromSpark: row.outpost_from_spark === true,
+      userStarted: row.outpost_user_started === true,
     },
   };
 }
@@ -226,7 +234,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
                 ? row.latest_run_progress
                 : null,
             interruptionChoice: row.latest_run_interruption_choice ?? null,
-            needsYou: row.latest_run_needs_you ?? null,
+            needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
           }
         : null,
     archivedAt: iso(row.archived_at),

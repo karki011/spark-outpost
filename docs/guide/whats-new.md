@@ -10,24 +10,19 @@ What changed recently in Spark, newest first.
 
 ## October 2026
 
-| What changed                                                                                                                        | What to do                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| **Outposts**: ask several chats for work in one thread with `@handle`. Chats in one outpost get different blob faces.               | See [outposts](outposts.md).                |
-| Outpost answers are formatted and leave out Codex's working notes. A **Needs you** question and your answer stay under the request. | No action.                                  |
-| The PR row shows state, number, repository and lines changed. **Refresh** re-reads GitHub; a reopened PR shows **Open** again.      | Press **Refresh** on a stale row.           |
-| **Agent TV**, **Browser** and **Terminal** moved into the chat's **…** menu. Its dot means agents or a hidden terminal are running. | No action.                                  |
-| A paired phone can save a passkey and sign in again in another browser.                                                             | See [your phone](use-your-phone.md).        |
-| Ticket moves use the status named Done, never Rejected or Cancelled. An unclear project leaves the ticket and flags it.             | Pick statuses in **Settings → Connectors**. |
-| Scout rests half hidden at the top and comes out when a chat is active. **Spark Island size** adds **Extra large**.                 | See [Spark Island](desktop-companion.md).   |
-| **Make the change** is gone. Replies, your messages and the message box share one centred column; replies sit under the agent name. | Ask for the change in your next message.    |
-| The context rail lists Agent TV's crew. Chats with a merged PR show an icon.                                                        | No action.                                  |
-| **Terminal**: Esc in Claude shows **Idle**; Spark's note left your message.                                                         | No action.                                  |
-| Scout drags up to the notch.                                                                                                        | See [Spark Island](desktop-companion.md).   |
-| Exited **Terminal** sessions offer **Start again**. Builds no longer fail as "missing context".                                     | No action.                                  |
-| **Use Spark workflow** supports direct agents and custom instructions.                                                              | Open **Settings → Spark**.                  |
-| **Terminal** has event-based activity, colors, drops and a borderless view.                                                         | See [Open a terminal](terminals.md).        |
-| Spark Island rests as blobs.                                                                                                        | Hover or click to open.                     |
-| Spark has no plan, question or retry cards. A reply that needs you ends **Needs you: …**.                                           | Answer in your next message.                |
-| A build shows **Plan saved · 4 pieces** and goes on. `/plan` and **Plan** mode use the agent's plan approval.                       | See [Plan before building](plan-card.md).   |
-| Pieces share one working tree. A change to another piece's file is flagged, not blocked. Jev sorts mid-build messages.              | No action.                                  |
-| New chats start on **Auto**. Builders and pieces stay on the chat's provider. **Settings → Models** is a table.                     | See [model routing](model-routing.md).      |
+| What changed                                                                                                                                                                                   | What to do                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| While follow-up is on, the agent may comment and reply on its own pull request, under its mode. Outpost answers show **Committed** and **Pushed**.                                             | See [PR feedback](pr-follow-up.md).             |
+| One chat is one agent session: your message goes to the agent as typed. Crews, pieces, the Critic and Spark's own checks are gone; the agent uses its own sub-agents.                          | See [how Spark works](how-spark-works.md).      |
+| Removed settings: **Use Spark workflow**, **Check changes with Jev**, **When checks still fail in Full auto**, and a project's **Builders at once** and **Checks after a change**.             | Nothing to do.                                  |
+| Spark saves a plan only when you approve the agent's; the line reads **Plan saved**. Every message in a **Plan** chat plans first. Codex `/plan` is read-only: a **Proposed plan**.            | See [plans](plan-card.md).                      |
+| Publishing is one request to the agent after its reply; Spark's result line leads. A PR is a draft only if you ask or Settings says so. An unasked push is refused. "Push, no PR" only pushes. | See [Ship a change](ship-and-pull-requests.md). |
+| **Changes kept** lists files and lines only. **Keep these changes?**, **Worth a look** and **Needs you:** endings are gone. A folder without git lists the agent's edits.                      | See [changes](review-changes.md).               |
+| Jev works only on the Map, PR feedback and Spark Island. **Auto** means the provider's default model. The chat names the model that ran.                                                       | See [Jev](jev.md).                              |
+| Older chats keep their crew, replies, costs, cards and plans, read-only, without piece boards or **Message**.                                                                                  | Nothing to do.                                  |
+| **Agent TV** opens for every turn and shows the chat's agent and Sparks. **Analytics** has **Overview** and **Spend**; `spark_analytics` has no harness report.                                | See [follow a turn](follow-a-turn.md).          |
+| **Settings → Models** groups models as **Everyday and complex work** and **Other models**. A project with no commits is worked on in its folder. A pinned `sonnet` runs the current Sonnet.    | See [models](providers-and-models.md).          |
+| **Phone** is now **Remote control**. Paired devices stay paired.                                                                                                                               | See [remote control](use-your-phone.md).        |
+| Agents can keep a command running after the turn: **Agent terminal**, with **Stop**.                                                                                                           | See [Spark tools](spark-tools.md).              |
+| **Open in terminal** on a reply's command mirrors it in a read-only tab.                                                                                                                       | See [Open a terminal](terminals.md).            |
+| No other-branch pushes or remote changes. Claude asks before changing instruction files, git hooks and config, worktrees too. Chats, not Terminals, get no account connectors.                 | See [protected paths](protected-paths.md).      |

@@ -1,4 +1,4 @@
-import { memo, use, useState } from 'react';
+import { memo, use } from 'react';
 import {
   isTerminalRunStatus,
   type ConversationDetail,
@@ -6,7 +6,7 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
-import { isCrewTurn } from '../crew/conversation-crew.ts';
+import { isCrewTurn, isSparkLed, sparkMembers } from '../crew/conversation-crew.ts';
 import { crewAgents } from '../crew/crew-projection.ts';
 import { TaskCard, TaskCount } from '../tasks/TaskCard.tsx';
 import { showsTaskCard } from '../tasks/task-card-shown.ts';
@@ -14,7 +14,7 @@ import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
-import { SparkJobs, isSparkLed, mainAgentRan, sparkMembers } from './crew/SparkJobs.tsx';
+import { SparkJobs, mainAgentRan } from './crew/SparkJobs.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
@@ -29,6 +29,7 @@ import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
 import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
+import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
 import { OutpostFaces } from '../outposts/MemberFace.tsx';
 
 type Task = ConversationDetail['tasks'][number];
@@ -37,6 +38,7 @@ interface TurnSectionProps {
   run: Run;
   userMessage: Message | null;
   assistantMessage: Message | null;
+  laterMessages: readonly Message[];
   detail: ConversationDetail;
   repo: Project | null;
   task: Task | null;
@@ -59,11 +61,18 @@ function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }
   );
 }
 
+function sameMessages(before: readonly Message[], after: readonly Message[]): boolean {
+  return (
+    before.length === after.length && before.every((message, index) => message === after[index])
+  );
+}
+
 function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean {
   return (
     before.run === after.run &&
     before.userMessage === after.userMessage &&
     before.assistantMessage === after.assistantMessage &&
+    sameMessages(before.laterMessages, after.laterMessages) &&
     before.repo === after.repo &&
     before.task === after.task &&
     before.onOpenTask === after.onOpenTask &&
@@ -76,6 +85,7 @@ export const TurnSection = memo(function TurnSection({
   run,
   userMessage,
   assistantMessage,
+  laterMessages,
   detail,
   repo,
   task,
@@ -85,7 +95,6 @@ export const TurnSection = memo(function TurnSection({
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
-  const [startedSolo] = useState(crew === null);
   const handedTo = sparkMembers(orchestration);
   const inRail = use(RailTaskContext) === task?.id;
   const shownTask = onOpenTask && task && !inRail && showsTaskCard(task) ? task : null;
@@ -151,20 +160,14 @@ export const TurnSection = memo(function TurnSection({
       )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
-        <CrewTurn
-          run={run}
-          detail={detail}
-          orchestration={crew}
-          repo={repo}
-          taskCard={taskCard}
-          continued={startedSolo}
-        />
+        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
       ) : (
         <>
           <SoloTurn
             run={run}
             detail={detail}
             assistantMessage={assistantMessage}
+            laterMessages={laterMessages}
             repo={repo}
             taskCount={taskCount}
           />
@@ -172,6 +175,7 @@ export const TurnSection = memo(function TurnSection({
         </>
       )}
       {!crew && <TurnSteers detail={detail} run={run} />}
+      <TurnOutpostLines conversation={detail.conversation} run={run} />
       <OpenedPullRequests
         conversationId={detail.conversation.id}
         runIds={turnRunIds(detail, run.id)}

@@ -1,7 +1,6 @@
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { agentBlock, CREW_REQUEST, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { openTouch } from './responsive-kit.ts';
@@ -224,34 +223,6 @@ test('at phone width the output scrolls sideways inside its box with large contr
   expect(sizes.smallestControl).toBeGreaterThanOrEqual(44);
   await shot(page, 'phone');
   await page.context().close();
-});
-
-test('each crew member gets its own terminal', async ({ page }) => {
-  test.setTimeout(150_000);
-  await resetCrew();
-  const repo = crewRepo();
-  try {
-    await page.setViewportSize({ width: 1400, height: 900 });
-    await crewChat(page, repo, 'Full auto');
-    await send(page, `${CREW_REQUEST} #build #crew #term=pass,fail 40ms`);
-    const builder = agentBlock(page, 'Bolt');
-    await expect(builder.locator('.run-cmd')).toHaveCount(2, { timeout: 45_000 });
-    await expect(builder.locator('.run-cmd.failed .run-cmd-state')).toHaveText(/exit 2/);
-    const critic = agentBlock(page, 'Hawk');
-    await expect(critic.locator('.run-cmd')).toHaveCount(2, { timeout: 60_000 });
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 60_000 });
-    const folded = builder.locator('.agent-fold');
-    if (await folded.count()) await folded.click();
-    await expect(builder.locator('.run-cmd')).toHaveCount(2);
-    await expect(critic.locator('.run-cmd')).toHaveCount(2);
-    await expect(builder.locator('.run-cmd.failed .xterm-rows')).toContainText('unused variable');
-    await shot(page, 'crew');
-  } catch (error) {
-    await shot(page, 'crew-failed');
-    throw error;
-  } finally {
-    repo.remove();
-  }
 });
 
 for (const theme of ['light', 'graphite', 'contrast']) {

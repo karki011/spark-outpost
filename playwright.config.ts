@@ -64,7 +64,6 @@ const serverEnv = {
     }),
   }),
   AGENT_RUNTIME: 'fake',
-  COORDINATOR_MODE: 'parallel',
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',
   MAP_ROOT_PREFIX,

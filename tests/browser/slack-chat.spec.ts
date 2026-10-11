@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { slackLink } from '../../apps/server/test/fake-slack.ts';
-import { resetCrew, send } from './crew-engine.ts';
+import { resetWithAgents, send } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
 import { connectSlack, resetSlackFake, slackPosts } from './slack-seed.ts';
 
@@ -9,7 +9,7 @@ const SHOTS = process.env.SPARK_SLACK_SHOTS;
 const THREAD = slackLink('C0ENG', '1760000000.000100');
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
+  await resetWithAgents();
   await resetSlackFake();
   await page.setViewportSize({ width: 1400, height: 900 });
 });

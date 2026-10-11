@@ -4,7 +4,7 @@ import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
-import { seedIndex } from './crew-voice.ts';
+import { seedIndex } from './seed-index.ts';
 import type { SessionState } from './island-model.ts';
 import { sessionColor, sessionExpression } from './island-mood.ts';
 

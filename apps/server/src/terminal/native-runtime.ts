@@ -159,7 +159,6 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         sessionId: row.id,
         cwd: row.cwd,
         prompt: prepared.prompt,
-        workflowEnabled: prepared.workflowEnabled,
         instructions: prepared.instructions,
         agentMode: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
         ...(request.resume && row.native_session_id

@@ -59,19 +59,8 @@ export async function insertWorktree(
   );
 }
 
-export async function getWorktree(db: Queryable, runId: string): Promise<WorktreeRecord | null> {
-  const { rows } = await db.query<WorktreeRow>('SELECT * FROM run_worktrees WHERE run_id = $1', [
-    runId,
-  ]);
-  return rows[0] ? toRecord(rows[0]) : null;
-}
-
 export async function saveResult(db: Queryable, runId: string, commit: string): Promise<void> {
   await db.query('UPDATE run_worktrees SET result_commit = $2 WHERE run_id = $1', [runId, commit]);
-}
-
-export async function markMerged(db: Queryable, runId: string): Promise<void> {
-  await db.query('UPDATE run_worktrees SET merged_at = now() WHERE run_id = $1', [runId]);
 }
 
 export async function markRemoved(db: Queryable, runId: string): Promise<void> {
@@ -92,18 +81,6 @@ export async function laneOfRun(db: Queryable, runId: string): Promise<RunLane |
   );
   const row = rows[0];
   return row ? { repoRoot: row.repo_root, resultCommit: row.result_commit } : null;
-}
-
-export async function liveWorktrees(
-  db: Queryable,
-  orchestrationRunId: string,
-): Promise<WorktreeRecord[]> {
-  const { rows } = await db.query<WorktreeRow>(
-    `SELECT * FROM run_worktrees WHERE orchestration_run_id = $1 AND removed_at IS NULL
-     ORDER BY created_at`,
-    [orchestrationRunId],
-  );
-  return rows.map(toRecord);
 }
 
 export async function orphanedWorktrees(db: Queryable): Promise<WorktreeRecord[]> {
@@ -127,28 +104,4 @@ export async function worktreesForRuns(
     [runIds],
   );
   return new Map(rows.map((row) => [row.run_id, { ...toRecord(row), name: row.name }]));
-}
-
-export interface DepsRecord {
-  method: 'clone' | 'copy' | 'offline_install' | 'install' | 'skipped';
-  durationMs: number;
-  note: string | null;
-  waitedMs: number;
-  lockfileMatched: boolean | null;
-}
-
-export async function saveDeps(db: Queryable, runId: string, deps: DepsRecord): Promise<void> {
-  await db.query(
-    `UPDATE run_worktrees SET deps_method = $2, deps_ms = $3, deps_note = $4, deps_waited_ms = $5,
-       deps_lockfile_matched = $6
-     WHERE run_id = $1`,
-    [runId, deps.method, deps.durationMs, deps.note, deps.waitedMs, deps.lockfileMatched],
-  );
-}
-
-export async function saveDepsWait(db: Queryable, runId: string, waitedMs: number): Promise<void> {
-  await db.query('UPDATE run_worktrees SET deps_waited_ms = $2 WHERE run_id = $1', [
-    runId,
-    waitedMs,
-  ]);
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { requestState, type RunStatus } from '@spark-outpost/contracts';
+import { requestAnswer } from '../src/persistence/outpost-answers.ts';
 import {
   cancelUnsent,
   closePost,
@@ -8,9 +9,9 @@ import {
   insertPosts,
   listPosts,
   rejectWaiting,
-  requestAnswer,
   unsentRequests,
 } from '../src/persistence/outpost-posts.ts';
+import { listConversations } from '../src/persistence/conversations.ts';
 import { createOutpost, setPaused } from '../src/persistence/outposts.ts';
 import {
   accept,
@@ -80,6 +81,7 @@ describe('the facts a request state is derived from', () => {
       paused: false,
       held: null,
       chatDeleted: false,
+      waitingOn: null,
     });
     expect(requestState(found!.facts!)).toEqual({ state: 'sent', reason: 'Not sent yet' });
   });
@@ -159,6 +161,29 @@ describe('the facts a request state is derived from', () => {
 
     expect((await getPost(t.db, postId))?.facts?.runNeedsYou).toBe('Needs you: REST or GraphQL?');
     expect(await stateOf(postId)).toEqual({ state: 'needs_you', reason: 'REST or GraphQL?' });
+  });
+
+  it('reads Needs you from a line of its own, with text before it and a line Spark added after', async () => {
+    const postId = await request();
+    const runId = await receivingRun(postId, 'succeeded');
+    const said = 'Added shout(name).\nLeft the change in the working tree.';
+    const added = 'Checks for Bolt: tests passed';
+    await reply(t, runId, `${said}\nNeeds you: REST or GraphQL?\n\n${added}`);
+
+    expect((await getPost(t.db, postId))?.facts?.runNeedsYou).toBe('Needs you: REST or GraphQL?');
+    const rows = await listConversations(t.db, t.workspaceId);
+    expect(rows.map((row) => row.latestRun?.needsYou ?? null)).toContain(
+      'Needs you: REST or GraphQL?',
+    );
+    expect(await stateOf(postId)).toEqual({ state: 'needs_you', reason: 'REST or GraphQL?' });
+  });
+
+  it('reads Answered when the reply only mentions the words inside a sentence', async () => {
+    const postId = await request();
+    const runId = await receivingRun(postId, 'succeeded');
+    await reply(t, runId, 'The card title is "Needs you: pick one". Nothing else is open.');
+
+    expect((await stateOf(postId)).state).toBe('answered');
   });
 
   it('lets a closed request win over its run and keeps the stored reason', async () => {
@@ -346,10 +371,9 @@ describe('requests waiting to be sent', () => {
 });
 
 describe('the answer to a request', () => {
-  it('is the last reply of the receiving run, with secrets redacted', async () => {
+  it('is the work reply of the receiving run, with secrets redacted', async () => {
     const postId = await request();
     const runId = await receivingRun(postId, 'succeeded');
-    await reply(t, runId, 'Looking.');
     await reply(
       t,
       runId,

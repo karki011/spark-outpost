@@ -6,9 +6,9 @@ import {
   combinationLine,
   modeKind,
   type ChatSettings,
-  type Orchestration,
   type ProviderId,
   type ProviderSetup,
+  type Run,
 } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../../api/client.ts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
@@ -24,10 +24,10 @@ import { ModeOptions } from './ModeOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
-import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts, unusableChoice } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionState } from './mode-summary.ts';
+import { unlistedPinName } from './shown-model.ts';
 import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
 import { FreezeWhileHidden } from '../../ui/FreezeWhileHidden.tsx';
@@ -48,8 +48,8 @@ interface ModelPickerProps {
   conversationId: string;
   settings: ChatSettings;
   providers: ProviderSetup[];
+  runs: readonly Run[];
   hasRepos: boolean;
-  orchestration: Orchestration | null;
 }
 
 export function ModelPicker({
@@ -57,8 +57,8 @@ export function ModelPicker({
   conversationId,
   settings,
   providers,
+  runs,
   hasRepos,
-  orchestration,
 }: ModelPickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef, returnFocusRef } = usePopover<
     HTMLDivElement,
@@ -117,13 +117,11 @@ export function ModelPicker({
     : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
   const unusable = unusableChoice(settings.model, capabilities) !== null;
-  const pinnedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const listedLabel = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
+  const pinnedLabel = unlistedPinName(settings, capabilities, runs) ?? listedLabel;
   const pinnedName = unusable ? `${pinnedLabel} (unavailable)` : pinnedLabel;
   const auto = settings.routing === 'auto';
-  const thisTurn = autoThisTurn(orchestration, capabilities?.models);
-  const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
-  const would = autoWouldHaveUsed(orchestration);
-  const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
+  const modelName = auto ? 'Auto' : pinnedName;
 
   const effort = efforts.find((option) => option.id === settings.effort);
 
@@ -278,7 +276,6 @@ export function ModelPicker({
                           onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
                           routing={settings.routing ?? 'pinned'}
                           onAuto={() => update.mutate({ routing: 'auto' })}
-                          hint={hint}
                         />
                       )}
                       {activeSection === 'effort' && (

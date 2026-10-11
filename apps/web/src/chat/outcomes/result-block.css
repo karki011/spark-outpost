@@ -46,9 +46,6 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.result-fact.bad {
-  color: var(--danger);
-}
 .result-pr {
   padding: 2px 6px;
   border-radius: 6px;

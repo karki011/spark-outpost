@@ -21,11 +21,6 @@
     width: calc(100% - var(--turn-indent));
     margin-left: var(--turn-indent);
   }
-
-  .col .jevline {
-    margin-left: 0;
-  }
-
   .col .ai-head + .steps ul {
     margin-left: -15px;
   }

@@ -4,8 +4,6 @@ import { STOPPED_REPLY, type ResumeDecision } from './session-decision.ts';
 
 export const CONVERSATION_KEY_PREFIX = 'chat:';
 
-const SOLO_BUILDER_KEY = /:builder$/;
-const CONVERSATION_SEAT = ':conversation';
 const CLOSED_BY_THE_USER = new Set<string>([
   SESSION_CLOSE_REASONS.fresh,
   SESSION_CLOSE_REASONS.compacted,
@@ -15,26 +13,10 @@ const CLOSED_BY_THE_USER = new Set<string>([
 
 export interface ConversationCandidate {
   parentRunId: string | null;
-  role: string | null;
-  resumeKey?: string | null;
-  piece?: unknown;
-}
-
-export function conversationSeatKey(taskId: string): string {
-  return `${taskId}${CONVERSATION_SEAT}`;
 }
 
 export function usesConversationSession(input: ConversationCandidate): boolean {
-  if (input.parentRunId === null) return true;
-  if (typeof input.resumeKey === 'string' && input.resumeKey.endsWith(CONVERSATION_SEAT)) {
-    return input.role === 'scout';
-  }
-  return (
-    input.role === 'builder' &&
-    !input.piece &&
-    typeof input.resumeKey === 'string' &&
-    SOLO_BUILDER_KEY.test(input.resumeKey)
-  );
+  return input.parentRunId === null;
 }
 
 export function conversationKey(provider: string): string {

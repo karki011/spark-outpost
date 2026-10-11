@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTitle, createTitleFilter, splitTitle } from './title-line.ts';
+import { cleanTitle, createTitleFilter, hidesTitleLine, splitTitle } from './title-line.ts';
 
 function streamed(deltas: readonly string[]) {
   const filter = createTitleFilter();
@@ -37,10 +37,22 @@ describe('title line', () => {
     });
   });
 
-  it('keeps a Title line that more than two lines or a long line follow', () => {
-    const three = 'Title: A heading\nOne.\nTwo.\nThree.';
+  it('takes a Title line that opens the reply, whatever follows it', () => {
+    expect(splitTitle('Title: A heading\nOne.\nTwo.\nThree.')).toEqual({
+      text: 'One.\nTwo.\nThree.',
+      title: 'A heading',
+    });
+    expect(splitTitle(`\n**Title:** A heading\n\n# Plan\n${'x'.repeat(41)}`)).toEqual({
+      text: `\n# Plan\n${'x'.repeat(41)}`,
+      title: 'A heading',
+    });
+    expect(splitTitle('Title: A heading\n')).toEqual({ text: '', title: 'A heading' });
+  });
+
+  it('keeps a Title line inside the reply that more than two lines or a long line follow', () => {
+    const three = 'Done.\nTitle: A heading\nOne.\nTwo.\nThree.';
     expect(splitTitle(three)).toEqual({ text: three, title: null });
-    const long = `Title: A heading\n${'x'.repeat(41)}`;
+    const long = `Done.\nTitle: A heading\n${'x'.repeat(41)}`;
     expect(splitTitle(long)).toEqual({ text: long, title: null });
     const edge = `Done.\nTitle: A heading\n${'x'.repeat(40)}`;
     expect(splitTitle(edge)).toEqual({ text: `Done.\n${'x'.repeat(40)}`, title: 'A heading' });
@@ -48,11 +60,14 @@ describe('title line', () => {
 
   it('keeps the reply whole when the title is missing, mid-reply, or unusable', () => {
     expect(splitTitle('Just an answer.')).toEqual({ text: 'Just an answer.', title: null });
-    const middle = 'Title: A heading\nThen the reply goes on with an ordinary sentence of prose.';
+    const middle =
+      'Intro.\nTitle: A heading\nThen the reply goes on with an ordinary sentence of prose.';
     expect(splitTitle(middle)).toEqual({ text: middle, title: null });
     const long = `Done.\nTitle: ${'word '.repeat(12)}`;
     expect(splitTitle(long)).toEqual({ text: long, title: null });
     expect(splitTitle('Done.\nTitle:   ')).toEqual({ text: 'Done.\nTitle:   ', title: null });
+    const opening = `Title: ${'word '.repeat(12)}\nThe reply.`;
+    expect(splitTitle(opening)).toEqual({ text: opening, title: null });
   });
 
   it('cleans quotes, trailing periods and spacing into sentence case', () => {
@@ -112,13 +127,57 @@ describe('title filter', () => {
     });
   });
 
-  it('still hides the final Title line after an earlier one was given back', () => {
+  it('hides a Title line that opens the reply as soon as the line ends', () => {
+    const filter = createTitleFilter();
+    expect(filter.push('Tit')).toBe('');
+    expect(filter.push('le: Add mean function\n')).toBe('');
+    expect(
+      filter.push('\n# Add a mean function\n\nA long plan follows, well past forty characters.'),
+    ).toBe('# Add a mean function\n\nA long plan follows, well past forty characters.');
+    expect(filter.finish()).toEqual({ text: '', title: 'Add mean function' });
+  });
+
+  it('hides a Title line that opens the final message, after the commentary before it', () => {
+    const filter = createTitleFilter();
+    expect(filter.push('I will read the code, then plan.')).toBe(
+      'I will read the code, then plan.',
+    );
+    filter.startMessage(0);
+    expect(filter.push('\n\nTitle: Add mean function\n\n# Add a mean function\n')).toBe(
+      '\n\n# Add a mean function',
+    );
+    expect(filter.push('Export it from sum.js and test it there, in one small change.')).toBe(
+      '\nExport it from sum.js and test it there, in one small change.',
+    );
+    expect(filter.finish()).toEqual({ text: '', title: 'Add mean function' });
+  });
+
+  it('counts the text still on its way when a message starts', () => {
+    const filter = createTitleFilter();
+    expect(filter.push('Reading the co')).toBe('Reading the co');
+    filter.startMessage(3);
+    expect(filter.push('de.\n\nTitle: Add mean function\nThe plan is one exported function.')).toBe(
+      'de.\n\nThe plan is one exported function.',
+    );
+    expect(filter.finish().title).toBe('Add mean function');
+  });
+
+  it('leaves a Title line alone when the message starts in the middle of a line', () => {
+    const filter = createTitleFilter();
+    filter.push('See the ');
+    filter.startMessage(0);
+    const rest = 'Title: field of the form, which is required and long enough to matter.';
+    expect(filter.push(rest)).toBe(rest);
+    expect(filter.finish()).toEqual({ text: '', title: null });
+  });
+
+  it('takes the closing Title line over the opening one and hides both', () => {
     const result = streamed([
       'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.\n',
       'Title: Explain the draft',
     ]);
     expect(result).toMatchObject({
-      text: 'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.',
+      text: 'This paragraph is clearly longer than a short sign-off line.',
       title: 'Explain the draft',
     });
   });
@@ -129,5 +188,15 @@ describe('title filter', () => {
       text: 'The Title: field is required.',
       title: 'Explain form validation',
     });
+  });
+});
+
+describe('hiding the title line', () => {
+  it("applies to every reply of the chat's own run, asked for a title or not", () => {
+    expect(hidesTitleLine({ parentRunId: null })).toBe(true);
+  });
+
+  it('leaves the reply of a run handed a job as it is', () => {
+    expect(hidesTitleLine({ parentRunId: '00000000-0000-4000-8000-000000000001' })).toBe(false);
   });
 });

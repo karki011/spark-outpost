@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { crewRepo, pickPermission, type CrewRepo } from './crew-engine.ts';
+import { pickPermission } from './permissions-kit.ts';
+import { chatRepo, type ChatRepo, turnDone } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import {
@@ -25,10 +26,10 @@ const SPREAD_FILES = 60;
 const FINAL_LABEL = `${(GROWN_LINES + SPREAD_FILES * 2).toLocaleString('en-US')} lines added, 0 removed in ${SPREAD_FILES + 1} files`;
 const API_STALL_MS = 200;
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async () => {
-  repo = crewRepo();
+  repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
 
@@ -157,7 +158,7 @@ test('a live stream of edits keeps the chip, drawer and thread smooth', async ({
   }
   phases['switch files while streaming'] = await takeProbe(page);
 
-  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 120_000 });
+  await turnDone(page, 120_000);
   const doneAfterMs = Date.now() - sent;
   await expect(chip).toHaveAccessibleName(FINAL_LABEL, { timeout: 30_000 });
   await sampleChip();

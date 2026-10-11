@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
-import { validChoice } from '../advisor/intake-questions.ts';
+import { validChoice } from '../advisor/jev-types.ts';
 import { redactText, storableText } from '../audit/redact.ts';
 import type { Endpoint } from '../codescan/endpoints.ts';
 import { evidenceBlock } from '../codescan/jev-state.ts';
 import type { ProjectLayout } from '../codescan/layout.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
-import { callJev, type JevAccess } from '../orchestration/jev-calls.ts';
+import { callJev, type JevAccess } from '../advisor/jev-calls.ts';
 import { sendable, type ReadContent } from './label-evidence.ts';
 import {
   matchEnv,

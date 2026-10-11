@@ -11,7 +11,6 @@ import {
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { postAttachmentIds } from '../persistence/outpost-posts.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
-import { buildingInPieces } from '../persistence/piece-notes.ts';
 import {
   getMemberMessage,
   insertMemberMessage,
@@ -164,13 +163,12 @@ export async function sendNow(
       );
       return 'sent';
     }
-    const toIntake = await buildingInPieces(client, running);
     await insertMemberMessage(client, {
       id: request.id,
       conversationId,
       runId: running,
       body: content,
-      urgency: toIntake ? 'next' : 'now',
+      urgency: 'now',
     });
     return 'steering';
   });

@@ -4,7 +4,7 @@ import { movedReply } from '../src/compaction/prepare-turn.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
-import { HANDOFF_HEADINGS } from '../src/orchestration/handoff.ts';
+import { CHAT_SUMMARY_HEADING } from '../src/workflow/session-brief.ts';
 import {
   compactionsOf,
   finished,
@@ -110,7 +110,7 @@ describe('the compaction card with automatic compaction off', { timeout: 60_000 
     expect(freshRun.status).toBe('succeeded');
     const [session] = await sessionsOf(h, fresh);
     const [first] = promptsOf(h, session!.session_id);
-    expect(first).toContain(HANDOFF_HEADINGS.chat);
+    expect(first).toContain(CHAT_SUMMARY_HEADING);
     expect(first).toContain('Next step');
     const detail = await getConversationDetail(h.t.db, fresh);
     expect(detail?.compactions?.[0]).toMatchObject({

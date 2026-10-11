@@ -1,5 +1,6 @@
 import { needsYouLines } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
+import { workReply } from '../persistence/work-reply.ts';
 
 const USER_SENT_SOURCES: readonly (string | null)[] = [null, 'ui', 'e2e', 'bench', 'queue'];
 
@@ -29,9 +30,7 @@ export async function continueOpenRequest(
 ): Promise<void> {
   const { rows } = await db.query<TurnRow>(
     `SELECT r.source, p.id AS previous_id, p.status AS previous_status,
-            (SELECT m.content FROM messages m
-             WHERE m.run_id = p.id AND m.role = 'assistant'
-             ORDER BY m.created_at DESC LIMIT 1) AS previous_reply
+            (${workReply('p.id', 'm.content')}) AS previous_reply
      FROM runs r
      LEFT JOIN LATERAL (
        SELECT e.id, e.status FROM runs e

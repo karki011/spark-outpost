@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp, localClient } from './app-support.ts';
-import { connectProviders } from './orchestration-support.ts';
+import { connectAgents } from './turn-worker.ts';
 import { pairDevice, remoteClient, turnRemoteOn } from './remote-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -53,7 +53,7 @@ describe('what a phone is not shown', () => {
   });
 
   it('shortens a saved key to its last four characters', async () => {
-    await connectProviders(t);
+    await connectAgents(t);
     await t.db.query(
       `UPDATE provider_connections SET detail = 'sk-abcd…wxyz' WHERE workspace_id = $1`,
       [t.workspaceId],

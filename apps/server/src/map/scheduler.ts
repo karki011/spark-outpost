@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { IntakeDeps } from '../advisor/intake-recorder.ts';
+import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { headCommit, workingChanges } from '../codescan/git.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
-import type { JevAccess } from '../orchestration/jev-calls.ts';
+import type { JevAccess } from '../advisor/jev-calls.ts';
 import { readIgnore } from '../projects/project-fs.ts';
 import { advisorEntry } from '../providers/catalog.ts';
 import { buildRepo } from './build.ts';

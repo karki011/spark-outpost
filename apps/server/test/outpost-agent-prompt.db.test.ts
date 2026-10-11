@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { intakeRequest } from '../src/advisor/intake-recorder.ts';
 import { wrapRequest } from '../src/outposts/request-prompt.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -48,7 +47,6 @@ async function finished(runId: string): Promise<void> {
     leaseSeconds: 30,
     concurrency: 1,
     pollMs: 20,
-    coordinator: 'off',
   });
   await eventually(async () => ((await getRun(t.db, runId))?.finishedAt ? true : null));
 }
@@ -69,7 +67,7 @@ async function requestTurn(body: string, fromUser = true) {
 }
 
 describe('what the agent receives for an outpost request', () => {
-  it('is the wrapped text, while the task title and intake read what was typed', async () => {
+  it('is the wrapped text, while the task title reads what was typed', async () => {
     const body = 'Add the orders endpoint.\nKeep the old route.';
     const { postId, input } = await requestTurn(body);
 
@@ -78,7 +76,6 @@ describe('what the agent receives for an outpost request', () => {
     ]);
     expect(input.prompt).toBe(body);
     expect(taskTitle(input.prompt)).toBe('Add the orders endpoint.');
-    expect(intakeRequest(input, { candidates: [] } as never).task).toBe(body);
     const stored = await t.db.query('SELECT content FROM messages WHERE id = $1', [postId]);
     expect(stored.rows).toEqual([{ content: body }]);
     const titles = await t.db.query<{ title: string }>(

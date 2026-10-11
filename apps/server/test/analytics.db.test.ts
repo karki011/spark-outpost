@@ -1,7 +1,6 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  analyticsHarnessSchema,
   analyticsOverviewSchema,
   analyticsSpendSchema,
   rollupReportSchema,
@@ -267,59 +266,7 @@ describe('analytics spend', () => {
   });
 });
 
-describe('analytics harness', () => {
-  it('builds the routing flow, gate points, disagreements and quality slices', async () => {
-    await seedScenario();
-    const response = await get('/api/analytics/harness?range=30d&tz=UTC').expect(200);
-    const harness = analyticsHarnessSchema.parse(response.body);
-    expect(harness.flow).toContainEqual({
-      category: 'bug_fix',
-      depth: 'plan_execute_review',
-      crew: 'Architect + Builder ×2 + Critic',
-      model: 'Sonnet 5',
-      provider: 'claude',
-      outcome: 'good',
-      turns: 3,
-    });
-    expect(harness.flow).toContainEqual(
-      expect.objectContaining({
-        crew: 'Solo',
-        depth: 'direct',
-        outcome: 'unclear',
-        model: 'GPT-6 Luna',
-      }),
-    );
-    expect(harness.confidence).toHaveLength(6);
-    expect(harness.confidence[0]).toMatchObject({ confidence: 0.93, decision: 'act', actAt: 0.9 });
-    expect(harness.disagreements).toEqual([
-      expect.objectContaining({
-        field: 'model',
-        rulePick: 'Haiku 4.5',
-        jevPick: 'Sonnet 5',
-        turns: 6,
-        winner: 'jev',
-      }),
-    ]);
-    expect(harness.agreement.find((row) => row.key === 'differs')).toMatchObject({ turns: 6 });
-    expect(harness.agreement.find((row) => row.key === 'no_jev')).toMatchObject({ turns: 1 });
-    expect(harness.lean.map((row) => [row.style, row.turns, row.netLines])).toEqual([
-      ['off', 3, 0],
-      ['lean', 3, -30],
-    ]);
-    expect(harness.critic).toMatchObject({ reviews: 3, concerns: 3, findings: 6 });
-    expect(harness.critic.reviewed).toMatchObject({ turns: 3, good: 3 });
-    expect(harness.critic.unreviewed).toMatchObject({ turns: 3, bad: 3 });
-    expect(harness.checks).toEqual({
-      turns: 6,
-      firstPassed: 3,
-      finalPassed: 6,
-      fixLoops: 3,
-      rounds: 9,
-    });
-    expect(harness.loops).toEqual({ turns: 6, withRetries: 3, retries: 3, fixLoops: 3 });
-    expect(harness.approvals).toMatchObject({ count: 3, medianMs: 30_000 });
-  });
-
+describe('analytics rollups', () => {
   it('rolls up by model and by Jev decision', async () => {
     await seedScenario();
     const byModel = rollupReportSchema.parse(
@@ -340,14 +287,12 @@ describe('analytics harness', () => {
     const seeded = await seedRealisticAnalytics(t.db, t.workspaceId, { days: 90 });
     expect(seeded).toBeGreaterThan(200);
     const started = performance.now();
-    const [overview, spend, harness] = await Promise.all([
+    const [overview, spend] = await Promise.all([
       get('/api/analytics/overview?range=90d').expect(200),
       get('/api/analytics/spend?range=90d').expect(200),
-      get('/api/analytics/harness?range=90d').expect(200),
     ]);
     expect(performance.now() - started).toBeLessThan(5_000);
     expect(analyticsOverviewSchema.parse(overview.body).health.score).not.toBeNull();
     expect(analyticsSpendSchema.parse(spend.body).leaves.length).toBeGreaterThan(5);
-    expect(analyticsHarnessSchema.parse(harness.body).flow.length).toBeGreaterThan(10);
   }, 60_000);
 });

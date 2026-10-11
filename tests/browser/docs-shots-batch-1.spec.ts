@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,23 +5,9 @@ import { expandSection } from './provider-screen.ts';
 import { expect, test, type Page } from '@playwright/test';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead } from './connector-cards.ts';
-import {
-  card,
-  failingCheck,
-  keptResult,
-  pickerPanel,
-  pickPermission,
-  send,
-  type Level,
-} from './crew-engine.ts';
-import {
-  DEMO_PROJECT,
-  demoRepo,
-  seedDemo,
-  shoot,
-  useSystemTheme,
-  type DemoRepo,
-} from './docs-seed.ts';
+import { pickPermission } from './permissions-kit.ts';
+import { card, send, turnDone } from './project-chat-kit.ts';
+import { demoRepo, seedDemo, shoot, useSystemTheme, type DemoRepo } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
@@ -67,38 +52,6 @@ async function newChat(page: Page) {
   await expect(page.getByText('What should we work on?')).toBeVisible();
 }
 
-async function projectChat(page: Page, level: Level) {
-  await newChat(page);
-  await page.locator('.ctx-repo').click();
-  const menu = page.getByRole('dialog', { name: 'Project folders' });
-  await menu.getByRole('button', { name: new RegExp(`^${DEMO_PROJECT}`) }).click();
-  await expect(menu.getByRole('list', { name: 'Linked repos' })).toContainText(DEMO_PROJECT);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: /^Model and effort/ }).click();
-  await pickerPanel(page).getByRole('radio', { name: /^Auto/ }).click();
-  await pickPermission(page, level);
-  await page.keyboard.press('Escape');
-}
-
-function git(...args: string[]) {
-  execFileSync('git', [
-    '-C',
-    repo.root,
-    '-c',
-    'user.email=maya@acme.test',
-    '-c',
-    'user.name=Maya',
-    ...args,
-  ]);
-}
-
-function crewFiles(relative: string, text: string) {
-  writeFileSync(path.join(repo.root, relative), text);
-  git('rm', '-q', 'package.json');
-  git('add', relative);
-  git('commit', '-qm', `Add ${relative}`);
-}
-
 test('Providers, models and Jev screenshots', async ({ page }) => {
   test.setTimeout(120_000);
   await seedDemo(page, repo);
@@ -128,13 +81,6 @@ test('Providers, models and Jev screenshots', async ({ page }) => {
   await expect(models.locator('.mc-provider').first()).toBeVisible();
   await shoot(page, IMAGES, 'providers-model-cards');
   await page.keyboard.press('Escape');
-
-  await newChat(page);
-  await page.getByRole('button', { name: /^Model and effort/ }).click();
-  const auto = pickerPanel(page).getByRole('radio', { name: /^Auto/ });
-  await auto.click();
-  await expect(auto).toHaveAttribute('aria-checked', 'true');
-  await shoot(page, IMAGES, 'auto-routing-picker');
 });
 
 async function sendAndWait(page: Page, text: string, turns: number) {
@@ -161,31 +107,6 @@ test('Compaction screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'compaction-card', full);
 });
 
-const TOTALS = `export function sumTotals(rows: number[]): number {
-  return rows.reduce((sum, row) => sum + row, 0);
-}
-
-export function helperTotals(rows: number[]): number {
-  return rows.length;
-}
-`;
-
-test('Crew and guardrail screenshots', async ({ page }) => {
-  test.setTimeout(150_000);
-  crewFiles('src/totals.ts', TOTALS);
-  await seedDemo(page, repo);
-  await page.setViewportSize({ width: 1400, height: 900 });
-
-  await projectChat(page, 'Auto-edit');
-  await failingCheck(page, repo.root);
-  await send(page, 'Fix the totals divider #build #removehelper #criticremoval');
-  const keep = keptResult(page);
-  await expect(keep.getByRole('list', { name: 'Worth a look' })).toBeVisible({ timeout: 30_000 });
-  await keep.scrollIntoViewIfNeeded();
-  await shoot(page, IMAGES, 'prompt-flow-crew-turn');
-  await shoot(page, IMAGES, 'guardrails-keep-card', keep);
-});
-
 test('Ship screenshot', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1400, height: 900 });
@@ -209,7 +130,7 @@ test('Ship screenshot', async ({ page }) => {
     await card(page, /Change a file\?/)
       .getByRole('button', { name: 'Allow', exact: true })
       .click();
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
+    await turnDone(page, 15_000);
     const showPanel = page.getByRole('button', { name: 'Show work panel' });
     if (await showPanel.isVisible()) await showPanel.click();
     const work = page.getByRole('complementary', { name: 'Work panel' });

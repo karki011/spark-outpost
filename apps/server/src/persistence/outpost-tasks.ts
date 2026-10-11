@@ -12,6 +12,7 @@ import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import { notifyOutpostChanged } from './outposts.ts';
 import { requestCancel } from './runs.ts';
+import { workReply } from './work-reply.ts';
 
 export interface ChatFacts {
   conversationId: string;
@@ -35,7 +36,8 @@ export type AcceptRefusal =
   | 'id_taken'
   | 'empty'
   | 'too_long'
-  | 'closed';
+  | 'closed'
+  | 'held';
 
 export type AcceptOutcome =
   | { kind: 'accepted'; postId: string; taskId: string; queued: boolean }
@@ -64,6 +66,7 @@ interface PostRow {
   task_id: string | null;
   run_id: string | null;
   closed_state: string | null;
+  after_post_id: string | null;
 }
 
 interface DeliveryFacts {
@@ -73,7 +76,7 @@ interface DeliveryFacts {
 }
 
 const POST_COLUMNS =
-  'id, outpost_id, kind, body, to_conversation_id, guest, task_id, run_id, closed_state';
+  'id, outpost_id, kind, body, to_conversation_id, guest, task_id, run_id, closed_state, after_post_id';
 
 export function deliveryProblem(facts: DeliveryFacts): RejectReason | null {
   if (!facts.mayReceive) return 'not_member';
@@ -245,6 +248,7 @@ export function acceptTask(
       return { kind: 'accepted', postId: post.id, taskId: post.task_id, queued: false };
     }
     if (post.closed_state !== null) return { kind: 'refused', why: 'closed' };
+    if (post.after_post_id !== null) return { kind: 'refused', why: 'held' };
     const outcome = await deliver(client, post, chatId, chat.archived);
     await notifyOutpostChanged(client, post.outpost_id);
     return outcome;
@@ -271,12 +275,8 @@ async function closeCancelled(db: Queryable, postId: string): Promise<CancelOutc
 }
 
 async function asksTheUser(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'
-     ORDER BY created_at DESC LIMIT 1`,
-    [runId],
-  );
-  return rows[0] !== undefined && needsYouLines(rows[0].content).length > 0;
+  const { rows } = await db.query<{ text: string }>(workReply('$1', 'm.content'), [runId]);
+  return rows[0] !== undefined && needsYouLines(rows[0].text).length > 0;
 }
 
 async function cancelCarried(db: Queryable, post: PostRow): Promise<CancelOutcome> {

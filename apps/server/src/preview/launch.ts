@@ -6,14 +6,13 @@ export const PORT_TRIES = 20;
 const DEFAULT_PORTS: Record<string, number> = { 'http:': 80, 'https:': 443 };
 const SPARK_OWN = /^(?:SPARK_|API_(?:PORT|HOST)$|ALLOWED_ORIGINS$|WEB_ROOT$|BACKUP_DIR$|PORT$)/;
 
-export function previewEnvironment(env: NodeJS.ProcessEnv, port: number): Record<string, string> {
+export function commandEnvironment(env: NodeJS.ProcessEnv): Record<string, string> {
   const kept = Object.entries(childEnvironment(env)).filter(([name]) => !SPARK_OWN.test(name));
-  return {
-    ...Object.fromEntries(kept),
-    TERM: 'xterm-256color',
-    COLORTERM: 'truecolor',
-    PORT: String(port),
-  };
+  return { ...Object.fromEntries(kept), TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+}
+
+export function previewEnvironment(env: NodeJS.ProcessEnv, port: number): Record<string, string> {
+  return { ...commandEnvironment(env), PORT: String(port) };
 }
 
 export function portOf(url: string): number {

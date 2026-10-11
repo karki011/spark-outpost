@@ -23,7 +23,6 @@ export interface NativeLaunchInput {
   version?: string;
   verifyHooks?: typeof verifyNativeHooks;
   verifyOption?: typeof verifyNativeOption;
-  workflowEnabled?: boolean;
   instructions?: string | undefined;
   signal?: AbortSignal;
   env?: NodeJS.ProcessEnv;
@@ -246,7 +245,6 @@ async function providerConfiguration(
     await privateJson(settingsPath, {
       hooks: Object.fromEntries(names.map((name) => [name, groups])),
     });
-    if (input.workflowEnabled === false) return { args: ['--settings', settingsPath], env: {} };
     await privateJson(mcpPath, {
       mcpServers: {
         [`spark_${input.sessionId.replaceAll('-', '_')}`]: {
@@ -260,20 +258,17 @@ async function providerConfiguration(
   }
   const name = `spark_${input.sessionId.replaceAll('-', '_')}`;
   const envName = `SPARK_NATIVE_MCP_TOKEN_${input.sessionId.replaceAll('-', '_')}`;
-  const args =
-    input.workflowEnabled === false
-      ? []
-      : [
-          '-c',
-          `mcp_servers.${name}.url=${tomlValue(input.mcp.url)}`,
-          '-c',
-          `mcp_servers.${name}.bearer_token_env_var=${tomlValue(envName)}`,
-        ];
+  const args = [
+    '-c',
+    `mcp_servers.${name}.url=${tomlValue(input.mcp.url)}`,
+    '-c',
+    `mcp_servers.${name}.bearer_token_env_var=${tomlValue(envName)}`,
+  ];
   if (names.length) {
     args.push('-c', 'features.hooks=true');
     for (const event of names) {
       args.push('-c', `hooks.${event}=${tomlValue(groups)}`);
     }
   }
-  return { args, env: input.workflowEnabled === false ? {} : { [envName]: input.mcp.token } };
+  return { args, env: { [envName]: input.mcp.token } };
 }

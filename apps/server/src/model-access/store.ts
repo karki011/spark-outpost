@@ -59,17 +59,6 @@ export async function loadAccess(
   return rows[0] ? toAccess(rows[0]) : null;
 }
 
-export async function loadAllAccess(
-  db: Queryable,
-  workspaceId: string,
-): Promise<Map<string, StoredAccess>> {
-  const { rows } = await db.query<AccessRow>(
-    `SELECT ${COLUMNS} FROM provider_model_access WHERE workspace_id = $1`,
-    [workspaceId],
-  );
-  return new Map(rows.map((row) => [row.provider, toAccess(row)]));
-}
-
 async function saveAccess(
   db: Queryable,
   workspaceId: string,

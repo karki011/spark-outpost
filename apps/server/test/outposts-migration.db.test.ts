@@ -111,7 +111,7 @@ describe('upgrading to outposts', () => {
       /outpost_members_one_outpost/,
     );
     await expect(join(db, outpostId, third.id, 'api')).rejects.toThrow(/outpost_members_handle/);
-    for (const handle of ['all', 'a', 'Docs', '2nd', 'a2345678901234567']) {
+    for (const handle of ['all', 'a', 'Docs', '2nd', `a${'2'.repeat(32)}`]) {
       await expect(join(db, outpostId, third.id, handle), handle).rejects.toThrow(/handle_check/);
     }
     await join(db, outpostId, third.id, 'docs-2');

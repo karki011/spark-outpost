@@ -160,4 +160,14 @@ describe('audit recorder', () => {
       false,
     ]);
   });
+
+  it('marks an entry Spark says ran without review, and no other', async () => {
+    const { audit, batches } = recorder();
+    const started = { method: 'spark/terminal_start', params: { decision: 'mode' } };
+    audit.message('harness', started, { unreviewed: true });
+    audit.message('harness', started, {});
+    audit.message('harness', started);
+    await audit.close();
+    expect(batches.flat().map((entry) => entry.unreviewed === true)).toEqual([true, false, false]);
+  });
 });

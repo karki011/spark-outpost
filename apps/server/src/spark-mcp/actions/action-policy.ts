@@ -70,12 +70,15 @@ interface RunFacts {
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
   const { rows } = await db.query<RunFacts>(
-    `SELECT r.provider, COALESCE(r.used_mode, r.agent_mode) AS mode, m.content AS request,
+    `SELECT r.provider, m.content AS request,
+            COALESCE(r.used_mode, CASE WHEN c.session_type = 'terminal' THEN NULL
+              ELSE r.agent_mode END) AS mode,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
             (SELECT post.from_user FROM outpost_posts post
              WHERE post.id = r.user_message_id) AS from_user
-     FROM runs r LEFT JOIN messages m ON m.id = r.user_message_id
+     FROM runs r JOIN conversations c ON c.id = r.conversation_id
+       LEFT JOIN messages m ON m.id = r.user_message_id
      WHERE r.id = $1`,
     [runId],
   );

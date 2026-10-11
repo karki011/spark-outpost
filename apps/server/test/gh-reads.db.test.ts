@@ -44,7 +44,7 @@ afterEach(async () => {
 
 type Chat = Awaited<ReturnType<typeof doRun>>;
 
-async function builderChat(pull: number | null): Promise<Chat> {
+async function ownChat(pull: number | null): Promise<Chat> {
   const chat = await doRun(t, root, 'work', 'hands-off');
   await insertChatWorktree(t.db, {
     id: randomUUID(),
@@ -80,7 +80,7 @@ async function builderChat(pull: number | null): Promise<Chat> {
   return chat;
 }
 
-function builderGate(chat: Chat, provider: string, mode: string) {
+function chatGate(chat: Chat, provider: string, mode: string) {
   const waiters = new ApprovalWaiters();
   const observations = createRunObservations({
     db: t.db,
@@ -92,7 +92,7 @@ function builderGate(chat: Chat, provider: string, mode: string) {
     runId: chat.runId,
     provider,
     mode,
-    builder: true,
+    changesProject: true,
     append: recordingAppend().append,
     waiters,
     pollMs: 20,
@@ -118,12 +118,12 @@ async function pendingCard(runId: string) {
 const signal = () => new AbortController().signal;
 
 describe.each([null, 2233, 77])(
-  "a Builder reading pull requests through gh when the chat's recorded pull request is %s",
+  "the chat run reading pull requests through gh when the chat's recorded pull request is %s",
   (pull) => {
     it.each(NON_ASKING)('runs every read without a card in %s %s', async (provider, mode) => {
-      const chat = await builderChat(pull);
+      const chat = await ownChat(pull);
       expect((await taskBranch(t.db, root))?.pull ?? null).toBe(pull);
-      const { gate } = builderGate(chat, provider, mode);
+      const { gate } = chatGate(chat, provider, mode);
       for (const command of READS) {
         const answer = await gate.review(commandRequest(root, command, randomUUID()), signal());
         expect(answer, command).toMatchObject({ allowed: true });
@@ -131,8 +131,8 @@ describe.each([null, 2233, 77])(
     });
 
     it("shows the mode's ordinary card in Manual", async () => {
-      const chat = await builderChat(pull);
-      const { gate, waiters } = builderGate(chat, 'claude', 'default');
+      const chat = await ownChat(pull);
+      const { gate, waiters } = chatGate(chat, 'claude', 'default');
       for (const command of [GREPTILE_COMMENT, SCORE_LINES]) {
         const waiting = gate.review(commandRequest(root, command, randomUUID()), signal());
         const card = await pendingCard(chat.runId);
@@ -144,12 +144,12 @@ describe.each([null, 2233, 77])(
     });
 
     it('still refuses a write on a pull request that is not its own', async () => {
-      const chat = await builderChat(pull);
-      const { gate } = builderGate(chat, 'claude', 'bypassPermissions');
+      const chat = await ownChat(pull);
+      const { gate } = chatGate(chat, 'claude', 'bypassPermissions');
       const refused = [
         ['gh pr merge 2233', 'gh pr merge'],
         ['gh pr edit 5 --title x', 'gh pr edit'],
-        ['gh api -X POST repos/acme/widgets/pulls/2233/comments -f body=x', 'gh api'],
+        ['gh api -X POST repos/acme/widgets/pulls/5/comments -f body=x', 'gh api'],
       ] as const;
       for (const [command, named] of refused) {
         const answer = await gate.review(commandRequest(root, command, randomUUID()), signal());

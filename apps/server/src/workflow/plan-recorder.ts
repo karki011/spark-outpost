@@ -23,7 +23,6 @@ export interface PlanRecorderDeps {
   root: string | null;
   taskId: () => Promise<string | null>;
   append: Append;
-  notesOnly?: boolean;
 }
 
 export interface PlanRecorder {
@@ -78,7 +77,6 @@ export function createPlanRecorder(deps: PlanRecorderDeps): PlanRecorder {
     (await latestPlanBody(deps.db, deps.conversationId)) === body.trim();
 
   const propose = async (body: string, source: PlanDocumentSource, toolCallId?: string) => {
-    if (deps.notesOnly) return null;
     try {
       if (source === 'codex' && (await repeated(body))) return null;
       const plan = await insertPlanDocument(deps.db, {

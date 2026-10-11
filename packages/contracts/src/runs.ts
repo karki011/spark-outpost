@@ -56,6 +56,7 @@ export const runSchema = z.object({
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
   model: z.string().nullable(),
+  usedModel: z.string().nullable().optional(),
   effort: z.string().nullable(),
   usage: runUsageSchema.nullable(),
   mode: runModeSchema.nullable(),
@@ -81,6 +82,8 @@ export const runSchema = z.object({
       outpostName: z.string(),
       fromHandle: z.string().nullable(),
       fromUser: z.boolean(),
+      fromSpark: z.boolean().default(false),
+      userStarted: z.boolean().default(false),
     })
     .optional(),
 });
@@ -98,3 +101,13 @@ export const interruptionSchema = z.object({
   blocked: interruptionBlockSchema.nullable(),
 });
 export type Interruption = z.infer<typeof interruptionSchema>;
+
+export const OUTPOST_DRAFT_ACTIVITY = 'outpost_draft';
+export const PUBLISH_NOTE_ACTIVITY = 'publish_note';
+
+export const outpostDraftActivitySchema = z.object({
+  draftId: z.uuid(),
+  chats: z.number().int().positive(),
+  stacked: z.number().int().nonnegative(),
+});
+export type OutpostDraftActivity = z.infer<typeof outpostDraftActivitySchema>;

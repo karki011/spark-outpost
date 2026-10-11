@@ -6,9 +6,10 @@ import {
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { countLabel } from '../../ui/count-label.ts';
-import { listedChats, type ChatDraft, type CreateDraft } from './create-draft.ts';
+import { joinedHandles, listedChats, type ChatDraft, type CreateDraft } from './create-draft.ts';
+import { LEAD_MISSING, leadMissing, storyIssues } from './story-problems.ts';
 
-export type ChatField = 'chat' | 'project' | 'agent' | 'handle' | 'message';
+export type ChatField = 'chat' | 'project' | 'agent' | 'handle' | 'message' | 'after';
 
 export interface ChatProblem {
   key: string;
@@ -75,7 +76,8 @@ function handleIssue(
   chats: readonly ConversationSummary[],
 ): ChatProblem | null {
   const listed = listedChats(draft);
-  const earlier = listed.slice(0, listed.indexOf(chat)).map((other) => other.handle);
+  const before = listed.slice(0, listed.indexOf(chat)).map((other) => other.handle);
+  const earlier = [...joinedHandles(draft), ...before];
   const shape = handleProblem(chat.handle, []);
   if (shape) return problem(chat, 'handle', shape);
   if (!earlier.includes(chat.handle)) return null;
@@ -83,7 +85,7 @@ function handleIssue(
     chat.kind === 'existing'
       ? chats.find((candidate) => candidate.id === chat.chatId)?.title
       : undefined;
-  const taken = listed.map((other) => other.handle);
+  const taken = [...joinedHandles(draft), ...listed.map((other) => other.handle)];
   return problem(
     chat,
     'handle',
@@ -114,7 +116,11 @@ export function chatProblems(
   if (!chat.touched) return [];
   const member = memberProblem(chat, chats);
   const picked = member === null || chat.kind === 'new';
-  return [member, picked ? handleIssue(chat, draft, chats) : null, messageProblem(chat)].filter(
+  const message = messageProblem(chat);
+  const story = storyIssues(chat, draft)
+    .filter((issue) => issue.field !== 'message' || message === null)
+    .map((issue) => problem(chat, issue.field, issue.message));
+  return [member, picked ? handleIssue(chat, draft, chats) : null, message, ...story].filter(
     (found): found is ChatProblem => found !== null,
   );
 }
@@ -142,5 +148,6 @@ export function continueBlock(
     return `An outpost can have at most ${OUTPOST_MEMBERS_MAX} chats.`;
   }
   const count = draftProblems(draft, chats).length;
-  return count === 0 ? null : `${countLabel(count, 'thing')} to fix`;
+  if (count > 0) return `${countLabel(count, 'thing')} to fix`;
+  return leadMissing(draft) ? LEAD_MISSING : null;
 }

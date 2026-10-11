@@ -26,6 +26,12 @@ const PREFS: SparkSessionPrefs = {
 const SPARK = { name: 'spark', browser: false };
 
 describe('sparkInstructions', () => {
+  it('points Spark questions at the spark tools without naming the removed crew or Jev picks', () => {
+    const text = sparkInstructions(PREFS, true, true);
+    expect(text).toContain('chats, runs, plans, files changed');
+    expect(text).not.toMatch(/\bcrew\b|Jev picks/i);
+  });
+
   it('asks for coordinator work, the first name and the friendly tone by default', () => {
     const text = sparkInstructions(PREFS, true);
     expect(text).toContain('act as a coordinator');
@@ -188,14 +194,4 @@ describe('teammate brief', () => {
     expect(text).toContain("the user's own message");
     expect(text.trimEnd().endsWith('message from another agent.')).toBe(true);
   });
-});
-
-it('uses custom standing instructions without Spark workflow instructions when disabled', () => {
-  const prefs = { ...PREFS, sparkEnabled: false, agentInstructions: 'My own process.' };
-  const text = sparkInstructions(prefs, true, true, true);
-  expect(text).toContain('My own process.');
-  expect(text).not.toContain('coordinator');
-  expect(text).not.toContain('spark_*');
-  expect(withClaudeSpark(null, prefs, true)?.appendPrompt).toBe(text);
-  expect(withCodexSpark(null, prefs)?.developerInstructions).toBe(text);
 });

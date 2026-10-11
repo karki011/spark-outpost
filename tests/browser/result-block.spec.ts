@@ -4,19 +4,14 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
-import { CREW_REQUEST, crewChat, crewRepo, send } from './crew-engine.ts';
+import { turnDone } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import {
   buildNotes,
   chatIn,
-  CLAIM,
-  OUTSIDE_FILES,
   shoot,
   shootEverywhere,
   SHOTS,
-  STORED_LAWS,
-  storeResultFacts,
-  storeWorthALook,
   timeOutLastTurn,
 } from './result-block-kit.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
@@ -50,8 +45,6 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   page,
 }) => {
   await fullAutoPr(page);
-  await storeWorthALook(STORED_LAWS);
-  await page.reload();
   const block = result(page);
   await expect(block).toHaveAccessibleName('Kept · 1 file · +1 −0');
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
@@ -75,19 +68,8 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   expect(thumbs!.y + thumbs!.height).toBeLessThanOrEqual(line!.y + line!.height + 1);
   await expect(block.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
 
-  const laws = block.getByRole('list', { name: 'Worth a look' });
-  await expect(laws.getByText(CLAIM.replaceAll('`', ''))).toHaveCount(1);
-  await expect(laws).not.toContainText('check it');
-  const outside = laws.locator('details');
-  await expect(outside.locator('summary')).toHaveText('5 files outside the plan');
-  await expect(outside.getByRole('list', { name: 'Files outside the plan' })).toBeHidden();
   await page.waitForTimeout(300);
   await shoot(page, 'after-full-auto-pr');
-
-  await outside.locator('summary').focus();
-  await page.keyboard.press('Enter');
-  const files = outside.getByRole('list', { name: 'Files outside the plan' });
-  await expect(files.getByRole('listitem')).toHaveText(OUTSIDE_FILES);
 
   const toggle = block.getByRole('button', { name: 'Kept · 1 file · +1 −0' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -95,7 +77,7 @@ test('Full auto → PR ends in one result line with a PR reference and no publis
   await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   const more = page.locator(`[id="${await toggle.getAttribute('aria-controls')}"]`);
-  await expect(more).toContainText('Full auto → PR kept the changes');
+  await expect(more).toContainText('Kept by Full auto → PR.');
   await expect(more.getByRole('button', { name: 'Open the diff of notes.txt' })).toBeVisible();
   await expect(more.getByRole('button', { name: 'Bring changes into main' })).toBeVisible();
   await shoot(page, 'after-full-auto-pr-expanded');
@@ -116,34 +98,12 @@ test('Automatic keeps on one line with no pull request and nothing to look at', 
   await expect(block).toHaveAccessibleName('Kept · 1 file · +1 −0');
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(0);
   await expect(block.getByRole('link')).toHaveCount(0);
-  await expect(block.locator('.wal')).toHaveCount(0);
   await expect(block.locator('.result-note')).toHaveCount(0);
   await expect(page.locator('.col').getByRole('button', { name: /PR|Push/ })).toHaveCount(0);
   await expect(page.getByRole('region', { name: /^Files changed/ })).toHaveCount(0);
   const height = (await block.boundingBox())!.height;
   expect(height).toBeLessThan(48);
   await shoot(page, 'after-automatic');
-});
-
-test('files outside the plan stay one collapsed line and vanish when there are none', async ({
-  page,
-}) => {
-  await automatic(page);
-  await storeWorthALook([CLAIM, CLAIM], OUTSIDE_FILES);
-  await page.reload();
-  const laws = result(page).getByRole('list', { name: 'Worth a look' });
-  await expect(laws.locator('> li')).toHaveCount(2);
-  await expect(laws.locator('summary')).toHaveText('5 files outside the plan');
-
-  await storeWorthALook([CLAIM]);
-  await page.reload();
-  await expect(laws.locator('> li')).toHaveCount(1);
-  await expect(laws.locator('details')).toHaveCount(0);
-
-  await storeWorthALook([]);
-  await page.reload();
-  await expect(result(page)).toBeVisible();
-  await expect(page.getByText('Worth a look')).toHaveCount(0);
 });
 
 test('Bring changes sits in the expanded block and only when the checkout can take it', async ({
@@ -182,7 +142,7 @@ test('a timed-out approval reads as waited for you, says what was asked and retr
   await automatic(page);
   await timeOutLastTurn('Run git commit?');
   await page.reload();
-  const turn = page.locator('.crew-turn, .msg.ai').first();
+  const turn = page.locator('.msg.ai').first();
   await expect(turn).toBeVisible();
   await expect(page.locator('.col')).not.toContainText('hit a problem');
   await expect(page.locator('.col')).toContainText('waited for you');
@@ -207,11 +167,8 @@ test('a timed-out approval reads as waited for you, says what was asked and retr
 
 test('the result block fits a phone and passes axe in light and dark', async ({ page }) => {
   await fullAutoPr(page);
-  await storeWorthALook(STORED_LAWS);
-  await page.reload();
   const block = result(page);
   await block.getByRole('button', { name: /^Kept · 1 file/ }).click();
-  await block.locator('summary').click();
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await page.evaluate((skin) => {
@@ -248,26 +205,11 @@ test.describe('result block screenshots', () => {
     await input.fill('Add a line to the notes #edit');
     await input.press('Enter');
     await expect(result(page)).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText('1 agent');
+    await turnDone(page, 30_000);
     await shootEverywhere(page, 'solo');
   });
 
-  test('a crew turn with several agents', async ({ page }) => {
-    const repo = crewRepo();
-    try {
-      await crewChat(page, repo, 'Auto-edit');
-      await send(page, `${CREW_REQUEST} #build #crew`);
-      await expect(result(page)).toBeVisible({ timeout: 90_000 });
-      await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', {
-        timeout: 30_000,
-      });
-      await shootEverywhere(page, 'crew');
-    } finally {
-      repo.remove();
-    }
-  });
-
-  test('a turn with a pull request, expanded, and with failing checks', async ({ page }) => {
+  test('a turn with a pull request, collapsed and expanded', async ({ page }) => {
     await fullAutoPr(page);
     const block = result(page);
     await expect(block.getByRole('link', { name: /^Pull request #1/ })).toBeVisible();
@@ -276,14 +218,45 @@ test.describe('result block screenshots', () => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await block.getByRole('button', { name: /^Kept · 1 file/ }).click();
     await shootEverywhere(page, 'with-pr-expanded');
-
-    await storeResultFacts({
-      checks: { passed: 2, failed: 1, unsettled: 0 },
-      keptNote:
-        'Opened draft PR #1, marked "Checks failing": https://github.com/acme/widgets/pull/1',
-    });
-    await page.reload();
-    await expect(result(page)).toContainText('1 check failing');
-    await shootEverywhere(page, 'failed-checks');
   });
+});
+
+test('a Full auto → PR turn shows the work reply, then the publish result, under one agent header', async ({
+  page,
+}) => {
+  await fullAutoPr(page);
+  const turn = page.locator('section[data-turn]').last();
+  const publish = turn.getByRole('group', { name: 'Publish result' });
+  const shown = async () => {
+    await expect(turn.locator('.ai-head')).toHaveCount(1);
+    await expect(turn.locator('.msg.ai > .md').first()).toContainText('fake-edit=allowed');
+    await expect(publish).toContainText('published=');
+    await expect(publish).not.toContainText('fake-edit=allowed');
+    const work = (await turn.locator('.msg.ai > .md').first().boundingBox())!;
+    const result = (await publish.boundingBox())!;
+    expect(work.y + work.height).toBeLessThanOrEqual(result.y);
+  };
+  await shown();
+  await page.reload();
+  await shown();
+  const violations = await new AxeBuilder({ page })
+    .include('.publish-result')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(violations.violations.map((violation) => violation.id)).toEqual([]);
+
+  if (!SHOTS) return;
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate((skin) => {
+      document.documentElement.dataset.skin = skin === 'light' ? 'light' : 'graphite';
+    }, scheme);
+    await turn.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    await turn.screenshot({ path: `${SHOTS}/release-fix-publish-turn-${scheme}.png` });
+    await page
+      .getByRole('region', { name: 'Chat context' })
+      .screenshot({ path: `${SHOTS}/release-fix-rail-${scheme}.png` });
+  }
 });

@@ -86,3 +86,33 @@ test('replies sit under the agent name in one centred column the bubble and comp
   }
   expect(await pageScroll(page)).toBe(0);
 });
+
+test('a short label in a wide reply table stays on one line', async ({ page }) => {
+  test.setTimeout(120_000);
+  await longChat(page);
+  await widenSecondReply(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const heights = await page
+    .locator('.md table')
+    .first()
+    .evaluate((table) => {
+      const long =
+        'Owner, or anyone if visibility is org, or anyone shared. Everyone else gets 404, so a private record does not leak. ';
+      table.innerHTML = `<thead><tr><th></th><th>Current</th><th>Proposed</th></tr></thead><tbody>${[
+        'Create',
+        'Update',
+        'Delete',
+      ]
+        .map(
+          (label) =>
+            `<tr><td>${label}</td><td>Any org member can do this today</td><td>${long.repeat(3)}</td></tr>`,
+        )
+        .join('')}</tbody>`;
+      return [...table.querySelectorAll('tbody tr')].map((row) => {
+        const text = document.createRange();
+        text.selectNodeContents(row.querySelector('td')!);
+        return text.getClientRects().length;
+      });
+    });
+  for (const lines of heights) expect(lines).toBe(1);
+});

@@ -36,9 +36,11 @@ The agent's mode is the provider's own setting, shown with the provider's names.
 
 ## Autonomy levels
 
-| Level                        | Plans          | Keeping changes | Shipping                                 | Where it works                |
-| ---------------------------- | -------------- | --------------- | ---------------------------------------- | ----------------------------- |
-| **Automatic**                | Saved, no wait | Kept by itself  | You ship                                 | Risky work in a worktree copy |
-| **Full auto → PR** (default) | Saved, no wait | Kept by itself  | Spark opens a PR, a draft if checks fail | A worktree copy               |
+| Level                        | Plans                         | Keeping changes | Shipping                        |
+| ---------------------------- | ----------------------------- | --------------- | ------------------------------- |
+| **Automatic**                | Only the agent's own approval | Kept by itself  | You ship                        |
+| **Full auto → PR** (default) | Only the agent's own approval | Kept by itself  | The agent pushes and opens a PR |
+
+The level doesn't choose [where the chat works](where-spark-works.md).
 
 Both levels keep **Revert to before this run**, and neither ever merges.

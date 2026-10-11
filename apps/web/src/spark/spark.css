@@ -14,9 +14,6 @@
   color: var(--text);
   font-size: 14px;
 }
-.spark-preview:not([data-enabled]) .spark-bubble {
-  color: var(--muted);
-}
 .spark-group + .spark-group {
   margin-top: 22px;
 }
@@ -41,25 +38,6 @@
   .inp.spark-name {
     width: 100%;
   }
-}
-.spark-off {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 3px 8px 3px 5px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.spark-off:hover {
-  color: var(--text);
-  border-color: var(--line-strong);
-}
-.spark-off .scout {
-  cursor: inherit;
 }
 .spark-value {
   display: inline-flex;

@@ -1,6 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { ModelCardsResponse } from '../../packages/contracts/src/model-cards.ts';
-import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import {
@@ -63,11 +62,11 @@ test('Models is one table per provider and a row opens for the details', async (
     'Out',
   ]);
   await expect(table.getByRole('rowheader')).toHaveText([
-    'Spark picks from these',
+    'Everyday and complex work',
     /^Sonnet 5(?!\.)/,
     /^Sonnet 5\.5/,
     /^Opus 5\.5/,
-    'Only when you pick it',
+    'Other models',
     /^Haiku 5\.5/,
     /^Haiku 4\.5/,
     /^Fable 5\.1/,
@@ -86,7 +85,7 @@ test('Models is one table per provider and a row opens for the details', async (
     /^\d+\/\d+/,
   ]);
   const details = sonnet.getByRole('button', { name: /^Sonnet 5 / });
-  await expect(details).toHaveText('Sonnet 5Everyday Builder, Critic, answers');
+  await expect(details).toHaveText('Sonnet 5Everyday work and answers');
   await expect(details).toHaveAttribute('aria-expanded', 'false');
   const measured = table.getByRole('table', { name: 'Measured on our benchmark' });
   await expect(measured).toBeHidden();
@@ -290,34 +289,16 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   await expect(again.getByRole('region')).toHaveCount(3);
 });
 
-test('the rules pick models, so there is no frontier switch, and Jev can stop checking changes', async ({
+test('there is no frontier switch, and the Jev screen has no switch to check changes', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], jev: true });
   const dialog = await openModels(page);
   await expect(dialog.getByRole('switch', { name: /Allow frontier models/ })).toHaveCount(0);
-  await expect(dialog).toContainText('The rules pick models');
 
   await dialog.getByRole('tab', { name: /AI providers/ }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   await providers.locator('.ptile[data-prov="jev"]').click();
-  await expandSection(providers.locator('.pconf[data-prov="jev"]'), 'Settings');
-  const diffs = providers.getByRole('switch', { name: 'Check changes with Jev' });
-  await expect(diffs).toBeChecked();
-  await expect(diffs).toHaveAccessibleDescription(
-    'Diffs and short file previews go to TypeSafe and are never used for training.',
-  );
-  const info = providers.getByRole('button', { name: 'More about Check changes with Jev' });
-  await expect(info).toHaveAccessibleDescription(
-    /observation only.*a stronger model redoes it once/,
-  );
-  await diffs.focus();
-  await page.keyboard.press('Space');
-  await expect(diffs).not.toBeChecked();
-  await page.reload();
-  await expect(
-    page
-      .getByRole('dialog', { name: 'AI providers' })
-      .getByRole('switch', { name: 'Check changes with Jev' }),
-  ).not.toBeChecked();
+  await expect(providers.locator('.pconf[data-prov="jev"]')).toBeVisible();
+  await expect(providers.getByRole('switch', { name: 'Check changes with Jev' })).toHaveCount(0);
 });

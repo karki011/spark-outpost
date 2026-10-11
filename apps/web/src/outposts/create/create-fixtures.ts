@@ -131,3 +131,13 @@ export function seedCreateQueries(client: QueryClient): void {
   });
   client.setQueryData(queryKeys.capabilities('codex'), CODEX_CAPABILITIES);
 }
+
+export const STORY_DRAFT_ID = '0e100000-0000-4000-8000-000000000001';
+
+export function storyDraft(chats: ChatDraft[], leadChatId: string): CreateDraft {
+  return { ...draftOf(chats), origin: { draftId: STORY_DRAFT_ID, leadChatId } };
+}
+
+export function withTask(chat: ChatDraft, text: string, dependsOn: string | null = null) {
+  return { ...chat, text, dependsOn };
+}

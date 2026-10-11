@@ -1,11 +1,11 @@
 import type { PublishBasis, TaskBranch } from '../approvals/publish-policy.ts';
-import { otherBranchReason } from '../approvals/publish-policy.ts';
+import { otherBranchReason, parentNotPushedReason } from '../approvals/publish-policy.ts';
 import { pushedSecretFiles } from '../approvals/secret-send.ts';
 import { trustFor } from '../agent-config/trust-store.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import { pushFailureDetail, shipFailureMessage } from './failure-hint.ts';
-import { harnessCommitsToPush, pickRemote, ShipGitError } from './git.ts';
+import { harnessCommitsToPush, pickRemote, remoteHasBranch, ShipGitError } from './git.ts';
 import type { GitHubDeps } from './github/access.ts';
 import { PushStoppedError } from './push-branch.ts';
 import { pushOwnBranch } from './push.ts';
@@ -17,6 +17,8 @@ export interface PublishScope {
   basis: PublishBasis;
   task: TaskBranch;
   root: string;
+  opensPull: boolean;
+  pushOnly: boolean;
 }
 
 export type AgentPushOutcome = 'pushed' | 'failed' | 'cancelled' | 'timed_out' | 'refused';
@@ -90,6 +92,10 @@ export async function pushForAgent(
   if (publish.task.protectedBranches.includes(branch)) return refuse(otherBranchReason(branch));
   const remote = await pickRemote(publish.root, branch);
   if (!remote) return refuse('This folder has no git remote to push to.');
+  const stack = publish.task.stackBase;
+  if (stack && !(await remoteHasBranch(publish.root, remote.name, stack.branch))) {
+    return refuse(parentNotPushedReason(branch, stack), remote.name);
+  }
   const internal = await harnessCommitsToPush(publish.root, remote.name, branch);
   if (internal.length > 0) {
     return refuse(

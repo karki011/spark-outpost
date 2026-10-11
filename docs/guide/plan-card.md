@@ -3,7 +3,7 @@ title: Plan before building
 section: Chats
 type: how-to
 order: 220
-summary: Have the agent plan first with /plan or Plan mode, approve its plan, and open the plan Spark saved for a build.
+summary: Have the agent plan first with /plan or Plan mode, approve its plan, and open the approved plan later.
 ---
 
 You'll have the agent plan before it changes anything. About 1 minute.
@@ -14,18 +14,18 @@ You'll have the agent plan before it changes anything. About 1 minute.
 
 The card is the agent's own. A mode that never asks, such as **Full access**, approves it at once.
 
-In a **Plan** chat a question is answered as usual. Only `/plan` or a request to build starts a plan.
+While the agent plans, a chat set to **Auto** or **Bypass permissions** runs commands that change no files without a card. A command that changes files still asks.
+
+`/plan` plans for one turn. In a **Plan** chat every message runs in the agent's Plan mode, so nothing changes until you approve its plan. Such a chat gets a worktree even for a question.
 
 ## The plan line
 
-Spark has no plan card of its own. When your message is a build, Spark saves the plan it already has as the chat's agreed plan and keeps building. Nothing waits.
+Spark has no plan card of its own and saves no plan of its own. Without `/plan` or **Plan** mode the agent builds at once, and the steps it lists show under **Tasks**.
 
-| Build             | Plan saved             |
-| ----------------- | ---------------------- |
-| Split into pieces | The Coordinator's list |
-| One Builder       | The steps it lists     |
-| After `/plan`     | The plan you approved  |
+The plan you approve becomes the chat's agreed plan. The thread shows one line, **Plan saved**. Select it to open the plan in the **Work** panel. A revised plan you approve is saved as a new version.
 
-The thread shows one line, such as **Plan saved · 4 pieces**. Select it to open the plan in the **Work** panel. A revised plan is saved as a new version, and the line updates.
+Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line; the **Work** panel lists it as **Proposed plan**. Send your next message to build.
+
+Older chats keep lines such as **Plan saved · 4 pieces**.
 
 **Next:** [Review, keep or revert changes](review-changes.md)

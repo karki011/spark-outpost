@@ -1,7 +1,8 @@
-import type { ConversationDetail, Orchestration, Run } from '@spark-outpost/contracts';
+import type { ConversationDetail } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
-import { crewAgents } from './crew-projection.ts';
-import { checkpoint, member, orchestration } from './test-orchestration.ts';
+import { tvCast } from './conversation-crew.ts';
+import { member, orchestration } from './test-orchestration.ts';
+import { RUN_ID, run } from './test-run.ts';
 import {
   formatElapsed,
   outcomeOf,
@@ -12,13 +13,10 @@ import {
   type TvRow,
 } from './tv-list.ts';
 
-const PARENT = '00000000-0000-4000-8000-000000000001';
-
 function item(overrides: Partial<TvRow>): TvRow {
   return {
     key: 'k',
     runId: 'r',
-    agentId: 'r',
     name: 'Builder',
     role: null,
     provider: 'claude',
@@ -33,16 +31,10 @@ function item(overrides: Partial<TvRow>): TvRow {
     finishedAt: null,
     durationMs: null,
     ask: null,
-    dispatcher: false,
-    messageable: true,
-    piece: null,
+    lead: false,
     order: 1,
     ...overrides,
   };
-}
-
-function detail(runs: Partial<Run>[] = []): ConversationDetail {
-  return { runs, approvals: [], activity: {} } as unknown as ConversationDetail;
 }
 
 describe('Agent TV list elapsed time', () => {
@@ -63,18 +55,9 @@ describe('Agent TV list order', () => {
       item({ key: 'late', state: 'working', startedAt: 2_000, order: 2 }),
       item({ key: 'early', state: 'thinking', startedAt: 1_000, order: 3 }),
       item({ key: 'ask', state: 'waiting', startedAt: 3_000, order: 4 }),
-      item({ key: 'jev', dispatcher: true, state: 'done', startedAt: 500, order: 0 }),
+      item({ key: 'lead', lead: true, state: 'thinking', startedAt: 500, order: 0 }),
     ]);
-    expect(rows.map((row) => row.key)).toEqual(['ask', 'jev', 'early', 'late', 'queued']);
-  });
-
-  it('ranks Jev first only when he is the one asking', () => {
-    const ask = { approvalId: 'a', text: 'Needs you: keep these changes?' };
-    const rows = sortRunning([
-      item({ key: 'builder', state: 'working', startedAt: 1_000 }),
-      item({ key: 'jev', dispatcher: true, state: 'waiting', ask, order: 0 }),
-    ]);
-    expect(rows.map((row) => row.key)).toEqual(['jev', 'builder']);
+    expect(rows.map((row) => row.key)).toEqual(['ask', 'lead', 'early', 'late', 'queued']);
   });
 
   it('lists the most recently finished first', () => {
@@ -88,111 +71,43 @@ describe('Agent TV list order', () => {
 });
 
 describe('Agent TV list rows', () => {
-  it('splits a live turn into running and finished rows with outcomes and usage', () => {
-    const scout = member({
-      runId: '00000000-0000-4000-8000-0000000000a2',
-      role: 'scout',
-      name: 'Wren',
-      status: 'succeeded',
-    });
-    const builder = member({
-      status: 'running',
-      toolCalls: 3,
-      finishedAt: null,
-      planStep: 'Run the tests',
-    });
-    const turn = orchestration({ crew: [scout, builder] });
-    const agents = crewAgents(turn);
-    const { running, finished } = tvListRows(
-      detail([{ id: PARENT, startedAt: '2026-09-26T10:02:00.000Z', finishedAt: null }]),
-      turn,
-      agents,
-      {},
-    );
-    expect(running.map((row) => row.name)).toEqual(['Jev', 'Builder']);
-    expect(running[0]).toMatchObject({ runId: PARENT, dispatcher: true });
-    expect(running[1]).toMatchObject({
-      runId: builder.runId,
-      model: 'Sonnet 5 · medium',
-      line: 'run the tests',
-      toolCalls: 3,
-      startedAt: Date.parse('2026-09-26T10:03:00.000Z'),
-    });
-    expect(rowUsage(running[1]!)).toEqual(['12.4K tokens', '$0.03', '3 tool uses']);
-    expect(finished).toHaveLength(1);
-    expect(finished[0]).toMatchObject({ name: 'Wren', role: 'Reader', durationMs: 38_000 });
-    expect(outcomeOf(finished[0]!.state)).toBe('passed');
+  const SPARK = '00000000-0000-4000-8000-0000000000b1';
+  const sparkJob = orchestration({
+    depth: 'direct',
+    depthSource: 'user',
+    crew: [
+      member({
+        runId: SPARK,
+        role: 'spark',
+        name: 'Quill',
+        spark: { id: '00000000-0000-4000-8000-0000000000b2', role: 'Reviewer', only: false },
+      }),
+    ],
   });
 
-  it('marks the agent behind a pending checkpoint as needing you', () => {
-    const builder = member({ status: 'awaiting_approval', finishedAt: null });
-    const pending = checkpoint({ kind: 'retry' }, { runId: builder.runId });
-    const turn = orchestration({ crew: [builder], pendingCheckpoint: pending });
-    const agents = crewAgents(turn);
-    const ask = { approvalId: pending.id, text: 'Needs you: keep going?' };
-    const { running } = tvListRows(detail(), turn, agents, { [builder.runId]: ask });
-    expect(running[0]).toMatchObject({ name: 'Builder', state: 'waiting', ask });
-  });
+  function rows(status: 'running' | 'succeeded') {
+    const detail = {
+      runs: [run({ status, finishedAt: status === 'running' ? null : '2026-10-10T10:00:39.000Z' })],
+      orchestrations: { [RUN_ID]: sparkJob },
+      approvals: [],
+      activity: {},
+    } as unknown as ConversationDetail;
+    return tvListRows(tvCast(detail)!, {});
+  }
 
-  it('labels each Builder with its piece and placement', () => {
-    const bolt = member({
-      status: 'running',
-      finishedAt: null,
-      pieceKey: 'P1',
-      placement: 'shared',
-    });
-    const rivet = member({
-      runId: '00000000-0000-4000-8000-0000000000a3',
-      name: 'Rivet',
-      status: 'running',
-      finishedAt: null,
-      pieceKey: 'P2',
-      placement: 'worktree',
-    });
-    const pieces = {
-      pieces: [
-        {
-          key: 'P1',
-          title: 'Store',
-          status: 'landed',
-          dependsOn: [],
-          placement: 'shared',
-          owns: ['a.ts', 'b.ts'],
-          builderName: 'Bolt',
-          notesQueued: 0,
-        },
-        {
-          key: 'P2',
-          title: 'API',
-          status: 'running',
-          dependsOn: [],
-          placement: 'worktree',
-          owns: ['c.ts'],
-          builderName: 'Rivet',
-          notesQueued: 1,
-        },
-      ],
-    } as unknown as Orchestration['pieces'];
-    const turn = orchestration({ crew: [bolt, rivet], pieces });
-    const { running } = tvListRows(detail(), turn, crewAgents(turn), {});
-    expect(running.map((row) => [row.name, row.piece?.label, row.piece?.state])).toEqual([
-      ['Jev', undefined, undefined],
-      ['Builder', 'P1 · Store · shared tree · owns 2 files', 'landed'],
-      ['Rivet', "P2 · API · Rivet's copy", 'running'],
+  it("lists the chat's agent while it runs and a finished Spark with its outcome and usage", () => {
+    const { running, finished } = rows('running');
+    expect(running.map((row) => [row.name, row.lead, row.role])).toEqual([['Claude', true, null]]);
+    expect(finished.map((row) => [row.name, row.role, outcomeOf(row.state)])).toEqual([
+      ['Quill', 'Reviewer', 'passed'],
     ]);
-    expect(running[2]!.piece?.notes).toBe(1);
+    expect(rowUsage(finished[0]!)).toEqual(['12.4K tokens', '$0.03', '4 tool uses']);
+    expect(finished[0]!.durationMs).toBe(38_000);
   });
 
-  it('moves the whole turn to finished once it ends, stopped or failed', () => {
-    const stopped = member({ status: 'cancelled' });
-    const turn = orchestration({ status: 'cancelled', crew: [stopped] });
-    const { running, finished } = tvListRows(detail(), turn, crewAgents(turn), {});
+  it('moves the agent to finished once the turn ends', () => {
+    const { running, finished } = rows('succeeded');
     expect(running).toEqual([]);
-    expect(finished.map((row) => [row.name, outcomeOf(row.state)])).toEqual(
-      expect.arrayContaining([
-        ['Jev', 'stopped'],
-        ['Builder', 'stopped'],
-      ]),
-    );
+    expect(finished.map((row) => row.name).sort()).toEqual(['Claude', 'Quill']);
   });
 });

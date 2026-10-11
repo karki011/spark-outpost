@@ -2,6 +2,7 @@ import type { OutpostExchange } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import type { StoredPost } from '../outposts/ports.ts';
 import type { Queryable } from './db.ts';
+import { workReply } from './work-reply.ts';
 
 interface ExchangeRow {
   question: string | null;
@@ -16,9 +17,7 @@ export async function requestExchanges(
   const { rows } = await db.query<ExchangeRow>(
     `WITH turns AS (
        SELECT turn.id, turn.created_at,
-         (SELECT COALESCE(m.final_reply, m.content) FROM messages m
-          WHERE m.run_id = turn.id AND m.role = 'assistant'
-          ORDER BY m.created_at DESC LIMIT 1) AS reply,
+         (${workReply('turn.id')}) AS reply,
          (SELECT said.content FROM messages said
           WHERE said.id = turn.user_message_id AND said.role = 'user') AS said
        FROM runs latest

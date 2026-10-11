@@ -9,7 +9,6 @@ import {
   memberRequestSchema,
   outpostDetailSchema,
   outpostPostSchema,
-  outpostDraftSchema,
   outpostHandleSchema,
   pinPostRequestSchema,
   rejectReasonSchema,
@@ -57,8 +56,12 @@ const detail: OutpostDetail = {
       kind: 'request',
       body: 'What does the orders response look like?',
       fromUser: false,
+      fromSpark: false,
       fromConversationId: FRONTEND,
+      fromRunId: null,
       fromHandle: 'fe',
+      userStarted: false,
+      held: false,
       toConversationId: BACKEND,
       toHandle: 'api',
       guest: false,
@@ -81,6 +84,7 @@ const detail: OutpostDetail = {
       intro: null,
     },
   ],
+  stories: [],
 };
 
 describe('outpost schemas', () => {
@@ -106,11 +110,11 @@ describe('outpost schemas', () => {
     expect(requestStateSchema.safeParse('rejected').success).toBe(false);
   });
 
-  it('accepts handles of two to sixteen lower-case characters that start with a letter', () => {
-    for (const handle of ['fe', 'api', 'docs-2', 'a234567890123456']) {
+  it('accepts handles of two to 32 lower-case characters that start with a letter', () => {
+    for (const handle of ['fe', 'api', 'docs-2', 'a234567890123456', `a${'2'.repeat(31)}`]) {
       expect(outpostHandleSchema.safeParse(handle).success, handle).toBe(true);
     }
-    for (const handle of ['', 'a', 'FE', '2fe', '-fe', 'fe_1', '@fe', 'a2345678901234567']) {
+    for (const handle of ['', 'a', 'FE', '2fe', '-fe', 'fe_1', '@fe', `a${'2'.repeat(32)}`]) {
       expect(outpostHandleSchema.safeParse(handle).success, handle).toBe(false);
     }
   });
@@ -198,29 +202,11 @@ describe('outpost schemas', () => {
       paused: false,
       held: null,
       chatDeleted: false,
+      waitingOn: null,
     };
     expect(requestFactsSchema.parse(facts)).toEqual(facts);
     expect(requestFactsSchema.safeParse({ ...facts, closedState: 'answered' }).success).toBe(false);
     expect(requestFactsSchema.safeParse({ ...facts, runStatus: 'working' }).success).toBe(false);
-  });
-
-  it('takes a draft member that names a chat or a project, never both or neither', () => {
-    const draft = (member: object) => ({
-      name: 'Orders launch',
-      members: [{ handle: 'fe', ...member }],
-      requests: [{ to: 'fe', text: 'Build the orders page.' }],
-    });
-    expect(outpostDraftSchema.safeParse(draft({ conversationId: FRONTEND })).success).toBe(true);
-    expect(
-      outpostDraftSchema.safeParse(draft({ projectId: BACKEND, agent: 'codex' })).success,
-    ).toBe(true);
-    expect(outpostDraftSchema.safeParse(draft({})).success).toBe(false);
-    expect(
-      outpostDraftSchema.safeParse(draft({ conversationId: FRONTEND, projectId: BACKEND })).success,
-    ).toBe(false);
-    expect(
-      outpostDraftSchema.safeParse(draft({ projectId: BACKEND, agent: 'other' })).success,
-    ).toBe(false);
   });
 
   it('lets the pure rules be written against the agreed signatures', () => {
@@ -267,6 +253,8 @@ describe('outpost fields on existing contracts', () => {
       outpostName: 'Orders launch',
       fromHandle: null,
       fromUser: true,
+      fromSpark: false,
+      userStarted: false,
     };
     expect(runSchema.shape.outpost.parse(from)).toEqual(from);
     expect(runSchema.shape.outpost.parse(undefined)).toBeUndefined();

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { getSetupState, sparkPreferences, updateProfile } from '../src/persistence/setup.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
-import { prepareNativeSession } from '../src/terminal/native-prepare.ts';
+import { SPARK_SESSION_NOTE, prepareNativeSession } from '../src/terminal/native-prepare.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -85,11 +85,8 @@ it('goes on without a saved file that was removed and reports it in Settings', a
   );
 });
 
-it('keeps terminal tracking and custom instructions when Spark workflow is off, including resume', async () => {
-  await updateProfile(t.db, t.workspaceId, {
-    sparkEnabled: false,
-    agentInstructions: 'My own workflow.',
-  });
+it('gives a Terminal launch the custom instructions and the Spark session note, including resume', async () => {
+  await updateProfile(t.db, t.workspaceId, { agentInstructions: 'My own workflow.' });
   const conversationId = randomUUID();
   await createConversation(t.db, t.workspaceId, conversationId, {
     sessionType: 'terminal',
@@ -109,8 +106,7 @@ it('keeps terminal tracking and custom instructions when Spark workflow is off, 
     { prompt: 'Inspect the project.', resume: false },
     null,
   );
-  expect(first.workflowEnabled).toBe(false);
-  expect(first.instructions).toBe('My own workflow.');
+  expect(first.instructions).toBe(`My own workflow.\n\n${SPARK_SESSION_NOTE}`);
   expect(first.prompt).toBe('Inspect the project.');
   expect(first.runId).toBeTruthy();
   await t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [first.runId]);
@@ -123,6 +119,5 @@ it('keeps terminal tracking and custom instructions when Spark workflow is off, 
     null,
   );
   expect(resumed.prompt).toBe('');
-  expect(resumed.instructions).toBe('New instructions.');
-  expect(resumed.workflowEnabled).toBe(false);
+  expect(resumed.instructions).toBe(`New instructions.\n\n${SPARK_SESSION_NOTE}`);
 });

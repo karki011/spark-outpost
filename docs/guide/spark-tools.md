@@ -18,7 +18,7 @@ These change nothing.
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                                           |
 | Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                                           |
-| A running task: crew, pieces, estimate, Jev's decisions    | `spark_run`, `spark_task`, `spark_laws`                                                                                                     |
+| A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                                                   |
 | Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                                           |
 | Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                                                     |
 | Providers, models, connectors, settings, projects          | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                                                   |
@@ -36,7 +36,7 @@ These change nothing.
 
 ## Tools that act
 
-The agent proposes, and Spark does it.
+Spark does what the agent proposes.
 
 | Action                                      | Tool                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -47,8 +47,22 @@ The agent proposes, and Spark does it.
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
+| Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
 An MCP server card shows the exact command. Agents pass only names of variables and headers; you fill values in **Settings → MCP servers**, for new agent sessions.
+
+## Outpost tools
+
+A chat in an [outpost](outposts.md) gets these. None shows a card.
+
+| The agent wants to                               | Tool                  |
+| ------------------------------------------------ | --------------------- |
+| Read the outpost: members, requests, answers     | `spark_outpost`       |
+| Ask another chat, and wait for its answer or not | `spark_outpost_ask`   |
+| Leave a note for the other chats                 | `spark_outpost_note`  |
+| Propose sub-task chats that you review and start | `spark_outpost_draft` |
+
+Any chat with a project gets `spark_outpost_draft`. A Spark handed a job gets none. What another chat wrote is never your message.
 
 ## When actions ask first
 
@@ -62,14 +76,20 @@ An MCP server card shows the exact command. Agents pass only names of variables 
 
 Change any field, then select the confirm button or **Don't**. The card then shows the result with a link, or why it failed with **Try again**. Every action is audited.
 
-Agents open pull requests themselves.
+## Commands after the turn
+
+`spark_terminal_run` runs a command such as a dev server outside the agent's sandbox. Modes that don't ask start it, marked ran without review; others show **Allow once** or **Reject**.
+
+[Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
+
+The agent can read its output and stop it. Stopping the turn or quitting Spark also stops it.
 
 ## What the tools never return
 
 | Never returned               | Instead                                               |
 | ---------------------------- | ----------------------------------------------------- |
 | File contents                | `spark_find` gives files, functions and line numbers. |
-| Terminal output              | A terminal's name, folder and running program.        |
+| Your terminals' output       | A terminal's name, folder and running program.        |
 | Password and card fields     | `[masked]`, and painted over in screenshots.          |
 | Secrets, API keys and tokens | Redacted before the agent sees them.                  |
 | Feedback comments            | Analytics give counts only.                           |

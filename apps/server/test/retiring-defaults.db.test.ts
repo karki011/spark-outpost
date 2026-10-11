@@ -151,9 +151,10 @@ describe('retiring models as defaults', () => {
   });
 
   it('never reads a stored retiring default back, and drops it on reconnect', async () => {
-    await t.db.query(`UPDATE provider_connections SET model = 'haiku' WHERE workspace_id = $1`, [
-      t.workspaceId,
-    ]);
+    await t.db.query(
+      `UPDATE provider_connections SET model = 'claude-haiku-4-5' WHERE workspace_id = $1`,
+      [t.workspaceId],
+    );
     const setup = await getSetupState(t.db, t.workspaceId);
     expect(setup.providers.find((entry) => entry.id === 'claude')?.connection?.model).toBeNull();
     const id = randomUUID();

@@ -1,18 +1,23 @@
 import { z } from 'zod';
 import {
   NEEDS_YOU_PREFIX,
+  needsYouLines,
   type ClosedState,
-  type OutpostAnswer,
   type OutpostPostKind,
   type RejectReason,
   type RequestFacts,
   type RunStatus,
 } from '@spark-outpost/contracts';
-import { redactText } from '../audit/redact.ts';
-import type { NewPost, PostStore, PostWithFacts, StoredPost } from '../outposts/ports.ts';
-import { taskChanges } from '../projects/task-changes.ts';
+import type {
+  HeldRequest,
+  NewPost,
+  PostStore,
+  PostWithFacts,
+  StoredPost,
+} from '../outposts/ports.ts';
 import { postedAfterStop } from './chat-queue.ts';
 import type { Queryable } from './db.ts';
+import { workReply } from './work-reply.ts';
 
 interface PostRow {
   id: string;
@@ -40,6 +45,8 @@ interface PostRow {
   created_at: Date;
   attachment_ids: string[];
   opening: boolean;
+  after_post_id: string | null;
+  user_started: boolean;
 }
 
 interface FactsRow extends PostRow {
@@ -47,7 +54,12 @@ interface FactsRow extends PostRow {
   queued: boolean;
   held: RequestFacts['held'];
   run_status: RunStatus | null;
-  run_needs_you: string | null;
+  run_error: string | null;
+  run_asking_reply: string | null;
+  waiting_handle: string | null;
+  waiting_deleted: boolean;
+  waiting_failed: boolean;
+  wrap_up: boolean;
 }
 
 const observedSchema = z.array(
@@ -73,14 +85,24 @@ const FACTS_QUERY = `
       ORDER BY last.created_at DESC LIMIT 1
     ) AS held,
     r.status AS run_status,
+    r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
-      SELECT substring(m.content from $needs$(?:^|\n\n)(${NEEDS_YOU_PREFIX}[^\n]*)$needs$)
-      FROM messages m
-      WHERE m.run_id = r.id AND m.role = 'assistant' ORDER BY m.created_at DESC LIMIT 1
-    ) END AS run_needs_you
+      SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
+      FROM (${workReply('r.id')}) work
+    ) END AS run_asking_reply,
+    CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
+    (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
+    COALESCE(
+      w.closed_state IN ('failed', 'rejected')
+        OR (w.closed_state IS NULL AND wr.status IN ('failed', 'outcome_unknown')),
+      false
+    ) AS waiting_failed,
+    EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = p.id) AS wrap_up
   FROM outpost_posts p
   JOIN outposts o ON o.id = p.outpost_id
-  LEFT JOIN runs r ON r.id = p.run_id`;
+  LEFT JOIN runs r ON r.id = p.run_id
+  LEFT JOIN outpost_posts w ON w.id = p.after_post_id AND p.task_id IS NULL
+  LEFT JOIN runs wr ON wr.id = w.run_id`;
 
 function toPost(row: PostRow): StoredPost {
   return {
@@ -109,6 +131,8 @@ function toPost(row: PostRow): StoredPost {
     createdAt: row.created_at.toISOString(),
     attachmentIds: row.attachment_ids,
     opening: row.opening,
+    afterPostId: row.after_post_id,
+    userStarted: row.user_started,
   };
 }
 
@@ -121,15 +145,23 @@ function toFacts(row: FactsRow): RequestFacts | null {
     sent: row.task_id !== null,
     queued: row.queued,
     runStatus: row.run_status,
-    runNeedsYou: row.run_needs_you,
+    runNeedsYou: needsYouLines(row.run_asking_reply ?? '')[0] ?? null,
     paused: row.paused,
     held: row.held,
     chatDeleted: row.to_conversation_id === null,
+    waitingOn: row.waiting_handle,
+    ...(row.waiting_deleted ? { waitingOnDeleted: true } : {}),
+    ...(row.waiting_failed ? { waitingOnFailed: true } : {}),
   };
 }
 
 function withFacts(row: FactsRow): PostWithFacts {
-  return { post: toPost(row), facts: toFacts(row) };
+  return {
+    post: toPost(row),
+    facts: toFacts(row),
+    ...(row.wrap_up ? { wrapUp: true } : {}),
+    ...(row.run_error ? { runError: row.run_error } : {}),
+  };
 }
 
 async function existingPost(db: Queryable, post: NewPost): Promise<StoredPost | null> {
@@ -148,9 +180,9 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
   const { rows } = await db.query<PostRow>(
     `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, from_conversation_id,
        from_run_id, request_hash, waits, from_handle, to_handle, to_conversation_id, guest,
-       batch_id, observed, attachment_ids, opening)
+       batch_id, observed, attachment_ids, opening, after_post_id, user_started)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb,
-       $16::uuid[], $17)
+       $16::uuid[], $17, $18, $19)
      ON CONFLICT DO NOTHING
      RETURNING *`,
     [
@@ -171,6 +203,8 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
       JSON.stringify(post.observed ?? []),
       post.attachmentIds ?? [],
       post.opening ?? false,
+      post.afterPostId ?? null,
+      post.userStarted ?? false,
     ],
   );
   if (rows[0]) return toPost(rows[0]);
@@ -221,6 +255,17 @@ export const getPost: PostStore['getPost'] = async (db, postId) => {
   return rows[0] ? withFacts(rows[0]) : null;
 };
 
+export async function postsById(
+  db: Queryable,
+  postIds: readonly string[],
+): Promise<Map<string, PostWithFacts>> {
+  if (postIds.length === 0) return new Map();
+  const { rows } = await db.query<FactsRow>(`${FACTS_QUERY} WHERE p.id = ANY($1::uuid[])`, [
+    postIds,
+  ]);
+  return new Map(rows.map((row) => [row.id, withFacts(row)]));
+}
+
 export const closePost: PostStore['closePost'] = async (db, postId, closed) => {
   const { rowCount } = await db.query(
     `UPDATE outpost_posts SET closed_state = $2, closed_reason = $3, closed_at = now()
@@ -229,6 +274,21 @@ export const closePost: PostStore['closePost'] = async (db, postId, closed) => {
   );
   return rowCount === 1;
 };
+
+export async function markAnswersSeen(
+  db: Queryable,
+  postIds: readonly string[],
+): Promise<string[]> {
+  if (postIds.length === 0) return [];
+  const { rows } = await db.query<{ id: string }>(
+    `UPDATE outpost_posts SET answer_seen_at = now()
+     WHERE id = ANY($1::uuid[]) AND kind = 'request' AND answer_seen_at IS NULL
+     RETURNING id`,
+    [postIds],
+  );
+  const claimed = new Set(rows.map((row) => row.id));
+  return [...new Set(postIds)].filter((id) => claimed.has(id));
+}
 
 export async function cancelUnsent(db: Queryable, postId: string): Promise<boolean> {
   const { rowCount } = await db.query(
@@ -266,86 +326,38 @@ export const unsentRequests: PostStore['unsentRequests'] = async (db) => {
     `SELECT p.* FROM outpost_posts p JOIN outposts o ON o.id = p.outpost_id
      WHERE p.kind = 'request' AND p.task_id IS NULL AND p.closed_state IS NULL
        AND p.to_conversation_id IS NOT NULL AND o.paused_at IS NULL
+       AND p.after_post_id IS NULL
      ORDER BY p.created_at, p.id`,
   );
   return rows.map(toPost);
 };
 
-interface AnswerRow {
-  task_id: string | null;
-  conversation_id: string;
-  reply: string | null;
-  branch: string | null;
-  run_ids: string[];
-  pull_requests: string[];
-}
-
-export interface AnswerOptions {
-  maxChars?: number;
-}
-
-function answerText(reply: string | null, maxChars: number | undefined): string {
-  const text = redactText(reply ?? '').trim();
-  if (maxChars === undefined || text.length <= maxChars) return text;
-  return `${text.slice(0, maxChars)}… (${text.length} chars)`;
-}
-
-async function changedPaths(
-  db: Queryable,
-  workspaceId: string,
-  taskId: string | null,
-  runIds: readonly string[],
-): Promise<string[]> {
-  if (taskId === null) return [];
-  try {
-    const { runs } = await taskChanges(db, workspaceId, taskId);
-    const files = runs
-      .filter((run) => !run.revertedAt && runIds.includes(run.runId))
-      .flatMap((run) => run.files);
-    return [...new Set(files.map((file) => file.path))];
-  } catch {
-    return [];
-  }
-}
-
-export async function requestAnswer(
-  db: Queryable,
-  workspaceId: string,
-  request: PostWithFacts,
-  options: AnswerOptions = {},
-): Promise<OutpostAnswer | null> {
-  const { post, facts } = request;
-  if (post.runId === null || post.closedState !== null || facts?.runStatus !== 'succeeded') {
-    return null;
-  }
-  const { rows } = await db.query<AnswerRow>(
-    `WITH RECURSIVE family AS (
-       SELECT id FROM runs WHERE id = $1
-       UNION ALL
-       SELECT child.id FROM runs child JOIN family ON child.parent_run_id = family.id
-     )
-     SELECT r.task_id, r.conversation_id,
-       (SELECT COALESCE(m.final_reply, m.content) FROM messages m
-        WHERE m.run_id = r.id AND m.role = 'assistant'
-        ORDER BY m.created_at DESC LIMIT 1) AS reply,
-       (SELECT w.branch FROM chat_worktrees w
-        WHERE w.conversation_id = r.conversation_id AND w.removed_at IS NULL
-        ORDER BY w.created_at LIMIT 1) AS branch,
-       ARRAY(SELECT id::text FROM family) AS run_ids,
-       ARRAY(
-         SELECT l.url FROM task_links l
-         WHERE l.task_id = r.task_id AND l.kind = 'pr' AND l.created_at >= r.created_at
-         ORDER BY l.created_at, l.id
-       ) AS pull_requests
-     FROM runs r WHERE r.id = $1`,
-    [post.runId],
+export const heldRequests: PostStore['heldRequests'] = async (db) => {
+  const { rows } = await db.query<PostRow>(
+    `SELECT p.* FROM outpost_posts p JOIN outposts o ON o.id = p.outpost_id
+     WHERE p.kind = 'request' AND p.task_id IS NULL AND p.closed_state IS NULL
+       AND p.to_conversation_id IS NOT NULL AND o.paused_at IS NULL
+       AND p.after_post_id IS NOT NULL
+     ORDER BY p.created_at, p.id`,
   );
-  const row = rows[0];
-  if (!row) return null;
-  return {
-    text: answerText(row.reply, options.maxChars),
-    branch: row.branch,
-    changes: await changedPaths(db, workspaceId, row.task_id, row.run_ids),
-    pullRequests: row.pull_requests,
-  };
-}
+  const after = await postsById(
+    db,
+    rows.flatMap((row) => row.after_post_id ?? []),
+  );
+  const held: HeldRequest[] = [];
+  for (const row of rows) {
+    const waitsFor = row.after_post_id === null ? undefined : after.get(row.after_post_id);
+    if (waitsFor) held.push({ post: toPost(row), after: waitsFor });
+  }
+  return held;
+};
+
+export const releaseHold: PostStore['releaseHold'] = async (db, postId) => {
+  const { rowCount } = await db.query(
+    `UPDATE outpost_posts SET after_post_id = NULL
+     WHERE id = $1 AND kind = 'request' AND task_id IS NULL AND closed_state IS NULL
+       AND after_post_id IS NOT NULL`,
+    [postId],
+  );
+  return rowCount === 1;
+};

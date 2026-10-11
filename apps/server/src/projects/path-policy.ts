@@ -32,9 +32,15 @@ export interface ResolvedPath {
   relative: string;
 }
 
+export interface GitDirs {
+  common: string;
+  own: string;
+}
+
 export interface ProjectRoot {
   path: string;
   ignore: readonly string[];
+  gitDirs?: GitDirs | null;
 }
 
 export interface PathPolicy {
@@ -134,6 +140,18 @@ const INSTRUCTION_FILES = new Set(['.github/copilot-instructions.md']);
 const GIT_HOOK = /^\.git\/hooks\/[^/]+$/;
 const GIT_CONFIG = '.git/config';
 const SPARK_OWN_DIRS = ['.spark/worktrees/', '.spark/plans/'];
+
+const holdsSparkOwnDir = (prefix: string) => SPARK_OWN_DIRS.some((dir) => dir.startsWith(prefix));
+
+export const EXACT_PROTECTED_GLOBS: readonly string[] = [
+  ...[...INSTRUCTION_NAMES].map((name) => `**/${name}`),
+  ...INSTRUCTION_PREFIXES.filter((prefix) => !holdsSparkOwnDir(prefix)).map(
+    (prefix) => `${prefix}**`,
+  ),
+  ...INSTRUCTION_FILES,
+  '.git/hooks/*',
+  GIT_CONFIG,
+];
 
 export function protectedPath(relative: string): ProtectedKind | null {
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';

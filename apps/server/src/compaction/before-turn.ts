@@ -17,15 +17,15 @@ import {
 } from '../persistence/provider-sessions.ts';
 import { sessionCommands } from '../persistence/session-commands.ts';
 import { autoContinueSeconds, compactionThresholds } from '../persistence/setup.ts';
-import { askCheckpoint, compactCard } from '../orchestration/checkpoint.ts';
-import { kilo } from '../orchestration/escalation.ts';
+import { askCheckpoint, compactCard } from '../workflow/kept-record.ts';
+import { kilo } from '../agents/acp/long-context.ts';
 import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
-import { HISTORY_TOOL_NOTE } from '../orchestration/handoff.ts';
+import { HISTORY_TOOL_NOTE } from '../workflow/session-brief.ts';
 import { compactInSession, offersCompact, type CompactTarget } from './agent-compact.ts';
 import { startFreshChat, type FreshChat } from './fresh-chat.ts';
 import { agentCompactWorked, compactStep, readingOf, usedPercent } from './policy.ts';

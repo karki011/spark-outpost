@@ -17,7 +17,6 @@ import {
   postId,
 } from './test-fixtures.ts';
 import {
-  optimisticPost,
   useAddMember,
   useAnswer,
   useCancel,
@@ -28,7 +27,10 @@ import {
   usePause,
   usePost,
   useSaveOutpost,
+  useStartNow,
 } from './use-outposts.ts';
+import { chatDraftsQuery } from '../chat/outpost/chat-drafts.ts';
+import { STORY_DRAFT_ID } from './create/create-fixtures.ts';
 
 interface Call {
   method: string;
@@ -114,38 +116,6 @@ describe('reading outposts', () => {
   });
 });
 
-describe('optimisticPost', () => {
-  it('draws a request to a member as Sent before the server has it', () => {
-    const drawn = optimisticPost(detail(), { id: postId(7), text: '@api add the filter' }, 'now');
-    expect(drawn).toMatchObject({
-      id: postId(7),
-      kind: 'request',
-      body: 'add the filter',
-      fromUser: true,
-      toHandle: 'api',
-      toConversationId: API_CHAT,
-      state: 'sent',
-      reason: 'Not sent yet',
-      createdAt: 'now',
-    });
-  });
-
-  it('draws anything else as a note with no state', () => {
-    const drawn = optimisticPost(detail(), { id: postId(7), text: '@nobody hello' }, 'now');
-    expect(drawn).toMatchObject({
-      kind: 'note',
-      body: '@nobody hello',
-      toHandle: null,
-      state: null,
-    });
-  });
-
-  it('says Paused for a request posted to a paused outpost', () => {
-    const paused = detail([], { pausedAt: '2026-10-09T10:30:00.000Z' });
-    expect(optimisticPost(paused, { id: postId(7), text: '@fe go' }, 'now').reason).toBe('Paused');
-  });
-});
-
 describe('usePost', () => {
   it('shows the post at once, sends it with its id, then keeps what the server returned', async () => {
     client.setQueryData(outpostKeys.detail(OUTPOST_ID), detail([post(1)]));
@@ -163,6 +133,20 @@ describe('usePost', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(cached()?.posts).toEqual([post(1), sent]);
     expect(calls).toHaveLength(1);
+  });
+
+  it('asks again after the answer, since a turn may have started while it was on its way', async () => {
+    const sent = post(1, { state: 'sent', reason: null });
+    const working = post(1, { state: 'working', reason: null });
+    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([sent])));
+    const shown = renderHook(() => useOutpost(OUTPOST_ID), { wrapper });
+    await waitFor(() => expect(shown.result.current.data?.posts).toEqual([sent]));
+    answers.set(`POST /api/outposts/${OUTPOST_ID}/posts`, () => json(detail([sent]), 201));
+    answers.set(`GET /api/outposts/${OUTPOST_ID}`, () => json(detail([working])));
+    const { result } = renderHook(() => usePost(OUTPOST_ID), { wrapper });
+    act(() => result.current.mutate({ id: postId(1), text: '@fe build the page' }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(shown.result.current.data?.posts).toEqual([working]));
   });
 
   it('takes the post back out when the server refuses it and reports why', async () => {
@@ -198,6 +182,17 @@ describe('the other actions', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calls).toEqual([{ method: 'POST', path, body: {} }]);
     expect(cached()?.posts).toEqual([cancelled]);
+  });
+
+  it('starts a held request now and keeps what the server answers', async () => {
+    const released = post(1, { reason: 'Not sent yet' });
+    const path = `/api/outposts/${OUTPOST_ID}/posts/${postId(1)}/start-now`;
+    answers.set(`POST ${path}`, () => json(detail([released])));
+    const { result } = renderHook(() => useStartNow(OUTPOST_ID), { wrapper });
+    act(() => result.current.mutate(postId(1)));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls).toEqual([{ method: 'POST', path, body: {} }]);
+    expect(cached()?.posts).toEqual([released]);
   });
 
   it('pauses at once and asks the server', async () => {
@@ -279,6 +274,26 @@ describe('the other actions', () => {
     expect(cached()).toEqual(created);
     expect(client.getQueryData(outpostKeys.list)).toEqual([created.outpost]);
     expect(calls.filter((call) => call.path.startsWith('/api/outposts'))).toHaveLength(1);
+  });
+
+  it('marks the proposing chat’s drafts stale once a draft is started', async () => {
+    const draftsKey = chatDraftsQuery(FE_CHAT).queryKey;
+    const draft = { id: STORY_DRAFT_ID, runId: null, chats: 2, stacked: 1 };
+    client.setQueryData(draftsKey, { drafts: [{ ...draft, outpostId: null, startedAt: null }] });
+    answers.set('POST /api/outposts', () => json(detail(), 201));
+    const { result } = renderHook(() => useCreateOutpost(), { wrapper });
+
+    act(() =>
+      result.current.mutate({
+        id: OUTPOST_ID,
+        name: 'Usage by user',
+        members: [],
+        draftId: STORY_DRAFT_ID,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(client.getQueryState(draftsKey)?.isInvalidated).toBe(true));
   });
 
   it('deletes an outpost with no request body and drops it from the list', async () => {

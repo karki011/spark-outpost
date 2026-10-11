@@ -2,25 +2,16 @@ import './crew-turn.css';
 import {
   isTerminalRunStatus,
   type ConversationDetail,
-  type CrewMember,
   type Orchestration,
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
-import { agentAnchor } from '../../crew/conversation-crew.ts';
+import { agentAnchor, sparkMembers } from '../../crew/conversation-crew.ts';
 import { runAgent } from '../../crew/crew-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock } from './AgentBlock.tsx';
 
 const NO_TEXT = '';
-
-export function sparkMembers(orchestration: Orchestration | null | undefined): CrewMember[] {
-  return orchestration?.crew.filter((member) => member.role === 'spark') ?? [];
-}
-
-export function isSparkLed(orchestration: Orchestration | null | undefined): boolean {
-  return orchestration?.depthSource === 'user' && sparkMembers(orchestration).length > 0;
-}
 
 export function mainAgentRan(orchestration: Orchestration): boolean {
   return sparkMembers(orchestration).some((member) => member.spark?.only === false);

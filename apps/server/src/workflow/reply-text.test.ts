@@ -41,11 +41,11 @@ describe('the final reply of a turn', () => {
 
     reply.mark('commentary', 0);
     await reply.say('I will count the tracked and untracked files.');
-    reply.mark('commentary', 0);
+    expect(reply.mark('commentary', 0)).toBe(false);
     await reply.say('\n\nCounting now.');
-    reply.mark('final', 0);
+    expect(reply.mark('final', 0)).toBe(true);
     await reply.say('\n\n3');
-    reply.mark('final', 0);
+    expect(reply.mark('final', 0)).toBe(false);
     await reply.say(' files');
 
     expect(reply.result().text).toBe(

@@ -4,41 +4,30 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
-import {
-  COMPLEX,
-  connectProviders,
-  gitRepo,
-  jevFetch,
-  removeRepo,
-  startOrchestrator,
-  startScenario,
-  TRIVIAL,
-  withTag,
-  type Harness,
-  type JevScript,
-} from './orchestration-support.ts';
+import type { Worker } from '../src/workflow/worker.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { createTestDb, eventTypes, eventually, type TestDb } from './support.ts';
+import { gitRepo, openChat, removeRepo, sendMessage, type MessageOptions } from './turn-support.ts';
+import { connectAgents, startTurnWorker } from './turn-worker.ts';
+
+const BUILD = 'Move date handling into one module. #build';
 
 let t: TestDb;
 let root: string;
 let logs: string;
-let harness: Harness | null = null;
-let script: JevScript;
+let worker: Worker | null = null;
 
 beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   logs = await mkdtemp(join(tmpdir(), 'spark-delete-'));
-  script = { calls: [], scenario: COMPLEX };
-  await connectProviders(t, true);
+  await connectAgents(t);
 });
 
 afterEach(async () => {
-  await harness?.stop();
-  harness = null;
+  await worker?.stop();
+  worker = null;
   await t.cleanup();
   await removeRepo(root);
   await rm(logs, { recursive: true, force: true });
@@ -47,9 +36,13 @@ afterEach(async () => {
 const cancelLog = () => join(logs, 'cancels.log');
 
 function start() {
-  harness = startOrchestrator(t, jevFetch(script), {
-    agentEnv: { FAKE_ACP_CANCEL_LOG: cancelLog() },
-  });
+  worker = startTurnWorker(t, { agentEnv: { FAKE_ACP_CANCEL_LOG: cancelLog() } });
+}
+
+async function send(text: string, options: MessageOptions = {}) {
+  const conversationId = await openChat(t, { root });
+  const runId = await sendMessage(t, conversationId, text, { permission: 'do', ...options });
+  return { conversationId, runId };
 }
 
 async function cancelsReceived(): Promise<number> {
@@ -77,38 +70,22 @@ async function runCount(conversationId: string): Promise<number> {
   return rows.length;
 }
 
-async function streamingBuilder(runId: string) {
-  return eventually(async () => {
-    const view = await loadOrchestration(t.db, runId);
-    const builder = view?.crew.find((member) => member.role === 'builder');
-    if (builder?.status !== 'running') return null;
-    const { rows } = await t.db.query(
-      `SELECT 1 FROM run_events WHERE run_id = $1 AND payload::text LIKE '%notes.txt%'`,
-      [builder.runId],
-    );
-    return rows.length > 0 ? builder : null;
-  }, 30_000);
-}
-
 describe('DELETE /conversations/:id on a busy chat', () => {
-  it('stops a running crew, tells the agent to cancel, and deletes the chat', async () => {
+  it('stops a running turn, tells the agent to cancel, and deletes the chat', async () => {
     start();
-    const { conversationId, runId } = await startScenario(
-      t,
-      root,
-      withTag(COMPLEX, '#slowbuild'),
-      'full-auto',
+    const { conversationId, runId } = await send('Count #slow');
+    await eventually(
+      async () => (await eventTypes(t.db, runId)).includes('TEXT_MESSAGE_CONTENT'),
+      30_000,
     );
-    const builder = await streamingBuilder(runId);
     await remove(conversationId).expect(204);
     expect(await conversationExists(conversationId)).toBe(false);
     expect(await getRun(t.db, runId)).toBeNull();
-    expect(await getRun(t.db, builder.runId)).toBeNull();
     expect(await cancelsReceived()).toBeGreaterThan(0);
   }, 60_000);
 
   it('deletes a chat whose run is still queued', async () => {
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'full-auto');
+    const { conversationId, runId } = await send(BUILD);
     expect((await getRun(t.db, runId))?.status).toBe('queued');
     await remove(conversationId).expect(204);
     expect(await conversationExists(conversationId)).toBe(false);
@@ -117,15 +94,7 @@ describe('DELETE /conversations/:id on a busy chat', () => {
 
   it('deletes a chat that is waiting on an approval card', async () => {
     start();
-    const { conversationId, runId } = await startScenario(
-      t,
-      root,
-      TRIVIAL,
-      'hands-off',
-      'auto',
-      'sonnet',
-      'default',
-    );
+    const { conversationId, runId } = await send(BUILD, { agentMode: 'default' });
     await eventually(async () => {
       const detail = await getConversationDetail(t.db, conversationId);
       return detail?.approvals.find((approval) => approval.status === 'pending');
@@ -137,7 +106,7 @@ describe('DELETE /conversations/:id on a busy chat', () => {
   }, 60_000);
 
   it('deletes anyway when a run never settles, after the wait runs out', async () => {
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'full-auto');
+    const { conversationId, runId } = await send(BUILD);
     await t.db.query(`UPDATE runs SET status = 'running', started_at = now() WHERE id = $1`, [
       runId,
     ]);

@@ -52,7 +52,6 @@ export interface SetupDeps {
   endpoints: ApiEndpoints;
   runCommand: RunCommand;
   loginShell: string | null;
-  parallelBuilders?: boolean | undefined;
 }
 
 function providerParam(req: Request): ProviderId {
@@ -74,10 +73,7 @@ function writeEvent(res: Response, event: VerifyEvent) {
 export function setupRoutes(deps: SetupDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const router = Router();
-  const setupState = async () => ({
-    ...(await getSetupState(db, workspaceId)),
-    parallelBuilders: deps.parallelBuilders ?? false,
-  });
+  const setupState = () => getSetupState(db, workspaceId);
 
   router.get('/setup', async (_req, res) => {
     res.json(setupStateFor(res, await setupState()));

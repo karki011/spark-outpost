@@ -4,6 +4,7 @@ import type {
   ProviderCapabilities,
   ProviderId,
 } from '@spark-outpost/contracts';
+import { agentDefinitions } from '../agents/acp/agents.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import type { RunTarget } from '../persistence/conversations.ts';
@@ -44,11 +45,13 @@ export async function resolveRunTarget(
     settings.model === null || !capabilities
       ? settings.model
       : offeredPin(settings.provider, settings.model, capabilities.models);
-  const model = offered ?? capabilities?.defaultModel ?? null;
+  const resolvesNames = agentDefinitions[settings.provider].resolvesModelNames === true;
+  const kept = offered ?? (resolvesNames ? settings.model : null);
+  const model = kept ?? capabilities?.defaultModel ?? null;
   return {
     provider: settings.provider,
     model,
-    modelSwitch: droppedPin(settings.model, offered, model, capabilities),
+    modelSwitch: droppedPin(settings.model, kept, model, capabilities),
     effort: settings.effort,
     permission: settings.permission,
     agentMode: settings.agentMode,

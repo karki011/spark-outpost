@@ -18,7 +18,7 @@ You'll change a provider's defaults, reconnect it, read the model cards and conn
 
 **How to connect** shows the **Account** and usable **Models**. If the default isn't usable, select **Switch to …**.
 
-Changes apply to new chats; **Model** only to chats off **Auto**. Fixed **Effort** covers every Builder; **Per chat** keeps each chat's own.
+Changes apply to new chats; **Model** only to chats off **Auto**. **Per chat** effort keeps each chat's own.
 
 ## Sign in again, switch or disconnect
 
@@ -33,11 +33,11 @@ Changes apply to new chats; **Model** only to chats off **Auto**. Fixed **Effort
 
 ![Settings → Models with one row per model](images/providers-model-cards-light.png)
 
-| Group                      | Spark uses it for            |
-| -------------------------- | ---------------------------- |
-| **Spark picks from these** | The job named on each row    |
-| **Only when you pick it**  | Nothing, unless you pin it   |
-| **No card yet**            | Its tier comes from its name |
+| Group                         | What it holds                         |
+| ----------------------------- | ------------------------------------- |
+| **Everyday and complex work** | Current mid and top models            |
+| **Other models**              | Small, frontier and retiring models   |
+| **No card yet**               | Models whose tier comes from the name |
 
 ## Connect Jev
 

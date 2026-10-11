@@ -1,14 +1,13 @@
 import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
-import { roleFor } from './fake-acp-roles.ts';
-import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
-import { withTurnFailure } from './fake-acp-limits.ts';
+import { buildTurn } from './fake-acp-build.ts';
 import { pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
 import { railCrossings } from './fake-acp-rails.ts';
+import { floorTurn } from './fake-acp-floor.ts';
 import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
@@ -231,22 +230,23 @@ async function turn(
     );
     return 'end_turn';
   }
-  const sparked = await sparkTurn(text, sessionRequest?.mcpServers, update, say);
+  const sparked = await sparkTurn(text, sessionRequest, update, say);
   if (sparked) return sparked;
   const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
   if (moded) return moded;
-  const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
-  await railCrossings(roleTurn).then(() => terminalCommands(roleTurn));
-  const published = await publishTurn(roleTurn);
+  const fakeTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
+  await railCrossings(fakeTurn).then(() => terminalCommands(fakeTurn));
+  await floorTurn(fakeTurn, sessionRequest?.meta, config.mode ?? '');
+  const published = await publishTurn(fakeTurn);
   if (published) return published;
   const asked = currentRequest(params.prompt);
-  const planned = await planTurn(asked, roleTurn, config.mode ?? '');
+  const planned = await planTurn(asked, fakeTurn, config.mode ?? '');
   if (planned) return planned;
   if (await planReplies(asked, say)) return 'end_turn';
   if (text.includes(FOUR_KINDS_TRIGGER)) return fourKindsTurn(sessionId, sessionCwd, client, say);
   if (text.includes('#signedout')) return signedOut(update, !text.includes('#signedoutquiet'));
-  const role = coordinatorRoleFor(text) ?? roleFor(text);
-  if (role) return role(roleTurn);
+  const built = await buildTurn(fakeTurn);
+  if (built) return built;
   if (text.includes('#blocks')) {
     await say(JSON.stringify(params.prompt.map(describeBlock)));
     return 'end_turn';
@@ -308,7 +308,7 @@ async function turn(
       await sleep(20, signal);
     }
   }
-  const codexed = await codexTurn(roleTurn, config.mode ?? '');
+  const codexed = await codexTurn(fakeTurn, config.mode ?? '');
   if (codexed) return codexed;
   if (text.includes('#write') || text.includes('#command')) {
     const tool = text.includes('#command')
@@ -365,10 +365,8 @@ acp
           ? { mcpCapabilities: JSON.parse(process.env.FAKE_ACP_MCP_CAPABILITIES) as object }
           : {}),
       },
-      ...(process.env.FAKE_ACP_STEERING ? { _meta: { steering: { supported: true } } } : {}),
     };
   })
-  .onRequest('_session/steering', steerParams, steerRequest)
   .onRequest(acp.methods.agent.session.new, (ctx) => {
     sessionRequest = { meta: ctx.params._meta ?? null, mcpServers: ctx.params.mcpServers };
     sessionCwd = ctx.params.cwd;
@@ -425,7 +423,7 @@ acp
       );
       if (refused) return refused;
       const stopReason = await turn(ctx.params, ctx.client, controller.signal);
-      return withTurnFailure(ctx.params.sessionId, { stopReason, usage: FAKE_USAGE });
+      return { stopReason, usage: FAKE_USAGE };
     } catch (error) {
       if (controller.signal.aborted) {
         const unmetered = text.join('').includes('#spend');

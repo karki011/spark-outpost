@@ -29,24 +29,14 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Outpost requests
 
-| Status        | Means                                                                            |
-| ------------- | -------------------------------------------------------------------------------- |
-| **Sent**      | The chat is busy, its last turn failed or was stopped, or the outpost is paused. |
-| **Working**   | Its turn is running.                                                             |
-| **Needs you** | The reply ends **Needs you: …**, or an approval card waits.                      |
-| **Answered**  | The answer is under the request.                                                 |
-| **Failed**    | The turn failed, or **Not delivered: …** says why.                               |
-| **Cancelled** | You cancelled it or stopped its turn.                                            |
-
-## Jev on a reply
-
-Hover the chip on a reply.
-
-| Status                            | Means                      |
-| --------------------------------- | -------------------------- |
-| **Jev not connected**             | The rules decided.         |
-| **Not asked**                     | This step didn't need Jev. |
-| **Jev timed out**, **Jev failed** | Spark used the rules.      |
+| Status        | Means                                                                                                           |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Sent**      | The chat is busy, its last turn failed or was stopped, the outpost is paused, or it reads **Waiting for @api**. |
+| **Working**   | Its turn is running; the line under it says what the chat is doing.                                             |
+| **Needs you** | An approval card waits, or the reply ends **Needs you: …**.                                                     |
+| **Answered**  | The answer is under the request.                                                                                |
+| **Failed**    | The turn failed and the line says why, or **Not delivered: …**.                                                 |
+| **Cancelled** | You cancelled it or stopped its turn.                                                                           |
 
 ## Ticket groups
 
@@ -82,13 +72,11 @@ Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on,
 
 ## Limits
 
+Spark caps no time, tool calls or cost for a turn.
+
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |
 | Approval card expiry                 | 30 minutes                               |
-| Builders for one plan                | 1 to 4; at once, up to 3                 |
-| Fix turns after failing checks       | 1                                        |
-| Time for one check                   | 10 minutes                               |
-| Critic fix rounds                    | 3                                        |
 | PR follow-up rounds per PR           | 3                                        |
 | Terminals open across all chats      | 12, each keeping 5,000 lines             |
 | Chats in an outpost                  | 50                                       |

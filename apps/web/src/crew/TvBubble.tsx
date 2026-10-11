@@ -1,8 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { crewStateWord, headerMeta, isDispatcher, type CrewAgent } from './crew-model.ts';
+import { crewStateWord, headerMeta, type CrewAgent } from './crew-model.ts';
 import type { BubbleBox } from './tv-layout.ts';
 import { roleTitle, type TvAsk } from './tv-scene.ts';
-import { messageable } from './member-model.ts';
 
 function place(box: BubbleBox): CSSProperties {
   const vertical: CSSProperties = box.below ? { top: box.edge } : { bottom: box.edge };
@@ -42,42 +41,24 @@ interface DetailProps {
   id: string;
   box: BubbleBox;
   agent: CrewAgent;
-  decision: string | null;
   ask: TvAsk | undefined;
   onGo(): void;
   onAsk(approvalId: string): void;
-  onMessage?: (() => void) | undefined;
 }
 
-export function DetailBubble({
-  id,
-  box,
-  agent,
-  decision,
-  ask,
-  onGo,
-  onAsk,
-  onMessage,
-}: DetailProps) {
-  const jev = isDispatcher(agent);
+export function DetailBubble({ id, box, agent, ask, onGo, onAsk }: DetailProps) {
   const status = `${crewStateWord(agent.state)} · ${agent.line}`;
   return (
     <Shell box={box} kind="detail" id={id} label={`${agent.name} details`}>
       <p className="tv-bub-t">
         <b>{agent.name}</b> <small>{roleTitle(agent)}</small>
       </p>
-      <p className="tv-bub-s">{jev && decision ? decision : status}</p>
-      {jev && decision && <p className="tv-bub-s">{status}</p>}
+      <p className="tv-bub-s">{status}</p>
       <p className="tv-bub-m">{headerMeta(agent)}</p>
       <div className="tv-bub-a">
         {ask && (
           <button type="button" className="tv-bub-go warn" onClick={() => onAsk(ask.approvalId)}>
             Answer
-          </button>
-        )}
-        {onMessage && messageable(agent) && (
-          <button type="button" className="tv-bub-go" onClick={onMessage}>
-            Message
           </button>
         )}
         <button type="button" className="tv-bub-go" onClick={onGo}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { requestState } from './outpost-state.ts';
+import { heldForRequest, requestState } from './outpost-state.ts';
 import { requestStateSchema, type RequestFacts } from './outposts.ts';
 import { runStatusSchema } from './runs.ts';
 
@@ -15,6 +15,7 @@ function facts(extra: Partial<RequestFacts> = {}): RequestFacts {
     paused: false,
     held: null,
     chatDeleted: false,
+    waitingOn: null,
     ...extra,
   };
 }
@@ -203,6 +204,58 @@ describe('requestState before a run starts', () => {
 
   it('does not call an unsent request held', () => {
     expect(requestState(facts({ sent: false, held: 'failed' })).reason).toBe('Not sent yet');
+  });
+});
+
+describe('requestState for a request that waits for another', () => {
+  it('names the chat an unsent request waits for', () => {
+    expect(requestState(facts({ toHandle: 'web', sent: false, waitingOn: 'api' }))).toEqual({
+      state: 'sent',
+      reason: 'Waiting for @api',
+    });
+  });
+
+  it('says that the chat it waits for failed, and stays held for Start anyway or Cancel', () => {
+    const waiting = facts({
+      toHandle: 'web',
+      sent: false,
+      waitingOn: 'api',
+      waitingOnFailed: true,
+    });
+    expect(requestState(waiting)).toEqual({ state: 'sent', reason: "Waiting: @api's turn failed" });
+    expect(heldForRequest(waiting)).toBe(true);
+  });
+
+  it('says so when the chat it waits for was deleted', () => {
+    expect(requestState(facts({ sent: false, waitingOnDeleted: true })).reason).toBe(
+      'Waiting for a deleted chat',
+    );
+    expect(requestState(facts({ sent: false, waitingOnDeleted: false })).reason).toBe(
+      'Not sent yet',
+    );
+  });
+
+  it('shows Paused first, since pause also stops the release', () => {
+    expect(requestState(facts({ sent: false, paused: true, waitingOn: 'api' })).reason).toBe(
+      'Paused',
+    );
+  });
+
+  it('stops saying it waits once the request is sent, running or closed', () => {
+    expect(requestState(facts({ queued: true, waitingOn: 'api' }))).toEqual({
+      state: 'sent',
+      reason: null,
+    });
+    expect(requestState(facts({ runStatus: 'running', waitingOn: 'api' }))).toEqual({
+      state: 'working',
+      reason: null,
+    });
+    expect(
+      requestState(facts({ sent: false, closedState: 'cancelled', waitingOn: 'api' })),
+    ).toEqual({ state: 'cancelled', reason: null });
+    expect(requestState(facts({ sent: false, chatDeleted: true, waitingOn: 'api' })).reason).toBe(
+      'Chat deleted',
+    );
   });
 });
 

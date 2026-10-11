@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { ProviderError } from '../../providers/provider.ts';
 import { childEnvironment } from '../../setup/environment.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
@@ -22,28 +21,15 @@ export interface AgentEnvironmentOptions {
   codexProfiles?: boolean | undefined;
 }
 
-const HOSTING_TOKENS = [
-  'GH_TOKEN',
-  'GITHUB_TOKEN',
-  'GH_ENTERPRISE_TOKEN',
-  'GITHUB_ENTERPRISE_TOKEN',
-];
 export const NO_PUSH_URL = 'spark-outpost-no-push:///';
 
-export function withoutPublishing(
-  env: Record<string, string>,
-  home: string,
-): Record<string, string> {
-  const kept = Object.fromEntries(
-    Object.entries(env).filter(([name]) => !HOSTING_TOKENS.includes(name)),
-  );
-  const index = Number.parseInt(kept.GIT_CONFIG_COUNT ?? '0', 10) || 0;
+export function withoutPushing(env: Record<string, string>): Record<string, string> {
+  const index = Number.parseInt(env.GIT_CONFIG_COUNT ?? '0', 10) || 0;
   return {
-    ...kept,
+    ...env,
     GIT_CONFIG_COUNT: String(index + 1),
     [`GIT_CONFIG_KEY_${index}`]: `url.${NO_PUSH_URL}.pushInsteadOf`,
     [`GIT_CONFIG_VALUE_${index}`]: '',
-    GH_CONFIG_DIR: join(home, '.spark-outpost-no-gh'),
   };
 }
 
@@ -84,9 +70,8 @@ export async function agentEnvironment(
   home: string,
   browsing = false,
   repo: CodexRepoOptions | null = null,
-  builder = false,
-  extra: Readonly<Record<string, string>> = {},
+  cannotPush = false,
 ): Promise<Record<string, string>> {
-  const env = { ...(await baseEnvironment(options, home, browsing, repo)), ...extra };
-  return builder ? withoutPublishing(env, home) : env;
+  const env = await baseEnvironment(options, home, browsing, repo);
+  return cannotPush ? withoutPushing(env) : env;
 }

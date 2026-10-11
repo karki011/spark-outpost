@@ -40,6 +40,9 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
+.ph-scene[data-stage='code'] .ph-scene-line {
+  min-height: 2lh;
+}
 .ph-scene.setup .ph-scene-line {
   color: var(--muted);
 }

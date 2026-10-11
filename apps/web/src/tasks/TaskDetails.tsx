@@ -109,10 +109,16 @@ export function TaskDetails({
     queryFn: () => taskApi.get(task.id),
     enabled: open,
   });
-  const tabs: WorkTab[] =
-    task.planVersion || task.agreedPlanVersion
-      ? ['tasks', 'plan', 'crew', 'links', 'changes', 'cost']
-      : ['tasks', 'crew', 'links', 'changes', 'cost'];
+  const hasPlan = Boolean(task.planVersion || task.agreedPlanVersion);
+  const storedCrew = orchestration !== null && agents.length > 0;
+  const tabs: WorkTab[] = [
+    'tasks',
+    ...(hasPlan ? (['plan'] as const) : []),
+    ...(storedCrew ? (['crew'] as const) : []),
+    'links',
+    'changes',
+    'cost',
+  ];
   const current = tabs.includes(tab) ? tab : 'tasks';
   const pill = orchestration ? orchestrationPill(orchestration, task) : statusPill(task);
 
@@ -166,24 +172,16 @@ export function TaskDetails({
       </div>
       <div className="wpane" id="wpane" role="tabpanel" aria-labelledby={`wtab-${current}`}>
         {current === 'tasks' && <TaskList items={items} roots={roots} />}
-        {current === 'crew' && agents.length > 0 && (
-          <CrewPane
-            runs={[]}
-            agents={agents}
-            conversationId={conversationId}
-            labels={orchestration ? pieceLabels(orchestration) : undefined}
-          />
+        {current === 'crew' && orchestration && (
+          <CrewPane agents={agents} labels={pieceLabels(orchestration)} />
         )}
-        {current !== 'tasks' &&
-          current !== 'changes' &&
-          !(current === 'crew' && agents.length > 0) &&
-          !detail.data && (
-            <div className="wsec">
-              <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
-                <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />
-              </QueryWait>
-            </div>
-          )}
+        {current !== 'tasks' && current !== 'changes' && current !== 'crew' && !detail.data && (
+          <div className="wsec">
+            <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
+              <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />
+            </QueryWait>
+          </div>
+        )}
         {current === 'plan' && detail.data && (
           <PlanPane
             taskId={task.id}
@@ -194,9 +192,6 @@ export function TaskDetails({
         )}
         {current === 'links' && detail.data && (
           <LinksPane taskId={task.id} conversationId={conversationId} links={detail.data.links} />
-        )}
-        {current === 'crew' && agents.length === 0 && detail.data && (
-          <CrewPane runs={detail.data.runs} />
         )}
         {current === 'changes' && (
           <ChangesPane

@@ -1,3 +1,4 @@
+import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import type { RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
@@ -7,14 +8,14 @@ import { briefWithFile } from '../projects/instructions-file.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
-import { renewLease, type Lease } from '../persistence/jobs.ts';
+import type { Lease } from '../persistence/jobs.ts';
 import {
   LeaseLostError,
   isCancelRequested,
   type AppendOptions,
 } from '../persistence/run-events.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
-import { createTitleFilter } from '../titles/title-line.ts';
+import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
 import {
@@ -27,9 +28,8 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
-import { publishGrant, publishScope, startBasis, withPublishNote } from './publish-context.ts';
-import { watchUrgentNotes } from './steer-requests.ts';
-import { joinSteering, openMemberInbox } from './member-inbox.ts';
+import { publishGrant, publishScope, startBasis } from './publish-context.ts';
+import { openMemberInbox } from './member-inbox.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
 import { createReplyText } from './reply-text.ts';
@@ -45,14 +45,17 @@ import {
 } from './run-metadata.ts';
 import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
-import { crewPlansStayNotes, plansThisTurn } from '../plans/plan-mode.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
+import { sparkCommandScope } from './command-scope.ts';
 import { createTurnEvents } from './turn-events.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
+import { preambleDeps } from '../outposts/preamble-stores.ts';
+import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -66,17 +69,17 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { withBrowserCheck } from './browser-check.ts';
+import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
+import type { RunControl, StopReason } from './run-control.ts';
 
-export function writesCode(role: string | null | undefined): boolean {
-  return role === 'builder' || role === 'integrator';
-}
+export { startControl, type RunControl, type StopReason } from './run-control.ts';
 
 function editsFiles(input: RunInput): boolean {
   if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
-  return input.role === null || writesCode(input.role);
+  return input.role === null;
 }
 
 async function sessionBrief(db: Db, input: RunInput) {
@@ -105,52 +108,6 @@ export interface TurnDeps {
   browserPane?: boolean;
 }
 
-export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout';
-
-export interface RunControl {
-  signal: AbortSignal;
-  reason(): StopReason | null;
-  stop(reason: StopReason): void;
-  dispose(): void;
-}
-
-export function startControl(deps: TurnDeps, lease: Lease, stopNow?: AbortSignal): RunControl {
-  const controller = new AbortController();
-  let stopReason: StopReason | null = null;
-  const stop = (reason: StopReason) => {
-    stopReason ??= reason;
-    controller.abort();
-  };
-  const stopFromOutside = () => stop('cancelled');
-  if (stopNow?.aborted) stopFromOutside();
-  else stopNow?.addEventListener('abort', stopFromOutside, { once: true });
-  const renewEveryMs = Math.max(1000, (deps.leaseSeconds * 1000) / 3);
-  const heartbeat = setInterval(() => {
-    renewLease(deps.db, lease, deps.leaseSeconds)
-      .then((held) => {
-        if (!held) stop('lease_lost');
-      })
-      .catch(() => undefined);
-  }, renewEveryMs);
-  const cancelWatch = setInterval(() => {
-    isCancelRequested(deps.db, lease.runId)
-      .then((requested) => {
-        if (requested) stop('cancelled');
-      })
-      .catch(() => undefined);
-  }, deps.cancelPollMs ?? 250);
-  return {
-    signal: controller.signal,
-    reason: () => stopReason,
-    stop,
-    dispose() {
-      clearInterval(heartbeat);
-      clearInterval(cancelWatch);
-      stopNow?.removeEventListener('abort', stopFromOutside);
-    },
-  };
-}
-
 export interface TurnOptions {
   onOutput?: (output: ProviderOutput) => void;
   onProduced?: (output: ProviderOutput) => void;
@@ -158,6 +115,8 @@ export interface TurnOptions {
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
   stopNow?: AbortSignal;
+  keepSnapshot?: RunSnapshot | undefined;
+  secondPrompt?: boolean;
 }
 
 export interface TurnResult {
@@ -200,7 +159,6 @@ export async function runAgentTurn(
     root: input.projectRoots[0] ?? null,
     taskId: () => tasks.taskId(),
     append,
-    notesOnly: crewPlansStayNotes(input),
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
@@ -224,10 +182,20 @@ export async function runAgentTurn(
   if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
     observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
   }
+  const edits =
+    input.mode === 'do'
+      ? createObservedEdits({
+          db: deps.db,
+          workspaceId: input.workspaceId,
+          runId: lease.runId,
+          alsoFor: options.backupAlsoFor,
+        })
+      : null;
   let auditSettled = false;
   const settleAudit = async () => {
     if (auditSettled) return;
     auditSettled = true;
+    await edits?.settled();
     await observations.settled();
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
@@ -242,7 +210,7 @@ export async function runAgentTurn(
 
   const reply = createReplyText(append);
   const say = reply.say;
-  const titles = input.askTitle ? createTitleFilter() : null;
+  const titles = hidesTitleLine(input) ? createTitleFilter() : null;
   let turnSession: TurnSession | null = null;
   const ended = async (settled: TurnResult) => {
     await turnSession
@@ -257,11 +225,6 @@ export async function runAgentTurn(
   });
   const modeWatch =
     input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
-  const steerWatch = input.piece?.coordinated
-    ? watchUrgentNotes(deps.db, lease.runId, deps.cancelPollMs ?? 250, () =>
-        control.stop('cancelled'),
-      )
-    : null;
   const inbox = input.assistant
     ? null
     : openMemberInbox(deps.db, {
@@ -270,7 +233,6 @@ export async function runAgentTurn(
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
       });
-  const steering = joinSteering([steerWatch, inbox]);
   const redaction = createRedactionFilter(secretValues);
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
@@ -311,19 +273,19 @@ export async function runAgentTurn(
       onTimeout: () => control.stop('approval_timeout'),
       observations,
     };
+    const changesProject = input.mode === 'do' && input.parentRunId === null;
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
             ...gateOptions,
-            builder: writesCode(input.role),
+            changesProject,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
-            copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
-            piece: input.piece ?? undefined,
             publish: publishGrant(input),
+            snapshot: options.keepSnapshot,
           })
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
@@ -351,9 +313,10 @@ export async function runAgentTurn(
       teammate: await sessionBrief(deps.db, input),
     };
     auditSparkHandoff(audit, input, spark.teammate);
-    const preamble = input.assistant
-      ? ASSISTANT_PREAMBLE
-      : withMoveNote({ ...input, preamble: await withPublishNote(deps.db, input) });
+    const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
+    const outposts = preambleDeps(deps.db, input.workspaceId);
+    const outpost =
+      input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
@@ -372,23 +335,22 @@ export async function runAgentTurn(
       signal: control.signal,
       observe: (output) => {
         if (output.kind === 'session') session?.noteSession(output);
+        edits?.see(output);
         options.onProduced?.(output);
       },
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
-      ...(writesCode(input.role) ? { builder: true } : {}),
-      ...(input.piece?.coordinated ? { coordinated: true } : {}),
-      ...(input.piece?.sharesTree ? { sharesTree: true } : {}),
-      ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
-      ...(input.builderEnv ? { env: input.builderEnv } : {}),
+      ...(changesProject ? { changesProject: true } : {}),
+      ...(changesProject && startBasis(input) ? { publishes: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
-      ...(steering ? { steering } : {}),
+      ...(inbox ? { steering: inbox } : {}),
       ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
+      ...(outpost?.text ? { turnPreamble: outpost.text } : {}),
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
@@ -400,12 +362,14 @@ export async function runAgentTurn(
         ...(input.assistant ? { readOnly: true } : {}),
         observations,
         publish: await publishScope(deps.db, input),
+        commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
         actions: {
           append,
           waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
           signal: control.signal,
           timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
           pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
+          onTimeout: () => control.stop('approval_timeout'),
           audit,
           replySoFar,
         },
@@ -442,7 +406,8 @@ export async function runAgentTurn(
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
       }
       if (output.kind === 'text_delta') {
-        reply.mark(output.phase, replySoFar().held);
+        const finalStarts = reply.mark(output.phase, replySoFar().held);
+        if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }
       await commands.observe(output);
@@ -454,12 +419,15 @@ export async function runAgentTurn(
     if (titles) {
       const ending = titles.finish();
       await say(ending.text);
-      if (ending.title) await recordSuggestedTitle(deps.db, lease.runId, ending.title);
+      if (ending.title && input.askTitle) {
+        await recordSuggestedTitle(deps.db, lease.runId, ending.title);
+      }
     }
 
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);
     await settleAudit();
     if (control.reason() === 'lease_lost') return result('lease_lost');
+    if (outpost && !control.signal.aborted) await answersDelivered(outposts, outpost);
     const { text } = reply.result();
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);
@@ -482,7 +450,6 @@ export async function runAgentTurn(
     return ended(result('failed', failureMessage(error, reason)));
   } finally {
     modeWatch?.dispose();
-    steerWatch?.dispose();
     await inbox
       ?.dispose()
       .catch((error: unknown) => console.error('Could not close the message inbox', error));

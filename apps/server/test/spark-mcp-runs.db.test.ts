@@ -5,14 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertDecision } from '../src/persistence/orchestrations.ts';
-import { insertPieceList } from '../src/persistence/pieces.ts';
+import { insertPlanDocument } from '../src/persistence/plan-documents.ts';
 import { seedConversation, seedIntake, seedTask, seedTurn } from './outcome-seed.ts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 const LEAKED = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
-const CODEX = { provider: 'codex', model: 'gpt-5', modelLabel: 'GPT-5', effort: null };
-const CLAUDE = { provider: 'claude', model: 'opus', modelLabel: 'Opus', effort: null };
 
 let t: TestDb;
 let tools: SparkToolsHarness | null = null;
@@ -132,39 +130,9 @@ async function seedCrew() {
       }),
     ],
   );
-  await insertPieceList(t.db, {
-    taskId,
-    orchestrationRunId: runId,
-    planDocumentId: null,
-    planVersion: null,
-    piecesHash: 'hash',
-    placement: 'shared',
-    placementReason: 'Pieces touch different files.',
-    integration: null,
-    approvedBy: 'level',
-    pieces: [
-      {
-        key: 'P1',
-        title: 'Restyle the button',
-        goal: 'New button style',
-        owns: ['web/Button.tsx'],
-        reads: [],
-        dependsOn: [],
-        contract: null,
-        acceptance: [],
-        checks: [],
-        research: false,
-        sizeEstimate: 1,
-        placement: 'shared',
-        provider: 'codex',
-        model: 'gpt-5',
-        pickNote: 'Jev: a small UI piece fits GPT-5',
-      },
-    ],
-  });
   await insertDecision(t.db, {
     runId,
-    purpose: 'piece_route',
+    purpose: 'verify',
     childRunId: null,
     role: 'builder',
     stepIndex: null,
@@ -172,41 +140,19 @@ async function seedCrew() {
     inputTokens: 100,
     costUsd: 0.001,
     body: {
-      summary: `Jev routed 1 piece ${LEAKED}`,
+      summary: `Jev confirmed the change ${LEAKED}`,
       applied: 'jev',
       gate: null,
       jevError: null,
       latencyMs: 40,
-      answer: {
-        pieces: [
-          {
-            key: 'P1',
-            pick: CODEX,
-            jevPick: CODEX,
-            rulesPick: CLAUDE,
-            decidedBy: 'jev',
-            reason: 'small UI change',
-          },
-        ],
-      },
+      answer: {},
     },
-  });
-  await insertDecision(t.db, {
-    runId,
-    purpose: 'clarify',
-    childRunId: null,
-    role: 'scout',
-    stepIndex: null,
-    jevStatus: 'not_asked',
-    inputTokens: null,
-    costUsd: null,
-    body: { round: 1, questions: ['Which page?', 'Dark mode too?'], answered: true, reply: 'text' },
   });
   return { conversationId, taskId, runId, builderId };
 }
 
 describe('spark_run', () => {
-  it("shows the crew, each piece's Jev pick and every Jev decision, redacted", async () => {
+  it('shows a stored crew turn as its helpers, totals and Jev decisions, redacted and without pieces', async () => {
     const { conversationId, builderId } = await seedCrew();
     const harness = await open(conversationId);
 
@@ -218,54 +164,27 @@ describe('spark_run', () => {
     expect(result.text).not.toContain(LEAKED);
     const body = result.json<{
       run: { id: string; status: string };
-      crew: {
-        phase: string;
-        crew: Record<string, unknown>[];
-        pieces: { items: Record<string, unknown>[] };
-      };
+      crew: { phase: string; crew: Record<string, unknown>[]; totals: { costUsd: number } };
       jevDecisions: Record<string, unknown>[];
     }>();
     expect(byChild.run.id).toBe(body.run.id);
     expect(body.run.status).toBe('running');
     expect(body.crew.phase).toBe('building');
     expect(body.crew.crew).toEqual([
-      expect.objectContaining({
+      {
         name: 'Bolt',
         role: 'builder',
-        piece: 'P1',
         agent: 'codex · gpt-5',
-        pickedBy: 'jev',
-        why: 'Jev: a small UI piece fits GPT-5',
-      }),
+        effort: null,
+        status: 'running',
+        costUsd: 0.12,
+        durationMs: null,
+      },
     ]);
-    expect(body.crew.pieces.items).toEqual([
-      expect.objectContaining({
-        key: 'P1',
-        status: 'pending',
-        jevPick: 'Jev: a small UI piece fits GPT-5',
-        owns: ['web/Button.tsx'],
-      }),
-    ]);
-    expect(body.jevDecisions.map((decision) => decision.kind)).toEqual([
-      'intake',
-      'piece_route',
-      'clarify',
-    ]);
-    expect(body.jevDecisions[1]).toMatchObject({
-      jev: 'answered',
-      applied: 'jev',
-      picks: [
-        {
-          piece: 'P1',
-          pick: 'codex · GPT-5',
-          decidedBy: 'jev',
-          reason: 'small UI change',
-          jevPick: 'codex · GPT-5',
-          rulesPick: 'claude · Opus',
-        },
-      ],
-    });
-    expect(body.jevDecisions[2]).toMatchObject({ questions: 2, answered: true });
+    expect(body.crew).not.toHaveProperty('pieces');
+    expect(body.crew.totals.costUsd).toBe(0.12);
+    expect(body.jevDecisions.map((decision) => decision.kind)).toEqual(['intake', 'verify']);
+    expect(body.jevDecisions[1]).toMatchObject({ jev: 'answered', applied: 'jev' });
   });
 
   it("refuses another workspace's run and a chat with no runs", async () => {
@@ -345,6 +264,38 @@ describe('spark_task', () => {
         { path: 'b.ts', change: 'added', added: 1, removed: 0 },
       ]),
     );
+  });
+
+  it('gives a plan nobody approved as proposed, never as the agreed plan', async () => {
+    const conversationId = await seedConversation(t.db, t.workspaceId);
+    const taskId = await seedTask(t.db, conversationId);
+    const runId = await seedTurn(t.db, conversationId, { taskId });
+    const proposal = { conversationId, taskId, sourceRunId: runId };
+    await insertPlanDocument(t.db, { ...proposal, source: 'codex', body: '# Plan\n1. Add mean' });
+    const session = await open(conversationId);
+    interface Plans {
+      agreedPlan: { version: number } | null;
+      proposedPlan?: { version: number; status: string; source: string; body: string };
+    }
+
+    const unapproved = (await session.call('spark_task')).json<Plans>();
+    expect(unapproved.agreedPlan).toBeNull();
+    expect(unapproved.proposedPlan).toEqual({
+      version: 1,
+      status: 'proposed',
+      source: 'codex',
+      body: '# Plan\n1. Add mean',
+    });
+
+    await insertPlanDocument(t.db, {
+      ...proposal,
+      source: 'claude_plan_mode',
+      body: '# Plan\n1. Add median',
+      approval: { by: 'user', option: null, runId, commit: null },
+    });
+    const approved = (await session.call('spark_task')).json<Plans>();
+    expect(approved.agreedPlan).toMatchObject({ version: 2, status: 'approved', versions: 2 });
+    expect(approved.proposedPlan).toBeUndefined();
   });
 
   it('says when a chat has no task', async () => {

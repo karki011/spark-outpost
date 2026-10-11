@@ -216,7 +216,7 @@ const PASSKEY_SCRIPT = `
 
 const PASSKEY_SECTION = `
 <section id="passkey" hidden>
-<p class="or">Paired this phone before?</p>
+<p class="or">Paired this device before?</p>
 <button type="button" id="passkey-button" class="quiet">Sign in with a passkey</button>
 </section>`;
 
@@ -245,7 +245,7 @@ function page(nonce: string, options: PairingPageOptions): string {
 <label for="code">Pairing code</label>
 <input id="code" name="code" required maxlength="40" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-describedby="status" placeholder="XXXX-XXXX-XXXX">
 <label for="name">Device name</label>
-<input id="name" name="name" required maxlength="${REMOTE_DEVICE_NAME_MAX}" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="My phone">
+<input id="name" name="name" required maxlength="${REMOTE_DEVICE_NAME_MAX}" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="My device">
 <button type="submit">Pair</button>
 </form>${options.passkeys ? PASSKEY_SECTION : ''}
 <section id="wait" hidden>

@@ -13,10 +13,19 @@ import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 export const NOT_AUTHORIZED =
   "Publishing isn't authorized in this turn. It needs the user's message to ask for a push or pull request, the chat at Full auto → PR, or an Auto or Bypass permissions (Full access) mode, in a chat working on its own spark/ branch. Leave the change in the working tree and tell the user.";
 
+export const PUSH_ONLY =
+  "The user's message asked for the push and no pull request, and nothing else in this turn allows one. Tell the user the branch is pushed.";
+
 function authorized(context: SparkToolContext): PublishScope {
   const publish = context.scope.publish;
   if (!publish) throw new SparkToolError(NOT_AUTHORIZED);
   return publish;
+}
+
+function nextAfterPush(publish: PublishScope): string {
+  return publish.pushOnly
+    ? 'Tell the user the branch is pushed. Do not open a pull request: the user asked for the push only.'
+    : 'Open the pull request now (gh pr create, or spark_pull_request when you have it) and give the user its link.';
 }
 
 async function push(context: SparkToolContext) {
@@ -36,7 +45,7 @@ async function push(context: SparkToolContext) {
     ...(result.stoppedBy ? { stoppedBy: result.stoppedBy } : {}),
     output: result.output,
     next: pushed
-      ? 'Open the pull request now (gh pr create, or spark_pull_request when you have it) and give the user its link.'
+      ? nextAfterPush(publish)
       : 'Nothing was pushed. Read the output: fix what your change caused and call this again; otherwise tell the user exactly what is needed.',
   };
 }
@@ -68,7 +77,7 @@ async function target(context: SparkToolContext, publish: PublishScope): Promise
     );
   }
   const worktree = await chatWorktreeAt(context.deps.db, root);
-  return { repo, base: worktree?.baseBranch ?? null };
+  return { repo, base: task.pullBase ?? worktree?.baseBranch ?? null };
 }
 
 interface PullText {
@@ -96,6 +105,7 @@ async function pullRequest(
   args: { title: string; body: string; draft?: boolean | undefined },
 ) {
   const publish = authorized(context);
+  if (!publish.opensPull) throw new SparkToolError(PUSH_ONLY);
   const deps = gitHubDepsFor(context.deps, context.scope);
   const at = await target(context, publish);
   const draft = args.draft ?? (await opensDraftPullRequests(deps.db, deps.workspaceId));

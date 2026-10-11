@@ -24,17 +24,6 @@ interface InboxOptions {
   append: Append;
 }
 
-export function joinSteering(watches: readonly (SteerRequests | null)[]): SteerRequests | null {
-  const present = watches.filter((watch): watch is SteerRequests => watch !== null);
-  if (present.length <= 1) return present[0] ?? null;
-  return {
-    attach(send) {
-      const detach = present.map((watch) => watch.attach(send));
-      return () => detach.forEach((stop) => stop());
-    },
-  };
-}
-
 export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]): string {
   const bodies = messages.map((message) => message.body.trim());
   const shown = bodies.length === 1 ? bodies[0]! : bodies.map((body) => `- ${body}`).join('\n');

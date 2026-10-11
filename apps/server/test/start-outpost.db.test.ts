@@ -132,6 +132,25 @@ describe('starting an outpost', () => {
     });
   });
 
+  it.each([
+    ['claude-sonnet-5', 'Claude Sonnet 5'],
+    ['sonnet', 'Claude sonnet'],
+  ])(
+    'names a model the capability list does not carry by its card, and an alias as typed (%s)',
+    async (model, shown) => {
+      await connectCliProvider(t, 'claude');
+      const api = newMember({ provider: 'claude', model, agentMode: null });
+      const start = request([api]);
+      await startOutpost(deps, start);
+
+      const posts = await listPosts(t.db, start.id);
+      const notices = posts.filter(({ post }) => post.kind === 'notice');
+      expect(notices.map(({ post }) => post.body.split(' · ').slice(0, 3))).toEqual([
+        ['@api joined', projectName, shown],
+      ]);
+    },
+  );
+
   it('introduces each member from its facts and names its task', async () => {
     const api = { ...newMember(), firstMessage: firstMessage('Add an optional userId filter.') };
     const start = request([{ conversationId: web, handle: 'fe' }, api]);

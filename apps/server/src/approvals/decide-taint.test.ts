@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MODE_POSTURES, type ModePosture } from '@spark-outpost/contracts';
 import {
-  BUILDER_PUBLISH_REASON,
+  CHAT_PUBLISH_REASON,
   NO_RUN_RULES,
   PUSH_REASON,
   decide,
@@ -98,9 +98,11 @@ describe('decide() after the run read sensitive data', () => {
 
   it('still refuses what the floor refuses', () => {
     const push = run('git push https://github.com/me/app.git main');
-    expect(decide('full_access', push, NO_RUN_RULES, [], tainted({ builder: true }))).toEqual({
+    expect(
+      decide('full_access', push, NO_RUN_RULES, [], tainted({ changesProject: true })),
+    ).toEqual({
       verdict: 'reject',
-      reason: BUILDER_PUBLISH_REASON,
+      reason: CHAT_PUBLISH_REASON,
     });
   });
 

@@ -2,22 +2,22 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  BUILD_REQUEST,
   card,
-  CREW_REQUEST,
-  crewChat,
-  crewRepo,
-  resetCrew,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
   send,
-  type CrewRepo,
-} from './crew-engine.ts';
+} from './project-chat-kit.ts';
 
 const SHOTS = process.env.SEND_OR_QUEUE_SHOTS ?? '';
 
-let repo: CrewRepo;
+let repo: ChatRepo;
 
 test.beforeEach(async ({ page }) => {
-  await resetCrew();
-  repo = crewRepo();
+  await resetWithAgents();
+  repo = chatRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 
@@ -44,8 +44,8 @@ async function otherKey(page: Page): Promise<string> {
 }
 
 async function waitingCrew(page: Page) {
-  await crewChat(page, repo, 'Ask before edits');
-  await send(page, `${CREW_REQUEST} #build #crew`);
+  await projectChat(page, repo, 'Ask before edits');
+  await send(page, `${BUILD_REQUEST} #build`);
   await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
 }
 
@@ -102,7 +102,7 @@ test('Enter queues and ⌘Enter sends now while a turn runs, ahead of the queue 
     timeout: 30_000,
   });
   await expect(mine(page).filter({ hasText: 'Do this now' })).toBeVisible();
-  await expect(page.locator('.crew-turn').first()).toContainText('Stopped');
+  await expect(page.locator('.msg.ai').first()).toContainText('Stopped before finishing.');
   await expect(queued(page)).toHaveText([/Later please/]);
   await shot(page, 'stopped-to-send');
 });

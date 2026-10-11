@@ -2,6 +2,7 @@ import {
   suggestHandle,
   type Attachment,
   type ConversationSummary,
+  type InvolvementLevel,
   type ProviderId,
 } from '@spark-outpost/contracts';
 
@@ -29,11 +30,27 @@ export interface ChatDraft extends AgentChoice {
   text: string;
   files: Attachment[];
   filesPending: boolean;
+  dependsOn: string | null;
+  level: InvolvementLevel | null;
+  storyTitle?: string;
+}
+
+export interface DraftOrigin {
+  draftId: string;
+  leadChatId: string;
+}
+
+export interface JoinedOutpost {
+  outpostId: string;
+  name: string;
+  members: readonly { conversationId: string; handle: string }[];
 }
 
 export interface CreateDraft {
   name: string;
   chats: ChatDraft[];
+  origin?: DraftOrigin;
+  into?: JoinedOutpost;
 }
 
 export type NewId = () => string;
@@ -58,6 +75,8 @@ export function emptyChat(agent: AgentChoice, newId: NewId = randomId): ChatDraf
     text: '',
     files: [],
     filesPending: false,
+    dependsOn: null,
+    level: null,
   };
 }
 
@@ -69,10 +88,15 @@ export function listedChats(draft: CreateDraft): ChatDraft[] {
   return draft.chats.filter((chat) => chat.touched);
 }
 
+export function joinedHandles(draft: CreateDraft): string[] {
+  return draft.into?.members.map((member) => member.handle) ?? [];
+}
+
 function otherHandles(draft: CreateDraft, key: string): string[] {
-  return listedChats(draft)
+  const listed = listedChats(draft)
     .filter((chat) => chat.key !== key && chat.handle !== '')
     .map((chat) => chat.handle);
+  return [...joinedHandles(draft), ...listed];
 }
 
 function changed(
@@ -163,7 +187,12 @@ export function withFiles(
 }
 
 export function withoutChat(draft: CreateDraft, key: string): CreateDraft {
-  return { ...draft, chats: draft.chats.filter((chat) => chat.key !== key) };
+  return {
+    ...draft,
+    chats: draft.chats
+      .filter((chat) => chat.key !== key)
+      .map((chat) => (chat.dependsOn === key ? { ...chat, dependsOn: null } : chat)),
+  };
 }
 
 export function withChat(draft: CreateDraft, chat: ChatDraft): CreateDraft {
@@ -192,6 +221,8 @@ function inputOf(draft: CreateDraft): string {
       chat.handle,
       chat.text,
       chat.files.map((file) => file.id),
+      chat.dependsOn,
+      chat.level,
     ]),
   ]);
 }

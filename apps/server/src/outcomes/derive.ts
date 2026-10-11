@@ -69,9 +69,8 @@ export function outcomeKind(facts: TurnFacts): OutcomeKind {
       accept.optionId === CHECKPOINT_OPTION.keep || accept.optionId === CHECKPOINT_OPTION.revert,
   );
   if (decided) return 'change';
-  if (facts.status === 'succeeded' && facts.depth === 'direct' && !facts.changedFiles) {
-    return 'answer';
-  }
+  const direct = facts.depth === 'direct' || facts.depth === null;
+  if (facts.status === 'succeeded' && direct && !facts.changedFiles) return 'answer';
   return 'other';
 }
 

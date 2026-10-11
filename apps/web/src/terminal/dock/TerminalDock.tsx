@@ -1,8 +1,11 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import '../terminal.css';
 import './terminal-dock.css';
-import { PlusIcon, XIcon } from '../../ui/icons.tsx';
+import { PlusIcon, SparkleIcon, XIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { AgentTab } from './AgentTab.tsx';
+import { AGENT_TAB_WORDS } from './command-tabs.ts';
+import { CommandTab } from './CommandTab.tsx';
 import { DockResizer } from './DockResizer.tsx';
 import { useDockHeight } from './dock-height.ts';
 import {
@@ -15,6 +18,7 @@ import {
   selectShell,
   shellCommand,
   useChatShells,
+  type ChatShells,
   type ShellTab,
 } from './shell-store.ts';
 import { StopShellConfirm } from './StopShellConfirm.tsx';
@@ -52,16 +56,23 @@ function DockTab({
   onClose: () => void;
 }) {
   const classes = ['term-tab', active ? 'on' : '', tab.status === 'ended' ? 'ended' : ''];
+  const agents = tab.kind === 'command' || tab.kind === 'agent';
   return (
     <div className={classes.filter(Boolean).join(' ')}>
       <button
         type="button"
         className="term-tab-pick"
         aria-pressed={active}
-        title={tab.cwd ?? undefined}
+        aria-label={agents && tab.label !== null ? `${name}, ${AGENT_TAB_WORDS}` : undefined}
+        title={agents ? `${name}, ${AGENT_TAB_WORDS}` : (tab.cwd ?? undefined)}
         onClick={() => selectShell(chatId, tab.id)}
       >
         <span className={`term-light ${tab.status}`} aria-hidden="true" />
+        {agents && (
+          <span className="term-tab-agent" aria-hidden="true">
+            <SparkleIcon />
+          </span>
+        )}
         {tab.label === null ? (
           <>
             <i className="term-tab-skel" aria-hidden="true" />
@@ -86,6 +97,28 @@ function DockTab({
 
 export function TerminalDock({ chatId }: { chatId: string }) {
   const shells = useChatShells(chatId);
+  return (
+    <>
+      {shells.tabs.map(
+        (tab) => tab.kind === 'command' && <CommandTab key={tab.id} chatId={chatId} tab={tab} />,
+      )}
+      {shells.tabs.map(
+        (tab) =>
+          tab.kind === 'agent' && (
+            <AgentTab
+              key={tab.id}
+              chatId={chatId}
+              tab={tab}
+              shown={shells.open && shells.activeId === tab.id}
+            />
+          ),
+      )}
+      {shells.open && <OpenDock chatId={chatId} shells={shells} />}
+    </>
+  );
+}
+
+function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
   const [height, setHeight] = useDockHeight();
   const section = useRef<HTMLElement>(null);
   const body = useRef<HTMLDivElement>(null);
@@ -99,13 +132,12 @@ export function TerminalDock({ chatId }: { chatId: string }) {
 
   useLayoutEffect(() => {
     const target = body.current;
-    if (!shells.open || !host || !activeId || !target) return;
+    if (!host || !activeId || !target) return;
     target.replaceChildren(host);
-    attachedShell(activeId);
+    attachedShell(activeId, host);
     return () => parkHost(host);
-  }, [shells.open, host, activeId]);
+  }, [host, activeId]);
 
-  if (!shells.open) return null;
   const names = tabNames(shells.tabs);
   const stoppingTab = shells.tabs.find(
     (tab) => tab.id === stopping?.tabId && tab.status === 'open',
@@ -210,7 +242,7 @@ export function TerminalDock({ chatId }: { chatId: string }) {
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>
-      {active?.status === 'ended' && (
+      {active?.status === 'ended' && active.kind !== 'command' && active.kind !== 'agent' && (
         <p className="term-dock-ended" role="status">
           <span>{active.notice}</span>
           <button

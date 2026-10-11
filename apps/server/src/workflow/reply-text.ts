@@ -11,7 +11,7 @@ interface ReplyResult {
 
 interface ReplyText {
   say(delta: string): Promise<void>;
-  mark(phase: MessagePhase | undefined, held: number): void;
+  mark(phase: MessagePhase | undefined, held: number): boolean;
   result(): ReplyResult;
 }
 
@@ -33,8 +33,10 @@ export function createReplyText(append: (event: RunEvent) => Promise<unknown>): 
     },
     mark(phase, held) {
       const final = phase === 'final';
-      if (final && !inFinal) finalStart = text.length + held;
+      const starts = final && !inFinal;
+      if (starts) finalStart = text.length + held;
       inFinal = final;
+      return starts;
     },
     result: () => ({ text, messageId, finalReply: finalReply() }),
   };

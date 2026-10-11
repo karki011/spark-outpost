@@ -58,9 +58,9 @@ export function SwitchRow({ id, checked, label = REMOTE_SWITCH_LABELS[id] }: Swi
 export function PhoneSwitches({ switches }: { switches: RemoteSwitches }) {
   return (
     <section className="ph-card" aria-labelledby="ph-switches-title">
-      <h2 id="ph-switches-title">What the phone can do</h2>
+      <h2 id="ph-switches-title">What paired devices can do</h2>
       <p className="ph-note">
-        A paired phone can read chats, send messages and answer cards. {MAC_ONLY_LINE} Pairing,
+        A paired device can read chats, send messages and answer cards. {MAC_ONLY_LINE} Pairing,
         devices and these switches can only be changed here.
       </p>
       <ul className="ph-switches">
@@ -75,7 +75,7 @@ export function PhoneSwitches({ switches }: { switches: RemoteSwitches }) {
 export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }) {
   return (
     <section className="ph-card ph-readonly" aria-labelledby="ph-switches-title">
-      <h2 id="ph-switches-title">What this phone can do</h2>
+      <h2 id="ph-switches-title">What this device can do</h2>
       <p className="ph-note">{MAC_ONLY_LINE} Change these on your Mac.</p>
       <ul className="ph-switches">
         {SHOWN.map((id) => (

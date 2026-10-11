@@ -8,7 +8,7 @@ import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
 import { zaiFailureReason, zaiMessageRequest } from './zai-key.ts';
 import { zaiModelId } from '../agents/acp/zai.ts';
-import { floorModel } from '../orchestration/model-floor.ts';
+import { floorModel } from '../model-access/floor-model.ts';
 
 export interface TestMessageDeps {
   run: RunCommand;

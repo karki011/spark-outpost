@@ -13,7 +13,7 @@ You'll read what the agent changed and keep or undo it. About 2 minutes.
 1. Select the changed-lines chip in the chat header, or press **⌘D**.
 2. Pick a file on the left, or type in **Filter files**.
 3. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** to search.
-4. Press **Esc** to close the **Changes** drawer.
+4. Press **Esc** to close the drawer.
 
 ![The Changes drawer with the file list and a diff](images/chats-and-modes-diff-drawer-light.png)
 
@@ -21,36 +21,20 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 ## Keep or revert
 
-Spark keeps changes by itself. The turn ends in one result line that needs no answer: **Kept**, files, checks, commit and pull request, plus a [**Worth a look**](guardrails.md#worth-a-look) list. Expand it for files and branch.
+Spark keeps changes by itself. The turn ends in a **Changes kept** record that needs no answer: files, lines, commit and pull request. Expand it for files and branch.
 
-| To                                   | Select                                         |
-| ------------------------------------ | ---------------------------------------------- |
-| Undo a run                           | **Revert to before this run** on the turn      |
-| Copy kept changes into your checkout | **Bring changes into** _branch_, expanded      |
-| Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md) |
+| To                                   | Select                                                      |
+| ------------------------------------ | ----------------------------------------------------------- |
+| Undo a run                           | **Revert to before this run**, on a turn that changed files |
+| Copy kept changes into your checkout | **Bring changes into** _branch_, expanded                   |
+| Commit, push or open a pull request  | See [Ship a change](ship-and-pull-requests.md)              |
 
-A **Keep these changes?** card waits, with **Keep**, **Fix** and **Revert**, only when Spark won't decide alone:
+No card asks whether to keep a change. To change it, say so in your next message.
 
-| Autonomy           | The card waits when                                             |
-| ------------------ | --------------------------------------------------------------- |
-| **Automatic**      | A risky migration was made in your own checkout, not a worktree |
-| **Full auto → PR** | Checks fail and you chose **Stop and ask**                      |
+Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch. In a folder without git, only what its edit tools changed counts; a command's changes go unseen.
 
-Select **Fix**, type what should change, and select **Ask for a fix**.
+## Checks
 
-Only the agent's own edits are counted and reverted, not changes it pulls in from the main branch.
-
-## Checks after a change
-
-After a Builder's turn, Spark runs checks and adds a **Checks** row to **Tasks**.
-
-| Row                                             | Meaning                        |
-| ----------------------------------------------- | ------------------------------ |
-| **failed**                                      | From the change. One fix turn. |
-| **already failing before this change**          | Not the change. No fix turn.   |
-| **failed before this change or can't tell**     | Cause unclear. No fix turn.    |
-| **could not finish in time**, **could not run** | Not counted; says why.         |
-
-Choose commands, or **Off**, in **Settings → Projects**.
+Spark runs no tests or lint itself. The agent runs your project's checks and says in its reply what it verified and what it skipped. Ask it to run a command if it didn't.
 
 **Next:** [Manage a long chat](compaction.md)

@@ -3,13 +3,13 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  BUILDER_PUBLISH_DENY_RULES,
   supportsDo,
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
+  floorAskRules,
+  GIT_CONFIG_ASK_RULE,
   FORCE_PUSH_DENY_RULES,
-  PUBLISH_ASK_RULES,
   secretRules,
 } from './agents.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
@@ -26,6 +26,11 @@ type ClaudeOptions = {
 
 const optionsOf = (meta: Record<string, unknown> | undefined) =>
   (meta as { claudeCode: { options: ClaudeOptions } }).claudeCode.options;
+
+const bashAsks = (options: ClaudeOptions) =>
+  ((options.settings.permissions.ask as string[] | undefined) ?? []).filter((rule) =>
+    rule.startsWith('Bash'),
+  );
 
 describe('Claude session options', () => {
   const project = optionsOf(agentDefinitions.claude.projectSessionMeta?.(['/work/lib']));
@@ -85,13 +90,13 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Ask turns a shell and leaves asking to the agent', () => {
+  it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
-    expect(asking.settings.permissions).not.toHaveProperty('ask');
+    expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
   });
 
-  it('gives Do runs the edit, shell and todo tools and leaves asking to the agent mode', () => {
+  it('gives Do runs the edit, shell and todo tools and asks only for the safety floor', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -104,7 +109,8 @@ describe('Claude session options', () => {
       'EnterPlanMode',
       'ExitPlanMode',
     ]);
-    expect(options.settings.permissions).not.toHaveProperty('ask');
+    expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
+    expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
       deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),
@@ -127,63 +133,6 @@ describe('Claude session options', () => {
     expect(agentDefinitions.claude.doMode).toBe('default');
     expect(agentDefinitions.codex.askMode).toBe('read-only');
   });
-
-  it('denies gh and remote changes to Builders, and only to Builders', () => {
-    const builder = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    const deny = builder.settings.permissions.deny as string[];
-    expect(BUILDER_PUBLISH_DENY_RULES).toContain('Bash(git push:*)');
-    expect(deny).not.toContain('Bash(git push:*)');
-    for (const rule of ['Bash(gh:*)', 'Bash(tea:*)', 'Bash(git remote add:*)']) {
-      expect(BUILDER_PUBLISH_DENY_RULES).toContain(rule);
-      expect(deny).toContain(rule);
-      expect(builder.disallowedTools).toContain(rule);
-    }
-    expect(deny).toEqual(expect.arrayContaining(secretRules([])));
-    const plain = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(plain.settings.permissions.deny).not.toContain('Bash(git push:*)');
-    const zai = optionsOf(agentDefinitions.zai.doSessionMeta?.([], null, true));
-    expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
-  });
-
-  it('adds no ask rules for a piece, whether or not it shares its tree', () => {
-    const alone = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    expect(alone.settings.permissions).not.toHaveProperty('ask');
-    const publishing = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
-    );
-    expect(publishing.settings.permissions).not.toHaveProperty('ask');
-  });
-
-  it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
-    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(solo.settings.permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
-  });
-
-  it('lets gh through to the approval gate for a Builder whose run may publish', () => {
-    const publishing = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, false, true),
-    );
-    const deny = publishing.settings.permissions.deny as string[];
-    expect(deny).not.toContain('Bash(gh:*)');
-    for (const rule of ['Bash(hub:*)', 'Bash(glab:*)', 'Bash(git remote set-url:*)']) {
-      expect(deny).toContain(rule);
-    }
-    const coordinated = optionsOf(
-      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
-    );
-    expect(coordinated.settings.permissions.deny).toContain('Bash(gh:*)');
-  });
-
-  it('also denies git state changes to Builders of a coordinated task', () => {
-    const coordinated = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
-    const deny = coordinated.settings.permissions.deny as string[];
-    for (const rule of ['Bash(git stash:*)', 'Bash(git checkout:*)', 'Bash(git branch -D:*)']) {
-      expect(deny).toContain(rule);
-    }
-    expect(deny).toContain('Bash(git push:*)');
-    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
-    expect(solo.settings.permissions.deny).not.toContain('Bash(git stash:*)');
-  });
 });
 
 describe('Codex launch', () => {
@@ -193,7 +142,12 @@ describe('Codex launch', () => {
     const chat = agentDefinitions.codex.conversationEnv?.('/tmp/run') ?? {};
     expect(chat).toMatchObject({ INITIAL_AGENT_MODE: 'read-only', TMPDIR: '/tmp/run' });
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
-      features: { shell_tool: false, unified_exec: false, skill_mcp_dependency_install: false },
+      features: {
+        shell_tool: false,
+        unified_exec: false,
+        skill_mcp_dependency_install: false,
+        apps: false,
+      },
       web_search: 'disabled',
       default_permissions: 'read-only',
       permissions: codexPermissionProfiles(),

@@ -9,7 +9,6 @@ GET /api/events
 GET /api/remote/switches
 GET /api/remote/session
 GET /api/agent-config/trust
-GET /api/analytics/harness
 GET /api/analytics/overview
 GET /api/analytics/rollups
 GET /api/analytics/spend
@@ -44,6 +43,7 @@ GET /api/conversations/:id/file-view
 POST /api/conversations/:id/update
 POST /api/spark-assistant
 GET /api/conversations/:id/agent-commands
+GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
 POST /api/conversations/:id/read
@@ -88,9 +88,11 @@ PUT /api/conversations/:id/queue/order
 POST /api/runs/:id/messages
 GET /api/outposts
 GET /api/outposts/:id
+GET /api/conversations/:id/outpost-drafts
 PATCH /api/outposts/:id
 POST /api/outposts/:id/posts
 POST /api/outposts/:id/posts/:postId/cancel
+POST /api/outposts/:id/posts/:postId/start-now
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
@@ -124,10 +126,7 @@ GET /api/tasks/:id/changes
 GET /api/tasks/:id/changes/diff
 GET /api/tasks/:id/changes/files
 GET /api/tasks/:id/changes/summary
-GET /api/tasks/:id/pieces
 POST /api/tasks/:id/links
-POST /api/tasks/:id/pieces/:key/notes
-POST /api/tasks/:id/steer
 GET /api/teammates
 POST /api/teammate-starters/:starter/dismiss
 POST /api/teammates/:id/home
@@ -176,6 +175,9 @@ POST /api/conversations/:id/terminal
 DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
 POST /api/terminal/previews
+GET /api/conversations/:id/agent-terminals/:terminalId/output
+POST /api/conversations/:id/agent-terminals/:terminalId/view
+POST /api/conversations/:id/agent-terminals/:terminalId/stop
 GET /api/conversations/:id/preview
 GET /api/projects/:id/preview
 POST /api/conversations/:id/preview/start
@@ -186,6 +188,7 @@ GET /api/diagnostics/export
 GET /api/instructions-file
 POST /api/setup/git/install
 POST /api/outposts
+GET /api/outposts/drafts/:id
 DELETE /api/outposts/:id
 PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId

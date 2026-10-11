@@ -4,15 +4,21 @@ import {
   createOutpostRequestSchema,
   createPostRequestSchema,
   needsYouCount,
+  stackedCount,
   updateOutpostRequestSchema,
+  type ChatDrafts,
   type CreateOutpostResponse,
   type Outpost,
   type OutpostDetail,
+  type OutpostDraft,
   type OutpostPost,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
+import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
 import { requestExchanges } from '../persistence/outpost-exchanges.ts';
-import { cancelUnsent, getPost, listPosts, requestAnswer } from '../persistence/outpost-posts.ts';
+import { requestAnswer } from '../persistence/outpost-answers.ts';
+import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
+import { storiesOf } from '../persistence/outpost-stories.ts';
 import {
   deleteOutpost,
   getOutpost,
@@ -23,15 +29,17 @@ import {
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
-import type { PeerAgent, PostWithFacts, StoredOutpost } from '../outposts/ports.ts';
+import type { PeerAgent, PostWithFacts, StackGit, StoredOutpost } from '../outposts/ports.ts';
 import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';
-import { startOutpost, type FolderExists } from '../outposts/start-outpost.ts';
+import { DRAFT_NOT_FOUND, startOutpost, type FolderExists } from '../outposts/start-outpost.ts';
+import { toStories, UNKNOWN_STACK } from '../outposts/story-view.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export const POST_NOT_FOUND = 'That post does not exist. It may have been deleted.';
 export const ONLY_REQUESTS_CANCEL = 'Only a request can be cancelled.';
+export const ONLY_REQUESTS_START = 'Only a request can be started.';
 export const REQUEST_FINISHED = 'That request has already finished.';
 export const CANCEL_UNAVAILABLE = 'That request could not be cancelled. Try again.';
 export const NOT_A_MEMBER = 'That chat is not in this outpost.';
@@ -42,6 +50,17 @@ export interface OutpostRouteOptions {
   peer: PeerAgent;
   drain(conversationId: string): Promise<unknown>;
   folderExists?: FolderExists;
+  stackGit?: StackGit;
+}
+
+export interface DraftView {
+  id: string;
+  conversationId: string | null;
+  outpostId: string | null;
+  title: string;
+  body: OutpostDraft;
+  startedAt: string | null;
+  createdAt: string;
 }
 
 const handleBodySchema = z.object({ handle: z.string() });
@@ -56,7 +75,7 @@ function conversationParam(req: Request): string {
 }
 
 export function outpostRoutes(options: OutpostRouteOptions): Router {
-  const { db, workspaceId, peer, drain, folderExists } = options;
+  const { db, workspaceId, peer, drain, folderExists, stackGit = UNKNOWN_STACK } = options;
   const router = Router();
   const service = { db, workspaceId, ...(folderExists ? { folderExists } : {}) };
 
@@ -76,7 +95,8 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       const exchanges = await requestExchanges(db, post.post);
       posts.push(toOutpostPost(post, answer, intros.get(post.post.id), exchanges));
     }
-    return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts };
+    const stories = await toStories(await storiesOf(db, id), stackGit);
+    return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts, stories };
   };
 
   const counted = async (outpost: StoredOutpost): Promise<Outpost> => {
@@ -84,16 +104,20 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     return { ...outpost, needsYou: needsYouCount(posts) };
   };
 
-  const openRequest = async (outpostId: string, postId: string): Promise<PostWithFacts> => {
+  const openRequest = async (
+    outpostId: string,
+    postId: string,
+    onlyRequests: string,
+  ): Promise<PostWithFacts> => {
     await known(outpostId);
     const found = await getPost(db, postId);
     if (!found || found.post.outpostId !== outpostId) throw new OutpostError(404, POST_NOT_FOUND);
-    if (found.post.kind !== 'request') throw new OutpostError(409, ONLY_REQUESTS_CANCEL);
+    if (found.post.kind !== 'request') throw new OutpostError(409, onlyRequests);
     return found;
   };
 
   const cancelRequest = async (outpostId: string, postId: string): Promise<void> => {
-    const found = await openRequest(outpostId, postId);
+    const found = await openRequest(outpostId, postId, ONLY_REQUESTS_CANCEL);
     const { state } = toOutpostPost(found, null);
     if (state === 'cancelled') return;
     if (state === 'answered' || state === 'failed') throw new OutpostError(409, REQUEST_FINISHED);
@@ -124,6 +148,36 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const { created, failed } = await startOutpost(service, request);
     const response: CreateOutpostResponse = { ...(await detail(request.id)), failed };
     res.status(created ? 201 : 200).json(response);
+  });
+
+  router.get('/outposts/drafts/:id', async (req, res) => {
+    const draft = await getDraft(db, workspaceId, paramId(req));
+    if (!draft) throw new OutpostError(404, DRAFT_NOT_FOUND);
+    const view: DraftView = {
+      id: draft.id,
+      conversationId: draft.conversationId,
+      outpostId: draft.outpostId,
+      title: draft.title,
+      body: draft.body,
+      startedAt: draft.startedAt,
+      createdAt: draft.createdAt,
+    };
+    res.json(view);
+  });
+
+  router.get('/conversations/:id/outpost-drafts', async (req, res) => {
+    const found = await draftsOfChat(db, workspaceId, paramId(req));
+    const view: ChatDrafts = {
+      drafts: found.map((draft) => ({
+        id: draft.id,
+        runId: draft.runId,
+        chats: draft.body.chats.length,
+        stacked: stackedCount(draft.body.chats),
+        outpostId: draft.outpostId,
+        startedAt: draft.startedAt,
+      })),
+    };
+    res.json(view);
   });
 
   router.get('/outposts/:id', async (req, res) => {
@@ -174,6 +228,7 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       author: { kind: 'user' },
       id: request.id,
       text: request.text,
+      ...(request.to ? { to: request.to } : {}),
       ...(request.guestConversationId ? { guestConversationId: request.guestConversationId } : {}),
     });
     res.status(201).json(await detail(outpostId));
@@ -184,6 +239,14 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const postId = paramId(req, 'postId');
     await cancelRequest(outpostId, postId);
     await notifyOutpostChanged(db, outpostId);
+    res.json(await detail(outpostId));
+  });
+
+  router.post('/outposts/:id/posts/:postId/start-now', async (req, res) => {
+    const outpostId = paramId(req);
+    const postId = paramId(req, 'postId');
+    await openRequest(outpostId, postId, ONLY_REQUESTS_START);
+    if (await releaseHold(db, postId)) await notifyOutpostChanged(db, outpostId);
     res.json(await detail(outpostId));
   });
 

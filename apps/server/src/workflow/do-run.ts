@@ -1,6 +1,5 @@
 import type { AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import type { PieceGuard } from '../approvals/piece-guard.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
@@ -31,14 +30,13 @@ export interface AskTurnOptions extends AskRunOptions {
 }
 
 export interface DoRunOptions extends AskRunOptions {
-  builder?: boolean | undefined;
+  changesProject?: boolean | undefined;
   projectRoots: readonly string[];
   backupAlsoFor?: string | undefined;
-  copyOf?: string | null | undefined;
   observe?: EditObserver | undefined;
   plans?: PlanModeHooks | undefined;
-  piece?: PieceGuard | undefined;
   publish?: PublishGrant | undefined;
+  snapshot?: RunSnapshot | undefined;
 }
 
 export async function takeSnapshot(db: Db, runId: string, root: string): Promise<RunSnapshot> {
@@ -88,14 +86,12 @@ export function prepareAskRun(options: AskTurnOptions): PermissionGate {
 export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
   const root = options.projectRoots[0];
   if (!root) return undefined;
-  const snapshot = await takeSnapshot(options.db, options.runId, root);
+  const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
   return createApprovalGate({
     ...gateBasics(options),
-    builder: options.builder === true,
-    copyOf: options.copyOf ?? null,
+    changesProject: options.changesProject === true,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
-    ...(options.piece ? { piece: options.piece } : {}),
     ...(options.publish ? { publish: options.publish } : {}),
     backup: async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);

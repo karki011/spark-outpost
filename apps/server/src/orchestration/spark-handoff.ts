@@ -21,13 +21,13 @@ import type { Append, RunControl } from '../workflow/agent-turn.ts';
 import { closeMessage, executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import type { OrchestratorDeps } from './session.ts';
+import type { ChatTurnDeps } from '../workflow/chat-turn-hooks.ts';
 import { handoffNote, sparkJobPrompt, type SparkResult } from './spark-job.ts';
 
 export const ALL_SPARKS_FAILED = 'The Spark could not finish this job.';
 
 interface Handoff {
-  deps: OrchestratorDeps;
+  deps: ChatTurnDeps;
   lease: Lease;
   input: RunInput;
   append: Append;
