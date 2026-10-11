@@ -140,6 +140,16 @@ describe('the publish step after the agent’s reply', { timeout: 120_000 }, () 
     });
   });
 
+  it('stores an empty work reply before the publish reply when the agent said nothing after its work', async () => {
+    const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
+    const { replies, prompts } = await turn(chat, `${BUILD} #quietbuild`, 'full-auto');
+
+    expect(prompts).toBe(2);
+    expect(replies).toHaveLength(2);
+    expect(replies[0]).toBe('');
+    expect(replies[1]).toContain(`Opened pull request #1: ${PULL_URL}`);
+  });
+
   it('keeps one changes snapshot and one set of totals for the run across both prompts', async () => {
     const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
     const { runId } = await turn(chat, BUILD, 'full-auto');

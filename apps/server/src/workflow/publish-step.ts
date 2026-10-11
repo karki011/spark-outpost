@@ -24,7 +24,13 @@ import { closeMessage } from './execute-run.ts';
 import { publishPrompt, type PublishReason } from './publish-prompt.ts';
 import { promptAgain } from './publish-step-again.ts';
 import { commitWithoutRemote } from './publish-step-commit.ts';
-import { followUpLine, notPublishedLine, pushedLine, withLine } from './publish-step-lines.ts';
+import {
+  followUpLine,
+  notPublishedLine,
+  pushedLine,
+  withLine,
+  withWorkMessage,
+} from './publish-step-lines.ts';
 import { publishReason } from './publish-step-reason.ts';
 import { recordPullRequest } from './publish-step-record.ts';
 import { branchWork, notPushed, pushedInFull } from './publish-step-work.ts';
@@ -128,7 +134,7 @@ async function publishedByAgent(
     pullBase: plan.pullBase,
   });
   if (!prompt) return turn.reply;
-  await closeMessage(turn.append, turn.reply, true);
+  await closeMessage(turn.append, await withWorkMessage(turn.append, turn.reply), true);
   const said = await promptAgain(deps, turn, prompt);
   if (said.outcome === 'lease_lost') return said;
   if (said.outcome !== 'succeeded') {

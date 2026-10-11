@@ -31,6 +31,13 @@ export function notCommittedLine(error: unknown): string {
   return `The change is kept but was not committed: ${reason}`;
 }
 
+export async function withWorkMessage(append: Append, reply: TurnResult): Promise<TurnResult> {
+  if (reply.messageId) return reply;
+  const messageId = newId();
+  await append(runEvents.textStart(messageId));
+  return { ...reply, messageId };
+}
+
 export async function withLine(
   append: Append,
   reply: TurnResult,

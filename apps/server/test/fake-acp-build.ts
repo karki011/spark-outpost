@@ -105,6 +105,7 @@ export async function buildTurn(turn: FakeTurn): Promise<acp.StopReason | null> 
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
   }
+  if (turn.text.includes('#quietbuild')) return 'end_turn';
   await turn.say(`Built it after ${priorPrompts(turn.sessionId)} earlier prompts.`);
   return 'end_turn';
 }
