@@ -50,7 +50,7 @@ Ship leaves these out of commits.
 
 An agent may push the chat's own `spark/` branch and open its pull request only when:
 
-- your message asks for it, such as "open a PR" or "push it";
+- your message asks for it, such as "open a PR" or "push it"; "push it, but don't open a PR" allows only the push;
 - the chat is at **Full auto → PR**;
 - the agent's mode is **Auto**, **Bypass permissions** or **Full access**;
 - the turn fixes [feedback](pr-follow-up.md) on the chat's own open pull request.

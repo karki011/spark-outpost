@@ -52,6 +52,7 @@ describe('publishRequested()', () => {
     'lets take it all they way to PR',
     'get this to a draft pull request',
     'turn it into a PR',
+    'Push this branch, but do not open a pull request',
   ])('counts "%s"', (text) => {
     expect(publishRequested(text)).toBe(true);
   });

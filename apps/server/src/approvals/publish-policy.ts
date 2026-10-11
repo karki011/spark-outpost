@@ -17,9 +17,14 @@ export interface FollowUpRound {
   conversationId: string;
 }
 
+export type PublishAction = 'push' | 'pull';
+
+export type PublishAsk = Readonly<Record<PublishAction, boolean>>;
+
 export interface PublishGrant {
   level: InvolvementLevel | null;
   requested: boolean;
+  asked?: PublishAsk | null;
   followUp?: FollowUpRound | null;
 }
 
@@ -78,8 +83,18 @@ export function parentNotPushedReason(
 
 const PERFORMING_POSTURES: ReadonlySet<ModePosture> = new Set(['auto', 'full_access']);
 
-export function publishBasis(posture: ModePosture, grant: PublishGrant): PublishBasis | null {
-  if (grant.requested) return 'requested';
+function messageAsks(grant: PublishGrant, actions: readonly PublishAction[]): boolean {
+  if (!grant.requested) return false;
+  const asked = grant.asked;
+  return !asked || actions.every((action) => asked[action]);
+}
+
+export function publishBasis(
+  posture: ModePosture,
+  grant: PublishGrant,
+  actions: readonly PublishAction[] = [],
+): PublishBasis | null {
+  if (messageAsks(grant, actions)) return 'requested';
   if (grant.level === 'full-auto') return 'full_auto';
   if (grant.followUp) return 'follow_up';
   if (PERFORMING_POSTURES.has(posture)) return 'mode';
@@ -91,11 +106,21 @@ const PR_ASK =
 const PUSH_ASK =
   /\b(push|publish)\s+(it|this|that|them|up|everything|the\s+(branch|changes?|commits?|code|work|fix))\b|\b(push|publish)\s+to\s+(origin|remote|github|gitlab)\b|\bgit push\b|^\s*(please\s+)?(push|publish)\s*[.!]?\s*$/i;
 const DECLINED =
-  /\b(don['’]?t|do not|never|no need to|without)\s+(push|publish|open|create|make|raise|submit|send|ship|put up)\b/i;
+  /\b(don['’]?t|do not|never|no need to|without)\s+(push|publish|open|create|make|raise|submit|send|ship|put up)\b(?:(?!\bbut\b)[^.?!\n,;])*/gi;
+
+export function publishAsk(text: string): PublishAsk {
+  const undeclined = text.replace(DECLINED, ' ');
+  const pull = PR_ASK.test(undeclined);
+  return { push: pull || PUSH_ASK.test(undeclined), pull };
+}
 
 export function publishRequested(text: string): boolean {
-  if (DECLINED.test(text)) return false;
-  return PR_ASK.test(text) || PUSH_ASK.test(text);
+  return publishAsk(text).push;
+}
+
+export function requestedBy(text: string): Pick<PublishGrant, 'requested' | 'asked'> {
+  const asked = publishAsk(text);
+  return { requested: asked.push, asked };
 }
 
 const GH_PR_WRITES = new Set(['create', 'edit']);
@@ -231,6 +256,12 @@ export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): bool
   );
 }
 
+function publishActions(command: string): PublishAction[] {
+  const pushes = pushTargets(command).length > 0;
+  const pulls = hostingCommands(command).some(writesHosting);
+  return [...(pushes ? (['push'] as const) : []), ...(pulls ? (['pull'] as const) : [])];
+}
+
 export function publishVerdict(
   command: string,
   posture: ModePosture,
@@ -238,7 +269,7 @@ export function publishVerdict(
   own: OwnRepo | null = null,
 ): PublishVerdict | null {
   if (!reachesHosting(command) || onlyRepliesOnOwnPull(command, own)) return null;
-  const basis = publishBasis(posture, context.grant);
+  const basis = publishBasis(posture, context.grant, publishActions(command));
   if (!basis) return null;
   if (!publishesCode(command)) {
     return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
