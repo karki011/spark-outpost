@@ -144,3 +144,21 @@ describe("a run's cost when the agent reports its session's cumulative cost", ()
     expect(charged).toEqual([0.04]);
   });
 });
+
+describe("a run's cost when the agent's counter started again below the last reading", () => {
+  it.each([
+    { name: 'a publish prompt after the work prompt', before: 0.0502, end: done(), after: 0.0185 },
+    { name: 'the next turn of the chat', before: 0.0548, end: done(), after: 0.0503 },
+    { name: 'the turn after a stopped run', before: 0.0548, end: stopped, after: 0.0242 },
+  ])('charges $name the whole reading', async ({ before, end, after }) => {
+    await run(builder(), { reported: [before], end });
+    expect(await run(builder(), { reported: [after], end: done() })).toEqual([after]);
+  });
+
+  it('counts later readings of that turn, and the next turn, from the new counter', async () => {
+    await run(builder(), { reported: [0.0502], end: done() });
+    expect(await run(builder(), { reported: [0.0185, 0.03], end: done() })).toEqual([0.0185, 0.03]);
+    const [next] = await run(builder(), { reported: [0.05], end: done() });
+    expect(next).toBeCloseTo(0.02, 6);
+  });
+});
