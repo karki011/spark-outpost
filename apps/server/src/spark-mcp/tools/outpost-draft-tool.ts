@@ -18,8 +18,13 @@ import {
   type StoryProblem,
 } from '@spark-outpost/contracts';
 import { redactText, storableText } from '../../audit/redact.ts';
-import { chatPosture, providerModePosture } from '../../outposts/chat-posture.ts';
+import {
+  chatPosture,
+  providerModeChoices,
+  providerModePosture,
+} from '../../outposts/chat-posture.ts';
 import { proposalAboveLead, type ProposedChat } from '../../outposts/mode-cap.ts';
+import { proposedModeId, unknownProposedMode } from '../../outposts/proposed-mode.ts';
 import { outpostNeeds } from '../../outposts/outpost-availability.ts';
 import { newId } from '../../persistence/ids.ts';
 import { saveDraft } from '../../persistence/outpost-drafts.ts';
@@ -46,7 +51,13 @@ const chatInput = z.object({
   title: z.string().trim().min(1).max(OUTPOST_STORY_TITLE_MAX),
   project: z.string().trim().min(1).max(200).describe('Project name or id.'),
   agent: providerIdSchema.optional(),
-  agentMode: z.string().trim().min(1).max(200).optional().describe('Never above your own mode.'),
+  agentMode: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe('A mode id or its name, never above your own mode.'),
   task: z.string().trim().min(1).max(SPARK_TEXT_MAX).describe('The first message the chat gets.'),
   dependsOn: handleInput.optional().describe('Handle of the sub-task this one starts after.'),
 });
@@ -97,23 +108,35 @@ function refuseProblems(chats: readonly DraftChat[], taken: readonly string[]): 
   if (problems.length > 0) throw new SparkToolError(problems.map(problemLine).join(' '));
 }
 
-async function refuseModesAboveOwn(
+async function proposedModes(
   { deps, scope }: SparkToolContext,
   turn: ChatTurn,
   chats: readonly DraftChat[],
-): Promise<void> {
+): Promise<DraftChat[]> {
   const lead = await chatPosture(deps.db, scope.workspaceId, turn.conversationId);
   const proposed: ProposedChat[] = [];
+  const resolved: DraftChat[] = [];
   for (const chat of chats) {
-    if (chat.agentMode === undefined) continue;
+    if (chat.agentMode === undefined) {
+      resolved.push(chat);
+      continue;
+    }
     const provider = chat.agent ?? lead.provider;
+    const choices = await providerModeChoices(deps.db, scope.workspaceId, provider);
+    const agentMode =
+      choices.length === 0 ? chat.agentMode : proposedModeId(choices, chat.agentMode);
+    if (agentMode === null) {
+      throw new SparkToolError(unknownProposedMode(chat.handle, chat.agentMode, choices));
+    }
+    resolved.push({ ...chat, agentMode });
     proposed.push({
       handle: chat.handle,
-      posture: await providerModePosture(deps.db, scope.workspaceId, provider, chat.agentMode),
+      posture: await providerModePosture(deps.db, scope.workspaceId, provider, agentMode),
     });
   }
   const refusal = proposalAboveLead(lead.posture, proposed);
   if (refusal) throw new SparkToolError(refusal);
+  return resolved;
 }
 
 function chatLines(chats: readonly DraftChat[], projects: readonly Project[]) {
@@ -155,9 +178,9 @@ async function draft(context: SparkToolContext, args: DraftArgs) {
   }
   const joined = await outpostOf(deps.db, turn.conversationId);
   const projects = await listProjects(deps.db, scope.workspaceId);
-  const chats = args.chats.map((chat) => draftChat(chat, projects));
-  refuseProblems(chats, joined?.outpost.members.map((member) => member.handle) ?? []);
-  await refuseModesAboveOwn(context, turn, chats);
+  const named = args.chats.map((chat) => draftChat(chat, projects));
+  refuseProblems(named, joined?.outpost.members.map((member) => member.handle) ?? []);
+  const chats = await proposedModes(context, turn, named);
   const body: OutpostDraft = outpostDraftSchema.parse({
     ...(joined || args.name === undefined ? {} : { name: args.name }),
     title: args.title,

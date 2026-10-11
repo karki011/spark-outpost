@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { OUTPOST_DRAFT_ACTIVITY } from '@spark-outpost/contracts';
 import { proposedAboveOwnMode } from '../src/outposts/mode-cap.ts';
-import { updateChatSettings } from '../src/persistence/chat-settings.ts';
+import { saveCapabilities, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { getDraft } from '../src/persistence/outpost-drafts.ts';
 import {
   DRAFT_FROM_REQUEST,
   DRAFT_NEEDS_PROJECT,
   outpostDraftTool,
 } from '../src/spark-mcp/tools/outpost-draft-tool.ts';
+import { FAKE_CLAUDE_MODES } from '../src/providers/fake.ts';
 import { NOT_THE_CHATS_TURN } from '../src/spark-mcp/tools/outpost-turn.ts';
 import { addMemberChat, createOutpostRow } from './outpost-fixtures.ts';
 import {
@@ -189,6 +190,34 @@ describe('spark_outpost_draft', () => {
         undefined,
       ]);
       expect(stored.body.chats[2]!.agent).toBe('codex');
+    });
+
+    it('is accepted by the label the session advertises and stored by id', async () => {
+      await saveCapabilities(t.db, t.workspaceId, {
+        provider: 'claude',
+        models: [],
+        efforts: [],
+        defaultModel: null,
+        modes: FAKE_CLAUDE_MODES,
+      });
+      await updateChatSettings(t.db, lead.conversationId, { agentMode: 'auto' });
+      const named = [
+        chat('api', { agentMode: 'Auto' }),
+        chat('web', { agentMode: 'accept edits' }),
+      ];
+      const drafted = await propose(lead, named).result;
+      const stored = (await getDraft(t.db, t.workspaceId, drafted.draft))!;
+      expect(stored.body.chats.map((each) => each.agentMode)).toEqual(['auto', 'acceptEdits']);
+      const over = [chat('api', { agentMode: 'Bypass permissions' })];
+      await expect(propose(lead, over).result).rejects.toThrow(proposedAboveOwnMode('api'));
+    });
+
+    it('is refused when it is no mode of that agent, with the modes it has', async () => {
+      const unknown = [chat('api', { agent: 'codex', agentMode: 'Turbo' })];
+      await expect(propose(lead, unknown).result).rejects.toThrow(
+        '@api: "Turbo" is not a mode of this agent. Modes: read-only, ask-every-action, agent, agent-full-access.',
+      );
+      expect(await count('outpost_drafts')).toBe(0);
     });
   });
 

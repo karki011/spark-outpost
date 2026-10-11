@@ -1,6 +1,7 @@
 import { modeKind, modePosture, type ModePosture, type ProviderId } from '@spark-outpost/contracts';
 import { getCapabilities, resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { modeChoices, type ModeChoice } from './proposed-mode.ts';
 
 export interface ChatPosture {
   provider: ProviderId | null;
@@ -16,6 +17,16 @@ export async function providerModePosture(
   if (!provider) return 'unknown';
   const capabilities = await getCapabilities(db, workspaceId, provider);
   return modePosture(provider, mode, modeKind(capabilities?.modes ?? [], mode));
+}
+
+export async function providerModeChoices(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId | null,
+): Promise<ModeChoice[]> {
+  if (!provider) return [];
+  const capabilities = await getCapabilities(db, workspaceId, provider);
+  return modeChoices(provider, capabilities?.modes ?? []);
 }
 
 export async function chatPosture(
