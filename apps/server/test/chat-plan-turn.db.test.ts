@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { latestApprovedPlan } from '../src/persistence/plan-documents.ts';
+import { agreedPlanFor } from '../src/plans/plan-staleness.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import {
   keepPlanning,
@@ -196,6 +198,8 @@ describe('a turn that is not a plan turn', { timeout: 120_000 }, () => {
       expect.objectContaining({ status: 'proposed', source: 'codex', body: FAKE_PLAN }),
     ]);
     expect(lines).toEqual([]);
+    expect(await latestApprovedPlan(t.db, conversationId)).toBeNull();
+    expect(await agreedPlanFor(t.db, conversationId, root)).toBeNull();
   });
 
   it('runs /plan for Codex as a read-only turn with the message as typed: no file changes, no Plan saved', async () => {

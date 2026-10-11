@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertDecision } from '../src/persistence/orchestrations.ts';
+import { insertPlanDocument } from '../src/persistence/plan-documents.ts';
 import { seedConversation, seedIntake, seedTask, seedTurn } from './outcome-seed.ts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
@@ -263,6 +264,38 @@ describe('spark_task', () => {
         { path: 'b.ts', change: 'added', added: 1, removed: 0 },
       ]),
     );
+  });
+
+  it('gives a plan nobody approved as proposed, never as the agreed plan', async () => {
+    const conversationId = await seedConversation(t.db, t.workspaceId);
+    const taskId = await seedTask(t.db, conversationId);
+    const runId = await seedTurn(t.db, conversationId, { taskId });
+    const proposal = { conversationId, taskId, sourceRunId: runId };
+    await insertPlanDocument(t.db, { ...proposal, source: 'codex', body: '# Plan\n1. Add mean' });
+    const session = await open(conversationId);
+    interface Plans {
+      agreedPlan: { version: number } | null;
+      proposedPlan?: { version: number; status: string; source: string; body: string };
+    }
+
+    const unapproved = (await session.call('spark_task')).json<Plans>();
+    expect(unapproved.agreedPlan).toBeNull();
+    expect(unapproved.proposedPlan).toEqual({
+      version: 1,
+      status: 'proposed',
+      source: 'codex',
+      body: '# Plan\n1. Add mean',
+    });
+
+    await insertPlanDocument(t.db, {
+      ...proposal,
+      source: 'claude_plan_mode',
+      body: '# Plan\n1. Add median',
+      approval: { by: 'user', option: null, runId, commit: null },
+    });
+    const approved = (await session.call('spark_task')).json<Plans>();
+    expect(approved.agreedPlan).toMatchObject({ version: 2, status: 'approved', versions: 2 });
+    expect(approved.proposedPlan).toBeUndefined();
   });
 
   it('says when a chat has no task', async () => {
