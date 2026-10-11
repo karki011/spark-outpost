@@ -5,10 +5,12 @@ import {
   hostingCommands,
   hostingRead,
   publishesCode,
+  publishesThroughGit,
   pushTargets,
   reachesHosting,
   type PushTarget,
 } from './git-commands.ts';
+import { namesAnotherRepo, ownPullReply, type OwnRepo } from './own-repo.ts';
 
 export interface FollowUpRound {
   workspaceId: string;
@@ -57,7 +59,7 @@ export const REMOTE_RAIL_REASON =
   'Changing git remotes, mailing patches and hosting CLIs other than gh stay refused';
 
 export function ghRailReason(subcommand: string): string {
-  return `${subcommand} is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, and reading any pull request, check, run or gh api GET is fine`;
+  return `${subcommand} is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, with comments and thread replies on it while Follow up on pull requests is on, and reading any pull request, check, run or gh api GET is fine`;
 }
 export const REMOTE_URL_REASON = 'Push to a named remote such as origin, not a URL';
 export const WIDE_PUSH_REASON = 'Pushes that delete, prune, mirror or push every ref are refused';
@@ -134,10 +136,11 @@ function ghSubcommand(args: readonly string[]): string {
   return ['gh', ...named.filter((word) => !word.startsWith('-'))].join(' ');
 }
 
-function ghRefusal(args: readonly string[], task: TaskBranch): string | null {
+function ghRefusal(args: readonly string[], task: TaskBranch, own: OwnRepo | null): string | null {
   const [group, verb, ...rest] = args;
-  const allowed = group === 'pr' && verb !== undefined && GH_PR_WRITES.has(verb);
-  return allowed && ownPullTarget(rest, task) ? null : ghRailReason(ghSubcommand(args));
+  const opens = group === 'pr' && verb !== undefined && GH_PR_WRITES.has(verb);
+  if (opens && ownPullTarget(rest, task)) return null;
+  return own && ownPullReply(args, own) ? null : ghRailReason(ghSubcommand(args));
 }
 
 type Program = readonly string[];
@@ -150,11 +153,15 @@ function hostingRefusal(
   command: string,
   task: TaskBranch,
   judged: (program: Program) => boolean,
+  own: OwnRepo | null,
 ): string | null {
+  const followed = namesAnotherRepo(command) ? null : own;
   for (const program of hostingCommands(command)) {
     if (!judged(program)) continue;
     const refused =
-      programName(program) === 'gh' ? ghRefusal(program.slice(1), task) : REMOTE_RAIL_REASON;
+      programName(program) === 'gh'
+        ? ghRefusal(program.slice(1), task, followed)
+        : REMOTE_RAIL_REASON;
     if (refused) return refused;
   }
   return null;
@@ -194,10 +201,11 @@ function refusalAmong(
   command: string,
   task: TaskBranch | null,
   judged: (program: Program) => boolean,
+  own: OwnRepo | null,
 ): string | null {
   if (gitPublishesBesidesPush(command)) return REMOTE_RAIL_REASON;
   if (!task) return NO_TASK_BRANCH_REASON;
-  const hosting = hostingRefusal(command, task, judged);
+  const hosting = hostingRefusal(command, task, judged, own);
   if (hosting) return hosting;
   for (const push of pushTargets(command)) {
     const refused = pushRefusal(push, task);
@@ -206,21 +214,35 @@ function refusalAmong(
   return null;
 }
 
-export function publishRefusal(command: string, task: TaskBranch | null): string | null {
-  return refusalAmong(command, task, writesHosting);
+export function publishRefusal(
+  command: string,
+  task: TaskBranch | null,
+  own: OwnRepo | null = null,
+): string | null {
+  return refusalAmong(command, task, writesHosting, own);
+}
+
+export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): boolean {
+  if (!own || namesAnotherRepo(command) || publishesThroughGit(command)) return false;
+  const writes = hostingCommands(command).filter(writesHosting);
+  return (
+    writes.length > 0 &&
+    writes.every((program) => programName(program) === 'gh' && ownPullReply(program.slice(1), own))
+  );
 }
 
 export function publishVerdict(
   command: string,
   posture: ModePosture,
   context: PublishContext,
+  own: OwnRepo | null = null,
 ): PublishVerdict | null {
-  if (!reachesHosting(command)) return null;
+  if (!reachesHosting(command) || onlyRepliesOnOwnPull(command, own)) return null;
   const basis = publishBasis(posture, context.grant);
   if (!basis) return null;
   if (!publishesCode(command)) {
     return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
   }
-  const refused = publishRefusal(command, context.task);
+  const refused = publishRefusal(command, context.task, own);
   return refused ? { kind: 'refuse', reason: refused } : { kind: 'allow', basis };
 }

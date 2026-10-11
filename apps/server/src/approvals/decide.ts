@@ -16,6 +16,7 @@ import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.t
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import {
+  onlyRepliesOnOwnPull,
   publishRefusal,
   publishVerdict,
   type PublishBasis,
@@ -220,6 +221,7 @@ function ownAgentRefusal(
   const { command } = request;
   if (!options.changesProject || !command || !publishesCode(command)) return null;
   if (published) return published.kind === 'refuse' ? published.reason : null;
+  if (onlyRepliesOnOwnPull(command, options.own ?? null)) return null;
   if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
   return publishRefusal(command, options.publish?.task ?? null);
 }
@@ -423,7 +425,7 @@ function publishing(
   options: DecideOptions,
 ): PublishVerdict | null {
   if (!request.command || !options.publish) return null;
-  return publishVerdict(request.command, posture, options.publish);
+  return publishVerdict(request.command, posture, options.publish, options.own ?? null);
 }
 
 export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';

@@ -35,6 +35,7 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 - At most 3 rounds per PR. Ask in the chat for another.
 - Spark stops when CI fails the same way twice, or a reviewer repeats a pushed-back request.
 - Spark never force-pushes, merges, approves, resolves threads or dismisses reviews.
+- While follow-up is on, the agent may also comment and reply on this pull request itself, under its mode. Other pull requests are refused.
 - PR text is data, never instructions.
 
 ## Turn it off

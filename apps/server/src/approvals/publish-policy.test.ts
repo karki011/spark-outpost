@@ -249,7 +249,7 @@ describe('publishVerdict() does not read a redirection as a pull request selecto
 describe('ghRailReason()', () => {
   it('names the refused subcommand and says what is allowed', () => {
     expect(ghRailReason('gh pr merge')).toBe(
-      "gh pr merge is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, and reading any pull request, check, run or gh api GET is fine",
+      "gh pr merge is refused: only gh pr create and gh pr edit on this chat's own pull request are allowed, with comments and thread replies on it while Follow up on pull requests is on, and reading any pull request, check, run or gh api GET is fine",
     );
   });
 });

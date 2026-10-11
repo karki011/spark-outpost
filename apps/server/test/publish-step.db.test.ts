@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { modeForLegacy, type InvolvementLevel } from '@spark-outpost/contracts';
+import { ghRailReason } from '../src/approvals/publish-policy.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
@@ -11,6 +12,7 @@ import { PUSHED_WITHOUT_PR } from '../src/ship/published.ts';
 import { KEPT_RECORD_TITLE } from '../src/workflow/kept-record-writer.ts';
 import { PUBLISH_PROMPT_HEADING } from '../src/workflow/publish-prompt.ts';
 import type { Worker } from '../src/workflow/worker.ts';
+import { THREAD_REPLY_COMMAND } from './fake-acp-build.ts';
 import {
   CHAT_BRANCH,
   chatOnItsBranch,
@@ -71,6 +73,38 @@ async function turn(chat: BranchChat, text: string, level: InvolvementLevel) {
 }
 
 const onRemote = (chat: BranchChat) => git(chat.repo.bare, 'branch', '--list', CHAT_BRANCH) !== '';
+
+async function followUpRound(chat: BranchChat, tags: string): Promise<string> {
+  const sent = await sendUserMessage(
+    t.db,
+    chat.conversationId,
+    {
+      id: randomUUID(),
+      content: `PR follow-up, round 1: acme/widgets#1 ${tags}`,
+      source: 'pr_follow_up',
+    },
+    {
+      provider: 'claude',
+      model: 'sonnet',
+      effort: 'medium',
+      permission: 'do',
+      agentMode: modeForLegacy('claude', 'do', 'hands-off'),
+      level: 'hands-off',
+    },
+  );
+  const { run } = await driveToEnd(t, chat.conversationId, sent.run.id);
+  expect(run.status).toBe('succeeded');
+  return sent.run.id;
+}
+
+async function replyCards(runId: string) {
+  const { rows } = await t.db.query<{ status: string; decided_by: string; reason: string | null }>(
+    `SELECT status, decided_by, reason FROM approvals
+     WHERE run_id = $1 AND payload->>'command' = $2 ORDER BY created_at`,
+    [runId, THREAD_REPLY_COMMAND],
+  );
+  return rows;
+}
 
 async function watched(conversationId: string) {
   const { rows } = await t.db.query<{ number: number; branch: string }>(
@@ -221,31 +255,27 @@ describe('the publish step after the agent’s reply', { timeout: 120_000 }, () 
     const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
     await turn(chat, BUILD, 'full-auto');
     const before = git(chat.repo.bare, 'rev-parse', CHAT_BRANCH);
-    const sent = await sendUserMessage(
-      t.db,
-      chat.conversationId,
-      {
-        id: randomUUID(),
-        content: 'PR follow-up, round 1: acme/widgets#1 #build',
-        source: 'pr_follow_up',
-      },
-      {
-        provider: 'claude',
-        model: 'sonnet',
-        effort: 'medium',
-        permission: 'do',
-        agentMode: modeForLegacy('claude', 'do', 'hands-off'),
-        level: 'hands-off',
-      },
-    );
-    const { run } = await driveToEnd(t, chat.conversationId, sent.run.id);
+    const runId = await followUpRound(chat, '#build');
 
-    expect(run.status).toBe('succeeded');
-    expect(await promptsOf(t, sent.run.id)).toBe(2);
+    expect(await promptsOf(t, runId)).toBe(2);
     expect(stub.github.pulls).toHaveLength(1);
     expect(git(chat.repo.bare, 'rev-parse', CHAT_BRANCH)).not.toBe(before);
-    expect((await repliesOf(t, sent.run.id)).at(-1)).toContain(
-      'Pushed the fix to pull request #1.',
-    );
+    expect((await repliesOf(t, runId)).at(-1)).toContain('Pushed the fix to pull request #1.');
+  });
+
+  it("a follow-up round's reply on the chat's own thread gets the mode's ordinary card, and is refused by name once follow-up is off", async () => {
+    const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
+    await turn(chat, BUILD, 'full-auto');
+
+    const followed = await followUpRound(chat, '#build #reply');
+    expect(await replyCards(followed)).toEqual([
+      { status: 'allowed', decided_by: 'user', reason: null },
+    ]);
+
+    await updateProfile(t.db, t.workspaceId, { prFollowUp: false });
+    const off = await followUpRound(chat, '#build #reply');
+    expect(await replyCards(off)).toEqual([
+      { status: 'denied', decided_by: 'policy', reason: ghRailReason('gh api') },
+    ]);
   });
 });

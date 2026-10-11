@@ -149,7 +149,7 @@ describe.each([null, 2233, 77])(
       const refused = [
         ['gh pr merge 2233', 'gh pr merge'],
         ['gh pr edit 5 --title x', 'gh pr edit'],
-        ['gh api -X POST repos/acme/widgets/pulls/2233/comments -f body=x', 'gh api'],
+        ['gh api -X POST repos/acme/widgets/pulls/5/comments -f body=x', 'gh api'],
       ] as const;
       for (const [command, named] of refused) {
         const answer = await gate.review(commandRequest(root, command, randomUUID()), signal());

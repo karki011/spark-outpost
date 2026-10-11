@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                                                       | What to do                                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| While follow-up is on, the agent may comment and reply on its own pull request, under its mode.                                                                                    | See [PR feedback](pr-follow-up.md).             |
 | One chat is one agent session: your message goes to the agent as typed. Crews, pieces, the Critic and Spark's own checks are gone; the agent uses its own sub-agents.              | See [how Spark works](how-spark-works.md).      |
 | Removed settings: **Use Spark workflow**, **Check changes with Jev**, **When checks still fail in Full auto**, and a project's **Builders at once** and **Checks after a change**. | Nothing to do.                                  |
 | Spark saves a plan only when you approve the agent's; the line reads **Plan saved**. Every message in a **Plan** chat plans first.                                                 | See [plans](plan-card.md).                      |

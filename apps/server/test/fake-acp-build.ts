@@ -3,6 +3,9 @@ import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { readFakeSession } from './fake-acp-sessions.ts';
 
+export const THREAD_REPLY_COMMAND =
+  'gh api repos/acme/widgets/pulls/1/comments/55/replies -f body=Fixed';
+
 export interface FakeTurn {
   text: string;
   sessionId: string;
@@ -98,6 +101,7 @@ export async function buildTurn(turn: FakeTurn): Promise<acp.StopReason | null> 
   if (!turn.text.includes('#build')) return null;
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
   if (turn.text.includes('#push')) await runCommand(turn, 'push-1', 'git push origin main');
+  if (turn.text.includes('#reply')) await runCommand(turn, 'reply-1', THREAD_REPLY_COMMAND);
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
   }

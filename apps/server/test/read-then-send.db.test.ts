@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { CHAT_PUBLISH_REASON, PUSH_HOOKS_REASON } from '../src/approvals/decide.ts';
 import { PLAIN_FORCE_REASON } from '../src/approvals/git-commands.ts';
-import { ghRailReason } from '../src/approvals/publish-policy.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { ApprovalInputError, decideApproval, getApproval } from '../src/persistence/approvals.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
@@ -180,6 +179,7 @@ describe("the owner's turn: a PR follow-up round after reading secrets, a web pa
     for (const command of [
       'git status --short; git log --oneline origin/main..HEAD',
       'git status --short; git log --oneline "$(git merge-base HEAD origin/main)"..HEAD',
+      REPLY,
       WAIT_FOR_CHECKS,
       `git push origin ${BRANCH}`,
     ]) {
@@ -190,18 +190,6 @@ describe("the owner's turn: a PR follow-up round after reading secrets, a web pa
     expect((await cardsOf(chat.runId)).every((card) => card.status === 'allowed')).toBe(true);
     expect(egress()).toEqual([]);
     expect(await flagTitles(chat)).toEqual([]);
-  });
-
-  it('refuses a reply the agent posts through gh itself: Spark posts the replies', async () => {
-    const chat = await turn();
-    await ownPullRequest(chat);
-    const answer = await gateFor(chat).gate.review(commandRequest(root, REPLY), signal());
-    expect(answer).toMatchObject({ allowed: false });
-    const { rows } = await t.db.query<{ reason: string }>(
-      'SELECT reason FROM approvals WHERE run_id = $1',
-      [chat.runId],
-    );
-    expect(rows).toEqual([{ reason: ghRailReason('gh api') }]);
   });
 
   it('runs the wait for checks with one audit entry and one flag when the chat has no pull request of its own', async () => {
