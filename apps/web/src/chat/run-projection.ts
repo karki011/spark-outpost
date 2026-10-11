@@ -14,6 +14,12 @@ import {
 import { applyApprovalEvent } from './approvals/approval-events.ts';
 import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
 import { applyCommandEvent, type LiveCommand } from './commands/command-model.ts';
+import {
+  initialReplyStream,
+  withTextDelta,
+  withTextEnd,
+  type ReplyStream,
+} from './publish/reply-stream.ts';
 
 export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
@@ -111,10 +117,9 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
   return views;
 }
 
-export interface RunProjection {
+export interface RunProjection extends ReplyStream {
   status: LiveRunStatus;
   steps: RunStep[];
-  text: string;
   error: string | null;
   lastSeq: number;
   approvals: readonly Approval[];
@@ -125,9 +130,9 @@ export interface RunProjection {
 }
 
 export const initialRunProjection: RunProjection = {
+  ...initialReplyStream,
   status: 'connecting',
   steps: [],
-  text: '',
   error: null,
   lastSeq: 0,
   approvals: [],
@@ -152,7 +157,12 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
     case EventType.REASONING_MESSAGE_CONTENT:
       return { ...next, steps: withThought(state.steps, event.messageId, event.delta) };
     case EventType.TEXT_MESSAGE_CONTENT:
-      return event.subagentRunId ? next : { ...next, text: state.text + event.delta };
+      return event.subagentRunId ? next : withTextDelta(next, event.messageId, event.delta);
+    case EventType.TEXT_MESSAGE_END: {
+      if (event.subagentRunId) return next;
+      const started = { commands: state.commands.length, terminals: state.terminals.length };
+      return withTextEnd(next, event.messageId, started);
+    }
     case EventType.RUN_FINISHED:
       return { ...next, status: event.outcome?.type === 'cancelled' ? 'cancelled' : 'succeeded' };
     case EventType.RUN_ERROR:

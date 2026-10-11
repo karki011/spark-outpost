@@ -38,6 +38,7 @@ interface TurnSectionProps {
   run: Run;
   userMessage: Message | null;
   assistantMessage: Message | null;
+  laterMessages: readonly Message[];
   detail: ConversationDetail;
   repo: Project | null;
   task: Task | null;
@@ -60,11 +61,18 @@ function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }
   );
 }
 
+function sameMessages(before: readonly Message[], after: readonly Message[]): boolean {
+  return (
+    before.length === after.length && before.every((message, index) => message === after[index])
+  );
+}
+
 function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean {
   return (
     before.run === after.run &&
     before.userMessage === after.userMessage &&
     before.assistantMessage === after.assistantMessage &&
+    sameMessages(before.laterMessages, after.laterMessages) &&
     before.repo === after.repo &&
     before.task === after.task &&
     before.onOpenTask === after.onOpenTask &&
@@ -77,6 +85,7 @@ export const TurnSection = memo(function TurnSection({
   run,
   userMessage,
   assistantMessage,
+  laterMessages,
   detail,
   repo,
   task,
@@ -158,6 +167,7 @@ export const TurnSection = memo(function TurnSection({
             run={run}
             detail={detail}
             assistantMessage={assistantMessage}
+            laterMessages={laterMessages}
             repo={repo}
             taskCount={taskCount}
           />

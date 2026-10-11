@@ -34,9 +34,10 @@ import { AgreedReplyLine } from './plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from './plans/PlanSavedLine.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import { ResultBlock } from './outcomes/ResultBlock.tsx';
+import { PublishResult } from './publish/PublishResult.tsx';
+import { copiedReply, splitAtPublish, turnReplies } from './publish/turn-replies.ts';
 import {
   shownSteps,
-  shownText,
   streamLeads,
   type LiveRunStatus,
   type RunProjection,
@@ -83,6 +84,7 @@ interface SoloTurnProps {
   taskCount?: ReactNode;
   detail: ConversationDetail;
   assistantMessage: Message | null;
+  laterMessages: readonly Message[];
   repo: Project | null;
 }
 
@@ -119,7 +121,14 @@ function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
   return { state: liveStates[stream.status], label: liveMoods[stream.status] };
 }
 
-export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: SoloTurnProps) {
+export function SoloTurn({
+  run,
+  detail,
+  assistantMessage,
+  laterMessages,
+  repo,
+  taskCount,
+}: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
   const finished = isTerminalRunStatus(run.status);
@@ -153,18 +162,33 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
     assistantMessage?.content ??
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
       ?.content;
-  const text = shownText(stream, persistedText, finished);
-  const commands = shownCommands(
-    runCommands(detail.commands, [run.id, member?.runId]),
-    stream.commands,
-    streamRunId,
-  );
+  const replies = turnReplies(stream, { reply: persistedText, later: laterMessages }, leads);
+  const { text } = replies;
+  const replyClosedAt = laterMessages.length > 0 ? (assistantMessage?.createdAt ?? null) : null;
   const terminals = turnAgentTerminals(
     useChatAgentTerminals(detail.conversation.id).data,
     stream.terminals,
     [run.id, member?.runId],
     streamRunId,
   );
+  const commands = splitAtPublish(
+    shownCommands(
+      runCommands(detail.commands, [run.id, member?.runId]),
+      stream.commands,
+      streamRunId,
+    ),
+    {
+      streamed: stream.commands,
+      streamedBeforePublish: stream.replyEnd?.commands ?? null,
+      replyClosedAt,
+    },
+  );
+  const terminalParts = splitAtPublish(terminals, {
+    streamed: stream.terminals,
+    streamedBeforePublish: stream.replyEnd?.terminals ?? null,
+    replyClosedAt,
+  });
+  const publishing = replies.publishText !== '' || commands.publish.length > 0;
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished ? (interrupted ? null : run.error) : stream.error;
@@ -220,12 +244,21 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
       <TurnReply
         text={text}
         shots={turnShots(detail, run.id)}
-        commands={commands}
-        terminals={terminals}
+        commands={commands.reply}
+        terminals={terminalParts.reply}
         waiting={waiting}
       >
-        {(part, last) => <Markdown text={part} streaming={last && leads && active} />}
+        {(part, last) => (
+          <Markdown text={part} streaming={last && leads && active && !publishing} />
+        )}
       </TurnReply>
+      <PublishResult
+        text={replies.publishText}
+        commands={commands.publish}
+        terminals={terminalParts.publish}
+        waiting={waiting}
+        streaming={leads && active}
+      />
       {cards.pending.map(approvalCard)}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
       {finished && <AgentTerminalsRunning terminals={terminals} />}
@@ -253,7 +286,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo, taskCount }: Sol
           />
           {text && (
             <MessageActions
-              text={text}
+              text={copiedReply(replies)}
               createdAt={assistantMessage?.createdAt ?? run.finishedAt ?? run.createdAt}
               copyLabel="Copy reply"
               side="assistant"
