@@ -138,7 +138,37 @@ describe('costSummary', () => {
     };
     const runs = [{ id: ids[0]!, usage } as unknown as Run];
     const summary = costSummary({ task: detail, runs, identities: new Map(), modelName: namer });
-    expect(summary.split).toEqual({ input: 800, output: 150, cached: 600 });
+    expect(summary.split).toEqual({
+      input: 800,
+      output: 150,
+      cached: 600,
+      cacheWrites: 0,
+      subagents: 0,
+    });
+  });
+
+  it("shows cache writes and the sub-agents' tokens as their own parts, so a Claude turn adds up", () => {
+    const detail = task([taskRun(0, {})]);
+    const tokens = {
+      input: 1_554,
+      output: 916,
+      total: 103_244,
+      cachedRead: 27_418,
+      cachedWrite: 26_462,
+      thought: null,
+      subagents: 46_894,
+    };
+    const usage = { contextUsed: null, contextSize: null, costUsd: 0.5, tokens };
+    const runs = [{ id: ids[0]!, usage } as unknown as Run];
+    const { split } = costSummary({ task: detail, runs, identities: new Map(), modelName: namer });
+    expect(split).toEqual({
+      input: 1_554,
+      output: 916,
+      cached: 27_418,
+      cacheWrites: 26_462,
+      subagents: 46_894,
+    });
+    expect(Object.values(split!).reduce((sum, part) => sum + part, 0)).toBe(tokens.total);
   });
 });
 

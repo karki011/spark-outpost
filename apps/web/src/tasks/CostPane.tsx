@@ -134,6 +134,16 @@ export function CostPane({ task, runs = [], agents = [], onAudit, conversationId
           <span>
             Cached <b>{formatTokens(split.cached)}</b>
           </span>
+          {split.cacheWrites > 0 && (
+            <span>
+              Cache writes <b>{formatTokens(split.cacheWrites)}</b>
+            </span>
+          )}
+          {split.subagents > 0 && (
+            <span>
+              Sub-agents <b>{formatTokens(split.subagents)}</b>
+            </span>
+          )}
         </p>
       )}
       {summary.slices.length > 0 && summary.costUsd !== null && summary.costUsd > 0 && (

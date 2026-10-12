@@ -223,6 +223,40 @@ describe('title filter', () => {
     expect(ending.title).toBe('Final name');
   });
 
+  it('takes a title written after the last sentence on the same line', () => {
+    expect(
+      splitTitle('Both scripts ran; no files changed. Title: Run parallel slow scripts'),
+    ).toEqual({
+      text: 'Both scripts ran; no files changed.',
+      title: 'Run parallel slow scripts',
+    });
+    const result = streamed([
+      'Both ran; no files chan',
+      'ged. Ti',
+      'tle: Run parallel',
+      ' slow scripts\n',
+    ]);
+    expect(result.text).toBe('Both ran; no files changed.');
+    expect(result.title).toBe('Run parallel slow scripts');
+    expect(result.shown.join('')).toBe('Both ran; no files changed.');
+  });
+
+  it('keeps a same-line Title that is not the end of the reply or not a title', () => {
+    const middle =
+      'Set it. Title: Required field\nThen a long explanation follows, well past forty characters.';
+    expect(splitTitle(middle)).toEqual({ text: middle, title: null });
+    const field = 'The form has a Title: field and a Name: field';
+    expect(splitTitle(field)).toEqual({ text: field, title: null });
+    const lower = 'Add a heading. title: lower case is not the form Spark asks for';
+    expect(splitTitle(lower)).toEqual({ text: lower, title: null });
+    const long =
+      'Done. Title: this one is far too long to be a chat title by any reasonable measure';
+    expect(splitTitle(long)).toEqual({ text: long, title: null });
+    expect(streamed(['It works. The', ' tests pass.']).shown.join('')).toBe(
+      'It works. The tests pass.',
+    );
+  });
+
   it('takes the closing Title line over the opening one and hides both', () => {
     const result = streamed([
       'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.\n',

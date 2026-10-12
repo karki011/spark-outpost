@@ -41,8 +41,9 @@ function perModelTally(meta: unknown): TokenUsage | null {
   };
 }
 
-function plus(a: number | null, b: number | null): number | null {
-  return a === null && b === null ? null : (a ?? 0) + (b ?? 0);
+function plus(a: number | null | undefined, b: number | null | undefined): number | null {
+  const [left, right] = [a ?? null, b ?? null];
+  return left === null && right === null ? null : (left ?? 0) + (right ?? 0);
 }
 
 function added(earlier: TokenUsage | null, next: TokenUsage): TokenUsage {
@@ -54,7 +55,14 @@ function added(earlier: TokenUsage | null, next: TokenUsage): TokenUsage {
     cachedRead: plus(earlier.cachedRead, next.cachedRead),
     cachedWrite: plus(earlier.cachedWrite, next.cachedWrite),
     thought: plus(earlier.thought, next.thought),
+    subagents: plus(earlier.subagents, next.subagents),
   };
+}
+
+function withSubagents(own: TokenUsage, tally: TokenUsage | null, reported: number): TokenUsage {
+  const apart = own.total + reported;
+  if (tally && tally.total > apart) return { ...tally, subagents: null };
+  return { ...own, total: apart, subagents: reported > 0 ? reported : null };
 }
 
 export function createTurnTokens(countsSubagentsApart: boolean): TurnTokens {
@@ -63,10 +71,9 @@ export function createTurnTokens(countsSubagentsApart: boolean): TurnTokens {
     add(response, subagentTokens) {
       const own = promptTokens(response.usage)[0];
       if (!own || own.kind !== 'tokens') return [];
-      const tally = countsSubagentsApart ? perModelTally(response._meta) : null;
-      const fuller = tally && tally.total > own.tokens.total ? tally : own.tokens;
-      const withSubagents = countsSubagentsApart ? own.tokens.total + subagentTokens : 0;
-      const prompt = { ...fuller, total: Math.max(fuller.total, withSubagents) };
+      const prompt = countsSubagentsApart
+        ? withSubagents(own.tokens, perModelTally(response._meta), subagentTokens)
+        : { ...own.tokens, subagents: null };
       earlier = added(earlier, prompt);
       return [{ kind: 'tokens', tokens: earlier }];
     },

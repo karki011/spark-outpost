@@ -38,21 +38,46 @@ describe('the tokens of a turn', () => {
     });
   });
 
-  it('adds the tokens each sub-agent reported when the tally does not hold them', () => {
+  it("keeps the main agent's own split and counts its sub-agents apart, so the parts add up", () => {
     const tokens = createTurnTokens(true);
+    const own = {
+      totalTokens: 56_350,
+      inputTokens: 1_554,
+      outputTokens: 916,
+      cachedReadTokens: 27_418,
+      cachedWriteTokens: 26_462,
+    };
     const counted = total(
-      tokens.add({ usage, _meta: quota(row('claude-sonnet-5-5', 29_908)) }, 34_000),
-    );
-    expect(counted?.total).toBe(63_908);
-    expect(counted).toMatchObject({ input: 1_200, output: 2_708 });
+      tokens.add({ usage: own, _meta: quota(row('claude-sonnet-5-5', 58_477)) }, 46_894),
+    )!;
+    expect(counted).toEqual({
+      input: 1_554,
+      output: 916,
+      cachedRead: 27_418,
+      cachedWrite: 26_462,
+      thought: null,
+      subagents: 46_894,
+      total: 103_244,
+    });
+    expect(
+      counted.input +
+        counted.output +
+        counted.cachedRead! +
+        counted.cachedWrite! +
+        counted.subagents!,
+    ).toBe(counted.total);
   });
 
-  it('never counts a sub-agent twice when both sources hold it', () => {
+  it('takes the per-model tally whole when it already holds more than the sub-agents reported', () => {
     const tokens = createTurnTokens(true);
     const counted = total(
       tokens.add({ usage, _meta: quota(row('claude-sonnet-5-5', 70_000)) }, 34_000),
+    )!;
+    expect(counted.total).toBe(70_000);
+    expect(counted.subagents ?? null).toBeNull();
+    expect(counted.input + counted.output + counted.cachedRead! + counted.cachedWrite!).toBe(
+      70_000,
     );
-    expect(counted?.total).toBe(70_000);
   });
 
   it('keeps the usage as reported for an agent whose usage already holds its sub-agents', () => {
@@ -65,6 +90,7 @@ describe('the tokens of a turn', () => {
       cachedRead: 24_000,
       cachedWrite: 2_000,
       thought: null,
+      subagents: null,
     });
   });
 

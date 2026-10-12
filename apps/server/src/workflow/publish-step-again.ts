@@ -21,6 +21,7 @@ interface RunTotals {
   cached_read_tokens: number | null;
   cached_write_tokens: number | null;
   thought_tokens: number | null;
+  subagent_tokens: number | null;
 }
 
 interface Reported {
@@ -31,7 +32,7 @@ interface Reported {
 async function totalsOf(db: Db, runId: string): Promise<RunTotals | null> {
   const { rows } = await db.query<RunTotals>(
     `SELECT duration_ms, tool_call_count, cost_usd::text AS cost_usd, input_tokens, output_tokens,
-       total_tokens, cached_read_tokens, cached_write_tokens, thought_tokens
+       total_tokens, cached_read_tokens, cached_write_tokens, thought_tokens, subagent_tokens
      FROM runs WHERE id = $1`,
     [runId],
   );
@@ -45,6 +46,7 @@ const TOKEN_COLUMNS = [
   'cached_read_tokens',
   'cached_write_tokens',
   'thought_tokens',
+  'subagent_tokens',
 ] as const;
 
 async function addEarlierTotals(db: Db, runId: string, earlier: RunTotals, reported: Reported) {

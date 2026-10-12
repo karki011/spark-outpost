@@ -96,6 +96,23 @@ function holdFrom(held: string, atLineStart: boolean): number {
   return blankStart ?? held.length;
 }
 
+const SENTENCE_END = /[.!?…][)"'*_`\]]*$/;
+const INLINE_TITLE = /[ \t]+T(?:i(?:t(?:l(?:e(?::[^\n]*)?)?)?)?)?\s*$/;
+const INLINE_CLOSING = /^[ \t]+Title:[ \t]*([^\n]+?)\s*$/;
+const INLINE_MAX_LENGTH = 'Title: '.length + MAX_TITLE_LENGTH + 8;
+const SHOWN_TAIL = 8;
+
+function inlineHoldFrom(held: string, shownTail: string): number {
+  const match = INLINE_TITLE.exec(held);
+  if (!match || match[0].trim().length > INLINE_MAX_LENGTH) return held.length;
+  return SENTENCE_END.test(shownTail + held.slice(0, match.index)) ? match.index : held.length;
+}
+
+function inlineClosing(rest: string): string | null {
+  const match = INLINE_CLOSING.exec(rest);
+  return match ? cleanTitle(match[1]!) : null;
+}
+
 export interface TitleFilter {
   push(delta: string): string;
   startMessage(onItsWay: number): void;
@@ -115,6 +132,7 @@ export function createTitleFilter(): TitleFilter {
   let opening: MessageOpening | null = { at: 0, taken: false };
   let openingTitle: string | null = null;
 
+  let shownTail = '';
   let closing: number | null = null;
   let closedTitle: string | null = null;
 
@@ -168,10 +186,11 @@ export function createTitleFilter(): TitleFilter {
       held += delta;
       takeClosedTitle();
       takeOpeningTitle();
-      const cut = holdFrom(held, atLineStart);
+      const cut = Math.min(holdFrom(held, atLineStart), inlineHoldFrom(held, shownTail));
       const shown = held.slice(0, cut);
       held = held.slice(cut);
       if (shown) atLineStart = shown.endsWith('\n');
+      shownTail = (shownTail + shown).slice(-SHOWN_TAIL);
       if (opening !== null) opening = { ...opening, at: opening.at - cut };
       if (closing !== null) closing = closing > cut ? closing - cut : null;
       return shown;
@@ -186,6 +205,8 @@ export function createTitleFilter(): TitleFilter {
     finish() {
       const rest = held;
       held = '';
+      const inline = inlineClosing(rest);
+      if (inline) return { text: '', title: inline };
       const ending = splitClosing(rest);
       return { text: ending.text, title: ending.title ?? closedTitle ?? openingTitle };
     },

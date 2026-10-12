@@ -56,6 +56,7 @@ export interface RunRow {
   cached_read_tokens: number | null;
   cached_write_tokens: number | null;
   thought_tokens: number | null;
+  subagent_tokens?: number | null;
   cost_source?: CostSource | null;
   outpost_post_id?: string | null;
   outpost_id?: string | null;
@@ -201,6 +202,7 @@ function toTokenUsage(row: RunRow): TokenUsage | null {
     cachedRead: row.cached_read_tokens,
     cachedWrite: row.cached_write_tokens,
     thought: row.thought_tokens,
+    ...(row.subagent_tokens ? { subagents: Number(row.subagent_tokens) } : {}),
   };
 }
 

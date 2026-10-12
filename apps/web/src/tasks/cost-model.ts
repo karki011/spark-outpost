@@ -44,6 +44,8 @@ export interface TokenSplit {
   input: number;
   output: number;
   cached: number;
+  cacheWrites: number;
+  subagents: number;
 }
 
 export interface CostSummary {
@@ -212,6 +214,8 @@ function tokenSplit(task: TaskDetail, runs: readonly Run[]): TokenSplit | null {
     input: usages.reduce((sum, tokens) => sum + tokens.input, 0),
     output: usages.reduce((sum, tokens) => sum + tokens.output, 0),
     cached: usages.reduce((sum, tokens) => sum + (tokens.cachedRead ?? 0), 0),
+    cacheWrites: usages.reduce((sum, tokens) => sum + (tokens.cachedWrite ?? 0), 0),
+    subagents: usages.reduce((sum, tokens) => sum + (tokens.subagents ?? 0), 0),
   };
 }
 
