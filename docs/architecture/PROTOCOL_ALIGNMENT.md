@@ -61,6 +61,14 @@ Not emitted: `STATE_*`, `MESSAGES_SNAPSHOT`, `RAW`, the `*_CHUNK` forms.
 
 Before `RUN_FINISHED` or `RUN_ERROR` the run appender closes whatever is still open (reasoning, tool calls, steps, a worker announced with `SUBAGENT_STARTED` and its reply) in the same write (`open-spans.ts`). A run that recovery marks `outcome_unknown` after a crash is not closed this way: its `RUN_ERROR` may follow open steps, which `verifyEvents` accepts.
 
+### An agent's own sub-agents
+
+Spark advertises the adapters' `nativeSubagentSessions` extension (`_meta.jetbrains.air.capabilities`, `client-info.ts`) on a turn's connection, not on the capability probe. Both pinned adapters then send `subagent_spawned` and `subagent_state_update` on the parent session and each sub-agent's updates under its own session id. SDK 1.5.0 has neither update in its schema and drops updates for a session it did not open, so `subagent-stream.ts` rewrites them before the SDK reads the stream: a spawn or an end becomes a marked `session_info_update` on the root session, a sub-agent's `tool_call` and `tool_call_update` move to the root session with a mark naming the sub-agent, and its other updates (text, thoughts, settings) are dropped. The audit records the stream before this rewrite.
+
+`subagent-updates.ts` maps the marked updates with one mapper per sub-agent, so a sub-agent's tool call never closes the main agent's Thinking step. The run stores `SUBAGENT_STARTED` (name, the task as `description`, `parentSubagentRunId` for a nested one, `timestamp`, `metadata.spark.ownSubagent`), then `SUBAGENT_FINISHED` or `SUBAGENT_ERROR` with code `failed` or `cancelled`; the sub-agent's `STEP_*` and `TOOL_CALL_START` carry `subagentRunId`. An `ACTIVITY_SNAPSHOT` of type `subagents` holds `waitingOn`: the number of working sub-agents while the main agent has no step of its own open, else 0 (`subagent-progress.ts`). `packages/contracts/src/subagents.ts` folds these events into the rows the chat, Agent TV and the sidebar show; a stored crew turn's `SUBAGENT_STARTED` has no `ownSubagent` mark and is ignored there.
+
+Covered by `subagent-stream.test.ts`, `subagent-updates.test.ts`, `subagent-progress.test.ts`, `acp-subagents.test.ts` and `subagents.db.test.ts` against the fake agent. Not yet run against the real Claude or Codex CLI.
+
 The browser reads the thinking text of a finished run from `GET /api/runs/:id/reasoning/:messageId`; a paired phone may read it like any other run event (no switch governs reading agent output).
 
 The worker writes `TEXT_MESSAGE_CONTENT` and `REASONING_MESSAGE_CONTENT` events in batches: chunks wait at most 50 ms (or 8 KB) and are stored together, each still its own event with its own `seq`. Any other event first stores the waiting text in the same transaction, so the order is the order the agent produced (`apps/server/src/workflow/run-appender.ts`).

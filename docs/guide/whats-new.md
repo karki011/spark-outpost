@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                                                                   | What to do                                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| A turn lists the agent's sub-agents with task, step and state. The chat says **Waiting on 2 sub-agents** while the agent only waits for them.                                                  | See [how Spark works](how-spark-works.md).      |
 | While follow-up is on, the agent may comment and reply on its own pull request, under its mode. Outpost answers show **Committed** and **Pushed**.                                             | See [PR feedback](pr-follow-up.md).             |
 | One chat is one agent session: your message goes to the agent as typed. Crews, pieces, the Critic and Spark's own checks are gone; the agent uses its own sub-agents.                          | See [how Spark works](how-spark-works.md).      |
 | Removed settings: **Use Spark workflow**, **Check changes with Jev**, **When checks still fail in Full auto**, and a project's **Builders at once** and **Checks after a change**.             | Nothing to do.                                  |
@@ -25,4 +26,3 @@ What changed recently in Spark, newest first.
 | **Phone** is now **Remote control**. Paired devices stay paired.                                                                                                                               | See [remote control](use-your-phone.md).        |
 | Agents can keep a command running after the turn: **Agent terminal**, with **Stop**.                                                                                                           | See [Spark tools](spark-tools.md).              |
 | **Open in terminal** on a reply's command mirrors it in a read-only tab.                                                                                                                       | See [Open a terminal](terminals.md).            |
-| No other-branch pushes or remote changes. Claude asks before changing instruction files, git hooks and config, worktrees too. Chats, not Terminals, get no account connectors.                 | See [protected paths](protected-paths.md).      |

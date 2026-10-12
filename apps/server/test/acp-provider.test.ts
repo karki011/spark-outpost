@@ -110,7 +110,11 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     const { text } = await collect('#caps');
     expect(JSON.parse(text.split('\n')[0]!)).toMatchObject({
       session: { notices: {} },
-      _meta: { jetbrains: { air: { version: 1, capabilities: ['sessionFailure', 'nativeSubagentSessions'] } } },
+      _meta: {
+        jetbrains: {
+          air: { version: 1, capabilities: ['sessionFailure', 'nativeSubagentSessions'] },
+        },
+      },
     });
   });
 
