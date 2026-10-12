@@ -43,7 +43,7 @@ import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
 import { createCommandTracker } from './command-output.ts';
-import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
+import { CLIENT_INFO, turnCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import {
   reviewPermission,
@@ -73,8 +73,9 @@ import {
   sessionOutput,
   type ReplayFilter,
 } from './session-open.ts';
-import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
-import { withToolCalls } from './tool-call-outputs.ts';
+import type { UpdateMapper } from './session-updates.ts';
+import { routeSubagents } from './subagent-stream.ts';
+import { createTurnMapper } from './subagent-updates.ts';
 import { promptTokens } from './prompt-usage.ts';
 import { slashPrompt } from './slash-commands.ts';
 
@@ -128,9 +129,7 @@ async function runSession(
   legacyPermissions: boolean,
 ): Promise<void> {
   const { definition } = options;
-  const mapper = withToolCalls(
-    createUpdateMapper(definition.name, definition.longContext === true),
-  );
+  const mapper = createTurnMapper(definition.name, definition.longContext === true);
   const push = (outputs: ProviderOutput[]) =>
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
@@ -345,12 +344,12 @@ async function converse(
       readTextFile(policy, ctx.params, report, secretRead),
     );
   }
-  return client.connectWith(agent.stream, async (ctx) => {
+  return client.connectWith(routeSubagents(agent.stream), async (ctx) => {
     const init = await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
       acp.methods.agent.initialize,
       {
         protocolVersion: acp.PROTOCOL_VERSION,
-        clientCapabilities: clientCapabilities(policy !== null, doing !== null),
+        clientCapabilities: turnCapabilities(policy !== null, doing !== null),
         clientInfo: CLIENT_INFO,
       },
     );

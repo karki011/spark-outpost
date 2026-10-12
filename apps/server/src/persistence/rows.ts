@@ -7,6 +7,7 @@ import {
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
+  waitingOnLabel,
   type AgentRole,
   type Attachment,
   type ConversationSummary,
@@ -91,6 +92,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_status: RunStatus | null;
   latest_run_error: string | null;
   latest_run_step: string | null;
+  latest_run_waiting_on?: number | null;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
@@ -215,6 +217,11 @@ function toRunUsage(row: RunRow): RunUsage | null {
   };
 }
 
+function latestStep(row: ConversationSummaryRow): string | null {
+  if (row.latest_run_waiting_on) return waitingOnLabel(row.latest_run_waiting_on);
+  return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
+}
+
 export function toConversationSummary(row: ConversationSummaryRow): ConversationSummary {
   return {
     id: row.id,
@@ -227,7 +234,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             id: row.latest_run_id,
             status: row.latest_run_status,
             error: row.latest_run_error,
-            step: row.latest_run_step === null ? null : friendlyStep(row.latest_run_step),
+            step: latestStep(row),
             provider: row.latest_run_provider,
             progress:
               row.latest_run_progress && row.latest_run_progress.total > 0

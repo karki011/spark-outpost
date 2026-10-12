@@ -22,6 +22,7 @@ import {
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
+import { subagentRowSchema } from './subagents.ts';
 import {
   nativeTerminalProviderSchema,
   nativeTerminalSessionSchema,
@@ -151,6 +152,7 @@ export const conversationDetailSchema = z.object({
   browserShots: z.array(browserShotSchema).optional(),
   commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
+  subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

@@ -162,6 +162,7 @@ export type ProviderOutput =
       tool?: boolean;
       toolKind?: string;
       target?: string;
+      subagent?: string;
     }
   | {
       kind: 'step_finished';
@@ -169,11 +170,14 @@ export type ProviderOutput =
       tool?: boolean;
       toolKind?: string;
       target?: string;
+      subagent?: string;
     }
   | ({ kind: 'file_focus' } & FileFocus)
   | { kind: 'text_delta'; delta: string; phase?: MessagePhase }
   | { kind: 'thought_delta'; delta: string }
-  | { kind: 'tool_started'; id: string; name: string }
+  | { kind: 'tool_started'; id: string; name: string; subagent?: string }
+  | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
+  | { kind: 'subagent_finished'; id: string; state: 'done' | 'failed' | 'cancelled' }
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
   | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }

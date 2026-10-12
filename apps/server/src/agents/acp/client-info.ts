@@ -1,4 +1,5 @@
 import type { ClientCapabilities, Implementation } from '@agentclientprotocol/sdk';
+import { SUBAGENT_SESSIONS_CAPABILITY } from './subagent-stream.ts';
 
 export const CLIENT_INFO: Implementation = {
   name: 'spark-outpost',
@@ -16,3 +17,14 @@ export function clientCapabilities(readFiles: boolean, writeFiles = false): Clie
 }
 
 export const CLIENT_CAPABILITIES = clientCapabilities(false);
+
+export function turnCapabilities(readFiles: boolean, writeFiles: boolean): ClientCapabilities {
+  return {
+    ...clientCapabilities(readFiles, writeFiles),
+    _meta: {
+      jetbrains: {
+        air: { version: 1, capabilities: ['sessionFailure', SUBAGENT_SESSIONS_CAPABILITY] },
+      },
+    },
+  };
+}

@@ -15,6 +15,7 @@ import {
   type StartAs,
   type CreateConversationRequest,
 } from '@spark-outpost/contracts';
+import { conversationSubagents } from './subagents.ts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
 import { STEP_NOT_INTERRUPTED } from './run-events.ts';
 import { conversationAdvice } from './advice.ts';
@@ -86,6 +87,12 @@ const summaryQuery = `
       SELECT e.payload->>'stepName' FROM run_events e
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
+    CASE WHEN r.status = 'running' THEN (
+      SELECT (e.payload->'content'->>'waitingOn')::int FROM run_events e
+      WHERE e.run_id = r.id AND e.type = 'ACTIVITY_SNAPSHOT'
+        AND e.payload->>'activityType' = 'subagents'
+      ORDER BY e.seq DESC LIMIT 1
+    ) END AS latest_run_waiting_on,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id', 'm.content')}) work
@@ -252,6 +259,7 @@ export async function getConversationDetail(
     browserShots,
     commands,
     interruption,
+    subagents,
   ] = await Promise.all([
     db.query<MessageRow>(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
@@ -287,6 +295,7 @@ export async function getConversationDetail(
     listBrowserShots(db, id),
     listCommands(db, id),
     findInterruption(db, id),
+    conversationSubagents(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -314,6 +323,7 @@ export async function getConversationDetail(
     ...(browserShots.length > 0 ? { browserShots } : {}),
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
+    ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
   };
 }
 
