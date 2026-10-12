@@ -71,17 +71,80 @@ describe('sub-agent session routing', () => {
     });
   });
 
-  it("drops a sub-agent's words, thoughts and settings", () => {
+  it("passes a sub-agent's words marked as its own and drops its thoughts and settings", () => {
     const route = createSubagentRouter();
     route(spawned('root', 'a'));
     const said = notify('a', {
       sessionUpdate: 'agent_message_chunk',
       content: { type: 'text', text: 'hi' },
     });
-    expect(route(said)).toBeNull();
+    expect(routed(route(said))).toMatchObject({
+      sessionId: 'root',
+      mark: { event: 'update', id: 'a' },
+    });
+    const thought = notify('a', {
+      sessionUpdate: 'agent_thought_chunk',
+      content: { type: 'text', text: 'hm' },
+    });
+    expect(route(thought)).toBeNull();
     expect(
       route(notify('a', { sessionUpdate: 'config_option_update', configOptions: [] })),
     ).toBeNull();
+  });
+
+  it('reads what each adapter reports about a sub-agent when it ends', () => {
+    const route = createSubagentRouter();
+    route(spawned('root', 'a'));
+    route(spawned('root', 'b'));
+    const claude = notify('root', {
+      sessionUpdate: 'subagent_state_update',
+      subagentSessionId: 'a',
+      state: 'completed',
+      _meta: {
+        claudeCode: {
+          usage: { total_tokens: 3400, tool_uses: 7, duration_ms: 41000 },
+          summary: ' Done ',
+        },
+      },
+    });
+    expect(routed(route(claude)).mark).toMatchObject({
+      reported: { tokens: 3400, toolUses: 7, durationMs: 41000, summary: 'Done' },
+    });
+    const codex = notify('root', {
+      sessionUpdate: 'subagent_state_update',
+      subagentSessionId: 'b',
+      state: 'completed',
+      _meta: {
+        codex: {
+          usage: {
+            totalTokens: 9000,
+            inputTokens: 8000,
+            cachedInputTokens: 6000,
+            outputTokens: 1000,
+          },
+          turns: 2,
+          model: 'gpt-6-luna',
+        },
+      },
+    });
+    expect(routed(route(codex)).mark).toMatchObject({
+      reported: {
+        tokens: 9000,
+        input: 8000,
+        cachedRead: 6000,
+        output: 1000,
+        turns: 2,
+        model: 'gpt-6-luna',
+      },
+    });
+    route(spawned('root', 'c'));
+    const bare = notify('root', {
+      sessionUpdate: 'subagent_state_update',
+      subagentSessionId: 'c',
+      state: 'completed',
+      _meta: { codex: { usage: undefined, turns: undefined } },
+    });
+    expect(routed(route(bare)).mark).toEqual({ event: 'ended', id: 'c', state: 'done' });
   });
 
   it.each([

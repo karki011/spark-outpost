@@ -27,6 +27,16 @@ export function subagentLines(rows: readonly SubagentRow[]): SubagentLine[] {
   return lines;
 }
 
+export function fileLabel(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+}
+
+export function hasDetail(row: SubagentRow): boolean {
+  const task = row.task !== '' && row.task !== row.name;
+  const did = row.steps.length + row.files.length + row.commands.length > 0;
+  return task || did || Boolean(row.message ?? row.summary);
+}
+
 export function subagentDurationMs(row: SubagentRow): number | null {
   if (row.startedAt === null || row.endedAt === null) return null;
   return Math.max(0, row.endedAt - row.startedAt);

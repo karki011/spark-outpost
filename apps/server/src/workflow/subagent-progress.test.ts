@@ -1,4 +1,9 @@
-import { EventType, SUBAGENTS_ACTIVITY, type RunEvent } from '@spark-outpost/contracts';
+import {
+  EventType,
+  SUBAGENTS_ACTIVITY,
+  SUBAGENT_REPORT,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { createSubagentProgress } from './subagent-progress.ts';
@@ -90,6 +95,32 @@ describe('sub-agent progress', () => {
     see({ kind: 'step_started', name: 'Allowed: Edit a.ts', subagent: 'a' });
     see({ kind: 'step_finished', name: 'Allowed: Edit a.ts', subagent: 'a' });
     expect(waits(all)).toEqual([1]);
+  });
+
+  it('stores what a sub-agent did and used, with its words redacted', () => {
+    const { see } = progress();
+    see(started('a'));
+    const [event] = see({
+      kind: 'subagent_report',
+      id: 'a',
+      report: {
+        usage: { tokens: 3400, toolUses: 7, input: 3000, output: 400, costUsd: 0.04 },
+        files: ['/work/a.ts'],
+        commands: ['echo sk-secret'],
+        message: 'The key is sk-secret',
+      },
+    });
+    expect(event).toEqual({
+      type: EventType.CUSTOM,
+      name: SUBAGENT_REPORT,
+      value: {
+        id: 'a',
+        usage: { tokens: 3400, toolUses: 7, costUsd: 0.04 },
+        files: ['/work/a.ts'],
+        commands: ['echo [redacted]'],
+        message: 'The key is [redacted]',
+      },
+    });
   });
 
   it('says nothing about waiting in a turn without sub-agents', () => {

@@ -461,7 +461,9 @@ export function Composer({
             disabled={!canSend}
             onSend={() => void submit()}
             onStop={onStop}
-            {...(queueing ? { busySend: { preferred: busyEnter, onChoice: sendAs } } : {})}
+            {...(queueing
+              ? { busySend: { preferred: busyEnter, onChoice: sendAs, waiting: waitingOn > 0 } }
+              : {})}
           />
         </div>
       </div>

@@ -52,9 +52,20 @@ export function busyHint(preferred: BusyEnterAction, mac: boolean, waitingOn = 0
   return `Enter to ${SEND_CHOICES[preferred].hint} · ${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
 }
 
-export function choiceTitle(action: BusyEnterAction, preferred: BusyEnterAction, mac: boolean) {
-  const choice = SEND_CHOICES[action];
-  return `${choice.label}: ${choice.note.toLowerCase()} (${choiceKey(action, preferred, mac)})`;
+const WAITING_NOW_NOTE = 'Reaches the agent while it waits, or joins the queue';
+
+export function choiceNote(action: BusyEnterAction, waiting: boolean): string {
+  return waiting && action === 'now' ? WAITING_NOW_NOTE : SEND_CHOICES[action].note;
+}
+
+export function choiceTitle(
+  action: BusyEnterAction,
+  preferred: BusyEnterAction,
+  mac: boolean,
+  waiting = false,
+) {
+  const note = choiceNote(action, waiting).toLowerCase();
+  return `${SEND_CHOICES[action].label}: ${note} (${choiceKey(action, preferred, mac)})`;
 }
 
 const ACTIVE = new Set<Run['status']>(['queued', 'running', 'awaiting_approval']);

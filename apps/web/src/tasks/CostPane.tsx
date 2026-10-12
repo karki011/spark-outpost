@@ -8,6 +8,7 @@ import { CostText } from '../usage/CostText.tsx';
 import { formatCost } from '../usage/format.ts';
 import { costSummary, runIdentities, type CostRow, type CostSlice } from './cost-model.ts';
 import { useModelNamer } from './model-names.ts';
+import { SubagentCosts } from './SubagentCosts.tsx';
 
 const PROVIDER_COLORS: Record<string, string> = {
   claude: 'var(--c-claude)',
@@ -98,9 +99,10 @@ interface CostPaneProps {
   runs?: readonly Run[];
   agents?: readonly CrewAgent[];
   onAudit?: (() => void) | undefined;
+  conversationId?: string;
 }
 
-export function CostPane({ task, runs = [], agents = [], onAudit }: CostPaneProps) {
+export function CostPane({ task, runs = [], agents = [], onAudit, conversationId }: CostPaneProps) {
   const modelName = useModelNamer(task.runs.map((run) => run.provider));
   const identities = runIdentities(task, runs, agents);
   const dispatcher = agents.find((agent) => agent.role === 'jev') ?? null;
@@ -153,6 +155,9 @@ export function CostPane({ task, runs = [], agents = [], onAudit }: CostPaneProp
             <AgentRow key={row.key} row={row} />
           ))}
         </ul>
+      )}
+      {conversationId && (
+        <SubagentCosts conversationId={conversationId} runIds={task.runs.map((run) => run.id)} />
       )}
       <p className="wnote">
         {estimated

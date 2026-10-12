@@ -235,7 +235,10 @@ export function SoloTurn({
         log || taskCount ? (
           <>
             {log && (
-              <StepToggle log={log} label={turnHeading(log.views, state, seconds, log.open)} />
+              <StepToggle
+                log={log}
+                label={turnHeading(log.views, waitingText ? 'waiting' : state, seconds, log.open)}
+              />
             )}
             {log && taskCount && (
               <span className="mood-dot" aria-hidden="true">

@@ -13,6 +13,7 @@ export interface LogFilters {
   direction: ProtocolDirection | null;
   method: string | null;
   q: string;
+  subagent?: string | null;
 }
 
 export const LOG_PAGE_SIZE = 100;
@@ -30,6 +31,7 @@ function logQuery(after: number, filters: LogFilters): string {
   if (filters.method) params.set('method', filters.method);
   const q = filters.q.trim();
   if (q) params.set('q', q);
+  if (filters.subagent) params.set('subagent', filters.subagent);
   return params.toString();
 }
 

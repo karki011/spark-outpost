@@ -131,6 +131,19 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
         step: null,
       },
     ]);
+    expect(rows[0]).toMatchObject({
+      steps: [
+        { name: 'Starting a subagent', done: true },
+        { name: 'Read routes.ts', done: true },
+        { name: 'Edit routes.ts', done: true },
+        { name: '`pnpm test`', done: true },
+      ],
+      files: ['/work/app/src/routes.ts'],
+      commands: ['pnpm test'],
+      usage: { tokens: 3400, toolUses: 3, durationMs: 41_000 },
+      message: 'Found 4 routes and moved them.',
+      summary: 'Moved 4 routes',
+    });
     for (const row of rows) {
       expect(row.startedAt).toEqual(expect.any(Number));
       expect(row.endedAt).toBeGreaterThanOrEqual(row.startedAt!);

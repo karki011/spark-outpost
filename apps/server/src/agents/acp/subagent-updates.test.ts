@@ -174,6 +174,111 @@ describe('sub-agent updates', () => {
     );
   });
 
+  it('reports the files a sub-agent changed and the commands it ran, once each', () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
+    const edit = (status: string) =>
+      send('a', {
+        sessionUpdate: status === 'in_progress' ? 'tool_call' : 'tool_call_update',
+        toolCallId: 'e1',
+        title: 'Edit a.ts',
+        kind: 'edit',
+        status,
+        locations: [{ path: '/work/a.ts' }],
+      });
+    expect(edit('in_progress')).toContainEqual({
+      kind: 'subagent_report',
+      id: 'a',
+      report: { files: ['/work/a.ts'] },
+    });
+    expect(edit('completed').some((output) => output.kind === 'subagent_report')).toBe(false);
+    const run = send('a', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'x1',
+      title: 'Terminal',
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput: { command: ['pnpm', 'test'] },
+    });
+    expect(run).toContainEqual({
+      kind: 'subagent_report',
+      id: 'a',
+      report: { commands: ['pnpm test'] },
+    });
+    const read = send('a', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'r1',
+      title: 'Read b.ts',
+      kind: 'read',
+      status: 'in_progress',
+      locations: [{ path: '/work/b.ts' }],
+    });
+    expect(read.some((output) => output.kind === 'subagent_report')).toBe(false);
+  });
+
+  it('ends a sub-agent with its last message, or with its hand-back when it used one', () => {
+    const { spawn, send, end } = harness();
+    spawn('root', 'a');
+    spawn('root', 'b');
+    const say = (id: string, messageId: string, text: string) =>
+      send(id, {
+        sessionUpdate: 'agent_message_chunk',
+        messageId,
+        content: { type: 'text', text },
+      });
+    expect(say('a', 'm1', 'Looking. ')).toEqual([]);
+    say('a', 'm2', 'Found 4 ');
+    say('a', 'm2', 'routes.');
+    expect(end('root', 'a')).toContainEqual({
+      kind: 'subagent_report',
+      id: 'a',
+      report: { message: 'Found 4 routes.' },
+    });
+    say('b', 'm1', 'Plain words that are not delivered.');
+    send('b', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'h1',
+      title: 'SubagentHandback',
+      status: 'in_progress',
+      rawInput: { message: ' The full report. ' },
+      _meta: { claudeCode: { toolName: 'SubagentHandback' } },
+    });
+    expect(end('root', 'b')).toContainEqual({
+      kind: 'subagent_report',
+      id: 'b',
+      report: { message: 'The full report.' },
+    });
+  });
+
+  it('counts the tokens sub-agents reported once, also when the figures arrive after the end', () => {
+    const { spawn, send, mapper } = harness();
+    spawn('root', 'a');
+    const ended = (tokens?: number) =>
+      send('root', {
+        sessionUpdate: 'subagent_state_update',
+        subagentSessionId: 'a',
+        state: 'completed',
+        ...(tokens
+          ? {
+              _meta: {
+                claudeCode: { usage: { total_tokens: tokens, tool_uses: 2, duration_ms: 900 } },
+              },
+            }
+          : {}),
+      });
+    expect(ended().map((output) => output.kind)).toEqual(['subagent_finished']);
+    expect(ended(1200)).toEqual([
+      {
+        kind: 'subagent_report',
+        id: 'a',
+        report: { usage: { tokens: 1200, toolUses: 2, durationMs: 900 } },
+      },
+    ]);
+    ended(1500);
+    expect(mapper.takeSubagentTokens()).toBe(1500);
+    expect(mapper.takeSubagentTokens()).toBe(0);
+  });
+
   it('closes the open steps of a sub-agent when it ends', () => {
     const { spawn, tool, end } = harness();
     spawn('root', 'a');

@@ -85,7 +85,7 @@ describe('applyRunEvent', () => {
     expect(state.subagents.rows).toEqual([
       expect.objectContaining({ name: 'Explore', state: 'working', step: 'Read routes.ts' }),
     ]);
-    expect(state.steps).toEqual([{ name: 'Read routes.ts', done: false }]);
+    expect(state.steps).toEqual([{ name: 'Read routes.ts', done: false, subagent: true }]);
     const ended = applyRunEvent(state, 9, { type: EventType.SUBAGENT_FINISHED, ...own });
     expect(ended.subagents.rows[0]).toMatchObject({ state: 'done', step: null });
   });

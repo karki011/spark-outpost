@@ -2,10 +2,17 @@ import { useEffect, useId, type KeyboardEvent } from 'react';
 import type { BusyEnterAction } from '@spark-outpost/contracts';
 import { MAC } from '../../ui/shortcuts.ts';
 import { usePopover } from '../../ui/use-popover.ts';
-import { SEND_CHOICES, SEND_CHOICE_ORDER, choiceKey, choiceTitle } from '../queue/send-choice.ts';
+import {
+  SEND_CHOICES,
+  SEND_CHOICE_ORDER,
+  choiceKey,
+  choiceNote,
+  choiceTitle,
+} from '../queue/send-choice.ts';
 
 interface BusySendButtonProps {
   preferred: BusyEnterAction;
+  waiting?: boolean;
   disabled: boolean;
   onChoice: (action: BusyEnterAction) => void;
 }
@@ -42,7 +49,12 @@ function ChoiceIcon({ action }: { action: BusyEnterAction }) {
   );
 }
 
-export function BusySendButton({ preferred, disabled, onChoice }: BusySendButtonProps) {
+export function BusySendButton({
+  preferred,
+  waiting = false,
+  disabled,
+  onChoice,
+}: BusySendButtonProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -76,7 +88,7 @@ export function BusySendButton({ preferred, disabled, onChoice }: BusySendButton
         type="button"
         className="send queue"
         aria-label={MAIN_LABELS[preferred]}
-        title={choiceTitle(preferred, preferred, MAC)}
+        title={choiceTitle(preferred, preferred, MAC, waiting)}
         disabled={disabled}
         onClick={() => onChoice(preferred)}
       >
@@ -131,7 +143,7 @@ export function BusySendButton({ preferred, disabled, onChoice }: BusySendButton
             </span>
             <span className="send-choice">
               <b>{SEND_CHOICES[action].label}</b>
-              <small>{SEND_CHOICES[action].note}</small>
+              <small>{choiceNote(action, waiting)}</small>
             </span>
             <kbd className="send-key">{choiceKey(action, preferred, MAC)}</kbd>
           </button>

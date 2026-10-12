@@ -61,7 +61,40 @@ export async function subagentsTurn(
   await end('sub-1', 'sub-3', 'completed');
   await tool('sub-2', 'c2', 'Read tests.ts');
   await done('sub-1', 'c1');
-  await end(rootId, 'sub-1', 'completed');
+  await send('sub-1', {
+    sessionUpdate: 'tool_call',
+    toolCallId: 'e1',
+    title: 'Edit routes.ts',
+    kind: 'edit',
+    status: 'in_progress',
+    locations: [{ path: '/work/app/src/routes.ts' }],
+  });
+  await done('sub-1', 'e1');
+  await send('sub-1', {
+    sessionUpdate: 'tool_call',
+    toolCallId: 'x1',
+    title: 'pnpm test',
+    kind: 'execute',
+    status: 'in_progress',
+    rawInput: { command: 'pnpm test' },
+  });
+  await done('sub-1', 'x1');
+  await send('sub-1', {
+    sessionUpdate: 'agent_message_chunk',
+    messageId: 'report',
+    content: { type: 'text', text: 'Found 4 routes and moved them.' },
+  });
+  await send(rootId, {
+    sessionUpdate: 'subagent_state_update',
+    subagentSessionId: 'sub-1',
+    state: 'completed',
+    _meta: {
+      claudeCode: {
+        usage: { total_tokens: 3400, tool_uses: 3, duration_ms: 41_000 },
+        summary: 'Moved 4 routes',
+      },
+    },
+  });
   await end(rootId, 'sub-2', 'failed');
   await say('All done');
   return 'end_turn';

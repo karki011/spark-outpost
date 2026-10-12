@@ -4,6 +4,7 @@ import { BusySendButton } from './BusySendButton.tsx';
 interface BusySend {
   preferred: BusyEnterAction;
   onChoice: (action: BusyEnterAction) => void;
+  waiting?: boolean;
 }
 
 interface SendButtonProps {

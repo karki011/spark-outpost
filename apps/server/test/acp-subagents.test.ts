@@ -39,7 +39,9 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
   it('records each sub-agent, attributes its tool calls and keeps its words out of the reply', async () => {
     const outputs = await collect('#subagents');
     expect(replyText(outputs)).toBe('Launching. All done');
-    const lifecycle = outputs.filter((output) => output.kind.startsWith('subagent_'));
+    const lifecycle = outputs.filter(
+      (output) => output.kind === 'subagent_started' || output.kind === 'subagent_finished',
+    );
     expect(lifecycle).toEqual([
       {
         kind: 'subagent_started',
@@ -77,11 +79,26 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
       'sub-1: Read routes.ts',
       'sub-3: Read deep.ts',
       'sub-2: Read tests.ts',
+      'sub-1: Edit routes.ts',
+      'sub-1: `pnpm test`',
+    ]);
+    const reports = outputs.flatMap((output) =>
+      output.kind === 'subagent_report' ? [{ id: output.id, ...output.report }] : [],
+    );
+    expect(reports).toEqual([
+      { id: 'sub-1', files: ['/work/app/src/routes.ts'] },
+      { id: 'sub-1', commands: ['pnpm test'] },
+      {
+        id: 'sub-1',
+        usage: { tokens: 3400, toolUses: 3, durationMs: 41_000 },
+        summary: 'Moved 4 routes',
+        message: 'Found 4 routes and moved them.',
+      },
     ]);
     const closed = outputs.flatMap((output) =>
       output.kind === 'step_finished' && output.subagent ? [output.subagent] : [],
     );
-    expect(closed).toEqual(['sub-1', 'sub-2', 'sub-3', 'sub-1', 'sub-2']);
+    expect(closed).toEqual(['sub-1', 'sub-2', 'sub-3', 'sub-1', 'sub-1', 'sub-1', 'sub-2']);
     const calls = outputs.flatMap((output) =>
       output.kind === 'tool_started' ? [[output.id, output.subagent]] : [],
     );
@@ -89,6 +106,8 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
       ['c1', 'sub-1'],
       ['c3', 'sub-3'],
       ['c2', 'sub-2'],
+      ['e1', 'sub-1'],
+      ['x1', 'sub-1'],
     ]);
   });
 

@@ -111,7 +111,8 @@ const summaryQuery = `
       FROM pr_watches w WHERE w.conversation_id = c.id
     ), false) AS pull_request_merged,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
-    p.pending_agent, p.pending_member, p.pending_asker, p.pending_questions, p.pending_plan,
+    p.pending_agent, p.pending_member, p.pending_asker, p.pending_subagent, p.pending_questions,
+    p.pending_plan,
     p.pending_provider, p.pending_pr_feedback,
     om.outpost_id, ob.name AS outpost_name, om.handle AS outpost_handle,
     ARRAY(
@@ -133,6 +134,7 @@ const summaryQuery = `
       a.payload->>'command' AS pending_command, a.payload->'paths' AS pending_paths,
       CASE WHEN ar.parent_run_id IS NOT NULL THEN ar.route->>'name' END AS pending_agent,
       m.name AS pending_member, a.payload->'checkpoint'->>'agent' AS pending_asker,
+      a.payload->>'subagent' AS pending_subagent,
       a.payload->'checkpoint'->'questions'->0 IS NOT NULL AS pending_questions,
       a.payload->>'plan' IS NOT NULL AS pending_plan,
       COALESCE(m.provider, ar.provider) AS pending_provider,
@@ -273,7 +275,8 @@ export async function getConversationDetail(
     ),
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
-         COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name
+         COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name,
+         e.payload ? 'subagentRunId' AS subagent
        FROM run_events e
        JOIN runs r ON r.id = e.run_id
        WHERE r.conversation_id = $1

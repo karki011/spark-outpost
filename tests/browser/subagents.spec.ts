@@ -37,6 +37,7 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
   const summary = turn.getByRole('button', { name: '2 sub-agents · 2 working' });
   await expect(summary).toBeVisible({ timeout: 30_000 });
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
+  await expect(turn.locator('.ai-head .steps-head')).toHaveText(/^\d+ steps$/);
 
   const rows = rowsIn(turn);
   await expect(rows).toHaveCount(2);
@@ -104,8 +105,8 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   const turn = page.locator('.msg.ai').last();
   const summary = turn.getByRole('button', { name: '3 sub-agents · 2 done, 1 failed' });
   await expect(summary).toBeVisible();
-  await expect(turn.locator('.md')).toContainText('All done');
-  await expect(turn.locator('.md')).not.toContainText('child words');
+  await expect(turn.locator('.md').last()).toContainText('All done');
+  await expect(turn).not.toContainText('child words');
 
   await page.reload();
   const again = page.locator('.msg.ai').last();
@@ -116,5 +117,20 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await expect(rows.nth(1)).toHaveAttribute('data-nested', 'true');
   await expect(rows.nth(2)).toContainText('Tests');
   await expect(rows.nth(2)).toContainText('Failed');
+  await expect(rows.nth(0)).toContainText('4 steps · 3.4k tokens · 41s');
+  const explore = again.getByRole('button', { name: 'Explore' });
+  await explore.focus();
+  await page.keyboard.press('Enter');
+  await expect(explore).toHaveAttribute('aria-expanded', 'true');
+  const steps = again.getByRole('list', { name: 'Steps of Explore' }).getByRole('listitem');
+  await expect(steps).toHaveText([
+    'Starting a subagent',
+    'Read routes.ts',
+    'Edit routes.ts',
+    'pnpm test',
+  ]);
+  await expect(rows.nth(0)).toContainText('Changed routes.ts');
+  await expect(rows.nth(0)).toContainText('Ran pnpm test');
+  await expect(rows.nth(0)).toContainText('Found 4 routes and moved them.');
   await shot(page, 'subagents-chat-finished.png');
 });

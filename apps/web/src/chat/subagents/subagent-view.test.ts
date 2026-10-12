@@ -1,8 +1,9 @@
-import type { SubagentRow } from '@spark-outpost/contracts';
+import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import { shownSubagents, subagentDurationMs, subagentLines } from './subagent-view.ts';
 
 const row = (id: string, parentId: string | null = null): SubagentRow => ({
+  ...emptySubagentRecord,
   id,
   name: id,
   task: '',

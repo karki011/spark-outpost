@@ -1,9 +1,11 @@
 import { friendlyStep } from '@spark-outpost/contracts';
-import type { ProviderOutput } from '../../providers/provider.ts';
+import type { ProviderOutput, SubagentReported } from '../../providers/provider.ts';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { objectFields } from './object-fields.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { withToolCalls } from './tool-call-outputs.ts';
+import { createSubagentActivity, type SubagentActivity } from './subagent-activity.ts';
+import type { Reported } from './subagent-report.ts';
 import { shownTask, subagentMark } from './subagent-stream.ts';
 
 export const SPAWN_STEP = friendlyStep('Agent');
@@ -27,6 +29,22 @@ export interface SubagentAsker {
 export interface TurnMapper extends UpdateMapper {
   note(name: string, subagent?: string): ProviderOutput[];
   asker(sessionId: string): SubagentAsker | null;
+  takeSubagentTokens(): number;
+}
+
+interface Child {
+  mapper: UpdateMapper;
+  activity: SubagentActivity;
+}
+
+function reportOf(reported: Reported | undefined, message: string | null): SubagentReported | null {
+  const { summary, ...usage } = reported ?? {};
+  const report: SubagentReported = {
+    ...(Object.keys(usage).length > 0 ? { usage } : {}),
+    ...(summary ? { summary } : {}),
+    ...(message ? { message } : {}),
+  };
+  return Object.keys(report).length > 0 ? report : null;
 }
 
 const CODEX_WAIT_TOOL = 'wait';
@@ -48,10 +66,21 @@ function waiting(output: ProviderOutput): ProviderOutput {
 }
 
 export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMapper): TurnMapper {
-  const working = new Map<string, UpdateMapper>();
+  const working = new Map<string, Child>();
   const seen = new Set<string>();
   const names = new Map<string, string>();
   const waitCalls = new Set<string>();
+  const tokens = new Map<string, number>();
+
+  const reporting = (
+    id: string,
+    reported: Reported | undefined,
+    message: string | null,
+  ): ProviderOutput[] => {
+    if (reported?.tokens !== undefined) tokens.set(id, reported.tokens);
+    const report = reportOf(reported, message);
+    return report ? [{ kind: 'subagent_report', id, report }] : [];
+  };
 
   const mainOutputs = (update: SessionUpdate): ProviderOutput[] => {
     const tool =
@@ -70,7 +99,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     const child = working.get(id);
     if (!child) return [];
     working.delete(id);
-    return child.finish(cancelled).map((output) => attribute(output, id));
+    return child.mapper.finish(cancelled).map((output) => attribute(output, id));
   };
 
   return {
@@ -81,7 +110,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
       if (mark.event === 'spawned') {
         if (seen.has(mark.id)) return [];
         seen.add(mark.id);
-        working.set(mark.id, childMapper());
+        working.set(mark.id, { mapper: childMapper(), activity: createSubagentActivity() });
         const { id, name } = mark;
         const task = shownTask(mark.task, name);
         names.set(id, name);
@@ -96,24 +125,34 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
         return [started, ...spawning];
       }
       if (mark.event === 'ended') {
-        if (!working.has(mark.id)) return [];
+        const ending = working.get(mark.id);
+        if (!ending) return seen.has(mark.id) ? reporting(mark.id, mark.reported, null) : [];
         return [
           ...close(mark.id, false),
+          ...reporting(mark.id, mark.reported, ending.activity.lastMessage()),
           { kind: 'subagent_finished', id: mark.id, state: mark.state },
         ];
       }
       const child = working.get(mark.id);
       if (!child) return [];
-      return child.map(update).map((output) => attribute(output, mark.id));
+      const done = child.activity.see(update);
+      if (update.sessionUpdate === 'agent_message_chunk') return [];
+      const outputs = child.mapper.map(update).map((output) => attribute(output, mark.id));
+      return done ? [...outputs, { kind: 'subagent_report', id: mark.id, report: done }] : outputs;
     },
     note(name, subagent) {
       const child = subagent ? working.get(subagent) : undefined;
       if (!child || !subagent) return main.note(name);
-      return child.note(name).map((output) => attribute(output, subagent));
+      return child.mapper.note(name).map((output) => attribute(output, subagent));
     },
     asker(sessionId) {
       const name = names.get(sessionId);
       return name === undefined ? null : { id: sessionId, name };
+    },
+    takeSubagentTokens() {
+      const total = [...tokens.values()].reduce((sum, count) => sum + count, 0);
+      tokens.clear();
+      return total;
     },
     didWork: () => main.didWork() || seen.size > 0,
     finish(cancelled = false) {

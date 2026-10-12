@@ -75,7 +75,7 @@ import {
 } from './session-open.ts';
 import { routeSubagents } from './subagent-stream.ts';
 import { createTurnMapper, type TurnMapper } from './subagent-updates.ts';
-import { promptTokens } from './prompt-usage.ts';
+import { createTurnTokens } from './turn-tokens.ts';
 import { slashPrompt } from './slash-commands.ts';
 
 export interface AcpProviderOptions {
@@ -447,11 +447,12 @@ async function converse(
         : conversationBlocks(sent.history, text, promptOptions);
       const textOnly = { ...promptOptions, attachments: [] };
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
+      const tokens = createTurnTokens(definition.cli === 'claude');
       let promptFailure = untilFailure(session.prompt(blocks));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
-          push(promptTokens(message.response.usage));
+          push(tokens.add(message.response, mapper.takeSubagentTokens()));
           mapper.stopped(message.response._meta);
           const next = await nextMessage(turn, message.stopReason, signal);
           if (next) {

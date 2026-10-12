@@ -1,4 +1,5 @@
 import {
+  SUBAGENT_REPORT,
   applySubagentEvent,
   emptySubagentRoster,
   parseRunEvent,
@@ -43,7 +44,8 @@ export async function conversationSubagents(
     `SELECT e.run_id, e.payload FROM run_events e
      WHERE e.run_id = ANY($1::uuid[])
        AND (e.type IN ${LIFECYCLE}
-         OR (e.type IN ('STEP_STARTED', 'STEP_FINISHED') AND e.payload ? 'subagentRunId'))
+         OR (e.type IN ('STEP_STARTED', 'STEP_FINISHED') AND e.payload ? 'subagentRunId')
+         OR (e.type = 'CUSTOM' AND e.payload->>'name' = '${SUBAGENT_REPORT}'))
      ORDER BY e.run_id, e.seq`,
     [spawning.rows.map((row) => row.run_id)],
   );

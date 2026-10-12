@@ -155,6 +155,26 @@ export interface ProviderCapabilityReport {
 
 export type UsageReadings = 'start_and_end' | 'end';
 
+export interface SubagentReportedUsage {
+  tokens?: number | undefined;
+  toolUses?: number | undefined;
+  durationMs?: number | undefined;
+  turns?: number | undefined;
+  model?: string | undefined;
+  input?: number | undefined;
+  cachedRead?: number | undefined;
+  output?: number | undefined;
+  costUsd?: number | undefined;
+}
+
+export interface SubagentReported {
+  usage?: SubagentReportedUsage;
+  files?: string[];
+  commands?: string[];
+  message?: string;
+  summary?: string;
+}
+
 export type ProviderOutput =
   | {
       kind: 'step_started';
@@ -180,6 +200,7 @@ export type ProviderOutput =
   | { kind: 'tool_started'; id: string; name: string; subagent?: string }
   | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
   | { kind: 'subagent_finished'; id: string; state: 'done' | 'failed' | 'cancelled' }
+  | { kind: 'subagent_report'; id: string; report: SubagentReported }
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
   | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }

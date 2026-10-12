@@ -58,6 +58,7 @@ export const auditLogQuerySchema = z.object({
   direction: protocolDirectionSchema.optional(),
   method: z.string().min(1).max(200).optional(),
   q: z.string().min(1).max(200).optional(),
+  subagent: z.string().min(1).max(200).optional(),
 });
 export type AuditLogQuery = z.infer<typeof auditLogQuerySchema>;
 

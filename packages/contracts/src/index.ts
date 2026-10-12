@@ -32,6 +32,7 @@ export * from './projects.ts';
 export * from './project-clone.ts';
 export * from './roles.ts';
 export * from './run-events.ts';
+export * from './subagent-report.ts';
 export * from './subagents.ts';
 export * from './runs.ts';
 export * from './setup.ts';

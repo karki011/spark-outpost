@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
-import { askReason } from './ask-reason.ts';
+import { askReason, askerName } from './ask-reason.ts';
 
 const base: Approval = {
   id: '5f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
@@ -33,9 +33,8 @@ describe('askReason', () => {
     expect(askReason(asked, 'Claude')).toBe(
       "Claude's sub-agent Explore wants to run `touch notes.txt`.",
     );
-    expect(askReason({ ...asked, reason: 'Secret file' }, 'Claude')).toBe(
-      "Asked by Claude's sub-agent Explore.",
-    );
+    expect(askerName(asked, 'Claude')).toBe("Claude's sub-agent Explore");
+    expect(askerName(base, 'Claude')).toBe('Claude');
   });
 
   it('keeps the agent’s own reason when it gives one', () => {

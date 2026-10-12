@@ -116,3 +116,46 @@
     transition: none;
   }
 }
+
+.sa-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0 4px;
+  font-size: 12px;
+}
+
+.sa-detail p {
+  margin: 0;
+}
+
+.sa-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sa-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.sa-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.sa-list b,
+.sa-said b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sa-said p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

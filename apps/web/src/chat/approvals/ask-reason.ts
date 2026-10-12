@@ -52,6 +52,5 @@ export function askReason(approval: Approval, agent: string): string | null {
   const own = approval.payload.agentReason;
   if (own && approval.payload.asksBecause) return `${asker} noted: ${own}`;
   if (own) return agentReasonLine(asker, own);
-  const told = explainedBySpark(approval) ? null : toolCallReason(approval, asker);
-  return told ?? (approval.payload.subagent ? `Asked by ${asker}.` : null);
+  return explainedBySpark(approval) ? null : toolCallReason(approval, asker);
 }

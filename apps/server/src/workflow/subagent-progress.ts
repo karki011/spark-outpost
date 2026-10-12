@@ -2,7 +2,9 @@ import {
   EventType,
   OWN_SUBAGENT_METADATA,
   SUBAGENTS_ACTIVITY,
+  SUBAGENT_REPORT,
   type RunEvent,
+  type SubagentReport,
 } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { runEvents } from './run-events.ts';
@@ -65,6 +67,25 @@ export function createSubagentProgress({
     ];
   };
 
+  const reported = (output: ProviderOutput): RunEvent[] => {
+    if (output.kind !== 'subagent_report') return [];
+    const { usage, files, commands, message, summary } = output.report;
+    const { tokens, toolUses, durationMs, turns, model, costUsd } = usage ?? {};
+    const shown = { tokens, toolUses, durationMs, turns, model, costUsd };
+    const known = Object.fromEntries(
+      Object.entries(shown).filter(([, value]) => value !== undefined),
+    );
+    const report: SubagentReport = {
+      id: output.id,
+      ...(Object.keys(known).length > 0 ? { usage: known } : {}),
+      ...(files?.length ? { files } : {}),
+      ...(commands?.length ? { commands: commands.map(storable) } : {}),
+      ...(message ? { message: storable(message) } : {}),
+      ...(summary ? { summary: storable(summary) } : {}),
+    };
+    return [{ type: EventType.CUSTOM, name: SUBAGENT_REPORT, value: report }];
+  };
+
   const countOwn = (output: ProviderOutput) => {
     const own =
       (output.kind === 'step_started' || output.kind === 'step_finished') &&
@@ -76,7 +97,7 @@ export function createSubagentProgress({
 
   return {
     observe(output) {
-      const events = lifecycle(output);
+      const events = [...lifecycle(output), ...reported(output)];
       countOwn(output);
       const waiting = ownOpen === 0 ? working.size : 0;
       if (waiting === waitingOn) return events;

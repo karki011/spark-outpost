@@ -1,10 +1,12 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { z } from 'zod';
 import { objectFields } from './object-fields.ts';
+import { reportedByAdapter, reportedSchema } from './subagent-report.ts';
 
 export const SUBAGENT_SESSIONS_CAPABILITY = 'nativeSubagentSessions';
 
 const MARK_KEY = 'sparkSubagent';
+const ATTRIBUTED_UPDATES = new Set(['tool_call', 'tool_call_update', 'agent_message_chunk']);
 
 const END_STATES = {
   completed: 'done',
@@ -25,6 +27,7 @@ const markSchema = z.discriminatedUnion('event', [
     event: z.literal('ended'),
     id: z.string().min(1),
     state: z.enum(['done', 'failed', 'cancelled']),
+    reported: reportedSchema.optional(),
   }),
   z.object({ event: z.literal('update'), id: z.string().min(1) }),
 ]);
@@ -115,16 +118,16 @@ export function createSubagentRouter(): (message: unknown) => unknown {
       const state = END_STATES[ended.data.state as keyof typeof END_STATES];
       const id = ended.data.subagentSessionId;
       if (state === undefined || !parents.has(id)) return null;
-      return control(parsed.data, rootOf(sessionId), { event: 'ended', id, state });
+      const reported = reportedByAdapter(update._meta);
+      const mark: SubagentMark = { event: 'ended', id, state, ...(reported ? { reported } : {}) };
+      return control(parsed.data, rootOf(sessionId), mark);
     }
     if (!parents.has(sessionId)) {
       return MARK_KEY in objectFields(update._meta)
         ? { ...parsed.data, params: { ...parsed.data.params, update: unmarked(update) } }
         : message;
     }
-    if (update.sessionUpdate !== 'tool_call' && update.sessionUpdate !== 'tool_call_update') {
-      return null;
-    }
+    if (!ATTRIBUTED_UPDATES.has(update.sessionUpdate)) return null;
     const mark: SubagentMark = { event: 'update', id: sessionId };
     return {
       ...parsed.data,

@@ -201,7 +201,13 @@ export function TaskDetails({
           />
         )}
         {current === 'cost' && detail.data && (
-          <CostPane task={detail.data} runs={runs} agents={agents} onAudit={onAudit} />
+          <CostPane
+            task={detail.data}
+            runs={runs}
+            agents={agents}
+            onAudit={onAudit}
+            conversationId={conversationId}
+          />
         )}
       </div>
     </>

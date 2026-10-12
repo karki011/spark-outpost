@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { EventType, SPARK_METADATA, type RunEvent } from './run-events.ts';
+import {
+  SUBAGENT_REPORT,
+  emptySubagentRecord,
+  subagentRecordSchema,
+  subagentReportSchema,
+  withSubagentReport,
+  withSubagentStep,
+} from './subagent-report.ts';
 
 export const SUBAGENTS_ACTIVITY = 'subagents';
 export const SUBAGENT_CANCELLED_CODES: readonly string[] = ['cancelled', 'interrupted'];
@@ -7,7 +15,7 @@ export const SUBAGENT_CANCELLED_CODES: readonly string[] = ['cancelled', 'interr
 export const subagentStateSchema = z.enum(['working', 'done', 'failed', 'cancelled']);
 export type SubagentState = z.infer<typeof subagentStateSchema>;
 
-export const subagentRowSchema = z.object({
+export const subagentRowSchema = subagentRecordSchema.extend({
   id: z.string(),
   name: z.string(),
   task: z.string(),
@@ -65,8 +73,17 @@ function ended(
   return { ...next, openSteps };
 }
 
-function withSteps(roster: SubagentRoster, id: string, steps: readonly string[]): SubagentRoster {
-  const next = changeRow(roster, id, (row) => ({ ...row, step: steps.at(-1) ?? null }));
+function withSteps(
+  roster: SubagentRoster,
+  id: string,
+  steps: readonly string[],
+  name: string,
+  started: boolean,
+): SubagentRoster {
+  const next = changeRow(roster, id, (row) => ({
+    ...withSubagentStep(row, name, started),
+    step: steps.at(-1) ?? null,
+  }));
   return { ...next, openSteps: { ...roster.openSteps, [id]: steps } };
 }
 
@@ -78,10 +95,10 @@ function attributedStep(
 ): SubagentRoster {
   if (!id || !roster.rows.some((row) => row.id === id && row.state === 'working')) return roster;
   const open = roster.openSteps[id] ?? [];
-  if (started) return withSteps(roster, id, [...open, name]);
+  if (started) return withSteps(roster, id, [...open, name], name, true);
   const index = open.indexOf(name);
   if (index < 0) return roster;
-  return withSteps(roster, id, [...open.slice(0, index), ...open.slice(index + 1)]);
+  return withSteps(roster, id, [...open.slice(0, index), ...open.slice(index + 1)], name, false);
 }
 
 function errorState(code: string | undefined): SubagentState {
@@ -93,6 +110,7 @@ export function applySubagentEvent(roster: SubagentRoster, event: RunEvent): Sub
     case EventType.SUBAGENT_STARTED: {
       if (!isOwn(event) || roster.rows.some((row) => row.id === event.subagentRunId)) return roster;
       const row: SubagentRow = {
+        ...emptySubagentRecord,
         id: event.subagentRunId,
         name: event.name,
         task: event.description ?? '',
@@ -112,6 +130,12 @@ export function applySubagentEvent(roster: SubagentRoster, event: RunEvent): Sub
       return attributedStep(roster, event.subagentRunId, event.stepName, true);
     case EventType.STEP_FINISHED:
       return attributedStep(roster, event.subagentRunId, event.stepName, false);
+    case EventType.CUSTOM: {
+      const report =
+        event.name === SUBAGENT_REPORT ? subagentReportSchema.safeParse(event.value) : null;
+      if (!report?.success || !roster.rows.some((row) => row.id === report.data.id)) return roster;
+      return changeRow(roster, report.data.id, (row) => withSubagentReport(row, report.data));
+    }
     case EventType.ACTIVITY_SNAPSHOT: {
       if (event.activityType !== SUBAGENTS_ACTIVITY) return roster;
       const wait = subagentWaitSchema.safeParse(event.content);

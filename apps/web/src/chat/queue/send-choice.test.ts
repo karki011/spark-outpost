@@ -3,6 +3,7 @@ import type { MemberMessage, Run } from '@spark-outpost/contracts';
 import {
   busyHint,
   choiceKey,
+  choiceNote,
   choiceTitle,
   enterAction,
   enterWhileBusy,
@@ -59,6 +60,15 @@ describe('what Enter does while a turn runs', () => {
     );
     expect(busyHint('now', false, 1)).toBe(
       'Enter to send to the agent now, while it waits on 1 sub-agent · Ctrl+Enter to queue',
+    );
+  });
+
+  it('says what Send now does while the agent only waits', () => {
+    expect(choiceNote('now', true)).toBe('Reaches the agent while it waits, or joins the queue');
+    expect(choiceNote('now', false)).toBe('Steers or interrupts the turn');
+    expect(choiceNote('queue', true)).toBe('Sends when this turn ends');
+    expect(choiceTitle('now', 'now', true, true)).toBe(
+      'Send now: reaches the agent while it waits, or joins the queue (Enter)',
     );
   });
 

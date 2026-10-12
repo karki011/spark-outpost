@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EventType, type RunEvent } from './run-events.ts';
+import { SUBAGENT_REPORT, subagentUsageParts } from './subagent-report.ts';
 import {
   applySubagentEvent,
   emptySubagentRoster,
@@ -106,6 +107,58 @@ describe('sub-agent roster', () => {
     expect(fold([started('a'), error('failed')]).rows[0]!.state).toBe('failed');
     expect(fold([started('a'), error('cancelled')]).rows[0]!.state).toBe('cancelled');
     expect(fold([started('a'), error('interrupted')]).rows[0]!.state).toBe('cancelled');
+  });
+
+  it("keeps a sub-agent's steps in order with what it changed, ran, used and said", () => {
+    const report = (value: Record<string, unknown>): RunEvent => ({
+      type: EventType.CUSTOM,
+      name: SUBAGENT_REPORT,
+      value: { id: 'a', ...value },
+    });
+    const done = {
+      type: EventType.SUBAGENT_FINISHED,
+      subagentRunId: 'a',
+      outcome: { type: 'success' },
+    } as RunEvent;
+    const row = fold([
+      started('a'),
+      step('STEP_STARTED', 'Read a.ts', 'a'),
+      step('STEP_FINISHED', 'Read a.ts', 'a'),
+      step('STEP_STARTED', 'Edit a.ts', 'a'),
+      report({ files: ['/work/a.ts'] }),
+      report({ files: ['/work/a.ts', '/work/b.ts'], commands: ['pnpm test'] }),
+      report({ usage: { tokens: 1200 } }),
+      done,
+      report({ usage: { tokens: 3400, toolUses: 7 }, message: 'All moved.', summary: 'Moved' }),
+      report({ id: 'ghost', message: 'ignored' }),
+    ]).rows[0]!;
+    expect(row).toMatchObject({
+      steps: [
+        { name: 'Read a.ts', done: true },
+        { name: 'Edit a.ts', done: false },
+      ],
+      files: ['/work/a.ts', '/work/b.ts'],
+      commands: ['pnpm test'],
+      usage: { tokens: 3400, toolUses: 7 },
+      message: 'All moved.',
+      summary: 'Moved',
+    });
+    expect(subagentUsageParts(row, 41_000)).toEqual(['2 steps', '3.4k tokens', '41s']);
+    expect(
+      subagentUsageParts(
+        {
+          steps: [],
+          usage: {
+            turns: 2,
+            tokens: 34_000,
+            costUsd: 0.04,
+            durationMs: 95_000,
+            model: 'gpt-6-luna',
+          },
+        },
+        null,
+      ),
+    ).toEqual(['2 turns', '34k tokens', '$0.04', '1m 35s', 'gpt-6-luna']);
   });
 
   it('follows the waiting count and clears it when the run ends', () => {

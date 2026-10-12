@@ -104,6 +104,19 @@ function ask(overrides: Partial<ConversationAttention>): ConversationAttention {
 }
 
 describe('attentionLine', () => {
+  it('names the sub-agent that asks', () => {
+    expect(
+      attentionLine(
+        ask({
+          kind: 'permission',
+          title: 'run pnpm test',
+          provider: 'claude',
+          subagent: 'Explore',
+        }),
+      ),
+    ).toBe("Claude's sub-agent Explore wants to run pnpm test");
+  });
+
   it('says who wants permission for what', () => {
     expect(
       attentionLine(ask({ kind: 'permission', title: 'run pnpm test', agentName: 'Bolt' })),

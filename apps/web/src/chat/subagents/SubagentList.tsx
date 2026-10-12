@@ -1,17 +1,23 @@
 import './subagents.css';
 import { useId, useState } from 'react';
-import { subagentSummary, type SubagentRow } from '@spark-outpost/contracts';
-import { formatDuration } from '../../audit/audit-model.ts';
+import { subagentSummary, subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
 import { StepIcon, StepName } from '../WorkLog.tsx';
-import { SUBAGENT_STATE_WORDS, subagentDurationMs, subagentLines } from './subagent-view.ts';
+import { SubagentDetail } from './SubagentDetail.tsx';
+import {
+  SUBAGENT_STATE_WORDS,
+  hasDetail,
+  subagentDurationMs,
+  subagentLines,
+} from './subagent-view.ts';
 
 const ICON_STATUS = { working: 'open', cancelled: 'open', done: 'done', failed: 'failed' } as const;
 
 function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; live: boolean }) {
   const [reading, setReading] = useState(false);
-  const taskId = useId();
+  const detailId = useId();
   const task = row.task && row.task !== row.name ? row.task : null;
-  const duration = subagentDurationMs(row);
+  const used = subagentUsageParts(row, subagentDurationMs(row)).join(' · ');
+  const expands = hasDetail(row);
   return (
     <li className="sa-row" data-state={row.state} data-nested={depth > 0 || undefined}>
       <StepIcon
@@ -20,12 +26,12 @@ function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; l
       />
       <span className="sa-main">
         <span className="sa-top">
-          {task ? (
+          {expands ? (
             <button
               type="button"
               className="sa-name sa-toggle"
               aria-expanded={reading}
-              aria-controls={taskId}
+              aria-controls={detailId}
               onClick={() => setReading(!reading)}
             >
               {row.name}
@@ -34,18 +40,15 @@ function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; l
             <b className="sa-name">{row.name}</b>
           )}
           <span className={`sa-state ${row.state}`}>{SUBAGENT_STATE_WORDS[row.state]}</span>
-          {duration !== null && <span className="sa-time">{formatDuration(duration)}</span>}
+          {used && <span className="sa-time">{used}</span>}
           {row.step && (
             <span className="sa-step">
               <StepName name={row.step} />
             </span>
           )}
         </span>
-        {task && (
-          <span id={taskId} className={reading ? 'sa-task open' : 'sa-task'}>
-            {task}
-          </span>
-        )}
+        {task && !reading && <span className="sa-task">{task}</span>}
+        {expands && reading && <SubagentDetail id={detailId} row={row} task={task} live={live} />}
       </span>
     </li>
   );

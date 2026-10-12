@@ -184,7 +184,7 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
           type="button"
           className="isl-send"
           aria-label={busy ? BUSY_LABELS[preferred] : 'Send reply'}
-          title={busy ? choiceTitle(preferred, preferred, MAC) : undefined}
+          title={busy ? choiceTitle(preferred, preferred, MAC, waitingOn > 0) : undefined}
           disabled={!text.trim() || send.isPending}
           onClick={() => submit()}
         >
