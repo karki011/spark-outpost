@@ -271,3 +271,40 @@ test('an agent that reports focus and uses the mouse keeps focus, Comment and Op
     await page.request.delete(`/api/conversations/${conversationId}/terminal`);
   }
 });
+
+test('a toolbar survives the pointer crossing an agent that tracks every mouse move', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const { conversationId, workspace } = await startTerminal(page);
+  try {
+    const rows = workspace.locator('.xterm-accessibility-tree > div');
+    const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.type('fixture motion on');
+    await page.keyboard.press('Enter');
+    await expect(workspace.getByText('Hold Option to select')).toBeVisible();
+
+    const area = (await workspace.locator('.xterm-screen').boundingBox())!;
+    await page.mouse.move(area.x + 40, area.y + area.height - 40);
+    await page.mouse.move(area.x + 400, area.y + area.height - 120, { steps: 30 });
+    await page.keyboard.down('Alt');
+    await selectLine(page, workspace, READY);
+    await page.keyboard.up('Alt');
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => clipboard(page)).toBe(READY);
+
+    await page.mouse.move(area.x + 300, area.y + 200, { steps: 40 });
+    await page.mouse.move(area.x + 120, area.y + 90, { steps: 40 });
+    await expect(toolbar).toBeVisible();
+    const add = (await toolbar.getByRole('button', { name: 'Add to terminal' }).boundingBox())!;
+    await page.mouse.move(add.x + add.width / 2, add.y + add.height / 2, { steps: 40 });
+    await expect(toolbar).toBeVisible();
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(toolbar).toHaveCount(0);
+    await expect(rows.filter({ hasText: READY })).toHaveCount(2);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}/terminal`);
+  }
+});

@@ -34,7 +34,7 @@ function fakeTerminal() {
     cols: 80,
     rows: 24,
     buffer: { active: { viewportY: 0 } },
-    modes: { mouseTrackingMode: 'none' },
+    modes: { mouseTrackingMode: 'none', synchronizedOutputMode: false },
     getSelection: () => model.text,
     clearSelection: () => {
       model.text = '';
@@ -261,6 +261,48 @@ describe('followSelection', () => {
     expect(reports.at(-1)).toEqual([null, 'changed']);
     expect(model.text).toBe('');
     expect(reports).toHaveLength(2);
+  });
+
+  it('keeps the selection and reports nothing when a repaint leaves its text the same', () => {
+    const { select, repaint, model, reports } = mount();
+    select('pnpm check', 10);
+    repaint('pnpm check');
+    repaint('pnpm check');
+    expect(reports).toHaveLength(1);
+    expect(model.text).toBe('pnpm check');
+  });
+
+  it('judges a synchronized repaint only once it is complete', () => {
+    const { select, repaint, modes, model, reports } = mount();
+    select('pnpm check', 10);
+    modes.synchronizedOutputMode = true;
+    repaint('');
+    repaint('pnpm');
+    modes.synchronizedOutputMode = false;
+    repaint('pnpm check');
+    expect(reports).toHaveLength(1);
+    expect(model.text).toBe('pnpm check');
+    modes.synchronizedOutputMode = true;
+    repaint('Compacting…');
+    modes.synchronizedOutputMode = false;
+    repaint('Compacting…');
+    expect(reports.at(-1)).toEqual([null, 'changed']);
+  });
+
+  it('holds pointer moves back from the agent while the toolbar is shown', () => {
+    const { select, events, element } = mount();
+    const screen = element.querySelector('.xterm-screen')!;
+    const reported: number[] = [];
+    screen.addEventListener('mousemove', (event) => reported.push((event as MouseEvent).buttons));
+    const move = (buttons: number) =>
+      screen.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons }));
+    move(0);
+    select('pnpm check');
+    move(0);
+    move(1);
+    events.key.fire();
+    move(0);
+    expect(reported).toEqual([0, 1, 0]);
   });
 
   it('reports the text without trailing spaces on each line', () => {

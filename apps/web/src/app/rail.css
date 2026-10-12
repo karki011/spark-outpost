@@ -10,10 +10,6 @@
   background: var(--rail);
 }
 
-.app.immersive .rail {
-  display: none;
-}
-
 .rail-logo {
   width: 52px;
   height: 52px;

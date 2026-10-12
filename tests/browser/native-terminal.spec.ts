@@ -274,7 +274,7 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
     await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
     await workspace.getByRole('button', { name: 'Focus terminal' }).click();
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
-    await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await expect.poll(cols).toBeGreaterThan(before);
     const leftGap = async () => {
       const inner = (await workspace.locator('.native-stage').boundingBox())!;
@@ -295,13 +295,11 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
     await page.reload();
     await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
-    await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
-    expect((await page.locator('main.main').boundingBox())!.x).toBeLessThanOrEqual(8);
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await workspace.locator('.native-screen').click();
     await page.keyboard.press('ControlOrMeta+Shift+F');
     await expect(workspace.getByRole('button', { name: 'Focus terminal' })).toBeVisible();
     await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
-    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     await expect.poll(cols).toBe(before);
     await workspace.getByRole('button', { name: 'Terminal actions' }).click();
     await page.getByRole('menuitem', { name: 'Stop session' }).click();

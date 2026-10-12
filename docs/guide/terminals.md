@@ -23,7 +23,7 @@ Answer its questions there. Pull requests aren't automatic.
 
 Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent's interface uses the mouse.
 
-**Focus terminal** (**⌘⇧F**) shows only the terminal; **Exit focus** leaves. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Terminal sessions are Mac-only.
+**Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Terminal sessions are Mac-only.
 
 ## Open a shell beside Chat
 

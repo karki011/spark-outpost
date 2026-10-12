@@ -233,7 +233,6 @@ function ChatShell({ entering }: { entering: boolean }) {
     entering ? 'entering' : '',
     layout.collapsed && !layout.narrow ? 'collapsed' : '',
     layout.drawer ? 'drawer' : '',
-    layout.immersive && view === 'chats' && !openOutpostId ? 'immersive' : '',
   ].filter(Boolean);
 
   return (

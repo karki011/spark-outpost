@@ -3,6 +3,7 @@ import type { Box } from '../../chat/quotes/toolbar-position.ts';
 import { selectionBoxes } from './selection-boxes.ts';
 import {
   followOutcome,
+  holdsPointerMove,
   isScrollbar,
   isScrollKey,
   isSelectionGesture,
@@ -123,7 +124,7 @@ export function followSelection(
     onSelection(null, HIDE_CAUSE[event]);
   };
   const follow = () => {
-    if (reported === null) return;
+    if (reported === null || terminal.modes.synchronizedOutputMode) return;
     const next = readSelection(terminal, element, canInsert);
     if (next && next.text !== copied) {
       reported = null;
@@ -155,6 +156,9 @@ export function followSelection(
     step('pointer-up');
     if (reselected && reported === null) report();
   };
+  const pointerMove = (event: Event) => {
+    if (holdsPointerMove(reported !== null, (event as MouseEvent).buttons)) event.stopPropagation();
+  };
   const keyDown = (event: KeyboardEvent) => {
     if (isScrollKey(event)) hide('user-scroll');
   };
@@ -162,6 +166,7 @@ export function followSelection(
   element.addEventListener('pointerdown', pointerDown, options);
   element.addEventListener('wheel', () => hide('user-scroll'), { ...options, passive: true });
   element.addEventListener('keydown', keyDown, options);
+  element.addEventListener('mousemove', pointerMove, options);
   element.addEventListener('paste', () => hide('input'), options);
   element.addEventListener('compositionend', () => hide('input'), options);
   document.addEventListener('pointerup', pointerUp, options);

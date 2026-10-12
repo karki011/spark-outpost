@@ -33,6 +33,10 @@ export function isScrollbar(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.scrollbar') !== null;
 }
 
+export function holdsPointerMove(toolbarShown: boolean, buttons: number): boolean {
+  return toolbarShown && buttons === 0;
+}
+
 export function isSelectionGesture(
   event: { altKey?: boolean; shiftKey?: boolean },
   mouseTracking: string,

@@ -7,13 +7,10 @@ const fake = vi.hoisted(() => ({ sidebar: null as SidebarLayout | null }));
 vi.mock('../conversations/sidebar-layout.tsx', () => ({ useSidebarLayout: () => fake.sidebar }));
 const { isFocusShortcut, useTerminalFocus } = await import('./use-terminal-focus.ts');
 
-const setImmersive = vi.fn();
-
 function sidebar(collapsed: boolean): SidebarLayout {
   const layout = {
     collapsed,
     narrow: false,
-    setImmersive,
     toggle: vi.fn(() => {
       fake.sidebar = { ...layout, collapsed: !layout.collapsed } as unknown as SidebarLayout;
     }),
@@ -37,7 +34,6 @@ function press(init: KeyboardEventInit) {
 
 beforeEach(() => {
   localStorage.clear();
-  setImmersive.mockClear();
   fake.sidebar = sidebar(false);
 });
 afterEach(cleanup);
@@ -57,22 +53,6 @@ describe('terminal focus', () => {
     expect(hook.result.current.focused).toBe(false);
     expect(first.reveal).toHaveBeenCalledTimes(1);
     expect(work.setOpen).toHaveBeenLastCalledWith(true);
-  });
-
-  it('hides the icon rail while focused and brings it back on exit', () => {
-    const hook = renderHook(() => useTerminalFocus('chat', null, true));
-    expect(setImmersive).not.toHaveBeenCalled();
-    act(() => hook.result.current.toggle());
-    expect(setImmersive).toHaveBeenLastCalledWith(true);
-    act(() => hook.result.current.toggle());
-    expect(setImmersive).toHaveBeenLastCalledWith(false);
-  });
-
-  it('brings the icon rail back when a focused chat closes', () => {
-    const hook = renderHook(() => useTerminalFocus('chat', null, true));
-    act(() => hook.result.current.toggle());
-    hook.unmount();
-    expect(setImmersive).toHaveBeenLastCalledWith(false);
   });
 
   it('leaves a sidebar and panel the user had already closed as they were', () => {
