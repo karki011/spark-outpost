@@ -143,6 +143,15 @@ test('a terminal selection is copied and offers Add to terminal, Ask, Comment an
     await workspace.getByRole('button', { name: 'Focus terminal' }).click();
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
     await expect.poll(width).toBeGreaterThan(before);
+    let last = before;
+    await expect
+      .poll(async () => {
+        const now = await width();
+        const settled = now === last;
+        last = now;
+        return settled;
+      })
+      .toBe(true);
     await selectLine(page, workspace, READY);
     await expect(toolbar).toBeVisible();
     await expectInside(toolbar, stage);
