@@ -5,7 +5,7 @@ import { Kbd } from './island-parts.tsx';
 const PANEL_HINTS: Record<Panel, ReactNode> = {
   home: (
     <>
-      <Kbd>⌘ 1–4</Kbd> switch · <Kbd>⌘</Kbd> click opens in Spark · <Kbd>Esc</Kbd> close
+      <Kbd>⌘ 1–4</Kbd> tabs · <Kbd>⌘</Kbd> click Open for Spark · <Kbd>Esc</Kbd> close
     </>
   ),
   sessions: (

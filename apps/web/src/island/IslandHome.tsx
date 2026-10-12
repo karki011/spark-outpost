@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import type { Panel } from './island-model.ts';
-import { NowCard, type QuickStart } from './NowCard.tsx';
+import { NowCard } from './NowCard.tsx';
+import type { QuickStart } from './now-parts.tsx';
 import { SparkTiles } from './SparkTiles.tsx';
 
 export interface HomeBundle {

@@ -28,11 +28,13 @@ Docked, Scout rests half hidden and comes out while a chat works, needs you or f
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
-Select a Spark to chat, right-click to edit, or select **New Spark**.
+A quiet chat shows its last reply and project. **Open** shows it; **Reply** opens its reply box.
+
+Select a Spark to chat, right-click to edit, or select **New Spark**. Without Sparks, tiles start a chat and **Needs you** opens waiting chats.
 
 Steps show verbs and file names, never secrets. See [Spark Island states](statuses-and-limits.md#spark-island-states).
 
-Select an edit to see the change; **Open chat** jumps to that turn. Terminal sessions have a **>_** blob; **Open terminal** or **Open terminal in Spark** opens the native agent. Answer its questions there.
+Select an edit to see the change; **Open chat** jumps to that turn. Terminal sessions have a **>_** blob and say **Terminal session**; **Open terminal** or **Open terminal in Spark** opens the native agent. Answer its questions there.
 
 ## Answer a card
 

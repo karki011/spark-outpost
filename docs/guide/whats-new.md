@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                                                                   | What to do                                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Spark Island **Home** shows a quiet chat's last reply, project and age, with **Open** and **Reply**. Terminal sessions are labelled. **Needs you** counts waiting chats.                       | See [Spark Island](desktop-companion.md).       |
 | Spark Island names what waits in a line beside Scout, and says when a chat finishes or fails. **Later** leaves a dashed count on Scout, kept across restarts.                                  | See [Spark Island](desktop-companion.md).       |
 | **Island chimes** add a short sound when a chat couldn't finish. A request or failure in the chat you're viewing in focused Spark stays silent.                                                | See [Spark Island](desktop-companion.md).       |
 | **Cost** shows cache writes and sub-agents as their own token parts, so the parts add up. Codex sub-agents show their model and an estimated cost.                                             | Nothing to do.                                  |

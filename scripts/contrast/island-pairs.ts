@@ -7,6 +7,8 @@ const TILE = [
   'color-mix(in srgb, var(--text) 4%, color-mix(in srgb, var(--raise) 70%, var(--panel)))',
   'color-mix(in srgb, var(--text) 9%, color-mix(in srgb, var(--raise) 70%, var(--panel)))',
 ];
+const NEEDS_TILE =
+  'color-mix(in srgb, var(--warn) 9%, color-mix(in srgb, var(--raise) 70%, var(--panel)))';
 
 const pair = (
   id: string,
@@ -67,5 +69,8 @@ export const ISLAND_PAIRS: Pair[] = [
   pair('now-meta', 'agent, step count and older steps on the Now card', 'var(--muted)', CARD),
   pair('now-active', 'marker of the step in progress', 'var(--accent-text)', CARD, 'ui'),
   pair('now-failed', 'marker of a failed step', 'var(--danger)', CARD, 'ui'),
+  pair('now-waiting', 'what a session waits for on the Now card', 'var(--warn)', CARD),
   pair('tile-label', 'Spark name on a Home tile', 'var(--text)', TILE),
+  pair('tile-sub', 'second line on a Home tile', 'var(--muted)', [...TILE, NEEDS_TILE]),
+  pair('tile-needs', 'Needs you tile label', 'var(--text)', [NEEDS_TILE]),
 ];
