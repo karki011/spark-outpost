@@ -19,7 +19,9 @@ export function focusBeside(
   const after = stops.filter(
     (element) => terminal.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING,
   );
-  const target = backward ? (before.at(-1) ?? after.at(-1)) : (after[0] ?? before[0]);
-  target?.focus();
-  return target !== undefined;
+  const order = backward ? [...before.reverse(), ...after.reverse()] : [...after, ...before];
+  return order.some((element) => {
+    element.focus();
+    return element.ownerDocument.activeElement === element;
+  });
 }

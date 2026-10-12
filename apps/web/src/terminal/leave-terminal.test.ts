@@ -41,4 +41,13 @@ describe('focusBeside', () => {
     expect(focusBeside(document.getElementById('terminal')!, false)).toBe(false);
     expect(document.activeElement?.id).toBe('input');
   });
+
+  it('skips a control that cannot take focus when going back', () => {
+    const terminal = page();
+    const bar = document.getElementById('bar')!;
+    bar.insertAdjacentHTML('beforebegin', '<button id="first">Chats</button>');
+    bar.focus = () => undefined;
+    focusBeside(terminal, true);
+    expect(document.activeElement?.id).toBe('first');
+  });
 });
