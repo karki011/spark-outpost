@@ -43,7 +43,7 @@ export function leadIn(sources: readonly (string | null)[], latestReplyId: strin
   return allLatest ? LEAD_IN_LATEST : LEAD_IN_EARLIER;
 }
 
-function blockquote(text: string): string {
+export function blockquote(text: string): string {
   return text
     .split('\n')
     .map((line) => (line ? `> ${line}` : '>'))

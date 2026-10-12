@@ -18,6 +18,8 @@ function fakeXterm() {
         fit: () => calls.push('fit'),
         focus: () => calls.push('focus'),
         close: () => calls.push('close'),
+        insertSelection: (kind, selected) => calls.push(`insert ${kind} ${selected}`) > 0,
+        clearSelection: () => calls.push('clear selection'),
         dispose: () => calls.push('dispose'),
       };
     },
@@ -71,6 +73,16 @@ describe('opening a terminal before its code has loaded', () => {
     connection.dispose();
     connection.dispose();
     expect(calls.slice(3)).toEqual(['fit', 'run', 'close', 'dispose']);
+  });
+
+  it('inserts a selection only once the terminal is open, and never replays it', async () => {
+    const { openTerminal } = await freshModule();
+    const connection = openTerminal(start, document.createElement('div'), handlers());
+    expect(connection.insertSelection('add', 'early')).toBe(false);
+    await loaded();
+    expect(connection.insertSelection('ask', 'pnpm check')).toBe(true);
+    connection.clearSelection();
+    expect(calls).toEqual(['opened', 'insert ask pnpm check', 'clear selection']);
   });
 
   it('never opens a terminal that was closed while loading', async () => {

@@ -1,0 +1,199 @@
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
+
+const READY = 'Ready for terminal input. No provider request is made.';
+const SHOTS = '.local/report';
+
+async function startTerminal(page: Page): Promise<{ conversationId: string; workspace: Locator }> {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page
+    .getByRole('radiogroup', { name: 'Session type' })
+    .getByRole('radio', { name: 'Terminal' })
+    .click();
+  await page.getByRole('button', { name: /^Terminal agent: / }).click();
+  await page
+    .getByRole('dialog', { name: 'Terminal agent and permissions' })
+    .getByRole('tab', { name: 'Codex', exact: true })
+    .click();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('textbox', { name: 'What would you like to work on?' })
+    .fill('Inspect the fixture.');
+  const launched = page.waitForResponse(
+    (response) =>
+      /\/api\/conversations\/[^/]+\/terminal$/.test(response.url()) &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
+  const { session } = (await (await launched).json()) as { session: { conversationId: string } };
+  const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
+  await expect(workspace.locator('.xterm-accessibility')).toContainText(READY);
+  await page.evaluate(() => navigator.clipboard.writeText('before'));
+  return { conversationId: session.conversationId, workspace };
+}
+
+async function selectLine(page: Page, workspace: Locator, text: string) {
+  const row = await workspace
+    .locator('.xterm-accessibility-tree > div')
+    .evaluateAll(
+      (rows, wanted) => [rows.findIndex((each) => each.textContent?.includes(wanted)), rows.length],
+      text,
+    );
+  const screen = (await workspace.locator('.xterm-screen').boundingBox())!;
+  const y = screen.y + ((row[0]! + 0.5) * screen.height) / row[1]!;
+  await page.mouse.click(screen.x + 24, y, { clickCount: 3 });
+}
+
+const clipboard = (page: Page) => page.evaluate(() => navigator.clipboard.readText());
+const terminalHasFocus = (page: Page) =>
+  page.evaluate(() => document.activeElement?.classList.contains('xterm-helper-textarea'));
+
+async function expectInside(toolbar: Locator, pane: Locator) {
+  const bar = (await toolbar.boundingBox())!;
+  const stage = (await pane.boundingBox())!;
+  expect(bar.x).toBeGreaterThanOrEqual(stage.x);
+  expect(bar.y).toBeGreaterThanOrEqual(stage.y);
+  expect(bar.x + bar.width).toBeLessThanOrEqual(stage.x + stage.width);
+  expect(bar.y + bar.height).toBeLessThanOrEqual(stage.y + stage.height);
+}
+
+test.beforeEach(async () => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  mkdirSync(SHOTS, { recursive: true });
+});
+
+test('a terminal selection is copied and offers Add to terminal, Ask, Comment and a new chat', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const { conversationId, workspace } = await startTerminal(page);
+  try {
+    const screen = workspace.locator('.xterm-accessibility');
+    const stage = workspace.locator('.native-stage');
+    const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
+    await expect(toolbar).toHaveCount(0);
+    expect(await clipboard(page)).toBe('before');
+
+    await selectLine(page, workspace, READY);
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => clipboard(page)).toBe(READY);
+    await expect(toolbar.getByRole('button')).toHaveText([
+      'Add to terminal',
+      'Ask about this',
+      'Comment',
+      'New chat with this',
+      'Copied',
+    ]);
+    await expectInside(toolbar, stage);
+    expect(await terminalHasFocus(page)).toBe(true);
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-toolbar.png') });
+    await toolbar.getByRole('button', { name: 'Copied' }).hover();
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-copied.png') });
+
+    await toolbar.getByRole('button', { name: 'Add to terminal' }).click();
+    await expect(toolbar).toHaveCount(0);
+    expect(await terminalHasFocus(page)).toBe(true);
+    await expect.poll(async () => (await screen.textContent())!.split(READY).length).toBe(3);
+    await expect(screen).not.toContainText('received[');
+    await page.keyboard.type(' typed after');
+    await page.keyboard.press('Enter');
+    await expect(screen).toContainText(`]: ${READY} typed after`);
+
+    await selectLine(page, workspace, 'Spark native terminal fixture');
+    await expect(toolbar).toBeVisible();
+    await page.keyboard.type('x');
+    await expect(toolbar).toHaveCount(0);
+    await page.keyboard.press('Backspace');
+
+    await selectLine(page, workspace, 'Spark native terminal fixture');
+    await expect(toolbar).toBeVisible();
+    const box = (await workspace.locator('.xterm-screen').boundingBox())!;
+    await page.mouse.click(box.x + box.width - 40, box.y + box.height - 20);
+    await expect(toolbar).toHaveCount(0);
+
+    await selectLine(page, workspace, 'Spark native terminal fixture');
+    await toolbar.getByRole('button', { name: 'Comment' }).click();
+    const note = toolbar.getByRole('textbox', { name: 'Note on the selected text' });
+    await expect(note).toBeFocused();
+    await note.fill('why this pid');
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-note.png') });
+    await page.keyboard.press('Enter');
+    await expect(toolbar).toHaveCount(0);
+    expect(await terminalHasFocus(page)).toBe(true);
+    await expect(screen).not.toContainText(/received\[\d+\]: >/);
+    await page.keyboard.press('Enter');
+    await expect(screen).toContainText(
+      /received\[\d+\]: > Spark native terminal fixture · PID \d+ why this pid/,
+    );
+
+    await selectLine(page, workspace, 'Spark native terminal fixture');
+    await page.keyboard.press('ControlOrMeta+Shift+A');
+    await expect(toolbar).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(screen).toContainText(/received\[\d+\]: Spark native terminal fixture · PID \d+/);
+
+    const width = async () => (await workspace.locator('.xterm-screen').boundingBox())!.width;
+    const before = await width();
+    await workspace.getByRole('button', { name: 'Focus terminal' }).click();
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await expect.poll(width).toBeGreaterThan(before);
+    let last = before;
+    await expect
+      .poll(async () => {
+        const now = await width();
+        const settled = now === last;
+        last = now;
+        return settled;
+      })
+      .toBe(true);
+    await selectLine(page, workspace, READY);
+    await expect(toolbar).toBeVisible();
+    await expectInside(toolbar, stage);
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-focus.png') });
+    await workspace.getByRole('button', { name: 'Exit focus' }).focus();
+    await page.keyboard.press('Tab');
+    await expect(toolbar.getByRole('button', { name: 'Add to terminal' })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(toolbar.getByRole('button', { name: 'Ask about this' })).toBeFocused();
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-focus-ring.png') });
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}/terminal`);
+  }
+});
+
+test('an ended session keeps Copy and a new chat for its last output', async ({ page }) => {
+  test.setTimeout(60_000);
+  const { conversationId, workspace } = await startTerminal(page);
+  try {
+    const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
+    await workspace.locator('.native-screen').click();
+    for (let row = 0; row < 30; row += 1) {
+      await page.keyboard.type(`row${row}`);
+      await page.keyboard.press('Enter');
+    }
+    await expect(workspace.locator('.xterm-accessibility')).toContainText(/received\[\d+\]: row29/);
+    await selectLine(page, workspace, 'row25');
+    await expect(toolbar).toBeVisible();
+    await page.mouse.wheel(0, -240);
+    await expect(toolbar).toHaveCount(0);
+    await page.keyboard.press('Control+d');
+    await expect(workspace.getByRole('status').first()).toHaveText('Exited');
+    await expect(workspace).toContainText('Its last output is shown below.');
+    await selectLine(page, workspace, 'row25');
+    await expect(toolbar.getByRole('button')).toHaveText(['New chat with this', 'Copied']);
+    await expect.poll(() => clipboard(page)).toBe('row25');
+    await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-ended.png') });
+    await toolbar.getByRole('button', { name: 'New chat with this' }).click();
+    await expect(workspace).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('> row25\n\n');
+    await expect(page.getByRole('textbox', { name: 'Message' })).toBeFocused();
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}/terminal`);
+  }
+});

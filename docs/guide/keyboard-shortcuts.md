@@ -20,7 +20,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **@** / **/**               | Add a file / run a command              |
 | **⌘⇧Y**                     | Jump to the card that waits for you     |
 | **⌘D**                      | Open the **Changes** drawer             |
-| **⌘⇧A**                     | Add the selected text to the chat       |
+| **⌘⇧A**                     | Add selected text to the chat or prompt |
 | **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
 | **⌃\`**                     | Show or hide the terminal               |
 | **⌘⇧F**                     | Focus a Terminal session, or leave it   |

@@ -1,6 +1,7 @@
 import type { TerminalEndReason, TerminalHint } from '@spark-outpost/contracts';
 import type { TerminalTicket } from './terminal-api.ts';
 import type * as Xterm from './xterm-terminal.ts';
+import type { SelectionActions, SelectionHandler } from './selection/follow-selection.ts';
 
 export interface TerminalHandlers<T extends TerminalTicket> {
   onOpen(created: T): void;
@@ -12,9 +13,10 @@ export interface TerminalHandlers<T extends TerminalTicket> {
   onEnded(reason: TerminalEndReason): void;
   onError(message: string): void;
   onInputError?(message: string): void;
+  onSelection?: SelectionHandler;
 }
 
-export interface TerminalConnection {
+export interface TerminalConnection extends SelectionActions {
   run(): void;
   notice(text: string): void;
   fit(): void;
@@ -85,6 +87,8 @@ export function openTerminal<T extends TerminalTicket>(
     fit: () => whenOpen((connection) => connection.fit()),
     focus: () => whenOpen((connection) => connection.focus()),
     close: () => whenOpen((connection) => connection.close()),
+    insertSelection: (...insert) => opened?.insertSelection(...insert) ?? false,
+    clearSelection: () => opened?.clearSelection(),
     dispose: () => {
       if (disposed) return;
       disposed = true;

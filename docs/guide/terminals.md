@@ -17,17 +17,19 @@ Open an AI terminal. About 1 minute.
 3. Next to **Start terminal**, pick **Claude Code** or **Codex** and its permissions.
 4. Describe the work and press **Enter**.
 
-Answer questions in the terminal. Pull requests aren't automatic.
+Answer its questions there. Pull requests aren't automatic.
 
-**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
+**Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open**: no tracking. Dropped files insert paths.
 
-**Focus terminal** (**⌘⇧F**) shows only the terminal; again, or **Exit focus**, to leave. **⋯** has **Copy folder path**, **Reconnect** and **Stop session**, which asks you to hold. Terminal sessions are Mac-only.
+Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent's interface uses the mouse.
+
+**Focus terminal** (**⌘⇧F**) shows only the terminal; **Exit focus** leaves. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Terminal sessions are Mac-only.
 
 ## Open a shell beside Chat
 
 1. In a chat's **…** menu, select **Terminal**, or press **⌃\`**.
-2. Type commands; Spark doesn't ask for approval.
-3. Select **+** for another tab, or **×** to close one.
+2. Type commands; Spark doesn't ask.
+3. Select **+** for another tab, **×** to close one.
 
 ![The terminal dock below a chat](images/terminals-dock-light.png)
 
@@ -39,12 +41,12 @@ The shell starts in the chat's worktree, checkout or home folder. Closing a busy
 
 1. On a command in a reply, select **Open in terminal**.
 
-The read-only tab is named for the agent, such as **Claude · pnpm dev**. **Stop turn** stops the whole turn. Claude and Z.ai output shows when the command ends.
+The read-only tab is named like **Claude · pnpm dev**. **Stop turn** stops the turn. Claude and Z.ai output shows when it ends.
 
 ## Close and recover
 
-Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents; outside terminals are unaffected.
+Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents, not outside terminals.
 
-After a crash, restart or agent exit, the session offers **Resume session** where supported. It restores history, not a running command. Otherwise **Start again** resends your first message, unless you stopped it.
+After a crash, restart or exit, **Resume session**, where supported, restores history, not a running command. Otherwise **Start again** resends your first message unless you stopped it.
 
 **Next:** [Use the browser](use-the-browser.md)

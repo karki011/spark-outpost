@@ -1,14 +1,4 @@
-import './quotes.css';
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type MouseEvent,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { AskIcon, CommentIcon, CopyIcon, QuoteIcon } from '../../ui/icons.tsx';
 import type { AnnotationKind } from '@spark-outpost/contracts';
 import { createAnchor } from './anchor.ts';
@@ -21,6 +11,12 @@ import {
 import type { QuotesState } from './use-quotes.ts';
 import { isToolbarShown, useToolbarLayout } from './use-toolbar-layout.ts';
 import { messageIdOf } from './selection.ts';
+import {
+  SelectionToolbar,
+  ToolbarButton,
+  ToolbarNote,
+  ToolbarSeparator,
+} from './SelectionToolbar.tsx';
 
 interface QuoteToolbarProps {
   scrollerRef: RefObject<HTMLDivElement | null>;
@@ -28,11 +24,9 @@ interface QuoteToolbarProps {
 }
 
 const DRAFT_HIGHLIGHT = 'spark-quote-draft';
-const NOTE_MAX_LENGTH = 2000;
 const COPIED_MS = 1400;
 const APPLE = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? '');
 const SHORTCUT_LABEL = APPLE ? '⌘⇧A' : 'Ctrl+Shift+A';
-const ROVING_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 function isAddShortcut(event: KeyboardEvent): boolean {
   return (
@@ -55,29 +49,8 @@ function collapseSelection() {
   if (selection && selection.rangeCount > 0) selection.collapseToEnd();
 }
 
-function keepSelection(event: MouseEvent) {
-  if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
-}
-
-function rovingTarget(key: string, index: number, count: number): number {
-  if (key === 'Home') return 0;
-  if (key === 'End') return count - 1;
-  if (key === 'ArrowRight') return (index + 1) % count;
-  return (index - 1 + count) % count;
-}
-
-function moveFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
-  if (!ROVING_KEYS.has(event.key) || event.target instanceof HTMLInputElement) return;
-  const buttons = Array.from(event.currentTarget.querySelectorAll('button'));
-  const index = buttons.indexOf(event.target as HTMLButtonElement);
-  const next = rovingTarget(event.key, index, buttons.length);
-  event.preventDefault();
-  buttons[next]?.focus();
-}
-
 export function QuoteToolbar({ scrollerRef, quotes }: QuoteToolbarProps) {
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const noteId = useId();
   const [commentFor, setCommentFor] = useState<CapturedSelection | null>(null);
   const [copiedFor, setCopiedFor] = useState<CapturedSelection | null>(null);
   const [note, setNote] = useState('');
@@ -166,74 +139,53 @@ export function QuoteToolbar({ scrollerRef, quotes }: QuoteToolbarProps) {
       () => undefined,
     );
   };
-  const saveNote = (event: FormEvent) => {
-    event.preventDefault();
+  const saveNote = () => {
     const trimmed = note.trim();
     add(quoteFrom(captured, trimmed ? 'comment' : 'quote', trimmed));
     finish();
   };
 
   return (
-    <div
-      ref={toolbarRef}
-      className={commenting ? 'quote-toolbar commenting' : 'quote-toolbar'}
-      role="toolbar"
-      aria-label="Selected text"
-      onMouseDown={keepSelection}
-      onKeyDown={moveFocus}
-    >
+    <SelectionToolbar ref={toolbarRef} commenting={commenting}>
       {commenting ? (
-        <form className="qt-note" onSubmit={saveNote}>
-          <label className="sr-only" htmlFor={noteId}>
-            Comment on the selected text
-          </label>
-          <input
-            id={noteId}
-            autoFocus
-            value={note}
-            maxLength={NOTE_MAX_LENGTH}
-            placeholder="Add a note…"
-            autoComplete="off"
-            onChange={(event) => setNote(event.target.value)}
-          />
-          <button type="submit" className="qt-btn qt-save">
-            Save
-          </button>
-        </form>
+        <ToolbarNote
+          label="Comment on the selected text"
+          submitLabel="Save"
+          value={note}
+          onChange={setNote}
+          onSubmit={saveNote}
+        />
       ) : (
         <>
-          <button
-            type="button"
-            className="qt-btn"
+          <ToolbarButton
+            icon={<QuoteIcon />}
+            label="Add to chat"
             title={`Add to chat (${SHORTCUT_LABEL})`}
-            aria-keyshortcuts="Meta+Shift+A Control+Shift+A"
+            keyshortcuts="Meta+Shift+A Control+Shift+A"
             onClick={addToChat}
-          >
-            <QuoteIcon />
-            <span className="qt-label">Add to chat</span>
-          </button>
-          <button type="button" className="qt-btn" title="Ask about this" onClick={ask}>
-            <AskIcon />
-            <span className="qt-label">Ask about this</span>
-          </button>
-          <button
-            type="button"
-            className="qt-btn"
+          />
+          <ToolbarButton
+            icon={<AskIcon />}
+            label="Ask about this"
+            title="Ask about this"
+            onClick={ask}
+          />
+          <ToolbarButton
+            icon={<CommentIcon />}
+            label="Comment"
             title="Comment"
             onClick={() => setCommentFor(captured)}
-          >
-            <CommentIcon />
-            <span className="qt-label">Comment</span>
-          </button>
-          <span className="qt-sep" aria-hidden="true" />
-          <button type="button" className="qt-btn" title="Copy" onClick={copy}>
-            <CopyIcon />
-            <span className="qt-label" aria-live="polite">
-              {copied ? 'Copied' : 'Copy'}
-            </span>
-          </button>
+          />
+          <ToolbarSeparator />
+          <ToolbarButton
+            icon={<CopyIcon />}
+            label={copied ? 'Copied' : 'Copy'}
+            title="Copy"
+            live
+            onClick={copy}
+          />
         </>
       )}
-    </div>
+    </SelectionToolbar>
   );
 }
