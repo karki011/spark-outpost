@@ -3,6 +3,7 @@ import type {
   CrewMember,
   Orchestration,
   Run,
+  SubagentRow,
   TaskOverview,
 } from '@spark-outpost/contracts';
 import { topLevelRuns } from '../chat/turns.ts';
@@ -60,6 +61,7 @@ export interface TvCast {
   run: Run;
   lead: CrewAgent;
   sparks: TvSpark[];
+  subagents: readonly SubagentRow[];
 }
 
 export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
@@ -75,7 +77,10 @@ export function tvCast(detail: ConversationDetail | undefined): TvCast | null {
         agent: runAgent(member, orchestration, detail.activity[member.runId] ?? []),
       }))
     : [];
-  return { run, lead: chatAgent(run, detail.activity[run.id] ?? [], asking), sparks };
+  const latest = detail.conversation.latestRun;
+  const waitingOn = latest?.id === run.id ? (latest.waitingOn ?? 0) : 0;
+  const lead = chatAgent(run, detail.activity[run.id] ?? [], asking, waitingOn);
+  return { run, lead, sparks, subagents: detail.subagents?.[run.id] ?? [] };
 }
 
 export function castAgents(cast: TvCast | null): CrewAgent[] {

@@ -2,6 +2,8 @@ import {
   EventType,
   MODEL_SWITCH_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
+  applySubagentEvent,
+  emptySubagentRoster,
   modelSwitchSchema,
   orchestrationSchema,
   stepMark,
@@ -10,6 +12,7 @@ import {
   type Orchestration,
   type AgentTerminalStarted,
   type RunEvent,
+  type SubagentRoster,
 } from '@spark-outpost/contracts';
 import { applyApprovalEvent } from './approvals/approval-events.ts';
 import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
@@ -127,6 +130,7 @@ export interface RunProjection extends ReplyStream {
   modelSwitch: ModelSwitch | null;
   commands: readonly LiveCommand[];
   terminals: readonly AgentTerminalStarted[];
+  subagents: SubagentRoster;
 }
 
 export const initialRunProjection: RunProjection = {
@@ -140,11 +144,13 @@ export const initialRunProjection: RunProjection = {
   modelSwitch: null,
   commands: [],
   terminals: [],
+  subagents: emptySubagentRoster,
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
   if (seq <= state.lastSeq) return state;
-  const next = { ...state, lastSeq: seq };
+  const subagents = applySubagentEvent(state.subagents, event);
+  const next = { ...state, lastSeq: seq, subagents };
   switch (event.type) {
     case EventType.RUN_STARTED:
       return { ...next, status: 'running' };

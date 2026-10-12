@@ -242,6 +242,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
                 : null,
             interruptionChoice: row.latest_run_interruption_choice ?? null,
             needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
+            ...(row.latest_run_waiting_on ? { waitingOn: row.latest_run_waiting_on } : {}),
           }
         : null,
     archivedAt: iso(row.archived_at),

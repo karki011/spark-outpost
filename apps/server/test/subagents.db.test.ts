@@ -60,10 +60,13 @@ async function settled(runId: string) {
   }, 20_000);
 }
 
-async function latestStep(conversationId: string): Promise<string | null> {
+async function latestRun(conversationId: string) {
   const chats = await listConversations(t.db, t.workspaceId);
-  return chats.find((chat) => chat.id === conversationId)?.latestRun?.step ?? null;
+  return chats.find((chat) => chat.id === conversationId)?.latestRun ?? null;
 }
+
+const latestStep = async (conversationId: string) =>
+  (await latestRun(conversationId))?.step ?? null;
 
 const waits = (events: readonly RunEvent[]) =>
   events.flatMap((event) =>
@@ -143,6 +146,7 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
       async () => (await latestStep(conversationId)) === 'Waiting on 2 sub-agents',
       20_000,
     );
+    expect((await latestRun(conversationId))?.waitingOn).toBe(2);
     const live = await getConversationDetail(t.db, conversationId);
     expect(live?.subagents?.[runId]).toEqual([
       expect.objectContaining({ id: 'sub-1', state: 'working', step: 'Read routes.ts' }),
@@ -157,7 +161,7 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
       'cancelled',
       'cancelled',
     ]);
-    expect(await latestStep(conversationId)).not.toBe('Waiting on 2 sub-agents');
+    expect((await latestRun(conversationId))?.waitingOn).toBeUndefined();
   });
 
   it('leaves a chat without sub-agents as it was', async () => {

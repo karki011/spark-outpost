@@ -11,6 +11,7 @@ import {
   type PointerEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import type { SubagentRow } from '@spark-outpost/contracts';
 import { CHAT_MENU_BUTTON_ID } from '../audit/ChatHeaderMenu.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { matchesMedia, PHONE_QUERY, usePhone } from '../ui/breakpoints.ts';
@@ -32,7 +33,8 @@ import {
   type TvView,
 } from './agent-tv-store.ts';
 import { AgentTvStage } from './AgentTvStage.tsx';
-import type { CrewAgent } from './crew-model.ts';
+import { SubagentList } from '../chat/subagents/SubagentList.tsx';
+import { isBusy, type CrewAgent } from './crew-model.ts';
 import { ChatterIcon, ListIcon, StageIcon, WatchIcon } from './tv-icons.tsx';
 import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
@@ -83,6 +85,7 @@ interface AgentTvProps {
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
   branch?: string | null;
+  subagents?: readonly SubagentRow[];
 }
 
 export function AgentTv({
@@ -94,6 +97,7 @@ export function AgentTv({
   onAsk,
   onStop,
   branch = null,
+  subagents = [],
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
   const panel = useRef<HTMLDivElement>(null);
@@ -303,6 +307,11 @@ export function AgentTv({
             onPick={onPick}
             onAsk={onAsk}
           />
+        )}
+        {subagents.length > 0 && (
+          <div className="tv-subagents" role="group" aria-label="Sub-agents" tabIndex={0}>
+            <SubagentList rows={subagents} live={members.some((member) => isBusy(member.state))} />
+          </div>
         )}
         {view === 'stage' && (
           <p className="tv-cap" aria-hidden="true">

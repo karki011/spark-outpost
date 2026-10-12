@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   isTerminalRunStatus,
+  waitingOnLabel,
   type Approval,
   type ConversationDetail,
   type Message,
@@ -45,6 +46,8 @@ import {
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
+import { SubagentList } from './subagents/SubagentList.tsx';
+import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
 import { StepList, StepToggle, turnHeading, useStepLog } from './WorkLog.tsx';
@@ -146,7 +149,12 @@ export function SoloTurn({
     ) : (
       <ApprovalCard key={approval.id} approval={approval} provider={provider} repo={repo} />
     );
-  const { state, label } = turnStatus(run, stream, waiting);
+  const status = turnStatus(run, stream, waiting);
+  const { state } = status;
+  const subagents = shownSubagents(stream.subagents.rows, detail.subagents?.[run.id], leads);
+  const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
+  const waitingText = waitingOn > 0 ? waitingOnLabel(waitingOn).toLowerCase() : null;
+  const label = waitingText ?? status.label;
 
   const persistedSteps = detail.activity[run.id]?.length
     ? detail.activity[run.id]!
@@ -154,9 +162,15 @@ export function SoloTurn({
   const steps = shownSteps(stream, persistedSteps, leads);
   const stepsRunId = !leads && detail.activity[run.id]?.length ? run.id : streamRunId;
   useLiveReport(
-    { id: run.id, name: providerName(provider), provider, kind: 'agent' },
+    {
+      id: run.id,
+      name: providerName(provider),
+      provider,
+      kind: 'agent',
+      ...(waitingText ? { doing: waitingText } : {}),
+    },
     working,
-    steps,
+    waitingText ? [] : steps,
   );
   const persistedText =
     assistantMessage?.content ??
@@ -213,7 +227,7 @@ export function SoloTurn({
   return (
     <AiTurn
       provider={provider}
-      label={working && !waiting && !log && !text ? 'thinking' : label}
+      label={working && !waiting && !waitingText && !log && !text ? 'thinking' : label}
       state={state}
       liveId={working && !waiting ? run.id : null}
       following={child?.following ?? run.following}
@@ -238,6 +252,7 @@ export function SoloTurn({
           <StepList log={log} />
         </div>
       )}
+      <SubagentList rows={subagents} live={working} />
       <PlanSavedLine detail={detail} runId={run.id} />
       <RailFlags detail={detail} runId={run.id} />
       {cards.decided.map(approvalCard)}

@@ -9,7 +9,14 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
-import { clockTime, entrySummary, JSON_TOKEN_LIMIT, jsonTokens } from './audit-model.ts';
+import {
+  clockTime,
+  entrySubagent,
+  entrySummary,
+  JSON_TOKEN_LIMIT,
+  jsonTokens,
+  subagentNames,
+} from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -54,9 +61,11 @@ const DIRECTION_TITLES: Record<ProtocolLogEntry['direction'], string> = {
 const LogRow = memo(function LogRow({
   entry,
   broken,
+  subagent,
 }: {
   entry: ProtocolLogEntry;
   broken: boolean;
+  subagent: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const rawId = useId();
@@ -76,7 +85,7 @@ const LogRow = memo(function LogRow({
         </span>
         <span className="ls">
           <span className={`ltype ${entry.kind}`}>{entry.kind}</span>
-          {entrySummary(entry)}
+          {entrySummary(entry, subagent)}
           {entry.unreviewed && <span className="unrev">Ran without review</span>}
         </span>
         <ChevronIcon />
@@ -132,6 +141,7 @@ export function AuditLogs({
   });
   if (!run) return <EmptyScene>No runs in this chat yet.</EmptyScene>;
   const entries = log.data?.pages.flatMap((page) => page.entries) ?? [];
+  const subagents = subagentNames(entries);
   const check = checks.get(run.runId);
   const brokenFrom = check && !check.intact ? (check.firstBrokenSeq ?? 0) : Infinity;
 
@@ -197,7 +207,12 @@ export function AuditLogs({
       )}
       <ul className="llist" aria-label="Protocol messages">
         {entries.map((entry) => (
-          <LogRow key={entry.seq} entry={entry} broken={entry.seq >= brokenFrom} />
+          <LogRow
+            key={entry.seq}
+            entry={entry}
+            broken={entry.seq >= brokenFrom}
+            subagent={entrySubagent(entry, subagents)}
+          />
         ))}
       </ul>
       {log.isFetchingNextPage && <Skeleton label="Reading more messages" shape="list" rows={3} />}

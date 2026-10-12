@@ -61,6 +61,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
       branch={source?.conversation.branch ?? null}
+      subagents={cast.subagents}
       onPick={(agentId) => jump(anchorOf(agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />

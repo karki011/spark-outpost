@@ -140,6 +140,16 @@ body:has(.wp.on:not(.over)) .tv:not(.watch) {
     opacity: 0.3;
   }
 }
+.tv-subagents {
+  max-height: 148px;
+  overflow-y: auto;
+  padding: 6px 12px 0;
+  border-top: 1px solid var(--line);
+}
+.tv-subagents:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .tv-cap {
   margin: 0;
   padding: 8px 12px 10px;
