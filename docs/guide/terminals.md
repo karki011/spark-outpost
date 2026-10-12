@@ -12,16 +12,16 @@ Open an AI terminal. About 1 minute.
 
 ## Start a Terminal session
 
-1. Select **New chat**, then **Terminal**.
-2. Pick **Claude Code** or **Codex** in the agent menu. Select **Choose project → Choose a folder…**, then **Use this folder**.
-3. Pick **Agent mode** when available.
-4. Describe the work and select **Start terminal**.
+1. Select **New chat**, then **Terminal** above the message box.
+2. Select **Choose project → Choose a folder…**, then **Use this folder**.
+3. Next to **Start terminal**, pick **Claude Code** or **Codex** and its permissions.
+4. Describe the work and press **Enter**.
 
 Answer questions in the terminal. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
 
-**Hide view** keeps the agent running; **Open terminal** reattaches. **Stop session** asks you to hold before stopping the agent and its commands. Terminal sessions are Mac-only.
+**Focus terminal** (**⌘⇧F**) hides the chat list and Work panel; again to leave. **⋯** has **Copy folder path**, **Reconnect** and **Stop session**, which asks you to hold. Terminal sessions are Mac-only.
 
 ## Open a shell beside Chat
 

@@ -9,6 +9,7 @@ export const SIDEBAR_KEYS: ShortcutKeys = MAC ? ['⌘', 'B'] : ['Ctrl', 'B'];
 export const DIFF_KEYS: ShortcutKeys = MAC ? ['⌘', 'D'] : ['Ctrl', 'D'];
 export const BROWSER_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'B'] : ['Ctrl', 'Shift', 'B'];
 export const TERMINAL_KEYS: ShortcutKeys = MAC ? ['⌃', '`'] : ['Ctrl', '`'];
+export const TERMINAL_FOCUS_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'F'] : ['Ctrl', 'Shift', 'F'];
 export const WAITING_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'Y'] : ['Ctrl', 'Shift', 'Y'];
 
 export function keysText(keys: ShortcutKeys): string {

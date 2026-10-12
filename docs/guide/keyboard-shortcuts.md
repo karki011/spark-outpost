@@ -23,6 +23,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧A**                     | Add the selected text to the chat       |
 | **⌘⇧B**                     | Show or hide the Browser pane (Mac app) |
 | **⌃\`**                     | Show or hide the terminal               |
+| **⌘⇧F**                     | Focus a Terminal session, or leave it   |
 | **Esc**                     | Close Agent TV, a drawer or a menu      |
 
 ## Cards

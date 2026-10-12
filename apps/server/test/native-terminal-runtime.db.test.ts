@@ -241,6 +241,7 @@ describe('native terminal integration', () => {
 
   it('reuses a running launch and exposes authenticated, scoped activity through real HTTP hooks', async () => {
     const first = await launch();
+    expect((await runtime.get(conversationId))?.agentMode).toBe('default');
     const again = await runtime.launch(conversationId, { resume: false });
     expect(again.session.id).toBe(first.session.id);
     expect(spawn).toHaveBeenCalledTimes(1);

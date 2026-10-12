@@ -5,7 +5,11 @@ import type {
   NativeTerminalProvider,
 } from '@spark-outpost/contracts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
-import { nativeTerminalRow, nativeTerminalView } from '../persistence/native-terminals.ts';
+import {
+  nativeTerminalMode,
+  nativeTerminalRow,
+  nativeTerminalView,
+} from '../persistence/native-terminals.ts';
 import {
   failNativeLaunchRun,
   finishNativeRun,
@@ -303,7 +307,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     async get(conversationId) {
       await owned(conversationId);
       const row = await nativeTerminalRow(deps.db, conversationId);
-      return row ? nativeTerminalView(row) : null;
+      return row ? nativeTerminalView(row, await nativeTerminalMode(deps.db, row)) : null;
     },
     launch(conversationId, request) {
       const key = JSON.stringify(request);

@@ -1,0 +1,85 @@
+.tbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 8px 4px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.tbar-agent {
+  flex: none;
+  font-size: 13px;
+}
+.tbar-state,
+.tbar-note {
+  margin: 0;
+  color: var(--muted);
+}
+.tbar-state {
+  flex: none;
+}
+.tbar-note {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--faint);
+}
+.tbar-mode {
+  padding-block: 3px;
+  font-size: 12.5px;
+  cursor: default;
+}
+.tbar-mode:hover {
+  background: none;
+}
+.tbar-mode.risk-full:hover {
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+}
+.tbar-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
+  color: var(--text);
+}
+.tbar-place svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+.tbar-name {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tbar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.tbar .icon-btn[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--accent-text);
+}
+@media (max-width: 900px) {
+  .tbar-note {
+    visibility: hidden;
+  }
+  .tbar-name {
+    max-width: 110px;
+  }
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tbar-place {
+    display: none;
+  }
+}

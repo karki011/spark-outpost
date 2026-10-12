@@ -32,6 +32,7 @@ export const nativeTerminalSessionSchema = z.object({
   runId: z.uuid().nullable(),
   observation: z.enum(['hooks', 'unsupported']),
   reason: z.string().nullable(),
+  agentMode: z.string().nullable().default(null),
 });
 export type NativeTerminalSession = z.infer<typeof nativeTerminalSessionSchema>;
 

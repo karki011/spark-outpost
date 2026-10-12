@@ -7,9 +7,11 @@ import { terminalMood } from './native-state.ts';
 export function TerminalCompanion({
   chat,
   state,
+  size = 38,
 }: {
   chat: ConversationSummary;
   state: NativeTerminalSession['state'];
+  size?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(false);
@@ -50,7 +52,7 @@ export function TerminalCompanion({
       <SessionBlob
         chat={chat}
         state={happy && state === 'ready' ? 'done' : terminalMood(state)}
-        size={38}
+        size={size}
         live={visible && !reduced}
       />
     </span>

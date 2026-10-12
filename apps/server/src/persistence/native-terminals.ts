@@ -22,7 +22,10 @@ export interface NativeTerminalRow {
   updated_at: Date;
 }
 
-export function nativeTerminalView(row: NativeTerminalRow): NativeTerminalSession {
+export function nativeTerminalView(
+  row: NativeTerminalRow,
+  agentMode: string | null = null,
+): NativeTerminalSession {
   return nativeTerminalSessionSchema.parse({
     id: row.id,
     conversationId: row.conversation_id,
@@ -35,7 +38,21 @@ export function nativeTerminalView(row: NativeTerminalRow): NativeTerminalSessio
     runId: row.active_run_id,
     observation: row.observation,
     reason: row.reason,
+    agentMode,
   });
+}
+
+export async function nativeTerminalMode(
+  db: Queryable,
+  row: Pick<NativeTerminalRow, 'conversation_id' | 'provider'>,
+): Promise<string | null> {
+  const { rows } = await db.query<{ mode: string | null }>(
+    `SELECT COALESCE(used_mode, agent_mode) AS mode FROM runs
+     WHERE conversation_id = $1 AND provider = $2 AND parent_run_id IS NULL
+     ORDER BY created_at DESC LIMIT 1`,
+    [row.conversation_id, row.provider],
+  );
+  return rows[0]?.mode ?? null;
 }
 
 export async function nativeTerminalRow(

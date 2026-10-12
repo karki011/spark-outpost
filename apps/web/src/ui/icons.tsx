@@ -249,6 +249,14 @@ export function RefreshIcon() {
   );
 }
 
+export function ExpandIcon() {
+  return <StrokeIcon path="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />;
+}
+
+export function ShrinkIcon() {
+  return <StrokeIcon path="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" />;
+}
+
 export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }

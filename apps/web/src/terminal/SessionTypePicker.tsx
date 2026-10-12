@@ -1,6 +1,7 @@
 import { Segmented } from '../ui/Segmented.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import './native-terminal.css';
 
 export interface SessionChoice {
   sessionType: 'chat' | 'terminal';
@@ -11,10 +12,12 @@ export function SessionTypePicker({
   value,
   onChange,
   disabled = false,
+  agent = false,
 }: {
   value: SessionChoice;
   onChange: (value: SessionChoice) => void;
   disabled?: boolean;
+  agent?: boolean;
 }) {
   const { remote } = useRemoteClient();
   if (remote) return null;
@@ -29,7 +32,7 @@ export function SessionTypePicker({
         value={value.sessionType}
         onChange={(id) => onChange({ ...value, sessionType: id as SessionChoice['sessionType'] })}
       />
-      {value.sessionType === 'terminal' && (
+      {agent && value.sessionType === 'terminal' && (
         <ChoicePicker
           label="Terminal agent"
           choices={[

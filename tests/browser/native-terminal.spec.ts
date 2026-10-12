@@ -1,10 +1,20 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
+
+async function pickTerminalAgent(page: Page, name: 'Claude Code' | 'Codex') {
+  await page.getByRole('button', { name: /^Terminal agent: / }).click();
+  await page
+    .getByRole('dialog', { name: 'Terminal agent and permissions' })
+    .getByRole('tab', { name, exact: true })
+    .click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: `Terminal agent: ${name}` })).toBeVisible();
+}
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
@@ -22,9 +32,13 @@ test('terminal launch selection preserves chat and lets the user pick a native a
   );
   await choice.getByRole('radio', { name: 'Terminal' }).click();
   await expect(page.getByRole('heading', { name: 'Work in your terminal' })).toBeVisible();
+  const composer = page.locator('.composer-wrap');
+  await expect(composer.getByRole('radiogroup', { name: 'Session type' })).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Choose project', exact: true })).toBeVisible();
+  await expect(composer.getByRole('button', { name: /^Permissions: / })).toBeVisible();
+  await expect(composer).toContainText('Terminal sessions don’t open pull requests automatically');
   await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await pickTerminalAgent(page, 'Codex');
   await expect(
     page.getByText('The real Codex interface, with Spark tools and your project context.'),
   ).toBeVisible();
@@ -99,11 +113,7 @@ test('failed terminal creation unlocks session and agent choices @packaged', asy
     page.getByRole('alert').filter({ hasText: 'Creation temporarily unavailable.' }),
   ).toBeVisible();
   await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Terminal agent', exact: true })).toHaveText(
-    'Codex',
-  );
+  await pickTerminalAgent(page, 'Codex');
   await sessions.getByRole('radio', { name: 'Chat', exact: true }).click();
   await expect(page.locator('.composer textarea')).toBeVisible();
 });
@@ -158,10 +168,11 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
       .getByRole('button', { name: 'Choose project', exact: true })
       .boundingBox())!;
     await expect
-      .poll(
-        async () => (await page.getByRole('dialog', { name: 'Project folders' }).boundingBox())!.y,
-      )
-      .toBeGreaterThanOrEqual(projectButton.y + projectButton.height);
+      .poll(async () => {
+        const menu = (await page.getByRole('dialog', { name: 'Project folders' }).boundingBox())!;
+        return menu.y + menu.height;
+      })
+      .toBeLessThanOrEqual(projectButton.y);
     await page
       .getByRole('dialog', { name: 'Project folders' })
       .getByRole('button', { name: 'Choose a folder…' })
@@ -247,7 +258,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
   }
 });
 
-test('native terminal keeps its actual process while hidden and stops explicitly @packaged', async ({
+test('native terminal keeps its process across reconnects, fills the pane in focus and stops explicitly @packaged', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -259,8 +270,7 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     .getByRole('radiogroup', { name: 'Session type' })
     .getByRole('radio', { name: 'Terminal' })
     .click();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect the fixture.');
@@ -268,6 +278,13 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     (response) =>
       /\/api\/conversations\/[^/]+\/terminal$/.test(response.url()) &&
       response.request().method() === 'POST',
+  );
+  const resizes: { cols: number; rows: number }[] = [];
+  page.on('websocket', (socket) =>
+    socket.on('framesent', (frame) => {
+      if (typeof frame.payload !== 'string' || !frame.payload.includes('"resize"')) return;
+      resizes.push(JSON.parse(frame.payload) as { cols: number; rows: number });
+    }),
   );
   let launchRequests = 0;
   let releaseLaunch = () => {};
@@ -356,16 +373,19 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     await expect(workspace.getByRole('button', { name: 'Reconnect', exact: true })).toHaveCount(0);
     await invalid.dispose();
 
-    await workspace.getByRole('button', { name: 'Hide view', exact: true }).click();
-    await expect(workspace).toContainText('Your agent keeps running.');
-    expect(await processId()).toBe(pid);
+    await expect(workspace.getByRole('button', { name: 'Hide view' })).toHaveCount(0);
+    await expect(workspace.locator('.tbar-place')).toHaveAttribute('title', /terminal-workspaces/);
+    await expect(workspace.locator('.tbar-mode')).toContainText('Approve for me');
     const attached = page.waitForResponse(
       (candidate) =>
         candidate.url().endsWith(`/api/terminal/sessions/${session.id}/attach`) &&
         candidate.request().method() === 'POST',
     );
-    await workspace.getByRole('button', { name: 'Open terminal', exact: true }).click();
+    await workspace.getByRole('button', { name: 'Terminal actions' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Copy folder path' })).toBeFocused();
+    await page.getByRole('menuitem', { name: 'Reconnect' }).click();
     expect((await attached).ok()).toBe(true);
+    expect(await processId()).toBe(pid);
     await expect(screen).toContainText(`received[${pid}]: before-hide`);
     await workspace.locator('.native-screen').click();
     await page.keyboard.type('after-reopen');
@@ -387,7 +407,33 @@ test('native terminal keeps its actual process while hidden and stops explicitly
       path: path.resolve('.local/report/native-terminal-packaged.png'),
       fullPage: true,
     });
-    await workspace.getByRole('button', { name: 'Stop session', exact: true }).click();
+    const cols = () => resizes.at(-1)?.cols ?? 0;
+    const before = cols();
+    expect(before).toBeGreaterThan(0);
+    await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
+    await workspace.getByRole('button', { name: 'Focus terminal' }).click();
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await expect.poll(cols).toBeGreaterThan(before);
+    const stage = (await workspace.locator('.native-stage').boundingBox())!;
+    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+    const pane = (await page.locator('main.main').boundingBox())!;
+    expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
+    expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
+    expect(stage.width - rows.width).toBeLessThan(40);
+    await page.keyboard.press('Escape');
+    await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
+    await page.reload();
+    await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.press('ControlOrMeta+Shift+F');
+    await expect(workspace.getByRole('button', { name: 'Focus terminal' })).toBeVisible();
+    await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
+    await expect.poll(cols).toBe(before);
+    await workspace.getByRole('button', { name: 'Terminal actions' }).click();
+    await page.getByRole('menuitem', { name: 'Stop session' }).click();
     const hold = workspace.getByRole('button', { name: 'Hold to stop', exact: true });
     await hold.focus();
     await page.keyboard.down('Space');
@@ -415,8 +461,7 @@ test('an exited terminal session starts again in the same chat @packaged', async
     .getByRole('radiogroup', { name: 'Session type' })
     .getByRole('radio', { name: 'Terminal' })
     .click();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect the fixture.');

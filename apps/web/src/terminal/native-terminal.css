@@ -5,9 +5,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  width: calc(100% - 48px);
-  max-width: 572px;
-  margin: 28px auto 0;
   flex-wrap: wrap;
 }
 .session-choice > .seg {
@@ -17,51 +14,39 @@
   width: 170px;
 }
 .tk-start .session-choice {
-  width: auto;
   margin: 0 0 18px;
 }
-.chat-head .session-choice {
-  flex: 0 1 auto;
+.ctxbar .session-choice {
+  flex: none;
   flex-wrap: nowrap;
-  width: auto;
-  max-width: none;
-  margin: 0 0 0 8px;
+  margin-right: 4px;
 }
-.chat-head .session-choice > .seg {
-  flex: 0 1 200px;
-  min-width: 150px;
+.ctxbar .session-choice > .seg {
+  width: 168px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
-.chat-head .session-choice > .choice-picker {
-  flex: 0 1 170px;
-  min-width: 120px;
+.ctxbar .session-choice > .seg button {
+  padding: 3px 0;
+}
+.native-intro {
+  margin: auto;
 }
 .native-workspace {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  padding: 18px 24px 12px;
-  gap: 10px;
+  min-width: 0;
 }
-.native-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
+.native-workspace.remote {
+  padding: 18px 24px;
 }
-.native-status b {
-  font-size: 14px;
-}
-.native-status p {
-  color: var(--muted);
-  margin: 4px 0 0;
-  font-size: 12px;
-}
-.native-controls {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-  flex-wrap: wrap;
+.native-workspace > .error-line,
+.native-workspace > .native-note {
+  margin: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line);
 }
 .native-companion {
   display: inline-flex;
@@ -75,20 +60,18 @@
 .native-companion[data-motion='off'] {
   animation-play-state: paused !important;
 }
-.native-cwd {
-  color: var(--muted);
-  font: 12px var(--mono, monospace);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.native-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--code);
 }
 .native-screen {
   flex: 1;
-  min-height: 240px;
-  border: 0;
-  border-radius: 0;
-  padding: 10px;
-  background: var(--code);
+  min-width: 0;
+  height: auto;
+  min-height: 0;
   overflow: hidden;
 }
 .native-detached {
@@ -105,82 +88,27 @@
   line-height: 1.5;
 }
 .native-stop {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 5;
+  max-width: min(420px, calc(100% - 28px));
   border: 1px solid var(--line);
   padding: 12px;
-  border-radius: var(--r-sm);
-  background: var(--raise);
-}
-.native-approvals:empty {
-  display: none;
-}
-.native-new {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 620px;
-  width: 100%;
-  margin: 12px auto auto;
-  padding: 24px;
-}
-.native-context {
-  border: 0;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0;
-}
-.native-context .ctxbar-wrap {
-  margin: 0;
-  padding: 0;
-  max-width: 100%;
-}
-.native-context .ctxbar {
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-}
-.native-context .mpop {
-  top: calc(100% + 8px);
-  bottom: auto;
-  transform: scale(0.94) translateY(-6px);
-  transform-origin: top right;
-}
-.native-context .mpop.left {
-  transform-origin: top left;
-}
-.native-context .mpop.repopop {
-  left: 0;
-}
-.native-context .mpop.open {
-  transform: none;
-}
-.native-context > .choice-picker {
-  width: 160px;
-}
-.native-new h2,
-.native-new p {
-  margin: 0;
-}
-.native-new p,
-.native-new small {
-  color: var(--muted);
-  line-height: 1.5;
-}
-.native-new textarea {
-  resize: vertical;
-  min-height: 100px;
-  padding: 12px;
-  border: 1px solid var(--line-strong);
   border-radius: var(--r-sm);
   background: var(--panel);
-  color: var(--text);
-  font: inherit;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 22%);
 }
-.native-new button {
-  align-self: flex-start;
+.native-stop > p {
+  margin: 0 0 10px;
+}
+.native-approvals {
+  flex: none;
+  max-height: 45%;
+  overflow-y: auto;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
 }
 .isl-sblob[data-terminal='true'] {
   position: relative;
@@ -208,16 +136,5 @@
   }
   .native-companion:hover {
     transform: none;
-  }
-}
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .native-workspace {
-    padding: 12px;
-  }
-  .native-status {
-    flex-wrap: wrap;
-  }
-  .native-controls {
-    margin-left: 0;
   }
 }
