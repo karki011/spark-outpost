@@ -71,6 +71,12 @@ The main agent's own wait for its sub-agents does not count as an open step: a C
 
 Chat sessions through the `claude` CLI (Claude and Z.ai) start with `CLAUDE_CODE_FORK_SUBAGENT=1` and without `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` (`subagent-env.ts`), so every sub-agent runs in the background; Terminal sessions build their own environment. While `waitingOn` is above 0, a message sent now that the adapter does not inject is moved to the chat queue instead of cancelling the run (`member-inbox.ts`).
 
+A sub-agent's `agent_message_chunk` also moves to the root session with its mark; it never joins the reply. `subagent-activity.ts` keeps its last message (or the `message` of Claude's `SubagentHandback` call), the paths of its edit, delete and move calls and the commands of its execute calls. With what the patched adapters report when it ends (`subagent-report.ts`: Claude `_meta.claudeCode.usage` and `summary`; Codex `_meta.codex.usage`, `turns`, `model`) these are stored as `CUSTOM` events named `spark.subagent_report` and folded into the row. A cost is added only when the model and the token split are reported and the price table has the model (`reported-output.ts`).
+
+Turn tokens (`turn-tokens.ts`): for the `claude` CLI the prompt response's `usage` covers the main agent loop only, so the total is the larger of the per-model tally in `_meta.quota.model_usage` and `usage` plus the tokens its sub-agents reported; both are sums of reported figures, so neither counts a sub-agent twice. Codex `usage` already adds every thread and is taken as is. The prompts of one run are added up.
+
+On Stop the adapter's process tree is read before `session/cancel` and again when the prompt returns; everything from either reading that is still alive is ended (`agent-process.ts`).
+
 Covered by `subagent-stream.test.ts`, `subagent-updates.test.ts`, `subagent-progress.test.ts`, `acp-subagents.test.ts` and `subagents.db.test.ts` against the fake agent. Not yet run against the real Claude or Codex CLI.
 
 The browser reads the thinking text of a finished run from `GET /api/runs/:id/reasoning/:messageId`; a paired phone may read it like any other run event (no switch governs reading agent output).

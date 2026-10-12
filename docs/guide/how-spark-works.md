@@ -35,6 +35,6 @@ The agent decides. Spark never splits a turn into roles.
 
 Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; your repository's hooks and CI run on a push. For a second opinion, ask another chat.
 
-The reply and Agent TV list sub-agents, such as **3 sub-agents · 2 working, 1 done**, each with its task, step and state. While the agent only waits, the chat says **Waiting on 2 sub-agents**.
+The reply and Agent TV list sub-agents, like **3 sub-agents · 2 working, 1 done**. Select one for its steps, files, report and usage. While the agent waits, the chat says **Waiting on 2 sub-agents**.
 
 Open the chat's **…** menu and select **Agent TV** to [watch the agent](follow-a-turn.md#see-whats-happening). Chats from before this change still show their crew, read-only.
