@@ -70,9 +70,7 @@ export function TerminalBar({
   return (
     <div className="tbar">
       <TerminalCompanion chat={chat} state={state} size={24} />
-      <b className="tbar-agent">
-        {terminalAgentName(provider)} <span aria-hidden="true">&gt;_</span>
-      </b>
+      <b className="tbar-agent">{terminalAgentName(provider)} · Terminal</b>
       <p className="tbar-state" role="status">
         {terminalLabel(state)}
         {link && link !== 'connected'

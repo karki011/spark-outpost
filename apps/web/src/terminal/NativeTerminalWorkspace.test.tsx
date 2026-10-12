@@ -109,7 +109,7 @@ describe('native terminal lifecycle controls', () => {
     mount();
     expect((await screen.findAllByRole('status'))[0]!.textContent).toBe('Running · Connecting');
     await waitFor(() => expect(screen.getAllByRole('status')[0]!.textContent).toBe('Running'));
-    expect(screen.getByText('Codex')).toBeTruthy();
+    expect(screen.getByText('Codex · Terminal')).toBeTruthy();
     await screen.findByText('Approve for me');
     expect(screen.getByText('spark-outpost').closest('[title]')?.getAttribute('title')).toBe(
       '/tmp/project',

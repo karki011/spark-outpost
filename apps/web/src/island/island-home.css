@@ -201,10 +201,6 @@
   min-height: 72px;
 }
 
-.isl-now-blob .isl-terminal-mark {
-  display: none;
-}
-
 .isl-now-logwrap {
   flex: none;
   height: 66px;

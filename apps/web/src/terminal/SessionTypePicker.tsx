@@ -27,7 +27,7 @@ export function SessionTypePicker({
         ariaLabel="Session type"
         options={[
           { id: 'chat', label: 'Chat' },
-          { id: 'terminal', label: '>_ Terminal' },
+          { id: 'terminal', label: 'Terminal' },
         ]}
         value={value.sessionType}
         onChange={(id) => onChange({ ...value, sessionType: id as SessionChoice['sessionType'] })}

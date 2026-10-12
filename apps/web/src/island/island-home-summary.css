@@ -42,10 +42,9 @@
 .isl-now-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   height: 18px;
   margin-right: 6px;
-  padding: 0 7px 0 5px;
+  padding: 0 7px;
   border: 1px solid var(--card-line);
   border-radius: 9px;
   background: color-mix(in srgb, var(--text) 7%, transparent);
@@ -55,11 +54,6 @@
   line-height: 1;
   vertical-align: middle;
   white-space: nowrap;
-}
-
-.isl-now-chip svg {
-  width: 11px;
-  height: 11px;
 }
 
 .isl-now-facts {

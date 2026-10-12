@@ -58,6 +58,16 @@ function StatusMark({ tone }: { tone: RowTone }) {
   return null;
 }
 
+function RowSub({ terminal, sub }: { terminal: boolean; sub: string }) {
+  if (!terminal) return sub ? <small className="sub">{sub}</small> : null;
+  return (
+    <small className="sub">
+      Terminal<span className="sr-only"> session</span>
+      {sub ? ` · ${sub}` : ''}
+    </small>
+  );
+}
+
 const MERGED_LABEL = 'Pull request merged';
 
 function MergedMark() {
@@ -196,8 +206,10 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     },
     onPointerLeave: marquee.stop,
   };
+  const terminal = chat.sessionType === 'terminal';
   const tooltip = [
     chat.title,
+    terminal ? 'Terminal session' : null,
     handle ? `@${handle}` : null,
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
@@ -248,11 +260,6 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           </span>
           <span className="rt">
             <span className="row-title-line">
-              {chat.sessionType === 'terminal' && (
-                <span className="row-terminal-mark" aria-label="Terminal session">
-                  &gt;_
-                </span>
-              )}
               <RowTitle
                 text={chat.title}
                 overflow={marquee.overflow}
@@ -264,10 +271,10 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             {handle ? (
               <span className="row-member">
                 <span className="row-handle">@{handle}</span>
-                {state.sub && <small className="sub">{state.sub}</small>}
+                <RowSub terminal={terminal} sub={state.sub} />
               </span>
             ) : (
-              state.sub && <small className="sub">{state.sub}</small>
+              <RowSub terminal={terminal} sub={state.sub} />
             )}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>

@@ -125,7 +125,7 @@ for (const theme of ['graphite', 'apricot']) {
   });
 }
 
-test('a Terminal session is labelled with its folder, has no bare glyph and no Reply', async ({
+test('a Terminal session is labelled in words with its folder, and has no Reply', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -137,7 +137,8 @@ test('a Terminal session is labelled with its folder, has no bare glyph and no R
     /^Claude · (\S.* · )?feature-web-apps$/,
   );
   await expect(facts(page).locator('time')).toHaveText('just now');
-  await expect(nowCard(page).locator('.isl-terminal-mark')).toBeHidden();
+  await expect(nowCard(page).locator('.isl-now-chip svg')).toHaveCount(0);
+  await expect(island(page)).not.toContainText('>_');
   await expect(nowCard(page).getByRole('button', { name: /^Reply/ })).toHaveCount(0);
   await expect(nowCard(page).getByRole('button', { name: /^Open/ })).toBeVisible();
   await snap(page, 'idle-terminal');

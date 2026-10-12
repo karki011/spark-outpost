@@ -110,26 +110,6 @@
   border-top: 1px solid var(--line);
   background: var(--panel);
 }
-.isl-sblob[data-terminal='true'] {
-  position: relative;
-}
-.isl-terminal-mark {
-  position: absolute;
-  bottom: -3px;
-  right: -5px;
-  font: 9px monospace;
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 1px 2px;
-  line-height: 1;
-}
-.row-terminal-mark {
-  flex: none;
-  font: 11px monospace;
-  color: var(--muted);
-}
 @media (prefers-reduced-motion: reduce) {
   .native-companion {
     transition: none;

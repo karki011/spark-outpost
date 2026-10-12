@@ -1,15 +1,9 @@
 import './island-home-summary.css';
-import { TerminalIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import type { SessionFacts, SessionNote } from './session-summary.ts';
 
 function TerminalChip() {
-  return (
-    <span className="isl-now-chip">
-      <TerminalIcon />
-      Terminal session
-    </span>
-  );
+  return <span className="isl-now-chip">Terminal session</span>;
 }
 
 function Note({ note, chip }: { note: SessionNote | null; chip: boolean }) {

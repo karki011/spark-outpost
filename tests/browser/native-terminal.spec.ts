@@ -189,12 +189,9 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
     await expect(workspace).not.toContainText('Detailed activity is unavailable');
     await expect(workspace.getByRole('button', { name: 'Terminal help' })).toHaveCount(0);
     const row = page.locator(`[data-chat="${session.conversationId}"]`);
-    const marker = await row.locator('.row-terminal-mark').boundingBox();
-    const title = await row.locator('.row-title-line .tt').boundingBox();
-    expect(marker).not.toBeNull();
-    expect(title).not.toBeNull();
-    expect(Math.abs(marker!.y + marker!.height / 2 - title!.y - title!.height / 2)).toBeLessThan(2);
-    expect(marker!.x).toBeLessThan(title!.x);
+    await expect(row.locator('.sub')).toHaveText('Terminal session · Open');
+    await expect(row).not.toContainText('>_');
+    await expect(workspace.locator('.tbar-agent')).toHaveText('Codex · Terminal');
     const processId = async () =>
       (
         await db.query<{ pid: number }>('SELECT pid FROM terminal_shells WHERE id = $1', [
@@ -279,6 +276,12 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
     await expect.poll(cols).toBeGreaterThan(before);
+    const leftGap = async () => {
+      const inner = (await workspace.locator('.native-stage').boundingBox())!;
+      const outer = (await page.locator('main.main').boundingBox())!;
+      return Math.abs(inner.x - outer.x);
+    };
+    await expect.poll(leftGap).toBeLessThanOrEqual(1);
     const stage = (await workspace.locator('.native-stage').boundingBox())!;
     const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
     const pane = (await page.locator('main.main').boundingBox())!;
