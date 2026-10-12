@@ -173,12 +173,8 @@ test('an empty Home offers Ask and quick starts, and the bar reaches settings', 
   await openHome(page);
   await expect(nowCard(page)).toHaveAccessibleName('Now');
   const quick = island(page).getByRole('region', { name: 'Quick start' });
-  await expect(quick.getByRole('button')).toHaveText([
-    'New chat',
-    'Ask Spark',
-    'Needs you',
-    'New Spark',
-  ]);
+  await expect(quick.getByRole('button')).toHaveText(['New chat', 'Ask Spark', 'New Spark']);
+  await expect(quick).toContainText('Nothing needs you');
   await shot(page, 'home-empty');
 
   await nowCard(page).getByRole('button', { name: 'Ask Spark…' }).click();

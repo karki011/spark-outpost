@@ -156,6 +156,7 @@ export const SPEC_GROUPS = {
     'island-code',
     'island-drop',
     'island-home',
+    'island-home-card',
     'island-hover',
     'island-layout',
     'island-notch',
