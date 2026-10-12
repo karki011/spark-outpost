@@ -90,7 +90,6 @@ describe('the tokens of a turn', () => {
       cachedRead: 24_000,
       cachedWrite: 2_000,
       thought: null,
-      subagents: null,
     });
   });
 

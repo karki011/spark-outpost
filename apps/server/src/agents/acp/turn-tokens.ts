@@ -46,6 +46,10 @@ function plus(a: number | null | undefined, b: number | null | undefined): numbe
   return left === null && right === null ? null : (left ?? 0) + (right ?? 0);
 }
 
+function apart(subagents: number | null): { subagents?: number } {
+  return subagents ? { subagents } : {};
+}
+
 function added(earlier: TokenUsage | null, next: TokenUsage): TokenUsage {
   if (!earlier) return next;
   return {
@@ -55,14 +59,14 @@ function added(earlier: TokenUsage | null, next: TokenUsage): TokenUsage {
     cachedRead: plus(earlier.cachedRead, next.cachedRead),
     cachedWrite: plus(earlier.cachedWrite, next.cachedWrite),
     thought: plus(earlier.thought, next.thought),
-    subagents: plus(earlier.subagents, next.subagents),
+    ...apart(plus(earlier.subagents, next.subagents)),
   };
 }
 
 function withSubagents(own: TokenUsage, tally: TokenUsage | null, reported: number): TokenUsage {
-  const apart = own.total + reported;
-  if (tally && tally.total > apart) return { ...tally, subagents: null };
-  return { ...own, total: apart, subagents: reported > 0 ? reported : null };
+  const total = own.total + reported;
+  if (tally && tally.total > total) return tally;
+  return { ...own, total, ...apart(reported) };
 }
 
 export function createTurnTokens(countsSubagentsApart: boolean): TurnTokens {
@@ -73,7 +77,7 @@ export function createTurnTokens(countsSubagentsApart: boolean): TurnTokens {
       if (!own || own.kind !== 'tokens') return [];
       const prompt = countsSubagentsApart
         ? withSubagents(own.tokens, perModelTally(response._meta), subagentTokens)
-        : { ...own.tokens, subagents: null };
+        : own.tokens;
       earlier = added(earlier, prompt);
       return [{ kind: 'tokens', tokens: earlier }];
     },
