@@ -112,31 +112,31 @@ it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
   }
 });
 
-it('tells the app when a sub-agent ends or what the agent waits on changes', async () => {
-  const kinds: number[] = [];
+it('tells the app at once when a sub-agent starts or ends, and with the steps when the wait changes', async () => {
+  const kinds: string[] = [];
   let conversationId = '';
   const raw = await listen(testDatabaseUrl(), 'changes', (payload) => {
     const event = JSON.parse(payload) as { kind: string; conversationId: string };
-    if (event.kind === 'step' && event.conversationId === conversationId) kinds.push(1);
+    const watched = event.kind === 'step' || event.kind === 'subagent';
+    if (event.conversationId === conversationId && watched) kinds.push(event.kind);
   });
   try {
     const chat = await startChat();
     conversationId = chat.conversationId;
+    const own = { subagentRunId: 's1' };
     await appendRunEvent(
       t.db,
       chat.lease,
-      { type: EventType.SUBAGENT_FINISHED, subagentRunId: 's1', outcome: { type: 'success' } },
+      { type: EventType.SUBAGENT_STARTED, name: 'Explore', ...own },
       { transition: { status: 'running' } },
     );
-    await eventually(async () => kinds.length === 1);
     await appendRunEvent(t.db, chat.lease, {
       type: EventType.ACTIVITY_SNAPSHOT,
       messageId: SUBAGENTS_ACTIVITY,
       activityType: SUBAGENTS_ACTIVITY,
-      content: { waitingOn: 0 },
+      content: { waitingOn: 1 },
       replace: true,
     });
-    await eventually(async () => kinds.length === 2);
     await appendRunEvent(t.db, chat.lease, {
       type: EventType.ACTIVITY_SNAPSHOT,
       messageId: 'other',
@@ -144,9 +144,19 @@ it('tells the app when a sub-agent ends or what the agent waits on changes', asy
       content: {},
       replace: true,
     });
-    await appendRunEvent(t.db, chat.lease, { type: EventType.STEP_STARTED, stepName: 'Reading' });
-    await eventually(async () => kinds.length >= 3);
-    expect(kinds).toHaveLength(3);
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.SUBAGENT_ERROR,
+      message: 'Stopped.',
+      code: 'cancelled',
+      ...own,
+    });
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.SUBAGENT_FINISHED,
+      subagentRunId: 's2',
+      outcome: { type: 'success' },
+    });
+    await eventually(async () => kinds.length >= 4);
+    expect(kinds).toEqual(['subagent', 'step', 'subagent', 'subagent']);
   } finally {
     await raw.close();
   }
