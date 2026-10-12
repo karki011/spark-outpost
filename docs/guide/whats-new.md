@@ -12,6 +12,7 @@ What changed recently in Spark, newest first.
 
 | What changed                                                                                                                                                                                   | What to do                                      |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Island chimes** add a short sound when a chat couldn't finish. A request or failure in the chat you're viewing in focused Spark stays silent.                                                | See [Spark Island](desktop-companion.md).       |
 | **Cost** shows cache writes and sub-agents as their own token parts, so the parts add up. Codex sub-agents show their model and an estimated cost.                                             | Nothing to do.                                  |
 | A sub-agent's row opens its steps, changed files, commands, report and usage. A turn's tokens include its sub-agents; **Cost** lists them. **Stop** ends their commands too.                   | See [how Spark works](how-spark-works.md).      |
 | Claude and Z.ai sub-agents always run in the background. While the agent only waits on them, **Enter** sends your message now; that turn is never stopped to deliver it.                       | See [follow a turn](follow-a-turn.md).          |
@@ -24,4 +25,3 @@ What changed recently in Spark, newest first.
 | Publishing is one request to the agent after its reply; Spark's result line leads. A PR is a draft only if you ask or Settings says so. An unasked push is refused. "Push, no PR" only pushes. | See [Ship a change](ship-and-pull-requests.md). |
 | **Changes kept** lists files and lines only. **Keep these changes?**, **Worth a look** and **Needs you:** endings are gone. A folder without git lists the agent's edits.                      | See [changes](review-changes.md).               |
 | Jev works only on the Map, PR feedback and Spark Island. **Auto** means the provider's default model. The chat names the model that ran.                                                       | See [Jev](jev.md).                              |
-| Older chats keep their crew, replies, costs, cards and plans, read-only, without piece boards or **Message**.                                                                                  | Nothing to do.                                  |
