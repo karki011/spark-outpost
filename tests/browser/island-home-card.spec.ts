@@ -231,6 +231,7 @@ test('quick start separates what you can start from what needs you, at both pane
     name: 'Needs you: 1 chat is waiting. Opens the Chats tab',
   });
   await expect(needs).toHaveText('Needs youOpens Chats1');
+  await expect(island(page).locator('.isl-restline')).toHaveCount(0);
   await snap(page, 'needs-you-small');
   await needs.click();
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(

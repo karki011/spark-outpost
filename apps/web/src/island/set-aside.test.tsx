@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
-import { cardKey, pendingCards, type Card } from './island-model.ts';
+import { cardKey, pendingCards, waitingCount, type Card } from './island-model.ts';
 import { readSetAside, stillWaiting, useSetAside } from './set-aside.ts';
 
 afterEach(() => {
@@ -33,6 +33,16 @@ describe('setting a request aside', () => {
     first.unmount();
     const reloaded = renderHook(() => useSetAside(cards));
     expect([...reloaded.result.current.keys]).toEqual(['one']);
+  });
+
+  it('counts every waiting chat on the Needs you tile: the ones asking plus the ones set aside', () => {
+    const chats = [waiting('a'), waiting('b'), waiting('c')];
+    const noApprovals = new Map<string, Approval[]>(chats.map((chat) => [chat.id, []]));
+    const all = pendingCards(chats, noApprovals, new Set());
+    const asking = pendingCards(chats, noApprovals, new Set([cardKey(all[0]!)]));
+    const setAside = all.length - asking.length;
+    expect(setAside).toBe(1);
+    expect(asking.length + setAside).toBe(waitingCount(chats, new Set()));
   });
 
   it('brings a chat-level request back once the chat changes', () => {
