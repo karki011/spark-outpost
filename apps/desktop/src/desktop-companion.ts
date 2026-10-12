@@ -20,6 +20,7 @@ import {
   type ShortcutAction,
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
+import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
@@ -27,6 +28,7 @@ import { openIslandWindow, type IslandWindow } from './island-window.ts';
 
 interface CompanionHostOptions {
   appName: string;
+  channelBadge: string | null;
   origin: string;
   preload: string;
   settingsPath: string;
@@ -76,6 +78,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let pendingChat: { id: string; runId: string | null } | null = null;
   let pendingSettings: string | null = null;
   let saving = Promise.resolve();
+  let attention: AttentionHost | null = null;
   const tray = new Tray(trayIcon(options.trayIcon));
   tray.setToolTip(options.appName);
 
@@ -135,6 +138,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     save,
     changed: (status) => {
       refreshTray(status);
+      attention?.refresh();
       broadcast(IPC.companionChanged, status);
     },
   });
@@ -190,6 +194,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );
+  ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
+    fromSpark(event) && typeof on === 'boolean' ? companion.setNotify(on) : companion.status(),
+  );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
@@ -232,6 +239,17 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     broadcast(IPC.openChat, null);
   };
 
+  attention = startAttentionHost({
+    channelBadge: options.channelBadge,
+    trusted: (event) => fromSpark(event) && !fromIsland(event),
+    enabled: () => companion.status().notify,
+    islandShowing: () => companion.running(),
+    sparkFocused,
+    openChat,
+    blocked: (on) => companion.setNotifyBlocked(on),
+    log: options.log,
+  });
+
   ipcMain.on(IPC.islandOpenChat, (event, id: unknown, runId: unknown) => {
     if (!fromIsland(event)) return;
     const turn = typeof runId === 'string' && CHAT_ID.test(runId) ? runId : null;
@@ -250,6 +268,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     companion,
     openChat,
     dispose: () => {
+      attention?.dispose();
       companion.shutdown();
       globalShortcut.unregisterAll();
       for (const channel of [
@@ -259,6 +278,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
         IPC.companionSetAutoExpand,
+        IPC.companionSetNotify,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
         IPC.islandPickFolder,

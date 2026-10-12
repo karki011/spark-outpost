@@ -139,6 +139,27 @@ describe('desktop companion lifecycle', () => {
     );
   });
 
+  it('notifies on this Mac until turned off, then saves and announces the choice', () => {
+    const { companion, effects } = setup();
+    expect(companion.status()).toMatchObject({ notify: true, notifyBlocked: false });
+    expect(companion.setNotify(false)).toMatchObject({ notify: false });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ notify: false }));
+    expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ notify: false }));
+  });
+
+  it('announces a blocked notification once, without saving it', () => {
+    const { companion, effects } = setup();
+    const saves = effects.save.mock.calls.length;
+    const announced = effects.changed.mock.calls.length;
+    companion.setNotifyBlocked(true);
+    companion.setNotifyBlocked(true);
+    expect(effects.changed).toHaveBeenCalledTimes(announced + 1);
+    expect(effects.changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ notifyBlocked: true }),
+    );
+    expect(effects.save).toHaveBeenCalledTimes(saves);
+  });
+
   it('starts at the full island, then saves a chosen size and announces it', () => {
     const { companion, effects } = setup();
     expect(companion.status().islandSize).toBe('full');
