@@ -56,6 +56,22 @@
   color: var(--text);
 }
 
+.sa-toggle {
+  flex-shrink: 1;
+  text-align: left;
+  border-radius: 4px;
+}
+
+.sa-toggle:hover {
+  text-decoration: underline;
+}
+
+.sa-task.open {
+  overflow: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .sa-state,
 .sa-time {
   flex-shrink: 0;

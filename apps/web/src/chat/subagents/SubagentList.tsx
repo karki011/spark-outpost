@@ -8,6 +8,9 @@ import { SUBAGENT_STATE_WORDS, subagentDurationMs, subagentLines } from './subag
 const ICON_STATUS = { working: 'open', cancelled: 'open', done: 'done', failed: 'failed' } as const;
 
 function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; live: boolean }) {
+  const [reading, setReading] = useState(false);
+  const taskId = useId();
+  const task = row.task && row.task !== row.name ? row.task : null;
   const duration = subagentDurationMs(row);
   return (
     <li className="sa-row" data-state={row.state} data-nested={depth > 0 || undefined}>
@@ -17,7 +20,19 @@ function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; l
       />
       <span className="sa-main">
         <span className="sa-top">
-          <b className="sa-name">{row.name}</b>
+          {task ? (
+            <button
+              type="button"
+              className="sa-name sa-toggle"
+              aria-expanded={reading}
+              aria-controls={taskId}
+              onClick={() => setReading(!reading)}
+            >
+              {row.name}
+            </button>
+          ) : (
+            <b className="sa-name">{row.name}</b>
+          )}
           <span className={`sa-state ${row.state}`}>{SUBAGENT_STATE_WORDS[row.state]}</span>
           {duration !== null && <span className="sa-time">{formatDuration(duration)}</span>}
           {row.step && (
@@ -26,9 +41,9 @@ function SubagentItem({ row, depth, live }: { row: SubagentRow; depth: number; l
             </span>
           )}
         </span>
-        {row.task && row.task !== row.name && (
-          <span className="sa-task" title={row.task}>
-            {row.task}
+        {task && (
+          <span id={taskId} className={reading ? 'sa-task open' : 'sa-task'}>
+            {task}
           </span>
         )}
       </span>
