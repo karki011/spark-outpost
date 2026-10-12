@@ -173,6 +173,14 @@ describe('labels', () => {
       'subagent_state_update · failed · sub-agent Explore',
     );
     expect(entrySubagent(entry({ payload: { params: { sessionId: 'root' } } }), names)).toBeNull();
+    const asked = entry({
+      kind: 'request',
+      method: 'session/request_permission',
+      payload: { params: { sessionId: 's1', toolCall: { toolCallId: 't1' } } },
+    });
+    expect(entrySummary(asked, entrySubagent(asked, names))).toBe(
+      'session/request_permission · sub-agent Explore',
+    );
     expect(entrySummary(entry({ kind: 'response', method: 'session/prompt' }))).toBe(
       'session/prompt · reply',
     );

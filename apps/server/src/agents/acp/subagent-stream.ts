@@ -51,6 +51,13 @@ const updateSchema = z.looseObject({
 
 type UpdateMessage = z.infer<typeof updateSchema>;
 
+const TASK_PLACEHOLDER = 'Delegated task';
+
+export function shownTask(task: string, name: string): string {
+  const text = task.trim();
+  return text === TASK_PLACEHOLDER || text === `${TASK_PLACEHOLDER} for ${name}` ? '' : text;
+}
+
 export function subagentMark(update: { _meta?: unknown }): SubagentMark | null {
   const parsed = markSchema.safeParse(objectFields(update._meta)[MARK_KEY]);
   return parsed.success ? parsed.data : null;

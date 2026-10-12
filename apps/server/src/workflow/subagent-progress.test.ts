@@ -82,6 +82,16 @@ describe('sub-agent progress', () => {
     expect(waits(all)).toEqual([1, 2, 0, 2, 1, 0]);
   });
 
+  it('keeps saying the main agent waits while its only open step is the wait itself', () => {
+    const { see, all } = progress();
+    see(started('a'));
+    see({ kind: 'step_started', name: 'Waiting for sub-agents', tool: true, waits: true });
+    see({ kind: 'step_finished', name: 'Waiting for sub-agents', tool: true, waits: true });
+    see({ kind: 'step_started', name: 'Allowed: Edit a.ts', subagent: 'a' });
+    see({ kind: 'step_finished', name: 'Allowed: Edit a.ts', subagent: 'a' });
+    expect(waits(all)).toEqual([1]);
+  });
+
   it('says nothing about waiting in a turn without sub-agents', () => {
     const { see, all } = progress();
     see({ kind: 'step_started', name: 'Thinking' }, { kind: 'step_finished', name: 'Thinking' });

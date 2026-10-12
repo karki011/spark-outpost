@@ -157,10 +157,9 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
     expect((await settled(runId)).status).toBe('cancelled');
     await expectConformantRun(t.db, runId);
     const stopped = await getConversationDetail(t.db, conversationId);
-    expect(stopped?.subagents?.[runId]?.map((row) => row.state)).toEqual([
-      'cancelled',
-      'cancelled',
-    ]);
+    const rows = stopped?.subagents?.[runId] ?? [];
+    expect(rows.map((row) => row.state)).toEqual(['cancelled', 'cancelled']);
+    for (const row of rows) expect(row.endedAt).toBeGreaterThanOrEqual(row.startedAt!);
     expect((await latestRun(conversationId))?.waitingOn).toBeUndefined();
   });
 

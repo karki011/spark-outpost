@@ -66,8 +66,12 @@ export function createSubagentProgress({
   };
 
   const countOwn = (output: ProviderOutput) => {
-    if (output.kind === 'step_started' && !output.subagent) ownOpen += 1;
-    if (output.kind === 'step_finished' && !output.subagent) ownOpen = Math.max(0, ownOpen - 1);
+    const own =
+      (output.kind === 'step_started' || output.kind === 'step_finished') &&
+      !output.subagent &&
+      !output.waits;
+    if (!own) return;
+    ownOpen = output.kind === 'step_started' ? ownOpen + 1 : Math.max(0, ownOpen - 1);
   };
 
   return {

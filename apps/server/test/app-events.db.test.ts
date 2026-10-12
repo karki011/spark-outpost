@@ -4,7 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { EventType, SUBAGENTS_ACTIVITY, type AppEvent } from '@spark-outpost/contracts';
 import { AppEventFeed, listenForAppEvents } from '../src/api/app-events.ts';
-import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
+import {
+  createConversation,
+  listConversations,
+  sendUserMessage,
+} from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { listen, type NotificationListener } from '../src/persistence/notifications.ts';
 import { appendRunEvent } from '../src/persistence/run-events.ts';
@@ -146,6 +150,25 @@ it('tells the app when a sub-agent ends or what the agent waits on changes', asy
   } finally {
     await raw.close();
   }
+});
+
+it("names the main agent's latest step in the chat list, not a sub-agent's", async () => {
+  const { conversationId, lease } = await startChat();
+  await appendRunEvent(
+    t.db,
+    lease,
+    { type: EventType.STEP_STARTED, stepName: 'Reading the plan' },
+    { transition: { status: 'running' } },
+  );
+  await appendRunEvent(t.db, lease, {
+    type: EventType.STEP_STARTED,
+    stepName: 'Read routes.ts',
+    subagentRunId: 's1',
+  });
+  const chats = await listConversations(t.db, t.workspaceId);
+  expect(chats.find((chat) => chat.id === conversationId)?.latestRun?.step).toBe(
+    'Reading the plan',
+  );
 });
 
 it('streams change events to every subscriber and refuses clients over the cap', async () => {

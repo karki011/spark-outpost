@@ -46,7 +46,13 @@ export async function subagentsTurn(
     sessionUpdate: 'agent_message_chunk',
     content: { type: 'text', text: 'child words' },
   });
-  if (hold) await untilCancelled(hold);
+  if (hold) {
+    await untilCancelled(hold).catch(async (stopped: unknown) => {
+      await end(rootId, 'sub-1', 'cancelled');
+      await end(rootId, 'sub-2', 'cancelled');
+      throw stopped;
+    });
+  }
   await spawn('sub-1', 'sub-3', 'Nested', 'Look deeper');
   await tool('sub-3', 'c3', 'Read deep.ts');
   await done('sub-3', 'c3');
@@ -56,5 +62,47 @@ export async function subagentsTurn(
   await end(rootId, 'sub-1', 'completed');
   await end(rootId, 'sub-2', 'failed');
   await say('All done');
+  return 'end_turn';
+}
+
+export async function subagentAsksTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  say: Say,
+): Promise<acp.StopReason> {
+  const notify = (sessionId: string, update: unknown) =>
+    client.notify(acp.methods.client.session.update, { sessionId, update } as never);
+  const tool = {
+    toolCallId: 'p1',
+    title: 'curl -sI https://example.com',
+    kind: 'execute' as const,
+  };
+  await notify(rootId, {
+    sessionUpdate: 'subagent_spawned',
+    subagentSessionId: 'sub-1',
+    name: 'Explore',
+    task: 'Delegated task for Explore',
+    capabilities: {},
+  });
+  await notify('sub-1', { sessionUpdate: 'tool_call', ...tool, status: 'pending' });
+  await client.request(acp.methods.client.session.requestPermission, {
+    sessionId: 'sub-1',
+    toolCall: { ...tool, status: 'pending' },
+    options: [
+      { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
+      { optionId: 'no', name: 'No', kind: 'reject_once' },
+    ],
+  });
+  await notify('sub-1', {
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'p1',
+    status: 'completed',
+  });
+  await notify(rootId, {
+    sessionUpdate: 'subagent_state_update',
+    subagentSessionId: 'sub-1',
+    state: 'completed',
+  });
+  await say('Asked and done');
   return 'end_turn';
 }

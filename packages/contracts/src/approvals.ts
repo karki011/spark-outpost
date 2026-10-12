@@ -118,6 +118,7 @@ export const approvalPayloadSchema = z.object({
   sparkResult: sparkResultSchema.optional(),
   sparkRequested: z.boolean().optional(),
   agentReason: z.string().optional(),
+  subagent: z.string().optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

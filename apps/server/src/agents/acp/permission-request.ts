@@ -19,6 +19,7 @@ export interface RequestContext {
   home: string;
   mode?: string | null;
   shownPlan?: string | null;
+  subagent?: string | null;
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
@@ -145,6 +146,7 @@ export function approvalRequestFrom(
     ...(plan ? { plan } : {}),
     ...(mcpServer ? { mcpServer } : {}),
     ...(agentReason ? { agentReason } : {}),
+    ...(context.subagent ? { subagent: context.subagent } : {}),
     ...(context.mode !== undefined ? { mode: context.mode } : {}),
   };
 }

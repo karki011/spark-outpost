@@ -163,6 +163,7 @@ export type ProviderOutput =
       toolKind?: string;
       target?: string;
       subagent?: string;
+      waits?: boolean;
     }
   | {
       kind: 'step_finished';
@@ -171,6 +172,7 @@ export type ProviderOutput =
       toolKind?: string;
       target?: string;
       subagent?: string;
+      waits?: boolean;
     }
   | ({ kind: 'file_focus' } & FileFocus)
   | { kind: 'text_delta'; delta: string; phase?: MessagePhase }

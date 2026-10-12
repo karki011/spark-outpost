@@ -145,7 +145,8 @@ function text(value: unknown): string | null {
 }
 
 function sessionUpdate(entry: ProtocolLogEntry) {
-  const params = entry.method === 'session/update' ? record(record(entry.payload)?.params) : null;
+  const told = entry.method === 'session/update' || entry.method === 'session/request_permission';
+  const params = told ? record(record(entry.payload)?.params) : null;
   const update = record(params?.update);
   return { sessionId: text(params?.sessionId), update, kind: text(update?.sessionUpdate) };
 }
@@ -202,6 +203,9 @@ export function entrySummary(entry: ProtocolLogEntry, subagent: string | null = 
     return `${entry.method ?? 'error'} failed${message ? ` · ${message}` : ''}`;
   }
   if (entry.method === 'session/update') return updateSummary(entry, subagent) ?? entry.method;
+  if (entry.method === 'session/request_permission' && entry.kind === 'request' && subagent) {
+    return `${entry.method} · sub-agent ${subagent}`;
+  }
   if (entry.kind === 'response') return `${entry.method ?? 'response'} · reply`;
   return entry.method ?? entry.kind;
 }

@@ -1,7 +1,11 @@
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
-import type { AgentSettings, ProviderOutput } from '../src/providers/provider.ts';
+import type { ApprovalRequest } from '../src/approvals/decide.ts';
+import type { AgentSettings, PermissionGate, ProviderOutput } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
@@ -11,6 +15,11 @@ const definition: AgentDefinition = {
   ...FAKE_AGENT_MODES,
 };
 const provider = createAcpProvider({ definition, launch, cancelGraceMs: 2_000 });
+const claude = createAcpProvider({
+  definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
+  launch,
+  cancelGraceMs: 2_000,
+});
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
 
 async function collect(prompt: string) {
@@ -81,5 +90,37 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
       ['c3', 'sub-3'],
       ['c2', 'sub-2'],
     ]);
+  });
+
+  it('names the sub-agent that asks for permission and attributes the answer to it', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'spark-acp-subagents-')));
+    const requests: ApprovalRequest[] = [];
+    const approvals: PermissionGate = {
+      review: async (request) => {
+        requests.push(request);
+        return { outcome: 'selected', optionId: 'yes', allowed: true, note: 'Allowed it' };
+      },
+    };
+    const outputs: ProviderOutput[] = [];
+    try {
+      for await (const output of claude.run({
+        prompt: '#subagentsask',
+        history: [],
+        settings,
+        projectRoots: [root],
+        signal: new AbortController().signal,
+        mode: 'do',
+        approvals,
+      })) {
+        outputs.push(output);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+    expect(requests).toEqual([expect.objectContaining({ toolCallId: 'p1', subagent: 'Explore' })]);
+    expect(outputs).toContainEqual({ kind: 'step_started', name: 'Allowed it', subagent: 'sub-1' });
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ kind: 'subagent_started', id: 'sub-1', task: '' }),
+    );
   });
 });

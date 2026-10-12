@@ -73,9 +73,8 @@ import {
   sessionOutput,
   type ReplayFilter,
 } from './session-open.ts';
-import type { UpdateMapper } from './session-updates.ts';
 import { routeSubagents } from './subagent-stream.ts';
-import { createTurnMapper } from './subagent-updates.ts';
+import { createTurnMapper, type TurnMapper } from './subagent-updates.ts';
 import { promptTokens } from './prompt-usage.ts';
 import { slashPrompt } from './slash-commands.ts';
 
@@ -294,12 +293,12 @@ async function converse(
   workspace: Workspace,
   turn: ProviderTurn,
   signal: AbortSignal,
-  mapper: UpdateMapper,
+  mapper: TurnMapper,
   push: (outputs: ProviderOutput[]) => void,
 ): Promise<acp.StopReason> {
   const { policy } = workspace;
   const report = (name: string) => push(mapper.clientAction(name));
-  const annotate = (name: string) => push(mapper.note(name));
+  const annotate = (name: string, subagent?: string) => push(mapper.note(name, subagent));
   const commands = createCommandTracker(definition.streamsCommandOutput === true);
   const gated: DoWorkspace | null =
     policy && turn.approvals
@@ -310,6 +309,7 @@ async function converse(
           signal,
           report,
           annotate,
+          asker: mapper.asker,
           mode: () => mapper.currentMode(),
           shownPlan: () => mapper.shownPlan(),
         }

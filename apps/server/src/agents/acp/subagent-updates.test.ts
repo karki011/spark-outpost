@@ -72,6 +72,108 @@ describe('sub-agent updates', () => {
     expect(outputs).not.toContainEqual({ kind: 'step_finished', name: THINKING_STEP });
   });
 
+  it("marks the main agent's wait for its sub-agents, so it is not counted as its own work", () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
+    const codexWait = send('root', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'w1',
+      title: 'wait',
+      status: 'in_progress',
+      _meta: { codex: { collaboration: { tool: 'wait' } } },
+    });
+    expect(codexWait).toContainEqual({
+      kind: 'step_started',
+      name: 'Waiting for sub-agents',
+      tool: true,
+      waits: true,
+    });
+    const ended = send('root', {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'w1',
+      status: 'completed',
+    });
+    expect(ended).toContainEqual({
+      kind: 'step_finished',
+      name: 'Waiting for sub-agents',
+      tool: true,
+      waits: true,
+    });
+    const claudeWait = send('root', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'w2',
+      title: 'TaskOutput',
+      status: 'in_progress',
+      rawInput: { task_id: 'a', block: true },
+      _meta: { claudeCode: { toolName: 'TaskOutput' } },
+    });
+    expect(claudeWait.filter((output) => 'waits' in output)).toHaveLength(1);
+  });
+
+  it("counts a check on something that is not a sub-agent as the main agent's own work", () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
+    const shell = send('root', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'w3',
+      title: 'TaskOutput',
+      status: 'in_progress',
+      rawInput: { task_id: 'shell-9' },
+      _meta: { claudeCode: { toolName: 'TaskOutput' } },
+    });
+    expect(shell.some((output) => 'waits' in output)).toBe(false);
+    const other = send('root', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'w4',
+      title: 'sendInput',
+      status: 'in_progress',
+      _meta: { codex: { collaboration: { tool: 'sendInput' } } },
+    });
+    expect(other.some((output) => 'waits' in output)).toBe(false);
+  });
+
+  it("leaves out the adapter's placeholder for a task it was not given", () => {
+    const { send } = harness();
+    const spawned = (id: string, name: string, task: string) =>
+      send('root', { sessionUpdate: 'subagent_spawned', subagentSessionId: id, name, task });
+    expect(spawned('a', 'Explorer', 'Delegated task for Explorer')).toContainEqual(
+      expect.objectContaining({ kind: 'subagent_started', id: 'a', task: '' }),
+    );
+    expect(spawned('b', 'Tests', 'Delegated task')).toContainEqual(
+      expect.objectContaining({ kind: 'subagent_started', id: 'b', task: '' }),
+    );
+    expect(spawned('c', 'Docs', 'Delegated task for the docs team')).toContainEqual(
+      expect.objectContaining({
+        kind: 'subagent_started',
+        id: 'c',
+        task: 'Delegated task for the docs team',
+      }),
+    );
+  });
+
+  it('names the sub-agent that asks for permission and attributes the note about the answer', () => {
+    const { spawn, mapper } = harness();
+    spawn('root', 'a');
+    expect(mapper.asker('a')).toEqual({ id: 'a', name: 'a' });
+    expect(mapper.asker('root')).toBeNull();
+    expect(mapper.note('Allowed: Edit a.ts', 'a')).toEqual([
+      { kind: 'step_started', name: 'Allowed: Edit a.ts', subagent: 'a' },
+      { kind: 'step_finished', name: 'Allowed: Edit a.ts', subagent: 'a' },
+    ]);
+    expect(mapper.note('Allowed: Edit a.ts')).toEqual([
+      { kind: 'step_started', name: 'Allowed: Edit a.ts' },
+      { kind: 'step_finished', name: 'Allowed: Edit a.ts' },
+    ]);
+  });
+
+  it("gives a sub-agent's hand-back a plain label", () => {
+    const { spawn, tool } = harness();
+    spawn('root', 'a');
+    expect(tool('a', 'h1', 'SubagentHandback')).toContainEqual(
+      expect.objectContaining({ kind: 'step_started', name: 'Reporting back', subagent: 'a' }),
+    );
+  });
+
   it('closes the open steps of a sub-agent when it ends', () => {
     const { spawn, tool, end } = harness();
     spawn('root', 'a');

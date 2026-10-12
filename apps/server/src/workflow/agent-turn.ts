@@ -379,6 +379,7 @@ export async function runAgentTurn(
         live.observe(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') await recordSpend(output);
+        if (output.kind === 'subagent_finished') await events.observe(output);
         continue;
       }
       options.onOutput?.(output);

@@ -85,7 +85,8 @@ const summaryQuery = `
     ) END AS latest_run_progress,
     CASE WHEN r.status = 'running' THEN (
       SELECT e.payload->>'stepName' FROM run_events e
-      WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
+      WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' AND NOT (e.payload ? 'subagentRunId')
+      ORDER BY e.seq DESC LIMIT 1
     ) END AS latest_run_step,
     CASE WHEN r.status = 'running' THEN (
       SELECT (e.payload->'content'->>'waitingOn')::int FROM run_events e

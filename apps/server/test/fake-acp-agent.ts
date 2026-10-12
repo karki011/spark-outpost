@@ -13,7 +13,7 @@ import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
 import { eventsTurn, leakSecrets } from './fake-acp-events.ts';
-import { subagentsTurn } from './fake-acp-subagents.ts';
+import { subagentAsksTurn, subagentsTurn } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   createFakeSession,
@@ -225,6 +225,7 @@ async function turn(
   const commanded = await commandTurn(params.prompt, update, say);
   if (commanded) return commanded;
   if (text.includes('#silent')) return 'end_turn';
+  if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {
     return subagentsTurn(client, sessionId, say, text.includes('#subagentshold') ? signal : null);
   }

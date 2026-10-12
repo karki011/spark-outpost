@@ -60,6 +60,9 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
 const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
   Agent: 'Starting a subagent',
   Task: 'Starting a subagent',
+  SubagentHandback: 'Reporting back',
+  TaskOutput: 'Checking a background task',
+  wait: 'Waiting for sub-agents',
   Bash: 'Running a command',
   BashOutput: 'Checking command output',
   KillBash: 'Stopping a command',

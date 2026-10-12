@@ -28,6 +28,16 @@ const edit = (paths: string[]): Approval => ({
 });
 
 describe('askReason', () => {
+  it('names the sub-agent that asked', () => {
+    const asked: Approval = { ...base, payload: { ...base.payload, subagent: 'Explore' } };
+    expect(askReason(asked, 'Claude')).toBe(
+      "Claude's sub-agent Explore wants to run `touch notes.txt`.",
+    );
+    expect(askReason({ ...asked, reason: 'Secret file' }, 'Claude')).toBe(
+      "Asked by Claude's sub-agent Explore.",
+    );
+  });
+
   it('keeps the agent’s own reason when it gives one', () => {
     const own = { ...base, payload: { ...base.payload, agentReason: 'to create the file' } };
     expect(askReason(own, 'Claude')).toBe('Claude asks because: to create the file');
