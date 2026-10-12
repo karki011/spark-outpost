@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { EventType, type AppEvent } from '@spark-outpost/contracts';
+import { EventType, SUBAGENTS_ACTIVITY, type AppEvent } from '@spark-outpost/contracts';
 import { AppEventFeed, listenForAppEvents } from '../src/api/app-events.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
@@ -103,6 +103,46 @@ it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
     expect(mine).toContainEqual({ kind: 'step', conversationId, runId: lease.runId });
     for (const event of mine)
       expect(Object.keys(event).sort()).toEqual(['conversationId', 'kind', 'runId']);
+  } finally {
+    await raw.close();
+  }
+});
+
+it('tells the app when a sub-agent ends or what the agent waits on changes', async () => {
+  const kinds: number[] = [];
+  let conversationId = '';
+  const raw = await listen(testDatabaseUrl(), 'changes', (payload) => {
+    const event = JSON.parse(payload) as { kind: string; conversationId: string };
+    if (event.kind === 'step' && event.conversationId === conversationId) kinds.push(1);
+  });
+  try {
+    const chat = await startChat();
+    conversationId = chat.conversationId;
+    await appendRunEvent(
+      t.db,
+      chat.lease,
+      { type: EventType.SUBAGENT_FINISHED, subagentRunId: 's1', outcome: { type: 'success' } },
+      { transition: { status: 'running' } },
+    );
+    await eventually(async () => kinds.length === 1);
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.ACTIVITY_SNAPSHOT,
+      messageId: SUBAGENTS_ACTIVITY,
+      activityType: SUBAGENTS_ACTIVITY,
+      content: { waitingOn: 0 },
+      replace: true,
+    });
+    await eventually(async () => kinds.length === 2);
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.ACTIVITY_SNAPSHOT,
+      messageId: 'other',
+      activityType: 'other',
+      content: {},
+      replace: true,
+    });
+    await appendRunEvent(t.db, chat.lease, { type: EventType.STEP_STARTED, stepName: 'Reading' });
+    await eventually(async () => kinds.length >= 3);
+    expect(kinds).toHaveLength(3);
   } finally {
     await raw.close();
   }
