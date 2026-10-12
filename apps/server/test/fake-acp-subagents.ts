@@ -1,6 +1,6 @@
 import * as acp from '@agentclientprotocol/sdk';
 
-type Say = (chunk: string) => Promise<void>;
+type Say = (chunk: string, messageId?: string) => Promise<void>;
 
 function untilCancelled(signal: AbortSignal): Promise<never> {
   return new Promise((_, reject) => {
@@ -104,5 +104,11 @@ export async function subagentAsksTurn(
     state: 'completed',
   });
   await say('Asked and done');
+  return 'end_turn';
+}
+
+export async function heldTitleTurn(say: Say): Promise<acp.StopReason> {
+  await say('I started two sub-agents.\n\nTitle: Split the route work', 'held-1');
+  await say('Both are done, and every test passes after the routes moved.', 'held-2');
   return 'end_turn';
 }

@@ -163,6 +163,15 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
     expect((await latestRun(conversationId))?.waitingOn).toBeUndefined();
   });
 
+  it('hides the Title line of a message that more text follows in a later message', async () => {
+    const { conversationId, runId } = await send('#heldtitle');
+    expect((await settled(runId)).status).toBe('succeeded');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.messages.at(-1)?.content).toBe(
+      'I started two sub-agents.\n\nBoth are done, and every test passes after the routes moved.',
+    );
+  });
+
   it('leaves a chat without sub-agents as it was', async () => {
     const { conversationId, runId } = await send('Hi');
     expect((await settled(runId)).status).toBe('succeeded');

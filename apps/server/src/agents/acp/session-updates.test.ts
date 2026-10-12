@@ -68,6 +68,7 @@ describe('ACP session update mapping', () => {
     expect(
       deltas.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join(''),
     ).toBe('One more\n\nTwo');
+    expect(deltas.map((output) => 'newMessage' in output)).toEqual([false, false, true]);
   });
 
   it('remembers error notices and shows warnings as steps', () => {

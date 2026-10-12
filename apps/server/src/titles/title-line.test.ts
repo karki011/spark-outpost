@@ -171,6 +171,58 @@ describe('title filter', () => {
     expect(filter.finish()).toEqual({ text: '', title: null });
   });
 
+  it('hides a Title line that closes one message when another message follows', () => {
+    const filter = createTitleFilter();
+    const first = filter.push('I started two sub-agents.\n\nTitle: Split the route work');
+    filter.endMessage(0);
+    const second = filter.push(
+      '\n\nBoth are done. The routes moved into one module and every test passes now.',
+    );
+    const ending = filter.finish();
+    expect(first + second + ending.text).toBe(
+      'I started two sub-agents.\n\nBoth are done. The routes moved into one module and every test passes now.',
+    );
+    expect(ending.title).toBe('Split the route work');
+  });
+
+  it('waits for text still on its way before it looks at the end of the message', () => {
+    const filter = createTitleFilter();
+    const first = filter.push('Started.\n\nTitle: Split the ro');
+    filter.endMessage(8);
+    const second = filter.push(
+      'ute work\n\nA long closing paragraph follows, well past forty characters.',
+    );
+    const ending = filter.finish();
+    expect(first + second + ending.text).toBe(
+      'Started.\n\nA long closing paragraph follows, well past forty characters.',
+    );
+    expect(ending.title).toBe('Split the route work');
+  });
+
+  it('keeps a Title line in the middle of one message', () => {
+    const filter = createTitleFilter();
+    const text =
+      'The form has these fields.\nTitle: Required field\nA long explanation follows, well past forty characters.\n';
+    const first = filter.push(text);
+    filter.endMessage(0);
+    const rest = filter.push('\n\nNext message.');
+    expect(first + rest + filter.finish().text).toBe(`${text}\n\nNext message.`);
+  });
+
+  it('prefers the title that closes the whole reply', () => {
+    const filter = createTitleFilter();
+    const first = filter.push('Working.\n\nTitle: First guess');
+    filter.endMessage(0);
+    const second = filter.push(
+      '\n\nAll done, with a long enough closing line to matter here.\n\nTitle: Final name',
+    );
+    const ending = filter.finish();
+    expect(first + second + ending.text).toBe(
+      'Working.\n\nAll done, with a long enough closing line to matter here.',
+    );
+    expect(ending.title).toBe('Final name');
+  });
+
   it('takes the closing Title line over the opening one and hides both', () => {
     const result = streamed([
       'Title: Draft heading\nThis paragraph is clearly longer than a short sign-off line.\n',

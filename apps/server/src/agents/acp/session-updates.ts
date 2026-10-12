@@ -357,7 +357,8 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
               : '';
           lastMessageId = messageId ?? lastMessageId;
           wroteText = true;
-          const said = { kind: 'text_delta', delta: separator + chunk } as const;
+          const next = separator ? { newMessage: true } : {};
+          const said = { kind: 'text_delta', delta: separator + chunk, ...next } as const;
           return [...stopThinking(), ...linked, { ...said, ...messagePhase(update._meta) }];
         }
         case 'tool_call': {

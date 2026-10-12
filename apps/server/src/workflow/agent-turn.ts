@@ -408,6 +408,7 @@ export async function runAgentTurn(
       }
       if (output.kind === 'text_delta') {
         const finalStarts = reply.mark(output.phase, replySoFar().held);
+        if (output.newMessage) titles?.endMessage(redaction.pending());
         if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }

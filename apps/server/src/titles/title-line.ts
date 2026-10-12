@@ -99,6 +99,7 @@ function holdFrom(held: string, atLineStart: boolean): number {
 export interface TitleFilter {
   push(delta: string): string;
   startMessage(onItsWay: number): void;
+  endMessage(onItsWay: number): void;
   finish(): SplitReply;
   pending(): number;
 }
@@ -114,7 +115,29 @@ export function createTitleFilter(): TitleFilter {
   let opening: MessageOpening | null = { at: 0, taken: false };
   let openingTitle: string | null = null;
 
+  let closing: number | null = null;
+  let closedTitle: string | null = null;
+
   const startsLine = (at: number) => (at === 0 ? atLineStart : held[at - 1] === '\n');
+
+  const takeClosedTitle = () => {
+    if (closing === null || closing > held.length) return;
+    const end = closing;
+    closing = null;
+    const lines = held.slice(0, end).split('\n');
+    const last = lines.findLastIndex((line) => line.trim() !== '');
+    if (last < 0 || (last === 0 && !atLineStart)) return;
+    const title = titleOfLine(lines[last]!);
+    if (title === null) return;
+    const kept = lines.slice(0, last);
+    while (kept.length > 0 && kept.at(-1)!.trim() === '') kept.pop();
+    const before = kept.join('\n');
+    closedTitle = title;
+    held = before + held.slice(end);
+    if (opening !== null && opening.at >= end) {
+      opening = { ...opening, at: opening.at - (end - before.length) };
+    }
+  };
 
   const takeOpeningTitle = () => {
     while (opening !== null && opening.at <= held.length) {
@@ -143,13 +166,19 @@ export function createTitleFilter(): TitleFilter {
   return {
     push(delta) {
       held += delta;
+      takeClosedTitle();
       takeOpeningTitle();
       const cut = holdFrom(held, atLineStart);
       const shown = held.slice(0, cut);
       held = held.slice(cut);
       if (shown) atLineStart = shown.endsWith('\n');
       if (opening !== null) opening = { ...opening, at: opening.at - cut };
+      if (closing !== null) closing = closing > cut ? closing - cut : null;
       return shown;
+    },
+    endMessage(onItsWay) {
+      closing = held.length + onItsWay;
+      takeClosedTitle();
     },
     startMessage(onItsWay) {
       opening = { at: held.length + onItsWay, taken: false };
@@ -158,7 +187,7 @@ export function createTitleFilter(): TitleFilter {
       const rest = held;
       held = '';
       const ending = splitClosing(rest);
-      return { text: ending.text, title: ending.title ?? openingTitle };
+      return { text: ending.text, title: ending.title ?? closedTitle ?? openingTitle };
     },
     pending: () => held.length,
   };
