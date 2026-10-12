@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { nativeTerminalApi } from './terminal-api.ts';
 import { openTerminal } from './terminal-connection.ts';
 import { terminalEnded } from './native-state.ts';
+import { TerminalSelectionToolbar } from './selection/TerminalSelectionToolbar.tsx';
+import { useTerminalSelection } from './selection/use-terminal-selection.ts';
 
 export function TerminalScreen({
   chatId,
@@ -21,6 +23,8 @@ export function TerminalScreen({
   onEnded: () => void;
 }) {
   const screen = useRef<HTMLDivElement>(null);
+  const selection = useTerminalSelection();
+  const { report, attach } = selection;
   const callbacks = useRef({ onConnected, onDisconnected, onError, onInputError, onEnded });
   useEffect(() => {
     callbacks.current = { onConnected, onDisconnected, onError, onInputError, onEnded };
@@ -43,15 +47,23 @@ export function TerminalScreen({
         onError: (message) => callbacks.current.onError(message),
         onInputError: (message) => callbacks.current.onInputError(message),
         onEnded: () => callbacks.current.onEnded(),
+        onSelection: report,
       },
     );
-    return () => connection.dispose();
-  }, [chatId, attempt]);
+    attach(connection);
+    return () => {
+      attach(null);
+      connection.dispose();
+    };
+  }, [chatId, attempt, report, attach]);
   return (
-    <div
-      className="native-screen term-screen"
-      ref={screen}
-      aria-label="Interactive agent terminal"
-    />
+    <>
+      <TerminalSelectionToolbar state={selection} />
+      <div
+        className="native-screen term-screen"
+        ref={screen}
+        aria-label="Interactive agent terminal"
+      />
+    </>
   );
 }

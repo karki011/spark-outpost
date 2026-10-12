@@ -10,6 +10,7 @@ import { lineEditingSequence } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { themeFromTokens } from './terminal-theme.ts';
 import { followTerminalDrops } from './terminal-drop.ts';
+import { followSelection, selectionActions } from './selection/follow-selection.ts';
 
 const OSC_CLIPBOARD = 52;
 const encoder = new TextEncoder();
@@ -116,6 +117,8 @@ export function openXterm<T extends TerminalTicket>(
   const unfollowDrops = readOnly
     ? () => undefined
     : followTerminalDrops(element, dropped, (message) => handlers.onInputError?.(message));
+  const canInsert = () => !readOnly && socket?.readyState === WebSocket.OPEN;
+  const unfollowSelection = followSelection(terminal, element, canInsert, handlers.onSelection);
   terminal.attachCustomKeyEventHandler((event) => {
     if (readOnly && event.key === 'Tab') return false;
     const sequence = lineEditingSequence(event);
@@ -180,6 +183,7 @@ export function openXterm<T extends TerminalTicket>(
     });
 
   return {
+    ...selectionActions(terminal, canInsert),
     run: () => {
       sendInput('\r');
       terminal.focus();
@@ -198,6 +202,7 @@ export function openXterm<T extends TerminalTicket>(
       resizeObserver.disconnect();
       unfollowTheme();
       unfollowDrops();
+      unfollowSelection();
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);
