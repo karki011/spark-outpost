@@ -298,11 +298,7 @@ export function IslandApp() {
 
   const sessions = useMemo(() => rankedSessions(data.chats, NO_HIDDEN), [data.chats]);
   const sound = useIslandSound();
-  useChimes(
-    sound?.on ?? false,
-    data.loaded ? waiting : null,
-    moment?.kind === 'done' ? moment.runId : null,
-  );
+  useChimes(sound?.on ?? false, data.loaded ? data.chats : null, moment, sparkFocused);
   const desktop = sparkDesktop();
   const openSettings = (target: IslandSettingsTarget) => {
     closePanel();
