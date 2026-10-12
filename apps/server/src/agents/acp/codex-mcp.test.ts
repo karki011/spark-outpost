@@ -54,6 +54,6 @@ describe('user-level Codex MCP servers', () => {
       { definition: agentDefinitions.claude, env: { PATH: '/bin', CODEX_HOME: codexHome } },
       home,
     );
-    expect(env).toEqual({ PATH: '/bin', CODEX_HOME: codexHome });
+    expect(env).toEqual({ PATH: '/bin', CODEX_HOME: codexHome, CLAUDE_CODE_FORK_SUBAGENT: '1' });
   });
 });
