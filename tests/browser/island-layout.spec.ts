@@ -145,7 +145,7 @@ async function expectClean(page: Page, label: string) {
         if (rect.width > 0 && overlaps(scout, rect)) found.push(`the blob covers ${selector}`);
       }
       for (const { selector, element } of visible(
-        '.isl-st, .isl-wlabel, .isl-nudge-title, .isl-now-title, .isl-tile-name',
+        '.isl-st, .isl-wlabel, .isl-restline-text, .isl-now-title, .isl-tile-name',
       )) {
         if (
           getComputedStyle(element).textOverflow !== 'ellipsis' &&

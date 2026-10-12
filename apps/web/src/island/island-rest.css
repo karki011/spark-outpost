@@ -3,7 +3,7 @@
   left: calc(100% + 8px);
   top: max(calc(50% - 13px), var(--line-top, 0px));
   height: 26px;
-  max-width: 280px;
+  max-width: calc(352px - 50%);
   padding: 0 10px 0 8px;
   border: 1px solid var(--island-line);
   border-radius: 13px;
@@ -77,18 +77,18 @@
 
 .isl-aside {
   position: absolute;
-  left: calc(16% - 11px);
-  top: calc(74% - 7px);
-  min-width: 14px;
-  height: 14px;
-  padding: 0 2px;
+  left: calc(16% - 12px);
+  top: calc(76% - 8px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
   box-sizing: border-box;
   border: 1.5px dashed var(--muted);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--island);
-  color: var(--muted);
+  color: var(--text);
   font:
-    700 8.5px/11px Geist,
+    700 9px/13px Geist,
     sans-serif;
   text-align: center;
   z-index: 2;
