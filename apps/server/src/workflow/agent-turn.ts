@@ -228,6 +228,7 @@ export async function runAgentTurn(
   const inbox = input.assistant
     ? null
     : openMemberInbox(deps.db, {
+        conversationId: input.identity.threadId,
         runId: lease.runId,
         topRunId: input.parentRunId ?? lease.runId,
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,

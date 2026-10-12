@@ -49,3 +49,14 @@ export async function conversationSubagents(
   );
   return subagentsFromEvents(rows);
 }
+
+export async function runWaitingOn(db: Queryable, runId: string): Promise<number> {
+  const { rows } = await db.query<{ waiting_on: number | null }>(
+    `SELECT (e.payload->'content'->>'waitingOn')::int AS waiting_on FROM run_events e
+     WHERE e.run_id = $1 AND e.type = 'ACTIVITY_SNAPSHOT'
+       AND e.payload->>'activityType' = 'subagents'
+     ORDER BY e.seq DESC LIMIT 1`,
+    [runId],
+  );
+  return rows[0]?.waiting_on ?? 0;
+}

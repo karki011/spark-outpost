@@ -91,6 +91,7 @@ interface ComposerProps {
   onQueue?: (content: string) => Promise<void>;
   onSendNow?: (content: string) => Promise<void>;
   busyEnter?: BusyEnterAction;
+  waitingOn?: number;
   notice?: string | null;
   above?: ReactNode;
   onAudit?: () => void;
@@ -123,6 +124,7 @@ export function Composer({
   onQueue,
   onSendNow,
   busyEnter = DEFAULT_BUSY_ENTER,
+  waitingOn = 0,
   notice = null,
   above = null,
   onAudit,
@@ -279,7 +281,7 @@ export function Composer({
     textareaRef.current?.focus();
   };
 
-  const hint = composerHint(attachments, queueing, busyEnter);
+  const hint = composerHint(attachments, queueing, busyEnter, waitingOn);
   const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {

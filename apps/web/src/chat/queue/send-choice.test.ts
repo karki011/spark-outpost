@@ -5,6 +5,7 @@ import {
   choiceKey,
   choiceTitle,
   enterAction,
+  enterWhileBusy,
   otherAction,
   sendNowStatus,
 } from './send-choice.ts';
@@ -47,6 +48,18 @@ describe('what Enter does while a turn runs', () => {
     expect(busyHint('queue', true)).toBe('Enter to queue · ⌘Enter to send now');
     expect(busyHint('now', true)).toBe('Enter to send now · ⌘Enter to queue');
     expect(busyHint('queue', false)).toBe('Enter to queue · Ctrl+Enter to send now');
+  });
+
+  it('makes Enter send now while the agent only waits on its sub-agents, and says so', () => {
+    expect(enterWhileBusy('queue', 2)).toBe('now');
+    expect(enterWhileBusy('queue', 0)).toBe('queue');
+    expect(enterWhileBusy('now', 0)).toBe('now');
+    expect(busyHint('now', true, 2)).toBe(
+      'Enter to send to the agent now, while it waits on 2 sub-agents · ⌘Enter to queue',
+    );
+    expect(busyHint('now', false, 1)).toBe(
+      'Enter to send to the agent now, while it waits on 1 sub-agent · Ctrl+Enter to queue',
+    );
   });
 
   it('labels each choice with its key', () => {

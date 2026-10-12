@@ -9,7 +9,10 @@ import {
   listConversations,
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
+import { listQueue } from '../src/persistence/chat-queue.ts';
+import { getMemberMessage } from '../src/persistence/member-messages.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import { sendNow } from '../src/workflow/queue-drain.ts';
 import { stopRun } from '../src/workflow/stop-run.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { expectConformantRun, storedEvents } from './agui-conformance.ts';
@@ -161,6 +164,26 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
     expect(rows.map((row) => row.state)).toEqual(['cancelled', 'cancelled']);
     for (const row of rows) expect(row.endedAt).toBeGreaterThanOrEqual(row.startedAt!);
     expect((await latestRun(conversationId))?.waitingOn).toBeUndefined();
+  });
+
+  it('queues a message sent now instead of stopping a turn that only waits on sub-agents', async () => {
+    const { conversationId, runId } = await send('#subagentshold');
+    await eventually(async () => (await latestRun(conversationId))?.waitingOn === 2, 20_000);
+    const id = randomUUID();
+    const target = async () => ({ provider: 'codex' });
+    expect(
+      await sendNow(t.db, conversationId, { id, content: 'Also check the tests' }, target),
+    ).toBe('steering');
+    const queued = await eventually(async () => {
+      const queue = await listQueue(t.db, conversationId);
+      return queue.length > 0 ? queue : null;
+    }, 20_000);
+    expect(queued).toEqual([expect.objectContaining({ id, content: 'Also check the tests' })]);
+    expect(await getMemberMessage(t.db, id)).toBeNull();
+    expect((await getRun(t.db, runId))?.status).toBe('running');
+    expect((await latestRun(conversationId))?.waitingOn).toBe(2);
+    await stopRun(t.db, runId);
+    await settled(runId);
   });
 
   it('hides the Title line of a message that more text follows in a later message', async () => {

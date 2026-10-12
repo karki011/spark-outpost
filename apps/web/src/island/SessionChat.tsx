@@ -19,7 +19,7 @@ import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { activeRun } from '../chat/turns.ts';
 import { queuedCount } from '../chat/queue/queue-model.ts';
-import { busyHint, choiceTitle, enterAction } from '../chat/queue/send-choice.ts';
+import { busyHint, choiceTitle, enterAction, enterWhileBusy } from '../chat/queue/send-choice.ts';
 import { useChatQueue } from '../chat/queue/use-chat-queue.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { islandApi } from './island-api.ts';
@@ -35,9 +35,14 @@ const BUSY_LABELS: Record<BusyEnterAction, string> = {
   now: 'Send reply now',
 };
 
-function replyHint(busy: boolean, count: number, preferred: BusyEnterAction): string {
+function replyHint(
+  busy: boolean,
+  count: number,
+  preferred: BusyEnterAction,
+  waitingOn: number,
+): string {
   if (count > 0) return `${queuedCount(count)} · sends when this turn ends`;
-  return busy ? busyHint(preferred, MAC) : '';
+  return busy ? busyHint(preferred, MAC, waitingOn) : '';
 }
 
 interface ReplySend {
@@ -125,7 +130,8 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
   const queue = useChatQueue(chat.id, detail?.queue);
   const busy = activeRun(detail) !== null;
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
-  const preferred = setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER;
+  const waitingOn = busy ? (chat.latestRun?.waitingOn ?? 0) : 0;
+  const preferred = enterWhileBusy(setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER, waitingOn);
   const send = useMutation({
     mutationFn: async ({ content, action }: ReplySend) => {
       if (!busy) await api.sendMessage(chat.id, crypto.randomUUID(), content);
@@ -171,7 +177,7 @@ function Reply({ chat, detail }: { chat: ConversationSummary; detail?: Conversat
       />
       <div className="isl-qc-bar">
         <span className="isl-qc-hint">
-          {send.isPending ? 'Sending…' : replyHint(busy, queue.items.length, preferred)}
+          {send.isPending ? 'Sending…' : replyHint(busy, queue.items.length, preferred, waitingOn)}
         </span>
         <span className="isl-sp" />
         <button

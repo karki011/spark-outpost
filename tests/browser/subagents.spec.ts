@@ -52,6 +52,10 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
   await input.fill('still typing');
   await expect(input).toBeFocused();
   await expect(input).toHaveValue('still typing');
+  await expect(page.locator('.hint').first()).toHaveAttribute(
+    'title',
+    /^Enter to send to the agent now, while it waits on 2 sub-agents/,
+  );
   await shot(page, 'subagents-chat-waiting.png');
 
   await summary.focus();
@@ -75,6 +79,15 @@ test('a turn lists its sub-agents, says the agent waits on them, and stops them 
   );
   await shot(page, 'subagents-agent-tv.png');
   await page.keyboard.press('Escape');
+
+  await input.fill('Also check the tests');
+  await input.press('Enter');
+  await expect(page.locator('.qs-text', { hasText: 'Also check the tests' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
+  await expect(summary).toBeVisible();
+  await shot(page, 'subagents-enter-while-waiting.png');
 
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   await expect(turn.getByRole('button', { name: '2 sub-agents · 2 cancelled' })).toBeVisible({

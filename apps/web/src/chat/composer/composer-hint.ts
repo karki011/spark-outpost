@@ -7,11 +7,12 @@ export function composerHint(
   attachments: AttachmentsState,
   queueing: boolean,
   preferred: BusyEnterAction,
+  waitingOn = 0,
 ): string {
   if (attachments.uploading) return 'Uploading your files…';
   if (attachments.failed) return 'Remove or retry the files that failed';
   if (queueing && attachments.items.length > 0) return 'Files wait until this turn ends';
-  if (queueing) return busyHint(preferred, MAC);
+  if (queueing) return busyHint(preferred, MAC, waitingOn);
   return 'Enter to send, Shift + Enter for a new line';
 }
 

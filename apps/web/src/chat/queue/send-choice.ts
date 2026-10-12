@@ -1,4 +1,9 @@
-import type { BusyEnterAction, MemberMessage, Run } from '@spark-outpost/contracts';
+import {
+  subagentCount,
+  type BusyEnterAction,
+  type MemberMessage,
+  type Run,
+} from '@spark-outpost/contracts';
 
 export interface ModifierKeys {
   metaKey: boolean;
@@ -34,7 +39,15 @@ export function choiceKey(action: BusyEnterAction, preferred: BusyEnterAction, m
   return action === preferred ? 'Enter' : modifiedEnter(mac);
 }
 
-export function busyHint(preferred: BusyEnterAction, mac: boolean): string {
+export function enterWhileBusy(preferred: BusyEnterAction, waitingOn: number): BusyEnterAction {
+  return waitingOn > 0 ? 'now' : preferred;
+}
+
+export function busyHint(preferred: BusyEnterAction, mac: boolean, waitingOn = 0): string {
+  if (waitingOn > 0) {
+    const waits = `while it waits on ${subagentCount(waitingOn)}`;
+    return `Enter to send to the agent now, ${waits} · ${modifiedEnter(mac)} to queue`;
+  }
   const other = otherAction(preferred);
   return `Enter to ${SEND_CHOICES[preferred].hint} · ${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
 }

@@ -62,7 +62,7 @@ import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { useChatSend } from './send/use-chat-send.ts';
 import { QueueStrip } from './queue/QueueStrip.tsx';
-import { sendNowStatus } from './queue/send-choice.ts';
+import { enterWhileBusy, sendNowStatus } from './queue/send-choice.ts';
 import { queueMode } from './queue/queue-model.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
 import { activeRun, latestReplyId } from './turns.ts';
@@ -133,6 +133,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const running = activeRun(detail.data);
+  const waitingOn = running ? (detail.data?.conversation.latestRun?.waitingOn ?? 0) : 0;
   usePreviewDockTab(conversationId);
   const queue = useChatQueue(conversationId, detail.data?.queue);
   const title = detail.data?.conversation.title ?? '';
@@ -412,7 +413,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                       followRequests.request();
                       return queue.sendFirst(content);
                     }}
-                    busyEnter={setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER}
+                    busyEnter={enterWhileBusy(
+                      setup.data?.profile.busyEnter ?? DEFAULT_BUSY_ENTER,
+                      waitingOn,
+                    )}
+                    waitingOn={waitingOn}
                     above={
                       <PrCard
                         conversationId={conversationId}
