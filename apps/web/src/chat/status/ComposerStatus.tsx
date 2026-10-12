@@ -30,6 +30,11 @@ function announcement(line: StatusLine | null): string {
   return line.elapsed === null ? line.word : `${line.word} after ${clockText(line.elapsed)}`;
 }
 
+function statusState(line: StatusLine | null): string {
+  if (!line) return '';
+  return line.kind === 'running' ? `running ${line.worker.doing ?? ''}` : line.kind;
+}
+
 function useWaitingShortcut(entries: readonly PendingEntry[]) {
   useEffect(() => {
     const first = entries[0];
@@ -190,7 +195,7 @@ export function ComposerStatus({
   const pending = line?.kind === 'waiting' ? line.entries : NO_ENTRIES;
   useFocusHandoff(pending);
   useWaitingShortcut(pending);
-  const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS);
+  const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS, statusState(line));
   const expand = useExpandReveal();
   const headInView = useHeadInView(store, line?.kind === 'running' ? line.worker.id : null);
   const shown = headInView ? null : line;

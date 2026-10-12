@@ -2,6 +2,8 @@ import {
   EventType,
   MODEL_SWITCH_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
+  applySubagentEvent,
+  emptySubagentRoster,
   modelSwitchSchema,
   orchestrationSchema,
   stepMark,
@@ -10,6 +12,7 @@ import {
   type Orchestration,
   type AgentTerminalStarted,
   type RunEvent,
+  type SubagentRoster,
 } from '@spark-outpost/contracts';
 import { applyApprovalEvent } from './approvals/approval-events.ts';
 import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
@@ -29,6 +32,8 @@ export interface RunStep {
   toolCallId?: string | undefined;
   reasoningId?: string | undefined;
   thought?: string | undefined;
+  subagent?: boolean | undefined;
+  waits?: boolean | undefined;
 }
 
 export type StepStatus = 'done' | 'failed' | 'open';
@@ -38,6 +43,8 @@ export interface StepView {
   status: StepStatus;
   reasoningId?: string | undefined;
   thought?: string | undefined;
+  subagent?: boolean | undefined;
+  waits?: boolean | undefined;
 }
 
 function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
@@ -48,8 +55,14 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId } = stepMark(event);
-  return { name: event.stepName, done: false, ...(toolCallId ? { toolCallId } : {}) };
+  const { toolCallId, waits } = stepMark(event);
+  return {
+    name: event.stepName,
+    done: false,
+    ...(toolCallId ? { toolCallId } : {}),
+    ...(waits ? { waits: true } : {}),
+    ...(event.subagentRunId ? { subagent: true } : {}),
+  };
 }
 
 function finishStep(
@@ -112,7 +125,13 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
       failedStep.status = 'failed';
       continue;
     }
-    views.push({ name: step.name, status: step.done ? 'done' : 'open', ...thinkingOf(step) });
+    views.push({
+      name: step.name,
+      status: step.done ? 'done' : 'open',
+      ...thinkingOf(step),
+      ...(step.subagent ? { subagent: true } : {}),
+      ...(step.waits ? { waits: true } : {}),
+    });
   }
   return views;
 }
@@ -127,6 +146,7 @@ export interface RunProjection extends ReplyStream {
   modelSwitch: ModelSwitch | null;
   commands: readonly LiveCommand[];
   terminals: readonly AgentTerminalStarted[];
+  subagents: SubagentRoster;
 }
 
 export const initialRunProjection: RunProjection = {
@@ -140,11 +160,13 @@ export const initialRunProjection: RunProjection = {
   modelSwitch: null,
   commands: [],
   terminals: [],
+  subagents: emptySubagentRoster,
 };
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
   if (seq <= state.lastSeq) return state;
-  const next = { ...state, lastSeq: seq };
+  const subagents = applySubagentEvent(state.subagents, event);
+  const next = { ...state, lastSeq: seq, subagents };
   switch (event.type) {
     case EventType.RUN_STARTED:
       return { ...next, status: 'running' };

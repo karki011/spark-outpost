@@ -8,6 +8,7 @@ const SPARK_RUN = '00000000-0000-4000-8000-0000000000b1';
 
 function detail(orchestrations: Record<string, Orchestration> = {}): ConversationDetail {
   return {
+    conversation: { latestRun: null },
     runs: [run({ status: 'running', finishedAt: null })],
     orchestrations,
     approvals: [],
@@ -40,6 +41,27 @@ describe('who Agent TV shows', () => {
     expect(tvCrew(detail()).map((agent) => [agent.name, agent.state])).toEqual([
       ['Claude', 'thinking'],
     ]);
+  });
+
+  it("carries the agent's own sub-agents and the count it waits on", () => {
+    const subagent = {
+      id: 's1',
+      name: 'Explore',
+      task: 'Find the routes',
+      parentId: null,
+      state: 'working',
+      step: null,
+      startedAt: null,
+      endedAt: null,
+    };
+    const cast = tvCast({
+      ...detail(),
+      conversation: { latestRun: { id: RUN_ID, waitingOn: 1 } },
+      subagents: { [RUN_ID]: [subagent] },
+    } as unknown as ConversationDetail)!;
+    expect(cast.subagents).toEqual([subagent]);
+    expect(cast.lead.line).toBe('waiting on 1 sub-agent');
+    expect(tvCast(detail())!.subagents).toEqual([]);
   });
 
   it('adds a Spark that was handed a job, after the agent', () => {

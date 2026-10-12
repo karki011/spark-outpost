@@ -2,9 +2,13 @@ import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { EventType, type AppEvent } from '@spark-outpost/contracts';
+import { EventType, SUBAGENTS_ACTIVITY, type AppEvent } from '@spark-outpost/contracts';
 import { AppEventFeed, listenForAppEvents } from '../src/api/app-events.ts';
-import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
+import {
+  createConversation,
+  listConversations,
+  sendUserMessage,
+} from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { listen, type NotificationListener } from '../src/persistence/notifications.ts';
 import { appendRunEvent } from '../src/persistence/run-events.ts';
@@ -106,6 +110,75 @@ it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
   } finally {
     await raw.close();
   }
+});
+
+it('tells the app at once when a sub-agent starts or ends, and with the steps when the wait changes', async () => {
+  const kinds: string[] = [];
+  let conversationId = '';
+  const raw = await listen(testDatabaseUrl(), 'changes', (payload) => {
+    const event = JSON.parse(payload) as { kind: string; conversationId: string };
+    const watched = event.kind === 'step' || event.kind === 'subagent';
+    if (event.conversationId === conversationId && watched) kinds.push(event.kind);
+  });
+  try {
+    const chat = await startChat();
+    conversationId = chat.conversationId;
+    const own = { subagentRunId: 's1' };
+    await appendRunEvent(
+      t.db,
+      chat.lease,
+      { type: EventType.SUBAGENT_STARTED, name: 'Explore', ...own },
+      { transition: { status: 'running' } },
+    );
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.ACTIVITY_SNAPSHOT,
+      messageId: SUBAGENTS_ACTIVITY,
+      activityType: SUBAGENTS_ACTIVITY,
+      content: { waitingOn: 1 },
+      replace: true,
+    });
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.ACTIVITY_SNAPSHOT,
+      messageId: 'other',
+      activityType: 'other',
+      content: {},
+      replace: true,
+    });
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.SUBAGENT_ERROR,
+      message: 'Stopped.',
+      code: 'cancelled',
+      ...own,
+    });
+    await appendRunEvent(t.db, chat.lease, {
+      type: EventType.SUBAGENT_FINISHED,
+      subagentRunId: 's2',
+      outcome: { type: 'success' },
+    });
+    await eventually(async () => kinds.length >= 4);
+    expect(kinds).toEqual(['subagent', 'step', 'subagent', 'subagent']);
+  } finally {
+    await raw.close();
+  }
+});
+
+it("names the main agent's latest step in the chat list, not a sub-agent's", async () => {
+  const { conversationId, lease } = await startChat();
+  await appendRunEvent(
+    t.db,
+    lease,
+    { type: EventType.STEP_STARTED, stepName: 'Reading the plan' },
+    { transition: { status: 'running' } },
+  );
+  await appendRunEvent(t.db, lease, {
+    type: EventType.STEP_STARTED,
+    stepName: 'Read routes.ts',
+    subagentRunId: 's1',
+  });
+  const chats = await listConversations(t.db, t.workspaceId);
+  expect(chats.find((chat) => chat.id === conversationId)?.latestRun?.step).toBe(
+    'Reading the plan',
+  );
 });
 
 it('streams change events to every subscriber and refuses clients over the cap', async () => {

@@ -194,6 +194,7 @@ describe('the crew the rail shows', () => {
   const names = (agents: readonly { name: string }[]) => agents.map((agent) => agent.name);
   const chat = (status: 'running' | 'succeeded', orchestrations = {}) =>
     ({
+      conversation: { latestRun: null },
       runs: [run({ status })],
       orchestrations,
       approvals: [],

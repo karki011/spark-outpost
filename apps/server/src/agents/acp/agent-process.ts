@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
-import { killProcessTree } from '../../terminal/process-group.ts';
+import { isAlive, killProcessTree, processTreeNow } from '../../terminal/process-group.ts';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 import type { AgentLaunch } from './agents.ts';
 import { tapStream } from './protocol-tap.ts';
@@ -17,10 +17,15 @@ export class AgentExitedError extends Error {
   }
 }
 
+function killOrphans(pids: readonly number[]): void {
+  for (const pid of pids.filter((candidate) => isAlive(candidate))) killProcessTree(pid);
+}
+
 export interface AgentProcess {
   stream: acp.Stream;
   exited: Promise<never>;
   stderrTail(): string;
+  stopping(): void;
   kill(): void;
 }
 
@@ -48,6 +53,7 @@ export function startAgentProcess(
   });
   exited.catch(() => undefined);
   let killed = false;
+  let startedBeforeStop: number[] = [];
   const stream = acp.ndJsonStream(
     Writable.toWeb(child.stdin),
     Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>,
@@ -56,10 +62,15 @@ export function startAgentProcess(
     stream: observer ? tapStream(stream, observer) : stream,
     exited,
     stderrTail: () => stderr,
+    stopping() {
+      if (child.pid !== undefined && !killed) startedBeforeStop = processTreeNow(child.pid);
+    },
     kill() {
       if (killed || child.pid === undefined) return;
       killed = true;
-      if (child.exitCode === null && child.signalCode === null) killProcessTree(child.pid);
+      const running = child.exitCode === null && child.signalCode === null;
+      if (running) killProcessTree(child.pid, undefined, undefined, startedBeforeStop);
+      else killOrphans(startedBeforeStop);
     },
   };
 }

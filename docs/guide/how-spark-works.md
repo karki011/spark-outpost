@@ -27,12 +27,14 @@ The agent decides. Spark never splits a turn into roles.
 | Work                                                | Who does it                                                                          |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | A small change                                      | The agent itself.                                                                    |
-| Independent parts in one repo and branch            | The agent's own sub-agents. Their steps show as the agent's, gated and audited.      |
+| Independent parts in one repo and branch            | The agent's own sub-agents. The turn lists each one; their steps are gated, audited. |
 | Several repos, branches or pull requests            | Sub-chats in an [outpost](outpost-stories.md) that the agent proposes and you start. |
 | A job for a [Spark](sparks.md) you mention with `@` | That Spark, in the same chat.                                                        |
 
 ## What Spark leaves to the agent
 
 Spark runs no tests, picks no model and reviews no diff. The agent runs your project's checks; your repository's hooks and CI run on a push. For a second opinion, ask another chat.
+
+The reply and Agent TV list sub-agents, like **3 sub-agents · 2 working, 1 done**. Select one for its steps, files, report and usage. While the agent waits, the chat says **Waiting on 2 sub-agents**.
 
 Open the chat's **…** menu and select **Agent TV** to [watch the agent](follow-a-turn.md#see-whats-happening). Chats from before this change still show their crew, read-only.

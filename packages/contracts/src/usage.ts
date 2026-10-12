@@ -12,6 +12,7 @@ export const tokenUsageSchema = z.object({
   cachedRead: tokenCount.nullable(),
   cachedWrite: tokenCount.nullable(),
   thought: tokenCount.nullable(),
+  subagents: tokenCount.nullable().optional(),
 });
 export type TokenUsage = z.infer<typeof tokenUsageSchema>;
 

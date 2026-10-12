@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { EventType, modelSwitchText, type RunEvent } from '@spark-outpost/contracts';
+import {
+  EventType,
+  OWN_SUBAGENT_METADATA,
+  SUBAGENTS_ACTIVITY,
+  modelSwitchText,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import {
   applyRunEvent,
   initialRunProjection,
@@ -52,6 +58,44 @@ describe('applyRunEvent', () => {
     ];
     const state = replay(withWorker.map((event, index) => [index + 1, event]));
     expect(state).toMatchObject({ status: 'succeeded', text: 'Hello world' });
+  });
+
+  it("lists the agent's own sub-agents with their current step and what the agent waits on", () => {
+    const own = { subagentRunId: 's1' };
+    const live: RunEvent[] = [
+      events[0]!,
+      {
+        type: EventType.SUBAGENT_STARTED,
+        name: 'Explore',
+        description: 'Find the routes',
+        metadata: OWN_SUBAGENT_METADATA,
+        ...own,
+      },
+      {
+        type: EventType.ACTIVITY_SNAPSHOT,
+        messageId: SUBAGENTS_ACTIVITY,
+        activityType: SUBAGENTS_ACTIVITY,
+        content: { waitingOn: 1 },
+        replace: true,
+      },
+      { type: EventType.STEP_STARTED, stepName: 'Read routes.ts', ...own },
+    ];
+    const state = replay(live.map((event, index) => [index + 1, event]));
+    expect(state.subagents.waitingOn).toBe(1);
+    expect(state.subagents.rows).toEqual([
+      expect.objectContaining({ name: 'Explore', state: 'working', step: 'Read routes.ts' }),
+    ]);
+    expect(state.steps).toEqual([{ name: 'Read routes.ts', done: false, subagent: true }]);
+    const ended = applyRunEvent(state, 9, { type: EventType.SUBAGENT_FINISHED, ...own });
+    expect(ended.subagents.rows[0]).toMatchObject({ state: 'done', step: null });
+  });
+
+  it('lists no sub-agents for the worker of a stored crew turn', () => {
+    const crew: RunEvent[] = [
+      events[0]!,
+      { type: EventType.SUBAGENT_STARTED, name: 'conversation', subagentRunId: 'w' },
+    ];
+    expect(replay(crew.map((event, index) => [index + 1, event])).subagents.rows).toEqual([]);
   });
 
   it('keeps a step open when it was only closed because the run stopped', () => {

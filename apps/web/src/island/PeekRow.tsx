@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import { waitingOnLabel, type ConversationSummary } from '@spark-outpost/contracts';
 import { peekOffset, sessionState, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { SessionBlob, sessionTint } from './SessionBlob.tsx';
@@ -19,6 +19,11 @@ const TIP_WORDS: Record<SessionState, string> = {
   failed: 'Failed',
   idle: 'Quiet',
 };
+
+function tipWord(chat: ConversationSummary, state: SessionState): string {
+  const waitingOn = state === 'working' ? (chat.latestRun?.waitingOn ?? 0) : 0;
+  return waitingOn > 0 ? waitingOnLabel(waitingOn) : TIP_WORDS[state];
+}
 
 const BADGES: Partial<Record<SessionState, string>> = {
   waiting: '!',
@@ -142,7 +147,7 @@ export function PeekRow({
             <span className="isl-tip" aria-hidden="true">
               <b>{chat.title}</b>
               <span>
-                <em data-state={state}>{TIP_WORDS[state]}</em> · Click to open
+                <em data-state={state}>{tipWord(chat, state)}</em> · Click to open
               </span>
             </span>
           </button>

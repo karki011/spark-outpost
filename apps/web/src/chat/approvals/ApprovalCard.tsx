@@ -29,7 +29,7 @@ import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
 import { CommandPreview } from './CommandPreview.tsx';
 import { DiffView } from './DiffView.tsx';
-import { askReason, fromSandbox } from './ask-reason.ts';
+import { askReason, askerName, fromSandbox } from './ask-reason.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { RetryAction } from './RetryAction.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
@@ -273,7 +273,7 @@ function PendingApproval({
               <i className="appr-dia" />
             </span>
             <span id={headingId}>
-              <b>{heading(approval)}</b> {request(approval, agentName)}
+              <b>{heading(approval)}</b> {request(approval, askerName(approval, agentName))}
             </span>
           </div>
           {holdOption && (

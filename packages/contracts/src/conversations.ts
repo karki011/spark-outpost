@@ -22,6 +22,7 @@ import {
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
 import { conversationUsageSchema } from './usage.ts';
+import { subagentRowSchema } from './subagents.ts';
 import {
   nativeTerminalProviderSchema,
   nativeTerminalSessionSchema,
@@ -59,6 +60,7 @@ export const conversationAttentionSchema = z.object({
   provider: z.string().nullable(),
   approvalId: z.uuid().nullable(),
   prFeedback: z.boolean().optional(),
+  subagent: z.string().optional(),
 });
 export type ConversationAttention = z.infer<typeof conversationAttentionSchema>;
 
@@ -86,6 +88,7 @@ export const conversationSummarySchema = z.object({
       progress: planProgressSchema.nullable().default(null),
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),
+      waitingOn: z.number().int().positive().optional(),
     })
     .nullable(),
   archivedAt: z.string().nullable(),
@@ -128,6 +131,7 @@ export const activityStepSchema = z.object({
   name: z.string(),
   done: z.boolean(),
   reasoningId: z.string().optional(),
+  subagent: z.boolean().optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 
@@ -151,6 +155,7 @@ export const conversationDetailSchema = z.object({
   browserShots: z.array(browserShotSchema).optional(),
   commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
+  subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

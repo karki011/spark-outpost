@@ -43,7 +43,7 @@ import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
 import { createCommandTracker } from './command-output.ts';
-import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
+import { CLIENT_INFO, turnCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import {
   reviewPermission,
@@ -73,9 +73,9 @@ import {
   sessionOutput,
   type ReplayFilter,
 } from './session-open.ts';
-import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
-import { withToolCalls } from './tool-call-outputs.ts';
-import { promptTokens } from './prompt-usage.ts';
+import { routeSubagents } from './subagent-stream.ts';
+import { createTurnMapper, type TurnMapper } from './subagent-updates.ts';
+import { createTurnTokens } from './turn-tokens.ts';
 import { slashPrompt } from './slash-commands.ts';
 
 export interface AcpProviderOptions {
@@ -128,9 +128,7 @@ async function runSession(
   legacyPermissions: boolean,
 ): Promise<void> {
   const { definition } = options;
-  const mapper = withToolCalls(
-    createUpdateMapper(definition.name, definition.longContext === true),
-  );
+  const mapper = createTurnMapper(definition.name, definition.longContext === true);
   const push = (outputs: ProviderOutput[]) =>
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
@@ -140,6 +138,7 @@ async function runSession(
   let spark: SparkTools | null = null;
   let graceTimer: NodeJS.Timeout | null = null;
   const onAbort = () => {
+    agent?.stopping();
     graceTimer = setTimeout(() => agent?.kill(), options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS);
   };
   if (signal.aborted) onAbort();
@@ -295,12 +294,12 @@ async function converse(
   workspace: Workspace,
   turn: ProviderTurn,
   signal: AbortSignal,
-  mapper: UpdateMapper,
+  mapper: TurnMapper,
   push: (outputs: ProviderOutput[]) => void,
 ): Promise<acp.StopReason> {
   const { policy } = workspace;
   const report = (name: string) => push(mapper.clientAction(name));
-  const annotate = (name: string) => push(mapper.note(name));
+  const annotate = (name: string, subagent?: string) => push(mapper.note(name, subagent));
   const commands = createCommandTracker(definition.streamsCommandOutput === true);
   const gated: DoWorkspace | null =
     policy && turn.approvals
@@ -311,6 +310,7 @@ async function converse(
           signal,
           report,
           annotate,
+          asker: mapper.asker,
           mode: () => mapper.currentMode(),
           shownPlan: () => mapper.shownPlan(),
         }
@@ -345,12 +345,12 @@ async function converse(
       readTextFile(policy, ctx.params, report, secretRead),
     );
   }
-  return client.connectWith(agent.stream, async (ctx) => {
+  return client.connectWith(routeSubagents(agent.stream), async (ctx) => {
     const init = await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
       acp.methods.agent.initialize,
       {
         protocolVersion: acp.PROTOCOL_VERSION,
-        clientCapabilities: clientCapabilities(policy !== null, doing !== null),
+        clientCapabilities: turnCapabilities(policy !== null, doing !== null),
         clientInfo: CLIENT_INFO,
       },
     );
@@ -447,11 +447,12 @@ async function converse(
         : conversationBlocks(sent.history, text, promptOptions);
       const textOnly = { ...promptOptions, attachments: [] };
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
+      const tokens = createTurnTokens(definition.cli === 'claude');
       let promptFailure = untilFailure(session.prompt(blocks));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
-          push(promptTokens(message.response.usage));
+          push(tokens.add(message.response, mapper.takeSubagentTokens()));
           mapper.stopped(message.response._meta);
           const next = await nextMessage(turn, message.stopReason, signal);
           if (next) {

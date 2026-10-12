@@ -87,6 +87,7 @@ describe('Agent TV list rows', () => {
 
   function rows(status: 'running' | 'succeeded') {
     const detail = {
+      conversation: { latestRun: null },
       runs: [run({ status, finishedAt: status === 'running' ? null : '2026-10-10T10:00:39.000Z' })],
       orchestrations: { [RUN_ID]: sparkJob },
       approvals: [],

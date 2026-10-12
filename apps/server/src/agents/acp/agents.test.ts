@@ -178,6 +178,34 @@ describe('Codex launch', () => {
       return source.slice(start, source.indexOf(');', start));
     };
 
+    it('waits for sub-agents without a timer of its own', () => {
+      const wait = source.slice(source.indexOf('async wait(signal, timeoutMs ='));
+      expect(source).toContain('static DEFAULT_WAIT_TIMEOUT_MS = Number.POSITIVE_INFINITY;');
+      expect(source).not.toContain('DEFAULT_WAIT_TIMEOUT_MS = 10 * 60 * 1e3');
+      expect(wait.slice(0, wait.indexOf('async finishOutstanding('))).toContain(
+        'Number.isFinite(remainingMs) ? setTimeout(',
+      );
+    });
+
+    it("reports each sub-agent's tokens, turns and model when it ends", () => {
+      expect(source).toContain(
+        'if (reporting) reporting.usage = notification.params.tokenUsage?.total;',
+      );
+      expect(source).toContain('if (starting) starting.turns = (starting.turns ?? 0) + 1;');
+      expect(source).toContain(
+        '_meta: { codex: { usage: child.usage, turns: child.turns, model: this.modelOf(child) } }',
+      );
+    });
+
+    it("gives a sub-agent its parent's model when its spawn names none", () => {
+      expect(source).toContain(
+        'await this.subagents.handle(notification, this.sessionState.currentModelId)',
+      );
+      expect(source).toContain('model: this.modelOf(child)');
+      const modelOf = source.slice(source.indexOf('  modelOf(child) {'));
+      expect(modelOf.slice(0, modelOf.indexOf('\n  }'))).toContain('return this.rootModel;');
+    });
+
     it('makes read-only a readOnly sandbox', () => {
       const mode = block('static ReadOnly = new _AgentMode(');
       expect(mode).toContain('type: "readOnly"');

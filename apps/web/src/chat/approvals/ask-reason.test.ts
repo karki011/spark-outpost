@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
-import { askReason } from './ask-reason.ts';
+import { askReason, askerName } from './ask-reason.ts';
 
 const base: Approval = {
   id: '5f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
@@ -28,6 +28,15 @@ const edit = (paths: string[]): Approval => ({
 });
 
 describe('askReason', () => {
+  it('names the sub-agent that asked', () => {
+    const asked: Approval = { ...base, payload: { ...base.payload, subagent: 'Explore' } };
+    expect(askReason(asked, 'Claude')).toBe(
+      "Claude's sub-agent Explore wants to run `touch notes.txt`.",
+    );
+    expect(askerName(asked, 'Claude')).toBe("Claude's sub-agent Explore");
+    expect(askerName(base, 'Claude')).toBe('Claude');
+  });
+
   it('keeps the agent’s own reason when it gives one', () => {
     const own = { ...base, payload: { ...base.payload, agentReason: 'to create the file' } };
     expect(askReason(own, 'Claude')).toBe('Claude asks because: to create the file');

@@ -144,12 +144,38 @@ function text(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
-function updateSummary(payload: Record<string, unknown>): string | null {
-  const update = record(record(payload.params)?.update);
-  const kind = text(update?.sessionUpdate);
+function sessionUpdate(entry: ProtocolLogEntry) {
+  const told = entry.method === 'session/update' || entry.method === 'session/request_permission';
+  const params = told ? record(record(entry.payload)?.params) : null;
+  const update = record(params?.update);
+  return { sessionId: text(params?.sessionId), update, kind: text(update?.sessionUpdate) };
+}
+
+export function subagentNames(entries: readonly ProtocolLogEntry[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const entry of entries) {
+    const { update, kind } = sessionUpdate(entry);
+    const id = text(update?.subagentSessionId);
+    if (kind === 'subagent_spawned' && id) names.set(id, text(update?.name) ?? id);
+  }
+  return names;
+}
+
+export function entrySubagent(
+  entry: ProtocolLogEntry,
+  names: ReadonlyMap<string, string>,
+): string | null {
+  const { sessionId, update } = sessionUpdate(entry);
+  const id = text(update?.subagentSessionId) ?? sessionId;
+  return id ? (names.get(id) ?? null) : null;
+}
+
+function updateSummary(entry: ProtocolLogEntry, subagent: string | null): string | null {
+  const { update, kind } = sessionUpdate(entry);
   if (!update || !kind) return null;
-  const title = text(update.title);
-  return title ? `${kind} · ${title}` : kind;
+  const title = text(update.title) ?? text(update.state);
+  const summary = title ? `${kind} · ${title}` : kind;
+  return subagent ? `${summary} · sub-agent ${subagent}` : summary;
 }
 
 const CHECK_CAUSES: Record<string, string> = {
@@ -159,7 +185,7 @@ const CHECK_CAUSES: Record<string, string> = {
   environment: 'could not run',
 };
 
-export function entrySummary(entry: ProtocolLogEntry): string {
+export function entrySummary(entry: ProtocolLogEntry, subagent: string | null = null): string {
   const payload = record(entry.payload) ?? {};
   if (entry.kind === 'stderr') return text(payload.text) ?? 'stderr output';
   if (entry.kind === 'check') {
@@ -176,7 +202,10 @@ export function entrySummary(entry: ProtocolLogEntry): string {
     const message = text(record(payload.error)?.message);
     return `${entry.method ?? 'error'} failed${message ? ` · ${message}` : ''}`;
   }
-  if (entry.method === 'session/update') return updateSummary(payload) ?? entry.method;
+  if (entry.method === 'session/update') return updateSummary(entry, subagent) ?? entry.method;
+  if (entry.method === 'session/request_permission' && entry.kind === 'request' && subagent) {
+    return `${entry.method} · sub-agent ${subagent}`;
+  }
   if (entry.kind === 'response') return `${entry.method ?? 'response'} · reply`;
   return entry.method ?? entry.kind;
 }

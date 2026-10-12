@@ -7,6 +7,7 @@ import {
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
+  waitingOnLabel,
   type AgentRole,
   type Attachment,
   type ConversationSummary,
@@ -55,6 +56,7 @@ export interface RunRow {
   cached_read_tokens: number | null;
   cached_write_tokens: number | null;
   thought_tokens: number | null;
+  subagent_tokens?: number | null;
   cost_source?: CostSource | null;
   outpost_post_id?: string | null;
   outpost_id?: string | null;
@@ -91,6 +93,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_status: RunStatus | null;
   latest_run_error: string | null;
   latest_run_step: string | null;
+  latest_run_waiting_on?: number | null;
   latest_run_provider: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
@@ -199,6 +202,7 @@ function toTokenUsage(row: RunRow): TokenUsage | null {
     cachedRead: row.cached_read_tokens,
     cachedWrite: row.cached_write_tokens,
     thought: row.thought_tokens,
+    ...(row.subagent_tokens ? { subagents: Number(row.subagent_tokens) } : {}),
   };
 }
 
@@ -215,6 +219,11 @@ function toRunUsage(row: RunRow): RunUsage | null {
   };
 }
 
+function latestStep(row: ConversationSummaryRow): string | null {
+  if (row.latest_run_waiting_on) return waitingOnLabel(row.latest_run_waiting_on);
+  return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
+}
+
 export function toConversationSummary(row: ConversationSummaryRow): ConversationSummary {
   return {
     id: row.id,
@@ -227,7 +236,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             id: row.latest_run_id,
             status: row.latest_run_status,
             error: row.latest_run_error,
-            step: row.latest_run_step === null ? null : friendlyStep(row.latest_run_step),
+            step: latestStep(row),
             provider: row.latest_run_provider,
             progress:
               row.latest_run_progress && row.latest_run_progress.total > 0
@@ -235,6 +244,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
                 : null,
             interruptionChoice: row.latest_run_interruption_choice ?? null,
             needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
+            ...(row.latest_run_waiting_on ? { waitingOn: row.latest_run_waiting_on } : {}),
           }
         : null,
     archivedAt: iso(row.archived_at),

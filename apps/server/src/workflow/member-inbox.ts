@@ -1,11 +1,14 @@
 import { MEMBER_MESSAGE_ACTIVITY, type MemberMessage } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import { addToQueue } from '../persistence/chat-queue.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import {
   claimMemberMessages,
   markMissedMessages,
+  removeMemberMessages,
   setMemberMessageStatus,
 } from '../persistence/member-messages.ts';
+import { runWaitingOn } from '../persistence/subagents.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { SteerRequests, TurnInbox } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
@@ -18,6 +21,7 @@ export interface MemberInbox extends SteerRequests, TurnInbox {
 }
 
 interface InboxOptions {
+  conversationId: string;
   runId: string;
   topRunId: string;
   pollMs: number;
@@ -31,7 +35,7 @@ export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]):
 }
 
 export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
-  const { runId, topRunId, append } = options;
+  const { conversationId, runId, topRunId, append } = options;
   let send: ((text: string) => Promise<boolean>) | null = null;
   let busy = false;
   let done = false;
@@ -51,6 +55,22 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     await announce(messages, 'interrupting');
     await requestCancel(db, topRunId);
   };
+  const queueForLater = async (messages: readonly MemberMessage[]) => {
+    await withTransaction(db, async (client) => {
+      for (const { id, body } of messages) {
+        await addToQueue(client, conversationId, { id, content: body });
+      }
+      await removeMemberMessages(
+        client,
+        messages.map((message) => message.id),
+      );
+    });
+    await announce(messages, 'queued');
+  };
+  const sendUnsteered = async (messages: readonly MemberMessage[]) => {
+    const onlyWaiting = (await runWaitingOn(db, topRunId)) > 0;
+    await (onlyWaiting ? queueForLater(messages) : interrupt(messages));
+  };
   const poll = async () => {
     if (busy || done) return;
     busy = true;
@@ -68,7 +88,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
         later.map((message) => message.id),
         'queued',
       );
-      if (urgent.length > 0) await interrupt(urgent);
+      if (urgent.length > 0) await sendUnsteered(urgent);
     } finally {
       busy = false;
     }

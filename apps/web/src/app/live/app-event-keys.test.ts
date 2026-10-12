@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { AppEvent } from '@spark-outpost/contracts';
-import { isLiveQueryKey, mergeInvalidations } from './app-event-keys.ts';
+import { isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -111,6 +111,11 @@ describe('app event invalidation', () => {
 
   it('a step refreshes the sidebar row, the open chat, its audit summary and live change counts', async () => {
     expect(await invalidatedBy(event('step'))).toEqual(['auditA', 'changesA', 'detailA', 'list']);
+  });
+
+  it('a sub-agent starting or ending refreshes the sidebar row and the open chat, outside the step lane', async () => {
+    expect(await invalidatedBy(event('subagent'))).toEqual(['auditA', 'detailA', 'list']);
+    expect(isStepEvent(event('subagent'))).toBe(false);
   });
 
   it('an approval also refreshes tasks and the day so far', async () => {

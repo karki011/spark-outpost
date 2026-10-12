@@ -1,10 +1,16 @@
 import type { RunEvent, StepMark } from '@spark-outpost/contracts';
 import { THINKING_STEP } from '../agents/acp/session-updates.ts';
 import { storableText } from '../audit/redact.ts';
-import { createRedactionFilter, type RedactionFilter } from '../audit/redact-stream.ts';
+import {
+  createRedactionFilter,
+  redactSecrets,
+  type RedactionFilter,
+} from '../audit/redact-stream.ts';
 import { newId } from '../persistence/ids.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { runEvents } from './run-events.ts';
+import { attributed } from './subagent-events.ts';
+import { createSubagentProgress } from './subagent-progress.ts';
 import { toolArguments, toolResult } from './tool-call-text.ts';
 
 export interface TurnEventsOptions {
@@ -27,7 +33,16 @@ interface Thought {
   redaction: RedactionFilter;
 }
 
+const stepKey = (name: string, subagent: string | undefined) =>
+  subagent ? `${subagent}\u0000${name}` : name;
+
+const owned = (event: RunEvent, subagent: string | undefined): RunEvent =>
+  (subagent ? attributed(event, subagent) : null) ?? event;
+
 export function createTurnEvents({ append, secretValues }: TurnEventsOptions): TurnEvents {
+  const subagents = createSubagentProgress({
+    storable: (text) => storableText(redactSecrets(text, secretValues)),
+  });
   const openSteps = new Map<string, OpenStep>();
   const announced = new Map<string, string>();
   const openCalls = new Set<string>();
@@ -53,37 +68,39 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
     await append(runEvents.reasoningEnd(id));
   };
 
-  const startStep = async (name: string) => {
-    const open = openSteps.get(name);
+  const startStep = async (name: string, subagent?: string, waits?: boolean) => {
+    const key = stepKey(name, subagent);
+    const open = openSteps.get(key);
     if (open) {
       open.calls += 1;
       return;
     }
     const toolCallId = announced.get(name);
     announced.delete(name);
-    const mark: StepMark = toolCallId ? { toolCallId } : {};
-    openSteps.set(name, { calls: 1, mark });
-    await append(runEvents.stepStarted(name, mark));
+    const mark: StepMark = { ...(toolCallId ? { toolCallId } : {}), ...(waits ? { waits } : {}) };
+    openSteps.set(key, { calls: 1, mark });
+    await append(owned(runEvents.stepStarted(name, mark), subagent));
   };
 
-  const finishStep = async (name: string) => {
-    if (name === THINKING_STEP) await stopThinking();
-    const open = openSteps.get(name);
+  const finishStep = async (name: string, subagent?: string) => {
+    if (name === THINKING_STEP && !subagent) await stopThinking();
+    const key = stepKey(name, subagent);
+    const open = openSteps.get(key);
     if (open && open.calls > 1) {
       open.calls -= 1;
       return;
     }
     if (!open) return;
-    openSteps.delete(name);
-    await append(runEvents.stepFinished(name, open.mark));
+    openSteps.delete(key);
+    await append(owned(runEvents.stepFinished(name, open.mark), subagent));
   };
 
-  const startCall = async (id: string, name: string) => {
+  const startCall = async (id: string, name: string, subagent?: string) => {
     if (openCalls.has(id)) return;
     openCalls.add(id);
     startedCalls.add(id);
     announced.set(name, id);
-    await append(runEvents.toolCallStart(id, name));
+    await append(owned(runEvents.toolCallStart(id, name), subagent));
   };
 
   const endCall = async (id: string, input: unknown, secret: boolean) => {
@@ -95,11 +112,15 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
 
   return {
     async observe(output) {
-      if (output.kind === 'step_started') await startStep(output.name);
-      if (output.kind === 'step_finished') await finishStep(output.name);
+      if (output.kind === 'step_started') {
+        await startStep(output.name, output.subagent, output.waits);
+      }
+      if (output.kind === 'step_finished') await finishStep(output.name, output.subagent);
       if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'thought_delta') await think(output.delta);
-      if (output.kind === 'tool_started') await startCall(output.id, output.name);
+      if (output.kind === 'tool_started') {
+        await startCall(output.id, output.name, output.subagent);
+      }
       if (output.kind === 'tool_input') await endCall(output.id, output.input, output.secret);
       if (
         output.kind === 'tool_result' &&
@@ -109,6 +130,7 @@ export function createTurnEvents({ append, secretValues }: TurnEventsOptions): T
         const content = toolResult(output.output, output.secret, secretValues);
         await append(runEvents.toolCallResult(newId(), output.id, content));
       }
+      for (const event of subagents.observe(output)) await append(event);
     },
     close: stopThinking,
   };

@@ -148,6 +148,12 @@ export async function listProtocolLog(
     params.push(containsPattern(query.q));
     conditions.push(`payload::text ILIKE $${params.length}`);
   }
+  if (query.subagent) {
+    params.push(query.subagent);
+    const session = `payload->'params'->>'sessionId' = $${params.length}`;
+    const lifecycle = `payload->'params'->'update'->>'subagentSessionId' = $${params.length}`;
+    conditions.push(`(${session} OR ${lifecycle})`);
+  }
   params.push(query.limit + 1);
   const { rows } = await db.query<LogRow>(
     `SELECT ${LOG_COLUMNS} FROM run_protocol_log WHERE ${conditions.join(' AND ')}

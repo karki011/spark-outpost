@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { AuditRunSummary, ProtocolLogEntry } from '@spark-outpost/contracts';
 import {
   auditTurns,
+  entrySubagent,
   entrySummary,
   formatDuration,
   jsonTokens,
   runLabel,
+  subagentNames,
   tickLabel,
   waterfall,
 } from './audit-model.ts';
@@ -138,6 +140,47 @@ describe('labels', () => {
         }),
       ),
     ).toBe('tool_call · Read a.ts');
+    const spawned = entry({
+      payload: {
+        params: {
+          sessionId: 'root',
+          update: { sessionUpdate: 'subagent_spawned', subagentSessionId: 's1', name: 'Explore' },
+        },
+      },
+    });
+    const childCall = entry({
+      payload: {
+        params: { sessionId: 's1', update: { sessionUpdate: 'tool_call', title: 'Read a.ts' } },
+      },
+    });
+    const ended = entry({
+      payload: {
+        params: {
+          sessionId: 'root',
+          update: {
+            sessionUpdate: 'subagent_state_update',
+            subagentSessionId: 's1',
+            state: 'failed',
+          },
+        },
+      },
+    });
+    const names = subagentNames([spawned, childCall, ended]);
+    expect(entrySummary(childCall, entrySubagent(childCall, names))).toBe(
+      'tool_call · Read a.ts · sub-agent Explore',
+    );
+    expect(entrySummary(ended, entrySubagent(ended, names))).toBe(
+      'subagent_state_update · failed · sub-agent Explore',
+    );
+    expect(entrySubagent(entry({ payload: { params: { sessionId: 'root' } } }), names)).toBeNull();
+    const asked = entry({
+      kind: 'request',
+      method: 'session/request_permission',
+      payload: { params: { sessionId: 's1', toolCall: { toolCallId: 't1' } } },
+    });
+    expect(entrySummary(asked, entrySubagent(asked, names))).toBe(
+      'session/request_permission · sub-agent Explore',
+    );
     expect(entrySummary(entry({ kind: 'response', method: 'session/prompt' }))).toBe(
       'session/prompt · reply',
     );

@@ -69,7 +69,8 @@ export async function recordTokens(
 ): Promise<void> {
   await db.query(
     `UPDATE runs SET input_tokens = $2, output_tokens = $3, total_tokens = $4,
-       cached_read_tokens = $5, cached_write_tokens = $6, thought_tokens = $7
+       cached_read_tokens = $5, cached_write_tokens = $6, thought_tokens = $7,
+       subagent_tokens = $8
      WHERE id = $1`,
     [
       runId,
@@ -79,6 +80,7 @@ export async function recordTokens(
       tokens.cachedRead,
       tokens.cachedWrite,
       tokens.thought,
+      tokens.subagents ?? null,
     ],
   );
 }

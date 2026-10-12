@@ -34,6 +34,14 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
     expect(crewJob(agent)).toBe('Agent · Sonnet 5 · medium');
   });
 
+  it('says it waits on its sub-agents while it has no step of its own', () => {
+    const live = run({ status: 'running', finishedAt: null });
+    const steps = [{ name: 'Read routes.ts', done: false }];
+    expect(chatAgent(live, steps, false, 2).line).toBe('waiting on 2 sub-agents');
+    expect(chatAgent(live, steps, true, 2).line).toBe('waiting for you');
+    expect(chatAgent(run(), steps, false, 2).line).toBe('done');
+  });
+
   it('names the model the session reported running, not the id the chat was pinned to', () => {
     expect(crewJob(chatAgent(run({ model: 'sonnet', usedModel: 'claude-sonnet-5-5' })))).toBe(
       'Agent · Sonnet 5.5 · medium',

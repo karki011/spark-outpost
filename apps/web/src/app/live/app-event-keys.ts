@@ -92,6 +92,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       ];
     case 'step':
       return [list, ...conversationScoped(event, true), changeSummaries];
+    case 'subagent':
+      return [list, ...conversationScoped(event, true)];
     case 'approval':
       return [list, teammates, ...conversationScoped(event, true), tasks, today, outposts];
     case 'orchestration':

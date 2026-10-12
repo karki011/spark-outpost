@@ -81,6 +81,7 @@ describe("the agent process of the chat's own changing run that may not publish"
       PATH: '/bin',
       GH_TOKEN: 'ghp_x',
       GITHUB_TOKEN: 'ghp_y',
+      CLAUDE_CODE_FORK_SUBAGENT: '1',
       GIT_CONFIG_COUNT: '1',
       GIT_CONFIG_KEY_0: `url.${NO_PUSH_URL}.pushInsteadOf`,
       GIT_CONFIG_VALUE_0: '',
@@ -88,6 +89,9 @@ describe("the agent process of the chat's own changing run that may not publish"
   });
 
   it('is left alone without the flag', async () => {
-    expect(await agentEnvironment(options, '/runs/1')).toEqual(options.env);
+    expect(await agentEnvironment(options, '/runs/1')).toEqual({
+      ...options.env,
+      CLAUDE_CODE_FORK_SUBAGENT: '1',
+    });
   });
 });

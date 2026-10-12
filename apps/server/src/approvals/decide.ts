@@ -58,6 +58,7 @@ export interface ApprovalRequest {
   mode?: string | null;
   mcpServer?: string | null;
   agentReason?: string | null;
+  subagent?: string | null;
 }
 
 export type RunRule =

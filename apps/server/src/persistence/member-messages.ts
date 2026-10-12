@@ -118,6 +118,11 @@ export async function setMemberMessageStatus(
   );
 }
 
+export async function removeMemberMessages(db: Queryable, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await db.query('DELETE FROM member_messages WHERE id = ANY($1::uuid[])', [ids]);
+}
+
 export async function markMissedMessages(db: Queryable, runId: string): Promise<void> {
   await db.query(
     `UPDATE member_messages SET status = 'missed'

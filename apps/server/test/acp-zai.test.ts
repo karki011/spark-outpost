@@ -127,6 +127,7 @@ describe('Z.ai provider against the fake agent', { timeout: 20_000 }, () => {
       'ANTHROPIC_BASE_URL',
       'CLAUDE_CODE_AUTO_COMPACT_WINDOW',
       'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+      'CLAUDE_CODE_FORK_SUBAGENT',
       'CLAUDE_CONFIG_DIR',
     ]);
   });

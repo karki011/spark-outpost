@@ -4,7 +4,7 @@ import type { TurnState } from './AiTurn.tsx';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
 import { StepThought, ThoughtToggle } from './StepThought.tsx';
 
-function StepName({ name }: { name: string }) {
+export function StepName({ name }: { name: string }) {
   return friendlyStep(name)
     .split('`')
     .map((part, index) => (index % 2 === 1 ? <code key={index}>{part}</code> : part));
@@ -15,7 +15,8 @@ function stepCount(steps: readonly StepView[]): string {
 }
 
 function currentStep(steps: readonly StepView[]): string | null {
-  const step = steps.findLast((candidate) => candidate.status !== 'done') ?? steps.at(-1);
+  const own = steps.filter((candidate) => !candidate.subagent && !candidate.waits);
+  const step = own.findLast((candidate) => candidate.status !== 'done') ?? own.at(-1);
   return step ? friendlyStep(step.name).replaceAll('`', '') : null;
 }
 
@@ -76,7 +77,7 @@ export function StepToggle({ log, label }: { log: StepLog; label: string }) {
   );
 }
 
-function StepIcon({ step, working }: { step: StepView; working: boolean }) {
+export function StepIcon({ step, working }: { step: StepView; working: boolean }) {
   if (step.status === 'done') {
     return (
       <svg width="12" height="12" viewBox="0 0 12 12" role="img" aria-label="Done">

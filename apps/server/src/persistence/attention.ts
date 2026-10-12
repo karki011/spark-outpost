@@ -9,6 +9,7 @@ export interface PendingApprovalRow {
   pending_agent: string | null;
   pending_member: string | null;
   pending_asker: string | null;
+  pending_subagent?: string | null;
   pending_questions?: boolean | null;
   pending_plan?: boolean | null;
   pending_provider: string | null;
@@ -89,5 +90,8 @@ export function toAttention(row: PendingApprovalRow): ConversationAttention | nu
     provider: kind === 'clarify' && !row.pending_asker ? 'jev' : row.pending_provider,
     approvalId: row.pending_id,
     ...(row.pending_pr_feedback ? { prFeedback: true } : {}),
+    ...(attention === 'permission' && row.pending_subagent
+      ? { subagent: row.pending_subagent }
+      : {}),
   };
 }

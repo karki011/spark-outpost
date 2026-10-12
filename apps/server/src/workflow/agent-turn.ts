@@ -228,6 +228,7 @@ export async function runAgentTurn(
   const inbox = input.assistant
     ? null
     : openMemberInbox(deps.db, {
+        conversationId: input.identity.threadId,
         runId: lease.runId,
         topRunId: input.parentRunId ?? lease.runId,
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
@@ -379,6 +380,7 @@ export async function runAgentTurn(
         live.observe(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') await recordSpend(output);
+        if (output.kind === 'subagent_finished') await events.observe(output);
         continue;
       }
       options.onOutput?.(output);
@@ -407,6 +409,7 @@ export async function runAgentTurn(
       }
       if (output.kind === 'text_delta') {
         const finalStarts = reply.mark(output.phase, replySoFar().held);
+        if (output.newMessage) titles?.endMessage(redaction.pending());
         if (finalStarts) titles?.startMessage(redaction.pending());
         await sayText(redaction.push(output.delta));
       }

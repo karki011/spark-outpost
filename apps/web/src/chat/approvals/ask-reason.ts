@@ -42,9 +42,15 @@ function toolCallReason(approval: Approval, agent: string): string | null {
   return null;
 }
 
+export function askerName(approval: Approval, agent: string): string {
+  const subagent = approval.payload.subagent;
+  return subagent ? `${agent}'s sub-agent ${subagent}` : agent;
+}
+
 export function askReason(approval: Approval, agent: string): string | null {
+  const asker = askerName(approval, agent);
   const own = approval.payload.agentReason;
-  if (own && approval.payload.asksBecause) return `${agent} noted: ${own}`;
-  if (own) return agentReasonLine(agent, own);
-  return explainedBySpark(approval) ? null : toolCallReason(approval, agent);
+  if (own && approval.payload.asksBecause) return `${asker} noted: ${own}`;
+  if (own) return agentReasonLine(asker, own);
+  return explainedBySpark(approval) ? null : toolCallReason(approval, asker);
 }

@@ -21,7 +21,7 @@ export function usePendingEntry(
 }
 
 function openStep(steps: readonly RunStep[]): string | null {
-  return steps.findLast((step) => !step.done)?.name ?? null;
+  return steps.findLast((step) => !step.done && !step.subagent && !step.waits)?.name ?? null;
 }
 
 export function useLiveReport(

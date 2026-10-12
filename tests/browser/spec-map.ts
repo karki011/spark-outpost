@@ -69,7 +69,7 @@ export const SPEC_GROUPS = {
     'rail-flags',
     'read-then-send',
   ],
-  'agent-tv': ['agent-tv', 'agent-tv-list'],
+  'agent-tv': ['agent-tv', 'agent-tv-list', 'subagents'],
   'ship-pr': [
     'chat-worktree',
     'github-app',

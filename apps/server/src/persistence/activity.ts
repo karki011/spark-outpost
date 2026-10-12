@@ -4,6 +4,7 @@ export interface StepEventRow {
   run_id: string;
   type: string;
   name: string;
+  subagent?: boolean;
 }
 
 interface OpenQueue {
@@ -24,7 +25,7 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
     const name = friendlyStep(raw);
     const open = openQueues(openByRun, row.run_id);
     if (row.type === 'STEP_STARTED') {
-      const step = { name, done: false };
+      const step: ActivityStep = { name, done: false, ...(row.subagent ? { subagent: true } : {}) };
       steps.push(step);
       enqueue(open, step);
       continue;

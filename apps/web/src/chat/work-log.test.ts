@@ -20,6 +20,23 @@ describe('turnHeading', () => {
     expect(turnHeading(views, 'stopped', null, false)).toBe('2 steps');
   });
 
+  it("names the agent's own step, never a sub-agent's, and only the count while it waits", () => {
+    const views: StepView[] = [
+      { name: 'Read plan.md', status: 'open' },
+      { name: 'node scripts/slow.mjs', status: 'open', subagent: true },
+    ];
+    expect(turnHeading(views, 'working', null, false)).toBe('Read plan.md · 2 steps');
+    expect(turnHeading(views, 'waiting', null, false)).toBe('2 steps');
+  });
+
+  it("never names the agent's wait for sub-agents as what it is doing", () => {
+    const views: StepView[] = [
+      { name: 'Read plan.md', status: 'done' },
+      { name: 'Waiting for sub-agents', status: 'open', waits: true },
+    ];
+    expect(turnHeading(views, 'working', null, false)).toBe('Read plan.md · 2 steps');
+  });
+
   it('counts steps otherwise', () => {
     expect(turnHeading(steps(1), 'working', null)).toBe('1 step');
     expect(turnHeading(steps(4), 'stopped', 12)).toBe('4 steps');

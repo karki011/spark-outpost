@@ -1,4 +1,4 @@
-import type { ActivityStep, Run } from '@spark-outpost/contracts';
+import { waitingOnLabel, type ActivityStep, type Run } from '@spark-outpost/contracts';
 import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
 import { AGENT_DEFAULT } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
@@ -22,10 +22,16 @@ function agentState(run: Run, steps: readonly ActivityStep[], asking: boolean): 
   return steps.length > 0 ? 'working' : 'thinking';
 }
 
-function agentLine(run: Run, state: CrewState, steps: readonly ActivityStep[]): string {
+function agentLine(
+  run: Run,
+  state: CrewState,
+  steps: readonly ActivityStep[],
+  waitingOn: number,
+): string {
   if (timedOut(run.error)) return WAITED_LABEL;
   const settled = SETTLED_LINES[state];
   if (settled) return settled;
+  if (waitingOn > 0) return waitingOnLabel(waitingOn).toLowerCase();
   const open = steps.findLast((step) => !step.done);
   return open ? stepLine(open.name) : 'thinking';
 }
@@ -45,6 +51,7 @@ export function chatAgent(
   run: Run,
   steps: readonly ActivityStep[] = [],
   asking = false,
+  waitingOn = 0,
 ): CrewAgent {
   const state = agentState(run, steps, asking);
   return {
@@ -55,7 +62,7 @@ export function chatAgent(
     model: modelOf(run),
     effort: run.effort,
     state,
-    line: agentLine(run, state, steps),
+    line: agentLine(run, state, steps, waitingOn),
     tokens: run.usage?.tokens?.total ?? null,
     costUsd: run.usage?.costUsd ?? null,
     costSource: run.usage?.costSource ?? null,

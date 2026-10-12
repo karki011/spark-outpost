@@ -30,9 +30,14 @@ export function isRunning(chat: ConversationSummary): boolean {
   return status === 'queued' || status === 'running';
 }
 
-function speaker(attention: ConversationAttention): string {
+function agentSpeaking(attention: ConversationAttention): string {
   if (attention.agentName) return attention.agentName;
   return attention.provider ? providerName(attention.provider) : 'The agent';
+}
+
+function speaker(attention: ConversationAttention): string {
+  const agent = agentSpeaking(attention);
+  return attention.subagent ? `${agent}'s sub-agent ${attention.subagent}` : agent;
 }
 
 export function attentionLine(attention: ConversationAttention | null): string {

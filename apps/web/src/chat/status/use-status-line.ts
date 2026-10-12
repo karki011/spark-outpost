@@ -93,17 +93,17 @@ export function useNow(ticking: boolean): number {
   return now;
 }
 
-export function useThrottled(value: string, gapMs: number): string {
-  const [shown, setShown] = useState('');
+export function useThrottled(value: string, gapMs: number, state = ''): string {
+  const [shown, setShown] = useState({ value: '', state: '' });
   const [lastAt, setLastAt] = useState(0);
   useEffect(() => {
-    if (value === shown) return;
-    const wait = Math.max(0, lastAt + gapMs - Date.now());
+    if (value === shown.value) return;
+    const wait = state === shown.state ? Math.max(0, lastAt + gapMs - Date.now()) : 0;
     const timer = setTimeout(() => {
-      setShown(value);
+      setShown({ value, state });
       setLastAt(Date.now());
     }, wait);
     return () => clearTimeout(timer);
-  }, [value, shown, lastAt, gapMs]);
-  return shown;
+  }, [value, state, shown, lastAt, gapMs]);
+  return shown.value;
 }

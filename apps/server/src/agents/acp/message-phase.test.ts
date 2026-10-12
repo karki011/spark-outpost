@@ -32,7 +32,7 @@ describe('ACP message chunks keep their phase', () => {
       { kind: 'text_delta', delta: 'I will count the files.', phase: 'commentary' },
     ]);
     expect(mapper.map(said('3', 'm2', 'final_answer'))).toEqual([
-      { kind: 'text_delta', delta: '\n\n3', phase: 'final' },
+      { kind: 'text_delta', delta: '\n\n3', newMessage: true, phase: 'final' },
     ]);
   });
 

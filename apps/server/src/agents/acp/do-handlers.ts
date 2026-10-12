@@ -4,6 +4,7 @@ import type { PathPolicy } from '../../projects/path-policy.ts';
 import type { PermissionGate } from '../../providers/provider.ts';
 import { writeTextFile } from './fs-handlers.ts';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
+import type { SubagentAsker } from './subagent-updates.ts';
 
 export interface DoWorkspace {
   policy: PathPolicy;
@@ -11,7 +12,8 @@ export interface DoWorkspace {
   gate: PermissionGate;
   signal: AbortSignal;
   report: (name: string) => void;
-  annotate: (name: string) => void;
+  annotate: (name: string, subagent?: string) => void;
+  asker?: (sessionId: string) => SubagentAsker | null;
   mode: () => string | null;
   shownPlan?: () => string | null;
 }
@@ -25,6 +27,7 @@ export async function reviewPermission(
   requestId: string | number | null | undefined,
   workspace: DoWorkspace,
 ): Promise<acp.RequestPermissionResponse> {
+  const asker = workspace.asker?.(params.sessionId) ?? null;
   const request = approvalRequestFrom(params, {
     rpcId: requestId === undefined || requestId === null ? null : String(requestId),
     roots: workspace.policy.roots,
@@ -32,9 +35,10 @@ export async function reviewPermission(
     home: homedir(),
     mode: workspace.mode(),
     shownPlan: workspace.shownPlan?.() ?? null,
+    subagent: asker?.name ?? null,
   });
   const answer = await workspace.gate.review(request, workspace.signal);
-  workspace.annotate(answer.note);
+  workspace.annotate(answer.note, asker?.id);
   return permissionResponse(answer);
 }
 

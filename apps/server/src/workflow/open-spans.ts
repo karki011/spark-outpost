@@ -14,8 +14,18 @@ function subagentOf(event: RunEvent): string | null {
   return typeof id === 'string' ? id : null;
 }
 
+interface OpenStep {
+  name: string;
+  mark: StepMark;
+  subagent: string | null;
+}
+
+function stepKey(event: RunEvent & { stepName: string }): string {
+  return `${subagentOf(event) ?? ''}\u0000${event.stepName}`;
+}
+
 export function trackOpenSpans(): OpenSpans {
-  const steps = new Map<string, StepMark>();
+  const steps = new Map<string, OpenStep>();
   const toolCalls = new Set<string>();
   const reasoningMessages = new Set<string>();
   const reasoningSpans = new Set<string>();
@@ -23,8 +33,14 @@ export function trackOpenSpans(): OpenSpans {
   const subagentTexts = new Map<string, string>();
   return {
     observe(event) {
-      if (event.type === EventType.STEP_STARTED) steps.set(event.stepName, stepMark(event));
-      if (event.type === EventType.STEP_FINISHED) steps.delete(event.stepName);
+      if (event.type === EventType.STEP_STARTED) {
+        steps.set(stepKey(event), {
+          name: event.stepName,
+          mark: stepMark(event),
+          subagent: subagentOf(event),
+        });
+      }
+      if (event.type === EventType.STEP_FINISHED) steps.delete(stepKey(event));
       if (event.type === EventType.TOOL_CALL_START) toolCalls.add(event.toolCallId);
       if (event.type === EventType.TOOL_CALL_END) toolCalls.delete(event.toolCallId);
       if (event.type === EventType.REASONING_START) reasoningSpans.add(event.messageId);
@@ -45,9 +61,10 @@ export function trackOpenSpans(): OpenSpans {
         ...[...reasoningMessages].map(runEvents.reasoningMessageEnd),
         ...[...reasoningSpans].map(runEvents.reasoningEnd),
         ...[...toolCalls].map(runEvents.toolCallEnd),
-        ...[...steps].map(([name, mark]) =>
-          runEvents.stepFinished(name, { ...mark, interrupted: true }),
-        ),
+        ...[...steps.values()].map(({ name, mark, subagent }) => {
+          const finished = runEvents.stepFinished(name, { ...mark, interrupted: true });
+          return (subagent ? attributed(finished, subagent) : null) ?? finished;
+        }),
         ...[...subagentTexts].map(([messageId, subagent]) =>
           attributed(runEvents.textEnd(messageId), subagent)!,
         ),

@@ -1,5 +1,5 @@
 import { memo, useId, useMemo, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type {
   AuditRunSummary,
   ProtocolDirection,
@@ -9,7 +9,14 @@ import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
-import { clockTime, entrySummary, JSON_TOKEN_LIMIT, jsonTokens } from './audit-model.ts';
+import {
+  clockTime,
+  entrySubagent,
+  entrySummary,
+  JSON_TOKEN_LIMIT,
+  jsonTokens,
+  subagentNames,
+} from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -54,9 +61,11 @@ const DIRECTION_TITLES: Record<ProtocolLogEntry['direction'], string> = {
 const LogRow = memo(function LogRow({
   entry,
   broken,
+  subagent,
 }: {
   entry: ProtocolLogEntry;
   broken: boolean;
+  subagent: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const rawId = useId();
@@ -76,7 +85,7 @@ const LogRow = memo(function LogRow({
         </span>
         <span className="ls">
           <span className={`ltype ${entry.kind}`}>{entry.kind}</span>
-          {entrySummary(entry)}
+          {entrySummary(entry, subagent)}
           {entry.unreviewed && <span className="unrev">Ran without review</span>}
         </span>
         <ChevronIcon />
@@ -100,6 +109,12 @@ const LogRow = memo(function LogRow({
   );
 });
 
+const SPAWNS: LogFilters = {
+  direction: 'from_agent',
+  method: 'session/update',
+  q: 'subagent_spawned',
+};
+
 function runOption(run: AuditRunSummary, index: number): string {
   return [`Run ${index + 1}`, run.role, run.model].filter(Boolean).join(' · ');
 }
@@ -116,13 +131,21 @@ export function AuditLogs({
   const [direction, setDirection] = useState<ProtocolDirection | 'all'>('all');
   const [method, setMethod] = useState('');
   const [text, setText] = useState('');
+  const [subagent, setSubagent] = useState('');
   const q = useDebouncedValue(text, 250);
   const run = runs.find((candidate) => candidate.runId === runId);
   const filters: LogFilters = {
     direction: direction === 'all' ? null : direction,
     method: method || null,
     q,
+    subagent: subagent || null,
   };
+  const spawned = useQuery({
+    queryKey: auditKeys.log(runId, SPAWNS),
+    queryFn: () => auditApi.log(runId, 0, SPAWNS),
+    enabled: runId !== '',
+  });
+  const known = subagentNames(spawned.data?.entries ?? []);
   const log = useInfiniteQuery({
     queryKey: auditKeys.log(runId, filters),
     queryFn: ({ pageParam }) => auditApi.log(runId, pageParam, filters),
@@ -132,6 +155,7 @@ export function AuditLogs({
   });
   if (!run) return <EmptyScene>No runs in this chat yet.</EmptyScene>;
   const entries = log.data?.pages.flatMap((page) => page.entries) ?? [];
+  const subagents = new Map([...known, ...subagentNames(entries)]);
   const check = checks.get(run.runId);
   const brokenFrom = check && !check.intact ? (check.firstBrokenSeq ?? 0) : Infinity;
 
@@ -148,6 +172,7 @@ export function AuditLogs({
           onChange={(id) => {
             setRunId(id);
             setMethod('');
+            setSubagent('');
           }}
         />
         <ChoicePicker
@@ -168,6 +193,17 @@ export function AuditLogs({
           value={method}
           onChange={setMethod}
         />
+        {known.size > 0 && (
+          <ChoicePicker
+            label="Agent"
+            choices={[
+              { id: '', label: 'All agents' },
+              ...[...known].map(([id, name]) => ({ id, label: `Sub-agent ${name}` })),
+            ]}
+            value={subagent}
+            onChange={setSubagent}
+          />
+        )}
         <input
           className="lf-q"
           type="search"
@@ -197,7 +233,12 @@ export function AuditLogs({
       )}
       <ul className="llist" aria-label="Protocol messages">
         {entries.map((entry) => (
-          <LogRow key={entry.seq} entry={entry} broken={entry.seq >= brokenFrom} />
+          <LogRow
+            key={entry.seq}
+            entry={entry}
+            broken={entry.seq >= brokenFrom}
+            subagent={entrySubagent(entry, subagents)}
+          />
         ))}
       </ul>
       {log.isFetchingNextPage && <Skeleton label="Reading more messages" shape="list" rows={3} />}

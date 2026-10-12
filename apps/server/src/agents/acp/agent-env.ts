@@ -4,6 +4,7 @@ import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition } from './agents.ts';
 import { codexUserMcpNames, disabledCodexServers } from './codex-mcp.ts';
 import type { CodexRepoOptions } from './repo-session.ts';
+import { withBackgroundSubagents } from './subagent-env.ts';
 
 function withHiddenServers(env: Record<string, string>, names: readonly string[]) {
   if (names.length === 0) return env;
@@ -72,6 +73,7 @@ export async function agentEnvironment(
   repo: CodexRepoOptions | null = null,
   cannotPush = false,
 ): Promise<Record<string, string>> {
-  const env = await baseEnvironment(options, home, browsing, repo);
+  const base = await baseEnvironment(options, home, browsing, repo);
+  const env = withBackgroundSubagents(options.definition, base);
   return cannotPush ? withoutPushing(env) : env;
 }

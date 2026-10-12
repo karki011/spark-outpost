@@ -56,6 +56,34 @@ const page = (runId: string, query: Partial<Parameters<typeof listProtocolLog>[2
   listProtocolLog(t.db, runId, { after: 0, limit: 100, ...query });
 
 describe('protocol log storage', () => {
+  it('filters the log to one sub-agent: its own messages and the ones that start and end it', async () => {
+    const lease = await leasedRun();
+    const recorder = createProtocolRecorder();
+    const update = (sessionId: string, body: Record<string, unknown>, second: number) =>
+      recorder.entry(
+        'from_agent',
+        { jsonrpc: '2.0', method: 'session/update', params: { sessionId, update: body } },
+        new Date(Date.UTC(2026, 8, 26, 10, 0, second)),
+      );
+    await insertProtocolEntries(t.db, lease, [
+      update(
+        'root',
+        { sessionUpdate: 'subagent_spawned', subagentSessionId: 's1', name: 'Explore' },
+        1,
+      ),
+      update('s1', { sessionUpdate: 'tool_call', toolCallId: 't1', title: 'Read a.ts' }, 2),
+      update('root', { sessionUpdate: 'tool_call', toolCallId: 't2', title: 'Read b.ts' }, 3),
+      update('s2', { sessionUpdate: 'tool_call', toolCallId: 't3', title: 'Read c.ts' }, 4),
+      update(
+        'root',
+        { sessionUpdate: 'subagent_state_update', subagentSessionId: 's1', state: 'completed' },
+        5,
+      ),
+    ]);
+    const { entries: rows } = await page(lease.runId, { subagent: 's1' });
+    expect(rows.map((row) => row.seq)).toEqual([1, 2, 5]);
+  });
+
   it('appends batches with continuous seq numbers and a hash chain', async () => {
     const lease = await leasedRun();
     await insertProtocolEntries(t.db, lease, entries(3));
