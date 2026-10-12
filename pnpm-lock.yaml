@@ -164,7 +164,7 @@ settings:
 
 patchedDependencies:
   '@agentclientprotocol/claude-agent-acp@0.81.2': 4926d7abbbfbde4cc6ba9dc5ff3afc4331c36f4884ba2d3afd67303a67215008
-  '@agentclientprotocol/codex-acp@1.13.1': 9e7c591d1b4ad0fc06423f2d72005f5b413dd11ae27eb2a54157c6133a94b272
+  '@agentclientprotocol/codex-acp@1.13.1': 43afa29ba49da6c4a9aa855f8f6106c224388a0a6ae46a2adce63d4c3cdb15b6
 
 importers:
 
@@ -257,7 +257,7 @@ importers:
         version: 0.81.2(patch_hash=4926d7abbbfbde4cc6ba9dc5ff3afc4331c36f4884ba2d3afd67303a67215008)(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.30.1(supports-color@10.2.2)(zod@4.6.5))
       '@agentclientprotocol/codex-acp':
         specifier: 1.13.1
-        version: 1.13.1(patch_hash=9e7c591d1b4ad0fc06423f2d72005f5b413dd11ae27eb2a54157c6133a94b272)
+        version: 1.13.1(patch_hash=43afa29ba49da6c4a9aa855f8f6106c224388a0a6ae46a2adce63d4c3cdb15b6)
       '@agentclientprotocol/sdk':
         specifier: 1.5.0
         version: 1.5.0(zod@4.6.5)
@@ -4952,7 +4952,7 @@ snapshots:
       - '@anthropic-ai/sdk'
       - '@modelcontextprotocol/sdk'
 
-  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=9e7c591d1b4ad0fc06423f2d72005f5b413dd11ae27eb2a54157c6133a94b272)':
+  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=43afa29ba49da6c4a9aa855f8f6106c224388a0a6ae46a2adce63d4c3cdb15b6)':
     dependencies:
       '@agentclientprotocol/sdk': 1.5.0(zod@4.6.5)
       '@openai/codex': 0.156.1

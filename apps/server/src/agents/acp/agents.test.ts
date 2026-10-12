@@ -193,8 +193,17 @@ describe('Codex launch', () => {
       );
       expect(source).toContain('if (starting) starting.turns = (starting.turns ?? 0) + 1;');
       expect(source).toContain(
-        '_meta: { codex: { usage: child.usage, turns: child.turns, model: child.model } }',
+        '_meta: { codex: { usage: child.usage, turns: child.turns, model: this.modelOf(child) } }',
       );
+    });
+
+    it("gives a sub-agent its parent's model when its spawn names none", () => {
+      expect(source).toContain(
+        'await this.subagents.handle(notification, this.sessionState.currentModelId)',
+      );
+      expect(source).toContain('model: this.modelOf(child)');
+      const modelOf = source.slice(source.indexOf('  modelOf(child) {'));
+      expect(modelOf.slice(0, modelOf.indexOf('\n  }'))).toContain('return this.rootModel;');
     });
 
     it('makes read-only a readOnly sandbox', () => {
