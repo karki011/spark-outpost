@@ -67,7 +67,7 @@ describe('island state machine', () => {
     expect(islandView(quiet).kind).toBe('peek');
     expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
     expect(hoverOpens(islandView(quiet))).toEqual({ kind: 'home' });
-    expect(hoverOpens(islandView({ ...quiet, cards: [card], nudge: true }))).toEqual({
+    expect(hoverOpens(islandView({ ...quiet, cards: [card], nudge: true }), card)).toEqual({
       kind: 'card',
       card,
     });
@@ -128,15 +128,11 @@ describe('island state machine', () => {
     expect(viewWidth({ kind: 'peek' }, 0, 1512)).toBe(72);
   });
 
-  it('nudges for a waiting card only when allowed, and opens it on review', () => {
+  it('keeps resting with a waiting card, and opens it on review', () => {
     const first = { kind: 'approval' as const, chat: chat('a'), approval: null, loading: false };
     const second = { kind: 'question' as const, chat: chat('b'), approval: null, loading: false };
     const cards = [first, second];
-    expect(islandView({ ...quiet, cards, nudge: true })).toEqual({
-      kind: 'nudge',
-      card: first,
-      total: 2,
-    });
+    expect(islandView({ ...quiet, cards, nudge: true })).toEqual({ kind: 'peek' });
     expect(islandView({ ...quiet, cards, review: second.chat.id })).toEqual({
       kind: 'card',
       card: second,
@@ -338,7 +334,7 @@ describe('Ask Spark fast path', () => {
       loading: false,
     };
     const openCard: Card = { kind: 'open' as const, chat: waiting, approval: null, loading: false };
-    const nudge = (card: Card) => ({ kind: 'nudge' as const, card, total: 1 });
+    const bar = (card: Card) => ({ kind: 'now' as const, card });
     const reviewCard = (card: Card) => ({
       kind: 'card' as const,
       card,
@@ -347,7 +343,7 @@ describe('Ask Spark fast path', () => {
     });
 
     it('reviews a needs-you item whose details are still loading instead of starting a chat', () => {
-      expect(quickShortcutTarget(null, nudge(loadingCard))).toEqual({
+      expect(quickShortcutTarget(null, bar(loadingCard))).toEqual({
         kind: 'review',
         chatId: 'a',
       });
@@ -358,7 +354,7 @@ describe('Ask Spark fast path', () => {
     });
 
     it('reviews a loaded approval and keeps its chat id when the details arrive', () => {
-      expect(quickShortcutTarget(null, nudge(approvalCard))).toEqual({
+      expect(quickShortcutTarget(null, bar(approvalCard))).toEqual({
         kind: 'review',
         chatId: 'a',
       });
@@ -366,8 +362,8 @@ describe('Ask Spark fast path', () => {
 
     it('opens the composer when nothing needs approving and closes an open panel', () => {
       expect(quickShortcutTarget(null, { kind: 'peek' })).toEqual({ kind: 'quick' });
-      expect(quickShortcutTarget(null, nudge(openCard))).toEqual({ kind: 'quick' });
-      expect(quickShortcutTarget('home', nudge(loadingCard))).toEqual({ kind: 'close' });
+      expect(quickShortcutTarget(null, bar(openCard))).toEqual({ kind: 'quick' });
+      expect(quickShortcutTarget('home', bar(loadingCard))).toEqual({ kind: 'close' });
     });
   });
 });

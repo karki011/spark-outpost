@@ -33,7 +33,6 @@ export const CHECKPOINT_OPTION = {
   keepFirst: 'keep_first',
   keepSecond: 'keep_second',
   reconcile: 'reconcile',
-  nudge: 'nudge',
   letContinue: 'let_continue',
   continueStuck: 'continue_stuck',
   stopReport: 'stop_report',

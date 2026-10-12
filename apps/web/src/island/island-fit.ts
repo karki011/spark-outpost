@@ -3,6 +3,10 @@ import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
 
 const MIN_STRIP = 24;
 const OUT_GAP = 4;
+const FLAT_ROW_BOTTOM = 18;
+const ROW_BLOB_DROP = 15;
+const ROW_BADGE = 5;
+const LINE_GAP = 4;
 
 interface NotchFit {
   hugsNotch: boolean;
@@ -69,4 +73,9 @@ export function hoverZone(shown: Box, reach: number, docked: boolean): Box {
     width: shown.width + 2 * reach,
     height: shown.y + shown.height + reach - top,
   };
+}
+
+export function restLineTop(flat: boolean, rowTop: number): number {
+  const rowBottom = flat ? FLAT_ROW_BOTTOM : rowTop + ROW_BLOB_DROP;
+  return rowBottom + ROW_BADGE + LINE_GAP;
 }

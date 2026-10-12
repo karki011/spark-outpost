@@ -62,3 +62,9 @@ export function flatRowRects(row: HTMLElement | null): DOMRect[] {
     element.getBoundingClientRect(),
   );
 }
+
+export function lineRects(island: HTMLElement | null): DOMRect[] {
+  return Array.from(island?.querySelectorAll('.isl-restline') ?? [], (element) =>
+    element.getBoundingClientRect(),
+  );
+}
