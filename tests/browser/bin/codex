@@ -22,9 +22,9 @@ case "$1" in
     printf 'Ready for terminal input. No provider request is made.\n'
     while IFS= read -r line; do
       case "$line" in
-        *'fixture focus on') printf '\033[?1004h' ;;
-        *'fixture mouse on') printf '\033[?1000h\033[?1006h' ;;
-        *'fixture repaint') (sleep 2; printf '\0337\033[3;1H\033[2KRepainted in place.\0338') & ;;
+        *'fixture focus on'*) printf '\033[?1004h' ;;
+        *'fixture mouse on'*) printf '\033[?1000h\033[?1006h' ;;
+        *'fixture repaint'*) (sleep 2; printf '\0337\033[3;1H\033[2KRepainted in place.\0338') & ;;
       esac
       printf 'received[%s]: %s\n' "$$" "$line"
     done
