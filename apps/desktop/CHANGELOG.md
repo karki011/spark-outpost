@@ -2,6 +2,15 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.13
+
+- Sub-agents: when an agent uses its own sub-agents, the chat and Agent TV list them with their state. Open one to see its steps, the files it changed, the commands it ran, its report, tokens and duration. Codex sub-agents also show their model and an estimated cost.
+- Sub-agents: the chat, the sidebar and Spark Island say "Waiting on 2 sub-agents" while the agent only waits. Enter then sends your message to the agent at once, and nothing is cancelled.
+- Sub-agents: Claude and Z.ai sub-agents always run in the background, so they never block the agent. Codex no longer gives up on a sub-agent after 10 minutes.
+- Sub-agents: Stop ends sub-agents and the commands they started. A permission card from a sub-agent names it, and the audit log has an Agent filter.
+- Cost: a turn's tokens include its sub-agents, and the Cost tab lists usage by sub-agent.
+- Fixes: a Title line no longer shows in the middle or at the end of a reply.
+
 ## 0.1.0-beta.12
 
 - One chat is one agent session. Your message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents or propose sub-chats. Crews, pieces, the Critic and Spark's own checks are gone, along with their settings. Older chats keep their crew, replies, costs and plans, read-only.
