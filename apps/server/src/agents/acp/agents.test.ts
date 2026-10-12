@@ -187,6 +187,16 @@ describe('Codex launch', () => {
       );
     });
 
+    it("reports each sub-agent's tokens, turns and model when it ends", () => {
+      expect(source).toContain(
+        'if (reporting) reporting.usage = notification.params.tokenUsage?.total;',
+      );
+      expect(source).toContain('if (starting) starting.turns = (starting.turns ?? 0) + 1;');
+      expect(source).toContain(
+        '_meta: { codex: { usage: child.usage, turns: child.turns, model: child.model } }',
+      );
+    });
+
     it('makes read-only a readOnly sandbox', () => {
       const mode = block('static ReadOnly = new _AgentMode(');
       expect(mode).toContain('type: "readOnly"');

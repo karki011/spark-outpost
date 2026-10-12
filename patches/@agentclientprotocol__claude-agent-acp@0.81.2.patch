@@ -1,3 +1,91 @@
+diff --git a/dist/acp-agent.js b/dist/acp-agent.js
+index beba2ff4f21e6805099c55215345a95a046c608a..1c87da1b6e102cd4642048ba80ba9c137e3bda37 100644
+--- a/dist/acp-agent.js
++++ b/dist/acp-agent.js
+@@ -3311,6 +3311,7 @@ export class ClaudeAcpAgent {
+                             case "files_persisted":
+                                 break;
+                             case "task_progress":
++                                subagents.noteProgress(message.task_id, message.usage);
+                                 await asyncTasks.taskProgress({
+                                     task_id: message.task_id,
+                                     description: message.description,
+@@ -3366,7 +3367,7 @@ export class ClaudeAcpAgent {
+                             case "task_notification":
+                                 // The task settled — no further tool calls can originate
+                                 // from it, so its registry entry can be dropped.
+-                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id);
++                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { usage: message.usage, summary: message.summary });
+                                 await asyncTasks.taskNotification({
+                                     task_id: message.task_id,
+                                     status: message.status,
+diff --git a/dist/native-subagents.js b/dist/native-subagents.js
+index 4ac38b00cea1883fd197e998b39ba6eccf304ccb..182ad84b115a721d4380bd71c0c87269004db052 100644
+--- a/dist/native-subagents.js
++++ b/dist/native-subagents.js
+@@ -139,13 +139,34 @@ export class NativeSubagentRuntime {
+             }
+         }
+     }
+-    async finishTask(taskId, status, deliver, toolUseId) {
++    noteProgress(taskId, usage) {
++        const child = this.children.get(taskId);
++        if (child && usage)
++            child.usage = usage;
++    }
++    async finishTask(taskId, status, deliver, toolUseId, report) {
+         if (!this.enabled)
+             return;
+         const state = nativeSubagentState(status);
+         const child = toolUseId ? this.childByParentToolUse.get(toolUseId) : this.children.get(taskId);
+         if (child && toolUseId && this.taskByToolUse.get(toolUseId) !== taskId)
+             return;
++        if (child && report?.usage)
++            child.usage = report.usage;
++        if (child && report?.summary)
++            child.summary = report.summary;
++        if (child && child.terminalState !== undefined && (report?.usage || report?.summary)) {
++            await this.publish({
++                sessionId: child.parentSessionId,
++                update: {
++                    sessionUpdate: "subagent_state_update",
++                    subagentSessionId: child.sessionId,
++                    state: child.terminalState,
++                    ...nativeSubagentReportMeta(child),
++                },
++            });
++            return;
++        }
+         if (!state || !child || child.terminalState !== undefined)
+             return;
+         const existing = this.taskFinishPromises.get(taskId);
+@@ -301,6 +322,7 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
+                 sessionUpdate: "subagent_state_update",
+                 subagentSessionId: child.sessionId,
+                 state,
++                ...nativeSubagentReportMeta(child),
+             },
+         });
+         child.terminalState = state;
+@@ -314,6 +336,18 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
+             child.terminalPromise = undefined;
+     }
+ }
++function nativeSubagentReportMeta(child) {
++    if (!child.usage && !child.summary)
++        return {};
++    return {
++        _meta: {
++            claudeCode: {
++                ...(child.usage ? { usage: child.usage } : {}),
++                ...(child.summary ? { summary: child.summary } : {}),
++            },
++        },
++    };
++}
+ export function nativeSubagentState(status) {
+     if (status === "completed")
+         return "completed";
 diff --git a/dist/permissions/effects.js b/dist/permissions/effects.js
 index f4649e0bdb3b6418ec9adc13f7d67579ba1c9c86..72a68c8f7fb5782596767ac3d49e5b73f759e59b 100644
 --- a/dist/permissions/effects.js

@@ -1,5 +1,5 @@
 diff --git a/dist/index.js b/dist/index.js
-index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd05597b45 100755
+index 87213c3614d88e42ee858cc72bda040e2b81b0fe..34c9ccdd68936addf8e0f6d80e8f1596dd8dcac4 100755
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -27333,6 +27333,20 @@ function toTokenCount(usage) {
@@ -32,7 +32,29 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    static MAX_PENDING_NOTIFICATIONS = 256;
    children = /* @__PURE__ */ new Map();
    pendingSpawns = /* @__PURE__ */ new Map();
-@@ -29158,11 +29172,11 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -28985,7 +28999,13 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+   replayQueue = [];
+   activeLegacyActivities = /* @__PURE__ */ new Set();
+   async handle(notification) {
++    if (notification.method === "thread/tokenUsage/updated") {
++      const reporting = this.children.get(notification.params.threadId);
++      if (reporting) reporting.usage = notification.params.tokenUsage?.total;
++    }
+     if (notification.method === "turn/started") {
++      const starting = this.children.get(notification.params.threadId);
++      if (starting) starting.turns = (starting.turns ?? 0) + 1;
+       return this.isKnownChild(notification.params.threadId);
+     }
+     if (notification.method === "turn/completed") {
+@@ -29066,6 +29086,7 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+           parentThreadId,
+           parentSessionId,
+           task: item.prompt?.trim() || "Delegated task",
++          model: item.model,
+           buffered: [],
+           droppedBufferedNotifications: 0
+         });
+@@ -29158,11 +29179,11 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
          return "timed_out";
        }
        const changed = await new Promise((resolve) => {
@@ -46,7 +68,25 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
          const onAbort = () => {
            clearTimeout(timeout);
            this.waiters.delete(onChange);
-@@ -30835,6 +30849,9 @@ ${event.stdin}
+@@ -29219,6 +29240,7 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+       sessionId: childSessionId,
+       name,
+       task,
++      model: pending?.model,
+       path: normalizeAgentPath(path9),
+       generation: 1
+     });
+@@ -29242,7 +29264,8 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+       await this.session.update({
+         sessionUpdate: "subagent_state_update",
+         subagentSessionId: child.sessionId,
+-        state
++        state,
++        _meta: { codex: { usage: child.usage, turns: child.turns, model: child.model } }
+       }, child.parentSessionId);
+     } catch (error62) {
+       if (child.terminalState === state) delete child.terminalState;
+@@ -30835,6 +30858,9 @@ ${event.stdin}
      return data;
    }
    handleTokenUsageUpdated(params) {
@@ -56,7 +96,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
      this.sessionState.lastTokenUsage = toTokenCount(params.tokenUsage.last);
      this.sessionState.totalTokenUsage = toTokenCount(params.tokenUsage.total);
      this.sessionState.modelContextWindow = params.tokenUsage.modelContextWindow;
-@@ -31020,6 +31037,10 @@ function sameNetworkAmendment(left, right) {
+@@ -31020,6 +31046,10 @@ function sameNetworkAmendment(left, right) {
  function commandDecisionOptions(params) {
    const decisions = parseAvailableCommandDecisions(params);
    if (!decisions) return void 0;
@@ -67,7 +107,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    const options = [];
    let networkIndex = 0;
    for (const decision of decisions) {
-@@ -31093,6 +31114,12 @@ function fileChangeDecisionOptions() {
+@@ -31093,6 +31123,12 @@ function fileChangeDecisionOptions() {
        "allow_always",
        "acceptForSession"
      ),
@@ -80,7 +120,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
      decisionOption(
        ApprovalOptionId.Cancel,
        "No, and tell Codex what to do differently",
-@@ -32983,19 +33010,16 @@ var AgentMode = class _AgentMode {
+@@ -32983,19 +33019,16 @@ var AgentMode = class _AgentMode {
    }
    static ReadOnly = new _AgentMode(
      "read-only",
@@ -105,7 +145,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    );
    static Agent = new _AgentMode(
      "agent",
-@@ -33023,6 +33047,22 @@ var AgentMode = class _AgentMode {
+@@ -33023,6 +33056,22 @@ var AgentMode = class _AgentMode {
      { "type": "dangerFullAccess" },
      "danger-full-access"
    );
@@ -128,7 +168,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    static DEFAULT_AGENT_MODE = _AgentMode.Agent;
    toSessionMode() {
      return {
-@@ -33055,7 +33095,7 @@ var AgentMode = class _AgentMode {
+@@ -33055,7 +33104,7 @@ var AgentMode = class _AgentMode {
      };
    }
    static all() {
@@ -137,7 +177,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    }
    static find(modeId) {
      const match = _AgentMode.all().find((m) => m.id === modeId);
-@@ -33982,7 +34022,7 @@ var CodexAcpClient = class {
+@@ -33982,7 +34031,7 @@ var CodexAcpClient = class {
      const mergedConfig = {
        ...forceGitRootTurnDiffPaths(mergeGatewayConfig(this.config, this.gatewayConfig)),
        projects: Object.fromEntries(sessionRoots.map((root) => [root, {
@@ -146,7 +186,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
        }]))
      };
      const configWithWorkspaceRoots = mergeSandboxWorkspaceWriteRoots(mergedConfig, additionalDirectories);
-@@ -34003,7 +34043,10 @@ var CodexAcpClient = class {
+@@ -34003,7 +34052,10 @@ var CodexAcpClient = class {
      }
      return {
        ...configWithWorkspaceRoots,
@@ -158,7 +198,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
      };
    }
    async getConfigMcpServerNames(projectPath) {
-@@ -34133,13 +34176,20 @@ var CodexAcpClient = class {
+@@ -34133,13 +34185,20 @@ var CodexAcpClient = class {
        input: input2,
        approvalPolicy: agentMode.approvalPolicy,
        approvalsReviewer: agentMode.approvalsReviewer,
@@ -180,7 +220,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
    async setCollaborationMode(sessionId, mode, currentModelId) {
      await this.codexClient.threadSettingsUpdate({
        threadId: sessionId,
-@@ -39876,6 +39926,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -39876,6 +39935,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
        const commandPromise = this.availableCommands.tryHandleCommand(params.prompt, sessionState, {
          onTurnStartPending: () => {
            sessionState.lastTokenUsage = null;
@@ -188,7 +228,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
            ensurePendingTurnStart();
          },
          onTurnStarted: (turnId, threadId) => {
-@@ -39947,7 +39998,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -39947,7 +40007,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
          await clearRecoveredSessionFailure(eventHandler);
          return {
            stopReason: "end_turn",
@@ -197,7 +237,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
            _meta: this.buildQuotaMeta(sessionState)
          };
        }
-@@ -39973,6 +40024,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -39973,6 +40033,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
          sessionState.currentModelSupportsFast
        );
        sessionState.lastTokenUsage = null;
@@ -205,7 +245,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
        ensurePendingTurnStart();
        const sendPromptPromise = this.runWithProcessCheck(
          () => this.codexAcpClient.sendPrompt(
-@@ -40144,7 +40196,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40144,7 +40205,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
        );
        return {
          stopReason: "end_turn",
@@ -214,7 +254,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
          _meta: this.buildQuotaMeta(sessionState)
        };
      } catch (err) {
-@@ -40238,7 +40290,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40238,7 +40299,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
    cancelledPromptResponse(sessionState) {
      return {
        stopReason: "cancelled",
@@ -223,7 +263,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..09a74745745d7b2826ded3914b08bcfd
        _meta: this.buildQuotaMeta(sessionState)
      };
    }
-@@ -40249,7 +40301,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40249,7 +40310,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
      }
      return {
        stopReason: "end_turn",
