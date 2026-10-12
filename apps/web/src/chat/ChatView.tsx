@@ -72,9 +72,8 @@ import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { sessionView } from './session-view.ts';
 import { NativeTerminalWorkspace } from '../terminal/NativeTerminalWorkspace.tsx';
-import { NewTerminalSession } from '../terminal/NewTerminalSession.tsx';
+import { TerminalComposer } from '../terminal/TerminalComposer.tsx';
 import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
-import '../terminal/native-terminal.css';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 
 const NO_REPOS: string[] = [];
@@ -235,6 +234,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       void api.resetSessionDraft(conversationId).then(refresh, () => null);
   };
   const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
+  const sessionPicker = newSession ? (
+    <SessionTypePicker
+      value={sessionChoice}
+      onChange={chooseSession}
+      disabled={terminalLaunching}
+    />
+  ) : null;
   const panelRoots = useMemo(
     () => [
       ...(chatBranch?.worktree ? [chatBranch.path] : []),
@@ -279,13 +285,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {title}
                 </h1>
                 <ChatTicketChips chat={tickets} />
-                {newSession && (
-                  <SessionTypePicker
-                    value={sessionChoice}
-                    onChange={chooseSession}
-                    disabled={terminalLaunching}
-                  />
-                )}
                 <div className="head-r">
                   <DiffChip
                     taskId={task?.id ?? null}
@@ -311,11 +310,17 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 </p>
               )}
               {terminalSession && detail.data ? (
-                <NativeTerminalWorkspace chat={detail.data.conversation} detail={detail.data} />
+                <NativeTerminalWorkspace
+                  chat={detail.data.conversation}
+                  detail={detail.data}
+                  panel={panel}
+                />
               ) : terminalDraft ? (
-                <NewTerminalSession
+                <TerminalComposer
                   conversationId={conversationId}
                   choice={sessionChoice}
+                  onChoice={chooseSession}
+                  sessionPicker={sessionPicker}
                   settings={settings}
                   connected={connected.some(
                     (provider) => provider.id === sessionChoice.terminalProvider,
@@ -431,6 +436,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     agentName={providerName(
                       commands.data?.provider ?? detail.data?.settings.provider ?? '',
                     )}
+                    contextLead={sessionPicker}
                   />
                 </>
               )}
