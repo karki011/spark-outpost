@@ -36,7 +36,9 @@ Select an edit to see the change; **Open chat** jumps to that turn. Terminal ses
 
 ## Answer a card
 
-Requests mark the blobs. With **Open requests by themselves** on, a card opens once, without the keyboard, then returns to blobs.
+A request shows one line beside Scout, such as **Approve: run npm test · Review**. Select it to open the card. A finished or failed chat says so there briefly.
+
+With **Open requests by themselves** on, a card opens once, without the keyboard, and stays until you answer.
 
 1. Press **⌥Space** to focus it.
 2. Press **Y** to allow once or **N** to deny.
@@ -49,7 +51,7 @@ Edit cards show the first changed lines, never secret files.
 | -------------------------- | ----------------------------------------------------------------- |
 | **Always in this project** | Adds a plain command to the project's list.                       |
 | **Open chat**              | Plans and instruction-file changes offer only this and **Later**. |
-| **Later**                  | Puts the card aside under **Needs you**.                          |
+| **Later**                  | Sets the card aside: a dashed count on Scout until it changes.    |
 
 ## Inside the app
 
