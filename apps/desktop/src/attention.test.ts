@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest';
+import type { AttentionRequest } from '@spark-outpost/contracts';
 import {
   decideAttention,
   dockBadge,
   NO_ATTENTION,
+  noticesFor,
   parseAttentionReport,
+  withdrawn,
   type AttentionContext,
-  type AttentionRequest,
 } from './attention.ts';
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const OTHER = '66666666-7777-4888-8999-aaaaaaaaaaaa';
 
-function request(key: string, chatId = CHAT): AttentionRequest {
+function request(key: string, chatId = CHAT, chat = 'Fix login'): AttentionRequest {
   return {
     key,
     chatId,
+    chat,
     title: 'Spark needs you: Fix login',
     body: 'Claude wants to run a command',
   };
@@ -82,6 +85,71 @@ describe('decideAttention', () => {
   });
 });
 
+describe('noticesFor', () => {
+  it('names the chat for a single new request and opens it', () => {
+    expect(noticesFor([request('a')])).toEqual([
+      {
+        key: 'a',
+        chatId: CHAT,
+        title: 'Spark needs you: Fix login',
+        body: 'Claude wants to run a command',
+        requests: ['a'],
+      },
+    ]);
+  });
+
+  it('sums up several new requests in one notice that opens Spark', () => {
+    const fresh = [
+      request('a'),
+      request('b', OTHER, 'Add tests'),
+      request('c', OTHER, 'Ship docs'),
+    ];
+    expect(noticesFor(fresh)).toEqual([
+      {
+        key: 'summary:a',
+        chatId: null,
+        title: '3 chats need you',
+        body: 'Fix login, Add tests and 1 more',
+        requests: ['a', 'b', 'c'],
+      },
+    ]);
+  });
+
+  it('names both chats when two are new', () => {
+    const [notice] = noticesFor([request('a'), request('b', OTHER, 'Add tests')]);
+    expect(notice).toMatchObject({ title: '2 chats need you', body: 'Fix login and Add tests' });
+  });
+
+  it('shows one summary for the requests already waiting when Spark starts unwatched', () => {
+    const report = { count: 3, requests: [request('a'), request('b', OTHER), request('c', OTHER)] };
+    const launch = decideAttention(context({ report }));
+    expect(launch.notify.map((notice) => notice.title)).toEqual(['3 chats need you']);
+    expect(decideAttention(context({ report, seen: launch.seen })).notify).toEqual([]);
+  });
+
+  it('names the chat again for one request that arrives after the summary', () => {
+    const report = { count: 2, requests: [request('a'), request('b', OTHER)] };
+    const launch = decideAttention(context({ report }));
+    const next = { count: 3, requests: [...report.requests, request('c', OTHER)] };
+    const later = decideAttention(context({ report: next, seen: launch.seen }));
+    expect(later.notify.map((notice) => notice.key)).toEqual(['c']);
+  });
+});
+
+describe('withdrawn', () => {
+  it('keeps a summary while any of its requests still waits', () => {
+    const [summary] = noticesFor([request('a'), request('b', OTHER)]);
+    expect(withdrawn(summary!, new Set(['b']))).toBe(false);
+    expect(withdrawn(summary!, new Set(['c']))).toBe(true);
+  });
+
+  it('withdraws a single notice once its request is answered', () => {
+    const [notice] = noticesFor([request('a')]);
+    expect(withdrawn(notice!, new Set(['a']))).toBe(false);
+    expect(withdrawn(notice!, new Set())).toBe(true);
+  });
+});
+
 describe('dockBadge', () => {
   it('shows the count of chats that need the user', () => {
     expect(dockBadge(null, 3, true)).toBe('3');
@@ -120,6 +188,7 @@ describe('parseAttentionReport', () => {
     expect(
       parseAttentionReport({ count: 1, requests: [{ ...request('a'), title: ' ' }] }),
     ).toBeNull();
+    expect(parseAttentionReport({ count: 1, requests: [{ ...request('a'), chat: 7 }] })).toBeNull();
   });
 
   it('keeps notification text to one short line', () => {

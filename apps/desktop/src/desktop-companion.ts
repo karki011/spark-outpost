@@ -30,6 +30,7 @@ interface CompanionHostOptions {
   appName: string;
   channelBadge: string | null;
   origin: string;
+  apiToken: string;
   preload: string;
   settingsPath: string;
   trayIcon: string;
@@ -241,11 +242,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
 
   attention = startAttentionHost({
     channelBadge: options.channelBadge,
-    trusted: (event) => fromSpark(event) && !fromIsland(event),
+    origin: options.origin,
+    token: options.apiToken,
+    trusted: fromSpark,
     enabled: () => companion.status().notify,
     islandShowing: () => companion.running(),
     sparkFocused,
     openChat,
+    showSpark: options.showSpark,
     blocked: (on) => companion.setNotifyBlocked(on),
     log: options.log,
   });

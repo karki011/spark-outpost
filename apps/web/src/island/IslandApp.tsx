@@ -27,6 +27,7 @@ import {
   type IslandAction,
   type IslandSettingsTarget,
 } from '../desktop/desktop-bridge.ts';
+import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import type { Decided } from './CardView.tsx';
@@ -100,6 +101,7 @@ export function IslandApp() {
   });
   const hidden = useMemo(() => new Set(assistant.data ? [assistant.data] : []), [assistant.data]);
   const data = useIslandData(hidden, NO_IDS);
+  useChatListAttentionReport();
   const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
   const [opener, setOpener] = useState<Opener>('user');

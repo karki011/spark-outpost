@@ -410,6 +410,7 @@ async function launch(): Promise<void> {
     appName: config.appName,
     channelBadge: config.badge,
     origin: apiUrl,
+    apiToken: token,
     preload,
     settingsPath: settingsFile(paths.userData),
     trayIcon: icons.tray,

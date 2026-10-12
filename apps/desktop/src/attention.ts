@@ -1,14 +1,4 @@
-export interface AttentionRequest {
-  key: string;
-  chatId: string;
-  title: string;
-  body: string;
-}
-
-export interface AttentionReport {
-  count: number;
-  requests: AttentionRequest[];
-}
+import type { AttentionReport, AttentionRequest } from '@spark-outpost/contracts';
 
 export const NO_ATTENTION: AttentionReport = { count: 0, requests: [] };
 
@@ -16,6 +6,7 @@ const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_REQUESTS = 50;
 const MAX_COUNT = 9_999;
 const MAX_KEY = 120;
+const MAX_CHAT = 80;
 const MAX_TITLE = 120;
 const MAX_BODY = 200;
 
@@ -26,13 +17,15 @@ function clip(text: string, max: number): string {
 
 function parseRequest(value: unknown): AttentionRequest | null {
   if (!value || typeof value !== 'object') return null;
-  const { key, chatId, title, body } = value as Record<string, unknown>;
+  const { key, chatId, chat, title, body } = value as Record<string, unknown>;
   if (typeof key !== 'string' || key.length === 0 || key.length > MAX_KEY) return null;
   if (typeof chatId !== 'string' || !CHAT_ID.test(chatId)) return null;
-  if (typeof title !== 'string' || typeof body !== 'string') return null;
+  if (typeof chat !== 'string' || typeof title !== 'string' || typeof body !== 'string') {
+    return null;
+  }
   const shown = clip(title, MAX_TITLE);
   if (!shown) return null;
-  return { key, chatId, title: shown, body: clip(body, MAX_BODY) };
+  return { key, chatId, chat: clip(chat, MAX_CHAT), title: shown, body: clip(body, MAX_BODY) };
 }
 
 export function parseAttentionReport(value: unknown): AttentionReport | null {
@@ -58,9 +51,49 @@ export interface AttentionContext {
   sparkFocused: boolean;
 }
 
+export interface AttentionNotice {
+  key: string;
+  chatId: string | null;
+  title: string;
+  body: string;
+  requests: string[];
+}
+
+function summaryBody(fresh: readonly AttentionRequest[]): string {
+  const [first, second] = fresh.map((request) => request.chat);
+  const more = fresh.length - 2;
+  const text = more > 0 ? `${first}, ${second} and ${more} more` : `${first} and ${second}`;
+  return clip(text, MAX_BODY);
+}
+
+export function noticesFor(fresh: readonly AttentionRequest[]): AttentionNotice[] {
+  if (fresh.length < 2) {
+    return fresh.map((request) => ({
+      key: request.key,
+      chatId: request.chatId,
+      title: request.title,
+      body: request.body,
+      requests: [request.key],
+    }));
+  }
+  return [
+    {
+      key: `summary:${fresh[0]!.key}`,
+      chatId: null,
+      title: `${fresh.length} chats need you`,
+      body: summaryBody(fresh),
+      requests: fresh.map((request) => request.key),
+    },
+  ];
+}
+
+export function withdrawn(notice: AttentionNotice, waiting: ReadonlySet<string>): boolean {
+  return !notice.requests.some((key) => waiting.has(key));
+}
+
 export interface AttentionDecision {
   seen: Set<string>;
-  notify: AttentionRequest[];
+  notify: AttentionNotice[];
 }
 
 export function decideAttention(context: AttentionContext): AttentionDecision {
@@ -72,5 +105,5 @@ export function decideAttention(context: AttentionContext): AttentionDecision {
     if (!context.seen.has(request.key)) fresh.push(request);
   }
   const quiet = !context.enabled || context.islandShowing || context.sparkFocused;
-  return { seen, notify: quiet ? [] : fresh };
+  return { seen, notify: quiet ? [] : noticesFor(fresh) };
 }

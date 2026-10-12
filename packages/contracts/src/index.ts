@@ -26,6 +26,8 @@ export * from './checkpoints.ts';
 export * from './compaction.ts';
 export * from './command-runs.ts';
 export * from './conversations.ts';
+export * from './attention-line.ts';
+export * from './attention-report.ts';
 export * from './file-view.ts';
 export * from './orchestration.ts';
 export * from './projects.ts';

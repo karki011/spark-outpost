@@ -1,4 +1,5 @@
 import type {
+  AttentionReport,
   BrowserCommand,
   BrowserPaneState,
   BrowserPick,
@@ -29,18 +30,6 @@ export interface CompanionStatus {
   autoExpand?: boolean;
   notify?: boolean;
   notifyBlocked?: boolean;
-}
-
-export interface AttentionRequest {
-  key: string;
-  chatId: string;
-  title: string;
-  body: string;
-}
-
-export interface AttentionReport {
-  count: number;
-  requests: AttentionRequest[];
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import { attentionReport, type ConversationSummary } from '@spark-outpost/contracts';
 import { attention, rowState } from '../conversations/row-state.ts';
-import { attentionReport } from './attention-report.ts';
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const OTHER = '66666666-7777-4888-8999-aaaaaaaaaaaa';
@@ -51,6 +50,7 @@ describe('attentionReport', () => {
         {
           key: APPROVAL,
           chatId: CHAT,
+          chat: 'Fix login',
           title: 'Spark needs you: Fix login',
           body: rowState(asking, false).sub,
         },
