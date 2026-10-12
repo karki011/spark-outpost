@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import * as acp from '@agentclientprotocol/sdk';
 
 type Say = (chunk: string, messageId?: string) => Promise<void>;
@@ -110,5 +112,34 @@ export async function subagentAsksTurn(
 export async function heldTitleTurn(say: Say): Promise<acp.StopReason> {
   await say('I started two sub-agents.\n\nTitle: Split the route work', 'held-1');
   await say('Both are done, and every test passes after the routes moved.', 'held-2');
+  return 'end_turn';
+}
+
+export async function orphanedCommandTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  text: string,
+  signal: AbortSignal,
+): Promise<acp.StopReason> {
+  const pidFile = /#orphan (\S+)/.exec(text)?.[1];
+  if (!pidFile) return 'end_turn';
+  const shell = spawn('/bin/sh', ['-c', 'sleep 600 & echo $! > "$0"; wait', pidFile], {
+    stdio: 'ignore',
+  });
+  await client.notify(acp.methods.client.session.update, {
+    sessionId: rootId,
+    update: {
+      sessionUpdate: 'subagent_spawned',
+      subagentSessionId: 'sub-1',
+      name: 'Runner',
+      task: 'Run the slow script',
+      capabilities: {},
+    },
+  } as never);
+  await untilCancelled(signal).catch((stopped: unknown) => {
+    shell.kill('SIGKILL');
+    writeFileSync(`${pidFile}.stopped`, 'shell killed');
+    throw stopped;
+  });
   return 'end_turn';
 }

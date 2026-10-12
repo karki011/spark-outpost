@@ -1,7 +1,7 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
@@ -122,5 +122,43 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
     expect(outputs).toContainEqual(
       expect.objectContaining({ kind: 'subagent_started', id: 'sub-1', task: '' }),
     );
+  });
+
+  it('stops a command a sub-agent left running, even after the agent dropped its shell', async () => {
+    const dir = await realpath(await mkdtemp(join(tmpdir(), 'spark-acp-orphan-')));
+    const pidFile = join(dir, 'pid');
+    const controller = new AbortController();
+    const outputs: ProviderOutput[] = [];
+    const alive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    let pid = 0;
+    try {
+      for await (const output of provider.run({
+        prompt: `#orphan ${pidFile}`,
+        history: [],
+        settings,
+        signal: controller.signal,
+      })) {
+        outputs.push(output);
+        if (output.kind !== 'subagent_started') continue;
+        await vi.waitFor(async () => {
+          pid = Number((await readFile(pidFile, 'utf8')).trim());
+          expect(pid).toBeGreaterThan(0);
+        });
+        expect(alive(pid)).toBe(true);
+        controller.abort();
+      }
+      await vi.waitFor(() => expect(alive(pid)).toBe(false), { timeout: 5_000 });
+      expect(await readFile(`${pidFile}.stopped`, 'utf8')).toBe('shell killed');
+    } finally {
+      if (pid > 0 && alive(pid)) process.kill(pid, 'SIGKILL');
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

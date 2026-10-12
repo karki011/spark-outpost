@@ -138,6 +138,7 @@ async function runSession(
   let spark: SparkTools | null = null;
   let graceTimer: NodeJS.Timeout | null = null;
   const onAbort = () => {
+    agent?.stopping();
     graceTimer = setTimeout(() => agent?.kill(), options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS);
   };
   if (signal.aborted) onAbort();

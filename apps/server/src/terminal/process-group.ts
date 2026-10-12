@@ -107,12 +107,20 @@ function signal(pid: number, name: NodeJS.Signals) {
   }
 }
 
+export function processTreeNow(root: number): number[] {
+  return descendantsOf(root, processTableNow());
+}
+
 export function killProcessTree(
   root: number,
   graceMs = 1500,
   first: NodeJS.Signals = 'SIGHUP',
+  seenEarlier: readonly number[] = [],
 ): void {
-  const targets = [root, ...descendantsOf(root, processTableNow())];
+  const table = processTableNow();
+  const orphaned = seenEarlier.filter((pid) => isAlive(pid));
+  const roots = [root, ...orphaned];
+  const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
   for (const pid of targets) signal(pid, first);
   signal(-root, first);
   const escalate = setTimeout(() => {
