@@ -93,7 +93,7 @@ for (const [place, setup] of Object.entries(PLACES)) {
           .toBeGreaterThanOrEqual(box.x + box.width - VIEWPORT.width / 2);
         expect((await restSize(page))!.height).toBeGreaterThanOrEqual(box.y + box.height);
       }
-      await shot(page, `waiting-${place}-${size}-${theme === 'apricot' ? 'light' : 'dark'}`);
+      await shot(page, `waiting-${place}-${size}-${theme}`);
 
       await line(page).click();
       await expect(island(page)).toHaveAttribute('data-view', 'card');
@@ -143,13 +143,17 @@ test('several waiting requests show the oldest, cut short with its full text in 
   await shot(page, 'several-waiting');
 });
 
-test('the line takes keyboard focus with a visible ring and Enter opens the request', async ({
+test('the line appears without motion under Reduce Motion, takes keyboard focus with a visible ring, and Enter opens the request', async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await resetTestDatabase({ onboarded: true });
   await openNotchIsland(page, { size: 'large', autoExpand: false, notch: false });
   await seedChats([install]);
   await expect(line(page)).toBeVisible();
+  expect(await line(page).evaluate((element) => getComputedStyle(element).animationName)).toBe(
+    'none',
+  );
   for (let presses = 0; presses < 6; presses += 1) {
     await page.keyboard.press('Tab');
     if (await line(page).evaluate((element) => element === document.activeElement)) break;
