@@ -65,6 +65,7 @@ import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
+import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 
@@ -223,6 +224,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     selectedId ??
     chats.find((chat) => !chat.archivedAt)?.id ??
     (conversations.data ? draftId : null);
+  useShareOnScreenChat(view === 'chats' && !openOutpostId && !settings ? activeId : null);
 
   const classes = [
     'app',
