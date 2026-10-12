@@ -27,7 +27,10 @@ function Facts({ title, facts, onReply }: FactsProps) {
   const text = facts.parts.join(' · ');
   return (
     <div className="isl-now-facts">
-      <span className="isl-now-fact" title={text || undefined}>
+      <span
+        className="isl-now-fact"
+        title={[text, facts.modeNote].filter(Boolean).join('. ') || undefined}
+      >
         {text}
       </span>
       <time

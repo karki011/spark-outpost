@@ -18,8 +18,12 @@
   margin: 0;
   color: var(--muted);
 }
-.tbar-state {
+.tbar-state,
+.tbar-hint {
   flex: none;
+}
+.tbar-hint {
+  color: var(--muted);
 }
 .tbar-note {
   flex: 1 1 0;

@@ -6,8 +6,9 @@ import { ApprovalCard } from '../chat/approvals/ApprovalCard.tsx';
 import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { MAC } from '../ui/shortcuts.ts';
 import { nativeTerminalApi } from './terminal-api.ts';
-import { terminalEnded, terminalRelaunch } from './native-state.ts';
+import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
 import { TerminalMenu } from './TerminalMenu.tsx';
 import { TerminalScreen } from './TerminalScreen.tsx';
@@ -16,6 +17,7 @@ import './native-terminal.css';
 
 const PATH_COPIED = 'Folder path copied';
 const PATH_NOT_COPIED = 'Could not copy the folder path';
+const SELECT_HINT = MAC ? 'Hold Option to select' : 'Hold Shift to select';
 
 export function NativeTerminalWorkspace({
   chat,
@@ -41,11 +43,14 @@ export function NativeTerminalWorkspace({
   const [problem, setProblem] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [opened, setOpened] = useState(false);
+  const [exited, setExited] = useState(false);
+  const [mouseReporting, setMouseReporting] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const stopGroup = useRef<HTMLDivElement>(null);
-  const native = session.data ?? chat.terminal ?? null;
+  const reported = session.data ?? chat.terminal ?? null;
+  const native = reported ? shownSession(reported, exited) : null;
   const ended = native ? terminalEnded(native) : false;
-  const relaunch = native ? terminalRelaunch(native, chat.latestRun?.status ?? null) : null;
+  const relaunch = reported ? terminalRelaunch(reported, chat.latestRun?.status ?? null) : null;
   const showsScreen = !session.isPending && (!ended || opened);
   const repos = useLinkedProjects(chat.projectIds);
   const capabilities = useQuery({
@@ -69,6 +74,7 @@ export function NativeTerminalWorkspace({
     setProblem(null);
     setCopied(null);
     setLink('connecting');
+    setExited(false);
     setAttempt((value) => value + 1);
   };
   const act = async (action: 'resume' | 'restart' | 'stop') => {
@@ -83,6 +89,8 @@ export function NativeTerminalWorkspace({
       await refresh();
       if (action !== 'stop') {
         setOpened(false);
+        setExited(false);
+        setMouseReporting(false);
         setLink('connecting');
         setAttempt((value) => value + 1);
       }
@@ -116,6 +124,7 @@ export function NativeTerminalWorkspace({
         repos={repos}
         capabilities={capabilities.data}
         note={copied ?? reason}
+        hint={mouseReporting && !ended ? SELECT_HINT : null}
         focus={focus}
       >
         {!ended && link === 'disconnected' && (
@@ -171,7 +180,9 @@ export function NativeTerminalWorkspace({
               setProblem(message);
               setLink('disconnected');
             }}
+            onMouseReporting={setMouseReporting}
             onEnded={() => {
+              setExited(true);
               setLink('disconnected');
               void refresh();
             }}

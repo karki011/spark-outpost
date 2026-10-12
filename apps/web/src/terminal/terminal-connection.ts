@@ -14,6 +14,7 @@ export interface TerminalHandlers<T extends TerminalTicket> {
   onError(message: string): void;
   onInputError?(message: string): void;
   onSelection?: SelectionHandler;
+  onMouseReporting?(on: boolean): void;
 }
 
 export interface TerminalConnection extends SelectionActions {

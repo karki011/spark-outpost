@@ -27,6 +27,7 @@ interface TerminalBarProps {
   repos: readonly Project[];
   capabilities: ProviderCapabilities | undefined;
   note: string | null;
+  hint: string | null;
   focus: { focused: boolean; toggle: () => void };
   children: ReactNode;
 }
@@ -59,6 +60,7 @@ export function TerminalBar({
   repos,
   capabilities,
   note,
+  hint,
   focus,
   children,
 }: TerminalBarProps) {
@@ -80,7 +82,7 @@ export function TerminalBar({
       {permission && (
         <span
           className={`pchip risk-${permission.risk} tbar-mode`}
-          title={`Permissions this session started with: ${permission.label}. The agent’s CLI owns its mode while it runs.`}
+          title={`Mode when the last prompt started: ${permission.label}. The agent’s CLI owns its mode while it runs.`}
         >
           <PermissionIcon risk={permission.risk} />
           <span className="sr-only">Permissions: </span>
@@ -99,6 +101,7 @@ export function TerminalBar({
           )}
         </span>
       )}
+      {hint && <span className="tbar-hint">{hint}</span>}
       <p className="tbar-note" role="status" title={note ?? undefined}>
         {note}
       </p>

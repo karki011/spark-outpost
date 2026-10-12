@@ -206,3 +206,19 @@ it('closes an open note when the session ends', async () => {
   expect(screen.queryByRole('textbox', { name: 'Note on the selected text' })).toBeNull();
   expect(names()).toEqual(['New chat with this', 'Copied']);
 });
+
+it('keeps an open note and inserts the copied text after output replaced the selected rows', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  act(() => state.report(null, 'changed'));
+  const note = screen.getByRole('textbox', { name: 'Note on the selected text' });
+  fireEvent.change(note, { target: { value: 'why?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(target.insertSelection).toHaveBeenCalledExactlyOnceWith('comment', 'pnpm check', 'why?');
+});
+
+it('closes the toolbar when output replaced the selected rows and no note is open', async () => {
+  await select(selected('pnpm check'));
+  act(() => state.report(null, 'changed'));
+  expect(screen.queryByRole('toolbar')).toBeNull();
+});

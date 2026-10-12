@@ -16,3 +16,12 @@ export function lineEditingSequence(event: KeyEventLike): string | null {
   if (!event.metaKey || event.ctrlKey || event.altKey) return null;
   return commandSequences[event.key] ?? null;
 }
+
+export type TabAction = 'send' | 'leave';
+
+export function tabAction(
+  event: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>,
+): TabAction | null {
+  if (event.key !== 'Tab') return null;
+  return event.altKey && !event.ctrlKey && !event.metaKey ? 'leave' : 'send';
+}

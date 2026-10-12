@@ -13,6 +13,7 @@ export function TerminalScreen({
   onError,
   onInputError,
   onEnded,
+  onMouseReporting,
 }: {
   chatId: string;
   attempt: number;
@@ -21,13 +22,28 @@ export function TerminalScreen({
   onError: (message: string) => void;
   onInputError: (message: string) => void;
   onEnded: () => void;
+  onMouseReporting: (on: boolean) => void;
 }) {
   const screen = useRef<HTMLDivElement>(null);
   const selection = useTerminalSelection();
   const { report, attach } = selection;
-  const callbacks = useRef({ onConnected, onDisconnected, onError, onInputError, onEnded });
+  const callbacks = useRef({
+    onConnected,
+    onDisconnected,
+    onError,
+    onInputError,
+    onEnded,
+    onMouseReporting,
+  });
   useEffect(() => {
-    callbacks.current = { onConnected, onDisconnected, onError, onInputError, onEnded };
+    callbacks.current = {
+      onConnected,
+      onDisconnected,
+      onError,
+      onInputError,
+      onEnded,
+      onMouseReporting,
+    };
   });
   useEffect(() => {
     if (!screen.current) return;
@@ -48,6 +64,7 @@ export function TerminalScreen({
         onInputError: (message) => callbacks.current.onInputError(message),
         onEnded: () => callbacks.current.onEnded(),
         onSelection: report,
+        onMouseReporting: (on) => callbacks.current.onMouseReporting(on),
       },
     );
     attach(connection);

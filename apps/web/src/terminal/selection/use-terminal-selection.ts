@@ -33,7 +33,8 @@ export function useTerminalSelection(): TerminalSelectionState {
   }, []);
   const report = useCallback<SelectionHandler>(
     (next, cause) => {
-      if (!next && cause === 'scroll' && noteOpen.current) return;
+      const keepsNote = cause === 'scroll' || cause === 'changed';
+      if (!next && keepsNote && noteOpen.current) return;
       const previous = shown.current;
       shown.current = next;
       setSelection(next);

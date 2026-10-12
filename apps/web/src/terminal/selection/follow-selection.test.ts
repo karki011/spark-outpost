@@ -25,6 +25,7 @@ function fakeTerminal() {
     selection: emitter(),
     scroll: emitter(),
     write: emitter(),
+    key: emitter(),
     data: emitter(),
     resize: emitter(),
   };
@@ -33,11 +34,17 @@ function fakeTerminal() {
     cols: 80,
     rows: 24,
     buffer: { active: { viewportY: 0 } },
+    modes: { mouseTrackingMode: 'none' },
     getSelection: () => model.text,
+    clearSelection: () => {
+      model.text = '';
+      events.selection.fire();
+    },
     getSelectionPosition: () => (model.text ? { start: model.start, end: model.end } : undefined),
     onSelectionChange: events.selection.on,
     onScroll: events.scroll.on,
     onWriteParsed: events.write.on,
+    onKey: events.key.on,
     onData: events.data.on,
     onResize: events.resize.on,
   };
@@ -52,7 +59,19 @@ function fakeTerminal() {
     events.scroll.fire();
     events.write.fire();
   };
-  return { terminal: terminal as never, events, select, scrollTo };
+  const repaint = (text: string) => {
+    model.text = text;
+    events.write.fire();
+  };
+  return {
+    terminal: terminal as never,
+    modes: terminal.modes,
+    model,
+    events,
+    select,
+    scrollTo,
+    repaint,
+  };
 }
 
 function mount() {
@@ -127,10 +146,10 @@ describe('followSelection', () => {
 
   it('dismisses on typing and resize while a selection is reported', () => {
     const { select, events, reports } = mount();
-    events.data.fire();
+    events.key.fire();
     expect(reports).toEqual([]);
     select('pnpm check');
-    events.data.fire();
+    events.key.fire();
     select('pnpm test');
     events.resize.fire();
     select('pnpm lint');
@@ -197,7 +216,7 @@ describe('followSelection', () => {
   it('shows the same selection again when it is made again after a dismissal', () => {
     const { select, events, reports } = mount();
     select('pnpm check');
-    events.data.fire();
+    events.key.fire();
     select('pnpm check');
     expect(reports.map(([selection]) => selection?.text ?? null)).toEqual([
       'pnpm check',
@@ -214,6 +233,73 @@ describe('followSelection', () => {
     expect(reports.at(-1)).toEqual([expect.objectContaining({ canInsert: false }), 'update']);
     follower.refresh();
     expect(reports).toHaveLength(2);
+  });
+
+  it('ignores terminal reports that are not typing, such as focus and mouse reports', () => {
+    const { select, events, reports } = mount();
+    select('pnpm check');
+    events.data.fire();
+    expect(reports).toHaveLength(1);
+  });
+
+  it('dismisses on a paste and on composed text', () => {
+    const { select, element, reports } = mount();
+    select('pnpm check');
+    element.dispatchEvent(new Event('paste', { bubbles: true }));
+    select('pnpm test');
+    element.dispatchEvent(new Event('compositionend', { bubbles: true }));
+    expect(reports.filter(([selection]) => selection === null)).toEqual([
+      [null, 'input'],
+      [null, 'input'],
+    ]);
+  });
+
+  it('clears the selection when output changes the text under it', () => {
+    const { select, repaint, model, reports } = mount();
+    select('pnpm check', 10);
+    repaint('Compacting…');
+    expect(reports.at(-1)).toEqual([null, 'changed']);
+    expect(model.text).toBe('');
+    expect(reports).toHaveLength(2);
+  });
+
+  it('reports the text without trailing spaces on each line', () => {
+    const { select, reports } = mount();
+    select('first line   \nsecond line \t');
+    expect(reports[0]![0]!.text).toBe('first line\nsecond line');
+  });
+
+  it('keeps a selection whose rows only gained trailing spaces', () => {
+    const { select, repaint, reports } = mount();
+    select('pnpm check', 10);
+    repaint('pnpm check   ');
+    expect(reports).toHaveLength(1);
+  });
+
+  it('brings the toolbar back when a still-highlighted range is selected again', () => {
+    const { select, events, reports, pointer } = mount();
+    select('pnpm check');
+    events.key.fire();
+    pointer('pointerdown');
+    pointer('pointerup', document);
+    expect(reports.map(([selection]) => selection?.text ?? null)).toEqual([
+      'pnpm check',
+      null,
+      'pnpm check',
+    ]);
+  });
+
+  it('leaves the toolbar hidden for a click that goes to an agent using the mouse', () => {
+    const { select, events, modes, element, reports, pointer } = mount();
+    modes.mouseTrackingMode = 'vt200';
+    select('pnpm check');
+    events.key.fire();
+    pointer('pointerdown');
+    pointer('pointerup', document);
+    expect(reports).toHaveLength(2);
+    element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, altKey: true }));
+    pointer('pointerup', document);
+    expect(reports.at(-1)![0]).toMatchObject({ text: 'pnpm check' });
   });
 
   it('marks a selection in a session that cannot take input', () => {

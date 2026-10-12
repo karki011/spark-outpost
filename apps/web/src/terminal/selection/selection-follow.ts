@@ -32,3 +32,10 @@ export function isScrollKey(event: Pick<KeyboardEvent, 'key' | 'shiftKey'>): boo
 export function isScrollbar(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.scrollbar') !== null;
 }
+
+export function isSelectionGesture(
+  event: { altKey?: boolean; shiftKey?: boolean },
+  mouseTracking: string,
+): boolean {
+  return mouseTracking === 'none' || event.altKey === true || event.shiftKey === true;
+}

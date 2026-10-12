@@ -5,6 +5,7 @@ import {
   followOutcome,
   isScrollbar,
   isScrollKey,
+  isSelectionGesture,
   rowsInView,
   type FollowEvent,
 } from './selection-follow.ts';
@@ -18,7 +19,7 @@ export interface TerminalSelection {
   canInsert: boolean;
 }
 
-export type SelectionCause = 'select' | 'update' | 'scroll' | 'input' | 'resize';
+export type SelectionCause = 'select' | 'update' | 'changed' | 'scroll' | 'input' | 'resize';
 
 export type SelectionHandler = (selection: TerminalSelection | null, cause: SelectionCause) => void;
 
@@ -39,11 +40,13 @@ type SelectionTerminal = Pick<
   | 'onSelectionChange'
   | 'onScroll'
   | 'onWriteParsed'
-  | 'onData'
+  | 'onKey'
   | 'onResize'
   | 'buffer'
   | 'cols'
   | 'rows'
+  | 'modes'
+  | 'clearSelection'
 >;
 
 type InsertTerminal = Pick<Terminal, 'paste' | 'focus' | 'clearSelection' | 'modes'>;
@@ -53,10 +56,10 @@ function readSelection(
   element: HTMLElement,
   canInsert: () => boolean,
 ): TerminalSelection | null {
-  const text = terminal.getSelection();
+  const text = cleanSelection(terminal.getSelection());
   const position = terminal.getSelectionPosition();
   const screen = element.querySelector('.xterm-screen')?.getBoundingClientRect();
-  if (!position || !screen || !cleanSelection(text)) return null;
+  if (!position || !screen || !text) return null;
   const boxes = selectionBoxes({
     start: position.start,
     end: position.end,
@@ -97,12 +100,15 @@ export function followSelection(
   const options = { capture: true, signal: abort.signal };
   let state = SETTLE_IDLE;
   let reported: string | null = null;
+  let copied: string | null = null;
+  let selecting = false;
 
   const report = () => {
     const next = readSelection(terminal, element, canInsert);
     const key = selectionKey(next);
     if (key === reported) return;
     reported = key;
+    copied = next?.text ?? null;
     onSelection(next, 'select');
   };
   const step = (event: SettleEvent) => {
@@ -119,6 +125,12 @@ export function followSelection(
   const follow = () => {
     if (reported === null) return;
     const next = readSelection(terminal, element, canInsert);
+    if (next && next.text !== copied) {
+      reported = null;
+      terminal.clearSelection();
+      onSelection(null, 'changed');
+      return;
+    }
     const facts = { shown: true, selected: next !== null, inView: selectionInView(terminal) };
     if (followOutcome('output', facts) === 'hide' || !next) {
       reported = null;
@@ -131,8 +143,17 @@ export function followSelection(
     onSelection(next, 'update');
   };
   const pointerDown = (event: Event) => {
-    if (isScrollbar(event.target)) hide('user-scroll');
+    const onScrollbar = isScrollbar(event.target);
+    if (onScrollbar) hide('user-scroll');
+    selecting =
+      !onScrollbar && isSelectionGesture(event as MouseEvent, terminal.modes.mouseTrackingMode);
     step('pointer-down');
+  };
+  const pointerUp = () => {
+    const reselected = state.pointerDown && selecting;
+    selecting = false;
+    step('pointer-up');
+    if (reselected && reported === null) report();
   };
   const keyDown = (event: KeyboardEvent) => {
     if (isScrollKey(event)) hide('user-scroll');
@@ -141,14 +162,16 @@ export function followSelection(
   element.addEventListener('pointerdown', pointerDown, options);
   element.addEventListener('wheel', () => hide('user-scroll'), { ...options, passive: true });
   element.addEventListener('keydown', keyDown, options);
-  document.addEventListener('pointerup', () => step('pointer-up'), options);
-  document.addEventListener('pointercancel', () => step('pointer-up'), options);
+  element.addEventListener('paste', () => hide('input'), options);
+  element.addEventListener('compositionend', () => hide('input'), options);
+  document.addEventListener('pointerup', pointerUp, options);
+  document.addEventListener('pointercancel', pointerUp, options);
   window.addEventListener('resize', () => hide('resize'), { signal: abort.signal });
   const subscriptions = [
     terminal.onSelectionChange(() => step('changed')),
     terminal.onScroll(follow),
     terminal.onWriteParsed(follow),
-    terminal.onData(() => hide('input')),
+    terminal.onKey(() => hide('input')),
     terminal.onResize(() => hide('resize')),
   ];
   return {

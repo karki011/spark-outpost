@@ -22,3 +22,10 @@ export function terminalRelaunch(
   if (session.resumeAvailable) return 'resume';
   return latestRunStatus === 'cancelled' ? null : 'restart';
 }
+
+export function shownSession(
+  session: NativeTerminalSession,
+  exitedHere: boolean,
+): NativeTerminalSession {
+  return exitedHere && !terminalEnded(session) ? { ...session, state: 'exited' } : session;
+}

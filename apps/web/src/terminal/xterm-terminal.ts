@@ -6,7 +6,10 @@ import '@xterm/xterm/css/xterm.css';
 import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-outpost/contracts';
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
 import type { TerminalConnection, TerminalHandlers } from './terminal-connection.ts';
-import { lineEditingSequence } from './terminal-keys.ts';
+import { focusBeside } from './leave-terminal.ts';
+import { followMouseReporting, MOUSE_REPORTING_OFF } from './mouse-reporting.ts';
+import { refitWhenFontLoads, TERMINAL_FONT, TERMINAL_FONT_SIZE } from './terminal-font.ts';
+import { lineEditingSequence, tabAction } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { themeFromTokens } from './terminal-theme.ts';
 import { followTerminalDrops } from './terminal-drop.ts';
@@ -34,8 +37,8 @@ export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
 
 export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   return new Terminal({
-    fontFamily: '"Geist Mono", ui-monospace, Menlo, monospace',
-    fontSize: 12.5,
+    fontFamily: TERMINAL_FONT,
+    fontSize: TERMINAL_FONT_SIZE,
     lineHeight: 1.25,
     cursorBlink: true,
     scrollback: 5000,
@@ -44,6 +47,7 @@ export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
     theme: themeFromTokens(),
     linkHandler: { activate: (event, uri) => openTerminalLink(event, uri) },
     macOptionClickForcesSelection: true,
+    altClickMovesCursor: false,
     ...overrides,
   });
 }
@@ -121,8 +125,19 @@ export function openXterm<T extends TerminalTicket>(
     : followTerminalDrops(element, dropped, (message) => handlers.onInputError?.(message));
   const canInsert = () => !readOnly && !ended && socket?.readyState === WebSocket.OPEN;
   const selection = followSelection(terminal, element, canInsert, handlers.onSelection);
+  const unfollowMouse = followMouseReporting(terminal, handlers.onMouseReporting);
+  refitWhenFontLoads(terminal, () => !disposed, sendResize);
   terminal.attachCustomKeyEventHandler((event) => {
-    if (readOnly && event.key === 'Tab') return false;
+    const tab = tabAction(event);
+    if (tab && readOnly) return false;
+    if (tab === 'leave') {
+      if (event.type === 'keydown') {
+        event.preventDefault();
+        focusBeside(element, event.shiftKey);
+      }
+      return false;
+    }
+    if (tab === 'send') event.preventDefault();
     const sequence = lineEditingSequence(event);
     if (!sequence) return true;
     if (event.type === 'keydown') sendInput(sequence);
@@ -156,6 +171,7 @@ export function openXterm<T extends TerminalTicket>(
         if (message.data.type === 'hint') handlers.onHint?.(message.data.hint);
         if (message.data.type === 'ended') {
           ended = true;
+          terminal.write(MOUSE_REPORTING_OFF);
           selection.refresh();
           handlers.onEnded(message.data.reason);
         }
@@ -211,6 +227,7 @@ export function openXterm<T extends TerminalTicket>(
       unfollowTheme();
       unfollowDrops();
       selection.stop();
+      unfollowMouse();
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);

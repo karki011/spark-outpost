@@ -136,6 +136,7 @@ describe('the facts under a session', () => {
     expect(sessionFacts(linked, undefined, names, [])).toEqual({
       terminal: false,
       parts: ['feature-web-apps', 'spark/fix-billing'],
+      modeNote: null,
       changedAt: '2026-10-02T12:00:00.000Z',
     });
     expect(sessionFacts(chat({ branch: null }), undefined, names, []).parts).toEqual([]);
@@ -149,11 +150,18 @@ describe('the facts under a session', () => {
     expect(facts).toEqual({
       terminal: true,
       parts: ['Auto', 'feature-web-apps'],
+      modeNote: 'Mode when the last prompt started: Auto',
       changedAt: '2026-10-02T12:30:00.000Z',
     });
     expect(sessionFacts(terminal('ready'), detail(null, 'secret'), names, MODES).parts).toEqual([
       'feature-web-apps',
     ]);
+    const inWorktree = {
+      ...terminal('ready'),
+      projectIds: ['p1'],
+      terminal: { ...terminal('ready').terminal, cwd: '/worktrees/01a131a4-77aa-4c0e-9d5e' },
+    } as ReturnType<typeof terminal>;
+    expect(sessionFacts(inWorktree, undefined, names, MODES).parts).toEqual(['feature-web-apps']);
     const older = terminal('ready', '2026-10-01T00:00:00.000Z');
     expect(sessionFacts(older, undefined, names, MODES).changedAt).toBe('2026-10-02T12:00:00.000Z');
   });

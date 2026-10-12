@@ -185,14 +185,88 @@ test('an ended session keeps Copy and a new chat for its last output', async ({ 
     await page.keyboard.press('Control+d');
     await expect(workspace.getByRole('status').first()).toHaveText('Exited');
     await expect(workspace).toContainText('Its last output is shown below.');
-    await selectLine(page, workspace, 'row25');
+    await expect
+      .poll(async () => {
+        await selectLine(page, workspace, 'row25');
+        return clipboard(page);
+      })
+      .toBe('row25');
     await expect(toolbar.getByRole('button')).toHaveText(['New chat with this', 'Copied']);
-    await expect.poll(() => clipboard(page)).toBe('row25');
     await page.screenshot({ path: path.resolve(SHOTS, 'terminal-select-ended.png') });
     await toolbar.getByRole('button', { name: 'New chat with this' }).click();
     await expect(workspace).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('> row25\n\n');
     await expect(page.getByRole('textbox', { name: 'Message' })).toBeFocused();
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}/terminal`);
+  }
+});
+
+test('an agent that reports focus and uses the mouse keeps focus, Comment and Option-select', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const { conversationId, workspace } = await startTerminal(page);
+  try {
+    const screen = workspace.locator('.xterm-accessibility');
+    const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
+    const hint = workspace.getByText('Hold Option to select');
+    const cell = async () => {
+      const box = (await workspace.locator('.xterm-screen').boundingBox())!;
+      const rows = await workspace.locator('.xterm-accessibility-tree > div').count();
+      return Math.round(box.height / rows);
+    };
+    const spacing = await cell();
+    await page.setViewportSize({ width: 1000, height: 700 });
+    await expect.poll(cell).toBe(spacing);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(cell).toBe(spacing);
+    await workspace.locator('.native-screen').click();
+    await expect(hint).toHaveCount(0);
+    for (const line of ['fixture focus on', 'fixture mouse on']) {
+      await page.keyboard.type(line);
+      await page.keyboard.press('Enter');
+    }
+    await expect(hint).toBeVisible();
+
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    expect(await terminalHasFocus(page)).toBe(true);
+
+    await selectLine(page, workspace, READY);
+    await expect(toolbar).toHaveCount(0);
+    await page.keyboard.down('Alt');
+    await selectLine(page, workspace, READY);
+    await page.keyboard.up('Alt');
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => clipboard(page)).toBe(READY);
+    await toolbar.getByRole('button', { name: 'Comment' }).click();
+    const note = toolbar.getByRole('textbox', { name: 'Note on the selected text' });
+    await expect(note).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.type('fixture repaint');
+    await page.keyboard.press('Enter');
+    await page.keyboard.down('Alt');
+    await selectLine(page, workspace, READY);
+    await page.keyboard.up('Alt');
+    await expect(toolbar).toBeVisible();
+    await expect(screen).toContainText('Repainted in place.');
+    await expect(toolbar).toHaveCount(0);
+    expect(await page.evaluate(() => getSelection()?.toString() ?? '')).toBe('');
+
+    await page.keyboard.press('Alt+Tab');
+    expect(await terminalHasFocus(page)).toBe(false);
+
+    await workspace.locator('.xterm-helper-textarea').focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Control+d');
+    await expect(workspace.getByRole('status').first()).toHaveText('Exited');
+    await expect(workspace.getByRole('button', { name: 'Reconnect' })).toHaveCount(0);
+    await expect(hint).toHaveCount(0);
+    await selectLine(page, workspace, 'Spark native terminal fixture');
+    await expect(toolbar.getByRole('button')).toHaveText(['New chat with this', 'Copied']);
   } finally {
     await page.request.delete(`/api/conversations/${conversationId}/terminal`);
   }

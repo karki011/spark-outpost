@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary, NativeTerminalSession } from '@spark-outpost/contracts';
 import {
+  shownSession,
   terminalEnded,
   terminalLabel,
   terminalMood,
@@ -57,5 +58,16 @@ describe('native terminal activity across surfaces', () => {
     expect(terminalRelaunch(ended('exited', true), 'cancelled')).toBe('resume');
     expect(terminalRelaunch(ended('working', true), 'running')).toBeNull();
     expect(terminalRelaunch(ended('unknown', false), null)).toBeNull();
+  });
+});
+
+describe('shownSession', () => {
+  it('shows a session that just exited here as exited before the server says so', () => {
+    expect(shownSession(terminal('ready'), true).state).toBe('exited');
+    expect(shownSession(terminal('ready'), false).state).toBe('ready');
+  });
+
+  it('keeps the state the server gives an ended session', () => {
+    expect(shownSession(terminal('error'), true).state).toBe('error');
   });
 });

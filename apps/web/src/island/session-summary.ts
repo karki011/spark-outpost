@@ -59,6 +59,7 @@ export function sessionNotes(
 export interface SessionFacts {
   terminal: boolean;
   parts: string[];
+  modeNote: string | null;
   changedAt: string;
 }
 
@@ -79,12 +80,19 @@ export function sessionFacts(
     return {
       terminal: false,
       parts: known([agent, project, chat.branch]),
+      modeNote: null,
       changedAt: chat.updatedAt,
     };
   }
   const mode = modes.find((option) => option.id === detail?.settings.agentMode)?.label;
   const changedAt = session.updatedAt > chat.updatedAt ? session.updatedAt : chat.updatedAt;
-  return { terminal: true, parts: known([agent, mode, baseName(session.cwd)]), changedAt };
+  const folder = project ?? baseName(session.cwd);
+  return {
+    terminal: true,
+    parts: known([agent, mode, folder]),
+    modeNote: mode ? `Mode when the last prompt started: ${mode}` : null,
+    changedAt,
+  };
 }
 
 export function showsFacts(state: SessionState, hasLog: boolean): boolean {

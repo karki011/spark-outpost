@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createTerminal } from './xterm-terminal.ts';
 
 describe('createTerminal', () => {
-  it('lets Option-drag select on a Mac while the agent has mouse reporting on', () => {
+  it('lets Option-drag select on a Mac and sends no arrow keys for an Option-click', () => {
     const terminal = createTerminal();
     expect(terminal.options.macOptionClickForcesSelection).toBe(true);
-    expect(terminal.options.altClickMovesCursor).toBe(true);
+    expect(terminal.options.altClickMovesCursor).toBe(false);
     terminal.dispose();
   });
 
