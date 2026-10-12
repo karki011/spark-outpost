@@ -178,6 +178,15 @@ describe('Codex launch', () => {
       return source.slice(start, source.indexOf(');', start));
     };
 
+    it('waits for sub-agents without a timer of its own', () => {
+      const wait = source.slice(source.indexOf('async wait(signal, timeoutMs ='));
+      expect(source).toContain('static DEFAULT_WAIT_TIMEOUT_MS = Number.POSITIVE_INFINITY;');
+      expect(source).not.toContain('DEFAULT_WAIT_TIMEOUT_MS = 10 * 60 * 1e3');
+      expect(wait.slice(0, wait.indexOf('async finishOutstanding('))).toContain(
+        'Number.isFinite(remainingMs) ? setTimeout(',
+      );
+    });
+
     it('makes read-only a readOnly sandbox', () => {
       const mode = block('static ReadOnly = new _AgentMode(');
       expect(mode).toContain('type: "readOnly"');
