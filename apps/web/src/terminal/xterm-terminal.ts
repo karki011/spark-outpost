@@ -43,6 +43,7 @@ export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
     screenReaderMode: true,
     theme: themeFromTokens(),
     linkHandler: { activate: (event, uri) => openTerminalLink(event, uri) },
+    macOptionClickForcesSelection: true,
     ...overrides,
   });
 }
@@ -76,6 +77,7 @@ export function openXterm<T extends TerminalTicket>(
   let socket: WebSocket | null = null;
   let session: T | null = null;
   let lastSize = '';
+  let ended = false;
   let disposed = false;
 
   const sendControl = (message: TerminalClientMessage) => {
@@ -117,8 +119,8 @@ export function openXterm<T extends TerminalTicket>(
   const unfollowDrops = readOnly
     ? () => undefined
     : followTerminalDrops(element, dropped, (message) => handlers.onInputError?.(message));
-  const canInsert = () => !readOnly && socket?.readyState === WebSocket.OPEN;
-  const unfollowSelection = followSelection(terminal, element, canInsert, handlers.onSelection);
+  const canInsert = () => !readOnly && !ended && socket?.readyState === WebSocket.OPEN;
+  const selection = followSelection(terminal, element, canInsert, handlers.onSelection);
   terminal.attachCustomKeyEventHandler((event) => {
     if (readOnly && event.key === 'Tab') return false;
     const sequence = lineEditingSequence(event);
@@ -136,6 +138,7 @@ export function openXterm<T extends TerminalTicket>(
       'open',
       () => {
         sendResize();
+        selection.refresh();
         handlers.onOpen(created);
         if (!readOnly) terminal.focus();
       },
@@ -151,13 +154,18 @@ export function openXterm<T extends TerminalTicket>(
         const message = terminalServerMessageSchema.safeParse(JSON.parse(event.data));
         if (!message.success) return;
         if (message.data.type === 'hint') handlers.onHint?.(message.data.hint);
-        if (message.data.type === 'ended') handlers.onEnded(message.data.reason);
+        if (message.data.type === 'ended') {
+          ended = true;
+          selection.refresh();
+          handlers.onEnded(message.data.reason);
+        }
       },
       { signal },
     );
     ws.addEventListener(
       'close',
       (event) => {
+        selection.refresh();
         handlers.onDisconnected?.();
         if (event.code === 4401) handlers.onError(event.reason || 'The terminal could not start.');
       },
@@ -202,7 +210,7 @@ export function openXterm<T extends TerminalTicket>(
       resizeObserver.disconnect();
       unfollowTheme();
       unfollowDrops();
-      unfollowSelection();
+      selection.stop();
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);

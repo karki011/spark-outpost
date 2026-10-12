@@ -1,6 +1,13 @@
 import type { Terminal } from '@xterm/xterm';
 import type { Box } from '../../chat/quotes/toolbar-position.ts';
 import { selectionBoxes } from './selection-boxes.ts';
+import {
+  followOutcome,
+  isScrollbar,
+  isScrollKey,
+  rowsInView,
+  type FollowEvent,
+} from './selection-follow.ts';
 import { SETTLE_IDLE, settle, type SettleEvent } from './selection-settle.ts';
 import { cleanSelection, insertText, pasteText, type InsertKind } from './selection-text.ts';
 
@@ -11,7 +18,7 @@ export interface TerminalSelection {
   canInsert: boolean;
 }
 
-export type SelectionCause = 'select' | 'scroll' | 'input' | 'resize';
+export type SelectionCause = 'select' | 'update' | 'scroll' | 'input' | 'resize';
 
 export type SelectionHandler = (selection: TerminalSelection | null, cause: SelectionCause) => void;
 
@@ -20,12 +27,18 @@ export interface SelectionActions {
   clearSelection(): void;
 }
 
+export interface SelectionFollower {
+  refresh(): void;
+  stop(): void;
+}
+
 type SelectionTerminal = Pick<
   Terminal,
   | 'getSelection'
   | 'getSelectionPosition'
   | 'onSelectionChange'
   | 'onScroll'
+  | 'onWriteParsed'
   | 'onData'
   | 'onResize'
   | 'buffer'
@@ -55,17 +68,31 @@ function readSelection(
   return boxes ? { text, ...boxes, canInsert: canInsert() } : null;
 }
 
-function selectionKey(selection: TerminalSelection | null): string | null {
-  return selection ? JSON.stringify([selection.text, selection.start, selection.end]) : null;
+function selectionInView(terminal: SelectionTerminal): boolean {
+  const position = terminal.getSelectionPosition();
+  if (!position) return false;
+  const { viewportY } = terminal.buffer.active;
+  return rowsInView(position.start.y, position.end.y, viewportY, terminal.rows);
 }
+
+function selectionKey(selection: TerminalSelection | null): string | null {
+  if (!selection) return null;
+  return JSON.stringify([selection.text, selection.start, selection.end, selection.canInsert]);
+}
+
+const HIDE_CAUSE: Record<Exclude<FollowEvent, 'output'>, SelectionCause> = {
+  'user-scroll': 'scroll',
+  input: 'input',
+  resize: 'resize',
+};
 
 export function followSelection(
   terminal: SelectionTerminal,
   element: HTMLElement,
   canInsert: () => boolean,
   onSelection: SelectionHandler | undefined,
-): () => void {
-  if (!onSelection) return () => undefined;
+): SelectionFollower {
+  if (!onSelection) return { refresh: () => undefined, stop: () => undefined };
   const abort = new AbortController();
   const options = { capture: true, signal: abort.signal };
   let state = SETTLE_IDLE;
@@ -83,23 +110,53 @@ export function followSelection(
     state = next.state;
     if (next.settled) report();
   };
-  const dismiss = (cause: SelectionCause) => {
-    if (reported !== null) onSelection(null, cause);
+  const hide = (event: Exclude<FollowEvent, 'output'>) => {
+    if (followOutcome(event, { shown: reported !== null, selected: true, inView: true }) !== 'hide')
+      return;
+    reported = null;
+    onSelection(null, HIDE_CAUSE[event]);
+  };
+  const follow = () => {
+    if (reported === null) return;
+    const next = readSelection(terminal, element, canInsert);
+    const facts = { shown: true, selected: next !== null, inView: selectionInView(terminal) };
+    if (followOutcome('output', facts) === 'hide' || !next) {
+      reported = null;
+      onSelection(null, 'scroll');
+      return;
+    }
+    const key = selectionKey(next);
+    if (key === reported) return;
+    reported = key;
+    onSelection(next, 'update');
+  };
+  const pointerDown = (event: Event) => {
+    if (isScrollbar(event.target)) hide('user-scroll');
+    step('pointer-down');
+  };
+  const keyDown = (event: KeyboardEvent) => {
+    if (isScrollKey(event)) hide('user-scroll');
   };
 
-  element.addEventListener('pointerdown', () => step('pointer-down'), options);
+  element.addEventListener('pointerdown', pointerDown, options);
+  element.addEventListener('wheel', () => hide('user-scroll'), { ...options, passive: true });
+  element.addEventListener('keydown', keyDown, options);
   document.addEventListener('pointerup', () => step('pointer-up'), options);
   document.addEventListener('pointercancel', () => step('pointer-up'), options);
-  window.addEventListener('resize', () => dismiss('resize'), { signal: abort.signal });
+  window.addEventListener('resize', () => hide('resize'), { signal: abort.signal });
   const subscriptions = [
     terminal.onSelectionChange(() => step('changed')),
-    terminal.onScroll(() => dismiss('scroll')),
-    terminal.onData(() => dismiss('input')),
-    terminal.onResize(() => dismiss('resize')),
+    terminal.onScroll(follow),
+    terminal.onWriteParsed(follow),
+    terminal.onData(() => hide('input')),
+    terminal.onResize(() => hide('resize')),
   ];
-  return () => {
-    abort.abort();
-    for (const subscription of subscriptions) subscription.dispose();
+  return {
+    refresh: follow,
+    stop: () => {
+      abort.abort();
+      for (const subscription of subscriptions) subscription.dispose();
+    },
   };
 }
 

@@ -180,3 +180,29 @@ it('moves between the options with the arrow keys', async () => {
   fireEvent.keyDown(buttons.at(-1)!, { key: 'ArrowRight' });
   expect(document.activeElement).toBe(buttons[0]);
 });
+
+it('follows a selection that output moved without copying again or closing the note', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  const note = screen.getByRole('textbox', { name: 'Note on the selected text' });
+  fireEvent.change(note, { target: { value: 'why?' } });
+  act(() => state.report({ ...selected('pnpm check'), start: { ...box, top: 0 } }, 'update'));
+  expect(
+    screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Note on the selected text' }).value,
+  ).toBe('why?');
+  expect(fake.writeText).toHaveBeenCalledTimes(1);
+});
+
+it('withdraws the terminal options when the session ends under an open toolbar', async () => {
+  await select(selected('pnpm check'));
+  act(() => state.report(selected('pnpm check', false), 'update'));
+  expect(names()).toEqual(['New chat with this', 'Copied']);
+});
+
+it('closes an open note when the session ends', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  act(() => state.report(selected('pnpm check', false), 'update'));
+  expect(screen.queryByRole('textbox', { name: 'Note on the selected text' })).toBeNull();
+  expect(names()).toEqual(['New chat with this', 'Copied']);
+});

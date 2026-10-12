@@ -21,7 +21,13 @@ function emitter() {
 }
 
 function fakeTerminal() {
-  const events = { selection: emitter(), scroll: emitter(), data: emitter(), resize: emitter() };
+  const events = {
+    selection: emitter(),
+    scroll: emitter(),
+    write: emitter(),
+    data: emitter(),
+    resize: emitter(),
+  };
   const model = { text: '', start: { x: 0, y: 0 }, end: { x: 0, y: 0 } };
   const terminal = {
     cols: 80,
@@ -31,6 +37,7 @@ function fakeTerminal() {
     getSelectionPosition: () => (model.text ? { start: model.start, end: model.end } : undefined),
     onSelectionChange: events.selection.on,
     onScroll: events.scroll.on,
+    onWriteParsed: events.write.on,
     onData: events.data.on,
     onResize: events.resize.on,
   };
@@ -40,7 +47,12 @@ function fakeTerminal() {
     model.end = { x: text.length, y: row };
     events.selection.fire();
   };
-  return { terminal: terminal as never, events, select };
+  const scrollTo = (viewportY: number) => {
+    terminal.buffer.active.viewportY = viewportY;
+    events.scroll.fire();
+    events.write.fire();
+  };
+  return { terminal: terminal as never, events, select, scrollTo };
 }
 
 function mount() {
@@ -54,7 +66,7 @@ function mount() {
   const fake = fakeTerminal();
   const reports: [TerminalSelection | null, SelectionCause][] = [];
   const live = { value: true };
-  const stop = followSelection(
+  const follower = followSelection(
     fake.terminal,
     element,
     () => live.value,
@@ -62,7 +74,7 @@ function mount() {
   );
   const pointer = (type: string, target: EventTarget = element) =>
     target.dispatchEvent(new Event(type, { bubbles: true }));
-  return { ...fake, element, reports, live, stop, pointer };
+  return { ...fake, element, reports, live, follower, pointer };
 }
 
 afterEach(() => document.body.replaceChildren());
@@ -113,21 +125,95 @@ describe('followSelection', () => {
     expect(reports.at(-1)).toEqual([null, 'select']);
   });
 
-  it('dismisses on scroll, typing and resize while a selection is reported', () => {
+  it('dismisses on typing and resize while a selection is reported', () => {
     const { select, events, reports } = mount();
-    events.scroll.fire();
+    events.data.fire();
     expect(reports).toEqual([]);
     select('pnpm check');
-    events.scroll.fire();
     events.data.fire();
+    select('pnpm test');
     events.resize.fire();
+    select('pnpm lint');
     window.dispatchEvent(new Event('resize'));
-    expect(reports.slice(1)).toEqual([
-      [null, 'scroll'],
+    expect(reports.filter(([selection]) => selection === null)).toEqual([
       [null, 'input'],
       [null, 'resize'],
       [null, 'resize'],
     ]);
+  });
+
+  it('keeps the selection when output scrolls it, and reports where it is now', () => {
+    const { select, scrollTo, reports } = mount();
+    select('pnpm check', 10);
+    scrollTo(4);
+    expect(reports).toHaveLength(2);
+    const first = reports[0]![0]!;
+    const moved = reports[1]![0]!;
+    expect(reports[1]![1]).toBe('update');
+    expect(moved.text).toBe('pnpm check');
+    expect(moved.start.top).toBe(first.start.top - 4 * 20);
+  });
+
+  it('reports nothing new when output arrives without moving the selection', () => {
+    const { select, events, reports } = mount();
+    select('pnpm check', 10);
+    events.write.fire();
+    events.write.fire();
+    expect(reports).toHaveLength(1);
+  });
+
+  it('dismisses once output scrolls the selection out of view', () => {
+    const { select, scrollTo, reports } = mount();
+    select('pnpm check', 10);
+    scrollTo(11);
+    expect(reports.at(-1)).toEqual([null, 'scroll']);
+    scrollTo(12);
+    expect(reports).toHaveLength(2);
+  });
+
+  it('dismisses when the user scrolls with the wheel, the keyboard or the scrollbar', () => {
+    const { select, scrollTo, element, reports, pointer } = mount();
+    const scrollbar = document.createElement('div');
+    scrollbar.className = 'scrollbar';
+    element.append(scrollbar);
+    select('pnpm check', 10);
+    element.dispatchEvent(new Event('wheel', { bubbles: true }));
+    scrollTo(3);
+    select('pnpm test', 10);
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', shiftKey: true }));
+    select('pnpm lint', 10);
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp' }));
+    pointer('pointerdown', scrollbar);
+    expect(reports.map(([selection, cause]) => [selection?.text ?? null, cause])).toEqual([
+      ['pnpm check', 'select'],
+      [null, 'scroll'],
+      ['pnpm test', 'select'],
+      [null, 'scroll'],
+      ['pnpm lint', 'select'],
+      [null, 'scroll'],
+    ]);
+  });
+
+  it('shows the same selection again when it is made again after a dismissal', () => {
+    const { select, events, reports } = mount();
+    select('pnpm check');
+    events.data.fire();
+    select('pnpm check');
+    expect(reports.map(([selection]) => selection?.text ?? null)).toEqual([
+      'pnpm check',
+      null,
+      'pnpm check',
+    ]);
+  });
+
+  it('stops offering insertion when the session ends while the selection is shown', () => {
+    const { select, reports, live, follower } = mount();
+    select('last output');
+    live.value = false;
+    follower.refresh();
+    expect(reports.at(-1)).toEqual([expect.objectContaining({ canInsert: false }), 'update']);
+    follower.refresh();
+    expect(reports).toHaveLength(2);
   });
 
   it('marks a selection in a session that cannot take input', () => {
@@ -138,11 +224,11 @@ describe('followSelection', () => {
   });
 
   it('stops listening when unfollowed, and does nothing without a handler', () => {
-    const { select, reports, stop, terminal, element } = mount();
-    stop();
+    const { select, reports, follower, terminal, element } = mount();
+    follower.stop();
     select('pnpm check');
     expect(reports).toEqual([]);
-    expect(() => followSelection(terminal, element, () => true, undefined)()).not.toThrow();
+    expect(() => followSelection(terminal, element, () => true, undefined).stop()).not.toThrow();
   });
 });
 
