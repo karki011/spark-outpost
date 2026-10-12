@@ -5,14 +5,16 @@ import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 
+type SwitchProvider = Pick<ProviderSetup, 'id' | 'name'>;
+
 interface ProviderSwitchProps {
-  providers: ProviderSetup[];
+  providers: readonly SwitchProvider[];
   active: ProviderId;
   onSelect: (id: ProviderId) => void;
 }
 
 interface SwitchTabProps {
-  provider: ProviderSetup;
+  provider: SwitchProvider;
   selected: boolean;
   onSelect: (id: ProviderId) => void;
 }

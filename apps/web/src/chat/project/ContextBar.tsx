@@ -42,19 +42,21 @@ export function ContextBar({
   repos,
   popover,
   autonomy,
+  lead,
   suggestion,
 }: {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
   autonomy: AutonomyControl | null;
+  lead?: ReactNode;
   suggestion?: ReactNode;
 }) {
   const primary = repos[0] ?? null;
   const branch = useProjectBranch(primary?.id ?? null);
   const current = useChatWorkspace(conversationId, primary !== null).data?.current ?? null;
   return (
-    <ProjectFolders conversationId={conversationId} repos={repos} popover={popover}>
+    <ProjectFolders conversationId={conversationId} repos={repos} popover={popover} lead={lead}>
       {!primary && <span className="ctx-unlinked">Not linked, so the agent can't read files</span>}
       {primary && current && (
         <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
