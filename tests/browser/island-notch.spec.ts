@@ -207,7 +207,7 @@ for (const size of SIZES) {
       await openNotchIsland(page, { size, autoExpand: true, notch });
       await expect(page.getByRole('button', { name: /^Chat: Fix billing totals/ })).toBeVisible();
       await staysOn(page, 'peek');
-      await expect(island(page).locator('.isl-nudge, .isl-nowbar, .isl-view')).toHaveCount(0);
+      await expect(island(page).locator('.isl-restline, .isl-nowbar, .isl-view')).toHaveCount(0);
       expect(await shownText(page)).toBe('');
       await settled(page);
       const drawn = (await island(page).boundingBox())!;
@@ -234,7 +234,7 @@ for (const size of ['full', 'large'] as const) {
     await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
     await openNotchIsland(page, { size, autoExpand: true });
     await staysOn(page, 'peek');
-    await expect(island(page).locator('.isl-nudge, .isl-nowbar')).toHaveCount(0);
+    await expect(island(page).locator('.isl-restline, .isl-nowbar')).toHaveCount(0);
 
     const [first] = await seedChats([deploy]);
     await expect(island(page)).toHaveAttribute('data-view', 'card');
@@ -250,7 +250,8 @@ for (const size of ['full', 'large'] as const) {
     await island(page).getByRole('button', { name: 'Later' }).click();
     await page.mouse.move(5, 600);
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
-    await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+    await expect(island(page).locator('.isl-aside')).toHaveText('1');
+    await expect(island(page).locator('.isl-pbadge, .isl-restline')).toHaveCount(0);
     await touch(first!);
     await staysOn(page, 'peek');
     await sparkFocus(page, true);

@@ -12,6 +12,7 @@ import './island-bar.css';
 import './island-home.css';
 import './island-code.css';
 import './island-now.css';
+import './island-rest.css';
 import '../chat/project/project.css';
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -26,13 +27,11 @@ import {
   type IslandAction,
   type IslandSettingsTarget,
 } from '../desktop/desktop-bridge.ts';
-import { homeApi, homeKeys } from '../home/home-api.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import type { Decided } from './CardView.tsx';
 import { islandKeys, islandApi } from './island-api.ts';
 import {
-  cardKey,
   hoverOpens,
   islandView,
   sessionState,
@@ -56,14 +55,23 @@ import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
-import { coreRects, flatRowRects, minuteOf, useHoverIntent, zoneRects } from './island-hover.ts';
+import {
+  coreRects,
+  flatRowRects,
+  lineRects,
+  minuteOf,
+  useHoverIntent,
+  zoneRects,
+} from './island-hover.ts';
+import { restLine, type RestLine } from './island-rest-line.ts';
+import { useSetAside } from './set-aside.ts';
+import { useFastState } from './use-fast-state.ts';
 import { useIslandData } from './use-island-data.ts';
-import { momentLine, useGreeting, useMoments } from './use-island-moments.ts';
+import { useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
 
 const NOTE_MS = 1_500;
 const MINUTE_MS = 60_000;
-const MOMENT_MS = 6_000;
 const WAVE_MS = 1_400;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
@@ -98,7 +106,6 @@ export function IslandApp() {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
-  const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
   const [wave, setWave] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
   const [draftId, setDraftId] = useState(newDraftId);
@@ -106,7 +113,7 @@ export function IslandApp() {
   const [followUp, setFollowUp] = useState<ConversationSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [now, setNow] = useState(() => minuteOf(Date.now()));
-  const { moment, memberLine, dismiss } = useMoments(data.chats, data.loaded);
+  const { moment, text: momentText, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
   const running = useMemo(
     () =>
@@ -132,13 +139,14 @@ export function IslandApp() {
     setDraft((current) => ({ ...current, projectId: project.id }));
   });
 
-  const cards = useMemo(
-    () => pendingCards(data.chats, data.approvalsByChat, snoozed),
-    [data.chats, data.approvalsByChat, snoozed],
-  );
   const allCards = useMemo(
     () => pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE),
     [data.chats, data.approvalsByChat],
+  );
+  const aside = useSetAside(allCards);
+  const cards = useMemo(
+    () => pendingCards(data.chats, data.approvalsByChat, aside.keys),
+    [data.chats, data.approvalsByChat, aside.keys],
   );
   const row = useMemo(() => peekRow(data.chats, NO_HIDDEN, now), [data.chats, now]);
   const size = useIslandSize();
@@ -167,22 +175,10 @@ export function IslandApp() {
     return () => clearTimeout(timer);
   }, [note]);
 
-  const momentRun = moment?.runId ?? null;
   const resting = view.kind === 'peek' || view.kind === 'now';
   const cardChat = 'card' in view ? (view.card?.chat ?? null) : null;
-  const momentTitle = data.chats.find((candidate) => candidate.id === moment?.chatId)?.title;
-
-  useEffect(() => {
-    if (!momentRun) return;
-    const timer = setTimeout(dismiss, MOMENT_MS);
-    return () => clearTimeout(timer);
-  }, [momentRun, dismiss]);
-
-  const viewAnnouncement = cardChat
-    ? `Spark needs you: ${cardChat.title}.`
-    : moment && momentTitle
-      ? momentLine(moment.kind, momentTitle, memberLine)
-      : '';
+  const line = view.kind === 'peek' ? restLine({ sparkFocused, cards, moment, momentText }) : null;
+  const viewAnnouncement = cardChat ? `Spark needs you: ${cardChat.title}.` : (momentText ?? '');
 
   const openPanel = (next: Panel, by: Opener = 'user') => {
     setPanel(next);
@@ -213,6 +209,17 @@ export function IslandApp() {
     openPanel('sessions', by);
   };
 
+  const openLine = (shown: RestLine) => {
+    if (shown.card) {
+      setReview(shown.chatId);
+      setFocusSignal((value) => value + 1);
+      return;
+    }
+    dismiss();
+    setSelected(shown.chatId);
+    openPanel('sessions');
+  };
+
   const command = (action: IslandAction) => {
     if (action === 'sessions') {
       if (panel === 'sessions') closePanel();
@@ -233,7 +240,7 @@ export function IslandApp() {
   const mood = wave
     ? 'happy'
     : scoutMoodFor(view, {
-        waiting,
+        waiting: cards.length,
         hour: new Date(now).getHours(),
         idleMinutes: 0,
         running: running.length,
@@ -245,11 +252,11 @@ export function IslandApp() {
     islandRef,
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
     coreRects: () => coreRects(islandRef.current),
-    blobRects: () => flatRowRects(rowRef.current),
+    blobRects: () => [...flatRowRects(rowRef.current), ...lineRects(islandRef.current)],
     zoneRects: (docked) => zoneRects(islandRef.current, restMetrics(size).reach, docked),
     peek: resting,
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}:${waiting}:${restsQuietly(mood)}:${line?.key}:${line?.more}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -288,7 +295,7 @@ export function IslandApp() {
 
   const snooze = () => {
     if (view.kind !== 'card') return;
-    setSnoozed((set) => new Set([...set, cardKey(view.card)]));
+    aside.setAside(view.card);
     setReview(null);
     if (!reduced) {
       setWave(true);
@@ -326,28 +333,7 @@ export function IslandApp() {
     onConnectors: settingsReady ? () => openSettings('connectors') : null,
     onEditSpark: settingsReady ? (id: string) => openSettings(`spark-edit:${id}`) : null,
   };
-  const spend = useQuery({
-    queryKey: homeKeys.spend('today'),
-    queryFn: () => homeApi.spend('today'),
-    enabled: panel === 'ask',
-  });
-  const spendToday = spend.data?.costUsd ?? null;
-  const fast = useMemo(
-    () => ({
-      waiting: feed.needs.map((item) => ({
-        id: item.chat.id,
-        title: item.chat.title,
-        detail: item.sub,
-      })),
-      running: feed.running.map((item) => ({
-        id: item.chat.id,
-        title: item.chat.title,
-        detail: item.step,
-      })),
-      spendToday,
-    }),
-    [feed, spendToday],
-  );
+  const fast = useFastState(feed, panel === 'ask');
 
   const openChatHere =
     panel === 'sessions' ? (data.chats.find((chat) => chat.id === selected) ?? null) : null;
@@ -421,6 +407,9 @@ export function IslandApp() {
         hover={hover}
         greeting={greeting}
         waiting={waiting}
+        asking={cards.length}
+        setAside={allCards.length - cards.length}
+        line={line}
         voice={voice}
         now={now}
         note={note}
@@ -446,9 +435,10 @@ export function IslandApp() {
         onDecided={setNote}
         onLater={snooze}
         onReview={openCard}
+        onLine={openLine}
         onScout={() => {
           if (panel) closePanel();
-          else if ((view.kind === 'nudge' || view.kind === 'now') && view.card) openCard(view.card);
+          else if (view.kind === 'now' && view.card) openCard(view.card);
           else openPanel('home');
         }}
         onPeekOpen={(id) => {

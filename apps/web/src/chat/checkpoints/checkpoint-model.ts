@@ -207,7 +207,6 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.revert]: 'Reverted the changes.',
   [CHECKPOINT_OPTION.answer]: 'Answered.',
   [CHECKPOINT_OPTION.reconcile]: 'Asked a Builder to reconcile.',
-  [CHECKPOINT_OPTION.nudge]: 'Nudged it; the note goes with its next turn.',
   [CHECKPOINT_OPTION.letContinue]: 'Let it continue.',
   [CHECKPOINT_OPTION.continueStuck]: 'Continued with a note to try another way.',
   [CHECKPOINT_OPTION.stopReport]: 'Stopped and reported.',

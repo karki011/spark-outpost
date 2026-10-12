@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_BUSY_ENTER,
@@ -24,6 +24,7 @@ import { useChatQueue } from '../chat/queue/use-chat-queue.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { islandApi } from './island-api.ts';
 import { sessionState } from './island-model.ts';
+import { useArmedAfterChange } from './island-parts.tsx';
 import { projectLine, StateChip } from './session-bits.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent, pendingOf } from './use-island-data.ts';
@@ -106,11 +107,30 @@ function Messages({ detail }: { detail: ConversationDetail | undefined }) {
   );
 }
 
+const ANSWER_KEYS = new Set(['Enter', ' ']);
+
 function Actions({ detail, provider }: { detail: ConversationDetail; provider: string }) {
   const pending = pendingOf(detail).filter((approval) => approval.status === 'pending');
+  const armed = useArmedAfterChange(pending.map((approval) => approval.id).join(' '));
+  const hold = (event: SyntheticEvent) => {
+    if (armed) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
   if (pending.length === 0) return null;
   return (
-    <div className="isl-chat-cards" aria-label="Waiting for you" role="group" tabIndex={-1}>
+    <div
+      className="isl-chat-cards"
+      aria-label="Waiting for you"
+      role="group"
+      tabIndex={-1}
+      data-arming={!armed || undefined}
+      onClickCapture={hold}
+      onPointerDownCapture={hold}
+      onKeyDownCapture={(event) => {
+        if (ANSWER_KEYS.has(event.key)) hold(event);
+      }}
+    >
       {pending.map((approval) =>
         isCheckpoint(approval) ? (
           <CheckpointCard key={approval.id} approval={approval} />

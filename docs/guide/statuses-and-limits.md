@@ -64,6 +64,7 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | ------------------------------------------------- | ------------- |
 | Scout's eyes scan; a blob has a spinning ring     | **Working…**  |
 | A number badge on Scout; a blob pulses with **!** | **Needs you** |
+| A dashed count on Scout                           | Set aside     |
 | A happy face; a blob pops a star once             | **Done**      |
 | A worried face; a grey blob with a red badge      | **Failed**    |
 | A dimmed blob                                     | **Quiet**     |

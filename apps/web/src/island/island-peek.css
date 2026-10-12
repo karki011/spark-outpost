@@ -114,28 +114,6 @@
   color: var(--muted);
 }
 
-.isl[data-view='nudge'] .isl-wing.l {
-  flex: none;
-  width: 0;
-  padding: 0;
-}
-
-.isl-nudge {
-  max-width: 300px;
-}
-
-.isl-nudge-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-}
-
-.isl-nudge b {
-  color: var(--accent-text);
-  font-weight: 600;
-}
-
 .isl-peekblob:focus-visible,
 .isl-peekmore:focus-visible {
   outline: 2px solid var(--accent);

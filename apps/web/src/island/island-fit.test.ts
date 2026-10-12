@@ -3,6 +3,7 @@ import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import {
   hoverZone,
   notchFit,
+  restLineTop,
   restPose,
   restsQuietly,
   shownBox,
@@ -172,5 +173,13 @@ describe('the resting hover zone', () => {
         expect(zone.y + zone.height).toBeGreaterThan(edge + blob - tuck);
       }
     }
+  });
+});
+
+describe('the line beside the resting blob', () => {
+  it('starts below the row of chat blobs and their badges', () => {
+    expect(restLineTop(true, 0)).toBe(27);
+    expect(restLineTop(false, 39)).toBe(63);
+    expect(restLineTop(false, 7)).toBe(31);
   });
 });

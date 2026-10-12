@@ -26,6 +26,16 @@ export function useArmed(key: string): boolean {
   return armedKey === key;
 }
 
+export function useArmedAfterChange(key: string): boolean {
+  const [armedKey, setArmedKey] = useState(key);
+  useEffect(() => {
+    if (armedKey === key) return;
+    const timer = setTimeout(() => setArmedKey(key), ARMING_MS);
+    return () => clearTimeout(timer);
+  }, [key, armedKey]);
+  return armedKey === key;
+}
+
 export function ProviderTag({ provider }: { provider: string | null }) {
   if (!provider) return null;
   return (

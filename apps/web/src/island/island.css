@@ -51,12 +51,6 @@
   border-radius: max(var(--island-r), 16px);
 }
 
-.isl.under {
-  top: var(--drop);
-  border-top: 1px solid var(--island-line);
-  border-radius: max(var(--island-r), 16px);
-}
-
 .isl.peek {
   border-color: transparent;
 }
@@ -108,7 +102,6 @@
 }
 
 .isl.floating .isl-ear,
-.isl.under .isl-ear,
 .isl.peek .isl-ear {
   opacity: 0;
 }
@@ -153,36 +146,6 @@
   width: var(--gap, 0px);
   flex: none;
   transition: width 0.35s var(--out);
-}
-
-.isl-pill-btn {
-  height: 26px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 9px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  cursor: pointer;
-  pointer-events: auto;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.isl-pill-btn:hover {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-  color: var(--text);
-}
-
-.isl-pill-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  color: var(--text);
 }
 
 .isl-wlabel {

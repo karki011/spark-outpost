@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import type { Card, IslandView, Panel } from './island-model.ts';
+import type { IslandView, Panel } from './island-model.ts';
 import { Kbd } from './island-parts.tsx';
 
 export interface WingProps {
@@ -10,29 +10,6 @@ export interface WingProps {
   followUp: ConversationSummary | null;
   hugsNotch: boolean;
   onTab: (panel: Panel) => void;
-  onReview: (card: Card) => void;
-}
-
-function lastPart(path: string): string {
-  return path.split('/').filter(Boolean).at(-1) ?? path;
-}
-
-export function nudgeTitle(card: Card): string {
-  const approval = card.approval;
-  if (card.kind === 'force') return 'Approve: force-push';
-  if (card.kind === 'question') return `Question: ${card.chat.title}`;
-  if (approval?.payload.plan) return 'Plan ready to review';
-  if (approval?.kind === 'execute' && approval.payload.command) {
-    return `Approve: run ${approval.payload.command}`;
-  }
-  if (approval?.kind === 'edit') {
-    const paths = approval.payload.paths;
-    return paths.length === 1
-      ? `Approve: change ${lastPart(paths[0]!)}`
-      : `Approve: change ${paths.length} files`;
-  }
-  if (approval?.payload.checkpoint) return `${card.chat.title}: ready for you`;
-  return `${card.chat.title} needs you`;
 }
 
 const PANEL_LABELS: Record<Panel, string> = {
@@ -49,21 +26,6 @@ function panelLabel(panel: Panel, followUp: boolean): string {
 export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
   const { view, waiting, greeting } = props;
   switch (view.kind) {
-    case 'nudge':
-      return {
-        left: null,
-        right: (
-          <button
-            type="button"
-            className="isl-pill-btn isl-nudge"
-            onClick={() => props.onReview(view.card)}
-          >
-            <span className="isl-nudge-title">{nudgeTitle(view.card)}</span>
-            <span aria-hidden="true">·</span>
-            <b>Review</b>
-          </button>
-        ),
-      };
     case 'card':
       return {
         left: view.card.kind === 'question' ? 'Question' : 'Needs you',
