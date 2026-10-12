@@ -28,7 +28,7 @@ Docked, Scout rests half hidden and comes out while a chat works, needs you or f
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
-A quiet chat shows its last reply and project. **Open** shows it here; **Reply** opens its reply box.
+A quiet chat shows its last reply and project. **Open** shows it; **Reply** opens its reply box.
 
 Select a Spark to chat, right-click to edit, or select **New Spark**. Without Sparks, tiles start a chat and **Needs you** opens waiting chats.
 

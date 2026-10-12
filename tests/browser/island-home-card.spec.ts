@@ -240,7 +240,7 @@ test('quick start separates what you can start from what needs you, at both pane
 });
 
 test.describe('on a wide screen', () => {
-  test.use({ viewport: { width: 1920, height: 720 }, screen: { width: 1920, height: 1080 } });
+  test.use({ viewport: { width: 1920, height: 720 } });
 
   test('the widest panel keeps both cards filled', async ({ page }) => {
     await resetTestDatabase({ onboarded: true });
