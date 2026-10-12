@@ -55,6 +55,10 @@ Edit cards show the first changed lines, never secret files.
 | **Open chat**              | Plans and instruction-file changes offer only this and **Later**. |
 | **Later**                  | Sets the card aside: a dashed count on Scout until it changes.    |
 
+## When Spark Island is off
+
+**Dock badge and notifications** (on by default): the Dock icon counts waiting chats, and with the island off a notification names the chat. Select it to open.
+
 ## Inside the app
 
 In Spark, **Status companion** shows session status.

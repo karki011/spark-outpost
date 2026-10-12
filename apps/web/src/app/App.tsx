@@ -63,6 +63,7 @@ import { revealWorkflowOptions } from '../spark/SparkSection.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
+import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
 import { useShareOnScreenChat } from '../island/on-screen-chat.ts';
@@ -137,6 +138,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const layout = useSidebarLayoutState(waiting > 0);
   const view: AppView = layout.narrow && storedView === 'map' ? 'home' : storedView;
   useAttentionTitle(waiting);
+  useAttentionReport(conversations.data);
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;

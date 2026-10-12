@@ -63,6 +63,7 @@ describe('companion settings file', () => {
       islandSize: 'full',
       islandSizePicked: false,
       autoExpand: true,
+      notify: true,
     });
   });
 
@@ -97,6 +98,12 @@ describe('companion settings file', () => {
     expect(parseSettings(JSON.stringify({ autoExpand: 'no' })).autoExpand).toBe(true);
   });
 
+  it('notifies on this Mac unless that was turned off', () => {
+    expect(parseSettings('{}').notify).toBe(true);
+    expect(parseSettings(JSON.stringify({ notify: false })).notify).toBe(false);
+    expect(parseSettings(JSON.stringify({ notify: 0 })).notify).toBe(true);
+  });
+
   it('falls back to the defaults when both shortcuts collide', () => {
     const parsed = parseSettings(
       JSON.stringify({ shortcuts: { quick: 'Alt+J', sessions: 'Alt+J' } }),
@@ -116,6 +123,7 @@ describe('companion settings file', () => {
       islandSize: 'small' as const,
       islandSizePicked: true,
       autoExpand: false,
+      notify: false,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

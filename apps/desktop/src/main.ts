@@ -408,6 +408,7 @@ async function launch(): Promise<void> {
   bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({
     appName: config.appName,
+    channelBadge: config.badge,
     origin: apiUrl,
     preload,
     settingsPath: settingsFile(paths.userData),
