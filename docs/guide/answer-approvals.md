@@ -9,7 +9,7 @@ summary: Allow or deny a command or file change an agent asks about, hold to con
 You'll answer an agent that's waiting for your permission. About 1 minute.
 
 1. Select **Waiting for you** above the message box, or press **⌘⇧Y**, to jump to the card.
-2. Read the command or the diff, where it runs, and why it asks.
+2. Read the command or the diff, where it runs, and why it asks. A sub-agent's card names it.
 
    ![An approval card asking to run a command](images/approvals-command-light.png)
 

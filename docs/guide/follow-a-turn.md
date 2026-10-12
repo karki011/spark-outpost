@@ -17,7 +17,7 @@ You'll follow a running turn, stop it and queue more messages. About 2 minutes.
 
 When the agent needs you, the line says **Waiting for you**. Select it or press **⌘⇧Y**.
 
-Commands show output in a terminal in the reply. Passing ones fold to a line; failed ones stay open. Codex output is live; Claude's appears when the command ends. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+Commands show their output in the reply: passing ones fold to a line, failed ones stay open. Codex output is live; Claude's appears when the command ends. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
@@ -27,14 +27,15 @@ Commands show output in a terminal in the reply. Passing ones fold to a line; fa
 
 1. While a turn runs, type a message. **Enter** queues it.
 2. **⌘Enter** sends it now.
-3. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
+3. While the agent waits on sub-agents, **Enter** sends now.
+4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
 
-| When                           | Spark                                                                               |
-| ------------------------------ | ----------------------------------------------------------------------------------- |
-| The turn finishes              | Sends queued messages in order.                                                     |
-| You send one now               | Shows it in the chat with its status: read next step, or sent after the turn stops. |
-| You stop the turn, or it fails | Pauses the queue until you select **Send now**.                                     |
-| You reload or restart          | Keeps the queue.                                                                    |
+| When                           | Spark                                                          |
+| ------------------------------ | -------------------------------------------------------------- |
+| The turn finishes              | Sends queued messages in order.                                |
+| You send one now               | Shows its status; a turn only waiting on sub-agents queues it. |
+| You stop the turn, or it fails | Pauses the queue until you select **Send now**.                |
+| You reload or restart          | Keeps the queue.                                               |
 
 Only text can be queued. Swap the keys in [Settings](settings.md#spark).
 
