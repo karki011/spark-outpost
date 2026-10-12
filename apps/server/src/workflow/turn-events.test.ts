@@ -52,6 +52,17 @@ describe('turn events', () => {
     expect(stepMark(events.at(-1)!)).toEqual({ toolCallId: 'a' });
   });
 
+  it("marks the agent's wait for its sub-agents on the step it opens", async () => {
+    const events = await eventsFor([
+      { kind: 'step_started', name: 'Waiting for sub-agents', tool: true, waits: true },
+      { kind: 'step_started', name: 'Read a.ts', tool: true },
+    ]);
+    const marks = events.flatMap((event) =>
+      event.type === EventType.STEP_STARTED ? [stepMark(event).waits ?? false] : [],
+    );
+    expect(marks).toEqual([true, false]);
+  });
+
   it('ignores a repeated start, input or result, and anything for a call it never saw', async () => {
     const events = await eventsFor([
       { kind: 'tool_result', id: 'ghost', output: 'x', secret: false },

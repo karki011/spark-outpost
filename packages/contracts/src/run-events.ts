@@ -21,6 +21,7 @@ export const SPARK_METADATA = 'spark';
 const stepMarkSchema = z.object({
   toolCallId: z.string().optional(),
   interrupted: z.boolean().optional(),
+  waits: z.boolean().optional(),
 });
 export type StepMark = z.infer<typeof stepMarkSchema>;
 

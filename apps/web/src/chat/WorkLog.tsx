@@ -15,7 +15,7 @@ function stepCount(steps: readonly StepView[]): string {
 }
 
 function currentStep(steps: readonly StepView[]): string | null {
-  const own = steps.filter((candidate) => !candidate.subagent);
+  const own = steps.filter((candidate) => !candidate.subagent && !candidate.waits);
   const step = own.findLast((candidate) => candidate.status !== 'done') ?? own.at(-1);
   return step ? friendlyStep(step.name).replaceAll('`', '') : null;
 }

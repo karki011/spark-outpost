@@ -91,7 +91,6 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
       {
         id: 'sub-1',
         usage: { tokens: 3400, toolUses: 3, durationMs: 41_000 },
-        summary: 'Moved 4 routes',
         message: 'Found 4 routes and moved them.',
       },
     ]);

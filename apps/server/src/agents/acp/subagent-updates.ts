@@ -71,6 +71,7 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
   const names = new Map<string, string>();
   const waitCalls = new Set<string>();
   const tokens = new Map<string, number>();
+  const delivered = new Set<string>();
 
   const reporting = (
     id: string,
@@ -78,7 +79,9 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     message: string | null,
   ): ProviderOutput[] => {
     if (reported?.tokens !== undefined) tokens.set(id, reported.tokens);
-    const report = reportOf(reported, message);
+    if (message) delivered.add(id);
+    const kept = delivered.has(id) && reported ? { ...reported, summary: undefined } : reported;
+    const report = reportOf(kept, message);
     return report ? [{ kind: 'subagent_report', id, report }] : [];
   };
 

@@ -141,8 +141,15 @@ describe('sub-agent roster', () => {
       commands: ['pnpm test'],
       usage: { tokens: 3400, toolUses: 7 },
       message: 'All moved.',
-      summary: 'Moved',
     });
+    expect(row.summary).toBeUndefined();
+    const pointed = fold([
+      started('a'),
+      report({ message: 'Report.' }),
+      report({ summary: 'Read it there.' }),
+    ]);
+    expect(pointed.rows[0]!.summary).toBeUndefined();
+    expect(fold([started('a'), report({ summary: 'Found 4' })]).rows[0]!.summary).toBe('Found 4');
     expect(subagentUsageParts(row, 41_000)).toEqual(['2 steps', '3.4k tokens', '41s']);
     expect(
       subagentUsageParts(

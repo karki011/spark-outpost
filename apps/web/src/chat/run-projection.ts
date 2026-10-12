@@ -33,6 +33,7 @@ export interface RunStep {
   reasoningId?: string | undefined;
   thought?: string | undefined;
   subagent?: boolean | undefined;
+  waits?: boolean | undefined;
 }
 
 export type StepStatus = 'done' | 'failed' | 'open';
@@ -43,6 +44,7 @@ export interface StepView {
   reasoningId?: string | undefined;
   thought?: string | undefined;
   subagent?: boolean | undefined;
+  waits?: boolean | undefined;
 }
 
 function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
@@ -53,11 +55,12 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId } = stepMark(event);
+  const { toolCallId, waits } = stepMark(event);
   return {
     name: event.stepName,
     done: false,
     ...(toolCallId ? { toolCallId } : {}),
+    ...(waits ? { waits: true } : {}),
     ...(event.subagentRunId ? { subagent: true } : {}),
   };
 }
@@ -127,6 +130,7 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
       status: step.done ? 'done' : 'open',
       ...thinkingOf(step),
       ...(step.subagent ? { subagent: true } : {}),
+      ...(step.waits ? { waits: true } : {}),
     });
   }
   return views;

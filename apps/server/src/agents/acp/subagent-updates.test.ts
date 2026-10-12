@@ -250,6 +250,47 @@ describe('sub-agent updates', () => {
     });
   });
 
+  it('keeps no summary for a sub-agent that delivered a report, also when it arrives later', () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
+    send('a', {
+      sessionUpdate: 'agent_message_chunk',
+      messageId: 'm1',
+      content: { type: 'text', text: 'The full report.' },
+    });
+    const ended = (summary: string) =>
+      send('root', {
+        sessionUpdate: 'subagent_state_update',
+        subagentSessionId: 'a',
+        state: 'completed',
+        _meta: { claudeCode: { summary } },
+      });
+    expect(ended('Short summary')).toContainEqual({
+      kind: 'subagent_report',
+      id: 'a',
+      report: { message: 'The full report.' },
+    });
+    expect(ended("This agent's report was delivered to you as a message. Read it there.")).toEqual(
+      [],
+    );
+  });
+
+  it('keeps the summary of a sub-agent that delivered no report', () => {
+    const { spawn, send } = harness();
+    spawn('root', 'a');
+    const ended = send('root', {
+      sessionUpdate: 'subagent_state_update',
+      subagentSessionId: 'a',
+      state: 'completed',
+      _meta: { claudeCode: { summary: 'Found 4 routes' } },
+    });
+    expect(ended).toContainEqual({
+      kind: 'subagent_report',
+      id: 'a',
+      report: { summary: 'Found 4 routes' },
+    });
+  });
+
   it('counts the tokens sub-agents reported once, also when the figures arrive after the end', () => {
     const { spawn, send, mapper } = harness();
     spawn('root', 'a');

@@ -51,7 +51,7 @@ export function withSubagentReport<Row extends SubagentRecord>(
     commands: [...row.commands, ...(report.commands ?? [])],
     ...(report.usage ? { usage: { ...row.usage, ...report.usage } } : {}),
     ...(report.message ? { message: report.message } : {}),
-    ...(report.summary ? { summary: report.summary } : {}),
+    ...(report.summary && !report.message && !row.message ? { summary: report.summary } : {}),
   };
 }
 

@@ -132,5 +132,8 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await expect(rows.nth(0)).toContainText('Changed routes.ts');
   await expect(rows.nth(0)).toContainText('Ran pnpm test');
   await expect(rows.nth(0)).toContainText('Found 4 routes and moved them.');
+  await page.getByRole('tab', { name: 'Cost' }).click();
+  await expect(page.locator('.cost-split')).toContainText('Sub-agents 3.4K');
+  await expect(page.getByRole('list', { name: 'Usage by sub-agent' })).toContainText('Explore');
   await shot(page, 'subagents-chat-finished.png');
 });
