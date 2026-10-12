@@ -29,8 +29,10 @@ export interface SidebarLayout {
   narrow: boolean;
   attention: boolean;
   hidden: boolean;
+  immersive: boolean;
   width: number | null;
   setWidth: (width: number | null) => void;
+  setImmersive: (on: boolean) => void;
   toggle: () => void;
   reveal: () => void;
   closeDrawer: () => void;
@@ -119,6 +121,7 @@ function takeSwapFocus(button: HTMLButtonElement | null): void {
 export function useSidebarLayoutState(attention: boolean): SidebarLayout {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
+  const [immersive, setImmersive] = useState(false);
   const [width, setWidthState] = useState(readWidth);
   const narrow = usePhone();
   useEdgeSwipe(narrow, drawer, setDrawer);
@@ -144,6 +147,7 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
       narrow,
       attention,
       hidden: narrow ? !drawer : collapsed,
+      immersive: immersive && !narrow,
       width,
       setWidth: (next) => {
         const clamped = next === null ? null : clampWidth(next);
@@ -157,8 +161,9 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
       },
       reveal: () => (narrow ? setDrawer(true) : setCollapsed(false)),
       closeDrawer: () => setDrawer(false),
+      setImmersive,
     }),
-    [collapsed, drawer, narrow, attention, width],
+    [collapsed, drawer, narrow, attention, immersive, width],
   );
 }
 

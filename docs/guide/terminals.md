@@ -21,7 +21,7 @@ Answer questions in the terminal. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open** means tracking is unavailable. Drop files or folders to insert paths; press Enter yourself.
 
-**Focus terminal** (**⌘⇧F**) hides the chat list and Work panel; again to leave. **⋯** has **Copy folder path**, **Reconnect** and **Stop session**, which asks you to hold. Terminal sessions are Mac-only.
+**Focus terminal** (**⌘⇧F**) shows only the terminal; again, or **Exit focus**, to leave. **⋯** has **Copy folder path**, **Reconnect** and **Stop session**, which asks you to hold. Terminal sessions are Mac-only.
 
 ## Open a shell beside Chat
 

@@ -52,10 +52,21 @@ describe('what is waiting, in one line', () => {
     );
     expect(waitingTitle(card('question', member))).toBe('@api needs you in Orders launch');
     expect(waitingTitle(card('open', member))).toBe('@api needs you in Orders launch');
-    expect(waitingTitle(card('approval', member, approval('a4')))).toBe(
-      'Approve: run npm install sharp',
-    );
     expect(waitingTitle(card('open', install.chat))).toBe('Add the image library needs you');
+  });
+
+  it('names the member chat whose approval is waiting', () => {
+    const run = card('approval', member, approval('a4'));
+    expect(waitingTitle(run)).toBe('@api: approve run npm install sharp');
+    expect(restLineTitle(restLine({ ...quiet, cards: [run] })!)).toBe(
+      '@api: approve run npm install sharp · Review',
+    );
+    const edit = approval('a5', {
+      kind: 'edit',
+      payload: { paths: ['src/a.ts', 'src/b.ts'] } as Approval['payload'],
+    });
+    expect(waitingTitle(card('approval', member, edit))).toBe('@api: approve change 2 files');
+    expect(waitingTitle(card('force', member, approval('a6')))).toBe('@api: approve force-push');
   });
 });
 

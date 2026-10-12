@@ -85,6 +85,13 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
     };
   }, [active, chatId]);
 
+  const setImmersive = sidebar?.setImmersive;
+  useEffect(() => {
+    if (!active || !setImmersive) return;
+    setImmersive(true);
+    return () => setImmersive(false);
+  }, [active, setImmersive]);
+
   const toggle = () => {
     saveFocused(chatId, focused ? null : NOTHING_HIDDEN);
     setFocused(!focused);
