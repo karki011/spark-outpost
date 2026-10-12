@@ -98,6 +98,16 @@ export function TerminalSelectionToolbar({ state }: { state: TerminalSelectionSt
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [canAdd, state]);
 
+  useEffect(() => {
+    if (!commenting) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && toolbarRef.current?.contains(event.target)) return;
+      state.dismiss();
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [commenting, state]);
+
   if (!selection) return null;
 
   return (

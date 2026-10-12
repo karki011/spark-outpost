@@ -222,3 +222,49 @@ it('closes the toolbar when output replaced the selected rows and no note is ope
   act(() => state.report(null, 'changed'));
   expect(screen.queryByRole('toolbar')).toBeNull();
 });
+
+it('keeps an open note whatever the terminal reports, and adds the copied text', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  const note = () =>
+    screen.getByRole<HTMLInputElement>('textbox', { name: 'Note on the selected text' });
+  fireEvent.change(note(), { target: { value: 'why?' } });
+  act(() => state.report(null, 'select'));
+  act(() => state.report(null, 'input'));
+  act(() => state.report(null, 'resize'));
+  act(() => state.report(selected('other text'), 'select'));
+  expect(note().value).toBe('why?');
+  expect(document.activeElement).toBe(note());
+  expect(fake.writeText).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(target.insertSelection).toHaveBeenCalledExactlyOnceWith('comment', 'pnpm check', 'why?');
+  expect(screen.queryByRole('toolbar')).toBeNull();
+});
+
+it('closes the toolbar on Escape when the terminal dropped the selection under the note', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  act(() => state.report(null, 'select'));
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Note on the selected text' }), {
+    key: 'Escape',
+  });
+  expect(screen.queryByRole('toolbar')).toBeNull();
+});
+
+it('returns to the options on Escape while the selection is still there', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Note on the selected text' }), {
+    key: 'Escape',
+  });
+  expect(names()).toContain('Comment');
+});
+
+it('closes an open note on a press outside the toolbar, and not on one inside it', async () => {
+  await select(selected('pnpm check'));
+  fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+  fireEvent.pointerDown(screen.getByRole('textbox', { name: 'Note on the selected text' }));
+  expect(screen.queryByRole('textbox', { name: 'Note on the selected text' })).not.toBeNull();
+  fireEvent.pointerDown(screen.getByRole('textbox', { name: 'Terminal input' }));
+  expect(screen.queryByRole('toolbar')).toBeNull();
+});

@@ -29,13 +29,14 @@ case "$1" in
           esc=$(printf '\033')
           report=0
           stty -icanon -echo
-          printf '\033[?1003h\033[?1006h'
+          printf '\033[?1004h\033[?1003h\033[?1006h'
           while byte=$(dd bs=1 count=1 2>/dev/null) && [ -n "$byte" ]; do
             if [ "$byte" = "$esc" ]; then report=1; continue; fi
             if [ "$report" = 0 ]; then printf '%s' "$byte"; continue; fi
             case "$byte" in
               M) report=0; printf '\0337\033[3;1H\033[2KReady for terminal input. No provider request is made.\0338' ;;
-              m) report=0 ;;
+              O) report=0; printf '\033[?1003h\0337\033[3;1H\033[2KReady for terminal input. No provider request is made.\0338' ;;
+              I|m) report=0 ;;
             esac
           done
           ;;

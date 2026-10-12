@@ -308,3 +308,36 @@ test('a toolbar survives the pointer crossing an agent that tracks every mouse m
     await page.request.delete(`/api/conversations/${conversationId}/terminal`);
   }
 });
+
+test('a note opened long after selecting stays open while the agent repaints on losing focus', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const { conversationId, workspace } = await startTerminal(page);
+  try {
+    const rows = workspace.locator('.xterm-accessibility-tree > div');
+    const toolbar = workspace.getByRole('toolbar', { name: 'Selected text' });
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.type('fixture motion on');
+    await page.keyboard.press('Enter');
+    await expect(workspace.getByText('Hold Option to select')).toBeVisible();
+
+    await page.keyboard.down('Alt');
+    await selectLine(page, workspace, READY);
+    await page.keyboard.up('Alt');
+    await expect(toolbar).toBeVisible();
+    await page.waitForTimeout(4_000);
+    await toolbar.getByRole('button', { name: 'Comment' }).click();
+    const note = toolbar.getByRole('textbox', { name: 'Note on the selected text' });
+    await expect(note).toBeFocused();
+    await page.waitForTimeout(3_000);
+    await expect(note).toBeFocused();
+    await page.keyboard.type('why this');
+    await toolbar.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(toolbar).toHaveCount(0);
+    expect(await terminalHasFocus(page)).toBe(true);
+    await expect(rows.filter({ hasText: `> ${READY} why this` })).toHaveCount(1);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}/terminal`);
+  }
+});

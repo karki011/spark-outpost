@@ -305,6 +305,13 @@ describe('followSelection', () => {
     expect(reported).toEqual([0, 1, 0]);
   });
 
+  it('reports the selection gone when the agent sets its mouse mode again and xterm drops it', () => {
+    const { select, terminal, reports } = mount();
+    select('pnpm check');
+    (terminal as { clearSelection(): void }).clearSelection();
+    expect(reports.at(-1)).toEqual([null, 'select']);
+  });
+
   it('reports the text without trailing spaces on each line', () => {
     const { select, reports } = mount();
     select('first line   \nsecond line \t');

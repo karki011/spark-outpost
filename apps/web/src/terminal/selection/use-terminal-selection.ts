@@ -23,6 +23,7 @@ export function useTerminalSelection(): TerminalSelectionState {
   const [commentFor, setCommentFor] = useState<TerminalSelection | null>(null);
   const targetRef = useRef<SelectionTarget | null>(null);
   const noteOpen = useRef(false);
+  const lostWhileNoting = useRef(false);
   const shown = useRef<TerminalSelection | null>(null);
 
   const write = useCallback((selected: TerminalSelection) => {
@@ -33,8 +34,11 @@ export function useTerminalSelection(): TerminalSelectionState {
   }, []);
   const report = useCallback<SelectionHandler>(
     (next, cause) => {
-      const keepsNote = cause === 'scroll' || cause === 'changed';
-      if (!next && keepsNote && noteOpen.current) return;
+      const sessionEnded = next !== null && cause === 'update' && !next.canInsert;
+      if (noteOpen.current && !sessionEnded) {
+        if (!next && (cause === 'select' || cause === 'changed')) lostWhileNoting.current = true;
+        return;
+      }
       const previous = shown.current;
       shown.current = next;
       setSelection(next);
@@ -64,8 +68,13 @@ export function useTerminalSelection(): TerminalSelectionState {
   const target = useCallback(() => targetRef.current, []);
   const comment = useCallback(
     (open: boolean) => {
+      const gone = !open && lostWhileNoting.current;
       noteOpen.current = open && selection !== null;
+      lostWhileNoting.current = false;
       setCommentFor(open ? selection : null);
+      if (!gone) return;
+      shown.current = null;
+      setSelection(null);
     },
     [selection],
   );
