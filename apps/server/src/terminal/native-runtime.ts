@@ -35,6 +35,8 @@ import { watchTranscript } from './native-tail.ts';
 import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
+import { placeChat } from '../orchestration/chat-place.ts';
+import { startTimer, type StartTimer } from './start-timing.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 
@@ -87,6 +89,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const launchOnce = async (
     conversationId: string,
     request: NativeTerminalLaunchRequest,
+    timer: StartTimer,
   ): Promise<NativeTerminalLaunchResponse> => {
     if (disposed) throw new NativeRuntimeError('The terminal host is stopping.', 503);
     const conversation = await owned(conversationId);
@@ -122,14 +125,23 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       throw new NativeTerminalConflictError(
         'This terminal has no native session to resume. Start a new Terminal session.',
       );
-    const command = await (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(
-      provider,
+    timer.provider(provider);
+    const command = await timer.time('locate_cli', () =>
+      (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(provider),
     );
     if (!command)
       throw new NativeRuntimeError(
         `Install ${provider === 'claude' ? 'Claude Code' : 'Codex'} before opening its terminal.`,
       );
-    const prepared = await prepareNativeSession(deps, conversationId, provider, request, previous);
+    const prepared = await timer.time('prepare_session', () =>
+      prepareNativeSession(
+        { ...deps, place: timer.place(deps.place ?? placeChat) },
+        conversationId,
+        provider,
+        request,
+        previous,
+      ),
+    );
     if (disposed || stoppedLaunches.has(conversationId)) {
       if (prepared.runId) await cancelRun(deps.db, prepared.runId);
       throw new NativeRuntimeError('This terminal launch was stopped.', 409);
@@ -159,6 +171,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (prepared.runId) await failNativeLaunchRun(deps.db, prepared.runId, failure.message);
       throw failure;
     });
+    timer.session(row.id);
     const token = randomBytes(32).toString('base64url');
     const scope: SparkScope = {
       workspaceId: deps.workspaceId,
@@ -170,24 +183,28 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     let launch: NativeLaunch | null = null;
     let session: LiveSession | null = null;
     try {
-      grant = await deps.mcp.grant(scope);
-      launch = await (deps.prepareLaunch ?? prepareNativeLaunch)({
-        provider,
-        sessionId: row.id,
-        cwd: row.cwd,
-        prompt: prepared.prompt,
-        instructions: prepared.instructions,
-        agentMode: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
-        ...(request.resume && row.native_session_id
-          ? { resumeSessionId: row.native_session_id }
-          : {}),
-        attachments: prepared.input.attachments,
-        dataDir: deps.dataDir,
-        channel: deps.channel,
-        command,
-        mcp: grant,
-        hooks: { url: host.url, token },
-      });
+      const granted = await timer.time('grant', () => deps.mcp.grant(scope));
+      grant = granted;
+      const prepareLaunch = deps.prepareLaunch ?? prepareNativeLaunch;
+      launch = await timer.time('prepare_launch', () =>
+        prepareLaunch({
+          provider,
+          sessionId: row.id,
+          cwd: row.cwd,
+          prompt: prepared.prompt,
+          instructions: prepared.instructions,
+          agentMode: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
+          ...(request.resume && row.native_session_id
+            ? { resumeSessionId: row.native_session_id }
+            : {}),
+          attachments: prepared.input.attachments,
+          dataDir: deps.dataDir,
+          channel: deps.channel,
+          command,
+          mcp: granted,
+          hooks: { url: host.url, token },
+        }),
+      );
       row.observation = launch.observation;
       const ceiling = prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent');
       if (deps.tmux && launch.directory)
@@ -257,6 +274,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         command: launch.command,
         args: launch.args,
         env: launch.env,
+        observer: timer.observer,
         onExit: exited(running),
       });
       return {
@@ -335,9 +353,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         return current.work;
       }
       stoppedLaunches.delete(conversationId);
-      const work = launchOnce(conversationId, request).finally(() =>
-        launches.delete(conversationId),
-      );
+      const timer = startTimer(deps.logStart ?? console.log);
+      const work = timer
+        .watch(launchOnce(conversationId, request, timer))
+        .finally(() => launches.delete(conversationId));
       launches.set(conversationId, { key, work });
       return work;
     },

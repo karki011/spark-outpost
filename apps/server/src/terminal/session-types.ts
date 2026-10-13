@@ -1,5 +1,6 @@
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
+import type { StartObserver } from './start-timing.ts';
 
 export interface TerminalClient {
   output(data: string): void;
@@ -35,6 +36,7 @@ export interface AgentRequest extends ShellRequest {
   args: string[];
   env?: Record<string, string>;
   adopt?: boolean;
+  observer?: StartObserver;
   onExit?: (exit: { exitCode: number; signal?: number | undefined }) => void;
 }
 

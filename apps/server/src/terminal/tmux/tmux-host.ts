@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 export interface TmuxHost {
   bin: string;
@@ -11,10 +11,12 @@ export interface TmuxHost {
   env: Record<string, string>;
 }
 
-export type TmuxChoice = { host: TmuxHost; reason: null } | { host: null; reason: string };
+export type TmuxChoice =
+  { host: TmuxHost; reason: null; version: string } | { host: null; reason: string };
 
 const SOCKET_PATH_MAX_BYTES = 103;
 const VERSION = /^tmux \d/;
+const VERSION_SHOWN = /^tmux \d[\w.-]{0,30}/;
 const DEAD_WINDOW = 'spark-dead';
 
 export function tmuxConfigText(): string {
@@ -66,13 +68,24 @@ export function tmuxBinary(env: NodeJS.ProcessEnv, localDir: string | null): str
   return built && existsSync(built) ? built : null;
 }
 
-export function checkTmux(bin: string, env: Record<string, string>): string | null {
+export function checkTmux(
+  bin: string,
+  env: Record<string, string>,
+): { version: string } | { problem: string } {
   try {
-    const version = execFileSync(bin, ['-V'], { env, encoding: 'utf8', timeout: 5_000 });
-    return VERSION.test(version) ? null : 'its version check printed something else';
+    const printed = execFileSync(bin, ['-V'], { env, encoding: 'utf8', timeout: 5_000 });
+    return VERSION.test(printed)
+      ? { version: VERSION_SHOWN.exec(printed)![0] }
+      : { problem: 'its version check printed something else' };
   } catch (error) {
-    return (error as Error).message.split('\n')[0] ?? 'it did not start';
+    return { problem: (error as Error).message.split('\n')[0] ?? 'it did not start' };
   }
+}
+
+export function tmuxChoiceLine(choice: TmuxChoice): string {
+  return choice.host
+    ? `Terminal sessions run under tmux (${basename(choice.host.bin)}, ${choice.version}).`
+    : `Terminal sessions run without tmux (${choice.reason}); they stop when Spark restarts.`;
 }
 
 export function chooseTmux(
@@ -87,8 +100,9 @@ export function chooseTmux(
   if (Buffer.byteLength(socket) > SOCKET_PATH_MAX_BYTES)
     return { host: null, reason: 'the data folder path is too long for its socket' };
   const base = tmuxBaseEnv(env);
-  const problem = checkTmux(bin, base);
-  if (problem) return { host: null, reason: `tmux failed its check (${problem})` };
+  const checked = checkTmux(bin, base);
+  if ('problem' in checked)
+    return { host: null, reason: `tmux failed its check (${checked.problem})` };
   const configPath = join(directory, 'tmux.conf');
   try {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -96,7 +110,11 @@ export function chooseTmux(
   } catch (error) {
     return { host: null, reason: `its folder could not be written (${(error as Error).message})` };
   }
-  return { host: { bin, directory, socket, configPath, env: base }, reason: null };
+  return {
+    host: { bin, directory, socket, configPath, env: base },
+    reason: null,
+    version: checked.version,
+  };
 }
 
 export function tmuxArgs(host: TmuxHost, args: readonly string[]): string[] {

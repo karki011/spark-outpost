@@ -23,6 +23,26 @@ const runs = async () =>
 const messages = async () => (await f.t.db.query('SELECT id FROM messages')).rowCount;
 
 describe('native terminal launch recovery', () => {
+  it('logs one timing line per start with the failing phase and no path or message', async () => {
+    const place = f.place;
+    f.place = async () => {
+      throw new Error('fatal: could not create work tree dir /private/secret/path');
+    };
+    await f.launch().catch(() => undefined);
+    expect(f.startLines).toHaveLength(1);
+    expect(f.startLines[0]).toMatch(
+      /^Terminal start session=none provider=claude outcome=failed total_ms=\d+ locate_cli_ms=\d+ failed_in=worktree error=NativeRuntimeError status=500$/,
+    );
+    f.place = place;
+    await f.launch();
+    expect(f.startLines).toHaveLength(1);
+    await f.runtime.stop(f.conversationId);
+    expect(f.startLines).toHaveLength(2);
+    expect(f.startLines[1]).toMatch(
+      /^Terminal start session=[0-9a-f-]{36} provider=claude outcome=ended_before_output total_ms=\d+ tmux=no worktree=none locate_cli_ms=\d+ prepare_session_ms=\d+ worktree_ms=\d+ grant_ms=\d+ prepare_launch_ms=\d+ spawn_ms=\d+ new_session=direct$/,
+    );
+  });
+
   it('starts again with the saved first message after the terminal limit refused the launch', async () => {
     const request = { prompt: 'Check the native fixture', messageId: randomUUID(), resume: false };
     const shell = f.terminals.createShell({ cwd: '/tmp', conversationId: null });

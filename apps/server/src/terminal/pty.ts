@@ -1,6 +1,7 @@
 import os from 'node:os';
 import { spawn as spawnNodePty } from 'node-pty';
 import { childEnvironment } from '../setup/environment.ts';
+import type { StartObserver } from './start-timing.ts';
 
 export interface PtyProcess {
   readonly pid: number;
@@ -21,6 +22,7 @@ export interface PtyOptions {
   env?: Record<string, string>;
   sessionId?: string;
   adopt?: boolean;
+  observer?: StartObserver;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;

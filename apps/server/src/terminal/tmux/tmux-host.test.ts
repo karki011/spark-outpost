@@ -3,7 +3,7 @@ import os from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PtyOptions, PtyProcess } from '../pty.ts';
-import { chooseTmux, tmuxArgs, tmuxBaseEnv, tmuxConfigText } from './tmux-host.ts';
+import { chooseTmux, tmuxArgs, tmuxBaseEnv, tmuxChoiceLine, tmuxConfigText } from './tmux-host.ts';
 import { tmuxSpawner } from './tmux-spawner.ts';
 
 let folder: string;
@@ -44,6 +44,15 @@ describe('choosing tmux for Terminal sessions', () => {
       join(folder, 'dev', 'tmux.conf'),
       'ls',
     ]);
+  });
+
+  it('says at start which tmux runs sessions by file name and version, never its folder', () => {
+    const bin = script('tmux', 'echo "tmux 3.8"; echo "built in /Users/me/secret"');
+    const line = tmuxChoiceLine(chooseTmux({ SPARK_TMUX_BIN: bin }, join(folder, 'dev'), null));
+    expect(line).toBe('Terminal sessions run under tmux (tmux, tmux 3.8).');
+    expect(tmuxChoiceLine(chooseTmux({ SPARK_TERMINAL_TMUX: 'off' }, folder, null))).toBe(
+      'Terminal sessions run without tmux (it is turned off); they stop when Spark restarts.',
+    );
   });
 
   it('keeps one socket per data folder so channels never share sessions', () => {
@@ -144,6 +153,25 @@ describe('tmux spawner', () => {
         env: expect.objectContaining({ EXTRA: '1', TERM: 'xterm-256color' }) as unknown,
       }),
     );
+  });
+
+  it('tells a start observer that tmux ran the session, and nothing when it fell back', () => {
+    const observer = { begin: vi.fn(() => vi.fn()), tmux: vi.fn(), ended: vi.fn() };
+    const control = vi.fn(() => ({ pid: 2 }) as PtyProcess);
+    tmuxSpawner(vi.fn(), host, vi.fn(), control)({ ...agent, observer });
+    expect(control).toHaveBeenCalledWith(host, expect.objectContaining({ observer }));
+    expect(observer.tmux).toHaveBeenCalledExactlyOnceWith(true);
+    const refused = { begin: vi.fn(() => vi.fn()), tmux: vi.fn(), ended: vi.fn() };
+    const failing = vi.fn(() => {
+      throw new Error('server exited');
+    });
+    tmuxSpawner(
+      vi.fn(() => direct),
+      host,
+      vi.fn(),
+      failing,
+    )({ ...agent, observer: refused });
+    expect(refused.tmux).not.toHaveBeenCalled();
   });
 
   it('starts the session directly and says so once when tmux refuses', () => {

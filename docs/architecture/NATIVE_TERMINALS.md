@@ -75,6 +75,16 @@ A Mac restart or logout ends the tmux server; so does killing it. A bundled tmux
 
 Without a binary, with one that fails `tmux -V`, with a socket path over 103 bytes, or when `new-session` fails, the session runs in a direct PTY and one log line says so.
 
+### Start timing
+
+The API writes one line to its log when it starts, naming the tmux that runs sessions by file name and version (`Terminal sessions run under tmux (tmux, tmux 3.8).`) or the fallback reason. Each Terminal session start then writes one line, when the session prints its first output, ends before printing, or fails:
+
+```
+Terminal start session=<session id> provider=claude outcome=started total_ms=2059 tmux=yes worktree=created locate_cli_ms=3 prepare_session_ms=2016 worktree_ms=1939 grant_ms=0 prepare_launch_ms=9 spawn_ms=21 new_session_ms=20 attach_ms=8 first_output_ms=40
+```
+
+`total_ms` is the launch request, which is what "Starting terminal…" waits for. `worktree_ms` is inside `prepare_session_ms` and covers placing the chat: the fetch, `git worktree add` and dependency preparation. `spawn_ms` is the synchronous start of the process and holds `new_session_ms` (tmux `start-server` and `source-file`, then `display-message`); without tmux the line says `new_session=direct`. `attach_ms` runs from opening the control client to tmux acknowledging the release of the held start, and `first_output_ms` from the spawn to the first bytes. A failed start adds `failed_in`, the error class, and its status and code when it has them. The line holds durations, the provider, the session id and these fixed words only: no path, command, prompt, name or error message (`start-timing.ts`).
+
 ## Tools and observation
 
 With Use Spark workflow enabled, Terminal agents receive a revocable session-scoped Spark MCP grant and prepared task context. Turning it off omits Spark tools and workflow prompts from new launches. Custom instructions remain available in either mode. Spark tools use the existing backend permissions, confirmations, audit, and run events. The native interface owns native questions and permission prompts; Spark action confirmations remain Spark cards.

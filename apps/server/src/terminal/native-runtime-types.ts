@@ -35,6 +35,7 @@ export interface NativeRuntimeDeps {
   watchTranscript?: WatchTranscript;
   tmux?: TmuxHost | null;
   now?: () => Date;
+  logStart?: (line: string) => void;
 }
 
 export interface PendingNativeLaunch {
