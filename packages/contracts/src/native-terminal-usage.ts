@@ -40,8 +40,8 @@ export const nativeTerminalReportedModelSchema = z.object({
 export type NativeTerminalReportedModel = z.infer<typeof nativeTerminalReportedModelSchema>;
 
 export const nativeTerminalReportedSchema = z.object({
+  nativeSessionId: z.string(),
   costUsd: z.number().nonnegative(),
-  cliSessions: z.number().int().positive(),
   models: z.array(nativeTerminalReportedModelSchema),
   updatedAt: z.string(),
 });
@@ -50,7 +50,7 @@ export type NativeTerminalReported = z.infer<typeof nativeTerminalReportedSchema
 export const nativeTerminalUsageSchema = z.object({
   provider: nativeTerminalProviderSchema.nullable(),
   turns: z.array(nativeTerminalTurnSchema),
-  reported: nativeTerminalReportedSchema.nullable(),
+  reported: z.array(nativeTerminalReportedSchema),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
 
@@ -79,9 +79,11 @@ export function turnCostOrigin(
 
 export function reportedTotalNote(
   provider: NativeTerminalProvider | null,
-  reported: NativeTerminalReported | null,
+  reported: readonly NativeTerminalReported[],
 ): string {
-  if (reported) return usageOriginLabel('reported', provider);
+  if (reported.length > 1)
+    return `${usageOriginLabel('reported', provider)}, one total for each CLI session; not added up`;
+  if (reported.length === 1) return usageOriginLabel('reported', provider);
   if (provider === 'claude') return 'unknown until Claude Code exits and writes its own total';
   if (provider === 'codex') return 'unknown: Codex reports no cost';
   return usageOriginLabel('unknown');

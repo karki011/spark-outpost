@@ -97,3 +97,12 @@
 .tu-cost-pane {
   padding-bottom: 0;
 }
+
+.tu-cli + .tu-cli {
+  margin-top: 12px;
+}
+
+.tu-total small {
+  font-size: 12px;
+  color: var(--faint);
+}

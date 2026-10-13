@@ -38,41 +38,19 @@ function turnTokens(row: TurnRow): NativeTerminalTurn['tokens'] {
 }
 
 interface ReportedRow {
+  native_session_id: string;
   cost_usd: string;
   models: NativeTerminalReportedModel[];
   updated_at: Date;
 }
 
-const REPORTED_COUNTS = ['input', 'output', 'cachedRead', 'cachedWrite', 'thought'] as const;
-
-function addModel(
-  known: NativeTerminalReportedModel | undefined,
-  next: NativeTerminalReportedModel,
-): NativeTerminalReportedModel {
-  if (!known) return next;
-  const merged = { ...known };
-  for (const key of REPORTED_COUNTS) merged[key] += next[key];
-  merged.costUsd =
-    known.costUsd === null || next.costUsd === null ? null : known.costUsd + next.costUsd;
-  return merged;
-}
-
-export function reportedTotal(rows: readonly ReportedRow[]): NativeTerminalReported | null {
-  if (rows.length === 0) return null;
-  const models = new Map<string, NativeTerminalReportedModel>();
-  for (const row of rows)
-    for (const model of row.models)
-      models.set(model.model, addModel(models.get(model.model), model));
-  const cents = rows.reduce(
-    (total, row) => total + Math.round(Number(row.cost_usd) * 1_000_000),
-    0,
-  );
-  return {
-    costUsd: cents / 1_000_000,
-    cliSessions: rows.length,
-    models: [...models.values()],
-    updatedAt: new Date(Math.max(...rows.map((row) => row.updated_at.getTime()))).toISOString(),
-  };
+function reportedTotals(rows: readonly ReportedRow[]): NativeTerminalReported[] {
+  return rows.map((row) => ({
+    nativeSessionId: row.native_session_id,
+    costUsd: Number(row.cost_usd),
+    models: row.models,
+    updatedAt: row.updated_at.toISOString(),
+  }));
 }
 
 export async function nativeTerminalUsage(
@@ -95,10 +73,10 @@ export async function nativeTerminalUsage(
     ),
     nativeStepsByRun(db, conversationId),
     db.query<ReportedRow>(
-      `SELECT u.cost_usd::text AS cost_usd, u.models, u.updated_at
+      `SELECT u.native_session_id, u.cost_usd::text AS cost_usd, u.models, u.updated_at
        FROM native_terminal_reported_usage u
        JOIN native_terminal_sessions s ON s.id = u.session_id
-       WHERE s.conversation_id = $1 ORDER BY u.native_session_id`,
+       WHERE s.conversation_id = $1 ORDER BY u.created_at, u.native_session_id`,
       [conversationId],
     ),
   ]);
@@ -114,7 +92,7 @@ export async function nativeTerminalUsage(
       costSource: row.cost_usd === null ? null : row.cost_source,
       steps: steps.get(row.id) ?? [],
     })),
-    reported: reportedTotal(reported.rows),
+    reported: reportedTotals(reported.rows),
   };
 }
 
@@ -173,5 +151,17 @@ export async function recordNativeReportedUsage(
       usage.costUsd,
       JSON.stringify(usage.models.map((entry) => ({ ...entry, model: storedLabel(entry.model) }))),
     ],
+  );
+}
+
+export async function recordNativeUsageOffset(
+  db: Db,
+  sessionId: string,
+  file: string,
+  offset: number,
+): Promise<void> {
+  await db.query(
+    'UPDATE native_terminal_sessions SET usage_file = $2, usage_offset = $3 WHERE id = $1',
+    [sessionId, storedLabel(file), offset],
   );
 }

@@ -19,6 +19,8 @@ export interface NativeTerminalRow {
   generation: number;
   observation: NativeTerminalSession['observation'];
   reason: string | null;
+  usage_file?: string | null;
+  usage_offset?: string | number | null;
   updated_at: Date;
 }
 

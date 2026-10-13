@@ -90,7 +90,11 @@ export function claudeTranscriptParser(sidechain = false): TranscriptParser {
       if (record.type === 'assistant') return response(record, turnId);
       if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
       turnId = record.promptId;
-      return !sidechain && isRecord(record.message) && interruptText(record.message)
+      if (sidechain) return [];
+      const started = record.toolUseResult;
+      if (isRecord(started) && typeof started.agentId === 'string' && started.agentId)
+        return [{ kind: 'agent', agentId: started.agentId, turnId }];
+      return isRecord(record.message) && interruptText(record.message)
         ? [{ kind: 'interrupt', turnId }]
         : [];
     },

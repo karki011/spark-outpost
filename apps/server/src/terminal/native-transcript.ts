@@ -27,6 +27,7 @@ export type TranscriptRecord =
       model: string | null;
       tokens: TokenCounts;
     }
+  | { kind: 'agent'; agentId: string; turnId: string }
   | { kind: 'reported'; usage: ReportedUsage };
 
 export interface TranscriptParser {

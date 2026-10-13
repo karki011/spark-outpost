@@ -25,6 +25,7 @@ import type { LiveSession } from './native-runtime-types.ts';
 
 export const hookTokenDigest = (token: string) => createHash('sha256').update(token).digest('hex');
 const digest = hookTokenDigest;
+const HANDBACK = 'SubagentHandback';
 const envelopeSchema = z.strictObject({
   sessionId: z.uuid(),
   provider: z.enum(['claude', 'codex']),
@@ -45,9 +46,11 @@ function interruptEventId(session: LiveSession, nativeTurnId: string): string {
   ].join('-');
 }
 
-function otherTurn(session: LiveSession, event: NativeHookEvent): boolean {
+function ownTurn(session: LiveSession, event: NativeHookEvent): boolean {
   const open = session.row.native_turn_id;
-  return Boolean(event.nativeTurnId && open && event.nativeTurnId !== open);
+  if (!session.context) return false;
+  if (event.nativeTurnId && session.completedTurns.has(event.nativeTurnId)) return false;
+  return !(event.nativeTurnId && open && event.nativeTurnId !== open);
 }
 
 export function nativeObserver({
@@ -116,12 +119,13 @@ export function nativeObserver({
     const retryCompletion = session.completedEvents.has(eventId);
     if (retryCompletion && session.completedEvents.get(eventId) !== session.currentPromptEventId)
       return;
-    if (!retryCompletion && event.nativeTurnId && session.completedTurns.has(event.nativeTurnId))
-      return;
-    if (!retryCompletion && event.tool?.agentId && session.context && otherTurn(session, event)) {
-      await recordNativeStep(db, session.context.input.identity.runId, event.tool);
+    if (!retryCompletion && event.tool?.agentId && !ownTurn(session, event)) {
+      const runId = usage.agentRun(session, event.tool.agentId);
+      if (runId) await recordNativeStep(db, runId, event.tool);
       return;
     }
+    if (!retryCompletion && event.nativeTurnId && session.completedTurns.has(event.nativeTurnId))
+      return;
     if (
       !retryCompletion &&
       event.kind !== 'prompt' &&
@@ -156,6 +160,7 @@ export function nativeObserver({
       }
     }
     if (event.kind === 'prompt') await turn(session, event, eventId);
+    if (event.tool?.agentId) usage.agentRun(session, event.tool.agentId);
     if (event.tool && session.context && !retryCompletion)
       await recordNativeStep(db, session.context.input.identity.runId, event.tool);
     if (['stop', 'interrupt', 'error'].includes(event.kind)) completed(session, eventId);
@@ -241,8 +246,9 @@ export function nativeObserver({
       await accept(session, event, parsed.data.eventId);
       if (event.transcriptPath && session.context)
         usage.follow(session, event.transcriptPath, event.model ?? null, interruptedTwice);
-      if (event.agentTranscriptPath && session.context)
-        usage.followAgent(session, event.agentTranscriptPath);
+      if (event.agentTranscriptPath) usage.followAgent(session, event.agentTranscriptPath);
+      if (event.agentTranscriptPath && event.tool?.phase === 'end' && event.tool.name === HANDBACK)
+        await usage.endAgent(session, event.agentTranscriptPath);
       return true;
     });
   };

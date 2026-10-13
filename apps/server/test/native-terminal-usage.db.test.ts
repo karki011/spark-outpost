@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { nativeTerminalRow } from '../src/persistence/native-terminals.ts';
 import { fixtureLines } from './fixtures/terminal-usage/read.ts';
 import { nativeRuntimeFixture, type NativeRuntimeFixture } from './native-terminal-fixture.ts';
 
@@ -113,7 +114,7 @@ describe('native terminal usage from the Claude transcript', () => {
     await prompt('first');
     await f.watchers[0]!.lines([reply('msg_1', 10)]);
     await f.hook('Stop', { prompt_id: 'first' });
-    expect((await usage()).reported).toBeNull();
+    expect((await usage()).reported).toEqual([]);
     await prompt('second');
     await f.watchers[1]!.lines([
       costState(0.4),
@@ -123,13 +124,15 @@ describe('native terminal usage from the Claude transcript', () => {
     ]);
     await f.hook('Stop', { prompt_id: 'second' });
     const seen = await usage();
-    expect(seen.reported).toMatchObject({ costUsd: 0.43, cliSessions: 1 });
-    expect(seen.reported!.models.map((model) => [model.model, model.input, model.costUsd])).toEqual(
-      [
-        ['claude-opus-5-5', 500, 0.429],
-        ['claude-haiku-5-5', 1200, 0.001],
-      ],
-    );
+    expect(seen.reported).toMatchObject([
+      { nativeSessionId: 'native-provider-session', costUsd: 0.43 },
+    ]);
+    expect(
+      seen.reported[0]!.models.map((model) => [model.model, model.input, model.costUsd]),
+    ).toEqual([
+      ['claude-opus-5-5', 500, 0.429],
+      ['claude-haiku-5-5', 1200, 0.001],
+    ]);
     expect(seen.turns.map((turn) => turn.costUsd)).toEqual([0.001208, null]);
   });
 
@@ -142,7 +145,7 @@ describe('native terminal usage from the Claude transcript', () => {
     await expect.poll(() => f.watchers.length).toBe(2);
     expect(f.watchers[1]!.from).toBe(100);
     await f.watchers[1]!.lines([costState(0.25)]);
-    await expect.poll(async () => (await usage()).reported?.costUsd).toBe(0.25);
+    await expect.poll(async () => (await usage()).reported[0]?.costUsd).toBe(0.25);
     expect(f.watchers[1]!.close).toHaveBeenCalledTimes(1);
   });
 
@@ -170,7 +173,7 @@ describe('native terminal usage from the Claude transcript', () => {
     }
     const seen = await usage();
     expect(seen.turns.map((turn) => turn.costUsd)).toEqual([0.105045, 0.120584, 0.010651]);
-    expect(seen.reported?.costUsd).toBe(0.262432);
+    expect(seen.reported.map((total) => total.costUsd)).toEqual([0.262432]);
   });
 
   it('adds a Claude sub-agent file named by its hook to the turn that is open', async () => {
@@ -192,13 +195,98 @@ describe('native terminal usage from the Claude transcript', () => {
       fixtureLines('claude-subagent.jsonl').map((line) => JSON.parse(line) as unknown),
     );
     await f.hook('Stop', { prompt_id: '5786d33b-f704-4717-a7ff-7351229f80a5' });
-    expect(f.watchers[1]!.close).toHaveBeenCalledTimes(1);
+    expect(f.watchers[1]!.close).not.toHaveBeenCalled();
     expect(await runs()).toMatchObject([
       { input_tokens: 6, output_tokens: 50, cached_read_tokens: 29548, cached_write_tokens: 31059 },
     ]);
     expect((await usage()).turns[0]!.steps).toMatchObject([
       { name: 'Bash', agentId: 'aec39d782762e820d' },
     ]);
+  });
+});
+
+describe('native terminal usage that arrives late', () => {
+  const PARENT = '5786d33b-f704-4717-a7ff-7351229f80a5';
+  const AGENT = 'aec39d782762e820d';
+  const parsed = (name: string) => fixtureLines(name).map((line) => JSON.parse(line) as unknown);
+  const agentTool = (name: string, tool_name: string, tool_use_id: string) =>
+    f.hook(name, { prompt_id: PARENT, transcript_path, tool_name, tool_use_id, agent_id: AGENT });
+
+  it('files a background sub-agent that finishes after Stop under the turn that started it', async () => {
+    await f.launch();
+    await prompt('3dc9909e-15d8-4026-9e0f-50c6dd227bc3');
+    await f.hook('Stop', { prompt_id: '3dc9909e-15d8-4026-9e0f-50c6dd227bc3' });
+    await prompt(PARENT);
+    f.watchers[1]!.atFlush.push(...parsed('claude-resume-interrupt-subagent.jsonl').slice(0, 50));
+    await f.hook('Stop', { prompt_id: PARENT });
+    expect((await runs())[1]).toMatchObject({ status: 'succeeded', cost_usd: 0.032159 });
+    expect(await agentTool('PreToolUse', 'Bash', 'toolu_child_1')).toBe(204);
+    expect(await agentTool('PostToolUse', 'Bash', 'toolu_child_1')).toBe(204);
+    const side = f.watchers[2]!;
+    expect(side).toMatchObject({ path: expect.stringContaining(`agent-${AGENT}.jsonl`), from: 0 });
+    side.atFlush.push(...parsed('claude-subagent.jsonl'));
+    expect(await agentTool('PreToolUse', 'SubagentHandback', 'toolu_child_2')).toBe(204);
+    expect(await agentTool('PostToolUse', 'SubagentHandback', 'toolu_child_2')).toBe(204);
+    expect(side.close).toHaveBeenCalledTimes(1);
+    const seen = await usage();
+    expect(seen.turns.map((turn) => [turn.status, turn.costUsd, turn.steps.length])).toEqual([
+      ['succeeded', 0.150669, 0],
+      ['succeeded', 0.19348, 2],
+    ]);
+    expect(seen.turns[1]!.tokens).toMatchObject({ input: 8, output: 429, cachedWrite: 31875 });
+    expect(seen.turns[1]!.steps.every((step) => step.agentId === AGENT)).toBe(true);
+    expect((await nativeTerminalRow(f.t.db, f.conversationId))!.state).toBe('ready');
+  });
+
+  it('drops a late sub-agent call that no turn of this session started', async () => {
+    await f.launch();
+    await prompt('first');
+    await f.hook('Stop', { prompt_id: 'first' });
+    expect(await agentTool('PreToolUse', 'Bash', 'toolu_stray')).toBe(204);
+    expect((await usage()).turns[0]!.steps).toEqual([]);
+  });
+
+  it('resumes reading where it stopped, counts nothing twice and picks up a total written meanwhile', async () => {
+    await f.launch();
+    await prompt('first');
+    await f.watchers[0]!.lines([user('first'), reply('msg_1', 10)]);
+    f.watchers[0]!.position = 500;
+    await f.hook('Stop', { prompt_id: 'first' });
+    f.exits[0]!({ exitCode: 0 });
+    await expect.poll(() => f.watchers.length).toBe(2);
+    await expect
+      .poll(async () => (await nativeTerminalRow(f.t.db, f.conversationId))!.usage_offset)
+      .toBe('500');
+    await f.runtime.launch(f.conversationId, { resume: true });
+    await prompt('second');
+    const resumed = f.watchers[2]!;
+    expect(resumed.from).toBe(500);
+    await resumed.lines([
+      reply('msg_1', 10),
+      costState(0.2),
+      user('first'),
+      reply('msg_1', 10),
+      user('second'),
+      reply('msg_2', 20),
+    ]);
+    await f.hook('Stop', { prompt_id: 'second' });
+    const seen = await usage();
+    expect(seen.turns.map((turn) => turn.tokens?.output ?? null)).toEqual([10, 20]);
+    expect(seen.reported.map((total) => total.costUsd)).toEqual([0.2]);
+  });
+
+  it('reads the session file once more after Stop has ended the process', async () => {
+    await f.launch();
+    await prompt('first');
+    f.watchers[0]!.position = 100;
+    await f.runtime.stop(f.conversationId);
+    expect(f.watchers).toHaveLength(1);
+    f.exits[0]!({ exitCode: 129 });
+    await expect.poll(() => f.watchers.length).toBe(2);
+    expect(f.watchers[1]!.from).toBe(100);
+    await f.watchers[1]!.lines([costState(0.31)]);
+    await expect.poll(async () => (await usage()).reported[0]?.costUsd).toBe(0.31);
+    expect((await runs())[0]).toMatchObject({ status: 'cancelled' });
   });
 });
 
@@ -253,7 +341,7 @@ describe('native terminal usage from the Codex rollout file', () => {
       },
     ]);
     const seen = await usage();
-    expect(seen.reported).toBeNull();
+    expect(seen.reported).toEqual([]);
     expect(seen.turns[0]!.steps).toMatchObject([
       { id: 'exec-1', name: 'Bash', agentId: CHILD, endedAt: expect.any(String) },
     ]);

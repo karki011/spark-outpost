@@ -75,7 +75,6 @@ export function nativeControl(
         reason,
       );
       await setNativeTerminalState(db, { ...session.row, state, reason });
-      await usage.last(session);
     } finally {
       await session.launch.dispose();
     }

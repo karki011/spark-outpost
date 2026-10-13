@@ -241,14 +241,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         args: launch.args,
         env: launch.env,
         onExit: (exit) => {
-          void enqueue(running, () =>
-            finish(
-              running,
-              exit.exitCode === 0 ? 'exited' : 'error',
-              false,
-              `Native agent exited (${exit.exitCode}).`,
-            ),
-          ).catch(() => undefined);
+          const state = exit.exitCode === 0 ? 'exited' : 'error';
+          void enqueue(running, async () => {
+            await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(
+              () => usage.last(running).catch(() => undefined),
+            );
+          }).catch(() => undefined);
         },
       });
       return {
@@ -260,7 +258,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (session) {
         live.delete(conversationId);
         tokens.delete(session.hookKey);
-        session.transcript?.watcher?.close();
+        await usage.last(session).catch(() => undefined);
         await session.context?.close();
       }
       grant?.revoke();

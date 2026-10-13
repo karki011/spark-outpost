@@ -7,8 +7,8 @@ import {
 } from './native-terminal-usage.ts';
 
 const reported: NativeTerminalReported = {
+  nativeSessionId: 'cli-1',
   costUsd: 0.4,
-  cliSessions: 1,
   models: [],
   updatedAt: '2026-10-12T00:00:00.000Z',
 };
@@ -31,11 +31,14 @@ describe('terminal usage labels', () => {
   });
 
   it('explains a missing session total by the agent', () => {
-    expect(reportedTotalNote('claude', reported)).toBe('reported by Claude Code');
-    expect(reportedTotalNote('claude', null)).toBe(
+    expect(reportedTotalNote('claude', [reported])).toBe('reported by Claude Code');
+    expect(reportedTotalNote('claude', [reported, reported])).toBe(
+      'reported by Claude Code, one total for each CLI session; not added up',
+    );
+    expect(reportedTotalNote('claude', [])).toBe(
       'unknown until Claude Code exits and writes its own total',
     );
-    expect(reportedTotalNote('codex', null)).toBe('unknown: Codex reports no cost');
-    expect(reportedTotalNote(null, null)).toBe('unknown');
+    expect(reportedTotalNote('codex', [])).toBe('unknown: Codex reports no cost');
+    expect(reportedTotalNote(null, [])).toBe('unknown');
   });
 });
