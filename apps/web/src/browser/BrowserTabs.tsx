@@ -49,7 +49,9 @@ function PageTab({
             <SpinnerIcon />
           </span>
         )}
-        {tab.owner === 'agent' && <span className="bp-agent">Agent</span>}
+        {tab.owner === 'agent' && (
+          <span className={tab.driving ? 'bp-agent driving' : 'bp-agent'}>Agent</span>
+        )}
         <span className="bp-tab-title">{label}</span>
       </button>
       {tab.owner === 'agent' && (

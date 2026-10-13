@@ -1,15 +1,17 @@
 import {
+  browserActLine,
+  browserOrigin,
   browserPlaceOf,
-  classifyBrowserUrl,
   type BrowserHostErrorCode,
   type BrowserHostRequest,
   type BrowserTab,
 } from '@spark-outpost/contracts';
-import { fileURLToPath } from 'node:url';
+import { describeTarget } from './act-target.ts';
+import { actOnPage } from './agent-act.ts';
 import { PageToolError, boxOf, readPage } from './page-read.ts';
 import { capturePage } from './page-tools.ts';
 import type { BrowserPanes } from './panes.ts';
-import { insideRoots } from './request-guard.ts';
+import { agentOpenProblem } from './request-guard.ts';
 import { SignInError, signInOnPage } from './sign-in.ts';
 import type { PaneTab } from './tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
@@ -36,17 +38,6 @@ function tabFacts(tab: PaneTab) {
   };
 }
 
-function agentMayOpen(url: string, roots: readonly string[]): boolean {
-  const kind = classifyBrowserUrl(url);
-  if (kind === 'local') return true;
-  if (kind !== 'file') return false;
-  try {
-    return insideRoots(fileURLToPath(url), roots);
-  } catch {
-    return false;
-  }
-}
-
 function targetTab(panes: BrowserPanes, chatId: string, wanted: string | undefined): PaneTab {
   const tabs = panes.tabsOf(chatId);
   const tab = wanted
@@ -67,15 +58,14 @@ function targetTab(panes: BrowserPanes, chatId: string, wanted: string | undefin
 }
 
 async function open(panes: BrowserPanes, request: Request<'open'>, signal: AbortSignal) {
-  if (!agentMayOpen(request.url, request.roots)) {
-    throw new BrowserOpError('not_allowed', 'Agents can open local pages and project files only.');
-  }
   const home = {
     projectId: request.projectId,
     keepSignIns: request.keepSignIns,
     roots: request.roots,
   };
   panes.touch(request.chatId, home);
+  const problem = agentOpenProblem(request.url, panes.guardFacts(request.chatId));
+  if (problem) throw new BrowserOpError('not_allowed', problem);
   const tabs = panes.tabsOf(request.chatId);
   const choice = chooseOpenTab(
     tabs.map((tab) => tab.facts()),
@@ -182,6 +172,48 @@ async function signIn(panes: BrowserPanes, request: Request<'sign_in'>, signal: 
   });
 }
 
+function nodeOf(tab: PaneTab, ref: string | undefined): number | null {
+  if (ref === undefined) return null;
+  const node = tab.refs.nodeFor(ref);
+  if (node === null) {
+    throw new BrowserOpError('no_ref', `${ref} is not on this page any more. Read it again.`);
+  }
+  return node;
+}
+
+async function page(panes: BrowserPanes, request: Request<'page'>) {
+  const tab = targetTab(panes, request.chatId, request.tab);
+  const node = nodeOf(tab, request.ref);
+  if (node === null) return tabFacts(tab);
+  const { cdp } = await tab.wake();
+  const target = await describeTarget(cdp, node, tab.filled);
+  return { ...tabFacts(tab), target };
+}
+
+async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSignal) {
+  const tab = targetTab(panes, request.chatId, request.tab);
+  const from = tab.currentUrl();
+  if ((browserOrigin(from) ?? 'about:blank') !== request.origin) {
+    throw new BrowserOpError(
+      'page_changed',
+      'The tab moved to another site since it was checked. Read the page again.',
+    );
+  }
+  return panes.whileDriving(tab, async () => {
+    const { cdp } = await tab.wake();
+    const { action, key, direction } = request;
+    const target = await actOnPage(
+      cdp,
+      { action, node: nodeOf(tab, request.ref), text: request.text, key, direction },
+      { filled: tab.filled, history: (step) => tab.history(step), signal },
+    );
+    const did = browserActLine({ action, target, key, direction });
+    tab.lastAction = did;
+    panes.noteChange(tab.chatId);
+    return { ...tabFacts(tab), action, target, from: from.slice(0, 4096), did };
+  });
+}
+
 export async function runBrowserOp(
   panes: BrowserPanes,
   request: BrowserHostRequest,
@@ -193,7 +225,8 @@ export async function runBrowserOp(
     if (request.op === 'read') return await read(panes, request);
     if (request.op === 'screenshot') return await screenshot(panes, request);
     if (request.op === 'logs') return await logs(panes, request);
-    if (request.op === 'page') return tabFacts(targetTab(panes, request.chatId, request.tab));
+    if (request.op === 'page') return await page(panes, request);
+    if (request.op === 'act') return await act(panes, request, signal);
     if (request.op === 'sign_in') return await signIn(panes, request, signal);
     return {
       closed: request.runId ? panes.closeRunTabs(request.chatId, request.runId) : 0,

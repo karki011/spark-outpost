@@ -1,7 +1,9 @@
 import {
   BROWSER_HOST_ENV,
+  browserActLine,
   browserBridgeToHostSchema,
   browserPlaceOf,
+  type BrowserActTarget,
   type BrowserHostRequest,
 } from '../../packages/contracts/src/index.ts';
 import { stripedPng } from './striped-png.ts';
@@ -10,6 +12,26 @@ type Listener = (event: { data: unknown }) => void;
 
 const listeners = new Set<Listener>();
 const tab = { url: 'about:blank', title: '', typed: [] as string[] };
+
+const TARGETS: Record<string, BrowserActTarget> = {
+  ref_1: { role: 'button', name: 'Search', sensitive: false },
+  ref_2: { role: 'searchbox', name: 'Search the docs', sensitive: false },
+  ref_3: { role: 'textbox', name: '', sensitive: true },
+};
+
+function act(request: Extract<BrowserHostRequest, { op: 'act' }>) {
+  const from = tab.url;
+  const target = request.ref ? (TARGETS[request.ref] ?? null) : null;
+  if (request.action === 'click') tab.url = `${new URL(from).origin}/results?q=clicked`;
+  const { action, key, direction } = request;
+  return {
+    ...facts(),
+    action,
+    target,
+    from,
+    did: browserActLine({ action, target, key, direction }),
+  };
+}
 
 function facts() {
   return {
@@ -66,7 +88,10 @@ function answer(request: BrowserHostRequest): unknown {
     };
   }
   if (request.op === 'end_run') return { closed: 0 };
-  if (request.op === 'page') return facts();
+  if (request.op === 'page') {
+    return { ...facts(), target: request.ref ? (TARGETS[request.ref] ?? null) : null };
+  }
+  if (request.op === 'act') return act(request);
   if (request.op === 'screenshot') {
     const height = request.fullPage ? 2400 : 800;
     return {

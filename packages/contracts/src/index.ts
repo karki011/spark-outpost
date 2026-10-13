@@ -90,6 +90,7 @@ export * from './spark-mention.ts';
 export * from './full-disk-access.ts';
 export * from './tool-steps.ts';
 export * from './browser.ts';
+export * from './browser-act.ts';
 export * from './browser-bridge.ts';
 export * from './sign-ins.ts';
 export * from './preview.ts';

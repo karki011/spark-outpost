@@ -6,33 +6,31 @@ order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-Agents get the `spark_*` tools their chat can use. Ask in plain words.
+Agents get the `spark_*` tools their chat can use.
 
 Ticket, Slack and pull request tools need their connector; pull request and map tools need a linked project.
 
 ## Tools that read
 
-These change nothing.
-
-| You ask about                                              | Tool                                                                                                                                        |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                                           |
-| Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                                           |
-| A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                                                   |
-| Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                                           |
-| Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                                                     |
-| Providers, models, connectors, settings, projects          | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                                                   |
-| The Map, and what breaks if a file changes                 | `spark_map`                                                                                                                                 |
-| Where something lives in the code                          | `spark_find`                                                                                                                                |
-| Your MCP servers and where each is on                      | `spark_mcp_servers`                                                                                                                         |
-| Open terminals                                             | `spark_terminals`                                                                                                                           |
-| The Browser pane's tabs, pages, screenshots, logs, preview | `spark_browser_tabs`, `spark_browser_open`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
-| Saved sign-ins, without their values                       | `spark_browser_signins`                                                                                                                     |
-| Tickets, one in full, or a search of every ticket          | `spark_tickets`                                                                                                                             |
-| A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                                               |
-| Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                                                |
-| The audit log, including actions that ran without review   | `spark_audit`                                                                                                                               |
-| How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                                                 |
+| You ask about                                              | Tool                                                                                                                  |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| What needs you, failed chats, flagged tickets              | `spark_attention`                                                                                                     |
+| Chats, a chat you shared, its runs, queue, earlier turns   | `spark_chats`, `spark_chat`, `spark_chat_history`                                                                     |
+| A run or task: plan, files changed, cost                   | `spark_run`, `spark_task`                                                                                             |
+| Spend, activity, analytics, the morning brief              | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                     |
+| Pull requests, their checks and reviews                    | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
+| Providers, models, connectors, settings, projects          | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                             |
+| The Map, and what breaks if a file changes                 | `spark_map`                                                                                                           |
+| Where something lives in the code                          | `spark_find`                                                                                                          |
+| Your MCP servers and where each is on                      | `spark_mcp_servers`                                                                                                   |
+| Open terminals                                             | `spark_terminals`                                                                                                     |
+| The Browser pane's tabs, pages, screenshots, logs, preview | `spark_browser_tabs`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
+| Saved sign-ins, without their values                       | `spark_browser_signins`                                                                                               |
+| Tickets, one in full, or a search of every ticket          | `spark_tickets`                                                                                                       |
+| A Slack thread by link, or a search of what you allowed    | `spark_slack`                                                                                                         |
+| Your Sparks, and the jobs and replies from an `@` mention  | `spark_sparks`, `spark_chat`                                                                                          |
+| The audit log, including actions that ran without review   | `spark_audit`                                                                                                         |
+| How Spark works, and this guide                            | `spark_guide`, `spark_docs`                                                                                           |
 
 ## Tools that act
 
@@ -46,6 +44,7 @@ Spark does what the agent proposes.
 | Push the chat's branch, open its PR         | `spark_push`, `spark_pull_request` (no card)                                                            |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
 | Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+| Open a site; act on a page                  | `spark_browser_open`, `spark_browser_act`                                                               |
 | Use a saved sign-in (always asks)           | `spark_browser_sign_in`                                                                                 |
 | Keep one command running after the turn     | `spark_terminal_run`                                                                                    |
 
@@ -82,7 +81,7 @@ Change any field, then select the confirm button or **Don't**. The card then sho
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only turns and turns with no project are refused.
 
-The agent can read its output and stop it. Stopping the turn or quitting Spark also stops it.
+The agent can read its output and stop it. Stopping the turn or quitting Spark stops it.
 
 ## What the tools never return
 

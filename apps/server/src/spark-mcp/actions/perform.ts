@@ -54,6 +54,16 @@ export function performSparkAction(
         message: `The agent can read ${action.origin} in this chat.`,
         url: null,
       });
+    case 'open_page':
+      return Promise.resolve({
+        message: `The agent can open ${action.origin} in this chat.`,
+        url: null,
+      });
+    case 'act_page':
+      return Promise.resolve({
+        message: `The agent can click and type on ${action.origin} in this chat.`,
+        url: null,
+      });
     case 'browser_sign_in':
       return Promise.resolve({
         message: `The agent can use ${action.label} on ${action.origin} in this chat.`,

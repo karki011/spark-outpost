@@ -37,6 +37,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
     'browser',
     [
       'spark_browser_open',
+      'spark_browser_act',
       'spark_browser_tabs',
       'spark_browser_read',
       'spark_browser_screenshot',

@@ -81,6 +81,7 @@ export const SPEC_GROUPS = {
   ],
   diff: ['diff-drawer', 'diff-shortcut', 'files-changed'],
   'terminal-preview-browser': [
+    'browser-agent',
     'browser-pane',
     'chat-links',
     'chat-terminal',

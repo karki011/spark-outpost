@@ -15,10 +15,13 @@ import {
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
+import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { SignInFacts } from './SignInFacts.tsx';
+import { SiteFacts } from './SiteFacts.tsx';
+import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
 import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
@@ -168,15 +171,9 @@ function Facts({ action }: { action: SparkAction }) {
     case 'remove_mcp_server':
       return <McpActionFacts action={action} />;
     case 'read_page':
-      return (
-        <dl className="sac-facts">
-          <Fact label="Page">
-            {action.origin}
-            {action.path}
-          </Fact>
-          {action.title && <Fact label="Title">{action.title}</Fact>}
-        </dl>
-      );
+    case 'open_page':
+    case 'act_page':
+      return <SiteFacts action={action} />;
     case 'browser_sign_in':
       return <SignInFacts action={action} />;
     case 'post_slack':
@@ -205,12 +202,11 @@ function Facts({ action }: { action: SparkAction }) {
   }
 }
 
-function byline(action: SparkAction, agent: string): string {
+function byline(action: SparkAction, agent: string, secretFiles?: readonly string[]): string {
+  const site = siteByline(action, agent, secretFiles);
+  if (site) return site;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
-  }
-  if (action.action === 'read_page') {
-    return `${agent} wants to read a page you opened in the browser.`;
   }
   if (action.action === 'browser_sign_in') {
     return `${agent} asks Spark to sign in on a page in the browser.`;
@@ -218,12 +214,11 @@ function byline(action: SparkAction, agent: string): string {
   return `${agent} asks Spark to do this for you.`;
 }
 
-function confirmNote(action: SparkAction): string {
+function confirmNote(action: SparkAction, secretFiles?: readonly string[]): string {
+  const site = siteNote(action, secretFiles);
+  if (site) return site;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
-  }
-  if (action.action === 'read_page') {
-    return 'The site is outside your project, so Spark treats what it says as untrusted. Allowing covers this site for the rest of this chat.';
   }
   if (action.action === 'browser_sign_in') {
     return 'Spark types the saved username and password into this site. The agent never sees them. Allowing covers this sign-in for the rest of this chat.';
@@ -378,6 +373,8 @@ export function SparkActionCard({
     confirmRef.current?.focus();
   }, [requested]);
   const warning = takeover(action);
+  const secretFiles = approval.payload.secretSend;
+  const holdOption = secretFiles ? approval.options.find(isAllow) : undefined;
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
   return (
     <div
@@ -391,7 +388,8 @@ export function SparkActionCard({
           <i className="appr-dia" />
         </span>
         <span id={headingId}>
-          <b>{sparkActionQuestion(action)}</b> {byline(action, agent)}
+          <b>{secretFiles ? 'Send a secret value?' : sparkActionQuestion(action)}</b>{' '}
+          {byline(action, agent, secretFiles)}
         </span>
       </div>
       <Facts action={action} />
@@ -406,20 +404,32 @@ export function SparkActionCard({
       <Fields action={action} draft={draft} onChange={setDraft} disabled={decide.isPending} />
       {warning && <p className="appr-reason">{warning}</p>}
       <ObservedNote observed={approval.payload.observed} />
-      <p className="sac-note">{confirmNote(action)}</p>
+      <p className="sac-note">{confirmNote(action, secretFiles)}</p>
+      {holdOption && (
+        <HoldToConfirm
+          label="Hold to allow once"
+          hint="Press and hold for 1.5 seconds, with the mouse or Space."
+          holdingHint="Keep holding. Let go now to cancel."
+          releasedHint="Released early. Nothing was sent."
+          disabled={decide.isPending}
+          onConfirm={() => decide.mutate(holdOption.optionId)}
+        />
+      )}
       <div className="appr-acts">
-        {approval.options.map((option) => (
-          <button
-            key={option.optionId}
-            ref={isAllow(option) ? confirmRef : undefined}
-            type="button"
-            className={isAllow(option) ? 'btn primary sm' : 'btn ghost sm deny'}
-            disabled={decide.isPending || (isAllow(option) && blankTitle)}
-            onClick={() => decide.mutate(option.optionId)}
-          >
-            {option.name}
-          </button>
-        ))}
+        {approval.options
+          .filter((option) => option !== holdOption)
+          .map((option) => (
+            <button
+              key={option.optionId}
+              ref={isAllow(option) ? confirmRef : undefined}
+              type="button"
+              className={isAllow(option) ? 'btn primary sm' : 'btn ghost sm deny'}
+              disabled={decide.isPending || (isAllow(option) && blankTitle)}
+              onClick={() => decide.mutate(option.optionId)}
+            >
+              {option.name}
+            </button>
+          ))}
       </div>
       {decide.isError && (
         <p className="appr-err" role="alert">

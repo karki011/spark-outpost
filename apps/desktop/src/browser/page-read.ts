@@ -4,10 +4,12 @@ import { quadBox } from './mask.ts';
 import { outlineOf, pageOfLines, pageTextOf, type AxNode, type RefMap } from './outline.ts';
 import { sensitiveNodes, type DomNode } from './sensitive-nodes.ts';
 
-export class PageToolError extends Error {
-  readonly code: 'no_ref' | 'failed';
+export type PageToolErrorCode = 'no_ref' | 'failed' | 'sensitive_field';
 
-  constructor(code: 'no_ref' | 'failed', message: string) {
+export class PageToolError extends Error {
+  readonly code: PageToolErrorCode;
+
+  constructor(code: PageToolErrorCode, message: string) {
     super(message);
     this.code = code;
   }

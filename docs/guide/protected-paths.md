@@ -18,7 +18,7 @@ These hold in every chat, agent mode and autonomy level, not in [Terminal sessio
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, a `git config` command that sets a value, `--global` too                              | Ask with hold to confirm, in a worktree too. Other `.git` files can't change.  |
 | **Outside the linked repos** | Changing or deleting files outside the project                                                                       | Asks, naming the path. Temp folders such as `/tmp` follow your mode. No reads. |
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                         | Asks with hold to confirm; no "always" option.                                 |
-| **Sending a secret value**   | A push or `gh` upload holding a secret file's value                                                                  | Asks with hold to confirm, naming the file.                                    |
+| **Sending a secret value**   | A push, a `gh` upload, or an address or text an agent sends to a site, holding a secret file's value                 | Asks with hold to confirm, naming the file.                                    |
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 

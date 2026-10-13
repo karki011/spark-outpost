@@ -3,6 +3,7 @@ import { advertisedSize, SESSION_CASES } from './spark-tool-sizes.ts';
 
 const PLAIN_CHAT_MAX_CHARS = 27_000;
 const INSTRUCTIONS_MAX_CHARS = 1_700;
+const BROWSER_GROUP_MAX_CHARS = 7_500;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
@@ -32,6 +33,8 @@ describe('the size of the Spark tool list a session is sent', () => {
         linked.groups.outpost_draft!,
     );
     expect(everything.tools).toBeGreaterThan(linked.tools);
+    expect(everything.groups.browser).toBeLessThanOrEqual(BROWSER_GROUP_MAX_CHARS);
+    expect(everything.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);
     expect(everything.groups.other).toBe(plain.groups.other);
   });
 });
