@@ -100,11 +100,15 @@ describe('native terminal interrupt from the Claude transcript', () => {
       prompt_id: 'second',
       transcript_path: cleared,
     });
-    expect(f.watchers.map((watcher) => watcher.path)).toEqual([transcript_path, cleared]);
+    expect(f.watchers.map((watcher) => watcher.path)).toEqual([
+      transcript_path,
+      transcript_path,
+      cleared,
+    ]);
     f.exits[0]!({ exitCode: 0 });
     await expect.poll(state).toBe('exited');
-    expect(f.watchers[1]!.close).toHaveBeenCalledTimes(1);
-    await f.watchers[1]!.interrupt('second');
+    expect(f.watchers[2]!.close).toHaveBeenCalledTimes(1);
+    await f.watchers[2]!.interrupt('second');
     expect(await state()).toBe('exited');
     expect(await runs()).toMatchObject([
       { status: 'outcome_unknown' },

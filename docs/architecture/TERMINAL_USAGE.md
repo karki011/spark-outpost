@@ -13,9 +13,9 @@ Measured against Claude Code 2.1.296 and Codex CLI 0.157.0. Neither file format 
 | Estimated cost per turn                                                      | `runs.cost_usd` with `cost_source = 'estimated'`                              | Tokens × the model card price                                          |
 | The CLI's own session total and per-model totals                             | `native_terminal_reported_usage` (migration 0169), one row per CLI session id | Claude `cost-state` record. Codex has none                             |
 
-The session row also keeps the session file's name and the position Spark has read up to (migration 0170).
+The session row also keeps the session file's path and the position Spark has read up to (migration 0170).
 
-Not recorded: tool input, tool output, commands, paths, prompt or reply text, the session file's folder. Tool names, ids and model names pass through the audit redaction and are cut to 200 characters. Nothing here delays or blocks the CLI: the hook script still exits silently on any failure, and a read that fails leaves the number unknown.
+Not recorded: tool input, tool output, commands, paths the agent touched, prompt or reply text. Tool names, ids and model names pass through the audit redaction and are cut to 200 characters. Nothing here delays or blocks the CLI: the hook script still exits silently on any failure, and a read that fails leaves the number unknown.
 
 ## Steps
 
@@ -25,9 +25,11 @@ Steps appear as the turn's activity in the conversation detail, so the Island sh
 
 ## Claude tokens per turn
 
-`native-tail.ts` is the one file reader (it replaced the interrupt tailer): 200 ms `watchFile` polling, only while a turn is open. The first time Spark sees a session file it starts at the end. Each later turn continues from where the previous read stopped, and that position is stored with the session, so a resumed session continues from it: nothing written while Spark was not watching is lost. Nothing is counted twice, because after a resume only records of a turn Spark opened in this launch count, usage is kept per `message.id`, and the last `cost-state` wins. A file that shrank is skipped to its new end. An unfinished last line waits for the rest.
+`native-tail.ts` is the one file reader (it replaced the interrupt tailer): 200 ms `watchFile` polling, only while a turn is open. The position is fixed the moment a hook first names the file: its size then, or zero when the file or its folder does not exist yet, so a first turn that is over before the file was ever polled is still read in full. A turn that had no watcher (the folder appeared after the prompt) is read once when it closes. Each later turn continues from where the previous read stopped, and that position is stored with the session, so a resumed session continues from it: nothing written while Spark was not watching is lost. Nothing is counted twice, because after a resume only records of a turn Spark opened in this launch count, usage is kept per `message.id`, and the last `cost-state` wins. A file that shrank is skipped to its new end. An unfinished last line waits for the rest.
 
-`claude-transcript.ts` reads `assistant` records. Usage is counted once per `message.id` (two tool calls in one response are two records with the same id and usage), per model, for the prompt the record follows (`promptId` of the last `user` record). A record of a prompt Spark has no turn for is ignored; one for an earlier turn of this launch updates that turn's run after the fact. `<synthetic>` zero-usage records, sidechain records and unknown record types are ignored.
+`claude-transcript.ts` reads `assistant` records. Usage is counted once per `message.id` (two tool calls in one response are two records with the same id and usage), per model, for the prompt the record follows (`promptId` of the last `user` record). Usage for an earlier turn of this launch updates that turn's run after the fact. Usage read before Spark has the turn's run (the file was read before the prompt hook was handled) is held and filed when the run exists; it is never dropped because of timing.
+
+A prompt the user did not type opens no turn. Claude Code marks each prompt record with its origin (`origin.kind`, `human` for a typed prompt) and its `turnPosition.promptIndex`; a sub-agent's handback and a task notification carry the index of the prompt that started them, and the sub-agent's own file names the handback's prompt id. Usage and tool calls under such a prompt go to the turn of that typed prompt. The `UserPromptSubmit` hook itself carries no origin, and the prompt record may reach the file after the hook. So while a sub-agent of the session has not handed back, a prompt whose origin the files do not show yet is held until its next hook event: Spark reads the files once more, opens the turn unless they mark the prompt as not typed, and opens it anyway when they say nothing. `<synthetic>` zero-usage records, sidechain records and unknown record types are ignored.
 
 Cost is tokens × the model card price. A one-hour cache write is priced at twice the input price (Anthropic's published rule; the card holds only the five-minute rate). This reproduces Claude Code's own per-model cost exactly for Opus 5.5: 2 in, 4 out, 28,918 cache read, 9,419 one-hour cache write gives $0.081224 against `costUSD` 0.0812236. A model without a card price leaves the turn's cost unknown; its tokens are still stored.
 
@@ -35,9 +37,11 @@ Cost is tokens × the model card price. A one-hour cache write is priced at twic
 
 Claude Code writes `cost-state` only when it exits, twice per exit, never after a turn, when idle or on `/cost`. After Resume the same file and session id continue and the totals continue cumulatively (0.4036 → 0.4282 in the sample). The rule is therefore: keep the last `cost-state` per CLI session id and never sum records of one id. A record whose `sessionId` is not the file's own is ignored.
 
-The file is read once more after the CLI process has exited, whether it exited by itself or after Spark's Stop (SIGHUP, then SIGKILL after 1.5 s). If that read does not happen, the stored position lets the next Resume pick the record up. Whether Claude Code writes `cost-state` on SIGHUP is not known; both cases are handled.
+The file is read once more after the CLI process has exited, whether it exited by itself or after Spark's Stop (SIGHUP, then SIGKILL after 1.5 s). If that read does not happen, the stored position lets the next Resume pick the record up. Claude Code does write `cost-state` when Spark's Stop ends it (observed: $0.0814).
 
-A Spark session can see more than one CLI session id (`/clear`). Whether the new id's total starts from zero or carries the earlier one is not known, so totals are stored and shown per CLI session id, each on its own line, and never added up.
+`/clear` starts a new CLI session id and a new file whose total starts from zero (observed: $0.0814 in the first file, $0.1121 in the second). When a hook names a new session file, Spark reads the earlier file once more, and again when the process exits. Totals are stored per CLI session id. The Cost tab shows their sum as the session total, with one line for each id under it.
+
+When a session that is not running is opened and its stored position is behind the file, Spark reads the rest once per app run and stores a total found there. That read can store only the reported total: turns are matched to runs only while the session is live.
 
 The session total and the turn estimates are never added together. An open session has no reported total; the Cost tab says so.
 
@@ -86,12 +90,11 @@ Every figure names its origin: "estimated from tokens", "reported by Claude Code
 ## Open questions
 
 1. Should estimated Terminal cost count in Analytics Spend, and as its own line? For a subscription login it is not a bill.
-2. Does Claude Code write `cost-state` when it receives SIGHUP? Handled either way; not observed.
-3. Does `/clear` start the new CLI session id's total from zero? Until known, totals are shown per id and not added.
-4. A turn started by a sub-agent's handback or a task notification has its own prompt id. Its usage is counted only if Claude Code fires `UserPromptSubmit` for it.
-5. Compaction, for both agents; Codex resume; Codex tool kinds other than `exec` and the collaboration calls; a Codex response interrupted before it finished; nested or failed sub-agents.
-6. The Sonnet 5.5 card lists cache reads at $0.20 per million, which is 0.1 × its input price like the Haiku and Sonnet 5 cards. Two chat session files imply Claude Code charges $0.10 (0.05 ×, as the Opus 5.5 card states for Opus). The card was left as it is: the evidence is inference from two files, not the vendor's price page. Estimates for that model ran 2–17% above the CLI total.
-7. Long-context and fast-mode prices are not modelled.
+2. A handback prompt whose records reach neither file before its next hook event still opens a turn. Not observed; the real-agent check covers it.
+3. A turn started by a sub-agent's handback or a task notification has its own prompt id. Its usage is counted only if Claude Code fires `UserPromptSubmit` for it.
+4. Compaction, for both agents; Codex resume; Codex tool kinds other than `exec` and the collaboration calls; a Codex response interrupted before it finished; nested or failed sub-agents.
+5. The Sonnet 5.5 card lists cache reads at $0.20 per million, which is 0.1 × its input price like the Haiku and Sonnet 5 cards. Two chat session files imply Claude Code charges $0.10 (0.05 ×, as the Opus 5.5 card states for Opus). The card was left as it is: the evidence is inference from two files, not the vendor's price page. Estimates for that model ran 2–17% above the CLI total.
+6. Long-context and fast-mode prices are not modelled.
 
 ## Tests
 

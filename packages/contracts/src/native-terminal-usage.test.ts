@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  reportedSessionTotal,
   reportedTotalNote,
   turnCostOrigin,
   usageOriginLabel,
@@ -32,9 +33,9 @@ describe('terminal usage labels', () => {
 
   it('explains a missing session total by the agent', () => {
     expect(reportedTotalNote('claude', [reported])).toBe('reported by Claude Code');
-    expect(reportedTotalNote('claude', [reported, reported])).toBe(
-      'reported by Claude Code, one total for each CLI session; not added up',
-    );
+    expect(reportedTotalNote('claude', [reported, reported])).toBe('reported by Claude Code');
+    expect(reportedSessionTotal([])).toBeNull();
+    expect(reportedSessionTotal([reported, { ...reported, costUsd: 0.112064 }])).toBe(0.512064);
     expect(reportedTotalNote('claude', [])).toBe(
       'unknown until Claude Code exits and writes its own total',
     );

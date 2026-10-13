@@ -28,6 +28,13 @@ export type TranscriptRecord =
       tokens: TokenCounts;
     }
   | { kind: 'agent'; agentId: string; turnId: string }
+  | {
+      kind: 'prompt';
+      promptId: string;
+      human: boolean;
+      owner: string | null;
+      agentId: string | null;
+    }
   | { kind: 'reported'; usage: ReportedUsage };
 
 export interface TranscriptParser {

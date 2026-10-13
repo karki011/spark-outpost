@@ -204,6 +204,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         currentPromptEventId: null,
         completedEvents: new Map(),
         transcript: null,
+        heldPrompt: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -331,6 +332,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     },
     async usage(conversationId) {
       await owned(conversationId);
+      const row = live.has(conversationId)
+        ? null
+        : await nativeTerminalRow(deps.db, conversationId);
+      if (row) await usage.catchUpStored(row).catch(() => undefined);
       return nativeTerminalUsage(deps.db, conversationId);
     },
     hook,

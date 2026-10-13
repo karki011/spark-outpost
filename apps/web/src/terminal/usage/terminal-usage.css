@@ -106,3 +106,7 @@
   font-size: 12px;
   color: var(--faint);
 }
+
+.tu-total.part {
+  font-size: 13px;
+}

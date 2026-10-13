@@ -60,7 +60,7 @@ describe('native terminal usage from the Claude transcript', () => {
     await f.launch();
     await prompt('first');
     const watcher = f.watchers[0]!;
-    expect(watcher.from).toBeNull();
+    expect(watcher.from).toBe(0);
     await watcher.lines([user('first'), reply('msg_1', 10), reply('msg_1', 10)]);
     expect(await runs()).toMatchObject([
       { status: 'running', output_tokens: 10, cost_source: 'estimated' },
@@ -188,7 +188,7 @@ describe('native terminal usage from the Claude transcript', () => {
       agent_id: 'aec39d782762e820d',
     });
     expect(f.watchers.map((watcher) => [watcher.path, watcher.from])).toEqual([
-      [transcript_path, null],
+      [transcript_path, 0],
       ['/fixture/projects/native-provider-session/subagents/agent-aec39d782762e820d.jsonl', 0],
     ]);
     await f.watchers[1]!.lines(
@@ -259,7 +259,7 @@ describe('native terminal usage that arrives late', () => {
       .toBe('500');
     await f.runtime.launch(f.conversationId, { resume: true });
     await prompt('second');
-    const resumed = f.watchers[2]!;
+    const resumed = f.watchers.at(-1)!;
     expect(resumed.from).toBe(500);
     await resumed.lines([
       reply('msg_1', 10),
@@ -287,6 +287,82 @@ describe('native terminal usage that arrives late', () => {
     await f.watchers[1]!.lines([costState(0.31)]);
     await expect.poll(async () => (await usage()).reported[0]?.costUsd).toBe(0.31);
     expect((await runs())[0]).toMatchObject({ status: 'cancelled' });
+  });
+});
+
+describe('native terminal prompts the user did not type', () => {
+  const PARENT = 'e7800f6f-7aa4-4ea1-a883-19ba220a2bf7';
+  const HANDBACK = '4d9e891c-2f4e-42b7-a689-c77d4d513d6d';
+  const AGENT = 'ad1f5f51c14fb7c05';
+  const parsed = (name: string) => fixtureLines(name).map((line) => JSON.parse(line) as unknown);
+  const main = () => parsed('claude-pass-resume-handback.jsonl');
+  const agentTool = (name: string, tool_name: string, tool_use_id: string) =>
+    f.hook(name, { prompt_id: PARENT, transcript_path, tool_name, tool_use_id, agent_id: AGENT });
+  const startSubagent = async () => {
+    await f.launch();
+    await prompt(PARENT);
+    f.watchers[0]!.atFlush.push(...main().slice(51, 59));
+    await f.hook('Stop', { prompt_id: PARENT });
+    await agentTool('PreToolUse', 'Bash', 'toolu_child_1');
+    await agentTool('PostToolUse', 'Bash', 'toolu_child_1');
+  };
+
+  it('opens no turn for a sub-agent handback and counts its reply on the turn that started the sub-agent', async () => {
+    await startSubagent();
+    const side = f.watchers.at(-1)!;
+    side.atFlush.push(...parsed('claude-pass-subagent.jsonl'));
+    await agentTool('PostToolUse', 'SubagentHandback', 'toolu_child_2');
+    expect(
+      await f.hook('UserPromptSubmit', {
+        prompt: 'handback',
+        prompt_id: HANDBACK,
+        transcript_path,
+      }),
+    ).toBe(204);
+    expect(await f.hook('Stop', { prompt_id: HANDBACK })).toBe(204);
+    expect((await usage()).turns).toHaveLength(1);
+    expect(await runs()).toMatchObject([{ status: 'succeeded' }]);
+    await prompt('typed-next');
+    await f.watchers.at(-1)!.lines(main().slice(59, 67));
+    const seen = await usage();
+    expect(seen.turns).toHaveLength(2);
+    expect(seen.turns[0]!.tokens).toMatchObject({ output: 339 + 32 + 34 + 16 + 24 });
+    expect(seen.turns[1]!.tokens).toBeNull();
+  });
+
+  it('still opens a turn for a prompt the user types while a sub-agent is running', async () => {
+    await startSubagent();
+    const typed = { prompt: 'Typed meanwhile', prompt_id: 'typed-1', transcript_path };
+    expect(await f.hook('UserPromptSubmit', typed)).toBe(204);
+    f.watchers.at(-1)!.atFlush.push({
+      type: 'user',
+      promptId: 'typed-1',
+      origin: { kind: 'human' },
+      promptSource: 'typed',
+      message: { role: 'user', content: 'x' },
+    });
+    await f.hook('PreToolUse', { prompt_id: 'typed-1', tool_use_id: 'toolu_t', tool_name: 'Bash' });
+    const seen = await usage();
+    expect(seen.turns.map((turn) => [turn.status, turn.steps.length])).toEqual([
+      ['succeeded', 1],
+      ['running', 1],
+    ]);
+  });
+
+  it('opens the turn at its next event when the file never says who sent the prompt', async () => {
+    await startSubagent();
+    await f.hook('UserPromptSubmit', { prompt: 'Unmarked', prompt_id: 'typed-2', transcript_path });
+    await f.hook('Stop', { prompt_id: 'typed-2' });
+    expect((await runs()).map((run) => run.status)).toEqual(['succeeded', 'succeeded']);
+  });
+
+  it('holds usage read before the prompt hook arrived and files it when the turn exists', async () => {
+    await f.launch();
+    await f.hook('SessionStart', { transcript_path });
+    await f.watchers[0]!.lines([user('first'), reply('msg_early', 12)]);
+    await prompt('first');
+    await f.hook('Stop', { prompt_id: 'first' });
+    expect((await usage()).turns.map((turn) => turn.tokens?.output ?? null)).toEqual([12]);
   });
 });
 

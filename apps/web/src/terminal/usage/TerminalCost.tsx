@@ -1,6 +1,10 @@
 import './terminal-usage.css';
 import { useQuery } from '@tanstack/react-query';
-import { reportedTotalNote, type NativeTerminalUsage } from '@spark-outpost/contracts';
+import {
+  reportedSessionTotal,
+  reportedTotalNote,
+  type NativeTerminalUsage,
+} from '@spark-outpost/contracts';
 import { formatTokens } from '../../chat/composer/model-options.ts';
 import { formatCost } from '../../usage/format.ts';
 import { terminalUsageQuery } from './terminal-usage-api.ts';
@@ -8,15 +12,22 @@ import { estimateTotal, turnUsageText } from './turn-usage-text.ts';
 
 function ReportedTotal({ usage }: { usage: NativeTerminalUsage }) {
   const several = usage.reported.length > 1;
+  const total = reportedSessionTotal(usage.reported);
   return (
     <section className="tu-reported" aria-label="Session total">
       <div className="wsec-h">
         <h3>Session total</h3>
         <span>{reportedTotalNote(usage.provider, usage.reported)}</span>
       </div>
+      {total !== null && several && (
+        <p className="tu-total">
+          <b>{formatCost(total)}</b>
+          <small> {usage.reported.length} CLI sessions</small>
+        </p>
+      )}
       {usage.reported.map((reported, index) => (
         <div key={reported.nativeSessionId} className="tu-cli">
-          <p className="tu-total">
+          <p className={several ? 'tu-total part' : 'tu-total'}>
             <b>{formatCost(reported.costUsd)}</b>
             {several && <small> CLI session {index + 1}</small>}
           </p>

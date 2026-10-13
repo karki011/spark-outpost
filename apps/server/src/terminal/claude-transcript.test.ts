@@ -216,3 +216,66 @@ describe('Claude Code 2.1.296 session files', () => {
     ).toEqual([]);
   });
 });
+
+describe('session files of the real-agent pass', () => {
+  const HUMAN = [
+    '7813aacd-16b3-477d-8bbc-4eea80f27deb',
+    '50412762-da7a-46f7-92b6-77eb171a69eb',
+    'e7800f6f-7aa4-4ea1-a883-19ba220a2bf7',
+  ];
+
+  it('files a handback reply and the sub-agent under the prompt the user typed', () => {
+    const main = fixtureRecords('claude-pass-resume-handback.jsonl', claudeTranscriptParser());
+    const side = fixtureRecords('claude-pass-subagent.jsonl', claudeTranscriptParser(true));
+    const prompts = main.filter((record) => record.kind === 'prompt');
+    expect(prompts.filter((record) => record.human).map((record) => record.promptId)).toEqual(
+      HUMAN,
+    );
+    expect(prompts.filter((record) => !record.human)).toEqual([
+      {
+        kind: 'prompt',
+        promptId: '4d9e891c-2f4e-42b7-a689-c77d4d513d6d',
+        human: false,
+        owner: HUMAN[2],
+        agentId: 'ad1f5f51c14fb7c05',
+      },
+      {
+        kind: 'prompt',
+        promptId: '8d1404eb-1668-478f-aa95-285feb28e0b0',
+        human: false,
+        owner: HUMAN[2],
+        agentId: null,
+      },
+    ]);
+    expect(side.filter((record) => record.kind === 'prompt')).toEqual([
+      {
+        kind: 'prompt',
+        promptId: '4d9e891c-2f4e-42b7-a689-c77d4d513d6d',
+        human: false,
+        owner: HUMAN[2],
+        agentId: null,
+      },
+    ]);
+    const turns = turnTotals('claude', [...main, ...side]);
+    expect([...turns.keys()]).toEqual(HUMAN);
+    const costs = [...turns.values()].map((turn) => turn.costUsd!);
+    expect(costs[0]! + costs[1]!).toBeCloseTo(0.158766, 6);
+    expect(costs).toEqual([0.149424, 0.009342, 0.136982]);
+    expect(reported(main).map((total) => total.costUsd)).toEqual([
+      0.1602545, 0.1602545, 0.3352450999999999, 0.3352450999999999,
+    ]);
+  });
+
+  it('reads the total of the session before /clear and of the one after it', () => {
+    const before = fixtureRecords('claude-pass-first-then-clear.jsonl', claudeTranscriptParser());
+    const after = fixtureRecords('claude-pass-after-clear.jsonl', claudeTranscriptParser());
+    expect(reported(before).at(-1)!.costUsd).toBe(0.0814073);
+    expect(reported(after).at(-1)!.costUsd).toBe(0.11206370000000002);
+    expect([...turnTotals('claude', before).values()].map((turn) => turn.costUsd)).toEqual([
+      0.08128,
+    ]);
+    expect([...turnTotals('claude', after).values()].map((turn) => turn.costUsd)).toEqual([
+      0.111936,
+    ]);
+  });
+});

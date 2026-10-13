@@ -80,23 +80,59 @@ function reported(record: Record<string, unknown>): TranscriptRecord[] {
   ];
 }
 
-export function claudeTranscriptParser(sidechain = false): TranscriptParser {
-  let turnId: string | null = null;
+function sidechainParser(): TranscriptParser {
+  let parent: string | null = null;
   return {
     push(line) {
       const record = parseLine(line);
-      if (!isRecord(record) || (record.isSidechain === true) !== sidechain) return [];
-      if (record.type === 'cost-state') return sidechain ? [] : reported(record);
+      if (!isRecord(record) || record.isSidechain !== true) return [];
+      if (record.type === 'assistant') return response(record, parent);
+      if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
+      parent ??= record.promptId;
+      if (record.promptId === parent) return [];
+      return [
+        { kind: 'prompt', promptId: record.promptId, human: false, owner: parent, agentId: null },
+      ];
+    },
+  };
+}
+
+export function claudeTranscriptParser(sidechain = false): TranscriptParser {
+  if (sidechain) return sidechainParser();
+  let turnId: string | null = null;
+  let lastHuman: string | null = null;
+  const byIndex = new Map<number, string>();
+  const owners = new Map<string, string>();
+  const prompt = (record: Record<string, unknown>, promptId: string): TranscriptRecord[] => {
+    const origin = record.origin;
+    if (!isRecord(origin)) return [];
+    const position = isRecord(record.turnPosition) ? record.turnPosition.promptIndex : null;
+    const index = typeof position === 'number' ? position : null;
+    const human = origin.kind === 'human';
+    if (human) {
+      lastHuman = promptId;
+      if (index !== null) byIndex.set(index, promptId);
+    }
+    const owner = human ? null : ((index === null ? undefined : byIndex.get(index)) ?? lastHuman);
+    if (owner) owners.set(promptId, owner);
+    const agentId = typeof origin.from === 'string' && origin.from ? origin.from : null;
+    return [{ kind: 'prompt', promptId, human, owner, agentId }];
+  };
+  return {
+    push(line) {
+      const record = parseLine(line);
+      if (!isRecord(record) || record.isSidechain === true) return [];
+      if (record.type === 'cost-state') return reported(record);
       if (record.type === 'assistant') return response(record, turnId);
       if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
-      turnId = record.promptId;
-      if (sidechain) return [];
+      const prompts = prompt(record, record.promptId);
+      turnId = owners.get(record.promptId) ?? record.promptId;
       const started = record.toolUseResult;
       if (isRecord(started) && typeof started.agentId === 'string' && started.agentId)
-        return [{ kind: 'agent', agentId: started.agentId, turnId }];
+        return [...prompts, { kind: 'agent', agentId: started.agentId, turnId }];
       return isRecord(record.message) && interruptText(record.message)
-        ? [{ kind: 'interrupt', turnId }]
-        : [];
+        ? [...prompts, { kind: 'interrupt', turnId }]
+        : prompts;
     },
   };
 }

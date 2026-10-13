@@ -162,6 +162,6 @@ export async function recordNativeUsageOffset(
 ): Promise<void> {
   await db.query(
     'UPDATE native_terminal_sessions SET usage_file = $2, usage_offset = $3 WHERE id = $1',
-    [sessionId, storedLabel(file), offset],
+    [sessionId, file, offset],
   );
 }

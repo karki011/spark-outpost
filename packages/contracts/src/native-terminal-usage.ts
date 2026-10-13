@@ -81,10 +81,14 @@ export function reportedTotalNote(
   provider: NativeTerminalProvider | null,
   reported: readonly NativeTerminalReported[],
 ): string {
-  if (reported.length > 1)
-    return `${usageOriginLabel('reported', provider)}, one total for each CLI session; not added up`;
-  if (reported.length === 1) return usageOriginLabel('reported', provider);
+  if (reported.length > 0) return usageOriginLabel('reported', provider);
   if (provider === 'claude') return 'unknown until Claude Code exits and writes its own total';
   if (provider === 'codex') return 'unknown: Codex reports no cost';
   return usageOriginLabel('unknown');
+}
+
+export function reportedSessionTotal(reported: readonly NativeTerminalReported[]): number | null {
+  if (reported.length === 0) return null;
+  const millionths = reported.reduce((sum, total) => sum + Math.round(total.costUsd * 1e6), 0);
+  return millionths / 1e6;
 }

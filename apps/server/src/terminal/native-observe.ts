@@ -115,10 +115,33 @@ export function nativeObserver({
     await session.context!.mode(session.mode);
     syncScope(session);
   };
+  const promptSender = async (session: LiveSession, event: NativeHookEvent) => {
+    const promptId = event.nativeTurnId;
+    if (!promptId || session.seedPending) return 'user';
+    if (usage.typedByUser(session, promptId) === null && usage.awaitsHandback(session))
+      await usage.catchUp(session).catch(() => undefined);
+    const typed = usage.typedByUser(session, promptId);
+    if (typed === null) return usage.awaitsHandback(session) ? 'unknown' : 'user';
+    return typed ? 'user' : 'agent';
+  };
+  const releaseHeld = async (session: LiveSession) => {
+    const held = session.heldPrompt;
+    session.heldPrompt = null;
+    if (!held) return;
+    await usage.catchUp(session).catch(() => undefined);
+    if (usage.typedByUser(session, held.event.nativeTurnId ?? '') === false) return;
+    await turn(session, held.event, held.eventId);
+  };
   const observe = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
     const retryCompletion = session.completedEvents.has(eventId);
     if (retryCompletion && session.completedEvents.get(eventId) !== session.currentPromptEventId)
       return;
+    if (session.heldPrompt && session.heldPrompt.eventId !== eventId) await releaseHeld(session);
+    const handedBack = event.nativeTurnId ? usage.ownerRun(session, event.nativeTurnId) : null;
+    if (!retryCompletion && handedBack && event.kind !== 'prompt') {
+      if (event.tool) await recordNativeStep(db, handedBack, event.tool);
+      return;
+    }
     if (!retryCompletion && event.tool?.agentId && !ownTurn(session, event)) {
       const runId = usage.agentRun(session, event.tool.agentId);
       if (runId) await recordNativeStep(db, runId, event.tool);
@@ -159,7 +182,12 @@ export function nativeObserver({
         await session.context?.mode(mode);
       }
     }
-    if (event.kind === 'prompt') await turn(session, event, eventId);
+    if (event.kind === 'prompt') {
+      const sender = await promptSender(session, event);
+      if (sender === 'agent') return;
+      if (sender === 'unknown') session.heldPrompt = { event, eventId };
+      else await turn(session, event, eventId);
+    }
     if (event.tool?.agentId) usage.agentRun(session, event.tool.agentId);
     if (event.tool && session.context && !retryCompletion)
       await recordNativeStep(db, session.context.input.identity.runId, event.tool);
@@ -246,7 +274,8 @@ export function nativeObserver({
       await accept(session, event, parsed.data.eventId);
       if (event.transcriptPath && session.context)
         usage.follow(session, event.transcriptPath, event.model ?? null, interruptedTwice);
-      if (event.agentTranscriptPath) usage.followAgent(session, event.agentTranscriptPath);
+      if (event.agentTranscriptPath)
+        usage.followAgent(session, event.agentTranscriptPath, event.tool?.agentId ?? null);
       if (event.agentTranscriptPath && event.tool?.phase === 'end' && event.tool.name === HANDBACK)
         await usage.endAgent(session, event.agentTranscriptPath);
       return true;

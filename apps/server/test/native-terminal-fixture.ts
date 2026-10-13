@@ -8,6 +8,7 @@ import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
 import { startSparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { NativeLaunch, NativeLaunchInput } from '../src/terminal/native-launch.ts';
 import { createNativeRuntime, type NativeRuntimeDeps } from '../src/terminal/native-runtime.ts';
+import type { WatchTranscript } from '../src/terminal/native-tail.ts';
 import type { PtyOptions, PtyProcess } from '../src/terminal/pty.ts';
 import { defaultLimits, TerminalSessions } from '../src/terminal/sessions.ts';
 import { toolDeps } from './spark-mcp-support.ts';
@@ -31,7 +32,7 @@ const interruptRecord = (promptId: string) => ({
 });
 
 export async function nativeRuntimeFixture(
-  options: { maxShells?: number; provider?: 'claude' | 'codex' } = {},
+  options: { maxShells?: number; provider?: 'claude' | 'codex'; realFiles?: boolean } = {},
 ) {
   const provider = options.provider ?? 'claude';
   const agentMode = provider === 'claude' ? 'default' : 'agent';
@@ -94,7 +95,27 @@ export async function nativeRuntimeFixture(
       dispose: async () => undefined,
     };
   };
-  const runtime = await createNativeRuntime({
+  const fakeWatcher: WatchTranscript = (path, from, onLines) => {
+    const watcher: FixtureWatcher = {
+      path,
+      from,
+      position: null,
+      atFlush: [],
+      close: vi.fn<() => void>(),
+      lines: (records) => onLines(records.map((record) => JSON.stringify(record))),
+      interrupt: (promptId) => watcher.lines([interruptRecord(promptId)]),
+    };
+    watchers.push(watcher);
+    return {
+      ready: Promise.resolve(),
+      flush: async () => {
+        if (watcher.atFlush.length > 0) void watcher.lines(watcher.atFlush.splice(0));
+      },
+      offset: () => watcher.position,
+      close: watcher.close,
+    };
+  };
+  const deps: NativeRuntimeDeps = {
     db: t.db,
     workspaceId: t.workspaceId,
     terminals,
@@ -104,27 +125,9 @@ export async function nativeRuntimeFixture(
     locateCli: async () => `/fixture/${provider}`,
     place: (...args) => fixture.place(...args),
     prepareLaunch: prepare,
-    watchTranscript: (path, from, onLines) => {
-      const watcher: FixtureWatcher = {
-        path,
-        from,
-        position: null,
-        atFlush: [],
-        close: vi.fn<() => void>(),
-        lines: (records) => onLines(records.map((record) => JSON.stringify(record))),
-        interrupt: (promptId) => watcher.lines([interruptRecord(promptId)]),
-      };
-      watchers.push(watcher);
-      return {
-        ready: Promise.resolve(),
-        flush: async () => {
-          if (watcher.atFlush.length > 0) void watcher.lines(watcher.atFlush.splice(0));
-        },
-        offset: () => watcher.position,
-        close: watcher.close,
-      };
-    },
-  });
+    ...(options.realFiles ? {} : { watchTranscript: fakeWatcher }),
+  };
+  const runtime = await createNativeRuntime(deps);
   return Object.assign(fixture, {
     runtime,
     launch: () =>
@@ -151,8 +154,13 @@ export async function nativeRuntimeFixture(
       });
       return response.status;
     },
+    async restart() {
+      await this.runtime.dispose();
+      this.runtime = await createNativeRuntime(deps);
+      await this.runtime.recover();
+    },
     async cleanup() {
-      await runtime.dispose();
+      await this.runtime.dispose();
       terminals.killAll();
       await host.close();
       await t.cleanup();
