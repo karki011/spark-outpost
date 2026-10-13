@@ -8,20 +8,20 @@ summary: Run commands beside a chat, or work with Claude Code or Codex in a Term
 
 Open an AI terminal. About 1 minute.
 
-> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply; Spark records only its start, mode and state.
+> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply. Spark records state, tool names and times, tokens and estimated cost, never commands or replies: Work panel **Steps** and **Cost**.
 
 ## Start a Terminal session
 
 1. Select **New chat**, then **Terminal** above the message box.
 2. Select **Choose project → Choose a folder…**, then **Use this folder**.
-3. Next to **Start terminal**, pick **Claude Code** or **Codex** and its permissions.
-4. Describe the work and press **Enter**.
+3. Next to **Start terminal**, pick **Claude Code** or **Codex** and permissions.
+4. Describe the work; press **Enter**.
 
-Answer its questions there. Pull requests aren't automatic.
+Answer questions there. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open**: no tracking. Dropped files insert paths.
 
-Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent's interface uses the mouse.
+Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse.
 
 **Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Terminal sessions are Mac-only.
 
@@ -33,7 +33,7 @@ Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment
 
 ![The terminal dock below a chat](images/terminals-dock-light.png)
 
-The shell starts in the chat's worktree, checkout or home folder. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
+The shell starts in the chat's worktree, checkout or home. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
@@ -41,12 +41,12 @@ The shell starts in the chat's worktree, checkout or home folder. Closing a busy
 
 1. On a command in a reply, select **Open in terminal**.
 
-The read-only tab is named like **Claude · pnpm dev**. **Stop turn** stops the turn. Claude and Z.ai output shows when it ends.
+The read-only tab is named **Claude · pnpm dev**. **Stop turn** stops the turn. Claude and Z.ai output shows when it ends.
 
 ## Close and recover
 
-Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents, not outside terminals.
+Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents only.
 
-After a crash, restart or exit, **Resume session**, where supported, restores history, not a running command. Otherwise **Start again** resends your first message unless you stopped it.
+After a crash, restart or exit, **Resume session** restores history, not a running command; else **Start again** resends your first message unless stopped.
 
 **Next:** [Use the browser](use-the-browser.md)
