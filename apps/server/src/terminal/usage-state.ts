@@ -19,6 +19,7 @@ export interface SessionTranscript {
   parser: TranscriptParser;
   offset: number;
   resumed: boolean;
+  catchUp: boolean;
   watcher: TranscriptWatcher | null;
   turns: Map<string, TurnEntry>;
   held: Map<string, Response[]>;
@@ -110,6 +111,12 @@ export function note(
   trim(transcript.prompts);
   const agent = record.agentId ?? fileAgent;
   if (!record.human && agent) transcript.waiting.delete(agent);
+}
+
+export function stepRun(transcript: SessionTranscript, turnId: string | null): string | null {
+  const known = turnId ? transcript.prompts.get(turnId) : undefined;
+  const owner = known && !known.human && known.owner ? known.owner : turnId;
+  return (owner && transcript.turns.get(owner)?.runId) || null;
 }
 
 export function chain(transcript: SessionTranscript | null): SessionTranscript[] {

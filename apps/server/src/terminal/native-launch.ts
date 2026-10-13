@@ -37,6 +37,7 @@ export interface NativeLaunch {
   env: Record<string, string>;
   observation: 'hooks' | 'unsupported';
   version: string;
+  directory?: string;
   dispose(): Promise<void>;
 }
 
@@ -204,7 +205,7 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
     }
     const prompt = [input.prompt, attachments.note].filter(Boolean).join('\n\n');
     if (prompt) args.push('--', prompt);
-    return { command, args, env: config.env, observation, version, dispose };
+    return { command, args, env: config.env, observation, version, directory, dispose };
   } catch (error) {
     await dispose();
     throw error;

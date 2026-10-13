@@ -8,6 +8,8 @@ export interface PtyProcess {
   resize(cols: number, rows: number): void;
   onData(listener: (data: string) => void): void;
   onExit(listener: (exit: { exitCode: number; signal?: number | undefined }) => void): void;
+  kill?(): void;
+  detach?(): void;
 }
 
 export interface PtyOptions {
@@ -17,6 +19,8 @@ export interface PtyOptions {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
+  sessionId?: string;
+  adopt?: boolean;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;

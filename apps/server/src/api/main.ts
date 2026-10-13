@@ -1,5 +1,5 @@
-import { resolve } from 'node:path';
-import { DEV_API_TOKEN_FILE } from '@spark-outpost/contracts';
+import { join, resolve } from 'node:path';
+import { DEV_API_TOKEN_FILE, isKeepTerminalsStop } from '@spark-outpost/contracts';
 import { loadConfig } from '../config.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
@@ -13,6 +13,9 @@ import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
+import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
+import { chooseTmux, killTmuxServer } from '../terminal/tmux/tmux-host.ts';
+import { tmuxSpawner } from '../terminal/tmux/tmux-spawner.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
@@ -132,8 +135,20 @@ const cloneDeps = {
       : null,
   reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
 };
+const localDir = resolve(import.meta.dirname, '../../../..', '.local');
+const nativeDataDir = config.SPARK_DATA_DIR ?? localDir;
+const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
+const terminalTmux = chooseTmux(
+  process.env,
+  join(nativeDataDir, config.BRANCH_PREFIX, 'tmux'),
+  config.SPARK_DATA_DIR ? null : localDir,
+);
+if (!terminalTmux.host)
+  console.warn(
+    `Terminal sessions run without tmux (${terminalTmux.reason}); they stop when Spark restarts.`,
+  );
 const terminals = new TerminalSessions(
-  loginShellSpawner(),
+  tmuxSpawner(loginShellSpawner(), terminalTmux.host),
   defaultLimits,
   shellWatchers(
     shellRegistry(db, workspaceId),
@@ -143,26 +158,32 @@ const terminals = new TerminalSessions(
   ),
 );
 const desktopBrowser = connectDesktopBrowser(process.env, process);
-const nativeMcp = await startSparkMcpHost({
-  db,
-  secrets,
-  fetch,
-  linearApiUrl: config.LINEAR_API_URL,
-  slackApiUrl: config.SLACK_API_URL,
-  slackSignIn,
-  github: {
-    runCommand,
-    apiUrl: config.GITHUB_API_URL,
-    app: githubApp,
-    locateGh: () => locateCli('gh', runCommand, loginShell),
-    loginPath: loginShellPath(runCommand, loginShell),
-    loginEnv: loginShellEnv(runCommand, loginShell),
+const nativeMcpPortFile = join(nativeSessionsDir, 'mcp-port');
+const nativeMcp = await startSparkMcpHost(
+  {
+    db,
+    secrets,
+    fetch,
+    linearApiUrl: config.LINEAR_API_URL,
+    slackApiUrl: config.SLACK_API_URL,
+    slackSignIn,
+    github: {
+      runCommand,
+      apiUrl: config.GITHUB_API_URL,
+      app: githubApp,
+      locateGh: () => locateCli('gh', runCommand, loginShell),
+      loginPath: loginShellPath(runCommand, loginShell),
+      loginEnv: loginShellEnv(runCommand, loginShell),
+    },
+    branchPrefix: config.BRANCH_PREFIX,
+    linkScheme: config.SPARK_LINK_SCHEME,
+    codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
+    browser: desktopBrowser?.host,
   },
-  branchPrefix: config.BRANCH_PREFIX,
-  linkScheme: config.SPARK_LINK_SCHEME,
-  codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
-  browser: desktopBrowser?.host,
-});
+  undefined,
+  savedPort(nativeMcpPortFile),
+);
+savePort(nativeMcpPortFile, nativeMcp.port);
 const nativeApprovalWaiters = new ApprovalWaiters();
 const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   nativeApprovalWaiters.notify(id),
@@ -171,9 +192,10 @@ const nativeTerminals = await createNativeRuntime({
   db,
   workspaceId,
   terminals,
-  dataDir: config.SPARK_DATA_DIR ?? resolve(import.meta.dirname, '../../../..', '.local'),
+  dataDir: nativeDataDir,
   channel: config.BRANCH_PREFIX,
   mcp: nativeMcp,
+  tmux: terminalTmux.host,
   locateCli: loginShellLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
@@ -261,10 +283,15 @@ attachTerminalSockets(server, terminals, {
   apiToken,
 });
 
-const shutdown = async () => {
+let stopping = false;
+const shutdown = async (keepTerminals = false) => {
+  if (stopping) return;
+  stopping = true;
   clones.stopAll();
-  await nativeTerminals.dispose();
+  if (keepTerminals) await nativeTerminals.detach();
+  else await nativeTerminals.dispose();
   terminals.killAll();
+  if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
   await nativeMcp.close();
   await nativeApprovalListener.close();
   await previews.stopAll('shutdown').catch(() => undefined);
@@ -282,5 +309,8 @@ const shutdown = async () => {
   await db.end();
   process.exit(0);
 };
-process.once('SIGINT', shutdown);
-process.once('SIGTERM', shutdown);
+process.once('SIGINT', () => void shutdown());
+process.once('SIGTERM', () => void shutdown());
+process.on('message', (message) => {
+  if (isKeepTerminalsStop(message)) void shutdown(true);
+});

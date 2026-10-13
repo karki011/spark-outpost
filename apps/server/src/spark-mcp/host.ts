@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -18,13 +18,28 @@ export interface SparkMcpHost {
   port: number;
   browser: boolean;
   grant(scope: SparkScope): Promise<SparkGrant>;
+  restore(scope: SparkScope, key: string): Promise<SparkGrant>;
   close(): Promise<void>;
+}
+
+const GRANT_KEY = /^[0-9a-f]{64}$/;
+
+function listenOn(server: Server, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const failed = () => resolve(false);
+    server.once('error', failed);
+    server.listen(port, '127.0.0.1', () => {
+      server.off('error', failed);
+      resolve(true);
+    });
+  });
 }
 
 const MCP_PATH = '/mcp';
 const BODY_LIMIT_BYTES = 1_000_000;
 
-const digest = (token: string) => createHash('sha256').update(token).digest('hex');
+export const sparkGrantKey = (token: string) => createHash('sha256').update(token).digest('hex');
+const digest = sparkGrantKey;
 
 function reply(res: ServerResponse, status: number, message: string): void {
   res
@@ -77,6 +92,7 @@ interface Session {
 export async function startSparkMcpHost(
   deps: SparkToolDeps,
   availabilityOf: typeof sparkAvailability = sparkAvailability,
+  preferredPort = 0,
 ): Promise<SparkMcpHost> {
   const grants = new Map<string, Session>();
   let host = '';
@@ -145,33 +161,38 @@ export async function startSparkMcpHost(
       else res.end();
     });
   });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
+  if (preferredPort === 0 || !(await listenOn(server, preferredPort))) {
+    if (!(await listenOn(server, 0))) throw new Error('Spark tools could not start listening.');
+  }
   const { port } = server.address() as AddressInfo;
   host = `127.0.0.1:${port}`;
   const url = `http://${host}${MCP_PATH}`;
+  const register = async (scope: SparkScope, key: string, token: string): Promise<SparkGrant> => {
+    grants.set(key, { scope, available: await availabilityOf(deps, scope) });
+    return {
+      url,
+      token,
+      revoke: () => {
+        grants.delete(key);
+        for (const [callKey, controller] of calls) {
+          if (callKey.startsWith(`${key}:`)) controller.abort();
+        }
+        void endBrowserRun(deps, scope);
+      },
+    };
+  };
 
   return {
     port,
     browser: deps.browser !== undefined,
-    async grant(scope) {
-      const available = await availabilityOf(deps, scope);
+    grant(scope) {
       const token = randomBytes(32).toString('base64url');
-      const key = digest(token);
-      grants.set(key, { scope, available });
-      return {
-        url,
-        token,
-        revoke: () => {
-          grants.delete(key);
-          for (const [callKey, controller] of calls) {
-            if (callKey.startsWith(`${key}:`)) controller.abort();
-          }
-          void endBrowserRun(deps, scope);
-        },
-      };
+      return register(scope, digest(token), token);
+    },
+    async restore(scope, key) {
+      if (!GRANT_KEY.test(key) || grants.has(key))
+        throw new Error('That Spark tools grant cannot be restored.');
+      return register(scope, key, '');
     },
     async close() {
       grants.clear();

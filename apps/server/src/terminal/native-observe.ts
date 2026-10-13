@@ -265,5 +265,5 @@ export function nativeObserver({
       return true;
     });
   };
-  return hook;
+  return { hook, resumeUsage: (session: LiveSession) => usage.resume(session, interruptedTwice) };
 }

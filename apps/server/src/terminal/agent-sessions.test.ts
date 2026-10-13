@@ -59,6 +59,7 @@ describe('native terminal ownership', () => {
       cwd: '/tmp',
       command: '/bin/claude',
       args: f.request.args,
+      sessionId: f.request.id,
       env: f.request.env,
     });
     await new Promise((resolve) => setTimeout(resolve, 60));
