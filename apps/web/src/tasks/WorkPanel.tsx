@@ -38,6 +38,7 @@ interface WorkPanelProps {
   view?: PanelView;
   onView?: (view: PanelView) => void;
   browser?: ((chrome: PanelChrome) => ReactNode) | null;
+  terminal?: boolean;
 }
 
 export interface PanelChrome {
@@ -114,6 +115,7 @@ export function WorkPanel({
   view = 'work',
   onView,
   browser = null,
+  terminal = false,
 }: WorkPanelProps) {
   const hasWork = task !== null || autonomy !== null;
   const browsing = browser !== null && view === 'browser';
@@ -199,6 +201,7 @@ export function WorkPanel({
                 runs={runs}
                 heading={heading}
                 autonomy={autonomySection}
+                terminal={terminal}
               />
             ) : (
               autonomySection

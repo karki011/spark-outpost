@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { costSourceSchema } from './audit.ts';
-import { nativeTerminalProviderSchema } from './native-terminal.ts';
+import { nativeTerminalProviderSchema, type NativeTerminalProvider } from './native-terminal.ts';
 import { runStatusSchema } from './runs.ts';
 import { tokenUsageSchema } from './usage.ts';
 
@@ -53,3 +53,36 @@ export const nativeTerminalUsageSchema = z.object({
   reported: nativeTerminalReportedSchema.nullable(),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
+
+export type UsageOrigin = 'estimated' | 'reported' | 'unknown';
+
+const CLI_NAMES: Record<NativeTerminalProvider, string> = {
+  claude: 'Claude Code',
+  codex: 'Codex',
+};
+
+export function usageOriginLabel(
+  origin: UsageOrigin,
+  provider: NativeTerminalProvider | null = null,
+): string {
+  if (origin === 'estimated') return 'estimated from tokens';
+  if (origin === 'unknown') return 'unknown';
+  return `reported by ${provider ? CLI_NAMES[provider] : 'the CLI'}`;
+}
+
+export function turnCostOrigin(
+  turn: Pick<NativeTerminalTurn, 'costUsd' | 'costSource'>,
+): UsageOrigin {
+  if (turn.costUsd === null) return 'unknown';
+  return turn.costSource === 'reported' ? 'reported' : 'estimated';
+}
+
+export function reportedTotalNote(
+  provider: NativeTerminalProvider | null,
+  reported: NativeTerminalReported | null,
+): string {
+  if (reported) return usageOriginLabel('reported', provider);
+  if (provider === 'claude') return 'unknown until Claude Code exits and writes its own total';
+  if (provider === 'codex') return 'unknown: Codex reports no cost';
+  return usageOriginLabel('unknown');
+}
