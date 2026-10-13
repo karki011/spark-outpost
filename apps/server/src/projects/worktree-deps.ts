@@ -30,6 +30,7 @@ export interface DepsOptions {
   onInstall?: (command: string) => void;
   onPhase?: (phase: 'copy' | 'install') => void;
   staging?: string;
+  onProcess?: (pid: number) => void;
 }
 
 export const DEPS_PREP_LIMIT_MS = 90_000;
@@ -98,6 +99,7 @@ function defaultRun(options: DepsOptions): RunCommand {
       timeoutMs: network ? DEPS_INSTALL_LIMIT_MS : DEPS_PREP_LIMIT_MS,
       registryEnv: network,
       ...(options.signal ? { signal: options.signal } : {}),
+      ...(options.onProcess ? { onStart: options.onProcess } : {}),
     });
   };
 }

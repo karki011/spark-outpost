@@ -4,6 +4,7 @@ import type { TerminalDependencies } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { git } from '../projects/snapshot.ts';
 import { prepareDependencies, type DepsPrep } from '../projects/worktree-deps.ts';
+import { endRecordedProcess, recordProcess } from './process-identity.ts';
 
 export interface DepsJob {
   main: string;
@@ -41,6 +42,8 @@ interface Running {
 
 const FAILED = 'Dependencies could not be prepared in this session’s worktree.';
 const PENDING_DIR = 'spark-deps';
+const PROCESS_FILE = 'process.json';
+const STAGING_DIR = 'staging';
 
 async function exists(target: string): Promise<boolean> {
   return access(target).then(
@@ -72,8 +75,10 @@ export function sessionDeps(options: SessionDepsOptions = {}): SessionDeps {
     if (!(await exists(path.join(job.copy, 'package.json')))) return end('nothing', null);
     const pending = await pendingDir(job.copy);
     if (pending) {
+      await endRecordedProcess(path.join(pending, PROCESS_FILE));
+      if (signal.aborted) return end('stopped', null);
       await rm(pending, { recursive: true, force: true });
-      await mkdir(pending, { recursive: true });
+      await mkdir(path.join(pending, STAGING_DIR), { recursive: true });
     }
     show(conversationId, { state: 'preparing', step: null, note: null });
     let prep: DepsPrep | null = null;
@@ -82,7 +87,13 @@ export function sessionDeps(options: SessionDepsOptions = {}): SessionDeps {
       prep = await prepare(job.main, job.copy, {
         root: job.main,
         signal,
-        ...(pending ? { staging: pending } : {}),
+        ...(pending
+          ? {
+              staging: path.join(pending, STAGING_DIR),
+              onProcess: (pid: number) =>
+                void recordProcess(path.join(pending, PROCESS_FILE), pid).catch(() => undefined),
+            }
+          : {}),
         onPhase: (step) => {
           if (!signal.aborted) show(conversationId, { state: 'preparing', step, note: null });
         },

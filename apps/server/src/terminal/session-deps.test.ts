@@ -74,7 +74,7 @@ describe('dependency preparation behind a Terminal session', () => {
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(deps.status(CHAT)).toEqual({ state: 'preparing', step: null, note: null });
     expect(existsSync(marker)).toBe(true);
-    expect(calls[0]).toMatchObject({ root: main, staging: marker });
+    expect(calls[0]).toMatchObject({ root: main, staging: join(marker, 'staging') });
     calls[0]!.onPhase?.('install');
     expect(deps.status(CHAT)).toEqual({ state: 'preparing', step: 'install', note: null });
     deps.start(CHAT, { main, copy });
@@ -126,7 +126,7 @@ describe('dependency preparation behind a Terminal session', () => {
     const { deps, ended } = watched(prepare);
     deps.start(CHAT, { main, copy });
     await vi.waitFor(() => expect(calls).toHaveLength(1));
-    mkdirSync(join(marker, '0'));
+    mkdirSync(join(marker, 'staging', '0'));
     await deps.stop(CHAT);
     expect(calls[0]!.signal?.aborted).toBe(true);
     expect(deps.status(CHAT)).toBeNull();
@@ -140,13 +140,13 @@ describe('dependency preparation behind a Terminal session', () => {
     const { deps, ended } = watched(prepare);
     await deps.resume(db([{ repo_root: main }]), CHAT, copy);
     expect(prepare).not.toHaveBeenCalled();
-    mkdirSync(join(marker, '0'), { recursive: true });
+    mkdirSync(join(marker, 'staging', '0'), { recursive: true });
     await deps.resume(db([]), CHAT, copy);
     expect(prepare).not.toHaveBeenCalled();
     await deps.resume(db([{ repo_root: main }]), CHAT, copy);
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     expect(prepare).toHaveBeenCalledWith(main, copy, expect.anything());
-    expect(existsSync(join(marker, '0'))).toBe(false);
+    expect(existsSync(join(marker, 'staging', '0'))).toBe(false);
     release(prepared);
     await vi.waitFor(() => expect(ended).toHaveLength(1));
     expect(existsSync(marker)).toBe(false);
