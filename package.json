@@ -10,6 +10,7 @@
     "dev": "pnpm --parallel --filter @spark-outpost/server --filter @spark-outpost/web dev",
     "desktop:dev": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop dev",
     "desktop:package": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop build && pnpm --filter @spark-outpost/desktop package",
+    "desktop:tmux": "pnpm --filter @spark-outpost/desktop tmux",
     "desktop:release": "pnpm --filter @spark-outpost/desktop release",
     "desktop:e2e-update": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop build && pnpm --filter @spark-outpost/desktop e2e:update",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:source && pnpm check:docs && pnpm model-cards:check && pnpm knip && pnpm a11y:contrast --quiet && pnpm acp:coverage && pnpm test",
