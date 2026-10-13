@@ -130,22 +130,36 @@ async function cloneFolders(
     const argv = cloneCommand(platform, path.join(main, folder, 'node_modules'), landing);
     if (!argv) return 'no copy-on-write clone on this platform';
     const result = await run(argv, copy);
-    const placed =
-      succeeded(result) &&
-      (landing === target ||
-        (await rename(landing, target).then(
-          () => true,
-          () => false,
-        )));
-    if (!placed) {
-      await Promise.all(
-        [...cloned, target, landing].map((dir) => rm(dir, { recursive: true, force: true })),
-      );
-      return `clone failed: ${firstLine(result)}`;
+    if (!staging) {
+      if (!succeeded(result)) {
+        await removeAll([...cloned, target]);
+        return `clone failed: ${firstLine(result)}`;
+      }
+      cloned.push(target);
+      continue;
     }
-    cloned.push(target);
+    const landed = succeeded(result) ? await land(landing, target) : 'failed';
+    if (landed === 'placed') {
+      cloned.push(target);
+      continue;
+    }
+    await removeAll([landing]);
+    if (landed === 'failed') return `clone failed: ${firstLine(result)}`;
   }
   return null;
+}
+
+async function removeAll(dirs: readonly string[]): Promise<void> {
+  await Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+}
+
+async function land(landing: string, target: string): Promise<'placed' | 'taken' | 'failed'> {
+  try {
+    await rename(landing, target);
+    return 'placed';
+  } catch {
+    return (await exists(target)) ? 'taken' : 'failed';
+  }
 }
 
 async function lockfiles(project: string): Promise<Set<string>> {
