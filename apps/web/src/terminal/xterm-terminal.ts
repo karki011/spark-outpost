@@ -12,7 +12,7 @@ import { followMouseReporting, MOUSE_REPORTING_OFF } from './mouse-reporting.ts'
 import { refitWhenFontLoads, TERMINAL_FONT, TERMINAL_FONT_SIZE } from './terminal-font.ts';
 import { lineEditingSequence, tabAction } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
-import { themeFromTokens } from './terminal-theme.ts';
+import { colorsFromTokens, themeFromTokens } from './terminal-theme.ts';
 import { followTerminalDrops } from './terminal-drop.ts';
 import { followSelection, selectionActions } from './selection/follow-selection.ts';
 
@@ -53,9 +53,10 @@ export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   });
 }
 
-export function followTheme(terminal: Terminal): () => void {
+export function followTheme(terminal: Terminal, onChange?: () => void): () => void {
   const observer = new MutationObserver(() => {
     terminal.options.theme = themeFromTokens();
+    onChange?.();
   });
   observer.observe(document.documentElement, {
     attributes: true,
@@ -102,6 +103,10 @@ export function openXterm<T extends TerminalTicket>(
     socket.send(encoder.encode(data));
     if (data.includes('\r')) handlers.onCommandRun?.();
   };
+  const sendColors = () => {
+    const colors = colorsFromTokens();
+    if (colors) sendControl({ type: 'colors', colors });
+  };
   const sendResize = () => {
     try {
       fit.fit();
@@ -122,7 +127,7 @@ export function openXterm<T extends TerminalTicket>(
 
   const resizeObserver = new ResizeObserver(sendResize);
   resizeObserver.observe(element);
-  const unfollowTheme = followTheme(terminal);
+  const unfollowTheme = followTheme(terminal, sendColors);
   const inputSubscription = terminal.onData(sendInput);
   const dropped = (text: string) => {
     if (socket?.readyState !== WebSocket.OPEN)
@@ -163,6 +168,7 @@ export function openXterm<T extends TerminalTicket>(
       'open',
       () => {
         sendResize();
+        sendColors();
         selection.refresh();
         handlers.onOpen(created);
         if (!readOnly) terminal.focus();

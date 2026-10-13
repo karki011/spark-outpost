@@ -1,4 +1,5 @@
 import os from 'node:os';
+import type { TerminalColors } from '@spark-outpost/contracts';
 import { spawn as spawnNodePty } from 'node-pty';
 import { childEnvironment } from '../setup/environment.ts';
 
@@ -6,6 +7,7 @@ export interface PtyProcess {
   readonly pid: number;
   write(data: string): void;
   resize(cols: number, rows: number): void;
+  colors?(colors: TerminalColors): void;
   onData(listener: (data: string) => void): void;
   onExit(listener: (exit: { exitCode: number; signal?: number | undefined }) => void): void;
   kill?(): void;
@@ -21,6 +23,7 @@ export interface PtyOptions {
   env?: Record<string, string>;
   sessionId?: string;
   adopt?: boolean;
+  colors?: TerminalColors | undefined;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;

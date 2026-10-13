@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { terminalColorsSchema } from './terminal-colors.ts';
 import { createShellResponseSchema } from './terminal-shell.ts';
 
 export const sessionTypeSchema = z.enum(['chat', 'terminal']);
@@ -42,6 +43,7 @@ export const nativeTerminalLaunchRequestSchema = z.strictObject({
   prompt: z.string().trim().min(1).max(100_000).optional(),
   messageId: z.uuid().optional(),
   resume: z.boolean().default(false),
+  colors: terminalColorsSchema.optional(),
 });
 export type NativeTerminalLaunchRequest = z.infer<typeof nativeTerminalLaunchRequestSchema>;
 

@@ -11,6 +11,7 @@ import {
   type TerminalStep,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
+import { colorsFromTokens } from './terminal-theme.ts';
 
 export interface TerminalTicket {
   id: string;
@@ -73,7 +74,7 @@ export const nativeTerminalApi = {
   ) =>
     request(nativeTerminalLaunchResponseSchema, `/conversations/${conversationId}/terminal`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, colors: colorsFromTokens() ?? undefined }),
     }),
   attach: (id: string) =>
     request(createShellResponseSchema, `/terminal/sessions/${id}/attach`, {
