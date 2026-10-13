@@ -2,6 +2,18 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.14
+
+- Terminal: a Terminal session starts from the chat composer, with the project, agent and permissions as chips. A running session has one slim bar and the terminal fills the pane. Focus (⌘⇧F) hides the chat list and Work panel. Hide view is gone, and Stop session moved into the ⋯ menu.
+- Terminal: selecting text copies it and shows a toolbar: Add to terminal (⌘⇧A), Ask about this, Comment and New chat with this. Nothing is sent for you. Hold Option to select when the agent's interface uses the mouse.
+- Terminal: Shift+Tab and Tab always reach the agent. ⌥Tab and ⌥⇧Tab move out of the terminal. Line spacing no longer changes after a window resize.
+- Terminal: the Work panel shows the session's steps, and tokens and an estimated cost for each turn. Claude Code's own session total appears when it exits. Spark stores tool names and times, never commands, paths, prompts or output.
+- Browser: agents can open any web address in the Browser pane and click, type and scroll there, so you can watch. It follows the agent's mode, with one card per site otherwise. An agent's tab on a website starts signed out, even where you are signed in. Typing a value from a secret file asks first in every mode, and agents cannot type into password fields.
+- Spark Island: a line beside Scout says what is waiting, done or failed. Later leaves a mark and stays set aside after a restart. The Home tab shows what a quiet session last said, and names Terminal sessions.
+- Spark Island: no chime for a request in the chat you are viewing, and a new chime when a chat could not finish.
+- Mac: the Dock icon shows how many chats need you. With Spark Island off, a notification names the chat, and clicking it opens that chat. Turn it off under Settings → Spark.
+- Outposts: an approval from a member chat names its handle in the Island line.
+
 ## 0.1.0-beta.13
 
 - Sub-agents: when an agent uses its own sub-agents, the chat and Agent TV list them with their state. Open one to see its steps, the files it changed, the commands it ran, its report, tokens and duration. Codex sub-agents also show their model and an estimated cost.
