@@ -5,7 +5,7 @@ import type {
   NativeTerminalTurn,
   NativeTerminalUsage,
 } from '@spark-outpost/contracts';
-import { lineText, sessionLine, shortModel, terminalFacts } from './session-line.ts';
+import { lineText, noBreakParts, sessionLine, shortModel, terminalFacts } from './session-line.ts';
 
 const ID = '00000000-0000-4000-8000-000000000001';
 
@@ -188,5 +188,14 @@ describe('shortModel', () => {
   it('names the model the way chats do, without the context suffix', () => {
     expect(shortModel('claude-sonnet-4-5[1m]')).toBe('Sonnet 4.5');
     expect(shortModel(null)).toBeNull();
+  });
+});
+
+describe('noBreakParts', () => {
+  it('lets a line wrap only after a separator', () => {
+    expect(noBreakParts('Finished · 3 steps · 1 sub-agent')).toBe(
+      'Finished\u00a0· 3\u00a0steps\u00a0· 1\u00a0sub-agent',
+    );
+    expect(noBreakParts('')).toBe('');
   });
 });

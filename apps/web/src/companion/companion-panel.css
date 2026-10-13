@@ -140,6 +140,10 @@
   font-size: 12px;
 }
 
+.cmp-txt small[data-parts] {
+  white-space: normal;
+}
+
 .cmp-row.error .cmp-txt small {
   color: var(--danger);
 }

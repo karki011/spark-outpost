@@ -100,3 +100,12 @@ export function terminalFacts(
 ): string {
   return isTerminalSession(chat) && !waitsOnCard(chat) ? lineText(line, parts) : '';
 }
+
+const NO_BREAK_SPACE = '\u00a0';
+
+export function noBreakParts(text: string): string {
+  return text
+    .split(' · ')
+    .map((part) => part.replaceAll(' ', NO_BREAK_SPACE))
+    .join(`${NO_BREAK_SPACE}· `);
+}

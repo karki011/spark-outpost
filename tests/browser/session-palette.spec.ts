@@ -197,7 +197,7 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     const overflow = await palette(page).evaluate((panel) => panel.scrollWidth > panel.clientWidth);
     expect(overflow).toBe(false);
     await expect(rows(page).filter({ hasText: 'Port the parser' }).locator('.sp-line')).toHaveText(
-      /^Running a command · 3 steps/,
+      /^Running\sa\scommand\s· 3\ssteps/,
     );
     await snap(page, `phone-${mode}`);
     await palette(page).getByRole('button', { name: 'Close' }).click();

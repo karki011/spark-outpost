@@ -1,6 +1,6 @@
 import { memo, useRef } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { lineText, type LinePart } from './session-line.ts';
+import { isTerminalSession, lineText, noBreakParts, type LinePart } from './session-line.ts';
 import type { PaletteEntry } from './palette-model.ts';
 import { useInView } from './use-in-view.ts';
 import { useSessionLine } from './use-session-line.ts';
@@ -25,7 +25,8 @@ export const PaletteRow = memo(function PaletteRow({
   onHover,
 }: PaletteRowProps) {
   const ref = useRef<HTMLLIElement>(null);
-  const line = lineText(useSessionLine(entry.chat, useInView(ref)), ROW_PARTS);
+  const text = lineText(useSessionLine(entry.chat, useInView(ref)), ROW_PARTS);
+  const line = isTerminalSession(entry.chat) ? noBreakParts(text) : text;
   const where = [entry.place, entry.agent].filter(Boolean).join(' · ');
   return (
     <li

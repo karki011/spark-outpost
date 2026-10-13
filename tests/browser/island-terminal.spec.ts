@@ -60,6 +60,15 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await expect(note).toHaveText('Terminal sessionFinished · 3 steps · 1 sub-agent · Sonnet 4.5');
     await expect(nowCard(page).locator('.isl-now-fact')).toHaveText(/^Claude · (\S.* · )?parser$/);
     await expect(nowCard(page).locator('.isl-now-dot')).toHaveAttribute('data-state', 'done');
+    const lineHeights = await note.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el.lastChild!);
+      return [...range.getClientRects()].map((rect) => Math.round(rect.top));
+    });
+    expect(new Set(lineHeights).size).toBe(2);
+    expect(await note.evaluate((el) => el.lastChild!.textContent)).toBe(
+      'Finished\u00a0· 3\u00a0steps\u00a0· 1\u00a0sub-agent\u00a0· Sonnet\u00a04.5',
+    );
     await snap(page, `done-${mode}`);
 
     await island(page).getByRole('tab', { name: 'Chats' }).click();

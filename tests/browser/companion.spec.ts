@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
@@ -5,6 +6,7 @@ import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { seedTerminal } from './terminal-seed.ts';
 
+const SHOTS = process.env.PALETTE_SHOTS ?? '';
 const companion = (page: Page) => page.getByRole('button', { name: /^Status: / });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Status' });
 const root = (page: Page) => page.locator('.cmp');
@@ -117,9 +119,10 @@ test('the panel shows the step line of a working Terminal session', async ({ pag
     .getByRole('region', { name: /^Running/ })
     .getByRole('listitem')
     .filter({ hasText: 'Port the parser' });
-  await expect(row.locator('small')).toHaveText(
-    'Running · Running a command · 3 steps · 1 sub-agent',
-  );
+  const line = row.locator('small');
+  await expect(line).toHaveText('Running a command · 3 steps · 1 sub-agent');
+  expect(await line.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(false);
+  if (SHOTS) await panel(page).screenshot({ path: path.join(SHOTS, 'companion-terminal.png') });
   await expect(row).not.toContainText('$');
   await expect(row.getByRole('button', { name: 'Watch: Port the parser' })).toBeVisible();
 });

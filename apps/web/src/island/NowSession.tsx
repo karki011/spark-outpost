@@ -14,10 +14,10 @@ import { FileView } from './FileView.tsx';
 import { activityLines, baseName, runActivity, stepCount, withChanges } from './home-model.ts';
 import { sessionState } from './island-model.ts';
 import { OpenButton } from './now-parts.tsx';
-import { sessionFacts, sessionNotes, showsFacts } from './session-summary.ts';
+import { sessionFacts, sessionNotes, showsFacts, type SessionNote } from './session-summary.ts';
 import { SessionSummary } from './SessionSummary.tsx';
 import { chatAgent } from './use-island-data.ts';
-import { terminalFacts, type LinePart } from '../sessions/session-line.ts';
+import { noBreakParts, terminalFacts, type LinePart } from '../sessions/session-line.ts';
 import { useSessionLine } from '../sessions/use-session-line.ts';
 import { useFileView } from './use-file-view.ts';
 import { useRunChanges } from './use-run-changes.ts';
@@ -25,6 +25,13 @@ import { useRunChanges } from './use-run-changes.ts';
 const NO_MODES: readonly AgentModeOption[] = [];
 const LOGGED_PARTS: readonly LinePart[] = ['steps', 'subagents', 'model'];
 const QUIET_PARTS: readonly LinePart[] = ['step', ...LOGGED_PARTS];
+
+function wholeParts(notes: SessionNote[], terminalText: string): SessionNote[] {
+  if (terminalText === '') return notes;
+  return notes.map((note) =>
+    note.tone === 'plain' ? { ...note, text: noBreakParts(note.text) } : note,
+  );
+}
 
 function taskOf(detail: ConversationDetail | undefined, runIds: readonly string[]): string | null {
   if (!detail) return null;
@@ -95,7 +102,7 @@ export function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: No
   const summed = showsFacts(state, hasLog);
   const terminalText = terminalFacts(chat, terminalLine, hasLog ? LOGGED_PARTS : QUIET_PARTS);
   const notes = useMemo(
-    () => sessionNotes(chat, state, detail.data, hasLog, terminalText),
+    () => wholeParts(sessionNotes(chat, state, detail.data, hasLog, terminalText), terminalText),
     [chat, state, detail.data, hasLog, terminalText],
   );
   const agent = agentLine(chat, detail.data);
