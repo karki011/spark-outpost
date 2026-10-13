@@ -1,6 +1,6 @@
 # Browser pane
 
-> **Status: "see" and "act" built.** The user browses in a pane next to a chat; agents open any `http(s)` address or project file, read it (outline, text, screenshot, console and network logs) and act on it (click, type, keys, scroll, back, forward, reload) in the visible tab; the user selects an element or a region for the next message. Spark can also fill a saved test sign-in for an agent ([Saved sign-ins](#saved-sign-ins)). Opening sites and acting were added on 2026-10-12 at the owner's request ([Acting on a page](#acting-on-a-page), [Policy](#policy), [Kept blocks](#kept-blocks)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
+> **Status: "see" and "act" built.** The user browses in a pane next to a chat; agents open any `http(s)` address or project file, read it (outline, text, screenshot, console and network logs) and act on it (click, type, keys, scroll, back, forward, reload) in the visible tab; the user selects an element or a region for the next message. Spark can also fill a saved test sign-in for an agent ([Saved sign-ins](#saved-sign-ins)). Opening sites and acting were added on 2026-10-12 at the owner's request ([Acting on a page](#acting-on-a-page), [Policy](#policy), [Kept blocks](#kept-blocks), [Decided](#decided)). Mac app only: the tools are not registered and the Browser tab is hidden when there is no desktop shell.
 
 Spark is a moderator here too: it honours the agent's mode, keeps a few hard rails, and records what happened.
 
@@ -19,9 +19,23 @@ Spark is a moderator here too: it honours the agent's mode, keeps a few hard rai
 ## Views and isolation
 
 - **Never the app session.** A tab's session is `persist:spark-browser-<projectId>` (cookies on disk, shared by the project's chats) or, for a chat without a project or with **Keep sign-ins in the browser** off, the in-memory `spark-browser-chat-<chatId>`. `browserSession` throws if a name would resolve to `session.defaultSession`, so `attachApiToken` (default session only) can never add the launch token. The pane never reads the cookies of the user's own browser (Safari, Chrome).
-- **One partition for the user's tabs and the agent's.** Within a project (or a chat) the user's tabs and the agent's tabs share the partition, so a site the user signed in to in the pane is signed in for an agent tab on that site too. That is what lets an agent check the user's local app; with any site now open to agents it also means an agent can act as the user on a site they signed in to here. The card for acting on a user-owned tab does not cover this case: the agent's own tab follows the mode. See [Open questions](#open-questions).
+- **The agent's own storage on websites.** An agent-owned tab on an external address uses `spark-browser-agent-<chatId>` (`agentPartition`, `tabPartition`): in memory, one per chat. It starts signed out everywhere and never sends a cookie the user set in the pane, so a site the user is signed in to in their own tab shows signed out in the agent's tab. Every guard below is installed on it by the same `browserSession` call; it has no project folders, so no `file:` loads there at all.
+
+  | Tab                                                  | Storage                                                                                  |
+  | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+  | The user's tab, any address                          | The user's partition (project or chat), as before                                        |
+  | The agent's tab on a local page or a project file    | The user's partition, as before, so a login the user did on their dev server still works |
+  | The agent's tab on an external address               | The agent's partition for that chat                                                      |
+  | A tab the agent's tab opens (popup, `target=_blank`) | An agent tab; the same rule by address, so an external one is in the agent's partition   |
+  | A user-owned tab the agent reads or acts on          | The user's partition; acting asks in every mode                                          |
+  | An agent tab the user navigates from the address bar | Becomes the user's, and loads in the user's partition                                    |
+  - **Crossing.** A view has one session for life, so a tab that crosses is given a new view. `PaneTab.load` picks the partition from owner and address; a link, script navigation or main-frame redirect that would cross is stopped (`will-navigate`, `will-redirect`) and loaded again in the right partition, and `did-navigate` does the same if one still commits. The tab's history does not survive the crossing, and a form post that crosses arrives as a plain load.
+  - **Local pages share, external never.** The user's partition is reached by an agent only for local addresses and project files. A local page may itself embed an external frame or script, which is requested with the user's cookies as it would be for the user; the agent's reads cover the main frame only.
+  - **Saved sign-ins.** `spark_browser_sign_in` types into whatever tab the agent is on, so on a website it signs the agent's partition in. That is the intended way for an agent to be signed in to a site.
+  - **Why per chat and in memory.** One chat's agent session can never show up in another chat or after a restart, and there is nothing on disk to clear. A sign-in card is allowed per chat already, so the two last the same. The storage lives until Spark quits; it is not listed under **Keep sign-ins in the browser** in Settings, which shows the user's partition.
+
 - **Spark's own ports are blocked** for every request on a browser partition (`webRequest.onBeforeRequest`): the API port, the Postgres port and the Spark tool port the worker reports. The match is on the port, whatever the host or scheme, so a rebinding hostname or a WebSocket does not get through. A page-set `X-Spark-Token` header is stripped as well. The API's own host, origin and token checks still stand behind this.
-- `sandbox`, `contextIsolation` on, no preload, no script injected into pages. Permission requests and checks are denied, downloads are cancelled, popups become tabs of the same chat with the opener's owner, and `file://` loads only inside the chat's linked projects and worktree. A navigation or a main-frame redirect to a scheme that is not `http`, `https` or `file`, or to an address with a username or password in it, is stopped at the tab (`will-navigate`, `will-redirect`, `navigationAllowed`); every hop of a redirect goes through the request guard as well.
+- `sandbox`, `contextIsolation` on, no preload, no script injected into pages. Permission requests and checks are denied, downloads are cancelled, popups become tabs of the same chat with the opener's owner, and `file://` loads only inside the chat's linked projects and worktree. A navigation or a main-frame redirect to a scheme that is not `http`, `https` or `file`, or to an address with a username or password in it, is stopped at the tab (`will-navigate`, `will-redirect`, `navigationAllowed`), and so is one to a Spark port or a file outside the project (the tab then shows **This page didn't load**); every hop of a redirect goes through the request guard as well.
 - Views are created when a tab is first shown or used and closed when the chat has not been shown or used for 10 minutes; the tab keeps its address and reloads when needed. Console and network capture is event-driven and bounded (300 entries each); headers, request bodies and query strings are never recorded. Both logs start over when the tab's main frame begins loading another document, and the security warnings the development shell prints into every page are left out.
 
 ## The pane
@@ -138,27 +152,31 @@ On a site outside this computer, opening, reading and acting use the Spark actio
 
 ## Kept blocks
 
-| Block                                                                             | Where                                                     | Why it stays                                                                           |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Spark's API, Postgres and tool ports, on any host or scheme, for every request    | `requestAllowed`, `agentOpenProblem`                      | A page could otherwise drive Spark's own API or database                               |
-| `file:` outside the chat's projects and worktree                                  | `requestAllowed`, `agentOpenProblem`                      | The agent's files are the project's; anything else on disk is not a page               |
-| `javascript:`, `data:`, `blob:`, `chrome:`, `devtools:`, `view-source:` as a page | `classifyBrowserUrl`, `navigationAllowed`                 | They run script in a page or open browser internals rather than a site                 |
-| An address with a username or password in it                                      | `classifyBrowserUrl`                                      | A credential would sit in the address, the tab strip and the audit                     |
-| Typing into password, card and code fields                                        | `actOnPage`, `spark_browser_act`                          | Agents never hold or enter credentials; saved sign-ins are typed by Spark after a card |
-| Field values of those fields in reads and screenshots                             | `outline.ts`, `page-tools.ts`                             | Unchanged                                                                              |
-| Downloads                                                                         | `will-download` cancelled in `sessions.ts`                | A download is a file written outside the project with no card                          |
-| Camera, microphone, location, notifications and every other permission            | `setPermissionRequestHandler` and the check handlers      | No page gets a device or a system prompt through an agent                              |
-| Navigating a tab the user owns                                                    | `chooseOpenTab`                                           | The user's place in their own tab is theirs                                            |
-| The app session and the launch token                                              | `browserSession`, `withoutSparkToken`                     | A page must never be the app                                                           |
-| A paired device, the web build                                                    | No bridge; the tools are not registered without the shell | The pane and its views stay on the Mac                                                 |
+| Block                                                                             | Where                                                     | Why it stays                                                                                 |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Spark's API, Postgres and tool ports, on any host or scheme, for every request    | `requestAllowed`, `agentOpenProblem`                      | A page could otherwise drive Spark's own API or database                                     |
+| `file:` outside the chat's projects and worktree                                  | `requestAllowed`, `agentOpenProblem`                      | The agent's files are the project's; anything else on disk is not a page                     |
+| `javascript:`, `data:`, `blob:`, `chrome:`, `devtools:`, `view-source:` as a page | `classifyBrowserUrl`, `navigationAllowed`                 | They run script in a page or open browser internals rather than a site                       |
+| An address with a username or password in it                                      | `classifyBrowserUrl`                                      | A credential would sit in the address, the tab strip and the audit                           |
+| Typing into password, card and code fields                                        | `actOnPage`, `spark_browser_act`                          | Agents never hold or enter credentials; saved sign-ins are typed by Spark after a card       |
+| Field values of those fields in reads and screenshots                             | `outline.ts`, `page-tools.ts`                             | Unchanged                                                                                    |
+| Downloads                                                                         | `will-download` cancelled in `sessions.ts`                | A download is a file written outside the project with no card                                |
+| Camera, microphone, location, notifications and every other permission            | `setPermissionRequestHandler` and the check handlers      | No page gets a device or a system prompt through an agent                                    |
+| Navigating a tab the user owns                                                    | `chooseOpenTab`                                           | The user's place in their own tab is theirs                                                  |
+| The user's pane cookies for an agent tab on a website                             | `tabPartition`                                            | An agent must not act as the user on a site they signed in to; a saved sign-in is the way in |
+| The app session and the launch token                                              | `browserSession`, `withoutSparkToken`                     | A page must never be the app                                                                 |
+| A paired device, the web build                                                    | No bridge; the tools are not registered without the shell | The pane and its views stay on the Mac                                                       |
 
-## Open questions
+## Decided
 
-For the owner; none is decided by this change.
+By the owner on 2026-10-12:
 
-- **Shared partition.** An agent tab is signed in wherever the user signed in inside the pane for that project. Options: leave it (today), give agent-opened external tabs their own partition, or ask before an agent acts on any site that has cookies in the partition.
-- **Cards on a paired device.** A paired device can answer the open, read and act cards like any Spark action card; only the sign-in card sits behind a switch.
-- **Terminal sessions.** The tools are offered there and follow the observed mode; Spark's cards work only during a turn.
+- **Storage.** Agent tabs on websites get their own storage ([Views and isolation](#views-and-isolation)).
+- **Paired devices** may answer the open, read, act and secret-value cards like any other card; only the saved sign-in card sits behind a switch (`cardSwitch`, `PHONE_REMOTE.md`).
+- **Plan and Read-only chats** are offered `spark_browser_act` and get its card.
+- **A click is not a send**, including one that submits a form: only opening an address and typing are.
+
+Terminal sessions are offered the tools and follow the observed mode, as before; Spark's cards work there only during a turn.
 
 ## Saved sign-ins
 
@@ -234,7 +252,7 @@ Later on 2026-10-04, in the same kind of dev build with a throwaway data folder 
 
 ## Not verified
 
-Opening sites and acting (2026-10-12) were not run in the shell or against a real site: the CDP calls are covered with a fake `Cdp` (`agent-act.test.ts`), the address rules as pure functions (`request-guard.test.ts`), the tools with a fake browser host (`spark-browser-open.db.test.ts`, `spark-browser-act.db.test.ts`, `tests/browser/browser-agent.spec.ts`). Whether `will-redirect` and the request guard stop a real redirect to a Spark port, how the highlight looks, and how real Claude and Codex sessions use the tools need a check in the Mac app.
+Opening sites and acting (2026-10-12) were not run in the shell or against a real site: the CDP calls are covered with a fake `Cdp` (`agent-act.test.ts`), the address rules as pure functions (`request-guard.test.ts`), the tools with a fake browser host (`spark-browser-open.db.test.ts`, `spark-browser-act.db.test.ts`, `tests/browser/browser-agent.spec.ts`). Redirects, crossings between the two partitions, popups, the guards on the agent's partition and a saved sign-in typed into an agent tab are driven through the real `PaneTab`, `BrowserPanes`, `browserSession` and `runBrowserOp` over a fake Electron (`agent-partition.test.ts`, `electron.fixture.ts`): a redirect to a Spark port, `data:`, `javascript:` or a file fails the load and sends no request there. Electron's own event order for a real redirect, how the highlight looks, whether a view swap flickers, and how real Claude and Codex sessions use the tools need a check in the Mac app.
 
 Saved sign-ins were not run in the shell: the fill was driven over CDP in Playwright's Chromium against the fixture pages (`tests/browser/sign-in-fill.spec.ts`), and the tools with a fake browser host. A real keychain on a signed build, a real `WebContentsView`, and real sites were not tried.
 

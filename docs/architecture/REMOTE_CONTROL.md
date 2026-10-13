@@ -224,6 +224,7 @@ It is a paired device. Nothing more.
 
 - It reaches only what `route-rules.ts` allows, behind the same switches, with the same redaction and the same audit rows on the host.
 - No terminal, no Browser pane, no preview, no Finder actions, no diagnostics export, no updates on the host.
+- It can answer the cards an agent's browsing raises on the host (open a site, read a page, click and type, and the hold card for a secret value), like any other card; only the saved sign-in card sits behind a switch. See `PHONE_REMOTE.md`.
 - It cannot change switches, pair or revoke devices, or touch Tailscale on the host.
 - It cannot add a remote Spark of its own. The **Other Sparks** card is shown only in a local desktop window, and its routes are `never` for a remote device. So there is no chain from Mac to Mac to Mac.
 - No new route on the host is needed for (a). Any route added later needs a rule or the policy test fails, as today.
