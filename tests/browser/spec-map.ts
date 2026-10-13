@@ -102,6 +102,7 @@ export const SPEC_GROUPS = {
     'project-work-place',
     'projects',
     'rail-badges-live',
+    'session-palette',
     'sidebar',
     'sidebar-attention',
     'sidebar-drag',
@@ -169,6 +170,7 @@ export const SPEC_GROUPS = {
     'island-rest-line',
     'island-size',
     'island-states',
+    'island-terminal',
   ],
   phone: ['phone', 'phone-motion', 'phone-pair-again', 'phone-passkey'],
   'docs-help': ['docs', 'help'],
@@ -259,6 +261,10 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   {
     prefix: 'apps/web/src/settings/',
     groups: ['settings-providers', 'tickets', 'slack', 'sparks', 'island-desktop', 'phone'],
+  },
+  {
+    prefix: 'apps/web/src/sessions/',
+    groups: ['sidebar-projects', 'island-desktop', 'home'],
   },
   { prefix: 'apps/web/src/ship/', groups: ['ship-pr'] },
   { prefix: 'apps/web/src/slack/', groups: ['slack'] },

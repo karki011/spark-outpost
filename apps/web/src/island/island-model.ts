@@ -1,5 +1,11 @@
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { terminalMood } from '../terminal/native-state.ts';
+import {
+  terminalStateEntry,
+  terminalKey,
+  terminalTurnDone,
+  terminalTurnFinished,
+} from '../terminal/turn-done.ts';
 import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
 
 export type Panel = 'home' | 'quick' | 'sessions' | 'ask';
@@ -118,13 +124,18 @@ export function viewWidth(view: IslandView, notchWidth: number, screenWidth: num
 
 export type RunStatuses = ReadonlyMap<string, { status: string; chatId: string }>;
 
+type RunStatusEntry = [string, { status: string; chatId: string }];
+
 export function runStatuses(chats: readonly ConversationSummary[]): RunStatuses {
   return new Map(
-    chats.flatMap((chat) =>
-      chat.latestRun
-        ? [[chat.latestRun.id, { status: chat.latestRun.status, chatId: chat.id }]]
-        : [],
-    ),
+    chats.flatMap((chat): RunStatusEntry[] => {
+      const run = chat.latestRun;
+      const terminal = terminalStateEntry(chat);
+      const entries: RunStatusEntry[] = [];
+      if (run) entries.push([run.id, { status: run.status, chatId: chat.id }]);
+      if (terminal) entries.push([terminal[0], { status: terminal[1], chatId: chat.id }]);
+      return entries;
+    }),
   );
 }
 
@@ -133,9 +144,10 @@ const LIVE = new Set(['queued', 'running', 'awaiting_approval']);
 export function newMoments(previous: RunStatuses, chats: readonly ConversationSummary[]): Moment[] {
   return chats.flatMap((chat): Moment[] => {
     const run = chat.latestRun;
-    if (!run) return [];
-    const before = previous.get(run.id)?.status;
-    if (!before || !LIVE.has(before)) return [];
+    const runBefore = run ? previous.get(run.id)?.status : undefined;
+    if (terminalTurnDone(chat, previous.get(terminalKey(chat.id))?.status, runBefore))
+      return [{ kind: 'done', chatId: chat.id, runId: run?.id ?? chat.terminal!.id }];
+    if (!run || !runBefore || !LIVE.has(runBefore)) return [];
     if (run.status === 'succeeded') return [{ kind: 'done', chatId: chat.id, runId: run.id }];
     if (run.status === 'failed') return [{ kind: 'failed', chatId: chat.id, runId: run.id }];
     return [];
@@ -199,7 +211,7 @@ export type SessionState = 'working' | 'waiting' | 'done' | 'failed' | 'idle';
 
 export function sessionState(chat: ConversationSummary): SessionState {
   if (chat.sessionType === 'terminal' && chat.terminal && !chat.needsInput)
-    return terminalMood(chat.terminal.state);
+    return terminalTurnFinished(chat) ? 'done' : terminalMood(chat.terminal.state);
   const tone = rowState(chat, false).tone;
   if (tone === 'permission' || tone === 'asking') return 'waiting';
   if (tone === 'running') return 'working';

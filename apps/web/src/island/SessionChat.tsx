@@ -14,7 +14,6 @@ import { ApprovalCard } from '../chat/approvals/ApprovalCard.tsx';
 import { CheckpointCard } from '../chat/checkpoints/CheckpointCard.tsx';
 import { isCheckpoint } from '../chat/checkpoints/checkpoint-model.ts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
-import { rowState } from '../conversations/row-state.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { activeRun } from '../chat/turns.ts';
@@ -25,9 +24,14 @@ import { MAC } from '../ui/shortcuts.ts';
 import { islandApi } from './island-api.ts';
 import { sessionState } from './island-model.ts';
 import { useArmedAfterChange } from './island-parts.tsx';
+import { terminalFacts, type LinePart } from '../sessions/session-line.ts';
+import { useSessionLine } from '../sessions/use-session-line.ts';
 import { projectLine, StateChip } from './session-bits.tsx';
+import { statusLine } from './session-summary.ts';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent, pendingOf } from './use-island-data.ts';
+
+const TERMINAL_PARTS: readonly LinePart[] = ['step', 'steps', 'subagents', 'model'];
 
 const RECENT_MESSAGES = 6;
 
@@ -257,7 +261,8 @@ export function SessionChat({ chat, projectNames, onBack, onOpenChat }: SessionC
     return () => clearTimeout(timer);
   }, [waiting, chat.id]);
 
-  const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
+  const terminalText = terminalFacts(chat, useSessionLine(chat), TERMINAL_PARTS);
+  const status = statusLine(chat, state, terminalText);
   return (
     <div ref={rootRef} className="isl-detail isl-chat">
       <button type="button" className="isl-back" onClick={onBack} aria-label="Back to chats">

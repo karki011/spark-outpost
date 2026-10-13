@@ -50,4 +50,11 @@ For several chats in one thread, use an [outpost](outposts.md).
 
 > **Tip:** Select **Talk to…** or type `@` to work with a [Spark](sparks.md).
 
+## Jump between sessions
+
+1. Press **⌘⇧K**, or select **Sessions** above the chat list.
+2. Read the list: sessions that need you come first, then working ones. A Terminal session shows its steps and cost.
+3. Type to filter by title, project, agent or state.
+4. Press **↑** or **↓**, then **Enter**. **Esc** closes.
+
 **Next:** [Pick the model, effort and mode](agent-mode.md)

@@ -1,6 +1,7 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import { needsYou, runningNow, type NeedItem, type RunItem } from '../home/home-model.ts';
+import { terminalKey, terminalStateEntry, terminalTurnDone } from '../terminal/turn-done.ts';
 
 const FINISHED_LIMIT = 3;
 
@@ -76,7 +77,12 @@ export type RunStatuses = ReadonlyMap<string, string>;
 
 export function runStatuses(chats: readonly ConversationSummary[]): Map<string, string> {
   return new Map(
-    chats.flatMap((chat) => (chat.latestRun ? [[chat.latestRun.id, chat.latestRun.status]] : [])),
+    chats.flatMap((chat): [string, string][] => {
+      const run = chat.latestRun;
+      const terminal = terminalStateEntry(chat);
+      const entries: [string, string][] = run ? [[run.id, run.status]] : [];
+      return terminal ? [...entries, terminal] : entries;
+    }),
   );
 }
 
@@ -86,8 +92,10 @@ export function finishedRunIds(
 ): string[] {
   return chats.flatMap((chat) => {
     const run = chat.latestRun;
+    const before = run ? previous.get(run.id) : undefined;
+    if (terminalTurnDone(chat, previous.get(terminalKey(chat.id)), before))
+      return [run?.id ?? chat.terminal!.id];
     if (!run || run.status !== 'succeeded') return [];
-    const before = previous.get(run.id);
     return before === 'running' || before === 'queued' ? [run.id] : [];
   });
 }

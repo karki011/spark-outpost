@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from 'react';
+import { isPaletteShortcut } from '../sessions/palette-model.ts';
 import { isNewChatShortcut } from './SidebarHeader.tsx';
 
 interface SidebarShortcuts {
@@ -15,6 +16,7 @@ export function useSidebarShortcuts({ reveal, startNew, searchRef }: SidebarShor
         startNew();
         return;
       }
+      if (isPaletteShortcut(event)) return;
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
       event.preventDefault();
       reveal?.();
