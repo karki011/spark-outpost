@@ -13,6 +13,8 @@ async function fakeDesktop(page: Page) {
       sound: false,
       islandSize: localStorage.getItem('fake-desktop.island-size') ?? 'medium',
       autoExpand: true,
+      notify: true,
+      notifyBlocked: false,
     };
     const publish = () => {
       const copy = structuredClone(status);
@@ -20,8 +22,14 @@ async function fakeDesktop(page: Page) {
       return copy;
     };
     const noop = () => () => undefined;
+    const reports: unknown[] = [];
     Object.assign(window, {
       desktopCalls: calls,
+      attentionReports: reports,
+      blockNotifications: () => {
+        status.notifyBlocked = true;
+        publish();
+      },
       sparkDesktop: {
         platform: 'darwin',
         companion: {
@@ -59,11 +67,17 @@ async function fakeDesktop(page: Page) {
             status.autoExpand = on;
             return publish();
           },
+          setNotify: async (on: boolean) => {
+            calls.push(['notify', on]);
+            status.notify = on;
+            return publish();
+          },
           onChange: (listener: (status: unknown) => void) => {
             listeners.add(listener);
             return () => listeners.delete(listener);
           },
         },
+        attention: { report: (report: unknown) => reports.push(report) },
         island: { geometry: async () => null, onGeometry: noop, onCommand: noop },
         onOpenChat: noop,
         onOpenSettings: (callback: (target: string) => void) => {
@@ -146,6 +160,36 @@ test('the browser build hides the desktop companion settings', async ({ page }) 
   const spark = page.getByRole('dialog', { name: 'Spark' });
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveCount(0);
+  await expect(spark.getByRole('switch', { name: 'Dock badge and notifications' })).toHaveCount(0);
+});
+
+test('the Dock badge and notifications switch works with the island off', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await page.goto('/');
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { attentionReports: unknown[] }).attentionReports),
+    )
+    .toEqual([{ count: 0, requests: [] }]);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const spark = page.getByRole('dialog', { name: 'Spark' });
+  await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  const notify = spark.getByRole('switch', { name: 'Dock badge and notifications' });
+  await expect(notify).toHaveAttribute('aria-checked', 'true');
+  await expect(spark).toContainText('a notification names the chat');
+  await page.evaluate(() =>
+    (window as unknown as { blockNotifications: () => void }).blockNotifications(),
+  );
+  await expect(spark).toContainText('System Settings → Notifications');
+  await notify.focus();
+  await page.keyboard.press('Space');
+  await expect(notify).toHaveAttribute('aria-checked', 'false');
+  await expect(spark).toContainText('No Dock count');
+  expect(await desktopCalls(page)).toEqual([['notify', false]]);
 });
 
 test('the island opens these settings, and its chimes stay off until switched on', async ({

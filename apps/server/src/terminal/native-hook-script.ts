@@ -32,6 +32,9 @@ async function bridgeMain() {
       if (typeof raw[field] !== 'string' || raw[field].length > max) return;
       payload[field] = raw[field];
     }
+    for (const field of ['tool_use_id', 'agent_id', 'model']) {
+      if (typeof raw[field] === 'string' && raw[field].length <= 200) payload[field] = raw[field];
+    }
     const body = JSON.stringify({
         sessionId: config.sessionId,
         provider: config.provider,

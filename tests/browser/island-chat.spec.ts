@@ -173,13 +173,14 @@ test('when Spark is in the background a waiting blob opens its chat', async ({ p
   await expect(blob).toBeVisible();
   await page.waitForTimeout(500);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await shot(page, 'nudge');
+  await expect(island(page).locator('.isl-restline')).toContainText('Review');
+  await shot(page, 'waiting-line');
   await blob.click();
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
   await expect(waiting).toBeFocused();
   await expect(waiting.getByRole('button', { name: 'Allow', exact: true })).toBeVisible();
-  await shot(page, 'nudge-opened');
+  await shot(page, 'waiting-opened');
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });

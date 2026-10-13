@@ -18,6 +18,7 @@ export interface CompanionSettings {
   islandSize: IslandSize;
   islandSizePicked: boolean;
   autoExpand: boolean;
+  notify: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   islandSize: 'full',
   islandSizePicked: false,
   autoExpand: true,
+  notify: true,
 };
 
 const MODIFIERS = new Set([
@@ -142,6 +144,7 @@ export function parseSettings(raw: string | null): CompanionSettings {
     islandSize: size ?? DEFAULT_SETTINGS.islandSize,
     islandSizePicked: size !== null,
     autoExpand: savedFlag(record.autoExpand, DEFAULT_SETTINGS.autoExpand),
+    notify: savedFlag(record.notify, DEFAULT_SETTINGS.notify),
   };
 }
 

@@ -115,7 +115,9 @@ test('the resting island follows the chosen size live and still opens on hover',
   await restingBlob(page, 48, 25);
 });
 
-test('pending requests stay as blobs at every size, including saved Full', async ({ page }) => {
+test('pending requests stay as blobs with one line at every size, including saved Full', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await openSizedIsland(page);
   await seedChats([
@@ -136,10 +138,12 @@ test('pending requests stay as blobs at every size, including saved Full', async
   ] as const) {
     await setSize(page, size);
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
-    await expect(island(page).locator('.isl-nudge, .isl-nowbar')).toHaveCount(0);
+    await expect(island(page).locator('.isl-nowbar')).toHaveCount(0);
     await expect.poll(() => scout.boundingBox()).toMatchObject({ y: 4, height: blob });
+    const line = (await island(page).locator('.isl-restline').boundingBox())!;
+    const height = Math.max(blob + 18, line.y + line.height + 14);
     await expect
-      .poll(async () => Math.abs(((await lastRest(page))?.height ?? 0) - (blob + 18)))
+      .poll(async () => Math.abs(((await lastRest(page))?.height ?? 0) - height))
       .toBeLessThanOrEqual(1);
   }
   await page.mouse.move(640, 300);

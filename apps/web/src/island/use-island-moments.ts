@@ -13,6 +13,7 @@ import {
 
 const MEMORY_KEY = 'spark-outpost.island';
 const GREETING_MS = 4_000;
+const MOMENT_MS = 6_000;
 const SEEN_EVERY_MS = 60_000;
 
 let lastNoted = 0;
@@ -66,8 +67,16 @@ export function useMoments(chats: readonly ConversationSummary[], loaded: boolea
 
   const dismiss = useCallback(() => setMoments((list) => list.slice(1)), []);
   const moment = moments[0] ?? null;
+  const momentRun = moment?.runId ?? null;
+  useEffect(() => {
+    if (!momentRun) return;
+    const timer = setTimeout(dismiss, MOMENT_MS);
+    return () => clearTimeout(timer);
+  }, [momentRun, dismiss]);
   const memberLine = moment ? memberNeedsYou(moment, chats) : null;
-  return { moment, memberLine, streak, dismiss };
+  const title = chats.find((candidate) => candidate.id === moment?.chatId)?.title;
+  const text = moment && title ? momentLine(moment.kind, title, memberLine) : null;
+  return { moment, memberLine, text, streak, dismiss };
 }
 
 export function momentLine(

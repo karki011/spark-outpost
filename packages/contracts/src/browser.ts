@@ -109,6 +109,7 @@ export const browserPaneTabSchema = browserTabSchema.extend({
   pinned: z.boolean(),
   driving: z.boolean(),
   picking: z.boolean(),
+  lastAction: z.string().max(200).nullable(),
   error: z.string().max(300).nullable(),
 });
 export type BrowserPaneTab = z.infer<typeof browserPaneTabSchema>;

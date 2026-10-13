@@ -160,7 +160,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
             </button>
           </div>
           <div className="dlg-body">
-            <SessionTypePicker value={sessionChoice} onChange={setSessionChoice} />
+            <SessionTypePicker value={sessionChoice} onChange={setSessionChoice} agent />
             <p className="dlabel">How to start</p>
             <Segmented
               ariaLabel="How to start"

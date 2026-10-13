@@ -67,7 +67,13 @@ function cardTitle(action: SparkAction): string {
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
-  if (action.action === 'read_page') return `${question} ${action.origin}${action.path}`;
+  if (
+    action.action === 'read_page' ||
+    action.action === 'open_page' ||
+    action.action === 'act_page'
+  ) {
+    return `${question} ${action.origin}${action.path}`;
+  }
   if (action.action === 'pr_follow_up' || action.action === 'pr_follow_up_round') {
     return `${question} ${action.repo}#${action.number}`;
   }
@@ -81,13 +87,15 @@ export interface CardPlan {
   path: ActionPath;
   requested: boolean;
   observed: readonly string[];
+  secretSend?: readonly string[];
+  confirmName?: string;
 }
 
 export async function postCard(
   db: Queryable,
   run: ActionRun,
   action: SparkAction,
-  { path, requested, observed }: CardPlan,
+  { path, requested, observed, secretSend, confirmName }: CardPlan,
 ): Promise<Approval> {
   const card = await insertApproval(
     db,
@@ -107,11 +115,12 @@ export async function postCard(
         sparkResult: WAITING_RESULT,
         ...(requested ? { sparkRequested: true } : {}),
         ...(observed.length > 0 ? { observed: [...observed] } : {}),
+        ...(secretSend && secretSend.length > 0 ? { secretSend: [...secretSend] } : {}),
       },
       options: [
         {
           optionId: SPARK_ACTION_OPTION.confirm,
-          name: sparkActionLabels[action.action].confirm,
+          name: confirmName ?? sparkActionLabels[action.action].confirm,
           kind: 'allow_once',
         },
         { optionId: SPARK_ACTION_OPTION.decline, name: 'Don’t', kind: 'reject_once' },

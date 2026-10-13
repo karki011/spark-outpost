@@ -129,8 +129,11 @@ test('stays collapsed through running work and approvals, and opens on hover', a
   ]);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(island(page).locator('.isl-restline')).toContainText(
+    'Approve: run npm install sharp',
+  );
 
-  await shot(page, 'nudge');
+  await shot(page, 'waiting-line');
   await hoverIsland(page);
   await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',

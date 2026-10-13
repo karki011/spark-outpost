@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineEditingSequence } from './terminal-keys.ts';
+import { lineEditingSequence, tabAction } from './terminal-keys.ts';
 
 const key = (overrides: Partial<Parameters<typeof lineEditingSequence>[0]>) => ({
   type: 'keydown',
@@ -27,5 +27,23 @@ describe('lineEditingSequence', () => {
       lineEditingSequence(key({ metaKey: true, key: 'Backspace', isComposing: true })),
     ).toBeNull();
     expect(lineEditingSequence(key({ metaKey: true, key: 'Backspace', keyCode: 229 }))).toBeNull();
+  });
+});
+
+describe('tabAction', () => {
+  const tab = { key: 'Tab', altKey: false, ctrlKey: false, metaKey: false };
+
+  it('sends Tab and Shift+Tab to the agent', () => {
+    expect(tabAction(tab)).toBe('send');
+    expect(tabAction({ ...tab, ctrlKey: true })).toBe('send');
+  });
+
+  it('leaves the terminal on Option+Tab', () => {
+    expect(tabAction({ ...tab, altKey: true })).toBe('leave');
+    expect(tabAction({ ...tab, altKey: true, metaKey: true })).toBe('send');
+  });
+
+  it('has nothing to say about other keys', () => {
+    expect(tabAction({ ...tab, key: 'a' })).toBeNull();
   });
 });

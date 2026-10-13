@@ -129,7 +129,7 @@ When the pairing page is shown, a `pairing_page_shown` audit row records why: `m
 Decisions the plan left open:
 
 - **Raise agent mode or autonomy** is enforced as "change": with the switch off, a phone request to chat settings or provider defaults that carries `agentMode`, `permission` or `level` is refused. Agent modes are provider-defined and have no order to compare.
-- **Answer high-risk cards** covers cards with git hooks or git config, force push, agent instruction files or a secret file in their paths, and rail flags. A card that approves a saved sign-in needs the sign-ins switch.
+- **Answer high-risk cards** covers cards with git hooks or git config, force push, agent instruction files or a secret file in their paths, and rail flags. A card that approves a saved sign-in needs the sign-ins switch. The Browser pane's site cards are ordinary cards by the owner's decision of 2026-10-12: a paired device may answer **Let the agent open this site?**, **Let the agent read this page?**, **Let the agent click and type on this site?** and the hold-to-confirm **Send a secret value?** card with no switch, as it may answer the same hold card for a push. `cardSwitch` returns null for them and `policy.test.ts` says so; the pane itself stays on the Mac.
 - **Pair another device and manage devices** is stored but opens no route: changing switches, starting or confirming pairing, device management, the hostname, Tailscale Serve and the phone audit are Mac-only, so a lost phone cannot widen its own access. It stays off and the Phone page does not show it.
 - Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**.
 

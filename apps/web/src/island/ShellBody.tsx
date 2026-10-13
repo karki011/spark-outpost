@@ -7,6 +7,7 @@ import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
 import { CardView, type Decided } from './CardView.tsx';
 import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
+import type { RestLine } from './island-rest-line.ts';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
 import { NowBar } from './NowBar.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
@@ -34,6 +35,9 @@ export interface IslandShellProps {
   hover: boolean;
   greeting: string | null;
   waiting: number;
+  asking: number;
+  setAside: number;
+  line: RestLine | null;
   voice: Voice;
   now: number;
   note: Decided | null;
@@ -59,6 +63,7 @@ export interface IslandShellProps {
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;
+  onLine: (line: RestLine) => void;
   onScout: () => void;
   onPeekOpen: (id: string) => void;
   onSent: (id: string, title: string, project: string | null) => void;

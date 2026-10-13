@@ -5,7 +5,12 @@ import type {
   NativeTerminalProvider,
 } from '@spark-outpost/contracts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
-import { nativeTerminalRow, nativeTerminalView } from '../persistence/native-terminals.ts';
+import {
+  nativeTerminalMode,
+  nativeTerminalRow,
+  nativeTerminalView,
+} from '../persistence/native-terminals.ts';
+import { nativeTerminalUsage, STOPPED_BY_USER } from '../persistence/native-terminal-usage.ts';
 import {
   failNativeLaunchRun,
   finishNativeRun,
@@ -26,7 +31,8 @@ import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { isNativeSessionId } from './native-hooks.ts';
-import { watchClaudeInterrupts } from './native-interrupts.ts';
+import { watchTranscript } from './native-tail.ts';
+import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
@@ -56,7 +62,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
     return rows[0];
   };
-  const control = nativeControl(deps.db, live, tokens);
+  const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
+  const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
   const hook = nativeObserver({
     db: deps.db,
@@ -64,7 +71,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     tokens,
     enqueue,
     control,
-    watchInterrupts: deps.watchInterrupts ?? watchClaudeInterrupts,
+    usage,
   });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
@@ -196,7 +203,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         completedTurns: new Set(),
         currentPromptEventId: null,
         completedEvents: new Map(),
-        interrupts: null,
+        transcript: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -234,14 +241,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         args: launch.args,
         env: launch.env,
         onExit: (exit) => {
-          void enqueue(running, () =>
-            finish(
-              running,
-              exit.exitCode === 0 ? 'exited' : 'error',
-              false,
-              `Native agent exited (${exit.exitCode}).`,
-            ),
-          ).catch(() => undefined);
+          const state = exit.exitCode === 0 ? 'exited' : 'error';
+          void enqueue(running, async () => {
+            await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(
+              () => usage.last(running).catch(() => undefined),
+            );
+          }).catch(() => undefined);
         },
       });
       return {
@@ -253,7 +258,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (session) {
         live.delete(conversationId);
         tokens.delete(session.hookKey);
-        session.interrupts?.close();
+        await usage.last(session).catch(() => undefined);
         await session.context?.close();
       }
       grant?.revoke();
@@ -263,7 +268,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         stoppedLaunches.has(conversationId) ||
         (prepared.runId !== null && (await isCancelRequested(deps.db, prepared.runId)));
       const failure = nativeLaunchError(error);
-      const reason = cancelled ? 'Stopped by the user.' : failure.message;
+      const reason = cancelled ? STOPPED_BY_USER : failure.message;
       await finishNativeRun(deps.db, row, cancelled ? 'cancelled' : 'failed', reason);
       await setNativeTerminalState(deps.db, {
         ...row,
@@ -288,7 +293,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       session.context?.controller.abort();
       session.grant.revoke();
       try {
-        await enqueue(session, () => finish(session, 'exited', true, 'Stopped by the user.'));
+        await enqueue(session, () => finish(session, 'exited', true, STOPPED_BY_USER));
       } finally {
         deps.terminals.kill(session.row.id);
       }
@@ -303,7 +308,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     async get(conversationId) {
       await owned(conversationId);
       const row = await nativeTerminalRow(deps.db, conversationId);
-      return row ? nativeTerminalView(row) : null;
+      return row ? nativeTerminalView(row, await nativeTerminalMode(deps.db, row)) : null;
     },
     launch(conversationId, request) {
       const key = JSON.stringify(request);
@@ -323,6 +328,14 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       );
       launches.set(conversationId, { key, work });
       return work;
+    },
+    async usage(conversationId) {
+      await owned(conversationId);
+      const row = live.has(conversationId)
+        ? null
+        : await nativeTerminalRow(deps.db, conversationId);
+      if (row) await usage.catchUpStored(row).catch(() => undefined);
+      return nativeTerminalUsage(deps.db, conversationId);
     },
     hook,
     stop,

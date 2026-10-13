@@ -7,6 +7,7 @@ import type {
   ConversationSummary,
   NativeTerminalSession,
 } from '@spark-outpost/contracts';
+import type * as ApiClient from '../api/client.ts';
 import type { TerminalHandlers } from './terminal-connection.ts';
 
 const fake = vi.hoisted(() => ({
@@ -23,6 +24,19 @@ vi.mock('./terminal-api.ts', () => ({
 }));
 vi.mock('./TerminalCompanion.tsx', () => ({
   TerminalCompanion: () => <span data-testid="companion" />,
+}));
+vi.mock('../chat/project/use-chat-repos.ts', () => ({
+  useLinkedProjects: () => [{ id: 'project', name: 'spark-outpost', rootPath: '/code/spark' }],
+}));
+vi.mock('../api/client.ts', async (original) => ({
+  ...(await original<typeof ApiClient>()),
+  capabilitiesQuery: () => ({
+    queryKey: ['capabilities', 'codex'],
+    queryFn: async () => ({
+      defaultMode: 'agent',
+      modes: [{ id: 'agent', label: 'Approve for me', description: null, kind: null }],
+    }),
+  }),
 }));
 vi.mock('../phone/use-remote-client.ts', () => ({ useRemoteClient: () => ({ remote: false }) }));
 vi.mock('./terminal-connection.ts', () => ({
@@ -50,8 +64,15 @@ const native: NativeTerminalSession = {
   runId: null,
   observation: 'hooks',
   reason: null,
+  agentMode: 'agent',
 };
-const chat = { id: 'chat', terminal: native, sessionType: 'terminal' } as ConversationSummary;
+const chat = {
+  id: 'chat',
+  terminal: native,
+  sessionType: 'terminal',
+  projectIds: ['project'],
+  branch: 'spark/terminal-ux',
+} as ConversationSummary;
 const detail = { approvals: [] } as unknown as ConversationDetail;
 function mount(summary: ConversationSummary = chat) {
   return render(
@@ -75,17 +96,57 @@ afterEach(() => {
 });
 
 describe('native terminal lifecycle controls', () => {
-  it('hides the view without stopping the process and reattaches on reopening', async () => {
+  it('has no way to hide the view: the terminal stays attached while the chat is open', async () => {
     mount();
     await waitFor(() => expect(fake.attach).toHaveBeenCalledWith(native.id));
     expect(fake.handlers[0]?.preserveSession).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Hide view' }));
-    expect(fake.disposed).toHaveBeenCalledTimes(1);
-    expect(fake.stop).not.toHaveBeenCalled();
-    expect(screen.getByText('The terminal view is hidden. Your agent keeps running.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Open terminal' }));
+    expect(screen.queryByRole('button', { name: 'Hide view' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open terminal' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull();
+    expect(fake.disposed).not.toHaveBeenCalled();
+  });
+  it('shows the agent, state, started permissions, project and branch in one bar', async () => {
+    mount();
+    expect((await screen.findAllByRole('status'))[0]!.textContent).toBe('Running · Connecting');
+    await waitFor(() => expect(screen.getAllByRole('status')[0]!.textContent).toBe('Running'));
+    expect(screen.getByText('Codex · Terminal')).toBeTruthy();
+    await screen.findByText('Approve for me');
+    expect(screen.getByText('spark-outpost').closest('[title]')?.getAttribute('title')).toBe(
+      '/tmp/project',
+    );
+    expect(screen.getByText('spark/terminal-ux')).toBeTruthy();
+    expect(screen.queryByText('/tmp/project')).toBeNull();
+  });
+  it('reconnects inline when the view is disconnected, and from the menu at any time', async () => {
+    mount();
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reconnect' }));
     await waitFor(() => expect(fake.attach).toHaveBeenCalledTimes(2));
+    expect(fake.disposed).toHaveBeenCalledTimes(1);
+    fake.handlers[1]!.onDisconnected!();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect' }));
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledTimes(3));
+    expect(fake.stop).not.toHaveBeenCalled();
     expect(fake.launch).not.toHaveBeenCalled();
+  });
+  it('copies the folder path and asks to hold before stopping, both from the menu', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mount();
+    await waitFor(() => expect(fake.attach).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy folder path' }));
+    expect(writeText).toHaveBeenCalledWith('/tmp/project');
+    await screen.findByText('Folder path copied');
+    expect(screen.queryByRole('button', { name: 'Stop session' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal actions' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Stop session' }));
+    expect(screen.getByRole('group', { name: 'Stop terminal session' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hold to stop' })).toBeTruthy();
+    expect(fake.stop).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep running' }));
+    expect(screen.queryByRole('group', { name: 'Stop terminal session' })).toBeNull();
   });
   it('does not restart an interrupted process until explicit Resume', async () => {
     fake.get.mockResolvedValue({ ...native, state: 'interrupted', resumeAvailable: true });
@@ -107,7 +168,9 @@ describe('native terminal lifecycle controls', () => {
     await screen.findByText('This terminal session has stopped. Its last output is shown below.');
     expect(screen.getByLabelText('Interactive agent terminal')).toBeTruthy();
     expect(fake.disposed).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: 'Stop session' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal actions' }));
+    expect(screen.queryByRole('menuitem', { name: 'Stop session' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Reconnect' })).toBeNull();
   });
   it('keeps a live terminal mounted when a status check fails', async () => {
     mount();

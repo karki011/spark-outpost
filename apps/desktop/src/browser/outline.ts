@@ -108,9 +108,13 @@ interface Walk {
   masked: number;
 }
 
+export function sensitiveByName(role: string, name: string): boolean {
+  return VALUE_ROLES.has(role) && SENSITIVE_NAME.test(name);
+}
+
 function isSensitive(node: AxNode, name: string, sensitive: ReadonlySet<number>): boolean {
   if (node.backendDOMNodeId !== undefined && sensitive.has(node.backendDOMNodeId)) return true;
-  return VALUE_ROLES.has(roleOf(node)) && SENSITIVE_NAME.test(name);
+  return sensitiveByName(roleOf(node), name);
 }
 
 function propertyNotes(node: AxNode): string[] {

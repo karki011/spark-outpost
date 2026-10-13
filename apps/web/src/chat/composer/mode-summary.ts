@@ -53,14 +53,14 @@ export function modeSummary(
   return `${label} · ${autonomyLabel(level ?? DEFAULT_INVOLVEMENT_LEVEL)}`;
 }
 
-export function permissionState(
-  settings: ChatSettings,
+export function modePermission(
+  provider: string | null,
+  mode: string | null,
   capabilities: ProviderCapabilities | undefined,
 ): PermissionState {
   const modes = capabilities?.modes ?? [];
-  const mode = settings.agentMode ?? capabilities?.defaultMode ?? defaultModeFor(settings.provider);
   const label = modeLabel(modes, mode);
-  const posture = modePosture(settings.provider, mode, modeKind(modes, mode));
+  const posture = modePosture(provider, mode, modeKind(modes, mode));
   return {
     mode,
     label,
@@ -68,6 +68,14 @@ export function permissionState(
     risk: RISKS[posture],
     description: modes.find((option) => option.id === mode)?.description ?? null,
   };
+}
+
+export function permissionState(
+  settings: ChatSettings,
+  capabilities: ProviderCapabilities | undefined,
+): PermissionState {
+  const mode = settings.agentMode ?? capabilities?.defaultMode ?? defaultModeFor(settings.provider);
+  return modePermission(settings.provider, mode, capabilities);
 }
 
 export function withCurrentMode(

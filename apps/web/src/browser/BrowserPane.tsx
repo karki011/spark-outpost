@@ -137,8 +137,8 @@ function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null
       </p>
       <PreviewStart chatId={chatId} tab={tab} />
       <p>
-        Agents can open and read local pages here when you ask. Anything a page says is treated as
-        untrusted.
+        Agents can open pages here, local or on the web, and click and type on them while you watch.
+        Anything a page says is treated as untrusted.
       </p>
     </div>
   );
@@ -245,6 +245,11 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             <button type="button" className="bp-link" onClick={() => dismissAgentOpened(chatId)}>
               Dismiss
             </button>
+          </span>
+        )}
+        {tab?.owner === 'agent' && tab.lastAction && (
+          <span className="bp-agent-did" role="status">
+            Agent: {tab.lastAction}
           </span>
         )}
         <PreviewBadge chatId={chatId} />

@@ -1,12 +1,14 @@
+import './island-home-tiles.css';
 import type { CSSProperties } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { TeammateFace as Face, TeammateState, TeammateView } from '@spark-outpost/contracts';
+import type { TeammateState, TeammateView } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
 import { teammatesApi } from '../teammates/teammates-api.ts';
 import { useTeammates } from '../teammates/use-teammates.ts';
 import { PlusIcon } from '../ui/icons.tsx';
-import type { QuickStart } from './NowCard.tsx';
+import type { QuickStart } from './now-parts.tsx';
+import { QuickTiles } from './QuickTiles.tsx';
 
 interface SparkTilesProps {
   waiting: number;
@@ -26,14 +28,6 @@ const STATE_WORDS: Record<TeammateState, string | null> = {
   done: 'done',
   failed: 'failed',
 };
-
-interface QuickAction {
-  id: string;
-  label: string;
-  face: Face;
-  badge?: number;
-  run: () => void;
-}
 
 function tileStyle(index: number): CSSProperties {
   return { '--i': index } as CSSProperties;
@@ -119,55 +113,6 @@ function NewSparkTile({ index, onMake }: { index: number; onMake: () => void }) 
   );
 }
 
-function ActionTile({ action, index }: { action: QuickAction; index: number }) {
-  return (
-    <button type="button" className="isl-tile" style={tileStyle(index)} onClick={action.run}>
-      <span className="isl-tile-face" aria-hidden="true">
-        <TeammateFace face={action.face} size={28} />
-      </span>
-      <span className="isl-tile-text">
-        <span className="isl-tile-name">{action.label}</span>
-      </span>
-      {action.badge ? (
-        <span className="isl-badge" aria-label={`${action.badge} waiting`}>
-          {action.badge}
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-function quickActions(props: SparkTilesProps): QuickAction[] {
-  const actions: QuickAction[] = [
-    {
-      id: 'new',
-      label: props.quickStart ? `New in ${props.quickStart.name}` : 'New chat',
-      face: { shape: 'cloud', color: 'sky' },
-      run: () => props.onNewIn(props.quickStart?.id ?? null),
-    },
-    { id: 'ask', label: 'Ask Spark', face: { shape: 'round', color: 'teal' }, run: props.onAsk },
-    {
-      id: 'needs',
-      label: 'Needs you',
-      face: { shape: 'nub', color: 'gold' },
-      badge: props.waiting,
-      run: props.onChats,
-    },
-  ];
-  const make = props.onMakeSpark;
-  actions.push(
-    make
-      ? { id: 'make', label: 'New Spark', face: { shape: 'sun', color: 'plum' }, run: make }
-      : {
-          id: 'chats',
-          label: 'All chats',
-          face: { shape: 'capsule', color: 'violet' },
-          run: props.onChats,
-        },
-  );
-  return actions;
-}
-
 export function SparkTiles(props: SparkTilesProps) {
   const { loading, teammates } = useTeammates();
   const queryClient = useQueryClient();
@@ -187,21 +132,28 @@ export function SparkTiles(props: SparkTilesProps) {
       aria-label={sparks ? 'Your Sparks' : 'Quick start'}
       style={tileStyle(1)}
     >
-      <div className="isl-tilegrid">
-        {sparks
-          ? teammates.map((teammate, index) => (
-              <SparkTile
-                key={teammate.id}
-                teammate={teammate}
-                index={index}
-                opening={open.isPending && open.variables === teammate.id}
-                onOpen={() => open.mutate(teammate.id)}
-                onEdit={onEditSpark && (() => onEditSpark(teammate.id))}
-              />
-            ))
-          : quickActions(props).map((action, index) => (
-              <ActionTile key={action.id} action={action} index={index} />
-            ))}
+      <div className="isl-tilegrid" data-quick={sparks ? undefined : ''}>
+        {sparks ? (
+          teammates.map((teammate, index) => (
+            <SparkTile
+              key={teammate.id}
+              teammate={teammate}
+              index={index}
+              opening={open.isPending && open.variables === teammate.id}
+              onOpen={() => open.mutate(teammate.id)}
+              onEdit={onEditSpark && (() => onEditSpark(teammate.id))}
+            />
+          ))
+        ) : (
+          <QuickTiles
+            waiting={props.waiting}
+            project={props.quickStart?.name ?? null}
+            onNew={() => props.onNewIn(props.quickStart?.id ?? null)}
+            onAsk={props.onAsk}
+            onChats={props.onChats}
+            onMakeSpark={onMakeSpark}
+          />
+        )}
         {sparks && onMakeSpark && <NewSparkTile index={teammates.length} onMake={onMakeSpark} />}
       </div>
       {open.isError && (

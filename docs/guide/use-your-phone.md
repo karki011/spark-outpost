@@ -18,4 +18,6 @@ You'll use Spark on another device; work stays on the Mac. About 5 minutes. Need
 
 Creating or deleting an [outpost](outposts.md), changing its chats and starting a proposed story stay on the Mac.
 
+A paired device can answer an agent's browser cards: open a site, click and type, send a secret value. The Browser pane stays on the Mac.
+
 **Next:** [Answer an approval card](answer-approvals.md)

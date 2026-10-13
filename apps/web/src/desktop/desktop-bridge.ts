@@ -1,4 +1,5 @@
 import type {
+  AttentionReport,
   BrowserCommand,
   BrowserPaneState,
   BrowserPick,
@@ -27,6 +28,8 @@ export interface CompanionStatus {
   sound?: boolean;
   islandSize?: IslandSize;
   autoExpand?: boolean;
+  notify?: boolean;
+  notifyBlocked?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -74,7 +77,11 @@ export interface SparkDesktop {
     setSound?(on: boolean): Promise<CompanionStatus>;
     setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
+    setNotify?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
+  };
+  attention?: {
+    report(report: AttentionReport): void;
   };
   island: {
     geometry(): Promise<IslandGeometry | null>;

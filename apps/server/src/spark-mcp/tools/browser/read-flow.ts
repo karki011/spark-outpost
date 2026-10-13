@@ -1,7 +1,7 @@
 import type { BrowserPlace } from '@spark-outpost/contracts';
 import type { SparkToolContext } from '../../tool.ts';
 import { auditBrowser, pageParts, type BrowserDecision } from './context.ts';
-import { clearExternalRead, WAITING_FOR_PAGE } from './gate.ts';
+import { clearSiteAction, WAITING_FOR_PAGE } from './gate.ts';
 
 export interface PageFacts {
   tabId: string;
@@ -37,7 +37,7 @@ export async function clearPage(
     return { cleared: true, decision: 'local' };
   }
   const { origin, path } = pageParts(page.url);
-  const clearance = await clearExternalRead(context, {
+  const clearance = await clearSiteAction(context, {
     action: 'read_page',
     origin,
     path,

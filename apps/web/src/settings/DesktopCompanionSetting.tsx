@@ -16,6 +16,14 @@ import { SettingRow } from './SettingRow.tsx';
 const LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
+const NOTIFY = 'Dock badge and notifications';
+
+function notifyHint(status: CompanionStatus): string {
+  if (!status.notify) return 'Off. No Dock count, and no notification while Spark Island is off.';
+  if (status.notifyBlocked)
+    return 'macOS blocked the last notification. Allow Spark in System Settings → Notifications.';
+  return 'The Dock icon counts chats that need you. With Spark Island off, a notification names the chat.';
+}
 
 let revealPending = false;
 const revealers = new Set<() => void>();
@@ -143,6 +151,7 @@ export function DesktopCompanionSetting() {
   const showId = useId();
   const chimesId = useId();
   const expandId = useId();
+  const notifyId = useId();
   const loaded = status !== null;
   useEffect(() => {
     if (!loaded) return;
@@ -175,6 +184,16 @@ export function DesktopCompanionSetting() {
         checked={status.enabled}
         onChange={(on) => void desktop.companion.setEnabled(on)}
       />
+      {desktop.companion.setNotify && (
+        <SwitchRow
+          id={notifyId}
+          label={NOTIFY}
+          doc={{ page: 'desktop-companion', heading: 'when-spark-island-is-off' }}
+          hint={notifyHint(status)}
+          checked={status.notify === true}
+          onChange={(on) => void desktop.companion.setNotify?.(on)}
+        />
+      )}
       {status.enabled && (
         <>
           {desktop.companion.setIslandSize && (

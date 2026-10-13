@@ -8,24 +8,46 @@ import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
 import { startSparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { NativeLaunch, NativeLaunchInput } from '../src/terminal/native-launch.ts';
 import { createNativeRuntime, type NativeRuntimeDeps } from '../src/terminal/native-runtime.ts';
+import type { WatchTranscript } from '../src/terminal/native-tail.ts';
 import type { PtyOptions, PtyProcess } from '../src/terminal/pty.ts';
 import { defaultLimits, TerminalSessions } from '../src/terminal/sessions.ts';
 import { toolDeps } from './spark-mcp-support.ts';
 import { createTestDb } from './support.ts';
 
-export async function nativeRuntimeFixture(options: { maxShells?: number } = {}) {
+interface FixtureWatcher {
+  path: string;
+  from: number | null;
+  position: number | null;
+  atFlush: unknown[];
+  close: ReturnType<typeof vi.fn<() => void>>;
+  lines(records: unknown[]): Promise<void>;
+  interrupt(promptId: string): Promise<void>;
+}
+
+const interruptRecord = (promptId: string) => ({
+  type: 'user',
+  isSidechain: false,
+  promptId,
+  message: { role: 'user', content: [{ type: 'text', text: '[Request interrupted by user]' }] },
+});
+
+export async function nativeRuntimeFixture(
+  options: { maxShells?: number; provider?: 'claude' | 'codex'; realFiles?: boolean } = {},
+) {
+  const provider = options.provider ?? 'claude';
+  const agentMode = provider === 'claude' ? 'default' : 'agent';
   const t = await createTestDb();
   const folder = await realpath(await mkdtemp(join(tmpdir(), 'spark-native-lifecycle-')));
   const conversationId = randomUUID();
   await createConversation(t.db, t.workspaceId, conversationId, {
     sessionType: 'terminal',
-    terminalProvider: 'claude',
+    terminalProvider: provider,
     title: 'Native fixture',
   });
-  await t.db.query(
-    `UPDATE conversations SET overrides = '{"claude":{"agentMode":"default","level":"hands-off"}}'::jsonb WHERE id = $1`,
-    [conversationId],
-  );
+  await t.db.query(`UPDATE conversations SET overrides = $2::jsonb WHERE id = $1`, [
+    conversationId,
+    JSON.stringify({ [provider]: { agentMode, level: 'hands-off' } }),
+  ]);
   const inputs: NativeLaunchInput[] = [];
   const exits: ((exit: { exitCode: number }) => void)[] = [];
   const spawn = vi.fn((_options: PtyOptions): PtyProcess => ({
@@ -50,11 +72,7 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     repoRoot: folder,
     note: null,
   });
-  const watchers: {
-    path: string;
-    interrupt: (nativeTurnId: string) => Promise<void>;
-    close: ReturnType<typeof vi.fn<() => void>>;
-  }[] = [];
+  const watchers: FixtureWatcher[] = [];
   const fixture = {
     t,
     watchers,
@@ -77,22 +95,39 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
       dispose: async () => undefined,
     };
   };
-  const runtime = await createNativeRuntime({
+  const fakeWatcher: WatchTranscript = (path, from, onLines) => {
+    const watcher: FixtureWatcher = {
+      path,
+      from,
+      position: null,
+      atFlush: [],
+      close: vi.fn<() => void>(),
+      lines: (records) => onLines(records.map((record) => JSON.stringify(record))),
+      interrupt: (promptId) => watcher.lines([interruptRecord(promptId)]),
+    };
+    watchers.push(watcher);
+    return {
+      ready: Promise.resolve(),
+      flush: async () => {
+        if (watcher.atFlush.length > 0) void watcher.lines(watcher.atFlush.splice(0));
+      },
+      offset: () => watcher.position,
+      close: watcher.close,
+    };
+  };
+  const deps: NativeRuntimeDeps = {
     db: t.db,
     workspaceId: t.workspaceId,
     terminals,
     dataDir: folder,
     channel: 'test',
     mcp: host,
-    locateCli: async () => '/fixture/claude',
+    locateCli: async () => `/fixture/${provider}`,
     place: (...args) => fixture.place(...args),
     prepareLaunch: prepare,
-    watchInterrupts: (path, interrupt) => {
-      const close = vi.fn<() => void>();
-      watchers.push({ path, interrupt, close });
-      return { ready: Promise.resolve(), close };
-    },
-  });
+    ...(options.realFiles ? {} : { watchTranscript: fakeWatcher }),
+  };
+  const runtime = await createNativeRuntime(deps);
   return Object.assign(fixture, {
     runtime,
     launch: () =>
@@ -107,7 +142,7 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
         },
         body: JSON.stringify({
           sessionId: input.sessionId,
-          provider: 'claude',
+          provider,
           eventId: randomUUID(),
           payload: {
             hook_event_name: name,
@@ -119,8 +154,13 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
       });
       return response.status;
     },
+    async restart() {
+      await this.runtime.dispose();
+      this.runtime = await createNativeRuntime(deps);
+      await this.runtime.recover();
+    },
     async cleanup() {
-      await runtime.dispose();
+      await this.runtime.dispose();
       terminals.killAll();
       await host.close();
       await t.cleanup();

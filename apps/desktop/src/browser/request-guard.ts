@@ -1,6 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { API_TOKEN_HEADER, parseBrowserUrl, type ParsedUrl } from '@spark-outpost/contracts';
+import {
+  API_TOKEN_HEADER,
+  browserPlaceOf,
+  classifyBrowserUrl,
+  parseBrowserUrl,
+  type BrowserTabOwner,
+  type ParsedUrl,
+} from '@spark-outpost/contracts';
 
 const DEFAULT_PORTS: Record<string, number> = {
   'http:': 80,
@@ -47,6 +54,25 @@ export function requestAllowed(value: string, facts: GuardFacts): boolean {
   return port === null || !facts.blockedPorts.has(port);
 }
 
+export const AGENT_OPEN_REFUSALS = {
+  address:
+    'That is not a web address the browser can open. Use http or https, with no username or password in it.',
+  file: 'Agents can open files inside this chat’s projects only.',
+  sparkPort:
+    'That address is on one of Spark’s own ports, which no page in the Browser pane may reach.',
+} as const;
+
+export function agentOpenProblem(value: string, facts: GuardFacts): string | null {
+  const kind = classifyBrowserUrl(value);
+  if (kind === 'blocked' || kind === 'blank') return AGENT_OPEN_REFUSALS.address;
+  if (requestAllowed(value, facts)) return null;
+  return kind === 'file' ? AGENT_OPEN_REFUSALS.file : AGENT_OPEN_REFUSALS.sparkPort;
+}
+
+export function navigationAllowed(value: string): boolean {
+  return classifyBrowserUrl(value) !== 'blocked';
+}
+
 export function withoutSparkToken(headers: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(headers).filter(([name]) => name.toLowerCase() !== API_TOKEN_HEADER),
@@ -70,6 +96,21 @@ export function partitionFor(choice: PartitionChoice): string {
   if (choice.projectId && choice.keepSignIns) return projectPartition(choice.projectId);
   if (!SAFE_ID.test(choice.chatId)) throw new Error('A browser partition needs a chat id.');
   return `${PARTITION_PREFIX}chat-${choice.chatId}`;
+}
+
+export function agentPartition(chatId: string): string {
+  if (!SAFE_ID.test(chatId)) throw new Error('A browser partition needs a chat id.');
+  return `${PARTITION_PREFIX}agent-${chatId}`;
+}
+
+export interface TabPlace {
+  owner: BrowserTabOwner;
+  url: string;
+}
+
+export function tabPartition(choice: PartitionChoice, tab: TabPlace): string {
+  const agentOnSite = tab.owner === 'agent' && browserPlaceOf(tab.url) === 'external';
+  return agentOnSite ? agentPartition(choice.chatId) : partitionFor(choice);
 }
 
 export function isBrowserPartition(name: string): boolean {

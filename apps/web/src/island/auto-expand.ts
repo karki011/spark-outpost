@@ -1,22 +1,18 @@
 import { useEffect, useRef } from 'react';
-import type { Card, IslandView } from './island-model.ts';
-
-export function attentionKey(card: Card): string {
-  return card.approval?.id ?? `chat:${card.chat.id}`;
-}
+import { cardKey, type Card, type IslandView } from './island-model.ts';
 
 export function nextToExpand(
   cards: readonly Card[],
   pending: readonly Card[],
   shown: Set<string>,
 ): Card | null {
-  const waiting = new Set(pending.map(attentionKey));
+  const waiting = new Set(pending.map(cardKey));
   for (const key of shown) {
     if (!waiting.has(key)) shown.delete(key);
   }
-  const next = cards.find((card) => !card.loading && !shown.has(attentionKey(card)));
+  const next = cards.find((card) => !card.loading && !shown.has(cardKey(card)));
   if (!next) return null;
-  shown.add(attentionKey(next));
+  shown.add(cardKey(next));
   return next;
 }
 

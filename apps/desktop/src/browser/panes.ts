@@ -9,7 +9,13 @@ import {
   type BrowserPlacement,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import { partitionFor } from './request-guard.ts';
+import {
+  partitionFor,
+  requestAllowed,
+  tabPartition,
+  type GuardFacts,
+  type PartitionChoice,
+} from './request-guard.ts';
 import { browserSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
@@ -73,12 +79,16 @@ export class BrowserPanes {
     return pane;
   }
 
-  private partitionOf(pane: ChatPane): string {
-    return partitionFor({
+  private choiceOf(pane: ChatPane): PartitionChoice {
+    return {
       chatId: pane.chatId,
       projectId: pane.home.projectId,
       keepSignIns: pane.home.keepSignIns,
-    });
+    };
+  }
+
+  private partitionOf(pane: ChatPane): string {
+    return partitionFor(this.choiceOf(pane));
   }
 
   private allowRoots(pane: ChatPane): void {
@@ -86,6 +96,12 @@ export class BrowserPanes {
     const roots = this.rootsByPartition.get(partition) ?? new Set<string>();
     for (const root of pane.home.roots) roots.add(root);
     this.rootsByPartition.set(partition, roots);
+  }
+
+  guardFacts(chatId: string): GuardFacts {
+    const pane = this.chats.get(chatId);
+    const roots = pane ? (this.rootsByPartition.get(this.partitionOf(pane)) ?? []) : [];
+    return { blockedPorts: this.options.blockedPorts(), roots: [...roots] };
   }
 
   tabsOf(chatId: string): readonly PaneTab[] {
@@ -138,12 +154,13 @@ export class BrowserPanes {
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
     if (pane.tabs.length >= BROWSER_TABS_MAX) return null;
-    const partition = this.partitionOf(pane);
     const projectId = pane.home.keepSignIns ? pane.home.projectId : null;
     const tab: PaneTab = new PaneTab(
       { id: randomUUID().slice(0, 8), chatId, ...init },
       {
-        session: () =>
+        partition: (owner, url) => tabPartition(this.choiceOf(pane), { owner, url }),
+        allowed: (url) => requestAllowed(url, this.guardFacts(pane.chatId)),
+        session: (partition) =>
           browserSession(partition, {
             blockedPorts: this.options.blockedPorts,
             roots: (name) => [...(this.rootsByPartition.get(name) ?? [])],

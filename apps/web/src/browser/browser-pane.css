@@ -79,6 +79,19 @@
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
 }
 
+.bp-agent.driving {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.bp-agent-did {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bp-tab-x {
   display: grid;
   place-items: center;

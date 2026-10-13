@@ -1,6 +1,11 @@
-import type { ConversationAttention, ConversationSummary } from '@spark-outpost/contracts';
-import { terminalLabel, terminalMood, terminalNeedsInput } from '../terminal/native-state.ts';
-import { providerName } from '../chat/provider-name.ts';
+import {
+  attentionLine,
+  needsInput,
+  terminalLabel,
+  terminalWaitsAlone,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
+import { terminalMood } from '../terminal/native-state.ts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
@@ -11,6 +16,8 @@ export interface RowState {
   sub: string;
 }
 
+export { attentionLine, needsInput };
+
 const IDLE: RowState = { tone: 'idle', label: '', sub: '' };
 
 function reason(error: string | null): string {
@@ -19,45 +26,11 @@ function reason(error: string | null): string {
   return `Stopped: ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
 
-export function needsInput(chat: ConversationSummary): boolean {
-  return chat.needsInput || terminalNeedsInput(chat);
-}
-
 export function isRunning(chat: ConversationSummary): boolean {
   if (chat.sessionType === 'terminal')
     return chat.terminal?.state === 'working' || chat.terminal?.state === 'starting';
   const status = chat.latestRun?.status;
   return status === 'queued' || status === 'running';
-}
-
-function agentSpeaking(attention: ConversationAttention): string {
-  if (attention.agentName) return attention.agentName;
-  return attention.provider ? providerName(attention.provider) : 'The agent';
-}
-
-function speaker(attention: ConversationAttention): string {
-  const agent = agentSpeaking(attention);
-  return attention.subagent ? `${agent}'s sub-agent ${attention.subagent}` : agent;
-}
-
-export function attentionLine(attention: ConversationAttention | null): string {
-  if (!attention) return 'Needs your input';
-  const name = attention.agentName;
-  switch (attention.kind) {
-    case 'permission':
-      if (attention.prFeedback) return 'Spark is ready to push PR fixes and replies';
-      return `${speaker(attention)} wants to ${attention.title}`;
-    case 'plan':
-      return name ? `${name}’s plan is ready for review` : 'The plan is ready for review';
-    case 'review':
-      return name ? `${name}’s changes are ready to review` : 'Changes are ready to review';
-    case 'input':
-      return name ? `${name} has a question` : attention.title || 'Needs your input';
-    case 'stuck':
-      return name ? `${name} was repeating itself` : 'The Builder was repeating itself';
-    case 'flag':
-      return attention.title;
-  }
 }
 
 export function asksPermission(chat: ConversationSummary): boolean {
@@ -74,11 +47,7 @@ function waitingState(chat: ConversationSummary): RowState {
 }
 
 export function rowState(chat: ConversationSummary, open: boolean): RowState {
-  if (
-    chat.needsInput &&
-    !(chat.sessionType === 'terminal' && terminalNeedsInput(chat) && !chat.attention?.approvalId)
-  )
-    return waitingState(chat);
+  if (chat.needsInput && !terminalWaitsAlone(chat)) return waitingState(chat);
   if (chat.sessionType === 'terminal' && chat.terminal) {
     const state = chat.terminal.state;
     const mood = terminalMood(state);

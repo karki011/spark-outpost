@@ -21,6 +21,8 @@ export interface CompanionStatus {
   sound: boolean;
   islandSize: IslandSize;
   autoExpand: boolean;
+  notify: boolean;
+  notifyBlocked: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -44,6 +46,8 @@ export interface Companion {
   setSound(on: boolean): CompanionStatus;
   setIslandSize(size: IslandSize): CompanionStatus;
   setAutoExpand(on: boolean): CompanionStatus;
+  setNotify(on: boolean): CompanionStatus;
+  setNotifyBlocked(on: boolean): void;
   setPosition(position: IslandPosition): void;
   shutdown(): void;
 }
@@ -61,6 +65,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
   let island: IslandHandle | null = null;
   const active = new Map<ShortcutAction, string>();
   const failed = new Set<ShortcutAction>();
+  let notifyBlocked = false;
 
   const status = (): CompanionStatus => ({
     supported: effects.supported,
@@ -70,6 +75,8 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     sound: settings.sound,
     islandSize: settings.islandSize,
     autoExpand: settings.autoExpand,
+    notify: settings.notify,
+    notifyBlocked,
   });
 
   const publish = () => effects.changed(status());
@@ -162,6 +169,16 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
       commit({ ...settings, autoExpand: on });
       publish();
       return status();
+    },
+    setNotify(on) {
+      commit({ ...settings, notify: on });
+      publish();
+      return status();
+    },
+    setNotifyBlocked(on) {
+      if (on === notifyBlocked) return;
+      notifyBlocked = on;
+      publish();
     },
     setPosition(position) {
       commit({ ...settings, position });

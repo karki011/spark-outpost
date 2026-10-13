@@ -55,7 +55,6 @@ export function SessionBlob({ chat, state, size, expression, live = false }: Ses
           expression={expressions[expression ?? sessionExpression(state, false)]}
         />
       )}
-      {chat.sessionType === 'terminal' && <span className="isl-terminal-mark">&gt;_</span>}
     </span>
   );
 }

@@ -15,8 +15,9 @@ Your chats, settings and code stay on your computer; keys live in your keychain.
 | **Your AI provider**                  | Your messages, and files, command output and allowed Slack messages the agent reads. | [`.sparkignore`](sparkignore.md) for files                       |
 | **Jev**, if connected                 | Redacted pull request comments, short facts about a chat's turn, Map file contents.  | See [what Jev reads](jev.md#what-jev-reads)                      |
 | **GitHub, Jira, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                               | Disconnect them                                                  |
+| **Sites agents open**                 | Addresses, typed text; never your sign-ins.                                          | [Agent mode](agent-mode.md)                                      |
 | **Slack**                             | Notifications, confirmed posts (as you after sign-in). Never direct message text.    | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
-| **Spark Outpost team**, Mac app only  | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
+| **Spark Outpost team**                | Anonymous heartbeat.                                                                 | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 
 Without Jev, nothing goes to TypeSafe.
 
@@ -32,7 +33,7 @@ See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
 
 Before storing or showing agent output, Spark replaces anything secret-looking with `[redacted:…]`: keys, tokens, passwords in URLs, `KEY=value` lines and values from your secret files.
 
-This covers agent replies, the audit log, Spark tool results, provider errors and Jev requests.
+This covers replies, the audit log, tool results, provider errors and Jev requests.
 
 ## What agents can't reach
 
@@ -40,7 +41,7 @@ This covers agent replies, the audit log, Spark tool results, provider errors an
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
 
-After a run reads private data, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
+After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).
 
 ## When you reset
 

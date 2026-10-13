@@ -60,13 +60,15 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Spark Island states
 
-| You see                                           | Means         |
-| ------------------------------------------------- | ------------- |
-| Scout's eyes scan; a blob has a spinning ring     | **Working…**  |
-| A number badge on Scout; a blob pulses with **!** | **Needs you** |
-| A happy face; a blob pops a star once             | **Done**      |
-| A worried face; a grey blob with a red badge      | **Failed**    |
-| A dimmed blob                                     | **Quiet**     |
+| You see                                           | Means                                                                                        |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Scout's eyes scan; a blob has a spinning ring     | **Working…**                                                                                 |
+| A number badge on Scout; a blob pulses with **!** | **Needs you**                                                                                |
+| A dashed count on Scout                           | Set aside                                                                                    |
+| A happy face; a blob pops a star once             | **Done**                                                                                     |
+| A worried face; a grey blob with a red badge      | **Failed**                                                                                   |
+| A dimmed blob                                     | **Quiet**                                                                                    |
+| **Terminal session** on the card                  | **Open terminal** or **Open terminal in Spark** opens the agent. Answer its questions there. |
 
 Up to five session blobs show; **+N** opens the rest. With **Reduce motion** on, only faces change.
 

@@ -150,4 +150,37 @@ describe('remote policy', () => {
     expect(cardSwitch({ ...base, fullPaths: ['/repo/.env.local'] })).toBe('highRiskCards');
     expect(cardSwitch({ unexpected: true })).toBe('highRiskCards');
   });
+
+  it('lets a paired device answer the browser’s site cards, and keeps saved sign-ins behind their switch', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const site = { origin: 'https://docs.example.com', path: '/guide' };
+    const act = {
+      action: 'act_page',
+      ...site,
+      title: 'Docs',
+      did: 'Clicked button',
+      userTab: true,
+    };
+    const cards = [
+      { action: 'open_page', ...site },
+      { action: 'read_page', ...site, title: 'Docs', what: 'read' },
+      act,
+    ];
+    for (const sparkAction of cards) {
+      expect(cardSwitch({ ...base, sparkAction }), sparkAction.action).toBeNull();
+    }
+    expect(cardSwitch({ ...base, sparkAction: act, secretSend: ['.env'] })).toBeNull();
+    expect(
+      cardSwitch({
+        ...base,
+        sparkAction: {
+          action: 'browser_sign_in',
+          signInId: '11111111-2222-4333-8444-555555555555',
+          projectId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+          label: 'Staging admin',
+          origin: 'https://staging.example.com',
+        },
+      }),
+    ).toBe('signIns');
+  });
 });

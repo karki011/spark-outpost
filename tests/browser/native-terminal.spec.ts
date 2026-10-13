@@ -3,137 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { pickTerminalAgent } from './native-terminal-support.ts';
 import { openChats } from './navigation.ts';
-import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
-});
-
-test('terminal launch selection preserves chat and lets the user pick a native agent @packaged', async ({
-  page,
-}) => {
-  await openChats(page);
-  await page.getByRole('button', { name: 'New chat' }).first().click();
-  const choice = page.getByRole('radiogroup', { name: 'Session type' });
-  await expect(choice.getByRole('radio', { name: 'Chat', exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await choice.getByRole('radio', { name: 'Terminal' }).click();
-  await expect(page.getByRole('heading', { name: 'Work in your terminal' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
-  await expect(
-    page.getByText('The real Codex interface, with Spark tools and your project context.'),
-  ).toBeVisible();
-  await page
-    .getByRole('textbox', { name: 'What would you like to work on?' })
-    .fill('Inspect this project.');
-  await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toBeEnabled();
-  await choice.getByRole('radio', { name: 'Chat', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toHaveCount(0);
-  await expect(page.locator('.composer textarea')).toBeVisible();
-});
-
-test('ticket launch keeps Terminal separate from Plan first and Build @packaged', async ({
-  page,
-}) => {
-  await resetTicketFakes();
-  await connectTickets(page, ['linear']);
-  await openTickets(page);
-  await page.getByRole('main', { name: 'Tickets' }).locator('li[data-ticket$=":ENG-1210"]').hover();
-  await page.getByRole('button', { name: 'Start ENG-1210' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Start work on ENG-1210' });
-  await dialog
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
-  await dialog.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
-  await expect(dialog.getByRole('radio', { name: 'Plan first', exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await dialog.getByRole('radio', { name: 'Build', exact: true }).click();
-  let submitted: Record<string, unknown> | null = null;
-  await page.route('**/api/tickets/linear/ENG-1210/start', async (route) => {
-    submitted = route.request().postDataJSON() as Record<string, unknown>;
-    await route.fulfill({
-      status: 503,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Test launch stopped before executing an agent.' }),
-    });
-  });
-  await dialog.getByRole('button', { name: 'Start building', exact: true }).click();
-  await expect(dialog.getByRole('alert')).toHaveText(
-    'Test launch stopped before executing an agent.',
-  );
-  expect(submitted).toMatchObject({
-    sessionType: 'terminal',
-    terminalProvider: 'codex',
-    mode: 'build',
-    moveToInProgress: true,
-  });
-});
-
-test('failed terminal creation unlocks session and agent choices @packaged', async ({ page }) => {
-  await openChats(page);
-  await page.getByRole('button', { name: 'New chat' }).first().click();
-  const sessions = page.getByRole('radiogroup', { name: 'Session type' });
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
-  await page
-    .getByRole('textbox', { name: 'What would you like to work on?' })
-    .fill('Inspect the project.');
-  await page.route('**/api/conversations', async (route) => {
-    if (route.request().method() !== 'POST') return route.continue();
-    await route.fulfill({
-      status: 503,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Creation temporarily unavailable.' }),
-    });
-  });
-  await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
-  await expect(
-    page.getByRole('alert').filter({ hasText: 'Creation temporarily unavailable.' }),
-  ).toBeVisible();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Terminal agent', exact: true })).toHaveText(
-    'Codex',
-  );
-  await sessions.getByRole('radio', { name: 'Chat', exact: true }).click();
-  await expect(page.locator('.composer textarea')).toBeVisible();
-});
-
-test('a failed first terminal launch unlocks the choices and leaves no dead session @packaged', async ({
-  page,
-}) => {
-  await openChats(page);
-  await page.getByRole('button', { name: 'New chat' }).first().click();
-  const sessions = page.getByRole('radiogroup', { name: 'Session type' });
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
-  const prompt = page.getByRole('textbox', { name: 'What would you like to work on?' });
-  await prompt.fill('Inspect the project.');
-  await page.route(/\/api\/conversations\/[^/]+\/terminal$/, async (route) => {
-    if (route.request().method() !== 'POST') return route.continue();
-    await route.fulfill({
-      status: 400,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Claude Code is not installed.' }),
-    });
-  });
-  await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
-  await expect(
-    page.getByRole('alert').filter({ hasText: 'Claude Code is not installed.' }),
-  ).toBeVisible();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
-  await page.reload();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
-  await expect(prompt).toBeVisible();
 });
 
 test('terminal uses the chat folder browser and preserves linked folders at launch @packaged', async ({
@@ -158,10 +32,11 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
       .getByRole('button', { name: 'Choose project', exact: true })
       .boundingBox())!;
     await expect
-      .poll(
-        async () => (await page.getByRole('dialog', { name: 'Project folders' }).boundingBox())!.y,
-      )
-      .toBeGreaterThanOrEqual(projectButton.y + projectButton.height);
+      .poll(async () => {
+        const menu = (await page.getByRole('dialog', { name: 'Project folders' }).boundingBox())!;
+        return menu.y + menu.height;
+      })
+      .toBeLessThanOrEqual(projectButton.y);
     await page
       .getByRole('dialog', { name: 'Project folders' })
       .getByRole('button', { name: 'Choose a folder…' })
@@ -247,7 +122,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
   }
 });
 
-test('native terminal keeps its actual process while hidden and stops explicitly @packaged', async ({
+test('native terminal keeps its process across reconnects, fills the pane in focus and stops explicitly @packaged', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -259,8 +134,7 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     .getByRole('radiogroup', { name: 'Session type' })
     .getByRole('radio', { name: 'Terminal' })
     .click();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect the fixture.');
@@ -268,6 +142,13 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     (response) =>
       /\/api\/conversations\/[^/]+\/terminal$/.test(response.url()) &&
       response.request().method() === 'POST',
+  );
+  const resizes: { cols: number; rows: number }[] = [];
+  page.on('websocket', (socket) =>
+    socket.on('framesent', (frame) => {
+      if (typeof frame.payload !== 'string' || !frame.payload.includes('"resize"')) return;
+      resizes.push(JSON.parse(frame.payload) as { cols: number; rows: number });
+    }),
   );
   let launchRequests = 0;
   let releaseLaunch = () => {};
@@ -308,12 +189,9 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     await expect(workspace).not.toContainText('Detailed activity is unavailable');
     await expect(workspace.getByRole('button', { name: 'Terminal help' })).toHaveCount(0);
     const row = page.locator(`[data-chat="${session.conversationId}"]`);
-    const marker = await row.locator('.row-terminal-mark').boundingBox();
-    const title = await row.locator('.row-title-line .tt').boundingBox();
-    expect(marker).not.toBeNull();
-    expect(title).not.toBeNull();
-    expect(Math.abs(marker!.y + marker!.height / 2 - title!.y - title!.height / 2)).toBeLessThan(2);
-    expect(marker!.x).toBeLessThan(title!.x);
+    await expect(row.locator('.sub')).toHaveText('Terminal session · Open');
+    await expect(row).not.toContainText('>_');
+    await expect(workspace.locator('.tbar-agent')).toHaveText('Codex · Terminal');
     const processId = async () =>
       (
         await db.query<{ pid: number }>('SELECT pid FROM terminal_shells WHERE id = $1', [
@@ -356,16 +234,19 @@ test('native terminal keeps its actual process while hidden and stops explicitly
     await expect(workspace.getByRole('button', { name: 'Reconnect', exact: true })).toHaveCount(0);
     await invalid.dispose();
 
-    await workspace.getByRole('button', { name: 'Hide view', exact: true }).click();
-    await expect(workspace).toContainText('Your agent keeps running.');
-    expect(await processId()).toBe(pid);
+    await expect(workspace.getByRole('button', { name: 'Hide view' })).toHaveCount(0);
+    await expect(workspace.locator('.tbar-place')).toHaveAttribute('title', /terminal-workspaces/);
+    await expect(workspace.locator('.tbar-mode')).toContainText('Approve for me');
     const attached = page.waitForResponse(
       (candidate) =>
         candidate.url().endsWith(`/api/terminal/sessions/${session.id}/attach`) &&
         candidate.request().method() === 'POST',
     );
-    await workspace.getByRole('button', { name: 'Open terminal', exact: true }).click();
+    await workspace.getByRole('button', { name: 'Terminal actions' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Copy folder path' })).toBeFocused();
+    await page.getByRole('menuitem', { name: 'Reconnect' }).click();
     expect((await attached).ok()).toBe(true);
+    expect(await processId()).toBe(pid);
     await expect(screen).toContainText(`received[${pid}]: before-hide`);
     await workspace.locator('.native-screen').click();
     await page.keyboard.type('after-reopen');
@@ -387,7 +268,41 @@ test('native terminal keeps its actual process while hidden and stops explicitly
       path: path.resolve('.local/report/native-terminal-packaged.png'),
       fullPage: true,
     });
-    await workspace.getByRole('button', { name: 'Stop session', exact: true }).click();
+    const cols = () => resizes.at(-1)?.cols ?? 0;
+    const before = cols();
+    expect(before).toBeGreaterThan(0);
+    await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
+    await workspace.getByRole('button', { name: 'Focus terminal' }).click();
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+    await expect.poll(cols).toBeGreaterThan(before);
+    const leftGap = async () => {
+      const inner = (await workspace.locator('.native-stage').boundingBox())!;
+      const outer = (await page.locator('main.main').boundingBox())!;
+      return Math.abs(inner.x - outer.x);
+    };
+    await expect.poll(leftGap).toBeLessThanOrEqual(1);
+    const stage = (await workspace.locator('.native-stage').boundingBox())!;
+    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+    const pane = (await page.locator('main.main').boundingBox())!;
+    expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
+    expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
+    expect(stage.width - rows.width).toBeLessThan(40);
+    await page.keyboard.press('Escape');
+    await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
+    await page.reload();
+    await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+    await workspace.locator('.native-screen').click();
+    await page.keyboard.press('ControlOrMeta+Shift+F');
+    await expect(workspace.getByRole('button', { name: 'Focus terminal' })).toBeVisible();
+    await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
+    await expect.poll(cols).toBe(before);
+    await workspace.getByRole('button', { name: 'Terminal actions' }).click();
+    await page.getByRole('menuitem', { name: 'Stop session' }).click();
     const hold = workspace.getByRole('button', { name: 'Hold to stop', exact: true });
     await hold.focus();
     await page.keyboard.down('Space');
@@ -415,8 +330,7 @@ test('an exited terminal session starts again in the same chat @packaged', async
     .getByRole('radiogroup', { name: 'Session type' })
     .getByRole('radio', { name: 'Terminal' })
     .click();
-  await page.getByRole('button', { name: 'Terminal agent', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Codex', exact: true }).click();
+  await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect the fixture.');

@@ -8,10 +8,13 @@ import {
 import { attachCdp, type Cdp } from './cdp.ts';
 import { RefMap } from './outline.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
+import { navigationAllowed } from './request-guard.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
-  session(): Session;
+  partition(owner: BrowserTabOwner, url: string): string;
+  session(partition: string): Session;
+  allowed(url: string): boolean;
   changed(): void;
   popup(url: string, opener: PaneTab): void;
   viewCreated(view: WebContentsView): void;
@@ -34,6 +37,7 @@ export interface LiveTab {
 }
 
 const BLANK = 'about:blank';
+const BLOCKED = 'Spark does not let a page in the Browser pane go to that address.';
 const VIEW_RADIUS = 10;
 
 export class PaneTab {
@@ -47,6 +51,7 @@ export class PaneTab {
   active = false;
   picking = false;
   driving = false;
+  lastAction: string | null = null;
   lastUsed = Date.now();
   status: number | null = null;
   error: string | null = null;
@@ -54,6 +59,7 @@ export class PaneTab {
   private title = '';
   private loading = false;
   private live: LiveTab | null = null;
+  private partition: string | null = null;
   private opening: Promise<LiveTab> | null = null;
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
@@ -109,6 +115,7 @@ export class PaneTab {
       pinned: this.pinned,
       driving: this.driving,
       picking: this.picking,
+      lastAction: this.lastAction,
       error: this.error,
     };
   }
@@ -125,10 +132,31 @@ export class PaneTab {
     return this.opening;
   }
 
+  private crosses(url: string): boolean {
+    return this.partition !== null && this.partition !== this.hooks.partition(this.owner, url);
+  }
+
+  private steer(event: { preventDefault(): void }, url: string, redirect: boolean): void {
+    const web = navigationAllowed(url);
+    if (!web || !this.hooks.allowed(url)) {
+      event.preventDefault();
+      if (redirect || web) this.note({ loading: false, error: BLOCKED });
+      return;
+    }
+    if (!this.crosses(url)) return;
+    event.preventDefault();
+    this.moveTo(url);
+  }
+
+  private moveTo(url: string): void {
+    setImmediate(() => void this.load(url));
+  }
+
   private async open(): Promise<LiveTab> {
+    const partition = this.hooks.partition(this.owner, this.url);
     const view = new WebContentsView({
       webPreferences: {
-        session: this.hooks.session(),
+        session: this.hooks.session(partition),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
@@ -144,8 +172,9 @@ export class PaneTab {
       if (classifyBrowserUrl(url) !== 'blocked') this.hooks.popup(url, this);
       return { action: 'deny' };
     });
-    contents.on('will-navigate', (event, url) => {
-      if (classifyBrowserUrl(url) === 'blocked') event.preventDefault();
+    contents.on('will-navigate', (event, url) => this.steer(event, url, false));
+    contents.on('will-redirect', (event, url, _inPlace, isMainFrame) => {
+      if (isMainFrame) this.steer(event, url, true);
     });
     contents.on('did-start-loading', () => this.note({ loading: true, error: null }));
     contents.on('did-stop-loading', () => this.note({ loading: false }));
@@ -154,6 +183,10 @@ export class PaneTab {
       if (details.isMainFrame && !details.isSameDocument) this.live?.logs.reset();
     });
     contents.on('did-navigate', (_event, url, code) => {
+      if (this.crosses(url)) {
+        this.moveTo(url);
+        return;
+      }
       this.refs.clear();
       this.filled.clear();
       this.status = code > 0 ? code : null;
@@ -175,6 +208,7 @@ export class PaneTab {
     const logs = await capturePageLogs(cdp);
     await cdp.send('Page.enable');
     this.live = { view, cdp, logs };
+    this.partition = partition;
     this.hooks.viewCreated(view);
     return this.live;
   }
@@ -186,9 +220,17 @@ export class PaneTab {
     this.hooks.changed();
   }
 
-  async load(url: string, signal?: AbortSignal): Promise<void> {
-    const { view } = await this.ensure();
+  private async viewFor(url: string): Promise<LiveTab> {
     this.url = url;
+    const live = await this.ensure();
+    if (!this.crosses(url)) return live;
+    this.sleep();
+    this.url = url;
+    return this.ensure();
+  }
+
+  async load(url: string, signal?: AbortSignal): Promise<void> {
+    const { view } = await this.viewFor(url);
     this.title = '';
     this.error = null;
     this.status = null;
@@ -220,14 +262,18 @@ export class PaneTab {
     return this.waking;
   }
 
-  history(step: 'back' | 'forward' | 'reload' | 'stop'): void {
+  history(step: 'back' | 'forward' | 'reload' | 'stop'): boolean {
     const contents = this.live?.view.webContents;
-    if (!contents || contents.isDestroyed()) return;
-    if (step === 'back') contents.navigationHistory.goBack();
-    if (step === 'forward') contents.navigationHistory.goForward();
+    if (!contents || contents.isDestroyed()) return false;
+    const history = contents.navigationHistory;
+    if (step === 'back' && !history.canGoBack()) return false;
+    if (step === 'forward' && !history.canGoForward()) return false;
+    if (step === 'back') history.goBack();
+    if (step === 'forward') history.goForward();
     if (step === 'reload') contents.reload();
     if (step === 'stop') contents.stop();
     this.touch();
+    return true;
   }
 
   sleep(): void {
@@ -235,8 +281,10 @@ export class PaneTab {
     if (!live) return;
     this.url = this.currentUrl();
     this.live = null;
+    this.partition = null;
     this.loading = false;
     this.picking = false;
+    this.lastAction = null;
     this.refs.clear();
     this.filled.clear();
     for (const step of [

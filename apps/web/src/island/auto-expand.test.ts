@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
-import { attentionKey, nextToExpand, opensByItself } from './auto-expand.ts';
-import { islandView, type Card } from './island-model.ts';
+import { nextToExpand, opensByItself } from './auto-expand.ts';
+import { cardKey, islandView, type Card } from './island-model.ts';
 
 function card(chatId: string, approvalId: string | null, loading = false): Card {
   return {
@@ -21,14 +21,23 @@ describe('opening a request by itself', () => {
     expect(nextToExpand(cards, cards, shown)).toBeNull();
   });
 
-  it('does not reopen a request the user put aside, even when the chat changes', () => {
+  it('does not reopen a request the user put aside while nothing about it changes', () => {
     const shown = new Set<string>();
     const first = card('a', null);
     expect(nextToExpand([first], [first], shown)).toBe(first);
+    expect(nextToExpand([first], [first], shown)).toBeNull();
+    expect(nextToExpand([], [first], shown)).toBeNull();
+    expect(nextToExpand([first], [first], shown)).toBeNull();
+  });
+
+  it('reopens a chat-level request after the chat changes, under the key that set it aside', () => {
+    const shown = new Set<string>();
+    const first = card('a', null);
+    nextToExpand([first], [first], shown);
     const touched = { ...first, chat: { ...first.chat, updatedAt: '2026-01-02T00:00:00Z' } };
-    expect(nextToExpand([touched], [touched], shown)).toBeNull();
-    expect(nextToExpand([], [touched], shown)).toBeNull();
-    expect(nextToExpand([touched], [touched], shown)).toBeNull();
+    expect(cardKey(touched)).not.toBe(cardKey(first));
+    expect(nextToExpand([touched], [touched], shown)).toBe(touched);
+    expect([...shown]).toEqual([cardKey(touched)]);
   });
 
   it('opens again when the same chat asks something new', () => {
@@ -46,7 +55,7 @@ describe('opening a request by itself', () => {
     const loading = card('a', null, true);
     expect(nextToExpand([loading], [loading], shown)).toBeNull();
     expect(shown.size).toBe(0);
-    expect(attentionKey(card('a', 'one'))).toBe('one');
+    expect(cardKey(card('a', 'one'))).toBe('one');
   });
 });
 

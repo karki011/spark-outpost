@@ -43,6 +43,14 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'read|look|check|see|inspect|review|screenshot|summari[sz]e',
     'page|tab|browser|site|website',
   ),
+  open_page: asked(
+    'open|browse|visit|go to|search|research|look up|find|check|read',
+    'page|site|website|web|online|internet|url|link|docs|documentation',
+  ),
+  act_page: asked(
+    'click|type|fill|submit|press|search|browse|use|navigate|try',
+    'page|site|website|web|form|button|browser|online',
+  ),
   browser_sign_in: null,
   post_slack: asked(
     'post|send|share|reply|tell|message|notify|announce|update',

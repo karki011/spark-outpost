@@ -33,7 +33,6 @@ export type IslandView =
   | { kind: 'note' }
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
-  | { kind: 'nudge'; card: Card; total: number }
   | { kind: 'now'; card: Card | null }
   | { kind: 'peek' };
 
@@ -48,7 +47,6 @@ export function islandView(inputs: IslandInputs): IslandView {
   if (inputs.hoverOnly) return { kind: 'peek' };
   const first = (inputs.nudge && inputs.cards[0]) || null;
   if (inputs.full) return { kind: 'now', card: first };
-  if (first) return { kind: 'nudge', card: first, total };
   return { kind: 'peek' };
 }
 
@@ -62,11 +60,7 @@ export function quickShortcutTarget(
 ): QuickShortcutTarget {
   if (panel) return { kind: 'close' };
   const card =
-    view.kind === 'card' || view.kind === 'nudge' || view.kind === 'now'
-      ? view.card
-      : view.kind === 'peek'
-        ? pending
-        : null;
+    view.kind === 'card' || view.kind === 'now' ? view.card : view.kind === 'peek' ? pending : null;
   if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {
     return { kind: 'review', chatId: card.chat.id };
@@ -78,7 +72,6 @@ export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
 
 export function hoverOpens(view: IslandView, pending: Card | null = null): HoverOpen {
   if (view.kind === 'peek') return pending ? { kind: 'card', card: pending } : { kind: 'home' };
-  if (view.kind === 'nudge') return { kind: 'card', card: view.card };
   if (view.kind === 'now') return view.card ? { kind: 'card', card: view.card } : { kind: 'home' };
   return null;
 }
@@ -90,7 +83,6 @@ const CARD_WIDTHS = {
   open: 520,
 } as const;
 const NOTE_WIDTH = 420;
-const NUDGE_WIDTH = 364;
 const NOW_WIDTH = 400;
 const NOW_WING = 104;
 const HOME_WIDTH = { share: 0.5, min: 720, max: 920 } as const;
@@ -119,8 +111,6 @@ export function viewWidth(view: IslandView, notchWidth: number, screenWidth: num
       return Math.max(notchWidth, 72);
     case 'note':
       return NOTE_WIDTH;
-    case 'nudge':
-      return NUDGE_WIDTH;
     case 'now':
       return Math.max(NOW_WIDTH, notchWidth + 2 * NOW_WING);
   }

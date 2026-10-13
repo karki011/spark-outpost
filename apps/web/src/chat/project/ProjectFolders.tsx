@@ -17,12 +17,19 @@ interface ProjectFoldersProps {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
+  lead?: ReactNode;
   children?: ReactNode;
 }
 
 const RECENT_LIMIT = 5;
 
-export function ProjectFolders({ conversationId, repos, popover, children }: ProjectFoldersProps) {
+export function ProjectFolders({
+  conversationId,
+  repos,
+  popover,
+  lead = null,
+  children,
+}: ProjectFoldersProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
   const [browsing, setBrowsing] = useState(false);
   const projects = useProjects();
@@ -72,6 +79,7 @@ export function ProjectFolders({ conversationId, repos, popover, children }: Pro
   return (
     <div className="ctxbar-wrap">
       <div className="ctxbar">
+        {lead}
         <button
           ref={anchorRef}
           type="button"

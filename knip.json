@@ -12,6 +12,7 @@
         "tests/browser/ensure-database.ts",
         "tests/browser/fake-browser-host.ts",
         "tests/browser/bin/gh-fake.ts",
+        "tests/browser/terminal-usage-cli.ts",
         "tests/browser/bin/tailscale-fake.ts",
         "tests/fixtures/browser-pane/serve.ts",
         "infra/heartbeat-worker/src/worker.ts"

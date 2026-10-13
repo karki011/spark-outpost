@@ -24,6 +24,11 @@ describe('browser URL classification', () => {
     'http://127.0.0.1.nip.io/',
     'https://test/',
     'http://mytest:3000/',
+    'https://example.com:8443/a?b=1#c',
+    'https://bücher.example/',
+    'https://xn--bcher-kva.example/',
+    'http://192.168.1.20:3000/',
+    'https://[2001:db8::1]/',
   ])('treats %s as external', (url) => {
     expect(classifyBrowserUrl(url)).toBe('external');
   });
@@ -33,6 +38,13 @@ describe('browser URL classification', () => {
     'chrome://settings',
     'data:text/html,<p>x</p>',
     'http://user:pass@localhost:3000/',
+    'https://user@example.com/',
+    'https://example.com:pw@evil.example/',
+    'devtools://devtools/bundled/inspector.html',
+    'view-source:https://example.com/',
+    'blob:https://example.com/1',
+    'ftp://example.com/',
+    'ws://example.com/',
     'not a url',
     `http://localhost/${'a'.repeat(5000)}`,
   ])('blocks %s', (url) => {

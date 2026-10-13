@@ -1,7 +1,8 @@
 import { signInOriginProblem } from '@spark-outpost/contracts';
 import type { Cdp } from './cdp.ts';
-import type { AxNode } from './outline.ts';
+import { focusNode, pressKey, replaceFocusedText } from './page-input.ts';
 import { boxOf } from './page-read.ts';
+import { pageSettles } from './page-settle.ts';
 import type { DomNode } from './sensitive-nodes.ts';
 import {
   SIGN_IN_REASONS,
@@ -53,15 +54,6 @@ export const SIGN_IN_FOCUS_LOST =
 export const SIGN_IN_NO_PASSWORD_STEP =
   'The page did not show a password field after the username step. The password was not filled.';
 
-const STARTS = new Set([
-  'Page.frameStartedLoading',
-  'Page.frameRequestedNavigation',
-  'Page.frameNavigated',
-]);
-const ENDS = new Set(['Page.loadEventFired', 'Page.navigatedWithinDocument']);
-const ENTER = { key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 };
-const SELECT_ALL = { key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65 };
-
 async function pageUrl(cdp: Cdp): Promise<string> {
   const { frameTree } = await cdp.send<{ frameTree: { frame: { url: string } } }>(
     'Page.getFrameTree',
@@ -88,65 +80,18 @@ async function planOf(cdp: Cdp): Promise<SignInPlan> {
   return chooseSignInFields(candidates, visible);
 }
 
-async function hasFocus(cdp: Cdp, node: number): Promise<boolean> {
-  const { nodes } = await cdp.send<{ nodes: AxNode[] }>('Accessibility.getPartialAXTree', {
-    backendNodeId: node,
-    fetchRelatives: false,
-  });
-  return nodes.some(
-    (candidate) =>
-      candidate.backendDOMNodeId === node &&
-      (candidate.properties ?? []).some(
-        (property) => property.name === 'focused' && property.value.value === true,
-      ),
-  );
-}
-
 async function typeInto(cdp: Cdp, node: number, text: string): Promise<void> {
-  await cdp.send('DOM.focus', { backendNodeId: node });
-  if (!(await hasFocus(cdp, node))) throw new SignInError('failed', SIGN_IN_FOCUS_LOST);
-  await cdp.send('Input.dispatchKeyEvent', {
-    type: 'rawKeyDown',
-    ...SELECT_ALL,
-    commands: ['selectAll'],
-  });
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...SELECT_ALL });
-  await cdp.send('Input.insertText', { text });
+  if (!(await focusNode(cdp, node))) throw new SignInError('failed', SIGN_IN_FOCUS_LOST);
+  await replaceFocusedText(cdp, text);
 }
 
 function pause(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function pageSettles(cdp: Cdp, timing: SignInTiming, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    let loading = false;
-    let stop: () => void = () => undefined;
-    const timers: NodeJS.Timeout[] = [];
-    const finish = () => {
-      for (const timer of timers) clearTimeout(timer);
-      stop();
-      signal.removeEventListener('abort', finish);
-      resolve();
-    };
-    stop = cdp.listen((method) => {
-      if (STARTS.has(method)) loading = true;
-      if (ENDS.has(method)) timers.push(setTimeout(finish, timing.restMs));
-    });
-    timers.push(
-      setTimeout(() => {
-        if (!loading) finish();
-      }, timing.settleMs),
-      setTimeout(finish, timing.loadMs),
-    );
-    signal.addEventListener('abort', finish, { once: true });
-  });
-}
-
 async function submit(cdp: Cdp, timing: SignInTiming, signal: AbortSignal): Promise<void> {
   const settled = pageSettles(cdp, timing, signal);
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', ...ENTER, text: '\r' });
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...ENTER });
+  await pressKey(cdp, 'Enter');
   await settled;
 }
 

@@ -28,7 +28,11 @@ export function StateChip({
           : state === 'failed'
             ? ' bad'
             : '';
-    return <span className={`isl-schip${style}`}>{terminalLabel(chat.terminal.state)}</span>;
+    return (
+      <span className={`isl-schip${style}`}>
+        Terminal<span className="sr-only"> session</span> · {terminalLabel(chat.terminal.state)}
+      </span>
+    );
   }
   switch (state) {
     case 'working':

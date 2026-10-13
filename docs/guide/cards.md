@@ -12,14 +12,14 @@ Cards appear in the chat, under the reply, and on [Spark Island](desktop-compani
 
 These come from the agent's mode or a [protected path](protected-paths.md). They never go on by themselves and expire after 30 minutes.
 
-| Card                                         | Means                                                   | Buttons                                                                 |
-| -------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Run a command?**                           | The agent wants to run a command.                       | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
-| **Change a file?** / **Change these files?** | The agent wants to edit.                                | **Allow**, **Always allow**, **Deny**                                   |
-| **Change agent instructions?**               | An edit to `AGENTS.md`, `CLAUDE.md` and similar.        | **Allow once**, **Allow for this chat**, **Deny**                       |
-| **Change git hooks or config?**              | An edit to `.git/hooks`, `.git/config` or `git config`. | **Hold to allow once**, **Deny**                                        |
-| **Force push?**                              | A push that rewrites history on the remote.             | **Hold to force push**, **Deny**                                        |
-| **Send a secret value?**                     | A push or upload holds a secret file's value.           | **Hold to allow once**, **Deny**                                        |
+| Card                                         | Means                                                                 | Buttons                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Run a command?**                           | The agent wants to run a command.                                     | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
+| **Change a file?** / **Change these files?** | The agent wants to edit.                                              | **Allow**, **Always allow**, **Deny**                                   |
+| **Change agent instructions?**               | An edit to `AGENTS.md`, `CLAUDE.md` and similar.                      | **Allow once**, **Allow for this chat**, **Deny**                       |
+| **Change git hooks or config?**              | An edit to `.git/hooks`, `.git/config` or `git config`.               | **Hold to allow once**, **Deny**                                        |
+| **Force push?**                              | A push that rewrites history on the remote.                           | **Hold to force push**, **Deny**                                        |
+| **Send a secret value?**                     | A push, upload or text typed into a site holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
 
 Spark asks nothing of its own before or after a build. The agent's [plan card](plan-card.md) is an approval card, and when the agent needs something it says so in its reply.
 

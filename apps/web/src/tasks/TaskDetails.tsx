@@ -14,15 +14,18 @@ import { CrewPane } from './CrewPane.tsx';
 import { LinksPane } from './LinksPane.tsx';
 import { PlanPane } from './PlanPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
+import { TerminalCost } from '../terminal/usage/TerminalCost.tsx';
+import { TerminalSteps } from '../terminal/usage/TerminalSteps.tsx';
 import { progressPercent } from './TaskCard.tsx';
 import { TaskList, WaitingItems } from './TaskList.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton, type SkeletonShape } from '../ui/loading/Skeleton.tsx';
 
-export type WorkTab = 'tasks' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
+export type WorkTab = 'tasks' | 'steps' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
 
 const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
   tasks: 'list',
+  steps: 'list',
   plan: 'lines',
   crew: 'list',
   links: 'list',
@@ -30,8 +33,11 @@ const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
   cost: 'cards',
 };
 
+const NO_DETAIL: ReadonlySet<WorkTab> = new Set(['tasks', 'steps', 'changes', 'crew']);
+
 const tabNames: Record<WorkTab, string> = {
   tasks: 'Tasks',
+  steps: 'Steps',
   plan: 'Plan',
   crew: 'Crew',
   links: 'Links',
@@ -85,6 +91,7 @@ interface TaskDetailsProps {
   runs: readonly Run[];
   heading: Ref<HTMLHeadingElement>;
   autonomy: ReactNode;
+  terminal?: boolean;
 }
 
 export function TaskDetails({
@@ -102,6 +109,7 @@ export function TaskDetails({
   runs,
   heading,
   autonomy,
+  terminal = false,
 }: TaskDetailsProps) {
   const items = task.items;
   const detail = useQuery({
@@ -113,6 +121,7 @@ export function TaskDetails({
   const storedCrew = orchestration !== null && agents.length > 0;
   const tabs: WorkTab[] = [
     'tasks',
+    ...(terminal ? (['steps'] as const) : []),
     ...(hasPlan ? (['plan'] as const) : []),
     ...(storedCrew ? (['crew'] as const) : []),
     'links',
@@ -175,7 +184,9 @@ export function TaskDetails({
         {current === 'crew' && orchestration && (
           <CrewPane agents={agents} labels={pieceLabels(orchestration)} />
         )}
-        {current !== 'tasks' && current !== 'changes' && current !== 'crew' && !detail.data && (
+        {current === 'steps' && <TerminalSteps conversationId={conversationId} />}
+        {current === 'cost' && terminal && <TerminalCost conversationId={conversationId} />}
+        {!NO_DETAIL.has(current) && !detail.data && (
           <div className="wsec">
             <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
               <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />

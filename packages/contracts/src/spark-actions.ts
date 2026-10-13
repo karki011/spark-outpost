@@ -157,6 +157,21 @@ export const readPageActionSchema = z.object({
   what: z.enum(['read', 'screenshot', 'logs']),
 });
 export type ReadPageAction = z.infer<typeof readPageActionSchema>;
+export const openPageActionSchema = z.object({
+  action: z.literal('open_page'),
+  origin: z.string().max(300),
+  path: z.string().max(500),
+});
+export type OpenPageAction = z.infer<typeof openPageActionSchema>;
+export const actPageActionSchema = z.object({
+  action: z.literal('act_page'),
+  origin: z.string().max(300),
+  path: z.string().max(500),
+  title: z.string().max(300),
+  did: z.string().max(200),
+  userTab: z.boolean(),
+});
+export type ActPageAction = z.infer<typeof actPageActionSchema>;
 export const browserSignInActionSchema = z.object({
   action: z.literal('browser_sign_in'),
   signInId: z.uuid(),
@@ -189,6 +204,8 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
   readPageActionSchema,
+  openPageActionSchema,
+  actPageActionSchema,
   browserSignInActionSchema,
   postSlackActionSchema,
 ]);
@@ -226,6 +243,8 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   switch_mcp_server: [],
   remove_mcp_server: [],
   read_page: [],
+  open_page: [],
+  act_page: [],
   browser_sign_in: [],
   post_slack: ['body'],
 };
@@ -320,6 +339,16 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Allow for this chat',
     doing: 'Allowing the page…',
   },
+  open_page: {
+    question: 'Let the agent open this site?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the site…',
+  },
+  act_page: {
+    question: 'Let the agent click and type on this site?',
+    confirm: 'Allow for this chat',
+    doing: 'Allowing the site…',
+  },
   browser_sign_in: {
     question: 'Use this saved sign-in?',
     confirm: 'Allow for this chat',
@@ -366,6 +395,8 @@ const REPEATABLE: ReadonlySet<SparkActionName> = new Set([
   'switch_mcp_server',
   'remove_mcp_server',
   'read_page',
+  'open_page',
+  'act_page',
   'browser_sign_in',
 ]);
 

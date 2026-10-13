@@ -3,6 +3,7 @@ import type {
   NativeTerminalLaunchRequest,
   NativeTerminalLaunchResponse,
   NativeTerminalSession,
+  NativeTerminalUsage,
 } from '@spark-outpost/contracts';
 import type { CliLocator } from '../agents/acp/agent-cli.ts';
 import type { Db } from '../persistence/db.ts';
@@ -12,7 +13,8 @@ import type { SparkGrant, SparkMcpHost } from '../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { placeChat } from '../orchestration/chat-place.ts';
 import type { NativeTurnContext } from './native-context.ts';
-import type { InterruptWatcher, WatchInterrupts } from './native-interrupts.ts';
+import type { WatchTranscript } from './native-tail.ts';
+import type { SessionTranscript } from './native-usage.ts';
 import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
@@ -29,7 +31,7 @@ export interface NativeRuntimeDeps {
   approvalWaiters?: ApprovalWaiters;
   prepareLaunch?: typeof prepareNativeLaunch;
   place?: typeof placeChat;
-  watchInterrupts?: WatchInterrupts;
+  watchTranscript?: WatchTranscript;
 }
 
 export interface PendingNativeLaunch {
@@ -44,6 +46,7 @@ export interface NativeRuntime {
     conversationId: string,
     request: NativeTerminalLaunchRequest,
   ): Promise<NativeTerminalLaunchResponse>;
+  usage(conversationId: string): Promise<NativeTerminalUsage>;
   hook(token: string, body: unknown): Promise<boolean>;
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;
@@ -71,5 +74,5 @@ export interface LiveSession {
   completedTurns: Set<string>;
   currentPromptEventId: string | null;
   completedEvents: Map<string, string | null>;
-  interrupts: InterruptWatcher | null;
+  transcript: SessionTranscript | null;
 }

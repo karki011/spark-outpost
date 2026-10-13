@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   browserOrigin,
   originAndPath,
@@ -7,6 +8,12 @@ import {
 import { BrowserHostError, type BrowserHost } from '../../../browser/host-client.ts';
 import type { Queryable } from '../../../persistence/db.ts';
 import { SparkToolError, type SparkToolContext } from '../../tool.ts';
+
+export const tabInput = z
+  .string()
+  .max(40)
+  .optional()
+  .describe('Tab id from spark_browser_tabs. Defaults to the tab the agent used last.');
 
 export interface BrowserPlaceOfChat {
   chatId: string;
@@ -63,7 +70,7 @@ export type BrowserDecision =
   | 'user_allowed'
   | 'waiting_for_user'
   | 'user_declined'
-  | 'refused_external'
+  | 'refused'
   | 'refused_origin'
   | 'failed';
 

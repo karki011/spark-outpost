@@ -1,0 +1,158 @@
+.isl-tiles {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.isl-tilegrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 8px;
+  max-height: 104px;
+  padding: 3px;
+  margin: -3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+
+.isl-tile {
+  height: 44px;
+  min-width: 0;
+  padding: 0 8px 0 4px;
+  border: 1px solid var(--card-line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--text) 4%, var(--card));
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  animation: isl-tile-in 0.52s var(--spring-pop) calc(150ms + var(--i, 0) * 55ms) both;
+  transition:
+    transform 0.34s var(--spring-pop),
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.isl-tile-new {
+  border-style: dashed;
+  background: none;
+  color: var(--muted);
+}
+
+.isl-tile-new .isl-tile-face svg {
+  width: 15px;
+  height: 15px;
+}
+
+.isl-tile:hover {
+  background: color-mix(in srgb, var(--text) 9%, var(--card));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--card-line));
+  transform: translateY(-1px) scale(1.03);
+}
+
+.isl-tile:active {
+  transform: scale(1.06, 0.9);
+  transition-duration: 0.08s;
+}
+
+.isl-tile[aria-busy='true'] {
+  transform: scale(0.97);
+}
+
+.isl-tile-face {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 17px 12px 12px 17px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+.isl-tile:hover .isl-tile-face {
+  animation: isl-wobble 0.5s var(--spring-pop);
+}
+
+.isl-tile-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.isl-tile-name,
+.isl-tile-role {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.isl-tile-role {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.isl-tile-skl {
+  position: relative;
+  overflow: hidden;
+  border-style: dashed;
+  background: none;
+  animation: none;
+}
+
+.isl-tile-skl::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 300%;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--text) 4%, transparent) 25%,
+    color-mix(in srgb, var(--text) 9%, transparent) 50%,
+    color-mix(in srgb, var(--text) 4%, transparent) 75%
+  );
+  will-change: transform;
+  animation: isl-sweep 1.4s ease-in-out infinite;
+}
+
+.isl-tilegrid[data-quick] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.isl-tile-needs {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--card-line));
+  background: color-mix(in srgb, var(--warn) 9%, var(--card));
+}
+
+.isl-tile-needs .isl-badge {
+  flex: none;
+}
+
+.isl-tile-quiet {
+  height: 44px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 8px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  animation: isl-tile-in 0.52s var(--spring-pop) calc(150ms + var(--i, 0) * 55ms) both;
+}
+
+.isl-tile-quiet svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--success);
+}

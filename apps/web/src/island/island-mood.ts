@@ -20,7 +20,6 @@ export function isSleepyTime(hour: number, idleMinutes: number): boolean {
 export function scoutMoodFor(view: IslandView, context: MoodContext): ScoutMood {
   switch (view.kind) {
     case 'card':
-    case 'nudge':
       return 'alert';
     case 'now':
       return view.card ? 'alert' : restingMood(context);

@@ -50,6 +50,7 @@ import { useSlash } from './composer/use-slash.ts';
 import { useDraftRequests } from './composer/use-draft-requests.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
+import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import {
   composerHint,
   composerPlaceholder,
@@ -100,12 +101,11 @@ interface ComposerProps {
   agentCommands?: readonly AgentCommand[];
   agentName?: string;
   autoFocus?: boolean;
+  contextLead?: ReactNode;
 }
 
 const NO_COMMANDS: readonly AgentCommand[] = [];
 const NO_SKILLS: readonly RepoDefinition[] = [];
-
-const MAX_ROWS = 5;
 
 export function Composer({
   conversationId,
@@ -133,6 +133,7 @@ export function Composer({
   agentCommands = NO_COMMANDS,
   agentName = 'Agent',
   autoFocus = true,
+  contextLead = null,
   quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useState('');
@@ -294,138 +295,39 @@ export function Composer({
   };
 
   return (
-    <div className="composer-wrap">
-      {error && (
-        <p className="composer-error" role="alert">
-          {error}
-        </p>
-      )}
-      <SecretWarning
-        guard={secrets}
-        input={textareaRef}
-        onText={setDraft}
-        onSendAnyway={() => void submit(lastChoice.current)}
-      />
-      {above}
-      <ContextBar
-        conversationId={conversationId}
-        repos={repos}
-        popover={repoPopover}
-        autonomy={autonomy}
-        suggestion={
-          <SparkSuggestion
-            conversationId={conversationId}
-            sparks={sparks}
-            draft={draft}
-            onApply={(text) => {
-              setDraft(text);
-              textareaRef.current?.focus();
-            }}
-          />
-        }
-      />
-      <div className="composer">
-        {quotes && <QuoteChips items={quotes.items} onRemove={quotes.remove} />}
-        <AttachmentChips
-          items={attachments.items}
-          onRemove={attachments.remove}
-          onRetry={attachments.retry}
-          onAllowSlackChannel={attachments.allowSlackChannel}
+    <ComposerShell
+      error={error}
+      warning={
+        <SecretWarning
+          guard={secrets}
+          input={textareaRef}
+          onText={setDraft}
+          onSendAnyway={() => void submit(lastChoice.current)}
         />
-        <p className="composer-notice" role="status">
-          {attachments.notice}
-        </p>
-        {notice && (
-          <p className="composer-notice" role="status">
-            {notice}
-          </p>
-        )}
-        {typedNote && !slash.open && (
-          <p className="composer-notice" role="status">
-            {typedNote}
-          </p>
-        )}
-        <label className="sr-only" htmlFor={inputId}>
-          Message
-        </label>
-        {slash.open && (
-          <SlashMenu
-            listId={slash.listId}
-            items={slash.items}
-            active={slash.active}
-            agentName={agentName}
-            emptyNote={typedNote}
-            onActive={slash.setActive}
-            onPick={(item) => {
-              slash.pick(item);
-              textareaRef.current?.focus();
-            }}
-            onKeyDown={(event) => {
-              if (slash.handleKey(event)) textareaRef.current?.focus();
-            }}
-          />
-        )}
-        {mcpOpen && (
-          <ChatMcpPanel
-            conversationId={conversationId}
-            onClose={() => {
-              setMcpOpen(false);
-              textareaRef.current?.focus();
-            }}
-          />
-        )}
-        {mention.open && (
-          <MentionPicker
-            listId={mention.listId}
-            left={mention.left}
-            sparks={mention.sparks}
-            active={mention.active}
-            showsFiles={mention.showsFiles}
-            search={mention.search}
-            attached={attachedPaths}
-            onActive={mention.setActive}
-            onPick={mention.pick}
-            onPickSpark={mention.pickSpark}
-          />
-        )}
-        {repoOpen && hasRepos && (
-          <RepoFilePicker
-            repos={repos}
-            attached={attachedPaths}
-            onPick={addFromRepo}
-            onClose={closeRepo}
-          />
-        )}
-        <textarea
-          ref={textareaRef}
-          id={inputId}
-          autoFocus={autoFocus}
-          value={draft}
-          rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
-          placeholder={composerPlaceholder({
-            queueing,
-            preferred: busyEnter,
-            hasRepos,
-            hasSparks: sparks.length > 0,
-          })}
-          {...(slash.open ? slash.inputProps : mention.inputProps)}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            slash.sync(event.target);
-            mention.sync(event.target);
-          }}
-          onSelect={(event) => {
-            slash.sync(event.currentTarget);
-            mention.sync(event.currentTarget);
-          }}
-          onBlur={(event) => {
-            if (!focusMovesToSlashMenu(event.relatedTarget)) slash.dismiss();
-            mention.dismiss();
-          }}
-          onKeyDown={onKeyDown}
-          onPaste={(event) => pasteContext(event, attachments, conversationId)}
+      }
+      above={above}
+      context={
+        <ContextBar
+          conversationId={conversationId}
+          repos={repos}
+          popover={repoPopover}
+          autonomy={autonomy}
+          lead={contextLead}
+          suggestion={
+            <SparkSuggestion
+              conversationId={conversationId}
+              sparks={sparks}
+              draft={draft}
+              onApply={(text) => {
+                setDraft(text);
+                textareaRef.current?.focus();
+              }}
+            />
+          }
         />
-        <div className="comp-bar">
+      }
+      bar={
+        <>
           <PlusMenu
             hasProject={hasRepos}
             onAttach={attachments.add}
@@ -465,8 +367,109 @@ export function Composer({
               ? { busySend: { preferred: busyEnter, onChoice: sendAs, waiting: waitingOn > 0 } }
               : {})}
           />
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {quotes && <QuoteChips items={quotes.items} onRemove={quotes.remove} />}
+      <AttachmentChips
+        items={attachments.items}
+        onRemove={attachments.remove}
+        onRetry={attachments.retry}
+        onAllowSlackChannel={attachments.allowSlackChannel}
+      />
+      <p className="composer-notice" role="status">
+        {attachments.notice}
+      </p>
+      {notice && (
+        <p className="composer-notice" role="status">
+          {notice}
+        </p>
+      )}
+      {typedNote && !slash.open && (
+        <p className="composer-notice" role="status">
+          {typedNote}
+        </p>
+      )}
+      <label className="sr-only" htmlFor={inputId}>
+        Message
+      </label>
+      {slash.open && (
+        <SlashMenu
+          listId={slash.listId}
+          items={slash.items}
+          active={slash.active}
+          agentName={agentName}
+          emptyNote={typedNote}
+          onActive={slash.setActive}
+          onPick={(item) => {
+            slash.pick(item);
+            textareaRef.current?.focus();
+          }}
+          onKeyDown={(event) => {
+            if (slash.handleKey(event)) textareaRef.current?.focus();
+          }}
+        />
+      )}
+      {mcpOpen && (
+        <ChatMcpPanel
+          conversationId={conversationId}
+          onClose={() => {
+            setMcpOpen(false);
+            textareaRef.current?.focus();
+          }}
+        />
+      )}
+      {mention.open && (
+        <MentionPicker
+          listId={mention.listId}
+          left={mention.left}
+          sparks={mention.sparks}
+          active={mention.active}
+          showsFiles={mention.showsFiles}
+          search={mention.search}
+          attached={attachedPaths}
+          onActive={mention.setActive}
+          onPick={mention.pick}
+          onPickSpark={mention.pickSpark}
+        />
+      )}
+      {repoOpen && hasRepos && (
+        <RepoFilePicker
+          repos={repos}
+          attached={attachedPaths}
+          onPick={addFromRepo}
+          onClose={closeRepo}
+        />
+      )}
+      <textarea
+        ref={textareaRef}
+        id={inputId}
+        autoFocus={autoFocus}
+        value={draft}
+        rows={composerRows(draft)}
+        placeholder={composerPlaceholder({
+          queueing,
+          preferred: busyEnter,
+          hasRepos,
+          hasSparks: sparks.length > 0,
+        })}
+        {...(slash.open ? slash.inputProps : mention.inputProps)}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          slash.sync(event.target);
+          mention.sync(event.target);
+        }}
+        onSelect={(event) => {
+          slash.sync(event.currentTarget);
+          mention.sync(event.currentTarget);
+        }}
+        onBlur={(event) => {
+          if (!focusMovesToSlashMenu(event.relatedTarget)) slash.dismiss();
+          mention.dismiss();
+        }}
+        onKeyDown={onKeyDown}
+        onPaste={(event) => pasteContext(event, attachments, conversationId)}
+      />
+    </ComposerShell>
   );
 }
