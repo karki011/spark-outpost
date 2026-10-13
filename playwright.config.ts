@@ -122,6 +122,7 @@ const viteServer = {
 export default defineConfig({
   testDir: 'tests/browser',
   globalSetup: './tests/browser/single-worker.ts',
+  globalTeardown: './tests/browser/stop-terminals.ts',
   outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,
