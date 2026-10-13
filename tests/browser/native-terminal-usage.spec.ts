@@ -6,7 +6,7 @@ import { pickTerminalAgent } from './native-terminal-support.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_CLAUDE_BIN } from './stub-config.ts';
 
-const CLI = path.resolve('tests/browser/terminal-usage-cli.mjs');
+const CLI = path.resolve('tests/browser/terminal-usage-cli.ts');
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });

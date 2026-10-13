@@ -46,7 +46,7 @@ describe('Claude interrupt records', () => {
       promptId: 'assistant',
       message: { content: [{ type: 'text', text: '[Request interrupted by user]' }] },
     };
-    const { promptId: _promptId, ...untitled } = interrupt('x');
+    const untitled = { ...interrupt('x'), promptId: undefined };
     expect(
       parse(
         typed,

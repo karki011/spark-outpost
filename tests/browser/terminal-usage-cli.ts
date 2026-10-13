@@ -29,16 +29,18 @@ if (args.includes('doctor')) {
   process.exit(0);
 }
 
-const valueOf = (flag) => args[args.indexOf(flag) + 1];
-const settings = JSON.parse(readFileSync(valueOf('--settings'), 'utf8'));
-const command = settings.hooks.UserPromptSubmit[0].hooks[0].command;
+const valueOf = (flag: string) => args[args.indexOf(flag) + 1]!;
+const settings = JSON.parse(readFileSync(valueOf('--settings'), 'utf8')) as {
+  hooks: Record<string, { hooks: { command: string }[] }[]>;
+};
+const command = settings.hooks.UserPromptSubmit![0]!.hooks[0]!.command;
 const sessionId = valueOf('--session-id');
 const folder = path.join(os.tmpdir(), 'spark-terminal-usage-fixture');
 mkdirSync(folder, { recursive: true });
 const transcript = path.join(folder, `${sessionId}.jsonl`);
 const promptId = 'fixture-prompt-1';
 
-const hook = (name, extra = {}) =>
+const hook = (name: string, extra: Record<string, unknown> = {}) =>
   execFileSync('/bin/sh', ['-c', command], {
     input: JSON.stringify({
       hook_event_name: name,
@@ -49,8 +51,8 @@ const hook = (name, extra = {}) =>
       ...extra,
     }),
   });
-const write = (record) => appendFileSync(transcript, `${JSON.stringify(record)}\n`);
-const reply = (id, output, cacheRead) => ({
+const write = (record: unknown) => appendFileSync(transcript, `${JSON.stringify(record)}\n`);
+const reply = (id: string, output: number, cacheRead: number) => ({
   type: 'assistant',
   isSidechain: false,
   message: {
@@ -66,7 +68,7 @@ const reply = (id, output, cacheRead) => ({
     },
   },
 });
-const tool = (name, id, tool_name) =>
+const tool = (name: string, id: string, tool_name: string) =>
   hook(name, { tool_name, tool_use_id: id, tool_input: { command: 'not stored' } });
 
 console.log('Terminal usage fixture. No provider request is made.');
