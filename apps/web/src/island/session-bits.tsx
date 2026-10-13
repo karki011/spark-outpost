@@ -5,6 +5,11 @@ import { relativeTime } from '../ui/relative-time.ts';
 import type { SessionState } from './island-model.ts';
 import { RunDots } from './island-parts.tsx';
 
+function terminalChangedAt(chat: ConversationSummary): string {
+  const changed = chat.terminal?.updatedAt ?? chat.updatedAt;
+  return changed > chat.updatedAt ? changed : chat.updatedAt;
+}
+
 function waitingChip(chat: ConversationSummary): string {
   if (chat.attention?.prFeedback) return 'PR feedback';
   return chat.attention?.kind === 'input' ? 'Has a question' : 'Waiting for you';
@@ -28,9 +33,13 @@ export function StateChip({
           : state === 'failed'
             ? ' bad'
             : '';
+    const label =
+      state === 'done'
+        ? `Done · ${relativeTime(terminalChangedAt(chat), now)}`
+        : terminalLabel(chat.terminal.state);
     return (
       <span className={`isl-schip${style}`}>
-        Terminal<span className="sr-only"> session</span> · {terminalLabel(chat.terminal.state)}
+        Terminal<span className="sr-only"> session</span> · {label}
       </span>
     );
   }

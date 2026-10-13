@@ -1,11 +1,14 @@
 import type { KeyboardEvent, RefObject } from 'react';
-import { XIcon } from '../ui/icons.tsx';
-import { Keys, keysText, NEW_CHAT_KEYS, SEARCH_KEYS } from '../ui/Keys.tsx';
+import { requestSessionPalette } from '../sessions/palette-request.ts';
+import { SessionsIcon, XIcon } from '../ui/icons.tsx';
+import { Keys, keysText, NEW_CHAT_KEYS, PALETTE_KEYS, SEARCH_KEYS } from '../ui/Keys.tsx';
 import { hasModifier, MAC } from '../ui/shortcuts.ts';
+import { useTooltip } from '../ui/Tooltip.tsx';
 
 export type SidebarTab = 'active' | 'history';
 
 export const LIST_PANEL_ID = 'chat-list-panel';
+export const SEARCH_DELAY_MS = 180;
 
 export function NewChatIcon() {
   return (
@@ -46,6 +49,26 @@ export function NewChatButton({ onNew }: { onNew: () => void }) {
       <span>New chat</span>
       <Keys keys={NEW_CHAT_KEYS} className="key-hint" />
     </button>
+  );
+}
+
+export function SessionsButton() {
+  const tip = useTooltip('Sessions', { keys: PALETTE_KEYS });
+  return (
+    <>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label="Sessions"
+        aria-haspopup="dialog"
+        aria-keyshortcuts={MAC ? 'Meta+Shift+K' : 'Control+Shift+K'}
+        {...tip.triggerProps}
+        onClick={requestSessionPalette}
+      >
+        <SessionsIcon />
+      </button>
+      {tip.tooltip}
+    </>
   );
 }
 

@@ -48,12 +48,23 @@ export function sessionNotes(
   state: SessionState,
   detail: ConversationDetail | undefined,
   hasLog: boolean,
+  terminalLine = '',
 ): SessionNote[] {
   const notes = [attentionNote(chat, state), lastReply(chat, state, detail)].filter(
     (note) => note !== null,
   );
-  if (notes.length > 0 || hasLog) return notes;
-  return [{ tone: 'plain', lead: null, text: rowState(chat, false).sub || quietWord(state) }];
+  if (notes.length > 0 || (hasLog && terminalLine === '')) return notes;
+  return [{ tone: 'plain', lead: null, text: statusLine(chat, state, terminalLine) }];
+}
+
+export function statusLine(
+  chat: ConversationSummary,
+  state: SessionState,
+  terminalLine: string,
+): string {
+  const finished = chat.sessionType === 'terminal' && state === 'done';
+  const status = finished ? 'Finished' : rowState(chat, false).sub || quietWord(state);
+  return terminalLine ? `${status} · ${terminalLine}` : status;
 }
 
 export interface SessionFacts {

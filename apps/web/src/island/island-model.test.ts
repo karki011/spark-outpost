@@ -51,6 +51,27 @@ const run = (id: string, status: string) =>
     progress: null,
   }) as ConversationSummary['latestRun'];
 
+function terminal(id: string, state: string, patch: Partial<ConversationSummary> = {}) {
+  return chat(id, {
+    sessionType: 'terminal',
+    terminal: {
+      id: `session-${id}`,
+      conversationId: id,
+      provider: 'claude',
+      state,
+      cwd: '/Users/ada/code/shop',
+      label: 'shop',
+      updatedAt: '2026-09-30T10:05:00.000Z',
+      resumeAvailable: false,
+      runId: null,
+      observation: 'hooks',
+      reason: null,
+      agentMode: null,
+    } as NonNullable<ConversationSummary['terminal']>,
+    ...patch,
+  });
+}
+
 const quiet: IslandInputs = {
   note: false,
   panel: null,
@@ -158,6 +179,39 @@ describe('island state machine', () => {
     expect(newMoments(runStatuses(after), after)).toEqual([]);
     expect(nextStreak(nextStreak(2, moments[0]!), moments[0]!)).toBe(4);
     expect(nextStreak(4, moments[1]!)).toBe(0);
+  });
+
+  it('notices a Terminal turn that went from working to ready, once', () => {
+    const before = runStatuses([terminal('t', 'working'), terminal('u', 'starting')]);
+    const after = [terminal('t', 'ready'), terminal('u', 'ready')];
+    expect(newMoments(before, after)).toEqual([{ kind: 'done', chatId: 't', runId: 'session-t' }]);
+    expect(newMoments(runStatuses(after), after)).toEqual([]);
+    const asking = [terminal('t', 'waiting_for_permission')];
+    expect(newMoments(before, asking)).toEqual([]);
+  });
+
+  it('gives a Terminal turn with a run one moment, from the run', () => {
+    const before = runStatuses([terminal('t', 'working', { latestRun: run('r1', 'running') })]);
+    const stillOpen = [terminal('t', 'ready', { latestRun: run('r1', 'running') })];
+    expect(newMoments(before, stillOpen)).toEqual([]);
+    const closed = [terminal('t', 'ready', { latestRun: run('r1', 'succeeded') })];
+    expect(newMoments(before, closed)).toEqual([{ kind: 'done', chatId: 't', runId: 'r1' }]);
+    expect(newMoments(runStatuses(stillOpen), closed)).toEqual([
+      { kind: 'done', chatId: 't', runId: 'r1' },
+    ]);
+  });
+
+  it('calls a ready Terminal session done after a finished turn', () => {
+    expect(sessionState(terminal('t', 'ready', { latestRun: run('r1', 'succeeded') }))).toBe(
+      'done',
+    );
+    expect(sessionState(terminal('t', 'ready'))).toBe('idle');
+    expect(sessionState(terminal('t', 'working', { latestRun: run('r1', 'succeeded') }))).toBe(
+      'working',
+    );
+    expect(sessionState(terminal('t', 'exited', { latestRun: run('r1', 'succeeded') }))).toBe(
+      'idle',
+    );
   });
 
   it('queues pending approvals oldest first and skips snoozed ones', () => {

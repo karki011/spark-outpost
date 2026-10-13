@@ -4,7 +4,13 @@ import type {
   ConversationDetail,
   ConversationSummary,
 } from '@spark-outpost/contracts';
-import { pagerLabel, sessionFacts, sessionNotes, showsFacts } from './session-summary.ts';
+import {
+  pagerLabel,
+  sessionFacts,
+  sessionNotes,
+  showsFacts,
+  statusLine,
+} from './session-summary.ts';
 
 const RUN = '00000000-0000-4000-8000-000000000001';
 
@@ -70,6 +76,26 @@ const MODES = [
 ] as AgentModeOption[];
 
 describe('what a session card says', () => {
+  it('adds the step line of a Terminal session to its state, and says Finished after a turn', () => {
+    const working = terminal('working');
+    expect(sessionNotes(working, 'working', undefined, false, 'Using Bash · 3 steps')).toEqual([
+      { tone: 'plain', lead: null, text: 'Running · Using Bash · 3 steps' },
+    ]);
+    expect(sessionNotes(working, 'working', undefined, true, '3 steps')).toEqual([
+      { tone: 'plain', lead: null, text: 'Running · 3 steps' },
+    ]);
+    expect(sessionNotes(working, 'working', undefined, true)).toEqual([]);
+    const ready = { ...terminal('ready'), latestRun: run('succeeded') };
+    expect(sessionNotes(ready, 'done', undefined, true, '3 steps')).toEqual([
+      { tone: 'plain', lead: null, text: 'Finished · 3 steps' },
+    ]);
+    expect(sessionNotes(ready, 'done', undefined, true)).toEqual([]);
+    expect(statusLine(ready, 'done', '3 steps')).toBe('Finished · 3 steps');
+    expect(statusLine(ready, 'done', '')).toBe('Finished');
+    expect(statusLine(chat({ latestRun: run('succeeded') }), 'done', '')).toBe('Finished');
+    expect(statusLine(chat(), 'idle', '')).toBe('Quiet');
+  });
+
   it('shows the last reply of a finished or quiet chat, with or without steps above it', () => {
     const done = chat({ latestRun: run('succeeded') });
     const said = detail('Totals now round **half up**. Tests pass.');

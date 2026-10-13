@@ -30,6 +30,7 @@ import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
+import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
 import {
@@ -364,6 +365,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             }}
           />
           <PasskeyOffer />
+          <SessionPaletteHost onOpenChat={openChat} />
           <TeammateHost />
           <AnimatePresence>
             {settings && (

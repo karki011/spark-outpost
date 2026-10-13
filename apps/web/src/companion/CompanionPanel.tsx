@@ -7,9 +7,12 @@ import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { CheckIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { RunItem } from '../home/home-model.ts';
+import { terminalFacts, type LinePart } from '../sessions/session-line.ts';
+import { useSessionLine } from '../sessions/use-session-line.ts';
 import { CORNERS, statusText, type CompanionFeed, type Corner } from './companion-model.ts';
 
 const SECTION_LIMIT = 4;
+const TERMINAL_PARTS: readonly LinePart[] = ['step', 'steps', 'subagents'];
 
 const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -96,6 +99,8 @@ interface RowProps {
 
 function Row({ item, tone, onOpen }: RowProps) {
   const { chat, provider, expression, sub, action } = item;
+  const terminalText = terminalFacts(chat, useSessionLine(chat), TERMINAL_PARTS);
+  const detail = terminalText ? `${sub} · ${terminalText}` : sub;
   return (
     <li className={`cmp-row ${tone}`}>
       <span className="cmp-ava" aria-hidden="true">
@@ -107,7 +112,7 @@ function Row({ item, tone, onOpen }: RowProps) {
       </span>
       <span className="cmp-txt">
         <b>{chat.title}</b>
-        <small>{sub}</small>
+        <small>{detail}</small>
       </span>
       <button
         type="button"
