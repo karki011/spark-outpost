@@ -3,6 +3,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { seedTerminal } from './terminal-seed.ts';
 
 const companion = (page: Page) => page.getByRole('button', { name: /^Status: / });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Status' });
@@ -93,6 +94,34 @@ test('the panel lists the live feed and jumps to the waiting card', async ({ pag
   const approval = page.getByRole('group', { name: /Run a command\?/ });
   await expect(approval).toBeInViewport();
   await expect(companion(page)).toHaveCount(0);
+});
+
+test('the panel shows the step line of a working Terminal session', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  const [chat] = await seedChats([{ title: 'Port the parser' }]);
+  await seedTerminal(chat!, {
+    state: 'working',
+    turn: {
+      status: 'running',
+      model: 'claude-sonnet-4-5',
+      costUsd: 0.0832,
+      steps: [{ name: 'Read' }, { name: 'Task', agentId: 'agent-1' }, { name: 'Bash', open: true }],
+    },
+  });
+  await page.goto('/');
+  await goHome(page);
+
+  await expect(companion(page)).toHaveAccessibleName('Status: 1 running');
+  await companion(page).click();
+  const row = panel(page)
+    .getByRole('region', { name: /^Running/ })
+    .getByRole('listitem')
+    .filter({ hasText: 'Port the parser' });
+  await expect(row.locator('small')).toHaveText(
+    'Running · Running a command · 3 steps · 1 sub-agent',
+  );
+  await expect(row).not.toContainText('$');
+  await expect(row.getByRole('button', { name: 'Watch: Port the parser' })).toBeVisible();
 });
 
 test('the panel works from the keyboard and Escape returns focus', async ({ page }) => {

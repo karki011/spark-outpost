@@ -27,7 +27,7 @@ const OPEN_KEYS = ['Enter'] as const;
 const CLOSE_KEYS = ['Esc'] as const;
 
 interface SessionPaletteProps {
-  onOpenChat: (chatId: string) => void;
+  onOpenChat: (chat: ConversationSummary) => void;
   onClose: () => void;
 }
 
@@ -91,7 +91,7 @@ export function SessionPalette({ onOpenChat, onClose }: SessionPaletteProps) {
     if (event.key === 'Enter' && !event.nativeEvent.isComposing && activeEntry) {
       if ((event.target as HTMLElement).closest('button')) return;
       event.preventDefault();
-      onOpenChat(activeEntry.chat.id);
+      onOpenChat(activeEntry.chat);
       return;
     }
     wrapTabFocus(event, () => [

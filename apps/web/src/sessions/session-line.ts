@@ -8,6 +8,7 @@ import {
   type PlanProgress,
 } from '@spark-outpost/contracts';
 import { isRunning, rowState } from '../conversations/row-state.ts';
+import { prettyModelId } from '../tasks/model-names.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { formatCost } from '../usage/format.ts';
 
@@ -44,7 +45,7 @@ function turnCost(turn: NativeTerminalTurn): string | null {
 }
 
 export function shortModel(model: string | null): string | null {
-  return model?.replace(/\[.*\]$/, '').trim() || null;
+  return model ? prettyModelId(model).trim() || null : null;
 }
 
 function terminalLine(chat: ConversationSummary, usage: NativeTerminalUsage | undefined) {

@@ -1,4 +1,5 @@
 import { memo, useRef } from 'react';
+import type { ConversationSummary } from '@spark-outpost/contracts';
 import { lineText, type LinePart } from './session-line.ts';
 import type { PaletteEntry } from './palette-model.ts';
 import { useInView } from './use-in-view.ts';
@@ -11,7 +12,7 @@ interface PaletteRowProps {
   entry: PaletteEntry;
   index: number;
   active: boolean;
-  onPick: (chatId: string) => void;
+  onPick: (chat: ConversationSummary) => void;
   onHover: (index: number) => void;
 }
 
@@ -34,7 +35,7 @@ export const PaletteRow = memo(function PaletteRow({
       aria-selected={active}
       className={active ? 'sp-row act' : 'sp-row'}
       data-tone={entry.state.tone}
-      onClick={() => onPick(entry.chat.id)}
+      onClick={() => onPick(entry.chat)}
       onPointerMove={() => onHover(index)}
     >
       <span className="sp-dot" aria-hidden="true" />

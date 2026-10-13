@@ -113,12 +113,10 @@ describe('the line for a Terminal session', () => {
       step: 'Searching the web',
       steps: '5 steps',
       subagents: '2 sub-agents',
-      model: 'claude-opus-4-1',
+      model: 'Opus 4.1',
       cost: '~$0.12',
     });
-    expect(lineText(line)).toBe(
-      'Searching the web · 5 steps · 2 sub-agents · claude-opus-4-1 · ~$0.12',
-    );
+    expect(lineText(line)).toBe('Searching the web · 5 steps · 2 sub-agents · Opus 4.1 · ~$0.12');
     expect(lineText(line, ['step', 'steps'])).toBe('Searching the web · 5 steps');
   });
 
@@ -128,7 +126,7 @@ describe('the line for a Terminal session', () => {
     );
     const line = sessionLine(terminal('ready'), done);
     expect(line.step).toBeNull();
-    expect(lineText(line)).toBe('2 steps · claude-opus-4-1 · $0.12');
+    expect(lineText(line)).toBe('2 steps · Opus 4.1 · $0.12');
   });
 
   it('says one step and leaves out what is unknown', () => {
@@ -187,8 +185,8 @@ describe('the line for a chat session', () => {
 });
 
 describe('shortModel', () => {
-  it('drops the context suffix', () => {
-    expect(shortModel('claude-sonnet-4-5[1m]')).toBe('claude-sonnet-4-5');
+  it('names the model the way chats do, without the context suffix', () => {
+    expect(shortModel('claude-sonnet-4-5[1m]')).toBe('Sonnet 4.5');
     expect(shortModel(null)).toBeNull();
   });
 });

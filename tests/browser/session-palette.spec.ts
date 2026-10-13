@@ -12,6 +12,7 @@ const palette = (page: Page) => page.getByRole('dialog', { name: 'Sessions' });
 const field = (page: Page) => palette(page).getByRole('combobox', { name: 'Find a session' });
 const rows = (page: Page) => palette(page).getByRole('option');
 const titles = (page: Page) => palette(page).locator('.sp-title');
+const message = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 
 async function seedSessions() {
   const ids = await seedChats([
@@ -143,6 +144,7 @@ test('arrow keys and Enter open a session, and Esc returns focus to where it was
   await expect(
     page.getByRole('navigation', { name: 'Chats' }).locator('[aria-current="page"]'),
   ).toContainText('Tidy the README');
+  await expect(message(page)).toBeFocused();
 
   await page.keyboard.press('ControlOrMeta+Shift+K');
   await rows(page).filter({ hasText: 'Fix billing totals' }).click();
@@ -150,6 +152,31 @@ test('arrow keys and Enter open a session, and Esc returns focus to where it was
   await expect(
     page.getByRole('navigation', { name: 'Chats' }).locator('[aria-current="page"]'),
   ).toContainText('Fix billing totals');
+  await expect(message(page)).toBeFocused();
+  await page.keyboard.press('ControlOrMeta+Shift+K');
+  await field(page).fill('billing');
+  await expect(titles(page)).toHaveText(['Fix billing totals']);
+  await page.keyboard.press('Enter');
+  await expect(palette(page)).toHaveCount(0);
+  await expect(message(page)).toBeFocused();
+
+  await page.keyboard.press('ControlOrMeta+Shift+K');
+  await field(page).fill('parser');
+  await expect(titles(page)).toHaveText(['Port the parser']);
+  await page.keyboard.press('Enter');
+  await expect(palette(page)).toHaveCount(0);
+  await expect(
+    page.getByRole('region', { name: 'Terminal session' }).getByRole('textbox', {
+      name: 'Terminal input',
+    }),
+  ).toBeFocused();
+
+  const menu = page.getByRole('button', { name: 'Terminal actions' });
+  await menu.focus();
+  await page.keyboard.press('ControlOrMeta+Shift+K');
+  await expect(field(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeFocused();
 });
 
 for (const [mode, theme] of Object.entries(THEMES)) {

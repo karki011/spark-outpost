@@ -2,6 +2,7 @@ import type { ConversationSummary } from '@spark-outpost/contracts';
 import { terminalLabel } from '../terminal/native-state.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { relativeTime } from '../ui/relative-time.ts';
+import { baseName } from './home-model.ts';
 import type { SessionState } from './island-model.ts';
 import { RunDots } from './island-parts.tsx';
 
@@ -63,7 +64,8 @@ export function StateChip({
 }
 
 export function projectLine(chat: ConversationSummary, names: ReadonlyMap<string, string>): string {
-  const project = chat.projectIds.map((id) => names.get(id)).find(Boolean) ?? 'No project';
+  const folder = chat.terminal ? baseName(chat.terminal.cwd) : 'No project';
+  const project = chat.projectIds.map((id) => names.get(id)).find(Boolean) ?? folder;
   const provider = chat.terminal?.provider ?? chat.latestRun?.provider;
   return provider ? `${project} · ${providerName(provider)}` : project;
 }

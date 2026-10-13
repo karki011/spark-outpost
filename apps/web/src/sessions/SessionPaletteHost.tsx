@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { focusOpenedSession } from './focus-session.ts';
 import { isPaletteShortcut } from './palette-model.ts';
 import { usePaletteRequests } from './palette-request.ts';
+import { isTerminalSession } from './session-line.ts';
 
 const SessionPalette = lazy(() =>
   import('./SessionPalette.tsx').then((module) => ({ default: module.SessionPalette })),
@@ -37,10 +39,11 @@ export function SessionPaletteHost({ onOpenChat }: { onOpenChat: (chatId: string
   return (
     <Suspense fallback={null}>
       <SessionPalette
-        onOpenChat={(chatId) => {
+        onOpenChat={(chat) => {
           setOpen(false);
           returnTo.current = null;
-          onOpenChat(chatId);
+          onOpenChat(chat.id);
+          focusOpenedSession(isTerminalSession(chat));
         }}
         onClose={close}
       />

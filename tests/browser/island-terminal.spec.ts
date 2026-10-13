@@ -40,8 +40,14 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await openHome(page);
 
     const note = nowCard(page).locator('.isl-now-note');
-    await expect(nowCard(page).locator('.isl-now-agent')).toHaveText('Claude · claude-sonnet-4-5');
-    await expect(note).toHaveText('Running · 3 steps · 1 sub-agent');
+    await expect(nowCard(page).locator('.isl-now-agent')).toHaveText('Claude');
+    await expect(note).toHaveText('Running · 3 steps · 1 sub-agent · Sonnet 4.5');
+    for (const part of ['.isl-now-title', '.isl-now-agent', '.isl-now-note']) {
+      const cut = await nowCard(page)
+        .locator(part)
+        .evaluate((el) => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
+      expect(cut, part).toBe(false);
+    }
     await expect(nowCard(page).getByRole('list', { name: 'Latest steps' })).toContainText(
       'Now: Running',
     );
@@ -51,9 +57,7 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await snap(page, `working-${mode}`);
 
     await setTerminalState(chat!, 'ready');
-    await expect(note).toHaveText(
-      'Terminal sessionFinished · 3 steps · 1 sub-agent · claude-sonnet-4-5',
-    );
+    await expect(note).toHaveText('Terminal sessionFinished · 3 steps · 1 sub-agent · Sonnet 4.5');
     await expect(nowCard(page).locator('.isl-now-fact')).toHaveText(/^Claude · (\S.* · )?parser$/);
     await expect(nowCard(page).locator('.isl-now-dot')).toHaveAttribute('data-state', 'done');
     await snap(page, `done-${mode}`);
@@ -61,10 +65,11 @@ for (const [mode, theme] of Object.entries(THEMES)) {
     await island(page).getByRole('tab', { name: 'Chats' }).click();
     const row = island(page).getByRole('option', { name: /Port the parser/ });
     await expect(row.locator('.isl-schip')).toHaveText(/^Terminal session · Done · /);
+    await expect(row.locator('.isl-sp2')).toHaveText('parser · Claude');
     await snap(page, `done-list-${mode}`);
     await row.click();
     await expect(island(page).locator('.isl-sstatus')).toHaveText(
-      'Finished · 3 steps · 1 sub-agent · claude-sonnet-4-5',
+      'Finished · 3 steps · 1 sub-agent · Sonnet 4.5',
     );
     await expect(island(page).getByRole('button', { name: 'Ask for update' })).toBeDisabled();
     await expect(island(page).getByRole('textbox')).toHaveCount(0);
@@ -82,6 +87,7 @@ test('a Terminal turn that ends says so beside Scout once', async ({ page }) => 
   await expect(line).toHaveText('Port the parser is done.');
   await expect(line).toHaveAttribute('data-kind', 'done');
   if (SHOTS) {
+    await page.waitForTimeout(900);
     await page.screenshot({
       path: path.join(SHOTS, 'island-terminal-done-line.png'),
       clip: { x: 240, y: 0, width: 800, height: 240 },

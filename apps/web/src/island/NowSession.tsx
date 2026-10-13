@@ -23,23 +23,16 @@ import { useFileView } from './use-file-view.ts';
 import { useRunChanges } from './use-run-changes.ts';
 
 const NO_MODES: readonly AgentModeOption[] = [];
-function terminalParts(hasLog: boolean, summed: boolean): LinePart[] {
-  const counts: LinePart[] = hasLog ? ['steps', 'subagents'] : ['step', 'steps', 'subagents'];
-  return summed ? [...counts, 'model'] : counts;
-}
+const LOGGED_PARTS: readonly LinePart[] = ['steps', 'subagents', 'model'];
+const QUIET_PARTS: readonly LinePart[] = ['step', ...LOGGED_PARTS];
 
 function taskOf(detail: ConversationDetail | undefined, runIds: readonly string[]): string | null {
   if (!detail) return null;
   return detail.tasks.find((task) => runIds.some((id) => task.runIds.includes(id)))?.id ?? null;
 }
 
-function agentLine(
-  chat: ConversationSummary,
-  detail: ConversationDetail | undefined,
-  terminalModel: string | null,
-): string {
-  if (chat.sessionType === 'terminal' && chat.terminal)
-    return [providerName(chat.terminal.provider), terminalModel].filter(Boolean).join(' · ');
+function agentLine(chat: ConversationSummary, detail: ConversationDetail | undefined): string {
+  if (chat.sessionType === 'terminal' && chat.terminal) return providerName(chat.terminal.provider);
   const agent = chatAgent(chat, detail);
   const model = detail?.runs
     .find((run) => run.id === chat.latestRun?.id)
@@ -100,12 +93,12 @@ export function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: No
   const hasLog = lines.length > 0;
   const terminalLine = useSessionLine(chat);
   const summed = showsFacts(state, hasLog);
-  const terminalText = terminalFacts(chat, terminalLine, terminalParts(hasLog, summed));
+  const terminalText = terminalFacts(chat, terminalLine, hasLog ? LOGGED_PARTS : QUIET_PARTS);
   const notes = useMemo(
     () => sessionNotes(chat, state, detail.data, hasLog, terminalText),
     [chat, state, detail.data, hasLog, terminalText],
   );
-  const agent = agentLine(chat, detail.data, summed ? null : terminalLine.model);
+  const agent = agentLine(chat, detail.data);
   const facts = useFacts(chat, detail.data, agent);
   const step = live && activity.runId ? `${activity.runId}:${activity.steps.length}` : null;
   const file = useFileView(chat.id, step, activity.runIds);
@@ -130,7 +123,11 @@ export function NowSession({ chat, reduced, onOpenHere, onOpenChat, onPeek }: No
             {chat.title}
           </b>
           {!summed && (
-            <span className="isl-now-agent" title={agent}>
+            <span
+              className="isl-now-agent"
+              data-whole={chat.sessionType === 'terminal' ? '' : undefined}
+              title={agent}
+            >
               {agent}
             </span>
           )}

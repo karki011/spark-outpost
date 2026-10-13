@@ -153,6 +153,10 @@
   text-overflow: ellipsis;
 }
 
+.isl-now-agent[data-whole] {
+  flex: none;
+}
+
 .isl-now-steps {
   flex: none;
   color: var(--muted);
