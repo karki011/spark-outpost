@@ -13,6 +13,7 @@ import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { teammateKeys } from '../../teammates/teammates-api.ts';
+import { terminalStartKey } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
 
 interface Invalidation {
@@ -122,6 +123,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return event.conversationId
         ? [{ queryKey: agentTerminalKeys.chat(event.conversationId), exact: true }]
         : [{ queryKey: agentTerminalKeys.all }];
+    case 'terminal_start':
+      return event.conversationId
+        ? [{ queryKey: terminalStartKey(event.conversationId), exact: true }]
+        : [];
   }
 }
 

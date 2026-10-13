@@ -37,6 +37,7 @@ import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 import { placeChat } from '../orchestration/chat-place.ts';
 import { startTimer, type StartTimer } from './start-timing.ts';
+import { startPhases } from './start-phases.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 
@@ -49,6 +50,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const launches = new Map<string, { key: string; work: Promise<NativeTerminalLaunchResponse> }>();
   const stoppedLaunches = new Set<string>();
   const waiters = deps.approvalWaiters ?? new ApprovalWaiters();
+  const phases = startPhases(deps.onStartPhase ?? (() => undefined));
   let disposed = false;
   const enqueue = <T>(session: LiveSession, work: () => Promise<T>): Promise<T> => {
     const next = session.chain.then(work);
@@ -126,6 +128,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         'This terminal has no native session to resume. Start a new Terminal session.',
       );
     timer.provider(provider);
+    phases.set(conversationId, 'preparing');
     const command = await timer.time('locate_cli', () =>
       (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(provider),
     );
@@ -135,7 +138,11 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       );
     const prepared = await timer.time('prepare_session', () =>
       prepareNativeSession(
-        { ...deps, place: timer.place(deps.place ?? placeChat) },
+        {
+          ...deps,
+          place: timer.place(deps.place ?? placeChat),
+          onPhase: (phase) => phases.set(conversationId, phase),
+        },
         conversationId,
         provider,
         request,
@@ -183,6 +190,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     let launch: NativeLaunch | null = null;
     let session: LiveSession | null = null;
     try {
+      phases.set(conversationId, 'agent');
       const granted = await timer.time('grant', () => deps.mcp.grant(scope));
       grant = granted;
       const prepareLaunch = deps.prepareLaunch ?? prepareNativeLaunch;
@@ -354,9 +362,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       }
       stoppedLaunches.delete(conversationId);
       const timer = startTimer(deps.logStart ?? console.log);
-      const work = timer
-        .watch(launchOnce(conversationId, request, timer))
-        .finally(() => launches.delete(conversationId));
+      const work = timer.watch(launchOnce(conversationId, request, timer)).finally(() => {
+        launches.delete(conversationId);
+        phases.clear(conversationId);
+      });
       launches.set(conversationId, { key, work });
       return work;
     },
@@ -367,6 +376,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         : await nativeTerminalRow(deps.db, conversationId);
       if (row) await usage.catchUpStored(row).catch(() => undefined);
       return nativeTerminalUsage(deps.db, conversationId);
+    },
+    async startPhase(conversationId) {
+      await owned(conversationId);
+      return phases.get(conversationId);
     },
     hook,
     stop,

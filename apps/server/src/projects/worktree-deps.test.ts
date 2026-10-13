@@ -75,6 +75,19 @@ describe('preparing dependencies in a worktree', () => {
     ]);
   });
 
+  it('reports copying and installing as each begins', async () => {
+    await put(join(copy, 'package-lock.json'), '{}');
+    const phases: string[] = [];
+    const run: RunCommand = async (argv) => (argv[0] === 'cp' ? { ...ok, exitCode: 1 } : ok);
+    await prepareDependencies(main, copy, {
+      root: main,
+      platform: 'darwin',
+      run,
+      onPhase: (phase) => phases.push(phase),
+    });
+    expect(phases).toEqual(['copy', 'install']);
+  });
+
   it('clones first for npm and falls back to an offline install', async () => {
     await put(join(copy, 'package-lock.json'), '{}');
     const calls: string[][] = [];

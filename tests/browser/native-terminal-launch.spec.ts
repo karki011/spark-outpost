@@ -1,6 +1,10 @@
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
+import { FIXTURE_READY } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
+import { chatRepo } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
@@ -132,4 +136,50 @@ test('a failed first terminal launch unlocks the choices and leaves no dead sess
   await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
   await sessions.getByRole('radio', { name: 'Terminal' }).click();
   await expect(prompt).toBeVisible();
+});
+
+test('a starting terminal names the phase it is in and clears it when the terminal opens', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const repo = chatRepo();
+  writeFileSync(path.join(repo.root, '.git', 'hooks', 'post-checkout'), '#!/bin/sh\nsleep 3\n', {
+    mode: 0o755,
+  });
+  const db = openTestDb();
+  try {
+    const linked = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
+    expect(linked.ok()).toBe(true);
+    await db.query(`UPDATE projects SET work_place = 'worktree' WHERE root_path = $1`, [repo.root]);
+    await openChats(page);
+    await page.getByRole('button', { name: 'New chat' }).first().click();
+    await page
+      .getByRole('radiogroup', { name: 'Session type' })
+      .getByRole('radio', { name: 'Terminal' })
+      .click();
+    await pickTerminalAgent(page, 'Codex');
+    await page.getByRole('button', { name: 'Choose project', exact: true }).click();
+    const folders = page.getByRole('dialog', { name: 'Project folders' });
+    await folders.getByRole('button', { name: new RegExp(`^${path.basename(repo.root)}`) }).click();
+    await expect(folders.getByRole('list', { name: 'Linked repos' })).toContainText(
+      path.basename(repo.root),
+    );
+    await page.keyboard.press('Escape');
+    await page
+      .getByRole('textbox', { name: 'What would you like to work on?' })
+      .fill('Inspect the fixture.');
+    await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
+    const phase = 'Creating this session’s worktree…';
+    await expect(page.locator('.composer-notice').first()).toHaveText(phase);
+    await expect(page.getByRole('button', { name: phase, exact: true })).toBeDisabled();
+    const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
+    await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY, {
+      timeout: 20_000,
+    });
+    await expect(page.getByText(phase)).toHaveCount(0);
+    await expect(page.getByText('Starting terminal…')).toHaveCount(0);
+  } finally {
+    await db.end();
+    repo.remove();
+  }
 });

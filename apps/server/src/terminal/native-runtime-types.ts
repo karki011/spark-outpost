@@ -4,6 +4,7 @@ import type {
   NativeTerminalLaunchResponse,
   NativeTerminalSession,
   NativeTerminalUsage,
+  TerminalStartPhase,
 } from '@spark-outpost/contracts';
 import type { CliLocator } from '../agents/acp/agent-cli.ts';
 import type { Db } from '../persistence/db.ts';
@@ -36,6 +37,7 @@ export interface NativeRuntimeDeps {
   tmux?: TmuxHost | null;
   now?: () => Date;
   logStart?: (line: string) => void;
+  onStartPhase?: (conversationId: string) => void;
 }
 
 export interface PendingNativeLaunch {
@@ -51,6 +53,7 @@ export interface NativeRuntime {
     request: NativeTerminalLaunchRequest,
   ): Promise<NativeTerminalLaunchResponse>;
   usage(conversationId: string): Promise<NativeTerminalUsage>;
+  startPhase(conversationId: string): Promise<TerminalStartPhase | null>;
   hook(token: string, body: unknown): Promise<boolean>;
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;

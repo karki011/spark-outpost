@@ -198,6 +198,8 @@ const nativeTerminals = await createNativeRuntime({
   locateCli: loginShellLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
+  onStartPhase: (conversationId) =>
+    appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
 await nativeTerminals.recover();
 desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);

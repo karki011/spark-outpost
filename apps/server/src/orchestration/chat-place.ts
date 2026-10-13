@@ -48,7 +48,10 @@ interface ChatPlaceDeps {
   branchPrefix: string;
   gitInstalled?: () => Promise<boolean>;
   onInstall?: (command: string) => void;
+  onPhase?: (phase: PlacePhase) => void;
 }
+
+export type PlacePhase = 'fetch' | 'worktree' | 'copy' | 'install';
 
 interface PlacedChat {
   input: RunInput;
@@ -95,8 +98,12 @@ interface StartPoint {
   baseRef: string;
 }
 
-async function upToDateBase(root: string, head: string | null): Promise<StartPoint | null> {
-  const remote = await freshRemoteDefault(root);
+async function upToDateBase(
+  root: string,
+  head: string | null,
+  onFetch?: () => void,
+): Promise<StartPoint | null> {
+  const remote = await freshRemoteDefault(root, onFetch);
   if (!remote || (head && !(await isAncestor(root, head, remote)))) return null;
   const commit = (await git(root, ['rev-parse', '--verify', '-q', `${remote}^{commit}`])).trim();
   return commit ? { from: commit, baseRef: remote } : null;
@@ -106,10 +113,11 @@ async function startPoint(
   root: string,
   branches: BranchList,
   from: string | null,
+  onFetch?: () => void,
 ): Promise<StartPoint | null> {
   if (from) return { from, baseRef: from };
   const head = await headCommit(root);
-  const fresh = await upToDateBase(root, head);
+  const fresh = await upToDateBase(root, head, onFetch);
   if (fresh) return fresh;
   if (branches.current && head) return { from: head, baseRef: branches.current };
   const fallback = (await defaultBranch(root)) ?? head;
@@ -142,7 +150,9 @@ async function plannedSource(
   if (branches.local.includes(branch)) {
     return { source: { kind: 'existing', branch }, owned: true, baseBranch, baseRef: null };
   }
-  const start = await startPoint(target.root, branches, decision.from);
+  const start = await startPoint(target.root, branches, decision.from, () =>
+    deps.onPhase?.('fetch'),
+  );
   if (!start) return null;
   return {
     source: { kind: 'new', branch, from: start.from },
@@ -185,6 +195,7 @@ async function createCopy(
     ownsBranch: planned.owned,
   };
   await insertChatWorktree(deps.db, record);
+  deps.onPhase?.('worktree');
   try {
     await addChatWorktree(root, folder, planned.source);
   } catch (error) {
@@ -194,6 +205,7 @@ async function createCopy(
   const prep = await prepareDependencies(root, record.path, {
     root,
     ...(deps.onInstall ? { onInstall: deps.onInstall } : {}),
+    ...(deps.onPhase ? { onPhase: deps.onPhase } : {}),
   }).catch(() => null);
   return { record, prep };
 }

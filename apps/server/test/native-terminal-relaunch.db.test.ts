@@ -23,6 +23,36 @@ const runs = async () =>
 const messages = async () => (await f.t.db.query('SELECT id FROM messages')).rowCount;
 
 describe('native terminal launch recovery', () => {
+  it('reports the phase a start is in, and a stop during it ends the start when placing returns', async () => {
+    const place = f.place;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    f.place = async (deps, input, create) => {
+      deps.onPhase?.('worktree');
+      await held;
+      return place(deps, input, create);
+    };
+    const changed: string[] = [];
+    f.onStartPhase = (id) => changed.push(id);
+    const launch = f.launch().catch((error: unknown) => error);
+    await expect.poll(() => f.runtime.startPhase(f.conversationId)).toBe('worktree');
+    const stopped = f.runtime.stop(f.conversationId);
+    expect(await f.runtime.startPhase(f.conversationId)).toBe('worktree');
+    release();
+    const failure = await launch;
+    await stopped;
+    expect(failure).toBeInstanceOf(NativeRuntimeError);
+    expect((failure as NativeRuntimeError).status).toBe(409);
+    expect(await f.runtime.startPhase(f.conversationId)).toBeNull();
+    expect(f.spawn).not.toHaveBeenCalled();
+    expect(changed).toEqual([f.conversationId, f.conversationId, f.conversationId]);
+    f.place = place;
+    await f.launch();
+    expect(await f.runtime.startPhase(f.conversationId)).toBeNull();
+  });
+
   it('logs one timing line per start with the failing phase and no path or message', async () => {
     const place = f.place;
     f.place = async () => {

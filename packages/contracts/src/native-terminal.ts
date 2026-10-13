@@ -50,3 +50,33 @@ export const nativeTerminalLaunchResponseSchema = z.object({
   connection: createShellResponseSchema,
 });
 export type NativeTerminalLaunchResponse = z.infer<typeof nativeTerminalLaunchResponseSchema>;
+
+export const terminalStartPhaseSchema = z.enum([
+  'preparing',
+  'fetch',
+  'worktree',
+  'copy',
+  'install',
+  'agent',
+]);
+export type TerminalStartPhase = z.infer<typeof terminalStartPhaseSchema>;
+
+export const terminalStartSchema = z.object({ phase: terminalStartPhaseSchema.nullable() });
+export type TerminalStart = z.infer<typeof terminalStartSchema>;
+
+export function terminalStartText(phase: TerminalStartPhase | null, agentName: string): string {
+  switch (phase) {
+    case 'fetch':
+      return 'Fetching the latest from the remote…';
+    case 'worktree':
+      return 'Creating this session’s worktree…';
+    case 'copy':
+      return 'Copying dependencies…';
+    case 'install':
+      return 'Installing dependencies…';
+    case 'agent':
+      return `Starting ${agentName}…`;
+    default:
+      return 'Starting terminal…';
+  }
+}

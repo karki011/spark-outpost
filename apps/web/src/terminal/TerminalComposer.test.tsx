@@ -8,6 +8,7 @@ const fake = vi.hoisted(() => ({
   settings: vi.fn(),
   launch: vi.fn(),
   choice: vi.fn(),
+  phase: vi.fn(),
 }));
 vi.mock('../api/client.ts', () => ({
   api: { updateChatSettings: fake.settings },
@@ -34,7 +35,10 @@ vi.mock('../api/projects.ts', () => ({
   projectKeys: { all: ['projects'] },
   projectsApi: { list: async () => [] },
 }));
-vi.mock('./terminal-api.ts', () => ({ nativeTerminalApi: { launch: fake.launch } }));
+vi.mock('./terminal-api.ts', () => ({
+  terminalStartKey: (id: string) => ['terminal-start', id],
+  nativeTerminalApi: { launch: fake.launch, startPhase: fake.phase },
+}));
 const { TerminalComposer } = await import('./TerminalComposer.tsx');
 const SETTLE = { timeout: 20_000 };
 vi.setConfig({ testTimeout: 60_000 });
@@ -44,6 +48,7 @@ beforeEach(() => {
   fake.create.mockResolvedValue({});
   fake.settings.mockResolvedValue({});
   fake.launch.mockResolvedValue({});
+  fake.phase.mockResolvedValue({ phase: null });
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
 afterEach(() => {
@@ -107,6 +112,44 @@ it('starts a signed-in native CLI without requiring an ACP connection', async ()
     SETTLE,
   );
   expect(fake.settings).not.toHaveBeenCalled();
+});
+
+it('names the phase of a start in the notice and on the button, and follows it as it changes', async () => {
+  fake.launch.mockReturnValue(new Promise(() => undefined));
+  fake.phase.mockResolvedValue({ phase: 'worktree' });
+  render(
+    <QueryClientProvider client={client}>
+      <TerminalComposer
+        conversationId="phased"
+        choice={{ sessionType: 'terminal', terminalProvider: 'codex' }}
+        onChoice={fake.choice}
+        projectIds={[]}
+        settings={null}
+        connected={false}
+      />
+    </QueryClientProvider>,
+  );
+  expect(fake.phase).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByRole('textbox', { name: 'What would you like to work on?' }), {
+    target: { value: 'Inspect the code.' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Start terminal' }));
+  expect(await screen.findByRole('button', { name: 'Starting terminal…' })).toHaveProperty(
+    'disabled',
+    true,
+  );
+  const phase = 'Creating this session’s worktree…';
+  expect(await screen.findByRole('button', { name: phase }, SETTLE)).toHaveProperty(
+    'disabled',
+    true,
+  );
+  expect(screen.getAllByRole('status')[0]!.textContent).toBe(phase);
+  fake.phase.mockResolvedValue({ phase: 'agent' });
+  await client.invalidateQueries({ queryKey: ['terminal-start', 'phased'], exact: true });
+  expect(await screen.findByRole('button', { name: 'Starting Codex…' }, SETTLE)).toHaveProperty(
+    'disabled',
+    true,
+  );
 });
 
 it('shows the existing secret warning before sending a terminal prompt', async () => {

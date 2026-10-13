@@ -28,6 +28,7 @@ export interface DepsOptions {
   signal?: AbortSignal;
   run?: RunCommand;
   onInstall?: (command: string) => void;
+  onPhase?: (phase: 'copy' | 'install') => void;
 }
 
 export const DEPS_PREP_LIMIT_MS = 90_000;
@@ -178,6 +179,7 @@ export async function prepareDependencies(
       notes.push('no lockfile for an offline install');
       return false;
     }
+    options.onPhase?.('install');
     const installed = await run(install, copy);
     if (!succeeded(installed)) notes.push(`${install.join(' ')}: ${firstLine(installed)}`);
     return succeeded(installed);
@@ -187,6 +189,7 @@ export async function prepareDependencies(
       notes.push('the main copy has no node_modules');
       return false;
     }
+    options.onPhase?.('copy');
     const failed = await cloneFolders(main, copy, folders, platform, run);
     if (failed) notes.push(failed);
     return failed === null;
@@ -199,6 +202,7 @@ export async function prepareDependencies(
     const seeded = manager !== 'npm' && (await tryClone());
     const command = installCommand(manager, present, true);
     options.onInstall?.(command.join(' '));
+    options.onPhase?.('install');
     const installed = await run(command, copy, true);
     if (succeeded(installed)) return done('install', null);
     return done(seeded ? cloned : 'skipped', installFailure(command, installed), true);
