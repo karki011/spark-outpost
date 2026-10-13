@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   BROWSER_SCREENSHOT_ACTIVITY,
   SPARK_ACTION_OPTION,
+  browserPlaceOf,
   type BrowserHostRequest,
 } from '@spark-outpost/contracts';
 import type { BrowserHost } from '../src/browser/host-client.ts';
@@ -65,7 +66,13 @@ class FakeBrowserHost implements BrowserHost {
   private answer(request: BrowserHostRequest): unknown {
     const facts = { tabId: 'tab1', ...this.page };
     if (request.op === 'open') {
-      return { ...facts, url: request.url, place: 'local', status: 200, reused: false };
+      return {
+        ...facts,
+        url: request.url,
+        place: browserPlaceOf(request.url),
+        status: 200,
+        reused: false,
+      };
     }
     if (request.op === 'tabs') {
       return { tabs: [{ id: 'tab1', ...this.page, active: true }] };
@@ -196,6 +203,7 @@ describe('browser tools need the Mac app', () => {
       tools.filter((tool) => tool.name.startsWith('spark_browser_')).map((t) => t.name),
     ).toEqual([
       'spark_browser_open',
+      'spark_browser_act',
       'spark_browser_tabs',
       'spark_browser_read',
       'spark_browser_screenshot',
@@ -232,15 +240,6 @@ describe('spark_browser_open', () => {
       decision: 'local',
       runId: chat.runId,
     });
-  });
-
-  it('does not open an external site and says the user can', async () => {
-    await start({ mode: 'bypassPermissions' });
-    const refused = await call('spark_browser_open', { url: 'https://example.com/pricing' });
-    expect(refused.facts).toMatchObject({ outcome: 'not_opened', place: 'external' });
-    expect(String(refused.facts.message)).toContain('later version');
-    expect(fake.requests).toHaveLength(0);
-    expect(audits()[0]!.params).toMatchObject({ decision: 'refused_external' });
   });
 
   it('refuses addresses that are not pages', async () => {

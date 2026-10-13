@@ -144,6 +144,11 @@ export async function pushedSecretFiles(root: string, branch: string): Promise<s
   return pushed.unreadable ? [] : filesIn(pushed.text, await secretSources([root]));
 }
 
+export async function secretFilesIn(text: string, roots: readonly string[]): Promise<string[]> {
+  if (text.length < MIN_MIXED_LENGTH || roots.length === 0) return [];
+  return filesIn(text, await secretSources(roots));
+}
+
 export function sendsContent(command: string): boolean {
   return /\b(?:gh|git)\b/.test(command);
 }
