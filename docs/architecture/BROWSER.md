@@ -132,6 +132,7 @@ On a site outside this computer, opening, reading and acting use the Spark actio
 
 - **Seen by the user.** The action happens in the tab's real view. The element is outlined for under a second (`Overlay.highlightNode`), the tab shows **Spark is driving**, and the pane keeps **Agent: Clicked button "Search"** until the next action.
 - **Never typed.** `type` is refused for a password, card or one-time-code field (`isSensitiveField`, `sensitiveByName`) and for a field Spark filled with a saved sign-in. Main decides from the DOM; the worker refuses earlier from main's answer. The name of such a field is left out of every result.
+- **Focus.** The page is told it has the focus (`Emulation.setFocusEmulationEnabled`) so typing works while the user's cursor is in the chat, and stays that way so a menu the page opened is still there for the next read. The user's own focus never moves.
 - **After it.** `click`, `key` and the history actions wait for the page to settle (`pageSettles`, shared with sign-in). A popup becomes a new agent tab. The result has the address and title the tab ended on and no page content: the agent reads again, through the read policy.
 - **Not built.** Hover, drag, file upload, choosing from a native select by value, frames (refs cover the main frame only), and waiting for a named element.
 

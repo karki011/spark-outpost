@@ -183,16 +183,17 @@ function nodeOf(tab: PaneTab, ref: string | undefined): number | null {
 
 async function page(panes: BrowserPanes, request: Request<'page'>) {
   const tab = targetTab(panes, request.chatId, request.tab);
-  if (request.ref === undefined) return tabFacts(tab);
+  const node = nodeOf(tab, request.ref);
+  if (node === null) return tabFacts(tab);
   const { cdp } = await tab.wake();
-  const target = await describeTarget(cdp, nodeOf(tab, request.ref)!, tab.filled);
+  const target = await describeTarget(cdp, node, tab.filled);
   return { ...tabFacts(tab), target };
 }
 
 async function act(panes: BrowserPanes, request: Request<'act'>, signal: AbortSignal) {
   const tab = targetTab(panes, request.chatId, request.tab);
   const from = tab.currentUrl();
-  if (browserOrigin(from) !== request.origin) {
+  if ((browserOrigin(from) ?? 'about:blank') !== request.origin) {
     throw new BrowserOpError(
       'page_changed',
       'The tab moved to another site since it was checked. Read the page again.',

@@ -148,6 +148,7 @@ export async function actOnPage(
   if (request.action === 'type' && target?.sensitive) {
     throw new PageToolError('sensitive_field', ACT_SENSITIVE_FIELD);
   }
+  await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => undefined);
   if (node !== null) await highlight(cdp, node, options.highlightMs ?? HIGHLIGHT_MS);
   const settled = SETTLING.has(request.action)
     ? pageSettles(cdp, options.timing ?? ACT_TIMING, options.signal)
