@@ -138,9 +138,10 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
       adopt: true,
       onExit: input.onExit(session),
     });
-    if (await setNativeTerminalState(db, { ...row, state: 'unknown', reason: WAITING }))
+    const idle = turnInput === null && row.state === 'ready';
+    if (!idle && (await setNativeTerminalState(db, { ...row, state: 'unknown', reason: WAITING })))
       row.state = 'unknown';
-    session.readopted!.stepsComplete = input.resumeUsage(session);
+    session.readopted!.stepsComplete = turnInput === null || input.resumeUsage(session);
   } catch (error) {
     input.live.delete(row.conversation_id);
     input.tokens.delete(session.hookKey);

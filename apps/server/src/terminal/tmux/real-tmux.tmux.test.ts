@@ -44,7 +44,11 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
       cwd: directory,
       command: '/bin/sh',
       args: ['-c', script],
-      env: { SPARK_TEST_VALUE: "it's here" },
+      env: {
+        SPARK_TEST_VALUE: "it's here",
+        PATH: '/opt/spark-test/bin:/usr/bin:/bin',
+        SHELL: '/bin/zsh',
+      },
       ...extra,
     });
     let output = '';
@@ -70,9 +74,15 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
   });
 
   it('runs the command with its environment, folder and no trace of tmux', async () => {
-    const run = start('pwd; echo "v=$SPARK_TEST_VALUE t=${TMUX:-none} term=$TERM"; exit 0');
+    const run = start(
+      'pwd; echo "v=$SPARK_TEST_VALUE t=${TMUX:-none} term=$TERM path=$PATH"; echo "sh=$SHELL tp=${TERM_PROGRAM:-none}"; exit 0',
+    );
     expect(await run.exit).toEqual({ exitCode: 0 });
-    expect(run.output()).toContain(`v=it's here t=none term=xterm-256color`);
+    expect(run.output()).toContain(
+      `v=it's here t=none term=xterm-256color path=/opt/spark-test/bin:/usr/bin:/bin`,
+    );
+    expect(run.output()).toContain('sh=/bin/zsh tp=none');
+    expect(tryTmux(host, ['show-environment', '-g']) ?? '').not.toContain('SPARK_TEST_VALUE');
     expect(run.output()).toContain(directory.split('/').at(-1));
     expect(listSessionIds(host)).toEqual([]);
   });
@@ -88,6 +98,19 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     await until(() => run.output().includes('got:héllo é✓\x1b[31m!'), 'the echo');
     run.pty.kill?.();
     expect(await run.exit).toEqual({ exitCode: 0, signal: 1 });
+  });
+
+  it('gives a secret to the command and then forgets it', async () => {
+    const run = start('echo "token=$SPARK_NATIVE_MCP_TOKEN_a1"; sleep 30', {
+      env: { SPARK_NATIVE_MCP_TOKEN_a1: 'fixture-token', PATH: '/usr/bin:/bin' },
+    });
+    await until(() => run.output().includes('token=fixture-token'), 'the command');
+    const kept = () => tryTmux(host, ['show-environment', '-t', '=spark-a1:']) ?? 'fixture-token';
+    await until(() => !kept().includes('fixture-token'), 'the secret to be dropped');
+    expect(kept()).toContain('PATH=/usr/bin:/bin');
+    expect(tryTmux(host, ['show-environment', '-g']) ?? '').not.toContain('fixture-token');
+    run.pty.kill?.();
+    await run.exit;
   });
 
   it('reports the real exit status', async () => {

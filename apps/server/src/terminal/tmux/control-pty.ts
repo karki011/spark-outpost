@@ -5,6 +5,7 @@ import { requestSeed } from './control-seed.ts';
 import type { TmuxHost } from './tmux-host.ts';
 import {
   createSession,
+  secretEnvNames,
   killSession,
   paneQuery,
   parsePane,
@@ -95,6 +96,8 @@ export function controlPty(
   } else {
     client!.command(`refresh-client -C ${Math.trunc(start.cols)}x${Math.trunc(start.rows)}`);
     client!.command(`send-keys -H -t ${pane.paneId} ${RELEASE_HELD_START}`);
+    for (const name of secretEnvNames(start.env))
+      client!.command(`set-environment -u -t ${pane.paneId} ${name}`);
   }
 
   return {

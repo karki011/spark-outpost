@@ -9,7 +9,12 @@ const start = {
   cwd: "/work/it's here",
   command: '/usr/local/bin/claude',
   args: ['--append-system-prompt', "line one\nline 'two' #{pane_id} $(id)", '--', 'hi'],
-  env: { PATH: '/usr/bin', SPARK_NATIVE_MCP_TOKEN_x: 'tok en', 'bad name': 'dropped' },
+  env: {
+    PATH: '/usr/bin',
+    SHELL: '/bin/zsh',
+    SPARK_NATIVE_MCP_TOKEN_x: 'tok en',
+    'bad name': 'dropped',
+  },
 };
 
 describe('tmux session commands', () => {
@@ -23,16 +28,19 @@ describe('tmux session commands', () => {
       command.startsWith("new-session -d -s 'spark-7f1e3b3a-0000-4000-8000-000000000001'"),
     ).toBe(true);
     expect(command).toContain('-x 120 -y 40');
-    expect(command).toContain("-e 'PATH=/usr/bin' -e 'SPARK_NATIVE_MCP_TOKEN_x=tok en' --");
+    expect(command).toContain(
+      "-e 'PATH=/usr/bin' -e 'SHELL=/bin/zsh' -e 'SPARK_NATIVE_MCP_TOKEN_x=tok en' --",
+    );
     expect(command).not.toContain('bad name');
-    expect(command).toContain("'/work/it'\\''s here' '/usr/local/bin/claude'");
+    expect(command).toContain("'/work/it'\\''s here' '/bin/zsh' '' '' '/usr/local/bin/claude'");
     expect(command).toContain("'line one\nline '\\''two'\\'' #{pane_id} $(id)' '--' 'hi'");
   });
 
   it('holds the command until Spark is attached and hides tmux from it', () => {
     const command = launchCommand(start);
     expect(command).toContain("'/bin/sh' '-c' 'stty -echo; IFS= read -r _; stty echo;");
-    expect(command).toContain('unset TMUX TMUX_PANE TERM_PROGRAM TERM_PROGRAM_VERSION');
+    expect(command).toContain('unset TMUX TMUX_PANE OLDPWD');
+    expect(command).toContain('for name in SHELL TERM_PROGRAM TERM_PROGRAM_VERSION; do shift;');
     expect(command).toContain('exec "$@"');
   });
 

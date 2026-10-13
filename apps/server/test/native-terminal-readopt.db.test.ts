@@ -340,6 +340,18 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     expect(listSessionIds(tmux)).toEqual([]);
   });
 
+  it('keeps an idle session idle, with nothing to catch up', async () => {
+    const first = await start();
+    await launched(first);
+    await hook('UserPromptSubmit', { prompt: 'Check the fixture', prompt_id: 'p1' });
+    await hook('Stop', { prompt_id: 'p1' });
+    const second = await restart(first);
+    expect(await second.runtime.get(conversationId)).toMatchObject({
+      state: 'ready',
+      readopted: { stepsComplete: true },
+    });
+  });
+
   it('adopts a session once and refuses a second recovery', async () => {
     const first = await start();
     const { id, pid } = await launched(first);

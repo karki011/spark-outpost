@@ -105,10 +105,14 @@ export function tmuxArgs(host: TmuxHost, args: readonly string[]): string[] {
   return ['-u', '-S', host.socket, '-f', host.configPath, ...args];
 }
 
-export function tmux(host: TmuxHost, args: readonly string[]): string {
+export function tmux(
+  host: TmuxHost,
+  args: readonly string[],
+  env: Record<string, string> = host.env,
+): string {
   return execFileSync(host.bin, tmuxArgs(host, args), {
     cwd: host.directory,
-    env: host.env,
+    env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     maxBuffer: 64 * 1024 * 1024,

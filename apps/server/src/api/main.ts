@@ -138,9 +138,10 @@ const cloneDeps = {
 const localDir = resolve(import.meta.dirname, '../../../..', '.local');
 const nativeDataDir = config.SPARK_DATA_DIR ?? localDir;
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
+const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
 const terminalTmux = chooseTmux(
   process.env,
-  join(nativeDataDir, config.BRANCH_PREFIX, 'tmux'),
+  join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
   config.SPARK_DATA_DIR ? null : localDir,
 );
 if (!terminalTmux.host)
@@ -158,7 +159,7 @@ const terminals = new TerminalSessions(
   ),
 );
 const desktopBrowser = connectDesktopBrowser(process.env, process);
-const nativeMcpPortFile = join(nativeSessionsDir, 'mcp-port');
+const nativeMcpPortFile = join(nativeSessionsDir, `mcp-port${perInstance}`);
 const nativeMcp = await startSparkMcpHost(
   {
     db,
