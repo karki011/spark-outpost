@@ -22,9 +22,6 @@ async function bridgeMain() {
       prompt_id: 200,
       permission_mode: 100,
       tool_name: 200,
-      tool_use_id: 200,
-      agent_id: 200,
-      model: 200,
       notification_type: 100,
       reason: 100,
       transcript_path: 4096,
@@ -34,6 +31,9 @@ async function bridgeMain() {
       if (raw[field] === undefined) continue;
       if (typeof raw[field] !== 'string' || raw[field].length > max) return;
       payload[field] = raw[field];
+    }
+    for (const field of ['tool_use_id', 'agent_id', 'model']) {
+      if (typeof raw[field] === 'string' && raw[field].length <= 200) payload[field] = raw[field];
     }
     const body = JSON.stringify({
         sessionId: config.sessionId,
