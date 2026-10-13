@@ -11,10 +11,10 @@ You'll open a page beside a chat, let the agent use it, and point at an element.
 ## Open a page
 
 1. In a chat's **…** menu, select **Browser**, or press **⌘⇧B**.
-2. Type an address, such as `localhost:5173`, and press **Enter**.
+2. Type an address, like `localhost:5173`, and press **Enter**.
 3. **+** adds a tab.
 
-Chat links open here; **⌘**-click or **Open in default browser** uses yours.
+Chat and Terminal links open here; **⌘**-click or **Open in default browser** uses yours.
 
 ## Let the agent look and browse
 
