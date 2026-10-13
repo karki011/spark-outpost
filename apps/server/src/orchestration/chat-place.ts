@@ -49,6 +49,7 @@ interface ChatPlaceDeps {
   gitInstalled?: () => Promise<boolean>;
   onInstall?: (command: string) => void;
   onPhase?: (phase: PlacePhase) => void;
+  prepareLater?: (job: { main: string; copy: string }) => void;
 }
 
 export type PlacePhase = 'fetch' | 'worktree' | 'copy' | 'install';
@@ -201,6 +202,10 @@ async function createCopy(
   } catch (error) {
     await markChatWorktreeRemoved(deps.db, id);
     throw error;
+  }
+  if (deps.prepareLater) {
+    deps.prepareLater({ main: root, copy: record.path });
+    return { record, prep: null };
   }
   const prep = await prepareDependencies(root, record.path, {
     root,

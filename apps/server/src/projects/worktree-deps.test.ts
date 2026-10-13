@@ -75,6 +75,30 @@ describe('preparing dependencies in a worktree', () => {
     ]);
   });
 
+  it('lands a clone through the staging folder, so an interrupted one never looks finished', async () => {
+    const staging = join(main, '.staging');
+    await mkdir(staging, { recursive: true });
+    const landings: string[] = [];
+    const run: RunCommand = async (argv) => {
+      landings.push(argv.at(-1)!);
+      if (landings.length === 2) return { ...ok, cancelled: true };
+      await mkdir(argv.at(-1)!, { recursive: true });
+      return ok;
+    };
+    await prepareDependencies(main, copy, { root: main, platform: 'darwin', run, staging });
+    expect(landings.slice(0, 2)).toEqual([join(staging, '0'), join(staging, '1')]);
+    await expect(lstat(join(copy, 'node_modules'))).rejects.toThrow();
+    await expect(lstat(join(staging, '0'))).rejects.toThrow();
+    const again = await prepareDependencies(main, copy, { root: main, staging });
+    expect(again).toMatchObject({ note: null, folders: 2 });
+    expect(await readFile(join(copy, 'node_modules', 'left-pad', 'index.js'), 'utf8')).toBe(
+      'module.exports = 1;',
+    );
+    expect(
+      await readFile(join(copy, 'packages', 'lib', 'node_modules', 'tiny', 'index.js'), 'utf8'),
+    ).toBe('ok');
+  });
+
   it('reports copying and installing as each begins', async () => {
     await put(join(copy, 'package-lock.json'), '{}');
     const phases: string[] = [];

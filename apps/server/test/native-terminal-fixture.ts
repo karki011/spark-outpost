@@ -81,6 +81,9 @@ export async function nativeRuntimeFixture(
     exits,
     startLines: [] as string[],
     onStartPhase: (_conversationId: string): void => undefined,
+    prepareDependencies: (async () => null) as NonNullable<
+      NativeRuntimeDeps['prepareDependencies']
+    >,
     spawn,
     terminals,
     observation: 'hooks' as NativeLaunch['observation'],
@@ -129,6 +132,7 @@ export async function nativeRuntimeFixture(
     prepareLaunch: prepare,
     logStart: (line) => fixture.startLines.push(line),
     onStartPhase: (conversationId) => fixture.onStartPhase(conversationId),
+    prepareDependencies: (...args) => fixture.prepareDependencies(...args),
     ...(options.realFiles ? {} : { watchTranscript: fakeWatcher }),
   };
   const runtime = await createNativeRuntime(deps);

@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { startLine, startTimer, worktreeOf, type StartRecord } from './start-timing.ts';
+import {
+  dependenciesLine,
+  startLine,
+  startTimer,
+  worktreeOf,
+  type StartRecord,
+} from './start-timing.ts';
 
 const SESSION = '3f0c8a52-5a51-4a0e-9d0b-7c1f6f0f2a11';
 const ALLOWED =
@@ -109,6 +115,20 @@ describe('the Terminal start log line', () => {
     expect(lines[0]).toBe(
       'Terminal start session=none provider=unknown outcome=failed total_ms=0 grant_ms=0 error=Error',
     );
+  });
+
+  it('gives the dependency step its own line with fixed words and a duration', () => {
+    expect(
+      dependenciesLine({ sessionId: SESSION, outcome: 'prepared', method: 'clone', ms: 1716.4 }),
+    ).toBe(`Terminal dependencies session=${SESSION} outcome=prepared method=clone total_ms=1716`);
+    expect(
+      dependenciesLine({
+        sessionId: '/Users/me',
+        outcome: 'failed in /Users/me',
+        method: 'pnpm install /Users/me',
+        ms: Number.NaN,
+      }),
+    ).toBe('Terminal dependencies session=none outcome=none method=none total_ms=0');
   });
 
   it('reads worktree use from where the chat was placed', () => {

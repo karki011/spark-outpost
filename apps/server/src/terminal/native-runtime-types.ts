@@ -13,6 +13,7 @@ import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { SparkGrant, SparkMcpHost } from '../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { placeChat } from '../orchestration/chat-place.ts';
+import type { prepareDependencies } from '../projects/worktree-deps.ts';
 import type { NativeTurnContext } from './native-context.ts';
 import type { WatchTranscript } from './native-tail.ts';
 import type { SessionTranscript } from './native-usage.ts';
@@ -38,6 +39,7 @@ export interface NativeRuntimeDeps {
   now?: () => Date;
   logStart?: (line: string) => void;
   onStartPhase?: (conversationId: string) => void;
+  prepareDependencies?: typeof prepareDependencies;
 }
 
 export interface PendingNativeLaunch {

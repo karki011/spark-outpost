@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  terminalDependenciesText,
   terminalStartPhaseSchema,
   terminalStartSchema,
   terminalStartText,
@@ -23,6 +24,25 @@ describe('what a starting Terminal session says it is doing', () => {
   it('has a line for every phase the server can report, and none ends without an ellipsis', () => {
     for (const phase of terminalStartPhaseSchema.options)
       expect(terminalStartText(phase, 'Codex')).toMatch(/^[A-Z][^/]+…$/);
+  });
+
+  it('says which dependency step is still running, or the failure as it was worded', () => {
+    const wait = 'Commands that need them may fail until this finishes.';
+    expect(terminalDependenciesText({ state: 'preparing', step: null, note: null })).toBe(
+      `Dependencies are still copying. ${wait}`,
+    );
+    expect(terminalDependenciesText({ state: 'preparing', step: 'copy', note: null })).toBe(
+      `Dependencies are still copying. ${wait}`,
+    );
+    expect(terminalDependenciesText({ state: 'preparing', step: 'install', note: null })).toBe(
+      `Dependencies are still installing. ${wait}`,
+    );
+    expect(
+      terminalDependenciesText({ state: 'failed', step: null, note: 'Installing them failed.' }),
+    ).toBe('Installing them failed.');
+    expect(terminalDependenciesText({ state: 'failed', step: null, note: null })).toBe(
+      'Dependencies could not be prepared in this session’s worktree.',
+    );
   });
 
   it('accepts only known phases from the server', () => {

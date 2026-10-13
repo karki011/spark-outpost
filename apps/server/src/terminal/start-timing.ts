@@ -70,6 +70,29 @@ function errorFields(error: unknown): string[] {
   ];
 }
 
+const DEPS_WORDS: readonly string[] = [
+  'prepared',
+  'failed',
+  'stopped',
+  'nothing',
+  'clone',
+  'copy',
+  'offline_install',
+  'install',
+  'skipped',
+];
+const word = (value: string | null) => (value && DEPS_WORDS.includes(value) ? value : 'none');
+
+export function dependenciesLine(result: {
+  sessionId: string | null;
+  outcome: string;
+  method: string | null;
+  ms: number;
+}): string {
+  const session = result.sessionId && SESSION_ID.test(result.sessionId) ? result.sessionId : 'none';
+  return `Terminal dependencies session=${session} outcome=${word(result.outcome)} method=${word(result.method)} total_ms=${ms(result.ms)}`;
+}
+
 export function worktreeOf(placed: Placed): StartWorktree {
   if (!placed.input.chatWorktree) return 'none';
   return placed.note ? 'created' : 'reused';

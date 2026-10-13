@@ -185,7 +185,10 @@ describe('app event invalidation', () => {
     const invalidations = mergeInvalidations([
       { kind: 'terminal_start', conversationId: A, runId: null },
     ]);
-    expect(invalidations).toEqual([{ queryKey: ['terminal-start', A], exact: true }]);
+    expect(invalidations).toEqual([
+      { queryKey: ['terminal-start', A], exact: true },
+      { queryKey: ['native-terminal', A], exact: true },
+    ]);
     expect(
       mergeInvalidations([{ kind: 'terminal_start', conversationId: null, runId: null }]),
     ).toEqual([]);

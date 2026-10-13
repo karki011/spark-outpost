@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,7 +10,13 @@ import { nativeTerminalRow } from '../src/persistence/native-terminals.ts';
 import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { NativeLaunchInput } from '../src/terminal/native-launch.ts';
-import { createNativeRuntime, type NativeRuntime } from '../src/terminal/native-runtime.ts';
+import {
+  createNativeRuntime,
+  type NativeRuntime,
+  type NativeRuntimeDeps,
+} from '../src/terminal/native-runtime.ts';
+import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import { pendingDir } from '../src/terminal/session-deps.ts';
 import { isAlive } from '../src/terminal/process-group.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
@@ -54,6 +61,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
   let conversationId: string;
   let inputs: (NativeLaunchInput & { directory: string })[];
   const worlds: World[] = [];
+  let prepareDependencies: NonNullable<NativeRuntimeDeps['prepareDependencies']> = async () => null;
 
   const start = async (port = 0): Promise<World> => {
     const terminals = new TerminalSessions(tmuxSpawner(loginShellSpawner(), tmux));
@@ -71,6 +79,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
       mcp,
       tmux,
       now: () => new Date('2026-10-13T07:14:00.000Z'),
+      prepareDependencies: (...args) => prepareDependencies(...args),
       locateCli: async () => '/bin/sh',
       place: async (_deps, input) => ({
         input: { ...input, projectRoots: [folder] },
@@ -171,6 +180,56 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     killTmuxServer(tmux);
     await t.cleanup();
     await rm(folder, { recursive: true, force: true });
+  });
+
+  it('finishes dependency preparation that a restart interrupted, and says so until it is done', async () => {
+    execFileSync('git', ['-C', folder, 'init', '-q', '-b', 'main']);
+    await writeFile(join(folder, 'package.json'), '{"name":"app"}');
+    const projectId = randomUUID();
+    await t.db.query(
+      `INSERT INTO projects (id, workspace_id, name, root_path) VALUES ($1, $2, 'app', $3)`,
+      [projectId, t.workspaceId, join(folder, 'main')],
+    );
+    await insertChatWorktree(t.db, {
+      id: randomUUID(),
+      conversationId,
+      projectId,
+      repoRoot: join(folder, 'main'),
+      path: folder,
+      branch: 'spark/fixture',
+      baseBranch: 'main',
+      baseCommit: '',
+      landedCommit: null,
+      inPlace: false,
+      ownsBranch: true,
+    });
+    const first = await start();
+    await launched(first);
+    expect((await first.runtime.get(conversationId))?.dependencies).toBeNull();
+    const marker = (await pendingDir(folder))!;
+    await mkdir(marker, { recursive: true });
+    let finish: () => void = () => undefined;
+    const calls: string[][] = [];
+    prepareDependencies = (main, copy) =>
+      new Promise((resolve) => {
+        calls.push([main, copy]);
+        finish = () => resolve(null);
+      });
+
+    const second = await restart(first);
+
+    await until(() => calls.length === 1, 'the dependency step to start again');
+    expect(calls).toEqual([[join(folder, 'main'), folder]]);
+    expect(await second.runtime.get(conversationId)).toMatchObject({
+      readopted: { at: '2026-10-13T07:14:00.000Z' },
+      dependencies: { state: 'preparing' },
+    });
+    finish();
+    await until(
+      async () => (await second.runtime.get(conversationId))?.dependencies === null,
+      'the notice to clear',
+    );
+    expect(existsSync(marker)).toBe(false);
   });
 
   it('adopts a running session with its turn, hooks and Spark tools after a restart', async () => {

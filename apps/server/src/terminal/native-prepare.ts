@@ -11,6 +11,7 @@ import { withPublishNote } from '../workflow/publish-context.ts';
 import { placeChat, type PlacePhase } from '../orchestration/chat-place.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
+import type { DepsJob } from './session-deps.ts';
 import { shellFolder } from './shell-folder.ts';
 import { nativeModeArgs } from './native-launch.ts';
 import { nativeLaunchError, NativeRuntimeError } from './native-control.ts';
@@ -31,6 +32,7 @@ export async function prepareNativeSession(
     branchPrefix?: string;
     place?: typeof placeChat;
     onPhase?: (phase: PlacePhase) => void;
+    prepareLater?: (job: DepsJob) => void;
   },
   conversationId: string,
   provider: NativeTerminalProvider,
@@ -79,6 +81,7 @@ export async function prepareNativeSession(
         db: deps.db,
         branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
         ...(deps.onPhase ? { onPhase: deps.onPhase } : {}),
+        ...(deps.prepareLater ? { prepareLater: deps.prepareLater } : {}),
       },
       { ...input, mode: 'do' },
       true,

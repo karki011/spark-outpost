@@ -1,8 +1,8 @@
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { FIXTURE_READY } from './native-terminal-fixture.ts';
+import { FIXTURE_READY, typeLine } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { chatRepo } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
@@ -178,6 +178,55 @@ test('a starting terminal names the phase it is in and clears it when the termin
     });
     await expect(page.getByText(phase)).toHaveCount(0);
     await expect(page.getByText('Starting terminal…')).toHaveCount(0);
+  } finally {
+    await db.end();
+    repo.remove();
+  }
+});
+
+test('a terminal opens in its worktree and is usable while dependencies are still installing', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const repo = chatRepo();
+  repo.commit('package.json', '{"name":"app","packageManager":"pnpm@10.0.0"}');
+  repo.commit('pnpm-lock.yaml', "lockfileVersion: '9.0'\n");
+  repo.commit('.spark-test-slow-install', '6\n');
+  const db = openTestDb();
+  try {
+    const linked = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
+    expect(linked.ok()).toBe(true);
+    await db.query(`UPDATE projects SET work_place = 'worktree' WHERE root_path = $1`, [repo.root]);
+    await openChats(page);
+    await page.getByRole('button', { name: 'New chat' }).first().click();
+    await page
+      .getByRole('radiogroup', { name: 'Session type' })
+      .getByRole('radio', { name: 'Terminal' })
+      .click();
+    await pickTerminalAgent(page, 'Codex');
+    await page.getByRole('button', { name: 'Choose project', exact: true }).click();
+    const folders = page.getByRole('dialog', { name: 'Project folders' });
+    await folders.getByRole('button', { name: new RegExp(`^${path.basename(repo.root)}`) }).click();
+    await expect(folders.getByRole('list', { name: 'Linked repos' })).toContainText(
+      path.basename(repo.root),
+    );
+    await page.keyboard.press('Escape');
+    await page
+      .getByRole('textbox', { name: 'What would you like to work on?' })
+      .fill('Inspect the fixture.');
+    await page.getByRole('button', { name: 'Start terminal', exact: true }).click();
+    const workspace = page.getByRole('region', { name: 'Terminal session', exact: true });
+    await expect(workspace.locator('.xterm-accessibility')).toContainText(FIXTURE_READY);
+    const notice = workspace.getByText(
+      'Dependencies are still installing. Commands that need them may fail until this finishes.',
+    );
+    await expect(notice).toBeVisible();
+    await typeLine(page, workspace, 'still usable');
+    await expect(notice).toBeVisible();
+    await expect(notice).toHaveCount(0, { timeout: 20_000 });
+    await expect(workspace.locator('.xterm-accessibility')).toContainText('still usable');
+    expect(existsSync(path.join(repo.work(), 'node_modules'))).toBe(true);
   } finally {
     await db.end();
     repo.remove();

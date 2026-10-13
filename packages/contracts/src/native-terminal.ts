@@ -20,6 +20,20 @@ export const nativeTerminalStateSchema = z.enum([
 ]);
 export type NativeTerminalState = z.infer<typeof nativeTerminalStateSchema>;
 
+export const terminalDependenciesSchema = z.object({
+  state: z.enum(['preparing', 'failed']),
+  step: z.enum(['copy', 'install']).nullable(),
+  note: z.string().nullable(),
+});
+export type TerminalDependencies = z.infer<typeof terminalDependenciesSchema>;
+
+export function terminalDependenciesText(dependencies: TerminalDependencies): string {
+  if (dependencies.state === 'failed')
+    return dependencies.note ?? 'Dependencies could not be prepared in this session’s worktree.';
+  const doing = dependencies.step === 'install' ? 'installing' : 'copying';
+  return `Dependencies are still ${doing}. Commands that need them may fail until this finishes.`;
+}
+
 export const nativeTerminalSessionSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
@@ -34,6 +48,7 @@ export const nativeTerminalSessionSchema = z.object({
   reason: z.string().nullable(),
   agentMode: z.string().nullable().default(null),
   readopted: z.object({ at: z.string(), stepsComplete: z.boolean() }).nullable().optional(),
+  dependencies: terminalDependenciesSchema.nullable().optional(),
 });
 export type NativeTerminalSession = z.infer<typeof nativeTerminalSessionSchema>;
 

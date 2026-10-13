@@ -58,6 +58,9 @@ export async function deleteTerminalSession(id: string): Promise<void> {
   if (!response.ok) throw new Error('The terminal could not be stopped. Try again.');
 }
 
+export const nativeTerminalKey = (conversationId: string) =>
+  ['native-terminal', conversationId] as const;
+
 export const terminalStartKey = (conversationId: string) =>
   ['terminal-start', conversationId] as const;
 

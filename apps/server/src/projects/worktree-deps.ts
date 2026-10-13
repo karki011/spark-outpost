@@ -1,4 +1,4 @@
-import { access, readFile, readdir, rm } from 'node:fs/promises';
+import { access, readFile, readdir, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { CONFIG_FILES, TOOL_FILES, packageManager, type CheckCommand } from '../checks/detect.ts';
 import { runCheck, type CheckRun } from '../checks/run-check.ts';
@@ -29,6 +29,7 @@ export interface DepsOptions {
   run?: RunCommand;
   onInstall?: (command: string) => void;
   onPhase?: (phase: 'copy' | 'install') => void;
+  staging?: string;
 }
 
 export const DEPS_PREP_LIMIT_MS = 90_000;
@@ -117,17 +118,26 @@ async function cloneFolders(
   folders: readonly string[],
   platform: NodeJS.Platform,
   run: RunCommand,
+  staging?: string,
 ): Promise<string | null> {
   const cloned: string[] = [];
   for (const folder of folders) {
     const target = path.join(copy, folder, 'node_modules');
     if (!(await exists(path.join(copy, folder))) || (await exists(target))) continue;
-    const argv = cloneCommand(platform, path.join(main, folder, 'node_modules'), target);
+    const landing = staging ? path.join(staging, String(cloned.length)) : target;
+    const argv = cloneCommand(platform, path.join(main, folder, 'node_modules'), landing);
     if (!argv) return 'no copy-on-write clone on this platform';
     const result = await run(argv, copy);
-    if (!succeeded(result)) {
+    const placed =
+      succeeded(result) &&
+      (landing === target ||
+        (await rename(landing, target).then(
+          () => true,
+          () => false,
+        )));
+    if (!placed) {
       await Promise.all(
-        [...cloned, target].map((dir) => rm(dir, { recursive: true, force: true })),
+        [...cloned, target, landing].map((dir) => rm(dir, { recursive: true, force: true })),
       );
       return `clone failed: ${firstLine(result)}`;
     }
@@ -190,7 +200,7 @@ export async function prepareDependencies(
       return false;
     }
     options.onPhase?.('copy');
-    const failed = await cloneFolders(main, copy, folders, platform, run);
+    const failed = await cloneFolders(main, copy, folders, platform, run, options.staging);
     if (failed) notes.push(failed);
     return failed === null;
   };
