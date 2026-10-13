@@ -1,15 +1,26 @@
 import './terminal-usage.css';
 import { useQuery } from '@tanstack/react-query';
-import { TaskStateIcon } from '../../tasks/TaskIcons.tsx';
+import '../../tasks/task-list.css';
+import { CheckIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { STEP_STATE_NAMES, stepRows, type StepState } from './step-rows.ts';
 import { terminalUsageQuery } from './terminal-usage-api.ts';
 
+const ICON_CLASSES: Record<StepState, string> = {
+  done: 'ic',
+  active: 'ic spin',
+  failed: 'ic errdot',
+  unknown: 'ic pend',
+};
+
 function StepIcon({ state }: { state: StepState }) {
-  if (state === 'unknown')
-    return <span className="ic pend" role="img" aria-label={STEP_STATE_NAMES.unknown} />;
-  return <TaskStateIcon state={state} />;
+  return (
+    <span className={ICON_CLASSES[state]} role="img" aria-label={STEP_STATE_NAMES[state]}>
+      {state === 'done' && <CheckIcon />}
+      {state === 'failed' && '!'}
+    </span>
+  );
 }
 
 export function TerminalSteps({ conversationId }: { conversationId: string }) {

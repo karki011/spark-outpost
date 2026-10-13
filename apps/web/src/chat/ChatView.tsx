@@ -150,7 +150,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
   const panel = useTaskPanel(
     detail.data?.tasks ?? NO_TASKS,
-    autonomyLevel !== null,
+    autonomyLevel !== null || detail.data?.conversation.sessionType === 'terminal',
     panelOpensByDefault(roomy, wideLayout),
     browserPane,
   );
