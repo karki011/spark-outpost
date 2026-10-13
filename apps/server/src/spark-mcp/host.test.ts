@@ -1,20 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../persistence/db.ts';
 import { memorySecretStore } from '../setup/secrets.ts';
-import { startSparkMcpHost, type SparkMcpHost } from './host.ts';
+import { sparkGrantKey, startSparkMcpHost, type SparkMcpHost } from './host.ts';
 
 let host: SparkMcpHost;
 
+const deps = () => ({
+  db: { query: async () => ({ rows: [] }) } as unknown as Db,
+  secrets: memorySecretStore(),
+  fetch,
+  github: {
+    runCommand: async () => ({ code: 1, stdout: '', stderr: '' }),
+    locateGh: async () => null,
+  },
+});
+
 beforeEach(async () => {
-  host = await startSparkMcpHost({
-    db: { query: async () => ({ rows: [] }) } as unknown as Db,
-    secrets: memorySecretStore(),
-    fetch,
-    github: {
-      runCommand: async () => ({ code: 1, stdout: '', stderr: '' }),
-      locateGh: async () => null,
-    },
-  });
+  host = await startSparkMcpHost(deps());
 });
 
 afterEach(async () => {
@@ -51,6 +53,31 @@ describe('Spark tools host', () => {
     expect((await post(grant.url, { Authorization: 'Bearer nope' })).status).toBe(401);
     grant.revoke();
     expect((await post(grant.url, { Authorization: `Bearer ${grant.token}` })).status).toBe(401);
+  });
+
+  it('restores a grant from its digest so a token issued before a restart still works', async () => {
+    const grant = await host.grant(scope);
+    const port = host.port;
+    await host.close();
+    host = await startSparkMcpHost(deps(), undefined, port);
+    expect(host.port).toBe(port);
+    const auth = { Authorization: `Bearer ${grant.token}` };
+    expect((await post(grant.url, auth)).status).toBe(401);
+    const restored = await host.restore(scope, sparkGrantKey(grant.token));
+    expect(restored.token).toBe('');
+    expect((await post(grant.url, auth)).status).toBe(200);
+    await expect(host.restore(scope, sparkGrantKey(grant.token))).rejects.toThrow(
+      'cannot be restored',
+    );
+    await expect(host.restore(scope, grant.token)).rejects.toThrow('cannot be restored');
+    restored.revoke();
+    expect((await post(grant.url, auth)).status).toBe(401);
+  });
+
+  it('listens on another port when the one it had is taken', async () => {
+    const other = await startSparkMcpHost(deps(), undefined, host.port);
+    expect(other.port).not.toBe(host.port);
+    await other.close();
   });
 
   it('refuses browsers, other host names, other paths and streams', async () => {

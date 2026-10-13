@@ -8,8 +8,13 @@ describe('appLayout', () => {
         isPackaged: false,
         appPath: '/repo/apps/desktop',
         resourcesPath: '/electron/Resources',
+        arch: 'arm64',
       }),
-    ).toEqual({ serverDir: '/repo/apps/server', webRoot: '/repo/apps/web/dist' });
+    ).toEqual({
+      serverDir: '/repo/apps/server',
+      webRoot: '/repo/apps/web/dist',
+      tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
+    });
   });
 
   it('runs them from the app bundle resources when packaged', () => {
@@ -22,6 +27,7 @@ describe('appLayout', () => {
     ).toEqual({
       serverDir: '/Applications/Spark Outpost.app/Contents/Resources/server',
       webRoot: '/Applications/Spark Outpost.app/Contents/Resources/web',
+      tmuxBin: '/Applications/Spark Outpost.app/Contents/Resources/tmux/bin/tmux',
     });
   });
 });

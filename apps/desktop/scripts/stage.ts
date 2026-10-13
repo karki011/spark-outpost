@@ -5,9 +5,11 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { build, Platform } from 'electron-builder';
 import { builderConfig, signingPlan, type MacArch } from './builder-config.ts';
+import { buildTmux } from './build-tmux.ts';
 import { notarizeDmgs } from './notarize-dmg.ts';
 import { collect, pruneRuntime, pruneServer } from './prune.ts';
 import { checkPostgresStarts, postgresNativeDir, prunePostgres } from './prune-postgres.ts';
+import { stageTmux } from './tmux-bundle.ts';
 
 const run = promisify(execFile);
 
@@ -69,6 +71,7 @@ async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}images`),
   });
+  await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);
 }
 
 async function stageApp(stageDir: string, version: string): Promise<void> {

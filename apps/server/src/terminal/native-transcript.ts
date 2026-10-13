@@ -35,7 +35,16 @@ export type TranscriptRecord =
       owner: string | null;
       agentId: string | null;
     }
-  | { kind: 'reported'; usage: ReportedUsage };
+  | { kind: 'reported'; usage: ReportedUsage }
+  | {
+      kind: 'step';
+      turnId: string | null;
+      id: string;
+      name: string;
+      phase: 'start' | 'end';
+      failed: boolean;
+      at: string | null;
+    };
 
 export interface TranscriptParser {
   push(line: string): TranscriptRecord[];

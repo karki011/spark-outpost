@@ -12,6 +12,7 @@ export interface ServerLaunch {
   token: string;
   version: string;
   webRoot: string;
+  tmuxBin: string;
   baseEnv: NodeJS.ProcessEnv;
 }
 
@@ -35,6 +36,7 @@ const LAUNCHER_OWNED = [
   'SPARK_APP_VERSION',
   'SPARK_LOG_DIR',
   'SPARK_DATA_DIR',
+  'SPARK_TMUX_BIN',
   BROWSER_HOST_ENV,
 ];
 
@@ -68,6 +70,7 @@ export function apiEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     SPARK_APP_VERSION: launch.version,
     SPARK_LOG_DIR: launch.paths.logs,
     SPARK_DATA_DIR: launch.paths.userData,
+    SPARK_TMUX_BIN: launch.tmuxBin,
     [API_TOKEN_ENV]: launch.token,
   };
 }

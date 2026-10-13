@@ -48,6 +48,53 @@ function response(record: Record<string, unknown>, turnId: string | null): Trans
   ];
 }
 
+function blocks(record: Record<string, unknown>): Record<string, unknown>[] {
+  const content = isRecord(record.message) ? record.message.content : null;
+  return Array.isArray(content) ? content.filter(isRecord) : [];
+}
+
+function steps(
+  record: Record<string, unknown>,
+  turnId: string | null,
+  names: Map<string, string>,
+): TranscriptRecord[] {
+  const at = typeof record.timestamp === 'string' ? record.timestamp : null;
+  const found: TranscriptRecord[] = [];
+  for (const block of blocks(record)) {
+    if (
+      block.type === 'tool_use' &&
+      typeof block.id === 'string' &&
+      typeof block.name === 'string'
+    ) {
+      names.set(block.id, block.name);
+      found.push({
+        kind: 'step',
+        turnId,
+        id: block.id,
+        name: block.name,
+        phase: 'start',
+        failed: false,
+        at,
+      });
+    }
+    const started =
+      typeof block.tool_use_id === 'string' ? names.get(block.tool_use_id) : undefined;
+    if (block.type === 'tool_result' && typeof block.tool_use_id === 'string' && started) {
+      names.delete(block.tool_use_id);
+      found.push({
+        kind: 'step',
+        turnId,
+        id: block.tool_use_id,
+        name: started,
+        phase: 'end',
+        failed: block.is_error === true,
+        at,
+      });
+    }
+  }
+  return found;
+}
+
 function reportedModels(usage: unknown): ReportedModel[] {
   if (!isRecord(usage)) return [];
   return Object.entries(usage).flatMap(([model, counts]) =>
@@ -94,13 +141,17 @@ function sidechainParser(): TranscriptParser {
   };
 }
 
-export function claudeTranscriptParser(sidechain = false): TranscriptParser {
+export function claudeTranscriptParser(
+  sidechain = false,
+  openTurnId: string | null = null,
+): TranscriptParser {
   if (sidechain) return sidechainParser();
-  let turnId: string | null = null;
+  let turnId = openTurnId;
   let lastHuman: string | null = null;
   const byIndex = new Map<number, string>();
   const owners = new Map<string, string>();
   const agentTurns = new Map<string, string>();
+  const toolNames = new Map<string, string>();
   const prompt = (record: Record<string, unknown>, promptId: string): TranscriptRecord[] => {
     const origin = record.origin;
     if (!isRecord(origin)) return [];
@@ -123,18 +174,20 @@ export function claudeTranscriptParser(sidechain = false): TranscriptParser {
       const record = parseLine(line);
       if (!isRecord(record) || record.isSidechain === true) return [];
       if (record.type === 'cost-state') return reported(record);
-      if (record.type === 'assistant') return response(record, turnId);
+      if (record.type === 'assistant')
+        return [...response(record, turnId), ...steps(record, turnId, toolNames)];
       if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
       const prompts = prompt(record, record.promptId);
       turnId = owners.get(record.promptId) ?? record.promptId;
+      const ended = steps(record, turnId, toolNames);
       const started = record.toolUseResult;
       if (isRecord(started) && typeof started.agentId === 'string' && started.agentId) {
         agentTurns.set(started.agentId, turnId);
-        return [...prompts, { kind: 'agent', agentId: started.agentId, turnId }];
+        return [...prompts, ...ended, { kind: 'agent', agentId: started.agentId, turnId }];
       }
       return isRecord(record.message) && interruptText(record.message)
         ? [...prompts, { kind: 'interrupt', turnId }]
-        : prompts;
+        : [...prompts, ...ended];
     },
   };
 }

@@ -8,6 +8,7 @@ export interface NativeStepEvent {
   phase: 'start' | 'end';
   failed: boolean;
   agentId?: string;
+  at?: Date;
 }
 
 interface StepRow {
@@ -32,18 +33,20 @@ export async function recordNativeStep(
     storedLabel(step.id),
     storedLabel(step.name),
     step.agentId === undefined ? null : storedLabel(step.agentId),
+    step.at ?? null,
   ];
   if (step.phase === 'start') {
     await db.query(
       `INSERT INTO native_terminal_steps (run_id, tool_use_id, name, agent_id, started_at)
-       VALUES ($1, $2, $3, $4, now()) ON CONFLICT (run_id, tool_use_id) DO NOTHING`,
+       VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, now()))
+       ON CONFLICT (run_id, tool_use_id) DO NOTHING`,
       values,
     );
     return;
   }
   await db.query(
     `INSERT INTO native_terminal_steps (run_id, tool_use_id, name, agent_id, ended_at, failed)
-     VALUES ($1, $2, $3, $4, now(), $5)
+     VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, now()), $6)
      ON CONFLICT (run_id, tool_use_id) DO UPDATE SET
        ended_at = COALESCE(native_terminal_steps.ended_at, EXCLUDED.ended_at),
        failed = native_terminal_steps.failed OR EXCLUDED.failed`,

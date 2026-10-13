@@ -37,6 +37,7 @@ export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL
   : null;
 
 export const SERVER_LOG_DIR = path.join(os.tmpdir(), `spark-outpost-server-logs-${slot}`);
+export const API_RESTART_FLAG = path.join(SERVER_LOG_DIR, 'restart-api');
 
 const ports = slotPorts(slot);
 export const STUB_PORT = ports.stub;

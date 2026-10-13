@@ -84,7 +84,7 @@ async function fixture(userData: string) {
   await mkdir(path.dirname(entry), { recursive: true });
   await writeFile(
     entry,
-    `process.send({ kind: 'ready', pid: process.pid }); process.on('message', message => { if (message.ping) process.send({kind: 'pong', pid: process.pid}); }); setInterval(() => {}, 1000);`,
+    `process.send({ kind: 'ready', pid: process.pid }); process.on('message', message => { if (message.ping) process.send({kind: 'pong', pid: process.pid}); if (message.kind === 'service:stop' && message.terminals === 'keep') { require('node:fs').writeFileSync(${JSON.stringify(path.join(userData, 'kept'))}, ''); process.exit(0); } }); setInterval(() => {}, 1000);`,
   );
   return {
     name: 'Spark test service',
@@ -322,7 +322,32 @@ describe('independent local runtime', () => {
     expect(info.pid).not.toBe(pid);
     expect(alive(pid!)).toBe(false);
     expect(alive(servicePid)).toBe(false);
+    expect(await exists(path.join(userData, 'kept'))).toBe(true);
     expect(await endpoint(userData)).toEqual({ pid: info.pid, version: '2.0.0' });
+  });
+
+  it('asks the API to keep Terminal sessions only when the stop says so', async () => {
+    const userData = await mkdtemp(path.join(folder, 'k-'));
+    const runtime = await connect(userData);
+    const pids: number[] = [];
+    const start = async () =>
+      runtime.service({
+        ...(await fixture(userData)),
+        connect: () => ({
+          receive: (raw) => void pids.push((raw as { pid: number }).pid),
+          close: () => undefined,
+        }),
+      });
+    const quit = await start();
+    await until(() => pids.length === 1);
+    await quit.stop();
+    expect(alive(pids[0]!)).toBe(false);
+    expect(await exists(path.join(userData, 'kept'))).toBe(false);
+    const relaunch = await start();
+    await until(() => pids.length === 2);
+    await relaunch.stop(true);
+    expect(alive(pids[1]!)).toBe(false);
+    expect(await exists(path.join(userData, 'kept'))).toBe(true);
   });
 
   it('replaces a host that reports no version', async () => {

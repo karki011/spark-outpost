@@ -14,10 +14,10 @@ export type RuntimeRequest =
   | { kind: 'database:start'; options: Omit<DatabaseOptions, 'log'> }
   | { kind: 'database:stop' }
   | { kind: 'service:start'; options: Omit<ServiceOptions, 'log' | 'connect'> }
-  | { kind: 'service:stop'; name: string }
+  | { kind: 'service:stop'; name: string; keepTerminals?: boolean | undefined }
   | { kind: 'service:post'; name: string; message: unknown }
   | { kind: 'configure'; api: NonNullable<RuntimeInfo['api']> }
-  | { kind: 'shutdown' };
+  | { kind: 'shutdown'; keepTerminals?: boolean | undefined };
 
 export type RuntimeHandshake = { kind: 'hello'; nonce: string } | { kind: 'proof'; proof: string };
 
@@ -58,10 +58,10 @@ const runtimeEnvelopeSchema = z.object({
         env: z.record(z.string(), z.string().optional()),
       }),
     }),
-    z.object({ kind: z.literal('service:stop'), name }),
+    z.object({ kind: z.literal('service:stop'), name, keepTerminals: z.boolean().optional() }),
     z.object({ kind: z.literal('service:post'), name, message: z.unknown() }),
     z.object({ kind: z.literal('configure'), api }),
-    z.object({ kind: z.literal('shutdown') }),
+    z.object({ kind: z.literal('shutdown'), keepTerminals: z.boolean().optional() }),
   ]),
 });
 export const runtimeFrameSchema = z.union([

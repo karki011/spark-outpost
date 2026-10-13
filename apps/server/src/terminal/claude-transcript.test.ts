@@ -298,3 +298,62 @@ describe('session files of the real-agent pass', () => {
     ]);
   });
 });
+
+describe('Claude tool records', () => {
+  const steps = (records: readonly TranscriptRecord[]) =>
+    records.flatMap((record) => (record.kind === 'step' ? [record] : []));
+
+  it('reads each tool call of a real session with its name, turn and time', () => {
+    const found = steps(fixtureRecords('claude-three-turns.jsonl', claudeTranscriptParser()));
+    expect(found.map((step) => [step.phase, step.name, step.failed])).toEqual([
+      ['start', found[0]!.name, false],
+      ['end', found[0]!.name, found[1]!.failed],
+    ]);
+    expect(found[0]!.id).toBe(found[1]!.id);
+    expect(found[0]!.turnId).toBe(found[1]!.turnId);
+    expect(Number.isNaN(Date.parse(found[0]!.at!))).toBe(false);
+  });
+
+  it('gives a tool call that starts before any prompt record the turn the reader was opened with', () => {
+    const parser = claudeTranscriptParser(false, 'open-turn');
+    const call = {
+      type: 'assistant',
+      timestamp: '2026-10-13T07:10:00.000Z',
+      message: { id: 'm1', content: [{ type: 'tool_use', id: 'toolu_1', name: 'Bash' }] },
+    };
+    const result = {
+      type: 'user',
+      promptId: 'open-turn',
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_1', is_error: true }] },
+    };
+    expect(steps([call, result].flatMap((record) => parser.push(JSON.stringify(record))))).toEqual([
+      {
+        kind: 'step',
+        turnId: 'open-turn',
+        id: 'toolu_1',
+        name: 'Bash',
+        phase: 'start',
+        failed: false,
+        at: '2026-10-13T07:10:00.000Z',
+      },
+      {
+        kind: 'step',
+        turnId: 'open-turn',
+        id: 'toolu_1',
+        name: 'Bash',
+        phase: 'end',
+        failed: true,
+        at: null,
+      },
+    ]);
+  });
+
+  it('drops a result whose call it never saw', () => {
+    const result = {
+      type: 'user',
+      promptId: 'p',
+      message: { content: [{ type: 'tool_result', tool_use_id: 'toolu_unknown' }] },
+    };
+    expect(steps(parse(result))).toEqual([]);
+  });
+});

@@ -1,44 +1,23 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import type {
-  ProviderId,
-  TerminalEndReason,
-  TerminalServerMessage,
-  TerminalStep,
-} from '@spark-outpost/contracts';
-import type { OpenShell } from '../persistence/terminal-shells.ts';
+import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
 import { killProcessTree, processTable, runningCommand } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
+import type {
+  AgentRequest,
+  AttachedTerminal,
+  OpenView,
+  ShellRequest,
+  ShellWatcher,
+  TerminalClient,
+  TerminalLimits,
+  TerminalView,
+} from './session-types.ts';
+import { defaultLimits, TerminalAuthError, TerminalLimitError } from './session-types.ts';
 
-export interface TerminalClient {
-  output(data: string): void;
-  send(message: TerminalServerMessage): void;
-  close(): void;
-}
-
-export interface TerminalLimits {
-  tokenTtlMs: number;
-  idleMs: number;
-  maxMs: number;
-  maxSessions: number;
-  maxShells: number;
-  maxViews: number;
-  quietMs: number;
-  folderCheckMs: number;
-}
-
-export const defaultLimits: TerminalLimits = {
-  tokenTtlMs: 60_000,
-  idleMs: 10 * 60_000,
-  maxMs: 30 * 60_000,
-  maxSessions: 2,
-  maxShells: 12,
-  maxViews: 12,
-  quietMs: 500,
-  folderCheckMs: 3_000,
-};
+export * from './session-types.ts';
 
 const OUTPUT_TAIL_BYTES = 8_000;
 const REPLAY_BYTES = 256_000;
@@ -56,30 +35,6 @@ interface ShellKind {
   label?: string | undefined;
   agent?: AgentRequest;
 }
-
-export interface AgentRequest extends ShellRequest {
-  id: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-  onExit?: (exit: { exitCode: number; signal?: number | undefined }) => void;
-}
-
-export interface TerminalView {
-  input(data: string): void;
-  resize(cols: number, rows: number): void;
-  detach(): void;
-}
-
-export interface ViewedOutput {
-  output(data: string): void;
-  ended(): void;
-}
-
-export type OpenView = (
-  viewer: ViewedOutput,
-  size: { cols: number; rows: number },
-) => TerminalView | null;
 
 interface ViewKind {
   type: 'view';
@@ -105,30 +60,8 @@ interface Session {
   idleTimer: NodeJS.Timeout | null;
 }
 
-export interface ShellRequest {
-  cwd: string;
-  conversationId: string | null;
-  label?: string | undefined;
-}
-
-export interface ShellWatcher {
-  opened(shell: OpenShell): void;
-  output?(id: string, data: string): void;
-  ended(id: string): void;
-}
-
 const isAgent = (kind: Session['kind']): kind is ShellKind & { agent: AgentRequest } =>
   kind.type === 'shell' && kind.agent !== undefined;
-
-export class TerminalLimitError extends Error {}
-export class TerminalAuthError extends Error {}
-
-export interface AttachedTerminal {
-  input(data: string): void;
-  resize(cols: number, rows: number): void;
-  close(): void;
-  disconnect(): void;
-}
 
 export class TerminalSessions {
   private readonly sessions = new Map<string, Session>();
@@ -283,6 +216,8 @@ export class TerminalSessions {
               ? {
                   command: agent.command,
                   args: agent.args,
+                  sessionId: session.id,
+                  ...(agent.adopt ? { adopt: true } : {}),
                   ...(agent.env ? { env: agent.env } : {}),
                 }
               : {}),
@@ -348,6 +283,13 @@ export class TerminalSessions {
     const session = this.sessions.get(id);
     if (!session) return false;
     this.end(session, 'closed', null);
+    return true;
+  }
+
+  detach(id: string): boolean {
+    const session = this.sessions.get(id);
+    if (!session?.pty?.detach) return false;
+    this.end(session, 'shutdown', null, true);
     return true;
   }
 
@@ -467,16 +409,23 @@ export class TerminalSessions {
     session.idleTimer = setTimeout(() => this.end(session, 'idle', null), this.limits.idleMs);
   }
 
-  private end(session: Session, reason: TerminalEndReason, exitCode: number | null) {
+  private end(
+    session: Session,
+    reason: TerminalEndReason,
+    exitCode: number | null,
+    keepRunning = false,
+  ) {
     if (!this.sessions.delete(session.id)) return;
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);
     session.view?.detach();
     session.view = null;
-    if (session.pty) killProcessTree(session.pty.pid);
+    if (keepRunning) session.pty?.detach?.();
+    else if (session.pty?.kill) session.pty.kill();
+    else if (session.pty) killProcessTree(session.pty.pid);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
-    session.client?.send({ type: 'ended', reason, exitCode });
+    if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
   }

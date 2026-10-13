@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { nativeTerminalApi } from './terminal-api.ts';
+import type { LinkOpener } from './link-pointer.ts';
 import { openTerminal } from './terminal-connection.ts';
 import { terminalEnded } from './native-state.ts';
 import { TerminalSelectionToolbar } from './selection/TerminalSelectionToolbar.tsx';
@@ -14,6 +15,7 @@ export function TerminalScreen({
   onInputError,
   onEnded,
   onMouseReporting,
+  links,
 }: {
   chatId: string;
   attempt: number;
@@ -23,6 +25,7 @@ export function TerminalScreen({
   onInputError: (message: string) => void;
   onEnded: () => void;
   onMouseReporting: (on: boolean) => void;
+  links: LinkOpener;
 }) {
   const screen = useRef<HTMLDivElement>(null);
   const selection = useTerminalSelection();
@@ -34,6 +37,7 @@ export function TerminalScreen({
     onInputError,
     onEnded,
     onMouseReporting,
+    links,
   });
   useEffect(() => {
     callbacks.current = {
@@ -43,6 +47,7 @@ export function TerminalScreen({
       onInputError,
       onEnded,
       onMouseReporting,
+      links,
     };
   });
   useEffect(() => {
@@ -65,6 +70,10 @@ export function TerminalScreen({
         onEnded: () => callbacks.current.onEnded(),
         onSelection: report,
         onMouseReporting: (on) => callbacks.current.onMouseReporting(on),
+        onLink: {
+          open: (uri, wanted) => callbacks.current.links.open(uri, wanted),
+          menu: (uri, point) => callbacks.current.links.menu(uri, point),
+        },
       },
     );
     attach(connection);

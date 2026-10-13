@@ -41,6 +41,7 @@ export interface UpdaterOptions {
   trusted: (event: IpcMainInvokeEvent) => boolean;
   broadcast: (status: UpdateStatus) => void;
   quit: () => void;
+  installing: (relaunch: boolean) => void;
   relaunch: () => void;
   log: (line: string) => void;
 }
@@ -60,7 +61,12 @@ async function loadAutoUpdater(): Promise<AppUpdater> {
   return updater;
 }
 
-function electronDriver(updater: AppUpdater, log: (line: string) => void, emit: Emit) {
+function electronDriver(
+  updater: AppUpdater,
+  log: (line: string) => void,
+  emit: Emit,
+  installing: (relaunch: boolean) => void,
+) {
   updater.autoDownload = false;
   updater.autoInstallOnAppQuit = false;
   updater.logger = {
@@ -91,6 +97,7 @@ function electronDriver(updater: AppUpdater, log: (line: string) => void, emit: 
       await updater.downloadUpdate();
     },
     install(relaunch) {
+      installing(relaunch);
       updater.autoRunAppAfterInstall = relaunch;
       updater.quitAndInstall();
     },
@@ -171,7 +178,9 @@ export async function startUpdater(options: UpdaterOptions): Promise<Updater> {
             quit: options.quit,
           });
         }
-        return autoUpdater ? electronDriver(autoUpdater, options.log, emit) : null;
+        return autoUpdater
+          ? electronDriver(autoUpdater, options.log, emit, options.installing)
+          : null;
       },
       {
         initial: initialStatus({

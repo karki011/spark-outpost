@@ -320,10 +320,16 @@ export async function requeueNativeLaunchRun(db: Db, runId: string): Promise<boo
   return requeued.rowCount === 1;
 }
 
-export async function recoverNativeTerminals(db: Db): Promise<void> {
+export async function recoverNativeTerminals(
+  db: Db,
+  keptSessionIds: readonly string[] = [],
+): Promise<void> {
   await withTransaction(db, async (client) => {
     const { rows } = await client.query<NativeTerminalRow>(
-      `SELECT * FROM native_terminal_sessions WHERE state NOT IN ('exited', 'error', 'interrupted') FOR UPDATE`,
+      `SELECT * FROM native_terminal_sessions
+       WHERE state NOT IN ('exited', 'error', 'interrupted') AND NOT (id = ANY($1::uuid[]))
+       FOR UPDATE`,
+      [keptSessionIds],
     );
     const reason = 'The terminal host stopped. Resume explicitly to continue the native session.';
     for (const row of rows) {
@@ -338,8 +344,10 @@ export async function recoverNativeTerminals(db: Db): Promise<void> {
       `UPDATE runs r SET status = 'outcome_unknown', error = $1, finished_at = now()
        FROM conversations c WHERE c.id = r.conversation_id AND c.session_type = 'terminal'
          AND r.status IN ('running', 'awaiting_approval')
+         AND r.conversation_id NOT IN (
+           SELECT conversation_id FROM native_terminal_sessions WHERE id = ANY($2::uuid[]))
        RETURNING r.id, r.conversation_id`,
-      [reason],
+      [reason, keptSessionIds],
     );
     for (const row of orphaned.rows) {
       await expirePendingApprovals(client, row.id, 'recovery');

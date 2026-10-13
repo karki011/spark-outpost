@@ -1,6 +1,7 @@
 import type { TerminalEndReason, TerminalHint } from '@spark-outpost/contracts';
 import type { TerminalTicket } from './terminal-api.ts';
 import type * as Xterm from './xterm-terminal.ts';
+import type { LinkOpener } from './link-pointer.ts';
 import type { SelectionActions, SelectionHandler } from './selection/follow-selection.ts';
 
 export interface TerminalHandlers<T extends TerminalTicket> {
@@ -15,6 +16,7 @@ export interface TerminalHandlers<T extends TerminalTicket> {
   onInputError?(message: string): void;
   onSelection?: SelectionHandler;
   onMouseReporting?(on: boolean): void;
+  onLink?: LinkOpener;
 }
 
 export interface TerminalConnection extends SelectionActions {

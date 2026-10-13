@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 export interface Supervised {
   exited: Promise<number | null>;
-  stop(): Promise<void>;
+  stop(keepTerminals?: boolean): Promise<void>;
 }
 
 export interface Backoff {
@@ -52,9 +52,9 @@ export class Supervisor {
     this.loop ??= this.run();
   }
 
-  async stop(): Promise<void> {
+  async stop(keepTerminals = false): Promise<void> {
     this.stopping.abort();
-    await this.current?.stop();
+    await this.current?.stop(keepTerminals);
     await this.loop;
   }
 

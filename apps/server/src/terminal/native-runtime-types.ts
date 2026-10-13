@@ -18,6 +18,7 @@ import type { SessionTranscript } from './native-usage.ts';
 import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
+import type { TmuxHost } from './tmux/tmux-host.ts';
 
 export interface NativeRuntimeDeps {
   db: Db;
@@ -32,6 +33,8 @@ export interface NativeRuntimeDeps {
   prepareLaunch?: typeof prepareNativeLaunch;
   place?: typeof placeChat;
   watchTranscript?: WatchTranscript;
+  tmux?: TmuxHost | null;
+  now?: () => Date;
 }
 
 export interface PendingNativeLaunch {
@@ -54,6 +57,7 @@ export interface NativeRuntime {
   stopSession(id: string): Promise<boolean>;
   attachSession(id: string): Promise<CreateShellResponse | null>;
   recover(): Promise<void>;
+  detach(): Promise<void>;
   dispose(): Promise<void>;
 }
 
@@ -75,4 +79,5 @@ export interface LiveSession {
   currentPromptEventId: string | null;
   completedEvents: Map<string, string | null>;
   transcript: SessionTranscript | null;
+  readopted?: { at: string; stepsComplete: boolean };
 }
