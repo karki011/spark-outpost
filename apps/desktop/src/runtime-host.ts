@@ -4,9 +4,10 @@ import { connect, createServer, type Socket } from 'node:net';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { setTimeout as delay } from 'node:timers/promises';
+import { STOP_KEEPING_TERMINALS } from '@spark-outpost/contracts';
 import { startDatabase, type Database } from './postgres.ts';
 import { descendantsOf, isAlive, processTable } from '../../server/src/terminal/process-group.ts';
-import { isBundledService } from './runtime-entries.ts';
+import { isBundledService, serverEntry } from './runtime-entries.ts';
 import { createSecret, runtimePaths, runtimeProof, sameProof } from './runtime-handshake.ts';
 import {
   RUNTIME_FRAME_LIMIT,
@@ -19,6 +20,7 @@ import {
 interface Service {
   child: ChildProcess;
   exited: Promise<number | null>;
+  ownsTerminals: boolean;
 }
 
 const directory = process.argv[2] ?? '';
@@ -60,13 +62,26 @@ function unavailable(name: string, raw: unknown) {
   });
 }
 
-async function stopService(name: string) {
+function askToStop(child: ChildProcess, keepTerminals: boolean) {
+  if (keepTerminals && child.connected) {
+    try {
+      child.send(STOP_KEEPING_TERMINALS);
+      return;
+    } catch {
+      child.kill('SIGTERM');
+      return;
+    }
+  }
+  child.kill('SIGTERM');
+}
+
+async function stopService(name: string, keepTerminals: boolean) {
   const service = services.get(name);
   if (!service) return;
   const descendants = service.child.pid
     ? descendantsOf(service.child.pid, await processTable())
     : [];
-  service.child.kill('SIGTERM');
+  askToStop(service.child, keepTerminals && service.ownsTerminals);
   const finished = await Promise.race([
     service.exited.then(() => true),
     delay(10_000, undefined, { ref: false }).then(() => false),
@@ -92,9 +107,9 @@ async function stopService(name: string) {
   }
 }
 
-function shutdown(): Promise<void> {
+function shutdown(keepTerminals: boolean): Promise<void> {
   stopping ??= (async () => {
-    await Promise.all([...services.keys()].map(stopService));
+    await Promise.all([...services.keys()].map((name) => stopService(name, keepTerminals)));
     await database?.stop();
     database = null;
     server.close();
@@ -107,7 +122,7 @@ function shutdown(): Promise<void> {
 
 async function handle(request: RuntimeRequest): Promise<unknown> {
   if (request.kind === 'shutdown') {
-    await shutdown();
+    await shutdown(request.keepTerminals === true);
     return null;
   }
   if (stopping) throw new Error('The local runtime is stopping.');
@@ -138,7 +153,7 @@ async function handle(request: RuntimeRequest): Promise<unknown> {
     return null;
   }
   if (request.kind === 'service:stop') {
-    await stopService(request.name);
+    await stopService(request.name, request.keepTerminals === true);
     return null;
   }
   if (request.kind === 'service:post') {
@@ -194,7 +209,10 @@ async function handle(request: RuntimeRequest): Promise<unknown> {
       resolve(1);
     });
   });
-  services.set(options.name, { child, exited });
+  const ownsTerminals =
+    bundled.serverDir !== null &&
+    path.resolve(options.entry) === serverEntry(bundled.serverDir, 'api');
+  services.set(options.name, { child, exited, ownsTerminals });
   return null;
 }
 
@@ -291,7 +309,7 @@ server.listen(paths.socket, async () => {
 });
 for (const signal of ['SIGTERM', 'SIGINT'] as const)
   process.on(signal, () => {
-    void shutdown().finally(() => {
+    void shutdown(true).finally(() => {
       for (const client of clients) client.end();
     });
   });

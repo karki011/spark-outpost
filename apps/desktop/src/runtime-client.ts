@@ -138,7 +138,7 @@ export class LocalRuntime {
       await retireHost({
         directory,
         pid: existing?.info.pid ?? (await recordedPid(paths.endpoint)),
-        stop: existing ? () => existing.runtime.stop() : null,
+        stop: existing ? () => existing.runtime.stop(true) : null,
       });
       await rm(paths.endpoint, { force: true });
       const child = spawn(
@@ -305,9 +305,9 @@ export class LocalRuntime {
     );
     return {
       exited,
-      stop: async () => {
+      stop: async (keepTerminals = false) => {
         await starting;
-        await this.request({ kind: 'service:stop', name: options.name });
+        await this.request({ kind: 'service:stop', name: options.name, keepTerminals });
       },
     };
   }
@@ -316,8 +316,8 @@ export class LocalRuntime {
     this.socket.end();
   }
 
-  async stop(): Promise<void> {
-    await this.request({ kind: 'shutdown' });
+  async stop(keepTerminals = false): Promise<void> {
+    await this.request({ kind: 'shutdown', keepTerminals });
     this.socket.end();
   }
 }
