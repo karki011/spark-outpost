@@ -62,6 +62,7 @@ export function startAttentionFeed(options: AttentionFeedOptions): AttentionFeed
   const stopped = new AbortController();
   let loading = false;
   let stale = false;
+  let reported: string | null = null;
 
   const chatList = async (): Promise<ConversationSummary[] | null> => {
     try {
@@ -77,6 +78,13 @@ export function startAttentionFeed(options: AttentionFeedOptions): AttentionFeed
     }
   };
 
+  const reportChanged = (report: AttentionReport) => {
+    const next = JSON.stringify(report);
+    if (next === reported) return;
+    reported = next;
+    options.onReport(report);
+  };
+
   const load = async () => {
     if (loading) {
       stale = true;
@@ -87,7 +95,7 @@ export function startAttentionFeed(options: AttentionFeedOptions): AttentionFeed
       stale = false;
       const chats = await chatList();
       if (stopped.signal.aborted) return;
-      if (chats) options.onReport(attentionReport(chats));
+      if (chats) reportChanged(attentionReport(chats));
     } while (stale);
     loading = false;
   };

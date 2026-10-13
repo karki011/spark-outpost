@@ -135,13 +135,29 @@ describe('startAttentionFeed', () => {
     feed.stop();
   });
 
+  it('reports only when the waiting chats changed', async () => {
+    const api = server();
+    const { feed, reports } = feedOn(api);
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    api.send(frame('run'));
+    await vi.waitFor(() => expect(api.lists()).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(reports).toHaveLength(1);
+    api.setChats([waitingChat(true)]);
+    api.send(frame('approval'));
+    await vi.waitFor(() => expect(reports).toHaveLength(2));
+    expect(api.lists()).toBe(3);
+    feed.stop();
+  });
+
   it('does not read the list for step events', async () => {
     const api = server();
     const { feed, reports } = feedOn(api);
     await vi.waitFor(() => expect(reports).toHaveLength(1));
     api.send(frame('step'));
     api.send(frame('approval'));
-    await vi.waitFor(() => expect(reports).toHaveLength(2));
+    await vi.waitFor(() => expect(api.lists()).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(api.lists()).toBe(2);
     feed.stop();
   });
@@ -152,7 +168,7 @@ describe('startAttentionFeed', () => {
     await vi.waitFor(() => expect(reports).toHaveLength(1));
     api.end();
     await vi.waitFor(() => expect(api.streams()).toBe(2));
-    await vi.waitFor(() => expect(reports).toHaveLength(2));
+    await vi.waitFor(() => expect(api.lists()).toBe(2));
     feed.stop();
   });
 
