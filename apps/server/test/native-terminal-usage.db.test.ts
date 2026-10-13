@@ -146,6 +146,7 @@ describe('native terminal usage from the Claude transcript', () => {
     expect(f.watchers[1]!.from).toBe(100);
     await f.watchers[1]!.lines([costState(0.25)]);
     await expect.poll(async () => (await usage()).reported[0]?.costUsd).toBe(0.25);
+    expect((await usage()).stopped).toBe(false);
     expect(f.watchers[1]!.close).toHaveBeenCalledTimes(1);
   });
 
@@ -286,6 +287,7 @@ describe('native terminal usage that arrives late', () => {
     expect(f.watchers[1]!.from).toBe(100);
     await f.watchers[1]!.lines([costState(0.31)]);
     await expect.poll(async () => (await usage()).reported[0]?.costUsd).toBe(0.31);
+    expect((await usage()).stopped).toBe(true);
     expect((await runs())[0]).toMatchObject({ status: 'cancelled' });
   });
 });
@@ -307,27 +309,24 @@ describe('native terminal prompts the user did not type', () => {
     await agentTool('PostToolUse', 'Bash', 'toolu_child_1');
   };
 
-  it('opens no turn for a sub-agent handback and counts its reply on the turn that started the sub-agent', async () => {
+  it('takes back the turn opened for a sub-agent handback and counts its reply on the turn that started the sub-agent', async () => {
     await startSubagent();
     const side = f.watchers.at(-1)!;
     side.atFlush.push(...parsed('claude-pass-subagent.jsonl'));
     await agentTool('PostToolUse', 'SubagentHandback', 'toolu_child_2');
-    expect(
-      await f.hook('UserPromptSubmit', {
-        prompt: 'handback',
-        prompt_id: HANDBACK,
-        transcript_path,
-      }),
-    ).toBe(204);
+    const handback = { prompt: 'handback', prompt_id: HANDBACK, transcript_path };
+    expect(await f.hook('UserPromptSubmit', handback)).toBe(204);
+    expect((await usage()).turns).toHaveLength(2);
+    await f.watchers
+      .findLast((watcher) => watcher.path === transcript_path)!
+      .lines(main().slice(59, 67));
     expect(await f.hook('Stop', { prompt_id: HANDBACK })).toBe(204);
-    expect((await usage()).turns).toHaveLength(1);
+    const seen = await usage();
+    expect(seen.turns).toHaveLength(1);
+    expect(seen.turns[0]!.tokens).toMatchObject({ output: 339 + 32 + 34 + 16 + 24 });
     expect(await runs()).toMatchObject([{ status: 'succeeded' }]);
     await prompt('typed-next');
-    await f.watchers.at(-1)!.lines(main().slice(59, 67));
-    const seen = await usage();
-    expect(seen.turns).toHaveLength(2);
-    expect(seen.turns[0]!.tokens).toMatchObject({ output: 339 + 32 + 34 + 16 + 24 });
-    expect(seen.turns[1]!.tokens).toBeNull();
+    expect((await usage()).turns).toHaveLength(2);
   });
 
   it('still opens a turn for a prompt the user types while a sub-agent is running', async () => {

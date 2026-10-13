@@ -115,3 +115,16 @@ export function note(
 export function chain(transcript: SessionTranscript | null): SessionTranscript[] {
   return transcript ? [transcript, ...chain(transcript.previous)] : [];
 }
+
+export function moveToOwner(
+  transcript: SessionTranscript,
+  promptId: string,
+): { runId: string; ownerRunId: string } | null {
+  const known = transcript.prompts.get(promptId);
+  const turn = transcript.turns.get(promptId);
+  const owner = known && !known.human && known.owner ? transcript.turns.get(known.owner) : null;
+  if (!turn || !owner || owner === turn) return null;
+  for (const response of turn.usage.take()) if (owner.usage.add(response)) owner.changed = true;
+  transcript.turns.delete(promptId);
+  return { runId: turn.runId, ownerRunId: owner.runId };
+}

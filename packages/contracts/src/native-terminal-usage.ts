@@ -51,6 +51,7 @@ export const nativeTerminalUsageSchema = z.object({
   provider: nativeTerminalProviderSchema.nullable(),
   turns: z.array(nativeTerminalTurnSchema),
   reported: z.array(nativeTerminalReportedSchema),
+  stopped: z.boolean().default(false),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
 
@@ -80,8 +81,11 @@ export function turnCostOrigin(
 export function reportedTotalNote(
   provider: NativeTerminalProvider | null,
   reported: readonly NativeTerminalReported[],
+  stopped = false,
 ): string {
   if (reported.length > 0) return usageOriginLabel('reported', provider);
+  if (provider === 'claude' && stopped)
+    return 'unknown: the session was stopped before Claude Code wrote its total, so only the estimates by turn exist';
   if (provider === 'claude') return 'unknown until Claude Code exits and writes its own total';
   if (provider === 'codex') return 'unknown: Codex reports no cost';
   return usageOriginLabel('unknown');

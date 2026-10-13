@@ -64,6 +64,12 @@ export function createTurnUsage(provider: string, priceFor: PriceFor = cardPrice
       latest = response.model ?? latest;
       return true;
     },
+    take(): Response[] {
+      const taken = [...responses.values()];
+      responses.clear();
+      latest = null;
+      return taken;
+    },
     clear() {
       responses.clear();
       latest = null;

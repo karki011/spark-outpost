@@ -17,7 +17,7 @@ function ReportedTotal({ usage }: { usage: NativeTerminalUsage }) {
     <section className="tu-reported" aria-label="Session total">
       <div className="wsec-h">
         <h3>Session total</h3>
-        <span>{reportedTotalNote(usage.provider, usage.reported)}</span>
+        <span>{reportedTotalNote(usage.provider, usage.reported, usage.stopped)}</span>
       </div>
       {total !== null && several && (
         <p className="tu-total">

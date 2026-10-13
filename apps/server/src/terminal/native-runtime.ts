@@ -10,7 +10,7 @@ import {
   nativeTerminalRow,
   nativeTerminalView,
 } from '../persistence/native-terminals.ts';
-import { nativeTerminalUsage } from '../persistence/native-terminal-usage.ts';
+import { nativeTerminalUsage, STOPPED_BY_USER } from '../persistence/native-terminal-usage.ts';
 import {
   failNativeLaunchRun,
   finishNativeRun,
@@ -204,7 +204,6 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         currentPromptEventId: null,
         completedEvents: new Map(),
         transcript: null,
-        heldPrompt: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -269,7 +268,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         stoppedLaunches.has(conversationId) ||
         (prepared.runId !== null && (await isCancelRequested(deps.db, prepared.runId)));
       const failure = nativeLaunchError(error);
-      const reason = cancelled ? 'Stopped by the user.' : failure.message;
+      const reason = cancelled ? STOPPED_BY_USER : failure.message;
       await finishNativeRun(deps.db, row, cancelled ? 'cancelled' : 'failed', reason);
       await setNativeTerminalState(deps.db, {
         ...row,
@@ -294,7 +293,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       session.context?.controller.abort();
       session.grant.revoke();
       try {
-        await enqueue(session, () => finish(session, 'exited', true, 'Stopped by the user.'));
+        await enqueue(session, () => finish(session, 'exited', true, STOPPED_BY_USER));
       } finally {
         deps.terminals.kill(session.row.id);
       }

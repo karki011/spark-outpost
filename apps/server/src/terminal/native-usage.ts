@@ -15,6 +15,7 @@ import {
   chain,
   count,
   firstPosition,
+  moveToOwner,
   note,
   openTurn,
   type SessionTranscript,
@@ -24,6 +25,7 @@ export type { SessionTranscript } from './usage-state.ts';
 
 type Enqueue = <T>(session: LiveSession, work: () => Promise<T>) => Promise<T>;
 type OnInterrupt = (session: LiveSession, nativeTurnId: string) => Promise<void>;
+type OnNotTyped = (session: LiveSession, promptId: string) => Promise<void>;
 
 function reportedHere(path: string, usage: ReportedUsage): boolean {
   return basename(path) === `${usage.nativeSessionId}.jsonl`;
@@ -31,6 +33,7 @@ function reportedHere(path: string, usage: ReportedUsage): boolean {
 
 export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
   const caughtUp = new Set<string>();
+  let notTyped: OnNotTyped = async () => undefined;
   const save = async (session: LiveSession) => {
     for (const transcript of chain(session.transcript)) {
       for (const turn of transcript.turns.values()) {
@@ -48,9 +51,12 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
   const open = (session: LiveSession, transcript: SessionTranscript, onInterrupt?: OnInterrupt) =>
     watch(transcript.path, transcript.offset, (lines) => {
       const interrupted: string[] = [];
+      const retracted: string[] = [];
       let changed = false;
       for (const record of lines.flatMap((line) => transcript.parser.push(line))) {
         note(transcript, record, null);
+        if (record.kind === 'prompt' && !record.human && transcript.turns.has(record.promptId))
+          retracted.push(record.promptId);
         if (record.kind === 'interrupt') interrupted.push(record.turnId);
         if (record.kind === 'reported' && reportedHere(transcript.path, record.usage)) {
           transcript.reported = record.usage;
@@ -60,6 +66,7 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       }
       return Promise.all([
         ...interrupted.map((turnId) => onInterrupt?.(session, turnId)),
+        ...retracted.map((promptId) => notTyped(session, promptId)),
         changed ? saveLater(session) : undefined,
       ]).then(() => undefined);
     });
@@ -132,7 +139,12 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       const owner = transcript?.prompts.get(promptId)?.owner;
       return (owner && transcript?.turns.get(owner)?.runId) || null;
     },
-    awaitsHandback: (session: LiveSession) => (session.transcript?.waiting.size ?? 0) > 0,
+    onNotTyped(handler: OnNotTyped) {
+      notTyped = handler;
+    },
+    moveToOwner(session: LiveSession, promptId: string) {
+      return session.transcript ? moveToOwner(session.transcript, promptId) : null;
+    },
     typedByUser(session: LiveSession, promptId: string): boolean | null {
       return session.transcript?.prompts.get(promptId)?.human ?? null;
     },
@@ -157,7 +169,7 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       session.transcript?.agents.delete(path);
       await saveQuietly(session);
     },
-    catchUp: readAll,
+    saveNow: saveQuietly,
     async settle(session: LiveSession) {
       const transcript = session.transcript;
       if (!transcript) return;

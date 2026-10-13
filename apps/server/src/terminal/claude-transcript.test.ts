@@ -247,15 +247,7 @@ describe('session files of the real-agent pass', () => {
         agentId: null,
       },
     ]);
-    expect(side.filter((record) => record.kind === 'prompt')).toEqual([
-      {
-        kind: 'prompt',
-        promptId: '4d9e891c-2f4e-42b7-a689-c77d4d513d6d',
-        human: false,
-        owner: HUMAN[2],
-        agentId: null,
-      },
-    ]);
+    expect(side.filter((record) => record.kind === 'prompt')).toEqual([]);
     const turns = turnTotals('claude', [...main, ...side]);
     expect([...turns.keys()]).toEqual(HUMAN);
     const costs = [...turns.values()].map((turn) => turn.costUsd!);
@@ -264,6 +256,33 @@ describe('session files of the real-agent pass', () => {
     expect(reported(main).map((total) => total.costUsd)).toEqual([
       0.1602545, 0.1602545, 0.3352450999999999, 0.3352450999999999,
     ]);
+  });
+
+  it('gives a handback to the turn that started the sub-agent, not to the prompt typed meanwhile', () => {
+    const main = fixtureRecords(
+      'claude-pass2-typed-during-subagent.jsonl',
+      claudeTranscriptParser(),
+    );
+    const side = fixtureRecords('claude-pass2-subagent.jsonl', claudeTranscriptParser(true));
+    const prompts = main.flatMap((record) => (record.kind === 'prompt' ? [record] : []));
+    expect(prompts.map((record) => [record.promptId.slice(0, 8), record.human])).toEqual([
+      ['5d960b67', true],
+      ['a57adc62', true],
+      ['a973dbb2', false],
+      ['84959583', true],
+      ['0dca7edf', false],
+      ['cda4cddf', false],
+    ]);
+    expect(prompts[4]!.owner).toBe(prompts[1]!.promptId);
+    expect(prompts[2]!.owner).toBe(prompts[1]!.promptId);
+    const turns = turnTotals('claude', [...main, ...side]);
+    expect([...turns].map(([turnId, turn]) => [turnId!.slice(0, 8), turn.tokens.output])).toEqual([
+      ['5d960b67', 5],
+      ['a57adc62', 563],
+      ['84959583', 5],
+    ]);
+    expect(side.every((record) => record.kind === 'response')).toBe(true);
+    expect(reported(main).at(-1)!.costUsd).toBe(0.5428069);
   });
 
   it('reads the total of the session before /clear and of the one after it', () => {

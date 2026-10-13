@@ -13,7 +13,6 @@ import type { SparkGrant, SparkMcpHost } from '../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { placeChat } from '../orchestration/chat-place.ts';
 import type { NativeTurnContext } from './native-context.ts';
-import type { NativeHookEvent } from './native-hooks.ts';
 import type { WatchTranscript } from './native-tail.ts';
 import type { SessionTranscript } from './native-usage.ts';
 import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
@@ -76,5 +75,4 @@ export interface LiveSession {
   currentPromptEventId: string | null;
   completedEvents: Map<string, string | null>;
   transcript: SessionTranscript | null;
-  heldPrompt: { event: NativeHookEvent; eventId: string } | null;
 }

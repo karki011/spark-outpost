@@ -354,3 +354,33 @@ export async function recoverNativeTerminals(db: Db): Promise<void> {
     );
   });
 }
+
+export async function retractNativeRun(
+  db: Db,
+  fence: NativeFence,
+  runId: string,
+  ownerRunId: string,
+): Promise<boolean> {
+  return withTransaction(db, async (client) => {
+    const row = await lockSession(client, fence);
+    const run = await client.query<{ user_message_id: string | null }>(
+      'SELECT user_message_id FROM runs WHERE id = $1 AND conversation_id = $2 FOR UPDATE',
+      [runId, row?.conversation_id ?? null],
+    );
+    if (!row || !run.rows[0]) return false;
+    await client.query(
+      `UPDATE native_terminal_steps s SET run_id = $2 WHERE s.run_id = $1 AND NOT EXISTS (
+         SELECT 1 FROM native_terminal_steps o WHERE o.run_id = $2 AND o.tool_use_id = s.tool_use_id)`,
+      [runId, ownerRunId],
+    );
+    await client.query(
+      'UPDATE native_terminal_sessions SET active_run_id = NULL WHERE id = $1 AND active_run_id = $2',
+      [row.id, runId],
+    );
+    await client.query('DELETE FROM runs WHERE id = $1', [runId]);
+    if (run.rows[0].user_message_id)
+      await client.query('DELETE FROM messages WHERE id = $1', [run.rows[0].user_message_id]);
+    await notifyNativeTerminal(client, row.conversation_id);
+    return true;
+  });
+}

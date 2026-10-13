@@ -1,5 +1,9 @@
 import type { Db } from '../persistence/db.ts';
-import { finishNativeRun, setNativeTerminalState } from '../persistence/native-terminal-turns.ts';
+import {
+  finishNativeRun,
+  retractNativeRun,
+  setNativeTerminalState,
+} from '../persistence/native-terminal-turns.ts';
 import { SparkToolError } from '../spark-mcp/tool.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 import type { NativeUsage } from './native-usage.ts';
@@ -37,6 +41,15 @@ export function nativeControl(
     if (session.completedEvents.size > 64)
       session.completedEvents.delete(session.completedEvents.keys().next().value!);
   };
+  const clearTurn = (session: LiveSession) => {
+    session.context = null;
+    session.scope.readOnly = true;
+    session.scope.runId = null;
+    delete session.scope.actions;
+    delete session.scope.observations;
+    session.scope.publish = null;
+    session.row.native_turn_id = null;
+  };
   const closeTurn = async (
     session: LiveSession,
     status: 'succeeded' | 'failed' | 'cancelled' | 'outcome_unknown',
@@ -50,13 +63,22 @@ export function nativeControl(
     await usage.settle(session);
     await session.context?.close();
     await finishNativeRun(db, session.row, status, reason);
-    session.context = null;
-    session.scope.readOnly = true;
-    session.scope.runId = null;
-    delete session.scope.actions;
-    delete session.scope.observations;
-    session.scope.publish = null;
-    session.row.native_turn_id = null;
+    clearTurn(session);
+  };
+  const retractTurn = async (session: LiveSession, promptId: string) => {
+    const moved = usage.moveToOwner(session, promptId);
+    if (!moved) return;
+    const open = session.context?.input.identity.runId === moved.runId;
+    if (open) {
+      session.completedTurns.add(promptId);
+      await session.context?.close();
+    }
+    const removed = await retractNativeRun(db, session.row, moved.runId, moved.ownerRunId).catch(
+      () => false,
+    );
+    if (open && !removed) await finishNativeRun(db, session.row, 'succeeded');
+    if (open) clearTurn(session);
+    await usage.saveNow(session);
   };
   const finish = async (
     session: LiveSession,
@@ -79,5 +101,5 @@ export function nativeControl(
       await session.launch.dispose();
     }
   };
-  return { syncScope, closeTurn, finish, completed };
+  return { syncScope, closeTurn, finish, completed, retractTurn };
 }

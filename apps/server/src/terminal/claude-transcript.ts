@@ -89,10 +89,7 @@ function sidechainParser(): TranscriptParser {
       if (record.type === 'assistant') return response(record, parent);
       if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
       parent ??= record.promptId;
-      if (record.promptId === parent) return [];
-      return [
-        { kind: 'prompt', promptId: record.promptId, human: false, owner: parent, agentId: null },
-      ];
+      return [];
     },
   };
 }
@@ -103,6 +100,7 @@ export function claudeTranscriptParser(sidechain = false): TranscriptParser {
   let lastHuman: string | null = null;
   const byIndex = new Map<number, string>();
   const owners = new Map<string, string>();
+  const agentTurns = new Map<string, string>();
   const prompt = (record: Record<string, unknown>, promptId: string): TranscriptRecord[] => {
     const origin = record.origin;
     if (!isRecord(origin)) return [];
@@ -113,9 +111,11 @@ export function claudeTranscriptParser(sidechain = false): TranscriptParser {
       lastHuman = promptId;
       if (index !== null) byIndex.set(index, promptId);
     }
-    const owner = human ? null : ((index === null ? undefined : byIndex.get(index)) ?? lastHuman);
-    if (owner) owners.set(promptId, owner);
     const agentId = typeof origin.from === 'string' && origin.from ? origin.from : null;
+    const starter = agentId ? agentTurns.get(agentId) : undefined;
+    const indexed = index === null ? undefined : byIndex.get(index);
+    const owner = human ? null : (starter ?? indexed ?? lastHuman);
+    if (owner) owners.set(promptId, owner);
     return [{ kind: 'prompt', promptId, human, owner, agentId }];
   };
   return {
@@ -128,8 +128,10 @@ export function claudeTranscriptParser(sidechain = false): TranscriptParser {
       const prompts = prompt(record, record.promptId);
       turnId = owners.get(record.promptId) ?? record.promptId;
       const started = record.toolUseResult;
-      if (isRecord(started) && typeof started.agentId === 'string' && started.agentId)
+      if (isRecord(started) && typeof started.agentId === 'string' && started.agentId) {
+        agentTurns.set(started.agentId, turnId);
         return [...prompts, { kind: 'agent', agentId: started.agentId, turnId }];
+      }
       return isRecord(record.message) && interruptText(record.message)
         ? [...prompts, { kind: 'interrupt', turnId }]
         : prompts;

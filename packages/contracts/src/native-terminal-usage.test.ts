@@ -40,6 +40,11 @@ describe('terminal usage labels', () => {
       'unknown until Claude Code exits and writes its own total',
     );
     expect(reportedTotalNote('codex', [])).toBe('unknown: Codex reports no cost');
+    expect(reportedTotalNote('claude', [], true)).toBe(
+      'unknown: the session was stopped before Claude Code wrote its total, so only the estimates by turn exist',
+    );
+    expect(reportedTotalNote('claude', [reported], true)).toBe('reported by Claude Code');
+    expect(reportedTotalNote('codex', [], true)).toBe('unknown: Codex reports no cost');
     expect(reportedTotalNote(null, [])).toBe('unknown');
   });
 });
