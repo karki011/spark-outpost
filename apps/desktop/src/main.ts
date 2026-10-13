@@ -1,20 +1,12 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import {
-  app,
-  autoUpdater as nativeUpdater,
-  BrowserWindow,
-  dialog,
-  ipcMain,
-  session,
-  shell,
-} from 'electron';
+import { app, autoUpdater as nativeUpdater, BrowserWindow, dialog, session, shell } from 'electron';
 import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
 import { linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
-import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
+import { appearanceFile, readSavedTheme } from './appearance.ts';
 import { startBootTeasers } from './boot-teaser-host.ts';
 import { prepareBoot, reportingSteps } from './boot-steps.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
@@ -43,6 +35,7 @@ import {
 import { startBrowserHost, type DesktopBrowserHost } from './browser/host.ts';
 import type { ServiceOptions } from './service.ts';
 import { RuntimeServices } from './runtime-services.ts';
+import { createQuitPolicy } from './quit-policy.ts';
 import { createShutdown } from './shutdown.ts';
 import { bakedSignInEnv, deliverSlackCallback, isSlackCallback } from './slack-sign-in.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
@@ -60,7 +53,7 @@ import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
 import { openSparkWindow, type SparkWindow } from './spark-window.ts';
 import { startStorageSync, type StorageSync } from './storage-sync.ts';
-import { isThemeName } from './theme-arg.ts';
+import { listenForTheme } from './theme-listener.ts';
 import { webStorageFile } from './web-storage.ts';
 import { attachApiToken } from './window.ts';
 
@@ -141,11 +134,14 @@ function supervise(
 }
 
 async function stopEverything(): Promise<void> {
+  const keepTerminals = quitPolicy.keepsTerminals();
   await bootTeasers.saveNow();
-  await services?.stop();
+  await services?.stop(keepTerminals);
   services = null;
-  mainLog('API and worker stopped; stopping the local runtime.');
-  await runtime?.stop();
+  mainLog(
+    `API and worker stopped${keepTerminals ? ', Terminal sessions kept' : ''}; stopping the local runtime.`,
+  );
+  await runtime?.stop(keepTerminals);
   runtime = null;
   database = null;
   mainLog('Stopped.');
@@ -184,6 +180,7 @@ async function showError(message: string, detail: string): Promise<void> {
   if (help && response === 0) await shell.openPath(help);
 }
 
+const quitPolicy = createQuitPolicy();
 const shutdown = createShutdown({
   stop: stopEverything,
   closeWindow: closeWindows,
@@ -243,26 +240,19 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
   return false;
 }
 
-function listenForTheme(): void {
-  const file = appearanceFile(paths.userData);
-  let saving = Promise.resolve();
-  ipcMain.on(IPC.themeSave, (event, theme: unknown) => {
-    if (!origin || !targetsApi(event.senderFrame?.url ?? '', origin) || !isThemeName(theme)) return;
-    if (theme === savedTheme) return;
-    savedTheme = theme;
-    saving = saving
-      .then(() => saveTheme(file, theme))
-      .catch((error: Error) => mainLog(`Could not save the theme: ${error.message}`));
-  });
-}
-
 function quitAfterSaving(): void {
   void (storage?.capture() ?? Promise.resolve()).finally(() => shutdown.quit());
 }
 
 async function launch(): Promise<void> {
   savedTheme = await readSavedTheme(appearanceFile(paths.userData));
-  listenForTheme();
+  listenForTheme({
+    file: appearanceFile(paths.userData),
+    trusted: (url) => origin !== null && targetsApi(url, origin),
+    saved: () => savedTheme,
+    remember: (theme) => void (savedTheme = theme),
+    log: mainLog,
+  });
   showSpark();
   if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
@@ -313,6 +303,7 @@ async function launch(): Promise<void> {
     token,
     version: app.getVersion(),
     webRoot: layout.webRoot,
+    tmuxBin: (!app.isPackaged && process.env.SPARK_TMUX_BIN) || layout.tmuxBin,
     baseEnv: {
       ...(await bakedSignInEnv(app.getAppPath())),
       ...process.env,
@@ -390,7 +381,9 @@ async function launch(): Promise<void> {
       }
     },
     quit: quitAfterSaving,
+    installing: quitPolicy.installing,
     relaunch: () => {
+      quitPolicy.relaunching();
       app.relaunch();
       quitAfterSaving();
     },
@@ -477,6 +470,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => undefined);
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
   nativeUpdater.on('before-quit-for-update', () => {
+    quitPolicy.quittingForUpdate();
     companionHost?.dispose();
     companionHost = null;
   });

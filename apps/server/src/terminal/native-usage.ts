@@ -1,6 +1,7 @@
 import { basename } from 'node:path';
 import type { Db } from '../persistence/db.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
+import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import {
   recordNativeReportedUsage,
   recordNativeTurnUsage,
@@ -18,6 +19,7 @@ import {
   moveToOwner,
   note,
   openTurn,
+  stepRun,
   type SessionTranscript,
 } from './usage-state.ts';
 
@@ -52,9 +54,24 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
     watch(transcript.path, transcript.offset, (lines) => {
       const interrupted: string[] = [];
       const retracted: string[] = [];
+      const missed: (() => Promise<void>)[] = [];
       let changed = false;
       for (const record of lines.flatMap((line) => transcript.parser.push(line))) {
         note(transcript, record, null);
+        const runId =
+          record.kind === 'step' && transcript.catchUp ? stepRun(transcript, record.turnId) : null;
+        if (record.kind === 'step' && runId) {
+          const at = record.at ? new Date(record.at) : null;
+          const step = {
+            id: record.id,
+            name: record.name,
+            phase: record.phase,
+            failed: record.failed,
+          };
+          missed.push(() =>
+            recordNativeStep(db, runId, at && !Number.isNaN(at.getTime()) ? { ...step, at } : step),
+          );
+        }
         if (record.kind === 'prompt' && !record.human && transcript.turns.has(record.promptId))
           retracted.push(record.promptId);
         if (record.kind === 'interrupt') interrupted.push(record.turnId);
@@ -65,6 +82,7 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
         if (count(session, transcript, record)) changed = true;
       }
       return Promise.all([
+        missed.reduce((before, record) => before.then(record), Promise.resolve()),
         ...interrupted.map((turnId) => onInterrupt?.(session, turnId)),
         ...retracted.map((promptId) => notTyped(session, promptId)),
         changed ? saveLater(session) : undefined,
@@ -92,14 +110,23 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       await Promise.all([...transcript.agents.values()].map((agent) => agent.flush()));
     }
   };
-  const start = (session: LiveSession, path: string, model: string | null): SessionTranscript => {
+  const start = (
+    session: LiveSession,
+    path: string,
+    model: string | null,
+    openTurnId: string | null,
+  ): SessionTranscript => {
     const previous = session.transcript;
     previous?.watcher?.close();
     if (previous) previous.watcher = null;
     return {
       path,
-      parser: session.row.provider === 'claude' ? claudeTranscriptParser() : codexRolloutParser(),
+      parser:
+        session.row.provider === 'claude'
+          ? claudeTranscriptParser(false, openTurnId)
+          : codexRolloutParser(),
       ...firstPosition(session, path),
+      catchUp: false,
       watcher: null,
       turns: new Map(),
       held: new Map(),
@@ -115,14 +142,35 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
   return {
     follow(session: LiveSession, path: string, model: string | null, onInterrupt: OnInterrupt) {
       if (session.transcript?.path !== path) {
-        session.transcript = start(session, path, model);
-        const earlier = session.transcript.previous;
+        const started = start(session, path, model, null);
+        session.transcript = started;
+        const earlier = started.previous;
         if (earlier) void read(session, earlier).then(() => saveLater(session));
+        if (!started.resumed) {
+          session.row.usage_file = path;
+          session.row.usage_offset = started.offset;
+          void enqueue(session, () =>
+            recordNativeUsageOffset(db, session.row.id, path, started.offset),
+          ).catch(() => undefined);
+        }
       }
       const transcript = session.transcript;
       transcript.model = model ?? transcript.model;
       openTurn(session, transcript);
       transcript.watcher ??= open(session, transcript, onInterrupt);
+    },
+    resume(session: LiveSession, onInterrupt: OnInterrupt): boolean {
+      const path = session.row.usage_file;
+      if (!path || !session.context || session.transcript) return false;
+      const transcript = start(session, path, null, session.row.native_turn_id);
+      session.transcript = transcript;
+      transcript.catchUp = session.row.provider === 'claude';
+      openTurn(session, transcript);
+      transcript.watcher = open(session, transcript, onInterrupt);
+      void transcript.watcher?.ready.then(() => {
+        transcript.catchUp = false;
+      });
+      return transcript.catchUp && transcript.watcher !== null;
     },
     agentRun(session: LiveSession, agentId: string): string | null {
       const transcript = session.transcript;

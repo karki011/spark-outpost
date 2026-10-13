@@ -174,6 +174,51 @@ describe('finishedRunIds', () => {
   });
 });
 
+describe('a Terminal turn finishing', () => {
+  function terminal(state: string, base: ConversationSummary = chat()): ConversationSummary {
+    return {
+      ...base,
+      sessionType: 'terminal',
+      terminal: {
+        id: uuid(999),
+        conversationId: base.id,
+        provider: 'codex',
+        state,
+        cwd: '/Users/ada/code/shop',
+        label: 'shop',
+        updatedAt: base.updatedAt,
+        resumeAvailable: false,
+        runId: null,
+        observation: 'hooks',
+        reason: null,
+        agentMode: null,
+      } as NonNullable<ConversationSummary['terminal']>,
+    };
+  }
+
+  it('is celebrated when the session goes from working to ready', () => {
+    const live = terminal('working');
+    const ready = terminal('ready', live);
+    expect(finishedRunIds(runStatuses([live]), [ready])).toEqual([uuid(999)]);
+    expect(finishedRunIds(runStatuses([ready]), [ready])).toEqual([]);
+  });
+
+  it('is not celebrated when the session stops to ask or ends with an error', () => {
+    const live = terminal('working');
+    expect(finishedRunIds(runStatuses([live]), [terminal('waiting_for_input', live)])).toEqual([]);
+    expect(finishedRunIds(runStatuses([live]), [terminal('error', live)])).toEqual([]);
+  });
+
+  it('is celebrated once when the turn also has a run', () => {
+    const live = terminal('working', working());
+    const done = {
+      ...terminal('ready', live),
+      latestRun: { ...live.latestRun!, status: 'succeeded' as const },
+    };
+    expect(finishedRunIds(runStatuses([live]), [done])).toEqual([live.latestRun!.id]);
+  });
+});
+
 describe('nearestCorner', () => {
   it('snaps to the closest quarter of the viewport', () => {
     expect(nearestCorner(10, 10, 1000, 800)).toBe('top-left');

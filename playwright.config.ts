@@ -9,6 +9,7 @@ import { SLACK_BOT_TOKEN, SLACK_USER_TOKEN } from './apps/server/test/fake-slack
 import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
+  API_RESTART_FLAG,
   APP_ORIGIN,
   CLONE_TEST_ROOT,
   FAKE_ACP_MODELS,
@@ -90,6 +91,9 @@ const workerCommand =
     : serverCommand('src/workflow/main.ts');
 const logged = (command: string, name: string) =>
   `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
+const restartFlag = JSON.stringify(API_RESTART_FLAG);
+const restartable = (command: string) =>
+  `while :; do ${command}; [ -e ${restartFlag} ] || break; rm -f ${restartFlag}; done`;
 const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 const buildsWeb = PACKAGED || Boolean(process.env.SPARK_WEB_BUILD);
 const viteBuild = `${node} node_modules/vite/bin/vite.js build`;
@@ -118,6 +122,7 @@ const viteServer = {
 export default defineConfig({
   testDir: 'tests/browser',
   globalSetup: './tests/browser/single-worker.ts',
+  globalTeardown: './tests/browser/stop-terminals.ts',
   outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,
@@ -137,7 +142,7 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${packagedBuild}${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(serverCommand('src/api/main.ts'), 'api')}`,
+      command: `${packagedBuild}${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(restartable(serverCommand('src/api/main.ts')), 'api')}`,
       cwd: 'apps/server',
       env: {
         ...serverEnv,

@@ -2,8 +2,14 @@ import type { ConversationSummary } from '@spark-outpost/contracts';
 import { terminalLabel } from '../terminal/native-state.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { relativeTime } from '../ui/relative-time.ts';
+import { baseName } from './home-model.ts';
 import type { SessionState } from './island-model.ts';
 import { RunDots } from './island-parts.tsx';
+
+function terminalChangedAt(chat: ConversationSummary): string {
+  const changed = chat.terminal?.updatedAt ?? chat.updatedAt;
+  return changed > chat.updatedAt ? changed : chat.updatedAt;
+}
 
 function waitingChip(chat: ConversationSummary): string {
   if (chat.attention?.prFeedback) return 'PR feedback';
@@ -28,9 +34,13 @@ export function StateChip({
           : state === 'failed'
             ? ' bad'
             : '';
+    const label =
+      state === 'done'
+        ? `Done · ${relativeTime(terminalChangedAt(chat), now)}`
+        : terminalLabel(chat.terminal.state);
     return (
       <span className={`isl-schip${style}`}>
-        Terminal<span className="sr-only"> session</span> · {terminalLabel(chat.terminal.state)}
+        Terminal<span className="sr-only"> session</span> · {label}
       </span>
     );
   }
@@ -54,7 +64,8 @@ export function StateChip({
 }
 
 export function projectLine(chat: ConversationSummary, names: ReadonlyMap<string, string>): string {
-  const project = chat.projectIds.map((id) => names.get(id)).find(Boolean) ?? 'No project';
+  const folder = chat.terminal ? baseName(chat.terminal.cwd) : 'No project';
+  const project = chat.projectIds.map((id) => names.get(id)).find(Boolean) ?? folder;
   const provider = chat.terminal?.provider ?? chat.latestRun?.provider;
   return provider ? `${project} · ${providerName(provider)}` : project;
 }

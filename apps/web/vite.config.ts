@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { ClientRequest } from 'node:http';
+import type { ClientRequest, IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -25,6 +25,12 @@ function attachApiToken(proxyReq: ClientRequest) {
   else proxyReq.removeHeader(API_TOKEN_HEADER);
 }
 
+function endWithUpstream(proxyRes: IncomingMessage, _req: IncomingMessage, res: ServerResponse) {
+  proxyRes.once('close', () => {
+    if (!res.writableEnded) res.destroy();
+  });
+}
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -40,6 +46,7 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('proxyReq', attachApiToken);
           proxy.on('proxyReqWs', attachApiToken);
+          proxy.on('proxyRes', endWithUpstream);
         },
       },
     },

@@ -14,7 +14,7 @@ Open an AI terminal. About 1 minute.
 
 1. Select **New chat**, then **Terminal** above the message box.
 2. Select **Choose project → Choose a folder…**, then **Use this folder**.
-3. Next to **Start terminal**, pick **Claude Code** or **Codex** and permissions.
+3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
 4. Describe the work; press **Enter**.
 
 Answer questions there. Pull requests aren't automatic.
@@ -29,11 +29,11 @@ Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment
 
 1. In a chat's **…** menu, select **Terminal**, or press **⌃\`**.
 2. Type commands; Spark doesn't ask.
-3. Select **+** for another tab, **×** to close one.
+3. **+** adds a tab, **×** closes one.
 
 ![The terminal dock below a chat](images/terminals-dock-light.png)
 
-The shell starts in the chat's worktree, checkout or home. Closing a busy tab asks **Hold to stop**; **Keep running** cancels.
+It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to stop**; **Keep running** cancels.
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
@@ -41,12 +41,12 @@ The shell starts in the chat's worktree, checkout or home. Closing a busy tab as
 
 1. On a command in a reply, select **Open in terminal**.
 
-The read-only tab is named **Claude · pnpm dev**. **Stop turn** stops the turn. Claude and Z.ai output shows when it ends.
+The read-only tab is **Claude · pnpm dev**. **Stop turn** stops it. Claude and Z.ai output shows when it ends.
 
 ## Close and recover
 
-Switching chats, closing a window or disconnecting keeps agents running. **Quit** stops Spark-owned agents only.
+Switching chats, closing a window or disconnecting keeps agents running; a Terminal session survives Spark restarting, updating or crashing. **Quit** stops Spark-owned agents.
 
-After a crash, restart or exit, **Resume session** restores history, not a running command; else **Start again** resends your first message unless stopped.
+After a reboot or exit, **Resume session** restores history, not a running command; else **Start again** resends your first message unless stopped.
 
 **Next:** [Use the browser](use-the-browser.md)

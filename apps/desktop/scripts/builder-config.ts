@@ -10,6 +10,7 @@ import {
 } from '../src/github-app.ts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
+import { checkTmuxBinary } from './tmux-bundle.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
@@ -125,6 +126,8 @@ async function copyRuntime(stageDir: string, arch: MacArch, resources: string): 
   await copy(path.join(stageDir, arch, 'runtime/node_modules'), 'app/node_modules');
   await copy(path.join(stageDir, arch, 'server'), 'server');
   await copy(path.join(stageDir, 'web'), 'web');
+  await copy(path.join(stageDir, arch, 'tmux'), 'tmux');
+  await checkTmuxBinary(path.join(resources, 'tmux/bin/tmux'), arch);
 }
 
 export interface BuilderOptions {

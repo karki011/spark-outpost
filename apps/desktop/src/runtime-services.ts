@@ -51,7 +51,7 @@ export class RuntimeServices {
       : { ok: false as const, detail: tail.text() || `The migration exited with ${code}.` };
   }
 
-  async stop() {
-    await Promise.all(this.supervisors.map((supervisor) => supervisor.stop()));
+  async stop(keepTerminals = false) {
+    await Promise.all(this.supervisors.map((supervisor) => supervisor.stop(keepTerminals)));
   }
 }

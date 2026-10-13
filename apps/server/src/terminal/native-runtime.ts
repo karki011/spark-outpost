@@ -21,7 +21,7 @@ import {
   NativeTerminalConflictError,
 } from '../persistence/native-terminal-turns.ts';
 import type { SparkScope } from '../spark-mcp/deps.ts';
-import type { SparkGrant } from '../spark-mcp/host.ts';
+import { sparkGrantKey, type SparkGrant } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { stopRun as cancelRun } from '../workflow/stop-run.ts';
 import { nativeControl, nativeLaunchError, NativeRuntimeError } from './native-control.ts';
@@ -35,6 +35,8 @@ import { watchTranscript } from './native-tail.ts';
 import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
+import { writeAdoptRecord } from './tmux/adopt-record.ts';
+import { readoptTmuxSessions } from './tmux/readopt.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
 import type { NativeRuntime, NativeRuntimeDeps, LiveSession } from './native-runtime-types.ts';
@@ -65,7 +67,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
   const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
-  const hook = nativeObserver({
+  const { hook, resumeUsage } = nativeObserver({
     db: deps.db,
     waiters,
     tokens,
@@ -74,6 +76,14 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     usage,
   });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
+  const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
+    const state = exit.exitCode === 0 ? 'exited' : 'error';
+    void enqueue(running, async () => {
+      await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(() =>
+        usage.last(running).catch(() => undefined),
+      );
+    }).catch(() => undefined);
+  };
   const launchOnce = async (
     conversationId: string,
     request: NativeTerminalLaunchRequest,
@@ -179,6 +189,13 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         hooks: { url: host.url, token },
       });
       row.observation = launch.observation;
+      const ceiling = prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent');
+      if (deps.tmux && launch.directory)
+        await writeAdoptRecord(launch.directory, {
+          grant: sparkGrantKey(grant.token),
+          mcpPort: deps.mcp.port,
+          ceiling,
+        });
       await deps.db.query(
         'UPDATE native_terminal_sessions SET observation = $3 WHERE id = $1 AND generation = $2',
         [row.id, row.generation, launch.observation],
@@ -194,7 +211,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         launch,
         context,
         mode: null,
-        ceiling: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
+        ceiling,
         seedPending: prepared.runId !== null,
         nativeSessionEnded: false,
         observedTurnId: null,
@@ -240,14 +257,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         command: launch.command,
         args: launch.args,
         env: launch.env,
-        onExit: (exit) => {
-          const state = exit.exitCode === 0 ? 'exited' : 'error';
-          void enqueue(running, async () => {
-            await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(
-              () => usage.last(running).catch(() => undefined),
-            );
-          }).catch(() => undefined);
-        },
+        onExit: exited(running),
       });
       return {
         session: nativeTerminalView((await nativeTerminalRow(deps.db, conversationId))!),
@@ -308,7 +318,9 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     async get(conversationId) {
       await owned(conversationId);
       const row = await nativeTerminalRow(deps.db, conversationId);
-      return row ? nativeTerminalView(row, await nativeTerminalMode(deps.db, row)) : null;
+      if (!row) return null;
+      const readopted = live.get(conversationId)?.readopted ?? null;
+      return { ...nativeTerminalView(row, await nativeTerminalMode(deps.db, row)), readopted };
     },
     launch(conversationId, request) {
       const key = JSON.stringify(request);
@@ -359,7 +371,43 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     },
     async recover() {
       if (live.size) throw new NativeRuntimeError('Recovery requires a stopped terminal host.');
-      await recoverNativeTerminals(deps.db);
+      const kept = deps.tmux
+        ? await readoptTmuxSessions({
+            tmux: deps.tmux,
+            db: deps.db,
+            workspaceId: deps.workspaceId,
+            dataDir: deps.dataDir,
+            channel: deps.channel,
+            mcp: deps.mcp,
+            terminals: deps.terminals,
+            waiters,
+            hookUrl: host.url,
+            live,
+            tokens,
+            now: deps.now ?? (() => new Date()),
+            syncScope,
+            resumeUsage,
+            onExit: exited,
+          })
+        : [];
+      await recoverNativeTerminals(deps.db, kept);
+    },
+    async detach() {
+      disposed = true;
+      try {
+        for (const session of [...live.values()]) {
+          await enqueue(session, async () => {
+            await usage.last(session).catch(() => undefined);
+            await session.context?.close();
+          }).catch(() => undefined);
+          if (!deps.terminals.detach(session.row.id)) await stop(session.row.conversation_id);
+        }
+        await Promise.all(
+          [...launches.values()].map((launch) => launch.work.catch(() => undefined)),
+        );
+      } finally {
+        await host.close();
+      }
     },
     async dispose() {
       disposed = true;

@@ -33,6 +33,7 @@ export const nativeTerminalSessionSchema = z.object({
   observation: z.enum(['hooks', 'unsupported']),
   reason: z.string().nullable(),
   agentMode: z.string().nullable().default(null),
+  readopted: z.object({ at: z.string(), stepsComplete: z.boolean() }).nullable().optional(),
 });
 export type NativeTerminalSession = z.infer<typeof nativeTerminalSessionSchema>;
 

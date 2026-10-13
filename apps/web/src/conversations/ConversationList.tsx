@@ -38,7 +38,9 @@ import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-ord
 import {
   LIST_PANEL_ID,
   NewChatButton,
+  SEARCH_DELAY_MS,
   SearchBox,
+  SessionsButton,
   SidebarTabs,
   type SidebarTab,
 } from './SidebarHeader.tsx';
@@ -56,7 +58,6 @@ import { useMarkRead } from './use-mark-read.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 
-const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
 const NO_OUTPOSTS: readonly Outpost[] = [];
 
@@ -277,6 +278,7 @@ export const ConversationList = memo(function ConversationList({
       <div className="side-in">
         <div className="side-top">
           <b>Chats</b>
+          <SessionsButton />
           <SidebarCollapseButton />
         </div>
         <NewChatButton onNew={startNew} />

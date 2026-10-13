@@ -7,6 +7,7 @@ import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
 import type { TerminalConnection, TerminalHandlers } from './terminal-connection.ts';
 import { focusBeside } from './leave-terminal.ts';
+import { terminalLinkFollower } from './link-pointer.ts';
 import { followMouseReporting, MOUSE_REPORTING_OFF } from './mouse-reporting.ts';
 import { refitWhenFontLoads, TERMINAL_FONT, TERMINAL_FONT_SIZE } from './terminal-font.ts';
 import { lineEditingSequence, tabAction } from './terminal-keys.ts';
@@ -70,11 +71,20 @@ export function openXterm<T extends TerminalTicket>(
 ): TerminalConnection {
   const abort = new AbortController();
   const readOnly = handlers.readOnly === true;
-  const terminal = createTerminal(readOnly ? { disableStdin: true, cursorBlink: false } : {});
+  const links = handlers.onLink ? terminalLinkFollower(handlers.onLink) : null;
+  const terminal = createTerminal({
+    ...(readOnly ? { disableStdin: true, cursorBlink: false } : {}),
+    ...(links ? { linkHandler: links.osc } : {}),
+  });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
-  terminal.loadAddon(new WebLinksAddon((event, uri) => openTerminalLink(event, uri)));
+  terminal.loadAddon(
+    links
+      ? new WebLinksAddon(links.activate, links.webLinks)
+      : new WebLinksAddon((event, uri) => openTerminalLink(event, uri)),
+  );
   terminal.open(element);
+  const unfollowLinks = links?.follow(terminal, element);
   const webgl = loadWebglRenderer(terminal);
   terminal.parser.registerOscHandler(OSC_CLIPBOARD, () => true);
 
@@ -228,6 +238,7 @@ export function openXterm<T extends TerminalTicket>(
       unfollowDrops();
       selection.stop();
       unfollowMouse();
+      unfollowLinks?.();
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);
