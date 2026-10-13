@@ -8,6 +8,7 @@ import { GlobeIcon } from '../browser/BrowserIcons.tsx';
 import { ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
+import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
 import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
 import { WORK_PANEL_LIMITS, type PanelView, type PanelWidthLimits } from './work-panel-state.ts';
@@ -38,6 +39,7 @@ interface WorkPanelProps {
   view?: PanelView;
   onView?: (view: PanelView) => void;
   browser?: ((chrome: PanelChrome) => ReactNode) | null;
+  terminal?: boolean;
 }
 
 export interface PanelChrome {
@@ -114,8 +116,9 @@ export function WorkPanel({
   view = 'work',
   onView,
   browser = null,
+  terminal = false,
 }: WorkPanelProps) {
-  const hasWork = task !== null || autonomy !== null;
+  const hasWork = task !== null || autonomy !== null || terminal;
   const browsing = browser !== null && view === 'browser';
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLElement>(null);
@@ -199,7 +202,10 @@ export function WorkPanel({
                 runs={runs}
                 heading={heading}
                 autonomy={autonomySection}
+                terminal={terminal}
               />
+            ) : terminal ? (
+              <TerminalWork conversationId={conversationId} />
             ) : (
               autonomySection
             )}

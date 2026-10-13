@@ -4,6 +4,7 @@ import { permissionFor } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
+import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import {
   acceptNativeEvent,
   setNativeRun,
@@ -19,11 +20,12 @@ import {
 } from './native-context.ts';
 import { NativeRuntimeError, type nativeControl } from './native-control.ts';
 import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
-import type { WatchInterrupts } from './native-interrupts.ts';
+import type { NativeUsage } from './native-usage.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
 export const hookTokenDigest = (token: string) => createHash('sha256').update(token).digest('hex');
 const digest = hookTokenDigest;
+const HANDBACK = 'SubagentHandback';
 const envelopeSchema = z.strictObject({
   sessionId: z.uuid(),
   provider: z.enum(['claude', 'codex']),
@@ -44,20 +46,27 @@ function interruptEventId(session: LiveSession, nativeTurnId: string): string {
   ].join('-');
 }
 
+function ownTurn(session: LiveSession, event: NativeHookEvent): boolean {
+  const open = session.row.native_turn_id;
+  if (!session.context) return false;
+  if (event.nativeTurnId && session.completedTurns.has(event.nativeTurnId)) return false;
+  return !(event.nativeTurnId && open && event.nativeTurnId !== open);
+}
+
 export function nativeObserver({
   db,
   waiters,
   tokens,
   enqueue,
   control: { syncScope, closeTurn, completed },
-  watchInterrupts,
+  usage,
 }: {
   db: Db;
   waiters: ApprovalWaiters;
   tokens: Map<string, LiveSession>;
   enqueue: <T>(session: LiveSession, work: () => Promise<T>) => Promise<T>;
   control: ReturnType<typeof nativeControl>;
-  watchInterrupts: WatchInterrupts;
+  usage: NativeUsage;
 }) {
   const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
     if ((session.seedPending || session.currentPromptEventId === eventId) && session.context)
@@ -110,6 +119,11 @@ export function nativeObserver({
     const retryCompletion = session.completedEvents.has(eventId);
     if (retryCompletion && session.completedEvents.get(eventId) !== session.currentPromptEventId)
       return;
+    if (!retryCompletion && event.tool?.agentId && !ownTurn(session, event)) {
+      const runId = usage.agentRun(session, event.tool.agentId);
+      if (runId) await recordNativeStep(db, runId, event.tool);
+      return;
+    }
     if (!retryCompletion && event.nativeTurnId && session.completedTurns.has(event.nativeTurnId))
       return;
     if (
@@ -146,6 +160,9 @@ export function nativeObserver({
       }
     }
     if (event.kind === 'prompt') await turn(session, event, eventId);
+    if (event.tool?.agentId) usage.agentRun(session, event.tool.agentId);
+    if (event.tool && session.context && !retryCompletion)
+      await recordNativeStep(db, session.context.input.identity.runId, event.tool);
     if (['stop', 'interrupt', 'error'].includes(event.kind)) completed(session, eventId);
     if (event.kind === 'stop') await closeTurn(session, 'succeeded');
     if (event.kind === 'interrupt')
@@ -202,13 +219,10 @@ export function nativeObserver({
         interruptEventId(session, nativeTurnId),
       );
     });
-  const followInterrupts = (session: LiveSession, transcriptPath: string) => {
-    session.interrupts = watchInterrupts(transcriptPath, async (nativeTurnId) => {
-      await interrupted(session, nativeTurnId)
-        .catch(() => interrupted(session, nativeTurnId))
-        .catch(() => undefined);
-    });
-  };
+  const interruptedTwice = (session: LiveSession, nativeTurnId: string) =>
+    interrupted(session, nativeTurnId)
+      .catch(() => interrupted(session, nativeTurnId))
+      .catch(() => undefined);
   const hook = async (token: string, body: unknown) => {
     const session = tokens.get(digest(token));
     const parsed = envelopeSchema.safeParse(body);
@@ -230,8 +244,11 @@ export function nativeObserver({
       if (anotherSession && !(event.kind === 'session_start' && session.nativeSessionEnded))
         return false;
       await accept(session, event, parsed.data.eventId);
-      if (event.transcriptPath && session.context && !session.interrupts)
-        followInterrupts(session, event.transcriptPath);
+      if (event.transcriptPath && session.context)
+        usage.follow(session, event.transcriptPath, event.model ?? null, interruptedTwice);
+      if (event.agentTranscriptPath) usage.followAgent(session, event.agentTranscriptPath);
+      if (event.agentTranscriptPath && event.tool?.phase === 'end' && event.tool.name === HANDBACK)
+        await usage.endAgent(session, event.agentTranscriptPath);
       return true;
     });
   };

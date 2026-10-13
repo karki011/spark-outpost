@@ -171,6 +171,7 @@ GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
 POST /api/terminal/sessions/:id/attach
 GET /api/conversations/:id/terminal
+GET /api/conversations/:id/terminal/usage
 POST /api/conversations/:id/terminal
 DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells

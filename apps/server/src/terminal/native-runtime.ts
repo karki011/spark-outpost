@@ -10,6 +10,7 @@ import {
   nativeTerminalRow,
   nativeTerminalView,
 } from '../persistence/native-terminals.ts';
+import { nativeTerminalUsage } from '../persistence/native-terminal-usage.ts';
 import {
   failNativeLaunchRun,
   finishNativeRun,
@@ -30,7 +31,8 @@ import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { isNativeSessionId } from './native-hooks.ts';
-import { watchClaudeInterrupts } from './native-interrupts.ts';
+import { watchTranscript } from './native-tail.ts';
+import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
@@ -60,7 +62,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
     return rows[0];
   };
-  const control = nativeControl(deps.db, live, tokens);
+  const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
+  const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
   const hook = nativeObserver({
     db: deps.db,
@@ -68,7 +71,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     tokens,
     enqueue,
     control,
-    watchInterrupts: deps.watchInterrupts ?? watchClaudeInterrupts,
+    usage,
   });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
@@ -200,7 +203,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         completedTurns: new Set(),
         currentPromptEventId: null,
         completedEvents: new Map(),
-        interrupts: null,
+        transcript: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -238,14 +241,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         args: launch.args,
         env: launch.env,
         onExit: (exit) => {
-          void enqueue(running, () =>
-            finish(
-              running,
-              exit.exitCode === 0 ? 'exited' : 'error',
-              false,
-              `Native agent exited (${exit.exitCode}).`,
-            ),
-          ).catch(() => undefined);
+          const state = exit.exitCode === 0 ? 'exited' : 'error';
+          void enqueue(running, async () => {
+            await finish(running, state, false, `Native agent exited (${exit.exitCode}).`).finally(
+              () => usage.last(running).catch(() => undefined),
+            );
+          }).catch(() => undefined);
         },
       });
       return {
@@ -257,7 +258,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (session) {
         live.delete(conversationId);
         tokens.delete(session.hookKey);
-        session.interrupts?.close();
+        await usage.last(session).catch(() => undefined);
         await session.context?.close();
       }
       grant?.revoke();
@@ -327,6 +328,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       );
       launches.set(conversationId, { key, work });
       return work;
+    },
+    async usage(conversationId) {
+      await owned(conversationId);
+      return nativeTerminalUsage(deps.db, conversationId);
     },
     hook,
     stop,

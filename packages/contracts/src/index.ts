@@ -43,6 +43,7 @@ export * from './tasks.ts';
 export * from './terminal.ts';
 export * from './native-terminal.ts';
 export * from './usage.ts';
+export * from './native-terminal-usage.ts';
 export * from './lean.ts';
 export * from './model-cards.ts';
 export * from './home.ts';

@@ -86,6 +86,7 @@ export const SPEC_GROUPS = {
     'chat-terminal',
     'native-terminal',
     'native-terminal-launch',
+    'native-terminal-usage',
     'terminal-select',
     'command-terminal',
     'command-tab',

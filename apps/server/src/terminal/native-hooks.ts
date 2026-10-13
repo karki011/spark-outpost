@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import { isRecord } from '../agent-config/records.ts';
 
 export type NativeProvider = 'claude' | 'codex';
@@ -14,14 +14,25 @@ export type NativeHookKind =
   | 'session_end'
   | 'interrupt';
 
+export interface NativeToolEvent {
+  id: string;
+  name: string;
+  phase: 'start' | 'end';
+  failed: boolean;
+  agentId?: string;
+}
+
 export interface NativeHookEvent {
   kind: NativeHookKind;
+  tool?: NativeToolEvent;
   nativeSessionId?: string;
   nativeTurnId?: string;
   permissionMode?: string;
   prompt?: string;
   reason?: string;
   transcriptPath?: string;
+  agentTranscriptPath?: string;
+  model?: string;
 }
 
 const NATIVE_SESSION_ID = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{0,99}$/;
@@ -41,12 +52,23 @@ const COMMON_EVENTS: Record<string, NativeHookKind> = {
   SessionEnd: 'session_end',
 };
 
-function sessionTranscriptPath(provider: NativeProvider, payload: Record<string, unknown>) {
-  const path = payload.transcript_path;
-  if (provider !== 'claude' || typeof path !== 'string' || typeof payload.session_id !== 'string')
-    return null;
-  if (!isAbsolute(path)) return null;
-  return path === join(dirname(path), `${payload.session_id}.jsonl`) ? path : null;
+function rolloutOf(path: string, threadId: string): boolean {
+  const name = basename(path);
+  return name.startsWith('rollout-') && name.endsWith(`-${threadId}.jsonl`);
+}
+
+function transcriptPaths(provider: NativeProvider, payload: Record<string, unknown>) {
+  const { transcript_path: path, session_id: sessionId, agent_id: agentId } = payload;
+  if (typeof path !== 'string' || typeof sessionId !== 'string' || !isAbsolute(path)) return {};
+  if (path !== join(dirname(path), basename(path))) return {};
+  const agent = isNativeSessionId(agentId) ? agentId : null;
+  if (provider === 'codex') {
+    if (rolloutOf(path, sessionId)) return { transcriptPath: path };
+    return agent && rolloutOf(path, agent) ? { agentTranscriptPath: path } : {};
+  }
+  if (basename(path) !== `${sessionId}.jsonl`) return {};
+  const side = join(dirname(path), sessionId, 'subagents', `agent-${agent}.jsonl`);
+  return { transcriptPath: path, ...(agent ? { agentTranscriptPath: side } : {}) };
 }
 
 export function nativeHookNames(provider: NativeProvider): string[] {
@@ -74,6 +96,9 @@ export function parseNativeHook(
     !optionalString(payload.prompt_id, 200) ||
     !optionalString(payload.permission_mode, 100) ||
     !optionalString(payload.tool_name, 200) ||
+    !optionalString(payload.tool_use_id, 200) ||
+    !optionalString(payload.agent_id, 200) ||
+    !optionalString(payload.model, 200) ||
     !optionalString(payload.notification_type, 100) ||
     !optionalString(payload.reason, 100) ||
     !optionalString(payload.transcript_path, 4096) ||
@@ -85,9 +110,10 @@ export function parseNativeHook(
   if (!kind) return null;
   const nativeTurnId =
     provider === 'claude' ? (payload.prompt_id ?? payload.turn_id) : payload.turn_id;
-  const transcriptPath = sessionTranscriptPath(provider, payload);
+  const tool = toolEvent(payload);
   return {
     kind,
+    ...(tool ? { tool } : {}),
     ...(typeof payload.session_id === 'string' ? { nativeSessionId: payload.session_id } : {}),
     ...(typeof nativeTurnId === 'string' ? { nativeTurnId } : {}),
     ...(typeof payload.permission_mode === 'string'
@@ -99,8 +125,23 @@ export function parseNativeHook(
     END_REASON.test(payload.reason)
       ? { reason: payload.reason }
       : {}),
-    ...(transcriptPath ? { transcriptPath } : {}),
+    ...transcriptPaths(provider, payload),
+    ...(typeof payload.model === 'string' && payload.model ? { model: payload.model } : {}),
   };
+}
+
+const TOOL_PHASES: Record<string, Pick<NativeToolEvent, 'phase' | 'failed'>> = {
+  PreToolUse: { phase: 'start', failed: false },
+  PostToolUse: { phase: 'end', failed: false },
+  PostToolUseFailure: { phase: 'end', failed: true },
+};
+
+function toolEvent(payload: Record<string, unknown>): NativeToolEvent | null {
+  const phase = TOOL_PHASES[payload.hook_event_name as string];
+  const { tool_use_id: id, tool_name: name, agent_id: agentId } = payload;
+  if (!phase || typeof id !== 'string' || typeof name !== 'string') return null;
+  if (!id.trim() || !name.trim()) return null;
+  return { id, name, ...phase, ...(typeof agentId === 'string' && agentId ? { agentId } : {}) };
 }
 
 function hookKind(payload: Record<string, unknown>): NativeHookKind | null {
