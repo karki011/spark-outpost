@@ -20,7 +20,7 @@ import {
 } from './native-context.ts';
 import { NativeRuntimeError, type nativeControl } from './native-control.ts';
 import { parseNativeHook, type NativeHookEvent } from './native-hooks.ts';
-import type { WatchInterrupts } from './native-interrupts.ts';
+import type { NativeUsage } from './native-usage.ts';
 import type { LiveSession } from './native-runtime-types.ts';
 
 export const hookTokenDigest = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -51,14 +51,14 @@ export function nativeObserver({
   tokens,
   enqueue,
   control: { syncScope, closeTurn, completed },
-  watchInterrupts,
+  usage,
 }: {
   db: Db;
   waiters: ApprovalWaiters;
   tokens: Map<string, LiveSession>;
   enqueue: <T>(session: LiveSession, work: () => Promise<T>) => Promise<T>;
   control: ReturnType<typeof nativeControl>;
-  watchInterrupts: WatchInterrupts;
+  usage: NativeUsage;
 }) {
   const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
     if ((session.seedPending || session.currentPromptEventId === eventId) && session.context)
@@ -205,13 +205,10 @@ export function nativeObserver({
         interruptEventId(session, nativeTurnId),
       );
     });
-  const followInterrupts = (session: LiveSession, transcriptPath: string) => {
-    session.interrupts = watchInterrupts(transcriptPath, async (nativeTurnId) => {
-      await interrupted(session, nativeTurnId)
-        .catch(() => interrupted(session, nativeTurnId))
-        .catch(() => undefined);
-    });
-  };
+  const interruptedTwice = (session: LiveSession, nativeTurnId: string) =>
+    interrupted(session, nativeTurnId)
+      .catch(() => interrupted(session, nativeTurnId))
+      .catch(() => undefined);
   const hook = async (token: string, body: unknown) => {
     const session = tokens.get(digest(token));
     const parsed = envelopeSchema.safeParse(body);
@@ -233,8 +230,8 @@ export function nativeObserver({
       if (anotherSession && !(event.kind === 'session_start' && session.nativeSessionEnded))
         return false;
       await accept(session, event, parsed.data.eventId);
-      if (event.transcriptPath && session.context && !session.interrupts)
-        followInterrupts(session, event.transcriptPath);
+      if (event.transcriptPath && session.context)
+        usage.follow(session, event.transcriptPath, interruptedTwice);
       return true;
     });
   };

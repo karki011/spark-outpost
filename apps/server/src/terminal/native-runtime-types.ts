@@ -13,7 +13,8 @@ import type { SparkGrant, SparkMcpHost } from '../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { placeChat } from '../orchestration/chat-place.ts';
 import type { NativeTurnContext } from './native-context.ts';
-import type { InterruptWatcher, WatchInterrupts } from './native-interrupts.ts';
+import type { WatchTranscript } from './native-tail.ts';
+import type { SessionTranscript } from './native-usage.ts';
 import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
@@ -30,7 +31,7 @@ export interface NativeRuntimeDeps {
   approvalWaiters?: ApprovalWaiters;
   prepareLaunch?: typeof prepareNativeLaunch;
   place?: typeof placeChat;
-  watchInterrupts?: WatchInterrupts;
+  watchTranscript?: WatchTranscript;
 }
 
 export interface PendingNativeLaunch {
@@ -73,5 +74,5 @@ export interface LiveSession {
   completedTurns: Set<string>;
   currentPromptEventId: string | null;
   completedEvents: Map<string, string | null>;
-  interrupts: InterruptWatcher | null;
+  transcript: SessionTranscript | null;
 }

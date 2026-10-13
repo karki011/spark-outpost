@@ -26,8 +26,30 @@ export const nativeTerminalTurnSchema = z.object({
 });
 export type NativeTerminalTurn = z.infer<typeof nativeTerminalTurnSchema>;
 
+const reportedCount = z.number().int().nonnegative();
+
+export const nativeTerminalReportedModelSchema = z.object({
+  model: z.string(),
+  input: reportedCount,
+  output: reportedCount,
+  cachedRead: reportedCount,
+  cachedWrite: reportedCount,
+  thought: reportedCount,
+  costUsd: z.number().nonnegative().nullable(),
+});
+export type NativeTerminalReportedModel = z.infer<typeof nativeTerminalReportedModelSchema>;
+
+export const nativeTerminalReportedSchema = z.object({
+  costUsd: z.number().nonnegative(),
+  cliSessions: z.number().int().positive(),
+  models: z.array(nativeTerminalReportedModelSchema),
+  updatedAt: z.string(),
+});
+export type NativeTerminalReported = z.infer<typeof nativeTerminalReportedSchema>;
+
 export const nativeTerminalUsageSchema = z.object({
   provider: nativeTerminalProviderSchema.nullable(),
   turns: z.array(nativeTerminalTurnSchema),
+  reported: nativeTerminalReportedSchema.nullable(),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;

@@ -31,7 +31,8 @@ import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { isNativeSessionId } from './native-hooks.ts';
-import { watchClaudeInterrupts } from './native-interrupts.ts';
+import { watchTranscript } from './native-tail.ts';
+import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
 
@@ -61,7 +62,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
     return rows[0];
   };
-  const control = nativeControl(deps.db, live, tokens);
+  const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
+  const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
   const hook = nativeObserver({
     db: deps.db,
@@ -69,7 +71,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     tokens,
     enqueue,
     control,
-    watchInterrupts: deps.watchInterrupts ?? watchClaudeInterrupts,
+    usage,
   });
   const host = await nativeHookHost((token) => tokens.has(digest(token)), hook);
   const launchOnce = async (
@@ -201,7 +203,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         completedTurns: new Set(),
         currentPromptEventId: null,
         completedEvents: new Map(),
-        interrupts: null,
+        transcript: null,
       };
       const running = session;
       scope.beforeToolCall = async () => {
@@ -258,7 +260,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (session) {
         live.delete(conversationId);
         tokens.delete(session.hookKey);
-        session.interrupts?.close();
+        session.transcript?.watcher?.close();
         await session.context?.close();
       }
       grant?.revoke();

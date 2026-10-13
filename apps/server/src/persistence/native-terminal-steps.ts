@@ -20,7 +20,7 @@ interface StepRow {
   failed: boolean;
 }
 
-const stored = (text: string) => redactText(storableText(text)).slice(0, 200);
+export const storedLabel = (text: string) => redactText(storableText(text)).slice(0, 200);
 
 export async function recordNativeStep(
   db: Db,
@@ -29,9 +29,9 @@ export async function recordNativeStep(
 ): Promise<void> {
   const values = [
     runId,
-    stored(step.id),
-    stored(step.name),
-    step.agentId === undefined ? null : stored(step.agentId),
+    storedLabel(step.id),
+    storedLabel(step.name),
+    step.agentId === undefined ? null : storedLabel(step.agentId),
   ];
   if (step.phase === 'start') {
     await db.query(

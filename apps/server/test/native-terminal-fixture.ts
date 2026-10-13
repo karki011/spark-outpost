@@ -13,6 +13,23 @@ import { defaultLimits, TerminalSessions } from '../src/terminal/sessions.ts';
 import { toolDeps } from './spark-mcp-support.ts';
 import { createTestDb } from './support.ts';
 
+interface FixtureWatcher {
+  path: string;
+  from: number | null;
+  position: number | null;
+  atFlush: unknown[];
+  close: ReturnType<typeof vi.fn<() => void>>;
+  lines(records: unknown[]): Promise<void>;
+  interrupt(promptId: string): Promise<void>;
+}
+
+const interruptRecord = (promptId: string) => ({
+  type: 'user',
+  isSidechain: false,
+  promptId,
+  message: { role: 'user', content: [{ type: 'text', text: '[Request interrupted by user]' }] },
+});
+
 export async function nativeRuntimeFixture(options: { maxShells?: number } = {}) {
   const t = await createTestDb();
   const folder = await realpath(await mkdtemp(join(tmpdir(), 'spark-native-lifecycle-')));
@@ -50,11 +67,7 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     repoRoot: folder,
     note: null,
   });
-  const watchers: {
-    path: string;
-    interrupt: (nativeTurnId: string) => Promise<void>;
-    close: ReturnType<typeof vi.fn<() => void>>;
-  }[] = [];
+  const watchers: FixtureWatcher[] = [];
   const fixture = {
     t,
     watchers,
@@ -87,10 +100,25 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     locateCli: async () => '/fixture/claude',
     place: (...args) => fixture.place(...args),
     prepareLaunch: prepare,
-    watchInterrupts: (path, interrupt) => {
-      const close = vi.fn<() => void>();
-      watchers.push({ path, interrupt, close });
-      return { ready: Promise.resolve(), close };
+    watchTranscript: (path, from, onLines) => {
+      const watcher: FixtureWatcher = {
+        path,
+        from,
+        position: null,
+        atFlush: [],
+        close: vi.fn<() => void>(),
+        lines: (records) => onLines(records.map((record) => JSON.stringify(record))),
+        interrupt: (promptId) => watcher.lines([interruptRecord(promptId)]),
+      };
+      watchers.push(watcher);
+      return {
+        ready: Promise.resolve(),
+        flush: async () => {
+          if (watcher.atFlush.length > 0) void watcher.lines(watcher.atFlush.splice(0));
+        },
+        offset: () => watcher.position,
+        close: watcher.close,
+      };
     },
   });
   return Object.assign(fixture, {

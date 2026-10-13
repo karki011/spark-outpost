@@ -2,6 +2,7 @@ import type { Db } from '../persistence/db.ts';
 import { finishNativeRun, setNativeTerminalState } from '../persistence/native-terminal-turns.ts';
 import { SparkToolError } from '../spark-mcp/tool.ts';
 import type { LiveSession } from './native-runtime-types.ts';
+import type { NativeUsage } from './native-usage.ts';
 
 export class NativeRuntimeError extends Error {
   constructor(
@@ -22,6 +23,7 @@ export function nativeControl(
   db: Db,
   live: Map<string, LiveSession>,
   tokens: Map<string, LiveSession>,
+  usage: NativeUsage,
 ) {
   const syncScope = (session: LiveSession) => {
     const context = session.context;
@@ -45,8 +47,7 @@ export function nativeControl(
       if (session.completedTurns.size > 64)
         session.completedTurns.delete(session.completedTurns.values().next().value!);
     }
-    session.interrupts?.close();
-    session.interrupts = null;
+    await usage.settle(session);
     await session.context?.close();
     await finishNativeRun(db, session.row, status, reason);
     session.context = null;
@@ -74,6 +75,7 @@ export function nativeControl(
         reason,
       );
       await setNativeTerminalState(db, { ...session.row, state, reason });
+      await usage.last(session);
     } finally {
       await session.launch.dispose();
     }
