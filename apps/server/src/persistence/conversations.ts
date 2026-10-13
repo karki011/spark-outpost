@@ -17,6 +17,7 @@ import {
 } from '@spark-outpost/contracts';
 import { conversationSubagents } from './subagents.ts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
+import { nativeStepActivity } from './native-terminal-steps.ts';
 import { STEP_NOT_INTERRUPTED } from './run-events.ts';
 import { conversationAdvice } from './advice.ts';
 import { insertAnnotations } from './annotations.ts';
@@ -263,6 +264,7 @@ export async function getConversationDetail(
     commands,
     interruption,
     subagents,
+    nativeActivity,
   ] = await Promise.all([
     db.query<MessageRow>(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
@@ -300,6 +302,7 @@ export async function getConversationDetail(
     listCommands(db, id),
     findInterruption(db, id),
     conversationSubagents(db, id),
+    nativeStepActivity(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -311,7 +314,7 @@ export async function getConversationDetail(
     conversation,
     messages: messages.rows.map((message) => toMessage(message, attachments.get(message.id))),
     runs: detailRuns,
-    activity: activityFromEvents(steps.rows),
+    activity: { ...activityFromEvents(steps.rows), ...nativeActivity },
     settings,
     usageTotals: { ...conversationUsage(allRuns), advisors: advice.usage },
     tasks,

@@ -4,6 +4,7 @@ import { permissionFor } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
+import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import {
   acceptNativeEvent,
   setNativeRun,
@@ -146,6 +147,8 @@ export function nativeObserver({
       }
     }
     if (event.kind === 'prompt') await turn(session, event, eventId);
+    if (event.tool && session.context && !retryCompletion)
+      await recordNativeStep(db, session.context.input.identity.runId, event.tool);
     if (['stop', 'interrupt', 'error'].includes(event.kind)) completed(session, eventId);
     if (event.kind === 'stop') await closeTurn(session, 'succeeded');
     if (event.kind === 'interrupt')

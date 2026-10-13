@@ -3,6 +3,7 @@ import type {
   NativeTerminalLaunchRequest,
   NativeTerminalLaunchResponse,
   NativeTerminalSession,
+  NativeTerminalUsage,
 } from '@spark-outpost/contracts';
 import type { CliLocator } from '../agents/acp/agent-cli.ts';
 import type { Db } from '../persistence/db.ts';
@@ -44,6 +45,7 @@ export interface NativeRuntime {
     conversationId: string,
     request: NativeTerminalLaunchRequest,
   ): Promise<NativeTerminalLaunchResponse>;
+  usage(conversationId: string): Promise<NativeTerminalUsage>;
   hook(token: string, body: unknown): Promise<boolean>;
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;

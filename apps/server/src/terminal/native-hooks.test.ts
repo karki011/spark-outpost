@@ -22,6 +22,42 @@ describe('native terminal observation', () => {
     expect(parseNativeHook('codex', payload)).toEqual(expected);
   });
 
+  it('names a tool call by its id and never by its input', () => {
+    const call = { tool_use_id: 'toolu_1', tool_name: 'Bash', tool_input: { command: 'secret' } };
+    expect(parseNativeHook('claude', { hook_event_name: 'PreToolUse', ...call })?.tool).toEqual({
+      id: 'toolu_1',
+      name: 'Bash',
+      phase: 'start',
+      failed: false,
+    });
+    expect(
+      parseNativeHook('claude', { hook_event_name: 'PostToolUseFailure', agent_id: 'a1', ...call })
+        ?.tool,
+    ).toEqual({ id: 'toolu_1', name: 'Bash', phase: 'end', failed: true, agentId: 'a1' });
+    expect(parseNativeHook('codex', { hook_event_name: 'PostToolUse', ...call })?.tool).toEqual({
+      id: 'toolu_1',
+      name: 'Bash',
+      phase: 'end',
+      failed: false,
+    });
+    expect(
+      parseNativeHook('claude', {
+        hook_event_name: 'PreToolUse',
+        tool_use_id: 'toolu_2',
+        tool_name: 'AskUserQuestion',
+      }),
+    ).toMatchObject({ kind: 'question', tool: { id: 'toolu_2', phase: 'start' } });
+    expect(parseNativeHook('claude', { hook_event_name: 'Stop', ...call })).toEqual({
+      kind: 'stop',
+    });
+    expect(parseNativeHook('claude', { hook_event_name: 'PreToolUse', tool_name: 'Bash' })).toEqual(
+      { kind: 'tool_start' },
+    );
+    expect(
+      parseNativeHook('claude', { hook_event_name: 'PreToolUse', ...call, tool_use_id: 7 }),
+    ).toBeNull();
+  });
+
   it('recognizes immediate input requests and explicit provider idle notifications', () => {
     expect(
       parseNativeHook('claude', { hook_event_name: 'PreToolUse', tool_name: 'AskUserQuestion' }),

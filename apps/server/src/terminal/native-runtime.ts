@@ -10,6 +10,7 @@ import {
   nativeTerminalRow,
   nativeTerminalView,
 } from '../persistence/native-terminals.ts';
+import { nativeTerminalUsage } from '../persistence/native-terminal-usage.ts';
 import {
   failNativeLaunchRun,
   finishNativeRun,
@@ -327,6 +328,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       );
       launches.set(conversationId, { key, work });
       return work;
+    },
+    async usage(conversationId) {
+      await owned(conversationId);
+      return nativeTerminalUsage(deps.db, conversationId);
     },
     hook,
     stop,

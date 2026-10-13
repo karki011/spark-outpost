@@ -14,8 +14,17 @@ export type NativeHookKind =
   | 'session_end'
   | 'interrupt';
 
+export interface NativeToolEvent {
+  id: string;
+  name: string;
+  phase: 'start' | 'end';
+  failed: boolean;
+  agentId?: string;
+}
+
 export interface NativeHookEvent {
   kind: NativeHookKind;
+  tool?: NativeToolEvent;
   nativeSessionId?: string;
   nativeTurnId?: string;
   permissionMode?: string;
@@ -74,6 +83,8 @@ export function parseNativeHook(
     !optionalString(payload.prompt_id, 200) ||
     !optionalString(payload.permission_mode, 100) ||
     !optionalString(payload.tool_name, 200) ||
+    !optionalString(payload.tool_use_id, 200) ||
+    !optionalString(payload.agent_id, 200) ||
     !optionalString(payload.notification_type, 100) ||
     !optionalString(payload.reason, 100) ||
     !optionalString(payload.transcript_path, 4096) ||
@@ -86,8 +97,10 @@ export function parseNativeHook(
   const nativeTurnId =
     provider === 'claude' ? (payload.prompt_id ?? payload.turn_id) : payload.turn_id;
   const transcriptPath = sessionTranscriptPath(provider, payload);
+  const tool = toolEvent(payload);
   return {
     kind,
+    ...(tool ? { tool } : {}),
     ...(typeof payload.session_id === 'string' ? { nativeSessionId: payload.session_id } : {}),
     ...(typeof nativeTurnId === 'string' ? { nativeTurnId } : {}),
     ...(typeof payload.permission_mode === 'string'
@@ -101,6 +114,20 @@ export function parseNativeHook(
       : {}),
     ...(transcriptPath ? { transcriptPath } : {}),
   };
+}
+
+const TOOL_PHASES: Record<string, Pick<NativeToolEvent, 'phase' | 'failed'>> = {
+  PreToolUse: { phase: 'start', failed: false },
+  PostToolUse: { phase: 'end', failed: false },
+  PostToolUseFailure: { phase: 'end', failed: true },
+};
+
+function toolEvent(payload: Record<string, unknown>): NativeToolEvent | null {
+  const phase = TOOL_PHASES[payload.hook_event_name as string];
+  const { tool_use_id: id, tool_name: name, agent_id: agentId } = payload;
+  if (!phase || typeof id !== 'string' || typeof name !== 'string') return null;
+  if (!id.trim() || !name.trim()) return null;
+  return { id, name, ...phase, ...(typeof agentId === 'string' && agentId ? { agentId } : {}) };
 }
 
 function hookKind(payload: Record<string, unknown>): NativeHookKind | null {

@@ -15,6 +15,9 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
   router.get('/conversations/:id/terminal', available, async (req, res) => {
     res.json(await runtime!.get(paramId(req)));
   });
+  router.get('/conversations/:id/terminal/usage', available, async (req, res) => {
+    res.json(await runtime!.usage(paramId(req)));
+  });
   router.post('/conversations/:id/terminal', available, async (req, res) => {
     res
       .status(201)

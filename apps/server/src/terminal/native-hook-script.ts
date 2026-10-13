@@ -22,6 +22,8 @@ async function bridgeMain() {
       prompt_id: 200,
       permission_mode: 100,
       tool_name: 200,
+      tool_use_id: 200,
+      agent_id: 200,
       notification_type: 100,
       reason: 100,
       transcript_path: 4096,
