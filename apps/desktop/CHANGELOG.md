@@ -2,6 +2,14 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.15
+
+- Terminal: a Terminal session keeps running when Spark restarts, updates or crashes. Spark picks it up again, says so in one line, and Spark's own tools keep working in it. Quit still stops it. Claude Code steps taken while Spark was away are read back; Codex steps from that gap are not.
+- Terminal: click a link in a Terminal session to open it in the Browser pane. ⌘-click opens your default browser, and right-click offers Open in Spark browser, Open in default browser and Copy link.
+- Sessions (⌘⇧K, or the button beside Chats): one list of chats and Terminal sessions, the ones that need you first, with what each is doing. Type to filter, Enter to open.
+- Spark Island and the companion: a Terminal session shows its current step, step count, sub-agents and model, and a turn that ends says Done.
+- Under the hood: Terminal sessions run inside a bundled tmux on Spark's own socket. If it cannot start, sessions run as before.
+
 ## 0.1.0-beta.14
 
 - Terminal: a Terminal session starts from the chat composer, with the project, agent and permissions as chips. A running session has one slim bar and the terminal fills the pane. Focus (⌘⇧F) hides the chat list and Work panel. Hide view is gone, and Stop session moved into the ⋯ menu.
