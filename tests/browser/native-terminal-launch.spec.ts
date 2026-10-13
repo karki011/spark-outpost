@@ -2,7 +2,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { FIXTURE_READY, typeLine } from './native-terminal-fixture.ts';
+import { FIXTURE_READY, startFixtureTerminal, typeLine } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { chatRepo } from './project-chat-kit.ts';
 import { openChats } from './navigation.ts';
@@ -231,4 +231,24 @@ test('a terminal opens in its worktree and is usable while dependencies are stil
     await db.end();
     repo.remove();
   }
+});
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+test('a database reset stops the Terminal session an earlier test left running', async ({
+  page,
+}) => {
+  const workspace = await startFixtureTerminal(page);
+  const screen = await workspace.locator('.xterm-accessibility').textContent();
+  const pid = Number(/PID (\d+)/.exec(screen!)![1]);
+  expect(isRunning(pid)).toBe(true);
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  await expect.poll(() => isRunning(pid)).toBe(false);
 });
