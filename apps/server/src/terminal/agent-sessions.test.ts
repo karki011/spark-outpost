@@ -162,4 +162,22 @@ describe('native terminal ownership', () => {
     f.sessions.attach(fresh.id, fresh.token, f.client(), { cols: 80, rows: 24 });
     expect(f.spawn).toHaveBeenCalledTimes(1);
   });
+
+  it('starts the agent with the launch colours and takes later ones from the attached view only', () => {
+    const f = useFixture();
+    const light = { foreground: '#241a13', background: '#faf2eb' };
+    const dark = { foreground: '#e7eaee', background: '#0e1215' };
+    const reported = vi.fn();
+    f.pty.colors = reported;
+    const created = f.sessions.createAgent({ ...f.request, colors: light });
+    expect(f.spawn.mock.calls[0]![0].colors).toEqual(light);
+    const connection = f.sessions.attach(created.id, created.token, f.client(), {
+      cols: 80,
+      rows: 24,
+    });
+    connection.colors(dark);
+    connection.disconnect();
+    connection.colors(light);
+    expect(reported).toHaveBeenCalledExactlyOnceWith(dark);
+  });
 });

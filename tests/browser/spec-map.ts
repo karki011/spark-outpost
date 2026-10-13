@@ -86,6 +86,7 @@ export const SPEC_GROUPS = {
     'chat-links',
     'chat-terminal',
     'native-terminal',
+    'native-terminal-colors',
     'native-terminal-launch',
     'native-terminal-links',
     'native-terminal-restart',

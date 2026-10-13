@@ -74,6 +74,7 @@ function forwardClientMessages(ws: WebSocket, terminal: AttachedTerminal) {
     const message = terminalClientMessageSchema.safeParse(parsed);
     if (!message.success) return;
     if (message.data.type === 'resize') terminal.resize(message.data.cols, message.data.rows);
+    if (message.data.type === 'colors') terminal.colors(message.data.colors);
     if (message.data.type === 'close') terminal.close();
   });
   ws.on('close', () => terminal.disconnect());

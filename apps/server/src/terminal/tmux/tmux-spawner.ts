@@ -22,6 +22,7 @@ export function tmuxSpawner(
       return control(host, {
         sessionId: options.sessionId,
         adopt: options.adopt === true,
+        colors: options.colors,
         cols: options.cols,
         rows: options.rows,
         cwd: options.cwd ?? host.env.HOME ?? '/',

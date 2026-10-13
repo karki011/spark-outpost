@@ -257,6 +257,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         command: launch.command,
         args: launch.args,
         env: launch.env,
+        colors: request.colors,
         onExit: exited(running),
       });
       return {

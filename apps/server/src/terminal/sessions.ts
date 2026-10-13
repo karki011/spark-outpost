@@ -188,6 +188,9 @@ export class TerminalSessions {
       resize: (cols, rows) => {
         if (session.client === client) session.pty?.resize(cols, rows);
       },
+      colors: (colors) => {
+        if (session.client === client) session.pty?.colors?.(colors);
+      },
       close: () => {
         if (session.client === client) this.end(session, 'closed', null);
       },
@@ -218,6 +221,7 @@ export class TerminalSessions {
                   args: agent.args,
                   sessionId: session.id,
                   ...(agent.adopt ? { adopt: true } : {}),
+                  ...(agent.colors ? { colors: agent.colors } : {}),
                   ...(agent.env ? { env: agent.env } : {}),
                 }
               : {}),
@@ -274,6 +278,7 @@ export class TerminalSessions {
     return {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
+      colors: () => undefined,
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };
