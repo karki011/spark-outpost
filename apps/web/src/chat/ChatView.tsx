@@ -308,6 +308,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   chat={detail.data.conversation}
                   detail={detail.data}
                   panel={panel}
+                  browserHome={hasBrowser ? browserHome : null}
                 />
               ) : terminalDraft ? (
                 <TerminalComposer

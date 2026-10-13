@@ -7,6 +7,10 @@ import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { MAC } from '../ui/shortcuts.ts';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
+import type { BrowserHome } from '../browser/use-view-placement.ts';
+import { RestartNotice } from './RestartNotice.tsx';
+import { useTerminalLinks } from './use-terminal-links.tsx';
 import { nativeTerminalApi } from './terminal-api.ts';
 import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
@@ -23,10 +27,12 @@ export function NativeTerminalWorkspace({
   chat,
   detail,
   panel = null,
+  browserHome = null,
 }: {
   chat: ConversationSummary;
   detail: ConversationDetail;
   panel?: FocusPanel | null;
+  browserHome?: BrowserHome | null;
 }) {
   const client = useQueryClient();
   const { remote } = useRemoteClient();
@@ -47,12 +53,14 @@ export function NativeTerminalWorkspace({
   const [mouseReporting, setMouseReporting] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const stopGroup = useRef<HTMLDivElement>(null);
+  const rejoined = useRef<string | null>(null);
   const reported = session.data ?? chat.terminal ?? null;
   const native = reported ? shownSession(reported, exited) : null;
   const ended = native ? terminalEnded(native) : false;
   const relaunch = reported ? terminalRelaunch(reported, chat.latestRun?.status ?? null) : null;
   const showsScreen = !session.isPending && (!ended || opened);
   const repos = useLinkedProjects(chat.projectIds);
+  const links = useTerminalLinks(browserHome, repos);
   const capabilities = useQuery({
     ...capabilitiesQuery(native?.provider ?? 'claude'),
     staleTime: CAPABILITIES_STALE_MS,
@@ -77,6 +85,14 @@ export function NativeTerminalWorkspace({
     setExited(false);
     setAttempt((value) => value + 1);
   };
+  const restartedAt = reported?.readopted?.at ?? null;
+  const reconnectAfterRestart = useStableCallback(reconnect);
+  useEffect(() => {
+    if (restartedAt && link === 'disconnected' && rejoined.current !== restartedAt) {
+      rejoined.current = restartedAt;
+      reconnectAfterRestart();
+    }
+  }, [restartedAt, link, reconnectAfterRestart]);
   const act = async (action: 'resume' | 'restart' | 'stop') => {
     if (!native || busy) return;
     setBusy(true);
@@ -159,6 +175,7 @@ export function NativeTerminalWorkspace({
           {session.error.message}
         </p>
       )}
+      {native && !ended && <RestartNotice session={native} />}
       {ended && showsScreen && (
         <p className="native-note" role="status">
           This terminal session has stopped. Its last output is shown below.
@@ -181,6 +198,7 @@ export function NativeTerminalWorkspace({
               setLink('disconnected');
             }}
             onMouseReporting={setMouseReporting}
+            links={links.opener}
             onEnded={() => {
               setExited(true);
               setLink('disconnected');
@@ -223,6 +241,7 @@ export function NativeTerminalWorkspace({
           </div>
         )}
       </div>
+      {links.menu}
       {pending.length > 0 && (
         <div className="native-approvals" role="group" aria-label="Waiting for your approval">
           {pending.map((approval) => (

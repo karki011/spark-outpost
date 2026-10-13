@@ -1,25 +1,9 @@
-import '../conversations/chat-menu.css';
 import { useEffect, useState } from 'react';
 import { anchorFor } from '../conversations/menu-anchor.ts';
-import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { CopyIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
-import { GlobeIcon } from './BrowserIcons.tsx';
-import {
-  anchorOf,
-  defaultBrowserUrl,
-  linkAction,
-  linkFacts,
-  openInDefaultBrowser,
-  openInPane,
-  paneTarget,
-} from './chat-links.ts';
+import { anchorOf, linkAction, linkFacts, openInPane, paneTarget } from './chat-links.ts';
+import { LinkMenu, type OpenLinkMenu } from './LinkMenu.tsx';
 import type { BrowserHome } from './use-view-placement.ts';
-
-interface OpenLinkMenu {
-  url: string;
-  anchor: MenuAnchor;
-}
 
 export function ChatLinks({ home }: { home: BrowserHome }) {
   const [menu, setMenu] = useState<OpenLinkMenu | null>(null);
@@ -51,28 +35,5 @@ export function ChatLinks({ home }: { home: BrowserHome }) {
   }, [open]);
 
   if (!menu) return null;
-  const close = () => {
-    setMenu(null);
-    menu.anchor.focusBack?.focus();
-  };
-  const run = (action: (url: string) => void) => () => {
-    close();
-    action(menu.url);
-  };
-  return (
-    <MenuShell anchor={menu.anchor} label="Link options" page="main" onClose={close}>
-      <MenuItem icon={<GlobeIcon />} label="Open in Spark browser" onSelect={run(open)} />
-      <MenuItem
-        icon={<ExternalLinkIcon />}
-        label="Open in default browser"
-        disabled={defaultBrowserUrl(menu.url, window.location.origin) === null}
-        onSelect={run(openInDefaultBrowser)}
-      />
-      <MenuItem
-        icon={<CopyIcon />}
-        label="Copy link"
-        onSelect={run((url) => void navigator.clipboard.writeText(url).catch(() => undefined))}
-      />
-    </MenuShell>
-  );
+  return <LinkMenu menu={menu} openInPane={open} onClose={() => setMenu(null)} />;
 }
