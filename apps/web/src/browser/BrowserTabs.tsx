@@ -50,9 +50,7 @@ function PageTab({
           </span>
         )}
         {tab.owner === 'agent' && (
-          <span className={tab.driving ? 'bp-agent driving' : 'bp-agent'}>
-            Agent{tab.driving && <span className="sr-only"> is working on this tab</span>}
-          </span>
+          <span className={tab.driving ? 'bp-agent driving' : 'bp-agent'}>Agent</span>
         )}
         <span className="bp-tab-title">{label}</span>
       </button>

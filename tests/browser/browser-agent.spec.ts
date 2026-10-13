@@ -79,7 +79,9 @@ test('the pane marks the tab the agent is working on and says what it last did',
   await expect(pane.getByRole('status').filter({ hasText: 'Agent:' })).toHaveText(
     'Agent: Clicked button "Search"',
   );
-  await expect(pane.getByRole('tab', { name: /Agent is working on this tab/ })).toBeVisible();
+  await expect(pane.getByRole('tab', { name: 'Agent Docs' }).locator('.bp-agent')).toHaveClass(
+    /driving/,
+  );
   await expect(pane.getByText('Spark is driving')).toBeVisible();
   await expect(pane.getByLabel('Address')).toHaveValue(`${SITE}/guide`);
   const axe = await new AxeBuilder({ page })
