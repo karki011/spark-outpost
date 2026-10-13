@@ -5,6 +5,14 @@ import {
   browserPlaceSchema,
   browserTabSchema,
 } from './browser.ts';
+import {
+  BROWSER_ACT_LINE_MAX,
+  BROWSER_ACT_TEXT_MAX,
+  browserActDirectionSchema,
+  browserActKeySchema,
+  browserActKindSchema,
+  browserActTargetSchema,
+} from './browser-act.ts';
 import { SIGN_IN_ORIGIN_MAX, SIGN_IN_PASSWORD_MAX, SIGN_IN_USERNAME_MAX } from './sign-ins.ts';
 
 export const BROWSER_HOST_ENV = 'SPARK_BROWSER_HOST';
@@ -57,7 +65,18 @@ export const browserHostRequestSchema = z.discriminatedUnion('op', [
     limit: z.number().int().min(1).max(BROWSER_LOG_ENTRIES_MAX),
   }),
   z.object({ op: z.literal('end_run'), ...chat }),
-  z.object({ op: z.literal('page'), ...chat, tab }),
+  z.object({ op: z.literal('page'), ...chat, tab, ref: z.string().max(20).optional() }),
+  z.object({
+    op: z.literal('act'),
+    ...chat,
+    tab,
+    action: browserActKindSchema,
+    ref: z.string().max(20).optional(),
+    text: z.string().max(BROWSER_ACT_TEXT_MAX).optional(),
+    key: browserActKeySchema.optional(),
+    direction: browserActDirectionSchema.optional(),
+    origin: z.string().min(1).max(300),
+  }),
   z.object({
     op: z.literal('sign_in'),
     ...chat,
@@ -131,8 +150,20 @@ export type BrowserLogsResult = z.infer<typeof browserLogsResultSchema>;
 
 export const browserEndRunResultSchema = z.object({ closed: z.number().int().nonnegative() });
 
-export const browserPageResultSchema = z.object(tabFacts);
+export const browserPageResultSchema = z.object({
+  ...tabFacts,
+  target: browserActTargetSchema.nullable().optional(),
+});
 export type BrowserPageResult = z.infer<typeof browserPageResultSchema>;
+
+export const browserActResultSchema = z.object({
+  ...tabFacts,
+  action: browserActKindSchema,
+  target: browserActTargetSchema.nullable(),
+  from: z.string().max(BROWSER_URL_MAX),
+  did: z.string().max(BROWSER_ACT_LINE_MAX),
+});
+export type BrowserActResult = z.infer<typeof browserActResultSchema>;
 
 export const browserSignInResultSchema = z.object({
   ...tabFacts,
@@ -148,6 +179,7 @@ export const browserHostResultSchemas = {
   logs: browserLogsResultSchema,
   end_run: browserEndRunResultSchema,
   page: browserPageResultSchema,
+  act: browserActResultSchema,
   sign_in: browserSignInResultSchema,
 } as const;
 
@@ -159,6 +191,8 @@ export const browserHostErrorCodeSchema = z.enum([
   'user_picking',
   'load_failed',
   'no_form',
+  'sensitive_field',
+  'page_changed',
   'cancelled',
   'failed',
 ]);

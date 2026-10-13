@@ -8,6 +8,7 @@ import {
 import { attachCdp, type Cdp } from './cdp.ts';
 import { RefMap } from './outline.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
+import { navigationAllowed } from './request-guard.ts';
 import type { TabFacts } from './tab-rules.ts';
 
 export interface TabHooks {
@@ -47,6 +48,7 @@ export class PaneTab {
   active = false;
   picking = false;
   driving = false;
+  lastAction: string | null = null;
   lastUsed = Date.now();
   status: number | null = null;
   error: string | null = null;
@@ -109,6 +111,7 @@ export class PaneTab {
       pinned: this.pinned,
       driving: this.driving,
       picking: this.picking,
+      lastAction: this.lastAction,
       error: this.error,
     };
   }
@@ -145,7 +148,10 @@ export class PaneTab {
       return { action: 'deny' };
     });
     contents.on('will-navigate', (event, url) => {
-      if (classifyBrowserUrl(url) === 'blocked') event.preventDefault();
+      if (!navigationAllowed(url)) event.preventDefault();
+    });
+    contents.on('will-redirect', (event, url, _inPlace, isMainFrame) => {
+      if (isMainFrame && !navigationAllowed(url)) event.preventDefault();
     });
     contents.on('did-start-loading', () => this.note({ loading: true, error: null }));
     contents.on('did-stop-loading', () => this.note({ loading: false }));
@@ -220,14 +226,18 @@ export class PaneTab {
     return this.waking;
   }
 
-  history(step: 'back' | 'forward' | 'reload' | 'stop'): void {
+  history(step: 'back' | 'forward' | 'reload' | 'stop'): boolean {
     const contents = this.live?.view.webContents;
-    if (!contents || contents.isDestroyed()) return;
-    if (step === 'back') contents.navigationHistory.goBack();
-    if (step === 'forward') contents.navigationHistory.goForward();
+    if (!contents || contents.isDestroyed()) return false;
+    const history = contents.navigationHistory;
+    if (step === 'back' && !history.canGoBack()) return false;
+    if (step === 'forward' && !history.canGoForward()) return false;
+    if (step === 'back') history.goBack();
+    if (step === 'forward') history.goForward();
     if (step === 'reload') contents.reload();
     if (step === 'stop') contents.stop();
     this.touch();
+    return true;
   }
 
   sleep(): void {
@@ -237,6 +247,7 @@ export class PaneTab {
     this.live = null;
     this.loading = false;
     this.picking = false;
+    this.lastAction = null;
     this.refs.clear();
     this.filled.clear();
     for (const step of [

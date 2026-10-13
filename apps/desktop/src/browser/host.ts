@@ -99,6 +99,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     if (!url) return;
     tab.owner = 'user';
     tab.runId = null;
+    tab.lastAction = null;
     await tab.load(url);
     panes.noteChange(chatId);
     panes.layout();

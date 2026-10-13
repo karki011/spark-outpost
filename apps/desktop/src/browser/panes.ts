@@ -9,7 +9,7 @@ import {
   type BrowserPlacement,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import { partitionFor } from './request-guard.ts';
+import { partitionFor, type GuardFacts } from './request-guard.ts';
 import { browserSession } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
@@ -86,6 +86,12 @@ export class BrowserPanes {
     const roots = this.rootsByPartition.get(partition) ?? new Set<string>();
     for (const root of pane.home.roots) roots.add(root);
     this.rootsByPartition.set(partition, roots);
+  }
+
+  guardFacts(chatId: string): GuardFacts {
+    const pane = this.chats.get(chatId);
+    const roots = pane ? (this.rootsByPartition.get(this.partitionOf(pane)) ?? []) : [];
+    return { blockedPorts: this.options.blockedPorts(), roots: [...roots] };
   }
 
   tabsOf(chatId: string): readonly PaneTab[] {

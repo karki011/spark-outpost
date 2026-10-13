@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AGENT_OPEN_REFUSALS,
+  agentOpenProblem,
   insideRoots,
   isBrowserPartition,
+  navigationAllowed,
   partitionFor,
   projectPartition,
   requestAllowed,
@@ -52,6 +55,85 @@ describe('what a page in the pane may request', () => {
     expect(
       withoutSparkToken({ Accept: '*/*', 'X-Spark-Token': 'guess', 'x-spark-token': 'guess' }),
     ).toEqual({ Accept: '*/*' });
+  });
+});
+
+describe('what an agent may open', () => {
+  it.each([
+    'https://example.com/pricing?plan=pro',
+    'http://example.com:8080/',
+    'https://xn--bcher-kva.example/',
+    'https://bücher.example/katalog',
+    'https://[2001:db8::1]/',
+    'http://192.168.1.20:3000/',
+    'http://localhost:5173/',
+    'http://app.test:4000/',
+    'file:///Users/me/app/index.html',
+  ])('opens %s', (url) => {
+    expect(agentOpenProblem(url, facts)).toBeNull();
+  });
+
+  it.each([
+    'http://127.0.0.1:32682/api/health',
+    'http://localhost:55050/',
+    'https://rebind.attacker.example:32682/',
+    'http://[::1]:61884/mcp',
+    'http://0.0.0.0:32682/',
+    'http://2130706433:32682/',
+  ])('refuses %s, one of Spark’s own ports on any host', (url) => {
+    expect(agentOpenProblem(url, facts)).toBe(AGENT_OPEN_REFUSALS.sparkPort);
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html,<p>x</p>',
+    'chrome://settings',
+    'devtools://devtools/bundled/inspector.html',
+    'view-source:https://example.com/',
+    'ftp://example.com/x',
+    'blob:https://example.com/1',
+    'about:blank',
+    'https://user:pass@example.com/',
+    'https://user@example.com/',
+    'not a url',
+    `https://example.com/${'a'.repeat(5000)}`,
+  ])('refuses %s as not a web address', (url) => {
+    expect(agentOpenProblem(url, facts)).toBe(AGENT_OPEN_REFUSALS.address);
+  });
+
+  it('refuses a file outside the chat’s projects', () => {
+    expect(agentOpenProblem('file:///etc/passwd', facts)).toBe(AGENT_OPEN_REFUSALS.file);
+    expect(agentOpenProblem('file:///Users/me/app/../.ssh/id_rsa', facts)).toBe(
+      AGENT_OPEN_REFUSALS.file,
+    );
+  });
+});
+
+describe('where a page may take a tab, by link, script or redirect', () => {
+  it('lets a redirect or link go to another web page', () => {
+    expect(navigationAllowed('https://other.example/landing')).toBe(true);
+    expect(navigationAllowed('http://localhost:5173/')).toBe(true);
+  });
+
+  it('stops a redirect to a scheme that is not the web or to an address with a login in it', () => {
+    for (const url of [
+      'javascript:alert(1)',
+      'data:text/html,<p>x</p>',
+      'chrome://settings',
+      'https://user:pass@example.com/',
+    ]) {
+      expect(navigationAllowed(url), url).toBe(false);
+    }
+  });
+
+  it('has every hop of a redirect checked against Spark’s ports and the project folders', () => {
+    for (const hop of [
+      'http://127.0.0.1:32682/api/conversations',
+      'https://rebind.attacker.example:55050/',
+      'file:///etc/passwd',
+    ]) {
+      expect(requestAllowed(hop, facts), hop).toBe(false);
+    }
   });
 });
 
