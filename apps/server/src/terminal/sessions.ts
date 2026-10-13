@@ -210,6 +210,8 @@ export class TerminalSessions {
     const kind = session.kind;
     if (kind.type === 'view') return;
     const agent = kind.type === 'shell' ? kind.agent : undefined;
+    const spawned = agent?.observer?.begin('spawn');
+    const firstOutput = agent?.observer?.begin('first_output');
     const pty = this.spawn(
       kind.type === 'shell'
         ? {
@@ -223,11 +225,13 @@ export class TerminalSessions {
                   ...(agent.adopt ? { adopt: true } : {}),
                   ...(agent.colors ? { colors: agent.colors } : {}),
                   ...(agent.env ? { env: agent.env } : {}),
+                  ...(agent.observer ? { observer: agent.observer } : {}),
                 }
               : {}),
           }
         : size,
     );
+    spawned?.();
     session.pty = pty;
     if (kind.type === 'shell') {
       this.watcher?.opened({
@@ -240,6 +244,7 @@ export class TerminalSessions {
     }
     let prefilled = kind.type === 'shell';
     pty.onData((data) => {
+      firstOutput?.();
       this.handleOutput(session, data);
       if (!prefilled && kind.type === 'setup') {
         prefilled = true;
@@ -421,6 +426,7 @@ export class TerminalSessions {
     keepRunning = false,
   ) {
     if (!this.sessions.delete(session.id)) return;
+    if (isAgent(session.kind)) session.kind.agent.observer?.ended();
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);

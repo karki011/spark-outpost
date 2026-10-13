@@ -1,0 +1,4 @@
+#!/bin/sh
+[ -f .spark-test-slow-install ] || exit 127
+sleep "$(cat .spark-test-slow-install)"
+mkdir -p node_modules

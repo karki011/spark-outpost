@@ -3,6 +3,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isSecretEnvName } from '../../setup/environment.ts';
 import { killProcessTree } from '../process-group.ts';
+import type { StartObserver } from '../start-timing.ts';
 import { tmux, tryTmux, type TmuxHost } from './tmux-host.ts';
 
 const PREFIX = 'spark-';
@@ -42,6 +43,7 @@ export interface TmuxStart {
   command: string;
   args: readonly string[];
   env: Record<string, string>;
+  observer?: StartObserver;
 }
 
 export const sessionName = (sessionId: string) => `${PREFIX}${sessionId}`;

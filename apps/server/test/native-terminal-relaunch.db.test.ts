@@ -23,6 +23,56 @@ const runs = async () =>
 const messages = async () => (await f.t.db.query('SELECT id FROM messages')).rowCount;
 
 describe('native terminal launch recovery', () => {
+  it('reports the phase a start is in, and a stop during it ends the start when placing returns', async () => {
+    const place = f.place;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    f.place = async (deps, input, create) => {
+      deps.onPhase?.('worktree');
+      await held;
+      return place(deps, input, create);
+    };
+    const changed: string[] = [];
+    f.onStartPhase = (id) => changed.push(id);
+    const launch = f.launch().catch((error: unknown) => error);
+    await expect.poll(() => f.runtime.startPhase(f.conversationId)).toBe('worktree');
+    const stopped = f.runtime.stop(f.conversationId);
+    expect(await f.runtime.startPhase(f.conversationId)).toBe('worktree');
+    release();
+    const failure = await launch;
+    await stopped;
+    expect(failure).toBeInstanceOf(NativeRuntimeError);
+    expect((failure as NativeRuntimeError).status).toBe(409);
+    expect(await f.runtime.startPhase(f.conversationId)).toBeNull();
+    expect(f.spawn).not.toHaveBeenCalled();
+    expect(changed).toEqual([f.conversationId, f.conversationId, f.conversationId]);
+    f.place = place;
+    await f.launch();
+    expect(await f.runtime.startPhase(f.conversationId)).toBeNull();
+  });
+
+  it('logs one timing line per start with the failing phase and no path or message', async () => {
+    const place = f.place;
+    f.place = async () => {
+      throw new Error('fatal: could not create work tree dir /private/secret/path');
+    };
+    await f.launch().catch(() => undefined);
+    expect(f.startLines).toHaveLength(1);
+    expect(f.startLines[0]).toMatch(
+      /^Terminal start session=none provider=claude outcome=failed total_ms=\d+ locate_cli_ms=\d+ failed_in=worktree error=NativeRuntimeError status=500$/,
+    );
+    f.place = place;
+    await f.launch();
+    expect(f.startLines).toHaveLength(1);
+    await f.runtime.stop(f.conversationId);
+    expect(f.startLines).toHaveLength(2);
+    expect(f.startLines[1]).toMatch(
+      /^Terminal start session=[0-9a-f-]{36} provider=claude outcome=ended_before_output total_ms=\d+ tmux=no worktree=none locate_cli_ms=\d+ prepare_session_ms=\d+ worktree_ms=\d+ grant_ms=\d+ prepare_launch_ms=\d+ spawn_ms=\d+ new_session=direct$/,
+    );
+  });
+
   it('starts again with the saved first message after the terminal limit refused the launch', async () => {
     const request = { prompt: 'Check the native fixture', messageId: randomUUID(), resume: false };
     const shell = f.terminals.createShell({ cwd: '/tmp', conversationId: null });

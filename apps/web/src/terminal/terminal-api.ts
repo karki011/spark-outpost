@@ -5,6 +5,7 @@ import {
   createShellResponseSchema,
   createTerminalResponseSchema,
   shellBusyResponseSchema,
+  terminalStartSchema,
   type CreateShellResponse,
   type CreateTerminalResponse,
   type ProviderId,
@@ -58,7 +59,15 @@ export async function deleteTerminalSession(id: string): Promise<void> {
   if (!response.ok) throw new Error('The terminal could not be stopped. Try again.');
 }
 
+export const nativeTerminalKey = (conversationId: string) =>
+  ['native-terminal', conversationId] as const;
+
+export const terminalStartKey = (conversationId: string) =>
+  ['terminal-start', conversationId] as const;
+
 export const nativeTerminalApi = {
+  startPhase: (conversationId: string) =>
+    request(terminalStartSchema, `/conversations/${conversationId}/terminal/start`),
   stop: (conversationId: string) =>
     request(z.null(), `/conversations/${conversationId}/terminal`, { method: 'DELETE' }),
   get: (conversationId: string) =>

@@ -3,7 +3,7 @@ import '../chat/composer/composer-popovers.css';
 import '../chat/project/project.css';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useIsMutating, useQuery } from '@tanstack/react-query';
-import type { ChatSettings } from '@spark-outpost/contracts';
+import { terminalStartText, type ChatSettings } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { ComposerShell, composerRows } from '../chat/composer/ComposerShell.tsx';
 import { SendButton } from '../chat/composer/SendButton.tsx';
@@ -19,6 +19,7 @@ import {
   terminalAgentName,
   terminalModeBlocked,
 } from './terminal-agents.ts';
+import { nativeTerminalApi, terminalStartKey } from './terminal-api.ts';
 import { useTerminalStart, type TerminalStartEvents } from './use-terminal-start.ts';
 
 const PROMPT_LABEL = 'What would you like to work on?';
@@ -75,7 +76,19 @@ export function TerminalComposer({
     if (!ready || secrets.blocks(prompt)) return;
     void launch.start({ conversationId, choice, projectIds, agentMode: mode, prompt });
   };
-  const pending = launch.busy ? 'Starting terminal…' : folderPending ? 'Linking folder…' : null;
+  const startPhase = useQuery({
+    queryKey: terminalStartKey(conversationId),
+    queryFn: () => nativeTerminalApi.startPhase(conversationId),
+    enabled: launch.busy,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+  const pending = launch.busy
+    ? terminalStartText(startPhase.data?.phase ?? null, agentName)
+    : folderPending
+      ? 'Linking folder…'
+      : null;
   return (
     <>
       <div className="thread-wrap">

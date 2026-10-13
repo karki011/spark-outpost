@@ -14,7 +14,7 @@ import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
-import { chooseTmux, killTmuxServer } from '../terminal/tmux/tmux-host.ts';
+import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
 import { tmuxSpawner } from '../terminal/tmux/tmux-spawner.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
@@ -144,10 +144,8 @@ const terminalTmux = chooseTmux(
   join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
   config.SPARK_DATA_DIR ? null : localDir,
 );
-if (!terminalTmux.host)
-  console.warn(
-    `Terminal sessions run without tmux (${terminalTmux.reason}); they stop when Spark restarts.`,
-  );
+if (terminalTmux.host) console.log(tmuxChoiceLine(terminalTmux));
+else console.warn(tmuxChoiceLine(terminalTmux));
 const terminals = new TerminalSessions(
   tmuxSpawner(loginShellSpawner(), terminalTmux.host),
   defaultLimits,
@@ -200,6 +198,8 @@ const nativeTerminals = await createNativeRuntime({
   locateCli: loginShellLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
+  onStartPhase: (conversationId) =>
+    appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
 await nativeTerminals.recover();
 desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);

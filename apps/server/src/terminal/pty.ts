@@ -2,6 +2,7 @@ import os from 'node:os';
 import type { TerminalColors } from '@spark-outpost/contracts';
 import { spawn as spawnNodePty } from 'node-pty';
 import { childEnvironment } from '../setup/environment.ts';
+import type { StartObserver } from './start-timing.ts';
 
 export interface PtyProcess {
   readonly pid: number;
@@ -24,6 +25,7 @@ export interface PtyOptions {
   sessionId?: string;
   adopt?: boolean;
   colors?: TerminalColors | undefined;
+  observer?: StartObserver;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;

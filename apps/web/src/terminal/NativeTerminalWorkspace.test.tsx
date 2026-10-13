@@ -21,6 +21,7 @@ const fake = vi.hoisted(() => ({
 vi.mock('./terminal-api.ts', () => ({
   nativeTerminalApi: { get: fake.get, launch: fake.launch, attach: fake.attach, stop: fake.stop },
   deleteTerminalSession: fake.stop,
+  nativeTerminalKey: (id: string) => ['native-terminal', id],
 }));
 vi.mock('./TerminalCompanion.tsx', () => ({
   TerminalCompanion: () => <span data-testid="companion" />,

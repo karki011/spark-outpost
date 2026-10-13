@@ -1,4 +1,4 @@
-import { access, readFile, readdir, rm } from 'node:fs/promises';
+import { access, readFile, readdir, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { CONFIG_FILES, TOOL_FILES, packageManager, type CheckCommand } from '../checks/detect.ts';
 import { runCheck, type CheckRun } from '../checks/run-check.ts';
@@ -28,6 +28,9 @@ export interface DepsOptions {
   signal?: AbortSignal;
   run?: RunCommand;
   onInstall?: (command: string) => void;
+  onPhase?: (phase: 'copy' | 'install') => void;
+  staging?: string;
+  onProcess?: (pid: number) => void;
 }
 
 export const DEPS_PREP_LIMIT_MS = 90_000;
@@ -96,6 +99,7 @@ function defaultRun(options: DepsOptions): RunCommand {
       timeoutMs: network ? DEPS_INSTALL_LIMIT_MS : DEPS_PREP_LIMIT_MS,
       registryEnv: network,
       ...(options.signal ? { signal: options.signal } : {}),
+      ...(options.onProcess ? { onStart: options.onProcess } : {}),
     });
   };
 }
@@ -116,17 +120,26 @@ async function cloneFolders(
   folders: readonly string[],
   platform: NodeJS.Platform,
   run: RunCommand,
+  staging?: string,
 ): Promise<string | null> {
   const cloned: string[] = [];
   for (const folder of folders) {
     const target = path.join(copy, folder, 'node_modules');
     if (!(await exists(path.join(copy, folder))) || (await exists(target))) continue;
-    const argv = cloneCommand(platform, path.join(main, folder, 'node_modules'), target);
+    const landing = staging ? path.join(staging, String(cloned.length)) : target;
+    const argv = cloneCommand(platform, path.join(main, folder, 'node_modules'), landing);
     if (!argv) return 'no copy-on-write clone on this platform';
     const result = await run(argv, copy);
-    if (!succeeded(result)) {
+    const placed =
+      succeeded(result) &&
+      (landing === target ||
+        (await rename(landing, target).then(
+          () => true,
+          () => false,
+        )));
+    if (!placed) {
       await Promise.all(
-        [...cloned, target].map((dir) => rm(dir, { recursive: true, force: true })),
+        [...cloned, target, landing].map((dir) => rm(dir, { recursive: true, force: true })),
       );
       return `clone failed: ${firstLine(result)}`;
     }
@@ -178,6 +191,7 @@ export async function prepareDependencies(
       notes.push('no lockfile for an offline install');
       return false;
     }
+    options.onPhase?.('install');
     const installed = await run(install, copy);
     if (!succeeded(installed)) notes.push(`${install.join(' ')}: ${firstLine(installed)}`);
     return succeeded(installed);
@@ -187,7 +201,8 @@ export async function prepareDependencies(
       notes.push('the main copy has no node_modules');
       return false;
     }
-    const failed = await cloneFolders(main, copy, folders, platform, run);
+    options.onPhase?.('copy');
+    const failed = await cloneFolders(main, copy, folders, platform, run, options.staging);
     if (failed) notes.push(failed);
     return failed === null;
   };
@@ -199,6 +214,7 @@ export async function prepareDependencies(
     const seeded = manager !== 'npm' && (await tryClone());
     const command = installCommand(manager, present, true);
     options.onInstall?.(command.join(' '));
+    options.onPhase?.('install');
     const installed = await run(command, copy, true);
     if (succeeded(installed)) return done('install', null);
     return done(seeded ? cloned : 'skipped', installFailure(command, installed), true);

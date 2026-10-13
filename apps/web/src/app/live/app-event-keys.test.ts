@@ -180,4 +180,17 @@ describe('app event invalidation', () => {
     expect(isLiveQueryKey(['setup'])).toBe(false);
     expect(isLiveQueryKey(['projects'])).toBe(false);
   });
+
+  it('refetches only that chat’s terminal start phase when it changes', () => {
+    const invalidations = mergeInvalidations([
+      { kind: 'terminal_start', conversationId: A, runId: null },
+    ]);
+    expect(invalidations).toEqual([
+      { queryKey: ['terminal-start', A], exact: true },
+      { queryKey: ['native-terminal', A], exact: true },
+    ]);
+    expect(
+      mergeInvalidations([{ kind: 'terminal_start', conversationId: null, runId: null }]),
+    ).toEqual([]);
+  });
 });

@@ -47,7 +47,9 @@ export function controlPty(
 ): PtyProcess {
   const adopted = start.adopt ? readPane(host, start.sessionId) : null;
   if (start.adopt && !adopted) throw new Error('That terminal session is no longer running.');
+  const created = start.observer?.begin('new_session');
   const pane = adopted ?? createSession(host, start);
+  created?.();
   const decoder = new StringDecoder('utf8');
   const withoutAnswered = createAnsweredQueryFilter();
   const dataListeners: ((data: string) => void)[] = [];
@@ -106,6 +108,7 @@ export function controlPty(
     for (const command of colorReportCommands(pane.paneId, colors)) client.command(command);
   };
 
+  const attached = start.observer?.begin('attach');
   connect();
   if (start.adopt) {
     requestSeed(client!, pane.paneId, (text) => {
@@ -115,7 +118,7 @@ export function controlPty(
   } else {
     client!.command(`refresh-client -C ${Math.trunc(start.cols)}x${Math.trunc(start.rows)}`);
     if (start.colors) reportColors(start.colors);
-    client!.command(`send-keys -H -t ${pane.paneId} ${RELEASE_HELD_START}`);
+    client!.command(`send-keys -H -t ${pane.paneId} ${RELEASE_HELD_START}`, () => attached?.());
     for (const name of secretEnvNames(start.env))
       client!.command(`set-environment -u -t ${pane.paneId} ${name}`);
   }
