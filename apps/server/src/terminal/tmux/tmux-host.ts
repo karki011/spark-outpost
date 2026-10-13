@@ -17,8 +17,6 @@ const SOCKET_PATH_MAX_BYTES = 103;
 const VERSION = /^tmux \d/;
 const DEAD_WINDOW = 'spark-dead';
 
-export const deadWindowName = DEAD_WINDOW;
-
 export function tmuxConfigText(): string {
   return [
     'set -g status off',

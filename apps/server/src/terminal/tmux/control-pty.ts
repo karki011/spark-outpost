@@ -19,6 +19,7 @@ type Exit = { exitCode: number; signal?: number | undefined };
 
 const INPUT_CHUNK_BYTES = 256;
 const LOST_EXIT_CODE = 1;
+const SPLIT_WRITE_MS = 1;
 const SIGHUP = 1;
 
 export function hexWords(data: Buffer): string {
@@ -51,12 +52,21 @@ export function controlPty(
   let answered = false;
   let ended = false;
 
-  const emit = (text: string) => {
+  let batch = '';
+  const flush = () => {
+    const text = batch;
+    batch = '';
     if (text) for (const listener of dataListeners) listener(text);
+  };
+  const emit = (text: string) => {
+    if (!text) return;
+    if (!batch) setTimeout(flush, SPLIT_WRITE_MS);
+    batch += text;
   };
   const exit = (result: Exit) => {
     if (ended) return;
     ended = true;
+    flush();
     killSession(host, start.sessionId, null);
     client.close();
     for (const listener of exitListeners) listener(result);

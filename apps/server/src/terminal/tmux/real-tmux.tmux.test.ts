@@ -113,6 +113,27 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     await run.exit;
   });
 
+  it('delivers one write of the command as one piece', async () => {
+    const pty = controlPty(host, {
+      sessionId: 'a1',
+      adopt: false,
+      cols: 100,
+      rows: 24,
+      cwd: directory,
+      command: '/bin/sh',
+      args: [
+        '-c',
+        'i=0; while [ $i -lt 12 ]; do printf "<repaint of one whole line that is longer than tmux sends at once>"; sleep 0.05; i=$((i+1)); done',
+      ],
+      env: { PATH: '/usr/bin:/bin' },
+    });
+    const pieces: string[] = [];
+    pty.onData((data) => pieces.push(data));
+    await new Promise((done) => pty.onExit(done));
+    expect(pieces.join('').match(/<repaint/g)).toHaveLength(12);
+    for (const piece of pieces) expect(piece).toMatch(/^(<repaint[^<>]*>)+$/);
+  });
+
   it('reports the real exit status', async () => {
     expect(await start('exit 7').exit).toEqual({ exitCode: 7 });
   });
