@@ -28,7 +28,7 @@
 .ctxbar .session-choice > .seg button {
   padding: 3px 0;
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .ctxbar:has(.session-choice) {
     flex-wrap: wrap;
   }
