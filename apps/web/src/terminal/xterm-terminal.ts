@@ -9,7 +9,7 @@ import type { TerminalConnection, TerminalHandlers } from './terminal-connection
 import { focusBeside } from './leave-terminal.ts';
 import { terminalLinkFollower } from './link-pointer.ts';
 import { followMouseReporting, MOUSE_REPORTING_OFF } from './mouse-reporting.ts';
-import { refitWhenFontLoads, TERMINAL_FONT, TERMINAL_FONT_SIZE } from './terminal-font.ts';
+import { refitWhenFontLoads, terminalFont, TERMINAL_FONT_SIZE } from './terminal-font.ts';
 import { lineEditingSequence, tabAction } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { colorsFromTokens, themeFromTokens } from './terminal-theme.ts';
@@ -38,7 +38,7 @@ export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
 
 export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   return new Terminal({
-    fontFamily: TERMINAL_FONT,
+    fontFamily: terminalFont(),
     fontSize: TERMINAL_FONT_SIZE,
     lineHeight: 1.25,
     cursorBlink: true,
@@ -141,7 +141,7 @@ export function openXterm<T extends TerminalTicket>(
   const canInsert = () => !readOnly && !ended && socket?.readyState === WebSocket.OPEN;
   const selection = followSelection(terminal, element, canInsert, handlers.onSelection);
   const unfollowMouse = followMouseReporting(terminal, handlers.onMouseReporting);
-  refitWhenFontLoads(terminal, () => !disposed, sendResize);
+  const unfollowFont = refitWhenFontLoads(terminal, sendResize);
   terminal.attachCustomKeyEventHandler((event) => {
     const tab = tabAction(event);
     if (tab && readOnly) return false;
@@ -244,6 +244,7 @@ export function openXterm<T extends TerminalTicket>(
       unfollowDrops();
       selection.stop();
       unfollowMouse();
+      unfollowFont();
       unfollowLinks?.();
       inputSubscription.dispose();
       if (socket) socket.close();

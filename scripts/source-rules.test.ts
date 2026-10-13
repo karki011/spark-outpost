@@ -81,4 +81,21 @@ describe('checkSource', () => {
     expect(checkSource('apps/web/src/a.test.tsx', text)).toEqual([]);
     expect(checkSource('apps/server/src/a.tsx', text)).toEqual([]);
   });
+
+  it('flags a font fetched from the network, in markup and in code', () => {
+    const page = [
+      '<head>',
+      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
+      '<link href="https://fonts.googleapis.com/css2?family=Geist" rel="stylesheet" />',
+      '<link rel="stylesheet" href="/fonts/fonts.css" />',
+      '</head>',
+      '',
+    ].join('\n');
+    expect(checkSource('apps/web/index.html', page).map((violation) => violation.line)).toEqual([
+      2, 3,
+    ]);
+    const style = "@import url('https://fonts.googleapis.com/css2?family=Geist');\n";
+    expect(checkSource('apps/web/src/a.css', style)).toHaveLength(1);
+    expect(checkSource('apps/desktop/src/a.test.ts', style)).toEqual([]);
+  });
 });

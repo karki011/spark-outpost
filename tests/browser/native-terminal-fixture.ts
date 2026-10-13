@@ -3,9 +3,12 @@ import { openChats } from './navigation.ts';
 
 export const FIXTURE_READY = 'Ready for terminal input. No provider request is made.';
 
-export async function startFixtureTerminal(page: Page): Promise<Locator> {
+export async function startFixtureTerminal(
+  page: Page,
+  open: (page: Page) => Promise<void> = openChats,
+): Promise<Locator> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openChats(page);
+  await open(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page
     .getByRole('radiogroup', { name: 'Session type' })
