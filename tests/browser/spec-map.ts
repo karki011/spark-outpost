@@ -90,6 +90,7 @@ export const SPEC_GROUPS = {
     'native-terminal-links',
     'native-terminal-restart',
     'native-terminal-usage',
+    'terminal-font',
     'terminal-select',
     'command-terminal',
     'command-tab',

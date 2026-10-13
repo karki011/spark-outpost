@@ -7,6 +7,7 @@ import { markConnectionRestored, reportRequestError } from './app/connection/con
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
+import { warmTerminalFont } from './terminal/terminal-font.ts';
 import { syncThemeColor } from './theme/theme.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
@@ -28,6 +29,7 @@ configureLiveQueries(queryClient);
 
 markScrollbarStyle();
 syncThemeColor();
+warmTerminalFont();
 startTouchViewport();
 ignoreAnimationIterationListeners(EventTarget.prototype);
 

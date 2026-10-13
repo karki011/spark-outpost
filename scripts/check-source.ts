@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { checkSource } from './source-rules.ts';
 
-const HANDWRITTEN = /\.(ts|tsx|js|mjs|css|sql|sh)$/;
+const HANDWRITTEN = /\.(ts|tsx|js|mjs|css|sql|sh|html)$/;
 const EXCLUDED = /^(docs\/design\/|.*node_modules\/|.*dist\/|pnpm-lock\.yaml$)/;
 
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {

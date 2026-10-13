@@ -17,12 +17,7 @@ body {
   padding-bottom: 6vh;
   background: var(--bg);
   color: var(--text);
-  font:
-    13.5px/1.5 Geist,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font: 13.5px/1.5 var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -webkit-user-select: none;
   user-select: none;

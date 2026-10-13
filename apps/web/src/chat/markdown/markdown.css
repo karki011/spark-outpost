@@ -65,7 +65,7 @@
   margin: 16px 0;
 }
 .md :not(pre) > code {
-  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.86em;
   background: var(--raise);
   padding: 1px 5px;
@@ -105,10 +105,7 @@
   padding: 10px 14px;
   overflow-x: auto;
   background: transparent !important;
-  font:
-    12.5px/1.65 'Geist Mono',
-    ui-monospace,
-    monospace;
+  font: 12.5px/1.65 var(--font-mono);
 }
 .md-pre code {
   font: inherit;
