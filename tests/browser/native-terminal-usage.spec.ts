@@ -59,6 +59,11 @@ test('a Codex Terminal session shows its steps and tokens by turn, with no repor
     'unknown: Codex reports no cost',
   );
   await page.screenshot({ path: path.resolve('.local/report/terminal-usage-codex.png') });
+  await workspace.getByRole('button', { name: 'Focus terminal' }).click();
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await workspace.getByRole('button', { name: 'Exit focus' }).click();
+  await expect(panel.getByRole('list', { name: 'Usage by turn' })).toContainText('34K tokens');
 });
 
 test('a Terminal session shows its steps, tokens by turn and the total the CLI reports at exit', async ({

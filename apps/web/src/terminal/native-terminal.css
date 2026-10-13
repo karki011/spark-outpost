@@ -28,6 +28,14 @@
 .ctxbar .session-choice > .seg button {
   padding: 3px 0;
 }
+@media (max-width: 640px) {
+  .ctxbar:has(.session-choice) {
+    flex-wrap: wrap;
+  }
+  .ctxbar .session-choice {
+    flex-basis: 100%;
+  }
+}
 .native-intro {
   margin: auto;
 }
