@@ -30,19 +30,23 @@ const interruptRecord = (promptId: string) => ({
   message: { role: 'user', content: [{ type: 'text', text: '[Request interrupted by user]' }] },
 });
 
-export async function nativeRuntimeFixture(options: { maxShells?: number } = {}) {
+export async function nativeRuntimeFixture(
+  options: { maxShells?: number; provider?: 'claude' | 'codex' } = {},
+) {
+  const provider = options.provider ?? 'claude';
+  const agentMode = provider === 'claude' ? 'default' : 'agent';
   const t = await createTestDb();
   const folder = await realpath(await mkdtemp(join(tmpdir(), 'spark-native-lifecycle-')));
   const conversationId = randomUUID();
   await createConversation(t.db, t.workspaceId, conversationId, {
     sessionType: 'terminal',
-    terminalProvider: 'claude',
+    terminalProvider: provider,
     title: 'Native fixture',
   });
-  await t.db.query(
-    `UPDATE conversations SET overrides = '{"claude":{"agentMode":"default","level":"hands-off"}}'::jsonb WHERE id = $1`,
-    [conversationId],
-  );
+  await t.db.query(`UPDATE conversations SET overrides = $2::jsonb WHERE id = $1`, [
+    conversationId,
+    JSON.stringify({ [provider]: { agentMode, level: 'hands-off' } }),
+  ]);
   const inputs: NativeLaunchInput[] = [];
   const exits: ((exit: { exitCode: number }) => void)[] = [];
   const spawn = vi.fn((_options: PtyOptions): PtyProcess => ({
@@ -97,7 +101,7 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
     dataDir: folder,
     channel: 'test',
     mcp: host,
-    locateCli: async () => '/fixture/claude',
+    locateCli: async () => `/fixture/${provider}`,
     place: (...args) => fixture.place(...args),
     prepareLaunch: prepare,
     watchTranscript: (path, from, onLines) => {
@@ -135,7 +139,7 @@ export async function nativeRuntimeFixture(options: { maxShells?: number } = {})
         },
         body: JSON.stringify({
           sessionId: input.sessionId,
-          provider: 'claude',
+          provider,
           eventId: randomUUID(),
           payload: {
             hook_event_name: name,

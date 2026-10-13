@@ -172,4 +172,90 @@ describe('native terminal usage from the Claude transcript', () => {
     expect(seen.turns.map((turn) => turn.costUsd)).toEqual([0.105045, 0.120584, 0.010651]);
     expect(seen.reported?.costUsd).toBe(0.262432);
   });
+
+  it('adds a Claude sub-agent file named by its hook to the turn that is open', async () => {
+    await f.launch();
+    await prompt('5786d33b-f704-4717-a7ff-7351229f80a5');
+    await f.watchers[0]!.lines([reply('msg_1', 10)]);
+    await f.hook('PreToolUse', {
+      prompt_id: '5786d33b-f704-4717-a7ff-7351229f80a5',
+      transcript_path,
+      tool_use_id: 'toolu_child',
+      tool_name: 'Bash',
+      agent_id: 'aec39d782762e820d',
+    });
+    expect(f.watchers.map((watcher) => [watcher.path, watcher.from])).toEqual([
+      [transcript_path, null],
+      ['/fixture/projects/native-provider-session/subagents/agent-aec39d782762e820d.jsonl', 0],
+    ]);
+    await f.watchers[1]!.lines(
+      fixtureLines('claude-subagent.jsonl').map((line) => JSON.parse(line) as unknown),
+    );
+    await f.hook('Stop', { prompt_id: '5786d33b-f704-4717-a7ff-7351229f80a5' });
+    expect(f.watchers[1]!.close).toHaveBeenCalledTimes(1);
+    expect(await runs()).toMatchObject([
+      { input_tokens: 6, output_tokens: 50, cached_read_tokens: 29548, cached_write_tokens: 31059 },
+    ]);
+    expect((await usage()).turns[0]!.steps).toMatchObject([
+      { name: 'Bash', agentId: 'aec39d782762e820d' },
+    ]);
+  });
+});
+
+describe('native terminal usage from the Codex rollout file', () => {
+  const ROOT = '01a132f2-3c62-7571-81e1-82c276843d89';
+  const CHILD = '01a132f3-4263-77c3-a2be-67e299075490';
+  const TURN = '01a132f3-37c3-77c0-8dce-ffbe841b6436';
+  const rollout = `/fixture/sessions/rollout-2026-10-12T21-48-18-${ROOT}.jsonl`;
+  const childRollout = `/fixture/sessions/rollout-2026-10-12T21-49-25-${CHILD}.jsonl`;
+  const parsed = (name: string) => fixtureLines(name).map((line) => JSON.parse(line) as unknown);
+
+  it('stores the turn total with the model the hook names, and a sub-agent thread under its parent turn', async () => {
+    await f.cleanup();
+    f = await nativeRuntimeFixture({ provider: 'codex' });
+    await f.launch();
+    const codex = { session_id: ROOT, permission_mode: 'default', model: 'gpt-5.6-sol' };
+    await f.hook('UserPromptSubmit', {
+      ...codex,
+      prompt: 'x',
+      turn_id: TURN,
+      transcript_path: rollout,
+    });
+    const tokenRecords = parsed('codex-rollout.jsonl').filter(
+      (record) => (record as { type: string }).type === 'token_usage_record',
+    );
+    await f.watchers[0]!.lines(tokenRecords);
+    const child = {
+      ...codex,
+      turn_id: '01a132f3-435e-7140-a118-95cb75eaebd4',
+      agent_id: CHILD,
+      transcript_path: childRollout,
+      tool_use_id: 'exec-1',
+      tool_name: 'Bash',
+    };
+    expect(await f.hook('PreToolUse', child)).toBe(204);
+    expect(await f.hook('PostToolUse', child)).toBe(204);
+    expect(f.watchers[1]).toMatchObject({ path: childRollout, from: 0 });
+    await f.watchers[1]!.lines(parsed('codex-subagent-rollout.jsonl'));
+    await f.hook('Stop', { ...codex, turn_id: TURN });
+    expect(await runs()).toEqual([
+      {
+        status: 'succeeded',
+        used_model: 'gpt-5.6-sol',
+        input_tokens: 52932 + 35399,
+        output_tokens: 193 + 218,
+        total_tokens: 53125 + 35617,
+        cached_read_tokens: 51712 + 25088,
+        cached_write_tokens: 0,
+        thought_tokens: 42 + 43,
+        cost_usd: 0.085064,
+        cost_source: 'estimated',
+      },
+    ]);
+    const seen = await usage();
+    expect(seen.reported).toBeNull();
+    expect(seen.turns[0]!.steps).toMatchObject([
+      { id: 'exec-1', name: 'Bash', agentId: CHILD, endedAt: expect.any(String) },
+    ]);
+  });
 });

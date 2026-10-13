@@ -24,6 +24,7 @@ async function bridgeMain() {
       tool_name: 200,
       tool_use_id: 200,
       agent_id: 200,
+      model: 200,
       notification_type: 100,
       reason: 100,
       transcript_path: 4096,

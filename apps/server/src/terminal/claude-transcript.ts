@@ -80,17 +80,17 @@ function reported(record: Record<string, unknown>): TranscriptRecord[] {
   ];
 }
 
-export function claudeTranscriptParser(): TranscriptParser {
+export function claudeTranscriptParser(sidechain = false): TranscriptParser {
   let turnId: string | null = null;
   return {
     push(line) {
       const record = parseLine(line);
-      if (!isRecord(record) || record.isSidechain === true) return [];
-      if (record.type === 'cost-state') return reported(record);
+      if (!isRecord(record) || (record.isSidechain === true) !== sidechain) return [];
+      if (record.type === 'cost-state') return sidechain ? [] : reported(record);
       if (record.type === 'assistant') return response(record, turnId);
       if (record.type !== 'user' || typeof record.promptId !== 'string') return [];
       turnId = record.promptId;
-      return isRecord(record.message) && interruptText(record.message)
+      return !sidechain && isRecord(record.message) && interruptText(record.message)
         ? [{ kind: 'interrupt', turnId }]
         : [];
     },

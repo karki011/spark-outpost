@@ -45,6 +45,11 @@ function interruptEventId(session: LiveSession, nativeTurnId: string): string {
   ].join('-');
 }
 
+function otherTurn(session: LiveSession, event: NativeHookEvent): boolean {
+  const open = session.row.native_turn_id;
+  return Boolean(event.nativeTurnId && open && event.nativeTurnId !== open);
+}
+
 export function nativeObserver({
   db,
   waiters,
@@ -113,6 +118,10 @@ export function nativeObserver({
       return;
     if (!retryCompletion && event.nativeTurnId && session.completedTurns.has(event.nativeTurnId))
       return;
+    if (!retryCompletion && event.tool?.agentId && session.context && otherTurn(session, event)) {
+      await recordNativeStep(db, session.context.input.identity.runId, event.tool);
+      return;
+    }
     if (
       !retryCompletion &&
       event.kind !== 'prompt' &&
@@ -231,7 +240,9 @@ export function nativeObserver({
         return false;
       await accept(session, event, parsed.data.eventId);
       if (event.transcriptPath && session.context)
-        usage.follow(session, event.transcriptPath, interruptedTwice);
+        usage.follow(session, event.transcriptPath, event.model ?? null, interruptedTwice);
+      if (event.agentTranscriptPath && session.context)
+        usage.followAgent(session, event.agentTranscriptPath);
       return true;
     });
   };

@@ -160,4 +160,67 @@ describe('native terminal observation', () => {
     });
     expect(parseNativeHook('claude', { ...event, transcript_path: 7 })).toBeNull();
   });
+
+  it('keeps a Codex rollout path only when it is the file of the reported thread', () => {
+    const event = { hook_event_name: 'UserPromptSubmit', session_id: 'thread-1', model: 'gpt-x' };
+    const path = '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-48-18-thread-1.jsonl';
+    expect(parseNativeHook('codex', { ...event, transcript_path: path })).toEqual({
+      kind: 'prompt',
+      nativeSessionId: 'thread-1',
+      transcriptPath: path,
+      model: 'gpt-x',
+    });
+    for (const transcript_path of [
+      '/home/.codex/sessions/thread-1.jsonl',
+      '/home/.codex/sessions/rollout-2026-thread-2.jsonl',
+      'rollout-2026-thread-1.jsonl',
+    ])
+      expect(parseNativeHook('codex', { ...event, transcript_path })).toEqual({
+        kind: 'prompt',
+        nativeSessionId: 'thread-1',
+        model: 'gpt-x',
+      });
+  });
+
+  it('names the file of a sub-agent only from the ids the hook reports', () => {
+    const tool = { hook_event_name: 'PreToolUse', tool_use_id: 'call_1', tool_name: 'Bash' };
+    const child = '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-49-25-thread-2.jsonl';
+    expect(
+      parseNativeHook('codex', {
+        ...tool,
+        session_id: 'thread-1',
+        agent_id: 'thread-2',
+        transcript_path: child,
+      }),
+    ).toMatchObject({ agentTranscriptPath: child, tool: { agentId: 'thread-2' } });
+    expect(
+      parseNativeHook('codex', {
+        ...tool,
+        session_id: 'thread-1',
+        agent_id: 'thread-3',
+        transcript_path: child,
+      }),
+    ).not.toHaveProperty('agentTranscriptPath');
+    const main = '/home/projects/repo/native-session.jsonl';
+    expect(
+      parseNativeHook('claude', {
+        ...tool,
+        session_id: 'native-session',
+        agent_id: 'aec39d782762e820d',
+        transcript_path: main,
+      }),
+    ).toMatchObject({
+      transcriptPath: main,
+      agentTranscriptPath:
+        '/home/projects/repo/native-session/subagents/agent-aec39d782762e820d.jsonl',
+    });
+    expect(
+      parseNativeHook('claude', {
+        ...tool,
+        session_id: 'native-session',
+        agent_id: '../../other',
+        transcript_path: main,
+      }),
+    ).not.toHaveProperty('agentTranscriptPath');
+  });
 });

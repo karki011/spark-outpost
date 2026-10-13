@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import { isRecord } from '../agent-config/records.ts';
 
 export type NativeProvider = 'claude' | 'codex';
@@ -31,6 +31,8 @@ export interface NativeHookEvent {
   prompt?: string;
   reason?: string;
   transcriptPath?: string;
+  agentTranscriptPath?: string;
+  model?: string;
 }
 
 const NATIVE_SESSION_ID = /^[a-zA-Z0-9_][a-zA-Z0-9_-]{0,99}$/;
@@ -50,12 +52,23 @@ const COMMON_EVENTS: Record<string, NativeHookKind> = {
   SessionEnd: 'session_end',
 };
 
-function sessionTranscriptPath(provider: NativeProvider, payload: Record<string, unknown>) {
-  const path = payload.transcript_path;
-  if (provider !== 'claude' || typeof path !== 'string' || typeof payload.session_id !== 'string')
-    return null;
-  if (!isAbsolute(path)) return null;
-  return path === join(dirname(path), `${payload.session_id}.jsonl`) ? path : null;
+function rolloutOf(path: string, threadId: string): boolean {
+  const name = basename(path);
+  return name.startsWith('rollout-') && name.endsWith(`-${threadId}.jsonl`);
+}
+
+function transcriptPaths(provider: NativeProvider, payload: Record<string, unknown>) {
+  const { transcript_path: path, session_id: sessionId, agent_id: agentId } = payload;
+  if (typeof path !== 'string' || typeof sessionId !== 'string' || !isAbsolute(path)) return {};
+  if (path !== join(dirname(path), basename(path))) return {};
+  const agent = isNativeSessionId(agentId) ? agentId : null;
+  if (provider === 'codex') {
+    if (rolloutOf(path, sessionId)) return { transcriptPath: path };
+    return agent && rolloutOf(path, agent) ? { agentTranscriptPath: path } : {};
+  }
+  if (basename(path) !== `${sessionId}.jsonl`) return {};
+  const side = join(dirname(path), sessionId, 'subagents', `agent-${agent}.jsonl`);
+  return { transcriptPath: path, ...(agent ? { agentTranscriptPath: side } : {}) };
 }
 
 export function nativeHookNames(provider: NativeProvider): string[] {
@@ -85,6 +98,7 @@ export function parseNativeHook(
     !optionalString(payload.tool_name, 200) ||
     !optionalString(payload.tool_use_id, 200) ||
     !optionalString(payload.agent_id, 200) ||
+    !optionalString(payload.model, 200) ||
     !optionalString(payload.notification_type, 100) ||
     !optionalString(payload.reason, 100) ||
     !optionalString(payload.transcript_path, 4096) ||
@@ -96,7 +110,6 @@ export function parseNativeHook(
   if (!kind) return null;
   const nativeTurnId =
     provider === 'claude' ? (payload.prompt_id ?? payload.turn_id) : payload.turn_id;
-  const transcriptPath = sessionTranscriptPath(provider, payload);
   const tool = toolEvent(payload);
   return {
     kind,
@@ -112,7 +125,8 @@ export function parseNativeHook(
     END_REASON.test(payload.reason)
       ? { reason: payload.reason }
       : {}),
-    ...(transcriptPath ? { transcriptPath } : {}),
+    ...transcriptPaths(provider, payload),
+    ...(typeof payload.model === 'string' && payload.model ? { model: payload.model } : {}),
   };
 }
 
