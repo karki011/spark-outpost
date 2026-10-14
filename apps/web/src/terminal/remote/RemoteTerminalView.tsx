@@ -102,6 +102,7 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
       </div>
       {approval && (
         <RemoteTerminalApproval
+          key={approval.id}
           approval={approval}
           allowed={approve}
           onDecide={(answer) =>

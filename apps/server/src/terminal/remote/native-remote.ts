@@ -7,6 +7,7 @@ import type {
 import { isRecord } from '../../agent-config/records.ts';
 import type { Db } from '../../persistence/db.ts';
 import { nativeTerminalRow } from '../../persistence/native-terminals.ts';
+import { switchRefusal } from '../../remote/policy.ts';
 import { remoteAccess } from '../../remote/store.ts';
 import { NativeRuntimeError } from '../native-control.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
@@ -37,7 +38,7 @@ const NOT_SUBMITTED =
   'The agent asked something before your message was sent. Answer it on your Mac; your message is typed there, not sent.';
 const COMMAND = 'Messages that start with / or ! run CLI commands. Type them on your Mac.';
 const REASON_NOT_SENT =
-  'Denied. Your reason wasn’t sent because the agent still shows a menu. Type it on your Mac.';
+  'Denied. Your reason wasn’t sent because the agent hasn’t returned to its prompt. Type it on your Mac.';
 const STOPPED_NOT_SENT =
   'The turn stopped, but the agent then asked something. Answer it on your Mac; your message wasn’t sent.';
 const MENU_GONE_TRIES = 10;
@@ -165,6 +166,11 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(NOT_SUBMITTED, 409);
     write(session, '\r');
   };
+  const typeable = async (reason: string) => {
+    if (COMMAND_PREFIX.test(reason)) throw new NativeRuntimeError(COMMAND, 409);
+    if (!(await remoteAccess(deps.db, deps.workspaceId)).switches.terminal)
+      throw new NativeRuntimeError(switchRefusal('terminal'), 403);
+  };
   const settled = async (conversationId: string, session: LiveSession): Promise<boolean> => {
     for (let tries = 0; tries < MENU_GONE_TRIES; tries++) {
       await delay(SUBMIT_DELAY_MS);
@@ -240,7 +246,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       const reason = decision.decision === 'deny' ? decision.reason?.trim() || null : null;
       const byKey = current.provider === 'codex';
       if (byKey) {
-        if (reason && COMMAND_PREFIX.test(reason)) throw new NativeRuntimeError(COMMAND, 409);
+        if (reason) await typeable(reason);
         const screen = await deps.terminals.screen(session.row.id);
         if (screen === null) throw new NativeRuntimeError('Answer this on your Mac.', 409);
         if (!codexMenuShows(screen, current.detail)) throw new NativeRuntimeError(CHANGED, 409);

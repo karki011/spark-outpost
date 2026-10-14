@@ -15,7 +15,7 @@ const IDLE = '› Ask Codex to do anything\n  gpt · /work';
 
 function setup(
   provider: 'claude' | 'codex',
-  options: { state?: string; approve?: boolean; whilePasting?: () => void } = {},
+  options: { state?: string; approve?: boolean; type?: boolean; whilePasting?: () => void } = {},
 ) {
   const row = {
     id: 's1',
@@ -28,7 +28,13 @@ function setup(
   const db = {
     query: async (sql: string) => ({
       rows: sql.includes('remote_access_settings')
-        ? [{ hostname: null, can_terminal: true, can_terminal_approve: options.approve ?? true }]
+        ? [
+            {
+              hostname: null,
+              can_terminal: options.type ?? true,
+              can_terminal_approve: options.approve ?? true,
+            },
+          ]
         : sql.includes('FROM runs')
           ? [{ at: new Date('2026-10-14T10:00:00Z') }]
           : [row],
@@ -256,6 +262,17 @@ describe('approving from a paired device', () => {
     ).rejects.toMatchObject({ status: 409 });
     expect(codex.sent).toEqual([]);
     expect(codex.approvals.current('c1')?.id).toBe(approval.id);
+  });
+
+  it('refuses a Codex reason when typing is switched off, before answering', async () => {
+    const codex = setup('codex', { state: 'waiting_for_permission', type: false });
+    const approval = await askCodex(codex);
+    await expect(
+      codex.remote.decide('c1', { id: approval.id, decision: 'deny', reason: 'Use pnpm' }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(codex.sent).toEqual([]);
+    await codex.remote.decide('c1', { id: approval.id, decision: 'deny' });
+    expect(codex.sent).toEqual(['\u001b']);
   });
 
   it('keeps a waiting Claude approval when another tool finishes, until the turn ends', async () => {
