@@ -3,9 +3,12 @@ import { openChats } from './navigation.ts';
 
 export const FIXTURE_READY = 'Ready for terminal input. No provider request is made.';
 
-export async function startFixtureTerminal(page: Page): Promise<Locator> {
+export async function startFixtureTerminal(
+  page: Page,
+  open: (page: Page) => Promise<void> = openChats,
+): Promise<Locator> {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await openChats(page);
+  await open(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page
     .getByRole('radiogroup', { name: 'Session type' })
@@ -42,18 +45,15 @@ export async function pointOf(
     .locator('.xterm-accessibility-tree > div')
     .evaluateAll((rows, wanted) => {
       const index = rows.findIndex((row) => row.textContent?.includes(wanted));
-      const widest = Math.max(...rows.map((row) => (row.textContent ?? '').length));
-      return [
-        index,
-        rows.length,
-        index < 0 ? -1 : rows[index]!.textContent!.indexOf(wanted),
-        widest,
-      ];
+      return [index, rows.length, index < 0 ? -1 : rows[index]!.textContent!.indexOf(wanted)];
     }, text);
-  const [row, rows, column, columns] = found as [number, number, number, number];
+  const [row, rows, column] = found as [number, number, number];
   expect(row).toBeGreaterThanOrEqual(0);
   const screen = (await workspace.locator('.xterm-screen').boundingBox())!;
-  const cell = screen.width / columns;
+  const cell = await workspace
+    .locator('.xterm-helper-textarea')
+    .evaluate((cursor) => parseFloat((cursor as HTMLElement).style.width));
+  expect(cell).toBeGreaterThan(1);
   return {
     x: screen.x + (column + offset + 0.5) * cell,
     y: screen.y + ((row + 0.5) * screen.height) / rows,

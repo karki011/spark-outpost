@@ -188,6 +188,9 @@ export class TerminalSessions {
       resize: (cols, rows) => {
         if (session.client === client) session.pty?.resize(cols, rows);
       },
+      colors: (colors) => {
+        if (session.client === client) session.pty?.colors?.(colors);
+      },
       close: () => {
         if (session.client === client) this.end(session, 'closed', null);
       },
@@ -207,6 +210,8 @@ export class TerminalSessions {
     const kind = session.kind;
     if (kind.type === 'view') return;
     const agent = kind.type === 'shell' ? kind.agent : undefined;
+    const spawned = agent?.observer?.begin('spawn');
+    const firstOutput = agent?.observer?.begin('first_output');
     const pty = this.spawn(
       kind.type === 'shell'
         ? {
@@ -218,12 +223,15 @@ export class TerminalSessions {
                   args: agent.args,
                   sessionId: session.id,
                   ...(agent.adopt ? { adopt: true } : {}),
+                  ...(agent.colors ? { colors: agent.colors } : {}),
                   ...(agent.env ? { env: agent.env } : {}),
+                  ...(agent.observer ? { observer: agent.observer } : {}),
                 }
               : {}),
           }
         : size,
     );
+    spawned?.();
     session.pty = pty;
     if (kind.type === 'shell') {
       this.watcher?.opened({
@@ -236,6 +244,7 @@ export class TerminalSessions {
     }
     let prefilled = kind.type === 'shell';
     pty.onData((data) => {
+      firstOutput?.();
       this.handleOutput(session, data);
       if (!prefilled && kind.type === 'setup') {
         prefilled = true;
@@ -274,6 +283,7 @@ export class TerminalSessions {
     return {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
+      colors: () => undefined,
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };
@@ -416,6 +426,7 @@ export class TerminalSessions {
     keepRunning = false,
   ) {
     if (!this.sessions.delete(session.id)) return;
+    if (isAgent(session.kind)) session.kind.agent.observer?.ended();
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);

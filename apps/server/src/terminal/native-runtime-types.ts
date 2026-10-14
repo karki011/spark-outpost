@@ -4,6 +4,7 @@ import type {
   NativeTerminalLaunchResponse,
   NativeTerminalSession,
   NativeTerminalUsage,
+  TerminalStartPhase,
 } from '@spark-outpost/contracts';
 import type { CliLocator } from '../agents/acp/agent-cli.ts';
 import type { Db } from '../persistence/db.ts';
@@ -12,6 +13,7 @@ import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { SparkGrant, SparkMcpHost } from '../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import type { placeChat } from '../orchestration/chat-place.ts';
+import type { prepareDependencies } from '../projects/worktree-deps.ts';
 import type { NativeTurnContext } from './native-context.ts';
 import type { WatchTranscript } from './native-tail.ts';
 import type { SessionTranscript } from './native-usage.ts';
@@ -35,6 +37,9 @@ export interface NativeRuntimeDeps {
   watchTranscript?: WatchTranscript;
   tmux?: TmuxHost | null;
   now?: () => Date;
+  logStart?: (line: string) => void;
+  onStartPhase?: (conversationId: string) => void;
+  prepareDependencies?: typeof prepareDependencies;
 }
 
 export interface PendingNativeLaunch {
@@ -50,6 +55,7 @@ export interface NativeRuntime {
     request: NativeTerminalLaunchRequest,
   ): Promise<NativeTerminalLaunchResponse>;
   usage(conversationId: string): Promise<NativeTerminalUsage>;
+  startPhase(conversationId: string): Promise<TerminalStartPhase | null>;
   hook(token: string, body: unknown): Promise<boolean>;
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;

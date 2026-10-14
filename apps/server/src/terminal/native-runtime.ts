@@ -30,11 +30,15 @@ import { attachNativeSession } from './native-attach.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
 import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
-import { isNativeSessionId } from './native-hooks.ts';
 import { watchTranscript } from './native-tail.ts';
 import { nativeUsage } from './native-usage.ts';
 import { prepareNativeLaunch, type NativeLaunch } from './native-launch.ts';
 import { prepareNativeSession } from './native-prepare.ts';
+import { placeChat } from '../orchestration/chat-place.ts';
+import { dependenciesLine, startTimer, type StartTimer } from './start-timing.ts';
+import { sessionDeps } from './session-deps.ts';
+import { startPhases } from './start-phases.ts';
+import { assertTerminalChat, providerToLaunch } from './native-launch-checks.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 
@@ -47,6 +51,16 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const launches = new Map<string, { key: string; work: Promise<NativeTerminalLaunchResponse> }>();
   const stoppedLaunches = new Set<string>();
   const waiters = deps.approvalWaiters ?? new ApprovalWaiters();
+  const phases = startPhases(deps.onStartPhase ?? (() => undefined));
+  const dependencies = sessionDeps({
+    ...(deps.prepareDependencies ? { prepare: deps.prepareDependencies } : {}),
+    ...(deps.onStartPhase ? { changed: deps.onStartPhase } : {}),
+    ended: (result) => {
+      const sessionId = live.get(result.conversationId)?.row.id ?? null;
+      if (result.outcome !== 'nothing')
+        (deps.logStart ?? console.log)(dependenciesLine({ ...result, sessionId }));
+    },
+  });
   let disposed = false;
   const enqueue = <T>(session: LiveSession, work: () => Promise<T>): Promise<T> => {
     const next = session.chain.then(work);
@@ -87,13 +101,11 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const launchOnce = async (
     conversationId: string,
     request: NativeTerminalLaunchRequest,
+    timer: StartTimer,
   ): Promise<NativeTerminalLaunchResponse> => {
     if (disposed) throw new NativeRuntimeError('The terminal host is stopping.', 503);
     const conversation = await owned(conversationId);
-    if (conversation.session_type !== 'terminal')
-      throw new NativeRuntimeError('Open a Terminal session first.');
-    if (request.provider && request.provider !== conversation.terminal_provider)
-      throw new NativeTerminalConflictError('Start a new Terminal session to use another agent.');
+    assertTerminalChat(conversation, request);
     const current = live.get(conversationId);
     if (current) {
       if (request.prompt || request.resume)
@@ -107,33 +119,36 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       };
     }
     const previous = await nativeTerminalRow(deps.db, conversationId);
-    const provider = request.provider ?? previous?.provider ?? conversation.terminal_provider;
-    if (!provider) throw new NativeRuntimeError('Choose Claude Code or Codex for this terminal.');
-    if (previous && !['exited', 'error', 'interrupted'].includes(previous.state))
-      throw new NativeTerminalConflictError('That terminal agent is already running.');
-    if (previous?.native_session_id && !request.resume)
-      throw new NativeTerminalConflictError(
-        'Resume the ended terminal explicitly, or start a new Terminal session.',
-      );
-    if (
-      request.resume &&
-      (!isNativeSessionId(previous?.native_session_id) || previous?.provider !== provider)
-    )
-      throw new NativeTerminalConflictError(
-        'This terminal has no native session to resume. Start a new Terminal session.',
-      );
-    const command = await (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(
-      provider,
+    const provider = providerToLaunch(conversation.terminal_provider, request, previous);
+    timer.provider(provider);
+    phases.set(conversationId, 'preparing');
+    const command = await timer.time('locate_cli', () =>
+      (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(provider),
     );
     if (!command)
       throw new NativeRuntimeError(
         `Install ${provider === 'claude' ? 'Claude Code' : 'Codex'} before opening its terminal.`,
       );
-    const prepared = await prepareNativeSession(deps, conversationId, provider, request, previous);
+    const prepared = await timer.time('prepare_session', () =>
+      prepareNativeSession(
+        {
+          ...deps,
+          place: timer.place(deps.place ?? placeChat),
+          onPhase: (phase) => phases.set(conversationId, phase),
+          prepareLater: (job) => dependencies.start(conversationId, job),
+        },
+        conversationId,
+        provider,
+        request,
+        previous,
+      ),
+    );
     if (disposed || stoppedLaunches.has(conversationId)) {
+      await dependencies.stop(conversationId);
       if (prepared.runId) await cancelRun(deps.db, prepared.runId);
       throw new NativeRuntimeError('This terminal launch was stopped.', 409);
     }
+    await dependencies.resume(deps.db, conversationId, prepared.folder.cwd);
     const row = await reserveNativeTerminalLaunch(deps.db, {
       id: previous?.id ?? randomUUID(),
       conversationId,
@@ -159,6 +174,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (prepared.runId) await failNativeLaunchRun(deps.db, prepared.runId, failure.message);
       throw failure;
     });
+    timer.session(row.id);
     const token = randomBytes(32).toString('base64url');
     const scope: SparkScope = {
       workspaceId: deps.workspaceId,
@@ -170,24 +186,29 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     let launch: NativeLaunch | null = null;
     let session: LiveSession | null = null;
     try {
-      grant = await deps.mcp.grant(scope);
-      launch = await (deps.prepareLaunch ?? prepareNativeLaunch)({
-        provider,
-        sessionId: row.id,
-        cwd: row.cwd,
-        prompt: prepared.prompt,
-        instructions: prepared.instructions,
-        agentMode: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
-        ...(request.resume && row.native_session_id
-          ? { resumeSessionId: row.native_session_id }
-          : {}),
-        attachments: prepared.input.attachments,
-        dataDir: deps.dataDir,
-        channel: deps.channel,
-        command,
-        mcp: grant,
-        hooks: { url: host.url, token },
-      });
+      phases.set(conversationId, 'agent');
+      const granted = await timer.time('grant', () => deps.mcp.grant(scope));
+      grant = granted;
+      const prepareLaunch = deps.prepareLaunch ?? prepareNativeLaunch;
+      launch = await timer.time('prepare_launch', () =>
+        prepareLaunch({
+          provider,
+          sessionId: row.id,
+          cwd: row.cwd,
+          prompt: prepared.prompt,
+          instructions: prepared.instructions,
+          agentMode: prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent'),
+          ...(request.resume && row.native_session_id
+            ? { resumeSessionId: row.native_session_id }
+            : {}),
+          attachments: prepared.input.attachments,
+          dataDir: deps.dataDir,
+          channel: deps.channel,
+          command,
+          mcp: granted,
+          hooks: { url: host.url, token },
+        }),
+      );
       row.observation = launch.observation;
       const ceiling = prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent');
       if (deps.tmux && launch.directory)
@@ -257,6 +278,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         command: launch.command,
         args: launch.args,
         env: launch.env,
+        colors: request.colors,
+        observer: timer.observer,
         onExit: exited(running),
       });
       return {
@@ -291,6 +314,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
   const stop = async (conversationId: string) => {
     stoppedLaunches.add(conversationId);
     await owned(conversationId);
+    await dependencies.stop(conversationId);
     const queued = await deps.db.query<{ id: string }>(
       `SELECT r.id FROM runs r JOIN conversations c ON c.id = r.conversation_id
        WHERE c.id = $1 AND c.session_type = 'terminal' AND r.status IN ('queued', 'running', 'awaiting_approval')
@@ -320,7 +344,12 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       const row = await nativeTerminalRow(deps.db, conversationId);
       if (!row) return null;
       const readopted = live.get(conversationId)?.readopted ?? null;
-      return { ...nativeTerminalView(row, await nativeTerminalMode(deps.db, row)), readopted };
+      const preparing = dependencies.status(conversationId);
+      return {
+        ...nativeTerminalView(row, await nativeTerminalMode(deps.db, row)),
+        readopted,
+        dependencies: preparing,
+      };
     },
     launch(conversationId, request) {
       const key = JSON.stringify(request);
@@ -335,9 +364,11 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         return current.work;
       }
       stoppedLaunches.delete(conversationId);
-      const work = launchOnce(conversationId, request).finally(() =>
-        launches.delete(conversationId),
-      );
+      const timer = startTimer(deps.logStart ?? console.log);
+      const work = timer.watch(launchOnce(conversationId, request, timer)).finally(() => {
+        launches.delete(conversationId);
+        phases.clear(conversationId);
+      });
       launches.set(conversationId, { key, work });
       return work;
     },
@@ -348,6 +379,10 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         : await nativeTerminalRow(deps.db, conversationId);
       if (row) await usage.catchUpStored(row).catch(() => undefined);
       return nativeTerminalUsage(deps.db, conversationId);
+    },
+    async startPhase(conversationId) {
+      await owned(conversationId);
+      return phases.get(conversationId);
     },
     hook,
     stop,
@@ -391,10 +426,15 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
           })
         : [];
       await recoverNativeTerminals(deps.db, kept);
+      for (const session of live.values())
+        await dependencies
+          .resume(deps.db, session.row.conversation_id, session.row.cwd)
+          .catch(() => undefined);
     },
     async detach() {
       disposed = true;
       try {
+        await dependencies.stopAll();
         for (const session of [...live.values()]) {
           await enqueue(session, async () => {
             await usage.last(session).catch(() => undefined);
@@ -412,6 +452,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     async dispose() {
       disposed = true;
       try {
+        await dependencies.stopAll();
         await stopAll();
       } finally {
         await host.close();

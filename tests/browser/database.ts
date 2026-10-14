@@ -13,6 +13,7 @@ import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
 import { FAKE_CLAUDE_MODES, FAKE_CODEX_MODES } from '../../apps/server/src/providers/fake.ts';
+import { stopLeftoverTerminals } from './leftover-terminals.ts';
 
 export function testDatabaseUrl(): string {
   const url = TEST_DATABASE_URL;
@@ -113,6 +114,7 @@ export async function resetTestDatabase({
   const db = openTestDb();
   try {
     await stopLeftoverRuns(db);
+    await stopLeftoverTerminals(db);
     await truncateTables(db, RESET_TABLES);
     if (!onboarded && connected.length === 0) return;
     const workspaceId = await ensureLocalWorkspace(db);

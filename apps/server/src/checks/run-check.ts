@@ -87,6 +87,7 @@ export interface RunOptions {
   signal?: AbortSignal;
   env?: NodeJS.ProcessEnv;
   registryEnv?: boolean;
+  onStart?: (pid: number) => void;
 }
 
 export async function runCheck(check: CheckCommand, options: RunOptions): Promise<CheckRun> {
@@ -106,6 +107,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    if (child.pid) options.onStart?.(child.pid);
     const stop = () => {
       killGroup(child.pid, 'SIGTERM');
       setTimeout(() => killGroup(child.pid, 'SIGKILL'), KILL_GRACE_MS).unref();

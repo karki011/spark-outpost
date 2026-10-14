@@ -3,16 +3,17 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
+import './xterm-terminal.css';
 import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-outpost/contracts';
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
 import type { TerminalConnection, TerminalHandlers } from './terminal-connection.ts';
 import { focusBeside } from './leave-terminal.ts';
 import { terminalLinkFollower } from './link-pointer.ts';
 import { followMouseReporting, MOUSE_REPORTING_OFF } from './mouse-reporting.ts';
-import { refitWhenFontLoads, TERMINAL_FONT, TERMINAL_FONT_SIZE } from './terminal-font.ts';
+import { refitWhenFontLoads, terminalFont, TERMINAL_FONT_SIZE } from './terminal-font.ts';
 import { lineEditingSequence, tabAction } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
-import { themeFromTokens } from './terminal-theme.ts';
+import { colorsFromTokens, themeFromTokens } from './terminal-theme.ts';
 import { followTerminalDrops } from './terminal-drop.ts';
 import { followSelection, selectionActions } from './selection/follow-selection.ts';
 
@@ -38,7 +39,7 @@ export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
 
 export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   return new Terminal({
-    fontFamily: TERMINAL_FONT,
+    fontFamily: terminalFont(),
     fontSize: TERMINAL_FONT_SIZE,
     lineHeight: 1.25,
     cursorBlink: true,
@@ -53,9 +54,10 @@ export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   });
 }
 
-export function followTheme(terminal: Terminal): () => void {
+export function followTheme(terminal: Terminal, onChange?: () => void): () => void {
   const observer = new MutationObserver(() => {
     terminal.options.theme = themeFromTokens();
+    onChange?.();
   });
   observer.observe(document.documentElement, {
     attributes: true,
@@ -102,6 +104,10 @@ export function openXterm<T extends TerminalTicket>(
     socket.send(encoder.encode(data));
     if (data.includes('\r')) handlers.onCommandRun?.();
   };
+  const sendColors = () => {
+    const colors = colorsFromTokens();
+    if (colors) sendControl({ type: 'colors', colors });
+  };
   const sendResize = () => {
     try {
       fit.fit();
@@ -122,7 +128,7 @@ export function openXterm<T extends TerminalTicket>(
 
   const resizeObserver = new ResizeObserver(sendResize);
   resizeObserver.observe(element);
-  const unfollowTheme = followTheme(terminal);
+  const unfollowTheme = followTheme(terminal, sendColors);
   const inputSubscription = terminal.onData(sendInput);
   const dropped = (text: string) => {
     if (socket?.readyState !== WebSocket.OPEN)
@@ -136,7 +142,7 @@ export function openXterm<T extends TerminalTicket>(
   const canInsert = () => !readOnly && !ended && socket?.readyState === WebSocket.OPEN;
   const selection = followSelection(terminal, element, canInsert, handlers.onSelection);
   const unfollowMouse = followMouseReporting(terminal, handlers.onMouseReporting);
-  refitWhenFontLoads(terminal, () => !disposed, sendResize);
+  const unfollowFont = refitWhenFontLoads(terminal, sendResize);
   terminal.attachCustomKeyEventHandler((event) => {
     const tab = tabAction(event);
     if (tab && readOnly) return false;
@@ -163,6 +169,7 @@ export function openXterm<T extends TerminalTicket>(
       'open',
       () => {
         sendResize();
+        sendColors();
         selection.refresh();
         handlers.onOpen(created);
         if (!readOnly) terminal.focus();
@@ -238,6 +245,7 @@ export function openXterm<T extends TerminalTicket>(
       unfollowDrops();
       selection.stop();
       unfollowMouse();
+      unfollowFont();
       unfollowLinks?.();
       inputSubscription.dispose();
       if (socket) socket.close();

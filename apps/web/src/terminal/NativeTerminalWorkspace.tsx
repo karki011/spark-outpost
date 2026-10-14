@@ -9,9 +9,10 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import type { BrowserHome } from '../browser/use-view-placement.ts';
+import { DependenciesNotice } from './DependenciesNotice.tsx';
 import { RestartNotice } from './RestartNotice.tsx';
 import { useTerminalLinks } from './use-terminal-links.tsx';
-import { nativeTerminalApi } from './terminal-api.ts';
+import { nativeTerminalApi, nativeTerminalKey } from './terminal-api.ts';
 import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
 import { TerminalMenu } from './TerminalMenu.tsx';
@@ -37,7 +38,7 @@ export function NativeTerminalWorkspace({
   const client = useQueryClient();
   const { remote } = useRemoteClient();
   const session = useQuery({
-    queryKey: ['native-terminal', chat.id],
+    queryKey: nativeTerminalKey(chat.id),
     queryFn: () => nativeTerminalApi.get(chat.id),
     refetchInterval: 2000,
     enabled: !remote,
@@ -176,6 +177,7 @@ export function NativeTerminalWorkspace({
         </p>
       )}
       {native && !ended && <RestartNotice session={native} />}
+      {native && <DependenciesNotice session={native} />}
       {ended && showsScreen && (
         <p className="native-note" role="status">
           This terminal session has stopped. Its last output is shown below.

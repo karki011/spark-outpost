@@ -16,13 +16,7 @@ body {
 body {
   margin: 0;
   color: var(--text);
-  font:
-    15px/1.6 'Geist',
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font: 15px/1.6 var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }

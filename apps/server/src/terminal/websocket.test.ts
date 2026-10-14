@@ -2,7 +2,11 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { API_TOKEN_HEADER, type TerminalServerMessage } from '@spark-outpost/contracts';
+import {
+  API_TOKEN_HEADER,
+  type TerminalColors,
+  type TerminalServerMessage,
+} from '@spark-outpost/contracts';
 import { loginShellSpawner } from './pty.ts';
 import { TerminalSessions } from './sessions.ts';
 import { attachTerminalSockets } from './websocket.ts';
@@ -12,12 +16,18 @@ const API_TOKEN = 'terminal-launch-token-0123456789abcdefghij';
 let server: Server;
 let sessions: TerminalSessions;
 let port: number;
+let reported: TerminalColors[];
 
 beforeEach(async () => {
   server = createServer((_req, res) => res.end());
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as AddressInfo).port;
-  sessions = new TerminalSessions(loginShellSpawner('/bin/sh'));
+  const spawn = loginShellSpawner('/bin/sh');
+  reported = [];
+  sessions = new TerminalSessions((options) => ({
+    ...spawn(options),
+    colors: (colors) => reported.push(colors),
+  }));
   attachTerminalSockets(server, sessions, { port, allowedOrigins: [ORIGIN], apiToken: API_TOKEN });
 });
 
@@ -92,5 +102,17 @@ describe('terminal websocket', () => {
 
     expect(messages.at(-1)).toEqual({ type: 'ended', reason: 'closed', exitCode: null });
     expect(sessions.activeCount).toBe(0);
+  });
+
+  it('passes the colours the view reports to the terminal and ignores a malformed one', async () => {
+    const { id, token } = sessions.create('codex');
+    const socket = connect(`/api/terminal/sessions/${id}/stream?token=${token}`, ORIGIN);
+    await new Promise((resolve) => socket.on('open', resolve));
+    const colors = { foreground: '#241a13', background: '#faf2eb' };
+    socket.send(JSON.stringify({ type: 'colors', colors: { ...colors, background: 'white' } }));
+    socket.send(JSON.stringify({ type: 'colors', colors }));
+    socket.send(JSON.stringify({ type: 'close' }));
+    await new Promise((resolve) => socket.on('close', resolve));
+    expect(reported).toEqual([colors]);
   });
 });

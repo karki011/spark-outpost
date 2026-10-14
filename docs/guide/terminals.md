@@ -17,13 +17,13 @@ Open an AI terminal. About 1 minute.
 3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
 4. Describe the work; press **Enter**.
 
-Answer questions there. Pull requests aren't automatic.
+A line says while dependencies still copy. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events. Esc before Claude replies stays **Running** until you send. **Open**: no tracking. Dropped files insert paths.
 
 Selected text is copied, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse.
 
-**Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Terminal sessions are Mac-only.
+**Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). Sessions are Mac-only.
 
 ## Open a shell beside Chat
 
@@ -45,8 +45,8 @@ The read-only tab is **Claude · pnpm dev**. **Stop turn** stops it. Claude and 
 
 ## Close and recover
 
-Switching chats, closing a window or disconnecting keeps agents running; a Terminal session survives Spark restarting, updating or crashing. **Quit** stops Spark-owned agents.
+Switching chats, closing windows or disconnecting keeps agents running; a Terminal session survives Spark restarting, updating or crashing. **Quit** stops Spark-owned agents.
 
-After a reboot or exit, **Resume session** restores history, not a running command; else **Start again** resends your first message unless stopped.
+After reboot or exit, **Resume session** restores history, not running commands; else **Start again** resends your first message unless stopped.
 
 **Next:** [Use the browser](use-the-browser.md)

@@ -91,7 +91,7 @@ describe('native terminal launch', () => {
     });
     expect(launch.observation).toBe('unsupported');
     const settingsPath = launch.args[launch.args.indexOf('--settings') + 1]!;
-    expect(JSON.parse(await readFile(settingsPath, 'utf8'))).toEqual({ hooks: {} });
+    expect(JSON.parse(await readFile(settingsPath, 'utf8'))).toEqual({ theme: 'auto', hooks: {} });
   });
 
   it.each(['claude', 'codex'] as const)(

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { themeFromTokens } from './terminal-theme.ts';
+import { colorsFromTokens, themeFromTokens } from './terminal-theme.ts';
 
 function element(colorScheme: string) {
   const node = document.createElement('div');
@@ -27,5 +27,27 @@ describe('themeFromTokens', () => {
   it('keeps white text readable on light themes', () => {
     const theme = themeFromTokens(element('light'));
     expect(theme).toMatchObject({ white: '#303030', brightWhite: '#202020' });
+  });
+});
+
+describe('colorsFromTokens', () => {
+  it('reports the same foreground and background the terminal draws with', () => {
+    expect(colorsFromTokens(element('light'))).toEqual({
+      foreground: '#202020',
+      background: '#101010',
+    });
+  });
+
+  it('writes a short or upper-case colour as six lower-case digits', () => {
+    const node = element('light');
+    node.style.setProperty('--text', '#000');
+    node.style.setProperty('--code', '#FAF2EB');
+    expect(colorsFromTokens(node)).toEqual({ foreground: '#000000', background: '#faf2eb' });
+  });
+
+  it('reports nothing when a colour is not hexadecimal', () => {
+    const node = element('light');
+    node.style.setProperty('--code', 'rgb(1 2 3)');
+    expect(colorsFromTokens(node)).toBeNull();
   });
 });

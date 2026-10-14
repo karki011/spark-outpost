@@ -1,4 +1,4 @@
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -73,6 +73,89 @@ describe('preparing dependencies in a worktree', () => {
     expect(calls).toEqual([
       ['pnpm', 'install', '--offline', '--frozen-lockfile', '--ignore-scripts'],
     ]);
+  });
+
+  it('lands a clone through the staging folder, so an interrupted one never looks finished', async () => {
+    const staging = join(main, '.staging');
+    await mkdir(staging, { recursive: true });
+    const landings: string[] = [];
+    const run: RunCommand = async (argv) => {
+      landings.push(argv.at(-1)!);
+      if (landings.length === 2) return { ...ok, cancelled: true };
+      await cp(argv.at(-2)!, argv.at(-1)!, { recursive: true });
+      return ok;
+    };
+    await prepareDependencies(main, copy, { root: main, platform: 'darwin', run, staging });
+    expect(landings.slice(0, 2)).toEqual([join(staging, '0'), join(staging, '1')]);
+    expect((await lstat(join(copy, 'node_modules'))).isDirectory()).toBe(true);
+    await expect(lstat(join(copy, 'packages', 'lib', 'node_modules'))).rejects.toThrow();
+    await expect(lstat(join(staging, '0'))).rejects.toThrow();
+    await expect(lstat(join(staging, '1'))).rejects.toThrow();
+    const again = await prepareDependencies(main, copy, { root: main, staging });
+    expect(again).toMatchObject({ note: null, folders: 2 });
+    expect(await readFile(join(copy, 'node_modules', 'left-pad', 'index.js'), 'utf8')).toBe(
+      'module.exports = 1;',
+    );
+    expect(
+      await readFile(join(copy, 'packages', 'lib', 'node_modules', 'tiny', 'index.js'), 'utf8'),
+    ).toBe('ok');
+  });
+
+  it('keeps a node_modules folder that appeared while its clone was staged', async () => {
+    const staging = join(main, '.staging');
+    await mkdir(staging, { recursive: true });
+    const theirs = join(copy, 'packages', 'lib', 'node_modules', 'theirs', 'index.js');
+    const run: RunCommand = async (argv) => {
+      const landing = argv.at(-1)!;
+      await put(join(landing, 'cloned.txt'));
+      if (landing === join(staging, '1')) await put(theirs, 'kept');
+      return ok;
+    };
+    const prep = await prepareDependencies(main, copy, {
+      root: main,
+      platform: 'darwin',
+      run,
+      staging,
+    });
+    expect(prep).toMatchObject({ method: 'clone', note: null, stale: false });
+    expect(await readFile(theirs, 'utf8')).toBe('kept');
+    await expect(
+      lstat(join(copy, 'packages', 'lib', 'node_modules', 'cloned.txt')),
+    ).rejects.toThrow();
+    expect(await readFile(join(copy, 'node_modules', 'cloned.txt'), 'utf8')).toBe('x');
+    await expect(lstat(join(staging, '1'))).rejects.toThrow();
+  });
+
+  it('removes only the staged clone when it cannot be moved into place', async () => {
+    const staging = join(main, '.staging');
+    await mkdir(staging, { recursive: true });
+    const run: RunCommand = async (argv) => {
+      const landing = argv.at(-1)!;
+      if (landing === join(staging, '0')) await put(join(landing, 'cloned.txt'));
+      return ok;
+    };
+    const prep = await prepareDependencies(main, copy, {
+      root: main,
+      platform: 'darwin',
+      run,
+      staging,
+    });
+    expect(prep?.note).toContain('clone failed');
+    expect(await readFile(join(copy, 'node_modules', 'cloned.txt'), 'utf8')).toBe('x');
+    await expect(lstat(join(copy, 'packages', 'lib', 'node_modules'))).rejects.toThrow();
+  });
+
+  it('reports copying and installing as each begins', async () => {
+    await put(join(copy, 'package-lock.json'), '{}');
+    const phases: string[] = [];
+    const run: RunCommand = async (argv) => (argv[0] === 'cp' ? { ...ok, exitCode: 1 } : ok);
+    await prepareDependencies(main, copy, {
+      root: main,
+      platform: 'darwin',
+      run,
+      onPhase: (phase) => phases.push(phase),
+    });
+    expect(phases).toEqual(['copy', 'install']);
   });
 
   it('clones first for npm and falls back to an offline install', async () => {

@@ -5,12 +5,14 @@ import {
   createShellResponseSchema,
   createTerminalResponseSchema,
   shellBusyResponseSchema,
+  terminalStartSchema,
   type CreateShellResponse,
   type CreateTerminalResponse,
   type ProviderId,
   type TerminalStep,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
+import { colorsFromTokens } from './terminal-theme.ts';
 
 export interface TerminalTicket {
   id: string;
@@ -57,7 +59,15 @@ export async function deleteTerminalSession(id: string): Promise<void> {
   if (!response.ok) throw new Error('The terminal could not be stopped. Try again.');
 }
 
+export const nativeTerminalKey = (conversationId: string) =>
+  ['native-terminal', conversationId] as const;
+
+export const terminalStartKey = (conversationId: string) =>
+  ['terminal-start', conversationId] as const;
+
 export const nativeTerminalApi = {
+  startPhase: (conversationId: string) =>
+    request(terminalStartSchema, `/conversations/${conversationId}/terminal/start`),
   stop: (conversationId: string) =>
     request(z.null(), `/conversations/${conversationId}/terminal`, { method: 'DELETE' }),
   get: (conversationId: string) =>
@@ -73,7 +83,7 @@ export const nativeTerminalApi = {
   ) =>
     request(nativeTerminalLaunchResponseSchema, `/conversations/${conversationId}/terminal`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, colors: colorsFromTokens() ?? undefined }),
     }),
   attach: (id: string) =>
     request(createShellResponseSchema, `/terminal/sessions/${id}/attach`, {

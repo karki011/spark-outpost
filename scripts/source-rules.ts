@@ -89,6 +89,16 @@ export function findStrayPhoneQueries(file: string, text: string): SourceViolati
     }));
 }
 
+const REMOTE_FONT = /fonts\.(?:googleapis|gstatic)\.com/g;
+
+export function findRemoteFonts(file: string, text: string): SourceViolation[] {
+  return [...text.matchAll(REMOTE_FONT)].map((match) => ({
+    file,
+    line: text.slice(0, match.index).split('\n').length,
+    message: 'Font fetched from the network; fonts ship in apps/web/bundled-fonts.ts',
+  }));
+}
+
 export function checkSource(file: string, text: string): SourceViolation[] {
   const violations: SourceViolation[] = [];
   const lines = lineCount(text);
@@ -96,6 +106,7 @@ export function checkSource(file: string, text: string): SourceViolation[] {
     violations.push({ file, line: MAX_LINES + 1, message: `${lines} lines exceeds ${MAX_LINES}` });
   }
   if (/\.(ts|tsx|js|mjs)$/.test(file)) violations.push(...findTsComments(file, text));
+  if (!file.includes('.test.')) violations.push(...findRemoteFonts(file, text));
   if (file.startsWith('apps/web/') && file.endsWith('.tsx')) {
     violations.push(...findNativeSelects(file, text));
     if (!file.includes('.test.')) violations.push(...findPlainLoading(file, text));

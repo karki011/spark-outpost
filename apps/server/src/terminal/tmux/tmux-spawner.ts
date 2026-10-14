@@ -19,16 +19,20 @@ export function tmuxSpawner(
   return (options) => {
     if (!options.sessionId || !options.command) return base(options);
     try {
-      return control(host, {
+      const pty = control(host, {
         sessionId: options.sessionId,
         adopt: options.adopt === true,
+        colors: options.colors,
         cols: options.cols,
         rows: options.rows,
         cwd: options.cwd ?? host.env.HOME ?? '/',
         command: options.command,
         args: options.args ?? [],
         env: { ...shellEnvironment(process.env), ...options.env },
+        ...(options.observer ? { observer: options.observer } : {}),
       });
+      options.observer?.tmux(true);
+      return pty;
     } catch (error) {
       return direct(options, error as Error);
     }

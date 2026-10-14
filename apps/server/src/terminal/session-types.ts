@@ -1,5 +1,6 @@
-import type { TerminalServerMessage } from '@spark-outpost/contracts';
+import type { TerminalColors, TerminalServerMessage } from '@spark-outpost/contracts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
+import type { StartObserver } from './start-timing.ts';
 
 export interface TerminalClient {
   output(data: string): void;
@@ -35,6 +36,8 @@ export interface AgentRequest extends ShellRequest {
   args: string[];
   env?: Record<string, string>;
   adopt?: boolean;
+  colors?: TerminalColors | undefined;
+  observer?: StartObserver;
   onExit?: (exit: { exitCode: number; signal?: number | undefined }) => void;
 }
 
@@ -72,6 +75,7 @@ export class TerminalAuthError extends Error {}
 export interface AttachedTerminal {
   input(data: string): void;
   resize(cols: number, rows: number): void;
+  colors(colors: TerminalColors): void;
   close(): void;
   disconnect(): void;
 }

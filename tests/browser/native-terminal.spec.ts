@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { startFixtureTerminal } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { openChats } from './navigation.ts';
 
@@ -282,14 +283,16 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
       return Math.abs(inner.x - outer.x);
     };
     await expect.poll(leftGap).toBeLessThanOrEqual(1);
-    const stage = (await workspace.locator('.native-stage').boundingBox())!;
-    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
-    const pane = (await page.locator('main.main').boundingBox())!;
-    expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
-    expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
-    expect(stage.width - rows.width).toBeLessThan(40);
+    await expect(async () => {
+      const stage = (await workspace.locator('.native-stage').boundingBox())!;
+      const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+      const pane = (await page.locator('main.main').boundingBox())!;
+      expect(Math.abs(stage.x - pane.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(stage.x + stage.width - pane.x - pane.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(stage.y + stage.height - pane.y - pane.height)).toBeLessThanOrEqual(1);
+      expect(rows.x + rows.width).toBeLessThanOrEqual(stage.x + stage.width);
+      expect(stage.width - rows.width).toBeLessThan(40);
+    }).toPass();
     await page.keyboard.press('Escape');
     await expect(workspace.getByRole('button', { name: 'Exit focus' })).toBeVisible();
     await page.reload();
@@ -363,5 +366,25 @@ test('an exited terminal session starts again in the same chat @packaged', async
     );
   } finally {
     await page.request.delete(`/api/conversations/${session.conversationId}/terminal`);
+  }
+});
+
+test('no terminal row is cut off at the bottom or the right edge as the window gets shorter', async ({
+  page,
+}) => {
+  const workspace = await startFixtureTerminal(page);
+  const overflow = async () => {
+    const frame = (await workspace.locator('.native-screen').boundingBox())!;
+    const rows = (await workspace.locator('.xterm-screen').boundingBox())!;
+    return Math.max(
+      rows.y + rows.height - (frame.y + frame.height),
+      rows.x + rows.width - (frame.x + frame.width),
+    );
+  };
+  for (const height of [925, 920, 915, 910, 905, 900, 895]) {
+    await page.setViewportSize({ width: 1440, height });
+    const frame = workspace.locator('.native-screen');
+    await expect.poll(async () => (await frame.boundingBox())!.height).toBeGreaterThan(height / 2);
+    await expect.poll(overflow, { message: `window height ${height}` }).toBeLessThanOrEqual(0);
   }
 });

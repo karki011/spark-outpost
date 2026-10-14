@@ -32,10 +32,13 @@ async function withLinks(page: Page): Promise<Locator> {
 }
 
 async function hover(page: Page, workspace: Locator, text: string) {
-  const point = await pointOf(workspace, text);
-  await page.mouse.move(point.x - 30, point.y - 20);
-  await page.mouse.move(point.x, point.y, { steps: 4 });
-  await expect(workspace.locator('.xterm-cursor-pointer')).toHaveCount(1);
+  let point = { x: 0, y: 0 };
+  await expect(async () => {
+    point = await pointOf(workspace, text);
+    await page.mouse.move(point.x - 30, point.y - 20);
+    await page.mouse.move(point.x, point.y, { steps: 4 });
+    await expect(workspace.locator('.xterm-cursor-pointer')).toHaveCount(1, { timeout: 1000 });
+  }).toPass();
   return point;
 }
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { providerIdSchema } from './setup.ts';
+import { terminalColorsSchema } from './terminal-colors.ts';
 
 export const TERMINAL_INPUT_MAX_LENGTH = 16_384;
 
@@ -29,6 +30,8 @@ export {
   type ShellFolderKind,
   type CreateShellResponse,
 } from './terminal-shell.ts';
+
+export { terminalColorsSchema, type TerminalColors } from './terminal-colors.ts';
 
 export const shellBusyResponseSchema = z.object({
   command: z.string().nullable(),
@@ -71,5 +74,6 @@ export const terminalClientMessageSchema = z.discriminatedUnion('type', [
     rows: z.number().int().min(4).max(200),
   }),
   z.object({ type: z.literal('close') }),
+  z.object({ type: z.literal('colors'), colors: terminalColorsSchema }),
 ]);
 export type TerminalClientMessage = z.infer<typeof terminalClientMessageSchema>;

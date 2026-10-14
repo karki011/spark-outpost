@@ -95,8 +95,12 @@ async function remoteRef(root: string, ref: string): Promise<boolean> {
   return succeeds(root, ['rev-parse', '--verify', '-q', `refs/remotes/${ref}^{commit}`]);
 }
 
-export async function freshRemoteDefault(root: string): Promise<string | null> {
+export async function freshRemoteDefault(
+  root: string,
+  onFetch?: () => void,
+): Promise<string | null> {
   if (!(await succeeds(root, ['remote', 'get-url', 'origin']))) return null;
+  onFetch?.();
   await run('git', ['-C', root, 'fetch', '--quiet', 'origin'], {
     timeout: FETCH_TIMEOUT_MS,
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },

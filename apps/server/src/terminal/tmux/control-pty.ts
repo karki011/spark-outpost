@@ -1,7 +1,10 @@
 import { StringDecoder } from 'node:string_decoder';
+import type { TerminalColors } from '@spark-outpost/contracts';
 import type { PtyProcess } from '../pty.ts';
+import { createAnsweredQueryFilter } from './answered-queries.ts';
 import { openControlClient, type ControlClient, type OpenControlClient } from './control-client.ts';
 import { requestSeed } from './control-seed.ts';
+import { colorReportCommands } from './pane-colors.ts';
 import type { TmuxHost } from './tmux-host.ts';
 import {
   createSession,
@@ -34,6 +37,7 @@ export function paneExit(pane: Pick<TmuxPane, 'exitCode' | 'signal'>): Exit {
 
 export interface ControlPtyStart extends TmuxStart {
   adopt: boolean;
+  colors?: TerminalColors | undefined;
 }
 
 export function controlPty(
@@ -43,8 +47,11 @@ export function controlPty(
 ): PtyProcess {
   const adopted = start.adopt ? readPane(host, start.sessionId) : null;
   if (start.adopt && !adopted) throw new Error('That terminal session is no longer running.');
+  const created = start.observer?.begin('new_session');
   const pane = adopted ?? createSession(host, start);
+  created?.();
   const decoder = new StringDecoder('utf8');
+  const withoutAnswered = createAnsweredQueryFilter();
   const dataListeners: ((data: string) => void)[] = [];
   const exitListeners: ((exit: Exit) => void)[] = [];
   let client: ControlClient;
@@ -88,7 +95,7 @@ export function controlPty(
   function connect() {
     client = open(host, start.sessionId);
     client.onOutput((paneId, data) => {
-      if (seeded && paneId === pane.paneId) emit(decoder.write(data));
+      if (seeded && paneId === pane.paneId) emit(withoutAnswered(decoder.write(data)));
     });
     client.onNotice((name) => {
       if (name === 'window-renamed') checkDeath();
@@ -97,6 +104,11 @@ export function controlPty(
     checkDeath();
   }
 
+  const reportColors = (colors: TerminalColors) => {
+    for (const command of colorReportCommands(pane.paneId, colors)) client.command(command);
+  };
+
+  const attached = start.observer?.begin('attach');
   connect();
   if (start.adopt) {
     requestSeed(client!, pane.paneId, (text) => {
@@ -105,7 +117,8 @@ export function controlPty(
     });
   } else {
     client!.command(`refresh-client -C ${Math.trunc(start.cols)}x${Math.trunc(start.rows)}`);
-    client!.command(`send-keys -H -t ${pane.paneId} ${RELEASE_HELD_START}`);
+    if (start.colors) reportColors(start.colors);
+    client!.command(`send-keys -H -t ${pane.paneId} ${RELEASE_HELD_START}`, () => attached?.());
     for (const name of secretEnvNames(start.env))
       client!.command(`set-environment -u -t ${pane.paneId} ${name}`);
   }
@@ -121,6 +134,7 @@ export function controlPty(
     },
     resize: (cols, rows) =>
       client.command(`refresh-client -C ${Math.trunc(cols)}x${Math.trunc(rows)}`),
+    colors: reportColors,
     onData: (listener) => {
       dataListeners.push(listener);
     },
