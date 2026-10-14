@@ -20,6 +20,9 @@ const PASTE_START = '\u001b[200~';
 const PASTE_END = '\u001b[201~';
 const ESCAPE = '\u001b';
 const CODEX_MENU = /press enter to confirm or esc to cancel/i;
+const MENU_FOOTER = /esc to (?:cancel|go back)/i;
+const MENU_LINES = 15;
+const COMMAND_PREFIX = /^\s*[/!]/;
 const PATCH_FILE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/m;
 const NOT_RUNNING = 'This Terminal session isn’t running. Start it again on your Mac.';
 const CHANGED = 'This approval has changed. Check the session again.';
@@ -60,6 +63,15 @@ export function approvalDetail(tool: string, input: unknown): string {
 
 function squashed(text: string): string {
   return text.replace(/\s+/g, '');
+}
+
+export function menuOpen(screen: string): boolean {
+  const bottom = screen
+    .split('\n')
+    .filter((line) => line.trim())
+    .slice(-MENU_LINES)
+    .join('\n');
+  return MENU_FOOTER.test(bottom);
 }
 
 export function codexMenuShows(screen: string, detail: string): boolean {
@@ -116,11 +128,18 @@ export function nativeRemote(deps: NativeRemoteDeps) {
 
     async message(conversationId: string, text: string): Promise<void> {
       const session = running(conversationId);
+      if (COMMAND_PREFIX.test(text))
+        throw new NativeRuntimeError(
+          'Messages that start with / or ! run CLI commands. Type them on your Mac.',
+          409,
+        );
       const row = await nativeTerminalRow(deps.db, conversationId);
+      const screen = await deps.terminals.screen(session.row.id);
       if (
         deps.approvals.current(conversationId) ||
         row?.state === 'waiting_for_permission' ||
-        row?.state === 'waiting_for_input'
+        row?.state === 'waiting_for_input' ||
+        (screen !== null && menuOpen(screen))
       )
         throw new NativeRuntimeError(
           'The agent is waiting for an answer. Answer it first, then send your message.',
@@ -131,8 +150,12 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       write(session, '\r');
     },
 
-    interrupt(conversationId: string): void {
-      write(running(conversationId), ESCAPE);
+    async interrupt(conversationId: string): Promise<void> {
+      const session = running(conversationId);
+      const row = await nativeTerminalRow(deps.db, conversationId);
+      if (row?.state !== 'working')
+        throw new NativeRuntimeError('The agent isn’t working, so there is nothing to stop.', 409);
+      write(session, ESCAPE);
     },
 
     async decide(conversationId: string, decision: TerminalApprovalDecision): Promise<void> {

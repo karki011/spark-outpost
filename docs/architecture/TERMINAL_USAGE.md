@@ -15,7 +15,7 @@ Measured against Claude Code 2.1.296 and Codex CLI 0.157.0. Neither file format 
 
 The session row also keeps the session file's path and the position Spark has read up to (migration 0170).
 
-Not recorded: tool input, tool output, commands, paths the agent touched, reply text. Tool names, ids and model names pass through the audit redaction and are cut to 200 characters. Nothing here delays or blocks the CLI: the hook script still exits silently on any failure, and a read that fails leaves the number unknown.
+Not recorded: tool input, tool output, commands, paths the agent touched, reply text. Tool names, ids and model names pass through the audit redaction and are cut to 200 characters. Nothing here blocks the CLI: the hook script still exits silently on any failure, and a read that fails leaves the number unknown. The exception is a `PermissionRequest` while approving from a paired device is possible: Claude's hook waits for the device while Claude shows its own menu, and Codex's hook asks once, for at most two seconds, before Codex shows its menu.
 
 ## Steps
 

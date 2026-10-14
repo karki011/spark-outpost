@@ -49,7 +49,7 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
     res.status(204).end();
   });
   router.post('/conversations/:id/terminal/interrupt', available, async (req, res) => {
-    runtime!.remote.interrupt(await session(req));
+    await runtime!.remote.interrupt(await session(req));
     res.status(204).end();
   });
   router.post('/conversations/:id/terminal/approval', available, async (req, res) => {

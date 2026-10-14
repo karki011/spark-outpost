@@ -11,6 +11,7 @@ const CODEX_MENU = [
   '  3. No, and tell Codex what to do differently (esc)',
   '  Press enter to confirm or esc to cancel',
 ].join('\n');
+const IDLE = '› Ask Codex to do anything\n  gpt · /work';
 
 function setup(provider: 'claude' | 'codex', options: { state?: string; approve?: boolean } = {}) {
   const row = {
@@ -29,7 +30,7 @@ function setup(provider: 'claude' | 'codex', options: { state?: string; approve?
   } as unknown as Db;
   const session = { row, transcript: null, remoteApprovals: true } as unknown as LiveSession;
   const sent: string[] = [];
-  let screen: string | null = CODEX_MENU;
+  let screen: string | null = IDLE;
   const approvals = terminalApprovals();
   const remote = nativeRemote({
     db,
@@ -65,10 +66,31 @@ describe('typing from a paired device', () => {
     expect(sent).toEqual([]);
   });
 
-  it('sends Esc for Stop', () => {
-    const { remote, sent } = setup('codex');
-    remote.interrupt('c1');
-    expect(sent).toEqual(['\u001b']);
+  it('sends Esc for Stop only while the agent works, never to an idle prompt', async () => {
+    const working = setup('codex', { state: 'working' });
+    await working.remote.interrupt('c1');
+    expect(working.sent).toEqual(['\u001b']);
+    const idle = setup('claude', { state: 'ready' });
+    await expect(idle.remote.interrupt('c1')).rejects.toMatchObject({ status: 409 });
+    expect(idle.sent).toEqual([]);
+  });
+
+  it('refuses messages that would run a CLI command', async () => {
+    const { remote, sent } = setup('claude');
+    for (const text of ['/model', '  !rm -rf build', '/permissions'])
+      await expect(remote.message('c1', text)).rejects.toMatchObject({ status: 409 });
+    expect(sent).toEqual([]);
+  });
+
+  it('refuses a message while any menu shows, even one Spark was not told about', async () => {
+    const { remote, sent, setScreen } = setup('codex');
+    setScreen(CODEX_MENU);
+    await expect(remote.message('c1', '2')).rejects.toMatchObject({ status: 409 });
+    setScreen('   Rewind\n   ❯ (current)\n   Enter to continue · Esc to cancel');
+    await expect(remote.message('c1', 'go on')).rejects.toMatchObject({ status: 409 });
+    setScreen('✻ Working… (esc to interrupt)\n❯ ');
+    await remote.message('c1', 'go on');
+    expect(sent).toHaveLength(2);
   });
 });
 
