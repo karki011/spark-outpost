@@ -2,6 +2,14 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+## 0.1.0-beta.16
+
+- Remote control: a paired phone or computer can follow a running Terminal session, send it a message, stop the agent and approve its permission requests. Two switches on the Remote control page turn this on, and both start off. Messages that would run a CLI command, and messages while the agent waits for an answer, stay on the Mac.
+- Terminal: a starting session names the step it is on and opens as soon as its worktree exists; dependencies finish copying behind it.
+- Terminal: Claude Code follows Spark's light or dark theme, also after you switch, and the last line of a terminal is no longer cut off.
+- Fonts: Geist and Geist Mono ship inside the app, so nothing is fetched from Google at start, and the terminal's bold is real.
+- Fixes: an interrupted dependency install is cleaned up before it runs again, and a failed dependency clone removes only its own folder.
+
 ## 0.1.0-beta.15
 
 - Terminal: a Terminal session keeps running when Spark restarts, updates or crashes. Spark picks it up again, says so in one line, and Spark's own tools keep working in it. Quit still stops it. Claude Code steps taken while Spark was away are read back; Codex steps from that gap are not.
