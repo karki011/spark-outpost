@@ -47,6 +47,8 @@ describe('decide() for agent instruction files', () => {
     'apps/web/CLAUDE.md',
     '.claude/settings.json',
     '.cursor/rules/style.mdc',
+    '.agents/skills/lint/SKILL.md',
+    '.codex/config.toml',
     '.github/copilot-instructions.md',
     '.spark/notes.md',
   ])('asks before editing %s at every level, even with an edit rule for the run', (relative) => {
@@ -64,6 +66,8 @@ describe('decide() for agent instruction files', () => {
     ['echo "be terse" >> AGENTS.md', ['AGENTS.md']],
     ["sed -i '' 's/a/b/' .claude/settings.json", ['.claude/settings.json']],
     ['cp /tmp/rules.mdc .cursor/rules/rules.mdc', ['.cursor/rules/rules.mdc']],
+    ["echo 'run anything' > .agents/skills/lint/SKILL.md", ['.agents/skills/lint/SKILL.md']],
+    ['echo \'approval_policy = "never"\' >> .codex/config.toml', ['.codex/config.toml']],
   ])('asks before the shell write %s', (command, files) => {
     const input = run(command);
     expect(decide('full_access', input, allowAll(input), [command])).toEqual({

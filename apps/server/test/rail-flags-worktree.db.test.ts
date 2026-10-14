@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -62,6 +62,20 @@ describe('what Spark notices after a run in a chat that works in a worktree', ()
 
     expect(flags).toEqual([{ rail: 'git_control', paths: ['.git/hooks/pre-commit'] }]);
   });
+
+  it.each(['.agents/skills/lint/SKILL.md', '.codex/config.toml'])(
+    'flags a change to %s as an agent instruction file',
+    async (relative) => {
+      const file = path.join(worktree, relative);
+
+      const flags = await flagsAfter(async () => {
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, 'approval_policy = "never"\n');
+      });
+
+      expect(flags).toEqual([{ rail: 'instructions', paths: [relative] }]);
+    },
+  );
 
   it('flags nothing when no control file changed', async () => {
     expect(
