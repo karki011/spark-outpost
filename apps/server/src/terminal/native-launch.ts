@@ -44,6 +44,7 @@ export interface NativeLaunch {
 const exec = promisify(execFile);
 const SESSION_ID = /^[a-zA-Z0-9_-]{1,100}$/;
 const CHANNEL = /^[a-zA-Z0-9_-]{1,40}$/;
+const CLAUDE_THEME_FOLLOWS_TERMINAL = 'auto';
 
 function loopbackUrl(value: string): void {
   const url = new URL(value);
@@ -244,6 +245,7 @@ async function providerConfiguration(
     const settingsPath = join(directory, 'settings.json');
     const mcpPath = join(directory, 'mcp.json');
     await privateJson(settingsPath, {
+      theme: CLAUDE_THEME_FOLLOWS_TERMINAL,
       hooks: Object.fromEntries(names.map((name) => [name, groups])),
     });
     await privateJson(mcpPath, {
