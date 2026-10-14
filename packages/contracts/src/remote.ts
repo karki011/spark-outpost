@@ -17,6 +17,8 @@ export const remoteSwitchSchema = z.enum([
   'reset',
   'devices',
   'passkeys',
+  'terminal',
+  'terminalApprove',
 ]);
 export type RemoteSwitch = z.infer<typeof remoteSwitchSchema>;
 
@@ -30,6 +32,8 @@ export const remoteSwitchesSchema = z.object({
   reset: z.boolean(),
   devices: z.boolean(),
   passkeys: z.boolean(),
+  terminal: z.boolean(),
+  terminalApprove: z.boolean(),
 });
 export type RemoteSwitches = z.infer<typeof remoteSwitchesSchema>;
 
@@ -43,6 +47,8 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   reset: true,
   devices: false,
   passkeys: true,
+  terminal: false,
+  terminalApprove: false,
 };
 
 export const REMOTE_MAC_ONLY_SWITCHES: readonly RemoteSwitch[] = ['devices'];
@@ -58,6 +64,8 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   reset: 'Reset or delete data',
   devices: 'Pair another device and manage devices',
   passkeys: 'Sign in with a passkey',
+  terminal: 'Follow, type in and stop Terminal sessions',
+  terminalApprove: 'Approve in Terminal sessions',
 };
 
 export const updateRemoteSwitchesRequestSchema = remoteSwitchesSchema

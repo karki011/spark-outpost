@@ -59,7 +59,14 @@ export async function readStoredLaunch(root: string): Promise<StoredLaunch | nul
 
 export async function writeObserver(
   directory: string,
-  observer: { url: string; token: string; sessionId: string; provider: string },
+  observer: {
+    url: string;
+    token: string;
+    sessionId: string;
+    provider: string;
+    permissionUrl?: string;
+    permissionWaitMs?: number;
+  },
 ): Promise<void> {
   await writeFile(join(directory, OBSERVER), JSON.stringify(observer), { mode: 0o600 });
 }

@@ -1,5 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
-import { nativeTerminalLaunchRequestSchema } from '@spark-outpost/contracts';
+import {
+  nativeTerminalLaunchRequestSchema,
+  terminalApprovalDecisionSchema,
+  terminalMessageRequestSchema,
+} from '@spark-outpost/contracts';
 import { paramId, parseBody } from '../api/validation.ts';
 import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
 import { NativeRuntimeError } from './native-control.ts';
@@ -28,6 +32,29 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
   });
   router.delete('/conversations/:id/terminal', available, async (req, res) => {
     await runtime!.stop(paramId(req));
+    res.status(204).end();
+  });
+  const session = async (req: Request) => {
+    const id = paramId(req);
+    if (!(await runtime!.get(id)))
+      throw new NativeRuntimeError('This chat has no Terminal session.', 404);
+    return id;
+  };
+  router.get('/conversations/:id/terminal/transcript', available, async (req, res) => {
+    res.json(await runtime!.remote.view(await session(req)));
+  });
+  router.post('/conversations/:id/terminal/message', available, async (req, res) => {
+    const { text } = parseBody(terminalMessageRequestSchema, req);
+    await runtime!.remote.message(await session(req), text);
+    res.status(204).end();
+  });
+  router.post('/conversations/:id/terminal/interrupt', available, async (req, res) => {
+    runtime!.remote.interrupt(await session(req));
+    res.status(204).end();
+  });
+  router.post('/conversations/:id/terminal/approval', available, async (req, res) => {
+    const decision = parseBody(terminalApprovalDecisionSchema, req);
+    await runtime!.remote.decide(await session(req), decision);
     res.status(204).end();
   });
   router.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {

@@ -21,6 +21,7 @@ import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
 import type { TmuxHost } from './tmux/tmux-host.ts';
+import type { NativeRemote } from './remote/native-remote.ts';
 
 export interface NativeRuntimeDeps {
   db: Db;
@@ -49,6 +50,7 @@ export interface PendingNativeLaunch {
 
 export interface NativeRuntime {
   port: number;
+  remote: Pick<NativeRemote, 'view' | 'message' | 'interrupt' | 'decide'>;
   get(conversationId: string): Promise<NativeTerminalSession | null>;
   launch(
     conversationId: string,
@@ -60,6 +62,7 @@ export interface NativeRuntime {
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;
   stopRun(runId: string): Promise<boolean>;
+  ownsRun(runId: string): boolean;
   stopSession(id: string): Promise<boolean>;
   attachSession(id: string): Promise<CreateShellResponse | null>;
   recover(): Promise<void>;
@@ -86,4 +89,5 @@ export interface LiveSession {
   completedEvents: Map<string, string | null>;
   transcript: SessionTranscript | null;
   readopted?: { at: string; stepsComplete: boolean };
+  remoteApprovals?: boolean;
 }

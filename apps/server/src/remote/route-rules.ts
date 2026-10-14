@@ -170,7 +170,6 @@ DELETE /api/terminal/sessions/:id
 GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
 POST /api/terminal/sessions/:id/attach
-GET /api/conversations/:id/terminal
 GET /api/conversations/:id/terminal/usage
 GET /api/conversations/:id/terminal/start
 POST /api/conversations/:id/terminal
@@ -285,6 +284,15 @@ DELETE /api/projects/:id
 GET /api/remote/passkeys
 POST /api/remote/passkeys/options
 POST /api/remote/passkeys
+`,
+  terminal: `
+GET /api/conversations/:id/terminal
+GET /api/conversations/:id/terminal/transcript
+POST /api/conversations/:id/terminal/message
+POST /api/conversations/:id/terminal/interrupt
+`,
+  terminalApprove: `
+POST /api/conversations/:id/terminal/approval
 `,
 };
 

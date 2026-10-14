@@ -49,14 +49,39 @@ async function bridgeMain() {
           body,
           signal: AbortSignal.timeout(1000),
         });
-        if (response.status < 500) return;
+        if (response.status < 500) break;
       } catch {
-        if (attempt === 1) return;
+        if (attempt === 1) break;
       }
     }
+    if (raw.hook_event_name === 'PermissionRequest' && typeof config.permissionUrl === 'string')
+      await askPermission(config, raw);
   } catch {
     return;
   }
+}
+async function askPermission(config, raw) {
+  if (typeof raw.tool_name !== 'string' || raw.tool_name.length > 200) return;
+  const input = JSON.stringify(raw.tool_input ?? null);
+  const response = await fetch(config.permissionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
+    body: JSON.stringify({
+      tool: raw.tool_name,
+      input: input.length <= 20_000 ? JSON.parse(input) : null,
+    }),
+    signal: AbortSignal.timeout(Number(config.permissionWaitMs) || 2000),
+  });
+  if (response.status !== 200) return;
+  const answer = await response.json();
+  if (answer?.behavior !== 'allow' && answer?.behavior !== 'deny') return;
+  const decision =
+    answer.behavior === 'allow'
+      ? { behavior: 'allow' }
+      : { behavior: 'deny', message: 'Denied from a paired device.' };
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } }),
+  );
 }
 await bridgeMain();
 `;

@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { expirePendingApprovals } from '../../persistence/approvals.ts';
 import type { Db } from '../../persistence/db.ts';
 import type { NativeTerminalRow } from '../../persistence/native-terminals.ts';
@@ -9,6 +10,8 @@ import type { SparkMcpHost } from '../../spark-mcp/host.ts';
 import type { ApprovalWaiters } from '../../workflow/approval-waiters.ts';
 import { loadRunInput } from '../../workflow/run-input.ts';
 import { nativeTurnContext } from '../native-context.ts';
+import { nativeHookScript } from '../native-hook-script.ts';
+import { permissionWaitMs } from '../native-launch.ts';
 import { hookTokenDigest } from '../native-observe.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import type { AgentRequest, TerminalSessions } from '../sessions.ts';
@@ -30,6 +33,7 @@ export interface ReadoptInput {
   terminals: TerminalSessions;
   waiters: ApprovalWaiters;
   hookUrl: string;
+  permissionUrl?: string;
   live: Map<string, LiveSession>;
   tokens: Map<string, LiveSession>;
   now(): Date;
@@ -71,12 +75,23 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
   const stored = await readStoredLaunch(root);
   const hookToken = randomBytes(32).toString('base64url');
   const observed = stored?.observed === true && row.observation === 'hooks';
+  const approvals =
+    stored !== null &&
+    observed &&
+    input.permissionUrl !== undefined &&
+    (await readFile(join(stored.directory, 'observe.mjs'), 'utf8').then(
+      (script) => script === nativeHookScript(),
+      () => false,
+    ));
   if (stored && observed)
     await writeObserver(stored.directory, {
       url: input.hookUrl,
       token: hookToken,
       sessionId: row.id,
       provider: row.provider,
+      ...(approvals && input.permissionUrl
+        ? { permissionUrl: input.permissionUrl, permissionWaitMs: permissionWaitMs(row.provider) }
+        : {}),
     });
   const scope: SparkScope = {
     workspaceId: input.workspaceId,
@@ -120,6 +135,7 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
     completedEvents: new Map(),
     transcript: null,
     readopted: { at: input.now().toISOString(), stepsComplete: false },
+    remoteApprovals: approvals,
   };
   scope.beforeToolCall = async () => {
     await session.chain;

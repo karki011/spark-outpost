@@ -1,3 +1,4 @@
+import { remoteDeviceOf } from '../remote/principal.ts';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
@@ -149,6 +150,10 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/runs/:id/cancel', async (req, res) => {
+    if (remoteDeviceOf(res) && deps.nativeTerminals?.ownsRun(paramId(req))) {
+      res.status(409).json({ error: 'Use Stop in the Terminal session to interrupt the agent.' });
+      return;
+    }
     let stopped = await stopRun(db, paramId(req));
     if (stopped && (await deps.nativeTerminals?.stopRun(paramId(req))))
       stopped = await stopRun(db, paramId(req));
