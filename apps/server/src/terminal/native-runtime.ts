@@ -413,8 +413,6 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       await stop(session.row.conversation_id);
       return true;
     },
-    ownsRun: (runId) =>
-      [...live.values()].some((item) => item.context?.input.identity.runId === runId),
     async stopSession(id) {
       const session = [...live.values()].find((item) => item.row.id === id);
       if (!session) return false;

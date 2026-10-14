@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TerminalRemoteView } from '@spark-outpost/contracts';
 import { createApp } from '../src/api/app.ts';
+import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import type { NativeRuntime } from '../src/terminal/native-runtime.ts';
 import { localClient, testAppOptions } from './app-support.ts';
 import { pairDevice, remoteClient, setSwitches, turnRemoteOn } from './remote-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const CHAT = randomUUID();
-const RUN = randomUUID();
 const VIEW: TerminalRemoteView = {
   provider: 'claude',
   state: 'working',
@@ -32,7 +32,6 @@ function fakeRuntime(): NativeRuntime {
       decide: async (_id: string, decision: { decision: string }) =>
         void calls.push(`decide ${decision.decision}`),
     },
-    ownsRun: (runId: string) => runId === RUN,
     stopRun: async () => {
       calls.push('stopRun');
       return true;
@@ -51,6 +50,19 @@ beforeEach(async () => {
 afterEach(async () => {
   await t.cleanup();
 });
+
+async function queuedRun(sessionType: 'terminal' | 'chat'): Promise<string> {
+  const id = randomUUID();
+  await createConversation(
+    t.db,
+    t.workspaceId,
+    id,
+    sessionType === 'terminal' ? { sessionType, terminalProvider: 'claude' } : {},
+  );
+  const target = { provider: 'claude', agentMode: 'plan', permission: 'ask' };
+  const sent = await sendUserMessage(t.db, id, { id: randomUUID(), content: 'Hi' }, target);
+  return sent.run.id;
+}
 
 const routes = {
   status: ['get', `/api/conversations/${CHAT}/terminal`],
@@ -106,13 +118,16 @@ describe('a Terminal session from a paired device', () => {
     expect(rows.map((row) => row.row).join('\n')).not.toContain('run the tests please');
   });
 
-  it('never lets a device end a Terminal session through a run cancel', async () => {
+  it('never lets a device end a Terminal session through a run cancel, even before it starts', async () => {
+    const run = await queuedRun('terminal');
     const phone = remoteClient(app, (await pairDevice(app)).cookie);
-    const refused = await phone.send('post', `/api/runs/${RUN}/cancel`);
+    const refused = await phone.send('post', `/api/runs/${run}/cancel`);
     expect(refused.status).toBe(409);
     expect(refused.body.error).toBe('Use Stop in the Terminal session to interrupt the agent.');
     expect(calls).toEqual([]);
-    const local = await localClient(app).send('post', `/api/runs/${RUN}/cancel`);
-    expect(local.status).not.toBe(409);
+    expect(
+      (await phone.send('post', `/api/runs/${await queuedRun('chat')}/cancel`)).status,
+    ).not.toBe(409);
+    expect((await localClient(app).send('post', `/api/runs/${run}/cancel`)).status).not.toBe(409);
   });
 });

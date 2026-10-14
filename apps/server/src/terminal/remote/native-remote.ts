@@ -33,6 +33,8 @@ const PATCH_FILE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/m;
 const NOT_RUNNING = 'This Terminal session isn’t running. Start it again on your Mac.';
 const CHANGED = 'This approval has changed. Check the session again.';
 const WAITING = 'The agent is waiting for an answer. Answer it first, then send your message.';
+const NOT_SUBMITTED =
+  'The agent asked something before your message was sent. Answer it on your Mac; your message is typed there, not sent.';
 
 export interface NativeRemoteDeps {
   db: Db;
@@ -122,8 +124,21 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       items: all.slice(-SHOWN_ITEMS),
       truncated: tail.truncated || all.length > SHOWN_ITEMS,
     };
-    parsed.set(conversationId, fresh);
+    if (deps.live.has(conversationId)) parsed.set(conversationId, fresh);
+    else parsed.delete(conversationId);
     return fresh;
+  };
+  const answerOpen = async (conversationId: string, session: LiveSession): Promise<boolean> => {
+    if (deps.approvals.current(conversationId)) return true;
+    const [row, screen] = await Promise.all([
+      nativeTerminalRow(deps.db, conversationId),
+      deps.terminals.screen(session.row.id),
+    ]);
+    return (
+      row?.state === 'waiting_for_permission' ||
+      row?.state === 'waiting_for_input' ||
+      (screen !== null && menuOpen(screen))
+    );
   };
 
   return {
@@ -159,19 +174,11 @@ export function nativeRemote(deps: NativeRemoteDeps) {
           'Messages that start with / or ! run CLI commands. Type them on your Mac.',
           409,
         );
-      if (deps.approvals.current(conversationId)) throw new NativeRuntimeError(WAITING, 409);
-      const [row, screen] = await Promise.all([
-        nativeTerminalRow(deps.db, conversationId),
-        deps.terminals.screen(session.row.id),
-      ]);
-      if (
-        row?.state === 'waiting_for_permission' ||
-        row?.state === 'waiting_for_input' ||
-        (screen !== null && menuOpen(screen))
-      )
-        throw new NativeRuntimeError(WAITING, 409);
+      if (await answerOpen(conversationId, session)) throw new NativeRuntimeError(WAITING, 409);
       write(session, pastedMessage(text));
       await delay(SUBMIT_DELAY_MS);
+      if (await answerOpen(conversationId, session))
+        throw new NativeRuntimeError(NOT_SUBMITTED, 409);
       write(session, '\r');
     },
 
@@ -220,8 +227,9 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     },
 
     observed(session: LiveSession, eventName: unknown): void {
-      if (typeof eventName === 'string' && SETTLED_BY.has(eventName))
-        deps.approvals.clear(session.row.conversation_id);
+      if (typeof eventName !== 'string') return;
+      const settles = session.row.provider === 'claude' ? TURN_ENDS : SETTLED_BY;
+      if (settles.has(eventName)) deps.approvals.clear(session.row.conversation_id);
     },
 
     ended(conversationId: string): void {
@@ -251,14 +259,7 @@ export function remoteHookHandlers(
   };
 }
 
-const SETTLED_BY = new Set([
-  'PostToolUse',
-  'PostToolUseFailure',
-  'Stop',
-  'StopFailure',
-  'UserPromptSubmit',
-  'SessionEnd',
-  'Interrupt',
-]);
+const TURN_ENDS = new Set(['Stop', 'StopFailure', 'UserPromptSubmit', 'SessionEnd', 'Interrupt']);
+const SETTLED_BY = new Set([...TURN_ENDS, 'PostToolUse', 'PostToolUseFailure']);
 
 export type NativeRemote = ReturnType<typeof nativeRemote>;

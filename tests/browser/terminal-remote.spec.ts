@@ -136,3 +136,24 @@ test('without the approve switch the card says to answer on the Mac', async ({ p
   await expect(card).toContainText('approving in Terminal sessions. Answer on your Mac.');
   await expect(card.getByRole('button')).toHaveCount(0);
 });
+
+test('while the agent works the phone can stop it or queue a message', async ({ page }) => {
+  await startFixtureTerminal(page);
+  await page.route('**/terminal/transcript', async (route) => {
+    await route.fulfill({
+      json: {
+        provider: 'claude',
+        state: 'working',
+        running: true,
+        items: [],
+        truncated: false,
+        approval: null,
+      } satisfies TerminalRemoteView,
+    });
+  });
+  await asPairedPhone(page, { terminal: true, terminalApprove: false });
+  const phone = page.getByRole('region', { name: 'Terminal session', exact: true });
+  await expect(phone.getByRole('button', { name: 'Stop' })).toBeVisible();
+  await phone.getByRole('textbox', { name: 'Message the agent' }).fill('then run the linter');
+  await expect(phone.getByRole('button', { name: 'Send' })).toBeEnabled();
+});

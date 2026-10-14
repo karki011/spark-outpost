@@ -13,7 +13,10 @@ const CODEX_MENU = [
 ].join('\n');
 const IDLE = '› Ask Codex to do anything\n  gpt · /work';
 
-function setup(provider: 'claude' | 'codex', options: { state?: string; approve?: boolean } = {}) {
+function setup(
+  provider: 'claude' | 'codex',
+  options: { state?: string; approve?: boolean; whilePasting?: () => void } = {},
+) {
   const row = {
     id: 's1',
     conversation_id: 'c1',
@@ -45,7 +48,7 @@ function setup(provider: 'claude' | 'codex', options: { state?: string; approve?
     },
     approvals,
     owned: async () => undefined,
-    delay: async () => undefined,
+    delay: async () => options.whilePasting?.(),
   });
   return { remote, session, sent, approvals, setScreen: (text: string | null) => (screen = text) };
 }
@@ -59,6 +62,12 @@ describe('typing from a paired device', () => {
 
   it('drops control characters so a message cannot end the paste early', () => {
     expect(pastedMessage('a\u001b[201~b\u0003c\td')).toBe('\u001b[200~a[201~bc\td\u001b[201~');
+  });
+
+  it('leaves the message unsent when a menu opens before Enter', async () => {
+    const menu = setup('codex', { whilePasting: () => menu.setScreen(CODEX_MENU) });
+    await expect(menu.remote.message('c1', 'hello')).rejects.toMatchObject({ status: 409 });
+    expect(menu.sent).toEqual(['\u001b[200~hello\u001b[201~']);
   });
 
   it('refuses a message while the agent waits for an answer', async () => {
@@ -161,6 +170,21 @@ describe('approving from a paired device', () => {
     setScreen(CODEX_MENU);
     await remote.decide('c1', { id: first.id, decision: 'deny' });
     expect(sent).toEqual(['\u001b']);
+  });
+
+  it('keeps a waiting Claude approval when another tool finishes, until the turn ends', async () => {
+    const { remote, session } = setup('claude');
+    const answer = remote.permission(
+      session,
+      { tool: 'Bash', input: { command: 'touch notes.txt' } },
+      new AbortController().signal,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    remote.observed(session, 'PostToolUse');
+    expect((await remote.view('c1')).approval).not.toBeNull();
+    remote.observed(session, 'Stop');
+    expect(await answer).toBeNull();
+    expect((await remote.view('c1')).approval).toBeNull();
   });
 
   it('forgets an open approval once the CLI moves on', async () => {

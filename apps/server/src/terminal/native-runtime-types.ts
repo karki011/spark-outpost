@@ -62,7 +62,6 @@ export interface NativeRuntime {
   stop(conversationId: string): Promise<void>;
   stopAll(): Promise<void>;
   stopRun(runId: string): Promise<boolean>;
-  ownsRun(runId: string): boolean;
   stopSession(id: string): Promise<boolean>;
   attachSession(id: string): Promise<CreateShellResponse | null>;
   recover(): Promise<void>;

@@ -49,13 +49,24 @@ export function RemoteTerminalComposer({
       }
       context={null}
       bar={
-        <SendButton
-          busy={working}
-          label="Send"
-          disabled={!ready}
-          onSend={() => void send()}
-          onStop={() => void onStop()}
-        />
+        <>
+          {working && (
+            <SendButton
+              busy
+              label="Stop"
+              disabled={false}
+              onSend={() => undefined}
+              onStop={() => void onStop()}
+            />
+          )}
+          <SendButton
+            busy={false}
+            label="Send"
+            disabled={!ready}
+            onSend={() => void send()}
+            onStop={() => undefined}
+          />
+        </>
       }
     >
       {blocked && (

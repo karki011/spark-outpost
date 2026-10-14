@@ -20,6 +20,7 @@ import { reasoningText } from '../persistence/run-events.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
 import { commandOutput } from '../persistence/run-commands.ts';
 import { stopRun } from '../workflow/stop-run.ts';
+import { isTerminalRun } from '../persistence/native-terminal-turns.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { usageSummary } from '../persistence/usage.ts';
@@ -150,7 +151,7 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/runs/:id/cancel', async (req, res) => {
-    if (remoteDeviceOf(res) && deps.nativeTerminals?.ownsRun(paramId(req))) {
+    if (remoteDeviceOf(res) && (await isTerminalRun(db, paramId(req)))) {
       res.status(409).json({ error: 'Use Stop in the Terminal session to interrupt the agent.' });
       return;
     }
