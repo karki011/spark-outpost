@@ -3,6 +3,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
+import './xterm-terminal.css';
 import { terminalServerMessageSchema, type TerminalClientMessage } from '@spark-outpost/contracts';
 import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
 import type { TerminalConnection, TerminalHandlers } from './terminal-connection.ts';
