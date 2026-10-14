@@ -13,7 +13,7 @@ You'll let Spark handle checks and reviews on a chat's pull requests. About 2 mi
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail or feedback arrives, Spark messages the chat, starting with "Spark:". A busy chat finishes its turn first.
+3. When checks fail or feedback arrives, Spark messages the chat, starting with "Spark:". A busy chat finishes its turn first; while Spark is paused, the message waits until you resume.
 4. The agent fixes what is right, pushes back on the rest, and pushes the fix. Spark replies on the threads.
 5. Read the agent's summary: fixed, pushed back, left for you.
 

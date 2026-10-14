@@ -130,4 +130,6 @@ export function heldBackLine(unchanged: readonly RoundItem[], repeated: number):
   return parts.join(' ');
 }
 
+export const PAUSED_LINE = 'New feedback is waiting until Spark is resumed.';
+
 export const CHAT_BUSY_LINE = 'New feedback is waiting for the chat’s current turn to finish.';

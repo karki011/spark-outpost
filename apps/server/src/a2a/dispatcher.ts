@@ -77,7 +77,7 @@ export function startDispatcher(deps: DispatchDeps): Dispatcher {
   wake();
   return {
     changed(event) {
-      if (event.kind === 'outpost_changed') wake();
+      if (event.kind === 'outpost_changed' || event.kind === 'spark_pause') wake();
     },
     async close() {
       closed = true;

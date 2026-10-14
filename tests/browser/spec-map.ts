@@ -6,6 +6,7 @@ export const SHELL_SPECS = [
   'lazy-ui',
   'packaged-parity',
   'responsive-shell',
+  'spark-pause',
 ] as const;
 
 export const PERF_SPECS = [

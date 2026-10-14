@@ -8,6 +8,7 @@ import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
 import { turnObservations } from '../src/persistence/observations.ts';
 import { conversationHasSlackContext, slackChatThread } from '../src/persistence/slack.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker } from '../src/workflow/worker.ts';
@@ -274,6 +275,18 @@ describe('Start work from Slack over Socket Mode', () => {
     await changeSlackSettings(deps(), { allowedUserIds: ['U0SAM'] });
     stub.socket.send(shortcut('env-2', 'U0SAM'));
     await eventually(async () => ((await chats()).length === 1 ? true : null), 10_000);
+  });
+
+  it('starts no work from inside Slack while Spark is paused', async () => {
+    await setSparkPaused(t.db, t.workspaceId, true);
+    await listening();
+    stub.socket.send(shortcut('env-1'));
+    await eventually(async () => ((await startEvents()).length === 1 ? true : null), 10_000);
+    expect(await chats()).toEqual([]);
+    expect(await startEvents()).toEqual([
+      expect.objectContaining({ outcome: 'skipped', reason: 'paused' }),
+    ]);
+    expect(stub.slack.posted).toEqual([]);
   });
 
   it('ignores triggers in channels that are not allowed and says nothing there', async () => {

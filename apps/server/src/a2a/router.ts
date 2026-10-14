@@ -47,9 +47,12 @@ export function a2aRoutes(options: A2aRouteOptions): Router {
     getPost,
     readAnswer: (queryable, request) => requestAnswer(queryable, workspaceId, request),
     wakes: options.wakes,
-    drain: (conversationId) =>
-      drainQueue(db, conversationId, (id) =>
-        resolveRunTarget({ db, workspaceId, fixedRunProvider }, id),
+    drain: (conversationId, typedPostId) =>
+      drainQueue(
+        db,
+        conversationId,
+        (id) => resolveRunTarget({ db, workspaceId, fixedRunProvider }, id),
+        typedPostId,
       ),
     stopRun: (runId) => stopRun(db, runId),
   };

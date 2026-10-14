@@ -64,6 +64,7 @@ import { useChatSend } from './send/use-chat-send.ts';
 import { QueueStrip } from './queue/QueueStrip.tsx';
 import { enterWhileBusy, sendNowStatus } from './queue/send-choice.ts';
 import { queueMode } from './queue/queue-model.ts';
+import { useSparkPause } from '../app/pause/use-spark-pause.ts';
 import { useChatQueue } from './queue/use-chat-queue.ts';
 import { activeRun, latestReplyId } from './turns.ts';
 import { useStop } from './use-stop.ts';
@@ -99,6 +100,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const sparkPaused = useSparkPause().paused;
   const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
 
   const refresh = () =>
@@ -382,7 +384,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   />
                   <QueueStrip
                     queue={queue}
-                    mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
+                    mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS, sparkPaused)}
                   />
                   <Composer
                     conversationId={conversationId}

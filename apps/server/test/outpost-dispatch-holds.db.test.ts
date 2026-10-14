@@ -12,6 +12,7 @@ import type { NewPost } from '../src/outposts/ports.ts';
 import { cancelPost } from '../src/persistence/outpost-tasks.ts';
 import { getPost, insertPosts } from '../src/persistence/outpost-posts.ts';
 import { createOutpost, setPaused } from '../src/persistence/outposts.ts';
+import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { acceptingPeer, type AcceptingPeer } from './accepting-peer.ts';
 import { chatWithTurn, newChat, reply, setRun } from './outpost-store-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -186,6 +187,21 @@ describe('a request that starts after another', () => {
     expect((await stored(held)).post.afterPostId).toBe(first);
 
     await setPaused(t.db, t.workspaceId, outpostId, false);
+    await onePass();
+    expect(sentIds()).toEqual([first, held]);
+  });
+
+  it('is not released while Spark is paused, and goes out once Spark is resumed', async () => {
+    await onePass();
+    await parentTurn('succeeded', 'Done.');
+    await setSparkPaused(t.db, t.workspaceId, true);
+
+    expect(await releaseAnswered(t.db)).toBe(0);
+    await onePass();
+    expect(sentIds()).toEqual([first]);
+    expect((await stored(held)).post.afterPostId).toBe(first);
+
+    await setSparkPaused(t.db, t.workspaceId, false);
     await onePass();
     expect(sentIds()).toEqual([first, held]);
   });

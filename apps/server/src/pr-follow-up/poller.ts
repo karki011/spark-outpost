@@ -2,6 +2,7 @@ import { advisorEntry } from '../providers/catalog.ts';
 import { getApproval } from '../persistence/approvals.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { prFollowUpSettings, type PrFollowUpSettings } from '../persistence/pr-settings.ts';
+import { sparkPaused } from '../persistence/spark-pause.ts';
 import {
   feedbackFor,
   insertFeedback,
@@ -35,6 +36,7 @@ import {
   MAX_INTERVAL_SECONDS,
   nextInterval,
   newSourceKeys,
+  PAUSED_LINE,
   roundDecision,
   stateFor,
 } from './rounds.ts';
@@ -117,6 +119,9 @@ function idleLine(waiting: number): string {
 async function decideNext(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
   const queued = await feedbackFor(deps.db, watch.id, ['queued']);
   const decision = roundDecision(watch.rounds, queued.length, watch.requested);
+  if (decision === 'start' && (await sparkPaused(deps.db, watch.workspaceId))) {
+    return { ...watch, phase: 'watching', doing: PAUSED_LINE };
+  }
   if (decision === 'start') return startRound(deps, watch, queued);
   if (decision === 'limit') {
     await updateFeedback(
